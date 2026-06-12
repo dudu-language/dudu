@@ -1,0 +1,12 @@
+class Box:
+    value: f32
+
+
+def read_box(box: &Box) -> f32:
+    doubled = box.value * 2.0
+    return doubled
+
+
+def main() -> i32:
+    box = Box(value=21.0)
+    return i32(read_box(box))

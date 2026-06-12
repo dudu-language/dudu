@@ -192,14 +192,15 @@ std::string infer_expr(const FunctionScope& scope, std::string expr) {
     }
     const size_t op = expr.find_first_of("+-*/%");
     if (op != std::string::npos) {
-        return infer_expr(scope, expr.substr(0, op));
+        const std::string left = infer_expr(scope, expr.substr(0, op));
+        return left.empty() ? infer_expr(scope, expr.substr(op + 1)) : left;
     }
     const size_t dot = expr.find('.');
     if (dot != std::string::npos) {
         const std::string base = expr.substr(0, dot);
         const auto local = scope.locals.find(base);
         if (local != scope.locals.end()) {
-            const auto klass = scope.symbols.classes.find(local->second);
+            const auto klass = scope.symbols.classes.find(base_type(local->second));
             if (klass != scope.symbols.classes.end()) {
                 const std::string field = expr.substr(dot + 1);
                 for (const FieldDecl& decl : klass->second->fields) {
@@ -322,10 +323,7 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
         }
         if (lhs.find('.') == std::string::npos && !scope.locals.contains(lhs)) {
             const std::string inferred = infer_expr(scope, text.substr(assign + 1));
-            if (inferred.empty()) {
-                fail(stmt.location, "cannot infer local type: " + lhs);
-            }
-            scope.locals[lhs] = inferred;
+            scope.locals[lhs] = inferred.empty() ? "auto" : inferred;
             return;
         }
         check_assign_target(scope, stmt, lhs);

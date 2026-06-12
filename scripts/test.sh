@@ -90,6 +90,7 @@ compile_and_expect function_attrs 42
 compile_and_expect cpp_namespace_alias 42
 compile_and_expect fixed_arrays 42
 compile_and_expect compound_assignment 46
+compile_and_expect ref_field_inference 42
 compile_path_and_expect multifile tests/fixtures/multifile/main.dd 42
 
 direct_bin="$repo_root/build/dudu_build_simple"
