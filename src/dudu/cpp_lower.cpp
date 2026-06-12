@@ -323,7 +323,7 @@ std::string lower_named_argument_calls(std::string expr) {
             has_named_arg = has_named_arg || top_level_equal(part) != std::string::npos;
         }
         if (!has_named_arg) {
-            open = expr.find('(', close_pos + 1);
+            open = expr.find('(', open + 1);
             continue;
         }
 
@@ -400,6 +400,7 @@ std::string lower_cpp_expr(std::string expr, const std::vector<std::string>& nam
     expr = lower_template_value_call(std::move(expr), "set");
     expr = lower_dotted_template_call(std::move(expr));
     expr = qualify_namespace_aliases(std::move(expr), namespace_aliases);
+    expr = replace_all(std::move(expr), ".append(", ".push_back(");
     expr = replace_all(std::move(expr), "Ok(None)", "dudu::Ok(std::monostate{})");
     expr = replace_word(std::move(expr), "Ok", "dudu::Ok");
     expr = replace_word(std::move(expr), "Err", "dudu::Err");

@@ -163,10 +163,13 @@ void emit_simple_statement(std::ostringstream& out, const RawStmt& stmt, int dep
         out << indent(depth) << lower_cpp_type(type) << ' ' << name;
         if (assign != std::string::npos) {
             const std::string value = trim_copy(text.substr(assign + 1));
-            out << " = "
-                << (starts_with(type, "Option[") && value == "None"
-                        ? "std::nullopt"
-                        : lower_cpp_expr(value, aliases));
+            if (starts_with(type, "Option[") && value == "None") {
+                out << " = std::nullopt";
+            } else if (starts_with(type, "list[") && value == "[]") {
+                out << " = {}";
+            } else {
+                out << " = " << lower_cpp_expr(value, aliases);
+            }
         } else {
             out << "{}";
         }

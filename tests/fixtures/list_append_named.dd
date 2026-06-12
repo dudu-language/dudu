@@ -1,0 +1,8 @@
+class Item:
+    value: i32
+
+
+def main() -> i32:
+    items: list[Item] = []
+    items.append(Item(value=42))
+    return items[0].value
