@@ -330,6 +330,15 @@ std::filesystem::path build_executable(const Options& options, const std::string
     for (const std::string& include_dir : config.include_dirs) {
         command += " " + shell_quote_arg("-I" + include_dir);
     }
+    for (const std::string& define : config.defines) {
+        command += " " + shell_quote_arg("-D" + define);
+    }
+    for (const std::string& lib_dir : config.lib_dirs) {
+        command += " " + shell_quote_arg("-L" + lib_dir);
+    }
+    for (const std::string& flag : config.flags) {
+        command += " " + shell_quote_arg(flag);
+    }
     const std::string package_flags = pkg_config_flags(config.pkg_config_packages);
     if (!package_flags.empty()) {
         command += " " + package_flags;

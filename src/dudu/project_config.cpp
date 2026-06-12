@@ -118,8 +118,14 @@ ProjectConfig parse_project_config(const std::filesystem::path& path) {
             config.test_command = unquote(value);
         } else if (section == "cc" && name == "include_dirs") {
             config.include_dirs = parse_string_array(path, line, value);
+        } else if (section == "cc" && name == "lib_dirs") {
+            config.lib_dirs = parse_string_array(path, line, value);
         } else if (section == "cc" && name == "libs") {
             config.libs = parse_string_array(path, line, value);
+        } else if (section == "cc" && name == "defines") {
+            config.defines = parse_string_array(path, line, value);
+        } else if (section == "cc" && name == "flags") {
+            config.flags = parse_string_array(path, line, value);
         } else if (section == "pkg_config" && name == "packages") {
             config.pkg_config_packages = parse_string_array(path, line, value);
         } else if (section == "build") {

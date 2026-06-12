@@ -2,5 +2,8 @@ main = "main.dd"
 cpp_std = "c++20"
 
 [cc]
+defines = ["DUDU_PROJECT_CC=40"]
+flags = ["-DDUDU_PROJECT_CC_FLAG=2"]
 include_dirs = ["include"]
+lib_dirs = ["lib"]
 libs = []
