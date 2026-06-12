@@ -1,0 +1,14 @@
+cpp include "raylib.h" as rl
+
+fn main i32
+
+    rl.InitWindow 800 600 "glaive"
+
+    while not rl.WindowShouldClose
+        rl.BeginDrawing
+        rl.ClearBackground rl.BLACK
+        rl.DrawCircle 400 300 40 rl.RED
+        rl.EndDrawing
+
+    rl.CloseWindow
+    ret 0

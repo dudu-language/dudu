@@ -1,0 +1,6 @@
+c include "stdio.h" as c
+
+fn main i32
+
+    c.printf "hello from glaive\n"
+    ret 0
