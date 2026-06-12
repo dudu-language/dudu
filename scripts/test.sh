@@ -76,6 +76,8 @@ grep -q 'registerCommand("dudu.runFile"' "$repo_root/editors/vscode/extension.js
 
 generated_header="$repo_root/build/cpp_library.hpp"
 "$repo_root/build/dudu" "$repo_root/examples/cpp_library.dd" --emit-header "$generated_header"
+grep -q 'inline constexpr std::string_view TARGET_KIND = "executable";' "$generated_header"
+grep -q 'inline constexpr std::string_view TARGET_MODE = "hosted";' "$generated_header"
 printf '#include "cpp_library.hpp"\nint main() { return 0; }\n' >"$repo_root/build/header_smoke.cpp"
 "${CXX:-c++}" -std=c++20 -I"$repo_root/build" -c "$repo_root/build/header_smoke.cpp" \
     -o "$repo_root/build/header_smoke.o"
