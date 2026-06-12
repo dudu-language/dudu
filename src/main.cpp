@@ -239,11 +239,18 @@ int run_project_benchmarks(const Options& options) {
                                                                                               : 1;
 }
 
+dudu::ProjectConfig config_for_input(const std::filesystem::path& input) {
+    return dudu::parse_project_config(build_config_path(input));
+}
+
 dudu::ModuleAst checked_module(const Options& options, const std::string& source,
                                bool check_bodies) {
     dudu::ModuleAst module = options.input.empty() ? dudu::parse_source(source, options.input)
                                                    : dudu::load_source_tree(options.input);
-    module.build_values = dudu::parse_project_config(build_config_path(options.input)).build_values;
+    const dudu::ProjectConfig config = config_for_input(options.input);
+    module.build_values = config.build_values;
+    module.build_values["TARGET_KIND"] = '"' + config.target_kind + '"';
+    module.build_values["TARGET_MODE"] = '"' + config.target_mode + '"';
     for (const auto& [name, value] : options.build_values) {
         module.build_values[name] = value;
     }
