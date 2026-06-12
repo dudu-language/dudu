@@ -108,7 +108,12 @@ void emit_simple_statement(std::ostringstream& out, const RawStmt& stmt, int dep
         const std::string type = trim_copy(text.substr(colon + 1, assign - colon - 1));
         out << indent(depth) << lower_cpp_type(type) << ' ' << name;
         if (assign != std::string::npos) {
-            out << " = " << lower_cpp_expr(trim_copy(text.substr(assign + 1)));
+            const std::string value = trim_copy(text.substr(assign + 1));
+            if (starts_with(type, "Option[") && value == "None") {
+                out << " = std::nullopt";
+            } else {
+                out << " = " << lower_cpp_expr(value);
+            }
         } else {
             out << "{}";
         }
@@ -266,6 +271,8 @@ void emit_includes(std::ostringstream& out, const ModuleAst& module) {
            "#include <tuple>\n"
            "#include <unordered_map>\n"
            "#include <unordered_set>\n"
+           "#include <utility>\n"
+           "#include <variant>\n"
            "#include <vector>\n";
 
     for (const ImportDecl& import : module.imports) {
@@ -274,6 +281,25 @@ void emit_includes(std::ostringstream& out, const ModuleAst& module) {
         }
     }
     out << '\n';
+}
+
+void emit_result_prelude(std::ostringstream& out) {
+    out << "namespace dudu {\n"
+           "template <typename T> struct OkValue { T value; };\n"
+           "template <typename E> struct ErrValue { E err; };\n"
+           "template <typename T> OkValue<T> Ok(T value) { return {std::move(value)}; }\n"
+           "template <typename E> ErrValue<E> Err(E err) { return {std::move(err)}; }\n"
+           "template <typename T, typename E> struct Result {\n"
+           "    bool ok{};\n"
+           "    T value{};\n"
+           "    E err{};\n"
+           "    Result() = default;\n"
+           "    Result(OkValue<T> ok_value) : ok(true), value(std::move(ok_value.value)), err{} "
+           "{}\n"
+           "    Result(ErrValue<E> err_value) : ok(false), value{}, err(std::move(err_value.err)) "
+           "{}\n"
+           "};\n"
+           "} // namespace dudu\n\n";
 }
 void emit_aliases(std::ostringstream& out, const ModuleAst& module) {
     for (const TypeAliasDecl& alias : module.aliases) {
@@ -383,6 +409,7 @@ std::string emit_cpp_header(const ModuleAst& module) {
     std::ostringstream out;
     out << "#pragma once\n\n";
     emit_includes(out, module);
+    emit_result_prelude(out);
 
     emit_aliases(out, module);
     emit_enums(out, module);
@@ -400,6 +427,7 @@ std::string emit_cpp_header(const ModuleAst& module) {
 std::string emit_cpp_source(const ModuleAst& module) {
     std::ostringstream out;
     emit_includes(out, module);
+    emit_result_prelude(out);
 
     emit_aliases(out, module);
     emit_enums(out, module);

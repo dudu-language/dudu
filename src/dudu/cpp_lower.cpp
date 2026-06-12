@@ -97,7 +97,17 @@ std::string lower_template_type(std::string_view name, const std::string& args) 
         return "std::optional<" + lower_cpp_type(args) + ">";
     }
     if (name == "Result") {
-        return "dudu::Result<" + replace_dots(args) + ">";
+        std::ostringstream out;
+        out << "dudu::Result<";
+        const std::vector<std::string> parts = split_top_level_args(args);
+        for (size_t i = 0; i < parts.size(); ++i) {
+            if (i > 0) {
+                out << ", ";
+            }
+            out << lower_cpp_type(parts[i]);
+        }
+        out << ">";
+        return out.str();
     }
     if (name == "tuple") {
         std::ostringstream out;
@@ -173,6 +183,9 @@ std::string lower_cpp_type(const std::string& raw_type) {
     if (type.empty()) {
         return "void";
     }
+    if (type == "None") {
+        return "std::monostate";
+    }
     if (starts_with(type, "fn(")) {
         return lower_function_type(type);
     }
@@ -223,6 +236,15 @@ std::string replace_word(std::string text, std::string_view from, std::string_vi
             pos += from.size();
         }
         pos = text.find(from, pos);
+    }
+    return text;
+}
+
+std::string replace_all(std::string text, std::string_view from, std::string_view to) {
+    size_t pos = text.find(from);
+    while (pos != std::string::npos) {
+        text.replace(pos, from.size(), to);
+        pos = text.find(from, pos + to.size());
     }
     return text;
 }
@@ -459,6 +481,9 @@ std::string lower_cpp_expr(std::string expr) {
     expr = lower_template_value_call(std::move(expr), "dict");
     expr = lower_template_value_call(std::move(expr), "set");
     expr = lower_dotted_template_call(std::move(expr));
+    expr = replace_all(std::move(expr), "Ok(None)", "dudu::Ok(std::monostate{})");
+    expr = replace_word(std::move(expr), "Ok", "dudu::Ok");
+    expr = replace_word(std::move(expr), "Err", "dudu::Err");
     expr = replace_word(std::move(expr), "True", "true");
     expr = replace_word(std::move(expr), "False", "false");
     expr = replace_word(std::move(expr), "None", "nullptr");

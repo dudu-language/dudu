@@ -66,6 +66,7 @@ compile_and_expect layout_attrs 21
 compile_and_expect atomic_volatile 44
 compile_and_expect constructors 42
 compile_and_expect native_escape 42
+compile_and_expect result_option 42
 
 direct_bin="$repo_root/build/dudu_build_simple"
 "$repo_root/build/dudu" build "$repo_root/tests/fixtures/simple_program.dd" -o "$direct_bin"
