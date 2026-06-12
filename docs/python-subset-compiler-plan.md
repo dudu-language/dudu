@@ -895,6 +895,7 @@ Benchmark commands:
 duc bench
 duc bench --compare-cpp
 duc bench --emit-report build/benchmarks/report.json
+./scripts/bench.sh 10000000 --max-ratio 1.10
 ```
 
 Benchmark reports should include:
@@ -905,6 +906,7 @@ Benchmark reports should include:
 - mean/median/p95 timings
 - generated C++ path
 - hand-written C++ comparison path
+- Dudu/C++ timing ratios
 - binary size where relevant
 
 Performance regressions should fail CI for core benchmarks once the benchmark

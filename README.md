@@ -131,6 +131,8 @@ Run the scalar-loop benchmark comparison:
 ```sh
 ./scripts/bench.sh
 ./scripts/bench.sh 10000000
+./scripts/bench.sh 10000000 --emit-report build/benchmarks/report.json
+./scripts/bench.sh 10000000 --max-ratio 1.10
 ```
 
 Editor support lives in:

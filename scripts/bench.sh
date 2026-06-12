@@ -8,10 +8,15 @@ bench_dir="$repo_root/build/benchmarks"
 mkdir -p "$bench_dir"
 n=50000000
 report_path=""
+max_ratio=""
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --emit-report)
             report_path="${2:?--emit-report requires a path}"
+            shift 2
+            ;;
+        --max-ratio)
+            max_ratio="${2:?--max-ratio requires a value}"
             shift 2
             ;;
         *)
@@ -100,6 +105,46 @@ run_bench "scalar cpp" "$bench_dir/scalar_sum_cpp"
 run_bench "pointer dudu" "$bench_dir/pointer_sum_dudu"
 run_bench "pointer cpp" "$bench_dir/pointer_sum_cpp"
 
+bench_micros() {
+    local label="$1"
+    awk -F'|' -v label="$label" '$1 == label { print $2 }' "$bench_dir/results.tsv"
+}
+
+bench_ratio() {
+    local dudu="$1"
+    local cpp="$2"
+    awk -v dudu="$dudu" -v cpp="$cpp" 'BEGIN {
+        if (cpp == 0) {
+            print "null"
+        } else {
+            printf "%.6f", dudu / cpp
+        }
+    }'
+}
+
+check_ratio() {
+    local name="$1"
+    local ratio="$2"
+    if [[ -z "$max_ratio" || "$ratio" == "null" ]]; then
+        return
+    fi
+    awk -v name="$name" -v ratio="$ratio" -v max="$max_ratio" 'BEGIN {
+        if (ratio > max) {
+            printf "%s ratio %.6f exceeds %.6f\n", name, ratio, max > "/dev/stderr"
+            exit 1
+        }
+    }'
+}
+
+scalar_dudu_micros="$(bench_micros "scalar dudu")"
+scalar_cpp_micros="$(bench_micros "scalar cpp")"
+pointer_dudu_micros="$(bench_micros "pointer dudu")"
+pointer_cpp_micros="$(bench_micros "pointer cpp")"
+scalar_ratio="$(bench_ratio "$scalar_dudu_micros" "$scalar_cpp_micros")"
+pointer_ratio="$(bench_ratio "$pointer_dudu_micros" "$pointer_cpp_micros")"
+check_ratio scalar "$scalar_ratio"
+check_ratio pointer "$pointer_ratio"
+
 if [[ -n "$report_path" ]]; then
     mkdir -p "$(dirname "$report_path")"
     {
@@ -116,9 +161,15 @@ if [[ -n "$report_path" ]]; then
             printf '    {"name": "%s", "micros": %s, "result": "%s"}' "$label" "$micros" "$result"
         done <"$bench_dir/results.tsv"
         printf '\n  ],\n'
+        printf '  "comparisons": [\n'
+        printf '    {"name": "scalar", "dudu_micros": %s, "cpp_micros": %s, "ratio": %s},\n' \
+            "$scalar_dudu_micros" "$scalar_cpp_micros" "$scalar_ratio"
+        printf '    {"name": "pointer", "dudu_micros": %s, "cpp_micros": %s, "ratio": %s}\n' \
+            "$pointer_dudu_micros" "$pointer_cpp_micros" "$pointer_ratio"
+        printf '  ],\n'
         printf '  "generated": ["%s", "%s"],\n' \
             "$bench_dir/scalar_sum_dudu.cpp" "$bench_dir/pointer_sum_dudu.cpp"
-        printf '  "comparisons": ["%s", "%s"]\n' \
+        printf '  "comparison_sources": ["%s", "%s"]\n' \
             "$repo_root/benchmarks/scalar_sum.cpp" "$repo_root/benchmarks/pointer_sum.cpp"
         printf '}\n'
     } >"$report_path"
