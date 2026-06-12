@@ -1,0 +1,226 @@
+# Development Plan
+
+This is the near-term implementation plan for turning the first Dudu emitter
+into something testable and useful.
+
+## Current Baseline
+
+The repo has a first line-oriented `.dd` to C++ emitter.
+
+Validated today:
+
+- `examples/hello.dd` emits C++ and runs through `stdio.h`.
+- `examples/use_math.dd` pulls in another Dudu file and runs.
+- `examples/raylib_window.dd` emits plausible C++ for a raylib-style C API.
+
+Known limits:
+
+- `src/main.cpp` is too large and should be split before adding much more.
+- There is no real typechecker yet.
+- C/C++ imports are syntactic includes plus alias stripping, not Clang-backed
+  symbol import.
+- External library tests are not broad enough.
+
+## Next Goal Run
+
+The next goal should make interop testable.
+
+### 1. Split The Compiler
+
+Split `src/main.cpp` into cohesive files before expanding behavior:
+
+- `src/source.*`: file reading, comments, indentation, source lines.
+- `src/tokens.*`: word/token splitting.
+- `src/ast.*`: AST structs.
+- `src/parser.*`: top-level and statement parsing.
+- `src/emitter.*`: C++ emission.
+- `src/main.cpp`: CLI only.
+
+Keep each file roughly within the existing `AGENTS.md` 300-500 line target.
+
+### 2. Build A Fixture Test Layout
+
+Add test fixtures:
+
+```text
+tests/
+    fixtures/
+        basic/
+        interop_c/
+        interop_cpp/
+        language/
+    expected/
+```
+
+Add a script:
+
+```text
+scripts/test.sh
+```
+
+The script should:
+
+- build `dudu`
+- emit C++ for fixtures
+- compile runnable fixtures with `clang++` or `c++`
+- run fixtures that do not need optional system libraries
+- diff emitted C++ for fixtures where readable output matters
+
+### 3. Add Local C Interop Fixtures
+
+Create small local C headers/sources so interop tests do not depend on system
+packages:
+
+```text
+tests/fixtures/interop_c/dudu_c_math.h
+tests/fixtures/interop_c/dudu_c_math.c
+```
+
+Test cases:
+
+- import C functions
+- import C constants
+- import C structs
+- pass pointers
+- pass `ptr const T`
+- fill an output pointer
+- use an imported enum
+
+Example Dudu:
+
+```dudu
+use c "dudu_c_math.h" as cm
+
+fn main i32
+
+    v cm.CVec2 = cm.CVec2 3 4
+    len f32 = cm.cvec2_len v
+    cm.print_len len
+    0
+```
+
+### 4. Add Local C++ Interop Fixtures
+
+Create local C++ headers/sources:
+
+```text
+tests/fixtures/interop_cpp/dudu_cpp_vec.hpp
+tests/fixtures/interop_cpp/dudu_cpp_vec.cpp
+```
+
+Test cases:
+
+- import namespaces
+- call free functions
+- use public structs/classes
+- call constructors
+- call basic methods
+- use static constants
+- use enum classes
+
+Example Dudu:
+
+```dudu
+use cpp "dudu_cpp_vec.hpp" as dv
+
+fn main i32
+
+    a dv.Vec2 = dv.Vec2 3 4
+    b dv.Vec2 = dv.scale a 2
+    b.length
+```
+
+### 5. Add Optional Real Library Probes
+
+These should be skipped when the dependency is missing.
+
+Candidates:
+
+- GLM: header-only C++ math library.
+- raylib: C-style graphics API.
+- SQLite: C library with real pointer-heavy API.
+
+Test detection should be explicit:
+
+```sh
+pkg-config --exists raylib
+```
+
+For GLM, compile a tiny C++ probe:
+
+```cpp
+#include <glm/glm.hpp>
+int main() { glm::vec3 v{1, 2, 3}; return v.x == 1 ? 0 : 1; }
+```
+
+Do not make optional library absence fail the default test suite.
+
+### 6. Implement Enough Type Knowledge For Interop
+
+Before Clang-backed import, maintain a small symbol table from parsed Dudu and
+manual foreign assumptions:
+
+- known thing names
+- known aliases
+- known enum names
+- known external aliases
+- known all-caps external constants
+
+Then add explicit foreign declarations if needed:
+
+```dudu
+foreign c cm
+    fn cvec2_len f32
+        v cm.CVec2
+```
+
+This is a fallback if real header import is too big for the next pass.
+
+### 7. Decide Header Import Implementation
+
+There are two viable paths:
+
+1. **Emit-only interop first**
+   - Dudu emits includes and C++ calls.
+   - C++ compiler catches bad foreign calls.
+   - Fastest path.
+
+2. **Clang-backed symbol import**
+   - Use libclang or Clang tooling to parse headers.
+   - Dudu typechecks foreign functions/classes itself.
+   - More correct, much more work.
+
+Recommendation for next goal: keep emit-only interop, but design tests so they
+compile and run the generated C++. That catches real interop breakage without
+building a header importer yet.
+
+## Language Fixtures To Add
+
+Add fixtures for:
+
+- `th` construction
+- `tp` aliases
+- `enum` values and underlying types
+- `con`
+- early `ret`
+- final expression returns
+- expression-valued `if`
+- nested block calls
+- `while`
+- `for item in items`
+- `for i in 0..count`
+- pointers: `addr`, `at`, `null`
+- arrays: `arr T N`, indexing
+- spans
+
+## Success Criteria
+
+The next goal run is done when:
+
+- compiler source is split into cohesive files
+- default tests build and run
+- local C interop fixture compiles and runs
+- local C++ interop fixture compiles and runs
+- optional GLM/raylib probes are present and skipped when unavailable
+- docs show how to run all tests
+- generated C++ stays readable enough to debug

@@ -40,6 +40,7 @@ The starting point is:
 - [Language sketch](docs/language.md)
 - [Interop plan](docs/interop.md)
 - [Compiler plan](docs/compiler-plan.md)
+- [Development plan](docs/development-plan.md)
 
 Build the compiler:
 
