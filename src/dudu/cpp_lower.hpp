@@ -10,6 +10,7 @@ std::string lower_cpp_expr(std::string expr);
 std::string lower_cpp_expr(std::string expr, const std::vector<std::string>& namespace_aliases);
 std::string lower_conditional_expr(std::string expr);
 std::string lower_cpp_type(const std::string& raw_type);
+std::string lower_lambda_expr(std::string expr);
 std::string lower_str_calls(std::string expr);
 std::string lower_str_from_cstr(std::string expr);
 std::string replace_dots(std::string text);

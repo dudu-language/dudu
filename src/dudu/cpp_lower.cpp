@@ -384,6 +384,7 @@ std::string lower_cpp_expr(std::string expr) {
 }
 
 std::string lower_cpp_expr(std::string expr, const std::vector<std::string>& namespace_aliases) {
+    expr = lower_lambda_expr(std::move(expr));
     expr = lower_conditional_expr(std::move(expr));
     expr = lower_template_alloc_call(std::move(expr), "new");
     expr = lower_template_alloc_call(std::move(expr), "malloc");

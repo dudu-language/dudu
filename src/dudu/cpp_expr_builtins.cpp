@@ -59,6 +59,45 @@ std::string lower_conditional_expr(std::string expr) {
            lower_cpp_expr(when_false) + ")";
 }
 
+std::string lower_lambda_expr(std::string expr) {
+    const std::string marker = "lambda ";
+    size_t pos = expr.find(marker);
+    while (pos != std::string::npos) {
+        const size_t args_start = pos + marker.size();
+        const size_t colon = expr.find(':', args_start);
+        if (colon == std::string::npos) {
+            return expr;
+        }
+        const std::vector<std::string> args =
+            split_top_level_args(expr.substr(args_start, colon - args_start));
+        size_t body_end = colon + 1;
+        int depth = 0;
+        while (body_end < expr.size()) {
+            const char c = expr[body_end];
+            if (c == '(' || c == '[' || c == '{') {
+                ++depth;
+            } else if (c == ')' || c == ']' || c == '}') {
+                if (depth == 0) {
+                    break;
+                }
+                --depth;
+            } else if (c == ',' && depth == 0) {
+                break;
+            }
+            ++body_end;
+        }
+        std::string replacement = "[&](";
+        for (size_t i = 0; i < args.size(); ++i) {
+            replacement += (i == 0 ? "" : ", ") + std::string("auto&& ") + args[i];
+        }
+        replacement +=
+            ") { return " + lower_cpp_expr(expr.substr(colon + 1, body_end - colon - 1)) + "; }";
+        expr.replace(pos, body_end - pos, replacement);
+        pos = expr.find(marker, pos + replacement.size());
+    }
+    return expr;
+}
+
 std::string lower_str_calls(std::string expr) {
     const std::string marker = "str(";
     size_t pos = expr.find(marker);
