@@ -171,15 +171,29 @@ fi
 expect_fail() {
     local name="$1"
     local mode="$2"
-    if "$repo_root/build/dudu" "$repo_root/tests/fixtures/$name.dd" "$mode" \
-        "$repo_root/build/$name.out" 2>"$repo_root/build/$name.err"; then
+    local expected="$3"
+    local cmd=("$repo_root/build/dudu" "$repo_root/tests/fixtures/$name.dd" "$mode")
+    if [[ "$mode" != "--check" ]]; then
+        cmd+=("$repo_root/build/$name.out")
+    fi
+    if "${cmd[@]}" 2>"$repo_root/build/$name.err"; then
         echo "$name unexpectedly passed" >&2
         exit 1
     fi
+    grep -q "$expected" "$repo_root/build/$name.err"
 }
 
-expect_fail bad_duplicate --check
-expect_fail bad_return --emit-cpp
+expect_fail bad_duplicate --check "duplicate declaration: Vec"
+expect_fail bad_return --emit-cpp "return type mismatch: expected i32, got bool"
+expect_fail bad_unknown_type --emit-cpp "unknown local type: MissingType"
+expect_fail bad_tuple_destructure --emit-cpp "tuple destructuring count mismatch"
+
+if "$repo_root/build/duc" emit "$repo_root/tests/fixtures/bad_package_build/main.dd" \
+    -o "$repo_root/build/bad_package_build.cpp" 2>"$repo_root/build/bad_package_build.err"; then
+    echo "bad_package_build unexpectedly passed" >&2
+    exit 1
+fi
+grep -q "invalid \\[build\\] entry" "$repo_root/build/bad_package_build.err"
 
 api_cpp="$repo_root/build/dudu_api.cpp"
 api_hpp="$repo_root/build/dudu_api.hpp"

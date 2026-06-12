@@ -219,6 +219,19 @@ std::string infer_expr(const FunctionScope& scope, std::string expr) {
     if (expr.empty()) {
         return "void";
     }
+    const std::vector<std::string> tuple_parts = split_top_level(expr);
+    if (tuple_parts.size() > 1) {
+        std::ostringstream out;
+        out << "tuple[";
+        for (size_t i = 0; i < tuple_parts.size(); ++i) {
+            if (i > 0) {
+                out << ", ";
+            }
+            out << infer_expr(scope, tuple_parts[i]);
+        }
+        out << "]";
+        return out.str();
+    }
     if (expr == "True" || expr == "False" || expr.find("==") != std::string::npos ||
         expr.find("!=") != std::string::npos || expr.find("<") != std::string::npos ||
         expr.find(">") != std::string::npos) {
@@ -240,19 +253,6 @@ std::string infer_expr(const FunctionScope& scope, std::string expr) {
             fn != scope.symbols.functions.end()) {
             return fn->second;
         }
-    }
-    const std::vector<std::string> tuple_parts = split_top_level(expr);
-    if (tuple_parts.size() > 1) {
-        std::ostringstream out;
-        out << "tuple[";
-        for (size_t i = 0; i < tuple_parts.size(); ++i) {
-            if (i > 0) {
-                out << ", ";
-            }
-            out << infer_expr(scope, tuple_parts[i]);
-        }
-        out << "]";
-        return out.str();
     }
     const size_t op = expr.find_first_of("+-*/%");
     if (op != std::string::npos) {
