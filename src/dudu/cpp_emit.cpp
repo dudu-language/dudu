@@ -124,7 +124,6 @@ std::vector<std::string> split_top_level_args(const std::string& args) {
     }
     return out;
 }
-
 std::string lower_type(const std::string& raw_type) {
     std::string type = trim_copy(raw_type);
     static const std::map<std::string, std::string> builtins = {
@@ -170,7 +169,6 @@ std::string lower_type(const std::string& raw_type) {
     }
     return replace_dots(type);
 }
-
 std::string replace_word(std::string text, std::string_view from, std::string_view to) {
     size_t pos = text.find(from);
     while (pos != std::string::npos) {
@@ -191,7 +189,6 @@ std::string replace_word(std::string text, std::string_view from, std::string_vi
     }
     return text;
 }
-
 std::string lower_expr(std::string expr) {
     expr = replace_word(std::move(expr), "True", "true");
     expr = replace_word(std::move(expr), "False", "false");
@@ -201,7 +198,6 @@ std::string lower_expr(std::string expr) {
     expr = replace_word(std::move(expr), "not", "!");
     return expr;
 }
-
 std::string strip_trailing_colon(std::string text) {
     text = trim_copy(std::move(text));
     if (!text.empty() && text.back() == ':') {
@@ -209,7 +205,6 @@ std::string strip_trailing_colon(std::string text) {
     }
     return trim_copy(std::move(text));
 }
-
 void emit_raw_block(std::ostringstream& out, const std::vector<RawStmt>& body, int depth);
 
 void emit_simple_statement(std::ostringstream& out, const RawStmt& stmt, int depth) {
@@ -312,7 +307,6 @@ void emit_raw_statement(std::ostringstream& out, const RawStmt& stmt, int depth)
     }
     emit_simple_statement(out, stmt, depth);
 }
-
 void emit_raw_block(std::ostringstream& out, const std::vector<RawStmt>& body, int depth) {
     for (const RawStmt& stmt : body) {
         emit_raw_statement(out, stmt, depth);
@@ -326,7 +320,6 @@ std::string include_path(const ImportDecl& import) {
     }
     return '"' + import.module_path + '"';
 }
-
 bool contains_type_name(const std::string& type, const std::string& name) {
     size_t pos = type.find(name);
     while (pos != std::string::npos) {
@@ -368,7 +361,6 @@ void visit_class(const std::vector<ClassDecl>& classes, size_t index, std::set<s
     emitted.insert(index);
     order.push_back(index);
 }
-
 std::vector<size_t> class_emit_order(const std::vector<ClassDecl>& classes) {
     std::set<size_t> visiting;
     std::set<size_t> emitted;
@@ -378,7 +370,6 @@ std::vector<size_t> class_emit_order(const std::vector<ClassDecl>& classes) {
     }
     return order;
 }
-
 void emit_includes(std::ostringstream& out, const ModuleAst& module) {
     out << "#include <atomic>\n";
     out << "#include <cstddef>\n";
@@ -397,7 +388,6 @@ void emit_includes(std::ostringstream& out, const ModuleAst& module) {
     }
     out << '\n';
 }
-
 void emit_aliases(std::ostringstream& out, const ModuleAst& module) {
     for (const TypeAliasDecl& alias : module.aliases) {
         out << "using " << alias.name << " = " << lower_type(alias.type) << ";\n";
@@ -436,6 +426,25 @@ void emit_classes(std::ostringstream& out, const ModuleAst& module) {
     }
 }
 
+void emit_constants(std::ostringstream& out, const ModuleAst& module) {
+    for (const ConstDecl& constant : module.constants) {
+        out << "inline constexpr " << lower_type(constant.type) << ' ' << constant.name << " = "
+            << lower_expr(constant.value) << ";\n";
+    }
+    if (!module.constants.empty()) {
+        out << '\n';
+    }
+}
+
+void emit_static_asserts(std::ostringstream& out, const ModuleAst& module) {
+    for (const StaticAssertDecl& assertion : module.static_asserts) {
+        out << "static_assert" << lower_expr(assertion.expression) << ";\n";
+    }
+    if (!module.static_asserts.empty()) {
+        out << '\n';
+    }
+}
+
 void emit_function_signature(std::ostringstream& out, const FunctionDecl& fn) {
     out << lower_type(fn.return_type) << ' ' << fn.name << '(';
     for (size_t i = 0; i < fn.params.size(); ++i) {
@@ -457,13 +466,8 @@ std::string emit_cpp_header(const ModuleAst& module) {
     emit_aliases(out, module);
     emit_enums(out, module);
     emit_classes(out, module);
-
-    for (const ConstDecl& constant : module.constants) {
-        out << "extern const " << lower_type(constant.type) << ' ' << constant.name << ";\n";
-    }
-    if (!module.constants.empty()) {
-        out << '\n';
-    }
+    emit_constants(out, module);
+    emit_static_asserts(out, module);
 
     for (const FunctionDecl& fn : module.functions) {
         emit_function_signature(out, fn);
@@ -479,13 +483,8 @@ std::string emit_cpp_source(const ModuleAst& module) {
     emit_aliases(out, module);
     emit_enums(out, module);
     emit_classes(out, module);
-
-    for (const ConstDecl& constant : module.constants) {
-        out << "const " << lower_type(constant.type) << ' ' << constant.name << "{};\n";
-    }
-    if (!module.constants.empty()) {
-        out << '\n';
-    }
+    emit_constants(out, module);
+    emit_static_asserts(out, module);
 
     for (const FunctionDecl& fn : module.functions) {
         emit_function_signature(out, fn);

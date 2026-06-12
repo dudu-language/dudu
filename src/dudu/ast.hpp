@@ -91,6 +91,7 @@ struct FunctionDecl {
 struct ConstDecl {
     std::string name;
     std::string type;
+    std::string value;
     SourceLocation location;
 };
 

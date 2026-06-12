@@ -55,5 +55,6 @@ compile_and_expect() {
 
 compile_and_expect simple_program 42
 compile_and_expect control_flow 55
+compile_and_expect compile_time_basic 64
 
 echo "compiler builds and canonical examples are present"

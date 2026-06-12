@@ -78,7 +78,6 @@ class Parser {
     bool check_text(std::string_view text) const {
         return current().kind == TokenKind::Identifier && current().text == text;
     }
-
     bool match(TokenKind kind) {
         if (!at(kind)) {
             return false;
@@ -365,7 +364,8 @@ class Parser {
             throw CompileError(name.location, "constant requires a type");
         }
         consume(TokenKind::Assign, "expected = after constant type");
-        skip_to_newline();
+        constant.value = join_until({TokenKind::Newline});
+        consume(TokenKind::Newline, "expected newline after constant");
         return constant;
     }
 
