@@ -17,7 +17,7 @@ This is a staged plan for implementation after the language sketch settles.
 - Parse function signatures with newline-separated arguments.
 - Parse simple statements:
   - local declarations
-  - `const`
+  - `con`
   - assignment
   - calls
   - `if`

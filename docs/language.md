@@ -124,6 +124,72 @@ type Position Vec2
 
 This should emit `using` aliases in C++.
 
+## Types
+
+Dudu is statically typed. Types are known at compile time and should lower
+directly to C++ types.
+
+Built-in scalar types:
+
+```dudu
+bool
+i8
+i16
+i32
+i64
+u8
+u16
+u32
+u64
+usize
+f32
+f64
+void
+```
+
+Text types are still an open design point. The first compiler can start with C
+strings for interop:
+
+```dudu
+cstr
+```
+
+The common type forms are:
+
+```dudu
+T
+ref T
+ref mut T
+ptr T
+ptr const T
+span T
+arr T 16
+```
+
+Rough C++ lowering:
+
+```dudu
+i32            # int32_t
+f32            # float
+T              # T
+ref T          # const T&
+ref mut T      # T&
+ptr T          # T*
+ptr const T    # const T*
+span T         # std::span<T>
+arr T 16       # std::array<T, 16>
+```
+
+Imported C/C++ types keep their namespace alias:
+
+```dudu
+pos rl.Vector2
+values std.vector i32
+```
+
+Generic/template spelling is not settled. `std.vector i32` is a placeholder for
+future C++ template interop.
+
 ## Locals
 
 Local declarations do not need `var` or `let`.
@@ -140,11 +206,11 @@ fn main i32
 
 Locals are mutable by default, like C/C++.
 
-Use `const` when mutation should be rejected:
+Use `con` when mutation should be rejected:
 
 ```dudu
-const max_count i32 = 100
-const pi f32 = 3.141592
+con max_count i32 = 100
+con pi f32 = 3.141592
 ```
 
 Type inference is allowed where the initializer makes the type obvious:
@@ -263,6 +329,65 @@ fn move_particle
     p.pos.x += p.vel.x * dt
     p.pos.y += p.vel.y * dt
 ```
+
+Pointer operations use words instead of C glyphs:
+
+```dudu
+p ptr Particle = addr particle
+q ptr Particle = null
+value Particle = at p
+at p = particle
+```
+
+Working meanings:
+
+- `addr x`: address of `x`.
+- `at p`: dereference pointer `p`.
+- `null`: null pointer literal.
+
+Pointer field access can use normal dot syntax as sugar:
+
+```dudu
+p.hp
+```
+
+That can lower to `p->hp` when `p` is a pointer.
+
+## Arrays, Spans, And Indexing
+
+Fixed-size arrays:
+
+```dudu
+values arr i32 16
+```
+
+Indexing:
+
+```dudu
+values[0] = 10
+x i32 = values[0]
+```
+
+Spans are pointer-plus-length views:
+
+```dudu
+fn sum i32
+    values span i32
+
+    total i32 = 0
+    for value in values
+        total += value
+    total
+```
+
+C pointers and arrays should interop through `ptr T`, `ptr const T`, and `span T`.
+The first compiler does not need a full slice system. It only needs:
+
+- fixed arrays: `arr T N`
+- indexing: `x[i]`
+- raw pointers: `ptr T`
+- pointer address/deref: `addr`, `at`
+- spans as a standard view type for loops and APIs
 
 ## Includes
 
