@@ -282,7 +282,7 @@ void check_type_match(const FunctionScope& scope, const RawStmt& stmt, const std
     if (can_assign_expr(scope, expected, expr, got)) {
         return;
     }
-    fail(stmt.location, "cannot assign " + got + " to " + expected + " without an explicit cast");
+    fail(stmt.location, assignment_error(expected, expr, got));
 }
 void check_condition_type(const FunctionScope& scope, const RawStmt& stmt, std::string expr) {
     expr = trim(std::move(expr));

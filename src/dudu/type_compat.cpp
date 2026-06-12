@@ -322,4 +322,14 @@ bool assignment_type_allowed(const std::string& expected, const std::string& exp
            (is_numeric_type(wrapped_type_arg(expected)) && is_numeric_literal(expr));
 }
 
+std::string display_type(const std::string& expr, const std::string& got) {
+    return got.empty() ? simple_literal_type(expr) : got;
+}
+
+std::string assignment_error(const std::string& expected, const std::string& expr,
+                             const std::string& got) {
+    return "cannot assign " + display_type(expr, got) + " to " + expected +
+           " without an explicit cast";
+}
+
 } // namespace dudu

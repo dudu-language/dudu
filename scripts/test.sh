@@ -324,7 +324,7 @@ fi
 expect_fail bad_duplicate --check "duplicate declaration: Vec"
 expect_fail bad_type_alias --check "unknown type alias target: MissingThing"
 expect_fail bad_dict_literal --emit-cpp "cannot assign set"
-expect_fail bad_list_literal_type --emit-cpp "cannot assign  to list\\[i32\\]"
+expect_fail bad_list_literal_type --emit-cpp "cannot assign list to list\\[i32\\]"
 expect_fail bad_set_literal_type --emit-cpp "cannot assign set to set\\[str\\]"
 expect_fail bad_dict_literal_key_type --emit-cpp "cannot assign dict to dict\\[str, i32\\]"
 expect_fail bad_dict_literal_value_type --emit-cpp "cannot assign dict to dict\\[str, i32\\]"
