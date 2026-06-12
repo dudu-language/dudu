@@ -1,0 +1,5 @@
+from bad_cycle_b import b
+
+
+def a() -> i32:
+    return b()
