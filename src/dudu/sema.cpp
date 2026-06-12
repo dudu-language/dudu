@@ -287,6 +287,16 @@ void check_type_match(const FunctionScope& scope, const RawStmt& stmt, const std
     }
     fail(stmt.location, "cannot assign " + got + " to " + expected + " without an explicit cast");
 }
+void check_condition_type(const FunctionScope& scope, const RawStmt& stmt, std::string expr) {
+    expr = trim(std::move(expr));
+    if (!expr.empty() && expr.back() == ':') {
+        expr.pop_back();
+    }
+    const std::string got = infer_expr(scope, expr, &stmt.location);
+    if (!got.empty() && got != "bool") {
+        fail(stmt.location, "condition must be bool, got " + got);
+    }
+}
 std::string assign_target_type(const FunctionScope& scope, const RawStmt& stmt,
                                const std::string& lhs) {
     if (lhs.size() > 1 && lhs.front() == '*') {
@@ -350,11 +360,22 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
     if (text == "break" || text == "continue") {
         return;
     }
-    if (starts_with(text, "if ") || starts_with(text, "elif ") || text == "else:") {
+    if (starts_with(text, "if ")) {
+        check_condition_type(scope, stmt, text.substr(3));
+        check_block(scope, stmt.children, return_type, loop_depth);
+        return;
+    }
+    if (starts_with(text, "elif ")) {
+        check_condition_type(scope, stmt, text.substr(5));
+        check_block(scope, stmt.children, return_type, loop_depth);
+        return;
+    }
+    if (text == "else:") {
         check_block(scope, stmt.children, return_type, loop_depth);
         return;
     }
     if (starts_with(text, "while ")) {
+        check_condition_type(scope, stmt, text.substr(6));
         check_block(scope, stmt.children, return_type, loop_depth + 1);
         return;
     }
