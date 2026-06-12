@@ -29,16 +29,21 @@ struct Options {
     bool run = false;
 };
 
+struct ProjectConfig {
+    std::filesystem::path main;
+    std::map<std::string, std::string> build_values;
+};
+
 [[noreturn]] void fail(const std::string& message) {
     throw std::runtime_error(message);
 }
 
 void print_usage() {
-    std::cout << "usage: duc build <input.dd> [-o output]\n"
-                 "       duc check <input.dd>\n"
-                 "       duc emit <input.dd> [-o output.cpp]\n"
+    std::cout << "usage: duc build [input.dd] [-o output]\n"
+                 "       duc check [input.dd]\n"
+                 "       duc emit [input.dd] [-o output.cpp]\n"
                  "       duc fmt <input.dd|dir> [--check] [-o output.dd]\n"
-                 "       duc run <input.dd> [-o output]\n"
+                 "       duc run [input.dd] [-o output]\n"
                  "       duc <input.dd> [--check] [--format <path|->] "
                  "[--emit-header <path|->] [--emit-cpp <path|->] [-DNAME=value]\n";
 }
@@ -91,11 +96,11 @@ std::string strip_comment(std::string line) {
     return line;
 }
 
-std::map<std::string, std::string> parse_build_config(const std::filesystem::path& path) {
-    std::map<std::string, std::string> values;
+ProjectConfig parse_project_config(const std::filesystem::path& path) {
+    ProjectConfig config;
     std::ifstream file(path);
     if (!file) {
-        return values;
+        return config;
     }
     bool in_build = false;
     std::string line;
@@ -108,21 +113,34 @@ std::map<std::string, std::string> parse_build_config(const std::filesystem::pat
             in_build = trim_copy(std::string_view(line).substr(1, line.size() - 2)) == "build";
             continue;
         }
+        const size_t equal = line.find('=');
+        if (equal == std::string::npos) {
+            if (in_build) {
+                fail(path.string() + ": invalid [build] entry: " + line);
+            }
+            fail(path.string() + ": invalid entry: " + line);
+        }
+        const std::string name = trim_copy(std::string_view(line).substr(0, equal));
+        std::string value = trim_copy(std::string_view(line).substr(equal + 1));
+        if (name.empty() || value.empty()) {
+            if (in_build) {
+                fail(path.string() + ": invalid [build] entry: " + line);
+            }
+            fail(path.string() + ": invalid entry: " + line);
+        }
+        if (!in_build && name == "main") {
+            if (value.size() >= 2 && value.front() == '"' && value.back() == '"') {
+                value = value.substr(1, value.size() - 2);
+            }
+            config.main = value;
+            continue;
+        }
         if (!in_build) {
             continue;
         }
-        const size_t equal = line.find('=');
-        if (equal == std::string::npos) {
-            fail(path.string() + ": invalid [build] entry: " + line);
-        }
-        const std::string name = trim_copy(std::string_view(line).substr(0, equal));
-        const std::string value = trim_copy(std::string_view(line).substr(equal + 1));
-        if (name.empty() || value.empty()) {
-            fail(path.string() + ": invalid [build] entry: " + line);
-        }
-        values[name] = value;
+        config.build_values[name] = value;
     }
-    return values;
+    return config;
 }
 
 std::filesystem::path build_config_path(const std::filesystem::path& input) {
@@ -222,9 +240,22 @@ Options parse_options(int argc, char** argv) {
         }
         fail("unexpected argument: " + arg);
     }
-    if (options.input.empty()) {
+    if (options.input.empty() && !options.build && !options.check && !options.emit_cpp &&
+        !options.run) {
         fail("missing input file");
     }
+    return options;
+}
+
+Options resolve_project_input(Options options) {
+    if (!options.input.empty()) {
+        return options;
+    }
+    const ProjectConfig config = parse_project_config("dudu.toml");
+    if (config.main.empty()) {
+        fail("missing input file and dudu.toml main");
+    }
+    options.input = config.main;
     return options;
 }
 
@@ -301,7 +332,7 @@ dudu::ModuleAst checked_module(const Options& options, const std::string& source
                                bool check_bodies) {
     dudu::ModuleAst module = options.input.empty() ? dudu::parse_source(source, options.input)
                                                    : dudu::load_source_tree(options.input);
-    module.build_values = parse_build_config(build_config_path(options.input));
+    module.build_values = parse_project_config(build_config_path(options.input)).build_values;
     for (const auto& [name, value] : options.build_values) {
         module.build_values[name] = value;
     }
@@ -313,7 +344,7 @@ dudu::ModuleAst checked_module(const Options& options, const std::string& source
 
 int main(int argc, char** argv) {
     try {
-        const Options options = parse_options(argc, argv);
+        const Options options = resolve_project_input(parse_options(argc, argv));
         if (options.format) {
             if (options.check) {
                 return check_formatted_path(options.input) ? 0 : 1;

@@ -23,3 +23,9 @@ Implementation work stays organized around cohesive frontend files:
 - C++ source/header emission
 - formatter
 - CLI/build driver
+
+Commit workflow:
+
+- commit at reasonable green checkpoints
+- keep each commit scoped to one feature, diagnostic, doc update, or test slice
+- run the relevant formatter and test command before committing

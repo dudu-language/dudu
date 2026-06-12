@@ -67,6 +67,7 @@ Check, format, or emit code:
 ```sh
 ./build/duc check tests/fixtures/simple_program.dd
 ./build/duc fmt tests/fixtures/simple_program.dd
+./build/duc fmt tests/fixtures/simple_program.dd --check
 ./build/duc emit tests/fixtures/simple_program.dd
 ./build/duc run tests/fixtures/run_zero.dd
 ./build/dudu examples/cpp_library.dd --emit-header -
@@ -79,6 +80,20 @@ Build flags can also live beside an input file in `dudu.toml`:
 [build]
 DEBUG = true
 RENDER_BACKEND = "raylib"
+```
+
+Project commands can use a top-level `main` entry:
+
+```toml
+main = "src/main.dd"
+```
+
+Then run:
+
+```sh
+./build/duc check
+./build/duc emit -o build/main.cpp
+./build/duc run
 ```
 
 Validate the checked-in examples that do not need external libraries:
