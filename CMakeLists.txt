@@ -26,6 +26,7 @@ add_library(dudu_frontend
     src/dudu/parser_utils.cpp
     src/dudu/project_config.cpp
     src/dudu/sema.cpp
+    src/dudu/sema_alloc.cpp
     src/dudu/sema_bindings.cpp
     src/dudu/sema_context.cpp
     src/dudu/sema_constexpr.cpp

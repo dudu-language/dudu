@@ -1,0 +1,4 @@
+def bad() -> i32:
+    value = new[MissingType]()
+    delete(value)
+    return 0

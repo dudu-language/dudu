@@ -5,6 +5,7 @@
 #include "dudu/cpp_lower.hpp"
 #include "dudu/escapes.hpp"
 #include "dudu/naming.hpp"
+#include "dudu/sema_alloc.hpp"
 #include "dudu/sema_bindings.hpp"
 #include "dudu/sema_constexpr.hpp"
 #include "dudu/sema_context.hpp"
@@ -79,10 +80,7 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
                        const SourceLocation* location = nullptr);
 std::vector<std::string> call_args(std::string expr, size_t open) {
     std::string args = trim(expr.substr(open + 1, expr.size() - open - 2));
-    if (args.empty()) {
-        return {};
-    }
-    return split_top_level_args(args);
+    return args.empty() ? std::vector<std::string>{} : split_top_level_args(args);
 }
 bool can_assign_expr(const FunctionScope& scope, const std::string& expected,
                      const std::string& expr, const std::string& got) {
@@ -224,6 +222,9 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
     const size_t call = find_call_open(expr);
     if (call != std::string::npos && expr.back() == ')') {
         const std::string callee = trim(expr.substr(0, call));
+        if (const auto type =
+                infer_allocation_call(scope.symbols, location, callee, call_args(expr, call)))
+            return *type;
         if (callee == "Ok" || callee == "Err") {
             const std::vector<std::string> args = call_args(expr, call);
             if (args.size() != 1 && location != nullptr) {

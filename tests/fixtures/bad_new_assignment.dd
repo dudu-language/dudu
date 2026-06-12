@@ -1,0 +1,8 @@
+class Node:
+    value: i32
+
+
+def bad() -> i32:
+    value: *i32 = new[Node]()
+    delete(value)
+    return 0

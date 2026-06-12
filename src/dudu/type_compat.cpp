@@ -188,9 +188,10 @@ bool is_result_value(const std::string& expected, const std::string& expr, const
 bool assignment_type_allowed(const std::string& expected, const std::string& expr,
                              const std::string& got) {
     return is_explicit_cast_to(expected, expr) || got.empty() || got == "auto" || got == expected ||
-           is_option_value(expected, expr, got) || is_result_value(expected, expr, got) ||
-           is_container_literal(expected, expr) || is_null_pointer(expected, expr, got) ||
-           is_reference_binding(expected, got) || is_function_type_match(expected, got) ||
+           compact_type(expected) == compact_type(got) || is_option_value(expected, expr, got) ||
+           is_result_value(expected, expr, got) || is_container_literal(expected, expr) ||
+           is_null_pointer(expected, expr, got) || is_reference_binding(expected, got) ||
+           is_function_type_match(expected, got) ||
            (is_numeric_type(wrapped_type_arg(expected)) && is_numeric_literal(expr));
 }
 

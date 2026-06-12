@@ -1,0 +1,4 @@
+def bad() -> i32:
+    bytes: *u8 = malloc[u8]()
+    free(bytes)
+    return 0
