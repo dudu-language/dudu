@@ -33,8 +33,20 @@ probe_opencv() {
 
     local cpp="$repo_root/build/probe_image_filter.cpp"
     local bin="$repo_root/build/probe_image_filter"
+    local run_dir="$repo_root/build/probe_image_filter_run"
     "$repo_root/build/duc" emit "$repo_root/examples/image_filter.dd" -o "$cpp"
     "${CXX:-c++}" -std=c++20 -w "$cpp" $(pkg-config --cflags --libs opencv4) -o "$bin"
+    rm -rf "$run_dir"
+    mkdir -p "$run_dir"
+    printf 'P3\n2 2\n255\n255 0 0 0 255 0 0 0 255 255 255 255\n' >"$run_dir/input.png"
+    (
+        cd "$run_dir"
+        "$bin"
+    )
+    if [[ ! -s "$run_dir/output.png" ]]; then
+        echo "opencv4 probe did not write output.png" >&2
+        exit 1
+    fi
     echo "ok opencv4"
 }
 
