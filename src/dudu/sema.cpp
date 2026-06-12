@@ -17,17 +17,14 @@
 
 namespace dudu {
 namespace {
-
 [[noreturn]] void fail(const SourceLocation& location, const std::string& message) {
     throw CompileError(location, message);
 }
-
 struct FunctionScope {
     const Symbols& symbols;
     std::map<std::string, std::string> locals;
     std::set<std::string> constants;
 };
-
 std::string function_type(const FunctionSignature& signature) {
     std::ostringstream out;
     out << "fn(";
@@ -40,7 +37,6 @@ std::string function_type(const FunctionSignature& signature) {
     out << ") -> " << signature.return_type;
     return out.str();
 }
-
 bool parse_function_type(std::string type, FunctionSignature& out) {
     type = trim(std::move(type));
     if (!starts_with(type, "fn(")) {
@@ -62,11 +58,9 @@ bool parse_function_type(std::string type, FunctionSignature& out) {
     }
     return true;
 }
-
 std::string call_label(const std::string& callee) {
     return callee.empty() ? "call" : callee;
 }
-
 std::string member_path_type(const FunctionScope& scope, const RawStmt* stmt,
                              const std::string& path) {
     const size_t dot = path.find('.');
@@ -116,10 +110,8 @@ std::string member_path_type(const FunctionScope& scope, const RawStmt* stmt,
     }
     return type;
 }
-
 std::string infer_expr(const FunctionScope& scope, std::string expr,
                        const SourceLocation* location = nullptr);
-
 std::vector<std::string> call_args(std::string expr, size_t open) {
     std::string args = trim(expr.substr(open + 1, expr.size() - open - 2));
     if (args.empty()) {
@@ -127,7 +119,12 @@ std::vector<std::string> call_args(std::string expr, size_t open) {
     }
     return split_top_level_args(args);
 }
-
+bool can_assign_expr(const FunctionScope& scope, const std::string& expected,
+                     const std::string& expr, const std::string& got) {
+    return assignment_type_allowed(expected, expr, got) ||
+           assignment_type_allowed(resolve_alias(scope.symbols, expected), expr,
+                                   resolve_alias(scope.symbols, got));
+}
 void check_call_args(const FunctionScope& scope, const std::string& callee,
                      const FunctionSignature& signature, const std::vector<std::string>& args,
                      const SourceLocation* location) {
@@ -142,16 +139,63 @@ void check_call_args(const FunctionScope& scope, const std::string& callee,
     for (size_t i = 0; i < args.size(); ++i) {
         const std::string got = infer_expr(scope, args[i], location);
         const std::string& expected = signature.params[i];
-        const std::string resolved_expected = resolve_alias(scope.symbols, expected);
-        const std::string resolved_got = resolve_alias(scope.symbols, got);
-        if (!assignment_type_allowed(expected, args[i], got) &&
-            !assignment_type_allowed(resolved_expected, args[i], resolved_got)) {
+        if (!can_assign_expr(scope, expected, args[i], got)) {
             fail(*location, "argument " + std::to_string(i + 1) + " for " + call_label(callee) +
                                 " expects " + expected + ", got " + got);
         }
     }
 }
-
+void check_constructor_args(const FunctionScope& scope, const ClassDecl& klass,
+                            const std::vector<std::string>& args, const SourceLocation* location) {
+    if (location == nullptr) {
+        return;
+    }
+    std::set<std::string> named_fields;
+    size_t positional = 0;
+    for (const std::string& arg : args) {
+        const size_t equal = find_top_level_char(arg, '=');
+        if (equal == std::string::npos) {
+            if (!named_fields.empty()) {
+                fail(*location,
+                     "positional constructor argument after named fields: " + klass.name);
+            }
+            if (positional >= klass.fields.size()) {
+                fail(*location, "constructor " + klass.name + " expects at most " +
+                                    std::to_string(klass.fields.size()) + " arguments, got " +
+                                    std::to_string(args.size()));
+            }
+            const FieldDecl& field = klass.fields[positional];
+            const std::string got = infer_expr(scope, arg, location);
+            if (!can_assign_expr(scope, field.type, arg, got)) {
+                fail(*location, "constructor " + klass.name + " argument " +
+                                    std::to_string(positional + 1) + " expects " + field.type +
+                                    ", got " + got);
+            }
+            ++positional;
+            continue;
+        }
+        const std::string name = trim(arg.substr(0, equal));
+        if (!named_fields.insert(name).second) {
+            fail(*location, "duplicate constructor field: " + name);
+        }
+        const FieldDecl* field = nullptr;
+        for (const FieldDecl& candidate : klass.fields) {
+            if (candidate.name == name) {
+                field = &candidate;
+                break;
+            }
+        }
+        if (field == nullptr) {
+            fail(*location, "unknown constructor field: " + klass.name + "." + name);
+        }
+        const std::string value = arg.substr(equal + 1);
+        const std::string got = infer_expr(scope, value, location);
+        if (!can_assign_expr(scope, field->type, value, got)) {
+            fail(*location, "constructor field " + klass.name + "." + name + " expects " +
+                                field->type + ", got " + got);
+        }
+    }
+}
 std::string infer_expr(const FunctionScope& scope, std::string expr,
                        const SourceLocation* location) {
     expr = trim(std::move(expr));
@@ -210,7 +254,9 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
     const size_t call = find_call_open(expr);
     if (call != std::string::npos && expr.back() == ')') {
         const std::string callee = trim(expr.substr(0, call));
-        if (scope.symbols.classes.contains(callee)) {
+        if (const auto klass = scope.symbols.classes.find(callee);
+            klass != scope.symbols.classes.end()) {
+            check_constructor_args(scope, *klass->second, call_args(expr, call), location);
             return callee;
         }
         if (const auto fn = scope.symbols.function_signatures.find(callee);
@@ -239,24 +285,19 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
     }
     return {};
 }
-
 void check_local_binding_name(const SourceLocation& location, const std::string& name) {
     if (!is_dudu_snake_case(name) && !is_dudu_all_caps(name)) {
         fail(location, "local names must be snake_case or ALL_CAPS: " + name);
     }
 }
-
 void check_type_match(const FunctionScope& scope, const RawStmt& stmt, const std::string& expected,
                       const std::string& expr) {
     const std::string got = infer_expr(scope, expr, &stmt.location);
-    if (assignment_type_allowed(expected, expr, got) ||
-        assignment_type_allowed(resolve_alias(scope.symbols, expected), expr,
-                                resolve_alias(scope.symbols, got))) {
+    if (can_assign_expr(scope, expected, expr, got)) {
         return;
     }
     fail(stmt.location, "cannot assign " + got + " to " + expected + " without an explicit cast");
 }
-
 std::string assign_target_type(const FunctionScope& scope, const RawStmt& stmt,
                                const std::string& lhs) {
     if (lhs.size() > 1 && lhs.front() == '*') {
@@ -322,16 +363,13 @@ std::string assign_target_type(const FunctionScope& scope, const RawStmt& stmt,
     }
     return member_path_type(scope, &stmt, lhs);
 }
-
 void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& return_type);
-
 void check_block(FunctionScope& scope, const std::vector<RawStmt>& body,
                  const std::string& return_type) {
     for (const RawStmt& stmt : body) {
         check_stmt(scope, stmt, return_type);
     }
 }
-
 void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& return_type) {
     const std::string text = trim(stmt.text);
     check_local_address_escape(stmt, scope.locals);
@@ -418,7 +456,6 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
     }
     (void)infer_expr(scope, text, &stmt.location);
 }
-
 void check_bodies(const ModuleAst& module, const Symbols& symbols) {
     for (const ClassDecl& klass : module.classes) {
         for (const FunctionDecl& method : klass.methods) {
