@@ -4,6 +4,7 @@
 
 #include <set>
 #include <sstream>
+#include <string_view>
 #include <vector>
 
 namespace dudu {
@@ -19,12 +20,76 @@ std::string strip_trailing_colon(std::string text) {
     }
     return trim_copy(std::move(text));
 }
+
+std::string unescape_cpp_string(std::string text) {
+    std::string out;
+    out.reserve(text.size());
+    bool escaped = false;
+    for (const char c : text) {
+        if (!escaped && c == '\\') {
+            escaped = true;
+            continue;
+        }
+        if (escaped) {
+            switch (c) {
+            case 'n':
+                out.push_back('\n');
+                break;
+            case 't':
+                out.push_back('\t');
+                break;
+            default:
+                out.push_back(c);
+                break;
+            }
+            escaped = false;
+            continue;
+        }
+        out.push_back(c);
+    }
+    if (escaped) {
+        out.push_back('\\');
+    }
+    return out;
+}
+
+std::string cpp_escape_body(std::string text) {
+    text = trim_copy(std::move(text));
+    if (!starts_with(text, "cpp(") || text.back() != ')') {
+        return {};
+    }
+    text = trim_copy(text.substr(4, text.size() - 5));
+    if (starts_with(text, "\"\"\"") && ends_with(text, "\"\"\"")) {
+        return text.substr(3, text.size() - 6);
+    }
+    if (text.size() >= 2 && ((text.front() == '"' && text.back() == '"') ||
+                             (text.front() == '\'' && text.back() == '\''))) {
+        return unescape_cpp_string(text.substr(1, text.size() - 2));
+    }
+    return {};
+}
+
+void emit_cpp_escape(std::ostringstream& out, const std::string& text, int depth) {
+    std::istringstream body(cpp_escape_body(text));
+    std::string line;
+    while (std::getline(body, line)) {
+        if (trim_copy(line).empty()) {
+            continue;
+        }
+        out << indent(depth) << trim_copy(line) << '\n';
+    }
+}
+
 void emit_raw_block(std::ostringstream& out, const std::vector<RawStmt>& body, int depth);
 
 void emit_simple_statement(std::ostringstream& out, const RawStmt& stmt, int depth) {
     const std::string text = trim_copy(stmt.text);
     const size_t colon = text.find(':');
     const size_t assign = text.find('=');
+    if (starts_with(text, "cpp(")) {
+        emit_cpp_escape(out, text, depth);
+        return;
+    }
     if (starts_with(text, "return")) {
         const std::string value = trim_copy(text.substr(6));
         out << indent(depth) << "return";

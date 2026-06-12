@@ -269,6 +269,9 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
         }
         return;
     }
+    if (starts_with(text, "cpp(")) {
+        return;
+    }
     if (starts_with(text, "if ") || starts_with(text, "elif ") || starts_with(text, "while ") ||
         text == "else:") {
         check_block(scope, stmt.children, return_type);
