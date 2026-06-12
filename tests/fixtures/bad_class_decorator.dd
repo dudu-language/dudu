@@ -1,0 +1,3 @@
+@packd
+class Header:
+    value: i32

@@ -53,6 +53,28 @@ void check_supported_type_shape(const SourceLocation& location, std::string type
     check_type_args(location, args);
 }
 
+bool decorator_is_call(std::string_view text, std::string_view name) {
+    return !text.empty() && starts_with(text, std::string(name) + "(") && text.back() == ')';
+}
+
+void check_class_decorator(const Decorator& decorator) {
+    const std::string text = trim(decorator.text);
+    if (text == "packed" || decorator_is_call(text, "align")) {
+        return;
+    }
+    fail(decorator.location, "unknown class decorator: @" + text);
+}
+
+void check_function_decorator(const Decorator& decorator) {
+    const std::string text = trim(decorator.text);
+    if (text == "inline" || text == "constexpr" || text == "cuda.global" || text == "cuda.device" ||
+        text == "cuda.host" || text == "shader.compute" ||
+        decorator_is_call(text, "workgroup_size")) {
+        return;
+    }
+    fail(decorator.location, "unknown function decorator: @" + text);
+}
+
 } // namespace
 
 std::string trim(std::string text) {
@@ -231,6 +253,9 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
         }
     }
     for (const ClassDecl& klass : module.classes) {
+        for (const Decorator& decorator : klass.decorators) {
+            check_class_decorator(decorator);
+        }
         std::set<std::string> fields;
         for (const FieldDecl& field : klass.fields) {
             if (!fields.insert(field.name).second) {
@@ -242,6 +267,9 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
             }
         }
         for (const FunctionDecl& method : klass.methods) {
+            for (const Decorator& decorator : method.decorators) {
+                check_function_decorator(decorator);
+            }
             std::set<std::string> params;
             for (const ParamDecl& param : method.params) {
                 if (!params.insert(param.name).second) {
@@ -260,6 +288,9 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
         }
     }
     for (const FunctionDecl& fn : module.functions) {
+        for (const Decorator& decorator : fn.decorators) {
+            check_function_decorator(decorator);
+        }
         std::set<std::string> params;
         for (const ParamDecl& param : fn.params) {
             if (!params.insert(param.name).second) {
