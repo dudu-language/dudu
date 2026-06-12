@@ -223,6 +223,22 @@ ar t "$repo_root/build/libproject_library.a" | grep -q "libproject_library.a.o"
 grep -q -- "-c .*libproject_library.a.cpp" "$repo_root/build/project_library_verbose.err"
 grep -q "ar rcs .*libproject_library.a" "$repo_root/build/project_library_verbose.err"
 (
+    cd "$repo_root/tests/fixtures/project_library"
+    "$repo_root/build/duc" main.dd --emit-header "$repo_root/build/project_library.hpp"
+)
+printf '#include "project_library.hpp"\nint main() { return answer(); }\n' \
+    >"$repo_root/build/project_library_caller.cpp"
+"${CXX:-c++}" -std=c++20 -I"$repo_root/build" "$repo_root/build/project_library_caller.cpp" \
+    "$repo_root/build/libproject_library.a" -o "$repo_root/build/project_library_caller"
+set +e
+"$repo_root/build/project_library_caller"
+project_library_status=$?
+set -e
+if [[ "$project_library_status" -ne 42 ]]; then
+    echo "project_library_caller returned $project_library_status, expected 42" >&2
+    exit 1
+fi
+(
     cd "$repo_root/tests/fixtures/project_shared_library"
     "$repo_root/build/duc" build -o "$repo_root/build/libproject_shared.so" --verbose \
         2>"$repo_root/build/project_shared_library_verbose.err"
