@@ -105,6 +105,21 @@ void emit_includes(std::ostringstream& out, const ModuleAst& module) {
             out << "#include " << include_path(import) << '\n';
         }
     }
+    out << "#ifndef DUDU_CUDA_GLOBAL\n"
+           "#define DUDU_CUDA_GLOBAL\n"
+           "#endif\n"
+           "#ifndef DUDU_CUDA_DEVICE\n"
+           "#define DUDU_CUDA_DEVICE\n"
+           "#endif\n"
+           "#ifndef DUDU_CUDA_HOST\n"
+           "#define DUDU_CUDA_HOST\n"
+           "#endif\n"
+           "#ifndef DUDU_SHADER_COMPUTE\n"
+           "#define DUDU_SHADER_COMPUTE\n"
+           "#endif\n"
+           "#ifndef DUDU_WORKGROUP_SIZE\n"
+           "#define DUDU_WORKGROUP_SIZE(x, y, z)\n"
+           "#endif\n";
     out << '\n';
 }
 
@@ -280,6 +295,17 @@ bool function_has_decorator(const FunctionDecl& fn, std::string_view name) {
     return false;
 }
 
+std::string function_decorator_arg(const FunctionDecl& fn, std::string_view name) {
+    const std::string prefix = std::string(name) + "(";
+    for (const Decorator& decorator : fn.decorators) {
+        const std::string text = trim_copy(decorator.text);
+        if (starts_with(text, prefix) && ends_with(text, ")")) {
+            return trim_copy(text.substr(prefix.size(), text.size() - prefix.size() - 1));
+        }
+    }
+    return {};
+}
+
 bool visible_in_header(Visibility visibility) {
     return visibility != Visibility::Private;
 }
@@ -361,6 +387,22 @@ void emit_static_asserts(std::ostringstream& out, const ModuleAst& module,
 }
 
 void emit_function_signature(std::ostringstream& out, const FunctionDecl& fn) {
+    if (function_has_decorator(fn, "cuda.global")) {
+        out << "DUDU_CUDA_GLOBAL ";
+    }
+    if (function_has_decorator(fn, "cuda.device")) {
+        out << "DUDU_CUDA_DEVICE ";
+    }
+    if (function_has_decorator(fn, "cuda.host")) {
+        out << "DUDU_CUDA_HOST ";
+    }
+    if (function_has_decorator(fn, "shader.compute")) {
+        out << "DUDU_SHADER_COMPUTE ";
+    }
+    const std::string workgroup = function_decorator_arg(fn, "workgroup_size");
+    if (!workgroup.empty()) {
+        out << "DUDU_WORKGROUP_SIZE(" << workgroup << ") ";
+    }
     if (function_has_decorator(fn, "inline")) {
         out << "inline ";
     }

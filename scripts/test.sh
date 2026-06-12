@@ -111,9 +111,17 @@ grep -q 'inline constexpr std::string_view RENDER_BACKEND = "raylib";' \
     "$repo_root/build/compile_time_raylib.cpp"
 "$repo_root/build/duc" emit "$repo_root/examples/cuda_kernel.dd" \
     -o "$repo_root/build/cuda_kernel.cpp"
+grep -q "#define DUDU_CUDA_GLOBAL" "$repo_root/build/cuda_kernel.cpp"
+grep -q "DUDU_CUDA_GLOBAL void saxpy_kernel" "$repo_root/build/cuda_kernel.cpp"
 grep -q "float\\* dev_x = nullptr;" "$repo_root/build/cuda_kernel.cpp"
 grep -q "err = cuda::cudaMalloc" "$repo_root/build/cuda_kernel.cpp"
 ! grep -q "dudu::dudu" "$repo_root/build/cuda_kernel.cpp"
+"$repo_root/build/duc" emit "$repo_root/examples/shader_compute.dd" \
+    -o "$repo_root/build/shader_compute.cpp"
+grep -q "#define DUDU_SHADER_COMPUTE" "$repo_root/build/shader_compute.cpp"
+grep -q "#define DUDU_WORKGROUP_SIZE" "$repo_root/build/shader_compute.cpp"
+grep -q "DUDU_SHADER_COMPUTE DUDU_WORKGROUP_SIZE(8, 8, 1) void blur_x" \
+    "$repo_root/build/shader_compute.cpp"
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/lambda_callback.dd" \
     -o "$repo_root/build/function_pointer.cpp"
 grep -Fq "std::add_pointer_t<int32_t(int32_t)> callback" \
