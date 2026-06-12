@@ -1,0 +1,3 @@
+[build]
+DEBUG = true
+RENDER_BACKEND = "raylib"

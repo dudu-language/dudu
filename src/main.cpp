@@ -4,6 +4,7 @@
 #include "dudu/parser.hpp"
 #include "dudu/sema.hpp"
 
+#include <cctype>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -12,6 +13,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 
 namespace {
 
@@ -51,6 +53,84 @@ void add_build_value(Options& options, const std::string& define) {
         fail("-D requires NAME=value");
     }
     options.build_values[define.substr(0, equal)] = define.substr(equal + 1);
+}
+
+std::string trim_copy(std::string_view text) {
+    while (!text.empty() && std::isspace(static_cast<unsigned char>(text.front())) != 0) {
+        text.remove_prefix(1);
+    }
+    while (!text.empty() && std::isspace(static_cast<unsigned char>(text.back())) != 0) {
+        text.remove_suffix(1);
+    }
+    return std::string(text);
+}
+
+std::string strip_comment(std::string line) {
+    char quote = '\0';
+    bool escaped = false;
+    for (size_t i = 0; i < line.size(); ++i) {
+        const char c = line[i];
+        if (quote != '\0') {
+            if (escaped) {
+                escaped = false;
+            } else if (c == '\\') {
+                escaped = true;
+            } else if (c == quote) {
+                quote = '\0';
+            }
+            continue;
+        }
+        if (c == '"' || c == '\'') {
+            quote = c;
+            continue;
+        }
+        if (c == '#') {
+            return line.substr(0, i);
+        }
+    }
+    return line;
+}
+
+std::map<std::string, std::string> parse_build_config(const std::filesystem::path& path) {
+    std::map<std::string, std::string> values;
+    std::ifstream file(path);
+    if (!file) {
+        return values;
+    }
+    bool in_build = false;
+    std::string line;
+    while (std::getline(file, line)) {
+        line = trim_copy(strip_comment(std::move(line)));
+        if (line.empty()) {
+            continue;
+        }
+        if (line.front() == '[' && line.back() == ']') {
+            in_build = trim_copy(std::string_view(line).substr(1, line.size() - 2)) == "build";
+            continue;
+        }
+        if (!in_build) {
+            continue;
+        }
+        const size_t equal = line.find('=');
+        if (equal == std::string::npos) {
+            fail(path.string() + ": invalid [build] entry: " + line);
+        }
+        const std::string name = trim_copy(std::string_view(line).substr(0, equal));
+        const std::string value = trim_copy(std::string_view(line).substr(equal + 1));
+        if (name.empty() || value.empty()) {
+            fail(path.string() + ": invalid [build] entry: " + line);
+        }
+        values[name] = value;
+    }
+    return values;
+}
+
+std::filesystem::path build_config_path(const std::filesystem::path& input) {
+    const std::filesystem::path beside_input = input.parent_path() / "dudu.toml";
+    if (!input.parent_path().empty() && std::filesystem::exists(beside_input)) {
+        return beside_input;
+    }
+    return "dudu.toml";
 }
 
 Options parse_options(int argc, char** argv) {
@@ -197,7 +277,10 @@ dudu::ModuleAst checked_module(const Options& options, const std::string& source
                                bool check_bodies) {
     dudu::ModuleAst module = options.input.empty() ? dudu::parse_source(source, options.input)
                                                    : dudu::load_source_tree(options.input);
-    module.build_values = options.build_values;
+    module.build_values = parse_build_config(build_config_path(options.input));
+    for (const auto& [name, value] : options.build_values) {
+        module.build_values[name] = value;
+    }
     dudu::analyze_module(module, {.check_bodies = check_bodies});
     return module;
 }

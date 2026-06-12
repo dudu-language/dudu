@@ -84,6 +84,14 @@ grep -q 'inline constexpr std::string_view RENDER_BACKEND = "raylib";' \
 grep -q "float\\* dev_x = nullptr;" "$repo_root/build/cuda_kernel.cpp"
 grep -q "err = cuda::cudaMalloc" "$repo_root/build/cuda_kernel.cpp"
 ! grep -q "dudu::dudu" "$repo_root/build/cuda_kernel.cpp"
+"$repo_root/build/duc" emit "$repo_root/tests/fixtures/package_build/main.dd" \
+    -o "$repo_root/build/package_build.cpp"
+grep -q "inline constexpr bool DEBUG = true;" "$repo_root/build/package_build.cpp"
+grep -q 'inline constexpr std::string_view RENDER_BACKEND = "raylib";' \
+    "$repo_root/build/package_build.cpp"
+"$repo_root/build/duc" emit "$repo_root/tests/fixtures/package_build/main.dd" \
+    -o "$repo_root/build/package_build_override.cpp" -DDEBUG=false
+grep -q "inline constexpr bool DEBUG = false;" "$repo_root/build/package_build_override.cpp"
 
 compile_and_expect() {
     local name="$1"

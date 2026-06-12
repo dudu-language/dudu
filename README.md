@@ -73,6 +73,14 @@ Check, format, or emit code:
 ./build/duc emit examples/compile_time.dd -DDEBUG=true -DRENDER_BACKEND=raylib
 ```
 
+Build flags can also live beside an input file in `dudu.toml`:
+
+```toml
+[build]
+DEBUG = true
+RENDER_BACKEND = "raylib"
+```
+
 Validate the checked-in examples that do not need external libraries:
 
 ```sh
