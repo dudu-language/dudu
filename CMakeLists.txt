@@ -14,6 +14,7 @@ add_library(dudu_frontend
     src/dudu/cpp_stmt_emit.cpp
     src/dudu/cpp_type.cpp
     src/dudu/format.cpp
+    src/dudu/format_path.cpp
     src/dudu/lexer.cpp
     src/dudu/module_loader.cpp
     src/dudu/naming.cpp

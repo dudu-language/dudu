@@ -1,5 +1,5 @@
 #include "dudu/cpp_emit.hpp"
-#include "dudu/format.hpp"
+#include "dudu/format_path.hpp"
 #include "dudu/module_loader.hpp"
 #include "dudu/parser.hpp"
 #include "dudu/sema.hpp"
@@ -305,30 +305,6 @@ std::string read_text_file(const std::filesystem::path& path) {
     return {std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
 }
 
-bool check_formatted_file(const std::filesystem::path& path) {
-    const std::string source = read_text_file(path);
-    if (dudu::format_source(source) == source) {
-        return true;
-    }
-    std::cerr << path.string() << ": would reformat\n";
-    return false;
-}
-
-bool check_formatted_path(const std::filesystem::path& path) {
-    if (!std::filesystem::is_directory(path)) {
-        return check_formatted_file(path);
-    }
-    bool ok = true;
-    for (const std::filesystem::directory_entry& entry :
-         std::filesystem::recursive_directory_iterator(path)) {
-        if (!entry.is_regular_file() || entry.path().extension() != ".dd") {
-            continue;
-        }
-        ok = check_formatted_file(entry.path()) && ok;
-    }
-    return ok;
-}
-
 void write_text_output(const std::optional<std::filesystem::path>& path, const std::string& text) {
     if (!path.has_value() || path->empty()) {
         std::cout << text;
@@ -449,10 +425,9 @@ int main(int argc, char** argv) {
         }
         if (options.format) {
             if (options.check) {
-                return check_formatted_path(options.input) ? 0 : 1;
+                return dudu::check_formatted_path(options.input) ? 0 : 1;
             }
-            const std::string source = read_text_file(options.input);
-            write_text_output(options.output, dudu::format_source(source));
+            dudu::format_path(options.input, options.output, std::cout);
             return 0;
         }
         if (options.check) {
