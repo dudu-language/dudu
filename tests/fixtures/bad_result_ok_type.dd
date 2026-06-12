@@ -1,0 +1,2 @@
+def choose() -> Result[i32, i32]:
+    return Ok(True)

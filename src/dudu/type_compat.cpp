@@ -124,6 +124,13 @@ bool is_reference_binding(std::string expected, std::string got) {
     return trim_copy(expected.substr(1)) == got;
 }
 
+bool is_null_pointer(std::string expected, std::string expr, std::string got) {
+    expected = trim_copy(std::move(expected));
+    expr = trim_copy(std::move(expr));
+    got = trim_copy(std::move(got));
+    return !expected.empty() && expected.front() == '*' && expr == "None" && got == "None";
+}
+
 std::string normalize_function_type(std::string type) {
     type = trim_copy(std::move(type));
     if (!starts_with(type, "fn(")) {
@@ -145,12 +152,44 @@ bool is_function_type_match(std::string expected, std::string got) {
     return starts_with(expected, "fn(") && expected == got;
 }
 
+std::string wrapped_call_arg(std::string expr, std::string_view name) {
+    expr = trim_copy(std::move(expr));
+    const std::string prefix = std::string(name) + "(";
+    if (!starts_with(expr, prefix) || !ends_with(expr, ")")) {
+        return {};
+    }
+    const std::vector<std::string> args =
+        split_top_level_args(expr.substr(prefix.size(), expr.size() - prefix.size() - 1));
+    return args.size() == 1 ? args.front() : std::string{};
+}
+
+bool is_result_value(const std::string& expected, const std::string& expr, const std::string& got) {
+    if (!starts_with(expected, "Result[") || expected.back() != ']') {
+        return false;
+    }
+    const std::vector<std::string> parts =
+        split_top_level_args(expected.substr(7, expected.size() - 8));
+    if (parts.size() != 2) {
+        return false;
+    }
+    if (starts_with(got, "Ok[") && got.back() == ']') {
+        return assignment_type_allowed(parts[0], wrapped_call_arg(expr, "Ok"),
+                                       got.substr(3, got.size() - 4));
+    }
+    if (starts_with(got, "Err[") && got.back() == ']') {
+        return assignment_type_allowed(parts[1], wrapped_call_arg(expr, "Err"),
+                                       got.substr(4, got.size() - 5));
+    }
+    return false;
+}
+
 } // namespace
 
 bool assignment_type_allowed(const std::string& expected, const std::string& expr,
                              const std::string& got) {
     return is_explicit_cast_to(expected, expr) || got.empty() || got == "auto" || got == expected ||
-           is_option_value(expected, expr, got) || is_container_literal(expected, expr) ||
+           is_option_value(expected, expr, got) || is_result_value(expected, expr, got) ||
+           is_container_literal(expected, expr) || is_null_pointer(expected, expr, got) ||
            is_reference_binding(expected, got) || is_function_type_match(expected, got) ||
            (is_numeric_type(wrapped_type_arg(expected)) && is_numeric_literal(expr));
 }

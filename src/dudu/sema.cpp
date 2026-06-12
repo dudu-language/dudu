@@ -14,7 +14,6 @@
 #include <map>
 #include <set>
 #include <sstream>
-
 namespace dudu {
 namespace {
 [[noreturn]] void fail(const SourceLocation& location, const std::string& message) {
@@ -58,9 +57,6 @@ bool parse_function_type(std::string type, FunctionSignature& out) {
     }
     return true;
 }
-std::string call_label(const std::string& callee) {
-    return callee.empty() ? "call" : callee;
-}
 std::string member_path_type(const FunctionScope& scope, const RawStmt* stmt,
                              const std::string& path) {
     const size_t dot = path.find('.');
@@ -70,7 +66,6 @@ std::string member_path_type(const FunctionScope& scope, const RawStmt* stmt,
         }
         return {};
     }
-
     std::string current = path.substr(0, dot);
     const auto local = scope.locals.find(current);
     if (local == scope.locals.end()) {
@@ -132,7 +127,7 @@ void check_call_args(const FunctionScope& scope, const std::string& callee,
         return;
     }
     if (args.size() != signature.params.size()) {
-        fail(*location, "function " + call_label(callee) + " expects " +
+        fail(*location, "function " + callee + " expects " +
                             std::to_string(signature.params.size()) + " arguments, got " +
                             std::to_string(args.size()));
     }
@@ -140,8 +135,8 @@ void check_call_args(const FunctionScope& scope, const std::string& callee,
         const std::string got = infer_expr(scope, args[i], location);
         const std::string& expected = signature.params[i];
         if (!can_assign_expr(scope, expected, args[i], got)) {
-            fail(*location, "argument " + std::to_string(i + 1) + " for " + call_label(callee) +
-                                " expects " + expected + ", got " + got);
+            fail(*location, "argument " + std::to_string(i + 1) + " for " + callee + " expects " +
+                                expected + ", got " + got);
         }
     }
 }
@@ -248,12 +243,17 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
     if (std::isdigit(static_cast<unsigned char>(expr.front())) != 0) {
         return expr.find('.') == std::string::npos ? "i32" : "f64";
     }
-    if (starts_with(expr, "Ok(") || starts_with(expr, "Err(")) {
-        return {};
+    if (expr == "None") {
+        return "None";
     }
     const size_t call = find_call_open(expr);
     if (call != std::string::npos && expr.back() == ')') {
         const std::string callee = trim(expr.substr(0, call));
+        if (callee == "Ok" || callee == "Err") {
+            const std::vector<std::string> args = call_args(expr, call);
+            return callee + "[" +
+                   (args.size() == 1 ? infer_expr(scope, args.front(), location) : "") + "]";
+        }
         if (const auto klass = scope.symbols.classes.find(callee);
             klass != scope.symbols.classes.end()) {
             check_constructor_args(scope, *klass->second, call_args(expr, call), location);
@@ -374,8 +374,9 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
     const std::string text = trim(stmt.text);
     check_local_address_escape(stmt, scope.locals);
     if (starts_with(text, "return")) {
-        const std::string got = infer_expr(scope, text.substr(6), &stmt.location);
-        if (return_type != "void" && !got.empty() && got != "auto" && got != return_type) {
+        const std::string expr = text.substr(6);
+        const std::string got = infer_expr(scope, expr, &stmt.location);
+        if (return_type != "void" && !can_assign_expr(scope, return_type, expr, got)) {
             fail(stmt.location, "return type mismatch: expected " + return_type + ", got " + got);
         }
         return;
@@ -483,9 +484,7 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols) {
         }
     }
 }
-
 } // namespace
-
 void analyze_module(const ModuleAst& module, SemanticOptions options) {
     const Symbols symbols = collect_symbols(module);
     check_build_flags(module);
@@ -496,5 +495,4 @@ void analyze_module(const ModuleAst& module, SemanticOptions options) {
         check_bodies(module, symbols);
     }
 }
-
 } // namespace dudu
