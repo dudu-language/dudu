@@ -1,0 +1,265 @@
+#include "dudu/cpp_stmt_emit.hpp"
+
+#include "dudu/cpp_lower.hpp"
+
+#include <cctype>
+#include <sstream>
+
+namespace dudu {
+namespace {
+
+std::string indent(int depth) {
+    return std::string(static_cast<size_t>(depth) * 4, ' ');
+}
+
+size_t find_top_level_assignment(const std::string& text) {
+    int depth = 0;
+    char quote = '\0';
+    bool escaped = false;
+    for (size_t i = 0; i < text.size(); ++i) {
+        const char c = text[i];
+        if (quote != '\0') {
+            if (escaped) {
+                escaped = false;
+            } else if (c == '\\') {
+                escaped = true;
+            } else if (c == quote) {
+                quote = '\0';
+            }
+            continue;
+        }
+        if (c == '"' || c == '\'') {
+            quote = c;
+            continue;
+        }
+        if (c == '(' || c == '[' || c == '{') {
+            ++depth;
+        } else if (c == ')' || c == ']' || c == '}') {
+            --depth;
+        } else if (c == '=' && depth == 0) {
+            if ((i > 0 && (text[i - 1] == '=' || text[i - 1] == '!' || text[i - 1] == '<' ||
+                           text[i - 1] == '>')) ||
+                (i + 1 < text.size() && text[i + 1] == '=')) {
+                continue;
+            }
+            return i;
+        }
+    }
+    return std::string::npos;
+}
+
+size_t find_top_level_colon(const std::string& text) {
+    int depth = 0;
+    char quote = '\0';
+    bool escaped = false;
+    for (size_t i = 0; i < text.size(); ++i) {
+        const char c = text[i];
+        if (quote != '\0') {
+            if (escaped) {
+                escaped = false;
+            } else if (c == '\\') {
+                escaped = true;
+            } else if (c == quote) {
+                quote = '\0';
+            }
+            continue;
+        }
+        if (c == '"' || c == '\'') {
+            quote = c;
+            continue;
+        }
+        if (c == '(' || c == '[' || c == '{') {
+            ++depth;
+        } else if (c == ')' || c == ']' || c == '}') {
+            --depth;
+        } else if (c == ':' && depth == 0) {
+            return i;
+        }
+    }
+    return std::string::npos;
+}
+
+std::string strip_trailing_colon(std::string text) {
+    text = trim_copy(std::move(text));
+    if (!text.empty() && text.back() == ':') {
+        text.pop_back();
+    }
+    return trim_copy(std::move(text));
+}
+
+std::string unescape_cpp_string(std::string text) {
+    std::string out;
+    out.reserve(text.size());
+    bool escaped = false;
+    for (const char c : text) {
+        if (!escaped && c == '\\') {
+            escaped = true;
+            continue;
+        }
+        if (escaped) {
+            out.push_back(c == 'n' ? '\n' : c == 't' ? '\t' : c);
+            escaped = false;
+            continue;
+        }
+        out.push_back(c);
+    }
+    if (escaped) {
+        out.push_back('\\');
+    }
+    return out;
+}
+
+std::string cpp_escape_body(std::string text) {
+    text = trim_copy(std::move(text));
+    if (!starts_with(text, "cpp(") || text.back() != ')') {
+        return {};
+    }
+    text = trim_copy(text.substr(4, text.size() - 5));
+    if (starts_with(text, "\"\"\"") && ends_with(text, "\"\"\"")) {
+        return text.substr(3, text.size() - 6);
+    }
+    if (text.size() >= 2 && ((text.front() == '"' && text.back() == '"') ||
+                             (text.front() == '\'' && text.back() == '\''))) {
+        return unescape_cpp_string(text.substr(1, text.size() - 2));
+    }
+    return {};
+}
+
+void emit_cpp_escape(std::ostringstream& out, const std::string& text, int depth) {
+    std::istringstream body(cpp_escape_body(text));
+    std::string line;
+    while (std::getline(body, line)) {
+        if (!trim_copy(line).empty()) {
+            out << indent(depth) << trim_copy(line) << '\n';
+        }
+    }
+}
+
+void emit_simple_statement(std::ostringstream& out, const RawStmt& stmt, int depth,
+                           const std::vector<std::string>& aliases) {
+    const std::string text = trim_copy(stmt.text);
+    const size_t colon = find_top_level_colon(text);
+    const size_t assign = find_top_level_assignment(text);
+    if (starts_with(text, "cpp(")) {
+        emit_cpp_escape(out, text, depth);
+        return;
+    }
+    if (starts_with(text, "return")) {
+        const std::string value = trim_copy(text.substr(6));
+        out << indent(depth) << "return";
+        if (!value.empty()) {
+            if (split_top_level_args(value).size() > 1) {
+                out << " {" << lower_cpp_expr(value, aliases) << '}';
+            } else {
+                out << ' ' << lower_cpp_expr(value, aliases);
+            }
+        }
+        out << ";\n";
+        return;
+    }
+    if (colon != std::string::npos && (assign == std::string::npos || colon < assign)) {
+        const std::string name = trim_copy(text.substr(0, colon));
+        const std::string type = trim_copy(text.substr(colon + 1, assign - colon - 1));
+        out << indent(depth) << lower_cpp_type(type) << ' ' << name;
+        if (assign != std::string::npos) {
+            const std::string value = trim_copy(text.substr(assign + 1));
+            out << " = "
+                << (starts_with(type, "Option[") && value == "None"
+                        ? "std::nullopt"
+                        : lower_cpp_expr(value, aliases));
+        } else {
+            out << "{}";
+        }
+        out << ";\n";
+        return;
+    }
+    if (assign != std::string::npos) {
+        const std::string lhs = trim_copy(text.substr(0, assign));
+        if (split_top_level_args(lhs).size() > 1) {
+            out << indent(depth) << "auto [" << lhs
+                << "] = " << lower_cpp_expr(trim_copy(text.substr(assign + 1)), aliases) << ";\n";
+            return;
+        }
+        if (!lhs.empty() && lhs.find_first_of(" .[]+-*/%<>") == std::string::npos) {
+            out << indent(depth) << "auto " << lhs << " = "
+                << lower_cpp_expr(trim_copy(text.substr(assign + 1)), aliases) << ";\n";
+            return;
+        }
+    }
+    out << indent(depth) << lower_cpp_expr(text, aliases) << ";\n";
+}
+
+void emit_raw_statement(std::ostringstream& out, const RawStmt& stmt, int depth,
+                        const std::vector<std::string>& aliases) {
+    const std::string text = trim_copy(stmt.text);
+    if (starts_with(text, "if ")) {
+        out << indent(depth) << "if ("
+            << lower_cpp_expr(strip_trailing_colon(text.substr(3)), aliases) << ") {\n";
+        emit_raw_block(out, stmt.children, depth + 1, aliases);
+        out << indent(depth) << "}\n";
+        return;
+    }
+    if (starts_with(text, "elif ")) {
+        out << indent(depth) << "else if ("
+            << lower_cpp_expr(strip_trailing_colon(text.substr(5)), aliases) << ") {\n";
+        emit_raw_block(out, stmt.children, depth + 1, aliases);
+        out << indent(depth) << "}\n";
+        return;
+    }
+    if (text == "else:") {
+        out << indent(depth) << "else {\n";
+        emit_raw_block(out, stmt.children, depth + 1, aliases);
+        out << indent(depth) << "}\n";
+        return;
+    }
+    if (starts_with(text, "while ")) {
+        out << indent(depth) << "while ("
+            << lower_cpp_expr(strip_trailing_colon(text.substr(6)), aliases) << ") {\n";
+        emit_raw_block(out, stmt.children, depth + 1, aliases);
+        out << indent(depth) << "}\n";
+        return;
+    }
+    if (starts_with(text, "for ")) {
+        const std::string header = strip_trailing_colon(text.substr(4));
+        const size_t in_pos = header.find(" in ");
+        if (in_pos != std::string::npos) {
+            std::string binding = trim_copy(header.substr(0, in_pos));
+            const std::string range = lower_cpp_expr(trim_copy(header.substr(in_pos + 4)), aliases);
+            std::string binding_type = "auto";
+            const size_t typed = binding.find(':');
+            if (typed != std::string::npos) {
+                binding_type = lower_cpp_type(trim_copy(binding.substr(typed + 1)));
+                binding = trim_copy(binding.substr(0, typed));
+            }
+            if (starts_with(range, "range(") && ends_with(range, ")")) {
+                const std::vector<std::string> args =
+                    split_top_level_args(range.substr(6, range.size() - 7));
+                const std::string start = args.size() == 1 ? "0" : args.at(0);
+                const std::string end = args.size() == 1 ? args.at(0) : args.at(1);
+                const std::string step = args.size() >= 3 ? args.at(2) : "1";
+                out << indent(depth) << "for (" << binding_type << ' ' << binding << " = " << start
+                    << "; " << binding << " < " << end << "; " << binding << " += " << step
+                    << ") {\n";
+                emit_raw_block(out, stmt.children, depth + 1, aliases);
+                out << indent(depth) << "}\n";
+                return;
+            }
+            out << indent(depth) << "for (auto&& " << binding << " : " << range << ") {\n";
+            emit_raw_block(out, stmt.children, depth + 1, aliases);
+            out << indent(depth) << "}\n";
+            return;
+        }
+    }
+    emit_simple_statement(out, stmt, depth, aliases);
+}
+
+} // namespace
+
+void emit_raw_block(std::ostringstream& out, const std::vector<RawStmt>& body, int depth,
+                    const std::vector<std::string>& aliases) {
+    for (const RawStmt& stmt : body) {
+        emit_raw_statement(out, stmt, depth, aliases);
+    }
+}
+
+} // namespace dudu

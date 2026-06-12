@@ -36,9 +36,25 @@ bool ends_with(std::string_view text, std::string_view suffix) {
 std::vector<std::string> split_top_level_args(const std::string& args) {
     std::vector<std::string> out;
     int depth = 0;
+    char quote = '\0';
+    bool escaped = false;
     size_t start = 0;
     for (size_t i = 0; i < args.size(); ++i) {
         const char c = args[i];
+        if (quote != '\0') {
+            if (escaped) {
+                escaped = false;
+            } else if (c == '\\') {
+                escaped = true;
+            } else if (c == quote) {
+                quote = '\0';
+            }
+            continue;
+        }
+        if (c == '"' || c == '\'') {
+            quote = c;
+            continue;
+        }
         if (c == '[' || c == '(') {
             ++depth;
         } else if (c == ']' || c == ')') {
@@ -78,6 +94,24 @@ std::string lower_cpp_expr(std::string expr);
 std::string replace_word(std::string text, std::string_view from, std::string_view to) {
     size_t pos = text.find(from);
     while (pos != std::string::npos) {
+        char quote = '\0';
+        bool escaped = false;
+        bool in_string = false;
+        for (size_t i = 0; i < pos; ++i) {
+            const char c = text[i];
+            if (quote != '\0') {
+                if (escaped) {
+                    escaped = false;
+                } else if (c == '\\') {
+                    escaped = true;
+                } else if (c == quote) {
+                    quote = '\0';
+                }
+            } else if (c == '"' || c == '\'') {
+                quote = c;
+            }
+        }
+        in_string = quote != '\0';
         const bool left_ok =
             pos == 0 ||
             (std::isalnum(static_cast<unsigned char>(text[pos - 1])) == 0 && text[pos - 1] != '_');
@@ -85,7 +119,7 @@ std::string replace_word(std::string text, std::string_view from, std::string_vi
         const bool right_ok =
             end == text.size() ||
             (std::isalnum(static_cast<unsigned char>(text[end])) == 0 && text[end] != '_');
-        if (left_ok && right_ok) {
+        if (!in_string && left_ok && right_ok) {
             text.replace(pos, from.size(), to);
             pos += to.size();
         } else {
@@ -350,12 +384,15 @@ std::string lower_cpp_expr(std::string expr) {
 }
 
 std::string lower_cpp_expr(std::string expr, const std::vector<std::string>& namespace_aliases) {
+    expr = lower_conditional_expr(std::move(expr));
     expr = lower_template_alloc_call(std::move(expr), "new");
     expr = lower_template_alloc_call(std::move(expr), "malloc");
     expr = lower_type_operator_call(std::move(expr), "sizeof");
     expr = lower_type_operator_call(std::move(expr), "alignof");
     expr = lower_offsetof_call(std::move(expr));
     expr = lower_builtin_cast_calls(std::move(expr));
+    expr = lower_str_from_cstr(std::move(expr));
+    expr = lower_str_calls(std::move(expr));
     expr = lower_named_argument_calls(std::move(expr));
     expr = lower_template_value_call(std::move(expr), "list");
     expr = lower_template_value_call(std::move(expr), "dict");

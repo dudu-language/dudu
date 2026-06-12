@@ -74,9 +74,25 @@ bool known_type(const Symbols& symbols, const std::string& type) {
 std::vector<std::string> split_top_level(std::string text) {
     std::vector<std::string> out;
     int depth = 0;
+    char quote = '\0';
+    bool escaped = false;
     size_t start = 0;
     for (size_t i = 0; i < text.size(); ++i) {
         const char c = text[i];
+        if (quote != '\0') {
+            if (escaped) {
+                escaped = false;
+            } else if (c == '\\') {
+                escaped = true;
+            } else if (c == quote) {
+                quote = '\0';
+            }
+            continue;
+        }
+        if (c == '"' || c == '\'') {
+            quote = c;
+            continue;
+        }
         if (c == '(' || c == '[') {
             ++depth;
         } else if (c == ')' || c == ']') {
@@ -88,6 +104,37 @@ std::vector<std::string> split_top_level(std::string text) {
     }
     out.push_back(trim(text.substr(start)));
     return out;
+}
+
+size_t find_top_level_char(const std::string& text, char wanted) {
+    int depth = 0;
+    char quote = '\0';
+    bool escaped = false;
+    for (size_t i = 0; i < text.size(); ++i) {
+        const char c = text[i];
+        if (quote != '\0') {
+            if (escaped) {
+                escaped = false;
+            } else if (c == '\\') {
+                escaped = true;
+            } else if (c == quote) {
+                quote = '\0';
+            }
+            continue;
+        }
+        if (c == '"' || c == '\'') {
+            quote = c;
+            continue;
+        }
+        if (c == '(' || c == '[') {
+            ++depth;
+        } else if (c == ')' || c == ']') {
+            --depth;
+        } else if (c == wanted && depth == 0) {
+            return i;
+        }
+    }
+    return std::string::npos;
 }
 
 Symbols collect_symbols(const ModuleAst& module) {
@@ -166,6 +213,20 @@ std::string infer_expr(const FunctionScope& scope, std::string expr) {
     if (std::isdigit(static_cast<unsigned char>(expr.front())) != 0) {
         return expr.find('.') == std::string::npos ? "i32" : "f64";
     }
+    if (starts_with(expr, "Ok(") || starts_with(expr, "Err(")) {
+        return {};
+    }
+    const size_t call = expr.find('(');
+    if (call != std::string::npos && expr.back() == ')') {
+        const std::string callee = trim(expr.substr(0, call));
+        if (scope.symbols.classes.contains(callee)) {
+            return callee;
+        }
+        if (const auto fn = scope.symbols.functions.find(callee);
+            fn != scope.symbols.functions.end()) {
+            return fn->second;
+        }
+    }
     const std::vector<std::string> tuple_parts = split_top_level(expr);
     if (tuple_parts.size() > 1) {
         std::ostringstream out;
@@ -178,17 +239,6 @@ std::string infer_expr(const FunctionScope& scope, std::string expr) {
         }
         out << "]";
         return out.str();
-    }
-    const size_t call = expr.find('(');
-    if (call != std::string::npos && expr.back() == ')') {
-        const std::string callee = trim(expr.substr(0, call));
-        if (scope.symbols.classes.contains(callee)) {
-            return callee;
-        }
-        if (const auto fn = scope.symbols.functions.find(callee);
-            fn != scope.symbols.functions.end()) {
-            return fn->second;
-        }
     }
     const size_t op = expr.find_first_of("+-*/%");
     if (op != std::string::npos) {
@@ -289,8 +339,8 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
         check_block(nested, stmt.children, return_type);
         return;
     }
-    const size_t colon = text.find(':');
-    const size_t assign = text.find('=');
+    const size_t colon = find_top_level_char(text, ':');
+    const size_t assign = find_top_level_char(text, '=');
     for (const char* op : {"+=", "-=", "*=", "/="}) {
         const size_t compound = text.find(op);
         if (compound != std::string::npos) {
