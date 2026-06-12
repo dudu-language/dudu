@@ -137,7 +137,7 @@ void emit_simple_statement(std::ostringstream& out, const RawStmt& stmt, int dep
         text.find("<=") == std::string::npos && text.find(">=") == std::string::npos &&
         text.find("!=") == std::string::npos) {
         const std::string lhs = trim_copy(text.substr(0, assign));
-        if (lhs.find(',') != std::string::npos) {
+        if (split_top_level_args(lhs).size() > 1) {
             out << indent(depth) << "auto [" << lhs
                 << "] = " << lower_cpp_expr(trim_copy(text.substr(assign + 1)), aliases) << ";\n";
             return;

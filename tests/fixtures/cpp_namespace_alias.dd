@@ -3,4 +3,4 @@ import cpp "cmath" as std
 
 def main() -> i32:
     root = std.sqrt(1764.0)
-    return i32(root)
+    return root

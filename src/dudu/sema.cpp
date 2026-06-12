@@ -265,7 +265,7 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
     const std::string text = trim(stmt.text);
     if (starts_with(text, "return")) {
         const std::string got = infer_expr(scope, text.substr(6));
-        if (return_type != "void" && !got.empty() && got != return_type) {
+        if (return_type != "void" && !got.empty() && got != "auto" && got != return_type) {
             fail(stmt.location, "return type mismatch: expected " + return_type + ", got " + got);
         }
         return;
@@ -309,7 +309,7 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
     }
     if (assign != std::string::npos && text.find("==") == std::string::npos) {
         const std::string lhs = trim(text.substr(0, assign));
-        if (lhs.find(',') != std::string::npos) {
+        if (split_top_level(lhs).size() > 1) {
             const std::vector<std::string> names = split_top_level(lhs);
             const std::vector<std::string> types =
                 tuple_types(infer_expr(scope, text.substr(assign + 1)));
