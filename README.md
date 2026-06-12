@@ -1,7 +1,6 @@
 # dudu
 
-Dudu is a sketch for a statically typed Python subset that compiles to readable
-C++.
+Dudu is a statically typed Python-shaped language that compiles to readable C++.
 
 The goal is Python syntax people already know, C/C++-style types and data
 movement, native-speed output, full access to existing C and C++ libraries, and
@@ -35,8 +34,10 @@ def main() -> i32:
 
 ## Current Status
 
-The checked-in compiler is being rebuilt around the typed Python subset
-described in the appearance spec and compiler plan.
+The checked-in compiler parses `.dd`, checks the core typed subset, emits
+readable C++20, emits importable headers, formats source, handles multi-file
+Dudu imports, and validates the canonical examples that do not require external
+SDKs.
 
 The starting point is:
 
@@ -54,20 +55,20 @@ Build the compiler:
 ./scripts/build.sh
 ```
 
-Emit C++ for current compiler fixtures:
+Show the compiler commands:
 
 ```sh
-./build/dudu --help
+./build/duc --help
 ```
 
 Check, format, or emit code:
 
 ```sh
-./build/dudu tests/fixtures/simple_program.dd --check
-./build/dudu tests/fixtures/simple_program.dd --format -
-./build/dudu tests/fixtures/simple_program.dd --emit-cpp -
+./build/duc check tests/fixtures/simple_program.dd
+./build/duc fmt tests/fixtures/simple_program.dd
+./build/duc emit tests/fixtures/simple_program.dd
 ./build/dudu examples/cpp_library.dd --emit-header -
-./build/dudu examples/compile_time.dd --emit-cpp - -DDEBUG=true -DRENDER_BACKEND=raylib
+./build/duc emit examples/compile_time.dd -DDEBUG=true -DRENDER_BACKEND=raylib
 ```
 
 Validate the checked-in examples that do not need external libraries:

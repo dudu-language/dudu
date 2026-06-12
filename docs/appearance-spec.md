@@ -1013,14 +1013,14 @@ Editors should run `duc fmt` on save.
 
 ## Packages And CLI
 
-The compiler command is planned as `duc`.
+The compiler command is `duc`. The `dudu` binary remains available as a
+compatibility entrypoint during repository development.
 
 ```sh
 duc emit src/main.dd -o build/main.cpp
 duc build
-duc run
-duc test
 duc fmt
+duc check src/main.dd
 ```
 
 Package metadata can live in `dudu.toml`.

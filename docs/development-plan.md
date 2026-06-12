@@ -3,14 +3,23 @@
 The active development plan is
 [Python Subset Compiler Plan](python-subset-compiler-plan.md).
 
-Next implementation objective:
+Current implementation baseline:
 
 ```text
-Implement the first typed-Python compiler slice:
-parse, typecheck, emit C++, compile, and run a tiny `.dd` program using classes,
-functions, locals, returns, tuple return, and destructuring.
+The compiler parses Python-shaped `.dd` source, checks the core static subset,
+emits readable C++20, emits importable headers, supports multi-file Dudu
+imports, validates canonical examples, and builds both `dudu` and `duc`
+entrypoints.
 ```
 
-The existing C++ source contains an older emitter. The next implementation pass
-should split the compiler into cohesive files and replace that parser with the
-Python-shaped parser described in the active plan.
+Implementation work stays organized around cohesive frontend files:
+
+- lexer and parser
+- semantic analysis
+- module loading
+- C++ type lowering
+- C++ expression lowering
+- C++ statement emission
+- C++ source/header emission
+- formatter
+- CLI/build driver
