@@ -172,7 +172,13 @@ Symbols collect_symbols(const ModuleAst& module) {
     }
     for (const FunctionDecl& fn : module.functions) {
         add_name(names, fn.name, fn.location);
-        symbols.functions[fn.name] = fn.return_type.empty() ? "void" : fn.return_type;
+        FunctionSignature signature;
+        for (const ParamDecl& param : fn.params) {
+            signature.params.push_back(param.type);
+        }
+        signature.return_type = fn.return_type.empty() ? "void" : fn.return_type;
+        symbols.functions[fn.name] = signature.return_type;
+        symbols.function_signatures[fn.name] = std::move(signature);
     }
     for (const ConstDecl& constant : module.constants) {
         add_name(names, constant.name, constant.location);

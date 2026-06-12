@@ -310,6 +310,10 @@ expect_fail bad_return_local_address --emit-cpp "cannot let local address escape
 expect_fail bad_append_local_address --emit-cpp "cannot let local address escape: value"
 expect_fail bad_static_assert --check "static_assert failed: (PIXELS == 65)"
 expect_fail bad_static_compare --check "static_assert failed: (PIXELS < 64)"
+expect_fail bad_call_arity --emit-cpp "function add expects 2 arguments, got 1"
+expect_fail bad_call_type --emit-cpp "argument 1 for negate expects i32, got bool"
+expect_fail bad_callback_lambda --emit-cpp "argument 2 for apply expects fn(i32) -> i32, got lambda"
+expect_fail bad_fn_pointer_call --emit-cpp "function callback expects 1 arguments, got 0"
 
 if "$repo_root/build/duc" build "$repo_root/tests/fixtures/bad_native_build.dd" \
     -o "$repo_root/build/bad_native_build" 2>"$repo_root/build/bad_native_build.err"; then

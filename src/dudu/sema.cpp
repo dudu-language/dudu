@@ -27,6 +27,45 @@ struct FunctionScope {
     std::set<std::string> constants;
 };
 
+std::string function_type(const FunctionSignature& signature) {
+    std::ostringstream out;
+    out << "fn(";
+    for (size_t i = 0; i < signature.params.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << signature.params[i];
+    }
+    out << ") -> " << signature.return_type;
+    return out.str();
+}
+
+bool parse_function_type(std::string type, FunctionSignature& out) {
+    type = trim(std::move(type));
+    if (!starts_with(type, "fn(")) {
+        return false;
+    }
+    const size_t close = type.find(')');
+    const size_t arrow = type.find("->", close == std::string::npos ? 0 : close);
+    if (close == std::string::npos) {
+        return false;
+    }
+    out.params.clear();
+    const std::string args = trim(type.substr(3, close - 3));
+    if (!args.empty()) {
+        out.params = split_top_level_args(args);
+    }
+    out.return_type = arrow == std::string::npos ? "void" : trim(type.substr(arrow + 2));
+    if (out.return_type.empty()) {
+        out.return_type = "void";
+    }
+    return true;
+}
+
+std::string call_label(const std::string& callee) {
+    return callee.empty() ? "call" : callee;
+}
+
 std::string member_path_type(const FunctionScope& scope, const RawStmt* stmt,
                              const std::string& path) {
     const size_t dot = path.find('.');
@@ -77,10 +116,81 @@ std::string member_path_type(const FunctionScope& scope, const RawStmt* stmt,
     return type;
 }
 
-std::string infer_expr(const FunctionScope& scope, std::string expr) {
+std::string infer_expr(const FunctionScope& scope, std::string expr,
+                       const SourceLocation* location = nullptr);
+
+std::vector<std::string> call_args(std::string expr, size_t open) {
+    std::string args = trim(expr.substr(open + 1, expr.size() - open - 2));
+    if (args.empty()) {
+        return {};
+    }
+    return split_top_level_args(args);
+}
+
+size_t find_call_open(const std::string& expr) {
+    int depth = 0;
+    char quote = '\0';
+    bool escaped = false;
+    for (size_t i = 0; i < expr.size(); ++i) {
+        const char c = expr[i];
+        if (quote != '\0') {
+            if (escaped) {
+                escaped = false;
+            } else if (c == '\\') {
+                escaped = true;
+            } else if (c == quote) {
+                quote = '\0';
+            }
+            continue;
+        }
+        if (c == '"' || c == '\'') {
+            quote = c;
+            continue;
+        }
+        if (c == '(' && depth == 0) {
+            return i;
+        }
+        if (c == '(' || c == '[' || c == '{') {
+            ++depth;
+        } else if (c == ')' || c == ']' || c == '}') {
+            --depth;
+        }
+    }
+    return std::string::npos;
+}
+
+void check_call_args(const FunctionScope& scope, const std::string& callee,
+                     const FunctionSignature& signature, const std::vector<std::string>& args,
+                     const SourceLocation* location) {
+    if (location == nullptr) {
+        return;
+    }
+    if (args.size() != signature.params.size()) {
+        fail(*location, "function " + call_label(callee) + " expects " +
+                            std::to_string(signature.params.size()) + " arguments, got " +
+                            std::to_string(args.size()));
+    }
+    for (size_t i = 0; i < args.size(); ++i) {
+        const std::string got = infer_expr(scope, args[i], location);
+        const std::string& expected = signature.params[i];
+        const std::string resolved_expected = resolve_alias(scope.symbols, expected);
+        const std::string resolved_got = resolve_alias(scope.symbols, got);
+        if (!assignment_type_allowed(expected, args[i], got) &&
+            !assignment_type_allowed(resolved_expected, args[i], resolved_got)) {
+            fail(*location, "argument " + std::to_string(i + 1) + " for " + call_label(callee) +
+                                " expects " + expected + ", got " + got);
+        }
+    }
+}
+
+std::string infer_expr(const FunctionScope& scope, std::string expr,
+                       const SourceLocation* location) {
     expr = trim(std::move(expr));
     if (expr.empty()) {
         return "void";
+    }
+    if (starts_with(expr, "lambda ")) {
+        return "lambda";
     }
     if (expr.size() > 1 && expr.front() == '*') {
         const std::string name = trim(expr.substr(1));
@@ -99,7 +209,7 @@ std::string infer_expr(const FunctionScope& scope, std::string expr) {
             if (i > 0) {
                 out << ", ";
             }
-            out << infer_expr(scope, tuple_parts[i]);
+            out << infer_expr(scope, tuple_parts[i], location);
         }
         out << "]";
         return out.str();
@@ -115,21 +225,29 @@ std::string infer_expr(const FunctionScope& scope, std::string expr) {
     if (starts_with(expr, "Ok(") || starts_with(expr, "Err(")) {
         return {};
     }
-    const size_t call = expr.find('(');
+    const size_t call = find_call_open(expr);
     if (call != std::string::npos && expr.back() == ')') {
         const std::string callee = trim(expr.substr(0, call));
         if (scope.symbols.classes.contains(callee)) {
             return callee;
         }
-        if (const auto fn = scope.symbols.functions.find(callee);
-            fn != scope.symbols.functions.end()) {
-            return fn->second;
+        if (const auto fn = scope.symbols.function_signatures.find(callee);
+            fn != scope.symbols.function_signatures.end()) {
+            check_call_args(scope, callee, fn->second, call_args(expr, call), location);
+            return fn->second.return_type;
+        }
+        if (const auto local = scope.locals.find(callee); local != scope.locals.end()) {
+            FunctionSignature signature;
+            if (parse_function_type(local->second, signature)) {
+                check_call_args(scope, callee, signature, call_args(expr, call), location);
+                return signature.return_type;
+            }
         }
     }
     const size_t op = expr.find_first_of("+-*/%");
     if (op != std::string::npos) {
-        const std::string left = infer_expr(scope, expr.substr(0, op));
-        return left.empty() ? infer_expr(scope, expr.substr(op + 1)) : left;
+        const std::string left = infer_expr(scope, expr.substr(0, op), location);
+        return left.empty() ? infer_expr(scope, expr.substr(op + 1), location) : left;
     }
     const size_t dot = expr.find('.');
     if (dot != std::string::npos) {
@@ -137,6 +255,10 @@ std::string infer_expr(const FunctionScope& scope, std::string expr) {
     }
     if (const auto local = scope.locals.find(expr); local != scope.locals.end()) {
         return local->second;
+    }
+    if (const auto fn = scope.symbols.function_signatures.find(expr);
+        fn != scope.symbols.function_signatures.end()) {
+        return function_type(fn->second);
     }
     return {};
 }
@@ -147,7 +269,7 @@ bool is_all_caps_name(const std::string& name) {
 
 void check_type_match(const FunctionScope& scope, const RawStmt& stmt, const std::string& expected,
                       const std::string& expr) {
-    const std::string got = infer_expr(scope, expr);
+    const std::string got = infer_expr(scope, expr, &stmt.location);
     if (assignment_type_allowed(expected, expr, got)) {
         return;
     }
@@ -194,7 +316,7 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
     const std::string text = trim(stmt.text);
     check_local_address_escape(stmt, scope.locals);
     if (starts_with(text, "return")) {
-        const std::string got = infer_expr(scope, text.substr(6));
+        const std::string got = infer_expr(scope, text.substr(6), &stmt.location);
         if (return_type != "void" && !got.empty() && got != "auto" && got != return_type) {
             fail(stmt.location, "return type mismatch: expected " + return_type + ", got " + got);
         }
@@ -247,8 +369,8 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
         const std::string lhs = trim(text.substr(0, assign));
         if (split_top_level(lhs).size() > 1) {
             const std::vector<std::string> names = split_top_level(lhs);
-            const std::vector<std::string> types =
-                tuple_types(scope.symbols, infer_expr(scope, text.substr(assign + 1)));
+            const std::vector<std::string> types = tuple_types(
+                scope.symbols, infer_expr(scope, text.substr(assign + 1), &stmt.location));
             if (names.size() != types.size()) {
                 fail(stmt.location, "tuple destructuring count mismatch");
             }
@@ -259,7 +381,7 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
         }
         if (lhs.find('.') == std::string::npos && !starts_with(lhs, "*") &&
             !scope.locals.contains(lhs)) {
-            const std::string inferred = infer_expr(scope, text.substr(assign + 1));
+            const std::string inferred = infer_expr(scope, text.substr(assign + 1), &stmt.location);
             scope.locals[lhs] = inferred.empty() ? "auto" : inferred;
             if (is_all_caps_name(lhs)) {
                 scope.constants.insert(lhs);
@@ -270,7 +392,9 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
         if (!target_type.empty()) {
             check_type_match(scope, stmt, target_type, text.substr(assign + 1));
         }
+        return;
     }
+    (void)infer_expr(scope, text, &stmt.location);
 }
 
 void check_bodies(const ModuleAst& module, const Symbols& symbols) {

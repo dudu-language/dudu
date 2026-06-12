@@ -115,12 +115,43 @@ bool is_container_literal(const std::string& expected, std::string expr) {
     return true;
 }
 
+bool is_reference_binding(std::string expected, std::string got) {
+    expected = trim_copy(std::move(expected));
+    got = trim_copy(std::move(got));
+    if (expected.empty() || expected.front() != '&') {
+        return false;
+    }
+    return trim_copy(expected.substr(1)) == got;
+}
+
+std::string normalize_function_type(std::string type) {
+    type = trim_copy(std::move(type));
+    if (!starts_with(type, "fn(")) {
+        return type;
+    }
+    const size_t close = type.find(')');
+    if (close == std::string::npos) {
+        return type;
+    }
+    if (type.find("->", close) != std::string::npos) {
+        return type;
+    }
+    return type + " -> void";
+}
+
+bool is_function_type_match(std::string expected, std::string got) {
+    expected = normalize_function_type(std::move(expected));
+    got = normalize_function_type(std::move(got));
+    return starts_with(expected, "fn(") && expected == got;
+}
+
 } // namespace
 
 bool assignment_type_allowed(const std::string& expected, const std::string& expr,
                              const std::string& got) {
     return is_explicit_cast_to(expected, expr) || got.empty() || got == "auto" || got == expected ||
            is_option_value(expected, expr, got) || is_container_literal(expected, expr) ||
+           is_reference_binding(expected, got) || is_function_type_match(expected, got) ||
            (is_numeric_type(wrapped_type_arg(expected)) && is_numeric_literal(expr));
 }
 

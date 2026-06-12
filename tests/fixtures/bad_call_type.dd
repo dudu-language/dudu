@@ -1,0 +1,5 @@
+def negate(value: i32) -> i32:
+    return 0 - value
+
+def main() -> i32:
+    return negate(True)
