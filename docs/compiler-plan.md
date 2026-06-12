@@ -13,7 +13,7 @@ This is a staged plan for implementation after the language sketch settles.
 - Lex indentation, identifiers, numbers, strings, and comments.
 - Parse things.
 - Parse enums.
-- Parse type aliases.
+- Parse `tp` aliases.
 - Parse function signatures with newline-separated arguments.
 - Parse simple statements:
   - local declarations
@@ -32,7 +32,7 @@ This is a staged plan for implementation after the language sketch settles.
 - Built-in scalar types.
 - Thing types.
 - Enum types.
-- Type aliases.
+- `tp` aliases.
 - Function signatures.
 - Local variables.
 - Basic expression checking.

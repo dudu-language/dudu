@@ -114,12 +114,12 @@ enum class Team : uint8_t {
 
 ## Type Aliases
 
-Use `type` for typedef-style aliases.
+Use `tp` for typedef-style aliases. It is short for type, and also toilet paper.
 
 ```dudu
-type EntityId u32
-type ByteSpan span u8
-type Position Vec2
+tp EntityId u32
+tp ByteSpan span u8
+tp Position Vec2
 ```
 
 This should emit `using` aliases in C++.
@@ -129,7 +129,7 @@ This should emit `using` aliases in C++.
 Dudu is statically typed. Types are known at compile time and should lower
 directly to C++ types.
 
-Built-in scalar types:
+Built-in scalar types use Rust-like names:
 
 ```dudu
 bool
@@ -141,6 +141,7 @@ u8
 u16
 u32
 u64
+isize
 usize
 f32
 f64
@@ -425,7 +426,7 @@ These are draft conventions:
 
 - Types: `PascalCase`
 - Functions and variables: `snake_case`
-- Built-in scalar types: `i32`, `u32`, `f32`, `f64`, `bool`, `usize`
+- Built-in scalar types: `i32`, `u32`, `f32`, `f64`, `bool`, `isize`, `usize`
 
 The parser should not depend on capitalization for correctness unless the
 language explicitly chooses that later.
