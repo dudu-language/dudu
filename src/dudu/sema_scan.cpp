@@ -90,4 +90,17 @@ size_t find_top_level_operator(const std::string& expr) {
     return std::string::npos;
 }
 
+bool is_plain_identifier(const std::string& expr) {
+    if (expr.empty() ||
+        (std::isalpha(static_cast<unsigned char>(expr.front())) == 0 && expr.front() != '_')) {
+        return false;
+    }
+    for (const char c : expr) {
+        if (std::isalnum(static_cast<unsigned char>(c)) == 0 && c != '_') {
+            return false;
+        }
+    }
+    return true;
+}
+
 } // namespace dudu

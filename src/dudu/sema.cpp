@@ -6,6 +6,7 @@
 #include "dudu/escapes.hpp"
 #include "dudu/naming.hpp"
 #include "dudu/sema_context.hpp"
+#include "dudu/sema_function_type.hpp"
 #include "dudu/sema_scan.hpp"
 #include "dudu/type_compat.hpp"
 #include "dudu/unsupported.hpp"
@@ -13,7 +14,6 @@
 #include <cctype>
 #include <map>
 #include <set>
-#include <sstream>
 namespace dudu {
 namespace {
 [[noreturn]] void fail(const SourceLocation& location, const std::string& message) {
@@ -24,39 +24,6 @@ struct FunctionScope {
     std::map<std::string, std::string> locals;
     std::set<std::string> constants;
 };
-std::string function_type(const FunctionSignature& signature) {
-    std::ostringstream out;
-    out << "fn(";
-    for (size_t i = 0; i < signature.params.size(); ++i) {
-        if (i > 0) {
-            out << ", ";
-        }
-        out << signature.params[i];
-    }
-    out << ") -> " << signature.return_type;
-    return out.str();
-}
-bool parse_function_type(std::string type, FunctionSignature& out) {
-    type = trim(std::move(type));
-    if (!starts_with(type, "fn(")) {
-        return false;
-    }
-    const size_t close = type.find(')');
-    const size_t arrow = type.find("->", close == std::string::npos ? 0 : close);
-    if (close == std::string::npos) {
-        return false;
-    }
-    out.params.clear();
-    const std::string args = trim(type.substr(3, close - 3));
-    if (!args.empty()) {
-        out.params = split_top_level_args(args);
-    }
-    out.return_type = arrow == std::string::npos ? "void" : trim(type.substr(arrow + 2));
-    if (out.return_type.empty()) {
-        out.return_type = "void";
-    }
-    return true;
-}
 std::string member_path_type(const FunctionScope& scope, const RawStmt* stmt,
                              const std::string& path) {
     const size_t dot = path.find('.');
@@ -283,6 +250,9 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
         fn != scope.symbols.function_signatures.end()) {
         return function_type(fn->second);
     }
+    if (location != nullptr && is_plain_identifier(expr)) {
+        fail(*location, "unknown identifier: " + expr);
+    }
     return {};
 }
 void check_local_binding_name(const SourceLocation& location, const std::string& name) {
@@ -383,7 +353,7 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
         }
         return;
     }
-    if (starts_with(text, "cpp(")) {
+    if (starts_with(text, "cpp(") || text == "pass") {
         return;
     }
     if (starts_with(text, "if ") || starts_with(text, "elif ") || starts_with(text, "while ") ||
@@ -460,9 +430,14 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
     (void)infer_expr(scope, text, &stmt.location);
 }
 void check_bodies(const ModuleAst& module, const Symbols& symbols) {
+    FunctionScope base{symbols, {}, {}};
+    for (const ConstDecl& constant : module.constants) {
+        base.locals[constant.name] = constant.type;
+        base.constants.insert(constant.name);
+    }
     for (const ClassDecl& klass : module.classes) {
         for (const FunctionDecl& method : klass.methods) {
-            FunctionScope scope{symbols, {}, {}};
+            FunctionScope scope = base;
             for (const ParamDecl& param : method.params) {
                 scope.locals[param.name] = param.type;
             }
@@ -475,7 +450,7 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols) {
         }
     }
     for (const FunctionDecl& fn : module.functions) {
-        FunctionScope scope{symbols, {}, {}};
+        FunctionScope scope = base;
         for (const ParamDecl& param : fn.params) {
             scope.locals[param.name] = param.type;
         }
