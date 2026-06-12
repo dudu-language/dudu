@@ -10,6 +10,9 @@ class Point:
     x: i32
     y: i32
 
+    def sum(self) -> i32:
+        return self.x + self.y
+
 
 def answer() -> i32:
     return ANSWER
