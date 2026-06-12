@@ -340,6 +340,26 @@ dudu::ModuleAst checked_module(const Options& options, const std::string& source
     return module;
 }
 
+void check_source_file(Options options, const std::filesystem::path& path) {
+    options.input = path;
+    (void)checked_module(options, read_text_file(path), false);
+}
+
+bool check_source_path(const Options& options) {
+    if (!std::filesystem::is_directory(options.input)) {
+        check_source_file(options, options.input);
+        return true;
+    }
+    for (const std::filesystem::directory_entry& entry :
+         std::filesystem::recursive_directory_iterator(options.input)) {
+        if (!entry.is_regular_file() || entry.path().extension() != ".dd") {
+            continue;
+        }
+        check_source_file(options, entry.path());
+    }
+    return true;
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -351,6 +371,10 @@ int main(int argc, char** argv) {
             }
             const std::string source = read_text_file(options.input);
             write_text_output(options.output, dudu::format_source(source));
+            return 0;
+        }
+        if (options.check) {
+            (void)check_source_path(options);
             return 0;
         }
         const std::string source = read_text_file(options.input);
@@ -375,10 +399,6 @@ int main(int argc, char** argv) {
         if (options.emit_cpp) {
             write_text_output(options.output,
                               dudu::emit_cpp_source(checked_module(options, source, true)));
-            return 0;
-        }
-        if (options.check) {
-            (void)checked_module(options, source, false);
             return 0;
         }
         write_text_output(std::nullopt,

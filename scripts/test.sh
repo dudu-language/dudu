@@ -103,6 +103,8 @@ grep -q "if constexpr (build::DEBUG && build::RENDER_BACKEND == \"raylib\")" \
 grep -q "inline constexpr bool DEBUG = false;" "$repo_root/build/package_build_override.cpp"
 (
     cd "$repo_root/tests/fixtures/project_mode"
+    "$repo_root/build/duc" check .
+    "$repo_root/build/duc" check
     "$repo_root/build/duc" emit -o "$repo_root/build/project_mode.cpp"
 )
 grep -q "inline constexpr bool DEBUG = true;" "$repo_root/build/project_mode.cpp"
