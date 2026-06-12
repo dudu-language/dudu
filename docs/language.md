@@ -234,6 +234,28 @@ Function calls omit parentheses in the common case:
 draw_circle 400 300 40 red
 ```
 
+Multiline calls use indentation for the argument list:
+
+```dudu
+clamp
+    add 10 20
+    0
+    16
+```
+
+Multiple simple arguments may share one argument line when it stays readable:
+
+```dudu
+clamp
+    add 10 20
+    0 16
+```
+
+That means the block contains one nested call argument plus two scalar arguments.
+The compiler should flatten a child line into multiple arguments only when the
+line is not itself a call. This keeps dense block calls possible without making
+every scalar argument take a full line.
+
 Method-style calls are allowed:
 
 ```dudu
@@ -252,6 +274,23 @@ fn Player.damage
 
 The compiler may require parentheses later for ambiguous expressions, but the
 default style should avoid them.
+
+Parentheses are allowed for math grouping:
+
+```dudu
+x i32 = (a + b) * c
+```
+
+They are not the preferred call syntax.
+
+Operator overloads matter for math-heavy C++ interop. Dudu should allow normal
+operators to lower to C++ operators for imported/library types:
+
+```dudu
+v glm.vec3 = a + b * 0.5
+```
+
+This is necessary for GLM and similar math libraries to feel natural.
 
 ## Control Flow
 
@@ -334,7 +373,7 @@ fn move_particle
 Pointer operations use words instead of C glyphs:
 
 ```dudu
-p ptr Particle = addr particle
+p ptr Particle = adr particle
 q ptr Particle = null
 value Particle = at p
 at p = particle
@@ -342,7 +381,7 @@ at p = particle
 
 Working meanings:
 
-- `addr x`: address of `x`.
+- `adr x`: address of `x`.
 - `at p`: dereference pointer `p`.
 - `null`: null pointer literal.
 
@@ -387,8 +426,23 @@ The first compiler does not need a full slice system. It only needs:
 - fixed arrays: `arr T N`
 - indexing: `x[i]`
 - raw pointers: `ptr T`
-- pointer address/deref: `addr`, `at`
+- pointer address/deref: `adr`, `at`
 - spans as a standard view type for loops and APIs
+
+Matrix/math types should usually come from libraries first, not a special Dudu
+matrix feature. For example, GLM should be usable through C++ interop:
+
+```dudu
+use cpp "glm/glm.hpp" as glm
+
+fn dot3 f32
+    a glm.vec3
+    b glm.vec3
+
+    glm.dot a b
+```
+
+Dudu can add first-class matrix sugar later if real examples show a need.
 
 ## Imports
 

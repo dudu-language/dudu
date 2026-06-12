@@ -66,7 +66,20 @@ Build integration should support two modes:
 - **CMake mode:** generate or participate in a CMake build for packages and
   external libraries.
 
-Package metadata can start with `dudu.toml`:
+CLI should feel familiar to C/C++ users while keeping a few cargo-style
+conveniences:
+
+```sh
+duc emit src/main.dd -o build/main.cpp
+duc build
+duc run
+duc test
+duc src/main.dd --emit-cpp -
+```
+
+Package metadata can start with `dudu.toml`. The name is fine for now because
+the manifest describes the Dudu package, while the build contents remain normal
+C/C++ include paths, libraries, flags, and CMake/pkg-config integration.
 
 ```toml
 name = "my_app"
@@ -81,14 +94,64 @@ libs = ["raylib", "m"]
 flags = ["-Wall"]
 ```
 
-Optional real-library probes should prefer existing C/C++ discovery mechanisms:
+Real-library probes should prefer existing C/C++ discovery mechanisms:
 
 - `pkg-config` for libraries like raylib or SQLite.
 - CMake `find_package` where that is the normal path.
 - raw include/lib/link flags as an escape hatch.
 
+The default local test suite should use checked-in fixture libraries, but the
+goal run should also add real GLM/raylib/SQLite probes. If a machine is missing
+a probe dependency, the script may report that probe as unavailable, but the
+project should still include those tests.
+
 Dudu should keep generated C++ inspectable and preserve `compile_commands.json`
 where possible.
+
+## Import Path Decision
+
+Use quoted strings for filesystem/header paths:
+
+```dudu
+use "math.dd"
+use c "stdio.h" as c
+use cpp "raylib.h" as rl
+```
+
+This mirrors C/C++ enough to be familiar: quoted text is a path/header spelling,
+not a Dudu symbol. For generated C++, Dudu can preserve the user's header style
+where possible:
+
+```dudu
+use c "local.h" as local     # emits #include "local.h"
+use c "stdio.h" as c         # may emit #include <stdio.h> when configured as a system header
+```
+
+Bare module names can be a later package feature:
+
+```dudu
+use math
+use glm as glm
+```
+
+Do not implement bare module imports until the package layout exists.
+
+## Interop Strategy Decision
+
+The next goal should use **emit-only interop plus generated C++ compilation**.
+
+Meaning:
+
+- Dudu emits `#include`s and C++ calls.
+- The generated C++ is compiled and linked with normal C/C++ tools.
+- The C++ compiler catches missing headers, bad calls, and link problems.
+- Clang-backed header import/typechecking comes later.
+
+This still supports the project goal: Dudu can use real C/C++ libraries now,
+and C/C++ can use Dudu once Dudu emits `.cpp/.hpp` or libraries.
+
+Avoid a temporary `foreign` declaration system unless the goal run gets blocked
+by a concrete test that cannot be expressed otherwise.
 
 ### 1. Split The Compiler
 
@@ -195,9 +258,10 @@ fn main i32
     b.length
 ```
 
-### 5. Add Optional Real Library Probes
+### 5. Add Real Library Probes
 
-These should be skipped when the dependency is missing.
+These should exist in the repo. Test scripts can skip running a probe when the
+dependency is missing on the current machine.
 
 Candidates:
 
@@ -218,7 +282,7 @@ For GLM, compile a tiny C++ probe:
 int main() { glm::vec3 v{1, 2, 3}; return v.x == 1 ? 0 : 1; }
 ```
 
-Do not make optional library absence fail the default test suite.
+Do not make real-library absence fail the default local fixture suite.
 
 ### 6. Implement Enough Type Knowledge For Interop
 
@@ -231,7 +295,7 @@ manual foreign assumptions:
 - known external aliases
 - known all-caps external constants
 
-Then add explicit foreign declarations if needed:
+Only add explicit foreign declarations if needed:
 
 ```dudu
 foreign c cm
@@ -239,7 +303,7 @@ foreign c cm
         v cm.CVec2
 ```
 
-This is a fallback if real header import is too big for the next pass.
+This is a fallback if emit-only interop cannot cover an important test.
 
 ### 7. Decide Header Import Implementation
 
@@ -274,7 +338,7 @@ Add fixtures for:
 - `while`
 - `for item in items`
 - `for i in 0..count`
-- pointers: `addr`, `at`, `null`
+- pointers: `adr`, `at`, `null`
 - arrays: `arr T N`, indexing
 - spans
 

@@ -723,7 +723,7 @@ class Emitter {
         if (token == "or") {
             return "||";
         }
-        if (token == "addr" || token == "at") {
+        if (token == "adr" || token == "at") {
             return token;
         }
         return translate_value_identifier(token);
@@ -733,7 +733,7 @@ class Emitter {
         if (tokens.empty()) {
             return "";
         }
-        if (tokens[0] == "addr" && tokens.size() == 2) {
+        if (tokens[0] == "adr" && tokens.size() == 2) {
             return "&" + emit_expr_words({tokens[1]});
         }
         if (tokens[0] == "at" && tokens.size() == 2) {
@@ -762,7 +762,7 @@ class Emitter {
                 out.push_back("!");
                 continue;
             }
-            if (token == "addr" && i + 1 < tokens.size()) {
+            if (token == "adr" && i + 1 < tokens.size()) {
                 out.push_back("&");
                 continue;
             }

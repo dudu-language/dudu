@@ -33,6 +33,15 @@ math.sqrt 9.0
 rl.InitWindow 800 600 "window"
 ```
 
+Quoted paths are intentional. They are path/header strings, not Dudu symbols.
+For C/C++ headers, Dudu should preserve local/system include intent where
+possible when emitting C++:
+
+```cpp
+#include "local_header.h"
+#include <stdio.h>
+```
+
 ## C Interop Rules
 
 C interop should work first because C has a simpler ABI and fewer language
@@ -74,8 +83,9 @@ fn make_pos rl.Vector2
 
 C++ interop should be practical before it is complete.
 
-The compiler should use Clang tooling to read C++ headers instead of expecting
-users to hand-write every binding.
+The next implementation step should compile generated C++ against real headers
+instead of requiring Dudu to understand every foreign declaration itself. Clang
+tooling can come later for better diagnostics and Dudu-side typechecking.
 
 The first C++ interop layer should support:
 
