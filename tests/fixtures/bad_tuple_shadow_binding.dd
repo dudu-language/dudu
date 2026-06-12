@@ -1,0 +1,7 @@
+def pair() -> tuple[i32, i32]:
+    return 1, 2
+
+
+def bad():
+    value: i32 = 0
+    value, other = pair()

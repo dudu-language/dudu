@@ -5,6 +5,7 @@
 #include "dudu/cpp_lower.hpp"
 #include "dudu/escapes.hpp"
 #include "dudu/naming.hpp"
+#include "dudu/sema_bindings.hpp"
 #include "dudu/sema_constexpr.hpp"
 #include "dudu/sema_context.hpp"
 #include "dudu/sema_function_type.hpp"
@@ -275,11 +276,6 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
     }
     return {};
 }
-void check_local_binding_name(const SourceLocation& location, const std::string& name) {
-    if (!is_dudu_snake_case(name) && !is_dudu_all_caps(name)) {
-        fail(location, "local names must be snake_case or ALL_CAPS: " + name);
-    }
-}
 void check_type_match(const FunctionScope& scope, const RawStmt& stmt, const std::string& expected,
                       const std::string& expr) {
     const std::string got = infer_expr(scope, expr, &stmt.location);
@@ -430,8 +426,8 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
             if (names.size() != types.size()) {
                 fail(stmt.location, "tuple destructuring count mismatch");
             }
+            check_destructure_bindings(stmt.location, names, scope.locals);
             for (size_t i = 0; i < names.size(); ++i) {
-                check_local_binding_name(stmt.location, names[i]);
                 scope.locals[names[i]] = types[i];
             }
             return;
