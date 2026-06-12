@@ -376,6 +376,8 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
     if (starts_with(text, "return")) {
         const std::string expr = text.substr(6);
         const std::string got = infer_expr(scope, expr, &stmt.location);
+        if (return_type == "void" && got != "void")
+            fail(stmt.location, "void function cannot return " + got);
         if (return_type != "void" && !can_assign_expr(scope, return_type, expr, got)) {
             fail(stmt.location, "return type mismatch: expected " + return_type + ", got " + got);
         }

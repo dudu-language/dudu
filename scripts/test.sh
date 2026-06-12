@@ -395,6 +395,7 @@ expect_fail bad_constructor_type --emit-cpp "constructor field Point.x expects i
 expect_fail bad_constructor_positional_type --emit-cpp "constructor Point argument 1 expects i32, got bool"
 expect_fail bad_result_ok_type --emit-cpp "return type mismatch: expected Result\\[i32, i32\\], got Ok\\[bool\\]"
 expect_fail bad_result_err_type --emit-cpp "return type mismatch: expected Result\\[i32, i32\\], got Err\\[bool\\]"
+expect_fail bad_void_return --emit-cpp "void function cannot return i32"
 expect_fail bad_build_flag --check "unknown build flag: build.NOPE"
 expect_fail bad_implicit_cast --emit-cpp "cannot assign i32 to i64 without an explicit cast"
 expect_fail bad_const_assignment --emit-cpp "cannot assign to constant: LIMIT"
