@@ -178,35 +178,6 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
             }
         }
     }
-    const std::vector<std::string> tuple_parts = split_top_level(expr);
-    if (tuple_parts.size() > 1) {
-        std::ostringstream out;
-        out << "tuple[";
-        for (size_t i = 0; i < tuple_parts.size(); ++i) {
-            if (i > 0) {
-                out << ", ";
-            }
-            out << infer_expr(scope, tuple_parts[i], location);
-        }
-        out << "]";
-        return out.str();
-    }
-    if (expr == "True" || expr == "False" || expr.find("==") != std::string::npos ||
-        expr.find("!=") != std::string::npos || expr.find("<") != std::string::npos ||
-        expr.find(">") != std::string::npos) {
-        return "bool";
-    }
-    const size_t op = find_top_level_operator(expr);
-    if (op != std::string::npos) {
-        const std::string left = infer_expr(scope, expr.substr(0, op), location);
-        return left.empty() ? infer_expr(scope, expr.substr(op + 1), location) : left;
-    }
-    if (std::isdigit(static_cast<unsigned char>(expr.front())) != 0) {
-        return expr.find('.') == std::string::npos ? "i32" : "f64";
-    }
-    if (expr == "None") {
-        return "None";
-    }
     const size_t call = find_call_open(expr);
     if (call != std::string::npos && expr.back() == ')') {
         const std::string callee = trim(expr.substr(0, call));
@@ -251,6 +222,35 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
             !known_type(scope.symbols, callee) && !is_builtin_call(callee)) {
             fail(*location, "unknown function: " + callee);
         }
+    }
+    const std::vector<std::string> tuple_parts = split_top_level(expr);
+    if (tuple_parts.size() > 1) {
+        std::ostringstream out;
+        out << "tuple[";
+        for (size_t i = 0; i < tuple_parts.size(); ++i) {
+            if (i > 0) {
+                out << ", ";
+            }
+            out << infer_expr(scope, tuple_parts[i], location);
+        }
+        out << "]";
+        return out.str();
+    }
+    if (expr == "True" || expr == "False" || expr.find("==") != std::string::npos ||
+        expr.find("!=") != std::string::npos || expr.find("<") != std::string::npos ||
+        expr.find(">") != std::string::npos) {
+        return "bool";
+    }
+    const size_t op = find_top_level_operator(expr);
+    if (op != std::string::npos) {
+        const std::string left = infer_expr(scope, expr.substr(0, op), location);
+        return left.empty() ? infer_expr(scope, expr.substr(op + 1), location) : left;
+    }
+    if (std::isdigit(static_cast<unsigned char>(expr.front())) != 0) {
+        return expr.find('.') == std::string::npos ? "i32" : "f64";
+    }
+    if (expr == "None") {
+        return "None";
     }
     const size_t index = expr.find('[');
     if (location != nullptr && index != std::string::npos && expr.back() == ']') {
