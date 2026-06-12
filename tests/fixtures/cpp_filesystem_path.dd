@@ -1,0 +1,9 @@
+import cpp "filesystem" as std
+
+
+def main() -> i32:
+    path: std.filesystem.path = std.filesystem.path("assets/ship.png")
+    name: str = path.filename().string()
+    if name == "ship.png":
+        return 42
+    return 1

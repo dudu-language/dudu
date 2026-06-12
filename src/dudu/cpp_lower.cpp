@@ -165,8 +165,17 @@ std::string qualify_namespace_aliases(std::string expr,
                 pos == 0 || (std::isalnum(static_cast<unsigned char>(expr[pos - 1])) == 0 &&
                              expr[pos - 1] != '_');
             if (left_ok) {
-                const std::string replacement = strip_alias ? "" : name + "::";
-                expr.replace(pos, marker.size(), replacement);
+                size_t end = pos + marker.size();
+                while (end < expr.size() &&
+                       (std::isalnum(static_cast<unsigned char>(expr[end])) != 0 ||
+                        expr[end] == '_' || expr[end] == '.')) {
+                    ++end;
+                }
+                std::string replacement =
+                    strip_alias ? expr.substr(pos + marker.size(), end - pos - marker.size())
+                                : expr.substr(pos, end - pos);
+                replacement = replace_all(std::move(replacement), ".", "::");
+                expr.replace(pos, end - pos, replacement);
                 pos = expr.find(marker, pos + replacement.size());
             } else {
                 pos = expr.find(marker, pos + marker.size());
