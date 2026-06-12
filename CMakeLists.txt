@@ -19,6 +19,7 @@ add_library(dudu_frontend
     src/dudu/format_path.cpp
     src/dudu/lexer.cpp
     src/dudu/module_loader.cpp
+    src/dudu/native_build.cpp
     src/dudu/naming.cpp
     src/dudu/parser.cpp
     src/dudu/project_config.cpp
