@@ -385,8 +385,14 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
         const size_t in_pos = text.find(" in ");
         if (colon != std::string::npos && in_pos != std::string::npos && colon < in_pos) {
             const std::string name = trim(text.substr(4, colon - 4));
+            std::string iterable = trim(text.substr(in_pos + 4));
+            if (!iterable.empty() && iterable.back() == ':') {
+                iterable.pop_back();
+            }
             check_local_binding_name(stmt.location, name);
-            nested.locals[name] = trim(text.substr(colon + 1, in_pos - colon - 1));
+            const std::string type = trim(text.substr(colon + 1, in_pos - colon - 1));
+            check_iterable_binding(scope.symbols, scope.locals, stmt.location, type, iterable);
+            nested.locals[name] = type;
         }
         check_block(nested, stmt.children, return_type, loop_depth + 1);
         return;

@@ -1,0 +1,5 @@
+def bad() -> i32:
+    value: i32 = 1
+    for item: i32 in value:
+        return item
+    return 0

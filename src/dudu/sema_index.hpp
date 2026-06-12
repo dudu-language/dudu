@@ -13,5 +13,12 @@ std::string indexed_value_type(const Symbols& symbols,
                                const std::map<std::string, std::string>& locals,
                                const SourceLocation& location, const std::string& name,
                                std::string_view unknown_message);
+std::string iterable_value_type(const Symbols& symbols,
+                                const std::map<std::string, std::string>& locals,
+                                const std::string& name);
+void check_iterable_binding(const Symbols& symbols,
+                            const std::map<std::string, std::string>& locals,
+                            const SourceLocation& location, const std::string& binding_type,
+                            const std::string& iterable);
 
 } // namespace dudu

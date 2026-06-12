@@ -1,8 +1,38 @@
 #include "dudu/sema_index.hpp"
 
 #include "dudu/cpp_lower.hpp"
+#include "dudu/type_compat.hpp"
+
+#include <cctype>
 
 namespace dudu {
+namespace {
+
+std::string unwrap_reference_and_const(std::string type) {
+    type = trim(std::move(type));
+    if (!type.empty() && type.front() == '&') {
+        type = trim(type.substr(1));
+    }
+    if (starts_with(type, "const[") && type.back() == ']') {
+        type = trim(type.substr(6, type.size() - 7));
+    }
+    return type;
+}
+
+bool plain_identifier(const std::string& text) {
+    if (text.empty() ||
+        (std::isalpha(static_cast<unsigned char>(text.front())) == 0 && text.front() != '_')) {
+        return false;
+    }
+    for (const char c : text) {
+        if (std::isalnum(static_cast<unsigned char>(c)) == 0 && c != '_') {
+            return false;
+        }
+    }
+    return true;
+}
+
+} // namespace
 
 std::string indexed_value_type(const Symbols& symbols,
                                const std::map<std::string, std::string>& locals,
@@ -42,6 +72,45 @@ std::string indexed_value_type(const Symbols& symbols,
         return trim(type.substr(0, type_index));
     }
     throw CompileError(location, "cannot index non-container: " + name);
+}
+
+std::string iterable_value_type(const Symbols& symbols,
+                                const std::map<std::string, std::string>& locals,
+                                const std::string& name) {
+    const auto local = locals.find(name);
+    if (local == locals.end()) {
+        return {};
+    }
+    const std::string type = unwrap_reference_and_const(resolve_alias(symbols, local->second));
+    if (starts_with(type, "list[") && type.back() == ']') {
+        return trim(type.substr(5, type.size() - 6));
+    }
+    const size_t type_index = type.find('[');
+    if (type_index != std::string::npos && type.back() == ']') {
+        return trim(type.substr(0, type_index));
+    }
+    return {};
+}
+
+void check_iterable_binding(const Symbols& symbols,
+                            const std::map<std::string, std::string>& locals,
+                            const SourceLocation& location, const std::string& binding_type,
+                            const std::string& iterable) {
+    if (starts_with(iterable, "range(") || !plain_identifier(iterable)) {
+        return;
+    }
+    if (!locals.contains(iterable)) {
+        throw CompileError(location, "iteration over unknown local: " + iterable);
+    }
+    const std::string element = iterable_value_type(symbols, locals, iterable);
+    if (element.empty()) {
+        throw CompileError(location, "cannot iterate non-container: " + iterable);
+    }
+    if (!assignment_type_allowed(binding_type, "", element) &&
+        !assignment_type_allowed(resolve_alias(symbols, binding_type), "",
+                                 resolve_alias(symbols, element))) {
+        throw CompileError(location, "loop binding expects " + binding_type + ", got " + element);
+    }
 }
 
 } // namespace dudu

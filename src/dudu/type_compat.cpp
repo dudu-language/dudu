@@ -121,7 +121,7 @@ bool is_reference_binding(std::string expected, std::string got) {
     if (expected.empty() || expected.front() != '&') {
         return false;
     }
-    return trim_copy(expected.substr(1)) == got;
+    return wrapped_type_arg(trim_copy(expected.substr(1))) == got;
 }
 
 bool is_null_pointer(std::string expected, std::string expr, std::string got) {
