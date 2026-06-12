@@ -25,6 +25,71 @@ Known limits:
 
 The next goal should make interop testable.
 
+## Toolchain Direction
+
+Dudu should follow normal C/C++ tooling instead of inventing a parallel build
+world.
+
+Pipeline:
+
+```text
+.dd source
+    -> duc
+    -> generated .cpp/.hpp
+    -> clang++/g++/MSVC through CMake or direct compiler mode
+    -> native binary/library
+```
+
+Command name:
+
+```text
+duc
+```
+
+`duc` means Dudu compiler. The language is Dudu, source files are `.dd`, and the
+compiler command is `duc`.
+
+Near-term command shapes:
+
+```sh
+duc emit src/main.dd -o build/main.cpp
+duc build
+duc run
+duc test
+```
+
+The current `dudu` executable can be renamed to `duc` during the next goal run.
+
+Build integration should support two modes:
+
+- **Direct mode:** emit C++ and call `c++`/`clang++` for a simple file.
+- **CMake mode:** generate or participate in a CMake build for packages and
+  external libraries.
+
+Package metadata can start with `dudu.toml`:
+
+```toml
+name = "my_app"
+main = "src/main.dd"
+cpp_std = "c++20"
+
+[cc]
+compiler = "clang++"
+include_dirs = ["third_party/include"]
+lib_dirs = ["third_party/lib"]
+libs = ["raylib", "m"]
+flags = ["-Wall"]
+```
+
+Optional real-library probes should prefer existing C/C++ discovery mechanisms:
+
+- `pkg-config` for libraries like raylib or SQLite.
+- CMake `find_package` where that is the normal path.
+- raw include/lib/link flags as an escape hatch.
+
+Dudu should keep generated C++ inspectable and preserve `compile_commands.json`
+where possible.
+
 ### 1. Split The Compiler
 
 Split `src/main.cpp` into cohesive files before expanding behavior:
