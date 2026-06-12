@@ -57,4 +57,17 @@ compile_and_expect simple_program 42
 compile_and_expect control_flow 55
 compile_and_expect compile_time_basic 64
 
+expect_fail() {
+    local name="$1"
+    local mode="$2"
+    if "$repo_root/build/dudu" "$repo_root/tests/fixtures/$name.dd" "$mode" \
+        "$repo_root/build/$name.out" 2>"$repo_root/build/$name.err"; then
+        echo "$name unexpectedly passed" >&2
+        exit 1
+    fi
+}
+
+expect_fail bad_duplicate --check
+expect_fail bad_return --emit-cpp
+
 echo "compiler builds and canonical examples are present"

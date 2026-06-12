@@ -1,0 +1,293 @@
+#include "dudu/sema.hpp"
+
+#include <cctype>
+#include <map>
+#include <set>
+#include <sstream>
+
+namespace dudu {
+namespace {
+
+std::string trim(std::string text) {
+    while (!text.empty() && std::isspace(static_cast<unsigned char>(text.front())) != 0) {
+        text.erase(text.begin());
+    }
+    while (!text.empty() && std::isspace(static_cast<unsigned char>(text.back())) != 0) {
+        text.pop_back();
+    }
+    return text;
+}
+
+bool starts_with(std::string_view text, std::string_view prefix) {
+    return text.substr(0, prefix.size()) == prefix;
+}
+
+bool is_builtin_type(const std::string& type) {
+    static const std::set<std::string> builtins = {"bool", "i8",   "i16", "i32",   "i64",   "u8",
+                                                   "u16",  "u32",  "u64", "isize", "usize", "f32",
+                                                   "f64",  "void", "str", "cstr"};
+    return builtins.contains(type);
+}
+
+std::string base_type(std::string type) {
+    type = trim(std::move(type));
+    while (!type.empty() && (type.front() == '*' || type.front() == '&')) {
+        type = trim(type.substr(1));
+    }
+    const size_t bracket = type.find('[');
+    if (bracket != std::string::npos) {
+        return trim(type.substr(0, bracket));
+    }
+    return type;
+}
+
+struct Symbols {
+    std::set<std::string> types;
+    std::map<std::string, std::string> functions;
+    std::map<std::string, const ClassDecl*> classes;
+};
+
+[[noreturn]] void fail(const SourceLocation& location, const std::string& message) {
+    throw CompileError(location, message);
+}
+
+void add_name(std::map<std::string, SourceLocation>& names, const std::string& name,
+              const SourceLocation& location) {
+    const auto [it, inserted] = names.emplace(name, location);
+    if (!inserted) {
+        fail(location, "duplicate declaration: " + name);
+    }
+}
+
+bool known_type(const Symbols& symbols, const std::string& type) {
+    if (starts_with(trim(type), "fn(")) {
+        return true;
+    }
+    const std::string base = base_type(type);
+    return base.empty() || is_builtin_type(base) || symbols.types.contains(base) ||
+           base.find('.') != std::string::npos || base == "list" || base == "dict" ||
+           base == "set" || base == "tuple" || base == "Result" || base == "Option" ||
+           base == "fn" || base == "const" || base == "atomic" || base == "volatile" ||
+           base == "storage" || base == "shared" || base == "device";
+}
+
+Symbols collect_symbols(const ModuleAst& module) {
+    Symbols symbols;
+    std::map<std::string, SourceLocation> names;
+    for (const char* type : {"bool", "i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64", "isize",
+                             "usize", "f32", "f64", "void", "str", "cstr"}) {
+        symbols.types.insert(type);
+    }
+    for (const TypeAliasDecl& alias : module.aliases) {
+        add_name(names, alias.name, alias.location);
+        symbols.types.insert(alias.name);
+    }
+    for (const EnumDecl& en : module.enums) {
+        add_name(names, en.name, en.location);
+        symbols.types.insert(en.name);
+    }
+    for (const ClassDecl& klass : module.classes) {
+        add_name(names, klass.name, klass.location);
+        symbols.types.insert(klass.name);
+        symbols.classes[klass.name] = &klass;
+    }
+    for (const FunctionDecl& fn : module.functions) {
+        add_name(names, fn.name, fn.location);
+        symbols.functions[fn.name] = fn.return_type.empty() ? "void" : fn.return_type;
+    }
+    for (const ConstDecl& constant : module.constants) {
+        add_name(names, constant.name, constant.location);
+    }
+    return symbols;
+}
+
+void check_declarations(const ModuleAst& module, const Symbols& symbols) {
+    for (const ClassDecl& klass : module.classes) {
+        std::set<std::string> fields;
+        for (const FieldDecl& field : klass.fields) {
+            if (!fields.insert(field.name).second) {
+                fail(field.location, "duplicate field: " + field.name);
+            }
+            if (!known_type(symbols, field.type)) {
+                fail(field.location, "unknown field type: " + field.type);
+            }
+        }
+    }
+    for (const FunctionDecl& fn : module.functions) {
+        std::set<std::string> params;
+        for (const ParamDecl& param : fn.params) {
+            if (!params.insert(param.name).second) {
+                fail(param.location, "duplicate parameter: " + param.name);
+            }
+            if (!known_type(symbols, param.type)) {
+                fail(param.location, "unknown parameter type: " + param.type);
+            }
+        }
+        if (!known_type(symbols, fn.return_type.empty() ? "void" : fn.return_type)) {
+            fail(fn.location, "unknown return type: " + fn.return_type);
+        }
+    }
+}
+
+struct FunctionScope {
+    const Symbols& symbols;
+    std::map<std::string, std::string> locals;
+};
+
+std::string infer_expr(const FunctionScope& scope, std::string expr) {
+    expr = trim(std::move(expr));
+    if (expr.empty()) {
+        return "void";
+    }
+    if (expr == "True" || expr == "False" || expr.find("==") != std::string::npos ||
+        expr.find("!=") != std::string::npos || expr.find("<") != std::string::npos ||
+        expr.find(">") != std::string::npos) {
+        return "bool";
+    }
+    if (std::isdigit(static_cast<unsigned char>(expr.front())) != 0) {
+        return expr.find('.') == std::string::npos ? "i32" : "f64";
+    }
+    const size_t call = expr.find('(');
+    if (call != std::string::npos && expr.back() == ')') {
+        const std::string callee = trim(expr.substr(0, call));
+        if (scope.symbols.classes.contains(callee)) {
+            return callee;
+        }
+        if (const auto fn = scope.symbols.functions.find(callee);
+            fn != scope.symbols.functions.end()) {
+            return fn->second;
+        }
+    }
+    const size_t op = expr.find_first_of("+-*/%");
+    if (op != std::string::npos) {
+        return infer_expr(scope, expr.substr(0, op));
+    }
+    const size_t dot = expr.find('.');
+    if (dot != std::string::npos) {
+        const std::string base = expr.substr(0, dot);
+        const auto local = scope.locals.find(base);
+        if (local != scope.locals.end()) {
+            const auto klass = scope.symbols.classes.find(local->second);
+            if (klass != scope.symbols.classes.end()) {
+                const std::string field = expr.substr(dot + 1);
+                for (const FieldDecl& decl : klass->second->fields) {
+                    if (decl.name == field) {
+                        return decl.type;
+                    }
+                }
+            }
+        }
+        return {};
+    }
+    if (const auto local = scope.locals.find(expr); local != scope.locals.end()) {
+        return local->second;
+    }
+    return {};
+}
+
+void check_assign_target(const FunctionScope& scope, const RawStmt& stmt, const std::string& lhs) {
+    if (lhs.find('.') == std::string::npos) {
+        if (!scope.locals.contains(lhs)) {
+            fail(stmt.location, "assignment to unknown local: " + lhs);
+        }
+        return;
+    }
+    const size_t dot = lhs.find('.');
+    const std::string base = lhs.substr(0, dot);
+    const auto local = scope.locals.find(base);
+    if (local == scope.locals.end()) {
+        fail(stmt.location, "assignment through unknown local: " + base);
+    }
+    const auto klass = scope.symbols.classes.find(local->second);
+    if (klass == scope.symbols.classes.end()) {
+        return;
+    }
+    const std::string field = lhs.substr(dot + 1);
+    for (const FieldDecl& decl : klass->second->fields) {
+        if (decl.name == field) {
+            return;
+        }
+    }
+    fail(stmt.location, "unknown field: " + lhs);
+}
+
+void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& return_type);
+
+void check_block(FunctionScope& scope, const std::vector<RawStmt>& body,
+                 const std::string& return_type) {
+    for (const RawStmt& stmt : body) {
+        check_stmt(scope, stmt, return_type);
+    }
+}
+
+void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& return_type) {
+    const std::string text = trim(stmt.text);
+    if (starts_with(text, "return")) {
+        const std::string got = infer_expr(scope, text.substr(6));
+        if (return_type != "void" && !got.empty() && got != return_type) {
+            fail(stmt.location, "return type mismatch: expected " + return_type + ", got " + got);
+        }
+        return;
+    }
+    if (starts_with(text, "if ") || starts_with(text, "elif ") || starts_with(text, "while ") ||
+        text == "else:") {
+        check_block(scope, stmt.children, return_type);
+        return;
+    }
+    if (starts_with(text, "for ")) {
+        FunctionScope nested = scope;
+        const size_t colon = text.find(':');
+        const size_t in_pos = text.find(" in ");
+        if (colon != std::string::npos && in_pos != std::string::npos && colon < in_pos) {
+            nested.locals[trim(text.substr(4, colon - 4))] =
+                trim(text.substr(colon + 1, in_pos - colon - 1));
+        }
+        check_block(nested, stmt.children, return_type);
+        return;
+    }
+    const size_t colon = text.find(':');
+    const size_t assign = text.find('=');
+    if (colon != std::string::npos && (assign == std::string::npos || colon < assign)) {
+        const std::string name = trim(text.substr(0, colon));
+        const std::string type = trim(text.substr(colon + 1, assign - colon - 1));
+        if (!known_type(scope.symbols, type)) {
+            fail(stmt.location, "unknown local type: " + type);
+        }
+        scope.locals[name] = type;
+        return;
+    }
+    if (assign != std::string::npos && text.find("==") == std::string::npos) {
+        const std::string lhs = trim(text.substr(0, assign));
+        if (lhs.find('.') == std::string::npos && !scope.locals.contains(lhs)) {
+            const std::string inferred = infer_expr(scope, text.substr(assign + 1));
+            if (inferred.empty()) {
+                fail(stmt.location, "cannot infer local type: " + lhs);
+            }
+            scope.locals[lhs] = inferred;
+            return;
+        }
+        check_assign_target(scope, stmt, lhs);
+    }
+}
+
+void check_bodies(const ModuleAst& module, const Symbols& symbols) {
+    for (const FunctionDecl& fn : module.functions) {
+        FunctionScope scope{symbols, {}};
+        for (const ParamDecl& param : fn.params) {
+            scope.locals[param.name] = param.type;
+        }
+        check_block(scope, fn.body, fn.return_type.empty() ? "void" : fn.return_type);
+    }
+}
+
+} // namespace
+
+void analyze_module(const ModuleAst& module, SemanticOptions options) {
+    const Symbols symbols = collect_symbols(module);
+    check_declarations(module, symbols);
+    if (options.check_bodies) {
+        check_bodies(module, symbols);
+    }
+}
+
+} // namespace dudu

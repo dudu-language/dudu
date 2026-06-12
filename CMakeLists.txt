@@ -10,6 +10,7 @@ add_library(dudu_frontend
     src/dudu/cpp_emit.cpp
     src/dudu/lexer.cpp
     src/dudu/parser.cpp
+    src/dudu/sema.cpp
     src/dudu/source.cpp
     src/dudu/token.cpp
 )

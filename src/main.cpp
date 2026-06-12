@@ -1,5 +1,6 @@
 #include "dudu/cpp_emit.hpp"
 #include "dudu/parser.hpp"
+#include "dudu/sema.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -1116,16 +1117,19 @@ int main(int argc, char** argv) {
         const std::string source = read_text_file(options.input);
         if (options.header_output.has_value()) {
             const dudu::ModuleAst module = dudu::parse_source(source, options.input);
+            dudu::analyze_module(module);
             write_text_output(options.header_output, dudu::emit_cpp_header(module));
             return 0;
         }
         if (options.emit_cpp) {
             const dudu::ModuleAst module = dudu::parse_source(source, options.input);
+            dudu::analyze_module(module, {.check_bodies = true});
             write_text_output(options.output, dudu::emit_cpp_source(module));
             return 0;
         }
         if (options.check) {
-            (void)dudu::parse_source(source, options.input);
+            const dudu::ModuleAst module = dudu::parse_source(source, options.input);
+            dudu::analyze_module(module);
             return 0;
         }
         Program program = parse_program(options.input);

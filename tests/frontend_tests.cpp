@@ -1,6 +1,7 @@
 #include "dudu/cpp_emit.hpp"
 #include "dudu/lexer.hpp"
 #include "dudu/parser.hpp"
+#include "dudu/sema.hpp"
 
 #include <cassert>
 #include <filesystem>
@@ -96,6 +97,33 @@ void test_header_emission() {
     assert(header.find("float dot(Vec3 a, Vec3 b);") != std::string::npos);
 }
 
+void test_semantic_diagnostics() {
+    bool duplicate = false;
+    try {
+        const dudu::ModuleAst module = dudu::parse_source("class Vec:\n"
+                                                          "    x: i32\n"
+                                                          "\n"
+                                                          "class Vec:\n"
+                                                          "    y: i32\n",
+                                                          "duplicate.dd");
+        dudu::analyze_module(module);
+    } catch (const dudu::CompileError&) {
+        duplicate = true;
+    }
+    assert(duplicate);
+
+    bool bad_return = false;
+    try {
+        const dudu::ModuleAst module = dudu::parse_source("def bad() -> i32:\n"
+                                                          "    return True\n",
+                                                          "bad_return.dd");
+        dudu::analyze_module(module, {.check_bodies = true});
+    } catch (const dudu::CompileError&) {
+        bad_return = true;
+    }
+    assert(bad_return);
+}
+
 } // namespace
 
 int main() {
@@ -105,6 +133,7 @@ int main() {
         test_import_bindings();
         test_canonical_examples_parse(root);
         test_header_emission();
+        test_semantic_diagnostics();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;

@@ -1,0 +1,6 @@
+class Vec:
+    x: i32
+
+
+class Vec:
+    y: i32
