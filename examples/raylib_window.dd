@@ -1,4 +1,4 @@
-cpp include "raylib.h" as rl
+use cpp "raylib.h" as rl
 
 fn main i32
 

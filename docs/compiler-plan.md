@@ -1,6 +1,7 @@
 # Compiler Plan
 
-This is a staged plan for implementation after the language sketch settles.
+This is a staged plan. Stage 1-3 are partially implemented by the first
+line-oriented C++ emitter.
 
 ## Stage 0: Spec Fixtures
 
@@ -50,13 +51,13 @@ This is a staged plan for implementation after the language sketch settles.
 
 ## Stage 4: C Interop
 
-- Accept `c include`.
+- Accept `use c`.
 - Start with explicit declarations if header parsing is not ready.
 - Add Clang-assisted header import once the core compiler is stable.
 
 ## Stage 5: C++ Interop
 
-- Accept `cpp include`.
+- Accept `use cpp`.
 - Support namespaces and direct function/constant access.
 - Add basic imported class/thing method calls.
 - Defer complex templates and macro-heavy APIs until the basics are proven.

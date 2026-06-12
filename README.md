@@ -9,7 +9,7 @@ movement, native-speed output, and first-class access to existing C and C++
 libraries. Source files use `.dd`.
 
 ```dudu
-cpp include "raylib.h" as rl
+use cpp "raylib.h" as rl
 
 th Vec2
     x f32
@@ -31,7 +31,8 @@ fn main i32
 
 ## Current Status
 
-This repo is currently spec-first. There is no compiler yet.
+This repo has a first compiler slice. It parses a small `.dd` subset and emits
+readable C++.
 
 The starting point is:
 
@@ -39,6 +40,24 @@ The starting point is:
 - [Language sketch](docs/language.md)
 - [Interop plan](docs/interop.md)
 - [Compiler plan](docs/compiler-plan.md)
+
+Build the compiler:
+
+```sh
+./scripts/build.sh
+```
+
+Emit C++:
+
+```sh
+./build/dudu examples/use_math.dd --emit-cpp -
+```
+
+Validate the checked-in examples that do not need external libraries:
+
+```sh
+./scripts/test.sh
+```
 
 ## Working Name
 

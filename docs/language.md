@@ -390,19 +390,19 @@ The first compiler does not need a full slice system. It only needs:
 - pointer address/deref: `addr`, `at`
 - spans as a standard view type for loops and APIs
 
-## Includes
+## Imports
 
-Dudu source imports use `include`:
+Dudu source imports use `use`:
 
 ```dudu
-include "math.dd"
+use "math.dd"
 ```
 
 C and C++ header imports are separate because they have different interop rules:
 
 ```dudu
-c include "stdio.h" as c
-cpp include "raylib.h" as rl
+use c "stdio.h" as c
+use cpp "raylib.h" as rl
 ```
 
 Dot paths are used for imported names:

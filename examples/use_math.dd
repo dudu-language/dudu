@@ -1,0 +1,12 @@
+use "math.dd"
+use c "stdio.h" as c
+
+fn main i32
+
+    value i32 = clamp
+        add 10 20
+        0
+        16
+
+    c.printf "value: %d\n" value
+    0

@@ -10,19 +10,19 @@ backend should emit readable C++ and use existing C++ build tools.
 Dudu source imports:
 
 ```dudu
-include "math.dd"
+use "math.dd"
 ```
 
 C header imports:
 
 ```dudu
-c include "math.h" as math
+use c "math.h" as math
 ```
 
 C++ header imports:
 
 ```dudu
-cpp include "raylib.h" as rl
+use cpp "raylib.h" as rl
 ```
 
 The alias is required for external headers. Imported names are accessed through
@@ -50,8 +50,8 @@ The compiler should import:
 Example:
 
 ```dudu
-c include "stdio.h" as c
-c include "math.h" as math
+use c "stdio.h" as c
+use c "math.h" as math
 
 fn main i32
 
@@ -63,7 +63,7 @@ fn main i32
 Imported C structs behave like Dudu things:
 
 ```dudu
-c include "raylib.h" as rl
+use c "raylib.h" as rl
 
 fn make_pos rl.Vector2
 
@@ -90,7 +90,7 @@ The first C++ interop layer should support:
 Example:
 
 ```dudu
-cpp include "raylib.h" as rl
+use cpp "raylib.h" as rl
 
 fn main i32
 
@@ -111,7 +111,7 @@ fn main i32
 C++ overload sets should resolve from Dudu argument types when possible.
 
 ```dudu
-cpp include "math.hpp" as math
+use cpp "math.hpp" as math
 
 fn demo f32
 

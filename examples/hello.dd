@@ -1,4 +1,4 @@
-c include "stdio.h" as c
+use c "stdio.h" as c
 
 fn main i32
 
