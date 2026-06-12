@@ -67,6 +67,7 @@ Check, format, or emit code:
 ./build/dudu tests/fixtures/simple_program.dd --format -
 ./build/dudu tests/fixtures/simple_program.dd --emit-cpp -
 ./build/dudu examples/cpp_library.dd --emit-header -
+./build/dudu examples/compile_time.dd --emit-cpp - -DDEBUG=true -DRENDER_BACKEND=raylib
 ```
 
 Validate the checked-in examples that do not need external libraries:

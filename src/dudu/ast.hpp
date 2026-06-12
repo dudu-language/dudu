@@ -2,6 +2,7 @@
 
 #include "dudu/source.hpp"
 
+#include <map>
 #include <string>
 #include <vector>
 
@@ -102,6 +103,7 @@ struct StaticAssertDecl {
 };
 
 struct ModuleAst {
+    std::map<std::string, std::string> build_values;
     std::vector<ImportDecl> imports;
     std::vector<TypeAliasDecl> aliases;
     std::vector<EnumDecl> enums;

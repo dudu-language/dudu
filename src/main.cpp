@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -18,6 +19,7 @@ struct Options {
     std::filesystem::path input;
     std::optional<std::filesystem::path> output;
     std::optional<std::filesystem::path> header_output;
+    std::map<std::string, std::string> build_values;
     bool build = false;
     bool check = false;
     bool emit_cpp = false;
@@ -31,7 +33,15 @@ struct Options {
 void print_usage() {
     std::cout << "usage: dudu build <input.dd> [-o output]\n"
                  "       dudu <input.dd> [--check] [--format <path|->] "
-                 "[--emit-header <path|->] [--emit-cpp <path|->]\n";
+                 "[--emit-header <path|->] [--emit-cpp <path|->] [-DNAME=value]\n";
+}
+
+void add_build_value(Options& options, const std::string& define) {
+    const size_t equal = define.find('=');
+    if (equal == std::string::npos || equal == 0) {
+        fail("-D requires NAME=value");
+    }
+    options.build_values[define.substr(0, equal)] = define.substr(equal + 1);
 }
 
 Options parse_options(int argc, char** argv) {
@@ -53,6 +63,17 @@ Options parse_options(int argc, char** argv) {
                 fail("-o requires a path");
             }
             options.output = argv[++i];
+            continue;
+        }
+        if (arg == "-D") {
+            if (i + 1 >= argc) {
+                fail("-D requires NAME=value");
+            }
+            add_build_value(options, argv[++i]);
+            continue;
+        }
+        if (arg.size() > 2 && arg.substr(0, 2) == "-D") {
+            add_build_value(options, arg.substr(2));
             continue;
         }
         if (arg == "--check") {
@@ -150,6 +171,7 @@ dudu::ModuleAst checked_module(const Options& options, const std::string& source
                                bool check_bodies) {
     dudu::ModuleAst module = options.input.empty() ? dudu::parse_source(source, options.input)
                                                    : dudu::load_source_tree(options.input);
+    module.build_values = options.build_values;
     dudu::analyze_module(module, {.check_bodies = check_bodies});
     return module;
 }

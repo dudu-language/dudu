@@ -3,6 +3,8 @@
 #include "dudu/cpp_lower.hpp"
 #include "dudu/cpp_stmt_emit.hpp"
 
+#include <algorithm>
+#include <cctype>
 #include <map>
 #include <set>
 #include <sstream>
@@ -114,6 +116,47 @@ bool has_function(const ModuleAst& module, std::string_view name) {
     return false;
 }
 
+std::string build_literal(const std::string& value) {
+    if (value == "true" || value == "false") {
+        return value;
+    }
+    if (!value.empty() && std::all_of(value.begin(), value.end(), [](char c) {
+            return std::isdigit(static_cast<unsigned char>(c)) != 0;
+        })) {
+        return value;
+    }
+    if (value.size() >= 2 && value.front() == '"' && value.back() == '"') {
+        return value;
+    }
+    return '"' + value + '"';
+}
+
+std::string build_type(const std::string& literal) {
+    if (literal == "true" || literal == "false") {
+        return "bool";
+    }
+    if (!literal.empty() && literal.front() == '"') {
+        return "std::string_view";
+    }
+    return "int";
+}
+
+void emit_build_namespace(std::ostringstream& out, const ModuleAst& module) {
+    std::map<std::string, std::string> values = {{"DEBUG", "false"},
+                                                 {"RENDER_BACKEND", "\"vulkan\""}};
+    for (const auto& [name, value] : module.build_values) {
+        values[name] = value;
+    }
+
+    out << "namespace build {\n";
+    for (const auto& [name, value] : values) {
+        const std::string literal = build_literal(value);
+        out << "inline constexpr " << build_type(literal) << ' ' << name << " = " << literal
+            << ";\n";
+    }
+    out << "} // namespace build\n\n";
+}
+
 void emit_result_prelude(std::ostringstream& out, const ModuleAst& module) {
     out << "namespace dudu {\n"
            "template <typename T> struct OkValue { T value; };\n"
@@ -142,10 +185,7 @@ void emit_result_prelude(std::ostringstream& out, const ModuleAst& module) {
         out << "using dudu::align_up;\n";
     }
     out << "using dudu::print;\n";
-    out << "namespace build {\n"
-           "inline constexpr bool DEBUG = false;\n"
-           "inline constexpr std::string_view RENDER_BACKEND = \"vulkan\";\n"
-           "} // namespace build\n\n";
+    emit_build_namespace(out, module);
 }
 void emit_aliases(std::ostringstream& out, const ModuleAst& module) {
     for (const TypeAliasDecl& alias : module.aliases) {
