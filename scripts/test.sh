@@ -122,6 +122,8 @@ grep -q "if constexpr (build::DEBUG)" "$repo_root/build/project_mode.cpp"
     cd "$repo_root/tests/fixtures/project_cc"
     "$repo_root/build/duc" build -o "$repo_root/build/project_cc_bin"
 )
+grep -q "project_cc_bin.cpp" "$repo_root/build/compile_commands.json"
+grep -q -- "-Iinclude" "$repo_root/build/compile_commands.json"
 set +e
 "$repo_root/build/project_cc_bin"
 project_cc_status=$?

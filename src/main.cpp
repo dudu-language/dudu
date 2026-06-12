@@ -239,6 +239,34 @@ std::string native_lib_flag(const std::string& lib) {
     return lib.empty() || lib.front() == '-' ? lib : "-l" + lib;
 }
 
+std::string json_escape(const std::string& value) {
+    std::string out;
+    for (const char c : value) {
+        if (c == '"' || c == '\\') {
+            out.push_back('\\');
+        }
+        out.push_back(c);
+    }
+    return out;
+}
+
+void write_compile_commands(const std::filesystem::path& output,
+                            const std::filesystem::path& cpp_path, const std::string& command) {
+    const std::filesystem::path dir = output.parent_path().empty() ? "." : output.parent_path();
+    std::ofstream out(dir / "compile_commands.json");
+    if (!out) {
+        fail("could not write compile_commands.json");
+    }
+    out << "[\n"
+        << "  {\n"
+        << "    \"directory\": \"" << json_escape(std::filesystem::current_path().string())
+        << "\",\n"
+        << "    \"command\": \"" << json_escape(command) << "\",\n"
+        << "    \"file\": \"" << json_escape(cpp_path.string()) << "\"\n"
+        << "  }\n"
+        << "]\n";
+}
+
 std::filesystem::path build_executable(const Options& options, const std::string& cpp) {
     const std::filesystem::path output = options.output.value_or("a.out");
     std::filesystem::create_directories(output.parent_path().empty() ? "." : output.parent_path());
@@ -256,6 +284,7 @@ std::filesystem::path build_executable(const Options& options, const std::string
     for (const std::string& lib : config.libs) {
         command += " " + shell_quote_arg(native_lib_flag(lib));
     }
+    write_compile_commands(output, cpp_path, command);
     if (std::system(command.c_str()) != 0) {
         fail("C++ build failed");
     }
