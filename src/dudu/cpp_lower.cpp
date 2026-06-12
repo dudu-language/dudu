@@ -73,8 +73,24 @@ std::vector<std::string> split_top_level_args(const std::string& args) {
 
 size_t top_level_equal(const std::string& text) {
     int depth = 0;
+    char quote = '\0';
+    bool escaped = false;
     for (size_t i = 0; i < text.size(); ++i) {
         const char c = text[i];
+        if (quote != '\0') {
+            if (escaped) {
+                escaped = false;
+            } else if (c == '\\') {
+                escaped = true;
+            } else if (c == quote) {
+                quote = '\0';
+            }
+            continue;
+        }
+        if (c == '"' || c == '\'') {
+            quote = c;
+            continue;
+        }
         if (c == '[' || c == '(' || c == '{') {
             ++depth;
         } else if (c == ']' || c == ')' || c == '}') {
