@@ -87,6 +87,43 @@ bool can_assign_expr(const FunctionScope& scope, const std::string& expected,
            assignment_type_allowed(resolve_alias(scope.symbols, expected), expr,
                                    resolve_alias(scope.symbols, got));
 }
+std::string index_value_type(const FunctionScope& scope, const SourceLocation& location,
+                             const std::string& name, const char* unknown_message) {
+    const auto local = scope.locals.find(name);
+    if (local == scope.locals.end()) {
+        fail(location, std::string(unknown_message) + name);
+    }
+    std::string type = resolve_alias(scope.symbols, local->second);
+    bool pointer_index = false;
+    if (starts_with(type, "*")) {
+        type = trim(type.substr(1));
+        pointer_index = true;
+    }
+    for (const char* wrapper : {"storage", "shared", "device", "volatile", "atomic"}) {
+        const std::string prefix = std::string(wrapper) + "[";
+        if (starts_with(type, prefix) && type.back() == ']') {
+            type = trim(type.substr(prefix.size(), type.size() - prefix.size() - 1));
+            break;
+        }
+    }
+    if (pointer_index) {
+        return type;
+    }
+    if (starts_with(type, "list[") && type.back() == ']') {
+        return trim(type.substr(5, type.size() - 6));
+    }
+    if (starts_with(type, "dict[") && type.back() == ']') {
+        const std::vector<std::string> args = split_top_level(type.substr(5, type.size() - 6));
+        if (args.size() == 2) {
+            return args[1];
+        }
+    }
+    const size_t type_index = type.find('[');
+    if (type_index != std::string::npos && type.back() == ']') {
+        return trim(type.substr(0, type_index));
+    }
+    fail(location, "cannot index non-container: " + name);
+}
 void check_call_args(const FunctionScope& scope, const std::string& callee,
                      const FunctionSignature& signature, const std::vector<std::string>& args,
                      const SourceLocation* location) {
@@ -239,6 +276,13 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
             }
         }
     }
+    const size_t index = expr.find('[');
+    if (location != nullptr && index != std::string::npos && expr.back() == ']') {
+        const std::string name = trim(expr.substr(0, index));
+        if (is_plain_identifier(name)) {
+            return index_value_type(scope, *location, name, "indexed access to unknown local: ");
+        }
+    }
     const size_t dot = expr.find('.');
     if (dot != std::string::npos) {
         return member_path_type(scope, nullptr, expr);
@@ -286,41 +330,8 @@ std::string assign_target_type(const FunctionScope& scope, const RawStmt& stmt,
         const size_t index = lhs.find('[');
         if (index != std::string::npos) {
             const std::string name = trim(lhs.substr(0, index));
-            const auto local = scope.locals.find(name);
-            if (local == scope.locals.end()) {
-                fail(stmt.location, "indexed assignment to unknown local: " + name);
-            }
-            std::string type = resolve_alias(scope.symbols, local->second);
-            bool pointer_index = false;
-            if (starts_with(type, "*")) {
-                type = trim(type.substr(1));
-                pointer_index = true;
-            }
-            for (const char* wrapper : {"storage", "shared", "device", "volatile", "atomic"}) {
-                const std::string prefix = std::string(wrapper) + "[";
-                if (starts_with(type, prefix) && type.back() == ']') {
-                    type = trim(type.substr(prefix.size(), type.size() - prefix.size() - 1));
-                    break;
-                }
-            }
-            if (pointer_index) {
-                return type;
-            }
-            if (starts_with(type, "list[") && type.back() == ']') {
-                return trim(type.substr(5, type.size() - 6));
-            }
-            if (starts_with(type, "dict[") && type.back() == ']') {
-                const std::vector<std::string> args =
-                    split_top_level(type.substr(5, type.size() - 6));
-                if (args.size() == 2) {
-                    return args[1];
-                }
-            }
-            const size_t type_index = type.find('[');
-            if (type_index != std::string::npos && type.back() == ']') {
-                return trim(type.substr(0, type_index));
-            }
-            fail(stmt.location, "cannot index non-container: " + name);
+            return index_value_type(scope, stmt.location, name,
+                                    "indexed assignment to unknown local: ");
         }
         if (scope.constants.contains(lhs)) {
             fail(stmt.location, "cannot assign to constant: " + lhs);

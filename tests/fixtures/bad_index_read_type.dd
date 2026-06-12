@@ -1,0 +1,4 @@
+def bad() -> i32:
+    values: list[i32] = [1]
+    ok: bool = values[0]
+    return 0
