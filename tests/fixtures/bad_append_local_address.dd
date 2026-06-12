@@ -1,0 +1,5 @@
+def bad() -> list[*i32]:
+    ptrs: list[*i32] = []
+    value: i32 = 1
+    ptrs.append(&value)
+    return ptrs

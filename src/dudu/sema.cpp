@@ -2,6 +2,7 @@
 
 #include "dudu/build_flags.hpp"
 #include "dudu/control_flow.hpp"
+#include "dudu/escapes.hpp"
 #include "dudu/naming.hpp"
 #include "dudu/type_compat.hpp"
 #include "dudu/unsupported.hpp"
@@ -373,6 +374,7 @@ void check_block(FunctionScope& scope, const std::vector<RawStmt>& body,
 
 void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& return_type) {
     const std::string text = trim(stmt.text);
+    check_local_address_escape(stmt, scope.locals);
     if (starts_with(text, "return")) {
         const std::string got = infer_expr(scope, text.substr(6));
         if (return_type != "void" && !got.empty() && got != "auto" && got != return_type) {

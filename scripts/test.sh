@@ -222,6 +222,8 @@ expect_fail bad_const_assignment --emit-cpp "cannot assign to constant: LIMIT"
 expect_fail bad_raise --check "unsupported Python feature: exceptions"
 expect_fail bad_yield --check "unsupported Python feature: generators"
 expect_fail bad_eval --check "unsupported Python feature: dynamic execution"
+expect_fail bad_return_local_address --emit-cpp "cannot let local address escape: value"
+expect_fail bad_append_local_address --emit-cpp "cannot let local address escape: value"
 
 if "$repo_root/build/duc" emit "$repo_root/tests/fixtures/bad_package_build/main.dd" \
     -o "$repo_root/build/bad_package_build.cpp" 2>"$repo_root/build/bad_package_build.err"; then
