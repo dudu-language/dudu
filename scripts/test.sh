@@ -124,11 +124,11 @@ grep -q "#define DUDU_WORKGROUP_SIZE" "$repo_root/build/shader_compute.cpp"
 grep -q "DUDU_SHADER_COMPUTE DUDU_WORKGROUP_SIZE(8, 8, 1) void blur_x" \
     "$repo_root/build/shader_compute.cpp"
 "$repo_root/build/duc" emit "$repo_root/examples/web_server.dd" -o "$repo_root/build/web_server.cpp"; grep -Fq "app.Get(\"/todos" "$repo_root/build/web_server.cpp"; grep -Fq "[&](auto&& req, auto&& res)" "$repo_root/build/web_server.cpp"
-"$repo_root/build/duc" emit "$repo_root/tests/fixtures/lambda_callback.dd" \
-    -o "$repo_root/build/function_pointer.cpp"
+"$repo_root/build/duc" emit "$repo_root/tests/fixtures/lambda_callback.dd" -o "$repo_root/build/function_pointer.cpp"
 grep -Fq "std::add_pointer_t<int32_t(int32_t)> callback" \
     "$repo_root/build/function_pointer.cpp"
 ! grep -q "std::function" "$repo_root/build/function_pointer.cpp"
+"$repo_root/build/duc" emit "$repo_root/tests/fixtures/cpp_move_unique_ptr.dd" -o "$repo_root/build/cpp_move_unique_ptr.cpp"; grep -Fq "std::move(first)" "$repo_root/build/cpp_move_unique_ptr.cpp"
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/tuple_return.dd" \
     -o "$repo_root/build/tuple_return.cpp"
 grep -Fq "dudu::Tuple2<int32_t, int32_t> divmod_i32" "$repo_root/build/tuple_return.cpp"
@@ -323,7 +323,7 @@ compile_and_expect type_aliases 42
 compile_and_expect enums 42
 compile_and_expect allocation 17
 compile_and_expect containers 42
-compile_and_expect cpp_template_interop 42
+compile_and_expect cpp_template_interop 42; compile_and_expect cpp_move_unique_ptr 42
 compile_and_expect layout_attrs 21
 compile_and_expect atomic_volatile 44
 compile_and_expect branch_return 1

@@ -1,0 +1,11 @@
+import cpp "memory" as std
+
+
+class Node:
+    value: i32
+
+
+def main() -> i32:
+    first: std.unique_ptr[Node] = std.make_unique[Node]()
+    second: std.unique_ptr[Node] = std.move(first)
+    return 42
