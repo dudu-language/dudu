@@ -1,0 +1,8 @@
+import cpp "glm/glm.hpp" as glm
+
+
+def main() -> i32:
+    a = glm.vec3(1.0, 2.0, 3.0)
+    b = glm.vec3(4.0, 5.0, 6.0)
+    value: f32 = glm.dot(a, b)
+    return i32(value)

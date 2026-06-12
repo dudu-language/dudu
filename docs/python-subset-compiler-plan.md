@@ -537,6 +537,12 @@ Optional probes:
 
 Skip optional probes when dependencies are missing.
 
+Run available local probes with:
+
+```sh
+./scripts/probe_optional.sh
+```
+
 ## User Workflow
 
 Dudu should fit into normal native development instead of hiding the C/C++
