@@ -11,7 +11,7 @@ libraries. Source files use `.dd`.
 ```dudu
 cpp include "raylib.h" as rl
 
-rec Vec2
+th Vec2
     x f32
     y f32
 

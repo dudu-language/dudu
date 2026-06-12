@@ -63,7 +63,7 @@ runtime-heavy by default.
 The first real compiler milestone should be a tiny vertical slice:
 
 - Parse `.dd` files.
-- Typecheck records, enums, functions, variables, loops, calls, and `ret`.
+- Typecheck things, enums, functions, variables, loops, calls, and `ret`.
 - Emit readable C++.
 - Compile that C++ with Clang.
 - Call a small C library or raylib example.

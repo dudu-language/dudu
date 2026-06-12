@@ -60,7 +60,7 @@ fn main i32
     0
 ```
 
-Imported C structs behave like Dudu records:
+Imported C structs behave like Dudu things:
 
 ```dudu
 c include "raylib.h" as rl

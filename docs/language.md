@@ -57,12 +57,12 @@ fn clamp01 f32
     x
 ```
 
-## Records
+## Things
 
-Use `rec` for plain aggregate types.
+Use `th` for plain aggregate types. It is short for "thing".
 
 ```dudu
-rec Particle
+th Particle
     pos Vec2
     vel Vec2
     life f32
@@ -71,7 +71,7 @@ rec Particle
 This maps to a C++ `struct` unless attributes or interop rules say otherwise.
 Dudu does not need a separate class form for v1.
 
-Record construction uses the type name as a constructor-like expression.
+Thing construction uses the type name as a constructor-like expression.
 
 ```dudu
 pos Vec2 = Vec2 10 20
