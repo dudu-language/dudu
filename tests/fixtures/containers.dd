@@ -1,5 +1,9 @@
 def main() -> i32:
-    values: list[i32] = list[i32]()
+    values: list[i32] = [12, 30]
+    scores: dict[str, i32] = {"bob": 20, "ada": 22}
+    seen: set[str] = {"bob", "ada"}
     values.push_back(12)
     values.push_back(30)
-    return values[0] + values[1]
+    if seen.contains("bob"):
+        return values[0] + values[1] + scores["bob"] + scores["ada"] - 42
+    return 1

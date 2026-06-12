@@ -65,12 +65,18 @@ bool is_option_value(const std::string& expected, std::string expr, const std::s
            (is_numeric_type(wrapped_type_arg(inner)) && is_numeric_literal(expr));
 }
 
+bool is_container_literal(const std::string& expected, std::string expr) {
+    expr = trim_copy(std::move(expr));
+    return (starts_with(expected, "dict[") || starts_with(expected, "set[")) &&
+           starts_with(expr, "{") && ends_with(expr, "}");
+}
+
 } // namespace
 
 bool assignment_type_allowed(const std::string& expected, const std::string& expr,
                              const std::string& got) {
     return is_explicit_cast_to(expected, expr) || got.empty() || got == "auto" || got == expected ||
-           is_option_value(expected, expr, got) ||
+           is_option_value(expected, expr, got) || is_container_literal(expected, expr) ||
            (is_numeric_type(wrapped_type_arg(expected)) && is_numeric_literal(expr));
 }
 

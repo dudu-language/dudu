@@ -136,6 +136,26 @@ std::string tuple_literal_body(const std::string& value) {
                                                             : value;
 }
 
+std::string lower_dict_literal_body(const std::string& value,
+                                    const std::vector<std::string>& aliases,
+                                    const std::map<std::string, std::string>& locals) {
+    const std::string body = value.substr(1, value.size() - 2);
+    std::ostringstream out;
+    const std::vector<std::string> entries = split_top_level_args(body);
+    for (size_t i = 0; i < entries.size(); ++i) {
+        const size_t colon = find_top_level_colon(entries[i]);
+        if (colon == std::string::npos) {
+            continue;
+        }
+        if (i > 0) {
+            out << ", ";
+        }
+        out << "{" << lower_expr(entries[i].substr(0, colon), aliases, locals) << ", "
+            << lower_expr(entries[i].substr(colon + 1), aliases, locals) << "}";
+    }
+    return out.str();
+}
+
 bool is_build_only_condition(const std::string& text) {
     char quote = '\0';
     bool escaped = false;
@@ -294,6 +314,13 @@ void emit_simple_statement(std::ostringstream& out, const RawStmt& stmt, int dep
                 out << " = {}";
             } else if (starts_with(type, "list[") && starts_with(value, "[") &&
                        ends_with(value, "]")) {
+                out << " = {" << lower_expr(value.substr(1, value.size() - 2), aliases, locals)
+                    << '}';
+            } else if (starts_with(type, "dict[") && starts_with(value, "{") &&
+                       ends_with(value, "}")) {
+                out << " = {" << lower_dict_literal_body(value, aliases, locals) << '}';
+            } else if (starts_with(type, "set[") && starts_with(value, "{") &&
+                       ends_with(value, "}")) {
                 out << " = {" << lower_expr(value.substr(1, value.size() - 2), aliases, locals)
                     << '}';
             } else if (is_tuple_literal(value)) {
