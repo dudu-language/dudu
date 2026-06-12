@@ -189,6 +189,14 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
     if (expr.empty()) {
         return "void";
     }
+    if (starts_with(expr, "{") && expr.back() == '}') {
+        for (const std::string& entry : split_top_level(expr.substr(1, expr.size() - 2))) {
+            if (find_top_level_char(entry, ':') != std::string::npos) {
+                return "dict";
+            }
+        }
+        return "set";
+    }
     if (starts_with(expr, "lambda ")) {
         return "lambda";
     }
@@ -270,7 +278,9 @@ bool is_all_caps_name(const std::string& name) {
 void check_type_match(const FunctionScope& scope, const RawStmt& stmt, const std::string& expected,
                       const std::string& expr) {
     const std::string got = infer_expr(scope, expr, &stmt.location);
-    if (assignment_type_allowed(expected, expr, got)) {
+    if (assignment_type_allowed(expected, expr, got) ||
+        assignment_type_allowed(resolve_alias(scope.symbols, expected), expr,
+                                resolve_alias(scope.symbols, got))) {
         return;
     }
     fail(stmt.location, "cannot assign " + got + " to " + expected + " without an explicit cast");

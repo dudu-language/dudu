@@ -136,6 +136,9 @@ std::string tuple_literal_body(const std::string& value) {
                                                             : value;
 }
 
+std::string lower_literal_value(const std::string& value, const std::vector<std::string>& aliases,
+                                const std::map<std::string, std::string>& locals);
+
 std::string lower_dict_literal_body(const std::string& value,
                                     const std::vector<std::string>& aliases,
                                     const std::map<std::string, std::string>& locals) {
@@ -150,10 +153,32 @@ std::string lower_dict_literal_body(const std::string& value,
         if (i > 0) {
             out << ", ";
         }
-        out << "{" << lower_expr(entries[i].substr(0, colon), aliases, locals) << ", "
-            << lower_expr(entries[i].substr(colon + 1), aliases, locals) << "}";
+        out << "{" << lower_expr(entries[i].substr(0, colon), aliases, locals) << ", ";
+        out << lower_literal_value(entries[i].substr(colon + 1), aliases, locals) << "}";
     }
     return out.str();
+}
+
+bool is_dict_literal_value(std::string value) {
+    value = trim_copy(std::move(value));
+    if (!starts_with(value, "{") || !ends_with(value, "}")) {
+        return false;
+    }
+    for (const std::string& entry : split_top_level_args(value.substr(1, value.size() - 2))) {
+        if (find_top_level_colon(entry) != std::string::npos) {
+            return true;
+        }
+    }
+    return false;
+}
+
+std::string lower_literal_value(const std::string& value, const std::vector<std::string>& aliases,
+                                const std::map<std::string, std::string>& locals) {
+    const std::string trimmed = trim_copy(value);
+    if (is_dict_literal_value(trimmed)) {
+        return "{" + lower_dict_literal_body(trimmed, aliases, locals) + "}";
+    }
+    return lower_expr(trimmed, aliases, locals);
 }
 
 bool is_build_only_condition(const std::string& text) {

@@ -268,6 +268,7 @@ compile_and_expect ref_field_inference 42
 compile_and_expect conditional_str 42
 compile_and_expect lambda_callback 42
 compile_and_expect multiline_literals 42
+compile_and_expect nested_containers 42
 compile_and_expect list_append_named 42
 compile_and_expect class_methods 42
 compile_and_expect c_import_alias 42
@@ -305,7 +306,7 @@ expect_fail() {
 
 expect_fail bad_duplicate --check "duplicate declaration: Vec"
 expect_fail bad_type_alias --check "unknown type alias target: MissingThing"
-expect_fail bad_dict_literal --emit-cpp "cannot assign tuple"
+expect_fail bad_dict_literal --emit-cpp "cannot assign set"
 expect_fail bad_enum_underlying --check "unknown enum underlying type: MissingType"
 expect_fail bad_enum_duplicate --check "duplicate enum value: value"
 expect_fail bad_enum_value_name --check "enum values must be snake_case: BadValue"

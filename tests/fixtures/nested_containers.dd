@@ -1,0 +1,9 @@
+def main() -> i32:
+    cache: dict[str, dict[i32, set[f32]]] = {
+        "first": {
+            7: {1.0, 2.0},
+        },
+    }
+    if cache["first"][7].contains(2.0):
+        return 42
+    return 1

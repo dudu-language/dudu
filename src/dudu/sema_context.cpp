@@ -145,9 +145,9 @@ std::vector<std::string> split_top_level(std::string text) {
             quote = c;
             continue;
         }
-        if (c == '(' || c == '[') {
+        if (c == '(' || c == '[' || c == '{') {
             ++depth;
-        } else if (c == ')' || c == ']') {
+        } else if (c == ')' || c == ']' || c == '}') {
             --depth;
         } else if (c == ',' && depth == 0) {
             out.push_back(trim(text.substr(start, i - start)));
@@ -178,9 +178,9 @@ size_t find_top_level_char(const std::string& text, char wanted) {
             quote = c;
             continue;
         }
-        if (c == '(' || c == '[') {
+        if (c == '(' || c == '[' || c == '{') {
             ++depth;
-        } else if (c == ')' || c == ']') {
+        } else if (c == ')' || c == ']' || c == '}') {
             --depth;
         } else if (c == wanted && depth == 0) {
             return i;

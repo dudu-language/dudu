@@ -55,9 +55,9 @@ std::vector<std::string> split_top_level_args(const std::string& args) {
             quote = c;
             continue;
         }
-        if (c == '[' || c == '(') {
+        if (c == '[' || c == '(' || c == '{') {
             ++depth;
-        } else if (c == ']' || c == ')') {
+        } else if (c == ']' || c == ')' || c == '}') {
             --depth;
         } else if (c == ',' && depth == 0) {
             out.push_back(trim_copy(args.substr(start, i - start)));
