@@ -1,5 +1,7 @@
 #include "dudu/sema.hpp"
 
+#include "dudu/naming.hpp"
+
 #include <cctype>
 #include <map>
 #include <set>
@@ -418,6 +420,7 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols) {
 
 void analyze_module(const ModuleAst& module, SemanticOptions options) {
     const Symbols symbols = collect_symbols(module);
+    check_naming(module);
     check_declarations(module, symbols);
     if (options.check_bodies) {
         check_bodies(module, symbols);
