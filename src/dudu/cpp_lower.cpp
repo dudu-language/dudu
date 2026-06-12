@@ -289,6 +289,51 @@ std::string lower_builtin_cast_calls(std::string expr) {
     return expr;
 }
 
+std::string lower_pointer_cast_calls(std::string expr) {
+    size_t pos = expr.find('*');
+    while (pos != std::string::npos) {
+        const bool left_ok =
+            pos == 0 ||
+            (std::isalnum(static_cast<unsigned char>(expr[pos - 1])) == 0 && expr[pos - 1] != '_');
+        size_t name_start = pos + 1;
+        while (name_start < expr.size() &&
+               std::isspace(static_cast<unsigned char>(expr[name_start])) != 0) {
+            ++name_start;
+        }
+        size_t name_end = name_start;
+        while (name_end < expr.size() &&
+               (std::isalnum(static_cast<unsigned char>(expr[name_end])) != 0 ||
+                expr[name_end] == '_' || expr[name_end] == '.')) {
+            ++name_end;
+        }
+        if (!left_ok || name_end == name_start || name_end >= expr.size() ||
+            expr[name_end] != '(') {
+            pos = expr.find('*', pos + 1);
+            continue;
+        }
+        int depth = 1;
+        size_t cursor = name_end + 1;
+        while (cursor < expr.size() && depth > 0) {
+            if (expr[cursor] == '(') {
+                ++depth;
+            } else if (expr[cursor] == ')') {
+                --depth;
+            }
+            ++cursor;
+        }
+        if (depth != 0) {
+            break;
+        }
+        const std::string type = expr.substr(name_start, name_end - name_start);
+        const std::string arg = expr.substr(name_end + 1, cursor - name_end - 2);
+        const std::string replacement =
+            "reinterpret_cast<" + lower_cpp_type("*" + type) + ">(" + lower_cpp_expr(arg) + ")";
+        expr.replace(pos, cursor - pos, replacement);
+        pos = expr.find('*', pos + replacement.size());
+    }
+    return expr;
+}
+
 std::string lower_named_argument_calls(std::string expr) {
     size_t open = expr.find('(');
     while (open != std::string::npos) {
@@ -394,6 +439,7 @@ std::string lower_cpp_expr(std::string expr, const std::vector<std::string>& nam
     expr = lower_type_operator_call(std::move(expr), "sizeof");
     expr = lower_type_operator_call(std::move(expr), "alignof");
     expr = lower_offsetof_call(std::move(expr));
+    expr = lower_pointer_cast_calls(std::move(expr));
     expr = lower_builtin_cast_calls(std::move(expr));
     expr = lower_str_from_cstr(std::move(expr));
     expr = lower_str_calls(std::move(expr));

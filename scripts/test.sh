@@ -96,6 +96,7 @@ compile_and_expect lambda_callback 42
 compile_and_expect list_append_named 42
 compile_and_expect class_methods 42
 compile_and_expect c_import_alias 42
+compile_and_expect pointer_cast 42
 compile_path_and_expect multifile tests/fixtures/multifile/main.dd 42
 
 direct_bin="$repo_root/build/dudu_build_simple"
