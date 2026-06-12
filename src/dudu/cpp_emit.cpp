@@ -3,6 +3,7 @@
 #include "dudu/cpp_lower.hpp"
 #include "dudu/cpp_stmt_emit.hpp"
 
+#include <map>
 #include <set>
 #include <sstream>
 #include <string_view>
@@ -108,6 +109,10 @@ void emit_result_prelude(std::ostringstream& out) {
            "template <typename E> struct ErrValue { E err; };\n"
            "template <typename T> OkValue<T> Ok(T value) { return {std::move(value)}; }\n"
            "template <typename E> ErrValue<E> Err(E err) { return {std::move(err)}; }\n"
+           "inline size_t align_up(size_t value, size_t alignment) {\n"
+           "    return alignment == 0 ? value : ((value + alignment - 1) / alignment) * "
+           "alignment;\n"
+           "}\n"
            "template <typename T, typename E> struct Result {\n"
            "    bool ok{};\n"
            "    T value{};\n"
@@ -118,7 +123,8 @@ void emit_result_prelude(std::ostringstream& out) {
            "    Result(ErrValue<E> err_value) : ok(false), value{}, err(std::move(err_value.err)) "
            "{}\n"
            "};\n"
-           "} // namespace dudu\n\n";
+           "} // namespace dudu\n"
+           "using dudu::align_up;\n\n";
 }
 void emit_aliases(std::ostringstream& out, const ModuleAst& module) {
     for (const TypeAliasDecl& alias : module.aliases) {
@@ -206,10 +212,15 @@ void emit_method(std::ostringstream& out, const FunctionDecl& method,
         out << lower_cpp_type(method.params[i].type) << ' ' << method.params[i].name;
     }
     out << ") {\n";
+    std::map<std::string, std::string> locals;
     if (first_param == 1) {
         out << "        auto& self = *this;\n";
+        locals[method.params.front().name] = method.params.front().type;
     }
-    emit_raw_block(out, method.body, 2, aliases);
+    for (size_t i = first_param; i < method.params.size(); ++i) {
+        locals[method.params[i].name] = method.params[i].type;
+    }
+    emit_raw_block(out, method.body, 2, aliases, locals);
     out << "    }\n";
 }
 
@@ -308,7 +319,11 @@ std::string emit_cpp_source(const ModuleAst& module) {
     for (const FunctionDecl& fn : module.functions) {
         emit_function_signature(out, fn);
         out << " {\n";
-        emit_raw_block(out, fn.body, 1, aliases);
+        std::map<std::string, std::string> locals;
+        for (const ParamDecl& param : fn.params) {
+            locals[param.name] = param.type;
+        }
+        emit_raw_block(out, fn.body, 1, aliases, locals);
         out << "}\n\n";
     }
     emit_static_asserts(out, module, aliases);

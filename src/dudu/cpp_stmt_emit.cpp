@@ -3,6 +3,7 @@
 #include "dudu/cpp_lower.hpp"
 
 #include <cctype>
+#include <map>
 #include <sstream>
 
 namespace dudu {
@@ -10,6 +11,38 @@ namespace {
 
 std::string indent(int depth) {
     return std::string(static_cast<size_t>(depth) * 4, ' ');
+}
+
+bool is_pointer_type(const std::string& type) {
+    return starts_with(trim_copy(type), "*");
+}
+
+std::string rewrite_pointer_members(std::string expr,
+                                    const std::map<std::string, std::string>& locals) {
+    for (const auto& [name, type] : locals) {
+        if (!is_pointer_type(type)) {
+            continue;
+        }
+        const std::string marker = name + ".";
+        size_t pos = expr.find(marker);
+        while (pos != std::string::npos) {
+            const bool left_ok =
+                pos == 0 || (std::isalnum(static_cast<unsigned char>(expr[pos - 1])) == 0 &&
+                             expr[pos - 1] != '_');
+            if (left_ok) {
+                expr.replace(pos, marker.size(), name + "->");
+                pos = expr.find(marker, pos + name.size() + 2);
+            } else {
+                pos = expr.find(marker, pos + marker.size());
+            }
+        }
+    }
+    return expr;
+}
+
+std::string lower_expr(std::string expr, const std::vector<std::string>& aliases,
+                       const std::map<std::string, std::string>& locals) {
+    return lower_cpp_expr(rewrite_pointer_members(std::move(expr), locals), aliases);
 }
 
 size_t find_top_level_assignment(const std::string& text) {
@@ -136,7 +169,8 @@ void emit_cpp_escape(std::ostringstream& out, const std::string& text, int depth
 }
 
 void emit_simple_statement(std::ostringstream& out, const RawStmt& stmt, int depth,
-                           const std::vector<std::string>& aliases) {
+                           const std::vector<std::string>& aliases,
+                           std::map<std::string, std::string>& locals) {
     const std::string text = trim_copy(stmt.text);
     const size_t colon = find_top_level_colon(text);
     const size_t assign = find_top_level_assignment(text);
@@ -149,9 +183,9 @@ void emit_simple_statement(std::ostringstream& out, const RawStmt& stmt, int dep
         out << indent(depth) << "return";
         if (!value.empty()) {
             if (split_top_level_args(value).size() > 1) {
-                out << " {" << lower_cpp_expr(value, aliases) << '}';
+                out << " {" << lower_expr(value, aliases, locals) << '}';
             } else {
-                out << ' ' << lower_cpp_expr(value, aliases);
+                out << ' ' << lower_expr(value, aliases, locals);
             }
         }
         out << ";\n";
@@ -160,6 +194,7 @@ void emit_simple_statement(std::ostringstream& out, const RawStmt& stmt, int dep
     if (colon != std::string::npos && (assign == std::string::npos || colon < assign)) {
         const std::string name = trim_copy(text.substr(0, colon));
         const std::string type = trim_copy(text.substr(colon + 1, assign - colon - 1));
+        locals[name] = type;
         out << indent(depth) << lower_cpp_type(type) << ' ' << name;
         if (assign != std::string::npos) {
             const std::string value = trim_copy(text.substr(assign + 1));
@@ -168,7 +203,7 @@ void emit_simple_statement(std::ostringstream& out, const RawStmt& stmt, int dep
             } else if (starts_with(type, "list[") && value == "[]") {
                 out << " = {}";
             } else {
-                out << " = " << lower_cpp_expr(value, aliases);
+                out << " = " << lower_expr(value, aliases, locals);
             }
         } else {
             out << "{}";
@@ -184,41 +219,43 @@ void emit_simple_statement(std::ostringstream& out, const RawStmt& stmt, int dep
             return;
         }
         if (!lhs.empty() && lhs.find_first_of(" .[]+-*/%<>") == std::string::npos) {
+            locals.try_emplace(lhs, "auto");
             out << indent(depth) << "auto " << lhs << " = "
-                << lower_cpp_expr(trim_copy(text.substr(assign + 1)), aliases) << ";\n";
+                << lower_expr(trim_copy(text.substr(assign + 1)), aliases, locals) << ";\n";
             return;
         }
     }
-    out << indent(depth) << lower_cpp_expr(text, aliases) << ";\n";
+    out << indent(depth) << lower_expr(text, aliases, locals) << ";\n";
 }
 
 void emit_raw_statement(std::ostringstream& out, const RawStmt& stmt, int depth,
-                        const std::vector<std::string>& aliases) {
+                        const std::vector<std::string>& aliases,
+                        std::map<std::string, std::string>& locals) {
     const std::string text = trim_copy(stmt.text);
     if (starts_with(text, "if ")) {
         out << indent(depth) << "if ("
-            << lower_cpp_expr(strip_trailing_colon(text.substr(3)), aliases) << ") {\n";
-        emit_raw_block(out, stmt.children, depth + 1, aliases);
+            << lower_expr(strip_trailing_colon(text.substr(3)), aliases, locals) << ") {\n";
+        emit_raw_block(out, stmt.children, depth + 1, aliases, locals);
         out << indent(depth) << "}\n";
         return;
     }
     if (starts_with(text, "elif ")) {
         out << indent(depth) << "else if ("
-            << lower_cpp_expr(strip_trailing_colon(text.substr(5)), aliases) << ") {\n";
-        emit_raw_block(out, stmt.children, depth + 1, aliases);
+            << lower_expr(strip_trailing_colon(text.substr(5)), aliases, locals) << ") {\n";
+        emit_raw_block(out, stmt.children, depth + 1, aliases, locals);
         out << indent(depth) << "}\n";
         return;
     }
     if (text == "else:") {
         out << indent(depth) << "else {\n";
-        emit_raw_block(out, stmt.children, depth + 1, aliases);
+        emit_raw_block(out, stmt.children, depth + 1, aliases, locals);
         out << indent(depth) << "}\n";
         return;
     }
     if (starts_with(text, "while ")) {
         out << indent(depth) << "while ("
-            << lower_cpp_expr(strip_trailing_colon(text.substr(6)), aliases) << ") {\n";
-        emit_raw_block(out, stmt.children, depth + 1, aliases);
+            << lower_expr(strip_trailing_colon(text.substr(6)), aliases, locals) << ") {\n";
+        emit_raw_block(out, stmt.children, depth + 1, aliases, locals);
         out << indent(depth) << "}\n";
         return;
     }
@@ -227,11 +264,13 @@ void emit_raw_statement(std::ostringstream& out, const RawStmt& stmt, int depth,
         const size_t in_pos = header.find(" in ");
         if (in_pos != std::string::npos) {
             std::string binding = trim_copy(header.substr(0, in_pos));
-            const std::string range = lower_cpp_expr(trim_copy(header.substr(in_pos + 4)), aliases);
+            const std::string range =
+                lower_expr(trim_copy(header.substr(in_pos + 4)), aliases, locals);
             std::string binding_type = "auto";
             const size_t typed = binding.find(':');
             if (typed != std::string::npos) {
                 binding_type = lower_cpp_type(trim_copy(binding.substr(typed + 1)));
+                locals[trim_copy(binding.substr(0, typed))] = trim_copy(binding.substr(typed + 1));
                 binding = trim_copy(binding.substr(0, typed));
             }
             if (starts_with(range, "range(") && ends_with(range, ")")) {
@@ -243,25 +282,32 @@ void emit_raw_statement(std::ostringstream& out, const RawStmt& stmt, int depth,
                 out << indent(depth) << "for (" << binding_type << ' ' << binding << " = " << start
                     << "; " << binding << " < " << end << "; " << binding << " += " << step
                     << ") {\n";
-                emit_raw_block(out, stmt.children, depth + 1, aliases);
+                emit_raw_block(out, stmt.children, depth + 1, aliases, locals);
                 out << indent(depth) << "}\n";
                 return;
             }
             out << indent(depth) << "for (auto&& " << binding << " : " << range << ") {\n";
-            emit_raw_block(out, stmt.children, depth + 1, aliases);
+            emit_raw_block(out, stmt.children, depth + 1, aliases, locals);
             out << indent(depth) << "}\n";
             return;
         }
     }
-    emit_simple_statement(out, stmt, depth, aliases);
+    emit_simple_statement(out, stmt, depth, aliases, locals);
 }
 
 } // namespace
 
 void emit_raw_block(std::ostringstream& out, const std::vector<RawStmt>& body, int depth,
                     const std::vector<std::string>& aliases) {
+    emit_raw_block(out, body, depth, aliases, {});
+}
+
+void emit_raw_block(std::ostringstream& out, const std::vector<RawStmt>& body, int depth,
+                    const std::vector<std::string>& aliases,
+                    const std::map<std::string, std::string>& initial_locals) {
+    std::map<std::string, std::string> locals = initial_locals;
     for (const RawStmt& stmt : body) {
-        emit_raw_statement(out, stmt, depth, aliases);
+        emit_raw_statement(out, stmt, depth, aliases, locals);
     }
 }
 

@@ -1,0 +1,14 @@
+class Item:
+    value: i32
+
+
+def bump(item: *Item):
+    item.value += 2
+
+
+def main() -> i32:
+    item: *Item = new[Item](40)
+    bump(item)
+    result: i32 = item.value
+    delete(item)
+    return result
