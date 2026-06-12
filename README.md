@@ -133,10 +133,14 @@ Run the scalar-loop benchmark comparison:
 ./scripts/bench.sh 10000000
 ```
 
-Editor syntax files live in:
+Editor support lives in:
 
 - `editors/vscode`
 - `editors/vim`
+- `editors/nvim`
+
+The VS Code folder is a local extension with `.dd` highlighting and command
+palette actions for `duc fmt`, `duc check`, `duc build`, and `duc run`.
 
 ## Working Name
 

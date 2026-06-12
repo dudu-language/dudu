@@ -4,9 +4,16 @@
   "description": "Syntax highlighting for Dudu .dd source files.",
   "version": "0.1.0",
   "publisher": "dudu",
+  "main": "./extension.js",
   "engines": {
     "vscode": "^1.90.0"
   },
+  "activationEvents": [
+    "onCommand:dudu.fmtFile",
+    "onCommand:dudu.checkFile",
+    "onCommand:dudu.buildProject",
+    "onCommand:dudu.runFile"
+  ],
   "categories": [
     "Programming Languages"
   ],
@@ -29,6 +36,24 @@
         "language": "dudu",
         "scopeName": "source.dudu",
         "path": "./syntaxes/dudu.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "dudu.fmtFile",
+        "title": "Dudu: Format Current File"
+      },
+      {
+        "command": "dudu.checkFile",
+        "title": "Dudu: Check Current File"
+      },
+      {
+        "command": "dudu.buildProject",
+        "title": "Dudu: Build Project"
+      },
+      {
+        "command": "dudu.runFile",
+        "title": "Dudu: Run Current File"
       }
     ]
   }

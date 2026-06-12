@@ -58,6 +58,19 @@ for example in "${object_examples[@]}"; do
     compile_example_object "$example"
 done
 
+test -f "$repo_root/editors/vscode/extension.js"
+test -f "$repo_root/editors/vscode/syntaxes/dudu.tmLanguage.json"
+test -f "$repo_root/editors/vim/syntax/dudu.vim"
+test -f "$repo_root/editors/nvim/queries/dudu/highlights.scm"
+grep -q '"command": "dudu.fmtFile"' "$repo_root/editors/vscode/package.json"
+grep -q '"command": "dudu.checkFile"' "$repo_root/editors/vscode/package.json"
+grep -q '"command": "dudu.buildProject"' "$repo_root/editors/vscode/package.json"
+grep -q '"command": "dudu.runFile"' "$repo_root/editors/vscode/package.json"
+grep -q 'registerCommand("dudu.fmtFile"' "$repo_root/editors/vscode/extension.js"
+grep -q 'registerCommand("dudu.checkFile"' "$repo_root/editors/vscode/extension.js"
+grep -q 'registerCommand("dudu.buildProject"' "$repo_root/editors/vscode/extension.js"
+grep -q 'registerCommand("dudu.runFile"' "$repo_root/editors/vscode/extension.js"
+
 generated_header="$repo_root/build/cpp_library.hpp"
 "$repo_root/build/dudu" "$repo_root/examples/cpp_library.dd" --emit-header "$generated_header"
 printf '#include "cpp_library.hpp"\nint main() { return 0; }\n' >"$repo_root/build/header_smoke.cpp"
