@@ -1,0 +1,35 @@
+{
+  "name": "dudu-syntax",
+  "displayName": "Dudu Syntax",
+  "description": "Syntax highlighting for Dudu .dd source files.",
+  "version": "0.1.0",
+  "publisher": "dudu",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "dudu",
+        "aliases": [
+          "Dudu",
+          "dudu"
+        ],
+        "extensions": [
+          ".dd"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "dudu",
+        "scopeName": "source.dudu",
+        "path": "./syntaxes/dudu.tmLanguage.json"
+      }
+    ]
+  }
+}

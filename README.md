@@ -60,11 +60,25 @@ Emit C++ for current compiler fixtures:
 ./build/dudu --help
 ```
 
+Check, format, or emit code:
+
+```sh
+./build/dudu tests/fixtures/simple_program.dd --check
+./build/dudu tests/fixtures/simple_program.dd --format -
+./build/dudu tests/fixtures/simple_program.dd --emit-cpp -
+./build/dudu examples/cpp_library.dd --emit-header -
+```
+
 Validate the checked-in examples that do not need external libraries:
 
 ```sh
 ./scripts/test.sh
 ```
+
+Editor syntax files live in:
+
+- `editors/vscode`
+- `editors/vim`
 
 ## Working Name
 

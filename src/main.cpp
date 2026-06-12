@@ -1,4 +1,5 @@
 #include "dudu/cpp_emit.hpp"
+#include "dudu/format.hpp"
 #include "dudu/parser.hpp"
 #include "dudu/sema.hpp"
 
@@ -90,6 +91,7 @@ struct Options {
     std::optional<std::filesystem::path> output;
     std::optional<std::filesystem::path> header_output;
     bool emit_cpp = false;
+    bool format = false;
     bool check = false;
 };
 
@@ -1072,8 +1074,20 @@ Options parse_options(int argc, char** argv) {
             options.check = true;
             continue;
         }
+        if (arg == "--format") {
+            if (i + 1 >= argc) {
+                fail("--format requires a path or '-'");
+            }
+            options.format = true;
+            const std::string value = argv[++i];
+            if (value != "-") {
+                options.output = value;
+            }
+            continue;
+        }
         if (arg == "-h" || arg == "--help") {
-            std::cout << "usage: dudu <input.dd> [--check] [--emit-header <path|->] "
+            std::cout << "usage: dudu <input.dd> [--check] [--format <path|->] "
+                         "[--emit-header <path|->] "
                          "[--emit-cpp <path|->]\n";
             std::exit(0);
         }
@@ -1115,6 +1129,10 @@ int main(int argc, char** argv) {
     try {
         const Options options = parse_options(argc, argv);
         const std::string source = read_text_file(options.input);
+        if (options.format) {
+            write_text_output(options.output, dudu::format_source(source));
+            return 0;
+        }
         if (options.header_output.has_value()) {
             const dudu::ModuleAst module = dudu::parse_source(source, options.input);
             dudu::analyze_module(module);

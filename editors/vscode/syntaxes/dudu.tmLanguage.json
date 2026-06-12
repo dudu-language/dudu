@@ -1,0 +1,53 @@
+{
+  "scopeName": "source.dudu",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#decorators" },
+    { "include": "#keywords" },
+    { "include": "#types" },
+    { "include": "#constants" },
+    { "include": "#numbers" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        { "name": "comment.line.number-sign.dudu", "match": "#.*$" }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        { "name": "string.quoted.triple.dudu", "begin": "\"\"\"", "end": "\"\"\"" },
+        { "name": "string.quoted.double.dudu", "begin": "\"", "end": "\"", "patterns": [{ "name": "constant.character.escape.dudu", "match": "\\\\." }] },
+        { "name": "string.quoted.single.dudu", "begin": "'", "end": "'", "patterns": [{ "name": "constant.character.escape.dudu", "match": "\\\\." }] }
+      ]
+    },
+    "decorators": {
+      "patterns": [
+        { "name": "meta.annotation.dudu", "match": "@[A-Za-z_][A-Za-z0-9_\\.]*" }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        { "name": "keyword.control.dudu", "match": "\\b(if|elif|else|while|for|in|return|break|continue|and|or|not)\\b" },
+        { "name": "keyword.declaration.dudu", "match": "\\b(def|class|enum|type|import|from|as|public|private|static_assert)\\b" },
+        { "name": "constant.language.dudu", "match": "\\b(True|False|None)\\b" }
+      ]
+    },
+    "types": {
+      "patterns": [
+        { "name": "storage.type.dudu", "match": "\\b(bool|i8|i16|i32|i64|u8|u16|u32|u64|isize|usize|f32|f64|void|str|cstr|list|dict|set|tuple|Result|Option|fn|const|atomic|volatile|storage|shared|device)\\b" }
+      ]
+    },
+    "constants": {
+      "patterns": [
+        { "name": "constant.other.dudu", "match": "\\b[A-Z][A-Z0-9_]*\\b" }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        { "name": "constant.numeric.dudu", "match": "\\b[0-9]+(\\.[0-9]+)?\\b" }
+      ]
+    }
+  }
+}

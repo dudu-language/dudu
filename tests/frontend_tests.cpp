@@ -1,4 +1,5 @@
 #include "dudu/cpp_emit.hpp"
+#include "dudu/format.hpp"
 #include "dudu/lexer.hpp"
 #include "dudu/parser.hpp"
 #include "dudu/sema.hpp"
@@ -124,6 +125,20 @@ void test_semantic_diagnostics() {
     assert(bad_return);
 }
 
+void test_formatter() {
+    const std::string formatted = dudu::format_source("def main() -> i32:   \n"
+                                                      "    return 0\t\n"
+                                                      "\n"
+                                                      "\n"
+                                                      "\n"
+                                                      "def other():\n");
+    assert(formatted == "def main() -> i32:\n"
+                        "    return 0\n"
+                        "\n"
+                        "\n"
+                        "def other():\n");
+}
+
 } // namespace
 
 int main() {
@@ -134,6 +149,7 @@ int main() {
         test_canonical_examples_parse(root);
         test_header_emission();
         test_semantic_diagnostics();
+        test_formatter();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;

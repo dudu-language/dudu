@@ -35,6 +35,8 @@ printf '#include "cpp_library.hpp"\nint main() { return 0; }\n' >"$repo_root/bui
 "${CXX:-c++}" -std=c++20 -I"$repo_root/build" -c "$repo_root/build/header_smoke.cpp" \
     -o "$repo_root/build/header_smoke.o"
 
+"$repo_root/build/dudu" "$repo_root/tests/fixtures/simple_program.dd" --format - >/dev/null
+
 compile_and_expect() {
     local name="$1"
     local expected="$2"
