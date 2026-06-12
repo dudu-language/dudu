@@ -1,0 +1,4 @@
+def bad() -> i32:
+    value: i32 = 4
+    free(value)
+    return value

@@ -27,4 +27,20 @@ std::optional<std::string> infer_allocation_call(const Symbols& symbols,
     return "*" + type;
 }
 
+bool is_deallocation_call(std::string_view callee) {
+    return callee == "delete" || callee == "free";
+}
+
+void check_deallocation_args(const SourceLocation& location, std::string_view callee,
+                             const std::vector<std::string>& arg_types) {
+    if (arg_types.size() != 1) {
+        throw CompileError(location, std::string(callee) + " expects 1 pointer argument, got " +
+                                         std::to_string(arg_types.size()));
+    }
+    const std::string type = trim_copy(arg_types.front());
+    if (type.empty() || type.front() != '*') {
+        throw CompileError(location, std::string(callee) + " expects pointer, got " + type);
+    }
+}
+
 } // namespace dudu

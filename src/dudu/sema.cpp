@@ -32,17 +32,15 @@ std::string member_path_type(const FunctionScope& scope, const RawStmt* stmt,
                              const std::string& path) {
     const size_t dot = path.find('.');
     if (dot == std::string::npos) {
-        if (const auto local = scope.locals.find(path); local != scope.locals.end()) {
+        if (const auto local = scope.locals.find(path); local != scope.locals.end())
             return local->second;
-        }
         return {};
     }
     std::string current = path.substr(0, dot);
     const auto local = scope.locals.find(current);
     if (local == scope.locals.end()) {
-        if (stmt != nullptr) {
+        if (stmt != nullptr)
             fail(stmt->location, "assignment through unknown local: " + current);
-        }
         return {};
     }
     std::string type = local->second;
@@ -52,9 +50,8 @@ std::string member_path_type(const FunctionScope& scope, const RawStmt* stmt,
         const std::string field =
             path.substr(start, next == std::string::npos ? next : next - start);
         const auto klass = scope.symbols.classes.find(base_type(type));
-        if (klass == scope.symbols.classes.end()) {
+        if (klass == scope.symbols.classes.end())
             return {};
-        }
         bool found = false;
         for (const FieldDecl& decl : klass->second->fields) {
             if (decl.name == field) {
@@ -64,14 +61,12 @@ std::string member_path_type(const FunctionScope& scope, const RawStmt* stmt,
             }
         }
         if (!found) {
-            if (stmt != nullptr) {
+            if (stmt != nullptr)
                 fail(stmt->location, "unknown field: " + path);
-            }
             return {};
         }
-        if (next == std::string::npos) {
+        if (next == std::string::npos)
             return type;
-        }
         start = next + 1;
     }
     return type;
@@ -96,9 +91,8 @@ bool is_builtin_call(const std::string& callee) {
 void check_call_args(const FunctionScope& scope, const std::string& callee,
                      const FunctionSignature& signature, const std::vector<std::string>& args,
                      const SourceLocation* location) {
-    if (location == nullptr) {
+    if (location == nullptr)
         return;
-    }
     if (args.size() != signature.params.size()) {
         fail(*location, "function " + callee + " expects " +
                             std::to_string(signature.params.size()) + " arguments, got " +
@@ -115,9 +109,8 @@ void check_call_args(const FunctionScope& scope, const std::string& callee,
 }
 void check_constructor_args(const FunctionScope& scope, const ClassDecl& klass,
                             const std::vector<std::string>& args, const SourceLocation* location) {
-    if (location == nullptr) {
+    if (location == nullptr)
         return;
-    }
     std::set<std::string> named_fields;
     size_t positional = 0;
     for (const std::string& arg : args) {
@@ -143,9 +136,8 @@ void check_constructor_args(const FunctionScope& scope, const ClassDecl& klass,
             continue;
         }
         const std::string name = trim(arg.substr(0, equal));
-        if (!named_fields.insert(name).second) {
+        if (!named_fields.insert(name).second)
             fail(*location, "duplicate constructor field: " + name);
-        }
         const FieldDecl* field = nullptr;
         for (const FieldDecl& candidate : klass.fields) {
             if (candidate.name == name) {
@@ -153,9 +145,8 @@ void check_constructor_args(const FunctionScope& scope, const ClassDecl& klass,
                 break;
             }
         }
-        if (field == nullptr) {
+        if (field == nullptr)
             fail(*location, "unknown constructor field: " + klass.name + "." + name);
-        }
         const std::string value = arg.substr(equal + 1);
         const std::string got = infer_expr(scope, value, location);
         if (!can_assign_expr(scope, field->type, value, got)) {
@@ -167,20 +158,17 @@ void check_constructor_args(const FunctionScope& scope, const ClassDecl& klass,
 std::string infer_expr(const FunctionScope& scope, std::string expr,
                        const SourceLocation* location) {
     expr = trim(std::move(expr));
-    if (expr.empty()) {
+    if (expr.empty())
         return "void";
-    }
     if (starts_with(expr, "{") && expr.back() == '}') {
         for (const std::string& entry : split_top_level(expr.substr(1, expr.size() - 2))) {
-            if (find_top_level_char(entry, ':') != std::string::npos) {
+            if (find_top_level_char(entry, ':') != std::string::npos)
                 return "dict";
-            }
         }
         return "set";
     }
-    if (starts_with(expr, "lambda ")) {
+    if (starts_with(expr, "lambda "))
         return "lambda";
-    }
     if (expr.size() > 1 && expr.front() == '*') {
         const std::string name = trim(expr.substr(1));
         if (const auto local = scope.locals.find(name); local != scope.locals.end()) {
@@ -225,6 +213,14 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
         if (const auto type =
                 infer_allocation_call(scope.symbols, location, callee, call_args(expr, call)))
             return *type;
+        if (is_deallocation_call(callee)) {
+            std::vector<std::string> types;
+            for (const std::string& arg : call_args(expr, call))
+                types.push_back(infer_expr(scope, arg, location));
+            if (location != nullptr)
+                check_deallocation_args(*location, callee, types);
+            return "void";
+        }
         if (callee == "Ok" || callee == "Err") {
             const std::vector<std::string> args = call_args(expr, call);
             if (args.size() != 1 && location != nullptr) {
@@ -352,7 +348,11 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
         }
         return;
     }
-    if (starts_with(text, "cpp(") || text == "pass") {
+    if (starts_with(text, "cpp(") || text == "pass")
+        return;
+    if (starts_with(text, "delete ")) {
+        check_deallocation_args(stmt.location, "delete",
+                                {infer_expr(scope, text.substr(7), &stmt.location)});
         return;
     }
     if ((text == "break" || text == "continue") && loop_depth == 0) {
