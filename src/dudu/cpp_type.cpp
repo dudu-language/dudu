@@ -124,7 +124,7 @@ std::string lower_function_type(const std::string& type) {
     }
 
     std::ostringstream out;
-    out << "std::function<" << result << '(';
+    out << "std::add_pointer_t<" << result << '(';
     const std::vector<std::string> parts = split_top_level_args(args);
     for (size_t i = 0; i < parts.size(); ++i) {
         if (i > 0) {

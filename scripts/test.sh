@@ -114,6 +114,11 @@ grep -q 'inline constexpr std::string_view RENDER_BACKEND = "raylib";' \
 grep -q "float\\* dev_x = nullptr;" "$repo_root/build/cuda_kernel.cpp"
 grep -q "err = cuda::cudaMalloc" "$repo_root/build/cuda_kernel.cpp"
 ! grep -q "dudu::dudu" "$repo_root/build/cuda_kernel.cpp"
+"$repo_root/build/duc" emit "$repo_root/tests/fixtures/lambda_callback.dd" \
+    -o "$repo_root/build/function_pointer.cpp"
+grep -Fq "std::add_pointer_t<int32_t(int32_t)> callback" \
+    "$repo_root/build/function_pointer.cpp"
+! grep -q "std::function" "$repo_root/build/function_pointer.cpp"
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/package_build/main.dd" \
     -o "$repo_root/build/package_build.cpp"
 grep -q "inline constexpr bool DEBUG = true;" "$repo_root/build/package_build.cpp"

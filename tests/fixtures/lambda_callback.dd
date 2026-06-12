@@ -1,6 +1,10 @@
+def add_one(value: i32) -> i32:
+    return value + 1
+
+
 def apply(value: i32, callback: fn(i32) -> i32) -> i32:
     return callback(value)
 
 
 def main() -> i32:
-    return apply(41, lambda x: x + 1)
+    return apply(41, add_one)

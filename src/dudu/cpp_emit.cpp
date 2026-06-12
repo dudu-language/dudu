@@ -94,6 +94,7 @@ void emit_includes(std::ostringstream& out, const ModuleAst& module) {
            "#include <string>\n"
            "#include <string_view>\n"
            "#include <tuple>\n"
+           "#include <type_traits>\n"
            "#include <unordered_map>\n"
            "#include <unordered_set>\n"
            "#include <utility>\n"
