@@ -13,9 +13,10 @@ namespace {
 std::vector<std::string> namespace_aliases(const ModuleAst& module) {
     std::vector<std::string> aliases;
     for (const ImportDecl& import : module.imports) {
-        if ((import.kind == ImportKind::ForeignC || import.kind == ImportKind::ForeignCpp) &&
-            !import.alias.empty()) {
+        if (import.kind == ImportKind::ForeignCpp && !import.alias.empty()) {
             aliases.push_back(import.alias);
+        } else if (import.kind == ImportKind::ForeignC && !import.alias.empty()) {
+            aliases.push_back("!" + import.alias);
         }
     }
     return aliases;

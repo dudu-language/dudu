@@ -1,0 +1,7 @@
+import c "string.h" as c
+
+
+def main() -> i32:
+    bytes: u8[4]
+    c.memset(&bytes[0], 0, 4)
+    return 42

@@ -142,15 +142,18 @@ std::string replace_all(std::string text, std::string_view from, std::string_vie
 std::string qualify_namespace_aliases(std::string expr,
                                       const std::vector<std::string>& namespace_aliases) {
     for (const std::string& alias : namespace_aliases) {
-        const std::string marker = alias + ".";
+        const bool strip_alias = !alias.empty() && alias.front() == '!';
+        const std::string name = strip_alias ? alias.substr(1) : alias;
+        const std::string marker = name + ".";
         size_t pos = expr.find(marker);
         while (pos != std::string::npos) {
             const bool left_ok =
                 pos == 0 || (std::isalnum(static_cast<unsigned char>(expr[pos - 1])) == 0 &&
                              expr[pos - 1] != '_');
             if (left_ok) {
-                expr.replace(pos, marker.size(), alias + "::");
-                pos = expr.find(marker, pos + alias.size() + 2);
+                const std::string replacement = strip_alias ? "" : name + "::";
+                expr.replace(pos, marker.size(), replacement);
+                pos = expr.find(marker, pos + replacement.size());
             } else {
                 pos = expr.find(marker, pos + marker.size());
             }
