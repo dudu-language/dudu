@@ -446,6 +446,15 @@ if (
 fi
 grep -q "invalid \\[target\\] mode" "$repo_root/build/bad_project_target.err"
 
+if (
+    cd "$repo_root/tests/fixtures/bad_project_unknown_key"
+    "$repo_root/build/duc" check
+) 2>"$repo_root/build/bad_project_unknown_key.err"; then
+    echo "bad_project_unknown_key unexpectedly passed" >&2
+    exit 1
+fi
+grep -q "unknown \\[cc\\] entry" "$repo_root/build/bad_project_unknown_key.err"
+
 api_cpp="$repo_root/build/dudu_api.cpp"
 api_hpp="$repo_root/build/dudu_api.hpp"
 api_caller="$repo_root/build/dudu_api_caller.cpp"

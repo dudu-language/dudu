@@ -148,6 +148,10 @@ ProjectConfig parse_project_config(const std::filesystem::path& path) {
             config.pkg_config_packages = parse_string_array(path, line, value);
         } else if (section == "build") {
             config.build_values[name] = value;
+        } else {
+            fail(path,
+                 section.empty() ? "unknown top-level entry" : "unknown [" + section + "] entry",
+                 line);
         }
     }
     return config;

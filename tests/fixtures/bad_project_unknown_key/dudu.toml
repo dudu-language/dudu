@@ -1,0 +1,4 @@
+main = "main.dd"
+
+[cc]
+include_dir = ["include"]
