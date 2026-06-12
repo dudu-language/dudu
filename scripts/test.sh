@@ -74,4 +74,21 @@ expect_fail() {
 expect_fail bad_duplicate --check
 expect_fail bad_return --emit-cpp
 
+api_cpp="$repo_root/build/dudu_api.cpp"
+api_hpp="$repo_root/build/dudu_api.hpp"
+api_caller="$repo_root/build/dudu_api_caller.cpp"
+api_bin="$repo_root/build/dudu_api_caller"
+"$repo_root/build/dudu" "$repo_root/tests/fixtures/dudu_api.dd" --emit-cpp "$api_cpp"
+"$repo_root/build/dudu" "$repo_root/tests/fixtures/dudu_api.dd" --emit-header "$api_hpp"
+printf '#include "dudu_api.hpp"\nint main() { return answer() + 9; }\n' >"$api_caller"
+"${CXX:-c++}" -std=c++20 -I"$repo_root/build" "$api_cpp" "$api_caller" -o "$api_bin"
+set +e
+"$api_bin"
+api_status=$?
+set -e
+if [[ "$api_status" -ne 42 ]]; then
+    echo "dudu_api_caller returned $api_status, expected 42" >&2
+    exit 1
+fi
+
 echo "compiler builds and canonical examples are present"
