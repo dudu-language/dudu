@@ -346,6 +346,7 @@ compile_and_expect pointer_cast 42
 compile_and_expect pointer_member 42
 compile_and_expect nested_fields 42
 compile_and_expect align_up 42
+compile_and_expect loop_control 25
 compile_path_and_expect multifile tests/fixtures/multifile/main.dd 42
 
 direct_bin="$repo_root/build/dudu_build_simple"
@@ -397,6 +398,8 @@ expect_fail bad_constructor_positional_type --emit-cpp "constructor Point argume
 expect_fail bad_result_ok_type --emit-cpp "return type mismatch: expected Result\\[i32, i32\\], got Ok\\[bool\\]"
 expect_fail bad_result_err_type --emit-cpp "return type mismatch: expected Result\\[i32, i32\\], got Err\\[bool\\]"
 expect_fail bad_void_return --emit-cpp "void function cannot return i32"
+expect_fail bad_break_outside_loop --emit-cpp "break outside loop"
+expect_fail bad_continue_outside_loop --emit-cpp "continue outside loop"
 expect_fail bad_build_flag --check "unknown build flag: build.NOPE"
 expect_fail bad_implicit_cast --emit-cpp "cannot assign i32 to i64 without an explicit cast"
 expect_fail bad_const_assignment --emit-cpp "cannot assign to constant: LIMIT"

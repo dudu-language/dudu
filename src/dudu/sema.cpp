@@ -333,14 +333,16 @@ std::string assign_target_type(const FunctionScope& scope, const RawStmt& stmt,
     }
     return member_path_type(scope, &stmt, lhs);
 }
-void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& return_type);
+void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& return_type,
+                int loop_depth);
 void check_block(FunctionScope& scope, const std::vector<RawStmt>& body,
-                 const std::string& return_type) {
+                 const std::string& return_type, int loop_depth) {
     for (const RawStmt& stmt : body) {
-        check_stmt(scope, stmt, return_type);
+        check_stmt(scope, stmt, return_type, loop_depth);
     }
 }
-void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& return_type) {
+void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& return_type,
+                int loop_depth) {
     const std::string text = trim(stmt.text);
     check_local_address_escape(stmt, scope.locals);
     if (starts_with(text, "return")) {
@@ -356,9 +358,18 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
     if (starts_with(text, "cpp(") || text == "pass") {
         return;
     }
-    if (starts_with(text, "if ") || starts_with(text, "elif ") || starts_with(text, "while ") ||
-        text == "else:") {
-        check_block(scope, stmt.children, return_type);
+    if ((text == "break" || text == "continue") && loop_depth == 0) {
+        fail(stmt.location, text + " outside loop");
+    }
+    if (text == "break" || text == "continue") {
+        return;
+    }
+    if (starts_with(text, "if ") || starts_with(text, "elif ") || text == "else:") {
+        check_block(scope, stmt.children, return_type, loop_depth);
+        return;
+    }
+    if (starts_with(text, "while ")) {
+        check_block(scope, stmt.children, return_type, loop_depth + 1);
         return;
     }
     if (starts_with(text, "for ")) {
@@ -370,7 +381,7 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
             check_local_binding_name(stmt.location, name);
             nested.locals[name] = trim(text.substr(colon + 1, in_pos - colon - 1));
         }
-        check_block(nested, stmt.children, return_type);
+        check_block(nested, stmt.children, return_type, loop_depth + 1);
         return;
     }
     const size_t colon = find_top_level_char(text, ':');
@@ -442,7 +453,7 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols) {
                 scope.locals[param.name] = param.type;
             }
             check_block(scope, method.body,
-                        method.return_type.empty() ? "void" : method.return_type);
+                        method.return_type.empty() ? "void" : method.return_type, 0);
             if (!method.return_type.empty() && method.return_type != "void" &&
                 !block_guarantees_return(method.body)) {
                 fail(method.location, "missing return in function: " + method.name);
@@ -454,7 +465,7 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols) {
         for (const ParamDecl& param : fn.params) {
             scope.locals[param.name] = param.type;
         }
-        check_block(scope, fn.body, fn.return_type.empty() ? "void" : fn.return_type);
+        check_block(scope, fn.body, fn.return_type.empty() ? "void" : fn.return_type, 0);
         if (!fn.return_type.empty() && fn.return_type != "void" &&
             !block_guarantees_return(fn.body)) {
             fail(fn.location, "missing return in function: " + fn.name);
