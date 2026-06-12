@@ -157,6 +157,23 @@ void test_formatter() {
                         "def other():\n");
 }
 
+void test_typed_for_emission() {
+    const dudu::ModuleAst module = dudu::parse_source("class Item:\n"
+                                                      "    value: i32\n"
+                                                      "\n"
+                                                      "def sum_items(items: list[Item]) -> i32:\n"
+                                                      "    total: i32 = 0\n"
+                                                      "    for item: &Item in items:\n"
+                                                      "        total += item.value\n"
+                                                      "    for copy in items:\n"
+                                                      "        total += copy.value\n"
+                                                      "    return total\n",
+                                                      "typed_for.dd");
+    const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find("for (Item& item : items)") != std::string::npos);
+    assert(cpp.find("for (auto&& copy : items)") != std::string::npos);
+}
+
 } // namespace
 
 int main() {
@@ -168,6 +185,7 @@ int main() {
         test_header_emission();
         test_semantic_diagnostics();
         test_formatter();
+        test_typed_for_emission();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;

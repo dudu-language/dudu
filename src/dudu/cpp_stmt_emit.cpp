@@ -443,7 +443,9 @@ void emit_raw_statement(std::ostringstream& out, const RawStmt& stmt, int depth,
                 out << indent(depth) << "}\n";
                 return;
             }
-            out << indent(depth) << "for (auto&& " << binding << " : " << range << ") {\n";
+            const std::string loop_type = typed == std::string::npos ? "auto&&" : binding_type;
+            out << indent(depth) << "for (" << loop_type << ' ' << binding << " : " << range
+                << ") {\n";
             emit_raw_block(out, stmt.children, depth + 1, aliases, locals);
             out << indent(depth) << "}\n";
             return;
