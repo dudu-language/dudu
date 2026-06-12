@@ -1,0 +1,74 @@
+# Allocation helpers and custom arena APIs.
+
+import c "string.h" as cstr
+
+
+class Enemy:
+    hp: i32
+    x: f32
+    y: f32
+
+
+class Arena:
+    data: *u8
+    capacity: usize
+    used: usize
+
+    def alloc(self, size: usize, align: usize) -> *u8:
+        # Library-defined behavior. Dudu does not know this is an arena.
+        aligned = align_up(self.used, align)
+        if aligned + size > self.capacity:
+            return None
+
+        ptr = self.data + aligned
+        self.used = aligned + size
+        return ptr
+
+    def reset(self):
+        self.used = 0
+
+
+def make_enemy(hp: i32, x: f32, y: f32) -> Enemy:
+    return Enemy(hp=hp, x=x, y=y)
+
+
+def make_enemy_wave(count: i32) -> list[Enemy]:
+    enemies: list[Enemy] = []
+
+    for i: i32 in range(count):
+        enemies.append(Enemy(
+            hp=50,
+            x=f32(i) * 12.0,
+            y=0.0,
+        ))
+
+    return enemies
+
+
+def collect_enemy_ptrs(enemies: &list[Enemy]) -> list[*Enemy]:
+    ptrs: list[*Enemy] = []
+
+    for enemy: &Enemy in enemies:
+        ptrs.append(&enemy)
+
+    return ptrs
+
+
+def demo_heap():
+    enemy: *Enemy = new[Enemy](100, 10.0, 20.0)
+    enemy.x += 5.0
+    delete(enemy)
+
+
+def demo_raw_bytes():
+    bytes: *u8 = malloc[u8](1024)
+    cstr.memset(bytes, 0, 1024)
+    free(bytes)
+
+
+def demo_arena(arena: &Arena):
+    raw: *u8 = arena.alloc(sizeof[Enemy](), alignof[Enemy]())
+    enemy: *Enemy = *Enemy(raw)
+
+    *enemy = make_enemy(50, 4.0, 8.0)
+    arena.reset()

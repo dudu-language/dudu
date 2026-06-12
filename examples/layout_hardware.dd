@@ -1,0 +1,41 @@
+# Hardware register and binary layout example.
+
+
+@packed
+class PacketHeader:
+    magic: u32
+    version: u16
+    flags: u16
+    payload_size: u32
+
+
+@align(16)
+class Mat4Block:
+    matrix: f32[4][4]
+
+
+class UartRegs:
+    status: volatile[u32]
+    data: volatile[u32]
+    baud: volatile[u32]
+
+
+UART0: *volatile[UartRegs] = *volatile[UartRegs](0x4000_1000)
+PACKET_HEADER_SIZE: usize = sizeof[PacketHeader]()
+PACKET_FLAGS_OFFSET: usize = offsetof[PacketHeader](flags)
+
+
+def uart_can_write(regs: *volatile[UartRegs]) -> bool:
+    return (regs.status & 0x01) != 0
+
+
+def uart_write_byte(regs: *volatile[UartRegs], value: u8):
+    while not uart_can_write(regs):
+        pass
+
+    regs.data = u32(value)
+
+
+def main() -> i32:
+    uart_write_byte(UART0, u8(65))
+    return 0

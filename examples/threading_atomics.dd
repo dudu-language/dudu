@@ -1,0 +1,41 @@
+# Threads, atomics, and explicit references.
+
+import cpp "thread" as std
+import cpp "atomic" as std
+import cpp "vector" as std
+
+
+class WorkQueue:
+    next_index: atomic[i32]
+    total: i32
+
+
+def worker(queue: &WorkQueue, output: &list[i32]):
+    while True:
+        index = queue.next_index.fetch_add(1)
+
+        if index >= queue.total:
+            return
+
+        output[index] = index * index
+
+
+def main() -> i32:
+    count: i32 = 1024
+    queue = WorkQueue(
+        next_index=atomic[i32](0),
+        total=count,
+    )
+
+    output: list[i32] = []
+    output.resize(count)
+
+    threads: list[std.thread] = []
+
+    for _: i32 in range(4):
+        threads.append(std.thread(worker, &queue, &output))
+
+    for thread: &std.thread in threads:
+        thread.join()
+
+    return output[10]

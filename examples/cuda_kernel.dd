@@ -1,0 +1,38 @@
+# CUDA-style target attributes and address spaces.
+
+import cpp "cuda_runtime.h" as cuda
+
+
+@cuda.global
+def saxpy_kernel(x: *device[const[f32]], y: *device[f32], a: f32, n: i32):
+    i = cuda.blockIdx.x * cuda.blockDim.x + cuda.threadIdx.x
+
+    if i < n:
+        y[i] = a * x[i] + y[i]
+
+
+def saxpy(x: *f32, y: *f32, a: f32, n: i32) -> Result[None, cuda.cudaError_t]:
+    dev_x: *device[f32] = None
+    dev_y: *device[f32] = None
+    bytes = usize(n) * sizeof[f32]()
+
+    err = cuda.cudaMalloc(&dev_x, bytes)
+    if err != cuda.cudaSuccess:
+        return Err(err)
+
+    err = cuda.cudaMalloc(&dev_y, bytes)
+    if err != cuda.cudaSuccess:
+        cuda.cudaFree(dev_x)
+        return Err(err)
+
+    cuda.cudaMemcpy(dev_x, x, bytes, cuda.cudaMemcpyHostToDevice)
+    cuda.cudaMemcpy(dev_y, y, bytes, cuda.cudaMemcpyHostToDevice)
+
+    block: i32 = 256
+    grid: i32 = (n + block - 1) / block
+    cuda.launch(saxpy_kernel, grid, block, dev_x, dev_y, a, n)
+
+    cuda.cudaMemcpy(y, dev_y, bytes, cuda.cudaMemcpyDeviceToHost)
+    cuda.cudaFree(dev_x)
+    cuda.cudaFree(dev_y)
+    return Ok(None)

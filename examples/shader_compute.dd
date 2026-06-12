@@ -1,0 +1,22 @@
+# GPU/shader-style address spaces without committing to a specific backend.
+
+
+@shader.compute
+@workgroup_size(8, 8, 1)
+def blur_x(
+    source: *storage[const[f32]],
+    target: *storage[f32],
+    width: i32,
+    height: i32,
+):
+    x = shader.global_id.x
+    y = shader.global_id.y
+
+    if x >= width or y >= height:
+        return
+
+    center = y * width + x
+    left = y * width + max(x - 1, 0)
+    right = y * width + min(x + 1, width - 1)
+
+    target[center] = (source[left] + source[center] + source[right]) / 3.0

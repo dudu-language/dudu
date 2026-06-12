@@ -1,77 +1,24 @@
 # Project Goals
 
-> Historical note: this document predates the current Python-subset direction.
-> The active surface syntax and implementation plan are now
-> [Appearance Spec](appearance-spec.md) and
-> [Python Subset Compiler Plan](python-subset-compiler-plan.md).
+Dudu is a statically typed Python subset that compiles to readable C++.
 
-Dudu is a small systems language experiment.
+The goal:
 
-The central question:
-
-> Can a language use Python-like visual simplicity while compiling to native
-> C++-class code and interoperating directly with existing C and C++ libraries?
-
-## Non-Goals
-
-- Do not preserve Python runtime semantics.
-- Do not make every value a boxed dynamic object.
-- Do not require garbage collection for ordinary code.
-- Do not add Rust-style ownership or lifetime rules.
-- Do not hide C/C++ costs behind surprising language magic.
-- Do not start by inventing a full custom backend.
-
-## Design Goals
-
-- Low punctuation.
-- Indentation-based blocks.
-- Static types with inference where it stays obvious.
-- C/C++-style performance model.
-- C ABI support from the start.
-- Practical C++ interop as a first-class direction.
-- Readable generated C++ as the first backend.
-- Build and debug with ordinary C++ toolchains.
-- Keep the language small enough to understand.
-
-## Intended Feel
-
-Dudu should feel closer to this:
-
-```dudu
-fn add i32
-    a i32
-    b i32
-
-    a + b
+```text
+99% Python-shaped syntax.
+C/C++ capability.
+Readable generated .hpp/.cpp files.
+Direct access to C and C++ libraries.
+No CPython runtime dependency.
 ```
 
-than this:
+Authoritative docs:
 
-```cpp
-auto add(int a, int b) -> int {
-    return a + b;
-}
-```
+- [Appearance Spec](appearance-spec.md)
+- [Python Subset Compiler Plan](python-subset-compiler-plan.md)
 
-or this:
-
-```python
-def add(a: int, b: int) -> int:
-    return a + b
-```
-
-The language should be light to read without becoming dynamically typed or
-runtime-heavy by default.
-
-## First Milestone
-
-The first real compiler milestone should be a tiny vertical slice:
-
-- Parse `.dd` files.
-- Typecheck things, enums, functions, variables, loops, calls, and `ret`.
-- Emit readable C++.
-- Compile that C++ with Clang.
-- Call a small C library or raylib example.
-
-No macro system, package manager, optimizer, or advanced C++ interop is needed
-for the first milestone.
+The compiler should support practical systems programming: native values,
+pointers, references, fixed-width integers, fixed arrays, dynamic containers,
+manual allocation, C/C++ imports, generated headers, hardware layout controls,
+atomics, volatile memory, target attributes, and build modes for hosted,
+freestanding, embedded, CUDA, and shader-style targets.

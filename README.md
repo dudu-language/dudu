@@ -6,7 +6,7 @@ C++.
 The goal is Python syntax people already know, C/C++-style types and data
 movement, native-speed output, full access to existing C and C++ libraries, and
 generated `.hpp/.cpp` files that C++ projects can use directly. Source files use
-`.dd` for now.
+`.dd`.
 
 ```python
 import cpp "raylib.h" as rl
@@ -35,9 +35,8 @@ def main() -> i32:
 
 ## Current Status
 
-This repo has an older first compiler slice for the original low-punctuation
-syntax. The active language direction has moved to a typed Python subset; see
-the appearance spec and compiler plan before changing compiler behavior.
+The checked-in compiler is being rebuilt around the typed Python subset
+described in the appearance spec and compiler plan.
 
 The starting point is:
 
@@ -55,10 +54,10 @@ Build the compiler:
 ./scripts/build.sh
 ```
 
-Emit C++:
+Emit C++ for current compiler fixtures:
 
 ```sh
-./build/dudu examples/use_math.dd --emit-cpp -
+./build/dudu --help
 ```
 
 Validate the checked-in examples that do not need external libraries:

@@ -1,202 +1,22 @@
 # C And C++ Interop
 
-> Historical note: this document uses the old Dudu syntax in many examples.
-> The active syntax and implementation plan are now
-> [Appearance Spec](appearance-spec.md) and
-> [Python Subset Compiler Plan](python-subset-compiler-plan.md).
+The active interop plan is in
+[Python Subset Compiler Plan](python-subset-compiler-plan.md).
 
-Interop is the reason this language exists.
+Interop requirements:
 
-Dudu should not ask users to abandon existing C and C++ ecosystems. The first
-backend should emit readable C++ and use existing C++ build tools.
+- `import c "header.h" as alias`
+- `import cpp "header.hpp" as alias`
+- generated includes
+- namespace/member lowering
+- constructors and destructors through generated C++
+- references and const-correct types
+- imported templates
+- function pointer types
+- C ABI calls
+- C++ ABI calls
+- generated `.hpp` files usable from C++
+- Clang-backed header import for complete library understanding
 
-## Include Forms
-
-Dudu source imports:
-
-```dudu
-use "math.dd"
-```
-
-C header imports:
-
-```dudu
-use c "math.h" as math
-```
-
-C++ header imports:
-
-```dudu
-use cpp "raylib.h" as rl
-```
-
-The alias is required for external headers. Imported names are accessed through
-dot paths:
-
-```dudu
-math.sqrt 9.0
-rl.InitWindow 800 600 "window"
-```
-
-Quoted paths are intentional. They are path/header strings, not Dudu symbols.
-For C/C++ headers, Dudu should preserve local/system include intent where
-possible when emitting C++:
-
-```cpp
-#include "local_header.h"
-#include <stdio.h>
-```
-
-## C Interop Rules
-
-C interop should work first because C has a simpler ABI and fewer language
-features.
-
-The compiler should import:
-
-- functions
-- structs
-- enums
-- typedefs
-- global constants
-- simple constant-like macros
-
-Example:
-
-```dudu
-use c "stdio.h" as c
-use c "math.h" as math
-
-fn main i32
-
-    x f64 = math.sqrt 9.0
-    c.printf "sqrt: %f\n" x
-    0
-```
-
-Imported C structs behave like Dudu things:
-
-```dudu
-use c "raylib.h" as rl
-
-fn make_pos rl.Vector2
-
-    rl.Vector2 400 300
-```
-
-## C++ Interop Rules
-
-C++ interop should be practical before it is complete.
-
-The next implementation step should compile generated C++ against real headers
-instead of requiring Dudu to understand every foreign declaration itself. Clang
-tooling can come later for better diagnostics and Dudu-side typechecking.
-
-The first C++ interop layer should support:
-
-- namespaces through dot paths
-- free functions
-- static constants
-- enum classes
-- plain structs/classes with public fields
-- constructors that can be called like functions
-- basic member functions
-
-Example:
-
-```dudu
-use cpp "raylib.h" as rl
-
-fn main i32
-
-    rl.InitWindow 800 600 "dudu"
-
-    while not rl.WindowShouldClose
-        rl.BeginDrawing
-        rl.ClearBackground rl.BLACK
-        rl.DrawCircle 400 300 40 rl.RED
-        rl.EndDrawing
-
-    rl.CloseWindow
-    0
-```
-
-## Overloads
-
-C++ overload sets should resolve from Dudu argument types when possible.
-
-```dudu
-use cpp "math.hpp" as math
-
-fn demo f32
-
-    math.lerp 0.0 10.0 0.5
-```
-
-If multiple overloads remain valid, the compiler should require a cast or a
-more explicit binding. Do not guess silently.
-
-## Templates
-
-Templates are not a v1 feature, but the interop plan should leave space for
-them.
-
-Possible future spelling:
-
-```dudu
-values std.vector i32
-```
-
-This could emit:
-
-```cpp
-std::vector<int32_t> values;
-```
-
-Template-heavy APIs can initially be handled by small C++ wrapper headers.
-
-## Exceptions
-
-Dudu should not expose C++ exceptions as a first-class language feature in v1.
-
-For imported C++ functions that may throw, the first implementation can either:
-
-- allow exceptions to pass through generated C++, or
-- require wrapper code that converts failures to explicit status values.
-
-This should be decided when the compiler reaches real C++ interop.
-
-## Practical Limits
-
-C++ has features that are difficult to expose cleanly:
-
-- macros
-- overload sets
-- templates
-- ADL
-- exceptions
-- reference qualifiers
-- custom allocators
-- complex operator overloads
-- ABI and compiler-version differences
-
-The first interop layer should support common, useful cases before chasing full
-C++ coverage.
-
-## Generated C++
-
-Generated C++ should be boring:
-
-```cpp
-struct Vec2 {
-    float x;
-    float y;
-};
-
-int add(int a, int b) {
-    return a + b;
-}
-```
-
-Readable output matters because it makes debugging, profiling, and interop
-failures less mysterious.
+Macros are not part of the core interop surface. Users can write wrapper
+headers when macro-heavy APIs need a stable callable shape.

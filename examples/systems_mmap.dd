@@ -48,7 +48,7 @@ def unmap_file(file: MappedFile):
     unistd.close(file.fd)
 
 
-def fnv1a(data: *u8, size: usize) -> u64:
+def fnv_one_a(data: *u8, size: usize) -> u64:
     hash: u64 = 14695981039346656037
 
     for i: usize in range(size):
@@ -65,7 +65,7 @@ def main() -> i32:
         return 1
 
     file = result.value
-    hash = fnv1a(file.data, file.size)
+    hash = fnv_one_a(file.data, file.size)
     unmap_file(file)
 
     return i32(hash & 0xFF)

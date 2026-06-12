@@ -18,7 +18,7 @@ def nearest(point: Vec2, centers: list[Vec2]) -> i32:
     best_index: i32 = 0
     best_distance = dist_sq(point, centers[0])
 
-    for i: i32 in range(1, centers.len()):
+    for i: i32 in range(1, len(centers)):
         distance = dist_sq(point, centers[i])
         if distance < best_distance:
             best_index = i
@@ -35,7 +35,7 @@ def mean(points: list[Vec2]) -> Vec2:
         sum_x += p.x
         sum_y += p.y
 
-    count = f32(points.len())
+    count = f32(len(points))
     return Vec2(sum_x / count, sum_y / count)
 
 
@@ -44,24 +44,24 @@ def kmeans(points: list[Vec2], k: i32, iterations: i32) -> tuple[list[Vec2], lis
     labels: list[i32] = []
 
     for i: i32 in range(k):
-        centers.push(points[i])
+        centers.append(points[i])
 
-    for _: i32 in range(points.len()):
-        labels.push(0)
+    for _: i32 in range(len(points)):
+        labels.append(0)
 
     for _: i32 in range(iterations):
         buckets: list[list[Vec2]] = []
 
         for i: i32 in range(k):
-            buckets.push([])
+            buckets.append([])
 
-        for i: i32 in range(points.len()):
+        for i: i32 in range(len(points)):
             label = nearest(points[i], centers)
             labels[i] = label
-            buckets[label].push(points[i])
+            buckets[label].append(points[i])
 
         for i: i32 in range(k):
-            if buckets[i].len() > 0:
+            if len(buckets[i]) > 0:
                 centers[i] = mean(buckets[i])
 
     return centers, labels

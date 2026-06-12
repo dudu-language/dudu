@@ -39,7 +39,7 @@ def main() -> i32:
     stream = rl.LoadAudioStream(i32(SAMPLE_RATE), 32, 2)
     rl.PlayAudioStream(stream)
 
-    samples: array[f32, 2048]
+    samples: f32[2048]
 
     while not rl.WindowShouldClose():
         if rl.IsAudioStreamProcessed(stream):

@@ -15,7 +15,7 @@ Direct C and C++ interop.
 
 ## Files
 
-Dudu source files still use `.dd` for now.
+Dudu source files use `.dd`.
 
 ```text
 main.dd
@@ -23,8 +23,8 @@ math.dd
 renderer.dd
 ```
 
-The syntax should be close enough to Python that editor support can eventually
-reuse Python grammar pieces where practical.
+The syntax stays close enough to Python that editor tooling can reuse Python
+grammar pieces where practical.
 
 ## Comments
 
@@ -378,8 +378,8 @@ def minmax(values: list[i32]) -> MinMax:
     return MinMax(lo, hi)
 ```
 
-Tuple return should lower to a generated aggregate by default. `std::tuple`
-can be an interop option later, but it should not be required.
+Tuple return lowers to a generated aggregate by default. `std::tuple` is an
+imported C++ library type, not the default tuple-return lowering.
 
 ## Results And Errors
 
@@ -432,7 +432,8 @@ Use Python typing spellings.
 
 ```python
 values: list[i32]
-tiles: array[Tile, 256]
+tiles: Tile[256]
+matrix: f32[4][4]
 scores: dict[str, i32]
 visited: set[TileId]
 cache: dict[str, dict[i32, set[f32]]]
@@ -442,7 +443,7 @@ Likely C++ lowerings:
 
 ```text
 list[T]      -> std::vector<T>
-array[T, N]  -> std::array<T, N>
+T[N]         -> std::array<T, N>
 dict[K, V]   -> std::unordered_map<K, V>
 set[T]       -> std::unordered_set<T>
 tuple[...]   -> std::tuple<...>
@@ -544,6 +545,109 @@ part of the type:
 a: *i32
 b: i32
 ```
+
+## Function Pointer Types
+
+Raw function pointers use `fn`.
+
+```python
+cmp: fn(i32, i32) -> bool
+audio_cb: fn(*f32, i32)
+```
+
+If the return type is omitted, the function pointer returns nothing.
+
+```python
+def less(a: i32, b: i32) -> bool:
+    return a < b
+
+
+def sort_values(values: list[i32], cmp: fn(i32, i32) -> bool):
+    native_sort(values, cmp)
+
+
+sort_values(values, less)
+```
+
+Rules:
+
+- `fn(...) -> T` is a raw function pointer type.
+- `fn(...)` returns `void`.
+- capturing lambdas do not fit in `fn`.
+- non-capturing lambdas may coerce if the generated C++ supports it.
+- owning/capturing callable wrappers use imported C++ types such as
+  `std.function[...]`.
+
+## Allocation
+
+Dudu does not impose an ownership or allocator model.
+
+Value construction is the default:
+
+```python
+player = Player(100, "bob")
+```
+
+Prelude heap helpers:
+
+```python
+p: *Player = new[Player](100, "bob")
+delete(p)
+```
+
+Raw C-style allocation helpers:
+
+```python
+bytes: *u8 = malloc[u8](1024)
+free(bytes)
+```
+
+Rules:
+
+- `T(...)` constructs a value.
+- `new[T](args...)` allocates and constructs one `T`, returning `*T`.
+- `delete(p)` destroys and deallocates memory created by `new`.
+- `malloc[T](count)` allocates raw storage for `count` `T` values.
+- `free(p)` frees memory created by `malloc`.
+- custom allocators are ordinary library APIs, not language rules.
+
+Value containers own values:
+
+```python
+def make_players() -> list[Player]:
+    players: list[Player] = []
+    players.append(Player(100, "bob"))
+    players.append(Player(80, "ada"))
+    return players
+```
+
+This is safe. `list[Player]` lowers to an owning dynamic array, likely
+`std::vector<Player>`. Appending `Player(...)` stores a value in the list, and
+returning the list returns the owning container.
+
+Pointer containers do not own pointees:
+
+```python
+players: list[*Player] = []
+```
+
+The programmer or library must ensure pointed-to objects live long enough. The
+compiler should reject obvious escapes like returning `&local_value` through a
+pointer container.
+
+Arena example:
+
+```python
+arena = Arena(1024 * 1024)
+
+enemy: *Enemy = arena.make[Enemy](spawn)
+scratch: *u8 = arena.alloc[u8](4096)
+
+arena.reset()
+```
+
+Dudu does not define what `arena.make`, `arena.alloc`, or `arena.reset` mean.
+Those are just method calls supplied by the arena library.
 
 ## Member And Namespace Access
 
@@ -752,12 +856,12 @@ struct Camera {
 Vec3 camera_forward(Camera camera);
 ```
 
-Explicit export controls can come later for C ABI, shared library visibility, or
+Explicit export controls are reserved for C ABI, shared library visibility, and
 name-mangling policy. They are not required for ordinary C++ use.
 
 ## Removed Python Features
 
-Dudu is Python-shaped, not full Python. These are rejected or delayed in v1:
+Dudu is Python-shaped, not full Python. These are rejected:
 
 - exceptions: `raise`, `try`, `except`, `finally`
 - `eval` and `exec`
@@ -771,7 +875,7 @@ Dudu is Python-shaped, not full Python. These are rejected or delayed in v1:
 - `async` and `await`
 - multiple inheritance
 - dynamic class creation
-- decorators, except compiler-recognized ones later
+- decorators, except compiler-recognized attributes
 - heterogeneous containers unless explicitly typed as a dynamic object type
 - arbitrary precision Python `int` as the default integer model
 
@@ -825,11 +929,23 @@ include_dirs = ["include"]
 libs = ["raylib"]
 ```
 
-## Open Decisions
+## Systems Surface
 
-- Whether source files should eventually use `.py`-compatible syntax tooling or
-  stay `.dd`.
-- Exact foreign import grammar for C/C++ headers.
-- Whether `const[T]` remains the const-qualified type spelling.
-- How much Python runtime behavior to reject at compile time.
-- How much generated header/source splitting Dudu should expose in v1.
+Dudu targets systems programming directly. The language surface includes:
+
+- raw pointers and references
+- fixed-width integer and float types
+- fixed arrays and dynamic containers
+- manual allocation with `new/delete` and `malloc/free`
+- packed and aligned class attributes
+- `volatile[T]`
+- `atomic[T]`
+- compile-time layout operators: `sizeof[T]`, `alignof[T]`, `offsetof[T](field)`
+- function attributes such as `@inline`
+- target attributes such as `@cuda.global` and `@shader.compute`
+- address spaces such as `device[T]`, `storage[T]`, and `shared[T]`
+- native C++ escape hatches through `cpp(...)`
+- build modes for hosted, freestanding, embedded, CUDA, and shader-style targets
+
+These features are part of the intended capability set, not Python
+compatibility features.

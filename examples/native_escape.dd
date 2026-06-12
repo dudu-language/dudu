@@ -1,0 +1,22 @@
+# Native C++ escape hatch for platform-specific code.
+
+import cpp "immintrin.h" as simd
+
+
+@inline
+def cpu_pause():
+    cpp("asm volatile(\"pause\" ::: \"memory\");")
+
+
+def add4(a: *const[f32], b: *const[f32], out: *f32):
+    cpp("""
+    __m128 av = _mm_loadu_ps(a);
+    __m128 bv = _mm_loadu_ps(b);
+    __m128 sum = _mm_add_ps(av, bv);
+    _mm_storeu_ps(out, sum);
+    """)
+
+
+def spin_until_ready(flag: *volatile[u32]):
+    while *flag == 0:
+        cpu_pause()

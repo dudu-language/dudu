@@ -1,0 +1,36 @@
+# Header visibility and generated C++ API shape.
+
+
+public class Camera:
+    pos: Vec3
+    yaw: f32
+    pitch: f32
+    fov: f32
+
+
+public class Vec3:
+    x: f32
+    y: f32
+    z: f32
+
+
+private def length(v: Vec3) -> f32:
+    return sqrt(v.x * v.x + v.y * v.y + v.z * v.z)
+
+
+private def normalize(v: Vec3) -> Vec3:
+    len = length(v)
+    return Vec3(v.x / len, v.y / len, v.z / len)
+
+
+public def camera_forward(camera: Camera) -> Vec3:
+    cy = cos(camera.yaw)
+    sy = sin(camera.yaw)
+    cp = cos(camera.pitch)
+    sp = sin(camera.pitch)
+
+    return normalize(Vec3(
+        cy * cp,
+        sp,
+        sy * cp,
+    ))
