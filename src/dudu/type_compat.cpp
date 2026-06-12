@@ -65,10 +65,54 @@ bool is_option_value(const std::string& expected, std::string expr, const std::s
            (is_numeric_type(wrapped_type_arg(inner)) && is_numeric_literal(expr));
 }
 
+bool has_top_level_colon(const std::string& text) {
+    int depth = 0;
+    char quote = '\0';
+    bool escaped = false;
+    for (const char c : text) {
+        if (quote != '\0') {
+            if (escaped) {
+                escaped = false;
+            } else if (c == '\\') {
+                escaped = true;
+            } else if (c == quote) {
+                quote = '\0';
+            }
+            continue;
+        }
+        if (c == '"' || c == '\'') {
+            quote = c;
+            continue;
+        }
+        if (c == '(' || c == '[' || c == '{') {
+            ++depth;
+        } else if (c == ')' || c == ']' || c == '}') {
+            --depth;
+        } else if (c == ':' && depth == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool is_container_literal(const std::string& expected, std::string expr) {
     expr = trim_copy(std::move(expr));
-    return (starts_with(expected, "dict[") || starts_with(expected, "set[")) &&
-           starts_with(expr, "{") && ends_with(expr, "}");
+    if (!starts_with(expr, "{") || !ends_with(expr, "}")) {
+        return false;
+    }
+    if (starts_with(expected, "set[")) {
+        return true;
+    }
+    if (!starts_with(expected, "dict[")) {
+        return false;
+    }
+    const std::vector<std::string> entries = split_top_level_args(expr.substr(1, expr.size() - 2));
+    for (const std::string& entry : entries) {
+        if (!entry.empty() && !has_top_level_colon(entry)) {
+            return false;
+        }
+    }
+    return true;
 }
 
 } // namespace

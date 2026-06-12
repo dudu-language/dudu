@@ -281,6 +281,7 @@ expect_fail() {
 
 expect_fail bad_duplicate --check "duplicate declaration: Vec"
 expect_fail bad_type_alias --check "unknown type alias target: MissingThing"
+expect_fail bad_dict_literal --emit-cpp "cannot assign tuple"
 expect_fail bad_enum_underlying --check "unknown enum underlying type: MissingType"
 expect_fail bad_enum_duplicate --check "duplicate enum value: value"
 expect_fail bad_enum_value_name --check "enum values must be snake_case: BadValue"
