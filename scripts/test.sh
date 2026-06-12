@@ -158,6 +158,7 @@ compile_and_expect containers 42
 compile_and_expect cpp_template_interop 42
 compile_and_expect layout_attrs 21
 compile_and_expect atomic_volatile 44
+compile_and_expect branch_return 1
 compile_and_expect constructors 42
 compile_and_expect native_escape 42
 compile_and_expect result_option 42
@@ -207,6 +208,7 @@ expect_fail bad_return --emit-cpp "return type mismatch: expected i32, got bool"
 expect_fail bad_unknown_type --emit-cpp "unknown local type: MissingType"
 expect_fail bad_tuple_destructure --emit-cpp "tuple destructuring count mismatch"
 expect_fail bad_naming --check "type names must be PascalCase: bad_type"
+expect_fail bad_missing_return --emit-cpp "missing return in function: bad"
 
 if "$repo_root/build/duc" emit "$repo_root/tests/fixtures/bad_package_build/main.dd" \
     -o "$repo_root/build/bad_package_build.cpp" 2>"$repo_root/build/bad_package_build.err"; then

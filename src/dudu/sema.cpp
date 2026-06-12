@@ -319,6 +319,7 @@ void check_assign_target(const FunctionScope& scope, const RawStmt& stmt, const 
 }
 
 void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& return_type);
+bool block_guarantees_return(const std::vector<RawStmt>& body);
 
 void check_block(FunctionScope& scope, const std::vector<RawStmt>& body,
                  const std::string& return_type) {
@@ -396,6 +397,37 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
     }
 }
 
+bool branch_chain_guarantees_return(const std::vector<RawStmt>& body, size_t& index) {
+    bool has_else = false;
+    bool all_branches_return = block_guarantees_return(body[index].children);
+    while (index + 1 < body.size()) {
+        const std::string next = trim(body[index + 1].text);
+        if (!starts_with(next, "elif ") && next != "else:") {
+            break;
+        }
+        ++index;
+        has_else = has_else || next == "else:";
+        all_branches_return = all_branches_return && block_guarantees_return(body[index].children);
+        if (has_else) {
+            break;
+        }
+    }
+    return has_else && all_branches_return;
+}
+
+bool block_guarantees_return(const std::vector<RawStmt>& body) {
+    for (size_t i = 0; i < body.size(); ++i) {
+        const std::string text = trim(body[i].text);
+        if (starts_with(text, "return")) {
+            return true;
+        }
+        if (starts_with(text, "if ") && branch_chain_guarantees_return(body, i)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void check_bodies(const ModuleAst& module, const Symbols& symbols) {
     for (const ClassDecl& klass : module.classes) {
         for (const FunctionDecl& method : klass.methods) {
@@ -405,6 +437,10 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols) {
             }
             check_block(scope, method.body,
                         method.return_type.empty() ? "void" : method.return_type);
+            if (!method.return_type.empty() && method.return_type != "void" &&
+                !block_guarantees_return(method.body)) {
+                fail(method.location, "missing return in function: " + method.name);
+            }
         }
     }
     for (const FunctionDecl& fn : module.functions) {
@@ -413,6 +449,10 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols) {
             scope.locals[param.name] = param.type;
         }
         check_block(scope, fn.body, fn.return_type.empty() ? "void" : fn.return_type);
+        if (!fn.return_type.empty() && fn.return_type != "void" &&
+            !block_guarantees_return(fn.body)) {
+            fail(fn.location, "missing return in function: " + fn.name);
+        }
     }
 }
 
