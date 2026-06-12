@@ -98,6 +98,106 @@ std::string lower_lambda_expr(std::string expr) {
     return expr;
 }
 
+std::string lower_generic_type_constructor(std::string expr) {
+    size_t open = expr.find('[');
+    while (open != std::string::npos) {
+        size_t name_start = open;
+        while (name_start > 0) {
+            const char c = expr[name_start - 1];
+            if (std::isalnum(static_cast<unsigned char>(c)) == 0 && c != '_') {
+                break;
+            }
+            --name_start;
+        }
+        if (name_start == open) {
+            open = expr.find('[', open + 1);
+            continue;
+        }
+        size_t prefix = name_start;
+        while (prefix > 0 && std::isspace(static_cast<unsigned char>(expr[prefix - 1])) != 0) {
+            --prefix;
+        }
+        if (prefix > 0 && expr[prefix - 1] == '*') {
+            open = expr.find('[', open + 1);
+            continue;
+        }
+        const std::string name = expr.substr(name_start, open - name_start);
+        if (name == "new" || name == "malloc" || name == "sizeof" || name == "alignof" ||
+            name == "offsetof") {
+            open = expr.find('[', open + 1);
+            continue;
+        }
+        const size_t close = expr.find(']', open + 1);
+        if (close == std::string::npos || close + 1 >= expr.size() || expr[close + 1] != '(') {
+            open = expr.find('[', open + 1);
+            continue;
+        }
+        int depth = 1;
+        size_t cursor = close + 2;
+        while (cursor < expr.size() && depth > 0) {
+            if (expr[cursor] == '(') {
+                ++depth;
+            } else if (expr[cursor] == ')') {
+                --depth;
+            }
+            ++cursor;
+        }
+        if (depth != 0) {
+            break;
+        }
+        const std::string type = expr.substr(name_start, close - name_start + 1);
+        const std::string args = expr.substr(close + 2, cursor - close - 3);
+        const std::string replacement = lower_cpp_type(type) + "(" + lower_cpp_expr(args) + ")";
+        expr.replace(name_start, cursor - name_start, replacement);
+        open = expr.find('[', name_start + replacement.size());
+    }
+    return expr;
+}
+
+std::string lower_len_calls(std::string expr) {
+    const std::string marker = "len(";
+    size_t pos = expr.find(marker);
+    while (pos != std::string::npos) {
+        const bool left_ok =
+            pos == 0 ||
+            (std::isalnum(static_cast<unsigned char>(expr[pos - 1])) == 0 && expr[pos - 1] != '_');
+        if (!left_ok) {
+            pos = expr.find(marker, pos + marker.size());
+            continue;
+        }
+        int depth = 1;
+        size_t cursor = pos + marker.size();
+        while (cursor < expr.size() && depth > 0) {
+            if (expr[cursor] == '(') {
+                ++depth;
+            } else if (expr[cursor] == ')') {
+                --depth;
+            }
+            ++cursor;
+        }
+        if (depth != 0) {
+            break;
+        }
+        const std::string arg = expr.substr(pos + marker.size(), cursor - pos - marker.size() - 1);
+        const std::string replacement = "(" + lower_cpp_expr(arg) + ").size()";
+        expr.replace(pos, cursor - pos, replacement);
+        pos = expr.find(marker, pos + replacement.size());
+    }
+    return expr;
+}
+
+std::string lower_numeric_separators(std::string expr) {
+    for (size_t i = 1; i + 1 < expr.size();) {
+        if (expr[i] == '_' && std::isdigit(static_cast<unsigned char>(expr[i - 1])) != 0 &&
+            std::isdigit(static_cast<unsigned char>(expr[i + 1])) != 0) {
+            expr.erase(i, 1);
+            continue;
+        }
+        ++i;
+    }
+    return expr;
+}
+
 std::string lower_str_calls(std::string expr) {
     const std::string marker = "str(";
     size_t pos = expr.find(marker);

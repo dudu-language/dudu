@@ -14,6 +14,28 @@ bool is_decimal_number(std::string_view text) {
     });
 }
 
+bool is_constant_name(std::string_view text) {
+    if (text.empty() || std::isalpha(static_cast<unsigned char>(text.front())) == 0) {
+        return false;
+    }
+    bool has_upper = false;
+    for (const char c : text) {
+        if (std::isupper(static_cast<unsigned char>(c)) != 0) {
+            has_upper = true;
+            continue;
+        }
+        if (std::isdigit(static_cast<unsigned char>(c)) != 0 || c == '_') {
+            continue;
+        }
+        return false;
+    }
+    return has_upper;
+}
+
+bool is_array_dimension(std::string_view text) {
+    return is_decimal_number(text) || is_constant_name(text);
+}
+
 std::string lower_template_type(std::string_view name, const std::string& args) {
     if (name == "list") {
         return "std::vector<" + lower_cpp_type(args) + ">";
@@ -110,7 +132,7 @@ std::vector<std::string> fixed_array_dimensions(const std::string& type) {
             return {};
         }
         const std::string dim = type.substr(open + 1, close - open - 1);
-        if (!is_decimal_number(dim)) {
+        if (!is_array_dimension(dim)) {
             return {};
         }
         dims.push_back(dim);

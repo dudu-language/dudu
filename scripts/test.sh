@@ -29,6 +29,33 @@ for example in "${required_examples[@]}"; do
     "$repo_root/build/dudu" "$repo_root/examples/$example" --check
 done
 
+compile_example_object() {
+    local example="$1"
+    local name
+    name="$(basename "$example" .dd)"
+    local cpp="$repo_root/build/example_$name.cpp"
+    local object="$repo_root/build/example_$name.o"
+
+    "$repo_root/build/dudu" "$repo_root/examples/$example" --emit-cpp "$cpp"
+    "${CXX:-c++}" -std=c++20 -c "$cpp" -o "$object"
+}
+
+object_examples=(
+    allocators.dd
+    compile_time.dd
+    cpp_library.dd
+    function_pointers.dd
+    layout_hardware.dd
+    modules_visibility.dd
+    native_escape.dd
+    numerics_kmeans.dd
+    threading_atomics.dd
+)
+
+for example in "${object_examples[@]}"; do
+    compile_example_object "$example"
+done
+
 generated_header="$repo_root/build/cpp_library.hpp"
 "$repo_root/build/dudu" "$repo_root/examples/cpp_library.dd" --emit-header "$generated_header"
 printf '#include "cpp_library.hpp"\nint main() { return 0; }\n' >"$repo_root/build/header_smoke.cpp"

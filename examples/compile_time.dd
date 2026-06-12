@@ -30,20 +30,27 @@ static_assert(PIXELS == 76800)
 static_assert(alignof[FrameInfo]() == 16)
 
 
-def init_renderer():
+def init_vulkan() -> i32:
+    return 7
+
+
+def init_raylib() -> i32:
+    return 3
+
+
+def init_renderer() -> i32:
     if build.RENDER_BACKEND == "vulkan":
-        init_vulkan()
+        return init_vulkan()
     elif build.RENDER_BACKEND == "raylib":
-        init_raylib()
-    else:
-        static_assert(False)
+        return init_raylib()
+    return 0
 
 
 def main() -> i32:
     pixels: Color[PIXELS]
 
+    debug_bonus: i32 = 0
     if build.DEBUG:
-        print("debug renderer")
+        debug_bonus = 1
 
-    init_renderer()
-    return i32(ROW_BYTES) + len(pixels)
+    return i32(ROW_BYTES) + i32(len(pixels)) + init_renderer() + debug_bonus

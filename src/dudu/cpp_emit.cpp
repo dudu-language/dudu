@@ -86,8 +86,10 @@ void emit_includes(std::ostringstream& out, const ModuleAst& module) {
            "#include <cstdint>\n"
            "#include <cstdlib>\n"
            "#include <functional>\n"
+           "#include <iostream>\n"
            "#include <optional>\n"
            "#include <string>\n"
+           "#include <string_view>\n"
            "#include <tuple>\n"
            "#include <unordered_map>\n"
            "#include <unordered_set>\n"
@@ -103,17 +105,29 @@ void emit_includes(std::ostringstream& out, const ModuleAst& module) {
     out << '\n';
 }
 
-void emit_result_prelude(std::ostringstream& out) {
+bool has_function(const ModuleAst& module, std::string_view name) {
+    for (const FunctionDecl& fn : module.functions) {
+        if (fn.name == name) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void emit_result_prelude(std::ostringstream& out, const ModuleAst& module) {
     out << "namespace dudu {\n"
            "template <typename T> struct OkValue { T value; };\n"
            "template <typename E> struct ErrValue { E err; };\n"
            "template <typename T> OkValue<T> Ok(T value) { return {std::move(value)}; }\n"
-           "template <typename E> ErrValue<E> Err(E err) { return {std::move(err)}; }\n"
-           "inline size_t align_up(size_t value, size_t alignment) {\n"
-           "    return alignment == 0 ? value : ((value + alignment - 1) / alignment) * "
-           "alignment;\n"
-           "}\n"
-           "template <typename T, typename E> struct Result {\n"
+           "template <typename E> ErrValue<E> Err(E err) { return {std::move(err)}; }\n";
+    out << "template <typename T> void print(const T& value) { std::cout << value << '\\n'; }\n";
+    if (!has_function(module, "align_up")) {
+        out << "constexpr size_t align_up(size_t value, size_t alignment) {\n"
+               "    return alignment == 0 ? value : ((value + alignment - 1) / alignment) * "
+               "alignment;\n"
+               "}\n";
+    }
+    out << "template <typename T, typename E> struct Result {\n"
            "    bool ok{};\n"
            "    T value{};\n"
            "    E err{};\n"
@@ -123,8 +137,15 @@ void emit_result_prelude(std::ostringstream& out) {
            "    Result(ErrValue<E> err_value) : ok(false), value{}, err(std::move(err_value.err)) "
            "{}\n"
            "};\n"
-           "} // namespace dudu\n"
-           "using dudu::align_up;\n\n";
+           "} // namespace dudu\n";
+    if (!has_function(module, "align_up")) {
+        out << "using dudu::align_up;\n";
+    }
+    out << "using dudu::print;\n";
+    out << "namespace build {\n"
+           "inline constexpr bool DEBUG = false;\n"
+           "inline constexpr std::string_view RENDER_BACKEND = \"vulkan\";\n"
+           "} // namespace build\n\n";
 }
 void emit_aliases(std::ostringstream& out, const ModuleAst& module) {
     for (const TypeAliasDecl& alias : module.aliases) {
@@ -200,6 +221,10 @@ bool visible_in_header(Visibility visibility) {
     return visibility != Visibility::Private;
 }
 
+bool emit_before_constants(const FunctionDecl& fn) {
+    return function_has_decorator(fn, "constexpr");
+}
+
 void emit_method(std::ostringstream& out, const FunctionDecl& method,
                  const std::vector<std::string>& aliases) {
     out << "    " << lower_cpp_type(method.return_type) << ' ' << method.name << '(';
@@ -245,8 +270,17 @@ void emit_classes(std::ostringstream& out, const ModuleAst& module,
 void emit_constants(std::ostringstream& out, const ModuleAst& module,
                     const std::vector<std::string>& aliases) {
     for (const ConstDecl& constant : module.constants) {
-        out << "inline constexpr " << lower_cpp_type(constant.type) << ' ' << constant.name << " = "
-            << lower_cpp_expr(constant.value, aliases) << ";\n";
+        const std::string lowered_type = lower_cpp_type(constant.type);
+        const bool runtime_address = constant.type.find('*') != std::string::npos ||
+                                     constant.type.find("volatile") != std::string::npos;
+        out << "inline ";
+        if (runtime_address && constant.type.find('*') != std::string::npos) {
+            out << lowered_type << " const " << constant.name;
+        } else {
+            out << (runtime_address ? "const " : "constexpr ") << lowered_type << ' '
+                << constant.name;
+        }
+        out << " = " << lower_cpp_expr(constant.value, aliases) << ";\n";
     }
     if (!module.constants.empty()) {
         out << '\n';
@@ -280,6 +314,31 @@ void emit_function_signature(std::ostringstream& out, const FunctionDecl& fn) {
     out << ')';
 }
 
+void emit_function_body(std::ostringstream& out, const FunctionDecl& fn,
+                        const std::vector<std::string>& aliases) {
+    emit_function_signature(out, fn);
+    out << " {\n";
+    std::map<std::string, std::string> locals;
+    for (const ParamDecl& param : fn.params) {
+        locals[param.name] = param.type;
+    }
+    emit_raw_block(out, fn.body, 1, aliases, locals);
+    out << "}\n\n";
+}
+
+void emit_early_functions(std::ostringstream& out, const ModuleAst& module,
+                          const std::vector<std::string>& aliases, bool header_only) {
+    for (const FunctionDecl& fn : module.functions) {
+        if (!emit_before_constants(fn)) {
+            continue;
+        }
+        if (header_only && !visible_in_header(fn.visibility)) {
+            continue;
+        }
+        emit_function_body(out, fn, aliases);
+    }
+}
+
 } // namespace
 
 std::string emit_cpp_header(const ModuleAst& module) {
@@ -287,14 +346,18 @@ std::string emit_cpp_header(const ModuleAst& module) {
     const std::vector<std::string> aliases = namespace_aliases(module);
     out << "#pragma once\n\n";
     emit_includes(out, module);
-    emit_result_prelude(out);
+    emit_result_prelude(out, module);
 
     emit_aliases(out, module);
     emit_enums(out, module);
     emit_classes(out, module, aliases, true);
+    emit_early_functions(out, module, aliases, true);
     emit_constants(out, module, aliases);
 
     for (const FunctionDecl& fn : module.functions) {
+        if (emit_before_constants(fn)) {
+            continue;
+        }
         if (!visible_in_header(fn.visibility)) {
             continue;
         }
@@ -309,22 +372,19 @@ std::string emit_cpp_source(const ModuleAst& module) {
     std::ostringstream out;
     const std::vector<std::string> aliases = namespace_aliases(module);
     emit_includes(out, module);
-    emit_result_prelude(out);
+    emit_result_prelude(out, module);
 
     emit_aliases(out, module);
     emit_enums(out, module);
     emit_classes(out, module, aliases);
+    emit_early_functions(out, module, aliases, false);
     emit_constants(out, module, aliases);
 
     for (const FunctionDecl& fn : module.functions) {
-        emit_function_signature(out, fn);
-        out << " {\n";
-        std::map<std::string, std::string> locals;
-        for (const ParamDecl& param : fn.params) {
-            locals[param.name] = param.type;
+        if (emit_before_constants(fn)) {
+            continue;
         }
-        emit_raw_block(out, fn.body, 1, aliases, locals);
-        out << "}\n\n";
+        emit_function_body(out, fn, aliases);
     }
     emit_static_asserts(out, module, aliases);
     return out.str();

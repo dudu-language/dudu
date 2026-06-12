@@ -33,7 +33,7 @@ def main() -> i32:
     threads: list[std.thread] = []
 
     for _: i32 in range(4):
-        threads.append(std.thread(worker, &queue, &output))
+        threads.append(std.thread(worker, std.ref(queue), std.ref(output)))
 
     for thread: &std.thread in threads:
         thread.join()

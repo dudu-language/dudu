@@ -178,6 +178,10 @@ void emit_simple_statement(std::ostringstream& out, const RawStmt& stmt, int dep
         emit_cpp_escape(out, text, depth);
         return;
     }
+    if (text == "pass") {
+        out << indent(depth) << "(void)0;\n";
+        return;
+    }
     if (starts_with(text, "return")) {
         const std::string value = trim_copy(text.substr(6));
         out << indent(depth) << "return";
@@ -202,6 +206,10 @@ void emit_simple_statement(std::ostringstream& out, const RawStmt& stmt, int dep
                 out << " = std::nullopt";
             } else if (starts_with(type, "list[") && value == "[]") {
                 out << " = {}";
+            } else if (starts_with(type, "list[") && starts_with(value, "[") &&
+                       ends_with(value, "]")) {
+                out << " = {" << lower_expr(value.substr(1, value.size() - 2), aliases, locals)
+                    << '}';
             } else {
                 out << " = " << lower_expr(value, aliases, locals);
             }
