@@ -1,0 +1,93 @@
+#include "dudu/lexer.hpp"
+#include "dudu/parser.hpp"
+
+#include <cassert>
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <string>
+#include <vector>
+
+namespace {
+
+std::string read_file(const std::filesystem::path& path) {
+    std::ifstream file(path);
+    if (!file) {
+        throw std::runtime_error("could not open " + path.string());
+    }
+    return {std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
+}
+
+void test_lexer_indentation() {
+    const std::string source = "def main() -> i32:\n"
+                               "    x: i32 = 1\n"
+                               "    if x > 0:\n"
+                               "        return x\n"
+                               "    return 0\n";
+    const std::vector<dudu::Token> tokens = dudu::lex_source(source, "inline.dd");
+
+    int indents = 0;
+    int dedents = 0;
+    for (const dudu::Token& token : tokens) {
+        indents += token.kind == dudu::TokenKind::Indent ? 1 : 0;
+        dedents += token.kind == dudu::TokenKind::Dedent ? 1 : 0;
+    }
+    assert(indents == 2);
+    assert(dedents == 2);
+}
+
+void test_import_bindings() {
+    const dudu::ModuleAst module = dudu::parse_source("import renderer.camera\n"
+                                                      "import renderer.light\n"
+                                                      "import renderer.camera as camera\n"
+                                                      "from ui.button import Button as UiButton\n",
+                                                      "imports.dd");
+    assert(module.imports.size() == 4);
+    assert(dudu::bound_import_name(module.imports[0]) == "renderer");
+    assert(dudu::bound_import_name(module.imports[2]) == "camera");
+    assert(dudu::bound_import_name(module.imports[3]) == "UiButton");
+
+    bool collided = false;
+    try {
+        (void)dudu::parse_source("from ui.button import Button\n"
+                                 "from game.input import Button\n",
+                                 "collision.dd");
+    } catch (const dudu::CompileError&) {
+        collided = true;
+    }
+    assert(collided);
+}
+
+void test_canonical_examples_parse(const std::filesystem::path& root) {
+    const std::vector<std::string> examples = {
+        "allocators.dd",     "audio_synth.dd",     "compile_time.dd",
+        "cpp_library.dd",    "cuda_kernel.dd",     "function_pointers.dd",
+        "image_filter.dd",   "layout_hardware.dd", "modules_visibility.dd",
+        "native_escape.dd",  "numerics_kmeans.dd", "raylib_game.dd",
+        "shader_compute.dd", "systems_mmap.dd",    "threading_atomics.dd",
+        "web_server.dd",
+    };
+
+    for (const std::string& example : examples) {
+        const std::filesystem::path path = root / "examples" / example;
+        const dudu::ModuleAst module = dudu::parse_source(read_file(path), path);
+        assert(!module.classes.empty() || !module.functions.empty() || !module.imports.empty() ||
+               !module.constants.empty() || !module.static_asserts.empty() ||
+               !module.enums.empty() || !module.aliases.empty());
+    }
+}
+
+} // namespace
+
+int main() {
+    try {
+        const std::filesystem::path root = DUDU_REPO_ROOT;
+        test_lexer_indentation();
+        test_import_bindings();
+        test_canonical_examples_parse(root);
+    } catch (const std::exception& error) {
+        std::cerr << error.what() << '\n';
+        return 1;
+    }
+    return 0;
+}

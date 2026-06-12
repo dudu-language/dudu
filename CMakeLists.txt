@@ -5,12 +5,34 @@ project(dudu LANGUAGES CXX)
 option(DUDU_STRICT "Enable strict compiler warnings" ON)
 option(DUDU_WARN_AS_ERROR "Treat warnings as errors" ON)
 
+add_library(dudu_frontend
+    src/dudu/ast.cpp
+    src/dudu/lexer.cpp
+    src/dudu/parser.cpp
+    src/dudu/source.cpp
+    src/dudu/token.cpp
+)
+target_include_directories(dudu_frontend PUBLIC src)
+target_compile_features(dudu_frontend PUBLIC cxx_std_20)
+
 add_executable(dudu src/main.cpp)
 target_compile_features(dudu PRIVATE cxx_std_20)
 
+add_executable(dudu_frontend_tests tests/frontend_tests.cpp)
+target_link_libraries(dudu_frontend_tests PRIVATE dudu_frontend)
+target_compile_features(dudu_frontend_tests PRIVATE cxx_std_20)
+target_compile_definitions(dudu_frontend_tests PRIVATE DUDU_REPO_ROOT="${CMAKE_SOURCE_DIR}")
+
 if(DUDU_STRICT)
     target_compile_options(dudu PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(dudu_frontend PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(dudu_frontend_tests PRIVATE -Wall -Wextra -Wpedantic)
     if(DUDU_WARN_AS_ERROR)
         target_compile_options(dudu PRIVATE -Werror)
+        target_compile_options(dudu_frontend PRIVATE -Werror)
+        target_compile_options(dudu_frontend_tests PRIVATE -Werror)
     endif()
 endif()
+
+enable_testing()
+add_test(NAME dudu_frontend_tests COMMAND dudu_frontend_tests)

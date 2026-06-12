@@ -3,10 +3,12 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 "$repo_root/scripts/build.sh"
+ctest --test-dir "$repo_root/build" --output-on-failure
 
 required_examples=(
     allocators.dd
     audio_synth.dd
+    compile_time.dd
     cpp_library.dd
     cuda_kernel.dd
     function_pointers.dd
