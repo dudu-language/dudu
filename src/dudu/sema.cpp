@@ -226,6 +226,9 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
         const std::string callee = trim(expr.substr(0, call));
         if (callee == "Ok" || callee == "Err") {
             const std::vector<std::string> args = call_args(expr, call);
+            if (args.size() != 1 && location != nullptr) {
+                fail(*location, callee + " expects 1 argument, got " + std::to_string(args.size()));
+            }
             return callee + "[" +
                    (args.size() == 1 ? infer_expr(scope, args.front(), location) : "") + "]";
         }

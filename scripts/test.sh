@@ -402,6 +402,8 @@ expect_fail bad_constructor_type --emit-cpp "constructor field Point.x expects i
 expect_fail bad_constructor_positional_type --emit-cpp "constructor Point argument 1 expects i32, got bool"
 expect_fail bad_result_ok_type --emit-cpp "return type mismatch: expected Result\\[i32, i32\\], got Ok\\[bool\\]"
 expect_fail bad_result_err_type --emit-cpp "return type mismatch: expected Result\\[i32, i32\\], got Err\\[bool\\]"
+expect_fail bad_ok_arity --emit-cpp "Ok expects 1 argument, got 0"
+expect_fail bad_err_arity --emit-cpp "Err expects 1 argument, got 2"
 expect_fail bad_void_return --emit-cpp "void function cannot return i32"
 expect_fail bad_break_outside_loop --emit-cpp "break outside loop"
 expect_fail bad_continue_outside_loop --emit-cpp "continue outside loop"
