@@ -178,6 +178,20 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                 fail(field.location, "unknown field type: " + field.type);
             }
         }
+        for (const FunctionDecl& method : klass.methods) {
+            std::set<std::string> params;
+            for (const ParamDecl& param : method.params) {
+                if (!params.insert(param.name).second) {
+                    fail(param.location, "duplicate parameter: " + param.name);
+                }
+                if (!known_type(symbols, param.type)) {
+                    fail(param.location, "unknown parameter type: " + param.type);
+                }
+            }
+            if (!known_type(symbols, method.return_type.empty() ? "void" : method.return_type)) {
+                fail(method.location, "unknown return type: " + method.return_type);
+            }
+        }
     }
     for (const FunctionDecl& fn : module.functions) {
         std::set<std::string> params;
@@ -381,6 +395,16 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
 }
 
 void check_bodies(const ModuleAst& module, const Symbols& symbols) {
+    for (const ClassDecl& klass : module.classes) {
+        for (const FunctionDecl& method : klass.methods) {
+            FunctionScope scope{symbols, {}};
+            for (const ParamDecl& param : method.params) {
+                scope.locals[param.name] = param.type;
+            }
+            check_block(scope, method.body,
+                        method.return_type.empty() ? "void" : method.return_type);
+        }
+    }
     for (const FunctionDecl& fn : module.functions) {
         FunctionScope scope{symbols, {}};
         for (const ParamDecl& param : fn.params) {

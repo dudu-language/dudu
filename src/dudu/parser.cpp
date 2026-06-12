@@ -230,8 +230,9 @@ class Parser {
                 ++cursor_;
                 continue;
             }
-            if (check_text("def")) {
-                skip_statement_or_block();
+            if (match_identifier("def")) {
+                klass.methods.push_back(
+                    parse_function(previous(), Visibility::Default, {}, klass.name));
                 continue;
             }
             klass.fields.push_back(parse_field());
@@ -296,7 +297,8 @@ class Parser {
     }
 
     FunctionDecl parse_function(const Token& start, Visibility visibility,
-                                const std::vector<Decorator>& decorators) {
+                                const std::vector<Decorator>& decorators,
+                                std::string_view receiver_type = {}) {
         FunctionDecl fn;
         fn.visibility = visibility;
         fn.decorators = decorators;
@@ -305,7 +307,7 @@ class Parser {
         consume(TokenKind::LParen, "expected ( after function name");
         skip_signature_separators();
         if (!at(TokenKind::RParen)) {
-            parse_params(fn.params);
+            parse_params(fn.params, receiver_type);
         }
         skip_signature_separators();
         consume(TokenKind::RParen, "expected ) after parameters");
@@ -318,7 +320,7 @@ class Parser {
         return fn;
     }
 
-    void parse_params(std::vector<ParamDecl>& params) {
+    void parse_params(std::vector<ParamDecl>& params, std::string_view receiver_type) {
         while (true) {
             skip_signature_separators();
             if (at(TokenKind::RParen)) {
@@ -328,6 +330,18 @@ class Parser {
             const Token& name = consume_identifier("expected parameter name");
             param.name = name.text;
             param.location = name.location;
+            if (!receiver_type.empty() && params.empty() && param.name == "self" &&
+                !at(TokenKind::Colon)) {
+                param.type = std::string(receiver_type);
+                params.push_back(std::move(param));
+                if (match(TokenKind::Comma)) {
+                    continue;
+                }
+                if (at(TokenKind::RParen)) {
+                    break;
+                }
+                fail_current("expected comma after self");
+            }
             consume(TokenKind::Colon, "expected : after parameter name");
             param.type = join_until({TokenKind::Comma, TokenKind::RParen, TokenKind::Newline});
             if (param.type.empty()) {
@@ -398,22 +412,6 @@ class Parser {
         }
         consume(TokenKind::Dedent, "expected dedent after block");
         return out;
-    }
-
-    void skip_statement_or_block() {
-        skip_to_newline();
-        if (at(TokenKind::Indent)) {
-            (void)parse_raw_block();
-        }
-    }
-
-    void skip_to_newline() {
-        while (!at(TokenKind::Newline) && !at(TokenKind::End)) {
-            ++cursor_;
-        }
-        if (at(TokenKind::Newline)) {
-            ++cursor_;
-        }
     }
 
     std::string join_until(std::initializer_list<TokenKind> stops) {

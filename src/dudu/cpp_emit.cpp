@@ -193,7 +193,27 @@ bool visible_in_header(Visibility visibility) {
     return visibility != Visibility::Private;
 }
 
-void emit_classes(std::ostringstream& out, const ModuleAst& module, bool header_only = false) {
+void emit_method(std::ostringstream& out, const FunctionDecl& method,
+                 const std::vector<std::string>& aliases) {
+    out << "    " << lower_cpp_type(method.return_type) << ' ' << method.name << '(';
+    const size_t first_param =
+        !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
+    for (size_t i = first_param; i < method.params.size(); ++i) {
+        if (i > first_param) {
+            out << ", ";
+        }
+        out << lower_cpp_type(method.params[i].type) << ' ' << method.params[i].name;
+    }
+    out << ") {\n";
+    if (first_param == 1) {
+        out << "        auto& self = *this;\n";
+    }
+    emit_raw_block(out, method.body, 2, aliases);
+    out << "    }\n";
+}
+
+void emit_classes(std::ostringstream& out, const ModuleAst& module,
+                  const std::vector<std::string>& aliases, bool header_only = false) {
     for (const size_t index : class_emit_order(module.classes)) {
         const ClassDecl& klass = module.classes[index];
         if (header_only && !visible_in_header(klass.visibility)) {
@@ -202,6 +222,9 @@ void emit_classes(std::ostringstream& out, const ModuleAst& module, bool header_
         out << class_opening(klass) << " {\n";
         for (const FieldDecl& field : klass.fields) {
             out << "    " << lower_cpp_type(field.type) << ' ' << field.name << "{};\n";
+        }
+        for (const FunctionDecl& method : klass.methods) {
+            emit_method(out, method, aliases);
         }
         out << "};\n\n";
     }
@@ -256,7 +279,7 @@ std::string emit_cpp_header(const ModuleAst& module) {
 
     emit_aliases(out, module);
     emit_enums(out, module);
-    emit_classes(out, module, true);
+    emit_classes(out, module, aliases, true);
     emit_constants(out, module, aliases);
 
     for (const FunctionDecl& fn : module.functions) {
@@ -278,7 +301,7 @@ std::string emit_cpp_source(const ModuleAst& module) {
 
     emit_aliases(out, module);
     emit_enums(out, module);
-    emit_classes(out, module);
+    emit_classes(out, module, aliases);
     emit_constants(out, module, aliases);
 
     for (const FunctionDecl& fn : module.functions) {

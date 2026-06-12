@@ -70,14 +70,6 @@ struct EnumDecl {
     SourceLocation location;
 };
 
-struct ClassDecl {
-    Visibility visibility = Visibility::Default;
-    std::string name;
-    std::vector<Decorator> decorators;
-    std::vector<FieldDecl> fields;
-    SourceLocation location;
-};
-
 struct FunctionDecl {
     Visibility visibility = Visibility::Default;
     std::string name;
@@ -85,6 +77,15 @@ struct FunctionDecl {
     std::vector<ParamDecl> params;
     std::string return_type;
     std::vector<RawStmt> body;
+    SourceLocation location;
+};
+
+struct ClassDecl {
+    Visibility visibility = Visibility::Default;
+    std::string name;
+    std::vector<Decorator> decorators;
+    std::vector<FieldDecl> fields;
+    std::vector<FunctionDecl> methods;
     SourceLocation location;
 };
 
