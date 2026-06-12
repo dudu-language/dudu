@@ -1,0 +1,4 @@
+def bad() -> i32:
+    try:
+        return 1
+    return 0
