@@ -120,8 +120,11 @@ grep -q "inline constexpr bool DEBUG = true;" "$repo_root/build/project_mode.cpp
 grep -q "if constexpr (build::DEBUG)" "$repo_root/build/project_mode.cpp"
 (
     cd "$repo_root/tests/fixtures/project_cc"
-    "$repo_root/build/duc" build -o "$repo_root/build/project_cc_bin"
+    "$repo_root/build/duc" build -o "$repo_root/build/project_cc_bin" --verbose \
+        2>"$repo_root/build/project_cc_verbose.err"
 )
+grep -q "project_cc_bin.cpp" "$repo_root/build/project_cc_verbose.err"
+grep -q -- "-Iinclude" "$repo_root/build/project_cc_verbose.err"
 grep -q "project_cc_bin.cpp" "$repo_root/build/compile_commands.json"
 grep -q -- "-Iinclude" "$repo_root/build/compile_commands.json"
 set +e

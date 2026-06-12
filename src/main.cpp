@@ -31,6 +31,7 @@ struct Options {
     bool format = false;
     bool run = false;
     bool test = false;
+    bool verbose = false;
 };
 
 [[noreturn]] void fail(const std::string& message) {
@@ -46,7 +47,7 @@ void print_usage() {
                  "       duc run [input.dd] [-o output]\n"
                  "       duc test\n"
                  "       duc <input.dd> [--check] [--format <path|->] "
-                 "[--emit-header <path|->] [--emit-cpp <path|->] [-DNAME=value]\n";
+                 "[--emit-header <path|->] [--emit-cpp <path|->] [-DNAME=value] [--verbose]\n";
 }
 
 void print_version() {
@@ -108,6 +109,10 @@ Options parse_options(int argc, char** argv) {
         if (arg == "--version") {
             print_version();
             std::exit(0);
+        }
+        if (arg == "--verbose") {
+            options.verbose = true;
+            continue;
         }
         if (arg == "-o") {
             if (i + 1 >= argc) {
@@ -285,6 +290,9 @@ std::filesystem::path build_executable(const Options& options, const std::string
         command += " " + shell_quote_arg(native_lib_flag(lib));
     }
     write_compile_commands(output, cpp_path, command);
+    if (options.verbose) {
+        std::cerr << command << '\n';
+    }
     if (std::system(command.c_str()) != 0) {
         fail("C++ build failed");
     }
