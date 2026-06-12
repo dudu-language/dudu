@@ -11,4 +11,4 @@ fn main i32
         rl.EndDrawing
 
     rl.CloseWindow
-    ret 0
+    0

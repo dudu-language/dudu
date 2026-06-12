@@ -4,38 +4,48 @@ This is a staged plan for implementation after the language sketch settles.
 
 ## Stage 0: Spec Fixtures
 
-- Keep example `.dudu` programs in `examples/`.
+- Keep example `.dd` programs in `examples/`.
 - Treat the examples as parse/typecheck fixtures once a compiler exists.
 - Do not implement broad features until a tiny vertical slice works.
 
 ## Stage 1: Parser
 
 - Lex indentation, identifiers, numbers, strings, and comments.
-- Parse structs.
+- Parse records.
+- Parse enums.
+- Parse type aliases.
 - Parse function signatures with newline-separated arguments.
 - Parse simple statements:
-  - `var`
-  - `let`
+  - local declarations
+  - `const`
   - assignment
   - calls
   - `if`
   - `while`
+  - `for`
+  - `break`
+  - `continue`
   - `ret`
 
 ## Stage 2: Typechecker
 
 - Built-in scalar types.
-- Struct types.
+- Record types.
+- Enum types.
+- Type aliases.
 - Function signatures.
 - Local variables.
 - Basic expression checking.
+- Block values and implicit function returns.
+- Expression-valued `if` lowering.
 - Basic reference/pointer spelling: `ref`, `ref mut`, `ptr`.
 
 ## Stage 3: C++ Emission
 
 - Emit one C++ translation unit.
-- Emit structs and functions.
+- Emit records, enums, aliases, and functions.
 - Emit local variables, calls, loops, conditionals, and returns.
+- Emit expression-valued blocks through temporaries where needed.
 - Use `clang++` to build the emitted C++.
 
 ## Stage 4: C Interop
@@ -48,7 +58,7 @@ This is a staged plan for implementation after the language sketch settles.
 
 - Accept `cpp include`.
 - Support namespaces and direct function/constant access.
-- Add basic class/struct method calls.
+- Add basic imported class/record method calls.
 - Defer complex templates and macro-heavy APIs until the basics are proven.
 
 ## Stage 6: Tooling

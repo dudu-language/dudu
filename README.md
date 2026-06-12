@@ -6,12 +6,12 @@ but stays close to C and C++ at runtime.
 The goal is not Python semantics made fast. The goal is a Python-readable,
 indentation-based language with static types, predictable C/C++-style data
 movement, native-speed output, and first-class access to existing C and C++
-libraries.
+libraries. Source files use `.dd`.
 
 ```dudu
 cpp include "raylib.h" as rl
 
-struct Vec2
+rec Vec2
     x f32
     y f32
 
@@ -26,7 +26,7 @@ fn main i32
         rl.EndDrawing
 
     rl.CloseWindow
-    ret 0
+    0
 ```
 
 ## Current Status

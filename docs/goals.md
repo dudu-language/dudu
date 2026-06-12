@@ -37,7 +37,7 @@ fn add i32
     a i32
     b i32
 
-    ret a + b
+    a + b
 ```
 
 than this:
@@ -62,8 +62,8 @@ runtime-heavy by default.
 
 The first real compiler milestone should be a tiny vertical slice:
 
-- Parse `.dudu` files.
-- Typecheck structs, functions, variables, loops, calls, and `ret`.
+- Parse `.dd` files.
+- Typecheck records, enums, functions, variables, loops, calls, and `ret`.
 - Emit readable C++.
 - Compile that C++ with Clang.
 - Call a small C library or raylib example.

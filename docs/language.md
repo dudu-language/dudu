@@ -2,6 +2,10 @@
 
 This document is a draft, not a final spec.
 
+## Source Files
+
+Dudu source files use `.dd`.
+
 ## Core Shape
 
 Blocks are indentation-based. Function parameters live on the following lines.
@@ -23,47 +27,137 @@ fn tick
     dt f32
 
     world.time += dt
+    simulate world dt
 ```
 
-Use `ret`, not `return`.
+## Return Values
+
+Blocks evaluate to their last expression. A function with a return type returns
+the value of its body block.
 
 ```dudu
 fn add i32
     a i32
     b i32
 
-    ret a + b
+    a + b
 ```
 
-## Structs
-
-Struct fields are one per line:
+`ret` is only for early return.
 
 ```dudu
-struct Particle
+fn clamp01 f32
+    x f32
+
+    if x < 0
+        ret 0
+    if x > 1
+        ret 1
+
+    x
+```
+
+## Records
+
+Use `rec` for plain aggregate types.
+
+```dudu
+rec Particle
     pos Vec2
     vel Vec2
     life f32
 ```
 
-This maps directly to plain C++ fields unless attributes or interop rules say
-otherwise.
+This maps to a C++ `struct` unless attributes or interop rules say otherwise.
+Dudu does not need a separate class form for v1.
 
-## Variables
+Record construction uses the type name as a constructor-like expression.
 
-Inside function bodies, declarations should be explicit:
+```dudu
+pos Vec2 = Vec2 10 20
+```
+
+This should emit aggregate-style C++:
+
+```cpp
+Vec2 pos = Vec2{10, 20};
+```
+
+Named-field construction can wait until later.
+
+## Enums
+
+Enums can optionally name their underlying integer type.
+
+```dudu
+enum Direction
+    up
+    down
+    left
+    right
+```
+
+```dudu
+enum Team u8
+    red = 0
+    blue = 1
+```
+
+Enums should map to scoped C++ enums by default:
+
+```cpp
+enum class Team : uint8_t {
+    red = 0,
+    blue = 1,
+};
+```
+
+## Type Aliases
+
+Use `type` for typedef-style aliases.
+
+```dudu
+type EntityId u32
+type ByteSpan span u8
+type Position Vec2
+```
+
+This should emit `using` aliases in C++.
+
+## Locals
+
+Local declarations do not need `var` or `let`.
 
 ```dudu
 fn main i32
 
-    var count i32 = 0
-    let max_count = 100
-    ret count
+    count i32 = 0
+    name str = "dudu"
+    player Player
+
+    count
 ```
 
-`var` is mutable. `let` is immutable.
+Locals are mutable by default, like C/C++.
 
-Type inference is allowed where the initializer makes the type obvious.
+Use `const` when mutation should be rejected:
+
+```dudu
+const max_count i32 = 100
+const pi f32 = 3.141592
+```
+
+Type inference is allowed where the initializer makes the type obvious:
+
+```dudu
+count = 10
+scale = 2.0
+```
+
+If the name already exists in the current scope, `name = value` is assignment.
+If it does not exist, `name = value` is an inferred local declaration. This is
+convenient, but the compiler should produce a clear diagnostic when the rule
+would hide a typo.
 
 ## Calls
 
@@ -79,10 +173,44 @@ Method-style calls are allowed:
 player.damage 10
 ```
 
+Method declarations can use dotted function names:
+
+```dudu
+fn Player.damage
+    self ref mut Player
+    amount i32
+
+    self.hp -= amount
+```
+
 The compiler may require parentheses later for ambiguous expressions, but the
 default style should avoid them.
 
 ## Control Flow
+
+`if` is an expression when all branches produce compatible values.
+
+```dudu
+fn max i32
+    a i32
+    b i32
+
+    if a > b
+        a
+    else
+        b
+```
+
+It can also be used only for effects:
+
+```dudu
+if hp <= 0
+    die
+else
+    keep_going
+```
+
+Loops:
 
 ```dudu
 while not window_should_close
@@ -91,10 +219,22 @@ while not window_should_close
 ```
 
 ```dudu
-if hp <= 0
-    die
-else
-    keep_going
+for item in items
+    draw item
+```
+
+```dudu
+for i in 0..count
+    print i
+```
+
+`while` and `for` evaluate to `void`.
+
+Loop control:
+
+```dudu
+break
+continue
 ```
 
 ## Reference And Pointer Spelling
@@ -124,6 +264,36 @@ fn move_particle
     p.pos.y += p.vel.y * dt
 ```
 
+## Includes
+
+Dudu source imports use `include`:
+
+```dudu
+include "math.dd"
+```
+
+C and C++ header imports are separate because they have different interop rules:
+
+```dudu
+c include "stdio.h" as c
+cpp include "raylib.h" as rl
+```
+
+Dot paths are used for imported names:
+
+```dudu
+c.printf "hello\n"
+rl.InitWindow 800 600 "dudu"
+```
+
+## Comments
+
+Use `#` for line comments:
+
+```dudu
+# This is a comment.
+```
+
 ## Naming Conventions
 
 These are draft conventions:
@@ -138,7 +308,7 @@ language explicitly chooses that later.
 ## Open Questions
 
 - Should no-argument functions require a blank line before body?
-- Should declarations support `name Type = value` without `var`?
+- Is inferred declaration by first assignment too typo-prone?
 - How much expression precedence should exist before parentheses become needed?
-- Should method declarations live under `impl Type`, or use `fn Type.method`?
+- Should methods emit as free functions first or C++ member functions?
 - How should templates/generics look without adding punctuation soup?
