@@ -1,0 +1,7 @@
+def main() -> i32:
+    value: i32 = 40
+    value += 10
+    value -= 4
+    value *= 2
+    value /= 2
+    return value

@@ -290,6 +290,13 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
     }
     const size_t colon = text.find(':');
     const size_t assign = text.find('=');
+    for (const char* op : {"+=", "-=", "*=", "/="}) {
+        const size_t compound = text.find(op);
+        if (compound != std::string::npos) {
+            check_assign_target(scope, stmt, trim(text.substr(0, compound)));
+            return;
+        }
+    }
     if (colon != std::string::npos && (assign == std::string::npos || colon < assign)) {
         const std::string name = trim(text.substr(0, colon));
         const std::string type = trim(text.substr(colon + 1, assign - colon - 1));
