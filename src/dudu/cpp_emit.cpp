@@ -285,9 +285,24 @@ void emit_raw_statement(std::ostringstream& out, const RawStmt& stmt, int depth)
         if (in_pos != std::string::npos) {
             std::string binding = trim_copy(header.substr(0, in_pos));
             const std::string range = lower_expr(trim_copy(header.substr(in_pos + 4)));
+            std::string binding_type = "auto";
             const size_t typed = binding.find(':');
             if (typed != std::string::npos) {
+                binding_type = lower_type(trim_copy(binding.substr(typed + 1)));
                 binding = trim_copy(binding.substr(0, typed));
+            }
+            if (starts_with(range, "range(") && ends_with(range, ")")) {
+                const std::vector<std::string> args =
+                    split_top_level_args(range.substr(6, range.size() - 7));
+                const std::string start = args.size() == 1 ? "0" : args.at(0);
+                const std::string end = args.size() == 1 ? args.at(0) : args.at(1);
+                const std::string step = args.size() >= 3 ? args.at(2) : "1";
+                out << indent(depth) << "for (" << binding_type << ' ' << binding << " = " << start
+                    << "; " << binding << " < " << end << "; " << binding << " += " << step
+                    << ") {\n";
+                emit_raw_block(out, stmt.children, depth + 1);
+                out << indent(depth) << "}\n";
+                return;
             }
             out << indent(depth) << "for (auto&& " << binding << " : " << range << ") {\n";
             emit_raw_block(out, stmt.children, depth + 1);

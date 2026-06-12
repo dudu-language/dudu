@@ -35,17 +35,25 @@ printf '#include "cpp_library.hpp"\nint main() { return 0; }\n' >"$repo_root/bui
 "${CXX:-c++}" -std=c++20 -I"$repo_root/build" -c "$repo_root/build/header_smoke.cpp" \
     -o "$repo_root/build/header_smoke.o"
 
-simple_cpp="$repo_root/build/simple_program.cpp"
-simple_bin="$repo_root/build/simple_program"
-"$repo_root/build/dudu" "$repo_root/tests/fixtures/simple_program.dd" --emit-cpp "$simple_cpp"
-"${CXX:-c++}" -std=c++20 "$simple_cpp" -o "$simple_bin"
-set +e
-"$simple_bin"
-simple_status=$?
-set -e
-if [[ "$simple_status" -ne 42 ]]; then
-    echo "simple_program returned $simple_status, expected 42" >&2
-    exit 1
-fi
+compile_and_expect() {
+    local name="$1"
+    local expected="$2"
+    local cpp="$repo_root/build/$name.cpp"
+    local bin="$repo_root/build/$name"
+
+    "$repo_root/build/dudu" "$repo_root/tests/fixtures/$name.dd" --emit-cpp "$cpp"
+    "${CXX:-c++}" -std=c++20 "$cpp" -o "$bin"
+    set +e
+    "$bin"
+    local status=$?
+    set -e
+    if [[ "$status" -ne "$expected" ]]; then
+        echo "$name returned $status, expected $expected" >&2
+        exit 1
+    fi
+}
+
+compile_and_expect simple_program 42
+compile_and_expect control_flow 55
 
 echo "compiler builds and canonical examples are present"

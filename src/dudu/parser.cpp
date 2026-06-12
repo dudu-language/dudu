@@ -453,9 +453,10 @@ class Parser {
     }
 
     static bool needs_space_between(TokenKind previous, TokenKind current) {
-        if (current == TokenKind::Comma || current == TokenKind::RParen ||
-            current == TokenKind::RBracket || current == TokenKind::Dot ||
-            current == TokenKind::LParen || current == TokenKind::LBracket) {
+        if (current == TokenKind::Comma || current == TokenKind::Colon ||
+            current == TokenKind::RParen || current == TokenKind::RBracket ||
+            current == TokenKind::Dot || current == TokenKind::LParen ||
+            current == TokenKind::LBracket) {
             return false;
         }
         if (previous == TokenKind::Dot || previous == TokenKind::LParen ||
@@ -468,7 +469,6 @@ class Parser {
     static bool is_foreign_import(const ImportDecl& import) {
         return import.kind == ImportKind::ForeignC || import.kind == ImportKind::ForeignCpp;
     }
-
     static void validate_import_bindings(const std::vector<ImportDecl>& imports) {
         std::map<std::string, ImportDecl> direct;
         for (const ImportDecl& import : imports) {
