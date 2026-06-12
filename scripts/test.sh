@@ -350,6 +350,15 @@ if "$repo_root/build/duc" emit "$repo_root/tests/fixtures/bad_package_build/main
 fi
 grep -q "invalid \\[build\\] entry" "$repo_root/build/bad_package_build.err"
 
+if (
+    cd "$repo_root/tests/fixtures/bad_project_target"
+    "$repo_root/build/duc" check
+) 2>"$repo_root/build/bad_project_target.err"; then
+    echo "bad_project_target unexpectedly passed" >&2
+    exit 1
+fi
+grep -q "invalid \\[target\\] mode" "$repo_root/build/bad_project_target.err"
+
 api_cpp="$repo_root/build/dudu_api.cpp"
 api_hpp="$repo_root/build/dudu_api.hpp"
 api_caller="$repo_root/build/dudu_api_caller.cpp"

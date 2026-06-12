@@ -1,5 +1,9 @@
 main = "main.dd"
 
+[target]
+kind = "executable"
+mode = "hosted"
+
 [build]
 DEBUG = true
 

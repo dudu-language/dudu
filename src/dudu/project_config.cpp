@@ -3,6 +3,7 @@
 #include <cctype>
 #include <cstdint>
 #include <fstream>
+#include <set>
 #include <stdexcept>
 #include <string_view>
 
@@ -80,6 +81,14 @@ std::vector<std::string> parse_string_array(const std::filesystem::path& path,
     return out;
 }
 
+void validate_one_of(const std::filesystem::path& path, const std::string& line,
+                     const std::string& field, const std::string& value,
+                     const std::set<std::string>& allowed) {
+    if (!allowed.contains(value)) {
+        fail(path, "invalid [target] " + field, line);
+    }
+}
+
 } // namespace
 
 ProjectConfig parse_project_config(const std::filesystem::path& path) {
@@ -112,6 +121,14 @@ ProjectConfig parse_project_config(const std::filesystem::path& path) {
             config.main = unquote(value);
         } else if (section.empty() && name == "cpp_std") {
             config.cpp_std = unquote(value);
+        } else if (section == "target" && name == "kind") {
+            config.target_kind = unquote(value);
+            validate_one_of(path, line, "kind", config.target_kind,
+                            {"executable", "library", "shared_library"});
+        } else if (section == "target" && name == "mode") {
+            config.target_mode = unquote(value);
+            validate_one_of(path, line, "mode", config.target_mode,
+                            {"hosted", "freestanding", "embedded", "cuda", "shader"});
         } else if (section == "bench" && name == "command") {
             config.bench_command = unquote(value);
         } else if (section == "test" && name == "command") {

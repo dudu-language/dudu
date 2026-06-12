@@ -10,6 +10,8 @@ namespace dudu {
 struct ProjectConfig {
     std::filesystem::path main;
     std::string cpp_std = "c++20";
+    std::string target_kind = "executable";
+    std::string target_mode = "hosted";
     std::string bench_command;
     std::string test_command;
     std::map<std::string, std::string> build_values;
