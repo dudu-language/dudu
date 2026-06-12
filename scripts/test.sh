@@ -280,6 +280,7 @@ compile_and_expect compile_time_compare 42
 compile_and_expect tuple_return 43
 compile_and_expect type_aliases 42
 compile_and_expect enums 42
+compile_and_expect explicit_casts 42
 compile_and_expect allocation 17
 compile_and_expect containers 42
 compile_and_expect cpp_template_interop 42; compile_and_expect cpp_move_unique_ptr 42; compile_and_expect cpp_filesystem_path 42; compile_and_expect cpp_chrono_timer 42
@@ -332,6 +333,7 @@ expect_fail bad_enum_duplicate --check "duplicate enum value: value"
 expect_fail bad_enum_value_name --check "enum values must be snake_case: BadValue"
 expect_fail bad_return --emit-cpp "return type mismatch: expected i32, got bool"
 expect_fail bad_return --check "return type mismatch: expected i32, got bool"
+expect_fail bad_return_implicit_cast --emit-cpp "return type mismatch: expected i64, got i32"
 expect_fail bad_unknown_identifier --emit-cpp "unknown identifier: missing_value"
 expect_fail bad_unknown_identifier --check "unknown identifier: missing_value"
 expect_fail bad_unknown_function --emit-cpp "unknown function: missing"

@@ -1,0 +1,4 @@
+def bad() -> i64:
+    value: i32 = 42
+    return value
+
