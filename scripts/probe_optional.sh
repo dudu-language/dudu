@@ -72,6 +72,23 @@ probe_sqlite() {
     echo "ok sqlite3"
 }
 
+probe_threading() {
+    local cpp="$repo_root/build/probe_threading_atomics.cpp"
+    local bin="$repo_root/build/probe_threading_atomics"
+    "$repo_root/build/duc" emit "$repo_root/examples/threading_atomics.dd" -o "$cpp"
+    "${CXX:-c++}" -std=c++20 "$cpp" -pthread -o "$bin"
+    set +e
+    "$bin"
+    local status=$?
+    set -e
+    if [[ "$status" -ne 100 ]]; then
+        echo "threading probe returned $status, expected 100" >&2
+        exit 1
+    fi
+    echo "ok threading"
+}
+
 probe_glm
 probe_opencv
 probe_sqlite
+probe_threading
