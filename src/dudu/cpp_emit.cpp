@@ -371,9 +371,16 @@ bool function_has_decorator(const FunctionDecl& fn, std::string_view name) {
     return false;
 }
 
-void emit_classes(std::ostringstream& out, const ModuleAst& module) {
+bool visible_in_header(Visibility visibility) {
+    return visibility != Visibility::Private;
+}
+
+void emit_classes(std::ostringstream& out, const ModuleAst& module, bool header_only = false) {
     for (const size_t index : class_emit_order(module.classes)) {
         const ClassDecl& klass = module.classes[index];
+        if (header_only && !visible_in_header(klass.visibility)) {
+            continue;
+        }
         out << class_opening(klass) << " {\n";
         for (const FieldDecl& field : klass.fields) {
             out << "    " << lower_cpp_type(field.type) << ' ' << field.name << "{};\n";
@@ -428,10 +435,13 @@ std::string emit_cpp_header(const ModuleAst& module) {
 
     emit_aliases(out, module);
     emit_enums(out, module);
-    emit_classes(out, module);
+    emit_classes(out, module, true);
     emit_constants(out, module);
 
     for (const FunctionDecl& fn : module.functions) {
+        if (!visible_in_header(fn.visibility)) {
+            continue;
+        }
         emit_function_signature(out, fn);
         out << ";\n";
     }

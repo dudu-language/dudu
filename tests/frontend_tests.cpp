@@ -83,9 +83,15 @@ void test_canonical_examples_parse(const std::filesystem::path& root) {
 void test_header_emission() {
     const dudu::ModuleAst module = dudu::parse_source("import cpp \"raylib.h\" as rl\n"
                                                       "\n"
+                                                      "private class Hidden:\n"
+                                                      "    z: i32\n"
+                                                      "\n"
                                                       "class Vec3:\n"
                                                       "    x: f32\n"
                                                       "    y: f32\n"
+                                                      "\n"
+                                                      "private def helper(a: Vec3) -> f32:\n"
+                                                      "    return a.x\n"
                                                       "\n"
                                                       "def dot(a: Vec3, b: Vec3) -> f32:\n"
                                                       "    return a.x * b.x + a.y * b.y\n",
@@ -96,6 +102,8 @@ void test_header_emission() {
     assert(header.find("struct Vec3") < header.find("float dot"));
     assert(header.find("float x{};") != std::string::npos);
     assert(header.find("float dot(Vec3 a, Vec3 b);") != std::string::npos);
+    assert(header.find("Hidden") == std::string::npos);
+    assert(header.find("helper") == std::string::npos);
 }
 
 void test_semantic_diagnostics() {
