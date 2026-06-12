@@ -186,6 +186,17 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
             fail(alias.location, "unknown type alias target: " + alias.type);
         }
     }
+    for (const EnumDecl& en : module.enums) {
+        if (!en.underlying_type.empty() && !known_type(symbols, en.underlying_type)) {
+            fail(en.location, "unknown enum underlying type: " + en.underlying_type);
+        }
+        std::set<std::string> values;
+        for (const EnumValueDecl& value : en.values) {
+            if (!values.insert(value.name).second) {
+                fail(value.location, "duplicate enum value: " + value.name);
+            }
+        }
+    }
     for (const ClassDecl& klass : module.classes) {
         std::set<std::string> fields;
         for (const FieldDecl& field : klass.fields) {

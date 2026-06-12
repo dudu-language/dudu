@@ -259,11 +259,10 @@ class Parser {
         EnumDecl en;
         en.location = start.location;
         en.name = consume_identifier("expected enum name").text;
-        if (match(TokenKind::LParen)) {
-            en.underlying_type = join_until({TokenKind::RParen});
-            consume(TokenKind::RParen, "expected ) after enum underlying type");
-        }
         consume(TokenKind::Colon, "expected : after enum name");
+        if (!at(TokenKind::Newline)) {
+            en.underlying_type = join_until({TokenKind::Newline});
+        }
         consume(TokenKind::Newline, "expected newline after enum header");
         if (!match(TokenKind::Indent)) {
             fail_current("expected indented enum body");

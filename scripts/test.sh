@@ -227,6 +227,7 @@ compile_and_expect control_flow 55
 compile_and_expect compile_time_basic 64
 compile_and_expect tuple_return 43
 compile_and_expect type_aliases 42
+compile_and_expect enums 42
 compile_and_expect allocation 17
 compile_and_expect containers 42
 compile_and_expect cpp_template_interop 42
@@ -279,6 +280,9 @@ expect_fail() {
 
 expect_fail bad_duplicate --check "duplicate declaration: Vec"
 expect_fail bad_type_alias --check "unknown type alias target: MissingThing"
+expect_fail bad_enum_underlying --check "unknown enum underlying type: MissingType"
+expect_fail bad_enum_duplicate --check "duplicate enum value: value"
+expect_fail bad_enum_value_name --check "enum values must be snake_case: BadValue"
 expect_fail bad_return --emit-cpp "return type mismatch: expected i32, got bool"
 expect_fail bad_unknown_type --emit-cpp "unknown local type: MissingType"
 expect_fail bad_tuple_destructure --emit-cpp "tuple destructuring count mismatch"
