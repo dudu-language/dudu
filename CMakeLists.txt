@@ -27,6 +27,10 @@ add_executable(dudu src/main.cpp)
 target_link_libraries(dudu PRIVATE dudu_frontend)
 target_compile_features(dudu PRIVATE cxx_std_20)
 
+add_executable(duc src/main.cpp)
+target_link_libraries(duc PRIVATE dudu_frontend)
+target_compile_features(duc PRIVATE cxx_std_20)
+
 add_executable(dudu_frontend_tests tests/frontend_tests.cpp)
 target_link_libraries(dudu_frontend_tests PRIVATE dudu_frontend)
 target_compile_features(dudu_frontend_tests PRIVATE cxx_std_20)
@@ -34,10 +38,12 @@ target_compile_definitions(dudu_frontend_tests PRIVATE DUDU_REPO_ROOT="${CMAKE_S
 
 if(DUDU_STRICT)
     target_compile_options(dudu PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(duc PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_options(dudu_frontend PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_options(dudu_frontend_tests PRIVATE -Wall -Wextra -Wpedantic)
     if(DUDU_WARN_AS_ERROR)
         target_compile_options(dudu PRIVATE -Werror)
+        target_compile_options(duc PRIVATE -Werror)
         target_compile_options(dudu_frontend PRIVATE -Werror)
         target_compile_options(dudu_frontend_tests PRIVATE -Werror)
     endif()

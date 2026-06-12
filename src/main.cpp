@@ -31,8 +31,8 @@ struct Options {
 }
 
 void print_usage() {
-    std::cout << "usage: dudu build <input.dd> [-o output]\n"
-                 "       dudu <input.dd> [--check] [--format <path|->] "
+    std::cout << "usage: duc build <input.dd> [-o output]\n"
+                 "       duc <input.dd> [--check] [--format <path|->] "
                  "[--emit-header <path|->] [--emit-cpp <path|->] [-DNAME=value]\n";
 }
 
