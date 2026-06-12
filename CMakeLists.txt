@@ -7,6 +7,7 @@ option(DUDU_WARN_AS_ERROR "Treat warnings as errors" ON)
 
 add_library(dudu_frontend
     src/dudu/ast.cpp
+    src/dudu/build_flags.cpp
     src/dudu/cpp_emit.cpp
     src/dudu/cpp_expr_builtins.cpp
     src/dudu/cpp_lower.cpp
