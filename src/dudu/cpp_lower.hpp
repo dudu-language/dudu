@@ -15,6 +15,7 @@ std::string lower_generic_type_constructor(std::string expr);
 std::string lower_lambda_expr(std::string expr);
 std::string lower_len_calls(std::string expr);
 std::string lower_numeric_separators(std::string expr);
+std::string lower_pointer_cast_calls(std::string expr);
 std::string lower_str_calls(std::string expr);
 std::string lower_str_from_cstr(std::string expr);
 std::string replace_dots(std::string text);

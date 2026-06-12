@@ -49,7 +49,7 @@ def unmap_file(file: MappedFile):
 
 
 def fnv_one_a(data: *u8, size: usize) -> u64:
-    hash: u64 = 14695981039346656037
+    hash: u64 = 0xcbf29ce484222325
 
     for i: usize in range(size):
         hash ^= u64(data[i])

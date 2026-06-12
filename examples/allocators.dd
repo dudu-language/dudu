@@ -38,7 +38,7 @@ def make_enemy_wave(count: i32) -> list[Enemy]:
     for i: i32 in range(count):
         enemies.append(Enemy(
             hp=50,
-            x=f32(i) * 12.0,
+            x=f32(i) * f32(12.0),
             y=0.0,
         ))
 
