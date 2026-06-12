@@ -1,0 +1,7 @@
+def main() -> i32:
+    counter: atomic[i32]
+    counter.store(2)
+    old: i32 = counter.fetch_add(8)
+
+    reg: volatile[u32] = 32
+    return old + counter.load() + i32(reg)
