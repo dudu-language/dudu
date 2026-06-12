@@ -416,6 +416,8 @@ expect_fail bad_return_local_address --emit-cpp "cannot let local address escape
 expect_fail bad_append_local_address --emit-cpp "cannot let local address escape: value"
 expect_fail bad_static_assert --check "static_assert failed: (PIXELS == 65)"
 expect_fail bad_static_compare --check "static_assert failed: (PIXELS < 64)"
+expect_fail bad_const_calls_runtime --check "compile-time expression calls non-constexpr function: runtime_value"
+expect_fail bad_static_assert_calls_runtime --check "compile-time expression calls non-constexpr function: runtime_value"
 expect_fail bad_call_arity --emit-cpp "function add expects 2 arguments, got 1"
 expect_fail bad_call_type --emit-cpp "argument 1 for negate expects i32, got bool"
 expect_fail bad_callback_lambda --emit-cpp "argument 2 for apply expects fn(i32) -> i32, got lambda"

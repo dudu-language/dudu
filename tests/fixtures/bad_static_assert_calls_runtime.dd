@@ -1,0 +1,9 @@
+def runtime_value() -> i32:
+    return 42
+
+
+static_assert(runtime_value() == 42)
+
+
+def main() -> i32:
+    return 0

@@ -5,6 +5,7 @@
 #include "dudu/cpp_lower.hpp"
 #include "dudu/escapes.hpp"
 #include "dudu/naming.hpp"
+#include "dudu/sema_constexpr.hpp"
 #include "dudu/sema_context.hpp"
 #include "dudu/sema_function_type.hpp"
 #include "dudu/sema_index.hpp"
@@ -492,8 +493,8 @@ void analyze_module(const ModuleAst& module, SemanticOptions options) {
     check_naming(module);
     check_unsupported_python(module);
     check_declarations(module, symbols);
-    if (options.check_bodies) {
+    check_constexpr_uses(module);
+    if (options.check_bodies)
         check_bodies(module, symbols);
-    }
 }
 } // namespace dudu
