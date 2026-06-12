@@ -87,6 +87,7 @@ compile_and_expect constructors 42
 compile_and_expect native_escape 42
 compile_and_expect result_option 42
 compile_and_expect function_attrs 42
+compile_and_expect cpp_namespace_alias 42
 compile_path_and_expect multifile tests/fixtures/multifile/main.dd 42
 
 direct_bin="$repo_root/build/dudu_build_simple"

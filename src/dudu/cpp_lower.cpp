@@ -105,6 +105,26 @@ std::string replace_all(std::string text, std::string_view from, std::string_vie
     return text;
 }
 
+std::string qualify_namespace_aliases(std::string expr,
+                                      const std::vector<std::string>& namespace_aliases) {
+    for (const std::string& alias : namespace_aliases) {
+        const std::string marker = alias + ".";
+        size_t pos = expr.find(marker);
+        while (pos != std::string::npos) {
+            const bool left_ok =
+                pos == 0 || (std::isalnum(static_cast<unsigned char>(expr[pos - 1])) == 0 &&
+                             expr[pos - 1] != '_');
+            if (left_ok) {
+                expr.replace(pos, marker.size(), alias + "::");
+                pos = expr.find(marker, pos + alias.size() + 2);
+            } else {
+                pos = expr.find(marker, pos + marker.size());
+            }
+        }
+    }
+    return expr;
+}
+
 std::string lower_template_alloc_call(std::string expr, std::string_view name) {
     const std::string marker = std::string(name) + "[";
     size_t pos = expr.find(marker);
@@ -326,6 +346,10 @@ std::string lower_dotted_template_call(std::string expr) {
 }
 
 std::string lower_cpp_expr(std::string expr) {
+    return lower_cpp_expr(std::move(expr), {});
+}
+
+std::string lower_cpp_expr(std::string expr, const std::vector<std::string>& namespace_aliases) {
     expr = lower_template_alloc_call(std::move(expr), "new");
     expr = lower_template_alloc_call(std::move(expr), "malloc");
     expr = lower_type_operator_call(std::move(expr), "sizeof");
@@ -337,6 +361,7 @@ std::string lower_cpp_expr(std::string expr) {
     expr = lower_template_value_call(std::move(expr), "dict");
     expr = lower_template_value_call(std::move(expr), "set");
     expr = lower_dotted_template_call(std::move(expr));
+    expr = qualify_namespace_aliases(std::move(expr), namespace_aliases);
     expr = replace_all(std::move(expr), "Ok(None)", "dudu::Ok(std::monostate{})");
     expr = replace_word(std::move(expr), "Ok", "dudu::Ok");
     expr = replace_word(std::move(expr), "Err", "dudu::Err");

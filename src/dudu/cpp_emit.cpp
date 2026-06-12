@@ -80,9 +80,22 @@ void emit_cpp_escape(std::ostringstream& out, const std::string& text, int depth
     }
 }
 
-void emit_raw_block(std::ostringstream& out, const std::vector<RawStmt>& body, int depth);
+std::vector<std::string> namespace_aliases(const ModuleAst& module) {
+    std::vector<std::string> aliases;
+    for (const ImportDecl& import : module.imports) {
+        if ((import.kind == ImportKind::ForeignC || import.kind == ImportKind::ForeignCpp) &&
+            !import.alias.empty()) {
+            aliases.push_back(import.alias);
+        }
+    }
+    return aliases;
+}
 
-void emit_simple_statement(std::ostringstream& out, const RawStmt& stmt, int depth) {
+void emit_raw_block(std::ostringstream& out, const std::vector<RawStmt>& body, int depth,
+                    const std::vector<std::string>& aliases);
+
+void emit_simple_statement(std::ostringstream& out, const RawStmt& stmt, int depth,
+                           const std::vector<std::string>& aliases) {
     const std::string text = trim_copy(stmt.text);
     const size_t colon = text.find(':');
     const size_t assign = text.find('=');
@@ -95,9 +108,9 @@ void emit_simple_statement(std::ostringstream& out, const RawStmt& stmt, int dep
         out << indent(depth) << "return";
         if (!value.empty()) {
             if (split_top_level_args(value).size() > 1) {
-                out << " {" << lower_cpp_expr(value) << '}';
+                out << " {" << lower_cpp_expr(value, aliases) << '}';
             } else {
-                out << ' ' << lower_cpp_expr(value);
+                out << ' ' << lower_cpp_expr(value, aliases);
             }
         }
         out << ";\n";
@@ -112,7 +125,7 @@ void emit_simple_statement(std::ostringstream& out, const RawStmt& stmt, int dep
             if (starts_with(type, "Option[") && value == "None") {
                 out << " = std::nullopt";
             } else {
-                out << " = " << lower_cpp_expr(value);
+                out << " = " << lower_cpp_expr(value, aliases);
             }
         } else {
             out << "{}";
@@ -126,43 +139,44 @@ void emit_simple_statement(std::ostringstream& out, const RawStmt& stmt, int dep
         const std::string lhs = trim_copy(text.substr(0, assign));
         if (lhs.find(',') != std::string::npos) {
             out << indent(depth) << "auto [" << lhs
-                << "] = " << lower_cpp_expr(trim_copy(text.substr(assign + 1))) << ";\n";
+                << "] = " << lower_cpp_expr(trim_copy(text.substr(assign + 1)), aliases) << ";\n";
             return;
         }
         if (!lhs.empty() && lhs.find_first_of(" .[]+-*/%<>") == std::string::npos) {
             out << indent(depth) << "auto " << lhs << " = "
-                << lower_cpp_expr(trim_copy(text.substr(assign + 1))) << ";\n";
+                << lower_cpp_expr(trim_copy(text.substr(assign + 1)), aliases) << ";\n";
             return;
         }
     }
-    out << indent(depth) << lower_cpp_expr(text) << ";\n";
+    out << indent(depth) << lower_cpp_expr(text, aliases) << ";\n";
 }
-void emit_raw_statement(std::ostringstream& out, const RawStmt& stmt, int depth) {
+void emit_raw_statement(std::ostringstream& out, const RawStmt& stmt, int depth,
+                        const std::vector<std::string>& aliases) {
     const std::string text = trim_copy(stmt.text);
     if (starts_with(text, "if ")) {
-        out << indent(depth) << "if (" << lower_cpp_expr(strip_trailing_colon(text.substr(3)))
-            << ") {\n";
-        emit_raw_block(out, stmt.children, depth + 1);
+        out << indent(depth) << "if ("
+            << lower_cpp_expr(strip_trailing_colon(text.substr(3)), aliases) << ") {\n";
+        emit_raw_block(out, stmt.children, depth + 1, aliases);
         out << indent(depth) << "}\n";
         return;
     }
     if (starts_with(text, "elif ")) {
-        out << indent(depth) << "else if (" << lower_cpp_expr(strip_trailing_colon(text.substr(5)))
-            << ") {\n";
-        emit_raw_block(out, stmt.children, depth + 1);
+        out << indent(depth) << "else if ("
+            << lower_cpp_expr(strip_trailing_colon(text.substr(5)), aliases) << ") {\n";
+        emit_raw_block(out, stmt.children, depth + 1, aliases);
         out << indent(depth) << "}\n";
         return;
     }
     if (text == "else:") {
         out << indent(depth) << "else {\n";
-        emit_raw_block(out, stmt.children, depth + 1);
+        emit_raw_block(out, stmt.children, depth + 1, aliases);
         out << indent(depth) << "}\n";
         return;
     }
     if (starts_with(text, "while ")) {
-        out << indent(depth) << "while (" << lower_cpp_expr(strip_trailing_colon(text.substr(6)))
-            << ") {\n";
-        emit_raw_block(out, stmt.children, depth + 1);
+        out << indent(depth) << "while ("
+            << lower_cpp_expr(strip_trailing_colon(text.substr(6)), aliases) << ") {\n";
+        emit_raw_block(out, stmt.children, depth + 1, aliases);
         out << indent(depth) << "}\n";
         return;
     }
@@ -171,7 +185,7 @@ void emit_raw_statement(std::ostringstream& out, const RawStmt& stmt, int depth)
         const size_t in_pos = header.find(" in ");
         if (in_pos != std::string::npos) {
             std::string binding = trim_copy(header.substr(0, in_pos));
-            const std::string range = lower_cpp_expr(trim_copy(header.substr(in_pos + 4)));
+            const std::string range = lower_cpp_expr(trim_copy(header.substr(in_pos + 4)), aliases);
             std::string binding_type = "auto";
             const size_t typed = binding.find(':');
             if (typed != std::string::npos) {
@@ -187,21 +201,22 @@ void emit_raw_statement(std::ostringstream& out, const RawStmt& stmt, int depth)
                 out << indent(depth) << "for (" << binding_type << ' ' << binding << " = " << start
                     << "; " << binding << " < " << end << "; " << binding << " += " << step
                     << ") {\n";
-                emit_raw_block(out, stmt.children, depth + 1);
+                emit_raw_block(out, stmt.children, depth + 1, aliases);
                 out << indent(depth) << "}\n";
                 return;
             }
             out << indent(depth) << "for (auto&& " << binding << " : " << range << ") {\n";
-            emit_raw_block(out, stmt.children, depth + 1);
+            emit_raw_block(out, stmt.children, depth + 1, aliases);
             out << indent(depth) << "}\n";
             return;
         }
     }
-    emit_simple_statement(out, stmt, depth);
+    emit_simple_statement(out, stmt, depth, aliases);
 }
-void emit_raw_block(std::ostringstream& out, const std::vector<RawStmt>& body, int depth) {
+void emit_raw_block(std::ostringstream& out, const std::vector<RawStmt>& body, int depth,
+                    const std::vector<std::string>& aliases) {
     for (const RawStmt& stmt : body) {
-        emit_raw_statement(out, stmt, depth);
+        emit_raw_statement(out, stmt, depth, aliases);
     }
 }
 std::string include_path(const ImportDecl& import) {
@@ -389,19 +404,21 @@ void emit_classes(std::ostringstream& out, const ModuleAst& module, bool header_
     }
 }
 
-void emit_constants(std::ostringstream& out, const ModuleAst& module) {
+void emit_constants(std::ostringstream& out, const ModuleAst& module,
+                    const std::vector<std::string>& aliases) {
     for (const ConstDecl& constant : module.constants) {
         out << "inline constexpr " << lower_cpp_type(constant.type) << ' ' << constant.name << " = "
-            << lower_cpp_expr(constant.value) << ";\n";
+            << lower_cpp_expr(constant.value, aliases) << ";\n";
     }
     if (!module.constants.empty()) {
         out << '\n';
     }
 }
 
-void emit_static_asserts(std::ostringstream& out, const ModuleAst& module) {
+void emit_static_asserts(std::ostringstream& out, const ModuleAst& module,
+                         const std::vector<std::string>& aliases) {
     for (const StaticAssertDecl& assertion : module.static_asserts) {
-        out << "static_assert" << lower_cpp_expr(assertion.expression) << ";\n";
+        out << "static_assert" << lower_cpp_expr(assertion.expression, aliases) << ";\n";
     }
     if (!module.static_asserts.empty()) {
         out << '\n';
@@ -429,6 +446,7 @@ void emit_function_signature(std::ostringstream& out, const FunctionDecl& fn) {
 
 std::string emit_cpp_header(const ModuleAst& module) {
     std::ostringstream out;
+    const std::vector<std::string> aliases = namespace_aliases(module);
     out << "#pragma once\n\n";
     emit_includes(out, module);
     emit_result_prelude(out);
@@ -436,7 +454,7 @@ std::string emit_cpp_header(const ModuleAst& module) {
     emit_aliases(out, module);
     emit_enums(out, module);
     emit_classes(out, module, true);
-    emit_constants(out, module);
+    emit_constants(out, module, aliases);
 
     for (const FunctionDecl& fn : module.functions) {
         if (!visible_in_header(fn.visibility)) {
@@ -445,27 +463,28 @@ std::string emit_cpp_header(const ModuleAst& module) {
         emit_function_signature(out, fn);
         out << ";\n";
     }
-    emit_static_asserts(out, module);
+    emit_static_asserts(out, module, aliases);
     return out.str();
 }
 
 std::string emit_cpp_source(const ModuleAst& module) {
     std::ostringstream out;
+    const std::vector<std::string> aliases = namespace_aliases(module);
     emit_includes(out, module);
     emit_result_prelude(out);
 
     emit_aliases(out, module);
     emit_enums(out, module);
     emit_classes(out, module);
-    emit_constants(out, module);
+    emit_constants(out, module, aliases);
 
     for (const FunctionDecl& fn : module.functions) {
         emit_function_signature(out, fn);
         out << " {\n";
-        emit_raw_block(out, fn.body, 1);
+        emit_raw_block(out, fn.body, 1, aliases);
         out << "}\n\n";
     }
-    emit_static_asserts(out, module);
+    emit_static_asserts(out, module, aliases);
     return out.str();
 }
 
