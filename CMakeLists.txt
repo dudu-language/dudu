@@ -24,6 +24,7 @@ add_library(dudu_frontend
     src/dudu/parser.cpp
     src/dudu/project_config.cpp
     src/dudu/sema.cpp
+    src/dudu/sema_context.cpp
     src/dudu/source.cpp
     src/dudu/token.cpp
     src/dudu/type_compat.cpp

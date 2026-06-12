@@ -104,6 +104,16 @@ void test_header_emission() {
     assert(header.find("float dot(Vec3 a, Vec3 b);") != std::string::npos);
     assert(header.find("Hidden") == std::string::npos);
     assert(header.find("helper") == std::string::npos);
+
+    const dudu::ModuleAst alias_module =
+        dudu::parse_source("type PlayerId = u64\n"
+                           "\n"
+                           "def next_id(id: PlayerId) -> PlayerId:\n"
+                           "    return id + 1\n",
+                           "alias_header.dd");
+    const std::string alias_header = dudu::emit_cpp_header(alias_module);
+    assert(alias_header.find("using PlayerId = uint64_t;") != std::string::npos);
+    assert(alias_header.find("PlayerId next_id(PlayerId id);") != std::string::npos);
 }
 
 void test_semantic_diagnostics() {

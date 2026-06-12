@@ -226,6 +226,7 @@ compile_and_expect simple_program 42
 compile_and_expect control_flow 55
 compile_and_expect compile_time_basic 64
 compile_and_expect tuple_return 43
+compile_and_expect type_aliases 42
 compile_and_expect allocation 17
 compile_and_expect containers 42
 compile_and_expect cpp_template_interop 42

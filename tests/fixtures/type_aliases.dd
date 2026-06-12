@@ -1,0 +1,29 @@
+type PlayerId = u64
+type Scores = dict[str, i32]
+type Pair = tuple[i32, i32]
+type Visit = fn(PlayerId) -> i32
+
+
+def bump_player(player_id: PlayerId) -> PlayerId:
+    return player_id + 1
+
+
+def pair_sum(pair: Pair) -> i32:
+    left, right = pair
+    return left + right
+
+
+def visit_player(player_id: PlayerId) -> i32:
+    return i32(player_id)
+
+
+def apply_visit(player_id: PlayerId, visitor: Visit) -> i32:
+    return visitor(player_id)
+
+
+def main() -> i32:
+    scores: Scores = {}
+    scores["p1"] = 12
+    next_id: PlayerId = bump_player(29)
+    pair: Pair = (10, 2)
+    return i32(next_id) + scores["p1"] - pair_sum(pair) + apply_visit(12, visit_player)

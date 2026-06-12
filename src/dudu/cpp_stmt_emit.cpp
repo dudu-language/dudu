@@ -123,6 +123,19 @@ bool is_identifier_char(char c) {
     return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_';
 }
 
+bool is_tuple_literal(const std::string& value) {
+    if (split_top_level_args(value).size() > 1) {
+        return true;
+    }
+    return starts_with(value, "(") && ends_with(value, ")") &&
+           split_top_level_args(value.substr(1, value.size() - 2)).size() > 1;
+}
+
+std::string tuple_literal_body(const std::string& value) {
+    return starts_with(value, "(") && ends_with(value, ")") ? value.substr(1, value.size() - 2)
+                                                            : value;
+}
+
 bool is_build_only_condition(const std::string& text) {
     char quote = '\0';
     bool escaped = false;
@@ -283,6 +296,9 @@ void emit_simple_statement(std::ostringstream& out, const RawStmt& stmt, int dep
                        ends_with(value, "]")) {
                 out << " = {" << lower_expr(value.substr(1, value.size() - 2), aliases, locals)
                     << '}';
+            } else if (is_tuple_literal(value)) {
+                out << " = " << lower_cpp_type(type) << "{"
+                    << lower_expr(tuple_literal_body(value), aliases, locals) << '}';
             } else {
                 out << " = " << lower_expr(value, aliases, locals);
             }

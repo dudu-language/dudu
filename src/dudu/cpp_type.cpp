@@ -41,7 +41,17 @@ std::string lower_template_type(std::string_view name, const std::string& args) 
         return "std::vector<" + lower_cpp_type(args) + ">";
     }
     if (name == "dict") {
-        return "std::unordered_map<" + replace_dots(args) + ">";
+        std::ostringstream out;
+        out << "std::unordered_map<";
+        const std::vector<std::string> parts = split_top_level_args(args);
+        for (size_t i = 0; i < parts.size(); ++i) {
+            if (i > 0) {
+                out << ", ";
+            }
+            out << lower_cpp_type(parts[i]);
+        }
+        out << ">";
+        return out.str();
     }
     if (name == "set") {
         return "std::unordered_set<" + lower_cpp_type(args) + ">";
