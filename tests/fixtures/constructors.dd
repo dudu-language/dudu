@@ -1,0 +1,19 @@
+class Point:
+    x: i32
+    y: i32
+
+
+class Player:
+    pos: Point
+    hp: i32
+
+
+def main() -> i32:
+    origin = Point()
+    target = Point(x=12, y=20)
+    player = Player(
+        pos=Point(x=target.x, y=target.y),
+        hp=10,
+    )
+
+    return origin.x + player.pos.x + player.pos.y + player.hp

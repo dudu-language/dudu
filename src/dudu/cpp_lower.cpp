@@ -62,7 +62,26 @@ std::vector<std::string> split_top_level_args(const std::string& args) {
     return out;
 }
 
+size_t top_level_equal(const std::string& text) {
+    int depth = 0;
+    for (size_t i = 0; i < text.size(); ++i) {
+        const char c = text[i];
+        if (c == '[' || c == '(' || c == '{') {
+            ++depth;
+        } else if (c == ']' || c == ')' || c == '}') {
+            --depth;
+        } else if (c == '=' && depth == 0) {
+            if ((i > 0 && text[i - 1] == '=') || (i + 1 < text.size() && text[i + 1] == '=')) {
+                continue;
+            }
+            return i;
+        }
+    }
+    return std::string::npos;
+}
+
 std::string lower_cpp_type(const std::string& raw_type);
+std::string lower_cpp_expr(std::string expr);
 
 std::string lower_template_type(std::string_view name, const std::string& args) {
     if (name == "list") {
@@ -335,6 +354,69 @@ std::string lower_builtin_cast_calls(std::string expr) {
     return expr;
 }
 
+std::string lower_named_argument_calls(std::string expr) {
+    size_t open = expr.find('(');
+    while (open != std::string::npos) {
+        int depth = 1;
+        size_t close = open + 1;
+        while (close < expr.size() && depth > 0) {
+            if (expr[close] == '(') {
+                ++depth;
+            } else if (expr[close] == ')') {
+                --depth;
+            }
+            ++close;
+        }
+        if (depth != 0) {
+            break;
+        }
+        const size_t close_pos = close - 1;
+        size_t name_start = open;
+        while (name_start > 0) {
+            const char c = expr[name_start - 1];
+            if (std::isalnum(static_cast<unsigned char>(c)) == 0 && c != '_' && c != '.') {
+                break;
+            }
+            --name_start;
+        }
+        if (name_start == open) {
+            open = expr.find('(', open + 1);
+            continue;
+        }
+
+        const std::string args = expr.substr(open + 1, close_pos - open - 1);
+        const std::vector<std::string> parts = split_top_level_args(args);
+        bool has_named_arg = false;
+        for (const std::string& part : parts) {
+            has_named_arg = has_named_arg || top_level_equal(part) != std::string::npos;
+        }
+        if (!has_named_arg) {
+            open = expr.find('(', close_pos + 1);
+            continue;
+        }
+
+        std::ostringstream replacement;
+        replacement << expr.substr(name_start, open - name_start) << "{";
+        for (size_t i = 0; i < parts.size(); ++i) {
+            const size_t equal = top_level_equal(parts[i]);
+            if (equal == std::string::npos) {
+                replacement << (i == 0 ? "" : ", ") << lower_cpp_expr(parts[i]);
+                continue;
+            }
+            if (i > 0) {
+                replacement << ", ";
+            }
+            replacement << "." << trim_copy(parts[i].substr(0, equal)) << " = "
+                        << lower_cpp_expr(parts[i].substr(equal + 1));
+        }
+        replacement << "}";
+        const std::string text = replacement.str();
+        expr.replace(name_start, close_pos + 1 - name_start, text);
+        open = expr.find('(', name_start + text.size());
+    }
+    return expr;
+}
+
 std::string lower_dotted_template_call(std::string expr) {
     size_t open = expr.find('[');
     while (open != std::string::npos) {
@@ -372,6 +454,7 @@ std::string lower_cpp_expr(std::string expr) {
     expr = lower_type_operator_call(std::move(expr), "alignof");
     expr = lower_offsetof_call(std::move(expr));
     expr = lower_builtin_cast_calls(std::move(expr));
+    expr = lower_named_argument_calls(std::move(expr));
     expr = lower_template_value_call(std::move(expr), "list");
     expr = lower_template_value_call(std::move(expr), "dict");
     expr = lower_template_value_call(std::move(expr), "set");
