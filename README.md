@@ -86,6 +86,9 @@ RENDER_BACKEND = "raylib"
 [cc]
 include_dirs = ["include"]
 libs = ["raylib"]
+
+[pkg_config]
+packages = ["raylib"]
 ```
 
 Project commands can use a top-level `main` entry:

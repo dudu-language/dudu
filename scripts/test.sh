@@ -135,6 +135,36 @@ if [[ "$project_cc_status" -ne 42 ]]; then
     echo "project_cc returned $project_cc_status, expected 42" >&2
     exit 1
 fi
+fake_pkg_config="$repo_root/build/fake-pkg-config"
+cat >"$fake_pkg_config" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "$*" != "--cflags --libs fixturelib" ]]; then
+    echo "unexpected pkg-config args: $*" >&2
+    exit 1
+fi
+
+printf '%s\n' '-Iinclude'
+SH
+chmod +x "$fake_pkg_config"
+(
+    cd "$repo_root/tests/fixtures/project_pkg_config"
+    PKG_CONFIG="$fake_pkg_config" "$repo_root/build/duc" build \
+        -o "$repo_root/build/project_pkg_config_bin" --verbose \
+        2>"$repo_root/build/project_pkg_config_verbose.err"
+)
+grep -q -- "-Iinclude" "$repo_root/build/project_pkg_config_verbose.err"
+grep -q "project_pkg_config_bin.cpp" "$repo_root/build/compile_commands.json"
+grep -q -- "-Iinclude" "$repo_root/build/compile_commands.json"
+set +e
+"$repo_root/build/project_pkg_config_bin"
+project_pkg_config_status=$?
+set -e
+if [[ "$project_pkg_config_status" -ne 42 ]]; then
+    echo "project_pkg_config returned $project_pkg_config_status, expected 42" >&2
+    exit 1
+fi
 
 compile_and_expect() {
     local name="$1"

@@ -15,6 +15,7 @@ struct ProjectConfig {
     std::map<std::string, std::string> build_values;
     std::vector<std::string> include_dirs;
     std::vector<std::string> libs;
+    std::vector<std::string> pkg_config_packages;
 };
 
 ProjectConfig parse_project_config(const std::filesystem::path& path);

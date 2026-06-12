@@ -5,6 +5,8 @@
 #include "dudu/project_config.hpp"
 #include "dudu/sema.hpp"
 
+#include <cctype>
+#include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -244,6 +246,48 @@ std::string native_lib_flag(const std::string& lib) {
     return lib.empty() || lib.front() == '-' ? lib : "-l" + lib;
 }
 
+void trim_ascii_whitespace(std::string& value) {
+    while (!value.empty() && std::isspace(static_cast<unsigned char>(value.back())) != 0) {
+        value.pop_back();
+    }
+    size_t start = 0;
+    while (start < value.size() && std::isspace(static_cast<unsigned char>(value[start])) != 0) {
+        ++start;
+    }
+    value.erase(0, start);
+}
+
+std::string capture_command(const std::string& command) {
+    FILE* pipe = popen(command.c_str(), "r");
+    if (pipe == nullptr) {
+        fail("could not run command: " + command);
+    }
+    std::string output;
+    char buffer[256];
+    while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+        output += buffer;
+    }
+    if (pclose(pipe) != 0) {
+        fail("command failed: " + command);
+    }
+    trim_ascii_whitespace(output);
+    return output;
+}
+
+std::string pkg_config_flags(const std::vector<std::string>& packages) {
+    if (packages.empty()) {
+        return {};
+    }
+    const char* env_pkg_config = std::getenv("PKG_CONFIG");
+    std::string command =
+        shell_quote_arg(env_pkg_config == nullptr ? "pkg-config" : std::string(env_pkg_config)) +
+        " --cflags --libs";
+    for (const std::string& package : packages) {
+        command += " " + shell_quote_arg(package);
+    }
+    return capture_command(command);
+}
+
 std::string json_escape(const std::string& value) {
     std::string out;
     for (const char c : value) {
@@ -285,6 +329,10 @@ std::filesystem::path build_executable(const Options& options, const std::string
                           shell_quote(output);
     for (const std::string& include_dir : config.include_dirs) {
         command += " " + shell_quote_arg("-I" + include_dir);
+    }
+    const std::string package_flags = pkg_config_flags(config.pkg_config_packages);
+    if (!package_flags.empty()) {
+        command += " " + package_flags;
     }
     for (const std::string& lib : config.libs) {
         command += " " + shell_quote_arg(native_lib_flag(lib));

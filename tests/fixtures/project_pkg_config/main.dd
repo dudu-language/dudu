@@ -1,0 +1,5 @@
+import cpp "pkg_answer.hpp" as pkg_answer
+
+
+def main() -> i32:
+    return pkg_answer.value()

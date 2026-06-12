@@ -120,6 +120,8 @@ ProjectConfig parse_project_config(const std::filesystem::path& path) {
             config.include_dirs = parse_string_array(path, line, value);
         } else if (section == "cc" && name == "libs") {
             config.libs = parse_string_array(path, line, value);
+        } else if (section == "pkg_config" && name == "packages") {
+            config.pkg_config_packages = parse_string_array(path, line, value);
         } else if (section == "build") {
             config.build_values[name] = value;
         }
