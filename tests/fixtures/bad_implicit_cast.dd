@@ -1,0 +1,4 @@
+def bad() -> i64:
+    x: i32 = 1
+    y: i64 = x
+    return y

@@ -1,7 +1,9 @@
 #include "dudu/sema.hpp"
 
 #include "dudu/build_flags.hpp"
+#include "dudu/control_flow.hpp"
 #include "dudu/naming.hpp"
+#include "dudu/type_compat.hpp"
 
 #include <cctype>
 #include <map>
@@ -222,6 +224,15 @@ std::string infer_expr(const FunctionScope& scope, std::string expr) {
     if (expr.empty()) {
         return "void";
     }
+    if (expr.size() > 1 && expr.front() == '*') {
+        const std::string name = trim(expr.substr(1));
+        if (const auto local = scope.locals.find(name); local != scope.locals.end()) {
+            std::string type = trim(local->second);
+            if (!type.empty() && type.front() == '*') {
+                return trim(type.substr(1));
+            }
+        }
+    }
     const std::vector<std::string> tuple_parts = split_top_level(expr);
     if (tuple_parts.size() > 1) {
         std::ostringstream out;
@@ -293,12 +304,35 @@ std::vector<std::string> tuple_types(std::string type) {
     return split_top_level(type.substr(6, type.size() - 7));
 }
 
-void check_assign_target(const FunctionScope& scope, const RawStmt& stmt, const std::string& lhs) {
+void check_type_match(const FunctionScope& scope, const RawStmt& stmt, const std::string& expected,
+                      const std::string& expr) {
+    const std::string got = infer_expr(scope, expr);
+    if (assignment_type_allowed(expected, expr, got)) {
+        return;
+    }
+    fail(stmt.location, "cannot assign " + got + " to " + expected + " without an explicit cast");
+}
+
+std::string assign_target_type(const FunctionScope& scope, const RawStmt& stmt,
+                               const std::string& lhs) {
+    if (lhs.size() > 1 && lhs.front() == '*') {
+        const std::string name = trim(lhs.substr(1));
+        const auto local = scope.locals.find(name);
+        if (local == scope.locals.end()) {
+            fail(stmt.location, "assignment through unknown local: " + name);
+        }
+        std::string type = trim(local->second);
+        if (type.empty() || type.front() != '*') {
+            fail(stmt.location, "cannot dereference non-pointer: " + name);
+        }
+        return trim(type.substr(1));
+    }
     if (lhs.find('.') == std::string::npos) {
-        if (!scope.locals.contains(lhs)) {
+        const auto local = scope.locals.find(lhs);
+        if (local == scope.locals.end()) {
             fail(stmt.location, "assignment to unknown local: " + lhs);
         }
-        return;
+        return local->second;
     }
     const size_t dot = lhs.find('.');
     const std::string base = lhs.substr(0, dot);
@@ -306,21 +340,20 @@ void check_assign_target(const FunctionScope& scope, const RawStmt& stmt, const 
     if (local == scope.locals.end()) {
         fail(stmt.location, "assignment through unknown local: " + base);
     }
-    const auto klass = scope.symbols.classes.find(local->second);
+    const auto klass = scope.symbols.classes.find(base_type(local->second));
     if (klass == scope.symbols.classes.end()) {
-        return;
+        return {};
     }
     const std::string field = lhs.substr(dot + 1);
     for (const FieldDecl& decl : klass->second->fields) {
         if (decl.name == field) {
-            return;
+            return decl.type;
         }
     }
     fail(stmt.location, "unknown field: " + lhs);
 }
 
 void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& return_type);
-bool block_guarantees_return(const std::vector<RawStmt>& body);
 
 void check_block(FunctionScope& scope, const std::vector<RawStmt>& body,
                  const std::string& return_type) {
@@ -362,7 +395,7 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
     for (const char* op : {"+=", "-=", "*=", "/=", "%=", "^=", "&=", "|="}) {
         const size_t compound = text.find(op);
         if (compound != std::string::npos) {
-            check_assign_target(scope, stmt, trim(text.substr(0, compound)));
+            (void)assign_target_type(scope, stmt, trim(text.substr(0, compound)));
             return;
         }
     }
@@ -371,6 +404,9 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
         const std::string type = trim(text.substr(colon + 1, assign - colon - 1));
         if (!known_type(scope.symbols, type)) {
             fail(stmt.location, "unknown local type: " + type);
+        }
+        if (assign != std::string::npos) {
+            check_type_match(scope, stmt, type, text.substr(assign + 1));
         }
         scope.locals[name] = type;
         return;
@@ -389,44 +425,17 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
             }
             return;
         }
-        if (lhs.find('.') == std::string::npos && !scope.locals.contains(lhs)) {
+        if (lhs.find('.') == std::string::npos && !starts_with(lhs, "*") &&
+            !scope.locals.contains(lhs)) {
             const std::string inferred = infer_expr(scope, text.substr(assign + 1));
             scope.locals[lhs] = inferred.empty() ? "auto" : inferred;
             return;
         }
-        check_assign_target(scope, stmt, lhs);
-    }
-}
-
-bool branch_chain_guarantees_return(const std::vector<RawStmt>& body, size_t& index) {
-    bool has_else = false;
-    bool all_branches_return = block_guarantees_return(body[index].children);
-    while (index + 1 < body.size()) {
-        const std::string next = trim(body[index + 1].text);
-        if (!starts_with(next, "elif ") && next != "else:") {
-            break;
-        }
-        ++index;
-        has_else = has_else || next == "else:";
-        all_branches_return = all_branches_return && block_guarantees_return(body[index].children);
-        if (has_else) {
-            break;
+        const std::string target_type = assign_target_type(scope, stmt, lhs);
+        if (!target_type.empty()) {
+            check_type_match(scope, stmt, target_type, text.substr(assign + 1));
         }
     }
-    return has_else && all_branches_return;
-}
-
-bool block_guarantees_return(const std::vector<RawStmt>& body) {
-    for (size_t i = 0; i < body.size(); ++i) {
-        const std::string text = trim(body[i].text);
-        if (starts_with(text, "return")) {
-            return true;
-        }
-        if (starts_with(text, "if ") && branch_chain_guarantees_return(body, i)) {
-            return true;
-        }
-    }
-    return false;
 }
 
 void check_bodies(const ModuleAst& module, const Symbols& symbols) {

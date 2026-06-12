@@ -217,6 +217,7 @@ expect_fail bad_tuple_destructure --emit-cpp "tuple destructuring count mismatch
 expect_fail bad_naming --check "type names must be PascalCase: bad_type"
 expect_fail bad_missing_return --emit-cpp "missing return in function: bad"
 expect_fail bad_build_flag --check "unknown build flag: build.NOPE"
+expect_fail bad_implicit_cast --emit-cpp "cannot assign i32 to i64 without an explicit cast"
 
 if "$repo_root/build/duc" emit "$repo_root/tests/fixtures/bad_package_build/main.dd" \
     -o "$repo_root/build/bad_package_build.cpp" 2>"$repo_root/build/bad_package_build.err"; then

@@ -8,6 +8,7 @@ option(DUDU_WARN_AS_ERROR "Treat warnings as errors" ON)
 add_library(dudu_frontend
     src/dudu/ast.cpp
     src/dudu/build_flags.cpp
+    src/dudu/control_flow.cpp
     src/dudu/cpp_emit.cpp
     src/dudu/cpp_expr_builtins.cpp
     src/dudu/cpp_lower.cpp
@@ -22,6 +23,7 @@ add_library(dudu_frontend
     src/dudu/sema.cpp
     src/dudu/source.cpp
     src/dudu/token.cpp
+    src/dudu/type_compat.cpp
 )
 target_include_directories(dudu_frontend PUBLIC src)
 target_compile_features(dudu_frontend PUBLIC cxx_std_20)
