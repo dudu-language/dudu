@@ -491,7 +491,7 @@ list[T]      -> std::vector<T>
 T[N]         -> std::array<T, N>
 dict[K, V]   -> std::unordered_map<K, V>
 set[T]       -> std::unordered_set<T>
-tuple[...]   -> std::tuple<...>
+tuple[...]   -> dudu::TupleN<...> aggregate
 ```
 
 Indexing is Python indexing:

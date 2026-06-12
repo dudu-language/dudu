@@ -119,6 +119,12 @@ grep -q "err = cuda::cudaMalloc" "$repo_root/build/cuda_kernel.cpp"
 grep -Fq "std::add_pointer_t<int32_t(int32_t)> callback" \
     "$repo_root/build/function_pointer.cpp"
 ! grep -q "std::function" "$repo_root/build/function_pointer.cpp"
+"$repo_root/build/duc" emit "$repo_root/tests/fixtures/tuple_return.dd" \
+    -o "$repo_root/build/tuple_return.cpp"
+grep -Fq "dudu::Tuple2<int32_t, int32_t> divmod_i32" "$repo_root/build/tuple_return.cpp"
+grep -Fq "return {value / divisor, value % divisor};" "$repo_root/build/tuple_return.cpp"
+! grep -q "std::tuple" "$repo_root/build/tuple_return.cpp"
+! grep -q "#include <tuple>" "$repo_root/build/tuple_return.cpp"
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/package_build/main.dd" \
     -o "$repo_root/build/package_build.cpp"
 grep -q "inline constexpr bool DEBUG = true;" "$repo_root/build/package_build.cpp"

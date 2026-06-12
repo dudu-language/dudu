@@ -74,8 +74,8 @@ std::string lower_template_type(std::string_view name, const std::string& args) 
     }
     if (name == "tuple") {
         std::ostringstream out;
-        out << "std::tuple<";
         const std::vector<std::string> parts = split_top_level_args(args);
+        out << "dudu::Tuple" << parts.size() << "<";
         for (size_t i = 0; i < parts.size(); ++i) {
             if (i > 0) {
                 out << ", ";
