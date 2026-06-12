@@ -61,6 +61,17 @@ compile_and_expect compile_time_basic 64
 compile_and_expect tuple_return 43
 compile_and_expect allocation 17
 
+direct_bin="$repo_root/build/dudu_build_simple"
+"$repo_root/build/dudu" build "$repo_root/tests/fixtures/simple_program.dd" -o "$direct_bin"
+set +e
+"$direct_bin"
+direct_status=$?
+set -e
+if [[ "$direct_status" -ne 42 ]]; then
+    echo "dudu build simple_program returned $direct_status, expected 42" >&2
+    exit 1
+fi
+
 expect_fail() {
     local name="$1"
     local mode="$2"

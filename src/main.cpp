@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -90,6 +91,7 @@ struct Options {
     std::filesystem::path input;
     std::optional<std::filesystem::path> output;
     std::optional<std::filesystem::path> header_output;
+    bool build = false;
     bool emit_cpp = false;
     bool format = false;
     bool check = false;
@@ -1045,8 +1047,20 @@ class Emitter {
 
 Options parse_options(int argc, char** argv) {
     Options options;
-    for (int i = 1; i < argc; ++i) {
+    int first_arg = 1;
+    if (argc > 1 && std::string(argv[1]) == "build") {
+        options.build = true;
+        first_arg = 2;
+    }
+    for (int i = first_arg; i < argc; ++i) {
         const std::string arg = argv[i];
+        if (arg == "-o") {
+            if (i + 1 >= argc) {
+                fail("-o requires a path");
+            }
+            options.output = argv[++i];
+            continue;
+        }
         if (arg == "--emit-cpp") {
             if (i + 1 >= argc) {
                 fail("--emit-cpp requires a path or '-'");
@@ -1086,7 +1100,8 @@ Options parse_options(int argc, char** argv) {
             continue;
         }
         if (arg == "-h" || arg == "--help") {
-            std::cout << "usage: dudu <input.dd> [--check] [--format <path|->] "
+            std::cout << "usage: dudu build <input.dd> [-o output]\n"
+                         "       dudu <input.dd> [--check] [--format <path|->] "
                          "[--emit-header <path|->] "
                          "[--emit-cpp <path|->]\n";
             std::exit(0);
@@ -1123,12 +1138,47 @@ void write_text_output(const std::optional<std::filesystem::path>& path, const s
     out << text;
 }
 
+std::string shell_quote(const std::filesystem::path& path) {
+    std::string out = "'";
+    for (const char c : path.string()) {
+        if (c == '\'') {
+            out += "'\\''";
+        } else {
+            out += c;
+        }
+    }
+    out += "'";
+    return out;
+}
+
+void build_executable(const Options& options, const std::string& cpp) {
+    const std::filesystem::path output = options.output.value_or("a.out");
+    std::filesystem::create_directories(output.parent_path().empty() ? "." : output.parent_path());
+    const std::filesystem::path cpp_path = output.string() + ".cpp";
+    write_text_output(cpp_path, cpp);
+
+    const char* env_cxx = std::getenv("CXX");
+    const std::string cxx = env_cxx == nullptr ? "c++" : env_cxx;
+    const std::string command =
+        cxx + " -std=c++20 " + shell_quote(cpp_path) + " -o " + shell_quote(output);
+    const int status = std::system(command.c_str());
+    if (status != 0) {
+        fail("C++ build failed");
+    }
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
     try {
         const Options options = parse_options(argc, argv);
         const std::string source = read_text_file(options.input);
+        if (options.build) {
+            const dudu::ModuleAst module = dudu::parse_source(source, options.input);
+            dudu::analyze_module(module, {.check_bodies = true});
+            build_executable(options, dudu::emit_cpp_source(module));
+            return 0;
+        }
         if (options.format) {
             write_text_output(options.output, dudu::format_source(source));
             return 0;
