@@ -765,6 +765,12 @@ duc build
 duc test
 ```
 
+Commit workflow:
+
+- commit frequently at reasonable green checkpoints
+- keep commits focused on one feature, diagnostic, doc update, or test slice
+- run formatter and tests before each commit
+
 Editor integration should support:
 
 - format on save

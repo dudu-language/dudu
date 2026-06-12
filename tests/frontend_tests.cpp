@@ -174,6 +174,16 @@ void test_typed_for_emission() {
     assert(cpp.find("for (auto&& copy : items)") != std::string::npos);
 }
 
+void test_image_filter_emission(const std::filesystem::path& root) {
+    const std::filesystem::path path = root / "examples" / "image_filter.dd";
+    const dudu::ModuleAst module = dudu::parse_source(read_file(path), path);
+    dudu::analyze_module(module, {.check_bodies = true});
+    const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find("dst.at<cv::Vec3b>(y, x)") != std::string::npos);
+    assert(cpp.find("edges.at<uint8_t>(y, x)") != std::string::npos);
+    assert(cpp.find("pixel[0]") != std::string::npos);
+}
+
 } // namespace
 
 int main() {
@@ -186,6 +196,7 @@ int main() {
         test_semantic_diagnostics();
         test_formatter();
         test_typed_for_emission();
+        test_image_filter_emission(root);
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;

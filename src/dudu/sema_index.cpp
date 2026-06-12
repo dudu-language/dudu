@@ -32,6 +32,11 @@ bool plain_identifier(const std::string& text) {
     return true;
 }
 
+bool foreign_indexable_type(const std::string& type) {
+    return type.empty() || type == "auto" || type.find('.') != std::string::npos ||
+           type.find("::") != std::string::npos;
+}
+
 } // namespace
 
 std::string indexed_value_type(const Symbols& symbols,
@@ -43,6 +48,9 @@ std::string indexed_value_type(const Symbols& symbols,
         throw CompileError(location, std::string(unknown_message) + name);
     }
     std::string type = resolve_alias(symbols, local->second);
+    if (foreign_indexable_type(type)) {
+        return "auto";
+    }
     bool pointer_index = false;
     if (starts_with(type, "*")) {
         type = trim(type.substr(1));
