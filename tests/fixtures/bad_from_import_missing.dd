@@ -1,0 +1,5 @@
+from bad_from_import_helper import missing
+
+
+def main() -> i32:
+    return missing()

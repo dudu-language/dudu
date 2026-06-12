@@ -384,6 +384,7 @@ expect_fail bad_enum_value_name --check "enum values must be snake_case: BadValu
 expect_fail bad_return --emit-cpp "return type mismatch: expected i32, got bool"
 expect_fail bad_unknown_identifier --emit-cpp "unknown identifier: missing_value"
 expect_fail bad_unknown_function --emit-cpp "unknown function: missing"
+expect_fail bad_from_import_missing --emit-cpp "module 'bad_from_import_helper' has no symbol 'missing'"
 expect_fail bad_unknown_type --emit-cpp "unknown local type: MissingType"
 expect_fail bad_tuple_destructure --emit-cpp "tuple destructuring count mismatch"
 expect_fail bad_nested_field --emit-cpp "unknown field: outer.inner.missing"

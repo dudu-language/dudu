@@ -4,6 +4,7 @@
 #include "dudu/source.hpp"
 
 #include <fstream>
+#include <map>
 #include <set>
 
 namespace dudu {
@@ -47,11 +48,30 @@ void append_module(ModuleAst& target, ModuleAst source) {
                                  source.static_asserts.end());
 }
 
+bool has_module_symbol(const ModuleAst& module, const std::string& name) {
+    for (const TypeAliasDecl& alias : module.aliases)
+        if (alias.name == name)
+            return true;
+    for (const EnumDecl& en : module.enums)
+        if (en.name == name)
+            return true;
+    for (const ClassDecl& klass : module.classes)
+        if (klass.name == name)
+            return true;
+    for (const FunctionDecl& fn : module.functions)
+        if (fn.name == name)
+            return true;
+    for (const ConstDecl& constant : module.constants)
+        if (constant.name == name)
+            return true;
+    return false;
+}
+
 ModuleAst load_one(const std::filesystem::path& path, std::set<std::filesystem::path>& loading,
-                   std::set<std::filesystem::path>& loaded) {
+                   std::map<std::filesystem::path, ModuleAst>& loaded) {
     const std::filesystem::path canonical = std::filesystem::weakly_canonical(path);
     if (loaded.contains(canonical)) {
-        return {};
+        return loaded.at(canonical);
     }
     if (loading.contains(canonical)) {
         throw CompileError({.file = path, .line = 1, .column = 1}, "cyclic module import");
@@ -60,18 +80,30 @@ ModuleAst load_one(const std::filesystem::path& path, std::set<std::filesystem::
 
     ModuleAst parsed = parse_source(read_text_file(path), path);
     ModuleAst merged;
+    std::set<std::filesystem::path> appended_dependencies;
     for (const ImportDecl& import : parsed.imports) {
         if (import.kind != ImportKind::Module && import.kind != ImportKind::From) {
             continue;
         }
         const std::filesystem::path dependency =
             module_path_to_file(path.parent_path(), import.module_path);
-        append_module(merged, load_one(dependency, loading, loaded));
+        const std::filesystem::path canonical_dependency =
+            std::filesystem::weakly_canonical(dependency);
+        ModuleAst dependency_module = load_one(dependency, loading, loaded);
+        if (import.kind == ImportKind::From &&
+            !has_module_symbol(dependency_module, import.imported_name)) {
+            throw CompileError(import.location, "module '" + import.module_path +
+                                                    "' has no symbol '" + import.imported_name +
+                                                    "'");
+        }
+        if (appended_dependencies.insert(canonical_dependency).second) {
+            append_module(merged, std::move(dependency_module));
+        }
     }
     append_module(merged, std::move(parsed));
 
     loading.erase(canonical);
-    loaded.insert(canonical);
+    loaded[canonical] = merged;
     return merged;
 }
 
@@ -79,7 +111,7 @@ ModuleAst load_one(const std::filesystem::path& path, std::set<std::filesystem::
 
 ModuleAst load_source_tree(const std::filesystem::path& entry) {
     std::set<std::filesystem::path> loading;
-    std::set<std::filesystem::path> loaded;
+    std::map<std::filesystem::path, ModuleAst> loaded;
     return load_one(entry, loading, loaded);
 }
 
