@@ -120,6 +120,7 @@ grep -q "#define DUDU_WORKGROUP_SIZE" "$repo_root/build/shader_compute.cpp"
 grep -q "DUDU_SHADER_COMPUTE DUDU_WORKGROUP_SIZE(8, 8, 1) void blur_x" \
     "$repo_root/build/shader_compute.cpp"
 "$repo_root/build/duc" emit "$repo_root/examples/web_server.dd" -o "$repo_root/build/web_server.cpp"; grep -Fq "app.Get(\"/todos" "$repo_root/build/web_server.cpp"; grep -Fq "[&](auto&& req, auto&& res)" "$repo_root/build/web_server.cpp"
+"$repo_root/build/duc" emit "$repo_root/tests/fixtures/sqlite_crud.dd" -o "$repo_root/build/sqlite_crud.cpp"; grep -Fq '#include "sqlite_wrap.h"' "$repo_root/build/sqlite_crud.cpp"; grep -Fq "dudu_sqlite_prepare" "$repo_root/build/sqlite_crud.cpp"; grep -Fq "dudu::Result<Todo, DbError> fetch_todo" "$repo_root/build/sqlite_crud.cpp"
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/lambda_callback.dd" -o "$repo_root/build/function_pointer.cpp"
 grep -Fq "std::add_pointer_t<int32_t(int32_t)> callback" \
     "$repo_root/build/function_pointer.cpp"

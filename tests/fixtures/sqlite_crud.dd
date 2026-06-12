@@ -1,0 +1,57 @@
+import c "sqlite_wrap.h" as sqlite
+
+
+class Todo:
+    id: i64
+    title: str
+    done: bool
+
+
+enum DbError:
+    open_failed
+    query_failed
+    not_found
+
+
+def fetch_todo(db: *struct sqlite3, todo_id: i64) -> Result[Todo, DbError]:
+    query: str = "select id, title, done from todos where id = ?"
+    stmt: *struct sqlite3_stmt = None
+
+    if sqlite.dudu_sqlite_prepare(db, query.c_str(), &stmt) != sqlite.DUDU_SQLITE_OK:
+        return Err(DbError.query_failed)
+
+    sqlite.dudu_sqlite_bind_i64(stmt, 1, todo_id)
+    if sqlite.dudu_sqlite_step(stmt) != sqlite.DUDU_SQLITE_ROW:
+        sqlite.dudu_sqlite_finalize(stmt)
+        return Err(DbError.not_found)
+
+    todo = Todo(
+        id=sqlite.dudu_sqlite_column_i64(stmt, 0),
+        title=str.from_cstr(sqlite.dudu_sqlite_column_text(stmt, 1)),
+        done=sqlite.dudu_sqlite_column_i32(stmt, 2) != 0,
+    )
+    sqlite.dudu_sqlite_finalize(stmt)
+    return Ok(todo)
+
+
+def main() -> i32:
+    db: *struct sqlite3 = None
+    if sqlite.dudu_sqlite_open_memory(&db) != sqlite.DUDU_SQLITE_OK:
+        return 1
+
+    create_sql: str = "create table todos(id integer primary key, title text, done integer)"
+    insert_sql: str = "insert into todos(id, title, done) values(42, 'ship dudu', 1)"
+    if sqlite.dudu_sqlite_exec(db, create_sql.c_str()) != sqlite.DUDU_SQLITE_OK:
+        sqlite.dudu_sqlite_close(db)
+        return 2
+    if sqlite.dudu_sqlite_exec(db, insert_sql.c_str()) != sqlite.DUDU_SQLITE_OK:
+        sqlite.dudu_sqlite_close(db)
+        return 3
+
+    result = fetch_todo(db, 42)
+    sqlite.dudu_sqlite_close(db)
+    if not result.ok:
+        return 4
+    if result.value.title == "ship dudu" and result.value.done:
+        return i32(result.value.id)
+    return 5

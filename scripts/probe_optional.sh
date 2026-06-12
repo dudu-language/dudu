@@ -38,5 +38,28 @@ probe_opencv() {
     echo "ok opencv4"
 }
 
+probe_sqlite() {
+    if ! pkg-config --exists sqlite3; then
+        echo "skip sqlite3: pkg-config package not found"
+        return
+    fi
+
+    local cpp="$repo_root/build/probe_sqlite_crud.cpp"
+    local bin="$repo_root/build/probe_sqlite_crud"
+    "$repo_root/build/duc" emit "$repo_root/tests/fixtures/sqlite_crud.dd" -o "$cpp"
+    "${CXX:-c++}" -std=c++20 -I"$repo_root/tests/fixtures" "$cpp" \
+        $(pkg-config --cflags --libs sqlite3) -o "$bin"
+    set +e
+    "$bin"
+    local status=$?
+    set -e
+    if [[ "$status" -ne 42 ]]; then
+        echo "sqlite probe returned $status, expected 42" >&2
+        exit 1
+    fi
+    echo "ok sqlite3"
+}
+
 probe_glm
 probe_opencv
+probe_sqlite
