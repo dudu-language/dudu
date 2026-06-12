@@ -181,6 +181,11 @@ Symbols collect_symbols(const ModuleAst& module) {
 }
 
 void check_declarations(const ModuleAst& module, const Symbols& symbols) {
+    for (const TypeAliasDecl& alias : module.aliases) {
+        if (!known_type(symbols, alias.type)) {
+            fail(alias.location, "unknown type alias target: " + alias.type);
+        }
+    }
     for (const ClassDecl& klass : module.classes) {
         std::set<std::string> fields;
         for (const FieldDecl& field : klass.fields) {

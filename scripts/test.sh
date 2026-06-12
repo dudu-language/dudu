@@ -278,6 +278,7 @@ expect_fail() {
 }
 
 expect_fail bad_duplicate --check "duplicate declaration: Vec"
+expect_fail bad_type_alias --check "unknown type alias target: MissingThing"
 expect_fail bad_return --emit-cpp "return type mismatch: expected i32, got bool"
 expect_fail bad_unknown_type --emit-cpp "unknown local type: MissingType"
 expect_fail bad_tuple_destructure --emit-cpp "tuple destructuring count mismatch"
