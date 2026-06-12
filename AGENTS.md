@@ -49,6 +49,9 @@
 - Preserve documented language behavior unless the task is to change it.
 - Do not perform broad style rewrites unless requested.
 - When splitting files, keep the resulting layout obvious and boring.
+- Commit frequently at reasonable green checkpoints.
+- Keep commits scoped to one feature, diagnostic, doc update, or test slice.
+- Run the relevant formatter and tests before committing.
 
 ## When in Doubt
 
