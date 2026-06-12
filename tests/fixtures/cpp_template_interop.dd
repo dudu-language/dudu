@@ -1,0 +1,10 @@
+import cpp "memory" as std
+
+
+class Node:
+    value: i32
+
+
+def main() -> i32:
+    node: std.unique_ptr[Node] = std.make_unique[Node]()
+    return 42

@@ -61,6 +61,7 @@ compile_and_expect compile_time_basic 64
 compile_and_expect tuple_return 43
 compile_and_expect allocation 17
 compile_and_expect containers 42
+compile_and_expect cpp_template_interop 42
 
 direct_bin="$repo_root/build/dudu_build_simple"
 "$repo_root/build/dudu" build "$repo_root/tests/fixtures/simple_program.dd" -o "$direct_bin"

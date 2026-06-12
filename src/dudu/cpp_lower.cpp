@@ -1,10 +1,17 @@
 #include "dudu/cpp_lower.hpp"
 
+#include <algorithm>
 #include <cctype>
 #include <map>
 #include <sstream>
 
 namespace dudu {
+
+bool is_decimal_number(std::string_view text) {
+    return !text.empty() && std::all_of(text.begin(), text.end(), [](char c) {
+        return std::isdigit(static_cast<unsigned char>(c)) != 0;
+    });
+}
 
 std::string replace_dots(std::string text) {
     size_t pos = 0;
@@ -95,7 +102,17 @@ std::string lower_template_type(std::string_view name, const std::string& args) 
     if (name == "volatile") {
         return "volatile " + lower_cpp_type(args);
     }
-    return replace_dots(std::string(name)) + "<" + replace_dots(args) + ">";
+    std::ostringstream out;
+    out << replace_dots(std::string(name)) << "<";
+    const std::vector<std::string> parts = split_top_level_args(args);
+    for (size_t i = 0; i < parts.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << lower_cpp_type(parts[i]);
+    }
+    out << ">";
+    return out.str();
 }
 
 std::string lower_function_type(const std::string& type) {
@@ -160,9 +177,9 @@ std::string lower_cpp_type(const std::string& raw_type) {
     if (open != std::string::npos && ends_with(type, "]")) {
         const std::string name = type.substr(0, open);
         const std::string args = type.substr(open + 1, type.size() - open - 2);
-        if (name != "list" && name != "dict" && name != "set" && name != "Option" &&
-            name != "Result" && name != "tuple" && name != "const" && name != "atomic" &&
-            name != "volatile" && args.find(',') == std::string::npos) {
+        if (is_decimal_number(args) && name != "list" && name != "dict" && name != "set" &&
+            name != "Option" && name != "Result" && name != "tuple" && name != "const" &&
+            name != "atomic" && name != "volatile") {
             return lower_cpp_type(name) + "[" + args + "]";
         }
         return lower_template_type(name, args);
@@ -251,12 +268,43 @@ std::string lower_template_value_call(std::string expr, std::string_view name) {
     return expr;
 }
 
+std::string lower_dotted_template_call(std::string expr) {
+    size_t open = expr.find('[');
+    while (open != std::string::npos) {
+        const size_t close = expr.find(']', open + 1);
+        if (close == std::string::npos || close + 2 > expr.size() ||
+            expr.substr(close + 1, 2) != "()") {
+            open = expr.find('[', open + 1);
+            continue;
+        }
+        size_t name_start = open;
+        while (name_start > 0) {
+            const char c = expr[name_start - 1];
+            if (std::isalnum(static_cast<unsigned char>(c)) == 0 && c != '_' && c != '.') {
+                break;
+            }
+            --name_start;
+        }
+        const std::string name = expr.substr(name_start, open - name_start);
+        if (name.find('.') == std::string::npos) {
+            open = expr.find('[', open + 1);
+            continue;
+        }
+        const std::string arg = expr.substr(open + 1, close - open - 1);
+        const std::string replacement = replace_dots(name) + "<" + lower_cpp_type(arg) + ">()";
+        expr.replace(name_start, close + 3 - name_start, replacement);
+        open = expr.find('[', name_start + replacement.size());
+    }
+    return expr;
+}
+
 std::string lower_cpp_expr(std::string expr) {
     expr = lower_template_alloc_call(std::move(expr), "new");
     expr = lower_template_alloc_call(std::move(expr), "malloc");
     expr = lower_template_value_call(std::move(expr), "list");
     expr = lower_template_value_call(std::move(expr), "dict");
     expr = lower_template_value_call(std::move(expr), "set");
+    expr = lower_dotted_template_call(std::move(expr));
     expr = replace_word(std::move(expr), "True", "true");
     expr = replace_word(std::move(expr), "False", "false");
     expr = replace_word(std::move(expr), "None", "nullptr");
