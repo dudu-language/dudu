@@ -1,0 +1,4 @@
+def bad() -> i32:
+    LIMIT: i32 = 3
+    LIMIT = 4
+    return LIMIT

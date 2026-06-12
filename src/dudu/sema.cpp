@@ -217,6 +217,7 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
 struct FunctionScope {
     const Symbols& symbols;
     std::map<std::string, std::string> locals;
+    std::set<std::string> constants;
 };
 
 std::string infer_expr(const FunctionScope& scope, std::string expr) {
@@ -296,6 +297,10 @@ std::string infer_expr(const FunctionScope& scope, std::string expr) {
     return {};
 }
 
+bool is_all_caps_name(const std::string& name) {
+    return !name.empty() && std::isupper(static_cast<unsigned char>(name.front())) != 0;
+}
+
 std::vector<std::string> tuple_types(std::string type) {
     type = trim(std::move(type));
     if (!starts_with(type, "tuple[") || type.back() != ']') {
@@ -328,6 +333,9 @@ std::string assign_target_type(const FunctionScope& scope, const RawStmt& stmt,
         return trim(type.substr(1));
     }
     if (lhs.find('.') == std::string::npos) {
+        if (scope.constants.contains(lhs)) {
+            fail(stmt.location, "cannot assign to constant: " + lhs);
+        }
         const auto local = scope.locals.find(lhs);
         if (local == scope.locals.end()) {
             fail(stmt.location, "assignment to unknown local: " + lhs);
@@ -409,6 +417,9 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
             check_type_match(scope, stmt, type, text.substr(assign + 1));
         }
         scope.locals[name] = type;
+        if (is_all_caps_name(name)) {
+            scope.constants.insert(name);
+        }
         return;
     }
     if (assign != std::string::npos && text.find("==") == std::string::npos) {
@@ -429,6 +440,9 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
             !scope.locals.contains(lhs)) {
             const std::string inferred = infer_expr(scope, text.substr(assign + 1));
             scope.locals[lhs] = inferred.empty() ? "auto" : inferred;
+            if (is_all_caps_name(lhs)) {
+                scope.constants.insert(lhs);
+            }
             return;
         }
         const std::string target_type = assign_target_type(scope, stmt, lhs);
@@ -441,7 +455,7 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
 void check_bodies(const ModuleAst& module, const Symbols& symbols) {
     for (const ClassDecl& klass : module.classes) {
         for (const FunctionDecl& method : klass.methods) {
-            FunctionScope scope{symbols, {}};
+            FunctionScope scope{symbols, {}, {}};
             for (const ParamDecl& param : method.params) {
                 scope.locals[param.name] = param.type;
             }
@@ -454,7 +468,7 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols) {
         }
     }
     for (const FunctionDecl& fn : module.functions) {
-        FunctionScope scope{symbols, {}};
+        FunctionScope scope{symbols, {}, {}};
         for (const ParamDecl& param : fn.params) {
             scope.locals[param.name] = param.type;
         }
