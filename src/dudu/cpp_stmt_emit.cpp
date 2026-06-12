@@ -119,6 +119,62 @@ std::string strip_trailing_colon(std::string text) {
     return trim_copy(std::move(text));
 }
 
+bool is_identifier_char(char c) {
+    return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_';
+}
+
+bool is_build_only_condition(const std::string& text) {
+    char quote = '\0';
+    bool escaped = false;
+    for (size_t i = 0; i < text.size();) {
+        const char c = text[i];
+        if (quote != '\0') {
+            if (escaped) {
+                escaped = false;
+            } else if (c == '\\') {
+                escaped = true;
+            } else if (c == quote) {
+                quote = '\0';
+            }
+            ++i;
+            continue;
+        }
+        if (c == '"' || c == '\'') {
+            quote = c;
+            ++i;
+            continue;
+        }
+        if (!is_identifier_char(c)) {
+            ++i;
+            continue;
+        }
+        const size_t start = i;
+        while (i < text.size() && is_identifier_char(text[i])) {
+            ++i;
+        }
+        const std::string word = text.substr(start, i - start);
+        if (word == "True" || word == "False" || word == "and" || word == "or" || word == "not") {
+            continue;
+        }
+        if (word == "build" && i < text.size() && text[i] == '.') {
+            ++i;
+            if (i >= text.size() || !is_identifier_char(text[i])) {
+                return false;
+            }
+            while (i < text.size() && is_identifier_char(text[i])) {
+                ++i;
+            }
+            continue;
+        }
+        return false;
+    }
+    return text.find("build.") != std::string::npos;
+}
+
+std::string if_keyword_for_condition(const std::string& condition) {
+    return is_build_only_condition(condition) ? "if constexpr" : "if";
+}
+
 std::string normalize_spaced_compound(std::string text) {
     for (const std::pair<std::string_view, std::string_view> op :
          {std::pair{" + =", " +="}, std::pair{" - =", " -="}, std::pair{" * =", " *="},
@@ -259,15 +315,17 @@ void emit_raw_statement(std::ostringstream& out, const RawStmt& stmt, int depth,
                         std::map<std::string, std::string>& locals) {
     const std::string text = trim_copy(stmt.text);
     if (starts_with(text, "if ")) {
-        out << indent(depth) << "if ("
-            << lower_expr(strip_trailing_colon(text.substr(3)), aliases, locals) << ") {\n";
+        const std::string condition = strip_trailing_colon(text.substr(3));
+        out << indent(depth) << if_keyword_for_condition(condition) << " ("
+            << lower_expr(condition, aliases, locals) << ") {\n";
         emit_raw_block(out, stmt.children, depth + 1, aliases, locals);
         out << indent(depth) << "}\n";
         return;
     }
     if (starts_with(text, "elif ")) {
-        out << indent(depth) << "else if ("
-            << lower_expr(strip_trailing_colon(text.substr(5)), aliases, locals) << ") {\n";
+        const std::string condition = strip_trailing_colon(text.substr(5));
+        out << indent(depth) << "else " << if_keyword_for_condition(condition) << " ("
+            << lower_expr(condition, aliases, locals) << ") {\n";
         emit_raw_block(out, stmt.children, depth + 1, aliases, locals);
         out << indent(depth) << "}\n";
         return;

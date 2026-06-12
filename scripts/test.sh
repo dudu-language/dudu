@@ -89,6 +89,8 @@ grep -q "err = cuda::cudaMalloc" "$repo_root/build/cuda_kernel.cpp"
 grep -q "inline constexpr bool DEBUG = true;" "$repo_root/build/package_build.cpp"
 grep -q 'inline constexpr std::string_view RENDER_BACKEND = "raylib";' \
     "$repo_root/build/package_build.cpp"
+grep -q "if constexpr (build::DEBUG && build::RENDER_BACKEND == \"raylib\")" \
+    "$repo_root/build/package_build.cpp"
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/package_build/main.dd" \
     -o "$repo_root/build/package_build_override.cpp" -DDEBUG=false
 grep -q "inline constexpr bool DEBUG = false;" "$repo_root/build/package_build_override.cpp"
