@@ -1,17 +1,10 @@
 #include "dudu/cpp_lower.hpp"
 
-#include <algorithm>
 #include <cctype>
 #include <map>
 #include <sstream>
 
 namespace dudu {
-
-bool is_decimal_number(std::string_view text) {
-    return !text.empty() && std::all_of(text.begin(), text.end(), [](char c) {
-        return std::isdigit(static_cast<unsigned char>(c)) != 0;
-    });
-}
 
 std::string replace_dots(std::string text) {
     size_t pos = 0;
@@ -80,144 +73,7 @@ size_t top_level_equal(const std::string& text) {
     return std::string::npos;
 }
 
-std::string lower_cpp_type(const std::string& raw_type);
 std::string lower_cpp_expr(std::string expr);
-
-std::string lower_template_type(std::string_view name, const std::string& args) {
-    if (name == "list") {
-        return "std::vector<" + lower_cpp_type(args) + ">";
-    }
-    if (name == "dict") {
-        return "std::unordered_map<" + replace_dots(args) + ">";
-    }
-    if (name == "set") {
-        return "std::unordered_set<" + lower_cpp_type(args) + ">";
-    }
-    if (name == "Option") {
-        return "std::optional<" + lower_cpp_type(args) + ">";
-    }
-    if (name == "Result") {
-        std::ostringstream out;
-        out << "dudu::Result<";
-        const std::vector<std::string> parts = split_top_level_args(args);
-        for (size_t i = 0; i < parts.size(); ++i) {
-            if (i > 0) {
-                out << ", ";
-            }
-            out << lower_cpp_type(parts[i]);
-        }
-        out << ">";
-        return out.str();
-    }
-    if (name == "tuple") {
-        std::ostringstream out;
-        out << "std::tuple<";
-        const std::vector<std::string> parts = split_top_level_args(args);
-        for (size_t i = 0; i < parts.size(); ++i) {
-            if (i > 0) {
-                out << ", ";
-            }
-            out << lower_cpp_type(parts[i]);
-        }
-        out << ">";
-        return out.str();
-    }
-    if (name == "const") {
-        return "const " + lower_cpp_type(args);
-    }
-    if (name == "atomic") {
-        return "std::atomic<" + lower_cpp_type(args) + ">";
-    }
-    if (name == "volatile") {
-        return "volatile " + lower_cpp_type(args);
-    }
-    std::ostringstream out;
-    out << replace_dots(std::string(name)) << "<";
-    const std::vector<std::string> parts = split_top_level_args(args);
-    for (size_t i = 0; i < parts.size(); ++i) {
-        if (i > 0) {
-            out << ", ";
-        }
-        out << lower_cpp_type(parts[i]);
-    }
-    out << ">";
-    return out.str();
-}
-
-std::string lower_function_type(const std::string& type) {
-    const size_t open = type.find('(');
-    const size_t close = type.find(')', open);
-    if (open == std::string::npos || close == std::string::npos) {
-        return replace_dots(type);
-    }
-    const std::string args = type.substr(open + 1, close - open - 1);
-    std::string result = "void";
-    const size_t arrow = type.find("->", close);
-    if (arrow != std::string::npos) {
-        result = lower_cpp_type(type.substr(arrow + 2));
-    }
-
-    std::ostringstream out;
-    out << "std::function<" << result << '(';
-    const std::vector<std::string> parts = split_top_level_args(args);
-    for (size_t i = 0; i < parts.size(); ++i) {
-        if (i > 0) {
-            out << ", ";
-        }
-        out << lower_cpp_type(parts[i]);
-    }
-    out << ")>";
-    return out.str();
-}
-
-std::string lower_cpp_type(const std::string& raw_type) {
-    std::string type = trim_copy(raw_type);
-    static const std::map<std::string, std::string> builtins = {
-        {"bool", "bool"},       {"i8", "int8_t"},    {"i16", "int16_t"},
-        {"i32", "int32_t"},     {"i64", "int64_t"},  {"u8", "uint8_t"},
-        {"u16", "uint16_t"},    {"u32", "uint32_t"}, {"u64", "uint64_t"},
-        {"isize", "intptr_t"},  {"usize", "size_t"}, {"f32", "float"},
-        {"f64", "double"},      {"void", "void"},    {"str", "std::string"},
-        {"cstr", "const char*"}};
-
-    if (type.empty()) {
-        return "void";
-    }
-    if (type == "None") {
-        return "std::monostate";
-    }
-    if (starts_with(type, "fn(")) {
-        return lower_function_type(type);
-    }
-    if (const auto found = builtins.find(type); found != builtins.end()) {
-        return found->second;
-    }
-    if (starts_with(type, "*const[") && ends_with(type, "]")) {
-        return lower_cpp_type(type.substr(7, type.size() - 8)) + " const*";
-    }
-    if (starts_with(type, "&const[") && ends_with(type, "]")) {
-        return lower_cpp_type(type.substr(7, type.size() - 8)) + " const&";
-    }
-    if (starts_with(type, "*")) {
-        return lower_cpp_type(type.substr(1)) + "*";
-    }
-    if (starts_with(type, "&")) {
-        return lower_cpp_type(type.substr(1)) + "&";
-    }
-
-    const size_t open = type.find('[');
-    if (open != std::string::npos && ends_with(type, "]")) {
-        const std::string name = type.substr(0, open);
-        const std::string args = type.substr(open + 1, type.size() - open - 2);
-        if (is_decimal_number(args) && name != "list" && name != "dict" && name != "set" &&
-            name != "Option" && name != "Result" && name != "tuple" && name != "const" &&
-            name != "atomic" && name != "volatile") {
-            return lower_cpp_type(name) + "[" + args + "]";
-        }
-        return lower_template_type(name, args);
-    }
-    return replace_dots(type);
-}
 
 std::string replace_word(std::string text, std::string_view from, std::string_view to) {
     size_t pos = text.find(from);

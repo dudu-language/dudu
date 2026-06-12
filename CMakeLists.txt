@@ -9,6 +9,7 @@ add_library(dudu_frontend
     src/dudu/ast.cpp
     src/dudu/cpp_emit.cpp
     src/dudu/cpp_lower.cpp
+    src/dudu/cpp_type.cpp
     src/dudu/format.cpp
     src/dudu/lexer.cpp
     src/dudu/module_loader.cpp
