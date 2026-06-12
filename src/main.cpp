@@ -261,7 +261,7 @@ dudu::ModuleAst checked_module(const Options& options, const std::string& source
 
 void check_source_file(Options options, const std::filesystem::path& path) {
     options.input = path;
-    (void)checked_module(options, read_text_file(path), false);
+    (void)checked_module(options, read_text_file(path), true);
 }
 
 bool check_source_path(const Options& options) {
