@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <optional>
 #include <stdexcept>
 
 namespace dudu {
@@ -79,6 +80,14 @@ void write_text_output(const std::filesystem::path& path, const std::string& tex
     out << text;
 }
 
+std::string read_text_file(const std::filesystem::path& path) {
+    std::ifstream in(path);
+    if (!in) {
+        return {};
+    }
+    return {std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()};
+}
+
 void write_compile_commands(const std::filesystem::path& output,
                             const std::filesystem::path& cpp_path, const std::string& command) {
     const std::filesystem::path dir = output.parent_path().empty() ? "." : output.parent_path();
@@ -116,6 +125,70 @@ std::string append_command_args(std::string command, const std::vector<std::stri
         command += " " + shell_quote_arg(arg);
     }
     return command;
+}
+
+int run_shell_command(const std::string& command, const std::filesystem::path& log_path) {
+    return std::system((command + " > " + shell_quote_path(log_path) + " 2>&1").c_str());
+}
+
+std::optional<int> first_generated_error_line(const std::string& output,
+                                              const std::filesystem::path& cpp_path) {
+    std::istringstream lines(output);
+    std::string line;
+    const std::string path = cpp_path.string() + ":";
+    while (std::getline(lines, line)) {
+        size_t pos = line.find(path);
+        if (pos == std::string::npos) {
+            continue;
+        }
+        pos += path.size();
+        if (pos >= line.size() || std::isdigit(static_cast<unsigned char>(line[pos])) == 0) {
+            continue;
+        }
+        int value = 0;
+        while (pos < line.size() && std::isdigit(static_cast<unsigned char>(line[pos])) != 0) {
+            value = value * 10 + line[pos] - '0';
+            ++pos;
+        }
+        return value;
+    }
+    return std::nullopt;
+}
+
+std::string dudu_source_for_generated_line(const std::filesystem::path& cpp_path, int line_number) {
+    std::ifstream in(cpp_path);
+    if (!in) {
+        return {};
+    }
+    std::string line;
+    std::string last_source;
+    for (int current = 1; current <= line_number && std::getline(in, line); ++current) {
+        const std::string marker = "// dudu: ";
+        const size_t pos = line.find(marker);
+        if (pos != std::string::npos) {
+            last_source = line.substr(pos + marker.size());
+        }
+    }
+    trim_ascii_whitespace(last_source);
+    return last_source;
+}
+
+std::string native_failure_message(std::string label, const std::filesystem::path& source,
+                                   const std::string& command,
+                                   const std::filesystem::path& log_path) {
+    const std::string output = read_text_file(log_path);
+    std::string message = std::move(label) + " failed\nsource: " + source.string();
+    if (const std::optional<int> line = first_generated_error_line(output, source)) {
+        const std::string dudu_source = dudu_source_for_generated_line(source, *line);
+        if (!dudu_source.empty()) {
+            message += "\ndudu source: " + dudu_source;
+        }
+    }
+    message += "\ncommand: " + command;
+    if (!output.empty()) {
+        message += "\ncompiler output:\n" + output;
+    }
+    return message;
 }
 
 std::filesystem::path build_executable(const NativeBuildOptions& options, const std::string& cpp) {
@@ -165,8 +238,9 @@ std::filesystem::path build_executable(const NativeBuildOptions& options, const 
     if (options.verbose) {
         std::cerr << command << '\n';
     }
-    if (std::system(command.c_str()) != 0) {
-        fail("C++ build failed\nsource: " + cpp_path.string() + "\ncommand: " + command);
+    const std::filesystem::path compile_log = output.string() + ".compile.log";
+    if (run_shell_command(command, compile_log) != 0) {
+        fail(native_failure_message("C++ build", cpp_path, command, compile_log));
     }
     if (options.config.target_kind == "library") {
         const char* env_ar = std::getenv("AR");
@@ -176,9 +250,10 @@ std::filesystem::path build_executable(const NativeBuildOptions& options, const 
         if (options.verbose) {
             std::cerr << archive_command << '\n';
         }
-        if (std::system(archive_command.c_str()) != 0) {
-            fail("archive build failed\nsource: " + object_path.string() +
-                 "\ncommand: " + archive_command);
+        const std::filesystem::path archive_log = output.string() + ".archive.log";
+        if (run_shell_command(archive_command, archive_log) != 0) {
+            fail(
+                native_failure_message("archive build", object_path, archive_command, archive_log));
         }
     }
     return output;
