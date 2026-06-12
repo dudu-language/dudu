@@ -1,2 +1,23 @@
+ANSWER: i32 = 33
+
+
+enum Status:
+    ok = 0
+    failed = 1
+
+
+class Point:
+    x: i32
+    y: i32
+
+
 def answer() -> i32:
-    return 33
+    return ANSWER
+
+
+def make_point(x: i32, y: i32) -> Point:
+    return Point(x=x, y=y)
+
+
+def point_sum(point: Point) -> i32:
+    return point.x + point.y
