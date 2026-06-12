@@ -72,6 +72,13 @@ printf '#include "cpp_library.hpp"\nint main() { return 0; }\n' >"$repo_root/bui
     -o "$repo_root/build/duc_emit_simple.cpp"
 "$repo_root/build/duc" fmt "$repo_root/tests/fixtures/simple_program.dd" \
     -o "$repo_root/build/duc_fmt_simple.dd"
+"$repo_root/build/duc" fmt "$repo_root/tests/fixtures/simple_program.dd" --check
+if "$repo_root/build/duc" fmt "$repo_root/tests/fixtures/unformatted.dd" --check \
+    2>"$repo_root/build/duc_fmt_check.err"; then
+    echo "unformatted fixture unexpectedly passed format check" >&2
+    exit 1
+fi
+grep -q "would reformat" "$repo_root/build/duc_fmt_check.err"
 "$repo_root/build/duc" run "$repo_root/tests/fixtures/run_zero.dd" \
     -o "$repo_root/build/duc_run_zero"
 "$repo_root/build/dudu" "$repo_root/examples/compile_time.dd" --emit-cpp \
