@@ -362,6 +362,15 @@ std::string class_opening(const ClassDecl& klass) {
     return "struct " + klass.name;
 }
 
+bool function_has_decorator(const FunctionDecl& fn, std::string_view name) {
+    for (const Decorator& decorator : fn.decorators) {
+        if (trim_copy(decorator.text) == name) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void emit_classes(std::ostringstream& out, const ModuleAst& module) {
     for (const size_t index : class_emit_order(module.classes)) {
         const ClassDecl& klass = module.classes[index];
@@ -393,6 +402,12 @@ void emit_static_asserts(std::ostringstream& out, const ModuleAst& module) {
 }
 
 void emit_function_signature(std::ostringstream& out, const FunctionDecl& fn) {
+    if (function_has_decorator(fn, "inline")) {
+        out << "inline ";
+    }
+    if (function_has_decorator(fn, "constexpr")) {
+        out << "constexpr ";
+    }
     out << lower_cpp_type(fn.return_type) << ' ' << fn.name << '(';
     for (size_t i = 0; i < fn.params.size(); ++i) {
         if (i > 0) {
@@ -415,12 +430,12 @@ std::string emit_cpp_header(const ModuleAst& module) {
     emit_enums(out, module);
     emit_classes(out, module);
     emit_constants(out, module);
-    emit_static_asserts(out, module);
 
     for (const FunctionDecl& fn : module.functions) {
         emit_function_signature(out, fn);
         out << ";\n";
     }
+    emit_static_asserts(out, module);
     return out.str();
 }
 
@@ -433,7 +448,6 @@ std::string emit_cpp_source(const ModuleAst& module) {
     emit_enums(out, module);
     emit_classes(out, module);
     emit_constants(out, module);
-    emit_static_asserts(out, module);
 
     for (const FunctionDecl& fn : module.functions) {
         emit_function_signature(out, fn);
@@ -441,6 +455,7 @@ std::string emit_cpp_source(const ModuleAst& module) {
         emit_raw_block(out, fn.body, 1);
         out << "}\n\n";
     }
+    emit_static_asserts(out, module);
     return out.str();
 }
 
