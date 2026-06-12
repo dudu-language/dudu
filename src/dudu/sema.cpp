@@ -71,6 +71,25 @@ bool known_type(const Symbols& symbols, const std::string& type) {
            base == "storage" || base == "shared" || base == "device";
 }
 
+std::vector<std::string> split_top_level(std::string text) {
+    std::vector<std::string> out;
+    int depth = 0;
+    size_t start = 0;
+    for (size_t i = 0; i < text.size(); ++i) {
+        const char c = text[i];
+        if (c == '(' || c == '[') {
+            ++depth;
+        } else if (c == ')' || c == ']') {
+            --depth;
+        } else if (c == ',' && depth == 0) {
+            out.push_back(trim(text.substr(start, i - start)));
+            start = i + 1;
+        }
+    }
+    out.push_back(trim(text.substr(start)));
+    return out;
+}
+
 Symbols collect_symbols(const ModuleAst& module) {
     Symbols symbols;
     std::map<std::string, SourceLocation> names;
@@ -147,6 +166,19 @@ std::string infer_expr(const FunctionScope& scope, std::string expr) {
     if (std::isdigit(static_cast<unsigned char>(expr.front())) != 0) {
         return expr.find('.') == std::string::npos ? "i32" : "f64";
     }
+    const std::vector<std::string> tuple_parts = split_top_level(expr);
+    if (tuple_parts.size() > 1) {
+        std::ostringstream out;
+        out << "tuple[";
+        for (size_t i = 0; i < tuple_parts.size(); ++i) {
+            if (i > 0) {
+                out << ", ";
+            }
+            out << infer_expr(scope, tuple_parts[i]);
+        }
+        out << "]";
+        return out.str();
+    }
     const size_t call = expr.find('(');
     if (call != std::string::npos && expr.back() == ')') {
         const std::string callee = trim(expr.substr(0, call));
@@ -183,6 +215,14 @@ std::string infer_expr(const FunctionScope& scope, std::string expr) {
         return local->second;
     }
     return {};
+}
+
+std::vector<std::string> tuple_types(std::string type) {
+    type = trim(std::move(type));
+    if (!starts_with(type, "tuple[") || type.back() != ']') {
+        return {};
+    }
+    return split_top_level(type.substr(6, type.size() - 7));
 }
 
 void check_assign_target(const FunctionScope& scope, const RawStmt& stmt, const std::string& lhs) {
@@ -258,6 +298,18 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
     }
     if (assign != std::string::npos && text.find("==") == std::string::npos) {
         const std::string lhs = trim(text.substr(0, assign));
+        if (lhs.find(',') != std::string::npos) {
+            const std::vector<std::string> names = split_top_level(lhs);
+            const std::vector<std::string> types =
+                tuple_types(infer_expr(scope, text.substr(assign + 1)));
+            if (names.size() != types.size()) {
+                fail(stmt.location, "tuple destructuring count mismatch");
+            }
+            for (size_t i = 0; i < names.size(); ++i) {
+                scope.locals[names[i]] = types[i];
+            }
+            return;
+        }
         if (lhs.find('.') == std::string::npos && !scope.locals.contains(lhs)) {
             const std::string inferred = infer_expr(scope, text.substr(assign + 1));
             if (inferred.empty()) {

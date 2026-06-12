@@ -1,0 +1,7 @@
+def divmod_i32(value: i32, divisor: i32) -> tuple[i32, i32]:
+    return value / divisor, value % divisor
+
+
+def main() -> i32:
+    q, r = divmod_i32(43, 10)
+    return q * 10 + r

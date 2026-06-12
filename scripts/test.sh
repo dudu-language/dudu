@@ -56,6 +56,7 @@ compile_and_expect() {
 compile_and_expect simple_program 42
 compile_and_expect control_flow 55
 compile_and_expect compile_time_basic 64
+compile_and_expect tuple_return 43
 
 expect_fail() {
     local name="$1"

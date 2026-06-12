@@ -8,7 +8,6 @@
 
 namespace dudu {
 namespace {
-
 std::string replace_dots(std::string text) {
     size_t pos = 0;
     while ((pos = text.find('.', pos)) != std::string::npos) {
@@ -60,7 +59,17 @@ std::string lower_template_type(std::string_view name, const std::string& args) 
         return "dudu::Result<" + replace_dots(args) + ">";
     }
     if (name == "tuple") {
-        return "dudu::Tuple<" + replace_dots(args) + ">";
+        std::ostringstream out;
+        out << "std::tuple<";
+        const std::vector<std::string> parts = split_top_level_args(args);
+        for (size_t i = 0; i < parts.size(); ++i) {
+            if (i > 0) {
+                out << ", ";
+            }
+            out << lower_type(parts[i]);
+        }
+        out << ">";
+        return out.str();
     }
     if (name == "const") {
         return "const " + lower_type(args);
@@ -215,7 +224,11 @@ void emit_simple_statement(std::ostringstream& out, const RawStmt& stmt, int dep
         const std::string value = trim_copy(text.substr(6));
         out << indent(depth) << "return";
         if (!value.empty()) {
-            out << ' ' << lower_expr(value);
+            if (split_top_level_args(value).size() > 1) {
+                out << " {" << lower_expr(value) << '}';
+            } else {
+                out << ' ' << lower_expr(value);
+            }
         }
         out << ";\n";
         return;
@@ -236,6 +249,11 @@ void emit_simple_statement(std::ostringstream& out, const RawStmt& stmt, int dep
         text.find("<=") == std::string::npos && text.find(">=") == std::string::npos &&
         text.find("!=") == std::string::npos) {
         const std::string lhs = trim_copy(text.substr(0, assign));
+        if (lhs.find(',') != std::string::npos) {
+            out << indent(depth) << "auto [" << lhs
+                << "] = " << lower_expr(trim_copy(text.substr(assign + 1))) << ";\n";
+            return;
+        }
         if (!lhs.empty() && lhs.find_first_of(" .[]+-*/%<>") == std::string::npos) {
             out << indent(depth) << "auto " << lhs << " = "
                 << lower_expr(trim_copy(text.substr(assign + 1))) << ";\n";
@@ -244,7 +262,6 @@ void emit_simple_statement(std::ostringstream& out, const RawStmt& stmt, int dep
     }
     out << indent(depth) << lower_expr(text) << ";\n";
 }
-
 void emit_raw_statement(std::ostringstream& out, const RawStmt& stmt, int depth) {
     const std::string text = trim_copy(stmt.text);
     if (starts_with(text, "if ")) {
@@ -312,7 +329,6 @@ void emit_raw_block(std::ostringstream& out, const std::vector<RawStmt>& body, i
         emit_raw_statement(out, stmt, depth);
     }
 }
-
 std::string include_path(const ImportDecl& import) {
     if (import.module_path.size() >= 2 && import.module_path.front() == '"' &&
         import.module_path.back() == '"') {
@@ -337,7 +353,6 @@ bool contains_type_name(const std::string& type, const std::string& name) {
     }
     return false;
 }
-
 void visit_class(const std::vector<ClassDecl>& classes, size_t index, std::set<size_t>& visiting,
                  std::set<size_t>& emitted, std::vector<size_t>& order) {
     if (emitted.contains(index)) {
@@ -371,15 +386,16 @@ std::vector<size_t> class_emit_order(const std::vector<ClassDecl>& classes) {
     return order;
 }
 void emit_includes(std::ostringstream& out, const ModuleAst& module) {
-    out << "#include <atomic>\n";
-    out << "#include <cstddef>\n";
-    out << "#include <cstdint>\n";
-    out << "#include <functional>\n";
-    out << "#include <optional>\n";
-    out << "#include <string>\n";
-    out << "#include <unordered_map>\n";
-    out << "#include <unordered_set>\n";
-    out << "#include <vector>\n";
+    out << "#include <atomic>\n"
+           "#include <cstddef>\n"
+           "#include <cstdint>\n"
+           "#include <functional>\n"
+           "#include <optional>\n"
+           "#include <string>\n"
+           "#include <tuple>\n"
+           "#include <unordered_map>\n"
+           "#include <unordered_set>\n"
+           "#include <vector>\n";
 
     for (const ImportDecl& import : module.imports) {
         if (import.kind == ImportKind::ForeignC || import.kind == ImportKind::ForeignCpp) {
@@ -396,7 +412,6 @@ void emit_aliases(std::ostringstream& out, const ModuleAst& module) {
         out << '\n';
     }
 }
-
 void emit_enums(std::ostringstream& out, const ModuleAst& module) {
     for (const EnumDecl& en : module.enums) {
         out << "enum class " << en.name;
