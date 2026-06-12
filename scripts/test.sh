@@ -213,6 +213,30 @@ if [[ "$project_pkg_config_status" -ne 42 ]]; then
     echo "project_pkg_config returned $project_pkg_config_status, expected 42" >&2
     exit 1
 fi
+(
+    cd "$repo_root/tests/fixtures/project_library"
+    "$repo_root/build/duc" build -o "$repo_root/build/libproject_library.a" --verbose \
+        2>"$repo_root/build/project_library_verbose.err"
+)
+test -f "$repo_root/build/libproject_library.a"
+ar t "$repo_root/build/libproject_library.a" | grep -q "libproject_library.a.o"
+grep -q -- "-c .*libproject_library.a.cpp" "$repo_root/build/project_library_verbose.err"
+grep -q "ar rcs .*libproject_library.a" "$repo_root/build/project_library_verbose.err"
+(
+    cd "$repo_root/tests/fixtures/project_shared_library"
+    "$repo_root/build/duc" build -o "$repo_root/build/libproject_shared.so" --verbose \
+        2>"$repo_root/build/project_shared_library_verbose.err"
+)
+test -f "$repo_root/build/libproject_shared.so"
+grep -q -- "-fPIC -shared" "$repo_root/build/project_shared_library_verbose.err"
+if (
+    cd "$repo_root/tests/fixtures/project_library"
+    "$repo_root/build/duc" run -o "$repo_root/build/project_library_run"
+) 2>"$repo_root/build/project_library_run.err"; then
+    echo "project_library run unexpectedly passed" >&2
+    exit 1
+fi
+grep -q "cannot run target kind: library" "$repo_root/build/project_library_run.err"
 
 compile_and_expect() {
     local name="$1"

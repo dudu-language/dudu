@@ -122,30 +122,44 @@ std::filesystem::path build_executable(const NativeBuildOptions& options, const 
     const std::filesystem::path output = options.output.empty() ? "a.out" : options.output;
     std::filesystem::create_directories(output.parent_path().empty() ? "." : output.parent_path());
     const std::filesystem::path cpp_path = output.string() + ".cpp";
+    const std::filesystem::path object_path = output.string() + ".o";
     write_text_output(cpp_path, cpp);
 
     const char* env_cxx = std::getenv("CXX");
     const std::string cxx = env_cxx == nullptr ? "c++" : env_cxx;
-    std::string command = cxx + " -std=" + options.config.cpp_std + " " +
-                          shell_quote_path(cpp_path) + " -o " + shell_quote_path(output);
+    std::string common_flags;
     for (const std::string& include_dir : options.config.include_dirs) {
-        command += " " + shell_quote_arg("-I" + include_dir);
+        common_flags += " " + shell_quote_arg("-I" + include_dir);
     }
     for (const std::string& define : options.config.defines) {
-        command += " " + shell_quote_arg("-D" + define);
+        common_flags += " " + shell_quote_arg("-D" + define);
     }
     for (const std::string& lib_dir : options.config.lib_dirs) {
-        command += " " + shell_quote_arg("-L" + lib_dir);
+        common_flags += " " + shell_quote_arg("-L" + lib_dir);
     }
     for (const std::string& flag : options.config.flags) {
-        command += " " + shell_quote_arg(flag);
+        common_flags += " " + shell_quote_arg(flag);
     }
     const std::string package_flags = pkg_config_flags(options.config.pkg_config_packages);
     if (!package_flags.empty()) {
-        command += " " + package_flags;
+        common_flags += " " + package_flags;
     }
-    for (const std::string& lib : options.config.libs) {
-        command += " " + shell_quote_arg(native_lib_flag(lib));
+
+    std::string command;
+    if (options.config.target_kind == "library") {
+        command = cxx + " -std=" + options.config.cpp_std + " -c " + shell_quote_path(cpp_path) +
+                  " -o " + shell_quote_path(object_path) + common_flags;
+    } else {
+        command = cxx + " -std=" + options.config.cpp_std + " ";
+        if (options.config.target_kind == "shared_library") {
+            command += "-fPIC -shared ";
+        }
+        command += shell_quote_path(cpp_path) + " -o " + shell_quote_path(output) + common_flags;
+    }
+    if (options.config.target_kind != "library") {
+        for (const std::string& lib : options.config.libs) {
+            command += " " + shell_quote_arg(native_lib_flag(lib));
+        }
     }
     write_compile_commands(output, cpp_path, command);
     if (options.verbose) {
@@ -153,6 +167,19 @@ std::filesystem::path build_executable(const NativeBuildOptions& options, const 
     }
     if (std::system(command.c_str()) != 0) {
         fail("C++ build failed\nsource: " + cpp_path.string() + "\ncommand: " + command);
+    }
+    if (options.config.target_kind == "library") {
+        const char* env_ar = std::getenv("AR");
+        const std::string ar = env_ar == nullptr ? "ar" : env_ar;
+        const std::string archive_command =
+            ar + " rcs " + shell_quote_path(output) + " " + shell_quote_path(object_path);
+        if (options.verbose) {
+            std::cerr << archive_command << '\n';
+        }
+        if (std::system(archive_command.c_str()) != 0) {
+            fail("archive build failed\nsource: " + object_path.string() +
+                 "\ncommand: " + archive_command);
+        }
     }
     return output;
 }

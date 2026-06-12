@@ -1,0 +1,5 @@
+main = "main.dd"
+
+[target]
+kind = "shared_library"
+mode = "hosted"

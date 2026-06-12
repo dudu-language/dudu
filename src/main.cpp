@@ -310,9 +310,13 @@ int main(int argc, char** argv) {
             return 0;
         }
         if (options.run) {
+            const dudu::ProjectConfig config = config_for_input(options.input);
+            if (config.target_kind != "executable") {
+                fail("cannot run target kind: " + config.target_kind);
+            }
             const std::filesystem::path bin = dudu::build_executable(
                 {.output = options.output.value_or("a.out"),
-                 .config = dudu::parse_project_config(build_config_path(options.input)),
+                 .config = config,
                  .verbose = options.verbose},
                 dudu::emit_cpp_source(checked_module(options, source, true)));
             const std::filesystem::path command = bin.is_relative() && bin.parent_path().empty()
