@@ -95,24 +95,150 @@ bool has_top_level_colon(const std::string& text) {
     return false;
 }
 
+size_t top_level_colon(const std::string& text) {
+    int depth = 0;
+    char quote = '\0';
+    bool escaped = false;
+    for (size_t i = 0; i < text.size(); ++i) {
+        const char c = text[i];
+        if (quote != '\0') {
+            if (escaped) {
+                escaped = false;
+            } else if (c == '\\') {
+                escaped = true;
+            } else if (c == quote) {
+                quote = '\0';
+            }
+            continue;
+        }
+        if (c == '"' || c == '\'') {
+            quote = c;
+            continue;
+        }
+        if (c == '(' || c == '[' || c == '{') {
+            ++depth;
+        } else if (c == ')' || c == ']' || c == '}') {
+            --depth;
+        } else if (c == ':' && depth == 0) {
+            return i;
+        }
+    }
+    return std::string::npos;
+}
+
+std::string simple_literal_type(std::string expr) {
+    expr = trim_copy(std::move(expr));
+    if (expr == "True" || expr == "False") {
+        return "bool";
+    }
+    if (expr == "None") {
+        return "None";
+    }
+    if (starts_with(expr, "[") && ends_with(expr, "]")) {
+        return "list";
+    }
+    if (starts_with(expr, "{") && ends_with(expr, "}")) {
+        const std::vector<std::string> entries =
+            split_top_level_args(expr.substr(1, expr.size() - 2));
+        for (const std::string& entry : entries) {
+            if (!entry.empty() && has_top_level_colon(entry)) {
+                return "dict";
+            }
+        }
+        return "set";
+    }
+    if (expr.size() >= 2 && ((expr.front() == '"' && expr.back() == '"') ||
+                             (expr.front() == '\'' && expr.back() == '\''))) {
+        return "str";
+    }
+    if (is_numeric_literal(expr)) {
+        return "number";
+    }
+    return {};
+}
+
+bool literal_assignable_to(const std::string& expected, const std::string& expr) {
+    const std::string got = simple_literal_type(expr);
+    return got == "number" ? is_numeric_type(wrapped_type_arg(expected))
+                           : assignment_type_allowed(expected, expr, got);
+}
+
+std::vector<std::string> type_args(const std::string& type, std::string_view prefix) {
+    const std::string text = trim_copy(type);
+    if (!starts_with(text, prefix) || !ends_with(text, "]")) {
+        return {};
+    }
+    return split_top_level_args(text.substr(prefix.size(), text.size() - prefix.size() - 1));
+}
+
 bool is_container_literal(const std::string& expected, std::string expr) {
     expr = trim_copy(std::move(expr));
-    if (!starts_with(expr, "{") || !ends_with(expr, "}")) {
-        return false;
+    if (starts_with(expected, "list[")) {
+        if (!starts_with(expr, "[") || !ends_with(expr, "]")) {
+            return false;
+        }
+        const std::vector<std::string> args = type_args(expected, "list[");
+        if (args.size() != 1) {
+            return false;
+        }
+        const std::vector<std::string> entries =
+            split_top_level_args(expr.substr(1, expr.size() - 2));
+        for (const std::string& entry : entries) {
+            if (!entry.empty() && !literal_assignable_to(args[0], entry)) {
+                return false;
+            }
+        }
+        return true;
     }
     if (starts_with(expected, "set[")) {
+        if (!starts_with(expr, "{") || !ends_with(expr, "}")) {
+            return false;
+        }
+        const std::vector<std::string> args = type_args(expected, "set[");
+        if (args.size() != 1) {
+            return false;
+        }
+        const std::vector<std::string> entries =
+            split_top_level_args(expr.substr(1, expr.size() - 2));
+        for (const std::string& entry : entries) {
+            if (!entry.empty() &&
+                (has_top_level_colon(entry) || !literal_assignable_to(args[0], entry))) {
+                return false;
+            }
+        }
         return true;
     }
     if (!starts_with(expected, "dict[")) {
         return false;
     }
+    if (!starts_with(expr, "{") || !ends_with(expr, "}")) {
+        return false;
+    }
+    const std::vector<std::string> args = type_args(expected, "dict[");
+    if (args.size() != 2) {
+        return false;
+    }
     const std::vector<std::string> entries = split_top_level_args(expr.substr(1, expr.size() - 2));
     for (const std::string& entry : entries) {
-        if (!entry.empty() && !has_top_level_colon(entry)) {
+        if (entry.empty()) {
+            continue;
+        }
+        const size_t colon = top_level_colon(entry);
+        if (colon == std::string::npos) {
+            return false;
+        }
+        if (!literal_assignable_to(args[0], entry.substr(0, colon)) ||
+            !literal_assignable_to(args[1], entry.substr(colon + 1))) {
             return false;
         }
     }
     return true;
+}
+
+bool is_container_literal_expr(std::string expr) {
+    expr = trim_copy(std::move(expr));
+    return (starts_with(expr, "[") && ends_with(expr, "]")) ||
+           (starts_with(expr, "{") && ends_with(expr, "}"));
 }
 
 bool is_reference_binding(std::string expected, std::string got) {
@@ -187,10 +313,11 @@ bool is_result_value(const std::string& expected, const std::string& expr, const
 
 bool assignment_type_allowed(const std::string& expected, const std::string& expr,
                              const std::string& got) {
-    return expected == "auto" || is_explicit_cast_to(expected, expr) || got.empty() ||
-           got == "auto" || got == expected || compact_type(expected) == compact_type(got) ||
-           is_option_value(expected, expr, got) || is_result_value(expected, expr, got) ||
-           is_container_literal(expected, expr) || is_null_pointer(expected, expr, got) ||
+    return expected == "auto" || is_explicit_cast_to(expected, expr) ||
+           is_container_literal(expected, expr) ||
+           (!is_container_literal_expr(expr) && got.empty()) || got == "auto" || got == expected ||
+           compact_type(expected) == compact_type(got) || is_option_value(expected, expr, got) ||
+           is_result_value(expected, expr, got) || is_null_pointer(expected, expr, got) ||
            is_reference_binding(expected, got) || is_function_type_match(expected, got) ||
            (is_numeric_type(wrapped_type_arg(expected)) && is_numeric_literal(expr));
 }
