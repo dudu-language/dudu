@@ -70,8 +70,7 @@ size_t find_top_level_assignment(const std::string& text) {
         } else if (c == ')' || c == ']' || c == '}') {
             --depth;
         } else if (c == '=' && depth == 0) {
-            if ((i > 0 && (text[i - 1] == '=' || text[i - 1] == '!' || text[i - 1] == '<' ||
-                           text[i - 1] == '>')) ||
+            if ((i > 0 && std::string("=!<>+-*/%^&|").find(text[i - 1]) != std::string::npos) ||
                 (i + 1 < text.size() && text[i + 1] == '=')) {
                 continue;
             }
@@ -118,6 +117,20 @@ std::string strip_trailing_colon(std::string text) {
         text.pop_back();
     }
     return trim_copy(std::move(text));
+}
+
+std::string normalize_spaced_compound(std::string text) {
+    for (const std::pair<std::string_view, std::string_view> op :
+         {std::pair{" + =", " +="}, std::pair{" - =", " -="}, std::pair{" * =", " *="},
+          std::pair{" / =", " /="}, std::pair{" % =", " %="}, std::pair{" ^ =", " ^="},
+          std::pair{" & =", " &="}, std::pair{" | =", " |="}}) {
+        size_t pos = text.find(op.first);
+        while (pos != std::string::npos) {
+            text.replace(pos, op.first.size(), op.second);
+            pos = text.find(op.first, pos + op.second.size());
+        }
+    }
+    return text;
 }
 
 std::string unescape_cpp_string(std::string text) {
@@ -233,7 +246,7 @@ void emit_simple_statement(std::ostringstream& out, const RawStmt& stmt, int dep
             return;
         }
     }
-    out << indent(depth) << lower_expr(text, aliases, locals) << ";\n";
+    out << indent(depth) << lower_expr(normalize_spaced_compound(text), aliases, locals) << ";\n";
 }
 
 void emit_raw_statement(std::ostringstream& out, const RawStmt& stmt, int depth,

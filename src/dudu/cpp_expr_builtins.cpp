@@ -42,6 +42,10 @@ size_t find_top_level_word(const std::string& text, std::string_view word) {
 
 } // namespace
 
+std::string lower_cpp_expr(std::string expr) {
+    return lower_cpp_expr(expr, {});
+}
+
 std::string lower_conditional_expr(std::string expr) {
     const size_t if_pos = find_top_level_word(expr, " if ");
     if (if_pos == std::string::npos) {
@@ -194,6 +198,24 @@ std::string lower_numeric_separators(std::string expr) {
             continue;
         }
         ++i;
+    }
+    return expr;
+}
+
+std::string lower_enum_access(std::string expr) {
+    size_t pos = expr.find('.');
+    while (pos != std::string::npos) {
+        size_t start = pos;
+        while (start > 0 && (std::isalnum(static_cast<unsigned char>(expr[start - 1])) != 0 ||
+                             expr[start - 1] == '_')) {
+            --start;
+        }
+        if (start < pos && std::isupper(static_cast<unsigned char>(expr[start])) != 0) {
+            expr.replace(pos, 1, "::");
+            pos = expr.find('.', pos + 2);
+            continue;
+        }
+        pos = expr.find('.', pos + 1);
     }
     return expr;
 }

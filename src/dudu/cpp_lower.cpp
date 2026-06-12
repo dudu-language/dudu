@@ -457,10 +457,6 @@ std::string lower_dotted_template_call(std::string expr) {
     return expr;
 }
 
-std::string lower_cpp_expr(std::string expr) {
-    return lower_cpp_expr(std::move(expr), {});
-}
-
 std::string lower_cpp_expr(std::string expr, const std::vector<std::string>& namespace_aliases) {
     expr = lower_lambda_expr(std::move(expr));
     expr = lower_conditional_expr(std::move(expr));
@@ -477,6 +473,7 @@ std::string lower_cpp_expr(std::string expr, const std::vector<std::string>& nam
     expr = lower_str_from_cstr(std::move(expr));
     expr = lower_str_calls(std::move(expr));
     expr = lower_named_argument_calls(std::move(expr));
+    expr = lower_enum_access(std::move(expr));
     expr = lower_template_value_call(std::move(expr), "list");
     expr = lower_template_value_call(std::move(expr), "dict");
     expr = lower_template_value_call(std::move(expr), "set");

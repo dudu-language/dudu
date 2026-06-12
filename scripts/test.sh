@@ -49,6 +49,7 @@ object_examples=(
     modules_visibility.dd
     native_escape.dd
     numerics_kmeans.dd
+    systems_mmap.dd
     threading_atomics.dd
 )
 

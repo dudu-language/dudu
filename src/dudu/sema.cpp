@@ -65,10 +65,10 @@ bool known_type(const Symbols& symbols, const std::string& type) {
     }
     const std::string base = base_type(type);
     return base.empty() || is_builtin_type(base) || symbols.types.contains(base) ||
-           base.find('.') != std::string::npos || base == "list" || base == "dict" ||
-           base == "set" || base == "tuple" || base == "Result" || base == "Option" ||
-           base == "fn" || base == "const" || base == "atomic" || base == "volatile" ||
-           base == "storage" || base == "shared" || base == "device";
+           base.find('.') != std::string::npos || starts_with(base, "struct ") || base == "list" ||
+           base == "dict" || base == "set" || base == "tuple" || base == "Result" ||
+           base == "Option" || base == "fn" || base == "const" || base == "atomic" ||
+           base == "volatile" || base == "storage" || base == "shared" || base == "device";
 }
 
 std::vector<std::string> split_top_level(std::string text) {
@@ -355,7 +355,7 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
     }
     const size_t colon = find_top_level_char(text, ':');
     const size_t assign = find_top_level_char(text, '=');
-    for (const char* op : {"+=", "-=", "*=", "/="}) {
+    for (const char* op : {"+=", "-=", "*=", "/=", "%=", "^=", "&=", "|="}) {
         const size_t compound = text.find(op);
         if (compound != std::string::npos) {
             check_assign_target(scope, stmt, trim(text.substr(0, compound)));
