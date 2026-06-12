@@ -1,0 +1,4 @@
+@shader.compute
+@workgroup_size(8, 8, 1)
+def kernel(value: *storage[i32]):
+    value[0] = 1
