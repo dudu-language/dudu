@@ -32,6 +32,9 @@ struct Options {
 
 void print_usage() {
     std::cout << "usage: duc build <input.dd> [-o output]\n"
+                 "       duc check <input.dd>\n"
+                 "       duc emit <input.dd> [-o output.cpp]\n"
+                 "       duc fmt <input.dd> [-o output.dd]\n"
                  "       duc <input.dd> [--check] [--format <path|->] "
                  "[--emit-header <path|->] [--emit-cpp <path|->] [-DNAME=value]\n";
 }
@@ -49,6 +52,15 @@ Options parse_options(int argc, char** argv) {
     int first_arg = 1;
     if (argc > 1 && std::string(argv[1]) == "build") {
         options.build = true;
+        first_arg = 2;
+    } else if (argc > 1 && std::string(argv[1]) == "check") {
+        options.check = true;
+        first_arg = 2;
+    } else if (argc > 1 && std::string(argv[1]) == "emit") {
+        options.emit_cpp = true;
+        first_arg = 2;
+    } else if (argc > 1 && std::string(argv[1]) == "fmt") {
+        options.format = true;
         first_arg = 2;
     }
 

@@ -64,6 +64,11 @@ printf '#include "cpp_library.hpp"\nint main() { return 0; }\n' >"$repo_root/bui
 
 "$repo_root/build/dudu" "$repo_root/tests/fixtures/simple_program.dd" --format - >/dev/null
 "$repo_root/build/duc" "$repo_root/tests/fixtures/simple_program.dd" --check
+"$repo_root/build/duc" check "$repo_root/tests/fixtures/simple_program.dd"
+"$repo_root/build/duc" emit "$repo_root/tests/fixtures/simple_program.dd" \
+    -o "$repo_root/build/duc_emit_simple.cpp"
+"$repo_root/build/duc" fmt "$repo_root/tests/fixtures/simple_program.dd" \
+    -o "$repo_root/build/duc_fmt_simple.dd"
 "$repo_root/build/dudu" "$repo_root/examples/compile_time.dd" --emit-cpp \
     "$repo_root/build/compile_time_raylib.cpp" -DDEBUG=true -DRENDER_BACKEND=raylib
 grep -q "inline constexpr bool DEBUG = true;" "$repo_root/build/compile_time_raylib.cpp"
