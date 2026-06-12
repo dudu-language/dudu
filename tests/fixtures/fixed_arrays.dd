@@ -1,0 +1,10 @@
+def main() -> i32:
+    values: i32[3]
+    values[0] = 10
+    values[1] = 20
+    values[2] = 30
+
+    matrix: i32[2][2]
+    matrix[1][1] = 12
+
+    return values[0] + values[1] + matrix[1][1]

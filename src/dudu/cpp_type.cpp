@@ -101,6 +101,29 @@ std::string lower_function_type(const std::string& type) {
     return out.str();
 }
 
+std::vector<std::string> fixed_array_dimensions(const std::string& type) {
+    std::vector<std::string> dims;
+    size_t open = type.find('[');
+    while (open != std::string::npos) {
+        const size_t close = type.find(']', open + 1);
+        if (close == std::string::npos) {
+            return {};
+        }
+        const std::string dim = type.substr(open + 1, close - open - 1);
+        if (!is_decimal_number(dim)) {
+            return {};
+        }
+        dims.push_back(dim);
+        open = type.find('[', close + 1);
+    }
+    return dims;
+}
+
+std::string fixed_array_base(const std::string& type) {
+    const size_t open = type.find('[');
+    return open == std::string::npos ? type : type.substr(0, open);
+}
+
 } // namespace
 
 std::string lower_cpp_type(const std::string& raw_type) {
@@ -136,6 +159,14 @@ std::string lower_cpp_type(const std::string& raw_type) {
     }
     if (starts_with(type, "&")) {
         return lower_cpp_type(type.substr(1)) + "&";
+    }
+
+    if (const std::vector<std::string> dims = fixed_array_dimensions(type); !dims.empty()) {
+        std::string out = lower_cpp_type(fixed_array_base(type));
+        for (auto it = dims.rbegin(); it != dims.rend(); ++it) {
+            out = "std::array<" + out + ", " + *it + ">";
+        }
+        return out;
     }
 
     const size_t open = type.find('[');

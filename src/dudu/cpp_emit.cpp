@@ -276,7 +276,8 @@ std::vector<size_t> class_emit_order(const std::vector<ClassDecl>& classes) {
     return order;
 }
 void emit_includes(std::ostringstream& out, const ModuleAst& module) {
-    out << "#include <atomic>\n"
+    out << "#include <array>\n"
+           "#include <atomic>\n"
            "#include <cstddef>\n"
            "#include <cstdint>\n"
            "#include <cstdlib>\n"
