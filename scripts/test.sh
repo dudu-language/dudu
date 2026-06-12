@@ -127,6 +127,7 @@ grep -Fq "std::add_pointer_t<int32_t(int32_t)> callback" \
 ! grep -q "std::function" "$repo_root/build/function_pointer.cpp"
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/cpp_move_unique_ptr.dd" -o "$repo_root/build/cpp_move_unique_ptr.cpp"; grep -Fq "std::move(first)" "$repo_root/build/cpp_move_unique_ptr.cpp"
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/cpp_filesystem_path.dd" -o "$repo_root/build/cpp_filesystem_path.cpp"; grep -Fq "std::filesystem::path path" "$repo_root/build/cpp_filesystem_path.cpp"; "$repo_root/build/duc" emit "$repo_root/tests/fixtures/cpp_chrono_timer.dd" -o "$repo_root/build/cpp_chrono_timer.cpp"; grep -Fq "std::chrono::duration_cast<std::chrono::milliseconds>" "$repo_root/build/cpp_chrono_timer.cpp"
+"$repo_root/build/duc" emit "$repo_root/tests/fixtures/std_vector_map_string.dd" -o "$repo_root/build/std_vector_map_string.cpp"; grep -Fq "std::vector<std::string> items" "$repo_root/build/std_vector_map_string.cpp"; grep -Fq "std::unordered_map<std::string, int32_t> scores" "$repo_root/build/std_vector_map_string.cpp"; grep -Fq "std::string label = items[0]" "$repo_root/build/std_vector_map_string.cpp"
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/tuple_return.dd" -o "$repo_root/build/tuple_return.cpp"
 grep -Fq "dudu::Tuple2<int32_t, int32_t> divmod_i32" "$repo_root/build/tuple_return.cpp"
 grep -Fq "return {value / divisor, value % divisor};" "$repo_root/build/tuple_return.cpp"
@@ -285,6 +286,7 @@ compile_and_expect explicit_casts 42
 compile_and_expect allocation 17
 compile_and_expect containers 42
 compile_and_expect cpp_template_interop 42; compile_and_expect cpp_move_unique_ptr 42; compile_and_expect cpp_filesystem_path 42; compile_and_expect cpp_chrono_timer 42
+compile_and_expect std_vector_map_string 42
 compile_and_expect layout_attrs 21
 compile_and_expect atomic_volatile 44
 compile_and_expect branch_return 1

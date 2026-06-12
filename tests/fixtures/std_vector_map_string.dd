@@ -1,0 +1,18 @@
+import cpp "string" as std
+import cpp "unordered_map" as std
+import cpp "vector" as std
+
+
+def main() -> i32:
+    items: std.vector[std.string]
+    items.push_back(std.string("alpha"))
+    items.push_back(std.string("beta"))
+
+    scores: std.unordered_map[std.string, i32]
+    scores[items[0]] = 20
+    scores[items[1]] = 22
+
+    label: str = items[0]
+    if label == "alpha":
+        return scores[std.string("alpha")] + scores[std.string("beta")]
+    return 1
