@@ -2,6 +2,7 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$repo_root/scripts/test_helpers.sh"
 "$repo_root/scripts/build.sh"
 ctest --test-dir "$repo_root/build" --output-on-failure
 
@@ -31,17 +32,6 @@ done
 "$repo_root/build/duc" emit "$repo_root/examples/raylib_game.dd" \
     -o "$repo_root/build/raylib_game_semantics.cpp"
 grep -q "player.vel.x" "$repo_root/build/raylib_game_semantics.cpp"
-
-compile_example_object() {
-    local example="$1"
-    local name
-    name="$(basename "$example" .dd)"
-    local cpp="$repo_root/build/example_$name.cpp"
-    local object="$repo_root/build/example_$name.o"
-
-    "$repo_root/build/dudu" "$repo_root/examples/$example" --emit-cpp "$cpp"
-    "${CXX:-c++}" -std=c++20 -c "$cpp" -o "$object"
-}
 
 object_examples=(
     allocators.dd
@@ -277,43 +267,6 @@ if (
 fi
 grep -q "cannot run target kind: library" "$repo_root/build/project_library_run.err"
 
-compile_and_expect() {
-    local name="$1"
-    local expected="$2"
-    local cpp="$repo_root/build/$name.cpp"
-    local bin="$repo_root/build/$name"
-
-    "$repo_root/build/dudu" "$repo_root/tests/fixtures/$name.dd" --emit-cpp "$cpp"
-    "${CXX:-c++}" -std=c++20 "$cpp" -o "$bin"
-    set +e
-    "$bin"
-    local status=$?
-    set -e
-    if [[ "$status" -ne "$expected" ]]; then
-        echo "$name returned $status, expected $expected" >&2
-        exit 1
-    fi
-}
-
-compile_path_and_expect() {
-    local name="$1"
-    local path="$2"
-    local expected="$3"
-    local cpp="$repo_root/build/$name.cpp"
-    local bin="$repo_root/build/$name"
-
-    "$repo_root/build/dudu" "$repo_root/$path" --emit-cpp "$cpp"
-    "${CXX:-c++}" -std=c++20 "$cpp" -o "$bin"
-    set +e
-    "$bin"
-    local status=$?
-    set -e
-    if [[ "$status" -ne "$expected" ]]; then
-        echo "$name returned $status, expected $expected" >&2
-        exit 1
-    fi
-}
-
 compile_and_expect simple_program 42
 compile_and_expect control_flow 55
 compile_and_expect compile_time_basic 64
@@ -359,21 +312,6 @@ if [[ "$direct_status" -ne 42 ]]; then
     echo "dudu build simple_program returned $direct_status, expected 42" >&2
     exit 1
 fi
-
-expect_fail() {
-    local name="$1"
-    local mode="$2"
-    local expected="$3"
-    local cmd=("$repo_root/build/dudu" "$repo_root/tests/fixtures/$name.dd" "$mode")
-    if [[ "$mode" != "--check" ]]; then
-        cmd+=("$repo_root/build/$name.out")
-    fi
-    if "${cmd[@]}" 2>"$repo_root/build/$name.err"; then
-        echo "$name unexpectedly passed" >&2
-        exit 1
-    fi
-    grep -q "$expected" "$repo_root/build/$name.err"
-}
 
 expect_fail bad_duplicate --check "duplicate declaration: Vec"
 expect_fail bad_type_alias --check "unknown type alias target: MissingThing"
