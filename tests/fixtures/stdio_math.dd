@@ -1,0 +1,8 @@
+import c "math.h" as math
+import c "stdio.h" as c
+
+
+def main() -> i32:
+    value: f64 = math.sqrt(1764.0)
+    c.printf("sqrt %d\n", i32(value))
+    return i32(value)
