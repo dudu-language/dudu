@@ -1,6 +1,10 @@
 const vscode = require("vscode");
+const childProcess = require("child_process");
+const os = require("os");
+const path = require("path");
 
 let terminal;
+let diagnostics;
 
 function shellQuote(value) {
   return `'${value.replace(/'/g, "'\\''")}'`;
@@ -32,8 +36,71 @@ function runCommand(command) {
   terminal.sendText(`cd ${shellQuote(workspaceDirectory())} && ${command}`);
 }
 
+function activeDuduDocument() {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor) {
+    vscode.window.showErrorMessage("Open a .dd file first.");
+    return undefined;
+  }
+  if (editor.document.languageId !== "dudu" && !editor.document.fileName.endsWith(".dd")) {
+    vscode.window.showErrorMessage("The active file is not a Dudu .dd file.");
+    return undefined;
+  }
+  return editor.document;
+}
+
+function parseDiagnostic(line) {
+  const match = /^dudu: (.*):([0-9]+):([0-9]+): (.*)$/.exec(line.trim());
+  if (!match) {
+    return undefined;
+  }
+  const file = match[1];
+  const row = Math.max(Number(match[2]) - 1, 0);
+  const col = Math.max(Number(match[3]) - 1, 0);
+  return {
+    file,
+    diagnostic: new vscode.Diagnostic(
+      new vscode.Range(row, col, row, col + 1),
+      match[4],
+      vscode.DiagnosticSeverity.Error,
+    ),
+  };
+}
+
+function checkDocument(document) {
+  const output = path.join(os.tmpdir(), `dudu-vscode-${process.pid}.cpp`);
+  childProcess.execFile(
+    "duc",
+    ["emit", document.fileName, "-o", output],
+    { cwd: workspaceDirectory() },
+    (error, _stdout, stderr) => {
+      const byFile = new Map();
+      for (const line of stderr.split(/\r?\n/)) {
+        const parsed = parseDiagnostic(line);
+        if (!parsed) {
+          continue;
+        }
+        const uri = vscode.Uri.file(path.resolve(workspaceDirectory(), parsed.file));
+        const key = uri.toString();
+        const list = byFile.get(key) ?? [];
+        list.push(parsed.diagnostic);
+        byFile.set(key, list);
+      }
+      diagnostics.clear();
+      for (const [key, list] of byFile) {
+        diagnostics.set(vscode.Uri.parse(key), list);
+      }
+      if (error && byFile.size === 0) {
+        vscode.window.showErrorMessage(stderr.trim() || String(error));
+      }
+    },
+  );
+}
+
 function activate(context) {
+  diagnostics = vscode.languages.createDiagnosticCollection("dudu");
   context.subscriptions.push(
+    diagnostics,
     vscode.commands.registerCommand("dudu.fmtFile", () => {
       const file = activeDuduFile();
       if (file) {
@@ -41,9 +108,9 @@ function activate(context) {
       }
     }),
     vscode.commands.registerCommand("dudu.checkFile", () => {
-      const file = activeDuduFile();
-      if (file) {
-        runCommand(`duc check ${shellQuote(file)}`);
+      const document = activeDuduDocument();
+      if (document) {
+        checkDocument(document);
       }
     }),
     vscode.commands.registerCommand("dudu.buildProject", () => {
@@ -55,9 +122,16 @@ function activate(context) {
         runCommand(`duc run ${shellQuote(file)}`);
       }
     }),
+    vscode.workspace.onDidSaveTextDocument((document) => {
+      if (document.languageId === "dudu" || document.fileName.endsWith(".dd")) {
+        checkDocument(document);
+      }
+    }),
   );
 }
 
-function deactivate() {}
+function deactivate() {
+  diagnostics?.dispose();
+}
 
 module.exports = { activate, deactivate };

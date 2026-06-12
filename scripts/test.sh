@@ -63,6 +63,12 @@ grep -q 'registerCommand("dudu.fmtFile"' "$repo_root/editors/vscode/extension.js
 grep -q 'registerCommand("dudu.checkFile"' "$repo_root/editors/vscode/extension.js"
 grep -q 'registerCommand("dudu.buildProject"' "$repo_root/editors/vscode/extension.js"
 grep -q 'registerCommand("dudu.runFile"' "$repo_root/editors/vscode/extension.js"
+grep -q 'createDiagnosticCollection("dudu")' "$repo_root/editors/vscode/extension.js"
+grep -q '"onLanguage:dudu"' "$repo_root/editors/vscode/package.json"
+grep -q '"duc"' "$repo_root/editors/vscode/extension.js"
+grep -q '"emit"' "$repo_root/editors/vscode/extension.js"
+grep -q "onDidSaveTextDocument" "$repo_root/editors/vscode/extension.js"
+node --check "$repo_root/editors/vscode/extension.js"
 
 generated_header="$repo_root/build/cpp_library.hpp"
 "$repo_root/build/dudu" "$repo_root/examples/cpp_library.dd" --emit-header "$generated_header"
