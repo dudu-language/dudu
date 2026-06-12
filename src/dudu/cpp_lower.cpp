@@ -482,6 +482,7 @@ std::string lower_cpp_expr(std::string expr, const std::vector<std::string>& nam
     expr = replace_all(std::move(expr), ".append(", ".push_back(");
     expr = replace_all(std::move(expr), "push_back([])", "push_back({})");
     expr = replace_all(std::move(expr), "build.", "build::");
+    expr = replace_all(std::move(expr), "shader.", "shader::");
     expr = replace_all(std::move(expr), "Ok(None)", "dudu::Ok(std::monostate{})");
     expr = replace_word(std::move(expr), "Ok", "dudu::Ok");
     expr = replace_word(std::move(expr), "Err", "dudu::Err");

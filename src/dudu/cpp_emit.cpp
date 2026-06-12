@@ -82,7 +82,8 @@ std::vector<size_t> class_emit_order(const std::vector<ClassDecl>& classes) {
     return order;
 }
 void emit_includes(std::ostringstream& out, const ModuleAst& module) {
-    out << "#include <array>\n"
+    out << "#include <algorithm>\n"
+           "#include <array>\n"
            "#include <atomic>\n"
            "#include <cstddef>\n"
            "#include <cstdint>\n"
@@ -185,6 +186,12 @@ void emit_result_prelude(std::ostringstream& out, const ModuleAst& module) {
         out << "using dudu::align_up;\n";
     }
     out << "using dudu::print;\n";
+    out << "using std::max;\n"
+           "using std::min;\n"
+           "namespace shader {\n"
+           "struct GlobalId { int32_t x{}; int32_t y{}; int32_t z{}; };\n"
+           "inline GlobalId global_id{};\n"
+           "} // namespace shader\n";
     emit_build_namespace(out, module);
 }
 void emit_aliases(std::ostringstream& out, const ModuleAst& module) {
