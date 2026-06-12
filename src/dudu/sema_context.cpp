@@ -27,6 +27,32 @@ void add_name(std::map<std::string, SourceLocation>& names, const std::string& n
     }
 }
 
+void check_supported_type_shape(const SourceLocation& location, std::string type);
+
+void check_type_args(const SourceLocation& location, const std::string& args) {
+    for (const std::string& arg : split_top_level(args)) {
+        check_supported_type_shape(location, arg);
+    }
+}
+
+void check_supported_type_shape(const SourceLocation& location, std::string type) {
+    type = trim(std::move(type));
+    while (!type.empty() && (type.front() == '*' || type.front() == '&')) {
+        type = trim(type.substr(1));
+    }
+    const size_t open = type.find('[');
+    if (open == std::string::npos || type.back() != ']') {
+        return;
+    }
+    const std::string name = trim(type.substr(0, open));
+    const std::string args = type.substr(open + 1, type.size() - open - 2);
+    const std::vector<std::string> parts = split_top_level(args);
+    if (name == "tuple" && (parts.empty() || parts.size() > 8)) {
+        fail(location, "tuple supports 1 to 8 elements, got " + std::to_string(parts.size()));
+    }
+    check_type_args(location, args);
+}
+
 } // namespace
 
 std::string trim(std::string text) {
@@ -188,6 +214,7 @@ Symbols collect_symbols(const ModuleAst& module) {
 
 void check_declarations(const ModuleAst& module, const Symbols& symbols) {
     for (const TypeAliasDecl& alias : module.aliases) {
+        check_supported_type_shape(alias.location, alias.type);
         if (!known_type(symbols, alias.type)) {
             fail(alias.location, "unknown type alias target: " + alias.type);
         }
@@ -209,6 +236,7 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
             if (!fields.insert(field.name).second) {
                 fail(field.location, "duplicate field: " + field.name);
             }
+            check_supported_type_shape(field.location, field.type);
             if (!known_type(symbols, field.type)) {
                 fail(field.location, "unknown field type: " + field.type);
             }
@@ -219,10 +247,13 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                 if (!params.insert(param.name).second) {
                     fail(param.location, "duplicate parameter: " + param.name);
                 }
+                check_supported_type_shape(param.location, param.type);
                 if (!known_type(symbols, param.type)) {
                     fail(param.location, "unknown parameter type: " + param.type);
                 }
             }
+            check_supported_type_shape(method.location,
+                                       method.return_type.empty() ? "void" : method.return_type);
             if (!known_type(symbols, method.return_type.empty() ? "void" : method.return_type)) {
                 fail(method.location, "unknown return type: " + method.return_type);
             }
@@ -234,10 +265,12 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
             if (!params.insert(param.name).second) {
                 fail(param.location, "duplicate parameter: " + param.name);
             }
+            check_supported_type_shape(param.location, param.type);
             if (!known_type(symbols, param.type)) {
                 fail(param.location, "unknown parameter type: " + param.type);
             }
         }
+        check_supported_type_shape(fn.location, fn.return_type.empty() ? "void" : fn.return_type);
         if (!known_type(symbols, fn.return_type.empty() ? "void" : fn.return_type)) {
             fail(fn.location, "unknown return type: " + fn.return_type);
         }
