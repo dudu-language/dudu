@@ -237,6 +237,10 @@ void emit_cpp_escape(std::ostringstream& out, const std::string& text, int depth
     }
 }
 
+void emit_source_comment(std::ostringstream& out, const RawStmt& stmt, int depth) {
+    out << indent(depth) << "// dudu: " << format_location(stmt.location) << '\n';
+}
+
 void emit_simple_statement(std::ostringstream& out, const RawStmt& stmt, int depth,
                            const std::vector<std::string>& aliases,
                            std::map<std::string, std::string>& locals) {
@@ -314,6 +318,7 @@ void emit_raw_statement(std::ostringstream& out, const RawStmt& stmt, int depth,
                         const std::vector<std::string>& aliases,
                         std::map<std::string, std::string>& locals) {
     const std::string text = trim_copy(stmt.text);
+    emit_source_comment(out, stmt, depth);
     if (starts_with(text, "if ")) {
         const std::string condition = strip_trailing_colon(text.substr(3));
         out << indent(depth) << if_keyword_for_condition(condition) << " ("
