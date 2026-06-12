@@ -27,10 +27,12 @@ struct Options {
     bool emit_cpp = false;
     bool format = false;
     bool run = false;
+    bool test = false;
 };
 
 struct ProjectConfig {
     std::filesystem::path main;
+    std::string test_command;
     std::map<std::string, std::string> build_values;
 };
 
@@ -44,6 +46,7 @@ void print_usage() {
                  "       duc emit [input.dd] [-o output.cpp]\n"
                  "       duc fmt <input.dd|dir> [--check] [-o output.dd]\n"
                  "       duc run [input.dd] [-o output]\n"
+                 "       duc test\n"
                  "       duc <input.dd> [--check] [--format <path|->] "
                  "[--emit-header <path|->] [--emit-cpp <path|->] [-DNAME=value]\n";
 }
@@ -103,6 +106,7 @@ ProjectConfig parse_project_config(const std::filesystem::path& path) {
         return config;
     }
     bool in_build = false;
+    bool in_test = false;
     std::string line;
     while (std::getline(file, line)) {
         line = trim_copy(strip_comment(std::move(line)));
@@ -110,7 +114,10 @@ ProjectConfig parse_project_config(const std::filesystem::path& path) {
             continue;
         }
         if (line.front() == '[' && line.back() == ']') {
-            in_build = trim_copy(std::string_view(line).substr(1, line.size() - 2)) == "build";
+            const std::string section =
+                trim_copy(std::string_view(line).substr(1, line.size() - 2));
+            in_build = section == "build";
+            in_test = section == "test";
             continue;
         }
         const size_t equal = line.find('=');
@@ -133,6 +140,13 @@ ProjectConfig parse_project_config(const std::filesystem::path& path) {
                 value = value.substr(1, value.size() - 2);
             }
             config.main = value;
+            continue;
+        }
+        if (in_test && name == "command") {
+            if (value.size() >= 2 && value.front() == '"' && value.back() == '"') {
+                value = value.substr(1, value.size() - 2);
+            }
+            config.test_command = value;
             continue;
         }
         if (!in_build) {
@@ -168,6 +182,9 @@ Options parse_options(int argc, char** argv) {
         first_arg = 2;
     } else if (argc > 1 && std::string(argv[1]) == "run") {
         options.run = true;
+        first_arg = 2;
+    } else if (argc > 1 && std::string(argv[1]) == "test") {
+        options.test = true;
         first_arg = 2;
     }
 
@@ -241,13 +258,16 @@ Options parse_options(int argc, char** argv) {
         fail("unexpected argument: " + arg);
     }
     if (options.input.empty() && !options.build && !options.check && !options.emit_cpp &&
-        !options.run) {
+        !options.run && !options.test) {
         fail("missing input file");
     }
     return options;
 }
 
 Options resolve_project_input(Options options) {
+    if (options.test) {
+        return options;
+    }
     if (!options.input.empty()) {
         return options;
     }
@@ -328,6 +348,17 @@ std::filesystem::path build_executable(const Options& options, const std::string
     return output;
 }
 
+int run_project_tests() {
+    std::string command = parse_project_config("dudu.toml").test_command;
+    if (command.empty() && std::filesystem::exists("scripts/test.sh")) {
+        command = "./scripts/test.sh";
+    }
+    if (command.empty()) {
+        fail("missing [test] command and scripts/test.sh");
+    }
+    return std::system(command.c_str()) == 0 ? 0 : 1;
+}
+
 dudu::ModuleAst checked_module(const Options& options, const std::string& source,
                                bool check_bodies) {
     dudu::ModuleAst module = options.input.empty() ? dudu::parse_source(source, options.input)
@@ -365,6 +396,9 @@ bool check_source_path(const Options& options) {
 int main(int argc, char** argv) {
     try {
         const Options options = resolve_project_input(parse_options(argc, argv));
+        if (options.test) {
+            return run_project_tests();
+        }
         if (options.format) {
             if (options.check) {
                 return check_formatted_path(options.input) ? 0 : 1;

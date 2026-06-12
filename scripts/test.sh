@@ -106,6 +106,7 @@ grep -q "inline constexpr bool DEBUG = false;" "$repo_root/build/package_build_o
     "$repo_root/build/duc" check .
     "$repo_root/build/duc" check
     "$repo_root/build/duc" emit -o "$repo_root/build/project_mode.cpp"
+    "$repo_root/build/duc" test
 )
 grep -q "inline constexpr bool DEBUG = true;" "$repo_root/build/project_mode.cpp"
 grep -q "if constexpr (build::DEBUG)" "$repo_root/build/project_mode.cpp"

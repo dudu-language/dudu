@@ -96,6 +96,17 @@ Then run:
 ./build/duc run
 ```
 
+Project tests can be wired through `dudu.toml`:
+
+```toml
+[test]
+command = "./scripts/test.sh"
+```
+
+```sh
+./build/duc test
+```
+
 Validate the checked-in examples that do not need external libraries:
 
 ```sh

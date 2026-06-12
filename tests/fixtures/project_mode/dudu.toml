@@ -2,3 +2,6 @@ main = "main.dd"
 
 [build]
 DEBUG = true
+
+[test]
+command = "true"
