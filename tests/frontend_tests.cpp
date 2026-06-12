@@ -1,3 +1,4 @@
+#include "dudu/cpp_emit.hpp"
 #include "dudu/lexer.hpp"
 #include "dudu/parser.hpp"
 
@@ -77,6 +78,24 @@ void test_canonical_examples_parse(const std::filesystem::path& root) {
     }
 }
 
+void test_header_emission() {
+    const dudu::ModuleAst module = dudu::parse_source("import cpp \"raylib.h\" as rl\n"
+                                                      "\n"
+                                                      "class Vec3:\n"
+                                                      "    x: f32\n"
+                                                      "    y: f32\n"
+                                                      "\n"
+                                                      "def dot(a: Vec3, b: Vec3) -> f32:\n"
+                                                      "    return a.x * b.x + a.y * b.y\n",
+                                                      "header.dd");
+    const std::string header = dudu::emit_cpp_header(module);
+    assert(header.find("#include \"raylib.h\"") != std::string::npos);
+    assert(header.find("struct Vec3") != std::string::npos);
+    assert(header.find("struct Vec3") < header.find("float dot"));
+    assert(header.find("float x{};") != std::string::npos);
+    assert(header.find("float dot(Vec3 a, Vec3 b);") != std::string::npos);
+}
+
 } // namespace
 
 int main() {
@@ -85,6 +104,7 @@ int main() {
         test_lexer_indentation();
         test_import_bindings();
         test_canonical_examples_parse(root);
+        test_header_emission();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;

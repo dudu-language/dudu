@@ -29,4 +29,10 @@ for example in "${required_examples[@]}"; do
     "$repo_root/build/dudu" "$repo_root/examples/$example" --check
 done
 
+generated_header="$repo_root/build/cpp_library.hpp"
+"$repo_root/build/dudu" "$repo_root/examples/cpp_library.dd" --emit-header "$generated_header"
+printf '#include "cpp_library.hpp"\nint main() { return 0; }\n' >"$repo_root/build/header_smoke.cpp"
+"${CXX:-c++}" -std=c++20 -I"$repo_root/build" -c "$repo_root/build/header_smoke.cpp" \
+    -o "$repo_root/build/header_smoke.o"
+
 echo "compiler builds and canonical examples are present"

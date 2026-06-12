@@ -418,6 +418,7 @@ class Parser {
     std::string join_until(std::initializer_list<TokenKind> stops) {
         std::ostringstream out;
         bool first = true;
+        TokenKind previous_kind = TokenKind::End;
         int bracket_depth = 0;
         int paren_depth = 0;
         while (!at(TokenKind::End)) {
@@ -430,11 +431,12 @@ class Parser {
                     break;
                 }
             }
-            if (!first && needs_space_before(current())) {
+            if (!first && needs_space_between(previous_kind, current().kind)) {
                 out << ' ';
             }
             out << current().text;
             first = false;
+            previous_kind = current().kind;
             if (current().kind == TokenKind::LBracket) {
                 ++bracket_depth;
             } else if (current().kind == TokenKind::RBracket) {
@@ -449,9 +451,17 @@ class Parser {
         return out.str();
     }
 
-    static bool needs_space_before(const Token& token) {
-        return token.kind != TokenKind::Comma && token.kind != TokenKind::RParen &&
-               token.kind != TokenKind::RBracket && token.kind != TokenKind::Dot;
+    static bool needs_space_between(TokenKind previous, TokenKind current) {
+        if (current == TokenKind::Comma || current == TokenKind::RParen ||
+            current == TokenKind::RBracket || current == TokenKind::Dot ||
+            current == TokenKind::LParen || current == TokenKind::LBracket) {
+            return false;
+        }
+        if (previous == TokenKind::Dot || previous == TokenKind::LParen ||
+            previous == TokenKind::LBracket) {
+            return false;
+        }
+        return true;
     }
 
     static bool is_foreign_import(const ImportDecl& import) {

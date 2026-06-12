@@ -1,3 +1,4 @@
+#include "dudu/cpp_emit.hpp"
 #include "dudu/parser.hpp"
 
 #include <algorithm>
@@ -86,6 +87,7 @@ struct Program {
 struct Options {
     std::filesystem::path input;
     std::optional<std::filesystem::path> output;
+    std::optional<std::filesystem::path> header_output;
     bool check = false;
 };
 
@@ -1051,12 +1053,25 @@ Options parse_options(int argc, char** argv) {
             }
             continue;
         }
+        if (arg == "--emit-header") {
+            if (i + 1 >= argc) {
+                fail("--emit-header requires a path or '-'");
+            }
+            const std::string value = argv[++i];
+            if (value != "-") {
+                options.header_output = value;
+            } else {
+                options.header_output = std::filesystem::path{};
+            }
+            continue;
+        }
         if (arg == "--check") {
             options.check = true;
             continue;
         }
         if (arg == "-h" || arg == "--help") {
-            std::cout << "usage: dudu <input.dd> [--check] [--emit-cpp <path|->]\n";
+            std::cout << "usage: dudu <input.dd> [--check] [--emit-header <path|->] "
+                         "[--emit-cpp <path|->]\n";
             std::exit(0);
         }
         if (options.input.empty()) {
@@ -1079,13 +1094,31 @@ std::string read_text_file(const std::filesystem::path& path) {
     return {std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
 }
 
+void write_text_output(const std::optional<std::filesystem::path>& path, const std::string& text) {
+    if (!path.has_value() || path->empty()) {
+        std::cout << text;
+        return;
+    }
+    std::ofstream out(*path);
+    if (!out) {
+        fail("could not open output " + path->string());
+    }
+    out << text;
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
     try {
         const Options options = parse_options(argc, argv);
+        const std::string source = read_text_file(options.input);
+        if (options.header_output.has_value()) {
+            const dudu::ModuleAst module = dudu::parse_source(source, options.input);
+            write_text_output(options.header_output, dudu::emit_cpp_header(module));
+            return 0;
+        }
         if (options.check) {
-            (void)dudu::parse_source(read_text_file(options.input), options.input);
+            (void)dudu::parse_source(source, options.input);
             return 0;
         }
         Program program = parse_program(options.input);
