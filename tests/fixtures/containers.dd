@@ -1,0 +1,5 @@
+def main() -> i32:
+    values: list[i32] = list[i32]()
+    values.push_back(12)
+    values.push_back(30)
+    return values[0] + values[1]

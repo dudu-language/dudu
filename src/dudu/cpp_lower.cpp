@@ -232,9 +232,31 @@ std::string lower_template_alloc_call(std::string expr, std::string_view name) {
     return expr;
 }
 
+std::string lower_template_value_call(std::string expr, std::string_view name) {
+    const std::string marker = std::string(name) + "[";
+    size_t pos = expr.find(marker);
+    while (pos != std::string::npos) {
+        const size_t args_start = pos + marker.size();
+        const size_t args_end = expr.find(']', args_start);
+        if (args_end == std::string::npos || args_end + 2 > expr.size() ||
+            expr.substr(args_end + 1, 2) != "()") {
+            pos = expr.find(marker, pos + marker.size());
+            continue;
+        }
+        const std::string type = expr.substr(pos, args_end - pos + 1);
+        const std::string replacement = lower_cpp_type(type) + "{}";
+        expr.replace(pos, args_end + 3 - pos, replacement);
+        pos = expr.find(marker, pos + replacement.size());
+    }
+    return expr;
+}
+
 std::string lower_cpp_expr(std::string expr) {
     expr = lower_template_alloc_call(std::move(expr), "new");
     expr = lower_template_alloc_call(std::move(expr), "malloc");
+    expr = lower_template_value_call(std::move(expr), "list");
+    expr = lower_template_value_call(std::move(expr), "dict");
+    expr = lower_template_value_call(std::move(expr), "set");
     expr = replace_word(std::move(expr), "True", "true");
     expr = replace_word(std::move(expr), "False", "false");
     expr = replace_word(std::move(expr), "None", "nullptr");
