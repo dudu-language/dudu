@@ -267,6 +267,7 @@ compile_and_expect compound_assignment 46
 compile_and_expect ref_field_inference 42
 compile_and_expect conditional_str 42
 compile_and_expect lambda_callback 42
+compile_and_expect multiline_literals 42
 compile_and_expect list_append_named 42
 compile_and_expect class_methods 42
 compile_and_expect c_import_alias 42

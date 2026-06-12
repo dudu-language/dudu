@@ -400,8 +400,10 @@ class Parser {
         TokenKind previous_kind = TokenKind::End;
         int bracket_depth = 0;
         int paren_depth = 0;
+        int brace_depth = 0;
         while (!at(TokenKind::End)) {
-            if (bracket_depth == 0 && paren_depth == 0) {
+            const bool inside_group = bracket_depth != 0 || paren_depth != 0 || brace_depth != 0;
+            if (!inside_group) {
                 bool stop = false;
                 for (TokenKind kind : stops) {
                     stop = stop || at(kind);
@@ -409,6 +411,11 @@ class Parser {
                 if (stop) {
                     break;
                 }
+            }
+            if (inside_group &&
+                (at(TokenKind::Newline) || at(TokenKind::Indent) || at(TokenKind::Dedent))) {
+                ++cursor_;
+                continue;
             }
             if (!first && parser_needs_space_between(previous_kind, current().kind)) {
                 out << ' ';
@@ -424,6 +431,10 @@ class Parser {
                 ++paren_depth;
             } else if (current().kind == TokenKind::RParen) {
                 --paren_depth;
+            } else if (current().kind == TokenKind::LBrace) {
+                ++brace_depth;
+            } else if (current().kind == TokenKind::RBrace) {
+                --brace_depth;
             }
             ++cursor_;
         }
