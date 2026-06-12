@@ -127,6 +127,7 @@ ProjectConfig parse_project_config(const std::filesystem::path& path) {
                             {"executable", "library", "shared_library"});
         } else if (section == "target" && name == "mode") {
             config.target_mode = unquote(value);
+            config.target_mode_explicit = true;
             validate_one_of(path, line, "mode", config.target_mode,
                             {"hosted", "freestanding", "embedded", "cuda", "shader"});
         } else if (section == "bench" && name == "command") {

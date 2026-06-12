@@ -153,6 +153,14 @@ grep -q "inline constexpr bool DEBUG = false;" "$repo_root/build/package_build_o
     "$repo_root/build/duc" bench 1000
     "$repo_root/build/duc" test
 )
+(
+    cd "$repo_root/tests/fixtures/project_cuda_mode"
+    "$repo_root/build/duc" check
+)
+(
+    cd "$repo_root/tests/fixtures/project_shader_mode"
+    "$repo_root/build/duc" check
+)
 grep -q "inline constexpr bool DEBUG = true;" "$repo_root/build/project_mode.cpp"
 grep -q 'inline constexpr std::string_view TARGET_KIND = "executable";' \
     "$repo_root/build/project_mode.cpp"
@@ -395,6 +403,16 @@ expect_fail bad_fn_pointer_call --emit-cpp "function callback expects 1 argument
 expect_fail bad_tuple_arity --check "tuple supports 1 to 8 elements, got 9"
 expect_fail bad_function_decorator --check "unknown function decorator: @cuda.glboal"
 expect_fail bad_class_decorator --check "unknown class decorator: @packd"
+
+if (
+    cd "$repo_root/tests/fixtures/bad_target_decorator_mode"
+    "$repo_root/build/duc" check
+) 2>"$repo_root/build/bad_target_decorator_mode.err"; then
+    echo "bad_target_decorator_mode unexpectedly passed" >&2
+    exit 1
+fi
+grep -q '@cuda.global requires \[target\] mode = "cuda"' \
+    "$repo_root/build/bad_target_decorator_mode.err"
 
 if "$repo_root/build/duc" build "$repo_root/tests/fixtures/bad_native_build.dd" \
     -o "$repo_root/build/bad_native_build" 2>"$repo_root/build/bad_native_build.err"; then

@@ -104,6 +104,7 @@ struct StaticAssertDecl {
 
 struct ModuleAst {
     std::map<std::string, std::string> build_values;
+    bool target_mode_explicit = false;
     std::vector<ImportDecl> imports;
     std::vector<TypeAliasDecl> aliases;
     std::vector<EnumDecl> enums;

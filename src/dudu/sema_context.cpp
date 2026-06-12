@@ -57,6 +57,33 @@ bool decorator_is_call(std::string_view text, std::string_view name) {
     return !text.empty() && starts_with(text, std::string(name) + "(") && text.back() == ')';
 }
 
+std::string target_mode(const ModuleAst& module) {
+    const auto found = module.build_values.find("TARGET_MODE");
+    if (found == module.build_values.end()) {
+        return "hosted";
+    }
+    std::string value = trim(found->second);
+    if (value.size() >= 2 && value.front() == '"' && value.back() == '"') {
+        return value.substr(1, value.size() - 2);
+    }
+    return value;
+}
+
+void check_target_decorator_mode(const ModuleAst& module, const Decorator& decorator,
+                                 const std::string& text) {
+    if (!module.target_mode_explicit) {
+        return;
+    }
+    const std::string mode = target_mode(module);
+    if ((text == "cuda.global" || text == "cuda.device" || text == "cuda.host") && mode != "cuda") {
+        fail(decorator.location, "@" + text + " requires [target] mode = \"cuda\"");
+    }
+    if ((text == "shader.compute" || decorator_is_call(text, "workgroup_size")) &&
+        mode != "shader") {
+        fail(decorator.location, "@" + text + " requires [target] mode = \"shader\"");
+    }
+}
+
 void check_class_decorator(const Decorator& decorator) {
     const std::string text = trim(decorator.text);
     if (text == "packed" || decorator_is_call(text, "align")) {
@@ -65,11 +92,12 @@ void check_class_decorator(const Decorator& decorator) {
     fail(decorator.location, "unknown class decorator: @" + text);
 }
 
-void check_function_decorator(const Decorator& decorator) {
+void check_function_decorator(const ModuleAst& module, const Decorator& decorator) {
     const std::string text = trim(decorator.text);
     if (text == "inline" || text == "constexpr" || text == "cuda.global" || text == "cuda.device" ||
         text == "cuda.host" || text == "shader.compute" ||
         decorator_is_call(text, "workgroup_size")) {
+        check_target_decorator_mode(module, decorator, text);
         return;
     }
     fail(decorator.location, "unknown function decorator: @" + text);
@@ -268,7 +296,7 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
         }
         for (const FunctionDecl& method : klass.methods) {
             for (const Decorator& decorator : method.decorators) {
-                check_function_decorator(decorator);
+                check_function_decorator(module, decorator);
             }
             std::set<std::string> params;
             for (const ParamDecl& param : method.params) {
@@ -289,7 +317,7 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
     }
     for (const FunctionDecl& fn : module.functions) {
         for (const Decorator& decorator : fn.decorators) {
-            check_function_decorator(decorator);
+            check_function_decorator(module, decorator);
         }
         std::set<std::string> params;
         for (const ParamDecl& param : fn.params) {

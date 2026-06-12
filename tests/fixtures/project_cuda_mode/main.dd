@@ -1,0 +1,3 @@
+@cuda.global
+def kernel(value: *device[i32]):
+    value[0] = 1

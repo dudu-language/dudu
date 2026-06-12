@@ -251,6 +251,7 @@ dudu::ModuleAst checked_module(const Options& options, const std::string& source
     module.build_values = config.build_values;
     module.build_values["TARGET_KIND"] = '"' + config.target_kind + '"';
     module.build_values["TARGET_MODE"] = '"' + config.target_mode + '"';
+    module.target_mode_explicit = config.target_mode_explicit;
     for (const auto& [name, value] : options.build_values) {
         module.build_values[name] = value;
     }
