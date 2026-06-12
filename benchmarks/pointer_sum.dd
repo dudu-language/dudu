@@ -1,0 +1,7 @@
+def pointer_sum(data: *const[i32], n: i32) -> i64:
+    total: i64 = 0
+
+    for i: i32 in range(n):
+        total += i64(data[i])
+
+    return total
