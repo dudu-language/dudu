@@ -64,6 +64,7 @@ printf '#include "cpp_library.hpp"\nint main() { return 0; }\n' >"$repo_root/bui
     -o "$repo_root/build/header_smoke.o"
 
 "$repo_root/build/dudu" "$repo_root/tests/fixtures/simple_program.dd" --format - >/dev/null
+"$repo_root/build/duc" --version | grep -q '^duc 0\.1\.0$'
 "$repo_root/build/duc" "$repo_root/tests/fixtures/simple_program.dd" --check
 "$repo_root/build/duc" check "$repo_root/tests/fixtures/simple_program.dd"
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/simple_program.dd" \

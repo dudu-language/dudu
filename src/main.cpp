@@ -41,6 +41,10 @@ void print_usage() {
                  "[--emit-header <path|->] [--emit-cpp <path|->] [-DNAME=value]\n";
 }
 
+void print_version() {
+    std::cout << "duc 0.1.0\n";
+}
+
 void add_build_value(Options& options, const std::string& define) {
     const size_t equal = define.find('=');
     if (equal == std::string::npos || equal == 0) {
@@ -73,6 +77,10 @@ Options parse_options(int argc, char** argv) {
         const std::string arg = argv[i];
         if (arg == "-h" || arg == "--help") {
             print_usage();
+            std::exit(0);
+        }
+        if (arg == "--version") {
+            print_version();
             std::exit(0);
         }
         if (arg == "-o") {

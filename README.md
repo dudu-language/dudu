@@ -59,6 +59,7 @@ Show the compiler commands:
 
 ```sh
 ./build/duc --help
+./build/duc --version
 ```
 
 Check, format, or emit code:
