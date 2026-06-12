@@ -24,6 +24,7 @@ add_library(dudu_frontend
     src/dudu/source.cpp
     src/dudu/token.cpp
     src/dudu/type_compat.cpp
+    src/dudu/unsupported.cpp
 )
 target_include_directories(dudu_frontend PUBLIC src)
 target_compile_features(dudu_frontend PUBLIC cxx_std_20)

@@ -219,6 +219,9 @@ expect_fail bad_missing_return --emit-cpp "missing return in function: bad"
 expect_fail bad_build_flag --check "unknown build flag: build.NOPE"
 expect_fail bad_implicit_cast --emit-cpp "cannot assign i32 to i64 without an explicit cast"
 expect_fail bad_const_assignment --emit-cpp "cannot assign to constant: LIMIT"
+expect_fail bad_raise --check "unsupported Python feature: exceptions"
+expect_fail bad_yield --check "unsupported Python feature: generators"
+expect_fail bad_eval --check "unsupported Python feature: dynamic execution"
 
 if "$repo_root/build/duc" emit "$repo_root/tests/fixtures/bad_package_build/main.dd" \
     -o "$repo_root/build/bad_package_build.cpp" 2>"$repo_root/build/bad_package_build.err"; then

@@ -4,6 +4,7 @@
 #include "dudu/control_flow.hpp"
 #include "dudu/naming.hpp"
 #include "dudu/type_compat.hpp"
+#include "dudu/unsupported.hpp"
 
 #include <cctype>
 #include <map>
@@ -486,6 +487,7 @@ void analyze_module(const ModuleAst& module, SemanticOptions options) {
     const Symbols symbols = collect_symbols(module);
     check_build_flags(module);
     check_naming(module);
+    check_unsupported_python(module);
     check_declarations(module, symbols);
     if (options.check_bodies) {
         check_bodies(module, symbols);
