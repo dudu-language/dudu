@@ -79,6 +79,13 @@ Validate the checked-in examples that do not need external libraries:
 ./scripts/test.sh
 ```
 
+Run the scalar-loop benchmark comparison:
+
+```sh
+./scripts/bench.sh
+./scripts/bench.sh 10000000
+```
+
 Editor syntax files live in:
 
 - `editors/vscode`

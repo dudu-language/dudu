@@ -1,0 +1,7 @@
+def scalar_sum(n: i32) -> i64:
+    total: i64 = 0
+
+    for i: i32 in range(n):
+        total += i64(i) * 3
+
+    return total
