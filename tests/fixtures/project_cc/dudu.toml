@@ -1,0 +1,6 @@
+main = "main.dd"
+cpp_std = "c++20"
+
+[cc]
+include_dirs = ["include"]
+libs = []

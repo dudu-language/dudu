@@ -77,9 +77,15 @@ Check, format, or emit code:
 Build flags can also live beside an input file in `dudu.toml`:
 
 ```toml
+cpp_std = "c++20"
+
 [build]
 DEBUG = true
 RENDER_BACKEND = "raylib"
+
+[cc]
+include_dirs = ["include"]
+libs = ["raylib"]
 ```
 
 Project commands can use a top-level `main` entry:

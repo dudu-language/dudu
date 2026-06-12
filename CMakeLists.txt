@@ -21,6 +21,7 @@ add_library(dudu_frontend
     src/dudu/module_loader.cpp
     src/dudu/naming.cpp
     src/dudu/parser.cpp
+    src/dudu/project_config.cpp
     src/dudu/sema.cpp
     src/dudu/source.cpp
     src/dudu/token.cpp

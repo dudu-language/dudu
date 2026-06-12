@@ -1,0 +1,5 @@
+import cpp "answer.hpp" as answer
+
+
+def main() -> i32:
+    return answer.value()

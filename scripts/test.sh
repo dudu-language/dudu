@@ -118,6 +118,18 @@ grep -q "inline constexpr bool DEBUG = false;" "$repo_root/build/package_build_o
 )
 grep -q "inline constexpr bool DEBUG = true;" "$repo_root/build/project_mode.cpp"
 grep -q "if constexpr (build::DEBUG)" "$repo_root/build/project_mode.cpp"
+(
+    cd "$repo_root/tests/fixtures/project_cc"
+    "$repo_root/build/duc" build -o "$repo_root/build/project_cc_bin"
+)
+set +e
+"$repo_root/build/project_cc_bin"
+project_cc_status=$?
+set -e
+if [[ "$project_cc_status" -ne 42 ]]; then
+    echo "project_cc returned $project_cc_status, expected 42" >&2
+    exit 1
+fi
 
 compile_and_expect() {
     local name="$1"

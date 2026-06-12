@@ -2,9 +2,9 @@
 #include "dudu/format_path.hpp"
 #include "dudu/module_loader.hpp"
 #include "dudu/parser.hpp"
+#include "dudu/project_config.hpp"
 #include "dudu/sema.hpp"
 
-#include <cctype>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -33,13 +33,6 @@ struct Options {
     bool test = false;
 };
 
-struct ProjectConfig {
-    std::filesystem::path main;
-    std::string bench_command;
-    std::string test_command;
-    std::map<std::string, std::string> build_values;
-};
-
 [[noreturn]] void fail(const std::string& message) {
     throw std::runtime_error(message);
 }
@@ -66,106 +59,6 @@ void add_build_value(Options& options, const std::string& define) {
         fail("-D requires NAME=value");
     }
     options.build_values[define.substr(0, equal)] = define.substr(equal + 1);
-}
-
-std::string trim_copy(std::string_view text) {
-    while (!text.empty() && std::isspace(static_cast<unsigned char>(text.front())) != 0) {
-        text.remove_prefix(1);
-    }
-    while (!text.empty() && std::isspace(static_cast<unsigned char>(text.back())) != 0) {
-        text.remove_suffix(1);
-    }
-    return std::string(text);
-}
-
-std::string strip_comment(std::string line) {
-    char quote = '\0';
-    bool escaped = false;
-    for (size_t i = 0; i < line.size(); ++i) {
-        const char c = line[i];
-        if (quote != '\0') {
-            if (escaped) {
-                escaped = false;
-            } else if (c == '\\') {
-                escaped = true;
-            } else if (c == quote) {
-                quote = '\0';
-            }
-            continue;
-        }
-        if (c == '"' || c == '\'') {
-            quote = c;
-            continue;
-        }
-        if (c == '#') {
-            return line.substr(0, i);
-        }
-    }
-    return line;
-}
-
-ProjectConfig parse_project_config(const std::filesystem::path& path) {
-    ProjectConfig config;
-    std::ifstream file(path);
-    if (!file) {
-        return config;
-    }
-    bool in_bench = false;
-    bool in_build = false;
-    bool in_test = false;
-    std::string line;
-    while (std::getline(file, line)) {
-        line = trim_copy(strip_comment(std::move(line)));
-        if (line.empty()) {
-            continue;
-        }
-        if (line.front() == '[' && line.back() == ']') {
-            const std::string section =
-                trim_copy(std::string_view(line).substr(1, line.size() - 2));
-            in_bench = section == "bench";
-            in_build = section == "build";
-            in_test = section == "test";
-            continue;
-        }
-        const size_t equal = line.find('=');
-        if (equal == std::string::npos) {
-            if (in_build) {
-                fail(path.string() + ": invalid [build] entry: " + line);
-            }
-            fail(path.string() + ": invalid entry: " + line);
-        }
-        const std::string name = trim_copy(std::string_view(line).substr(0, equal));
-        std::string value = trim_copy(std::string_view(line).substr(equal + 1));
-        if (name.empty() || value.empty()) {
-            if (in_build) {
-                fail(path.string() + ": invalid [build] entry: " + line);
-            }
-            fail(path.string() + ": invalid entry: " + line);
-        }
-        if (!in_build && name == "main") {
-            if (value.size() >= 2 && value.front() == '"' && value.back() == '"') {
-                value = value.substr(1, value.size() - 2);
-            }
-            config.main = value;
-            continue;
-        }
-        if ((in_bench || in_test) && name == "command") {
-            if (value.size() >= 2 && value.front() == '"' && value.back() == '"') {
-                value = value.substr(1, value.size() - 2);
-            }
-            if (in_bench) {
-                config.bench_command = value;
-            } else {
-                config.test_command = value;
-            }
-            continue;
-        }
-        if (!in_build) {
-            continue;
-        }
-        config.build_values[name] = value;
-    }
-    return config;
 }
 
 std::filesystem::path build_config_path(const std::filesystem::path& input) {
@@ -289,7 +182,7 @@ Options resolve_project_input(Options options) {
     if (!options.input.empty()) {
         return options;
     }
-    const ProjectConfig config = parse_project_config("dudu.toml");
+    const dudu::ProjectConfig config = dudu::parse_project_config("dudu.toml");
     if (config.main.empty()) {
         fail("missing input file and dudu.toml main");
     }
@@ -342,16 +235,27 @@ std::string append_command_args(std::string command, const std::vector<std::stri
     return command;
 }
 
+std::string native_lib_flag(const std::string& lib) {
+    return lib.empty() || lib.front() == '-' ? lib : "-l" + lib;
+}
+
 std::filesystem::path build_executable(const Options& options, const std::string& cpp) {
     const std::filesystem::path output = options.output.value_or("a.out");
     std::filesystem::create_directories(output.parent_path().empty() ? "." : output.parent_path());
     const std::filesystem::path cpp_path = output.string() + ".cpp";
     write_text_output(cpp_path, cpp);
 
+    const dudu::ProjectConfig config = dudu::parse_project_config(build_config_path(options.input));
     const char* env_cxx = std::getenv("CXX");
     const std::string cxx = env_cxx == nullptr ? "c++" : env_cxx;
-    const std::string command =
-        cxx + " -std=c++20 " + shell_quote(cpp_path) + " -o " + shell_quote(output);
+    std::string command = cxx + " -std=" + config.cpp_std + " " + shell_quote(cpp_path) + " -o " +
+                          shell_quote(output);
+    for (const std::string& include_dir : config.include_dirs) {
+        command += " " + shell_quote_arg("-I" + include_dir);
+    }
+    for (const std::string& lib : config.libs) {
+        command += " " + shell_quote_arg(native_lib_flag(lib));
+    }
     if (std::system(command.c_str()) != 0) {
         fail("C++ build failed");
     }
@@ -359,7 +263,7 @@ std::filesystem::path build_executable(const Options& options, const std::string
 }
 
 int run_project_tests() {
-    std::string command = parse_project_config("dudu.toml").test_command;
+    std::string command = dudu::parse_project_config("dudu.toml").test_command;
     if (command.empty() && std::filesystem::exists("scripts/test.sh")) {
         command = "./scripts/test.sh";
     }
@@ -370,7 +274,7 @@ int run_project_tests() {
 }
 
 int run_project_benchmarks(const Options& options) {
-    std::string command = parse_project_config("dudu.toml").bench_command;
+    std::string command = dudu::parse_project_config("dudu.toml").bench_command;
     if (command.empty() && std::filesystem::exists("scripts/bench.sh")) {
         command = "./scripts/bench.sh";
     }
@@ -384,7 +288,7 @@ dudu::ModuleAst checked_module(const Options& options, const std::string& source
                                bool check_bodies) {
     dudu::ModuleAst module = options.input.empty() ? dudu::parse_source(source, options.input)
                                                    : dudu::load_source_tree(options.input);
-    module.build_values = parse_project_config(build_config_path(options.input)).build_values;
+    module.build_values = dudu::parse_project_config(build_config_path(options.input)).build_values;
     for (const auto& [name, value] : options.build_values) {
         module.build_values[name] = value;
     }
