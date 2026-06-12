@@ -2,6 +2,7 @@
 
 import cpp "httplib.h" as http
 import cpp "sqlite3.h" as sqlite
+import c "stdlib.h" as c
 
 
 class Todo:
@@ -19,6 +20,10 @@ enum DbError:
 def todo_to_json(todo: Todo) -> str:
     done_text = "true" if todo.done else "false"
     return "{\"id\":" + str(todo.id) + ",\"title\":\"" + todo.title + "\",\"done\":" + done_text + "}"
+
+
+def parse_i64(text: str) -> i64:
+    return c.atoll(text.c_str())
 
 
 def find_todo(db: *sqlite.sqlite3, todo_id: i64) -> Result[Todo, DbError]:
