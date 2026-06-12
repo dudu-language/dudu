@@ -7,6 +7,8 @@ Interop requirements:
 
 - `import c "header.h" as alias`
 - `import cpp "header.hpp" as alias`
+- generated `.hpp`/`.cpp` files for C++ consumers
+- generated `.h` files for C ABI exports
 - generated includes
 - namespace/member lowering
 - constructors and destructors through generated C++
@@ -17,6 +19,9 @@ Interop requirements:
 - C++ ABI calls
 - generated `.hpp` files usable from C++
 - Clang-backed header import for complete library understanding
+
+Dudu code imports Dudu modules directly. Foreign headers are the boundary to
+the C and C++ ecosystem, not the normal Dudu module interface.
 
 Macros are not part of the core interop surface. Users can write wrapper
 headers when macro-heavy APIs need a stable callable shape.

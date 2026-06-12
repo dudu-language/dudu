@@ -1,0 +1,49 @@
+# Compile-time constants, build flags, static assertions, and constexpr helpers.
+
+
+WIDTH: i32 = 320
+HEIGHT: i32 = 240
+PIXELS: i32 = WIDTH * HEIGHT
+
+
+class Color:
+    r: u8
+    g: u8
+    b: u8
+    a: u8
+
+
+@align(16)
+class FrameInfo:
+    frame: u64
+    pixels: i32
+
+
+@constexpr
+def align_up(value: usize, align: usize) -> usize:
+    return (value + align - 1) & ~(align - 1)
+
+
+ROW_BYTES: usize = align_up(usize(WIDTH) * sizeof[Color](), 64)
+
+static_assert(PIXELS == 76800)
+static_assert(alignof[FrameInfo]() == 16)
+
+
+def init_renderer():
+    if build.RENDER_BACKEND == "vulkan":
+        init_vulkan()
+    elif build.RENDER_BACKEND == "raylib":
+        init_raylib()
+    else:
+        static_assert(False)
+
+
+def main() -> i32:
+    pixels: Color[PIXELS]
+
+    if build.DEBUG:
+        print("debug renderer")
+
+    init_renderer()
+    return i32(ROW_BYTES) + len(pixels)

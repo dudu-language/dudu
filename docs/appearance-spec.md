@@ -68,13 +68,54 @@ use all-caps names.
 
 ## Imports
 
-Normal Dudu modules should look like Python imports:
+Dudu modules use Python-shaped imports and keep names qualified by default:
 
 ```python
 import math
 import renderer.camera as camera
 from renderer.camera import Camera
 ```
+
+`import renderer.camera` binds the top-level `renderer` name. Code accesses
+members through the qualified module path:
+
+```python
+cam = renderer.camera.Camera()
+```
+
+`import renderer.camera as camera` binds only `camera`:
+
+```python
+cam = camera.Camera()
+```
+
+`from renderer.camera import Camera` binds `Camera` directly in the current
+module. If two direct imports create the same name, compilation fails unless
+one or both imports use aliases:
+
+```python
+from ui.button import Button as UiButton
+from game.input import Button as InputButton
+```
+
+Reexports are ordinary Dudu modules. A package can provide a facade module:
+
+```python
+# game.dd
+from game.player import Player
+from game.world import World
+```
+
+Users can then write:
+
+```python
+import game
+
+p = game.Player()
+```
+
+Packages do not need facade modules. Qualified imports are the default answer
+to name collisions.
 
 C and C++ headers need explicit foreign imports. These are not Python syntax,
 but they should stay visually close:
@@ -86,6 +127,10 @@ import cpp "glm/glm.hpp" as glm
 ```
 
 The quoted path is a header spelling, not a Dudu module name.
+
+Dudu source files are the source of truth. The compiler emits generated
+`.hpp`/`.cpp` files for C++ consumers and generated `.h` files for C ABI
+exports. Dudu interface files are not required for normal use.
 
 ## Blocks
 
@@ -648,6 +693,67 @@ arena.reset()
 
 Dudu does not define what `arena.make`, `arena.alloc`, or `arena.reset` mean.
 Those are just method calls supplied by the arena library.
+
+## Compile-Time Values
+
+All-caps constants can participate in compile-time expressions when their
+initializer is compile-time evaluable.
+
+```python
+WIDTH: i32 = 320
+HEIGHT: i32 = 240
+PIXELS: i32 = WIDTH * HEIGHT
+
+pixels: Color[PIXELS]
+```
+
+Build flags live in the `build` namespace.
+
+```python
+if build.DEBUG:
+    enable_validation_layers()
+
+if build.RENDER_BACKEND == "vulkan":
+    init_vulkan()
+elif build.RENDER_BACKEND == "raylib":
+    init_raylib()
+```
+
+Build flags come from `dudu.toml` or `duc -D` values:
+
+```toml
+[build]
+DEBUG = true
+RENDER_BACKEND = "vulkan"
+```
+
+```sh
+duc build -DDEBUG=true -DRENDER_BACKEND=vulkan
+```
+
+Branches depending only on `build.*` values are compile-time selected.
+
+Static assertions use `static_assert`.
+
+```python
+static_assert(sizeof[PacketHeader]() == 12)
+static_assert(alignof[Mat4Block]() == 16)
+```
+
+Compile-time functions use `@constexpr`.
+
+```python
+@constexpr
+def align_up(value: usize, align: usize) -> usize:
+    return (value + align - 1) & ~(align - 1)
+
+
+BUFFER_SIZE: usize = align_up(1500, 64)
+```
+
+`@constexpr` maps to generated C++ `constexpr` where possible. It is also the
+Dudu signal that a function can be evaluated for constants, static assertions,
+array sizes, and build-time branches.
 
 ## Member And Namespace Access
 

@@ -42,6 +42,9 @@ Implement this first:
 - `.dd` files with Python-like indentation.
 - Python comments.
 - `import`, `import c "..." as name`, `import cpp "..." as name`.
+- qualified module imports by default.
+- selective imports with compile errors on direct-name collisions.
+- facade modules through ordinary imports, with no special reexport system.
 - `class` with typed fields and methods.
 - `enum`.
 - `type Name = Type`.
@@ -51,6 +54,9 @@ Implement this first:
 - typed local annotations: `x: i32 = 0`.
 - local type inference from initializers.
 - constants via mandatory `ALL_CAPS` bindings.
+- compile-time build flags through `build.NAME`.
+- static assertions with `static_assert(...)`.
+- compile-time functions with `@constexpr`.
 - tuple return and destructuring assignment.
 - `Result[T, E]` and `Option[T]`.
 - no exceptions.
@@ -196,6 +202,8 @@ Parser requirements:
 
 - module imports
 - foreign imports
+- import aliases
+- selective imports
 - classes
 - enums
 - aliases
@@ -209,6 +217,17 @@ Parsing target examples:
 - `examples/numerics_kmeans.dd`
 - `examples/cpp_library.dd`
 - a tiny hello fixture
+
+Name-resolution requirements:
+
+- `import foo.bar` binds `foo` and requires qualified access such as
+  `foo.bar.Name`.
+- `import foo.bar as fb` binds `fb`.
+- `from foo.bar import Name` binds `Name` in the current module.
+- `from foo.bar import Name as Alias` binds `Alias`.
+- direct-name collisions are compile errors.
+- facade modules are normal modules that import and expose selected names.
+- generated C++ namespaces mirror Dudu module paths.
 
 ## Stage 2: AST And Type AST
 
@@ -573,6 +592,10 @@ build_dir = "build"
 kind = "executable"
 mode = "hosted"
 
+[build]
+DEBUG = true
+RENDER_BACKEND = "vulkan"
+
 [cc]
 compiler = "clang++"
 include_dirs = ["include"]
@@ -635,6 +658,9 @@ Required diagnostic categories:
 - rejected implicit cast
 - const assignment
 - all-caps naming misuse
+- invalid compile-time expression
+- failed `static_assert`
+- missing `build.NAME` flag
 - pointer/reference escape of local values
 - tuple destructuring arity mismatch
 - unsupported Python feature
@@ -740,9 +766,53 @@ Editor integration should support:
 - generated C++ location lookup
 - basic completion for Dudu symbols
 - imported C/C++ completion once Clang-backed import is available
+- syntax highlighting
+- file icons and `.dd` file association
+- command palette actions for `duc fmt`, `duc check`, `duc build`, and `duc run`
 
 The syntax intentionally stays close to Python so existing editor tokenization
 can provide a usable baseline before a full language server exists.
+
+Editor deliverables:
+
+```text
+editors/
+    vscode/
+        package.json
+        syntaxes/dudu.tmLanguage.json
+        language-configuration.json
+    vim/
+        syntax/dudu.vim
+        ftdetect/dudu.vim
+    nvim/
+        queries/dudu/highlights.scm
+```
+
+VS Code development flow:
+
+- keep a local extension under `editors/vscode`
+- run it with VS Code's Extension Development Host
+- associate `.dd` files with Dudu
+- start with TextMate grammar based on Python plus Dudu-specific additions:
+  - `import c`
+  - `import cpp`
+  - fixed-width scalar types
+  - `*T`, `&T`, `const[T]`
+  - typed `for name: Type in`
+  - `fn(...) -> T` function pointer types
+  - target attributes like `@cuda.global`
+
+Vim/Neovim flow:
+
+- basic Vim syntax and file detection live in the repo
+- Neovim Tree-sitter queries are added when a grammar exists
+- users can symlink or copy the files during development
+
+Language server:
+
+- `duc lsp` should provide diagnostics and navigation after parser/typechecker
+  APIs are stable
+- syntax highlighting does not wait for LSP
 
 ## Performance Requirements
 
@@ -820,6 +890,59 @@ Benchmark reports should include:
 
 Performance regressions should fail CI for core benchmarks once the benchmark
 suite exists.
+
+## Compile-Time Evaluation
+
+Compile-time facilities:
+
+```python
+WIDTH: i32 = 320
+HEIGHT: i32 = 240
+PIXELS: i32 = WIDTH * HEIGHT
+
+static_assert(PIXELS == 76800)
+
+@constexpr
+def align_up(value: usize, align: usize) -> usize:
+    return (value + align - 1) & ~(align - 1)
+
+
+BUFFER_SIZE: usize = align_up(1500, 64)
+```
+
+Build configuration uses the `build` namespace:
+
+```python
+if build.DEBUG:
+    enable_validation_layers()
+
+if build.RENDER_BACKEND == "vulkan":
+    init_vulkan()
+elif build.RENDER_BACKEND == "raylib":
+    init_raylib()
+```
+
+Sources for `build.NAME` values:
+
+```toml
+[build]
+DEBUG = true
+RENDER_BACKEND = "vulkan"
+```
+
+```sh
+duc build -DDEBUG=true -DRENDER_BACKEND=vulkan
+```
+
+Rules:
+
+- `build.NAME` values are compile-time known.
+- branches depending only on `build.NAME` are compile-time selected.
+- all-caps constants can initialize array sizes and other compile-time contexts.
+- `@constexpr` functions are valid in compile-time contexts.
+- `static_assert(expr)` evaluates at compile time.
+- generated C++ should use `constexpr` where the Dudu expression is
+  compile-time evaluable.
 
 ## Distribution
 

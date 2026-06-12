@@ -7,6 +7,8 @@ Dudu source is typed Python-shaped code that lowers to C++.
 Core forms:
 
 - `import`
+- `import module.path as alias`
+- `from module.path import Name`
 - `import c "header.h" as alias`
 - `import cpp "header.hpp" as alias`
 - `class`
@@ -23,3 +25,6 @@ Core forms:
 - function pointer types: `fn(A, B) -> R`
 - result types: `Result[T, E]`
 - optional values: `Option[T]`
+
+Imports are qualified by default. Direct imported names must not collide unless
+they are explicitly aliased.
