@@ -26,6 +26,7 @@ Implementation work stays organized around cohesive frontend files:
 
 Commit workflow:
 
-- commit at reasonable green checkpoints
+- commit frequently at reasonable green checkpoints
 - keep each commit scoped to one feature, diagnostic, doc update, or test slice
 - run the relevant formatter and test command before committing
+- prefer many small, reviewed checkpoints over one large end-of-session commit

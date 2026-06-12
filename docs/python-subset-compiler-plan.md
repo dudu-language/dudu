@@ -562,6 +562,13 @@ Expected project flow:
 5. Debug generated C++ when necessary.
 6. Use generated `.hpp` files from C++ projects when Dudu code is a library.
 
+Expected implementation flow:
+
+1. Work in cohesive slices.
+2. Run the relevant formatter and tests for the touched area.
+3. Commit frequently at reasonable green checkpoints.
+4. Keep each commit scoped enough to review or revert cleanly.
+
 `duc` should support direct one-file use:
 
 ```sh
