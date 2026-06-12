@@ -3,5 +3,8 @@ main = "main.dd"
 [build]
 DEBUG = true
 
+[bench]
+command = "true"
+
 [test]
 command = "true"

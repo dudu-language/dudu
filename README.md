@@ -99,11 +99,15 @@ Then run:
 Project tests can be wired through `dudu.toml`:
 
 ```toml
+[bench]
+command = "./scripts/bench.sh"
+
 [test]
 command = "./scripts/test.sh"
 ```
 
 ```sh
+./build/duc bench 10000000
 ./build/duc test
 ```
 

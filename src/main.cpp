@@ -14,6 +14,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace {
 
@@ -22,6 +23,8 @@ struct Options {
     std::optional<std::filesystem::path> output;
     std::optional<std::filesystem::path> header_output;
     std::map<std::string, std::string> build_values;
+    std::vector<std::string> command_args;
+    bool bench = false;
     bool build = false;
     bool check = false;
     bool emit_cpp = false;
@@ -32,6 +35,7 @@ struct Options {
 
 struct ProjectConfig {
     std::filesystem::path main;
+    std::string bench_command;
     std::string test_command;
     std::map<std::string, std::string> build_values;
 };
@@ -41,7 +45,8 @@ struct ProjectConfig {
 }
 
 void print_usage() {
-    std::cout << "usage: duc build [input.dd] [-o output]\n"
+    std::cout << "usage: duc bench [args...]\n"
+                 "       duc build [input.dd] [-o output]\n"
                  "       duc check [input.dd]\n"
                  "       duc emit [input.dd] [-o output.cpp]\n"
                  "       duc fmt <input.dd|dir> [--check] [-o output.dd]\n"
@@ -105,6 +110,7 @@ ProjectConfig parse_project_config(const std::filesystem::path& path) {
     if (!file) {
         return config;
     }
+    bool in_bench = false;
     bool in_build = false;
     bool in_test = false;
     std::string line;
@@ -116,6 +122,7 @@ ProjectConfig parse_project_config(const std::filesystem::path& path) {
         if (line.front() == '[' && line.back() == ']') {
             const std::string section =
                 trim_copy(std::string_view(line).substr(1, line.size() - 2));
+            in_bench = section == "bench";
             in_build = section == "build";
             in_test = section == "test";
             continue;
@@ -142,11 +149,15 @@ ProjectConfig parse_project_config(const std::filesystem::path& path) {
             config.main = value;
             continue;
         }
-        if (in_test && name == "command") {
+        if ((in_bench || in_test) && name == "command") {
             if (value.size() >= 2 && value.front() == '"' && value.back() == '"') {
                 value = value.substr(1, value.size() - 2);
             }
-            config.test_command = value;
+            if (in_bench) {
+                config.bench_command = value;
+            } else {
+                config.test_command = value;
+            }
             continue;
         }
         if (!in_build) {
@@ -171,6 +182,9 @@ Options parse_options(int argc, char** argv) {
     if (argc > 1 && std::string(argv[1]) == "build") {
         options.build = true;
         first_arg = 2;
+    } else if (argc > 1 && std::string(argv[1]) == "bench") {
+        options.bench = true;
+        first_arg = 2;
     } else if (argc > 1 && std::string(argv[1]) == "check") {
         options.check = true;
         first_arg = 2;
@@ -190,6 +204,10 @@ Options parse_options(int argc, char** argv) {
 
     for (int i = first_arg; i < argc; ++i) {
         const std::string arg = argv[i];
+        if (options.bench) {
+            options.command_args.push_back(arg);
+            continue;
+        }
         if (arg == "-h" || arg == "--help") {
             print_usage();
             std::exit(0);
@@ -257,15 +275,15 @@ Options parse_options(int argc, char** argv) {
         }
         fail("unexpected argument: " + arg);
     }
-    if (options.input.empty() && !options.build && !options.check && !options.emit_cpp &&
-        !options.run && !options.test) {
+    if (options.input.empty() && !options.bench && !options.build && !options.check &&
+        !options.emit_cpp && !options.run && !options.test) {
         fail("missing input file");
     }
     return options;
 }
 
 Options resolve_project_input(Options options) {
-    if (options.test) {
+    if (options.bench || options.test) {
         return options;
     }
     if (!options.input.empty()) {
@@ -332,6 +350,22 @@ std::string shell_quote(const std::filesystem::path& path) {
     return out;
 }
 
+std::string shell_quote_arg(const std::string& value) {
+    std::string out = "'";
+    for (const char c : value) {
+        out += c == '\'' ? "'\\''" : std::string(1, c);
+    }
+    out += "'";
+    return out;
+}
+
+std::string append_command_args(std::string command, const std::vector<std::string>& args) {
+    for (const std::string& arg : args) {
+        command += " " + shell_quote_arg(arg);
+    }
+    return command;
+}
+
 std::filesystem::path build_executable(const Options& options, const std::string& cpp) {
     const std::filesystem::path output = options.output.value_or("a.out");
     std::filesystem::create_directories(output.parent_path().empty() ? "." : output.parent_path());
@@ -357,6 +391,17 @@ int run_project_tests() {
         fail("missing [test] command and scripts/test.sh");
     }
     return std::system(command.c_str()) == 0 ? 0 : 1;
+}
+
+int run_project_benchmarks(const Options& options) {
+    std::string command = parse_project_config("dudu.toml").bench_command;
+    if (command.empty() && std::filesystem::exists("scripts/bench.sh")) {
+        command = "./scripts/bench.sh";
+    }
+    if (command.empty()) {
+        fail("missing [bench] command and scripts/bench.sh");
+    }
+    return std::system(append_command_args(command, options.command_args).c_str()) == 0 ? 0 : 1;
 }
 
 dudu::ModuleAst checked_module(const Options& options, const std::string& source,
@@ -396,6 +441,9 @@ bool check_source_path(const Options& options) {
 int main(int argc, char** argv) {
     try {
         const Options options = resolve_project_input(parse_options(argc, argv));
+        if (options.bench) {
+            return run_project_benchmarks(options);
+        }
         if (options.test) {
             return run_project_tests();
         }
