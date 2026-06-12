@@ -194,6 +194,7 @@ void emit_includes(std::ostringstream& out, const ModuleAst& module) {
     out << "#include <atomic>\n"
            "#include <cstddef>\n"
            "#include <cstdint>\n"
+           "#include <cstdlib>\n"
            "#include <functional>\n"
            "#include <optional>\n"
            "#include <string>\n"

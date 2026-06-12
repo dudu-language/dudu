@@ -191,7 +191,50 @@ std::string replace_word(std::string text, std::string_view from, std::string_vi
     return text;
 }
 
+std::string lower_template_alloc_call(std::string expr, std::string_view name) {
+    const std::string marker = std::string(name) + "[";
+    size_t pos = expr.find(marker);
+    while (pos != std::string::npos) {
+        const size_t type_start = pos + marker.size();
+        const size_t type_end = expr.find(']', type_start);
+        if (type_end == std::string::npos || type_end + 1 >= expr.size() ||
+            expr[type_end + 1] != '(') {
+            pos = expr.find(marker, pos + marker.size());
+            continue;
+        }
+        const size_t args_start = type_end + 2;
+        int depth = 1;
+        size_t cursor = args_start;
+        while (cursor < expr.size() && depth > 0) {
+            if (expr[cursor] == '(') {
+                ++depth;
+            } else if (expr[cursor] == ')') {
+                --depth;
+            }
+            ++cursor;
+        }
+        if (depth != 0) {
+            break;
+        }
+        const std::string type = expr.substr(type_start, type_end - type_start);
+        const std::string args = expr.substr(args_start, cursor - args_start - 1);
+        std::string replacement;
+        if (name == "new") {
+            replacement = "new " + lower_cpp_type(type) + "(" + args + ")";
+        } else {
+            const std::string lowered = lower_cpp_type(type);
+            replacement = "static_cast<" + lowered + "*>(std::malloc(sizeof(" + lowered + ") * (" +
+                          args + ")))";
+        }
+        expr.replace(pos, cursor - pos, replacement);
+        pos = expr.find(marker, pos + replacement.size());
+    }
+    return expr;
+}
+
 std::string lower_cpp_expr(std::string expr) {
+    expr = lower_template_alloc_call(std::move(expr), "new");
+    expr = lower_template_alloc_call(std::move(expr), "malloc");
     expr = replace_word(std::move(expr), "True", "true");
     expr = replace_word(std::move(expr), "False", "false");
     expr = replace_word(std::move(expr), "None", "nullptr");
