@@ -273,6 +273,15 @@ expect_fail bad_return_local_address --emit-cpp "cannot let local address escape
 expect_fail bad_append_local_address --emit-cpp "cannot let local address escape: value"
 expect_fail bad_static_assert --check "static_assert failed: (PIXELS == 65)"
 
+if "$repo_root/build/duc" build "$repo_root/tests/fixtures/bad_native_build.dd" \
+    -o "$repo_root/build/bad_native_build" 2>"$repo_root/build/bad_native_build.err"; then
+    echo "bad_native_build unexpectedly passed" >&2
+    exit 1
+fi
+grep -q "C++ build failed" "$repo_root/build/bad_native_build.err"
+grep -q "source: .*bad_native_build.cpp" "$repo_root/build/bad_native_build.err"
+grep -q "command: " "$repo_root/build/bad_native_build.err"
+
 if "$repo_root/build/duc" emit "$repo_root/tests/fixtures/bad_package_build/main.dd" \
     -o "$repo_root/build/bad_package_build.cpp" 2>"$repo_root/build/bad_package_build.err"; then
     echo "bad_package_build unexpectedly passed" >&2

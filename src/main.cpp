@@ -342,7 +342,7 @@ std::filesystem::path build_executable(const Options& options, const std::string
         std::cerr << command << '\n';
     }
     if (std::system(command.c_str()) != 0) {
-        fail("C++ build failed");
+        fail("C++ build failed\nsource: " + cpp_path.string() + "\ncommand: " + command);
     }
     return output;
 }
