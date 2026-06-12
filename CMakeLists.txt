@@ -28,6 +28,7 @@ add_library(dudu_frontend
     src/dudu/sema.cpp
     src/dudu/sema_context.cpp
     src/dudu/sema_function_type.cpp
+    src/dudu/sema_index.cpp
     src/dudu/sema_scan.cpp
     src/dudu/source.cpp
     src/dudu/token.cpp

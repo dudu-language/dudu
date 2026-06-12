@@ -16,7 +16,7 @@ class Arena:
 
     def alloc(self, size: usize, align: usize) -> *u8:
         # Library-defined behavior. Dudu does not know this is an arena.
-        aligned = align_up(self.used, align)
+        aligned = (self.used + align - 1) / align * align
         if aligned + size > self.capacity:
             return None
 

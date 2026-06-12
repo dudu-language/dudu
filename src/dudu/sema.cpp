@@ -7,6 +7,7 @@
 #include "dudu/naming.hpp"
 #include "dudu/sema_context.hpp"
 #include "dudu/sema_function_type.hpp"
+#include "dudu/sema_index.hpp"
 #include "dudu/sema_scan.hpp"
 #include "dudu/type_compat.hpp"
 #include "dudu/unsupported.hpp"
@@ -87,42 +88,10 @@ bool can_assign_expr(const FunctionScope& scope, const std::string& expected,
            assignment_type_allowed(resolve_alias(scope.symbols, expected), expr,
                                    resolve_alias(scope.symbols, got));
 }
-std::string index_value_type(const FunctionScope& scope, const SourceLocation& location,
-                             const std::string& name, const char* unknown_message) {
-    const auto local = scope.locals.find(name);
-    if (local == scope.locals.end()) {
-        fail(location, std::string(unknown_message) + name);
-    }
-    std::string type = resolve_alias(scope.symbols, local->second);
-    bool pointer_index = false;
-    if (starts_with(type, "*")) {
-        type = trim(type.substr(1));
-        pointer_index = true;
-    }
-    for (const char* wrapper : {"storage", "shared", "device", "volatile", "atomic"}) {
-        const std::string prefix = std::string(wrapper) + "[";
-        if (starts_with(type, prefix) && type.back() == ']') {
-            type = trim(type.substr(prefix.size(), type.size() - prefix.size() - 1));
-            break;
-        }
-    }
-    if (pointer_index) {
-        return type;
-    }
-    if (starts_with(type, "list[") && type.back() == ']') {
-        return trim(type.substr(5, type.size() - 6));
-    }
-    if (starts_with(type, "dict[") && type.back() == ']') {
-        const std::vector<std::string> args = split_top_level(type.substr(5, type.size() - 6));
-        if (args.size() == 2) {
-            return args[1];
-        }
-    }
-    const size_t type_index = type.find('[');
-    if (type_index != std::string::npos && type.back() == ']') {
-        return trim(type.substr(0, type_index));
-    }
-    fail(location, "cannot index non-container: " + name);
+bool is_builtin_call(const std::string& callee) {
+    static const std::set<std::string> builtins = {"align_up", "delete", "free",  "len",
+                                                   "max",      "min",    "print", "range"};
+    return builtins.contains(callee);
 }
 void check_call_args(const FunctionScope& scope, const std::string& callee,
                      const FunctionSignature& signature, const std::vector<std::string>& args,
@@ -270,17 +239,23 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
         }
         if (const auto local = scope.locals.find(callee); local != scope.locals.end()) {
             FunctionSignature signature;
-            if (parse_function_type(local->second, signature)) {
+            if (parse_function_type(resolve_alias(scope.symbols, local->second), signature)) {
                 check_call_args(scope, callee, signature, call_args(expr, call), location);
                 return signature.return_type;
             }
+        }
+        if (location != nullptr && callee.find('.') == std::string::npos &&
+            callee.find('[') == std::string::npos && is_plain_identifier(callee) &&
+            !known_type(scope.symbols, callee) && !is_builtin_call(callee)) {
+            fail(*location, "unknown function: " + callee);
         }
     }
     const size_t index = expr.find('[');
     if (location != nullptr && index != std::string::npos && expr.back() == ']') {
         const std::string name = trim(expr.substr(0, index));
         if (is_plain_identifier(name)) {
-            return index_value_type(scope, *location, name, "indexed access to unknown local: ");
+            return indexed_value_type(scope.symbols, scope.locals, *location, name,
+                                      "indexed access to unknown local: ");
         }
     }
     const size_t dot = expr.find('.');
@@ -330,8 +305,8 @@ std::string assign_target_type(const FunctionScope& scope, const RawStmt& stmt,
         const size_t index = lhs.find('[');
         if (index != std::string::npos) {
             const std::string name = trim(lhs.substr(0, index));
-            return index_value_type(scope, stmt.location, name,
-                                    "indexed assignment to unknown local: ");
+            return indexed_value_type(scope.symbols, scope.locals, stmt.location, name,
+                                      "indexed assignment to unknown local: ");
         }
         if (scope.constants.contains(lhs)) {
             fail(stmt.location, "cannot assign to constant: " + lhs);
