@@ -225,6 +225,7 @@ compile_path_and_expect() {
 compile_and_expect simple_program 42
 compile_and_expect control_flow 55
 compile_and_expect compile_time_basic 64
+compile_and_expect compile_time_compare 42
 compile_and_expect tuple_return 43
 compile_and_expect type_aliases 42
 compile_and_expect enums 42
@@ -297,6 +298,7 @@ expect_fail bad_eval --check "unsupported Python feature: dynamic execution"
 expect_fail bad_return_local_address --emit-cpp "cannot let local address escape: value"
 expect_fail bad_append_local_address --emit-cpp "cannot let local address escape: value"
 expect_fail bad_static_assert --check "static_assert failed: (PIXELS == 65)"
+expect_fail bad_static_compare --check "static_assert failed: (PIXELS < 64)"
 
 if "$repo_root/build/duc" build "$repo_root/tests/fixtures/bad_native_build.dd" \
     -o "$repo_root/build/bad_native_build" 2>"$repo_root/build/bad_native_build.err"; then

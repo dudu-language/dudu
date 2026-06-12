@@ -1,0 +1,9 @@
+WIDTH: i32 = 8
+HEIGHT: i32 = 8
+PIXELS: i32 = WIDTH * HEIGHT
+
+static_assert(PIXELS < 64)
+
+
+def main() -> i32:
+    return PIXELS

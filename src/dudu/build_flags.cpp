@@ -69,7 +69,7 @@ std::optional<int64_t> eval_int(std::string expr, const std::map<std::string, in
 void check_static_assert(const StaticAssertDecl& assertion,
                          const std::map<std::string, int64_t>& constants) {
     const std::string expr = strip_parens(assertion.expression);
-    for (const std::string op : {"==", "!="}) {
+    for (const std::string op : {"==", "!=", ">=", "<=", ">", "<"}) {
         const size_t pos = expr.find(op);
         if (pos == std::string::npos) {
             continue;
@@ -79,7 +79,20 @@ void check_static_assert(const StaticAssertDecl& assertion,
         if (!left.has_value() || !right.has_value()) {
             return;
         }
-        const bool passed = op == "==" ? *left == *right : *left != *right;
+        bool passed = false;
+        if (op == "==") {
+            passed = *left == *right;
+        } else if (op == "!=") {
+            passed = *left != *right;
+        } else if (op == ">=") {
+            passed = *left >= *right;
+        } else if (op == "<=") {
+            passed = *left <= *right;
+        } else if (op == ">") {
+            passed = *left > *right;
+        } else {
+            passed = *left < *right;
+        }
         if (!passed) {
             throw CompileError(assertion.location, "static_assert failed: " + assertion.expression);
         }
