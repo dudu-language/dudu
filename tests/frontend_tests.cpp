@@ -155,6 +155,19 @@ void test_formatter() {
                         "\n"
                         "\n"
                         "def other():\n");
+
+    const std::string sorted = dudu::format_source("import zeta\n"
+                                                   "from beta import Thing\n"
+                                                   "import alpha\n"
+                                                   "\n"
+                                                   "def main() -> i32:\n"
+                                                   "    return 0\n");
+    assert(sorted == "from beta import Thing\n"
+                     "import alpha\n"
+                     "import zeta\n"
+                     "\n"
+                     "def main() -> i32:\n"
+                     "    return 0\n");
 }
 
 void test_typed_for_emission() {
