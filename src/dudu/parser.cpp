@@ -1,9 +1,8 @@
 #include "dudu/parser.hpp"
 
 #include "dudu/lexer.hpp"
+#include "dudu/parser_utils.hpp"
 
-#include <cctype>
-#include <map>
 #include <sstream>
 
 namespace dudu {
@@ -112,24 +111,6 @@ class Parser {
     void skip_newlines() {
         while (match(TokenKind::Newline)) {
         }
-    }
-
-    static bool is_all_caps_identifier(const Token& token) {
-        if (token.kind != TokenKind::Identifier || token.text.empty()) {
-            return false;
-        }
-        bool saw_letter = false;
-        for (char c : token.text) {
-            if (std::isalpha(static_cast<unsigned char>(c)) != 0) {
-                saw_letter = true;
-                if (std::islower(static_cast<unsigned char>(c)) != 0) {
-                    return false;
-                }
-            } else if (std::isdigit(static_cast<unsigned char>(c)) == 0 && c != '_') {
-                return false;
-            }
-        }
-        return saw_letter;
     }
 
     void require_no_decorators(const std::vector<Decorator>& decorators,
@@ -429,7 +410,7 @@ class Parser {
                     break;
                 }
             }
-            if (!first && needs_space_between(previous_kind, current().kind)) {
+            if (!first && parser_needs_space_between(previous_kind, current().kind)) {
                 out << ' ';
             }
             out << current().text;
@@ -447,41 +428,6 @@ class Parser {
             ++cursor_;
         }
         return out.str();
-    }
-
-    static bool needs_space_between(TokenKind previous, TokenKind current) {
-        if (current == TokenKind::Comma || current == TokenKind::Colon ||
-            current == TokenKind::RParen || current == TokenKind::RBracket ||
-            current == TokenKind::Dot || current == TokenKind::LParen ||
-            current == TokenKind::LBracket) {
-            return false;
-        }
-        if (previous == TokenKind::Dot || previous == TokenKind::LParen ||
-            previous == TokenKind::LBracket) {
-            return false;
-        }
-        return true;
-    }
-
-    static bool is_foreign_import(const ImportDecl& import) {
-        return import.kind == ImportKind::ForeignC || import.kind == ImportKind::ForeignCpp;
-    }
-    static void validate_import_bindings(const std::vector<ImportDecl>& imports) {
-        std::map<std::string, ImportDecl> direct;
-        for (const ImportDecl& import : imports) {
-            if (import.kind == ImportKind::Module && import.alias.empty()) {
-                continue;
-            }
-            const std::string name = bound_import_name(import);
-            const auto [it, inserted] = direct.emplace(name, import);
-            if (!inserted) {
-                if (is_foreign_import(import) && is_foreign_import(it->second)) {
-                    continue;
-                }
-                throw CompileError(import.location, "import name '" + name +
-                                                        "' collides with an earlier direct import");
-            }
-        }
     }
 };
 

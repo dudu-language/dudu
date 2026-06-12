@@ -23,6 +23,7 @@ add_library(dudu_frontend
     src/dudu/native_build.cpp
     src/dudu/naming.cpp
     src/dudu/parser.cpp
+    src/dudu/parser_utils.cpp
     src/dudu/project_config.cpp
     src/dudu/sema.cpp
     src/dudu/sema_context.cpp
