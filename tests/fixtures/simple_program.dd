@@ -1,0 +1,17 @@
+class Pair:
+    left: i32
+    right: i32
+
+
+def add(a: i32, b: i32) -> i32:
+    total: i32 = a + b
+    return total
+
+
+def main() -> i32:
+    pair = Pair()
+    pair.left = add(40, 2)
+    pair.right = 10
+    if pair.left > pair.right:
+        return pair.left
+    return pair.right

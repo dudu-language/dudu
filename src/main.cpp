@@ -88,6 +88,7 @@ struct Options {
     std::filesystem::path input;
     std::optional<std::filesystem::path> output;
     std::optional<std::filesystem::path> header_output;
+    bool emit_cpp = false;
     bool check = false;
 };
 
@@ -1047,6 +1048,7 @@ Options parse_options(int argc, char** argv) {
             if (i + 1 >= argc) {
                 fail("--emit-cpp requires a path or '-'");
             }
+            options.emit_cpp = true;
             const std::string value = argv[++i];
             if (value != "-") {
                 options.output = value;
@@ -1115,6 +1117,11 @@ int main(int argc, char** argv) {
         if (options.header_output.has_value()) {
             const dudu::ModuleAst module = dudu::parse_source(source, options.input);
             write_text_output(options.header_output, dudu::emit_cpp_header(module));
+            return 0;
+        }
+        if (options.emit_cpp) {
+            const dudu::ModuleAst module = dudu::parse_source(source, options.input);
+            write_text_output(options.output, dudu::emit_cpp_source(module));
             return 0;
         }
         if (options.check) {

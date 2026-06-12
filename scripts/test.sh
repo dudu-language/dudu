@@ -35,4 +35,17 @@ printf '#include "cpp_library.hpp"\nint main() { return 0; }\n' >"$repo_root/bui
 "${CXX:-c++}" -std=c++20 -I"$repo_root/build" -c "$repo_root/build/header_smoke.cpp" \
     -o "$repo_root/build/header_smoke.o"
 
+simple_cpp="$repo_root/build/simple_program.cpp"
+simple_bin="$repo_root/build/simple_program"
+"$repo_root/build/dudu" "$repo_root/tests/fixtures/simple_program.dd" --emit-cpp "$simple_cpp"
+"${CXX:-c++}" -std=c++20 "$simple_cpp" -o "$simple_bin"
+set +e
+"$simple_bin"
+simple_status=$?
+set -e
+if [[ "$simple_status" -ne 42 ]]; then
+    echo "simple_program returned $simple_status, expected 42" >&2
+    exit 1
+fi
+
 echo "compiler builds and canonical examples are present"

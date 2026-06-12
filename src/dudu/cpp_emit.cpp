@@ -18,6 +18,10 @@ std::string replace_dots(std::string text) {
     return text;
 }
 
+std::string indent(int depth) {
+    return std::string(static_cast<size_t>(depth) * 4, ' ');
+}
+
 std::string trim_copy(std::string text) {
     while (!text.empty() && std::isspace(static_cast<unsigned char>(text.front())) != 0) {
         text.erase(text.begin());
@@ -167,6 +171,139 @@ std::string lower_type(const std::string& raw_type) {
     return replace_dots(type);
 }
 
+std::string replace_word(std::string text, std::string_view from, std::string_view to) {
+    size_t pos = text.find(from);
+    while (pos != std::string::npos) {
+        const bool left_ok =
+            pos == 0 ||
+            (std::isalnum(static_cast<unsigned char>(text[pos - 1])) == 0 && text[pos - 1] != '_');
+        const size_t end = pos + from.size();
+        const bool right_ok =
+            end == text.size() ||
+            (std::isalnum(static_cast<unsigned char>(text[end])) == 0 && text[end] != '_');
+        if (left_ok && right_ok) {
+            text.replace(pos, from.size(), to);
+            pos += to.size();
+        } else {
+            pos += from.size();
+        }
+        pos = text.find(from, pos);
+    }
+    return text;
+}
+
+std::string lower_expr(std::string expr) {
+    expr = replace_word(std::move(expr), "True", "true");
+    expr = replace_word(std::move(expr), "False", "false");
+    expr = replace_word(std::move(expr), "None", "nullptr");
+    expr = replace_word(std::move(expr), "and", "&&");
+    expr = replace_word(std::move(expr), "or", "||");
+    expr = replace_word(std::move(expr), "not", "!");
+    return expr;
+}
+
+std::string strip_trailing_colon(std::string text) {
+    text = trim_copy(std::move(text));
+    if (!text.empty() && text.back() == ':') {
+        text.pop_back();
+    }
+    return trim_copy(std::move(text));
+}
+
+void emit_raw_block(std::ostringstream& out, const std::vector<RawStmt>& body, int depth);
+
+void emit_simple_statement(std::ostringstream& out, const RawStmt& stmt, int depth) {
+    const std::string text = trim_copy(stmt.text);
+    const size_t colon = text.find(':');
+    const size_t assign = text.find('=');
+    if (starts_with(text, "return")) {
+        const std::string value = trim_copy(text.substr(6));
+        out << indent(depth) << "return";
+        if (!value.empty()) {
+            out << ' ' << lower_expr(value);
+        }
+        out << ";\n";
+        return;
+    }
+    if (colon != std::string::npos && (assign == std::string::npos || colon < assign)) {
+        const std::string name = trim_copy(text.substr(0, colon));
+        const std::string type = trim_copy(text.substr(colon + 1, assign - colon - 1));
+        out << indent(depth) << lower_type(type) << ' ' << name;
+        if (assign != std::string::npos) {
+            out << " = " << lower_expr(trim_copy(text.substr(assign + 1)));
+        } else {
+            out << "{}";
+        }
+        out << ";\n";
+        return;
+    }
+    if (assign != std::string::npos && text.find("==") == std::string::npos &&
+        text.find("<=") == std::string::npos && text.find(">=") == std::string::npos &&
+        text.find("!=") == std::string::npos) {
+        const std::string lhs = trim_copy(text.substr(0, assign));
+        if (!lhs.empty() && lhs.find_first_of(" .[]+-*/%<>") == std::string::npos) {
+            out << indent(depth) << "auto " << lhs << " = "
+                << lower_expr(trim_copy(text.substr(assign + 1))) << ";\n";
+            return;
+        }
+    }
+    out << indent(depth) << lower_expr(text) << ";\n";
+}
+
+void emit_raw_statement(std::ostringstream& out, const RawStmt& stmt, int depth) {
+    const std::string text = trim_copy(stmt.text);
+    if (starts_with(text, "if ")) {
+        out << indent(depth) << "if (" << lower_expr(strip_trailing_colon(text.substr(3)))
+            << ") {\n";
+        emit_raw_block(out, stmt.children, depth + 1);
+        out << indent(depth) << "}\n";
+        return;
+    }
+    if (starts_with(text, "elif ")) {
+        out << indent(depth) << "else if (" << lower_expr(strip_trailing_colon(text.substr(5)))
+            << ") {\n";
+        emit_raw_block(out, stmt.children, depth + 1);
+        out << indent(depth) << "}\n";
+        return;
+    }
+    if (text == "else:") {
+        out << indent(depth) << "else {\n";
+        emit_raw_block(out, stmt.children, depth + 1);
+        out << indent(depth) << "}\n";
+        return;
+    }
+    if (starts_with(text, "while ")) {
+        out << indent(depth) << "while (" << lower_expr(strip_trailing_colon(text.substr(6)))
+            << ") {\n";
+        emit_raw_block(out, stmt.children, depth + 1);
+        out << indent(depth) << "}\n";
+        return;
+    }
+    if (starts_with(text, "for ")) {
+        const std::string header = strip_trailing_colon(text.substr(4));
+        const size_t in_pos = header.find(" in ");
+        if (in_pos != std::string::npos) {
+            std::string binding = trim_copy(header.substr(0, in_pos));
+            const std::string range = lower_expr(trim_copy(header.substr(in_pos + 4)));
+            const size_t typed = binding.find(':');
+            if (typed != std::string::npos) {
+                binding = trim_copy(binding.substr(0, typed));
+            }
+            out << indent(depth) << "for (auto&& " << binding << " : " << range << ") {\n";
+            emit_raw_block(out, stmt.children, depth + 1);
+            out << indent(depth) << "}\n";
+            return;
+        }
+    }
+    emit_simple_statement(out, stmt, depth);
+}
+
+void emit_raw_block(std::ostringstream& out, const std::vector<RawStmt>& body, int depth) {
+    for (const RawStmt& stmt : body) {
+        emit_raw_statement(out, stmt, depth);
+    }
+}
+
 std::string include_path(const ImportDecl& import) {
     if (import.module_path.size() >= 2 && import.module_path.front() == '"' &&
         import.module_path.back() == '"') {
@@ -227,11 +364,7 @@ std::vector<size_t> class_emit_order(const std::vector<ClassDecl>& classes) {
     return order;
 }
 
-} // namespace
-
-std::string emit_cpp_header(const ModuleAst& module) {
-    std::ostringstream out;
-    out << "#pragma once\n\n";
+void emit_includes(std::ostringstream& out, const ModuleAst& module) {
     out << "#include <atomic>\n";
     out << "#include <cstddef>\n";
     out << "#include <cstdint>\n";
@@ -248,14 +381,18 @@ std::string emit_cpp_header(const ModuleAst& module) {
         }
     }
     out << '\n';
+}
 
+void emit_aliases(std::ostringstream& out, const ModuleAst& module) {
     for (const TypeAliasDecl& alias : module.aliases) {
         out << "using " << alias.name << " = " << lower_type(alias.type) << ";\n";
     }
     if (!module.aliases.empty()) {
         out << '\n';
     }
+}
 
+void emit_enums(std::ostringstream& out, const ModuleAst& module) {
     for (const EnumDecl& en : module.enums) {
         out << "enum class " << en.name;
         if (!en.underlying_type.empty()) {
@@ -271,7 +408,9 @@ std::string emit_cpp_header(const ModuleAst& module) {
         }
         out << "};\n\n";
     }
+}
 
+void emit_classes(std::ostringstream& out, const ModuleAst& module) {
     for (const size_t index : class_emit_order(module.classes)) {
         const ClassDecl& klass = module.classes[index];
         out << "struct " << klass.name << " {\n";
@@ -280,6 +419,29 @@ std::string emit_cpp_header(const ModuleAst& module) {
         }
         out << "};\n\n";
     }
+}
+
+void emit_function_signature(std::ostringstream& out, const FunctionDecl& fn) {
+    out << lower_type(fn.return_type) << ' ' << fn.name << '(';
+    for (size_t i = 0; i < fn.params.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << lower_type(fn.params[i].type) << ' ' << fn.params[i].name;
+    }
+    out << ')';
+}
+
+} // namespace
+
+std::string emit_cpp_header(const ModuleAst& module) {
+    std::ostringstream out;
+    out << "#pragma once\n\n";
+    emit_includes(out, module);
+
+    emit_aliases(out, module);
+    emit_enums(out, module);
+    emit_classes(out, module);
 
     for (const ConstDecl& constant : module.constants) {
         out << "extern const " << lower_type(constant.type) << ' ' << constant.name << ";\n";
@@ -289,14 +451,32 @@ std::string emit_cpp_header(const ModuleAst& module) {
     }
 
     for (const FunctionDecl& fn : module.functions) {
-        out << lower_type(fn.return_type) << ' ' << fn.name << '(';
-        for (size_t i = 0; i < fn.params.size(); ++i) {
-            if (i > 0) {
-                out << ", ";
-            }
-            out << lower_type(fn.params[i].type) << ' ' << fn.params[i].name;
-        }
-        out << ");\n";
+        emit_function_signature(out, fn);
+        out << ";\n";
+    }
+    return out.str();
+}
+
+std::string emit_cpp_source(const ModuleAst& module) {
+    std::ostringstream out;
+    emit_includes(out, module);
+
+    emit_aliases(out, module);
+    emit_enums(out, module);
+    emit_classes(out, module);
+
+    for (const ConstDecl& constant : module.constants) {
+        out << "const " << lower_type(constant.type) << ' ' << constant.name << "{};\n";
+    }
+    if (!module.constants.empty()) {
+        out << '\n';
+    }
+
+    for (const FunctionDecl& fn : module.functions) {
+        emit_function_signature(out, fn);
+        out << " {\n";
+        emit_raw_block(out, fn.body, 1);
+        out << "}\n\n";
     }
     return out.str();
 }

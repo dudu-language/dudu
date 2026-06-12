@@ -3,13 +3,11 @@
 #include "dudu/lexer.hpp"
 
 #include <cctype>
-#include <fstream>
 #include <map>
 #include <sstream>
 
 namespace dudu {
 namespace {
-
 class Parser {
   public:
     explicit Parser(std::span<const Token> tokens) : tokens_(tokens) {
@@ -71,15 +69,12 @@ class Parser {
     const Token& current() const {
         return tokens_[cursor_];
     }
-
     const Token& previous() const {
         return tokens_[cursor_ - 1];
     }
-
     bool at(TokenKind kind) const {
         return current().kind == kind;
     }
-
     bool check_text(std::string_view text) const {
         return current().kind == TokenKind::Identifier && current().text == text;
     }
@@ -320,7 +315,7 @@ class Parser {
         }
         consume(TokenKind::Colon, "expected : after function header");
         consume(TokenKind::Newline, "expected newline after function header");
-        skip_block();
+        fn.body = parse_raw_block();
         return fn;
     }
 
@@ -383,26 +378,32 @@ class Parser {
         return assertion;
     }
 
-    void skip_block() {
+    std::vector<RawStmt> parse_raw_block() {
+        std::vector<RawStmt> out;
         if (!match(TokenKind::Indent)) {
-            return;
+            return out;
         }
-        int depth = 1;
-        while (depth > 0 && !at(TokenKind::End)) {
-            if (match(TokenKind::Indent)) {
-                ++depth;
-            } else if (match(TokenKind::Dedent)) {
-                --depth;
-            } else {
-                ++cursor_;
+        while (!at(TokenKind::Dedent) && !at(TokenKind::End)) {
+            if (match(TokenKind::Newline)) {
+                continue;
             }
+            RawStmt stmt;
+            stmt.location = current().location;
+            stmt.text = join_until({TokenKind::Newline});
+            consume(TokenKind::Newline, "expected newline after statement");
+            if (at(TokenKind::Indent)) {
+                stmt.children = parse_raw_block();
+            }
+            out.push_back(std::move(stmt));
         }
+        consume(TokenKind::Dedent, "expected dedent after block");
+        return out;
     }
 
     void skip_statement_or_block() {
         skip_to_newline();
         if (at(TokenKind::Indent)) {
-            skip_block();
+            (void)parse_raw_block();
         }
     }
 
@@ -488,7 +489,6 @@ class Parser {
 };
 
 } // namespace
-
 ModuleAst parse_module(std::span<const Token> tokens) {
     return Parser(tokens).parse();
 }

@@ -45,6 +45,12 @@ struct ParamDecl {
     SourceLocation location;
 };
 
+struct RawStmt {
+    std::string text;
+    std::vector<RawStmt> children;
+    SourceLocation location;
+};
+
 struct TypeAliasDecl {
     std::string name;
     std::string type;
@@ -78,6 +84,7 @@ struct FunctionDecl {
     std::vector<Decorator> decorators;
     std::vector<ParamDecl> params;
     std::string return_type;
+    std::vector<RawStmt> body;
     SourceLocation location;
 };
 
