@@ -112,8 +112,8 @@ std::string replace_word(std::string text, std::string_view from, std::string_vi
         }
         in_string = quote != '\0';
         const bool left_ok =
-            pos == 0 ||
-            (std::isalnum(static_cast<unsigned char>(text[pos - 1])) == 0 && text[pos - 1] != '_');
+            pos == 0 || (std::isalnum(static_cast<unsigned char>(text[pos - 1])) == 0 &&
+                         text[pos - 1] != '_' && text[pos - 1] != ':');
         const size_t end = pos + from.size();
         const bool right_ok =
             end == text.size() ||

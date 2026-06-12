@@ -78,6 +78,11 @@ printf '#include "cpp_library.hpp"\nint main() { return 0; }\n' >"$repo_root/bui
 grep -q "inline constexpr bool DEBUG = true;" "$repo_root/build/compile_time_raylib.cpp"
 grep -q 'inline constexpr std::string_view RENDER_BACKEND = "raylib";' \
     "$repo_root/build/compile_time_raylib.cpp"
+"$repo_root/build/duc" emit "$repo_root/examples/cuda_kernel.dd" \
+    -o "$repo_root/build/cuda_kernel.cpp"
+grep -q "float\\* dev_x = nullptr;" "$repo_root/build/cuda_kernel.cpp"
+grep -q "err = cuda::cudaMalloc" "$repo_root/build/cuda_kernel.cpp"
+! grep -q "dudu::dudu" "$repo_root/build/cuda_kernel.cpp"
 
 compile_and_expect() {
     local name="$1"

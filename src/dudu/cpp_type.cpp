@@ -84,6 +84,9 @@ std::string lower_template_type(std::string_view name, const std::string& args) 
     if (name == "volatile") {
         return "volatile " + lower_cpp_type(args);
     }
+    if (name == "device" || name == "storage" || name == "shared") {
+        return lower_cpp_type(args);
+    }
     std::ostringstream out;
     out << replace_dots(std::string(name)) << "<";
     const std::vector<std::string> parts = split_top_level_args(args);

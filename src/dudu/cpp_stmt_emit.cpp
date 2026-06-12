@@ -240,9 +240,14 @@ void emit_simple_statement(std::ostringstream& out, const RawStmt& stmt, int dep
             return;
         }
         if (!lhs.empty() && lhs.find_first_of(" .[]+-*/%<>") == std::string::npos) {
-            locals.try_emplace(lhs, "auto");
-            out << indent(depth) << "auto " << lhs << " = "
-                << lower_expr(trim_copy(text.substr(assign + 1)), aliases, locals) << ";\n";
+            const std::string value =
+                lower_expr(trim_copy(text.substr(assign + 1)), aliases, locals);
+            if (locals.contains(lhs)) {
+                out << indent(depth) << lhs << " = " << value << ";\n";
+            } else {
+                locals.emplace(lhs, "auto");
+                out << indent(depth) << "auto " << lhs << " = " << value << ";\n";
+            }
             return;
         }
     }
