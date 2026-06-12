@@ -1,0 +1,10 @@
+class Node:
+    value: i32
+
+
+def bad() -> list[*Node]:
+    node: Node = Node(value=42)
+    out: list[*Node] = []
+    out.push_back(&node)
+    return out
+

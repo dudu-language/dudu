@@ -44,10 +44,13 @@ void check_local_address_escape(const RawStmt& stmt,
         fail_if_value_local_escapes(stmt, locals, address_name_after(text, text.find('&')));
         return;
     }
-    size_t pos = text.find(".append(&");
-    while (pos != std::string::npos) {
-        fail_if_value_local_escapes(stmt, locals, address_name_after(text, pos + 8));
-        pos = text.find(".append(&", pos + 1);
+    for (const std::string pattern : {".append(&", ".push_back(&"}) {
+        size_t pos = text.find(pattern);
+        while (pos != std::string::npos) {
+            fail_if_value_local_escapes(stmt, locals,
+                                        address_name_after(text, pos + pattern.size() - 1));
+            pos = text.find(pattern, pos + 1);
+        }
     }
 }
 
