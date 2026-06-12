@@ -26,6 +26,7 @@ required_examples=(
 
 for example in "${required_examples[@]}"; do
     test -f "$repo_root/examples/$example"
+    "$repo_root/build/dudu" "$repo_root/examples/$example" --check
 done
 
 echo "compiler builds and canonical examples are present"

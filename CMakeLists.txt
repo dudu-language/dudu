@@ -16,6 +16,7 @@ target_include_directories(dudu_frontend PUBLIC src)
 target_compile_features(dudu_frontend PUBLIC cxx_std_20)
 
 add_executable(dudu src/main.cpp)
+target_link_libraries(dudu PRIVATE dudu_frontend)
 target_compile_features(dudu PRIVATE cxx_std_20)
 
 add_executable(dudu_frontend_tests tests/frontend_tests.cpp)

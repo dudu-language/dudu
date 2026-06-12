@@ -1,3 +1,5 @@
+#include "dudu/parser.hpp"
+
 #include <algorithm>
 #include <cctype>
 #include <filesystem>
@@ -84,6 +86,7 @@ struct Program {
 struct Options {
     std::filesystem::path input;
     std::optional<std::filesystem::path> output;
+    bool check = false;
 };
 
 [[noreturn]] void fail(const std::string& message) {
@@ -1048,8 +1051,12 @@ Options parse_options(int argc, char** argv) {
             }
             continue;
         }
+        if (arg == "--check") {
+            options.check = true;
+            continue;
+        }
         if (arg == "-h" || arg == "--help") {
-            std::cout << "usage: dudu <input.dd> [--emit-cpp <path|->]\n";
+            std::cout << "usage: dudu <input.dd> [--check] [--emit-cpp <path|->]\n";
             std::exit(0);
         }
         if (options.input.empty()) {
@@ -1064,11 +1071,23 @@ Options parse_options(int argc, char** argv) {
     return options;
 }
 
+std::string read_text_file(const std::filesystem::path& path) {
+    std::ifstream file(path);
+    if (!file) {
+        fail("could not open " + path.string());
+    }
+    return {std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
     try {
         const Options options = parse_options(argc, argv);
+        if (options.check) {
+            (void)dudu::parse_source(read_text_file(options.input), options.input);
+            return 0;
+        }
         Program program = parse_program(options.input);
         Emitter emitter(std::move(program));
         const std::string cpp = emitter.emit();
