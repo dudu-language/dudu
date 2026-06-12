@@ -1,0 +1,93 @@
+#include "dudu/sema_scan.hpp"
+
+#include <cctype>
+
+namespace dudu {
+
+size_t compound_assign_pos(const std::string& text, size_t assign) {
+    if (assign == std::string::npos) {
+        return std::string::npos;
+    }
+    size_t pos = assign;
+    while (pos > 0 && std::isspace(static_cast<unsigned char>(text[pos - 1])) != 0) {
+        --pos;
+    }
+    if (pos == 0) {
+        return std::string::npos;
+    }
+    const char op = text[pos - 1];
+    if (op == '+' || op == '-' || op == '*' || op == '/' || op == '%' || op == '^' || op == '&' ||
+        op == '|') {
+        return pos - 1;
+    }
+    return std::string::npos;
+}
+
+size_t find_call_open(const std::string& expr) {
+    int depth = 0;
+    char quote = '\0';
+    bool escaped = false;
+    for (size_t i = 0; i < expr.size(); ++i) {
+        const char c = expr[i];
+        if (quote != '\0') {
+            if (escaped) {
+                escaped = false;
+            } else if (c == '\\') {
+                escaped = true;
+            } else if (c == quote) {
+                quote = '\0';
+            }
+            continue;
+        }
+        if (c == '"' || c == '\'') {
+            quote = c;
+            continue;
+        }
+        if (c == '(' && depth == 0) {
+            return i;
+        }
+        if (c == '(' || c == '[' || c == '{') {
+            ++depth;
+        } else if (c == ')' || c == ']' || c == '}') {
+            --depth;
+        }
+    }
+    return std::string::npos;
+}
+
+size_t find_top_level_operator(const std::string& expr) {
+    int depth = 0;
+    char quote = '\0';
+    bool escaped = false;
+    for (size_t i = 0; i < expr.size(); ++i) {
+        const char c = expr[i];
+        if (quote != '\0') {
+            if (escaped) {
+                escaped = false;
+            } else if (c == '\\') {
+                escaped = true;
+            } else if (c == quote) {
+                quote = '\0';
+            }
+            continue;
+        }
+        if (c == '"' || c == '\'') {
+            quote = c;
+            continue;
+        }
+        if (c == '(' || c == '[' || c == '{') {
+            ++depth;
+            continue;
+        }
+        if (c == ')' || c == ']' || c == '}') {
+            --depth;
+            continue;
+        }
+        if (depth == 0 && i > 0 && (c == '+' || c == '-' || c == '*' || c == '/' || c == '%')) {
+            return i;
+        }
+    }
+    return std::string::npos;
+}
+
+} // namespace dudu

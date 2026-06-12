@@ -1,0 +1,6 @@
+def main() -> i32:
+    values: list[i32] = [1, 2, 3]
+    total: i32 = 0
+    for BadValue: i32 in values:
+        total += BadValue
+    return total

@@ -19,4 +19,4 @@ def blur_x(
     left = y * width + max(x - 1, 0)
     right = y * width + min(x + 1, width - 1)
 
-    target[center] = (source[left] + source[center] + source[right]) / 3.0
+    target[center] = (source[left] + source[center] + source[right]) / f32(3.0)

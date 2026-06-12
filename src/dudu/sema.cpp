@@ -6,6 +6,7 @@
 #include "dudu/escapes.hpp"
 #include "dudu/naming.hpp"
 #include "dudu/sema_context.hpp"
+#include "dudu/sema_scan.hpp"
 #include "dudu/type_compat.hpp"
 #include "dudu/unsupported.hpp"
 
@@ -127,38 +128,6 @@ std::vector<std::string> call_args(std::string expr, size_t open) {
     return split_top_level_args(args);
 }
 
-size_t find_call_open(const std::string& expr) {
-    int depth = 0;
-    char quote = '\0';
-    bool escaped = false;
-    for (size_t i = 0; i < expr.size(); ++i) {
-        const char c = expr[i];
-        if (quote != '\0') {
-            if (escaped) {
-                escaped = false;
-            } else if (c == '\\') {
-                escaped = true;
-            } else if (c == quote) {
-                quote = '\0';
-            }
-            continue;
-        }
-        if (c == '"' || c == '\'') {
-            quote = c;
-            continue;
-        }
-        if (c == '(' && depth == 0) {
-            return i;
-        }
-        if (c == '(' || c == '[' || c == '{') {
-            ++depth;
-        } else if (c == ')' || c == ']' || c == '}') {
-            --depth;
-        }
-    }
-    return std::string::npos;
-}
-
 void check_call_args(const FunctionScope& scope, const std::string& callee,
                      const FunctionSignature& signature, const std::vector<std::string>& args,
                      const SourceLocation* location) {
@@ -227,6 +196,11 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
         expr.find(">") != std::string::npos) {
         return "bool";
     }
+    const size_t op = find_top_level_operator(expr);
+    if (op != std::string::npos) {
+        const std::string left = infer_expr(scope, expr.substr(0, op), location);
+        return left.empty() ? infer_expr(scope, expr.substr(op + 1), location) : left;
+    }
     if (std::isdigit(static_cast<unsigned char>(expr.front())) != 0) {
         return expr.find('.') == std::string::npos ? "i32" : "f64";
     }
@@ -252,11 +226,6 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
             }
         }
     }
-    const size_t op = expr.find_first_of("+-*/%");
-    if (op != std::string::npos) {
-        const std::string left = infer_expr(scope, expr.substr(0, op), location);
-        return left.empty() ? infer_expr(scope, expr.substr(op + 1), location) : left;
-    }
     const size_t dot = expr.find('.');
     if (dot != std::string::npos) {
         return member_path_type(scope, nullptr, expr);
@@ -271,8 +240,10 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
     return {};
 }
 
-bool is_all_caps_name(const std::string& name) {
-    return !name.empty() && std::isupper(static_cast<unsigned char>(name.front())) != 0;
+void check_local_binding_name(const SourceLocation& location, const std::string& name) {
+    if (!is_dudu_snake_case(name) && !is_dudu_all_caps(name)) {
+        fail(location, "local names must be snake_case or ALL_CAPS: " + name);
+    }
 }
 
 void check_type_match(const FunctionScope& scope, const RawStmt& stmt, const std::string& expected,
@@ -301,6 +272,45 @@ std::string assign_target_type(const FunctionScope& scope, const RawStmt& stmt,
         return trim(type.substr(1));
     }
     if (lhs.find('.') == std::string::npos) {
+        const size_t index = lhs.find('[');
+        if (index != std::string::npos) {
+            const std::string name = trim(lhs.substr(0, index));
+            const auto local = scope.locals.find(name);
+            if (local == scope.locals.end()) {
+                fail(stmt.location, "indexed assignment to unknown local: " + name);
+            }
+            std::string type = resolve_alias(scope.symbols, local->second);
+            bool pointer_index = false;
+            if (starts_with(type, "*")) {
+                type = trim(type.substr(1));
+                pointer_index = true;
+            }
+            for (const char* wrapper : {"storage", "shared", "device", "volatile", "atomic"}) {
+                const std::string prefix = std::string(wrapper) + "[";
+                if (starts_with(type, prefix) && type.back() == ']') {
+                    type = trim(type.substr(prefix.size(), type.size() - prefix.size() - 1));
+                    break;
+                }
+            }
+            if (pointer_index) {
+                return type;
+            }
+            if (starts_with(type, "list[") && type.back() == ']') {
+                return trim(type.substr(5, type.size() - 6));
+            }
+            if (starts_with(type, "dict[") && type.back() == ']') {
+                const std::vector<std::string> args =
+                    split_top_level(type.substr(5, type.size() - 6));
+                if (args.size() == 2) {
+                    return args[1];
+                }
+            }
+            const size_t type_index = type.find('[');
+            if (type_index != std::string::npos && type.back() == ']') {
+                return trim(type.substr(0, type_index));
+            }
+            fail(stmt.location, "cannot index non-container: " + name);
+        }
         if (scope.constants.contains(lhs)) {
             fail(stmt.location, "cannot assign to constant: " + lhs);
         }
@@ -345,24 +355,24 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
         const size_t colon = text.find(':');
         const size_t in_pos = text.find(" in ");
         if (colon != std::string::npos && in_pos != std::string::npos && colon < in_pos) {
-            nested.locals[trim(text.substr(4, colon - 4))] =
-                trim(text.substr(colon + 1, in_pos - colon - 1));
+            const std::string name = trim(text.substr(4, colon - 4));
+            check_local_binding_name(stmt.location, name);
+            nested.locals[name] = trim(text.substr(colon + 1, in_pos - colon - 1));
         }
         check_block(nested, stmt.children, return_type);
         return;
     }
     const size_t colon = find_top_level_char(text, ':');
     const size_t assign = find_top_level_char(text, '=');
-    for (const char* op : {"+=", "-=", "*=", "/=", "%=", "^=", "&=", "|="}) {
-        const size_t compound = text.find(op);
-        if (compound != std::string::npos) {
-            (void)assign_target_type(scope, stmt, trim(text.substr(0, compound)));
-            return;
-        }
+    const size_t compound = compound_assign_pos(text, assign);
+    if (compound != std::string::npos) {
+        (void)assign_target_type(scope, stmt, trim(text.substr(0, compound)));
+        return;
     }
     if (colon != std::string::npos && (assign == std::string::npos || colon < assign)) {
         const std::string name = trim(text.substr(0, colon));
         const std::string type = trim(text.substr(colon + 1, assign - colon - 1));
+        check_local_binding_name(stmt.location, name);
         if (!known_type(scope.symbols, type)) {
             fail(stmt.location, "unknown local type: " + type);
         }
@@ -370,7 +380,7 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
             check_type_match(scope, stmt, type, text.substr(assign + 1));
         }
         scope.locals[name] = type;
-        if (is_all_caps_name(name)) {
+        if (is_dudu_all_caps(name)) {
             scope.constants.insert(name);
         }
         return;
@@ -385,15 +395,17 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
                 fail(stmt.location, "tuple destructuring count mismatch");
             }
             for (size_t i = 0; i < names.size(); ++i) {
+                check_local_binding_name(stmt.location, names[i]);
                 scope.locals[names[i]] = types[i];
             }
             return;
         }
         if (lhs.find('.') == std::string::npos && !starts_with(lhs, "*") &&
-            !scope.locals.contains(lhs)) {
+            lhs.find('[') == std::string::npos && !scope.locals.contains(lhs)) {
+            check_local_binding_name(stmt.location, lhs);
             const std::string inferred = infer_expr(scope, text.substr(assign + 1), &stmt.location);
             scope.locals[lhs] = inferred.empty() ? "auto" : inferred;
-            if (is_all_caps_name(lhs)) {
+            if (is_dudu_all_caps(lhs)) {
                 scope.constants.insert(lhs);
             }
             return;

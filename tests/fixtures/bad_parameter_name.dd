@@ -1,0 +1,2 @@
+def bad(Value: i32) -> i32:
+    return Value
