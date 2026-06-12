@@ -268,6 +268,73 @@ std::string lower_template_value_call(std::string expr, std::string_view name) {
     return expr;
 }
 
+std::string lower_type_operator_call(std::string expr, std::string_view name) {
+    const std::string marker = std::string(name) + "[";
+    size_t pos = expr.find(marker);
+    while (pos != std::string::npos) {
+        const size_t type_start = pos + marker.size();
+        const size_t type_end = expr.find(']', type_start);
+        if (type_end == std::string::npos || type_end + 2 > expr.size() ||
+            expr.substr(type_end + 1, 2) != "()") {
+            pos = expr.find(marker, pos + marker.size());
+            continue;
+        }
+        const std::string type = expr.substr(type_start, type_end - type_start);
+        const std::string replacement = std::string(name) + "(" + lower_cpp_type(type) + ")";
+        expr.replace(pos, type_end + 3 - pos, replacement);
+        pos = expr.find(marker, pos + replacement.size());
+    }
+    return expr;
+}
+
+std::string lower_offsetof_call(std::string expr) {
+    const std::string marker = "offsetof[";
+    size_t pos = expr.find(marker);
+    while (pos != std::string::npos) {
+        const size_t type_start = pos + marker.size();
+        const size_t type_end = expr.find(']', type_start);
+        if (type_end == std::string::npos || type_end + 1 >= expr.size() ||
+            expr[type_end + 1] != '(') {
+            pos = expr.find(marker, pos + marker.size());
+            continue;
+        }
+        const size_t field_start = type_end + 2;
+        const size_t field_end = expr.find(')', field_start);
+        if (field_end == std::string::npos) {
+            break;
+        }
+        const std::string type = expr.substr(type_start, type_end - type_start);
+        const std::string field = trim_copy(expr.substr(field_start, field_end - field_start));
+        const std::string replacement = "offsetof(" + lower_cpp_type(type) + ", " + field + ")";
+        expr.replace(pos, field_end + 1 - pos, replacement);
+        pos = expr.find(marker, pos + replacement.size());
+    }
+    return expr;
+}
+
+std::string lower_builtin_cast_calls(std::string expr) {
+    static const std::map<std::string, std::string> casts = {
+        {"i8", "int8_t"},      {"i16", "int16_t"},  {"i32", "int32_t"},  {"i64", "int64_t"},
+        {"u8", "uint8_t"},     {"u16", "uint16_t"}, {"u32", "uint32_t"}, {"u64", "uint64_t"},
+        {"isize", "intptr_t"}, {"usize", "size_t"}, {"f32", "float"},    {"f64", "double"}};
+    for (const auto& [from, to] : casts) {
+        const std::string marker = from + "(";
+        size_t pos = expr.find(marker);
+        while (pos != std::string::npos) {
+            const bool left_ok =
+                pos == 0 || (std::isalnum(static_cast<unsigned char>(expr[pos - 1])) == 0 &&
+                             expr[pos - 1] != '_');
+            if (left_ok) {
+                expr.replace(pos, marker.size(), to + "(");
+                pos = expr.find(marker, pos + to.size() + 1);
+            } else {
+                pos = expr.find(marker, pos + marker.size());
+            }
+        }
+    }
+    return expr;
+}
+
 std::string lower_dotted_template_call(std::string expr) {
     size_t open = expr.find('[');
     while (open != std::string::npos) {
@@ -301,6 +368,10 @@ std::string lower_dotted_template_call(std::string expr) {
 std::string lower_cpp_expr(std::string expr) {
     expr = lower_template_alloc_call(std::move(expr), "new");
     expr = lower_template_alloc_call(std::move(expr), "malloc");
+    expr = lower_type_operator_call(std::move(expr), "sizeof");
+    expr = lower_type_operator_call(std::move(expr), "alignof");
+    expr = lower_offsetof_call(std::move(expr));
+    expr = lower_builtin_cast_calls(std::move(expr));
     expr = lower_template_value_call(std::move(expr), "list");
     expr = lower_template_value_call(std::move(expr), "dict");
     expr = lower_template_value_call(std::move(expr), "set");

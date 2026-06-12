@@ -236,10 +236,45 @@ void emit_enums(std::ostringstream& out, const ModuleAst& module) {
     }
 }
 
+std::string decorator_arg(const ClassDecl& klass, std::string_view name) {
+    const std::string prefix = std::string(name) + "(";
+    for (const Decorator& decorator : klass.decorators) {
+        const std::string text = trim_copy(decorator.text);
+        if (starts_with(text, prefix) && ends_with(text, ")")) {
+            return trim_copy(text.substr(prefix.size(), text.size() - prefix.size() - 1));
+        }
+    }
+    return {};
+}
+
+bool has_decorator(const ClassDecl& klass, std::string_view name) {
+    for (const Decorator& decorator : klass.decorators) {
+        if (trim_copy(decorator.text) == name) {
+            return true;
+        }
+    }
+    return false;
+}
+
+std::string class_opening(const ClassDecl& klass) {
+    const bool packed = has_decorator(klass, "packed");
+    const std::string alignment = decorator_arg(klass, "align");
+    if (packed && !alignment.empty()) {
+        return "struct __attribute__((packed, aligned(" + alignment + "))) " + klass.name;
+    }
+    if (packed) {
+        return "struct __attribute__((packed)) " + klass.name;
+    }
+    if (!alignment.empty()) {
+        return "struct alignas(" + alignment + ") " + klass.name;
+    }
+    return "struct " + klass.name;
+}
+
 void emit_classes(std::ostringstream& out, const ModuleAst& module) {
     for (const size_t index : class_emit_order(module.classes)) {
         const ClassDecl& klass = module.classes[index];
-        out << "struct " << klass.name << " {\n";
+        out << class_opening(klass) << " {\n";
         for (const FieldDecl& field : klass.fields) {
             out << "    " << lower_cpp_type(field.type) << ' ' << field.name << "{};\n";
         }

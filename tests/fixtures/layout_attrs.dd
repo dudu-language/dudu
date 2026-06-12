@@ -1,0 +1,18 @@
+@packed
+class PackedHeader:
+    tag: u8
+    value: u32
+
+
+@align(16)
+class AlignedByte:
+    value: u8
+
+
+static_assert(sizeof[PackedHeader]() == 5)
+static_assert(alignof[AlignedByte]() == 16)
+static_assert(offsetof[PackedHeader](value) == 1)
+
+
+def main() -> i32:
+    return i32(sizeof[PackedHeader]()) + i32(alignof[AlignedByte]())
