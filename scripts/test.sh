@@ -55,6 +55,25 @@ compile_and_expect() {
     fi
 }
 
+compile_path_and_expect() {
+    local name="$1"
+    local path="$2"
+    local expected="$3"
+    local cpp="$repo_root/build/$name.cpp"
+    local bin="$repo_root/build/$name"
+
+    "$repo_root/build/dudu" "$repo_root/$path" --emit-cpp "$cpp"
+    "${CXX:-c++}" -std=c++20 "$cpp" -o "$bin"
+    set +e
+    "$bin"
+    local status=$?
+    set -e
+    if [[ "$status" -ne "$expected" ]]; then
+        echo "$name returned $status, expected $expected" >&2
+        exit 1
+    fi
+}
+
 compile_and_expect simple_program 42
 compile_and_expect control_flow 55
 compile_and_expect compile_time_basic 64
@@ -68,6 +87,7 @@ compile_and_expect constructors 42
 compile_and_expect native_escape 42
 compile_and_expect result_option 42
 compile_and_expect function_attrs 42
+compile_path_and_expect multifile tests/fixtures/multifile/main.dd 42
 
 direct_bin="$repo_root/build/dudu_build_simple"
 "$repo_root/build/dudu" build "$repo_root/tests/fixtures/simple_program.dd" -o "$direct_bin"

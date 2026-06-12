@@ -1,0 +1,6 @@
+def twice(value: i32) -> i32:
+    return value * 2
+
+
+def add_two(value: i32) -> i32:
+    return value + 2

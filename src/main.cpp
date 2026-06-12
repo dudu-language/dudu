@@ -1,5 +1,6 @@
 #include "dudu/cpp_emit.hpp"
 #include "dudu/format.hpp"
+#include "dudu/module_loader.hpp"
 #include "dudu/parser.hpp"
 #include "dudu/sema.hpp"
 
@@ -147,7 +148,8 @@ void build_executable(const Options& options, const std::string& cpp) {
 
 dudu::ModuleAst checked_module(const Options& options, const std::string& source,
                                bool check_bodies) {
-    dudu::ModuleAst module = dudu::parse_source(source, options.input);
+    dudu::ModuleAst module = options.input.empty() ? dudu::parse_source(source, options.input)
+                                                   : dudu::load_source_tree(options.input);
     dudu::analyze_module(module, {.check_bodies = check_bodies});
     return module;
 }
