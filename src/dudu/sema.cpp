@@ -27,6 +27,56 @@ struct FunctionScope {
     std::set<std::string> constants;
 };
 
+std::string member_path_type(const FunctionScope& scope, const RawStmt* stmt,
+                             const std::string& path) {
+    const size_t dot = path.find('.');
+    if (dot == std::string::npos) {
+        if (const auto local = scope.locals.find(path); local != scope.locals.end()) {
+            return local->second;
+        }
+        return {};
+    }
+
+    std::string current = path.substr(0, dot);
+    const auto local = scope.locals.find(current);
+    if (local == scope.locals.end()) {
+        if (stmt != nullptr) {
+            fail(stmt->location, "assignment through unknown local: " + current);
+        }
+        return {};
+    }
+    std::string type = local->second;
+    size_t start = dot + 1;
+    while (start < path.size()) {
+        const size_t next = path.find('.', start);
+        const std::string field =
+            path.substr(start, next == std::string::npos ? next : next - start);
+        const auto klass = scope.symbols.classes.find(base_type(type));
+        if (klass == scope.symbols.classes.end()) {
+            return {};
+        }
+        bool found = false;
+        for (const FieldDecl& decl : klass->second->fields) {
+            if (decl.name == field) {
+                type = decl.type;
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            if (stmt != nullptr) {
+                fail(stmt->location, "unknown field: " + path);
+            }
+            return {};
+        }
+        if (next == std::string::npos) {
+            return type;
+        }
+        start = next + 1;
+    }
+    return type;
+}
+
 std::string infer_expr(const FunctionScope& scope, std::string expr) {
     expr = trim(std::move(expr));
     if (expr.empty()) {
@@ -83,20 +133,7 @@ std::string infer_expr(const FunctionScope& scope, std::string expr) {
     }
     const size_t dot = expr.find('.');
     if (dot != std::string::npos) {
-        const std::string base = expr.substr(0, dot);
-        const auto local = scope.locals.find(base);
-        if (local != scope.locals.end()) {
-            const auto klass = scope.symbols.classes.find(base_type(local->second));
-            if (klass != scope.symbols.classes.end()) {
-                const std::string field = expr.substr(dot + 1);
-                for (const FieldDecl& decl : klass->second->fields) {
-                    if (decl.name == field) {
-                        return decl.type;
-                    }
-                }
-            }
-        }
-        return {};
+        return member_path_type(scope, nullptr, expr);
     }
     if (const auto local = scope.locals.find(expr); local != scope.locals.end()) {
         return local->second;
@@ -141,23 +178,7 @@ std::string assign_target_type(const FunctionScope& scope, const RawStmt& stmt,
         }
         return local->second;
     }
-    const size_t dot = lhs.find('.');
-    const std::string base = lhs.substr(0, dot);
-    const auto local = scope.locals.find(base);
-    if (local == scope.locals.end()) {
-        fail(stmt.location, "assignment through unknown local: " + base);
-    }
-    const auto klass = scope.symbols.classes.find(base_type(local->second));
-    if (klass == scope.symbols.classes.end()) {
-        return {};
-    }
-    const std::string field = lhs.substr(dot + 1);
-    for (const FieldDecl& decl : klass->second->fields) {
-        if (decl.name == field) {
-            return decl.type;
-        }
-    }
-    fail(stmt.location, "unknown field: " + lhs);
+    return member_path_type(scope, &stmt, lhs);
 }
 
 void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& return_type);

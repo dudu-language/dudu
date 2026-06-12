@@ -28,6 +28,9 @@ for example in "${required_examples[@]}"; do
     test -f "$repo_root/examples/$example"
     "$repo_root/build/dudu" "$repo_root/examples/$example" --check
 done
+"$repo_root/build/duc" emit "$repo_root/examples/raylib_game.dd" \
+    -o "$repo_root/build/raylib_game_semantics.cpp"
+grep -q "player.vel.x" "$repo_root/build/raylib_game_semantics.cpp"
 
 compile_example_object() {
     local example="$1"
@@ -250,6 +253,7 @@ compile_and_expect class_methods 42
 compile_and_expect c_import_alias 42
 compile_and_expect pointer_cast 42
 compile_and_expect pointer_member 42
+compile_and_expect nested_fields 42
 compile_and_expect align_up 42
 compile_path_and_expect multifile tests/fixtures/multifile/main.dd 42
 
@@ -288,6 +292,7 @@ expect_fail bad_enum_value_name --check "enum values must be snake_case: BadValu
 expect_fail bad_return --emit-cpp "return type mismatch: expected i32, got bool"
 expect_fail bad_unknown_type --emit-cpp "unknown local type: MissingType"
 expect_fail bad_tuple_destructure --emit-cpp "tuple destructuring count mismatch"
+expect_fail bad_nested_field --emit-cpp "unknown field: outer.inner.missing"
 expect_fail bad_naming --check "type names must be PascalCase: bad_type"
 expect_fail bad_missing_return --emit-cpp "missing return in function: bad"
 expect_fail bad_build_flag --check "unknown build flag: build.NOPE"
