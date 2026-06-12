@@ -1,5 +1,9 @@
 # Compiler Plan
 
+> Historical note: this plan targets the earlier low-punctuation Dudu syntax.
+> The active plan is now
+> [Python Subset Compiler Plan](python-subset-compiler-plan.md).
+
 This is a staged plan. Stage 1-3 are partially implemented by the first
 line-oriented C++ emitter.
 

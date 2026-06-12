@@ -2,6 +2,10 @@
 
 This document is a draft, not a final spec.
 
+For the current surface syntax direction, see
+[Appearance Spec](appearance-spec.md). This older sketch records earlier
+compiler and language notes and may show syntax that has since changed.
+
 ## Source Files
 
 Dudu source files use `.dd`.

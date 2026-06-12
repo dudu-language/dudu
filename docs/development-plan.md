@@ -1,5 +1,10 @@
 # Development Plan
 
+> Historical note: this was the plan for the first low-punctuation emitter.
+> The current direction is a typed Python subset that compiles to C++.
+> Use [Python Subset Compiler Plan](python-subset-compiler-plan.md) for the
+> next implementation goal.
+
 This is the near-term implementation plan for turning the first Dudu emitter
 into something testable and useful.
 

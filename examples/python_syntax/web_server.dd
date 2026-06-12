@@ -1,0 +1,70 @@
+# Tiny HTTP API using a hypothetical C++ HTTP library.
+
+import cpp "httplib.h" as http
+import cpp "sqlite3.h" as sqlite
+
+
+class Todo:
+    id: i64
+    title: str
+    done: bool
+
+
+enum DbError:
+    open_failed
+    query_failed
+    not_found
+
+
+def todo_to_json(todo: Todo) -> str:
+    done_text = "true" if todo.done else "false"
+    return "{\"id\":" + str(todo.id) + ",\"title\":\"" + todo.title + "\",\"done\":" + done_text + "}"
+
+
+def find_todo(db: *sqlite.sqlite3, todo_id: i64) -> Result[Todo, DbError]:
+    query = "select id, title, done from todos where id = ?"
+    stmt: *sqlite.sqlite3_stmt = None
+
+    if sqlite.prepare_v2(db, query.c_str(), -1, &stmt, None) != sqlite.OK:
+        return Err(DbError.query_failed)
+
+    sqlite.bind_int64(stmt, 1, todo_id)
+    step = sqlite.step(stmt)
+
+    if step != sqlite.ROW:
+        sqlite.finalize(stmt)
+        return Err(DbError.not_found)
+
+    todo = Todo(
+        id=sqlite.column_int64(stmt, 0),
+        title=str.from_cstr(sqlite.column_text(stmt, 1)),
+        done=sqlite.column_int(stmt, 2) != 0,
+    )
+
+    sqlite.finalize(stmt)
+    return Ok(todo)
+
+
+def handle_get_todo(db: *sqlite.sqlite3, req: http.Request, res: &http.Response):
+    todo_id = parse_i64(req.matches[1])
+    result = find_todo(db, todo_id)
+
+    if result.ok:
+        res.set_content(todo_to_json(result.value), "application/json")
+    else:
+        res.status = 404
+        res.set_content("{\"error\":\"not found\"}", "application/json")
+
+
+def main() -> i32:
+    db: *sqlite.sqlite3 = None
+
+    if sqlite.open("todos.db", &db) != sqlite.OK:
+        return 1
+
+    app = http.Server()
+
+    app.Get("/todos/(\\d+)", lambda req, res: handle_get_todo(db, req, res))
+    app.listen("0.0.0.0", 8080)
+    sqlite.close(db)
+    return 0

@@ -1,0 +1,67 @@
+# Small typed numeric example with tuples, lists, and deterministic allocation.
+
+import cpp "cmath" as cmath
+
+
+class Vec2:
+    x: f32
+    y: f32
+
+
+def dist_sq(a: Vec2, b: Vec2) -> f32:
+    dx = a.x - b.x
+    dy = a.y - b.y
+    return dx * dx + dy * dy
+
+
+def nearest(point: Vec2, centers: list[Vec2]) -> i32:
+    best_index: i32 = 0
+    best_distance = dist_sq(point, centers[0])
+
+    for i: i32 in range(1, centers.len()):
+        distance = dist_sq(point, centers[i])
+        if distance < best_distance:
+            best_index = i
+            best_distance = distance
+
+    return best_index
+
+
+def mean(points: list[Vec2]) -> Vec2:
+    sum_x: f32 = 0.0
+    sum_y: f32 = 0.0
+
+    for p: &const[Vec2] in points:
+        sum_x += p.x
+        sum_y += p.y
+
+    count = f32(points.len())
+    return Vec2(sum_x / count, sum_y / count)
+
+
+def kmeans(points: list[Vec2], k: i32, iterations: i32) -> tuple[list[Vec2], list[i32]]:
+    centers: list[Vec2] = []
+    labels: list[i32] = []
+
+    for i: i32 in range(k):
+        centers.push(points[i])
+
+    for _: i32 in range(points.len()):
+        labels.push(0)
+
+    for _: i32 in range(iterations):
+        buckets: list[list[Vec2]] = []
+
+        for i: i32 in range(k):
+            buckets.push([])
+
+        for i: i32 in range(points.len()):
+            label = nearest(points[i], centers)
+            labels[i] = label
+            buckets[label].push(points[i])
+
+        for i: i32 in range(k):
+            if buckets[i].len() > 0:
+                centers[i] = mean(buckets[i])
+
+    return centers, labels

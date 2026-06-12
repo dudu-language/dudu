@@ -1,0 +1,41 @@
+# Dudu code intended to be imported from C++ after generating a .hpp/.cpp pair.
+
+
+class Camera:
+    pos: Vec3
+    yaw: f32
+    pitch: f32
+    fov: f32
+
+
+class Vec3:
+    x: f32
+    y: f32
+    z: f32
+
+
+def normalize(v: Vec3) -> Vec3:
+    length = sqrt(v.x * v.x + v.y * v.y + v.z * v.z)
+    return Vec3(v.x / length, v.y / length, v.z / length)
+
+
+def camera_forward(camera: Camera) -> Vec3:
+    cy = cos(camera.yaw)
+    sy = sin(camera.yaw)
+    cp = cos(camera.pitch)
+    sp = sin(camera.pitch)
+
+    return normalize(Vec3(
+        cy * cp,
+        sp,
+        sy * cp,
+    ))
+
+
+def make_camera(pos: Vec3, yaw: f32, pitch: f32) -> Camera:
+    return Camera(
+        pos=pos,
+        yaw=yaw,
+        pitch=pitch,
+        fov=70.0,
+    )

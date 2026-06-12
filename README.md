@@ -1,42 +1,49 @@
 # dudu
 
-Dudu is a sketch for a low-syntax systems language that feels light to write
-but stays close to C and C++ at runtime.
+Dudu is a sketch for a statically typed Python subset that compiles to readable
+C++.
 
-The goal is not Python semantics made fast. The goal is a Python-readable,
-indentation-based language with static types, predictable C/C++-style data
-movement, native-speed output, and first-class access to existing C and C++
-libraries. Source files use `.dd`.
+The goal is Python syntax people already know, C/C++-style types and data
+movement, native-speed output, full access to existing C and C++ libraries, and
+generated `.hpp/.cpp` files that C++ projects can use directly. Source files use
+`.dd` for now.
 
-```dudu
-use cpp "raylib.h" as rl
+```python
+import cpp "raylib.h" as rl
 
-th Vec2
-    x f32
-    y f32
 
-fn main i32
+class PlayerState:
+    hp: i32
+    x: f32
+    y: f32
 
-    rl.InitWindow 800 600 "dudu"
 
-    while not rl.WindowShouldClose
-        rl.BeginDrawing
-        rl.ClearBackground rl.BLACK
-        rl.DrawCircle 400 300 40 rl.RED
-        rl.EndDrawing
+def main() -> i32:
+    player = PlayerState(hp=100, x=400.0, y=300.0)
 
-    rl.CloseWindow
-    0
+    rl.InitWindow(800, 600, "dudu")
+
+    while not rl.WindowShouldClose():
+        rl.BeginDrawing()
+        rl.ClearBackground(rl.BLACK)
+        rl.DrawCircle(i32(player.x), i32(player.y), 40.0, rl.RED)
+        rl.EndDrawing()
+
+    rl.CloseWindow()
+    return 0
 ```
 
 ## Current Status
 
-This repo has a first compiler slice. It parses a small `.dd` subset and emits
-readable C++.
+This repo has an older first compiler slice for the original low-punctuation
+syntax. The active language direction has moved to a typed Python subset; see
+the appearance spec and compiler plan before changing compiler behavior.
 
 The starting point is:
 
 - [Project goals](docs/goals.md)
+- [Appearance spec](docs/appearance-spec.md)
+- [Python subset compiler plan](docs/python-subset-compiler-plan.md)
 - [Language sketch](docs/language.md)
 - [Interop plan](docs/interop.md)
 - [Compiler plan](docs/compiler-plan.md)

@@ -1,0 +1,71 @@
+# Low-level file hashing with POSIX mmap.
+
+import c "fcntl.h" as fcntl
+import c "sys/mman.h" as mmap
+import c "sys/stat.h" as stat
+import c "unistd.h" as unistd
+
+
+enum FileError:
+    open_failed
+    stat_failed
+    map_failed
+
+
+class MappedFile:
+    data: *u8
+    size: usize
+    fd: i32
+
+
+def map_file(path: cstr) -> Result[MappedFile, FileError]:
+    fd = fcntl.open(path, fcntl.O_RDONLY)
+
+    if fd < 0:
+        return Err(FileError.open_failed)
+
+    info: stat.struct_stat
+    if stat.fstat(fd, &info) != 0:
+        unistd.close(fd)
+        return Err(FileError.stat_failed)
+
+    size = usize(info.st_size)
+    raw = mmap.mmap(None, size, mmap.PROT_READ, mmap.MAP_PRIVATE, fd, 0)
+
+    if raw == mmap.MAP_FAILED:
+        unistd.close(fd)
+        return Err(FileError.map_failed)
+
+    return Ok(MappedFile(
+        data=*u8(raw),
+        size=size,
+        fd=fd,
+    ))
+
+
+def unmap_file(file: MappedFile):
+    mmap.munmap(file.data, file.size)
+    unistd.close(file.fd)
+
+
+def fnv1a(data: *u8, size: usize) -> u64:
+    hash: u64 = 14695981039346656037
+
+    for i: usize in range(size):
+        hash ^= u64(data[i])
+        hash *= 1099511628211
+
+    return hash
+
+
+def main() -> i32:
+    result = map_file("asset.bin")
+
+    if not result.ok:
+        return 1
+
+    file = result.value
+    hash = fnv1a(file.data, file.size)
+    unmap_file(file)
+
+    return i32(hash & 0xFF)

@@ -1,0 +1,86 @@
+# Small raylib arcade loop.
+
+import cpp "raylib.h" as rl
+
+
+class Player:
+    pos: rl.Vector2
+    vel: rl.Vector2
+    radius: f32
+
+
+class Coin:
+    pos: rl.Vector2
+    active: bool
+
+
+def length_sq(v: rl.Vector2) -> f32:
+    return v.x * v.x + v.y * v.y
+
+
+def collides(player: Player, coin: Coin) -> bool:
+    delta = rl.Vector2(
+        coin.pos.x - player.pos.x,
+        coin.pos.y - player.pos.y,
+    )
+    r = player.radius + 8.0
+    return length_sq(delta) <= r * r
+
+
+def update_player(player: &Player, dt: f32):
+    speed: f32 = 240.0
+    player.vel = rl.Vector2(0.0, 0.0)
+
+    if rl.IsKeyDown(rl.KEY_LEFT):
+        player.vel.x -= speed
+    if rl.IsKeyDown(rl.KEY_RIGHT):
+        player.vel.x += speed
+    if rl.IsKeyDown(rl.KEY_UP):
+        player.vel.y -= speed
+    if rl.IsKeyDown(rl.KEY_DOWN):
+        player.vel.y += speed
+
+    player.pos.x += player.vel.x * dt
+    player.pos.y += player.vel.y * dt
+
+
+def main() -> i32:
+    rl.InitWindow(800, 450, "dudu raylib")
+    rl.SetTargetFPS(144)
+
+    player = Player(
+        pos=rl.Vector2(400.0, 225.0),
+        vel=rl.Vector2(0.0, 0.0),
+        radius=18.0,
+    )
+
+    coins: list[Coin] = [
+        Coin(pos=rl.Vector2(140.0, 120.0), active=True),
+        Coin(pos=rl.Vector2(620.0, 180.0), active=True),
+        Coin(pos=rl.Vector2(390.0, 360.0), active=True),
+    ]
+
+    score: i32 = 0
+
+    while not rl.WindowShouldClose():
+        dt = rl.GetFrameTime()
+        update_player(player, dt)
+
+        for coin: &Coin in coins:
+            if coin.active and collides(player, coin):
+                coin.active = False
+                score += 1
+
+        rl.BeginDrawing()
+        rl.ClearBackground(rl.BLACK)
+
+        for coin: &const[Coin] in coins:
+            if coin.active:
+                rl.DrawCircleV(coin.pos, 8.0, rl.GOLD)
+
+        rl.DrawCircleV(player.pos, player.radius, rl.SKYBLUE)
+        rl.DrawText(rl.TextFormat("score: %d", score), 20, 20, 24, rl.WHITE)
+        rl.EndDrawing()
+
+    rl.CloseWindow()
+    return 0

@@ -1,0 +1,51 @@
+# Realtime audio callback style code.
+
+import cpp "raylib.h" as rl
+import cpp "cmath" as cmath
+
+
+SAMPLE_RATE: f32 = 48000.0
+TAU: f32 = 6.283185307
+
+
+class Oscillator:
+    phase: f32
+    frequency: f32
+    gain: f32
+
+
+def next_sample(osc: &Oscillator) -> f32:
+    value = cmath.sin(osc.phase) * osc.gain
+    osc.phase += TAU * osc.frequency / SAMPLE_RATE
+
+    if osc.phase >= TAU:
+        osc.phase -= TAU
+
+    return value
+
+
+def fill_audio(buffer: *f32, frames: i32, left: &Oscillator, right: &Oscillator):
+    for i: i32 in range(frames):
+        buffer[i * 2 + 0] = next_sample(left)
+        buffer[i * 2 + 1] = next_sample(right)
+
+
+def main() -> i32:
+    rl.InitAudioDevice()
+
+    left = Oscillator(phase=0.0, frequency=220.0, gain=0.2)
+    right = Oscillator(phase=0.0, frequency=277.18, gain=0.2)
+
+    stream = rl.LoadAudioStream(i32(SAMPLE_RATE), 32, 2)
+    rl.PlayAudioStream(stream)
+
+    samples: array[f32, 2048]
+
+    while not rl.WindowShouldClose():
+        if rl.IsAudioStreamProcessed(stream):
+            fill_audio(&samples[0], 1024, left, right)
+            rl.UpdateAudioStream(stream, &samples[0], 1024)
+
+    rl.UnloadAudioStream(stream)
+    rl.CloseAudioDevice()
+    return 0

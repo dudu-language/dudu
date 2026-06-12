@@ -1,5 +1,10 @@
 # C And C++ Interop
 
+> Historical note: this document uses the old Dudu syntax in many examples.
+> The active syntax and implementation plan are now
+> [Appearance Spec](appearance-spec.md) and
+> [Python Subset Compiler Plan](python-subset-compiler-plan.md).
+
 Interop is the reason this language exists.
 
 Dudu should not ask users to abandon existing C and C++ ecosystems. The first

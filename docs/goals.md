@@ -1,5 +1,10 @@
 # Project Goals
 
+> Historical note: this document predates the current Python-subset direction.
+> The active surface syntax and implementation plan are now
+> [Appearance Spec](appearance-spec.md) and
+> [Python Subset Compiler Plan](python-subset-compiler-plan.md).
+
 Dudu is a small systems language experiment.
 
 The central question:
