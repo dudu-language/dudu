@@ -24,6 +24,7 @@ struct Options {
     bool check = false;
     bool emit_cpp = false;
     bool format = false;
+    bool run = false;
 };
 
 [[noreturn]] void fail(const std::string& message) {
@@ -35,6 +36,7 @@ void print_usage() {
                  "       duc check <input.dd>\n"
                  "       duc emit <input.dd> [-o output.cpp]\n"
                  "       duc fmt <input.dd> [-o output.dd]\n"
+                 "       duc run <input.dd> [-o output]\n"
                  "       duc <input.dd> [--check] [--format <path|->] "
                  "[--emit-header <path|->] [--emit-cpp <path|->] [-DNAME=value]\n";
 }
@@ -61,6 +63,9 @@ Options parse_options(int argc, char** argv) {
         first_arg = 2;
     } else if (argc > 1 && std::string(argv[1]) == "fmt") {
         options.format = true;
+        first_arg = 2;
+    } else if (argc > 1 && std::string(argv[1]) == "run") {
+        options.run = true;
         first_arg = 2;
     }
 
@@ -164,7 +169,7 @@ std::string shell_quote(const std::filesystem::path& path) {
     return out;
 }
 
-void build_executable(const Options& options, const std::string& cpp) {
+std::filesystem::path build_executable(const Options& options, const std::string& cpp) {
     const std::filesystem::path output = options.output.value_or("a.out");
     std::filesystem::create_directories(output.parent_path().empty() ? "." : output.parent_path());
     const std::filesystem::path cpp_path = output.string() + ".cpp";
@@ -177,6 +182,7 @@ void build_executable(const Options& options, const std::string& cpp) {
     if (std::system(command.c_str()) != 0) {
         fail("C++ build failed");
     }
+    return output;
 }
 
 dudu::ModuleAst checked_module(const Options& options, const std::string& source,
@@ -199,8 +205,17 @@ int main(int argc, char** argv) {
             return 0;
         }
         if (options.build) {
-            build_executable(options, dudu::emit_cpp_source(checked_module(options, source, true)));
+            (void)build_executable(options,
+                                   dudu::emit_cpp_source(checked_module(options, source, true)));
             return 0;
+        }
+        if (options.run) {
+            const std::filesystem::path bin = build_executable(
+                options, dudu::emit_cpp_source(checked_module(options, source, true)));
+            const std::filesystem::path command = bin.is_relative() && bin.parent_path().empty()
+                                                      ? std::filesystem::path(".") / bin
+                                                      : bin;
+            return std::system(shell_quote(command).c_str()) == 0 ? 0 : 1;
         }
         if (options.header_output.has_value()) {
             write_text_output(options.header_output,

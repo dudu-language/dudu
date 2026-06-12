@@ -1019,6 +1019,7 @@ compatibility entrypoint during repository development.
 ```sh
 duc emit src/main.dd -o build/main.cpp
 duc build
+duc run src/main.dd
 duc fmt
 duc check src/main.dd
 ```

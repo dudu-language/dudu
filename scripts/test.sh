@@ -70,6 +70,8 @@ printf '#include "cpp_library.hpp"\nint main() { return 0; }\n' >"$repo_root/bui
     -o "$repo_root/build/duc_emit_simple.cpp"
 "$repo_root/build/duc" fmt "$repo_root/tests/fixtures/simple_program.dd" \
     -o "$repo_root/build/duc_fmt_simple.dd"
+"$repo_root/build/duc" run "$repo_root/tests/fixtures/run_zero.dd" \
+    -o "$repo_root/build/duc_run_zero"
 "$repo_root/build/dudu" "$repo_root/examples/compile_time.dd" --emit-cpp \
     "$repo_root/build/compile_time_raylib.cpp" -DDEBUG=true -DRENDER_BACKEND=raylib
 grep -q "inline constexpr bool DEBUG = true;" "$repo_root/build/compile_time_raylib.cpp"
