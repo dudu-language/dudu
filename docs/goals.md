@@ -1,6 +1,6 @@
 # Project Goals
 
-Glaive is a small systems language experiment.
+Dudu is a small systems language experiment.
 
 The central question:
 
@@ -30,9 +30,9 @@ The central question:
 
 ## Intended Feel
 
-Glaive should feel closer to this:
+Dudu should feel closer to this:
 
-```glaive
+```dudu
 fn add i32
     a i32
     b i32
@@ -62,7 +62,7 @@ runtime-heavy by default.
 
 The first real compiler milestone should be a tiny vertical slice:
 
-- Parse `.glaive` files.
+- Parse `.dudu` files.
 - Typecheck structs, functions, variables, loops, calls, and `ret`.
 - Emit readable C++.
 - Compile that C++ with Clang.

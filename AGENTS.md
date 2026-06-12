@@ -38,7 +38,7 @@
 
 ## Language Pragmatism
 
-- Glaive is intended to be C/C++-ish with lighter syntax, not Python semantics.
+- Dudu is intended to be C/C++-ish with lighter syntax, not Python semantics.
 - Prefer explicit compile-time behavior over runtime magic.
 - Keep C and C++ interoperability central to design decisions.
 - Do not add Rust-style ownership or lifetime rules unless the project goals

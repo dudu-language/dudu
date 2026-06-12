@@ -7,7 +7,7 @@ This document is a draft, not a final spec.
 Blocks are indentation-based. Function parameters live on the following lines.
 A blank line separates the function signature from the body.
 
-```glaive
+```dudu
 fn name ReturnType
     arg Type
     arg Type
@@ -17,7 +17,7 @@ fn name ReturnType
 
 The return type is optional. Omitted return type means `void`.
 
-```glaive
+```dudu
 fn tick
     world ref mut World
     dt f32
@@ -27,7 +27,7 @@ fn tick
 
 Use `ret`, not `return`.
 
-```glaive
+```dudu
 fn add i32
     a i32
     b i32
@@ -39,7 +39,7 @@ fn add i32
 
 Struct fields are one per line:
 
-```glaive
+```dudu
 struct Particle
     pos Vec2
     vel Vec2
@@ -53,7 +53,7 @@ otherwise.
 
 Inside function bodies, declarations should be explicit:
 
-```glaive
+```dudu
 fn main i32
 
     var count i32 = 0
@@ -69,13 +69,13 @@ Type inference is allowed where the initializer makes the type obvious.
 
 Function calls omit parentheses in the common case:
 
-```glaive
+```dudu
 draw_circle 400 300 40 red
 ```
 
 Method-style calls are allowed:
 
-```glaive
+```dudu
 player.damage 10
 ```
 
@@ -84,13 +84,13 @@ default style should avoid them.
 
 ## Control Flow
 
-```glaive
+```dudu
 while not window_should_close
     update
     draw
 ```
 
-```glaive
+```dudu
 if hp <= 0
     die
 else
@@ -101,7 +101,7 @@ else
 
 Avoid `&` and `*` in source when possible. Use words:
 
-```glaive
+```dudu
 ref T
 ref mut T
 ptr T
@@ -115,7 +115,7 @@ Rust ownership rules.
 
 Example:
 
-```glaive
+```dudu
 fn move_particle
     p ref mut Particle
     dt f32

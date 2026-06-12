@@ -2,5 +2,5 @@ c include "stdio.h" as c
 
 fn main i32
 
-    c.printf "hello from glaive\n"
+    c.printf "hello from dudu\n"
     ret 0

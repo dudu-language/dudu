@@ -2,7 +2,7 @@ cpp include "raylib.h" as rl
 
 fn main i32
 
-    rl.InitWindow 800 600 "glaive"
+    rl.InitWindow 800 600 "dudu"
 
     while not rl.WindowShouldClose
         rl.BeginDrawing

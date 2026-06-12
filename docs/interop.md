@@ -2,7 +2,7 @@
 
 Interop is the reason this language exists.
 
-Glaive should not ask users to abandon existing C and C++ ecosystems. The first
+Dudu should not ask users to abandon existing C and C++ ecosystems. The first
 backend should emit readable C++ and use existing C++ build tools.
 
 ## C Interop
@@ -11,7 +11,7 @@ C interop should be direct and early.
 
 Possible source shape:
 
-```glaive
+```dudu
 c include "math.h" as c
 
 fn main i32
@@ -29,7 +29,7 @@ C++ interop is harder than C interop, but it is the interesting target.
 
 Possible source shape:
 
-```glaive
+```dudu
 cpp include "raylib.h" as rl
 
 fn main i32

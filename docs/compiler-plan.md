@@ -4,7 +4,7 @@ This is a staged plan for implementation after the language sketch settles.
 
 ## Stage 0: Spec Fixtures
 
-- Keep example `.glaive` programs in `examples/`.
+- Keep example `.dudu` programs in `examples/`.
 - Treat the examples as parse/typecheck fixtures once a compiler exists.
 - Do not implement broad features until a tiny vertical slice works.
 
