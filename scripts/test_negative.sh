@@ -22,6 +22,7 @@ expect_fail bad_return_implicit_cast --emit-cpp "return type mismatch: expected 
 expect_fail bad_unknown_identifier --emit-cpp "unknown identifier: missing_value"
 expect_fail bad_unknown_identifier --check "unknown identifier: missing_value"
 expect_fail bad_unknown_function --emit-cpp "unknown function: missing"
+expect_fail bad_variadic_macro_arity --emit-cpp "no native overload of wrap.DUDU_WRAP_COUNT accepts 1 arguments"
 expect_fail bad_unknown_method --emit-cpp "unknown method: Counter.add"
 expect_fail bad_method_arity --emit-cpp "function counter.add expects 1 arguments, got 0"
 expect_fail bad_method_type --emit-cpp "argument 1 for counter.add expects i32, got bool"

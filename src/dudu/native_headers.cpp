@@ -298,12 +298,19 @@ void parse_ast_dump(NativeHeaderScan& scan, const std::string& dump,
         parse_ast_line(scan, line, namespaces, classes, location);
     }
 }
-int macro_arity(std::string args) {
+struct MacroParams { int arity = 0; bool variadic = false; };
+MacroParams macro_params(std::string args) {
     args = trim_copy(std::move(args));
-    if (args.empty()) {
-        return 0;
+    if (args.empty()) return {};
+    MacroParams out;
+    for (std::string part : split_top_level_args(args)) {
+        part = trim_copy(std::move(part));
+        if (part == "..." || part.find("...") != std::string::npos || part == "__VA_ARGS__")
+            out.variadic = true;
+        else
+            ++out.arity;
     }
-    return static_cast<int>(split_top_level_args(args).size());
+    return out;
 }
 void parse_macro_dump(NativeHeaderScan& scan, const std::string& dump,
                       const SourceLocation& location) {
@@ -323,15 +330,16 @@ void parse_macro_dump(NativeHeaderScan& scan, const std::string& dump,
             if (starts_with(name, "_") && !starts_with(name, "_mm") && !starts_with(name, "_MM_")) {
                 continue;
             }
-            const int arity = macro_arity(match[is_simd_macro ? 3 : 2].str());
+            const MacroParams params = macro_params(match[is_simd_macro ? 3 : 2].str());
             scan.macros.push_back({.name = name,
-                                   .arity = arity,
+                                   .arity = params.arity,
                                    .function_like = true,
                                    .location = location});
             scan.functions.push_back({.name = name,
-                                      .params = std::vector<std::string>(static_cast<size_t>(arity),
-                                                                         "auto"),
+                                      .params = std::vector<std::string>(
+                                          static_cast<size_t>(params.arity), "auto"),
                                       .return_type = "auto",
+                                      .variadic = params.variadic,
                                       .location = location});
         } else if (std::regex_search(line, match, object_macro)) {
             const std::string name = match[1].str();
@@ -426,14 +434,9 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
 template <typename T>
 void append_unique(std::vector<T>& target, const std::vector<T>& source) {
     std::set<std::string> seen;
-    for (const T& item : target) {
-        seen.insert(item.name);
-    }
-    for (const T& item : source) {
-        if (seen.insert(item.name).second) {
-            target.push_back(item);
-        }
-    }
+    for (const T& item : target) seen.insert(item.name);
+    for (const T& item : source)
+        if (seen.insert(item.name).second) target.push_back(item);
 }
 template <typename T>
 std::vector<T> prefixed_names(const std::vector<T>& source, const std::string& prefix) {
@@ -447,8 +450,7 @@ std::vector<T> prefixed_names(const std::vector<T>& source, const std::string& p
 }
 std::vector<NativeMacroDecl> direct_macros(const std::vector<NativeMacroDecl>& source) {
     std::vector<NativeMacroDecl> out;
-    for (const NativeMacroDecl& item : source)
-        if (public_direct_macro_name(item.name)) out.push_back(item);
+    for (const NativeMacroDecl& item : source) if (public_direct_macro_name(item.name)) out.push_back(item);
     return out;
 }
 } // namespace

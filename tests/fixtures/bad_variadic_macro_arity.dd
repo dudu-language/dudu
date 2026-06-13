@@ -1,0 +1,4 @@
+import c "./c_macro_wrap.h" as wrap
+
+def bad():
+    wrap.DUDU_WRAP_COUNT(1)

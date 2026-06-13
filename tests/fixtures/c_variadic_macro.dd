@@ -1,0 +1,6 @@
+import c "./c_macro_wrap.h" as wrap
+
+def main() -> i32:
+    first: i32 = wrap.DUDU_WRAP_FIRST(20, 1, 2, 3)
+    total: i32 = wrap.DUDU_WRAP_COUNT(first, 22, 99)
+    return total

@@ -27,6 +27,8 @@ Dudu code imports Dudu modules directly. Foreign headers are the boundary to
 the C and C++ ecosystem, not the normal Dudu module interface.
 
 Known imported macros are callable when the scanner can determine their arity.
+Variadic macros enforce their fixed leading parameters and pass through extra
+arguments.
 Aliased imports expose lowercase function-like macros too:
 
 ```python

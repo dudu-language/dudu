@@ -60,6 +60,10 @@ grep -Fq "dudu::Result<Todo, DbError> fetch_todo" "$repo_root/build/sqlite_crud.
 grep -Fq '#include "c_macro_wrap.h"' "$repo_root/build/c_macro_constants.cpp"
 grep -Fq "DUDU_WRAP_SCALE(5)" "$repo_root/build/c_macro_constants.cpp"
 grep -Fq "return total + DUDU_WRAP_MAGIC - 7;" "$repo_root/build/c_macro_constants.cpp"
+"$repo_root/build/duc" emit "$repo_root/tests/fixtures/c_variadic_macro.dd" \
+    -o "$repo_root/build/c_variadic_macro.cpp"
+grep -Fq "DUDU_WRAP_FIRST(20, 1, 2, 3)" "$repo_root/build/c_variadic_macro.cpp"
+grep -Fq "DUDU_WRAP_COUNT(first, 22, 99)" "$repo_root/build/c_variadic_macro.cpp"
 
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/c_lowercase_macro.dd" \
     -o "$repo_root/build/c_lowercase_macro.cpp"
