@@ -227,6 +227,28 @@ if [[ "$project_cmake_status" -ne 42 ]]; then
     echo "project_cmake returned $project_cmake_status, expected 42" >&2
     exit 1
 fi
+cmake_cc_dir="$repo_root/build/project_cmake_cc"
+rm -rf "$cmake_cc_dir" "$repo_root/build/project_cmake_cc_build"
+mkdir -p "$cmake_cc_dir"
+"$repo_root/build/duc" cmake "$repo_root/tests/fixtures/project_cc/main.dd" \
+    -o "$cmake_cc_dir/CMakeLists.txt"
+grep -q "target_include_directories(main PRIVATE" "$cmake_cc_dir/CMakeLists.txt"
+grep -q "target_compile_definitions(main PRIVATE \"DUDU_PROJECT_CC=40\")" \
+    "$cmake_cc_dir/CMakeLists.txt"
+grep -q "target_compile_options(main PRIVATE \"-DDUDU_PROJECT_CC_FLAG=2\")" \
+    "$cmake_cc_dir/CMakeLists.txt"
+grep -q "target_link_directories(main PRIVATE" "$cmake_cc_dir/CMakeLists.txt"
+cmake -S "$cmake_cc_dir" -B "$repo_root/build/project_cmake_cc_build" \
+    -DDUDU_EXECUTABLE="$repo_root/build/duc" >/dev/null
+cmake --build "$repo_root/build/project_cmake_cc_build" >/dev/null
+set +e
+"$repo_root/build/project_cmake_cc_build/main"
+project_cmake_cc_status=$?
+set -e
+if [[ "$project_cmake_cc_status" -ne 42 ]]; then
+    echo "project_cmake_cc returned $project_cmake_cc_status, expected 42" >&2
+    exit 1
+fi
 fake_pkg_config="$repo_root/build/fake-pkg-config"
 cat >"$fake_pkg_config" <<'SH'
 #!/usr/bin/env bash
