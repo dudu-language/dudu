@@ -16,6 +16,7 @@ Authoritative docs:
 
 - [Appearance Spec](appearance-spec.md)
 - [Dudu Tests](tests.md)
+- [Le Plan](le_plan.md)
 - [Python Subset Compiler Plan](python-subset-compiler-plan.md)
 
 The compiler should support practical systems programming: native values,

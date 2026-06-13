@@ -15,6 +15,7 @@
 - Added `@test` functions and generated native `dudu test` harnesses.
 - Added runtime `assert` lowering for test-friendly failures.
 - Added `docs/tests.md` with the Cargo-style test direction.
+- Added `docs/le_plan.md` as the next implementation roadmap.
 
 ### Changed
 
