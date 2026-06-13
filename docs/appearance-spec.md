@@ -770,7 +770,7 @@ elif build.RENDER_BACKEND == "raylib":
     init_raylib()
 ```
 
-Build flags come from `dudu.toml` or `duc -D` values:
+Build flags come from `dudu.toml` or command-line `-D` values:
 
 ```toml
 [build]
@@ -779,7 +779,7 @@ RENDER_BACKEND = "vulkan"
 ```
 
 ```sh
-duc build -DDEBUG=true -DRENDER_BACKEND=vulkan
+dudu build -DDEBUG=true -DRENDER_BACKEND=vulkan
 ```
 
 Branches depending only on `build.*` values are compile-time selected.
@@ -1066,26 +1066,39 @@ Editors should run `duc fmt` on save.
 
 ## Packages And CLI
 
-The compiler command is `duc`. The `dudu` binary remains available as a
-compatibility entrypoint during repository development.
+The compiler-driver command is `duc`. It stays explicit and file-oriented.
 
 ```sh
 duc emit src/main.dd -o build/main.cpp
-duc build
 duc run src/main.dd
 duc fmt
 duc check src/main.dd
 ```
 
-Package metadata can live in `dudu.toml`.
+The project-driver command is `dudu`. It reads `dudu.toml` and coordinates
+normal project actions without hiding the native toolchain.
+
+```sh
+dudu check
+dudu build
+dudu run
+dudu test
+dudu clean
+```
+
+Package metadata and native build settings can live in `dudu.toml`.
 
 ```toml
 name = "demo"
-main = "src/main.dd"
-cpp_std = "c++20"
+entry = "src/main.dd"
 
-[cc]
-include_dirs = ["include"]
+[cxx]
+standard = "c++20"
+
+[include]
+paths = ["include"]
+
+[pkg]
 libs = ["raylib"]
 ```
 

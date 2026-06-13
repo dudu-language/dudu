@@ -16,7 +16,7 @@ Make daily use feel good:
 - clean Cargo-ish build logs: done
 - `dudu test ./...`: done
 - better test binary output paths: done
-- examples and docs that prefer `dudu run` where it improves usability
+- examples and docs that prefer `dudu run` where it improves usability: done
 
 This pays off immediately because every future example and feature becomes
 easier to build, run, and test.

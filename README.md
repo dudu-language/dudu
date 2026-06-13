@@ -55,14 +55,14 @@ Build the compiler:
 ./scripts/build.sh
 ```
 
-Show the compiler commands:
+Show the compiler-driver commands:
 
 ```sh
 ./build/duc --help
 ./build/duc --version
 ```
 
-Check, format, or emit code:
+Use `duc` for direct compiler-driver actions:
 
 ```sh
 ./build/duc check tests/fixtures/simple_program.dd
@@ -70,55 +70,73 @@ Check, format, or emit code:
 ./build/duc fmt tests/fixtures/simple_program.dd --check
 ./build/duc emit tests/fixtures/simple_program.dd
 ./build/duc run tests/fixtures/run_zero.dd
-./build/dudu examples/cpp_library.dd --emit-header -
 ./build/duc tests/fixtures/c_api_export.dd --emit-c-header -
 ./build/duc emit examples/compile_time.dd -DDEBUG=true -DRENDER_BACKEND=raylib
 ```
 
-Build flags can also live beside an input file in `dudu.toml`:
+Use `dudu` for project-level work:
+
+```sh
+./build/dudu init hello
+cd hello
+../build/dudu run
+../build/dudu test
+../build/dudu clean
+```
+
+A `dudu.toml` project can name its entry file and native build settings:
 
 ```toml
-cpp_std = "c++20"
+name = "hello"
+entry = "src/main.dd"
+
+[cxx]
+standard = "c++20"
 
 [build]
-DEBUG = true
-RENDER_BACKEND = "raylib"
+dir = "build"
 
-[cc]
-include_dirs = ["include"]
+[include]
+paths = ["include"]
+
+[pkg]
 libs = ["raylib"]
-
-[pkg_config]
-packages = ["raylib"]
 ```
 
-Project commands can use a top-level `main` entry:
-
-```toml
-main = "src/main.dd"
-```
-
-Then run:
+Then run project commands from the project directory:
 
 ```sh
-./build/duc check
-./build/duc emit -o build/main.cpp
-./build/duc run
+../build/dudu check
+../build/dudu build
+../build/dudu run
+../build/dudu test
 ```
 
-Project tests can be wired through `dudu.toml`:
+Project manifests can also define named targets:
 
 ```toml
-[bench]
-command = "./scripts/bench.sh"
+name = "tools"
 
-[test]
-command = "./scripts/test.sh"
+[targets.app]
+entry = "src/main.dd"
+kind = "executable"
+
+[targets.tests]
+entry = "tests/main.dd"
+kind = "executable"
 ```
 
 ```sh
-./build/duc bench 10000000
-./build/duc test
+../build/dudu run app
+../build/dudu build tests
+../build/dudu test
+```
+
+Generated headers are available for C and C++ integration:
+
+```sh
+./build/duc emit examples/cpp_library.dd -o build/cpp_library.cpp
+./build/duc examples/cpp_library.dd --emit-header build/cpp_library.hpp
 ```
 
 Validate the checked-in examples that do not need external libraries:
@@ -144,7 +162,7 @@ Editor support lives in:
 - `editors/nvim`
 
 The VS Code folder is a local extension with `.dd` highlighting and command
-palette actions for `duc fmt`, `duc check`, `duc build`, and `duc run`.
+palette actions for formatting, checking, building, and running Dudu files.
 
 ## Working Name
 

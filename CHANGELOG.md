@@ -29,6 +29,8 @@
 - Improved native header scanning for direct SIMD intrinsic imports.
 - Removed generated `CHANGELOG.md` files from `dudu init` and `dudu new`
   scaffolds.
+- Updated public docs to prefer `dudu` for project-driver workflows and keep
+  `duc` focused on explicit compiler-driver workflows.
 
 ### Fixed
 

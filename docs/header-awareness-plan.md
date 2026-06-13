@@ -111,7 +111,7 @@ this use case.
 
 Policy:
 
-- `duc check`, `duc emit`, `duc build`, and editor diagnostics require Clang
+- `duc check`, `duc emit`, `dudu build`, and editor diagnostics require Clang
   tooling when a source file imports C/C++ headers and uses imported native
   declarations that Dudu must understand.
 - Missing Clang tooling should be a clear setup error, not a silent downgrade.
@@ -280,15 +280,18 @@ duc check --clear-header-cache
 Use the existing C/C++ project config as scanner input:
 
 ```toml
-cpp_std = "c++20"
+[cxx]
+standard = "c++20"
+
+[include]
+paths = ["third_party/install/include"]
 
 [cc]
-include_dirs = ["third_party/install/include"]
 defines = ["IMGUI_DISABLE_OBSOLETE_FUNCTIONS"]
 flags = ["-fPIC"]
 
-[pkg_config]
-packages = ["sdl3"]
+[pkg]
+libs = ["sdl3"]
 ```
 
 Add explicit scanner configuration only where needed:

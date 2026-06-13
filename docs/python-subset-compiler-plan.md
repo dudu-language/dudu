@@ -458,17 +458,19 @@ constructors, methods, templates, and operators.
 
 ## Stage 9: Build Tool
 
-Rename the compiler command to `duc`.
+Use `duc` as the compiler driver and `dudu` as the project driver.
 
 Expected commands:
 
 ```sh
 duc emit src/main.dd -o build/main.cpp
-duc build
-duc run
-duc test
+duc run src/main.dd
 duc fmt
 duc src/main.dd --emit-cpp -
+dudu build
+dudu run
+dudu test
+dudu clean
 ```
 
 Use normal C/C++ build tools:
@@ -552,11 +554,11 @@ toolchain.
 Expected daily commands:
 
 ```sh
-duc check src/main.dd
-duc emit src/main.dd -o build/main.cpp
-duc build
-duc run
-duc test
+dudu check
+dudu build
+dudu run
+dudu test
+dudu clean
 duc fmt
 ```
 
@@ -564,8 +566,8 @@ Expected project flow:
 
 1. Write `.dd` files.
 2. Configure native dependencies in `dudu.toml`.
-3. Run `duc check` for Dudu parse/type errors.
-4. Run `duc build` to emit C++ and invoke the configured native build.
+3. Run `dudu check` for Dudu parse/type errors.
+4. Run `dudu build` to emit C++ and invoke the configured native build.
 5. Debug generated C++ when necessary.
 6. Use generated `.hpp` files from C++ projects when Dudu code is a library.
 
@@ -576,18 +578,19 @@ Expected implementation flow:
 3. Commit frequently at reasonable green checkpoints.
 4. Keep each commit scoped enough to review or revert cleanly.
 
-`duc` should support direct one-file use:
+`duc` supports direct one-file use:
 
 ```sh
 duc run examples/raylib_game.dd
 duc emit examples/raylib_game.dd -o build/raylib_game.cpp
 ```
 
-And project use:
+`dudu` handles project use:
 
 ```sh
-duc build
-duc test
+dudu build
+dudu run
+dudu test
 ```
 
 ## Package And Build Manifest
@@ -598,31 +601,32 @@ Sketch:
 
 ```toml
 name = "game_tool"
-main = "src/main.dd"
-cpp_std = "c++20"
-build_dir = "build"
-
-[target]
+entry = "src/main.dd"
 kind = "executable"
 mode = "hosted"
 
-[build]
-DEBUG = true
-RENDER_BACKEND = "vulkan"
+[cxx]
+standard = "c++20"
+compiler = "clang++"
+
+[include]
+paths = ["include"]
+
+[link]
+paths = ["third_party/lib"]
+libs = ["raylib", "imgui"]
 
 [cc]
-compiler = "clang++"
-include_dirs = ["include"]
-lib_dirs = ["third_party/lib"]
-libs = ["raylib", "imgui"]
 defines = ["IMGUI_IMPL_OPENGL_LOADER_GLAD"]
 flags = ["-Wall", "-Wextra"]
 
-[pkg_config]
-packages = ["raylib", "sdl3"]
+[pkg]
+libs = ["raylib", "sdl3"]
 
-[cmake]
-enabled = true
+[build]
+dir = "build"
+DEBUG = true
+RENDER_BACKEND = "vulkan"
 ```
 
 Target modes:
@@ -701,7 +705,7 @@ help: use text.c_str()
 The full native compiler output should remain available with:
 
 ```sh
-duc build --verbose
+dudu build --verbose
 ```
 
 ## Optional Hardware And Library Tests
@@ -773,9 +777,9 @@ Required tooling commands:
 ```sh
 duc fmt .
 duc fmt --check .
-duc check .
-duc build
-duc test
+dudu check
+dudu build
+dudu test
 ```
 
 Commit workflow:
@@ -794,7 +798,7 @@ Editor integration should support:
 - imported C/C++ completion once Clang-backed import is available
 - syntax highlighting
 - file icons and `.dd` file association
-- command palette actions for `duc fmt`, `duc check`, `duc build`, and `duc run`
+- command palette actions for formatting, checking, building, and running
 
 The syntax intentionally stays close to Python so existing editor tokenization
 can provide a usable baseline before a full language server exists.
@@ -959,7 +963,7 @@ RENDER_BACKEND = "vulkan"
 ```
 
 ```sh
-duc build -DDEBUG=true -DRENDER_BACKEND=vulkan
+dudu build -DDEBUG=true -DRENDER_BACKEND=vulkan
 ```
 
 Rules:
