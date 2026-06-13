@@ -86,27 +86,7 @@ printf '#include "cpp_library.hpp"\nint main() { return 0; }\n' >"$repo_root/bui
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/simple_program.dd" \
     -o "$repo_root/build/duc_emit_simple.cpp"
 grep -q "dudu: .*simple_program.dd:7:" "$repo_root/build/duc_emit_simple.cpp"
-"$repo_root/build/duc" "$repo_root/tests/fixtures/c_api_export.dd" --emit-cpp \
-    "$repo_root/build/c_api_export.cpp"
-"$repo_root/build/duc" "$repo_root/tests/fixtures/c_api_export.dd" --emit-c-header \
-    "$repo_root/build/c_api_export.h"
-grep -q "int32_t exported_answer(void);" "$repo_root/build/c_api_export.h"
-"${CXX:-c++}" -std=c++20 -c "$repo_root/build/c_api_export.cpp" \
-    -o "$repo_root/build/c_api_export.o"
-printf '#include "c_api_export.h"\nint main(void) { return exported_answer(); }\n' \
-    >"$repo_root/build/c_api_export_caller.c"
-cc -std=c11 -I"$repo_root/build" -c "$repo_root/build/c_api_export_caller.c" \
-    -o "$repo_root/build/c_api_export_caller.o"
-"${CXX:-c++}" "$repo_root/build/c_api_export.o" "$repo_root/build/c_api_export_caller.o" \
-    -o "$repo_root/build/c_api_export_caller"
-set +e
-"$repo_root/build/c_api_export_caller"
-c_api_export_status=$?
-set -e
-if [[ "$c_api_export_status" -ne 42 ]]; then
-    echo "c_api_export_caller returned $c_api_export_status, expected 42" >&2
-    exit 1
-fi
+"$repo_root/scripts/test_c_api.sh"
 "$repo_root/build/duc" fmt "$repo_root/tests/fixtures/simple_program.dd" \
     -o "$repo_root/build/duc_fmt_simple.dd"
 "$repo_root/build/duc" fmt "$repo_root/tests/fixtures/simple_program.dd" --check
