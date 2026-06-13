@@ -1,0 +1,22 @@
+def add_three(value: i32) -> i32:
+    return value + 3
+
+
+def xor_mask(value: i32) -> i32:
+    return value ^ 85
+
+
+def choose_callback(use_mask: bool) -> fn(i32) -> i32:
+    if use_mask:
+        return xor_mask
+    return add_three
+
+
+def callback_accum(n: i32) -> i64:
+    callback = choose_callback((n & 1) != 0)
+    total: i64 = 0
+
+    for i: i32 in range(n):
+        total += i64(callback(i & 1023))
+
+    return total

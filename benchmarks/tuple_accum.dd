@@ -1,0 +1,12 @@
+def divmod_pair(value: i32, divisor: i32) -> tuple[i32, i32]:
+    return value / divisor, value % divisor
+
+
+def tuple_accum(n: i32) -> i64:
+    total: i64 = 0
+
+    for i: i32 in range(n):
+        q, r = divmod_pair(i, 97)
+        total += i64(q + r)
+
+    return total

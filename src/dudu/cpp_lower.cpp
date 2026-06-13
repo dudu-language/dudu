@@ -96,7 +96,10 @@ size_t top_level_equal(const std::string& text) {
         } else if (c == ']' || c == ')' || c == '}') {
             --depth;
         } else if (c == '=' && depth == 0) {
-            if ((i > 0 && text[i - 1] == '=') || (i + 1 < text.size() && text[i + 1] == '=')) {
+            const bool comparison =
+                (i > 0 && std::string_view("=!<>").find(text[i - 1]) != std::string_view::npos) ||
+                (i + 1 < text.size() && text[i + 1] == '=');
+            if (comparison) {
                 continue;
             }
             return i;
@@ -287,7 +290,6 @@ std::string lower_template_value_call(std::string expr, std::string_view name) {
     }
     return expr;
 }
-
 std::string lower_type_operator_call(std::string expr, std::string_view name) {
     const std::string marker = std::string(name) + "[";
     size_t pos = expr.find(marker);
@@ -457,7 +459,6 @@ std::string lower_dotted_template_call(std::string expr,
     }
     return expr;
 }
-
 std::string lower_cpp_expr(std::string expr, const std::vector<std::string>& namespace_aliases) {
     expr = lower_lambda_expr(std::move(expr));
     expr = lower_conditional_expr(std::move(expr));
