@@ -1,0 +1,14 @@
+# CUDA shared-memory shaped kernel.
+
+import cpp "cuda_runtime.h" as cuda
+
+
+@cuda.global
+def tile_sum(input: *device[f32], output: *device[f32], count: i32):
+    tile: shared[f32[256]]
+    lane = cuda.threadIdx.x
+    global_index = cuda.blockIdx.x * cuda.blockDim.x + lane
+
+    if global_index < count:
+        tile[lane] = input[global_index]
+        output[global_index] = tile[lane]

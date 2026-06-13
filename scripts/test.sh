@@ -12,6 +12,7 @@ required_examples=(
     compile_time.dd
     cpp_library.dd
     cuda_kernel.dd
+    cuda_shared_memory_tile.dd
     ffmpeg_probe_decode.dd
     function_pointers.dd
     glfw_opengl_triangle.dd
@@ -122,6 +123,11 @@ grep -q "DUDU_CUDA_GLOBAL void saxpy_kernel" "$repo_root/build/cuda_kernel.cpp"
 grep -q "float\\* dev_x = nullptr;" "$repo_root/build/cuda_kernel.cpp"
 grep -q "err = cuda::cudaMalloc" "$repo_root/build/cuda_kernel.cpp"
 ! grep -q "dudu::dudu" "$repo_root/build/cuda_kernel.cpp"
+"$repo_root/build/duc" emit "$repo_root/examples/cuda_shared_memory_tile.dd" \
+    -o "$repo_root/build/cuda_shared_memory_tile.cpp"
+grep -q "DUDU_CUDA_GLOBAL void tile_sum" "$repo_root/build/cuda_shared_memory_tile.cpp"
+grep -q "std::array<float, 256> tile" "$repo_root/build/cuda_shared_memory_tile.cpp"
+grep -q "cuda::threadIdx::x" "$repo_root/build/cuda_shared_memory_tile.cpp"
 "$repo_root/build/duc" emit "$repo_root/examples/shader_compute.dd" -o "$repo_root/build/shader_compute.cpp"
 grep -q "#define DUDU_SHADER_COMPUTE" "$repo_root/build/shader_compute.cpp"
 grep -q "#define DUDU_WORKGROUP_SIZE" "$repo_root/build/shader_compute.cpp"
