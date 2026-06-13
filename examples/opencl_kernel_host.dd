@@ -1,0 +1,12 @@
+# OpenCL host-side probe with output pointer parameters.
+
+import c "CL/cl.h" as cl
+
+
+def main() -> i32:
+    platform_count: u32 = 0
+    err: i32 = cl.clGetPlatformIDs(0, None, &platform_count)
+    if err != cl.CL_SUCCESS:
+        return 1
+
+    return 42

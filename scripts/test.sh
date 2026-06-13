@@ -19,6 +19,7 @@ required_examples=(
     modules_visibility.dd
     native_escape.dd
     numerics_kmeans.dd
+    opencl_kernel_host.dd
     raylib_game.dd
     sdl3_window.dd
     shader_compute.dd

@@ -127,6 +127,28 @@ probe_glfw() {
     echo "ok glfw3"
 }
 
+probe_opencl() {
+    if ! pkg-config --exists OpenCL; then
+        echo "skip OpenCL: pkg-config package not found"
+        return
+    fi
+
+    local cpp="$repo_root/build/probe_opencl_kernel_host.cpp"
+    local bin="$repo_root/build/probe_opencl_kernel_host"
+    "$repo_root/build/duc" emit "$repo_root/examples/opencl_kernel_host.dd" -o "$cpp"
+    "${CXX:-c++}" -std=c++20 -DCL_TARGET_OPENCL_VERSION=300 "$cpp" \
+        $(pkg-config --cflags --libs OpenCL) -o "$bin"
+    set +e
+    "$bin"
+    local status=$?
+    set -e
+    if [[ "$status" -ne 42 ]]; then
+        echo "OpenCL probe returned $status, expected 42" >&2
+        exit 1
+    fi
+    echo "ok OpenCL"
+}
+
 probe_glm
 probe_opencv
 probe_sqlite
@@ -134,3 +156,4 @@ probe_threading
 probe_raylib
 probe_sdl3
 probe_glfw
+probe_opencl

@@ -63,12 +63,13 @@ void test_import_bindings() {
 
 void test_canonical_examples_parse(const std::filesystem::path& root) {
     const std::vector<std::string> examples = {
-        "allocators.dd",           "audio_synth.dd",       "compile_time.dd",
-        "cpp_library.dd",          "cuda_kernel.dd",       "function_pointers.dd",
-        "glfw_opengl_triangle.dd", "image_filter.dd",      "layout_hardware.dd",
-        "modules_visibility.dd",   "native_escape.dd",     "numerics_kmeans.dd",
-        "raylib_game.dd",          "sdl3_window.dd",       "shader_compute.dd",
-        "systems_mmap.dd",         "threading_atomics.dd", "web_server.dd",
+        "allocators.dd",           "audio_synth.dd",   "compile_time.dd",
+        "cpp_library.dd",          "cuda_kernel.dd",   "function_pointers.dd",
+        "glfw_opengl_triangle.dd", "image_filter.dd",  "layout_hardware.dd",
+        "modules_visibility.dd",   "native_escape.dd", "numerics_kmeans.dd",
+        "opencl_kernel_host.dd",   "raylib_game.dd",   "sdl3_window.dd",
+        "shader_compute.dd",       "systems_mmap.dd",  "threading_atomics.dd",
+        "web_server.dd",
     };
 
     for (const std::string& example : examples) {
