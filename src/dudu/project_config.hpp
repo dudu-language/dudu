@@ -7,6 +7,13 @@
 
 namespace dudu {
 
+struct ProjectTarget {
+    std::filesystem::path main;
+    std::string target_kind;
+    std::string target_mode;
+    bool target_mode_explicit = false;
+};
+
 struct ProjectConfig {
     std::string name;
     std::filesystem::path main;
@@ -17,6 +24,7 @@ struct ProjectConfig {
     bool target_mode_explicit = false;
     std::string bench_command;
     std::string test_command;
+    std::map<std::string, ProjectTarget> targets;
     std::map<std::string, std::string> build_values;
     std::string compiler;
     std::vector<std::string> c_sources;
@@ -31,6 +39,7 @@ struct ProjectConfig {
     bool cmake_enabled = false;
 };
 
+ProjectConfig apply_project_target(ProjectConfig config, const std::string& target_name);
 ProjectConfig parse_project_config(const std::filesystem::path& path);
 
 } // namespace dudu

@@ -171,6 +171,25 @@ grep -q "inline constexpr bool DEBUG = false;" "$repo_root/build/package_build_o
     "$repo_root/build/duc" test -o "$repo_root/build/project_mode_tests"
 )
 (
+    cd "$repo_root/tests/fixtures/project_targets"
+    "$repo_root/build/dudu" check tool
+    "$repo_root/build/dudu" build tool 2>"$repo_root/build/project_targets_build.err"
+    test -x "$repo_root/build/project_targets/tool"
+    "$repo_root/build/dudu" run tool >"$repo_root/build/project_targets_run.out" \
+        2>"$repo_root/build/project_targets_run.err"
+    "$repo_root/build/dudu" test >"$repo_root/build/project_targets_test.out" \
+        2>"$repo_root/build/project_targets_test.err"
+    "$repo_root/build/dudu" cmake tool -o "$repo_root/build/project_targets_cmake.txt" \
+        2>"$repo_root/build/project_targets_cmake.err"
+)
+grep -q "build ../../../build/project_targets/tool" "$repo_root/build/project_targets_build.err"
+grep -q "run ../../../build/project_targets/tool" "$repo_root/build/project_targets_run.err"
+grep -q "tool target" "$repo_root/build/project_targets_run.out"
+grep -q "ok target_test" "$repo_root/build/project_targets_test.out"
+grep -q "1/1 tests passed" "$repo_root/build/project_targets_test.out"
+grep -q "add_executable(tool" "$repo_root/build/project_targets_cmake.txt"
+grep -q 'set(DUDU_SOURCE "tool.dd")' "$repo_root/build/project_targets_cmake.txt"
+(
     cd "$repo_root/tests/fixtures/project_cuda_mode"
     "$repo_root/build/duc" check
 )

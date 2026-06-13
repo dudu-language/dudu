@@ -1,4 +1,5 @@
 #include "dudu/cpp_emit.hpp"
+#include "dudu/cli_usage.hpp"
 #include "dudu/cmake_emit.hpp"
 #include "dudu/format_path.hpp"
 #include "dudu/module_loader.hpp"
@@ -29,6 +30,7 @@ struct Options {
     std::optional<std::filesystem::path> output;
     std::optional<std::filesystem::path> header_output;
     std::map<std::string, std::string> build_values;
+    std::string target_name;
     std::vector<std::string> command_args;
     std::string test_filter;
     bool bench = false;
@@ -48,38 +50,6 @@ struct Options {
 
 [[noreturn]] void fail(const std::string& message) {
     throw std::runtime_error(message);
-}
-
-void print_usage(bool project_driver = false) {
-    if (project_driver) {
-        std::cout << "usage: dudu init\n"
-                     "       dudu init [path]\n"
-                     "       dudu new <name>\n"
-                     "       dudu run [input.dd] [-o output]\n"
-                     "       dudu build [input.dd] [-o output]\n"
-                     "       dudu check [input.dd|dir]\n"
-                     "       dudu clean [path]\n"
-                     "       dudu fmt <input.dd|dir> [--check]\n"
-                     "       dudu test [input.dd|filter] [--filter text]\n"
-                     "       dudu cmake [input.dd] [-o CMakeLists.txt]\n";
-        return;
-    }
-    std::cout << "usage: duc bench [args...]\n"
-                 "       duc build [input.dd] [-o output]\n"
-                 "       duc check [input.dd]\n"
-                 "       duc clean [path]\n"
-                 "       duc cmake [input.dd] [-o CMakeLists.txt]\n"
-                 "       duc emit [input.dd] [-o output.cpp]\n"
-                 "       duc fmt <input.dd|dir> [--check] [-o output.dd]\n"
-                 "       duc run [input.dd] [-o output]\n"
-                 "       duc test [input.dd|filter] [--filter text]\n"
-                 "       duc <input.dd> [--check] [--format <path|->] "
-                 "[--emit-header <path|->] [--emit-c-header <path|->] "
-                 "[--emit-cpp <path|->] [-DNAME=value] [--verbose]\n";
-}
-
-void print_version() {
-    std::cout << "duc 0.1.0\n";
 }
 
 void add_build_value(Options& options, const std::string& define) {
@@ -144,11 +114,11 @@ Options parse_options(int argc, char** argv, bool project_driver) {
             continue;
         }
         if (arg == "-h" || arg == "--help") {
-            print_usage(project_driver);
+            dudu::print_cli_usage(project_driver);
             std::exit(0);
         }
         if (arg == "--version") {
-            print_version();
+            dudu::print_cli_version();
             std::exit(0);
         }
         if (arg == "--verbose") {
@@ -244,14 +214,23 @@ Options resolve_project_input(Options options) {
         options.test) {
         return options;
     }
+    const dudu::ProjectConfig project = dudu::parse_project_config("dudu.toml");
     if (!options.input.empty()) {
+        const std::string input = options.input.string();
+        if (!std::filesystem::exists(options.input) && options.input.extension() != ".dd" &&
+            project.targets.contains(input)) {
+            options.target_name = input;
+            options.input = dudu::apply_project_target(project, input).main;
+            if (options.input.empty()) {
+                fail("target has no entry: " + input);
+            }
+        }
         return options;
     }
-    const dudu::ProjectConfig config = dudu::parse_project_config("dudu.toml");
-    if (config.main.empty()) {
+    if (project.main.empty()) {
         fail("missing input file and dudu.toml main");
     }
-    options.input = config.main;
+    options.input = project.main;
     return options;
 }
 
@@ -291,6 +270,14 @@ dudu::ProjectConfig config_for_input(const std::filesystem::path& input) {
     return dudu::parse_project_config(build_config_path(input));
 }
 
+dudu::ProjectConfig config_for_options(const Options& options) {
+    dudu::ProjectConfig config = config_for_input(options.input);
+    if (!options.target_name.empty()) {
+        config = dudu::apply_project_target(std::move(config), options.target_name);
+    }
+    return config;
+}
+
 std::filesystem::path default_build_output(const dudu::ProjectConfig& config,
                                            const std::filesystem::path& input) {
     if (config.name.empty() && config.build_dir.empty()) {
@@ -310,7 +297,7 @@ dudu::ModuleAst checked_module(const Options& options, const std::string& source
                                bool check_bodies) {
     dudu::ModuleAst module = options.input.empty() ? dudu::parse_source(source, options.input)
                                                    : dudu::load_source_tree(options.input);
-    const dudu::ProjectConfig config = config_for_input(options.input);
+    const dudu::ProjectConfig config = config_for_options(options);
     module.build_values = config.build_values;
     module.build_values["TARGET_KIND"] = '"' + config.target_kind + '"';
     module.build_values["TARGET_MODE"] = '"' + config.target_mode + '"';
@@ -361,20 +348,35 @@ int run_delegated_project_tests() {
 }
 
 int run_project_tests(Options options) {
+    const dudu::ProjectConfig project = dudu::parse_project_config("dudu.toml");
     if (!options.input.empty() && !looks_like_test_input(options.input)) {
-        if (options.test_filter.empty()) {
-            options.test_filter = options.input.string();
+        const std::string input = options.input.string();
+        if (project.targets.contains(input)) {
+            options.target_name = input;
+            options.input = dudu::apply_project_target(project, input).main;
+            if (options.input.empty()) {
+                fail("target has no entry: " + input);
+            }
+        } else {
+            if (options.test_filter.empty()) {
+                options.test_filter = input;
+            }
+            options.input.clear();
         }
-        options.input.clear();
     }
     if (options.input.empty()) {
-        options.input = dudu::parse_project_config("dudu.toml").main;
+        if (project.targets.contains("tests")) {
+            options.target_name = "tests";
+            options.input = dudu::apply_project_target(project, "tests").main;
+        } else {
+            options.input = project.main;
+        }
     }
     if (options.input.empty()) {
         return run_delegated_project_tests();
     }
     const std::string source = read_text_file(options.input);
-    const dudu::ProjectConfig config = config_for_input(options.input);
+    const dudu::ProjectConfig config = config_for_options(options);
     const std::filesystem::path output =
         options.output.value_or(config.build_dir.empty() ? std::filesystem::path("build/dudu_tests")
                                                          : config.build_dir / "dudu_tests");
@@ -433,7 +435,7 @@ int main(int argc, char** argv) {
             return 0;
         }
         if (options.cmake) {
-            const dudu::ProjectConfig config = config_for_input(options.input);
+            const dudu::ProjectConfig config = config_for_options(options);
             dudu::print_project_step(options.project_driver, "cmake",
                                      options.output.value_or("CMakeLists.txt"));
             write_text_output(options.output, dudu::emit_cmake_project(config, options.input));
@@ -441,8 +443,7 @@ int main(int argc, char** argv) {
         }
         const std::string source = read_text_file(options.input);
         if (options.build) {
-            const dudu::ProjectConfig config =
-                dudu::parse_project_config(build_config_path(options.input));
+            const dudu::ProjectConfig config = config_for_options(options);
             const std::filesystem::path output =
                 options.output.value_or(default_build_output(config, options.input));
             dudu::print_project_step(options.project_driver, "emit", output.string() + ".cpp");
@@ -453,7 +454,7 @@ int main(int argc, char** argv) {
             return 0;
         }
         if (options.run) {
-            const dudu::ProjectConfig config = config_for_input(options.input);
+            const dudu::ProjectConfig config = config_for_options(options);
             if (config.target_kind != "executable") {
                 fail("cannot run target kind: " + config.target_kind);
             }

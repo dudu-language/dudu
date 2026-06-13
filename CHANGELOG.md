@@ -19,6 +19,8 @@
 - Added `dudu clean` for removing a project's configured build directory.
 - Added Cargo-ish stderr step logs for `dudu build`, `dudu run`, `dudu test`,
   and `dudu cmake`.
+- Added named project targets through `[targets.<name>]` for build, run, test,
+  and CMake generation.
 
 ### Changed
 

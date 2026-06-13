@@ -1,0 +1,11 @@
+name = "project_targets"
+entry = "app.dd"
+build_dir = "../../../build/project_targets"
+
+[targets.tool]
+entry = "tool.dd"
+kind = "executable"
+
+[targets.tests]
+entry = "tests.dd"
+kind = "executable"

@@ -297,7 +297,16 @@ void test_project_driver_config(const std::filesystem::path& root) {
                "flags = [\"-pthread\"]\n"
                "\n"
                "[build]\n"
-               "dir = \"out\"\n";
+               "dir = \"out\"\n"
+               "\n"
+               "[targets.tool]\n"
+               "entry = \"tools/tool.dd\"\n"
+               "kind = \"executable\"\n"
+               "\n"
+               "[targets.tests]\n"
+               "entry = \"tests/main.dd\"\n"
+               "kind = \"executable\"\n"
+               "mode = \"hosted\"\n";
     }
     const dudu::ProjectConfig config = dudu::parse_project_config(config_path);
     assert(config.name == "tool");
@@ -312,6 +321,14 @@ void test_project_driver_config(const std::filesystem::path& root) {
     assert(config.libs.size() == 1);
     assert(config.link_flags.size() == 1);
     assert(config.build_dir == "out");
+    assert(config.targets.size() == 2);
+    assert(config.targets.at("tool").main == "tools/tool.dd");
+    assert(config.targets.at("tests").target_mode == "hosted");
+    const dudu::ProjectConfig tests_config = dudu::apply_project_target(config, "tests");
+    assert(tests_config.name == "tests");
+    assert(tests_config.main == "tests/main.dd");
+    assert(tests_config.target_kind == "executable");
+    assert(tests_config.target_mode == "hosted");
 }
 
 void test_image_filter_emission(const std::filesystem::path& root) {

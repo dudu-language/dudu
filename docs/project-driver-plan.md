@@ -189,6 +189,10 @@ dudu test
 dudu build tests
 ```
 
+Named targets are supported for `dudu build`, `dudu run`, `dudu test`, and
+`dudu cmake`. `dudu test` uses `[targets.tests]` by default when that target is
+present.
+
 ## Script Entries
 
 Projects may contain more than one file with a `main` function.

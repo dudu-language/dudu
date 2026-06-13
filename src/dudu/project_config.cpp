@@ -115,7 +115,30 @@ void validate_one_of(const std::filesystem::path& path, const std::string& line,
     }
 }
 
+bool starts_with(std::string_view text, std::string_view prefix) {
+    return text.size() >= prefix.size() && text.substr(0, prefix.size()) == prefix;
+}
+
 } // namespace
+
+ProjectConfig apply_project_target(ProjectConfig config, const std::string& target_name) {
+    const auto found = config.targets.find(target_name);
+    if (found == config.targets.end()) {
+        return config;
+    }
+    config.name = target_name;
+    if (!found->second.main.empty()) {
+        config.main = found->second.main;
+    }
+    if (!found->second.target_kind.empty()) {
+        config.target_kind = found->second.target_kind;
+    }
+    if (!found->second.target_mode.empty()) {
+        config.target_mode = found->second.target_mode;
+        config.target_mode_explicit = found->second.target_mode_explicit;
+    }
+    return config;
+}
 
 ProjectConfig parse_project_config(const std::filesystem::path& path) {
     ProjectConfig config;
@@ -143,7 +166,27 @@ ProjectConfig parse_project_config(const std::filesystem::path& path) {
         if (name.empty() || value.empty()) {
             fail(path, section == "build" ? "invalid [build] entry" : "invalid entry", line);
         }
-        if (section.empty() && name == "name") {
+        if (starts_with(section, "targets.")) {
+            const std::string target_name = section.substr(8);
+            if (target_name.empty()) {
+                fail(path, "invalid target section", line);
+            }
+            ProjectTarget& target = config.targets[target_name];
+            if (name == "entry" || name == "main") {
+                target.main = unquote(value);
+            } else if (name == "kind") {
+                target.target_kind = unquote(value);
+                validate_one_of(path, line, "kind", target.target_kind,
+                                {"executable", "library", "shared_library"});
+            } else if (name == "mode") {
+                target.target_mode = unquote(value);
+                target.target_mode_explicit = true;
+                validate_one_of(path, line, "mode", target.target_mode,
+                                {"hosted", "freestanding", "embedded", "cuda", "shader"});
+            } else {
+                fail(path, "unknown [" + section + "] entry", line);
+            }
+        } else if (section.empty() && name == "name") {
             config.name = unquote(value);
         } else if (section.empty() && (name == "main" || name == "entry")) {
             config.main = unquote(value);
