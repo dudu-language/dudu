@@ -1,0 +1,13 @@
+class Coin:
+    active: bool
+
+
+def is_active(coin: &const[Coin]) -> bool:
+    return coin.active
+
+
+def main() -> i32:
+    coin = Coin(active=True)
+    if is_active(coin):
+        return 42
+    return 1

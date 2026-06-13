@@ -303,6 +303,7 @@ compile_and_expect compound_assignment 46
 compile_and_expect bitwise_ops 42
 compile_and_expect binary_packet_parser 42
 compile_and_expect ref_field_inference 42
+compile_and_expect const_ref_field 42
 compile_and_expect conditional_str 42
 compile_and_expect lambda_callback 42
 compile_and_expect multiline_literals 42
@@ -354,6 +355,7 @@ expect_fail bad_from_import_missing --emit-cpp "module 'bad_from_import_helper' 
 expect_fail bad_cycle_a --emit-cpp "cyclic module import"
 expect_fail bad_unknown_type --emit-cpp "unknown local type: MissingType"
 expect_fail bad_field_read --emit-cpp "unknown field: counter.missing"
+expect_fail bad_const_ref_field --emit-cpp "unknown field: coin.missing"
 expect_fail bad_tuple_destructure --emit-cpp "tuple destructuring count mismatch"
 expect_fail bad_tuple_duplicate_binding --emit-cpp "duplicate destructuring binding: value"
 expect_fail bad_tuple_shadow_binding --emit-cpp "destructuring binding shadows local: value"

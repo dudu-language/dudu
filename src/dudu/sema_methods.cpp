@@ -9,6 +9,28 @@ namespace {
     throw CompileError(location, message);
 }
 
+std::string unwrap_receiver_type(const Symbols& symbols, std::string type) {
+    type = resolve_alias(symbols, std::move(type));
+    while (true) {
+        type = trim(std::move(type));
+        while (!type.empty() && (type.front() == '*' || type.front() == '&')) {
+            type = trim(type.substr(1));
+        }
+        bool unwrapped = false;
+        for (const char* wrapper : {"const", "volatile", "atomic", "storage", "shared", "device"}) {
+            const std::string prefix = std::string(wrapper) + "[";
+            if (type.rfind(prefix, 0) == 0 && type.back() == ']') {
+                type = trim(type.substr(prefix.size(), type.size() - prefix.size() - 1));
+                unwrapped = true;
+                break;
+            }
+        }
+        if (!unwrapped) {
+            return base_type(type);
+        }
+    }
+}
+
 } // namespace
 
 std::string member_path_type(const Symbols& symbols,
@@ -36,7 +58,7 @@ std::string member_path_type(const Symbols& symbols,
         const size_t next = path.find('.', start);
         const std::string field =
             path.substr(start, next == std::string::npos ? next : next - start);
-        const auto klass = symbols.classes.find(base_type(type));
+        const auto klass = symbols.classes.find(unwrap_receiver_type(symbols, type));
         if (klass == symbols.classes.end()) {
             return {};
         }
@@ -65,7 +87,7 @@ std::string member_path_type(const Symbols& symbols,
 bool method_signature_for_type(const Symbols& symbols, std::string receiver_type,
                                const std::string& method_name, FunctionSignature& signature,
                                const SourceLocation* location) {
-    const std::string type = base_type(resolve_alias(symbols, std::move(receiver_type)));
+    const std::string type = unwrap_receiver_type(symbols, std::move(receiver_type));
     const auto klass = symbols.classes.find(type);
     if (klass == symbols.classes.end()) {
         return false;
