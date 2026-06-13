@@ -134,7 +134,7 @@ grep -q "compiler output:" "$repo_root/build/bad_native_build.err"
 
 if "$repo_root/build/duc" build "$repo_root/tests/fixtures/bad_missing_header.dd" -o "$repo_root/build/bad_missing_header" 2>"$repo_root/build/bad_missing_header.err"; then echo "bad_missing_header unexpectedly passed" >&2; exit 1; fi
 grep -q "dudu_missing_header_for_test.hpp" "$repo_root/build/bad_missing_header.err"
-grep -q "C++ build failed" "$repo_root/build/bad_missing_header.err"
+grep -q "could not scan native header" "$repo_root/build/bad_missing_header.err"
 
 if "$repo_root/build/duc" emit "$repo_root/tests/fixtures/bad_package_build/main.dd" \
     -o "$repo_root/build/bad_package_build.cpp" 2>"$repo_root/build/bad_package_build.err"; then

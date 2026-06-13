@@ -1,4 +1,4 @@
-import c "../tests/fixtures/pthread_wrap.h" as pthreads
+import c "pthread_wrap.h" as pthreads
 
 
 def thread_main(user_data: *void) -> *void:

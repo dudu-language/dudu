@@ -1,4 +1,4 @@
-import cpp "../tests/fixtures/cpp_template_member.hpp" as dudu_tpl
+import cpp "cpp_template_member.hpp" as dudu_tpl
 
 
 def main() -> i32:

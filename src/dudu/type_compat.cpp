@@ -282,6 +282,22 @@ bool is_null_pointer(std::string expected, std::string expr, std::string got) {
     return !expected.empty() && expected.front() == '*' && expr == "None" && got == "None";
 }
 
+bool is_void_pointer_target(std::string expected, std::string got) {
+    expected = trim_copy(std::move(expected));
+    got = trim_copy(std::move(got));
+    return !expected.empty() && !got.empty() && expected.front() == '*' && got.front() == '*' &&
+           (wrapped_type_arg(expected.substr(1)) == "void" ||
+            wrapped_type_arg(expected.substr(1)) == "const[void]");
+}
+
+bool is_pointer_to_reference_value(std::string expected, std::string got) {
+    expected = trim_copy(std::move(expected));
+    got = trim_copy(std::move(got));
+    return expected.size() > 1 && got.size() > 2 && expected.front() == '*' &&
+           got.rfind("*&", 0) == 0 &&
+           wrapped_type_arg(expected.substr(1)) == wrapped_type_arg(got.substr(2));
+}
+
 std::string normalize_function_type(std::string type) {
     type = trim_copy(std::move(type));
     if (!starts_with(type, "fn(")) {
@@ -301,6 +317,12 @@ bool is_function_type_match(std::string expected, std::string got) {
     expected = normalize_function_type(std::move(expected));
     got = normalize_function_type(std::move(got));
     return starts_with(expected, "fn(") && expected == got;
+}
+
+bool is_native_function_pointer(std::string expected, std::string got) {
+    expected = trim_copy(std::move(expected));
+    got = trim_copy(std::move(got));
+    return expected == "*void" && starts_with(normalize_function_type(std::move(got)), "fn(");
 }
 
 std::string normalize_c_tags(std::string type) {
@@ -356,8 +378,10 @@ bool assignment_type_allowed(const std::string& expected, const std::string& exp
            compact_type(normalize_c_tags(expected)) == compact_type(normalize_c_tags(got)) ||
            is_result_value(expected, expr, got) ||
            is_value_wrapper_assignment(expected, expr, got) ||
-           is_null_pointer(expected, expr, got) || is_reference_binding(expected, got) ||
+           is_null_pointer(expected, expr, got) || is_void_pointer_target(expected, got) ||
+           is_pointer_to_reference_value(expected, got) || is_reference_binding(expected, got) ||
            is_value_from_reference(expected, got) || is_function_type_match(expected, got) ||
+           is_native_function_pointer(expected, got) ||
            (expected == "cstr" && got == "str" && is_string_literal(expr)) ||
            (is_numeric_type(wrapped_type_arg(expected)) && is_numeric_literal(expr));
 }

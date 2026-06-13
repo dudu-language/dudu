@@ -1,4 +1,4 @@
-import c "../tests/fixtures/c_audio_callback.h" as audio
+import c "c_audio_callback.h" as audio
 
 
 def fill_samples(output: *f32, frames: i32, user_data: *void):

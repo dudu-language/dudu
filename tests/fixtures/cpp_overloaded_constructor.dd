@@ -1,4 +1,4 @@
-import cpp "../tests/fixtures/cpp_overloaded_constructor.hpp" as dudu_ctor
+import cpp "cpp_overloaded_constructor.hpp" as dudu_ctor
 
 
 def main() -> i32:

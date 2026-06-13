@@ -17,7 +17,7 @@ public class Vec3:
 
 
 private def length(v: Vec3) -> f32:
-    return std.sqrt(v.x * v.x + v.y * v.y + v.z * v.z)
+    return f32(std.sqrt(v.x * v.x + v.y * v.y + v.z * v.z))
 
 
 private def normalize(v: Vec3) -> Vec3:
@@ -26,9 +26,9 @@ private def normalize(v: Vec3) -> Vec3:
 
 
 public def camera_forward(camera: Camera) -> Vec3:
-    cy = std.cos(camera.yaw)
-    sy = std.sin(camera.yaw)
-    cp = std.cos(camera.pitch)
-    sp = std.sin(camera.pitch)
+    cy = f32(std.cos(camera.yaw))
+    sy = f32(std.sin(camera.yaw))
+    cp = f32(std.cos(camera.pitch))
+    sp = f32(std.sin(camera.pitch))
 
     return normalize(Vec3(x=cy * cp, y=sp, z=sy * cp))

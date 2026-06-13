@@ -7,6 +7,7 @@ typedef union DuduNativeEvent {
 } DuduNativeEvent;
 
 typedef struct DuduNativeWindow DuduNativeWindow;
+typedef void (*DuduNativeProc)(void);
 
 enum DuduNativeKind {
     dudu_native_kind_ok = 1,
@@ -19,3 +20,4 @@ enum DuduNativeKind {
 bool dudu_native_ready(DuduNativeEvent* event);
 int dudu_native_add(int a, int b);
 const char* dudu_native_format(const char* text, ...);
+DuduNativeProc dudu_native_proc(void);

@@ -33,6 +33,64 @@ std::string unwrap_receiver_type(const Symbols& symbols, std::string type) {
     }
 }
 
+std::string receiver_template_type(const Symbols& symbols, std::string type) {
+    type = resolve_alias(symbols, std::move(type));
+    while (!type.empty() && (type.front() == '*' || type.front() == '&')) {
+        type = trim(type.substr(1));
+    }
+    return trim(std::move(type));
+}
+
+std::string first_type_arg(const std::string& type) {
+    const size_t open = type.find('[');
+    if (open == std::string::npos || type.back() != ']') {
+        return {};
+    }
+    int depth = 0;
+    const size_t close = type.size() - 1;
+    for (size_t i = open + 1; i < close; ++i) {
+        if (type[i] == '[') ++depth;
+        if (type[i] == ']') --depth;
+        if (type[i] == ',' && depth == 0) return trim(type.substr(open + 1, i - open - 1));
+    }
+    return trim(type.substr(open + 1, close - open - 1));
+}
+
+bool has_prefix(const std::string& text, const char* prefix) {
+    return text.rfind(prefix, 0) == 0;
+}
+
+bool builtin_cpp_method_signature(const Symbols& symbols, std::string receiver_type,
+                                  const std::string& method_name, FunctionSignature& signature) {
+    const std::string templated = receiver_template_type(symbols, std::move(receiver_type));
+    if (has_prefix(templated, "std.vector[") || has_prefix(templated, "list[")) {
+        const std::string item = first_type_arg(templated);
+        if (method_name == "push_back" || method_name == "append") {
+            signature.params = {item.empty() ? "auto" : item};
+            signature.return_type = "void";
+            return true;
+        }
+        if (method_name == "resize" || method_name == "reserve") {
+            signature.params = {"auto"};
+            signature.return_type = "void";
+            return true;
+        }
+        if (method_name == "size" || method_name == "capacity") {
+            signature.return_type = "usize";
+            return true;
+        }
+        if (method_name == "empty") {
+            signature.return_type = "bool";
+            return true;
+        }
+    }
+    if (templated == "std.thread" && method_name == "join") {
+        signature.return_type = "void";
+        return true;
+    }
+    return false;
+}
+
 bool is_indexed_local_segment(const std::string& text) {
     const size_t index = text.find('[');
     return index != std::string::npos && text.back() == ']' &&
@@ -46,6 +104,21 @@ bool method_is_static(const FunctionDecl& method) {
         }
     }
     return false;
+}
+
+std::string template_method_name(const std::string& method_name) {
+    const size_t open = method_name.find('[');
+    return open == std::string::npos ? method_name : method_name.substr(0, open);
+}
+
+std::string template_method_arg(const std::string& method_name) {
+    const size_t open = method_name.find('[');
+    if (open == std::string::npos || method_name.back() != ']') return {};
+    return trim(method_name.substr(open + 1, method_name.size() - open - 2));
+}
+
+std::string substitute_template_type(std::string type, const std::string& arg) {
+    return !arg.empty() && trim(type) == "T" ? arg : type;
 }
 
 std::string first_path_type(const Symbols& symbols,
@@ -180,21 +253,28 @@ bool is_member_path(const std::string& path) {
 bool method_signature_for_type(const Symbols& symbols, std::string receiver_type,
                                const std::string& method_name, FunctionSignature& signature,
                                const SourceLocation* location) {
+    if (builtin_cpp_method_signature(symbols, receiver_type, method_name, signature)) {
+        return true;
+    }
     const std::string type = unwrap_receiver_type(symbols, std::move(receiver_type));
+    const std::string lookup_name = template_method_name(method_name);
+    const std::string template_arg = template_method_arg(method_name);
     const auto klass = symbols.classes.find(type);
     if (klass == symbols.classes.end()) {
         return false;
     }
     for (const FunctionDecl& method : klass->second->methods) {
-        if (method.name != method_name) {
+        if (method.name != lookup_name) {
             continue;
         }
         const size_t first_param =
             !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
         for (size_t i = first_param; i < method.params.size(); ++i) {
-            signature.params.push_back(method.params[i].type);
+            signature.params.push_back(substitute_template_type(method.params[i].type, template_arg));
         }
-        signature.return_type = method.return_type.empty() ? "void" : method.return_type;
+        signature.return_type = method.return_type.empty()
+                                    ? "void"
+                                    : substitute_template_type(method.return_type, template_arg);
         return true;
     }
     for (const std::string& base : klass->second->base_classes) {

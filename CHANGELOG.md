@@ -31,6 +31,8 @@
 - Added `@test.ignore` and `@test.should_panic` test decorators.
 - Added imported C++ inheritance awareness for inherited method lookup and
   derived-to-base pointer/reference calls.
+- Added clearer native-header scan diagnostics when project-relative C/C++
+  headers are missing or cannot be parsed by Clang.
 
 ### Changed
 

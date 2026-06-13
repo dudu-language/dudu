@@ -14,6 +14,10 @@ bool arity_matches(const FunctionSignature& signature, size_t arg_count) {
                               : arg_count <= signature.params.size();
 }
 
+bool native_numeric_promotion(const std::string& expected, const std::string& got) {
+    return expected == "f64" && got == "f32";
+}
+
 bool args_match_signature(const FunctionScope& scope, const FunctionSignature& signature,
                           const std::vector<std::string>& args, const SourceLocation* location,
                           const NativeInferExprFn& infer_expr,
@@ -23,7 +27,8 @@ bool args_match_signature(const FunctionScope& scope, const FunctionSignature& s
     }
     for (size_t i = 0; i < signature.params.size(); ++i) {
         const std::string got = infer_expr(scope, args[i], location);
-        if (!can_assign(signature.params[i], args[i], got)) {
+        if (!can_assign(signature.params[i], args[i], got) &&
+            !native_numeric_promotion(signature.params[i], got)) {
             return false;
         }
     }

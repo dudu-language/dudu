@@ -18,7 +18,7 @@ compile_and_expect() {
     local bin="$repo_root/build/$name"
 
     "$repo_root/build/dudu" "$repo_root/tests/fixtures/$name.dd" --emit-cpp "$cpp"
-    "${CXX:-c++}" -std=c++20 "$cpp" -o "$bin"
+    "${CXX:-c++}" -std=c++20 -I"$repo_root/tests/fixtures" "$cpp" -o "$bin"
     set +e
     "$bin"
     local status=$?

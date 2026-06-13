@@ -60,6 +60,7 @@ struct TypeAliasDecl {
 
 struct NativeTypeDecl {
     std::string name;
+    std::string type;
     SourceLocation location;
 };
 

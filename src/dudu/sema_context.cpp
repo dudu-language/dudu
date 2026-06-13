@@ -15,9 +15,7 @@ bool is_builtin_type(const std::string& type) {
     return builtins.contains(type);
 }
 
-[[noreturn]] void fail(const SourceLocation& location, const std::string& message) {
-    throw CompileError(location, message);
-}
+[[noreturn]] void fail(const SourceLocation& location, const std::string& message) { throw CompileError(location, message); }
 
 void add_name(std::map<std::string, SourceLocation>& names, const std::string& name,
               const SourceLocation& location) {
@@ -306,8 +304,8 @@ Symbols collect_symbols(const ModuleAst& module) {
         symbols.aliases[alias.name] = alias.type;
     }
     for (const NativeTypeDecl& type : module.native_types) {
-        add_name(names, type.name, type.location);
         symbols.types.insert(type.name);
+        if (!type.type.empty()) symbols.aliases[type.name] = type.type;
     }
     for (const NativeValueDecl& value : module.native_values) {
         add_name(names, value.name, value.location);
@@ -341,11 +339,7 @@ Symbols collect_symbols(const ModuleAst& module) {
         symbols.functions[fn.name] = signature.return_type;
         symbols.function_signatures[fn.name] = std::move(signature);
     }
-    std::set<std::string> native_function_names;
     for (const NativeFunctionDecl& fn : module.native_functions) {
-        if (native_function_names.insert(fn.name).second) {
-            add_name(names, fn.name, fn.location);
-        }
         FunctionSignature signature;
         signature.params = fn.params;
         signature.return_type = fn.return_type.empty() ? "auto" : fn.return_type;

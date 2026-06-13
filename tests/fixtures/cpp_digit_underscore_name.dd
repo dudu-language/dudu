@@ -1,4 +1,4 @@
-import cpp "../tests/fixtures/cpp_digit_underscore_name.hpp" as dudu_digits
+import cpp "cpp_digit_underscore_name.hpp" as dudu_digits
 
 
 def main() -> i32:

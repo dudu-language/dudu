@@ -2,6 +2,8 @@
 
 #include "dudu/cpp_lower.hpp"
 
+#include <string_view>
+
 namespace dudu {
 namespace {
 
@@ -25,11 +27,27 @@ std::string scalar_dudu_type(const std::string& type) {
     return type.empty() ? "auto" : type;
 }
 
+std::string erase_all(std::string text, std::string_view token) {
+    size_t pos = text.find(token);
+    while (pos != std::string::npos) {
+        text.erase(pos, token.size());
+        pos = text.find(token, pos);
+    }
+    return text;
+}
+
 } // namespace
 
 std::string dudu_type(std::string type) {
     type = trim_copy(std::move(type));
+    type = erase_all(std::move(type), "__restrict__");
+    type = erase_all(std::move(type), "__restrict");
+    type = erase_all(std::move(type), " restrict");
+    type = trim_copy(std::move(type));
     if (type == "char *" || type == "const char *") return "cstr";
+    if (type.find("(*)") != std::string::npos || type.find("(*") != std::string::npos) {
+        return "*void";
+    }
     int pointer_depth = 0;
     bool reference = false;
     while (!type.empty()) {

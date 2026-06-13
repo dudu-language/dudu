@@ -114,7 +114,8 @@ Policy:
 - `duc check`, `duc emit`, `dudu build`, and editor diagnostics require Clang
   tooling when a source file imports C/C++ headers and uses imported native
   declarations that Dudu must understand.
-- Missing Clang tooling should be a clear setup error, not a silent downgrade.
+- Missing Clang tooling or missing project-relative imported headers are clear
+  setup errors, not silent downgrades.
 - `type Name` remains available for unusual generated/platform headers and
   quick experiments, but docs and examples should not rely on it for normal
   SDL, imgui, raylib, OpenCL, Vulkan, POSIX, or standard-library usage.
@@ -367,3 +368,5 @@ Current migration state:
 - keep one small `type Name` fixture as an escape-hatch test
 - docs describe `type Name` as manual override, not normal API
 - automatic native interop requires Clang tooling
+- missing project-relative native headers fail at the import with a `could not
+  scan native header` diagnostic

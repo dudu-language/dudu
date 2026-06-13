@@ -15,7 +15,7 @@ class Oscillator:
 
 
 def next_sample(osc: &Oscillator) -> f32:
-    value = cmath.sin(osc.phase) * osc.gain
+    value = f32(cmath.sin(osc.phase)) * osc.gain
     osc.phase += TAU * osc.frequency / SAMPLE_RATE
 
     if osc.phase >= TAU:

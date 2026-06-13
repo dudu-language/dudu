@@ -1,4 +1,4 @@
-import c "../tests/fixtures/c_macro_wrap.h" as wrap
+import c "c_macro_wrap.h" as wrap
 
 
 def main() -> i32:

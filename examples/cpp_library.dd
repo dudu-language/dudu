@@ -17,15 +17,15 @@ class Vec3:
 
 
 def normalize(v: Vec3) -> Vec3:
-    length = std.sqrt(v.x * v.x + v.y * v.y + v.z * v.z)
+    length = f32(std.sqrt(v.x * v.x + v.y * v.y + v.z * v.z))
     return Vec3(x=v.x / length, y=v.y / length, z=v.z / length)
 
 
 def camera_forward(camera: Camera) -> Vec3:
-    cy = std.cos(camera.yaw)
-    sy = std.sin(camera.yaw)
-    cp = std.cos(camera.pitch)
-    sp = std.sin(camera.pitch)
+    cy = f32(std.cos(camera.yaw))
+    sy = f32(std.sin(camera.yaw))
+    cp = f32(std.cos(camera.pitch))
+    sp = f32(std.sin(camera.pitch))
 
     return normalize(Vec3(x=cy * cp, y=sp, z=sy * cp))
 
