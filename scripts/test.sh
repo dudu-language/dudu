@@ -175,6 +175,7 @@ grep -q 'if constexpr (build::DEBUG && build::TARGET_KIND == "executable" && bui
     "$repo_root/build/duc" build -o "$repo_root/build/project_cc_bin" --verbose \
         2>"$repo_root/build/project_cc_verbose.err"
 )
+grep -q "^c++ -std=c++20" "$repo_root/build/project_cc_verbose.err"
 grep -q "project_cc_bin.cpp" "$repo_root/build/project_cc_verbose.err"
 grep -q -- "-Iinclude" "$repo_root/build/project_cc_verbose.err"
 grep -q -- "-DDUDU_PROJECT_CC=40" "$repo_root/build/project_cc_verbose.err"

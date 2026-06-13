@@ -134,6 +134,8 @@ ProjectConfig parse_project_config(const std::filesystem::path& path) {
             config.bench_command = unquote(value);
         } else if (section == "test" && name == "command") {
             config.test_command = unquote(value);
+        } else if (section == "cc" && name == "compiler") {
+            config.compiler = unquote(value);
         } else if (section == "cc" && name == "include_dirs") {
             config.include_dirs = parse_string_array(path, line, value);
         } else if (section == "cc" && name == "lib_dirs") {

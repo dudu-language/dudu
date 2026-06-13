@@ -208,7 +208,8 @@ std::filesystem::path build_executable(const NativeBuildOptions& options, const 
     write_text_output(cpp_path, cpp);
 
     const char* env_cxx = std::getenv("CXX");
-    const std::string cxx = env_cxx == nullptr ? "c++" : env_cxx;
+    const std::string cxx = options.config.compiler.empty() ? (env_cxx == nullptr ? "c++" : env_cxx)
+                                                            : options.config.compiler;
     std::string common_flags;
     for (const std::string& include_dir : options.config.include_dirs) {
         common_flags += " " + shell_quote_arg("-I" + include_dir);

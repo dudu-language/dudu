@@ -16,6 +16,7 @@ struct ProjectConfig {
     std::string bench_command;
     std::string test_command;
     std::map<std::string, std::string> build_values;
+    std::string compiler;
     std::vector<std::string> defines;
     std::vector<std::string> flags;
     std::vector<std::string> include_dirs;
