@@ -1,0 +1,4 @@
+def main() -> i32:
+    value: i32 = 42
+    debug_assert value == 42
+    return value

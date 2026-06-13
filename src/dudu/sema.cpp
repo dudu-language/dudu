@@ -45,6 +45,9 @@ bool is_local_member_call(const FunctionScope& scope, const std::string& callee)
     const size_t dot = callee.find('.');
     return dot != std::string::npos && scope.locals.contains(trim(callee.substr(0, dot)));
 }
+bool freestanding_like(const FunctionScope& scope) {
+    return scope.target_mode == "freestanding" || scope.target_mode == "embedded";
+}
 void check_call_args(const FunctionScope& scope, const std::string& callee,
                      const FunctionSignature& signature, const std::vector<std::string>& args,
                      const SourceLocation* location) {
@@ -339,7 +342,13 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
         return;
     }
     if (starts_with(text, "assert ") || starts_with(text, "debug_assert ")) {
-        const auto parts = split_top_level_args(text.substr(starts_with(text, "assert ") ? 7 : 13));
+        const bool debug = starts_with(text, "debug_assert ");
+        if (!debug && freestanding_like(scope)) {
+            fail(stmt.location,
+                 "runtime assert is not available in " + scope.target_mode +
+                     " target mode; use debug_assert or a target-specific assert handler");
+        }
+        const auto parts = split_top_level_args(text.substr(debug ? 13 : 7));
         check_condition_type(scope, stmt, parts.empty() ? "" : parts.front());
         if (parts.size() > 1) (void)infer_expr(scope, parts[1], &stmt.location);
         return;
@@ -482,6 +491,14 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
 }
 void check_bodies(const ModuleAst& module, const Symbols& symbols) {
     FunctionScope base{symbols, {}, {}};
+    const auto mode = module.build_values.find("TARGET_MODE");
+    if (mode != module.build_values.end()) {
+        base.target_mode = trim(mode->second);
+        if (base.target_mode.size() >= 2 && base.target_mode.front() == '"' &&
+            base.target_mode.back() == '"') {
+            base.target_mode = base.target_mode.substr(1, base.target_mode.size() - 2);
+        }
+    }
     for (const ConstDecl& constant : module.constants) {
         base.locals[constant.name] = constant.type;
         base.constants.insert(constant.name);

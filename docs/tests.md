@@ -177,12 +177,13 @@ manager.
 
 ## Hosted And Freestanding
 
-Hosted builds can support runtime `assert` directly. Freestanding and embedded
-targets need an explicit policy:
+Hosted builds support runtime `assert` directly. Freestanding and embedded
+targets reject runtime `assert` because hosted exception machinery is not
+available there. Use `debug_assert` for native C/C++ assertion behavior or a
+target-specific assert handler.
 
-- reject `assert`
-- lower to a configurable panic/assert handler
-- lower to a target trap
+Future target-specific policies may lower runtime assertions to a configurable
+panic/assert handler or target trap.
 
 Do not silently emit hosted exception machinery in freestanding or embedded
 mode.

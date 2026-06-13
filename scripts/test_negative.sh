@@ -58,6 +58,22 @@ expect_fail bad_index_read_type --emit-cpp "cannot assign i32 to bool without an
 expect_fail bad_index_non_container --emit-cpp "cannot index non-container: value"
 expect_fail bad_condition_type --emit-cpp "condition must be bool, got i32"
 expect_fail bad_debug_assert_condition --emit-cpp "condition must be bool, got i32"
+if "$repo_root/build/dudu" "$repo_root/tests/fixtures/bad_freestanding_assert.dd" \
+    --emit-cpp "$repo_root/build/bad_freestanding_assert.out" -DTARGET_MODE=freestanding \
+    2>"$repo_root/build/bad_freestanding_assert.err"; then
+    echo "bad_freestanding_assert unexpectedly passed" >&2
+    exit 1
+fi
+grep -q "runtime assert is not available in freestanding target mode" \
+    "$repo_root/build/bad_freestanding_assert.err"
+if "$repo_root/build/dudu" "$repo_root/tests/fixtures/bad_freestanding_assert.dd" \
+    --emit-cpp "$repo_root/build/bad_embedded_assert.out" -DTARGET_MODE=embedded \
+    2>"$repo_root/build/bad_embedded_assert.err"; then
+    echo "bad_embedded_assert unexpectedly passed" >&2
+    exit 1
+fi
+grep -q "runtime assert is not available in embedded target mode" \
+    "$repo_root/build/bad_embedded_assert.err"
 expect_fail bad_for_binding_type --emit-cpp "loop binding expects bool, got i32"
 expect_fail bad_for_non_container --emit-cpp "cannot iterate non-container: value"
 expect_fail bad_build_flag --check "unknown build flag: build.NOPE"
