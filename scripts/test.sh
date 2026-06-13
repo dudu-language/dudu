@@ -12,6 +12,7 @@ required_examples=(
     compile_time.dd
     cpp_library.dd
     cuda_kernel.dd
+    ffmpeg_probe_decode.dd
     function_pointers.dd
     glfw_opengl_triangle.dd
     image_filter.dd

@@ -1,0 +1,15 @@
+# FFmpeg allocation/cleanup probe.
+
+import c "../tests/fixtures/ffmpeg_wrap.h" as avcodec
+
+
+def main() -> i32:
+    packet: *struct AVPacket = avcodec.dudu_av_packet_alloc()
+    if packet == None:
+        return 1
+
+    avcodec.dudu_av_packet_free(&packet)
+    if packet != None:
+        return 2
+
+    return 42

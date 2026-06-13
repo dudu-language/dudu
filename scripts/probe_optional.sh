@@ -170,6 +170,28 @@ probe_vulkan() {
     echo "ok vulkan"
 }
 
+probe_ffmpeg() {
+    if ! pkg-config --exists libavcodec; then
+        echo "skip libavcodec: pkg-config package not found"
+        return
+    fi
+
+    local cpp="$repo_root/build/probe_ffmpeg_probe_decode.cpp"
+    local bin="$repo_root/build/probe_ffmpeg_probe_decode"
+    "$repo_root/build/duc" emit "$repo_root/examples/ffmpeg_probe_decode.dd" -o "$cpp"
+    "${CXX:-c++}" -std=c++20 -I"$repo_root" "$cpp" \
+        $(pkg-config --cflags --libs libavcodec) -o "$bin"
+    set +e
+    "$bin"
+    local status=$?
+    set -e
+    if [[ "$status" -ne 42 ]]; then
+        echo "ffmpeg probe returned $status, expected 42" >&2
+        exit 1
+    fi
+    echo "ok ffmpeg"
+}
+
 probe_glm
 probe_opencv
 probe_sqlite
@@ -179,3 +201,4 @@ probe_sdl3
 probe_glfw
 probe_opencl
 probe_vulkan
+probe_ffmpeg
