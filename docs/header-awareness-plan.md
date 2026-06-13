@@ -376,4 +376,6 @@ Current migration state:
 - docs describe `type Name` as manual override, not normal API
 - automatic native interop requires Clang tooling
 - missing project-relative native headers fail at the import with a `could not
-  scan native header` diagnostic
+  scan native header` diagnostic and an include/pkg hint
+- broken `CLANGXX` or missing Clang tooling fails with a native-header scanner
+  diagnostic and a Clang setup hint

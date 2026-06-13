@@ -42,6 +42,8 @@
   `namespace.identity[i32](value)`.
 - Added `duduplayground/` as a checked-in scratch project for local `dudu run`
   and `dudu test` experiments.
+- Improved native-header scanner failure hints for missing include paths and
+  broken Clang tooling.
 - Added aliased lowercase native macro imports, such as `cassert.assert(...)`.
 - Added variadic native macro passthrough for fixed-leading-argument macros.
 - Added a macro-bomb fixture and example for imported C/C++ macro coverage.

@@ -129,16 +129,37 @@ std::string run_capture(const std::string& command, const std::filesystem::path&
     }
     return read_text(output);
 }
+std::string clangxx_command() {
+    const char* clang_env = std::getenv("CLANGXX");
+    return clang_env == nullptr ? "clang++" : std::string(clang_env);
+}
 std::string clang_base_command(const NativeHeaderOptions& options, const std::filesystem::path& cpp,
                                bool ast_dump) {
-    const char* clang_env = std::getenv("CLANGXX");
-    const std::string clang = clang_env == nullptr ? "clang++" : clang_env;
+    const std::string clang = clangxx_command();
     std::string command = shell_quote_arg(clang) + " -std=" + shell_quote_arg(options.config.cpp_std) +
                           " -x c++ -fsyntax-only -fno-color-diagnostics ";
     if (ast_dump) {
         command += "-Xclang -ast-dump ";
     }
     return command + shell_quote_path(cpp) + scanner_flags(options);
+}
+std::string scan_error_message(const ImportDecl& import, std::string detail,
+                               const std::string& clang) {
+    std::ostringstream out;
+    out << "could not scan native header " << unquoted(import.module_path);
+    detail = trim_copy(std::move(detail));
+    if (!detail.empty()) {
+        out << "\n" << detail;
+    }
+    if (!clang.empty() && detail.find(clang) != std::string::npos) {
+        out << "\nhint: native header awareness requires clang++; install clang or set CLANGXX";
+    } else if (detail.find("not found") != std::string::npos ||
+        detail.find("No such file") != std::string::npos) {
+        out << "\nhint: add the header directory to [include].paths or the package to [pkg].libs";
+    } else {
+        out << "\nhint: native header awareness requires clang++; install clang or set CLANGXX";
+    }
+    return out.str();
 }
 int ast_depth(const std::string& line) {
     const size_t branch = line.find("|-");
@@ -409,7 +430,7 @@ NativeHeaderScan dedupe_scan(NativeHeaderScan scan) {
 }
 std::string scan_key(const ImportDecl& import, const NativeHeaderOptions& options,
                      const std::string& flags) {
-    return unquoted(import.module_path) + "|" + options.config.cpp_std + "|" + flags +
+    return unquoted(import.module_path) + "|" + clangxx_command() + "|" + options.config.cpp_std + "|" + flags +
            header_stamp(import, options);
 }
 NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOptions& options,
@@ -445,8 +466,7 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
     if (!ast_dump.empty()) {
         parse_ast_dump(scan, ast_dump, import.location);
     }
-    const char* clang_env = std::getenv("CLANGXX");
-    const std::string clang = clang_env == nullptr ? "clang++" : clang_env;
+    const std::string clang = clangxx_command();
     const std::string macro_cmd = shell_quote_arg(clang) + " -std=" +
                                   shell_quote_arg(options.config.cpp_std) + " -x c++ -dM -E " +
                                   shell_quote_path(cpp) + flags;
@@ -458,9 +478,7 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
         }
         const std::string detail = read_text(err);
         cleanup();
-        throw CompileError(import.location, "could not scan native header " +
-                                                unquoted(import.module_path) +
-                                                (detail.empty() ? "" : "\n" + detail));
+        throw CompileError(import.location, scan_error_message(import, detail, clangxx_command()));
     }
     parse_macro_dump(scan, macro_dump, import.location);
     store_native_header_raw_cache(raw_cache, ast_dump, macro_dump);

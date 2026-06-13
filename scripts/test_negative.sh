@@ -156,6 +156,17 @@ grep -q "compiler output:" "$repo_root/build/bad_native_build.err"
 if "$repo_root/build/duc" build "$repo_root/tests/fixtures/bad_missing_header.dd" -o "$repo_root/build/bad_missing_header" 2>"$repo_root/build/bad_missing_header.err"; then echo "bad_missing_header unexpectedly passed" >&2; exit 1; fi
 grep -q "dudu_missing_header_for_test.hpp" "$repo_root/build/bad_missing_header.err"
 grep -q "could not scan native header" "$repo_root/build/bad_missing_header.err"
+grep -q "hint: add the header directory to \\[include\\].paths or the package to \\[pkg\\].libs" \
+    "$repo_root/build/bad_missing_header.err"
+
+if CLANGXX="$repo_root/build/not-a-clang" "$repo_root/build/duc" build \
+    "$repo_root/tests/fixtures/native_scan_local.dd" -o "$repo_root/build/bad_clangxx" \
+    2>"$repo_root/build/bad_clangxx.err"; then
+    echo "bad_clangxx unexpectedly passed" >&2
+    exit 1
+fi
+grep -q "could not scan native header" "$repo_root/build/bad_clangxx.err"
+grep -q "hint: native header awareness requires clang++" "$repo_root/build/bad_clangxx.err"
 
 if "$repo_root/build/duc" emit "$repo_root/tests/fixtures/bad_package_build/main.dd" \
     -o "$repo_root/build/bad_package_build.cpp" 2>"$repo_root/build/bad_package_build.err"; then
