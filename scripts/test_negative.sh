@@ -1,0 +1,148 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$repo_root/scripts/test_helpers.sh"
+
+expect_fail bad_duplicate --check "duplicate declaration: Vec"
+expect_fail bad_type_alias --check "unknown type alias target: MissingThing"
+expect_fail bad_parse_missing_colon --check "bad_parse_missing_colon.dd:3:1: expected : after function header"
+expect_fail bad_indent_width --check "bad_indent_width.dd:2:1: indentation must be a multiple of four spaces"
+expect_fail bad_dict_literal --emit-cpp "cannot assign set"
+expect_fail bad_list_literal_type --emit-cpp "cannot assign list to list\\[i32\\]"
+expect_fail bad_set_literal_type --emit-cpp "cannot assign set to set\\[str\\]"
+expect_fail bad_dict_literal_key_type --emit-cpp "cannot assign dict to dict\\[str, i32\\]"
+expect_fail bad_dict_literal_value_type --emit-cpp "cannot assign dict to dict\\[str, i32\\]"
+expect_fail bad_enum_underlying --check "unknown enum underlying type: MissingType"
+expect_fail bad_enum_duplicate --check "duplicate enum value: value"
+expect_fail bad_enum_value_name --check "enum values must be snake_case: BadValue"
+expect_fail bad_return --emit-cpp "return type mismatch: expected i32, got bool"
+expect_fail bad_return --check "return type mismatch: expected i32, got bool"
+expect_fail bad_return_implicit_cast --emit-cpp "return type mismatch: expected i64, got i32"
+expect_fail bad_unknown_identifier --emit-cpp "unknown identifier: missing_value"
+expect_fail bad_unknown_identifier --check "unknown identifier: missing_value"
+expect_fail bad_unknown_function --emit-cpp "unknown function: missing"
+expect_fail bad_unknown_method --emit-cpp "unknown method: Counter.add"
+expect_fail bad_method_arity --emit-cpp "function counter.add expects 1 arguments, got 0"
+expect_fail bad_method_type --emit-cpp "argument 1 for counter.add expects i32, got bool"
+expect_fail bad_from_import_missing --emit-cpp "module 'bad_from_import_helper' has no symbol 'missing'"
+expect_fail bad_cycle_a --emit-cpp "cyclic module import"
+expect_fail bad_unknown_type --emit-cpp "unknown local type: MissingType"
+expect_fail bad_field_read --emit-cpp "unknown field: counter.missing"
+expect_fail bad_const_ref_field --emit-cpp "unknown field: coin.missing"
+expect_fail bad_tuple_destructure --emit-cpp "tuple destructuring count mismatch"
+expect_fail bad_tuple_duplicate_binding --emit-cpp "duplicate destructuring binding: value"
+expect_fail bad_tuple_shadow_binding --emit-cpp "destructuring binding shadows local: value"
+expect_fail bad_nested_field --emit-cpp "unknown field: outer.inner.missing"
+expect_fail bad_naming --check "type names must be PascalCase: bad_type"
+expect_fail bad_parameter_name --check "parameter names must be snake_case: Value"
+expect_fail bad_local_name --emit-cpp "local names must be snake_case or ALL_CAPS: BadValue"
+expect_fail bad_for_name --emit-cpp "local names must be snake_case or ALL_CAPS: BadValue"
+expect_fail bad_missing_return --emit-cpp "missing return in function: bad"
+expect_fail bad_constructor_field --emit-cpp "unknown constructor field: Point.z"
+expect_fail bad_constructor_duplicate --emit-cpp "duplicate constructor field: x"
+expect_fail bad_constructor_type --emit-cpp "constructor field Point.x expects i32, got bool"
+expect_fail bad_constructor_positional_type --emit-cpp "constructor Point argument 1 expects i32, got bool"
+expect_fail bad_result_ok_type --emit-cpp "return type mismatch: expected Result\\[i32, i32\\], got Ok\\[bool\\]"
+expect_fail bad_result_err_type --emit-cpp "return type mismatch: expected Result\\[i32, i32\\], got Err\\[bool\\]"
+expect_fail bad_ok_arity --emit-cpp "Ok expects 1 argument, got 0"; expect_fail bad_err_arity --emit-cpp "Err expects 1 argument, got 2"
+expect_fail bad_new_assignment --emit-cpp "cannot assign \\*Node to \\* i32 without an explicit cast"; expect_fail bad_malloc_arity --emit-cpp "malloc expects 1 count argument, got 0"; expect_fail bad_alloc_type --emit-cpp "unknown allocation type: MissingType"
+expect_fail bad_delete_arity --emit-cpp "delete expects 1 pointer argument, got 2"; expect_fail bad_free_type --emit-cpp "free expects pointer, got i32"; expect_fail bad_bare_delete_type --emit-cpp "delete expects pointer, got i32"
+expect_fail bad_void_return --emit-cpp "void function cannot return i32"; expect_fail bad_break_outside_loop --emit-cpp "break outside loop"
+expect_fail bad_continue_outside_loop --emit-cpp "continue outside loop"
+expect_fail bad_index_read_type --emit-cpp "cannot assign i32 to bool without an explicit cast"
+expect_fail bad_index_non_container --emit-cpp "cannot index non-container: value"
+expect_fail bad_condition_type --emit-cpp "condition must be bool, got i32"
+expect_fail bad_for_binding_type --emit-cpp "loop binding expects bool, got i32"
+expect_fail bad_for_non_container --emit-cpp "cannot iterate non-container: value"
+expect_fail bad_build_flag --check "unknown build flag: build.NOPE"
+expect_fail bad_implicit_cast --emit-cpp "cannot assign i32 to i64 without an explicit cast"
+expect_fail bad_binary_bool --emit-cpp "operator + expects i32, got bool"
+expect_fail bad_binary_mixed_width --emit-cpp "operator + expects i32, got i64"
+expect_fail bad_binary_bool_pair --emit-cpp "operator + expects bool, got bool"
+expect_fail bad_binary_string_subtract --emit-cpp "operator - expects str, got str"
+expect_fail bad_bitwise_string --emit-cpp "operator | expects str, got str"
+expect_fail bad_compound_assignment_type --emit-cpp "cannot assign bool to i32 without an explicit cast"
+expect_fail bad_shift_bool --emit-cpp "cannot assign i32 to bool without an explicit cast"
+expect_fail bad_comparison_bool_order --emit-cpp "comparison < expects bool, got bool"
+expect_fail bad_comparison_mixed_width --emit-cpp "comparison < expects i32, got i64"
+expect_fail bad_logical_operand --emit-cpp "and expects bool, got i32"
+expect_fail bad_const_assignment --emit-cpp "cannot assign to constant: LIMIT"
+expect_fail bad_raise --check "unsupported Python feature: exceptions"
+expect_fail bad_try --check "unsupported Python feature: exceptions"
+expect_fail bad_yield --check "unsupported Python feature: generators"
+expect_fail bad_await --check "unsupported Python feature: async"
+expect_fail bad_eval --check "unsupported Python feature: dynamic execution"
+expect_fail bad_exec --check "unsupported Python feature: dynamic execution"
+expect_fail bad_getattr --check "unsupported Python feature: dynamic attribute access"
+expect_fail bad_del --check "unsupported Python feature: dynamic deletion"; expect_fail bad_assert_runtime --check "unsupported Python feature: runtime assertions"; expect_fail bad_local_import --check "unsupported Python feature: local imports"; expect_fail bad_match --check "unsupported Python feature: pattern matching"
+expect_fail bad_return_local_address --emit-cpp "cannot let local address escape: value"
+expect_fail bad_append_local_address --emit-cpp "cannot let local address escape: value"
+expect_fail bad_push_back_local_address --emit-cpp "cannot let local address escape: node"
+expect_fail bad_static_assert --check "static_assert failed: (PIXELS == 65)"
+expect_fail bad_static_compare --check "static_assert failed: (PIXELS < 64)"
+expect_fail bad_const_calls_runtime --check "compile-time expression calls non-constexpr function: runtime_value"
+expect_fail bad_static_assert_calls_runtime --check "compile-time expression calls non-constexpr function: runtime_value"
+expect_fail bad_call_arity --emit-cpp "function add expects 2 arguments, got 1"
+expect_fail bad_call_type --emit-cpp "argument 1 for negate expects i32, got bool"
+expect_fail bad_callback_lambda --emit-cpp "argument 2 for apply expects fn(i32) -> i32, got lambda"
+expect_fail bad_fn_pointer_call --emit-cpp "function callback expects 1 arguments, got 0"
+expect_fail bad_tuple_arity --check "tuple supports 1 to 8 elements, got 9"
+expect_fail bad_function_decorator --check "unknown function decorator: @cuda.glboal"
+expect_fail bad_class_decorator --check "unknown class decorator: @packd"
+
+if (
+    cd "$repo_root/tests/fixtures/bad_target_decorator_mode"
+    "$repo_root/build/duc" check
+) 2>"$repo_root/build/bad_target_decorator_mode.err"; then
+    echo "bad_target_decorator_mode unexpectedly passed" >&2
+    exit 1
+fi
+grep -q '@cuda.global requires \[target\] mode = "cuda"' \
+    "$repo_root/build/bad_target_decorator_mode.err"
+
+if (
+    cd "$repo_root/tests/fixtures/bad_shader_target_mode"
+    "$repo_root/build/duc" check
+) 2>"$repo_root/build/bad_shader_target_mode.err"; then
+    echo "bad_shader_target_mode unexpectedly passed" >&2
+    exit 1
+fi
+grep -q '@shader.compute requires \[target\] mode = "shader"' \
+    "$repo_root/build/bad_shader_target_mode.err"
+
+if "$repo_root/build/duc" build "$repo_root/tests/fixtures/bad_native_build.dd" -o "$repo_root/build/bad_native_build" 2>"$repo_root/build/bad_native_build.err"; then echo "bad_native_build unexpectedly passed" >&2; exit 1; fi
+grep -q "C++ build failed" "$repo_root/build/bad_native_build.err"
+grep -q "source: .*bad_native_build.cpp" "$repo_root/build/bad_native_build.err"
+grep -q "dudu source: .*bad_native_build.dd:2:5" "$repo_root/build/bad_native_build.err"
+grep -q "command: " "$repo_root/build/bad_native_build.err"
+grep -q "compiler output:" "$repo_root/build/bad_native_build.err"
+
+if "$repo_root/build/duc" build "$repo_root/tests/fixtures/bad_missing_header.dd" -o "$repo_root/build/bad_missing_header" 2>"$repo_root/build/bad_missing_header.err"; then echo "bad_missing_header unexpectedly passed" >&2; exit 1; fi
+grep -q "dudu_missing_header_for_test.hpp" "$repo_root/build/bad_missing_header.err"
+grep -q "C++ build failed" "$repo_root/build/bad_missing_header.err"
+
+if "$repo_root/build/duc" emit "$repo_root/tests/fixtures/bad_package_build/main.dd" \
+    -o "$repo_root/build/bad_package_build.cpp" 2>"$repo_root/build/bad_package_build.err"; then
+    echo "bad_package_build unexpectedly passed" >&2
+    exit 1
+fi
+grep -q "invalid \\[build\\] entry" "$repo_root/build/bad_package_build.err"
+
+if (
+    cd "$repo_root/tests/fixtures/bad_project_target"
+    "$repo_root/build/duc" check
+) 2>"$repo_root/build/bad_project_target.err"; then
+    echo "bad_project_target unexpectedly passed" >&2
+    exit 1
+fi
+grep -q "invalid \\[target\\] mode" "$repo_root/build/bad_project_target.err"
+
+if (
+    cd "$repo_root/tests/fixtures/bad_project_unknown_key"
+    "$repo_root/build/duc" check
+) 2>"$repo_root/build/bad_project_unknown_key.err"; then
+    echo "bad_project_unknown_key unexpectedly passed" >&2
+    exit 1
+fi
+grep -q "unknown \\[cc\\] entry" "$repo_root/build/bad_project_unknown_key.err"
