@@ -30,6 +30,7 @@ struct Options {
     std::optional<std::filesystem::path> header_output;
     std::map<std::string, std::string> build_values;
     std::vector<std::string> command_args;
+    std::string test_filter;
     bool bench = false;
     bool build = false;
     bool check = false;
@@ -56,7 +57,7 @@ void print_usage(bool project_driver = false) {
                      "       dudu build [input.dd] [-o output]\n"
                      "       dudu check [input.dd|dir]\n"
                      "       dudu fmt <input.dd|dir> [--check]\n"
-                     "       dudu test\n"
+                     "       dudu test [input.dd|filter] [--filter text]\n"
                      "       dudu cmake [input.dd] [-o CMakeLists.txt]\n";
         return;
     }
@@ -67,7 +68,7 @@ void print_usage(bool project_driver = false) {
                  "       duc emit [input.dd] [-o output.cpp]\n"
                  "       duc fmt <input.dd|dir> [--check] [-o output.dd]\n"
                  "       duc run [input.dd] [-o output]\n"
-                 "       duc test\n"
+                 "       duc test [input.dd|filter] [--filter text]\n"
                  "       duc <input.dd> [--check] [--format <path|->] "
                  "[--emit-header <path|->] [--emit-c-header <path|->] "
                  "[--emit-cpp <path|->] [-DNAME=value] [--verbose]\n";
@@ -144,6 +145,13 @@ Options parse_options(int argc, char** argv, bool project_driver) {
         }
         if (arg == "--verbose") {
             options.verbose = true;
+            continue;
+        }
+        if (arg == "--filter") {
+            if (i + 1 >= argc) {
+                fail("--filter requires text");
+            }
+            options.test_filter = argv[++i];
             continue;
         }
         if (arg == "-o") {
@@ -257,17 +265,6 @@ void write_text_output(const std::optional<std::filesystem::path>& path, const s
     out << text;
 }
 
-int run_project_tests() {
-    std::string command = dudu::parse_project_config("dudu.toml").test_command;
-    if (command.empty() && std::filesystem::exists("scripts/test.sh")) {
-        command = "./scripts/test.sh";
-    }
-    if (command.empty()) {
-        fail("missing [test] command and scripts/test.sh");
-    }
-    return std::system(command.c_str()) == 0 ? 0 : 1;
-}
-
 int run_project_benchmarks(const Options& options) {
     std::string command = dudu::parse_project_config("dudu.toml").bench_command;
     if (command.empty() && std::filesystem::exists("scripts/bench.sh")) {
@@ -338,6 +335,48 @@ bool check_source_path(const Options& options) {
     return true;
 }
 
+bool looks_like_test_input(const std::filesystem::path& value) {
+    return value.extension() == ".dd" || std::filesystem::exists(value);
+}
+
+int run_delegated_project_tests() {
+    std::string command = dudu::parse_project_config("dudu.toml").test_command;
+    if (command.empty() && std::filesystem::exists("scripts/test.sh")) {
+        command = "./scripts/test.sh";
+    }
+    if (command.empty()) {
+        fail("missing test entry and no [test] command or scripts/test.sh");
+    }
+    return std::system(command.c_str()) == 0 ? 0 : 1;
+}
+
+int run_project_tests(Options options) {
+    if (!options.input.empty() && !looks_like_test_input(options.input)) {
+        if (options.test_filter.empty()) {
+            options.test_filter = options.input.string();
+        }
+        options.input.clear();
+    }
+    if (options.input.empty()) {
+        options.input = dudu::parse_project_config("dudu.toml").main;
+    }
+    if (options.input.empty()) {
+        return run_delegated_project_tests();
+    }
+    const std::string source = read_text_file(options.input);
+    const dudu::ProjectConfig config = config_for_input(options.input);
+    const std::filesystem::path output =
+        options.output.value_or(config.build_dir.empty() ? std::filesystem::path("build/dudu_tests")
+                                                         : config.build_dir / "dudu_tests");
+    const std::filesystem::path bin = dudu::build_executable(
+        {.output = output, .config = config, .verbose = options.verbose},
+        dudu::emit_cpp_test_source(checked_module(options, source, true), options.test_filter));
+    const std::filesystem::path command = bin.is_relative() && bin.parent_path().empty()
+                                              ? std::filesystem::path(".") / bin
+                                              : bin;
+    return std::system(dudu::shell_quote_path(command).c_str()) == 0 ? 0 : 1;
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -361,7 +400,7 @@ int main(int argc, char** argv) {
             return run_project_benchmarks(options);
         }
         if (options.test) {
-            return run_project_tests();
+            return run_project_tests(options);
         }
         if (options.format) {
             if (options.check) {

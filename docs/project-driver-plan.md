@@ -233,8 +233,9 @@ Rules:
 - A module may contain both `main` and `@test` functions. `main` is ignored in
   test harness mode unless the module is built as an executable target.
 
-The current `dudu test` command delegates to a configured native test command
-or `scripts/test.sh`.
+`dudu test` now builds and runs a generated native test harness for `@test`
+functions. If no test entry is configured, it can still delegate to a
+configured native test command or `scripts/test.sh`.
 
 ## Native Build Inputs
 

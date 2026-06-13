@@ -72,7 +72,6 @@ void check_statement(const RawStmt& stmt) {
         UnsupportedPrefix{"global", "global rebinding"},
         UnsupportedPrefix{"nonlocal", "nonlocal rebinding"},
         UnsupportedPrefix{"del", "dynamic deletion"},
-        UnsupportedPrefix{"assert", "runtime assertions"},
         UnsupportedPrefix{"import", "local imports"},
         UnsupportedPrefix{"from", "local imports"},
         UnsupportedPrefix{"match", "pattern matching"},

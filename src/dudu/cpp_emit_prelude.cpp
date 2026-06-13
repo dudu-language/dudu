@@ -114,6 +114,7 @@ void emit_includes(std::ostringstream& out, const ModuleAst& module) {
                "#include <functional>\n"
                "#include <iostream>\n"
                "#include <optional>\n"
+               "#include <stdexcept>\n"
                "#include <string>\n"
                "#include <string_view>\n"
                "#include <type_traits>\n"

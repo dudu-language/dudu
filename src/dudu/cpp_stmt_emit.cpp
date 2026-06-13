@@ -259,6 +259,18 @@ std::string cpp_escape_body(std::string text) {
     return {};
 }
 
+std::string cpp_string_literal(std::string text) {
+    std::string out = "\"";
+    for (const char c : text) {
+        if (c == '"' || c == '\\') {
+            out.push_back('\\');
+        }
+        out.push_back(c);
+    }
+    out.push_back('"');
+    return out;
+}
+
 void emit_cpp_escape(std::ostringstream& out, const std::string& text, int depth) {
     std::istringstream body(cpp_escape_body(text));
     std::string line;
@@ -287,6 +299,13 @@ void emit_simple_statement(std::ostringstream& out, const RawStmt& stmt, int dep
     }
     if (text == "pass") {
         out << indent(depth) << "(void)0;\n";
+        return;
+    }
+    if (starts_with(text, "assert ")) {
+        const std::string condition = trim_copy(text.substr(7));
+        out << indent(depth) << "if (!(" << lower_expr(condition, aliases, locals)
+            << ")) { throw std::runtime_error("
+            << cpp_string_literal("assert failed: " + condition) << "); }\n";
         return;
     }
     if (starts_with(text, "return")) {

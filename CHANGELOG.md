@@ -12,6 +12,8 @@
   `entry`, `[cxx]`, `[include]`, `[sources]`, `[pkg]`, `[link]`, and
   `[build].dir`.
 - Added C and C++ source passthrough for native builds.
+- Added `@test` functions and generated native `dudu test` harnesses.
+- Added runtime `assert` lowering for test-friendly failures.
 
 ### Changed
 

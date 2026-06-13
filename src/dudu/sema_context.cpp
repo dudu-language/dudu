@@ -139,6 +139,7 @@ void check_function_decorator(const ModuleAst& module, const Decorator& decorato
     const std::string text = trim(decorator.text);
     if (text == "inline" || text == "constexpr" || text == "extern_c" || text == "cuda.global" ||
         text == "cuda.device" || text == "cuda.host" || text == "shader.compute" ||
+        text == "test" ||
         decorator_is_call(text, "workgroup_size") || decorator_is_call(text, "section")) {
         check_target_decorator_mode(module, decorator, text);
         return;
@@ -385,6 +386,9 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
             if (has_decorator(method, "extern_c")) {
                 fail(method.location, "@extern_c is only valid on free functions");
             }
+            if (has_decorator(method, "test")) {
+                fail(method.location, "@test is only valid on free functions");
+            }
             std::set<std::string> params;
             for (const ParamDecl& param : method.params) {
                 if (!params.insert(param.name).second) {
@@ -408,6 +412,15 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
         }
         if (has_decorator(fn, "extern_c")) {
             check_extern_c_signature(fn);
+        }
+        if (has_decorator(fn, "test")) {
+            const std::string return_type = fn.return_type.empty() ? "void" : fn.return_type;
+            if (!fn.params.empty()) {
+                fail(fn.location, "@test functions cannot take parameters");
+            }
+            if (return_type != "void" && return_type != "bool" && return_type != "i32") {
+                fail(fn.location, "@test return type must be void, bool, or i32");
+            }
         }
         std::set<std::string> params;
         for (const ParamDecl& param : fn.params) {

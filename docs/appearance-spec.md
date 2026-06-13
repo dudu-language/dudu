@@ -274,6 +274,35 @@ def clamp(x: i32, lo: i32, hi: i32) -> i32:
 Expression-last implicit return is gone. If this is Python-shaped, use
 `return`.
 
+## Tests
+
+Tests use explicit Python-style decorators.
+
+```python
+@test
+def add_works():
+    assert add(20, 22) == 42
+
+@test
+def returns_bool() -> bool:
+    return add(1, 2) == 3
+
+@test
+def returns_code() -> i32:
+    return add(2, 2) - 4
+```
+
+`@test` functions are free functions, take no args, and return `void`, `bool`,
+or `i32`. `void` passes unless an assertion fails, `bool` passes on `True`,
+and `i32` passes on zero.
+
+```sh
+dudu test
+dudu test src/math.dd
+dudu test add_works
+dudu test --filter add
+```
+
 ## Calls
 
 Calls use normal Python call syntax:

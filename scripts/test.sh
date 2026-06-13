@@ -113,6 +113,28 @@ cp "$repo_root/tests/fixtures/unformatted.dd" "$fmt_dir/sample.dd"
 "$repo_root/build/duc" fmt "$repo_root/examples" --check
 "$repo_root/build/duc" run "$repo_root/tests/fixtures/run_zero.dd" \
     -o "$repo_root/build/duc_run_zero"
+"$repo_root/build/dudu" test "$repo_root/tests/fixtures/dudu_tests.dd" \
+    >"$repo_root/build/dudu_tests.out"
+grep -q "3/3 tests passed" "$repo_root/build/dudu_tests.out"
+"$repo_root/build/dudu" test "$repo_root/tests/fixtures/dudu_tests.dd" --filter bool \
+    >"$repo_root/build/dudu_tests_filter.out"
+grep -q "1/1 tests passed" "$repo_root/build/dudu_tests_filter.out"
+grep -q "ok bool_result" "$repo_root/build/dudu_tests_filter.out"
+if grep -q "ok add_works" "$repo_root/build/dudu_tests_filter.out"; then
+    echo "dudu test filter ran an unfiltered test" >&2
+    exit 1
+fi
+cat >"$repo_root/build/dudu_failing_test.dd" <<'DD'
+@test
+def fails():
+    assert 1 == 2
+DD
+if "$repo_root/build/dudu" test "$repo_root/build/dudu_failing_test.dd" \
+    >"$repo_root/build/dudu_failing_test.out"; then
+    echo "failing dudu test unexpectedly passed" >&2
+    exit 1
+fi
+grep -q "FAILED fails: assert failed: 1 == 2" "$repo_root/build/dudu_failing_test.out"
 "$repo_root/scripts/test_codegen_shapes.sh"
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/package_build/main.dd" \
     -o "$repo_root/build/package_build.cpp"
@@ -130,7 +152,7 @@ grep -q "inline constexpr bool DEBUG = false;" "$repo_root/build/package_build_o
     "$repo_root/build/duc" check
     "$repo_root/build/duc" emit -o "$repo_root/build/project_mode.cpp"
     "$repo_root/build/duc" bench 1000
-    "$repo_root/build/duc" test
+    "$repo_root/build/duc" test -o "$repo_root/build/project_mode_tests"
 )
 (
     cd "$repo_root/tests/fixtures/project_cuda_mode"

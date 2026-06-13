@@ -132,6 +132,18 @@ bool function_has_decorator(const FunctionDecl& fn, std::string_view name) {
     return false;
 }
 
+std::string cpp_string_literal(std::string text) {
+    std::string out = "\"";
+    for (const char c : text) {
+        if (c == '"' || c == '\\') {
+            out.push_back('\\');
+        }
+        out.push_back(c);
+    }
+    out.push_back('"');
+    return out;
+}
+
 std::string function_decorator_arg(const FunctionDecl& fn, std::string_view name) {
     const std::string prefix = std::string(name) + "(";
     for (const Decorator& decorator : fn.decorators) {
@@ -145,6 +157,10 @@ std::string function_decorator_arg(const FunctionDecl& fn, std::string_view name
 
 bool visible_in_header(Visibility visibility) {
     return visibility != Visibility::Private;
+}
+
+bool visible_function_in_header(const FunctionDecl& fn) {
+    return visible_in_header(fn.visibility) && !function_has_decorator(fn, "test");
 }
 
 std::string_view class_section_for_method(Visibility visibility) {
@@ -309,19 +325,63 @@ void emit_function_body(std::ostringstream& out, const FunctionDecl& fn,
     out << "}\n\n";
 }
 
+bool should_emit_function(const FunctionDecl& fn, bool test_source) {
+    return !test_source || fn.name != "main";
+}
+
 void emit_early_functions(std::ostringstream& out, const ModuleAst& module,
                           const std::vector<std::string>& aliases,
                           const std::map<std::string, std::string>& function_returns,
-                          bool header_only) {
+                          bool header_only, bool test_source = false) {
     for (const FunctionDecl& fn : module.functions) {
-        if (!emit_before_constants(fn)) {
+        if (!emit_before_constants(fn) || !should_emit_function(fn, test_source)) {
             continue;
         }
-        if (header_only && !visible_in_header(fn.visibility)) {
+        if (header_only && !visible_function_in_header(fn)) {
             continue;
         }
         emit_function_body(out, fn, aliases, function_returns);
     }
+}
+
+void emit_test_harness(std::ostringstream& out, const ModuleAst& module,
+                       const std::string& filter) {
+    out << "namespace dudu_test {\n"
+           "template <typename F> bool run_one(const char* name, F fn) {\n"
+           "    try {\n"
+           "        using R = decltype(fn());\n"
+           "        if constexpr (std::is_same_v<R, void>) {\n"
+           "            fn();\n"
+           "        } else if constexpr (std::is_same_v<R, bool>) {\n"
+           "            if (!fn()) { std::cout << \"FAILED \" << name << \"\\n\"; return false; }\n"
+           "        } else {\n"
+           "            if (fn() != 0) { std::cout << \"FAILED \" << name << \"\\n\"; return false; }\n"
+           "        }\n"
+           "        std::cout << \"ok \" << name << \"\\n\";\n"
+           "        return true;\n"
+           "    } catch (const std::exception& error) {\n"
+           "        std::cout << \"FAILED \" << name << \": \" << error.what() << \"\\n\";\n"
+           "        return false;\n"
+           "    }\n"
+           "}\n"
+           "} // namespace dudu_test\n\n"
+           "int main() {\n"
+           "    int total = 0;\n"
+           "    int passed = 0;\n";
+    for (const FunctionDecl& fn : module.functions) {
+        if (!function_has_decorator(fn, "test")) {
+            continue;
+        }
+        if (!filter.empty() && fn.name.find(filter) == std::string::npos) {
+            continue;
+        }
+        out << "    ++total;\n"
+            << "    if (dudu_test::run_one(" << cpp_string_literal(fn.name) << ", " << fn.name
+            << ")) { ++passed; }\n";
+    }
+    out << "    std::cout << passed << \"/\" << total << \" tests passed\\n\";\n"
+           "    return passed == total ? 0 : 1;\n"
+           "}\n";
 }
 
 } // namespace
@@ -344,7 +404,7 @@ std::string emit_cpp_header(const ModuleAst& module) {
         if (emit_before_constants(fn)) {
             continue;
         }
-        if (!visible_in_header(fn.visibility)) {
+        if (!visible_function_in_header(fn)) {
             continue;
         }
         emit_function_signature(out, fn);
@@ -364,7 +424,7 @@ std::string emit_c_header(const ModuleAst& module) {
         << "extern \"C\" {\n"
         << "#endif\n\n";
     for (const FunctionDecl& fn : module.functions) {
-        if (!function_has_decorator(fn, "extern_c") || !visible_in_header(fn.visibility)) {
+        if (!function_has_decorator(fn, "extern_c") || !visible_function_in_header(fn)) {
             continue;
         }
         out << lower_cpp_type(fn.return_type) << ' ' << fn.name << '(';
@@ -405,6 +465,30 @@ std::string emit_cpp_source(const ModuleAst& module) {
         emit_function_body(out, fn, aliases, function_returns);
     }
     emit_static_asserts(out, module, aliases);
+    return out.str();
+}
+
+std::string emit_cpp_test_source(const ModuleAst& module, const std::string& filter) {
+    std::ostringstream out;
+    const std::vector<std::string> aliases = namespace_aliases(module);
+    const std::map<std::string, std::string> function_returns = function_return_types(module);
+    emit_includes(out, module);
+    emit_result_prelude(out, module);
+
+    emit_aliases(out, module);
+    emit_enums(out, module);
+    emit_classes(out, module, aliases, function_returns);
+    emit_early_functions(out, module, aliases, function_returns, false, true);
+    emit_constants(out, module, aliases);
+
+    for (const FunctionDecl& fn : module.functions) {
+        if (emit_before_constants(fn) || !should_emit_function(fn, true)) {
+            continue;
+        }
+        emit_function_body(out, fn, aliases, function_returns);
+    }
+    emit_static_asserts(out, module, aliases);
+    emit_test_harness(out, module, filter);
     return out.str();
 }
 

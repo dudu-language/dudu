@@ -326,6 +326,10 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
         }
         return;
     }
+    if (starts_with(text, "assert ")) {
+        check_condition_type(scope, stmt, text.substr(7));
+        return;
+    }
     if (starts_with(text, "cpp(") || text == "pass")
         return;
     if (starts_with(text, "delete ")) {
