@@ -7,12 +7,7 @@ def main() -> i32:
     if sdl.SDL_Init(sdl.SDL_INIT_VIDEO) == False:
         return 1
 
-    window: *struct SDL_Window = sdl.SDL_CreateWindow(
-        "dudu sdl3",
-        640,
-        360,
-        sdl.SDL_WINDOW_HIDDEN,
-    )
+    window: *struct SDL_Window = sdl.SDL_CreateWindow("dudu sdl3", 640, 360, sdl.SDL_WINDOW_HIDDEN)
     if window == None:
         sdl.SDL_Quit()
         return 2

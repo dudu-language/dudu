@@ -97,7 +97,8 @@ probe_raylib() {
     local cpp="$repo_root/build/probe_raylib_game.cpp"
     local bin="$repo_root/build/probe_raylib_game"
     "$repo_root/build/duc" emit "$repo_root/examples/raylib_game.dd" -o "$cpp"
-    "${CXX:-c++}" -std=c++20 "$cpp" $(pkg-config --cflags --libs raylib) -o "$bin"
+    "${CXX:-c++}" -std=c++20 -I"$repo_root/examples" "$cpp" \
+        $(pkg-config --cflags --libs raylib) -o "$bin"
     echo "ok raylib"
 }
 

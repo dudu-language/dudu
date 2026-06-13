@@ -1,6 +1,6 @@
 # Small raylib arcade loop.
 
-import cpp "raylib.h" as rl
+import cpp "support/raylib_cpp.hpp" as rl
 
 
 class Player:
@@ -19,17 +19,14 @@ def length_sq(v: rl.Vector2) -> f32:
 
 
 def collides(player: Player, coin: Coin) -> bool:
-    delta = rl.Vector2(
-        coin.pos.x - player.pos.x,
-        coin.pos.y - player.pos.y,
-    )
+    delta = rl.vec2(coin.pos.x - player.pos.x, coin.pos.y - player.pos.y)
     r = player.radius + 8.0
     return length_sq(delta) <= r * r
 
 
 def update_player(player: &Player, dt: f32):
     speed: f32 = 240.0
-    player.vel = rl.Vector2(0.0, 0.0)
+    player.vel = rl.vec2(0.0, 0.0)
 
     if rl.IsKeyDown(rl.KEY_LEFT):
         player.vel.x -= speed
@@ -49,15 +46,15 @@ def main() -> i32:
     rl.SetTargetFPS(144)
 
     player = Player(
-        pos=rl.Vector2(400.0, 225.0),
-        vel=rl.Vector2(0.0, 0.0),
+        pos=rl.vec2(400.0, 225.0),
+        vel=rl.vec2(0.0, 0.0),
         radius=18.0,
     )
 
     coins: list[Coin] = [
-        Coin(pos=rl.Vector2(140.0, 120.0), active=True),
-        Coin(pos=rl.Vector2(620.0, 180.0), active=True),
-        Coin(pos=rl.Vector2(390.0, 360.0), active=True),
+        Coin(pos=rl.vec2(140.0, 120.0), active=True),
+        Coin(pos=rl.vec2(620.0, 180.0), active=True),
+        Coin(pos=rl.vec2(390.0, 360.0), active=True),
     ]
 
     score: i32 = 0
@@ -72,14 +69,14 @@ def main() -> i32:
                 score += 1
 
         rl.BeginDrawing()
-        rl.ClearBackground(rl.BLACK)
+        rl.ClearBackground(rl.black())
 
         for coin: &const[Coin] in coins:
             if coin.active:
-                rl.DrawCircleV(coin.pos, 8.0, rl.GOLD)
+                rl.DrawCircleV(coin.pos, 8.0, rl.gold())
 
-        rl.DrawCircleV(player.pos, player.radius, rl.SKYBLUE)
-        rl.DrawText(rl.TextFormat("score: %d", score), 20, 20, 24, rl.WHITE)
+        rl.DrawCircleV(player.pos, player.radius, rl.skyblue())
+        rl.DrawText(rl.TextFormat("score: %d", score), 20, 20, 24, rl.white())
         rl.EndDrawing()
 
     rl.CloseWindow()
