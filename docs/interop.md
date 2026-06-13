@@ -41,3 +41,5 @@ def hot(x: i32):
 Direct imports keep object-like macro exposure conservative. Function-like
 macros are still callable with call syntax, so `assert expr` remains Dudu
 syntax while `assert(expr)` can call a native macro.
+
+See `examples/macro_bomb.dd` for a compact imported-macro stress example.

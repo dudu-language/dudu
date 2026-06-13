@@ -40,6 +40,7 @@
 - Added C++ exception interop with `try`, `except`, and `raise`.
 - Added aliased lowercase native macro imports, such as `cassert.assert(...)`.
 - Added variadic native macro passthrough for fixed-leading-argument macros.
+- Added a macro-bomb fixture and example for imported C/C++ macro coverage.
 
 ### Changed
 

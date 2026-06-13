@@ -11,6 +11,7 @@ compile_and_expect simple_program 42
 compile_and_expect c_direct_lowercase_macro 42
 compile_and_expect c_lowercase_macro 42
 compile_and_expect c_variadic_macro 42
+compile_and_expect cpp_macro_bomb 42
 compile_and_expect debug_asserts 42
 compile_and_expect cpp_exceptions 42
 compile_and_expect cpp_nested_native 42

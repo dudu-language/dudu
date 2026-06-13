@@ -64,6 +64,11 @@ grep -Fq "return total + DUDU_WRAP_MAGIC - 7;" "$repo_root/build/c_macro_constan
     -o "$repo_root/build/c_variadic_macro.cpp"
 grep -Fq "DUDU_WRAP_FIRST(20, 1, 2, 3)" "$repo_root/build/c_variadic_macro.cpp"
 grep -Fq "DUDU_WRAP_COUNT(first, 22, 99)" "$repo_root/build/c_variadic_macro.cpp"
+"$repo_root/build/duc" emit "$repo_root/tests/fixtures/cpp_macro_bomb.dd" \
+    -o "$repo_root/build/cpp_macro_bomb.cpp"
+grep -Fq "DUDU_MACRO_BOMB_ASSIGN(scratch, 40);" "$repo_root/build/cpp_macro_bomb.cpp"
+grep -Fq "DUDU_MACRO_BOMB_SUM2(7, 13, 99)" "$repo_root/build/cpp_macro_bomb.cpp"
+! grep -Fq "macros::DUDU_MACRO_BOMB" "$repo_root/build/cpp_macro_bomb.cpp"
 
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/c_lowercase_macro.dd" \
     -o "$repo_root/build/c_lowercase_macro.cpp"

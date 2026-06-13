@@ -81,6 +81,11 @@ void emit_build_namespace(std::ostringstream& out, const ModuleAst& module) {
 
 std::vector<std::string> namespace_aliases(const ModuleAst& module) {
     std::vector<std::string> aliases;
+    for (const NativeMacroDecl& macro : module.native_macros) {
+        if (macro.name.find('.') != std::string::npos) {
+            aliases.push_back("!" + macro.name);
+        }
+    }
     for (const ImportDecl& import : module.imports) {
         if (import.kind == ImportKind::ForeignCpp && !import.alias.empty()) {
             aliases.push_back(import.alias);

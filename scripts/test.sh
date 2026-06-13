@@ -19,6 +19,7 @@ required_examples=(
     image_filter.dd
     interrupt_handler.dd
     layout_hardware.dd
+    macro_bomb.dd
     modules_visibility.dd
     native_escape.dd
     numerics_kmeans.dd
@@ -564,6 +565,7 @@ compile_and_expect class_methods 42
 compile_and_expect c_direct_lowercase_macro 42
 compile_and_expect c_lowercase_macro 42
 compile_and_expect c_variadic_macro 42
+compile_and_expect cpp_macro_bomb 42
 compile_and_expect c_import_alias 42; compile_and_expect c_macro_constants 42; compile_and_expect stdio_math 42; compile_and_expect c_qsort_callback 24; compile_and_expect c_struct_layout 42
 compile_and_expect c_audio_callback 26
 compile_and_expect pointer_cast 42

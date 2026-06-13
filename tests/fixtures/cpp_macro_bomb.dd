@@ -1,0 +1,29 @@
+import cpp "./cpp_macro_bomb.hpp" as macros
+
+
+def main() -> i32:
+    value: i32 = macros.DUDU_MACRO_BOMB_VALUE
+    value = macros.DUDU_MACRO_BOMB_SCALE(value)
+
+    mixed: i32 = macros.DUDU_MACRO_BOMB_MIX(2, 3, 4)
+    value = macros.DUDU_MACRO_BOMB_MAX(value, mixed)
+    value += macros.DUDU_MACRO_BOMB_FIRST(7, 8, 9)
+    value += macros.DUDU_MACRO_BOMB_SUM2(7, 13, 99)
+    value -= 7
+
+    if macros.DUDU_MACRO_BOMB_FLAG != 1:
+        return 1
+
+    name: str = macros.DUDU_MACRO_BOMB_STRINGIZE("macro")
+    if len(name) == 0:
+        return 2
+
+    scratch: i32 = 0
+    macros.DUDU_MACRO_BOMB_ASSIGN(scratch, 40)
+    macros.DUDU_MACRO_BOMB_INC(scratch)
+    scratch = macros.dudu_macro_bomb_lower(scratch)
+
+    if scratch != 42:
+        return scratch
+
+    return value

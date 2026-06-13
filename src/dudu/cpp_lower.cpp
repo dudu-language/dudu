@@ -161,6 +161,28 @@ std::string qualify_namespace_aliases(std::string expr,
     for (const std::string& alias : namespace_aliases) {
         const bool strip_alias = !alias.empty() && alias.front() == '!';
         const std::string name = strip_alias ? alias.substr(1) : alias;
+        if (strip_alias && name.find('.') != std::string::npos) {
+            size_t pos = expr.find(name);
+            while (pos != std::string::npos) {
+                const bool left_ok =
+                    pos == 0 || (std::isalnum(static_cast<unsigned char>(expr[pos - 1])) == 0 &&
+                                 expr[pos - 1] != '_');
+                const size_t after = pos + name.size();
+                const bool right_ok =
+                    after >= expr.size() ||
+                    (std::isalnum(static_cast<unsigned char>(expr[after])) == 0 &&
+                     expr[after] != '_' && expr[after] != '.');
+                if (left_ok && right_ok) {
+                    const size_t dot = name.rfind('.');
+                    const std::string replacement = name.substr(dot + 1);
+                    expr.replace(pos, name.size(), replacement);
+                    pos = expr.find(name, pos + replacement.size());
+                } else {
+                    pos = expr.find(name, pos + name.size());
+                }
+            }
+            continue;
+        }
         const std::string marker = name + ".";
         size_t pos = expr.find(marker);
         while (pos != std::string::npos) {
