@@ -303,6 +303,17 @@ bool is_function_type_match(std::string expected, std::string got) {
     return starts_with(expected, "fn(") && expected == got;
 }
 
+std::string normalize_c_tags(std::string type) {
+    for (std::string_view tag : {"struct ", "class ", "union ", "enum "}) {
+        size_t pos = type.find(tag);
+        while (pos != std::string::npos) {
+            type.erase(pos, tag.size());
+            pos = type.find(tag, pos);
+        }
+    }
+    return type;
+}
+
 std::string wrapped_call_arg(std::string expr, std::string_view name) {
     expr = trim_copy(std::move(expr));
     const std::string prefix = std::string(name) + "(";
@@ -342,6 +353,7 @@ bool assignment_type_allowed(const std::string& expected, const std::string& exp
            is_container_literal(expected, expr) ||
            (!is_container_literal_expr(expr) && got.empty()) || got == "auto" || got == expected ||
            compact_type(expected) == compact_type(got) || is_option_value(expected, expr, got) ||
+           compact_type(normalize_c_tags(expected)) == compact_type(normalize_c_tags(got)) ||
            is_result_value(expected, expr, got) ||
            is_value_wrapper_assignment(expected, expr, got) ||
            is_null_pointer(expected, expr, got) || is_reference_binding(expected, got) ||

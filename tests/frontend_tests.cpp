@@ -268,6 +268,26 @@ void test_native_header_collision(const std::filesystem::path& root) {
     assert(failed);
 }
 
+void test_native_header_pointer_diagnostics(const std::filesystem::path& root) {
+    bool failed = false;
+    try {
+        dudu::ModuleAst module = dudu::parse_source("import c \"native_headers/simple_c.h\"\n"
+                                                    "\n"
+                                                    "def main() -> i32:\n"
+                                                    "    event: DuduNativeEvent\n"
+                                                    "    if dudu_native_ready(event):\n"
+                                                    "        return 1\n"
+                                                    "    return 0\n",
+                                                    root / "tests/fixtures/native_pointer.dd");
+        dudu::merge_native_header_types(
+            module, {.config = dudu::ProjectConfig{}, .source_dir = root / "tests/fixtures"});
+        dudu::analyze_module(module, {.check_bodies = true});
+    } catch (const dudu::CompileError&) {
+        failed = true;
+    }
+    assert(failed);
+}
+
 void test_project_driver_config(const std::filesystem::path& root) {
     const std::filesystem::path dir = root / "build" / "project-driver-config-test";
     std::filesystem::create_directories(dir);
@@ -356,6 +376,7 @@ int main() {
         test_native_type_declaration_emission();
         test_native_header_type_scan(root);
         test_native_header_collision(root);
+        test_native_header_pointer_diagnostics(root);
         test_project_driver_config(root);
         test_image_filter_emission(root);
     } catch (const std::exception& error) {

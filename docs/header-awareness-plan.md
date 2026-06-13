@@ -174,6 +174,7 @@ Dudu currently discovers and registers:
 - object-like macros as native values
 - function-like macros by arity
 - global functions, parameter types, return types, and varargs markers
+- simple pointer and reference parameter/field types
 - C++ namespace-qualified functions
 - simple native overload sets by arity and assignability
 - C++ class fields, methods, and non-default constructor signatures
