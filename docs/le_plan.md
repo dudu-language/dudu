@@ -181,12 +181,23 @@ push. They are not release packaging work.
 
    Improve overload diagnostics, const/reference modeling, explicit C++
    template calls, template-heavy library behavior, header cache invalidation,
-   and scanner failure UX.
+   cache cleanup, and scanner failure UX.
+
+   Status: overload diagnostics, single-`T` explicit template function calls,
+   local-header cache invalidation, cache cleanup, broken-Clang diagnostics,
+   missing-header diagnostics, and common const pointer/reference lowering are
+   implemented. Template-heavy library behavior and deeper overload behavior
+   remain the main hardening areas.
 
 2. Real library stress tests
 
    Keep proving SDL3, ImGui, raylib, glm, sqlite, POSIX, OpenCL, Vulkan, GLFW,
    and FFmpeg style APIs with normal imports and minimal wrapper code.
+
+   Current optional probes pass for glm, OpenCV, sqlite, threading, POSIX mmap,
+   POSIX pthread, GLFW, OpenCL, Vulkan, and FFmpeg on this machine. raylib and
+   SDL3 are skipped because pkg-config cannot find them in the current Ubuntu
+   24.04 package setup.
 
 3. Broader namespace constants
 
@@ -198,6 +209,9 @@ push. They are not release packaging work.
 
    Keep using `dudu` on real projects and fix friction in native build inputs,
    target selection, diagnostics, and generated build files.
+
+   Status: `duduplayground/` is a checked-in scratch project that runs through
+   `dudu run` and `dudu test`.
 
 5. Incremental build strategy
 
