@@ -3,9 +3,11 @@
 #include "dudu/parser.hpp"
 #include "dudu/source.hpp"
 
+#include <algorithm>
 #include <fstream>
 #include <map>
 #include <set>
+#include <vector>
 
 namespace dudu {
 namespace {
@@ -107,12 +109,40 @@ ModuleAst load_one(const std::filesystem::path& path, std::set<std::filesystem::
     return merged;
 }
 
+void collect_files(const std::filesystem::path& path, std::set<std::filesystem::path>& loading,
+                   std::vector<std::filesystem::path>& out) {
+    const std::filesystem::path canonical = std::filesystem::weakly_canonical(path);
+    if (loading.contains(canonical)) {
+        throw CompileError({.file = path, .line = 1, .column = 1}, "cyclic module import");
+    }
+    if (std::find(out.begin(), out.end(), canonical) != out.end()) {
+        return;
+    }
+    loading.insert(canonical);
+    out.push_back(canonical);
+    const ModuleAst parsed = parse_source(read_text_file(path), path);
+    for (const ImportDecl& import : parsed.imports) {
+        if (import.kind != ImportKind::Module && import.kind != ImportKind::From) {
+            continue;
+        }
+        collect_files(module_path_to_file(path.parent_path(), import.module_path), loading, out);
+    }
+    loading.erase(canonical);
+}
+
 } // namespace
 
 ModuleAst load_source_tree(const std::filesystem::path& entry) {
     std::set<std::filesystem::path> loading;
     std::map<std::filesystem::path, ModuleAst> loaded;
     return load_one(entry, loading, loaded);
+}
+
+std::vector<std::filesystem::path> source_tree_files(const std::filesystem::path& entry) {
+    std::set<std::filesystem::path> loading;
+    std::vector<std::filesystem::path> out;
+    collect_files(entry, loading, out);
+    return out;
 }
 
 } // namespace dudu

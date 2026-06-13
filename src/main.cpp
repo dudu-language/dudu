@@ -308,6 +308,14 @@ void emit_cmake_list_values(std::ostringstream& out, std::string_view prefix,
     out << ")\n";
 }
 
+void emit_cmake_depends(std::ostringstream& out, const std::vector<std::filesystem::path>& files) {
+    out << "    DEPENDS";
+    for (const std::filesystem::path& file : files) {
+        out << ' ' << cmake_quote(file.string());
+    }
+    out << "\n";
+}
+
 std::string cmake_cpp_standard(const std::string& cpp_std) {
     if (cpp_std.size() > 3 && cpp_std.substr(0, 3) == "c++") {
         return cpp_std.substr(3);
@@ -333,9 +341,9 @@ std::string emit_cmake_project(const dudu::ProjectConfig& config,
         << "    OUTPUT ${DUDU_GENERATED}\n"
         << "    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/generated\n"
         << "    COMMAND ${DUDU_EXECUTABLE} emit ${DUDU_PROJECT_DIR}/${DUDU_SOURCE} -o "
-           "${DUDU_GENERATED}\n"
-        << "    DEPENDS ${DUDU_PROJECT_DIR}/${DUDU_SOURCE}\n"
-        << "    VERBATIM\n"
+           "${DUDU_GENERATED}\n";
+    emit_cmake_depends(out, dudu::source_tree_files(input));
+    out << "    VERBATIM\n"
         << ")\n\n";
     if (config.target_kind == "library") {
         out << "add_library(" << target << " STATIC ${DUDU_GENERATED})\n";

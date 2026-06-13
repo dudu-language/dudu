@@ -242,6 +242,23 @@ if [[ "$project_cmake_cc_status" -ne 42 ]]; then
     echo "project_cmake_cc returned $project_cmake_cc_status, expected 42" >&2
     exit 1
 fi
+cmake_multifile_dir="$repo_root/build/project_cmake_multifile"
+rm -rf "$cmake_multifile_dir" "$repo_root/build/project_cmake_multifile_build"
+mkdir -p "$cmake_multifile_dir"
+"$repo_root/build/duc" cmake "$repo_root/tests/fixtures/multifile/main.dd" \
+    -o "$cmake_multifile_dir/CMakeLists.txt"
+grep -q "helper.dd" "$cmake_multifile_dir/CMakeLists.txt"
+cmake -S "$cmake_multifile_dir" -B "$repo_root/build/project_cmake_multifile_build" \
+    -DDUDU_EXECUTABLE="$repo_root/build/duc" >/dev/null
+cmake --build "$repo_root/build/project_cmake_multifile_build" >/dev/null
+set +e
+"$repo_root/build/project_cmake_multifile_build/main"
+project_cmake_multifile_status=$?
+set -e
+if [[ "$project_cmake_multifile_status" -ne 42 ]]; then
+    echo "project_cmake_multifile returned $project_cmake_multifile_status, expected 42" >&2
+    exit 1
+fi
 fake_pkg_config="$repo_root/build/fake-pkg-config"
 cat >"$fake_pkg_config" <<'SH'
 #!/usr/bin/env bash
