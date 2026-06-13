@@ -72,16 +72,15 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
 
 Dudu should move toward that output instead of `0/0 tests passed`.
 
-Cargo also keeps test binaries under `target/debug/deps/` with unique names.
-Dudu should avoid fixed output paths for test binaries:
+Dudu keeps generated test binaries under unique paths:
 
 ```text
-build/dudu/tests/<entry-stem>-<hash>
+build/dudu-tests/<entry-stem>-<hash>
 ```
 
-The hash should include at least the entry path, build mode, and filter. That
-avoids parallel runs stomping each other and gives us a place to cache
-incremental test builds.
+The hash includes the entry path, target name, test filter, target kind, and
+target mode. That avoids parallel runs stomping each other and gives us a place
+to cache incremental test builds.
 
 ## Future Test Features
 

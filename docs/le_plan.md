@@ -11,11 +11,11 @@ Primary plan: [Dudu Project Driver Plan](project-driver-plan.md).
 
 Make daily use feel good:
 
-- named targets
-- `dudu clean`
-- clean Cargo-ish build logs
-- `dudu test ./...`
-- better test binary output paths
+- named targets: done
+- `dudu clean`: done
+- clean Cargo-ish build logs: done
+- `dudu test ./...`: done
+- better test binary output paths: done
 - examples and docs that prefer `dudu run` where it improves usability
 
 This pays off immediately because every future example and feature becomes
@@ -111,8 +111,8 @@ Keep it Cargo-ish.
 Short-term fixes:
 
 - `0 tests` output instead of `0/0 tests passed`
-- unique test binary paths
-- `dudu test ./...`
+- unique test binary paths: done
+- `dudu test ./...`: done
 - `assert expr, "message"`
 
 Longer-term features:

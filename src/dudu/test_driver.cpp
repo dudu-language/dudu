@@ -10,10 +10,12 @@
 #include "dudu/sema.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
+#include <sstream>
 #include <vector>
 
 namespace dudu {
@@ -113,12 +115,49 @@ int run_delegated_project_tests() {
     return std::system(command.c_str()) == 0 ? 0 : 1;
 }
 
+uint64_t fnv1a(std::string_view text) {
+    uint64_t hash = 14695981039346656037ull;
+    for (const char c : text) {
+        hash ^= static_cast<unsigned char>(c);
+        hash *= 1099511628211ull;
+    }
+    return hash;
+}
+
+std::string hex_hash(uint64_t value) {
+    std::ostringstream out;
+    out << std::hex << value;
+    return out.str();
+}
+
+std::string safe_stem(std::filesystem::path path) {
+    std::string stem = path.stem().string();
+    if (stem.empty()) {
+        stem = "tests";
+    }
+    for (char& c : stem) {
+        if (!std::isalnum(static_cast<unsigned char>(c)) && c != '_' && c != '-') {
+            c = '_';
+        }
+    }
+    return stem;
+}
+
+std::filesystem::path default_test_output(const TestDriverOptions& options,
+                                          const ProjectConfig& config) {
+    const std::filesystem::path root =
+        config.build_dir.empty() ? std::filesystem::path("build/dudu-tests")
+                                 : config.build_dir / "dudu-tests";
+    const std::string key = std::filesystem::absolute(options.input).string() + "|" +
+                            options.target_name + "|" + options.test_filter + "|" +
+                            config.target_kind + "|" + config.target_mode;
+    return root / (safe_stem(options.input) + "-" + hex_hash(fnv1a(key)));
+}
+
 int run_one_test_entry(TestDriverOptions options) {
     const std::string source = read_text_file(options.input);
     const ProjectConfig config = config_for_options(options);
-    const std::filesystem::path output =
-        options.output.value_or(config.build_dir.empty() ? std::filesystem::path("build/dudu_tests")
-                                                         : config.build_dir / "dudu_tests");
+    const std::filesystem::path output = options.output.value_or(default_test_output(options, config));
     print_project_step(options.project_driver, "emit", output.string() + ".cpp");
     print_project_step(options.project_driver, "test", output);
     const std::filesystem::path bin = build_executable(

@@ -130,14 +130,20 @@ grep -q "clean ./build" "$repo_root/build/dudu_clean.err"
 "$repo_root/build/dudu" test "$repo_root/tests/fixtures/dudu_tests.dd" \
     >"$repo_root/build/dudu_tests.out" 2>"$repo_root/build/dudu_test_steps.err"
 grep -q "3/3 tests passed" "$repo_root/build/dudu_tests.out"
-grep -q "emit build/dudu_tests.cpp" "$repo_root/build/dudu_test_steps.err"
-grep -q "test build/dudu_tests" "$repo_root/build/dudu_test_steps.err"
+grep -Eq "emit build/dudu-tests/dudu_tests-[0-9a-f]+\\.cpp" "$repo_root/build/dudu_test_steps.err"
+grep -Eq "test build/dudu-tests/dudu_tests-[0-9a-f]+$" "$repo_root/build/dudu_test_steps.err"
 "$repo_root/build/dudu" test "$repo_root/tests/fixtures/dudu_tests.dd" --filter bool \
-    >"$repo_root/build/dudu_tests_filter.out"
+    >"$repo_root/build/dudu_tests_filter.out" 2>"$repo_root/build/dudu_test_filter_steps.err"
 grep -q "1/1 tests passed" "$repo_root/build/dudu_tests_filter.out"
 grep -q "ok bool_result" "$repo_root/build/dudu_tests_filter.out"
 if grep -q "ok add_works" "$repo_root/build/dudu_tests_filter.out"; then
     echo "dudu test filter ran an unfiltered test" >&2
+    exit 1
+fi
+unfiltered_test_binary=$(sed -n 's/^test //p' "$repo_root/build/dudu_test_steps.err")
+filtered_test_binary=$(sed -n 's/^test //p' "$repo_root/build/dudu_test_filter_steps.err")
+if [ "$unfiltered_test_binary" = "$filtered_test_binary" ]; then
+    echo "dudu test reused the unfiltered binary path for a filtered test" >&2
     exit 1
 fi
 cat >"$repo_root/build/dudu_failing_test.dd" <<'DD'
