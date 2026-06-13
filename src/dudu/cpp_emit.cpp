@@ -269,6 +269,10 @@ void emit_function_signature(std::ostringstream& out, const FunctionDecl& fn) {
     if (function_has_decorator(fn, "shader.compute")) {
         out << "DUDU_SHADER_COMPUTE ";
     }
+    const std::string section = function_decorator_arg(fn, "section");
+    if (!section.empty()) {
+        out << "__attribute__((section(" << section << "))) ";
+    }
     const std::string workgroup = function_decorator_arg(fn, "workgroup_size");
     if (!workgroup.empty()) {
         out << "DUDU_WORKGROUP_SIZE(" << workgroup << ") ";

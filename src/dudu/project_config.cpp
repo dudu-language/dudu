@@ -77,17 +77,32 @@ std::vector<std::string> parse_string_array(const std::filesystem::path& path,
     std::vector<std::string> out;
     value = value.substr(1, value.size() - 2);
     size_t start = 0;
-    while (start < value.size()) {
-        const size_t comma = value.find(',', start);
-        const std::string item =
-            trim_copy(value.substr(start, comma == std::string::npos ? comma : comma - start));
+    char quote = '\0';
+    bool escaped = false;
+    for (size_t cursor = 0; cursor <= value.size(); ++cursor) {
+        const char c = cursor < value.size() ? value[cursor] : ',';
+        if (quote != '\0') {
+            if (escaped) {
+                escaped = false;
+            } else if (c == '\\') {
+                escaped = true;
+            } else if (c == quote) {
+                quote = '\0';
+            }
+            continue;
+        }
+        if (c == '"' || c == '\'') {
+            quote = c;
+            continue;
+        }
+        if (c != ',') {
+            continue;
+        }
+        const std::string item = trim_copy(value.substr(start, cursor - start));
         if (!item.empty()) {
             out.push_back(unquote(item));
         }
-        if (comma == std::string::npos) {
-            break;
-        }
-        start = comma + 1;
+        start = cursor + 1;
     }
     return out;
 }

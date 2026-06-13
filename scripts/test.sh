@@ -210,6 +210,22 @@ if [[ "$project_default_output_status" -ne 42 ]]; then
     echo "project_default_output returned $project_default_output_status, expected 42" >&2
     exit 1
 fi
+(
+    cd "$repo_root/tests/fixtures/project_linker_script"
+    "$repo_root/build/duc" build -o "$repo_root/build/project_linker_script_bin" --verbose \
+        2>"$repo_root/build/project_linker_script_verbose.err"
+)
+grep -q -- "-Wl,-T,linker.ld" "$repo_root/build/project_linker_script_verbose.err"
+grep -q '__attribute__((section(".dudu_boot")))' \
+    "$repo_root/build/project_linker_script_bin.cpp"
+set +e
+"$repo_root/build/project_linker_script_bin"
+project_linker_script_status=$?
+set -e
+if [[ "$project_linker_script_status" -ne 42 ]]; then
+    echo "project_linker_script returned $project_linker_script_status, expected 42" >&2
+    exit 1
+fi
 cmake_project_dir="$repo_root/build/project_cmake"
 rm -rf "$cmake_project_dir" "$repo_root/build/project_cmake_build"
 mkdir -p "$cmake_project_dir"
@@ -385,6 +401,7 @@ compile_and_expect constructor_comparison_arg 42; compile_and_expect native_esca
 compile_and_expect result_option 42
 compile_and_expect function_pointers 42
 compile_and_expect function_attrs 42
+compile_and_expect section_attrs 42
 compile_and_expect cpp_namespace_alias 42
 compile_and_expect fixed_arrays 42
 compile_and_expect compound_assignment 46

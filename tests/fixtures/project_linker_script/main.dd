@@ -1,0 +1,7 @@
+@section(".dudu_boot")
+def boot_answer() -> i32:
+    return 42
+
+
+def main() -> i32:
+    return boot_answer()
