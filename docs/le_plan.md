@@ -121,7 +121,7 @@ Short-term fixes:
 - `0 tests` output instead of `0/0 tests passed`: done
 - unique test binary paths: done
 - `dudu test ./...`: done
-- `assert expr, "message"`
+- `assert expr, "message"`: done
 
 Longer-term features:
 

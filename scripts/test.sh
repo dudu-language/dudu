@@ -162,6 +162,18 @@ if "$repo_root/build/dudu" test "$repo_root/build/dudu_failing_test.dd" \
     exit 1
 fi
 grep -q "FAILED fails: assert failed: 1 == 2" "$repo_root/build/dudu_failing_test.out"
+cat >"$repo_root/build/dudu_assert_message_test.dd" <<'DD'
+@test
+def fails_with_message():
+    assert 1 == 2, "numbers are still wrong"
+DD
+if "$repo_root/build/dudu" test "$repo_root/build/dudu_assert_message_test.dd" \
+    >"$repo_root/build/dudu_assert_message_test.out"; then
+    echo "dudu custom assert message test unexpectedly passed" >&2
+    exit 1
+fi
+grep -q "FAILED fails_with_message: numbers are still wrong" \
+    "$repo_root/build/dudu_assert_message_test.out"
 "$repo_root/scripts/test_codegen_shapes.sh"
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/package_build/main.dd" \
     -o "$repo_root/build/package_build.cpp"

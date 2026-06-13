@@ -48,7 +48,7 @@ It lowers to a hosted C++ exception with a readable failure message. This is a
 language feature rather than a standard library function because it benefits
 from source-location-aware lowering and test harness integration.
 
-Python-style custom messages are the right next shape:
+Python-style custom messages are supported:
 
 ```python
 assert value > 0, "value must be positive"
