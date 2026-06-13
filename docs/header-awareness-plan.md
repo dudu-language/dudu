@@ -53,6 +53,35 @@ bool pump_events() {
 }
 ```
 
+One physical C/C++ header import should also expose all relevant symbol kinds
+from that header. Dear ImGui is the motivating case:
+
+```python
+import cpp "imgui.h" as imgui
+
+def init_imgui():
+    imgui.IMGUI_CHECKVERSION()
+    imgui.ImGui.CreateContext()
+    imgui.ImGui.StyleColorsDark()
+```
+
+Generated C++ should still look like normal ImGui C++:
+
+```cpp
+#include "imgui.h"
+
+void init_imgui() {
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGui::StyleColorsDark();
+}
+```
+
+Dudu should not require both `import c "imgui.h" as imgui` and
+`import cpp "imgui.h" as ImGui` for the same header. The scanner should attach
+object-like macros, global values/functions, and C++ namespaces to the same
+imported header model.
+
 ## Tooling Policy
 
 Dudu should require Clang tooling for automatic native header awareness.
@@ -151,12 +180,16 @@ Add native values and constants:
 - enum constants
 - object-like macros with simple literal values
 - global variables where present
+- C/C++ preprocessor constants such as `IMGUI_CHECKVERSION` when they can be
+  represented safely
 
 This makes C imports feel less magical because constants in headers become
 known symbols instead of only passing through to generated C++.
 
 Macro policy should stay conservative. Function-like macros are not normal
-functions. Prefer wrapper headers for macro-heavy APIs.
+functions, but widely used no-argument macros such as `IMGUI_CHECKVERSION()`
+should be supported when the scanner can preserve their call spelling exactly.
+Prefer wrapper headers for macro-heavy APIs that cannot be represented cleanly.
 
 ## Third Slice
 
