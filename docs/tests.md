@@ -182,8 +182,9 @@ targets reject runtime `assert` because hosted exception machinery is not
 available there. Use `debug_assert` for native C/C++ assertion behavior or a
 target-specific assert handler.
 
-Future target-specific policies may lower runtime assertions to a configurable
-panic/assert handler or target trap.
+Target-specific policies can lower runtime assertions to a configurable
+panic/assert handler or target trap when a real embedded project needs that
+behavior.
 
 Do not silently emit hosted exception machinery in freestanding or embedded
 mode.

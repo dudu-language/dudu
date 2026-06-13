@@ -1,0 +1,6 @@
+import cpp "native_template_function.hpp"
+
+
+def main() -> i32:
+    value: i32 = dudu_template.identity[i32](41)
+    return dudu_template.add_one[i32](value)

@@ -55,9 +55,9 @@ Related specs:
 
 Support class-scoped constants, static data, and static functions.
 
-Status: class-scoped constants and `@staticmethod` methods are implemented.
-Mutable static data and broader namespaced constants remain candidates if real
-examples need them.
+Status: class-scoped constants, mutable static fields, and `@staticmethod`
+methods are implemented. Broader module and namespace constants remain a
+candidate if real examples need cleaner organization than file-level constants.
 
 Python, Rust, C, and C++ all have ways to hang values off a type or namespace.
 Dudu needs that so constants and helpers do not all live in the global module
@@ -188,11 +188,11 @@ push. They are not release packaging work.
    Keep proving SDL3, ImGui, raylib, glm, sqlite, POSIX, OpenCL, Vulkan, GLFW,
    and FFmpeg style APIs with normal imports and minimal wrapper code.
 
-3. Mutable static data and broader namespace constants
+3. Broader namespace constants
 
-   Class constants and `@staticmethod` are implemented. Finish the parts that
-   real examples need for mutable static data and cleaner namespace/module
-   constants.
+   Class constants, mutable static fields, and `@staticmethod` are
+   implemented. Cleaner namespace/module constants remain a candidate if real
+   examples need them.
 
 4. Project driver polish
 
@@ -208,8 +208,8 @@ push. They are not release packaging work.
 6. Freestanding and embedded assert policy
 
    Hosted `assert` and `debug_assert` are implemented. Freestanding and
-   embedded targets must explicitly reject, lower, or configure runtime
-   `assert` instead of accidentally emitting hosted runtime machinery.
+   embedded targets reject runtime `assert` instead of accidentally emitting
+   hosted runtime machinery.
 
 7. Macro edge cases
 
@@ -219,6 +219,6 @@ push. They are not release packaging work.
 
 8. Slow or hung validation
 
-   Fix slow validation loops, especially hangs in codegen shape checks such as
-   the `std_vector_map_string` emit path. Compiler development needs a reliable
-   fast suite.
+   The `std_vector_map_string` codegen-shape hang is fixed and the fast suite
+   is reliable again. Keep new validation targeted and guarded so one slow
+   fixture does not stall the development loop.

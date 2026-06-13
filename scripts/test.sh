@@ -546,6 +546,7 @@ compile_and_expect constructors 42
 compile_and_expect class_lifecycle 42
 compile_and_expect static_members 42
 compile_and_expect static_fields 42
+compile_and_expect native_template_function 42
 compile_and_expect constructor_comparison_arg 42; compile_and_expect native_escape 42
 compile_and_expect result_option 42
 compile_and_expect function_pointers 42

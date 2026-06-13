@@ -38,6 +38,8 @@
 - Added `scripts/test_fast.sh` for normal inner-loop compiler validation.
 - Added `debug_assert` for native C/C++ `assert(...)` semantics.
 - Added C++ exception interop with `try`, `except`, and `raise`.
+- Tightened semantic checks for imported C++ template function calls such as
+  `namespace.identity[i32](value)`.
 - Added aliased lowercase native macro imports, such as `cassert.assert(...)`.
 - Added variadic native macro passthrough for fixed-leading-argument macros.
 - Added a macro-bomb fixture and example for imported C/C++ macro coverage.

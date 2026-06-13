@@ -234,13 +234,14 @@ falling back to loose expression typing.
 
 Richer constructs still need deeper modeling:
 
-- templates with explicit arguments
 - overloaded operators
 - deeper references and const correctness
 - destructor semantics
 
 The scanner now preserves namespace and class scope for nested types such as
-`outer_namespace.Outer.Inner`. Template-heavy libraries may still need wrapper
+`outer_namespace.Outer.Inner`. Simple imported C++ function templates with a
+single `T` parameter typecheck through explicit Dudu calls such as
+`native.identity[i32](value)`. Template-heavy libraries may still need wrapper
 headers.
 
 ## Cache

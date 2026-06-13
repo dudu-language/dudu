@@ -2,6 +2,7 @@
 
 #include "dudu/source.hpp"
 
+#include <cctype>
 #include <sstream>
 
 namespace dudu {
@@ -18,6 +19,59 @@ bool arity_matches(const FunctionSignature& signature, size_t arg_count) {
 
 bool native_numeric_promotion(const std::string& expected, const std::string& got) {
     return expected == "f64" && got == "f32";
+}
+
+std::string replace_template_type(std::string type, const std::string& arg) {
+    size_t pos = type.find('T');
+    while (pos != std::string::npos) {
+        const bool left_ok =
+            pos == 0 || (std::isalnum(static_cast<unsigned char>(type[pos - 1])) == 0 &&
+                         type[pos - 1] != '_');
+        const size_t end = pos + 1;
+        const bool right_ok =
+            end >= type.size() || (std::isalnum(static_cast<unsigned char>(type[end])) == 0 &&
+                                   type[end] != '_');
+        if (left_ok && right_ok) {
+            type.replace(pos, 1, arg);
+            pos = type.find('T', pos + arg.size());
+        } else {
+            pos = type.find('T', pos + 1);
+        }
+    }
+    return type;
+}
+
+FunctionSignature substitute_template_signature(FunctionSignature signature, const std::string& arg) {
+    for (std::string& param : signature.params) {
+        param = replace_template_type(std::move(param), arg);
+    }
+    signature.return_type = replace_template_type(std::move(signature.return_type), arg);
+    return signature;
+}
+
+std::optional<std::pair<std::string, std::string>> template_call_base(const std::string& callee) {
+    const size_t close = callee.rfind(']');
+    if (close == std::string::npos || close + 1 != callee.size()) {
+        return std::nullopt;
+    }
+    int depth = 0;
+    for (size_t i = close + 1; i > 0; --i) {
+        const size_t pos = i - 1;
+        if (callee[pos] == ']') {
+            ++depth;
+        } else if (callee[pos] == '[') {
+            --depth;
+            if (depth == 0) {
+                const std::string base = trim(callee.substr(0, pos));
+                const std::string arg = trim(callee.substr(pos + 1, close - pos - 1));
+                if (!base.empty() && !arg.empty()) {
+                    return std::make_pair(base, arg);
+                }
+                return std::nullopt;
+            }
+        }
+    }
+    return std::nullopt;
 }
 
 std::string signature_text(const std::string& callee, const FunctionSignature& signature) {
@@ -78,18 +132,26 @@ std::optional<FunctionSignature> native_signature_for_call(
     const FunctionScope& scope, const std::string& callee, const std::vector<std::string>& args,
     const SourceLocation* location, const NativeInferExprFn& infer_expr,
     const NativeCanAssignFn& can_assign) {
-    const auto found = scope.symbols.native_function_signatures.find(callee);
+    const auto template_call = template_call_base(callee);
+    const std::string lookup = template_call ? template_call->first : callee;
+    const auto found = scope.symbols.native_function_signatures.find(lookup);
     if (found == scope.symbols.native_function_signatures.end()) {
         return std::nullopt;
     }
-    for (const FunctionSignature& signature : found->second) {
+    std::vector<FunctionSignature> candidates = found->second;
+    if (template_call) {
+        for (FunctionSignature& signature : candidates) {
+            signature = substitute_template_signature(std::move(signature), template_call->second);
+        }
+    }
+    for (const FunctionSignature& signature : candidates) {
         if (args_match_signature(scope, signature, args, location, infer_expr, can_assign)) {
             return signature;
         }
     }
     if (location != nullptr) {
-        fail(*location, native_overload_message(scope, callee, args, found->second, location,
-                                                infer_expr));
+        fail(*location,
+             native_overload_message(scope, callee, args, candidates, location, infer_expr));
     }
     return std::nullopt;
 }
