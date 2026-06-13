@@ -71,7 +71,8 @@ void test_canonical_examples_parse(const std::filesystem::path& root) {
     const std::vector<std::string> examples = {
         "allocators.dd",          "audio_synth.dd",       "compile_time.dd",
         "cpp_library.dd",         "cuda_kernel.dd",       "cuda_shared_memory_tile.dd",
-        "ffmpeg_probe_decode.dd", "function_pointers.dd", "glfw_opengl_triangle.dd",
+        "ffmpeg_probe_decode.dd", "fibonacci.dd",         "function_pointers.dd",
+        "glfw_opengl_triangle.dd",
         "image_filter.dd",        "layout_hardware.dd",   "modules_visibility.dd",
         "native_escape.dd",       "numerics_kmeans.dd",   "opencl_kernel_host.dd",
         "raylib_game.dd",         "sdl3_imgui.dd",        "sdl3_window.dd",
