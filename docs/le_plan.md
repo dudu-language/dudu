@@ -171,3 +171,54 @@ to:
 
 That is an interop requirement, not a reason to design inheritance into Dudu's
 own object model immediately.
+
+## Remaining Completion Checklist
+
+These are the remaining practical completion areas for the current language
+push. They are not release packaging work.
+
+1. Native header hardening
+
+   Improve overload diagnostics, const/reference modeling, explicit C++
+   template calls, template-heavy library behavior, header cache invalidation,
+   and scanner failure UX.
+
+2. Real library stress tests
+
+   Keep proving SDL3, ImGui, raylib, glm, sqlite, POSIX, OpenCL, Vulkan, GLFW,
+   and FFmpeg style APIs with normal imports and minimal wrapper code.
+
+3. Mutable static data and broader namespace constants
+
+   Class constants and `@staticmethod` are implemented. Finish the parts that
+   real examples need for mutable static data and cleaner namespace/module
+   constants.
+
+4. Project driver polish
+
+   Keep using `dudu` on real projects and fix friction in native build inputs,
+   target selection, diagnostics, and generated build files.
+
+5. Incremental build strategy
+
+   Move beyond generated-one-file builds where needed. Generate C++ per Dudu
+   module so CMake/Ninja can rebuild changed translation units instead of whole
+   programs.
+
+6. Freestanding and embedded assert policy
+
+   Hosted `assert` and `debug_assert` are implemented. Freestanding and
+   embedded targets must explicitly reject, lower, or configure runtime
+   `assert` instead of accidentally emitting hosted runtime machinery.
+
+7. Macro edge cases
+
+   Normal imported macros are covered. Keep token-pasting, declaration-
+   generating, and partial-syntax macros behind wrapper headers unless a real
+   library forces a better design.
+
+8. Slow or hung validation
+
+   Fix slow validation loops, especially hangs in codegen shape checks such as
+   the `std_vector_map_string` emit path. Compiler development needs a reliable
+   fast suite.
