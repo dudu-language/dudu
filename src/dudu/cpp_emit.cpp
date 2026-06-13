@@ -151,8 +151,17 @@ bool emit_before_constants(const FunctionDecl& fn) {
     return function_has_decorator(fn, "constexpr");
 }
 
+std::map<std::string, std::string> function_return_types(const ModuleAst& module) {
+    std::map<std::string, std::string> out;
+    for (const FunctionDecl& fn : module.functions) {
+        out[fn.name] = fn.return_type.empty() ? "void" : fn.return_type;
+    }
+    return out;
+}
+
 void emit_method(std::ostringstream& out, const FunctionDecl& method,
-                 const std::vector<std::string>& aliases) {
+                 const std::vector<std::string>& aliases,
+                 const std::map<std::string, std::string>& function_returns) {
     out << "    " << lower_cpp_type(method.return_type) << ' ' << method.name << '(';
     const size_t first_param =
         !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
@@ -171,12 +180,14 @@ void emit_method(std::ostringstream& out, const FunctionDecl& method,
     for (size_t i = first_param; i < method.params.size(); ++i) {
         locals[method.params[i].name] = method.params[i].type;
     }
-    emit_raw_block(out, method.body, 2, aliases, locals, method.return_type);
+    emit_raw_block(out, method.body, 2, aliases, locals, method.return_type, function_returns);
     out << "    }\n";
 }
 
 void emit_classes(std::ostringstream& out, const ModuleAst& module,
-                  const std::vector<std::string>& aliases, bool header_only = false) {
+                  const std::vector<std::string>& aliases,
+                  const std::map<std::string, std::string>& function_returns,
+                  bool header_only = false) {
     for (const size_t index : class_emit_order(module.classes)) {
         const ClassDecl& klass = module.classes[index];
         if (header_only && !visible_in_header(klass.visibility)) {
@@ -187,7 +198,7 @@ void emit_classes(std::ostringstream& out, const ModuleAst& module,
             out << "    " << lower_cpp_type(field.type) << ' ' << field.name << "{};\n";
         }
         for (const FunctionDecl& method : klass.methods) {
-            emit_method(out, method, aliases);
+            emit_method(out, method, aliases, function_returns);
         }
         out << "};\n\n";
     }
@@ -257,19 +268,22 @@ void emit_function_signature(std::ostringstream& out, const FunctionDecl& fn) {
 }
 
 void emit_function_body(std::ostringstream& out, const FunctionDecl& fn,
-                        const std::vector<std::string>& aliases) {
+                        const std::vector<std::string>& aliases,
+                        const std::map<std::string, std::string>& function_returns) {
     emit_function_signature(out, fn);
     out << " {\n";
     std::map<std::string, std::string> locals;
     for (const ParamDecl& param : fn.params) {
         locals[param.name] = param.type;
     }
-    emit_raw_block(out, fn.body, 1, aliases, locals, fn.return_type);
+    emit_raw_block(out, fn.body, 1, aliases, locals, fn.return_type, function_returns);
     out << "}\n\n";
 }
 
 void emit_early_functions(std::ostringstream& out, const ModuleAst& module,
-                          const std::vector<std::string>& aliases, bool header_only) {
+                          const std::vector<std::string>& aliases,
+                          const std::map<std::string, std::string>& function_returns,
+                          bool header_only) {
     for (const FunctionDecl& fn : module.functions) {
         if (!emit_before_constants(fn)) {
             continue;
@@ -277,7 +291,7 @@ void emit_early_functions(std::ostringstream& out, const ModuleAst& module,
         if (header_only && !visible_in_header(fn.visibility)) {
             continue;
         }
-        emit_function_body(out, fn, aliases);
+        emit_function_body(out, fn, aliases, function_returns);
     }
 }
 
@@ -286,14 +300,15 @@ void emit_early_functions(std::ostringstream& out, const ModuleAst& module,
 std::string emit_cpp_header(const ModuleAst& module) {
     std::ostringstream out;
     const std::vector<std::string> aliases = namespace_aliases(module);
+    const std::map<std::string, std::string> function_returns = function_return_types(module);
     out << "#pragma once\n\n";
     emit_includes(out, module);
     emit_result_prelude(out, module);
 
     emit_aliases(out, module);
     emit_enums(out, module);
-    emit_classes(out, module, aliases, true);
-    emit_early_functions(out, module, aliases, true);
+    emit_classes(out, module, aliases, function_returns, true);
+    emit_early_functions(out, module, aliases, function_returns, true);
     emit_constants(out, module, aliases);
 
     for (const FunctionDecl& fn : module.functions) {
@@ -313,20 +328,21 @@ std::string emit_cpp_header(const ModuleAst& module) {
 std::string emit_cpp_source(const ModuleAst& module) {
     std::ostringstream out;
     const std::vector<std::string> aliases = namespace_aliases(module);
+    const std::map<std::string, std::string> function_returns = function_return_types(module);
     emit_includes(out, module);
     emit_result_prelude(out, module);
 
     emit_aliases(out, module);
     emit_enums(out, module);
-    emit_classes(out, module, aliases);
-    emit_early_functions(out, module, aliases, false);
+    emit_classes(out, module, aliases, function_returns);
+    emit_early_functions(out, module, aliases, function_returns, false);
     emit_constants(out, module, aliases);
 
     for (const FunctionDecl& fn : module.functions) {
         if (emit_before_constants(fn)) {
             continue;
         }
-        emit_function_body(out, fn, aliases);
+        emit_function_body(out, fn, aliases, function_returns);
     }
     emit_static_asserts(out, module, aliases);
     return out.str();

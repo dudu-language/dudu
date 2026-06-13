@@ -14,6 +14,7 @@ add_library(dudu_frontend
     src/dudu/cpp_expr_builtins.cpp
     src/dudu/cpp_lower.cpp
     src/dudu/cpp_stmt_emit.cpp
+    src/dudu/cpp_stmt_types.cpp
     src/dudu/cpp_type.cpp
     src/dudu/escapes.cpp
     src/dudu/format.cpp

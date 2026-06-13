@@ -1,6 +1,7 @@
 #include "dudu/cpp_stmt_emit.hpp"
 
 #include "dudu/cpp_lower.hpp"
+#include "dudu/cpp_stmt_types.hpp"
 
 #include <cctype>
 #include <map>
@@ -302,7 +303,8 @@ void emit_source_comment(std::ostringstream& out, const RawStmt& stmt, int depth
 void emit_simple_statement(std::ostringstream& out, const RawStmt& stmt, int depth,
                            const std::vector<std::string>& aliases,
                            std::map<std::string, std::string>& locals,
-                           const std::string& return_type) {
+                           const std::string& return_type,
+                           const std::map<std::string, std::string>& function_returns) {
     const std::string text = trim_copy(stmt.text);
     const size_t colon = find_top_level_colon(text);
     const size_t assign = find_top_level_assignment(text);
@@ -382,7 +384,9 @@ void emit_simple_statement(std::ostringstream& out, const RawStmt& stmt, int dep
                 }
                 out << ";\n";
             } else {
-                locals.emplace(lhs, "auto");
+                const std::string inferred =
+                    infer_emitted_local_type(raw_value, locals, function_returns);
+                locals.emplace(lhs, inferred.empty() ? "auto" : inferred);
                 out << indent(depth) << "auto " << lhs << " = " << value << ";\n";
             }
             return;
@@ -393,15 +397,16 @@ void emit_simple_statement(std::ostringstream& out, const RawStmt& stmt, int dep
 
 void emit_raw_statement(std::ostringstream& out, const RawStmt& stmt, int depth,
                         const std::vector<std::string>& aliases,
-                        std::map<std::string, std::string>& locals,
-                        const std::string& return_type) {
+                        std::map<std::string, std::string>& locals, const std::string& return_type,
+                        const std::map<std::string, std::string>& function_returns) {
     const std::string text = trim_copy(stmt.text);
     emit_source_comment(out, stmt, depth);
     if (starts_with(text, "if ")) {
         const std::string condition = strip_trailing_colon(text.substr(3));
         out << indent(depth) << if_keyword_for_condition(condition) << " ("
             << lower_expr(condition, aliases, locals) << ") {\n";
-        emit_raw_block(out, stmt.children, depth + 1, aliases, locals, return_type);
+        emit_raw_block(out, stmt.children, depth + 1, aliases, locals, return_type,
+                       function_returns);
         out << indent(depth) << "}\n";
         return;
     }
@@ -409,20 +414,23 @@ void emit_raw_statement(std::ostringstream& out, const RawStmt& stmt, int depth,
         const std::string condition = strip_trailing_colon(text.substr(5));
         out << indent(depth) << "else " << if_keyword_for_condition(condition) << " ("
             << lower_expr(condition, aliases, locals) << ") {\n";
-        emit_raw_block(out, stmt.children, depth + 1, aliases, locals, return_type);
+        emit_raw_block(out, stmt.children, depth + 1, aliases, locals, return_type,
+                       function_returns);
         out << indent(depth) << "}\n";
         return;
     }
     if (text == "else:") {
         out << indent(depth) << "else {\n";
-        emit_raw_block(out, stmt.children, depth + 1, aliases, locals, return_type);
+        emit_raw_block(out, stmt.children, depth + 1, aliases, locals, return_type,
+                       function_returns);
         out << indent(depth) << "}\n";
         return;
     }
     if (starts_with(text, "while ")) {
         out << indent(depth) << "while ("
             << lower_expr(strip_trailing_colon(text.substr(6)), aliases, locals) << ") {\n";
-        emit_raw_block(out, stmt.children, depth + 1, aliases, locals, return_type);
+        emit_raw_block(out, stmt.children, depth + 1, aliases, locals, return_type,
+                       function_returns);
         out << indent(depth) << "}\n";
         return;
     }
@@ -449,19 +457,21 @@ void emit_raw_statement(std::ostringstream& out, const RawStmt& stmt, int depth,
                 out << indent(depth) << "for (" << binding_type << ' ' << binding << " = " << start
                     << "; " << binding << " < " << end << "; " << binding << " += " << step
                     << ") {\n";
-                emit_raw_block(out, stmt.children, depth + 1, aliases, locals, return_type);
+                emit_raw_block(out, stmt.children, depth + 1, aliases, locals, return_type,
+                               function_returns);
                 out << indent(depth) << "}\n";
                 return;
             }
             const std::string loop_type = typed == std::string::npos ? "auto&&" : binding_type;
             out << indent(depth) << "for (" << loop_type << ' ' << binding << " : " << range
                 << ") {\n";
-            emit_raw_block(out, stmt.children, depth + 1, aliases, locals, return_type);
+            emit_raw_block(out, stmt.children, depth + 1, aliases, locals, return_type,
+                           function_returns);
             out << indent(depth) << "}\n";
             return;
         }
     }
-    emit_simple_statement(out, stmt, depth, aliases, locals, return_type);
+    emit_simple_statement(out, stmt, depth, aliases, locals, return_type, function_returns);
 }
 
 } // namespace
@@ -474,10 +484,11 @@ void emit_raw_block(std::ostringstream& out, const std::vector<RawStmt>& body, i
 void emit_raw_block(std::ostringstream& out, const std::vector<RawStmt>& body, int depth,
                     const std::vector<std::string>& aliases,
                     const std::map<std::string, std::string>& initial_locals,
-                    const std::string& return_type) {
+                    const std::string& return_type,
+                    const std::map<std::string, std::string>& function_returns) {
     std::map<std::string, std::string> locals = initial_locals;
     for (const RawStmt& stmt : body) {
-        emit_raw_statement(out, stmt, depth, aliases, locals, return_type);
+        emit_raw_statement(out, stmt, depth, aliases, locals, return_type, function_returns);
     }
 }
 

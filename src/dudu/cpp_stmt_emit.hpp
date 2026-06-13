@@ -14,6 +14,7 @@ void emit_raw_block(std::ostringstream& out, const std::vector<RawStmt>& body, i
 void emit_raw_block(std::ostringstream& out, const std::vector<RawStmt>& body, int depth,
                     const std::vector<std::string>& aliases,
                     const std::map<std::string, std::string>& locals,
-                    const std::string& return_type = {});
+                    const std::string& return_type = {},
+                    const std::map<std::string, std::string>& function_returns = {});
 
 } // namespace dudu
