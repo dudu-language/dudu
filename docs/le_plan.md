@@ -196,9 +196,9 @@ push. They are not release packaging work.
 
    Current optional probes pass for glm, OpenCV, sqlite, threading, POSIX mmap,
    POSIX pthread, raylib, SDL3, GLFW, OpenCL, Vulkan, and FFmpeg on this
-   machine. raylib and SDL3 are installed as normal `/usr/local` pkg-config
-   packages here because Ubuntu 24.04 apt does not provide useful dev packages
-   for them.
+   machine. Optional dev-only dependencies can be installed into the ignored
+   `third_party/install` prefix with `scripts/setup_dev_deps.sh`; the main Dudu
+   build does not require them.
 
 3. Broader namespace constants
 

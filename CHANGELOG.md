@@ -59,6 +59,8 @@
   assignments.
 - Fixed aliased native C/C++ record types such as `rl.Vector2` resolving as
   aliases of their underlying header types during overload checks.
+- Added opt-in developer dependency setup for local raylib/SDL3 probe installs
+  under the ignored `third_party/` directory.
 
 ### Changed
 

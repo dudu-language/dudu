@@ -52,6 +52,13 @@ The starting point is:
 Build the compiler:
 
 ```sh
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+```
+
+Build the compiler with developer tests enabled:
+
+```sh
 ./scripts/build.sh
 ```
 
@@ -152,6 +159,28 @@ Validate the checked-in examples that do not need external libraries:
 
 ```sh
 ./scripts/test.sh
+```
+
+Run optional native interop probes:
+
+```sh
+./scripts/probe_optional.sh
+```
+
+These probes compile examples against real libraries such as raylib, SDL3,
+OpenCV, Vulkan, and FFmpeg when those libraries are available. They are for
+Dudu compiler development, not for normal users building the compiler. Missing
+packages are skipped.
+
+For dev machines that do not have raylib or SDL3 through the system package
+manager, install local probe-only copies into the ignored `third_party/`
+directory:
+
+```sh
+./scripts/setup_dev_deps.sh raylib
+./scripts/setup_dev_deps.sh sdl3
+source scripts/dev_env.sh
+./scripts/probe_optional.sh
 ```
 
 Run the scalar-loop benchmark comparison:

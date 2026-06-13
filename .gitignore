@@ -1,9 +1,11 @@
 build/
 build-*/
+third_party/
 .cache/
 .idea/
 .vscode/
 compile_commands.json
+.dudu_native_headers_*
 *.o
 *.obj
 *.a

@@ -2,6 +2,7 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$repo_root/scripts/dev_env.sh"
 "$repo_root/scripts/build.sh" >/dev/null
 
 probe_glm() {
