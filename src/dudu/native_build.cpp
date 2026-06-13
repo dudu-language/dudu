@@ -23,6 +23,15 @@ std::string native_lib_flag(const std::string& lib) {
     return lib.empty() || lib.front() == '-' ? lib : "-l" + lib;
 }
 
+void append_source_files(std::string& command, const ProjectConfig& config) {
+    for (const std::string& source : config.cpp_sources) {
+        command += " " + shell_quote_arg(source);
+    }
+    for (const std::string& source : config.c_sources) {
+        command += " " + shell_quote_arg(source);
+    }
+}
+
 void trim_ascii_whitespace(std::string& value) {
     while (!value.empty() && std::isspace(static_cast<unsigned char>(value.back())) != 0) {
         value.pop_back();
@@ -283,11 +292,16 @@ std::filesystem::path build_executable(const NativeBuildOptions& options, const 
         if (options.config.target_kind == "shared_library") {
             command += "-fPIC -shared ";
         }
-        command += shell_quote_path(cpp_path) + " -o " + shell_quote_path(output) + common_flags;
+        command += shell_quote_path(cpp_path);
+        append_source_files(command, options.config);
+        command += " -o " + shell_quote_path(output) + common_flags;
     }
     if (options.config.target_kind != "library") {
         for (const std::string& lib : options.config.libs) {
             command += " " + shell_quote_arg(native_lib_flag(lib));
+        }
+        for (const std::string& flag : options.config.link_flags) {
+            command += " " + shell_quote_arg(flag);
         }
     }
     write_compile_commands(output, cpp_path, command);

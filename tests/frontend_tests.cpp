@@ -3,6 +3,7 @@
 #include "dudu/lexer.hpp"
 #include "dudu/native_headers.hpp"
 #include "dudu/parser.hpp"
+#include "dudu/project_config.hpp"
 #include "dudu/sema.hpp"
 
 #include <cassert>
@@ -267,6 +268,52 @@ void test_native_header_collision(const std::filesystem::path& root) {
     assert(failed);
 }
 
+void test_project_driver_config(const std::filesystem::path& root) {
+    const std::filesystem::path dir = root / "build" / "project-driver-config-test";
+    std::filesystem::create_directories(dir);
+    const std::filesystem::path config_path = dir / "dudu.toml";
+    {
+        std::ofstream out(config_path);
+        out << "name = \"tool\"\n"
+               "entry = \"src/main.dd\"\n"
+               "\n"
+               "[cxx]\n"
+               "standard = \"c++23\"\n"
+               "compiler = \"clang++\"\n"
+               "\n"
+               "[include]\n"
+               "paths = [\"src\", \"include\"]\n"
+               "\n"
+               "[sources]\n"
+               "cpp = [\"src/native.cpp\"]\n"
+               "c = [\"src/native.c\"]\n"
+               "\n"
+               "[pkg]\n"
+               "libs = [\"raylib\"]\n"
+               "\n"
+               "[link]\n"
+               "paths = [\"lib\"]\n"
+               "libs = [\"m\"]\n"
+               "flags = [\"-pthread\"]\n"
+               "\n"
+               "[build]\n"
+               "dir = \"out\"\n";
+    }
+    const dudu::ProjectConfig config = dudu::parse_project_config(config_path);
+    assert(config.name == "tool");
+    assert(config.main == "src/main.dd");
+    assert(config.cpp_std == "c++23");
+    assert(config.compiler == "clang++");
+    assert(config.include_dirs.size() == 2);
+    assert(config.cpp_sources.size() == 1);
+    assert(config.c_sources.size() == 1);
+    assert(config.pkg_config_packages.size() == 1);
+    assert(config.lib_dirs.size() == 1);
+    assert(config.libs.size() == 1);
+    assert(config.link_flags.size() == 1);
+    assert(config.build_dir == "out");
+}
+
 void test_image_filter_emission(const std::filesystem::path& root) {
     const std::filesystem::path path = root / "examples" / "image_filter.dd";
     const dudu::ModuleAst module = dudu::parse_source(read_file(path), path);
@@ -292,6 +339,7 @@ int main() {
         test_native_type_declaration_emission();
         test_native_header_type_scan(root);
         test_native_header_collision(root);
+        test_project_driver_config(root);
         test_image_filter_emission(root);
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';

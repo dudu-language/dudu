@@ -8,6 +8,7 @@ option(DUDU_WARN_AS_ERROR "Treat warnings as errors" ON)
 add_library(dudu_frontend
     src/dudu/ast.cpp
     src/dudu/build_flags.cpp
+    src/dudu/cmake_emit.cpp
     src/dudu/control_flow.cpp
     src/dudu/cpp_emit.cpp
     src/dudu/cpp_emit_prelude.cpp
@@ -30,6 +31,7 @@ add_library(dudu_frontend
     src/dudu/parser.cpp
     src/dudu/parser_utils.cpp
     src/dudu/project_config.cpp
+    src/dudu/project_driver.cpp
     src/dudu/sema.cpp
     src/dudu/sema_alloc.cpp
     src/dudu/sema_bindings.cpp

@@ -1,0 +1,71 @@
+#include "dudu/project_driver.hpp"
+
+#include <filesystem>
+#include <fstream>
+#include <stdexcept>
+#include <string>
+
+namespace dudu {
+namespace {
+
+[[noreturn]] void fail(const std::string& message) {
+    throw std::runtime_error(message);
+}
+
+void write_new_file(const std::filesystem::path& path, const std::string& text) {
+    if (std::filesystem::exists(path)) {
+        fail("refusing to overwrite " + path.string());
+    }
+    std::filesystem::create_directories(path.parent_path().empty() ? "." : path.parent_path());
+    std::ofstream out(path);
+    if (!out) {
+        fail("could not write " + path.string());
+    }
+    out << text;
+}
+
+std::string project_name(const std::filesystem::path& dir) {
+    const std::filesystem::path name = dir.filename();
+    return name.empty() || name == "." ? "dudu_app" : name.string();
+}
+
+} // namespace
+
+void init_project(const std::filesystem::path& dir) {
+    const std::string name = project_name(dir);
+    write_new_file(dir / "dudu.toml",
+                   "name = \"" + name + "\"\n"
+                   "entry = \"src/main.dd\"\n"
+                   "\n"
+                   "[cxx]\n"
+                   "standard = \"c++20\"\n"
+                   "\n"
+                   "[build]\n"
+                   "dir = \"build\"\n");
+    write_new_file(dir / "src" / "main.dd",
+                   "def main() -> i32:\n"
+                   "    print(\"hello from dudu\")\n"
+                   "    return 0\n");
+    write_new_file(dir / "CHANGELOG.md",
+                   "# Changelog\n"
+                   "\n"
+                   "## [Unreleased]\n"
+                   "\n"
+                   "### Added\n"
+                   "\n"
+                   "### Changed\n"
+                   "\n"
+                   "### Fixed\n");
+    write_new_file(dir / "README.md", "# " + name + "\n\nRun with:\n\n```bash\ndudu run\n```\n");
+    write_new_file(dir / ".gitignore", "build/\n");
+}
+
+void new_project(const std::filesystem::path& dir) {
+    if (std::filesystem::exists(dir) && !std::filesystem::is_empty(dir)) {
+        fail("project directory is not empty: " + dir.string());
+    }
+    std::filesystem::create_directories(dir);
+    init_project(dir);
+}
+
+} // namespace dudu

@@ -44,7 +44,7 @@ CMake replacement, or a walled garden.
 - Do not make Dudu dependencies source-only.
 - Do not make `dudu.toml` required for `duc emit`, `duc check`, or explicit
   compiler-driver workflows.
-- Do not promise portable binary dependency management in the first version.
+- Do not promise portable binary dependency management.
 
 ## Command Split
 
@@ -144,12 +144,14 @@ flags = []
 dir = "build"
 ```
 
-Open questions for implementation:
+Target decisions:
 
-- whether `entry` should become `[targets.app] entry = ...` immediately.
-- whether tests should be separate targets or a convention under `tests/`.
-- whether `compiler` should default to `c++`, `clang++`, or the platform CMake
-  compiler.
+- Single-target projects use top-level `entry`.
+- Multi-target projects use `[targets.<name>]`.
+- Test functions use explicit `@test`; test executables may also be configured
+  as native targets.
+- The native build compiler defaults to `$CXX` when set, then `c++`.
+- Generated CMake projects use CMake's selected C++ compiler.
 
 ## Targets
 
@@ -182,6 +184,55 @@ dudu run app
 dudu test
 dudu build tests
 ```
+
+## Script Entries
+
+Projects may contain more than one file with a `main` function.
+
+The selected entry is the only executable entry point for a build or run:
+
+```text
+dudu run
+dudu run src/tools/pack_assets.dd
+duc run src/tools/pack_assets.dd
+```
+
+Rules:
+
+- `dudu run` uses the configured project entry.
+- `dudu run path/to/file.dd` treats that file as a script-like executable.
+- `duc run path/to/file.dd` keeps the same low-level explicit behavior.
+- Imported modules may contain helper functions, including functions named
+  `main`; only the selected entry file's `main` should lower to C++ `main`.
+- If the selected entry has no `main`, report an error. Top-level script
+  statements are not part of Dudu.
+
+## Tests
+
+Use explicit `@test` functions rather than name-based `test_*` discovery.
+
+```python
+@test
+def add_works():
+    assert add(2, 3) == 5
+```
+
+Rules:
+
+- `@test` functions take no args.
+- `@test` functions may return `void`, `bool`, or `i32`.
+- `void` passes unless an assertion fails.
+- `bool` passes when it returns `true`.
+- `i32` passes when it returns zero.
+- `dudu test` discovers `@test` functions and builds a test harness.
+- `dudu test src/math.dd` runs tests from one module.
+- `dudu test add_works` runs one named test.
+- `dudu test --filter add` filters by substring.
+- A module may contain both `main` and `@test` functions. `main` is ignored in
+  test harness mode unless the module is built as an executable target.
+
+The current `dudu test` command delegates to a configured native test command
+or `scripts/test.sh`.
 
 ## Native Build Inputs
 

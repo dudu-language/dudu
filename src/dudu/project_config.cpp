@@ -145,12 +145,16 @@ ProjectConfig parse_project_config(const std::filesystem::path& path) {
         }
         if (section.empty() && name == "name") {
             config.name = unquote(value);
-        } else if (section.empty() && name == "main") {
+        } else if (section.empty() && (name == "main" || name == "entry")) {
             config.main = unquote(value);
         } else if (section.empty() && name == "build_dir") {
             config.build_dir = unquote(value);
         } else if (section.empty() && name == "cpp_std") {
             config.cpp_std = unquote(value);
+        } else if (section == "cxx" && name == "standard") {
+            config.cpp_std = unquote(value);
+        } else if (section == "cxx" && name == "compiler") {
+            config.compiler = unquote(value);
         } else if (section == "target" && name == "kind") {
             config.target_kind = unquote(value);
             validate_one_of(path, line, "kind", config.target_kind,
@@ -168,16 +172,32 @@ ProjectConfig parse_project_config(const std::filesystem::path& path) {
             config.compiler = unquote(value);
         } else if (section == "cc" && name == "include_dirs") {
             config.include_dirs = parse_string_array(path, line, value);
+        } else if (section == "include" && name == "paths") {
+            config.include_dirs = parse_string_array(path, line, value);
+        } else if (section == "sources" && name == "cpp") {
+            config.cpp_sources = parse_string_array(path, line, value);
+        } else if (section == "sources" && name == "c") {
+            config.c_sources = parse_string_array(path, line, value);
         } else if (section == "cc" && name == "lib_dirs") {
             config.lib_dirs = parse_string_array(path, line, value);
+        } else if (section == "link" && name == "paths") {
+            config.lib_dirs = parse_string_array(path, line, value);
         } else if (section == "cc" && name == "libs") {
+            config.libs = parse_string_array(path, line, value);
+        } else if (section == "link" && name == "libs") {
             config.libs = parse_string_array(path, line, value);
         } else if (section == "cc" && name == "defines") {
             config.defines = parse_string_array(path, line, value);
         } else if (section == "cc" && name == "flags") {
             config.flags = parse_string_array(path, line, value);
+        } else if (section == "link" && name == "flags") {
+            config.link_flags = parse_string_array(path, line, value);
         } else if (section == "pkg_config" && name == "packages") {
             config.pkg_config_packages = parse_string_array(path, line, value);
+        } else if (section == "pkg" && name == "libs") {
+            config.pkg_config_packages = parse_string_array(path, line, value);
+        } else if (section == "build" && name == "dir") {
+            config.build_dir = unquote(value);
         } else if (section == "cmake" && name == "enabled") {
             config.cmake_enabled = parse_bool_value(path, line, value);
         } else if (section == "build") {

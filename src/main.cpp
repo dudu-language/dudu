@@ -1,10 +1,12 @@
 #include "dudu/cpp_emit.hpp"
+#include "dudu/cmake_emit.hpp"
 #include "dudu/format_path.hpp"
 #include "dudu/module_loader.hpp"
 #include "dudu/native_build.hpp"
 #include "dudu/native_headers.hpp"
 #include "dudu/parser.hpp"
 #include "dudu/project_config.hpp"
+#include "dudu/project_driver.hpp"
 #include "dudu/sema.hpp"
 
 #include <cstdlib>
@@ -34,6 +36,8 @@ struct Options {
     bool cmake = false;
     bool emit_cpp = false;
     bool format = false;
+    bool init_project = false;
+    bool new_project = false;
     bool run = false;
     bool test = false;
     bool verbose = false;
@@ -43,7 +47,18 @@ struct Options {
     throw std::runtime_error(message);
 }
 
-void print_usage() {
+void print_usage(bool project_driver = false) {
+    if (project_driver) {
+        std::cout << "usage: dudu init\n"
+                     "       dudu new <name>\n"
+                     "       dudu run [input.dd] [-o output]\n"
+                     "       dudu build [input.dd] [-o output]\n"
+                     "       dudu check [input.dd|dir]\n"
+                     "       dudu fmt <input.dd|dir> [--check]\n"
+                     "       dudu test\n"
+                     "       dudu cmake [input.dd] [-o CMakeLists.txt]\n";
+        return;
+    }
     std::cout << "usage: duc bench [args...]\n"
                  "       duc build [input.dd] [-o output]\n"
                  "       duc check [input.dd]\n"
@@ -77,10 +92,16 @@ std::filesystem::path build_config_path(const std::filesystem::path& input) {
     return "dudu.toml";
 }
 
-Options parse_options(int argc, char** argv) {
+Options parse_options(int argc, char** argv, bool project_driver) {
     Options options;
     int first_arg = 1;
-    if (argc > 1 && std::string(argv[1]) == "build") {
+    if (project_driver && argc > 1 && std::string(argv[1]) == "init") {
+        options.init_project = true;
+        first_arg = 2;
+    } else if (project_driver && argc > 1 && std::string(argv[1]) == "new") {
+        options.new_project = true;
+        first_arg = 2;
+    } else if (argc > 1 && std::string(argv[1]) == "build") {
         options.build = true;
         first_arg = 2;
     } else if (argc > 1 && std::string(argv[1]) == "bench") {
@@ -113,7 +134,7 @@ Options parse_options(int argc, char** argv) {
             continue;
         }
         if (arg == "-h" || arg == "--help") {
-            print_usage();
+            print_usage(project_driver);
             std::exit(0);
         }
         if (arg == "--version") {
@@ -193,14 +214,15 @@ Options parse_options(int argc, char** argv) {
         fail("unexpected argument: " + arg);
     }
     if (options.input.empty() && !options.bench && !options.build && !options.check &&
-        !options.cmake && !options.emit_cpp && !options.run && !options.test) {
+        !options.cmake && !options.emit_cpp && !options.init_project && !options.new_project &&
+        !options.run && !options.test) {
         fail("missing input file");
     }
     return options;
 }
 
 Options resolve_project_input(Options options) {
-    if (options.bench || options.test) {
+    if (options.bench || options.init_project || options.new_project || options.test) {
         return options;
     }
     if (!options.input.empty()) {
@@ -276,94 +298,6 @@ std::filesystem::path default_build_output(const dudu::ProjectConfig& config,
     return config.build_dir.empty() ? filename : config.build_dir / filename;
 }
 
-std::string cmake_quote(const std::string& value) {
-    std::string out = "\"";
-    for (const char c : value) {
-        if (c == '"' || c == '\\') {
-            out.push_back('\\');
-        }
-        out.push_back(c);
-    }
-    out.push_back('"');
-    return out;
-}
-
-std::filesystem::path project_relative_path(const std::filesystem::path& project_dir,
-                                            const std::string& value) {
-    const std::filesystem::path path = value;
-    return path.is_absolute() ? path : std::filesystem::absolute(project_dir / path);
-}
-
-void emit_cmake_list_values(std::ostringstream& out, std::string_view prefix,
-                            const std::vector<std::string>& values,
-                            const std::filesystem::path* project_dir = nullptr) {
-    if (values.empty()) {
-        return;
-    }
-    out << prefix;
-    for (const std::string& value : values) {
-        const std::string emitted =
-            project_dir == nullptr ? value : project_relative_path(*project_dir, value).string();
-        out << ' ' << cmake_quote(emitted);
-    }
-    out << ")\n";
-}
-
-void emit_cmake_depends(std::ostringstream& out, const std::vector<std::filesystem::path>& files) {
-    out << "    DEPENDS";
-    for (const std::filesystem::path& file : files) {
-        out << ' ' << cmake_quote(file.string());
-    }
-    out << "\n";
-}
-
-std::string cmake_cpp_standard(const std::string& cpp_std) {
-    if (cpp_std.size() > 3 && cpp_std.substr(0, 3) == "c++") {
-        return cpp_std.substr(3);
-    }
-    return "20";
-}
-
-std::string emit_cmake_project(const dudu::ProjectConfig& config,
-                               const std::filesystem::path& input) {
-    const std::string target = config.name.empty() ? input.stem().string() : config.name;
-    const std::filesystem::path project_dir =
-        std::filesystem::absolute(input.parent_path().empty() ? "." : input.parent_path());
-    std::ostringstream out;
-    out << "cmake_minimum_required(VERSION 3.20)\n\n"
-        << "project(" << target << " LANGUAGES CXX)\n\n"
-        << "set(CMAKE_CXX_STANDARD " << cmake_cpp_standard(config.cpp_std) << ")\n"
-        << "set(CMAKE_CXX_STANDARD_REQUIRED ON)\n"
-        << "set(DUDU_EXECUTABLE duc CACHE FILEPATH \"Path to the duc compiler\")\n"
-        << "set(DUDU_PROJECT_DIR " << cmake_quote(project_dir.string()) << ")\n"
-        << "set(DUDU_SOURCE " << cmake_quote(input.filename().string()) << ")\n"
-        << "set(DUDU_GENERATED ${CMAKE_CURRENT_BINARY_DIR}/generated/" << target << ".cpp)\n\n"
-        << "add_custom_command(\n"
-        << "    OUTPUT ${DUDU_GENERATED}\n"
-        << "    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/generated\n"
-        << "    COMMAND ${DUDU_EXECUTABLE} emit ${DUDU_PROJECT_DIR}/${DUDU_SOURCE} -o "
-           "${DUDU_GENERATED}\n";
-    emit_cmake_depends(out, dudu::source_tree_files(input));
-    out << "    VERBATIM\n"
-        << ")\n\n";
-    if (config.target_kind == "library") {
-        out << "add_library(" << target << " STATIC ${DUDU_GENERATED})\n";
-    } else if (config.target_kind == "shared_library") {
-        out << "add_library(" << target << " SHARED ${DUDU_GENERATED})\n";
-    } else {
-        out << "add_executable(" << target << " ${DUDU_GENERATED})\n";
-    }
-    emit_cmake_list_values(out, "target_include_directories(" + target + " PRIVATE",
-                           config.include_dirs, &project_dir);
-    emit_cmake_list_values(out, "target_compile_definitions(" + target + " PRIVATE",
-                           config.defines);
-    emit_cmake_list_values(out, "target_compile_options(" + target + " PRIVATE", config.flags);
-    emit_cmake_list_values(out, "target_link_directories(" + target + " PRIVATE", config.lib_dirs,
-                           &project_dir);
-    emit_cmake_list_values(out, "target_link_libraries(" + target + " PRIVATE", config.libs);
-    return out.str();
-}
-
 dudu::ModuleAst checked_module(const Options& options, const std::string& source,
                                bool check_bodies) {
     dudu::ModuleAst module = options.input.empty() ? dudu::parse_source(source, options.input)
@@ -407,7 +341,21 @@ bool check_source_path(const Options& options) {
 
 int main(int argc, char** argv) {
     try {
-        const Options options = resolve_project_input(parse_options(argc, argv));
+        const std::string executable =
+            argc > 0 ? std::filesystem::path(argv[0]).stem().string() : "duc";
+        const bool project_driver = executable == "dudu";
+        const Options options = resolve_project_input(parse_options(argc, argv, project_driver));
+        if (options.init_project) {
+            dudu::init_project(".");
+            return 0;
+        }
+        if (options.new_project) {
+            if (options.input.empty()) {
+                fail("dudu new requires a project name");
+            }
+            dudu::new_project(options.input);
+            return 0;
+        }
         if (options.bench) {
             return run_project_benchmarks(options);
         }
@@ -427,7 +375,7 @@ int main(int argc, char** argv) {
         }
         if (options.cmake) {
             const dudu::ProjectConfig config = config_for_input(options.input);
-            write_text_output(options.output, emit_cmake_project(config, options.input));
+            write_text_output(options.output, dudu::emit_cmake_project(config, options.input));
             return 0;
         }
         const std::string source = read_text_file(options.input);
