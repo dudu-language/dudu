@@ -1,0 +1,7 @@
+name = "default_tool"
+main = "main.dd"
+build_dir = "../../../build/project_default_output"
+cpp_std = "c++20"
+
+[cmake]
+enabled = true

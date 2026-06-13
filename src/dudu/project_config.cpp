@@ -57,6 +57,17 @@ std::string unquote(std::string value) {
     return value;
 }
 
+bool parse_bool_value(const std::filesystem::path& path, const std::string& line,
+                      const std::string& value) {
+    if (value == "true") {
+        return true;
+    }
+    if (value == "false") {
+        return false;
+    }
+    fail(path, "expected boolean", line);
+}
+
 std::vector<std::string> parse_string_array(const std::filesystem::path& path,
                                             const std::string& line, std::string value) {
     value = trim_copy(std::move(value));
@@ -117,8 +128,12 @@ ProjectConfig parse_project_config(const std::filesystem::path& path) {
         if (name.empty() || value.empty()) {
             fail(path, section == "build" ? "invalid [build] entry" : "invalid entry", line);
         }
-        if (section.empty() && name == "main") {
+        if (section.empty() && name == "name") {
+            config.name = unquote(value);
+        } else if (section.empty() && name == "main") {
             config.main = unquote(value);
+        } else if (section.empty() && name == "build_dir") {
+            config.build_dir = unquote(value);
         } else if (section.empty() && name == "cpp_std") {
             config.cpp_std = unquote(value);
         } else if (section == "target" && name == "kind") {
@@ -148,6 +163,8 @@ ProjectConfig parse_project_config(const std::filesystem::path& path) {
             config.flags = parse_string_array(path, line, value);
         } else if (section == "pkg_config" && name == "packages") {
             config.pkg_config_packages = parse_string_array(path, line, value);
+        } else if (section == "cmake" && name == "enabled") {
+            config.cmake_enabled = parse_bool_value(path, line, value);
         } else if (section == "build") {
             config.build_values[name] = value;
         } else {

@@ -243,6 +243,21 @@ dudu::ProjectConfig config_for_input(const std::filesystem::path& input) {
     return dudu::parse_project_config(build_config_path(input));
 }
 
+std::filesystem::path default_build_output(const dudu::ProjectConfig& config,
+                                           const std::filesystem::path& input) {
+    if (config.name.empty() && config.build_dir.empty()) {
+        return "a.out";
+    }
+    const std::string name = config.name.empty() ? input.stem().string() : config.name;
+    std::filesystem::path filename = name;
+    if (config.target_kind == "library") {
+        filename = "lib" + name + ".a";
+    } else if (config.target_kind == "shared_library") {
+        filename = "lib" + name + ".so";
+    }
+    return config.build_dir.empty() ? filename : config.build_dir / filename;
+}
+
 dudu::ModuleAst checked_module(const Options& options, const std::string& source,
                                bool check_bodies) {
     dudu::ModuleAst module = options.input.empty() ? dudu::parse_source(source, options.input)
@@ -303,9 +318,11 @@ int main(int argc, char** argv) {
         }
         const std::string source = read_text_file(options.input);
         if (options.build) {
+            const dudu::ProjectConfig config =
+                dudu::parse_project_config(build_config_path(options.input));
             (void)dudu::build_executable(
-                {.output = options.output.value_or("a.out"),
-                 .config = dudu::parse_project_config(build_config_path(options.input)),
+                {.output = options.output.value_or(default_build_output(config, options.input)),
+                 .config = config,
                  .verbose = options.verbose},
                 dudu::emit_cpp_source(checked_module(options, source, true)));
             return 0;
@@ -316,7 +333,7 @@ int main(int argc, char** argv) {
                 fail("cannot run target kind: " + config.target_kind);
             }
             const std::filesystem::path bin = dudu::build_executable(
-                {.output = options.output.value_or("a.out"),
+                {.output = options.output.value_or(default_build_output(config, options.input)),
                  .config = config,
                  .verbose = options.verbose},
                 dudu::emit_cpp_source(checked_module(options, source, true)));

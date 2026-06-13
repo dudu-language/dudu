@@ -194,6 +194,21 @@ if [[ "$project_cc_status" -ne 42 ]]; then
     echo "project_cc returned $project_cc_status, expected 42" >&2
     exit 1
 fi
+(
+    cd "$repo_root/tests/fixtures/project_default_output"
+    "$repo_root/build/duc" build --verbose 2>"$repo_root/build/project_default_output_verbose.err"
+)
+test -x "$repo_root/build/project_default_output/default_tool"
+grep -q "project_default_output/default_tool.cpp" \
+    "$repo_root/build/project_default_output_verbose.err"
+set +e
+"$repo_root/build/project_default_output/default_tool"
+project_default_output_status=$?
+set -e
+if [[ "$project_default_output_status" -ne 42 ]]; then
+    echo "project_default_output returned $project_default_output_status, expected 42" >&2
+    exit 1
+fi
 fake_pkg_config="$repo_root/build/fake-pkg-config"
 cat >"$fake_pkg_config" <<'SH'
 #!/usr/bin/env bash
