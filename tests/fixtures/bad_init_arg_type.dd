@@ -1,0 +1,10 @@
+class Counter:
+    value: i32
+
+    def __init__(self, seed: bool):
+        self.value = i32(seed)
+
+
+def main() -> i32:
+    counter = Counter(1)
+    return counter.value

@@ -1,8 +1,8 @@
 class Counter:
     value: i32
 
-    def __init__(self, seed: i32):
-        self.value = seed + 1
+    def __init__(self, seed: i32, bonus: i32):
+        self.value = seed + bonus + 1
 
 
 class Tracker:
@@ -13,7 +13,7 @@ class Tracker:
 
 
 def main() -> i32:
-    counter = Counter(40)
+    counter = Counter(39, 1)
     value: i32 = counter.value
     tracker: *Tracker = new[Tracker](&value)
     delete tracker

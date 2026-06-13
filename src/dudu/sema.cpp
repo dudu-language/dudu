@@ -8,6 +8,7 @@
 #include "dudu/sema_alloc.hpp"
 #include "dudu/sema_bindings.hpp"
 #include "dudu/sema_constexpr.hpp"
+#include "dudu/sema_constructors.hpp"
 #include "dudu/sema_context.hpp"
 #include "dudu/sema_expr.hpp"
 #include "dudu/sema_function_type.hpp"
@@ -70,6 +71,7 @@ void check_constructor_args(const FunctionScope& scope, const ClassDecl& klass,
                             const std::vector<std::string>& args, const SourceLocation* location) {
     if (location == nullptr)
         return;
+    const std::vector<ConstructorParam> expected = constructor_params(klass);
     std::set<std::string> named_fields;
     size_t positional = 0;
     for (const std::string& arg : args) {
@@ -79,16 +81,16 @@ void check_constructor_args(const FunctionScope& scope, const ClassDecl& klass,
                 fail(*location,
                      "positional constructor argument after named fields: " + klass.name);
             }
-            if (positional >= klass.fields.size()) {
+            if (positional >= expected.size()) {
                 fail(*location, "constructor " + klass.name + " expects at most " +
-                                    std::to_string(klass.fields.size()) + " arguments, got " +
+                                    std::to_string(expected.size()) + " arguments, got " +
                                     std::to_string(args.size()));
             }
-            const FieldDecl& field = klass.fields[positional];
+            const ConstructorParam& param = expected[positional];
             const std::string got = infer_expr(scope, arg, location);
-            if (!can_assign_expr(scope, field.type, arg, got)) {
+            if (!can_assign_expr(scope, param.type, arg, got)) {
                 fail(*location, "constructor " + klass.name + " argument " +
-                                    std::to_string(positional + 1) + " expects " + field.type +
+                                    std::to_string(positional + 1) + " expects " + param.type +
                                     ", got " + got);
             }
             ++positional;
@@ -97,20 +99,20 @@ void check_constructor_args(const FunctionScope& scope, const ClassDecl& klass,
         const std::string name = trim(arg.substr(0, equal));
         if (!named_fields.insert(name).second)
             fail(*location, "duplicate constructor field: " + name);
-        const FieldDecl* field = nullptr;
-        for (const FieldDecl& candidate : klass.fields) {
+        const ConstructorParam* param = nullptr;
+        for (const ConstructorParam& candidate : expected) {
             if (candidate.name == name) {
-                field = &candidate;
+                param = &candidate;
                 break;
             }
         }
-        if (field == nullptr)
+        if (param == nullptr)
             fail(*location, "unknown constructor field: " + klass.name + "." + name);
         const std::string value = arg.substr(equal + 1);
         const std::string got = infer_expr(scope, value, location);
-        if (!can_assign_expr(scope, field->type, value, got)) {
+        if (!can_assign_expr(scope, param->type, value, got)) {
             fail(*location, "constructor field " + klass.name + "." + name + " expects " +
-                                field->type + ", got " + got);
+                                param->type + ", got " + got);
         }
     }
 }
