@@ -2,6 +2,7 @@
 #include "dudu/format_path.hpp"
 #include "dudu/module_loader.hpp"
 #include "dudu/native_build.hpp"
+#include "dudu/native_headers.hpp"
 #include "dudu/parser.hpp"
 #include "dudu/project_config.hpp"
 #include "dudu/sema.hpp"
@@ -375,6 +376,9 @@ dudu::ModuleAst checked_module(const Options& options, const std::string& source
     for (const auto& [name, value] : options.build_values) {
         module.build_values[name] = value;
     }
+    const std::filesystem::path source_dir =
+        options.input.empty() ? std::filesystem::current_path() : options.input.parent_path();
+    dudu::merge_native_header_types(module, {.config = config, .source_dir = source_dir});
     dudu::analyze_module(module, {.check_bodies = check_bodies});
     return module;
 }

@@ -49,7 +49,8 @@ bool parser_needs_space_between(TokenKind previous, TokenKind current) {
 void validate_import_bindings(const std::vector<ImportDecl>& imports) {
     std::map<std::string, ImportDecl> direct;
     for (const ImportDecl& import : imports) {
-        if (import.kind == ImportKind::Module && import.alias.empty()) {
+        if ((import.kind == ImportKind::Module || is_foreign_import(import)) &&
+            import.alias.empty()) {
             continue;
         }
         const std::string name = bound_import_name(import);

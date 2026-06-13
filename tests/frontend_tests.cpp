@@ -1,6 +1,7 @@
 #include "dudu/cpp_emit.hpp"
 #include "dudu/format.hpp"
 #include "dudu/lexer.hpp"
+#include "dudu/native_headers.hpp"
 #include "dudu/parser.hpp"
 #include "dudu/sema.hpp"
 
@@ -59,6 +60,11 @@ void test_import_bindings() {
         collided = true;
     }
     assert(collided);
+
+    const dudu::ModuleAst direct_native =
+        dudu::parse_source("import cpp \"imgui.h\"\n", "direct_native.dd");
+    assert(direct_native.imports.size() == 1);
+    assert(direct_native.imports[0].alias.empty());
 }
 
 void test_canonical_examples_parse(const std::filesystem::path& root) {
@@ -209,6 +215,25 @@ void test_native_type_declaration_emission() {
     assert(cpp.find("struct SDL_Event") == std::string::npos);
 }
 
+void test_native_header_type_scan(const std::filesystem::path& root) {
+    dudu::ModuleAst module = dudu::parse_source("import c \"native_headers/simple_c.h\"\n"
+                                                "import cpp \"native_headers/simple_cpp.hpp\"\n"
+                                                "\n"
+                                                "def main() -> i32:\n"
+                                                "    event: DuduNativeEvent\n"
+                                                "    window: *DuduNativeWindow = None\n"
+                                                "    widget: DuduWidgetAlias\n"
+                                                "    return event.type + widget.value\n",
+                                                root / "tests/fixtures/native_scan.dd");
+    dudu::merge_native_header_types(
+        module, {.config = dudu::ProjectConfig{}, .source_dir = root / "tests/fixtures"});
+    dudu::analyze_module(module, {.check_bodies = true});
+    const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find("DuduNativeEvent event{};") != std::string::npos);
+    assert(cpp.find("DuduNativeWindow* window = nullptr;") != std::string::npos);
+    assert(cpp.find("DuduWidgetAlias widget{};") != std::string::npos);
+}
+
 void test_image_filter_emission(const std::filesystem::path& root) {
     const std::filesystem::path path = root / "examples" / "image_filter.dd";
     const dudu::ModuleAst module = dudu::parse_source(read_file(path), path);
@@ -232,6 +257,7 @@ int main() {
         test_formatter();
         test_typed_for_emission();
         test_native_type_declaration_emission();
+        test_native_header_type_scan(root);
         test_image_filter_emission(root);
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';

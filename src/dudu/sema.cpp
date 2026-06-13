@@ -1,5 +1,4 @@
 #include "dudu/sema.hpp"
-
 #include "dudu/build_flags.hpp"
 #include "dudu/control_flow.hpp"
 #include "dudu/cpp_lower.hpp"
@@ -18,15 +17,12 @@
 #include "dudu/sema_scan.hpp"
 #include "dudu/type_compat.hpp"
 #include "dudu/unsupported.hpp"
-
 #include <cctype>
 #include <map>
 #include <set>
 namespace dudu {
 namespace {
-[[noreturn]] void fail(const SourceLocation& location, const std::string& message) {
-    throw CompileError(location, message);
-}
+[[noreturn]] void fail(const SourceLocation& location, const std::string& message) { throw CompileError(location, message); }
 std::string infer_expr(const FunctionScope& scope, std::string expr,
                        const SourceLocation* location = nullptr);
 std::vector<std::string> call_args(std::string expr, size_t open) {
@@ -201,6 +197,8 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
         if (location != nullptr && callee.find('.') == std::string::npos &&
             callee.find('[') == std::string::npos && is_plain_identifier(callee) &&
             !known_type(scope.symbols, callee) && !is_builtin_call(callee)) {
+            if (is_dudu_all_caps(callee))
+                return "auto";
             fail(*location, "unknown function: " + callee);
         }
     }
@@ -266,6 +264,8 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
         fn != scope.symbols.function_signatures.end()) {
         return function_type(fn->second);
     }
+    if (is_dudu_all_caps(expr))
+        return "i32";
     if (location != nullptr && is_plain_identifier(expr)) {
         fail(*location, "unknown identifier: " + expr);
     }

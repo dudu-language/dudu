@@ -161,10 +161,9 @@ class Parser {
         import.kind = kind;
         import.location = start.location;
         import.module_path = consume(TokenKind::String, "expected quoted foreign header").text;
-        if (!match_identifier("as")) {
-            fail_current("foreign import requires as alias");
+        if (match_identifier("as")) {
+            import.alias = consume_identifier("expected alias after as").text;
         }
-        import.alias = consume_identifier("expected alias after as").text;
         consume(TokenKind::Newline, "expected newline after foreign import");
         return import;
     }
