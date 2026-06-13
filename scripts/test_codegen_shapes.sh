@@ -61,6 +61,14 @@ grep -Fq '#include "c_macro_wrap.h"' "$repo_root/build/c_macro_constants.cpp"
 grep -Fq "DUDU_WRAP_SCALE(5)" "$repo_root/build/c_macro_constants.cpp"
 grep -Fq "return total + DUDU_WRAP_MAGIC - 7;" "$repo_root/build/c_macro_constants.cpp"
 
+"$repo_root/build/duc" emit "$repo_root/tests/fixtures/c_lowercase_macro.dd" \
+    -o "$repo_root/build/c_lowercase_macro.cpp"
+grep -Fq "#include \"assert.h\"" "$repo_root/build/c_lowercase_macro.cpp"
+grep -Fq "assert(value == 42);" "$repo_root/build/c_lowercase_macro.cpp"
+"$repo_root/build/duc" emit "$repo_root/tests/fixtures/c_direct_lowercase_macro.dd" \
+    -o "$repo_root/build/c_direct_lowercase_macro.cpp"
+grep -Fq "assert(value == 42);" "$repo_root/build/c_direct_lowercase_macro.cpp"
+
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/lambda_callback.dd" \
     -o "$repo_root/build/function_pointer.cpp"
 grep -Fq "std::add_pointer_t<int32_t(int32_t)> callback" \

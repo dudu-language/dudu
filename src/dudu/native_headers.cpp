@@ -6,6 +6,7 @@
 #include "dudu/native_header_scope.hpp"
 #include "dudu/native_header_types.hpp"
 #include <chrono>
+#include <cctype>
 #include <cstdlib>
 #include <fstream>
 #include <map>
@@ -306,7 +307,8 @@ int macro_arity(std::string args) {
 }
 void parse_macro_dump(NativeHeaderScan& scan, const std::string& dump,
                       const SourceLocation& location) {
-    static const std::regex function_macro(R"(^#define ([A-Z_][A-Z0-9_]*)\(([^)]*)\))");
+    static const std::regex function_macro(
+        R"(^#define ([A-Za-z_][A-Za-z0-9_]*)\(([^)]*)\))");
     static const std::regex simd_function_macro(R"(^#define ((_mm|_MM_)[A-Za-z0-9_]*)\(([^)]*)\))");
     static const std::regex object_macro(R"(^#define ([A-Z_][A-Z0-9_]*)(\s|$))");
     std::istringstream in(dump);
@@ -340,6 +342,10 @@ void parse_macro_dump(NativeHeaderScan& scan, const std::string& dump,
             scan.values.push_back({.name = name, .type = "auto", .location = location});
         }
     }
+}
+bool public_direct_macro_name(const std::string& name) {
+    return !name.empty() && (std::isupper(static_cast<unsigned char>(name.front())) != 0 ||
+                             name.front() == '_');
 }
 NativeHeaderScan dedupe_scan(NativeHeaderScan scan) {
     NativeHeaderScan out;
@@ -439,6 +445,12 @@ std::vector<T> prefixed_names(const std::vector<T>& source, const std::string& p
     }
     return out;
 }
+std::vector<NativeMacroDecl> direct_macros(const std::vector<NativeMacroDecl>& source) {
+    std::vector<NativeMacroDecl> out;
+    for (const NativeMacroDecl& item : source)
+        if (public_direct_macro_name(item.name)) out.push_back(item);
+    return out;
+}
 } // namespace
 NativeHeaderScan scan_native_headers(const ModuleAst& module, const NativeHeaderOptions& options) {
     const std::string flags = scanner_flags(options);
@@ -453,7 +465,7 @@ NativeHeaderScan scan_native_headers(const ModuleAst& module, const NativeHeader
             append_unique(out.classes, scan.classes);
             append_unique(out.values, scan.values);
             append_unique_native_functions(out.functions, scan.functions);
-            append_unique(out.macros, scan.macros);
+            append_unique(out.macros, direct_macros(scan.macros));
             append_unique(out.namespaces, scan.namespaces);
         } else {
             append_unique(out.types, scan.types);

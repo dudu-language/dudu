@@ -26,5 +26,16 @@ The native header scanner plan is
 Dudu code imports Dudu modules directly. Foreign headers are the boundary to
 the C and C++ ecosystem, not the normal Dudu module interface.
 
-Macros are not part of the core interop surface. Users can write wrapper
-headers when macro-heavy APIs need a stable callable shape.
+Known imported macros are callable when the scanner can determine their arity.
+Aliased imports expose lowercase function-like macros too:
+
+```python
+import c "assert.h" as cassert
+
+def hot(x: i32):
+    cassert.assert(x > 0)
+```
+
+Direct imports keep object-like macro exposure conservative. Function-like
+macros are still callable with call syntax, so `assert expr` remains Dudu
+syntax while `assert(expr)` can call a native macro.

@@ -204,6 +204,10 @@ understanding. Dudu should not add C macro-definition syntax. Instead:
 
 - known object-like macros can be used as native passthrough expression names
 - known function-like macros can be called when their arity is known
+- aliased imports expose lowercase function-like macros, such as
+  `cassert.assert(expr)`
+- direct imports keep object-like macro exposure conservative; function-like
+  macros remain callable with call syntax, such as `assert(expr)`
 - unknown all-caps native-looking names from imported headers may be emitted as
   passthrough with a warning rather than blocking the user
 

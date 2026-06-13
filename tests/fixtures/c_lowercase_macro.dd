@@ -1,0 +1,6 @@
+import c "assert.h" as cassert
+
+def main() -> i32:
+    value: i32 = 42
+    cassert.assert(value == 42)
+    return value
