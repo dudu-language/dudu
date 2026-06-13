@@ -283,6 +283,17 @@ if grep -q "#include <iostream>" "$repo_root/build/libproject_freestanding.a.cpp
     echo "freestanding prelude unexpectedly included iostream" >&2
     exit 1
 fi
+(
+    cd "$repo_root/tests/fixtures/project_embedded_uart"
+    "$repo_root/build/duc" build -o "$repo_root/build/libproject_embedded_uart.a" --verbose \
+        2>"$repo_root/build/project_embedded_uart_verbose.err"
+)
+test -f "$repo_root/build/libproject_embedded_uart.a"
+grep -q -- "-ffreestanding" "$repo_root/build/project_embedded_uart_verbose.err"
+grep -q -- "-fno-exceptions" "$repo_root/build/project_embedded_uart_verbose.err"
+grep -q -- "-fno-rtti" "$repo_root/build/project_embedded_uart_verbose.err"
+grep -q "volatile uint32_t status" "$repo_root/build/libproject_embedded_uart.a.cpp"
+grep -q "reinterpret_cast<volatile UartRegs\\*>" "$repo_root/build/libproject_embedded_uart.a.cpp"
 if (
     cd "$repo_root/tests/fixtures/project_library"
     "$repo_root/build/duc" run -o "$repo_root/build/project_library_run"

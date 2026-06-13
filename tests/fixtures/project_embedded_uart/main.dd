@@ -1,0 +1,22 @@
+class UartRegs:
+    status: volatile[u32]
+    data: volatile[u32]
+    baud: volatile[u32]
+
+
+UART0: *volatile[UartRegs] = *volatile[UartRegs](0x4000_1000)
+
+
+def uart_ready(regs: *volatile[UartRegs]) -> bool:
+    return (regs.status & 0x01) != 0
+
+
+def uart_write_byte(regs: *volatile[UartRegs], value: u8):
+    while not uart_ready(regs):
+        pass
+
+    regs.data = u32(value)
+
+
+def write_boot_marker():
+    uart_write_byte(UART0, u8(65))
