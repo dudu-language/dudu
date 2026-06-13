@@ -160,6 +160,14 @@ class Lexer {
             push(TokenKind::Arrow, "->", line_, column);
             return 2;
         }
+        const std::string three{peek(), peek(1), peek(2)};
+        if (three == "<<=" || three == ">>=") {
+            take();
+            take();
+            take();
+            push(TokenKind::Operator, three, line_, column);
+            return 3;
+        }
         const std::string two{peek(), peek(1)};
         if (two == "==" || two == "!=" || two == "<=" || two == ">=" || two == "+=" ||
             two == "-=" || two == "*=" || two == "/=" || two == "<<" || two == ">>") {

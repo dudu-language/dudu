@@ -236,9 +236,7 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
         out << "]";
         return out.str();
     }
-    if (expr == "True" || expr == "False" || expr.find("==") != std::string::npos ||
-        expr.find("!=") != std::string::npos || expr.find("<") != std::string::npos ||
-        expr.find(">") != std::string::npos) {
+    if (expr == "True" || expr == "False" || find_top_level_comparison(expr) != std::string::npos) {
         return "bool";
     }
     const size_t op = find_top_level_operator(expr);

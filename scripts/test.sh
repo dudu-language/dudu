@@ -130,6 +130,7 @@ grep -Fq "std::add_pointer_t<int32_t(int32_t)> callback" \
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/cpp_filesystem_path.dd" -o "$repo_root/build/cpp_filesystem_path.cpp"; grep -Fq "std::filesystem::path path" "$repo_root/build/cpp_filesystem_path.cpp"; "$repo_root/build/duc" emit "$repo_root/tests/fixtures/cpp_chrono_timer.dd" -o "$repo_root/build/cpp_chrono_timer.cpp"; grep -Fq "std::chrono::duration_cast<std::chrono::milliseconds>" "$repo_root/build/cpp_chrono_timer.cpp"
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/std_vector_map_string.dd" -o "$repo_root/build/std_vector_map_string.cpp"; grep -Fq "std::vector<std::string> items" "$repo_root/build/std_vector_map_string.cpp"; grep -Fq "std::unordered_map<std::string, int32_t> scores" "$repo_root/build/std_vector_map_string.cpp"; grep -Fq "std::string label = items[0]" "$repo_root/build/std_vector_map_string.cpp"
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/binary_packet_parser.dd" -o "$repo_root/build/binary_packet_parser.cpp"; grep -Fq "struct __attribute__((packed)) PacketHeader" "$repo_root/build/binary_packet_parser.cpp"; grep -Fq "offsetof(PacketHeader, flags)" "$repo_root/build/binary_packet_parser.cpp"; grep -Fq "std::array<uint8_t, 8> bytes" "$repo_root/build/binary_packet_parser.cpp"; grep -Fq "<< 24" "$repo_root/build/binary_packet_parser.cpp"
+"$repo_root/build/duc" emit "$repo_root/tests/fixtures/bitwise_ops.dd" -o "$repo_root/build/bitwise_ops.cpp"; grep -Fq "1 << 5" "$repo_root/build/bitwise_ops.cpp"; grep -Fq "flags >>= 1" "$repo_root/build/bitwise_ops.cpp"
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/tuple_return.dd" -o "$repo_root/build/tuple_return.cpp"
 grep -Fq "dudu::Tuple2<int32_t, int32_t> divmod_i32" "$repo_root/build/tuple_return.cpp"
 grep -Fq "return {value / divisor, value % divisor};" "$repo_root/build/tuple_return.cpp"
@@ -299,6 +300,7 @@ compile_and_expect function_attrs 42
 compile_and_expect cpp_namespace_alias 42
 compile_and_expect fixed_arrays 42
 compile_and_expect compound_assignment 46
+compile_and_expect bitwise_ops 42
 compile_and_expect binary_packet_parser 42
 compile_and_expect ref_field_inference 42
 compile_and_expect conditional_str 42
@@ -375,6 +377,7 @@ expect_fail bad_for_binding_type --emit-cpp "loop binding expects bool, got i32"
 expect_fail bad_for_non_container --emit-cpp "cannot iterate non-container: value"
 expect_fail bad_build_flag --check "unknown build flag: build.NOPE"
 expect_fail bad_implicit_cast --emit-cpp "cannot assign i32 to i64 without an explicit cast"
+expect_fail bad_shift_bool --emit-cpp "cannot assign i32 to bool without an explicit cast"
 expect_fail bad_const_assignment --emit-cpp "cannot assign to constant: LIMIT"
 expect_fail bad_raise --check "unsupported Python feature: exceptions"
 expect_fail bad_try --check "unsupported Python feature: exceptions"
