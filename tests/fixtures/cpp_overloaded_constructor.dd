@@ -1,0 +1,8 @@
+import cpp "../tests/fixtures/cpp_overloaded_constructor.hpp" as dudu_ctor
+
+
+def main() -> i32:
+    first: dudu_ctor.Widget = dudu_ctor.Widget()
+    second: dudu_ctor.Widget = dudu_ctor.Widget(10)
+    third: dudu_ctor.Widget = dudu_ctor.Widget(20, 11)
+    return first.value + second.value + third.value
