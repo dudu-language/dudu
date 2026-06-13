@@ -147,6 +147,10 @@ bool visible_in_header(Visibility visibility) {
     return visibility != Visibility::Private;
 }
 
+std::string_view class_section_for_method(Visibility visibility) {
+    return visibility == Visibility::Private ? "private" : "public";
+}
+
 bool emit_before_constants(const FunctionDecl& fn) {
     return function_has_decorator(fn, "constexpr");
 }
@@ -209,7 +213,13 @@ void emit_classes(std::ostringstream& out, const ModuleAst& module,
         for (const FieldDecl& field : klass.fields) {
             out << "    " << lower_cpp_type(field.type) << ' ' << field.name << "{};\n";
         }
+        std::string_view current_section = "public";
         for (const FunctionDecl& method : klass.methods) {
+            const std::string_view method_section = class_section_for_method(method.visibility);
+            if (method_section != current_section) {
+                out << method_section << ":\n";
+                current_section = method_section;
+            }
             emit_method(out, klass.name, method, aliases, function_returns);
         }
         out << "};\n\n";

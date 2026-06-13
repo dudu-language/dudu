@@ -93,6 +93,7 @@ expect_fail bad_fn_pointer_call --emit-cpp "function callback expects 1 argument
 expect_fail bad_tuple_arity --check "tuple supports 1 to 8 elements, got 9"
 expect_fail bad_function_decorator --check "unknown function decorator: @cuda.glboal"
 expect_fail bad_class_decorator --check "unknown class decorator: @packd"
+expect_fail bad_class_member_visibility --check "expected def after class member visibility"
 
 if (
     cd "$repo_root/tests/fixtures/bad_target_decorator_mode"

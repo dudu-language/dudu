@@ -211,10 +211,14 @@ class Parser {
                 ++cursor_;
                 continue;
             }
+            const Visibility member_visibility = parse_visibility();
             if (match_identifier("def")) {
                 klass.methods.push_back(
-                    parse_function(previous(), Visibility::Default, {}, klass.name));
+                    parse_function(previous(), member_visibility, {}, klass.name));
                 continue;
+            }
+            if (member_visibility != Visibility::Default) {
+                fail_current("expected def after class member visibility");
             }
             klass.fields.push_back(parse_field());
         }

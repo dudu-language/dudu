@@ -10,8 +10,11 @@ class Point:
     x: i32
     y: i32
 
+    private def secret(self) -> i32:
+        return self.x - self.y
+
     def sum(self) -> i32:
-        return self.x + self.y
+        return self.x + self.y + self.secret()
 
 
 def answer() -> i32:
