@@ -1,5 +1,6 @@
 #include "dudu/project_driver.hpp"
 
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
@@ -24,15 +25,48 @@ void write_new_file(const std::filesystem::path& path, const std::string& text) 
     out << text;
 }
 
+std::string shell_quote_path(const std::filesystem::path& path) {
+    std::string out = "'";
+    for (const char c : path.string()) {
+        out += c == '\'' ? "'\\''" : std::string(1, c);
+    }
+    out += "'";
+    return out;
+}
+
 std::string project_name(const std::filesystem::path& dir) {
     const std::filesystem::path name = dir.filename();
     return name.empty() || name == "." ? "dudu_app" : name.string();
+}
+
+bool has_enclosing_git_repo(std::filesystem::path dir) {
+    dir = std::filesystem::absolute(std::move(dir));
+    while (true) {
+        if (std::filesystem::exists(dir / ".git")) {
+            return true;
+        }
+        const std::filesystem::path parent = dir.parent_path();
+        if (parent.empty() || parent == dir) {
+            return false;
+        }
+        dir = parent;
+    }
+}
+
+bool init_git_repo(const std::filesystem::path& dir) {
+    const std::string command = "git init -q " + shell_quote_path(dir);
+    return std::system(command.c_str()) == 0;
 }
 
 } // namespace
 
 void init_project(const std::filesystem::path& dir) {
     const std::string name = project_name(dir);
+    std::filesystem::create_directories(dir);
+    const bool write_gitignore = !has_enclosing_git_repo(dir);
+    if (write_gitignore) {
+        (void)init_git_repo(dir);
+    }
     write_new_file(dir / "dudu.toml",
                    "name = \"" + name + "\"\n"
                    "entry = \"src/main.dd\"\n"
@@ -46,18 +80,10 @@ void init_project(const std::filesystem::path& dir) {
                    "def main() -> i32:\n"
                    "    print(\"hello from dudu\")\n"
                    "    return 0\n");
-    write_new_file(dir / "CHANGELOG.md",
-                   "# Changelog\n"
-                   "\n"
-                   "## [Unreleased]\n"
-                   "\n"
-                   "### Added\n"
-                   "\n"
-                   "### Changed\n"
-                   "\n"
-                   "### Fixed\n");
     write_new_file(dir / "README.md", "# " + name + "\n\nRun with:\n\n```bash\ndudu run\n```\n");
-    write_new_file(dir / ".gitignore", "build/\n");
+    if (write_gitignore) {
+        write_new_file(dir / ".gitignore", "build/\n");
+    }
 }
 
 void new_project(const std::filesystem::path& dir) {

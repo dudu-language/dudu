@@ -84,10 +84,10 @@ dudu clean
 ```text
 dudu.toml
 src/main.dd
-CHANGELOG.md
 README.md
-.gitignore
 ```
+
+`dudu init tools/pack` initializes a specific directory, creating it if needed.
 
 `dudu new hello` creates a new directory:
 
@@ -95,10 +95,12 @@ README.md
 hello/
     dudu.toml
     src/main.dd
-    CHANGELOG.md
     README.md
-    .gitignore
 ```
+
+Like Cargo, `dudu init` and `dudu new` initialize git and write `.gitignore`
+when the project is not already inside an existing git repository. Inside an
+existing repository, they skip git setup and do not add a nested `.gitignore`.
 
 `dudu run` should be the common path. It should emit C++, build the configured
 target, and launch the binary.
@@ -291,9 +293,7 @@ printed steps.
 
 ## Changelog
 
-Add `CHANGELOG.md` to new projects.
-
-Use a simple Keep a Changelog-style file:
+The Dudu compiler repository keeps a simple Keep a Changelog-style file:
 
 ```markdown
 # Changelog
@@ -315,7 +315,7 @@ update CHANGELOG.md under [Unreleased].
 ```
 
 This prevents important changes from being spread across transient planning
-docs.
+docs. Generated Dudu projects do not get a changelog by default.
 
 ## Implementation Slices
 

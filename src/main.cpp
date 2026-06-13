@@ -50,6 +50,7 @@ struct Options {
 void print_usage(bool project_driver = false) {
     if (project_driver) {
         std::cout << "usage: dudu init\n"
+                     "       dudu init [path]\n"
                      "       dudu new <name>\n"
                      "       dudu run [input.dd] [-o output]\n"
                      "       dudu build [input.dd] [-o output]\n"
@@ -346,7 +347,7 @@ int main(int argc, char** argv) {
         const bool project_driver = executable == "dudu";
         const Options options = resolve_project_input(parse_options(argc, argv, project_driver));
         if (options.init_project) {
-            dudu::init_project(".");
+            dudu::init_project(options.input.empty() ? std::filesystem::path(".") : options.input);
             return 0;
         }
         if (options.new_project) {
