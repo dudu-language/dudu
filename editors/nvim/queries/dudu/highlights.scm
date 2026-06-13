@@ -5,7 +5,6 @@
 [
   "def"
   "class"
-  "extern"
   "if"
   "elif"
   "else"

@@ -15,7 +15,7 @@ the imported header, so native typedefs such as `SDL_Event` are unknown unless
 the user writes:
 
 ```python
-extern type SDL_Event
+type SDL_Event
 ```
 
 That is acceptable as an escape hatch, but it is not acceptable as the normal
@@ -69,7 +69,7 @@ Policy:
   tooling when a source file imports C/C++ headers and uses imported native
   declarations that Dudu must understand.
 - Missing Clang tooling should be a clear setup error, not a silent downgrade.
-- `extern type` remains available for unusual generated/platform headers and
+- `type Name` remains available for unusual generated/platform headers and
   quick experiments, but docs and examples should not rely on it for normal
   SDL, imgui, raylib, OpenCL, Vulkan, POSIX, or standard-library usage.
 
@@ -79,7 +79,7 @@ Suggested diagnostic:
 dudu: src/main.dd:7:12: native header awareness requires clang tooling
   import c "SDL3/SDL.h" as sdl
   install clang/libclang, or declare an explicit escape hatch:
-      extern type SDL_Event
+      type SDL_Event
 ```
 
 ## Implementation Shape
@@ -131,8 +131,8 @@ Discover and register:
 - enums and enum constants
 
 Dudu should add discovered type names to the same symbol table path used by
-`extern type`, but mark them as native-discovered so diagnostics can explain
-their origin.
+manual `type Name` declarations, but mark them as native-discovered so
+diagnostics can explain their origin.
 
 This is enough for:
 
@@ -319,8 +319,7 @@ Optional probes:
 
 After the type-only scanner works:
 
-- remove `extern type SDL_Event` from the SDL3/imgui playground
-- keep one small `extern type` fixture as an escape-hatch test
-- update docs so `extern type` is described as manual override, not normal API
+- remove `type SDL_Event` from the SDL3/imgui playground
+- keep one small `type Name` fixture as an escape-hatch test
+- update docs so `type Name` is described as manual override, not normal API
 - add a note that automatic native interop requires Clang tooling
-

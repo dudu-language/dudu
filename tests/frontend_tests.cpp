@@ -189,18 +189,19 @@ void test_typed_for_emission() {
     assert(cpp.find("for (auto&& copy : items)") != std::string::npos);
 }
 
-void test_extern_type_emission() {
-    const dudu::ModuleAst module = dudu::parse_source("import c \"SDL3/SDL.h\" as sdl\n"
-                                                      "\n"
-                                                      "extern type SDL_Event\n"
-                                                      "\n"
-                                                      "def main() -> i32:\n"
-                                                      "    event: SDL_Event\n"
-                                                      "    while sdl.SDL_PollEvent(&event):\n"
-                                                      "        if event.type == sdl.SDL_EVENT_QUIT:\n"
-                                                      "            return 0\n"
-                                                      "    return 1\n",
-                                                      "extern_type.dd");
+void test_native_type_declaration_emission() {
+    const dudu::ModuleAst module =
+        dudu::parse_source("import c \"SDL3/SDL.h\" as sdl\n"
+                           "\n"
+                           "type SDL_Event\n"
+                           "\n"
+                           "def main() -> i32:\n"
+                           "    event: SDL_Event\n"
+                           "    while sdl.SDL_PollEvent(&event):\n"
+                           "        if event.type == sdl.SDL_EVENT_QUIT:\n"
+                           "            return 0\n"
+                           "    return 1\n",
+                           "native_type.dd");
     dudu::analyze_module(module, {.check_bodies = true});
     const std::string cpp = dudu::emit_cpp_source(module);
     assert(cpp.find("#include \"SDL3/SDL.h\"") != std::string::npos);
@@ -230,7 +231,7 @@ int main() {
         test_semantic_diagnostics();
         test_formatter();
         test_typed_for_emission();
-        test_extern_type_emission();
+        test_native_type_declaration_emission();
         test_image_filter_emission(root);
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';

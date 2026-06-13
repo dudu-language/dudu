@@ -65,7 +65,7 @@
         },
         {
           "name": "meta.type-alias.dudu",
-          "match": "^\\s*(?:(public|private)\\s+)?(type)\\s+([A-Z][A-Za-z0-9_]*)",
+          "match": "^\\s*(?:(public|private)\\s+)?(type)\\s+([A-Z][A-Za-z0-9_]*)(?=\\s*=)",
           "captures": {
             "1": { "name": "storage.modifier.dudu" },
             "2": { "name": "keyword.declaration.type.dudu" },
@@ -73,12 +73,11 @@
           }
         },
         {
-          "name": "meta.extern-type.dudu",
-          "match": "^\\s*(extern)\\s+(type)\\s+([A-Z][A-Za-z0-9_]*)",
+          "name": "meta.native-type.dudu",
+          "match": "^\\s*(type)\\s+([A-Z][A-Za-z0-9_]*)(?=\\s*$)",
           "captures": {
-            "1": { "name": "keyword.declaration.extern.dudu" },
-            "2": { "name": "keyword.declaration.type.dudu" },
-            "3": { "name": "entity.name.type.extern.dudu" }
+            "1": { "name": "keyword.declaration.type.dudu" },
+            "2": { "name": "entity.name.type.native.dudu" }
           }
         }
       ]
@@ -145,7 +144,7 @@
     "keywords": {
       "patterns": [
         { "name": "keyword.control.dudu", "match": "\\b(if|elif|else|while|for|in|return|break|continue|and|or|not)\\b" },
-        { "name": "keyword.declaration.dudu", "match": "\\b(def|class|enum|extern|type|import|from|as|public|private|static_assert)\\b" },
+        { "name": "keyword.declaration.dudu", "match": "\\b(def|class|enum|type|import|from|as|public|private|static_assert)\\b" },
         { "name": "constant.language.dudu", "match": "\\b(True|False|None)\\b" }
       ]
     },

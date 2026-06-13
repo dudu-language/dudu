@@ -378,7 +378,7 @@ Dudu definition:
 ```python
 import c "SDL3/SDL.h" as sdl
 
-extern type SDL_Event
+type SDL_Event
 
 def pump_events() -> bool:
     event: SDL_Event

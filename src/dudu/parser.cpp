@@ -39,12 +39,9 @@ class Parser {
             } else if (match_identifier("enum")) {
                 require_no_decorators(decorators, "enum");
                 module.enums.push_back(parse_enum(previous()));
-            } else if (match_identifier("extern")) {
-                require_no_decorators(decorators, "extern type");
-                module.extern_types.push_back(parse_extern_type(previous()));
             } else if (match_identifier("type")) {
-                require_no_decorators(decorators, "type alias");
-                module.aliases.push_back(parse_type_alias(previous()));
+                require_no_decorators(decorators, "type declaration");
+                parse_type_decl(previous(), module);
             } else if (match_identifier("def")) {
                 module.functions.push_back(parse_function(previous(), visibility, decorators));
                 decorators.clear();
@@ -273,25 +270,22 @@ class Parser {
         return en;
     }
 
-    ExternTypeDecl parse_extern_type(const Token& start) {
-        if (!match_identifier("type")) {
-            fail_current("expected type after extern");
+    void parse_type_decl(const Token& start, ModuleAst& module) {
+        const Token& name = consume_identifier("expected type name");
+        if (match(TokenKind::Assign)) {
+            TypeAliasDecl alias;
+            alias.location = start.location;
+            alias.name = name.text;
+            alias.type = join_until({TokenKind::Newline});
+            consume(TokenKind::Newline, "expected newline after type alias");
+            module.aliases.push_back(std::move(alias));
+            return;
         }
-        ExternTypeDecl type;
-        type.location = start.location;
-        type.name = consume_identifier("expected extern type name").text;
-        consume(TokenKind::Newline, "expected newline after extern type");
-        return type;
-    }
-
-    TypeAliasDecl parse_type_alias(const Token& start) {
-        TypeAliasDecl alias;
-        alias.location = start.location;
-        alias.name = consume_identifier("expected type alias name").text;
-        consume(TokenKind::Assign, "expected = after type alias name");
-        alias.type = join_until({TokenKind::Newline});
-        consume(TokenKind::Newline, "expected newline after type alias");
-        return alias;
+        NativeTypeDecl type;
+        type.location = name.location;
+        type.name = name.text;
+        consume(TokenKind::Newline, "expected = or newline after type name");
+        module.native_types.push_back(std::move(type));
     }
 
     FunctionDecl parse_function(const Token& start, Visibility visibility,

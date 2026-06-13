@@ -58,7 +58,7 @@ struct TypeAliasDecl {
     SourceLocation location;
 };
 
-struct ExternTypeDecl {
+struct NativeTypeDecl {
     std::string name;
     SourceLocation location;
 };
@@ -112,7 +112,7 @@ struct ModuleAst {
     bool target_mode_explicit = false;
     std::vector<ImportDecl> imports;
     std::vector<TypeAliasDecl> aliases;
-    std::vector<ExternTypeDecl> extern_types;
+    std::vector<NativeTypeDecl> native_types;
     std::vector<EnumDecl> enums;
     std::vector<ClassDecl> classes;
     std::vector<FunctionDecl> functions;
