@@ -2,6 +2,8 @@
 
 #include "dudu/source.hpp"
 
+#include <sstream>
+
 namespace dudu {
 namespace {
 
@@ -16,6 +18,41 @@ bool arity_matches(const FunctionSignature& signature, size_t arg_count) {
 
 bool native_numeric_promotion(const std::string& expected, const std::string& got) {
     return expected == "f64" && got == "f32";
+}
+
+std::string signature_text(const std::string& callee, const FunctionSignature& signature) {
+    std::ostringstream out;
+    out << callee << "(";
+    for (size_t i = 0; i < signature.params.size(); ++i) {
+        if (i > 0) out << ", ";
+        out << signature.params[i];
+    }
+    if (signature.variadic) {
+        if (!signature.params.empty()) out << ", ";
+        out << "...";
+    }
+    out << ") -> " << signature.return_type;
+    return out.str();
+}
+
+std::string native_overload_message(const FunctionScope& scope, const std::string& callee,
+                                    const std::vector<std::string>& args,
+                                    const std::vector<FunctionSignature>& candidates,
+                                    const SourceLocation* location,
+                                    const NativeInferExprFn& infer_expr) {
+    std::ostringstream out;
+    out << "no native overload of " << callee << " accepts " << args.size() << " arguments";
+    if (!args.empty()) {
+        out << "\narguments: ";
+        for (size_t i = 0; i < args.size(); ++i) {
+            if (i > 0) out << ", ";
+            out << infer_expr(scope, args[i], location);
+        }
+    }
+    for (const FunctionSignature& candidate : candidates) {
+        out << "\ncandidate: " << signature_text(callee, candidate);
+    }
+    return out.str();
 }
 
 bool args_match_signature(const FunctionScope& scope, const FunctionSignature& signature,
@@ -51,8 +88,8 @@ std::optional<FunctionSignature> native_signature_for_call(
         }
     }
     if (location != nullptr) {
-        fail(*location, "no native overload of " + callee + " accepts " +
-                            std::to_string(args.size()) + " arguments");
+        fail(*location, native_overload_message(scope, callee, args, found->second, location,
+                                                infer_expr));
     }
     return std::nullopt;
 }

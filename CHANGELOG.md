@@ -45,6 +45,8 @@
 
 ### Changed
 
+- Improved native overload diagnostics to show argument types and candidate
+  signatures.
 - Improved native header scanning for direct SIMD intrinsic imports.
 - Removed generated `CHANGELOG.md` files from `dudu init` and `dudu new`
   scaffolds.
