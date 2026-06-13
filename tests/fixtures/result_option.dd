@@ -8,6 +8,8 @@ def main() -> i32:
     result = choose(True)
     empty: Option[i32] = None
     value: Option[i32] = 2
+    value = None
+    value = 2
 
     if result.ok and not empty.has_value():
         return result.value + value.value()

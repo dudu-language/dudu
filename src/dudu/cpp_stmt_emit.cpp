@@ -368,10 +368,16 @@ void emit_simple_statement(std::ostringstream& out, const RawStmt& stmt, int dep
             return;
         }
         if (!lhs.empty() && lhs.find_first_of(" .[]+-*/%<>") == std::string::npos) {
-            const std::string value =
-                lower_expr(trim_copy(text.substr(assign + 1)), aliases, locals);
+            const std::string raw_value = trim_copy(text.substr(assign + 1));
+            const std::string value = lower_expr(raw_value, aliases, locals);
             if (locals.contains(lhs)) {
-                out << indent(depth) << lhs << " = " << value << ";\n";
+                out << indent(depth) << lhs << " = ";
+                if (starts_with(locals.at(lhs), "Option[") && raw_value == "None") {
+                    out << "std::nullopt";
+                } else {
+                    out << value;
+                }
+                out << ";\n";
             } else {
                 locals.emplace(lhs, "auto");
                 out << indent(depth) << "auto " << lhs << " = " << value << ";\n";
