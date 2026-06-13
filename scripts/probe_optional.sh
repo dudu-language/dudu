@@ -88,6 +88,38 @@ probe_threading() {
     echo "ok threading"
 }
 
+probe_posix_mmap() {
+    local cpp="$repo_root/build/probe_posix_mmap_hash.cpp"
+    local bin="$repo_root/build/probe_posix_mmap_hash"
+    "$repo_root/build/duc" emit "$repo_root/tests/fixtures/posix_mmap_hash.dd" -o "$cpp"
+    "${CXX:-c++}" -std=c++20 "$cpp" -o "$bin"
+    set +e
+    "$bin"
+    local status=$?
+    set -e
+    if [[ "$status" -ne 42 ]]; then
+        echo "POSIX mmap probe returned $status, expected 42" >&2
+        exit 1
+    fi
+    echo "ok POSIX mmap"
+}
+
+probe_posix_threads() {
+    local cpp="$repo_root/build/probe_posix_threads_mutex.cpp"
+    local bin="$repo_root/build/probe_posix_threads_mutex"
+    "$repo_root/build/duc" emit "$repo_root/tests/fixtures/posix_threads_mutex.dd" -o "$cpp"
+    "${CXX:-c++}" -std=c++20 -I"$repo_root/tests/fixtures" "$cpp" -pthread -o "$bin"
+    set +e
+    "$bin"
+    local status=$?
+    set -e
+    if [[ "$status" -ne 42 ]]; then
+        echo "POSIX pthread probe returned $status, expected 42" >&2
+        exit 1
+    fi
+    echo "ok POSIX pthread"
+}
+
 probe_raylib() {
     if ! pkg-config --exists raylib; then
         echo "skip raylib: pkg-config package not found"
@@ -197,6 +229,8 @@ probe_glm
 probe_opencv
 probe_sqlite
 probe_threading
+probe_posix_mmap
+probe_posix_threads
 probe_raylib
 probe_sdl3
 probe_glfw
