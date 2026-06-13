@@ -114,9 +114,23 @@ probe_sdl3() {
     echo "ok sdl3"
 }
 
+probe_glfw() {
+    if ! pkg-config --exists glfw3; then
+        echo "skip glfw3: pkg-config package not found"
+        return
+    fi
+
+    local cpp="$repo_root/build/probe_glfw_opengl_triangle.cpp"
+    local bin="$repo_root/build/probe_glfw_opengl_triangle"
+    "$repo_root/build/duc" emit "$repo_root/examples/glfw_opengl_triangle.dd" -o "$cpp"
+    "${CXX:-c++}" -std=c++20 "$cpp" $(pkg-config --cflags --libs glfw3) -o "$bin"
+    echo "ok glfw3"
+}
+
 probe_glm
 probe_opencv
 probe_sqlite
 probe_threading
 probe_raylib
 probe_sdl3
+probe_glfw

@@ -13,6 +13,7 @@ required_examples=(
     cpp_library.dd
     cuda_kernel.dd
     function_pointers.dd
+    glfw_opengl_triangle.dd
     image_filter.dd
     layout_hardware.dd
     modules_visibility.dd
