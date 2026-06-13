@@ -88,7 +88,21 @@ probe_threading() {
     echo "ok threading"
 }
 
+probe_raylib() {
+    if ! pkg-config --exists raylib; then
+        echo "skip raylib: pkg-config package not found"
+        return
+    fi
+
+    local cpp="$repo_root/build/probe_raylib_game.cpp"
+    local bin="$repo_root/build/probe_raylib_game"
+    "$repo_root/build/duc" emit "$repo_root/examples/raylib_game.dd" -o "$cpp"
+    "${CXX:-c++}" -std=c++20 "$cpp" $(pkg-config --cflags --libs raylib) -o "$bin"
+    echo "ok raylib"
+}
+
 probe_glm
 probe_opencv
 probe_sqlite
 probe_threading
+probe_raylib
