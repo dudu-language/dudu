@@ -15,6 +15,10 @@ function workspaceDirectory() {
   return folder ? folder.uri.fsPath : process.cwd();
 }
 
+function ducPath() {
+  return vscode.workspace.getConfiguration("dudu").get("ducPath", "duc");
+}
+
 function activeDuduFile() {
   const editor = vscode.window.activeTextEditor;
   if (!editor) {
@@ -70,7 +74,7 @@ function parseDiagnostic(line) {
 function checkDocument(document) {
   const output = path.join(os.tmpdir(), `dudu-vscode-${process.pid}.cpp`);
   childProcess.execFile(
-    "duc",
+    ducPath(),
     ["emit", document.fileName, "-o", output],
     { cwd: workspaceDirectory() },
     (error, _stdout, stderr) => {
@@ -152,7 +156,7 @@ function activate(context) {
     vscode.commands.registerCommand("dudu.fmtFile", () => {
       const file = activeDuduFile();
       if (file) {
-        runCommand(`duc fmt ${shellQuote(file)}`);
+        runCommand(`${shellQuote(ducPath())} fmt ${shellQuote(file)}`);
       }
     }),
     vscode.commands.registerCommand("dudu.checkFile", () => {
@@ -162,12 +166,12 @@ function activate(context) {
       }
     }),
     vscode.commands.registerCommand("dudu.buildProject", () => {
-      runCommand("duc build");
+      runCommand(`${shellQuote(ducPath())} build`);
     }),
     vscode.commands.registerCommand("dudu.runFile", () => {
       const file = activeDuduFile();
       if (file) {
-        runCommand(`duc run ${shellQuote(file)}`);
+        runCommand(`${shellQuote(ducPath())} run ${shellQuote(file)}`);
       }
     }),
     vscode.workspace.onDidSaveTextDocument((document) => {
