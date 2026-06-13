@@ -179,6 +179,10 @@ grep -q "inline constexpr bool DEBUG = false;" "$repo_root/build/package_build_o
         2>"$repo_root/build/project_targets_run.err"
     "$repo_root/build/dudu" test >"$repo_root/build/project_targets_test.out" \
         2>"$repo_root/build/project_targets_test.err"
+    "$repo_root/build/dudu" test ./... >"$repo_root/build/project_targets_recursive.out" \
+        2>"$repo_root/build/project_targets_recursive.err"
+    "$repo_root/build/dudu" test . >"$repo_root/build/project_targets_dir.out" \
+        2>"$repo_root/build/project_targets_dir.err"
     "$repo_root/build/dudu" cmake tool -o "$repo_root/build/project_targets_cmake.txt" \
         2>"$repo_root/build/project_targets_cmake.err"
 )
@@ -187,6 +191,8 @@ grep -q "run ../../../build/project_targets/tool" "$repo_root/build/project_targ
 grep -q "tool target" "$repo_root/build/project_targets_run.out"
 grep -q "ok target_test" "$repo_root/build/project_targets_test.out"
 grep -q "1/1 tests passed" "$repo_root/build/project_targets_test.out"
+grep -q "ok target_test" "$repo_root/build/project_targets_recursive.out"
+grep -q "ok target_test" "$repo_root/build/project_targets_dir.out"
 grep -q "add_executable(tool" "$repo_root/build/project_targets_cmake.txt"
 grep -q 'set(DUDU_SOURCE "tool.dd")' "$repo_root/build/project_targets_cmake.txt"
 (

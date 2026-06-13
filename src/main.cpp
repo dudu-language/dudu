@@ -9,6 +9,7 @@
 #include "dudu/project_config.hpp"
 #include "dudu/project_driver.hpp"
 #include "dudu/sema.hpp"
+#include "dudu/test_driver.hpp"
 
 #include <cstdlib>
 #include <filesystem>
@@ -332,65 +333,6 @@ bool check_source_path(const Options& options) {
     return true;
 }
 
-bool looks_like_test_input(const std::filesystem::path& value) {
-    return value.extension() == ".dd" || std::filesystem::exists(value);
-}
-
-int run_delegated_project_tests() {
-    std::string command = dudu::parse_project_config("dudu.toml").test_command;
-    if (command.empty() && std::filesystem::exists("scripts/test.sh")) {
-        command = "./scripts/test.sh";
-    }
-    if (command.empty()) {
-        fail("missing test entry and no [test] command or scripts/test.sh");
-    }
-    return std::system(command.c_str()) == 0 ? 0 : 1;
-}
-
-int run_project_tests(Options options) {
-    const dudu::ProjectConfig project = dudu::parse_project_config("dudu.toml");
-    if (!options.input.empty() && !looks_like_test_input(options.input)) {
-        const std::string input = options.input.string();
-        if (project.targets.contains(input)) {
-            options.target_name = input;
-            options.input = dudu::apply_project_target(project, input).main;
-            if (options.input.empty()) {
-                fail("target has no entry: " + input);
-            }
-        } else {
-            if (options.test_filter.empty()) {
-                options.test_filter = input;
-            }
-            options.input.clear();
-        }
-    }
-    if (options.input.empty()) {
-        if (project.targets.contains("tests")) {
-            options.target_name = "tests";
-            options.input = dudu::apply_project_target(project, "tests").main;
-        } else {
-            options.input = project.main;
-        }
-    }
-    if (options.input.empty()) {
-        return run_delegated_project_tests();
-    }
-    const std::string source = read_text_file(options.input);
-    const dudu::ProjectConfig config = config_for_options(options);
-    const std::filesystem::path output =
-        options.output.value_or(config.build_dir.empty() ? std::filesystem::path("build/dudu_tests")
-                                                         : config.build_dir / "dudu_tests");
-    dudu::print_project_step(options.project_driver, "emit", output.string() + ".cpp");
-    dudu::print_project_step(options.project_driver, "test", output);
-    const std::filesystem::path bin = dudu::build_executable(
-        {.output = output, .config = config, .verbose = options.verbose},
-        dudu::emit_cpp_test_source(checked_module(options, source, true), options.test_filter));
-    const std::filesystem::path command = bin.is_relative() && bin.parent_path().empty()
-                                              ? std::filesystem::path(".") / bin
-                                              : bin;
-    return std::system(dudu::shell_quote_path(command).c_str()) == 0 ? 0 : 1;
-}
-
 } // namespace
 
 int main(int argc, char** argv) {
@@ -421,7 +363,13 @@ int main(int argc, char** argv) {
             return 0;
         }
         if (options.test) {
-            return run_project_tests(options);
+            return dudu::run_project_tests({.input = options.input,
+                                            .output = options.output,
+                                            .build_values = options.build_values,
+                                            .target_name = options.target_name,
+                                            .test_filter = options.test_filter,
+                                            .project_driver = options.project_driver,
+                                            .verbose = options.verbose});
         }
         if (options.format) {
             if (options.check) {

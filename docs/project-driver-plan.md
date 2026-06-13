@@ -236,6 +236,8 @@ Rules:
 - `dudu test src/math.dd` runs tests from one module.
 - `dudu test add_works` runs one named test.
 - `dudu test --filter add` filters by substring.
+- `dudu test ./...` and `dudu test tests/` discover `.dd` files with `@test`
+  recursively.
 - A module may contain both `main` and `@test` functions. `main` is ignored in
   test harness mode unless the module is built as an executable target.
 

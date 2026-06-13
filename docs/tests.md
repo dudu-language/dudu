@@ -108,15 +108,16 @@ def panics_with_message():
 Rust captures stdout by default and supports `cargo test -- --nocapture`.
 Dudu should eventually support a similar mode.
 
-Project-wide tests should include:
+Project-wide tests include:
 
 ```sh
 dudu test ./...
 dudu test tests/
 ```
 
-`dudu test ./...` should discover testable Dudu modules recursively, similar to
-Go's `go test ./...`, while keeping Cargo-style explicit test functions.
+`dudu test ./...` discovers testable Dudu modules recursively, similar to Go's
+`go test ./...`, while keeping Cargo-style explicit test functions. Discovery
+skips `build/` and `.git/` directories.
 
 ## Compile-Time Direction
 
