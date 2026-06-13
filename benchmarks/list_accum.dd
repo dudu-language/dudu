@@ -1,0 +1,10 @@
+def list_accum(n: i32) -> i64:
+    values: list[i32] = []
+    for i: i32 in range(n):
+        values.append(i & 1023)
+
+    total: i64 = 0
+    for value: i32 in values:
+        total += i64(value)
+
+    return total
