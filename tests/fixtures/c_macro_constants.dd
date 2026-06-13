@@ -1,0 +1,7 @@
+import c "../tests/fixtures/c_macro_wrap.h" as wrap
+
+
+def main() -> i32:
+    value: i32 = wrap.DUDU_WRAP_SCALE(5)
+    total: i32 = wrap.dudu_wrap_add_magic(value)
+    return total + wrap.DUDU_WRAP_MAGIC - 7

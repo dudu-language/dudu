@@ -55,6 +55,12 @@ grep -Fq '#include "sqlite_wrap.h"' "$repo_root/build/sqlite_crud.cpp"
 grep -Fq "dudu_sqlite_prepare" "$repo_root/build/sqlite_crud.cpp"
 grep -Fq "dudu::Result<Todo, DbError> fetch_todo" "$repo_root/build/sqlite_crud.cpp"
 
+"$repo_root/build/duc" emit "$repo_root/tests/fixtures/c_macro_constants.dd" \
+    -o "$repo_root/build/c_macro_constants.cpp"
+grep -Fq '#include "../tests/fixtures/c_macro_wrap.h"' "$repo_root/build/c_macro_constants.cpp"
+grep -Fq "DUDU_WRAP_SCALE(5)" "$repo_root/build/c_macro_constants.cpp"
+grep -Fq "return total + DUDU_WRAP_MAGIC - 7;" "$repo_root/build/c_macro_constants.cpp"
+
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/lambda_callback.dd" \
     -o "$repo_root/build/function_pointer.cpp"
 grep -Fq "std::add_pointer_t<int32_t(int32_t)> callback" \
