@@ -156,6 +156,12 @@ std::map<std::string, std::string> function_return_types(const ModuleAst& module
     for (const FunctionDecl& fn : module.functions) {
         out[fn.name] = fn.return_type.empty() ? "void" : fn.return_type;
     }
+    for (const ClassDecl& klass : module.classes) {
+        for (const FunctionDecl& method : klass.methods) {
+            out[klass.name + "." + method.name] =
+                method.return_type.empty() ? "void" : method.return_type;
+        }
+    }
     return out;
 }
 

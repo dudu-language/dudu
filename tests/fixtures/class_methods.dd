@@ -5,7 +5,17 @@ class Counter:
         self.value += amount
         return self.value
 
+    def optional_value(self, enabled: bool) -> Option[i32]:
+        if enabled:
+            return self.value
+        return None
+
 
 def main() -> i32:
     counter = Counter(value=40)
-    return counter.add(2)
+    value = counter.optional_value(True)
+    value = None
+    value = 2
+    if not counter.optional_value(False).has_value():
+        return counter.add(value.value())
+    return 1
