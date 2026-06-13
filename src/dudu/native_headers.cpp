@@ -100,6 +100,25 @@ bool requires_scan_success(const ImportDecl& import) {
     const std::string text = header.string();
     return header.is_absolute() || starts_with(text, ".") || starts_with(text, "/");
 }
+std::string header_stamp(const ImportDecl& import, const NativeHeaderOptions& options) {
+    const std::filesystem::path header = unquoted(import.module_path);
+    const std::filesystem::path path =
+        header.is_absolute() ? header : (options.source_dir / header).lexically_normal();
+    std::error_code error;
+    if (!std::filesystem::exists(path, error) || error) {
+        return {};
+    }
+    const auto size = std::filesystem::file_size(path, error);
+    if (error) {
+        return {};
+    }
+    const auto mtime = std::filesystem::last_write_time(path, error);
+    if (error) {
+        return {};
+    }
+    return "|" + path.string() + "|" + std::to_string(size) + "|" +
+           std::to_string(mtime.time_since_epoch().count());
+}
 std::string run_capture(const std::string& command, const std::filesystem::path& output,
                         const std::filesystem::path& error) {
     const int status = std::system((command + " >" + shell_quote_path(output) + " 2>" +
@@ -390,7 +409,8 @@ NativeHeaderScan dedupe_scan(NativeHeaderScan scan) {
 }
 std::string scan_key(const ImportDecl& import, const NativeHeaderOptions& options,
                      const std::string& flags) {
-    return unquoted(import.module_path) + "|" + options.config.cpp_std + "|" + flags;
+    return unquoted(import.module_path) + "|" + options.config.cpp_std + "|" + flags +
+           header_stamp(import, options);
 }
 NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOptions& options,
                                  const std::string& flags) {

@@ -288,6 +288,50 @@ void test_native_header_collision(const std::filesystem::path& root) {
     assert(failed);
 }
 
+void test_native_header_cache_invalidates_local_header(const std::filesystem::path& root) {
+    const std::filesystem::path source_dir = root / "build" / "native-cache-invalidation";
+    const std::filesystem::path header = source_dir / "cache_probe.hpp";
+    dudu::ProjectConfig config;
+    config.build_dir = source_dir / "build";
+    std::filesystem::remove_all(source_dir);
+    std::filesystem::create_directories(source_dir);
+
+    {
+        std::ofstream out(header);
+        out << "#pragma once\ninline bool cache_probe(bool value) { return value; }\n";
+    }
+    dudu::ModuleAst first = dudu::parse_source("import cpp \"./cache_probe.hpp\"\n"
+                                               "\n"
+                                               "def main() -> i32:\n"
+                                               "    if cache_probe(True):\n"
+                                               "        return 42\n"
+                                               "    return 0\n",
+                                               source_dir / "main.dd");
+    dudu::merge_native_header_types(first, {.config = config, .source_dir = source_dir});
+    dudu::analyze_module(first, {.check_bodies = true});
+
+    {
+        std::ofstream out(header);
+        out << "#pragma once\n"
+               "inline int cache_probe(int value, int salt) { return value + salt; }\n";
+    }
+    bool failed = false;
+    try {
+        dudu::ModuleAst second = dudu::parse_source("import cpp \"./cache_probe.hpp\"\n"
+                                                    "\n"
+                                                    "def main() -> i32:\n"
+                                                    "    if cache_probe(True):\n"
+                                                    "        return 42\n"
+                                                    "    return 0\n",
+                                                    source_dir / "main.dd");
+        dudu::merge_native_header_types(second, {.config = config, .source_dir = source_dir});
+        dudu::analyze_module(second, {.check_bodies = true});
+    } catch (const dudu::CompileError& error) {
+        failed = std::string(error.what()).find("cache_probe") != std::string::npos;
+    }
+    assert(failed);
+}
+
 void test_native_header_pointer_diagnostics(const std::filesystem::path& root) {
     bool failed = false;
     try {
@@ -396,6 +440,7 @@ int main() {
         test_native_type_declaration_emission();
         test_native_header_type_scan(root);
         test_native_header_collision(root);
+        test_native_header_cache_invalidates_local_header(root);
         test_native_header_pointer_diagnostics(root);
         test_project_driver_config(root);
         test_image_filter_emission(root);

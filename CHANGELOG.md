@@ -47,6 +47,8 @@
 
 - Improved native overload diagnostics to show argument types and candidate
   signatures.
+- Included local header path, size, and mtime in native-header cache keys so
+  edited wrapper headers rescan cleanly.
 - Improved native header scanning for direct SIMD intrinsic imports.
 - Removed generated `CHANGELOG.md` files from `dudu init` and `dudu new`
   scaffolds.
