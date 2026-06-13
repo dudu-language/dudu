@@ -132,6 +132,14 @@ kind = "executable"
 ../build/dudu test
 ```
 
+A checked-in scratch project lives in `duduplayground/`:
+
+```sh
+cd duduplayground
+../build/dudu run
+../build/dudu test
+```
+
 Generated headers are available for C and C++ integration:
 
 ```sh

@@ -40,6 +40,8 @@
 - Added C++ exception interop with `try`, `except`, and `raise`.
 - Tightened semantic checks for imported C++ template function calls such as
   `namespace.identity[i32](value)`.
+- Added `duduplayground/` as a checked-in scratch project for local `dudu run`
+  and `dudu test` experiments.
 - Added aliased lowercase native macro imports, such as `cassert.assert(...)`.
 - Added variadic native macro passthrough for fixed-leading-argument macros.
 - Added a macro-bomb fixture and example for imported C/C++ macro coverage.
