@@ -295,6 +295,22 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
             }
         }
         for (const FunctionDecl& method : klass.methods) {
+            if ((method.name == "__init__" || method.name == "__del__") &&
+                (method.params.empty() || method.params.front().name != "self")) {
+                fail(method.location, method.name + " requires self parameter");
+            }
+            if (method.name == "__init__" && !method.return_type.empty() &&
+                method.return_type != "void") {
+                fail(method.location, "__init__ cannot declare a return type");
+            }
+            if (method.name == "__del__") {
+                if (method.params.size() != 1) {
+                    fail(method.location, "__del__ cannot take parameters");
+                }
+                if (!method.return_type.empty() && method.return_type != "void") {
+                    fail(method.location, "__del__ cannot declare a return type");
+                }
+            }
             for (const Decorator& decorator : method.decorators) {
                 check_function_decorator(module, decorator);
             }

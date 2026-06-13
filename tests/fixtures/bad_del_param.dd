@@ -1,0 +1,5 @@
+class Tracker:
+    value: i32
+
+    def __del__(self, extra: i32):
+        pass

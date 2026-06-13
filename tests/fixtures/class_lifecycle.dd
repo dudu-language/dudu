@@ -1,0 +1,20 @@
+class Counter:
+    value: i32
+
+    def __init__(self, seed: i32):
+        self.value = seed + 1
+
+
+class Tracker:
+    out: *i32
+
+    def __del__(self):
+        cpp("*self.out += 1;")
+
+
+def main() -> i32:
+    counter = Counter(40)
+    value: i32 = counter.value
+    tracker: *Tracker = new[Tracker](&value)
+    delete tracker
+    return value

@@ -1,0 +1,6 @@
+class Counter:
+    value: i32
+
+    def __init__(self, value: i32) -> i32:
+        self.value = value
+        return value

@@ -165,12 +165,18 @@ std::map<std::string, std::string> function_return_types(const ModuleAst& module
     return out;
 }
 
-void emit_method(std::ostringstream& out, const FunctionDecl& method,
+void emit_method(std::ostringstream& out, const std::string& class_name, const FunctionDecl& method,
                  const std::vector<std::string>& aliases,
                  const std::map<std::string, std::string>& function_returns) {
-    out << "    " << lower_cpp_type(method.return_type) << ' ' << method.name << '(';
     const size_t first_param =
         !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
+    if (method.name == "__init__") {
+        out << "    " << class_name << '(';
+    } else if (method.name == "__del__") {
+        out << "    ~" << class_name << '(';
+    } else {
+        out << "    " << lower_cpp_type(method.return_type) << ' ' << method.name << '(';
+    }
     for (size_t i = first_param; i < method.params.size(); ++i) {
         if (i > first_param) {
             out << ", ";
@@ -204,7 +210,7 @@ void emit_classes(std::ostringstream& out, const ModuleAst& module,
             out << "    " << lower_cpp_type(field.type) << ' ' << field.name << "{};\n";
         }
         for (const FunctionDecl& method : klass.methods) {
-            emit_method(out, method, aliases, function_returns);
+            emit_method(out, klass.name, method, aliases, function_returns);
         }
         out << "};\n\n";
     }
