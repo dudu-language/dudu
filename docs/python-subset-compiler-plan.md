@@ -59,7 +59,7 @@ Implement this first:
 - compile-time functions with `@constexpr`.
 - tuple return and destructuring assignment.
 - `Result[T, E]` and `Option[T]`.
-- no exceptions.
+- C++ exception interop through `try`, `except`, and `raise`.
 - typed loop variable extension:
   ```python
   for x: &Thing in things:
@@ -146,7 +146,7 @@ ptr = std.make_unique[PlayerState](10, 20)
 
 Reject:
 
-- `raise`, `try`, `except`, `finally`
+- Python `finally`
 - `eval`, `exec`
 - monkeypatching modules/classes/functions
 - dynamic attribute creation on typed classes
@@ -1055,7 +1055,6 @@ or compiles against the actual target library.
 4. **result_option**
    - `Result[T, E]`
    - `Option[T]`
-   - no exceptions
    - explicit error handling
 
 5. **explicit_casts**

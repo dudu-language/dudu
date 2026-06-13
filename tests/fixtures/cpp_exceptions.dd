@@ -1,0 +1,10 @@
+import cpp "stdexcept"
+
+def main() -> i32:
+    try:
+        raise std.runtime_error("boom")
+    except e: std.exception:
+        return 42
+    except:
+        return 1
+    return 2

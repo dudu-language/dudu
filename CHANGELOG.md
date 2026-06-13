@@ -37,6 +37,7 @@
 - Added native header support for namespaced and nested C++ class names.
 - Added `scripts/test_fast.sh` for normal inner-loop compiler validation.
 - Added `debug_assert` for native C/C++ `assert(...)` semantics.
+- Added C++ exception interop with `try`, `except`, and `raise`.
 
 ### Changed
 

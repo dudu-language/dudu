@@ -479,7 +479,7 @@ imported C++ library type, not the default tuple-return lowering.
 
 ## Results And Errors
 
-Dudu does not use Python exceptions for normal error handling.
+Dudu uses `Result` and `Option` for normal error handling.
 
 Core prelude types:
 
@@ -487,6 +487,23 @@ Core prelude types:
 Option[T]
 Result[T, E]
 ```
+
+C++ exception interop is available when native libraries require it:
+
+```python
+import cpp "stdexcept"
+
+def load() -> i32:
+    try:
+        raise std.runtime_error("boom")
+    except e: std.exception:
+        return 42
+    except:
+        return 1
+```
+
+`try`, `except`, and `raise` lower to C++ `try`, `catch`, and `throw`.
+`finally` is not part of Dudu.
 
 Example:
 
@@ -1081,7 +1098,7 @@ name-mangling policy. They are not required for ordinary C++ use.
 
 Dudu is Python-shaped, not full Python. These are rejected:
 
-- exceptions: `raise`, `try`, `except`, `finally`
+- Python `finally`
 - `eval` and `exec`
 - monkeypatching classes, modules, or functions
 - dynamic attribute creation on typed classes

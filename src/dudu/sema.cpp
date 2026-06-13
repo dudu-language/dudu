@@ -344,6 +344,11 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
         if (parts.size() > 1) (void)infer_expr(scope, parts[1], &stmt.location);
         return;
     }
+    if (starts_with(text, "raise")) {
+        const std::string expr = trim(text.substr(5));
+        if (!expr.empty()) (void)infer_expr(scope, expr, &stmt.location);
+        return;
+    }
     if (starts_with(text, "cpp(") || text == "pass")
         return;
     if (starts_with(text, "delete ")) {
@@ -369,6 +374,27 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
     }
     if (text == "else:") {
         check_block(scope, stmt.children, return_type, loop_depth);
+        return;
+    }
+    if (text == "try:") {
+        check_block(scope, stmt.children, return_type, loop_depth);
+        return;
+    }
+    if (starts_with(text, "except")) {
+        FunctionScope nested = scope;
+        std::string header = trim(text.substr(6));
+        if (!header.empty() && header.back() == ':') header.pop_back();
+        const size_t colon = find_top_level_char(header, ':');
+        if (!header.empty() && colon == std::string::npos)
+            fail(stmt.location, "expected except binding as name: Type");
+        if (colon != std::string::npos) {
+            const std::string name = trim(header.substr(0, colon));
+            const std::string type = trim(header.substr(colon + 1));
+            check_local_binding_name(stmt.location, name);
+            if (!known_type(scope.symbols, type)) fail(stmt.location, "unknown catch type: " + type);
+            nested.locals[name] = "&const[" + type + "]";
+        }
+        check_block(nested, stmt.children, return_type, loop_depth);
         return;
     }
     if (starts_with(text, "while ")) {

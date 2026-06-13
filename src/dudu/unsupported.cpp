@@ -61,9 +61,6 @@ bool contains_word(std::string_view text, std::string_view name) {
 void check_statement(const RawStmt& stmt) {
     const std::string text = trim_copy(stmt.text);
     constexpr std::array prefixes = {
-        UnsupportedPrefix{"raise", "exceptions"},
-        UnsupportedPrefix{"try", "exceptions"},
-        UnsupportedPrefix{"except", "exceptions"},
         UnsupportedPrefix{"finally", "exceptions"},
         UnsupportedPrefix{"yield", "generators"},
         UnsupportedPrefix{"async", "async"},

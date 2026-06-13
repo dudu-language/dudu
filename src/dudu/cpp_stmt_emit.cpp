@@ -301,6 +301,13 @@ void emit_simple_statement(std::ostringstream& out, const RawStmt& stmt, int dep
         out << indent(depth) << "(void)0;\n";
         return;
     }
+    if (starts_with(text, "raise")) {
+        const std::string value = trim_copy(text.substr(5));
+        out << indent(depth) << "throw";
+        if (!value.empty()) out << ' ' << lower_expr(value, aliases, locals);
+        out << ";\n";
+        return;
+    }
     if (starts_with(text, "assert ")) {
         const std::vector<std::string> parts = split_top_level_args(text.substr(7));
         const std::string condition = parts.empty() ? "" : trim_copy(parts.front());
@@ -426,6 +433,30 @@ void emit_raw_statement(std::ostringstream& out, const RawStmt& stmt, int depth,
     }
     if (text == "else:") {
         out << indent(depth) << "else {\n";
+        emit_raw_block(out, stmt.children, depth + 1, aliases, locals, return_type,
+                       function_returns);
+        out << indent(depth) << "}\n";
+        return;
+    }
+    if (text == "try:") {
+        out << indent(depth) << "try {\n";
+        emit_raw_block(out, stmt.children, depth + 1, aliases, locals, return_type,
+                       function_returns);
+        out << indent(depth) << "}\n";
+        return;
+    }
+    if (starts_with(text, "except")) {
+        const std::string header = strip_trailing_colon(text.substr(6));
+        const size_t colon = find_top_level_colon(header);
+        out << indent(depth);
+        if (trim_copy(header).empty() || colon == std::string::npos) {
+            out << "catch (...)";
+        } else {
+            const std::string name = trim_copy(header.substr(0, colon));
+            const std::string type = trim_copy(header.substr(colon + 1));
+            out << "catch (const " << lower_cpp_type(type) << "& " << name << ")";
+        }
+        out << " {\n";
         emit_raw_block(out, stmt.children, depth + 1, aliases, locals, return_type,
                        function_returns);
         out << indent(depth) << "}\n";

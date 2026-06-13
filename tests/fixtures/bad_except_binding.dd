@@ -1,0 +1,5 @@
+def bad():
+    try:
+        pass
+    except RuntimeError:
+        pass
