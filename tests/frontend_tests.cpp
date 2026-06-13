@@ -69,7 +69,7 @@ void test_canonical_examples_parse(const std::filesystem::path& root) {
         "modules_visibility.dd",   "native_escape.dd", "numerics_kmeans.dd",
         "opencl_kernel_host.dd",   "raylib_game.dd",   "sdl3_window.dd",
         "shader_compute.dd",       "systems_mmap.dd",  "threading_atomics.dd",
-        "web_server.dd",
+        "vulkan_triangle.dd",      "web_server.dd",
     };
 
     for (const std::string& example : examples) {

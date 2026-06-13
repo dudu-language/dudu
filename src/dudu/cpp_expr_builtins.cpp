@@ -197,8 +197,16 @@ std::string lower_len_calls(std::string expr) {
 
 std::string lower_numeric_separators(std::string expr) {
     for (size_t i = 1; i + 1 < expr.size();) {
-        if (expr[i] == '_' && std::isdigit(static_cast<unsigned char>(expr[i - 1])) != 0 &&
-            std::isdigit(static_cast<unsigned char>(expr[i + 1])) != 0) {
+        const bool numeric_separator = expr[i] == '_' &&
+                                       std::isdigit(static_cast<unsigned char>(expr[i - 1])) != 0 &&
+                                       std::isdigit(static_cast<unsigned char>(expr[i + 1])) != 0;
+        const bool in_identifier =
+            numeric_separator &&
+            ((i > 1 &&
+              (std::isalpha(static_cast<unsigned char>(expr[i - 2])) != 0 || expr[i - 2] == '_')) ||
+             (i + 2 < expr.size() &&
+              (std::isalpha(static_cast<unsigned char>(expr[i + 2])) != 0 || expr[i + 2] == '_')));
+        if (numeric_separator && !in_identifier) {
             expr.erase(i, 1);
             continue;
         }

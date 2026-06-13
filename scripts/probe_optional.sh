@@ -149,6 +149,27 @@ probe_opencl() {
     echo "ok OpenCL"
 }
 
+probe_vulkan() {
+    if ! pkg-config --exists vulkan; then
+        echo "skip vulkan: pkg-config package not found"
+        return
+    fi
+
+    local cpp="$repo_root/build/probe_vulkan_triangle.cpp"
+    local bin="$repo_root/build/probe_vulkan_triangle"
+    "$repo_root/build/duc" emit "$repo_root/examples/vulkan_triangle.dd" -o "$cpp"
+    "${CXX:-c++}" -std=c++20 "$cpp" $(pkg-config --cflags --libs vulkan) -o "$bin"
+    set +e
+    "$bin"
+    local status=$?
+    set -e
+    if [[ "$status" -ne 42 ]]; then
+        echo "vulkan probe returned $status, expected 42" >&2
+        exit 1
+    fi
+    echo "ok vulkan"
+}
+
 probe_glm
 probe_opencv
 probe_sqlite
@@ -157,3 +178,4 @@ probe_raylib
 probe_sdl3
 probe_glfw
 probe_opencl
+probe_vulkan

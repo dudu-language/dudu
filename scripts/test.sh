@@ -25,6 +25,7 @@ required_examples=(
     shader_compute.dd
     systems_mmap.dd
     threading_atomics.dd
+    vulkan_triangle.dd
     web_server.dd
 )
 
@@ -395,6 +396,7 @@ compile_and_expect cpp_template_interop 42; compile_and_expect cpp_move_unique_p
 compile_and_expect cpp_template_member 42
 compile_and_expect cpp_operator_overload 42
 compile_and_expect cpp_overloaded_constructor 42
+compile_and_expect cpp_digit_underscore_name 42
 compile_and_expect std_vector_map_string 42
 compile_and_expect layout_attrs 21
 compile_and_expect atomic_volatile 44
