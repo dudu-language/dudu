@@ -19,6 +19,10 @@ bool is_foreign(const ImportDecl& import) {
 bool direct_import(const ImportDecl& import) {
     return import.alias.empty();
 }
+bool is_simd_vector_type_name(std::string_view name) {
+    return name == "__m64" || starts_with(name, "__m128") || starts_with(name, "__m256") ||
+           starts_with(name, "__m512");
+}
 std::string unquoted(std::string value) {
     if (value.size() >= 2 && value.front() == '"' && value.back() == '"') {
         return value.substr(1, value.size() - 2);
@@ -28,20 +32,6 @@ std::string unquoted(std::string value) {
 std::filesystem::path absolute_from(const std::filesystem::path& base,
                                     const std::filesystem::path& path) {
     return path.is_absolute() ? path : base / path;
-}
-std::string read_text(const std::filesystem::path& path) {
-    std::ifstream in(path);
-    if (!in) {
-        return {};
-    }
-    return {std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()};
-}
-void write_text(const std::filesystem::path& path, const std::string& text) {
-    std::ofstream out(path);
-    if (!out) {
-        throw std::runtime_error("could not write " + path.string());
-    }
-    out << text;
 }
 std::vector<std::filesystem::path> env_include_dirs() {
     const char* raw = std::getenv("CPLUS_INCLUDE_PATH");
@@ -63,6 +53,20 @@ std::vector<std::filesystem::path> env_include_dirs() {
         start = end + 1;
     }
     return out;
+}
+std::string read_text(const std::filesystem::path& path) {
+    std::ifstream in(path);
+    if (!in) {
+        return {};
+    }
+    return {std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()};
+}
+void write_text(const std::filesystem::path& path, const std::string& text) {
+    std::ofstream out(path);
+    if (!out) {
+        throw std::runtime_error("could not write " + path.string());
+    }
+    out << text;
 }
 std::string capture_pkg_config_cflags(const std::vector<std::string>& packages) {
     if (packages.empty()) {
@@ -176,6 +180,7 @@ std::string dudu_type(std::string type) {
     if (type == "float") return "f32";
     if (type == "double") return "f64";
     if (type == "char *" || type == "const char *") return "cstr";
+    if (type == "size_t") return "usize";
     if (type == "int8_t" || type == "Sint8" || type == "signed char") return "i8";
     if (type == "uint8_t" || type == "Uint8" || type == "unsigned char") return "u8";
     if (type == "int16_t" || type == "Sint16" || type == "short") return "i16";
@@ -189,7 +194,7 @@ std::string dudu_type(std::string type) {
 }
 std::vector<std::string> signature_params(const std::string& signature) {
     const size_t open = signature.find('(');
-    const size_t close = signature.rfind(')');
+    const size_t close = signature.find(')', open == std::string::npos ? 0 : open);
     if (open == std::string::npos || close == std::string::npos || close <= open + 1) return {};
     std::vector<std::string> out;
     for (std::string part : split_top_level_args(signature.substr(open + 1, close - open - 1))) {
@@ -246,7 +251,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         scan.namespaces.push_back({.name = name, .location = location});
     } else if (std::regex_search(line, match, typedef_decl)) {
         const std::string name = match[2].str();
-        if (!starts_with(name, "__")) {
+        if (!starts_with(name, "__") || is_simd_vector_type_name(name)) {
             scan.types.push_back({.name = name, .location = location});
         }
     } else if (std::regex_search(line, match, record_decl)) {
@@ -341,24 +346,28 @@ int macro_arity(std::string args) {
 void parse_macro_dump(NativeHeaderScan& scan, const std::string& dump,
                       const SourceLocation& location) {
     static const std::regex function_macro(R"(^#define ([A-Z_][A-Z0-9_]*)\(([^)]*)\))");
+    static const std::regex simd_function_macro(R"(^#define ((_mm|_MM_)[A-Za-z0-9_]*)\(([^)]*)\))");
     static const std::regex object_macro(R"(^#define ([A-Z_][A-Z0-9_]*)(\s|$))");
     std::istringstream in(dump);
     std::string line;
     while (std::getline(in, line)) {
         std::smatch match;
-        if (std::regex_search(line, match, function_macro)) {
+        bool is_function_macro = std::regex_search(line, match, function_macro);
+        const bool is_simd_macro =
+            is_function_macro ? false : std::regex_search(line, match, simd_function_macro);
+        if (is_function_macro || is_simd_macro) {
             const std::string name = match[1].str();
-            if (starts_with(name, "_")) {
+            if (starts_with(name, "_") && !starts_with(name, "_mm") && !starts_with(name, "_MM_")) {
                 continue;
             }
-            scan.macros.push_back({.name = match[1].str(),
-                                   .arity = macro_arity(match[2].str()),
+            const int arity = macro_arity(match[is_simd_macro ? 3 : 2].str());
+            scan.macros.push_back({.name = name,
+                                   .arity = arity,
                                    .function_like = true,
                                    .location = location});
             scan.functions.push_back({.name = name,
-                                      .params = std::vector<std::string>(
-                                          static_cast<size_t>(macro_arity(match[2].str())),
-                                          "auto"),
+                                      .params = std::vector<std::string>(static_cast<size_t>(arity),
+                                                                         "auto"),
                                       .return_type = "auto",
                                       .location = location});
         } else if (std::regex_search(line, match, object_macro)) {
@@ -460,7 +469,7 @@ NativeHeaderScan scan_native_headers(const ModuleAst& module, const NativeHeader
     const std::string flags = scanner_flags(options);
     NativeHeaderScan out;
     for (const ImportDecl& import : module.imports) {
-        if (!is_foreign(import) || !can_resolve_header(import, options)) {
+        if (!is_foreign(import) || (!direct_import(import) && !can_resolve_header(import, options))) {
             continue;
         }
         NativeHeaderScan scan = scan_one_header(import, options, flags);
