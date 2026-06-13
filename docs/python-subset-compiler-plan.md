@@ -292,8 +292,8 @@ Implement:
 - typed `for` variables
 - no implicit casts in Dudu-native assignments/returns
 - `Result`/`Option` as known generic types
-
-Do not attempt full C++ overload resolution yet.
+- imported C++ calls preserve native syntax so the C++ compiler resolves
+  overloads
 
 ## Stage 4: C++ Emission
 
@@ -452,8 +452,9 @@ Use Clang/libclang/clang tooling to inspect:
 - templates
 - constants and simple macros
 
-This stage enables better diagnostics and Dudu-side overload resolution. Before
-this stage, compile generated C++ and surface compiler errors clearly.
+This stage enables better diagnostics and Dudu-side overload resolution for
+foreign declarations. Generated C++ remains the source of truth for imported
+constructors, methods, templates, and operators.
 
 ## Stage 9: Build Tool
 
