@@ -45,6 +45,11 @@ bool unknown_or_auto(const std::string& type) {
     return text.empty() || text == "auto";
 }
 
+bool same_foreign_cpp_type(const std::string& left, const std::string& right) {
+    const std::string lhs = trim(left);
+    return !lhs.empty() && lhs == trim(right) && lhs.find('.') != std::string::npos;
+}
+
 bool numeric_operand_allowed(const std::string& expected, const std::string& expr,
                              const std::string& got) {
     return is_numeric_type(expected) && assignment_type_allowed(expected, expr, got);
@@ -65,6 +70,9 @@ bool binary_rhs_allowed(const Symbols& symbols, const std::string& op, const std
     const std::string value_left = unwrap_value_type(symbols, left);
     const std::string value_right = unwrap_value_type(symbols, right);
     if (unknown_or_auto(value_left) || unknown_or_auto(value_right)) {
+        return true;
+    }
+    if (same_foreign_cpp_type(value_left, value_right)) {
         return true;
     }
     if (op == "+" && value_left == "str") {
@@ -91,6 +99,9 @@ bool comparison_rhs_allowed(const Symbols& symbols, const std::string& op, const
     const std::string value_left = unwrap_value_type(symbols, left);
     const std::string value_right = unwrap_value_type(symbols, right);
     if (unknown_or_auto(value_left) || unknown_or_auto(value_right)) {
+        return true;
+    }
+    if (same_foreign_cpp_type(value_left, value_right)) {
         return true;
     }
     if (op == "==" || op == "!=") {

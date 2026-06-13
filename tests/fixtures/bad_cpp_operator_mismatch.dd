@@ -1,0 +1,7 @@
+import cpp "../tests/fixtures/cpp_operator_overload.hpp" as dudu_op
+
+
+def main() -> i32:
+    value: dudu_op.Vec2 = dudu_op.Vec2(1, 2)
+    result = value + 1
+    return result.x
