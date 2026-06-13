@@ -270,6 +270,14 @@ if [[ "$project_shared_library_status" -ne 42 ]]; then
     echo "project_shared_library_caller returned $project_shared_library_status, expected 42" >&2
     exit 1
 fi
+(
+    cd "$repo_root/tests/fixtures/project_freestanding_mode"
+    "$repo_root/build/duc" build -o "$repo_root/build/libproject_freestanding.a" --verbose \
+        2>"$repo_root/build/project_freestanding_verbose.err"
+)
+test -f "$repo_root/build/libproject_freestanding.a"
+grep -q -- "-fno-exceptions" "$repo_root/build/project_freestanding_verbose.err"
+grep -q -- "-fno-rtti" "$repo_root/build/project_freestanding_verbose.err"
 if (
     cd "$repo_root/tests/fixtures/project_library"
     "$repo_root/build/duc" run -o "$repo_root/build/project_library_run"

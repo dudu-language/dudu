@@ -61,6 +61,15 @@ std::string pkg_config_flags(const std::vector<std::string>& packages) {
     return capture_command(command);
 }
 
+void append_target_mode_flags(std::string& common_flags, const std::string& mode) {
+    if (mode != "freestanding" && mode != "embedded") {
+        return;
+    }
+    for (const char* flag : {"-fno-exceptions", "-fno-rtti"}) {
+        common_flags += " " + shell_quote_arg(flag);
+    }
+}
+
 std::string json_escape(const std::string& value) {
     std::string out;
     for (const char c : value) {
@@ -213,6 +222,7 @@ std::filesystem::path build_executable(const NativeBuildOptions& options, const 
     for (const std::string& flag : options.config.flags) {
         common_flags += " " + shell_quote_arg(flag);
     }
+    append_target_mode_flags(common_flags, options.config.target_mode);
     const std::string package_flags = pkg_config_flags(options.config.pkg_config_packages);
     if (!package_flags.empty()) {
         common_flags += " " + package_flags;

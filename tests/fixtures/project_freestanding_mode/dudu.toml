@@ -1,0 +1,5 @@
+main = "main.dd"
+
+[target]
+kind = "library"
+mode = "freestanding"

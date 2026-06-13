@@ -632,6 +632,12 @@ freestanding
 embedded
 cuda
 shader
+```
+
+Target kinds:
+
+```text
+executable
 library
 shared_library
 ```
