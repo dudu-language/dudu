@@ -248,6 +248,21 @@ void test_native_header_type_scan(const std::filesystem::path& root) {
     assert(std::filesystem::exists(config.build_dir / "dudu-header-cache"));
 }
 
+void test_native_header_collision(const std::filesystem::path& root) {
+    bool failed = false;
+    try {
+        dudu::ModuleAst module = dudu::parse_source("import c \"native_headers/simple_c.h\"\n"
+                                                    "DUDU_NATIVE_MAGIC: i32 = 1\n",
+                                                    root / "tests/fixtures/native_collision.dd");
+        dudu::merge_native_header_types(
+            module, {.config = dudu::ProjectConfig{}, .source_dir = root / "tests/fixtures"});
+        dudu::analyze_module(module, {.check_bodies = true});
+    } catch (const dudu::CompileError&) {
+        failed = true;
+    }
+    assert(failed);
+}
+
 void test_image_filter_emission(const std::filesystem::path& root) {
     const std::filesystem::path path = root / "examples" / "image_filter.dd";
     const dudu::ModuleAst module = dudu::parse_source(read_file(path), path);
@@ -272,6 +287,7 @@ int main() {
         test_typed_for_emission();
         test_native_type_declaration_emission();
         test_native_header_type_scan(root);
+        test_native_header_collision(root);
         test_image_filter_emission(root);
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
