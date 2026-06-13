@@ -12,6 +12,7 @@
 #include "dudu/sema_function_type.hpp"
 #include "dudu/sema_index.hpp"
 #include "dudu/sema_methods.hpp"
+#include "dudu/sema_ops.hpp"
 #include "dudu/sema_scan.hpp"
 #include "dudu/type_compat.hpp"
 #include "dudu/unsupported.hpp"
@@ -45,29 +46,6 @@ bool is_builtin_call(const std::string& callee) {
     static const std::set<std::string> builtins = {"align_up", "delete", "free",  "len",
                                                    "max",      "min",    "print", "range"};
     return builtins.contains(callee);
-}
-bool is_member_call_path(const std::string& callee) {
-    if (callee.find('.') == std::string::npos) {
-        return false;
-    }
-    for (const std::string& part : split_top_level(callee)) {
-        if (part != callee) {
-            return false;
-        }
-    }
-    size_t start = 0;
-    while (start < callee.size()) {
-        const size_t dot = callee.find('.', start);
-        const std::string part = callee.substr(start, dot == std::string::npos ? dot : dot - start);
-        if (!is_plain_identifier(trim(part))) {
-            return false;
-        }
-        if (dot == std::string::npos) {
-            return true;
-        }
-        start = dot + 1;
-    }
-    return false;
 }
 void check_call_args(const FunctionScope& scope, const std::string& callee,
                      const FunctionSignature& signature, const std::vector<std::string>& args,
@@ -160,7 +138,7 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
         }
     }
     const size_t call = find_call_open(expr);
-    if (call != std::string::npos && expr.back() == ')') {
+    if (call != std::string::npos && find_call_close(expr, call) == expr.size() - 1) {
         const std::string callee = trim(expr.substr(0, call));
         if (const auto type =
                 infer_allocation_call(scope.symbols, location, callee, call_args(expr, call)))
@@ -199,7 +177,7 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
             }
         }
         const size_t method_dot = callee.rfind('.');
-        if (method_dot != std::string::npos && is_member_call_path(callee)) {
+        if (method_dot != std::string::npos && is_member_path(callee)) {
             const std::string receiver = trim(callee.substr(0, method_dot));
             const std::string method_name = trim(callee.substr(method_dot + 1));
             FunctionSignature signature;
@@ -236,7 +214,14 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
     const size_t op = find_top_level_operator(expr);
     if (op != std::string::npos) {
         const std::string left = infer_expr(scope, expr.substr(0, op), location);
-        return left.empty() ? infer_expr(scope, expr.substr(op + 1), location) : left;
+        const std::string op_text = top_level_operator_text(expr, op);
+        const std::string right_expr = expr.substr(op + op_text.size());
+        const std::string right = infer_expr(scope, right_expr, location);
+        if (location != nullptr && !left.empty() && !right.empty() &&
+            !binary_rhs_allowed(scope.symbols, left, right_expr, right)) {
+            fail(*location, "operator " + op_text + " expects " + left + ", got " + right);
+        }
+        return left.empty() ? right : left;
     }
     if (std::isdigit(static_cast<unsigned char>(expr.front())) != 0) {
         return expr.find('.') == std::string::npos ? "i32" : "f64";
@@ -253,7 +238,7 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
         }
     }
     const size_t dot = expr.find('.');
-    if (dot != std::string::npos && is_member_call_path(expr)) {
+    if (dot != std::string::npos && is_member_path(expr)) {
         return member_path_type(scope.symbols, scope.locals, location, expr, "");
     }
     if (const auto local = scope.locals.find(expr); local != scope.locals.end()) {

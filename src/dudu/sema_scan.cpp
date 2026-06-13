@@ -61,6 +61,38 @@ size_t find_call_open(const std::string& expr) {
     return std::string::npos;
 }
 
+size_t find_call_close(const std::string& expr, size_t open) {
+    int depth = 0;
+    char quote = '\0';
+    bool escaped = false;
+    for (size_t i = open; i < expr.size(); ++i) {
+        const char c = expr[i];
+        if (quote != '\0') {
+            if (escaped) {
+                escaped = false;
+            } else if (c == '\\') {
+                escaped = true;
+            } else if (c == quote) {
+                quote = '\0';
+            }
+            continue;
+        }
+        if (c == '"' || c == '\'') {
+            quote = c;
+            continue;
+        }
+        if (c == '(') {
+            ++depth;
+        } else if (c == ')') {
+            --depth;
+            if (depth == 0) {
+                return i;
+            }
+        }
+    }
+    return std::string::npos;
+}
+
 size_t find_top_level_comparison(const std::string& expr) {
     int depth = 0;
     char quote = '\0';
@@ -145,6 +177,16 @@ size_t find_top_level_operator(const std::string& expr) {
         }
     }
     return std::string::npos;
+}
+
+std::string top_level_operator_text(const std::string& expr, size_t pos) {
+    if (pos + 1 < expr.size()) {
+        const std::string two = expr.substr(pos, 2);
+        if (two == "<<" || two == ">>") {
+            return two;
+        }
+    }
+    return pos < expr.size() ? expr.substr(pos, 1) : std::string{};
 }
 
 bool is_plain_identifier(const std::string& expr) {

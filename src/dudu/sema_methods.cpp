@@ -1,5 +1,6 @@
 #include "dudu/sema_methods.hpp"
 
+#include "dudu/sema_scan.hpp"
 #include "dudu/source.hpp"
 
 namespace dudu {
@@ -82,6 +83,30 @@ std::string member_path_type(const Symbols& symbols,
         start = next + 1;
     }
     return type;
+}
+
+bool is_member_path(const std::string& path) {
+    if (path.find('.') == std::string::npos) {
+        return false;
+    }
+    for (const std::string& part : split_top_level(path)) {
+        if (part != path) {
+            return false;
+        }
+    }
+    size_t start = 0;
+    while (start < path.size()) {
+        const size_t dot = path.find('.', start);
+        const std::string part = path.substr(start, dot == std::string::npos ? dot : dot - start);
+        if (!is_plain_identifier(trim(part))) {
+            return false;
+        }
+        if (dot == std::string::npos) {
+            return true;
+        }
+        start = dot + 1;
+    }
+    return false;
 }
 
 bool method_signature_for_type(const Symbols& symbols, std::string receiver_type,

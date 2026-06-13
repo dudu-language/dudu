@@ -1,0 +1,4 @@
+def main() -> i32:
+    wide: i64 = 2
+    value: i32 = 1 + wide
+    return value
