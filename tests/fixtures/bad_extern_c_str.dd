@@ -1,0 +1,3 @@
+@extern_c
+def bad() -> str:
+    return "nope"

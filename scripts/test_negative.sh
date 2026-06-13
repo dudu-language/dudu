@@ -95,6 +95,7 @@ expect_fail bad_tuple_arity --check "tuple supports 1 to 8 elements, got 9"
 expect_fail bad_function_decorator --check "unknown function decorator: @cuda.glboal"
 expect_fail bad_class_decorator --check "unknown class decorator: @packd"
 expect_fail bad_class_member_visibility --check "expected def after class member visibility"
+expect_fail bad_extern_c_str --check "@extern_c return type is not C ABI safe: str"
 
 if (
     cd "$repo_root/tests/fixtures/bad_target_decorator_mode"

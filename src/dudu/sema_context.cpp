@@ -57,6 +57,49 @@ bool decorator_is_call(std::string_view text, std::string_view name) {
     return !text.empty() && starts_with(text, std::string(name) + "(") && text.back() == ')';
 }
 
+bool has_decorator(const FunctionDecl& fn, std::string_view name) {
+    for (const Decorator& decorator : fn.decorators) {
+        if (trim(decorator.text) == name) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool is_c_abi_primitive(const std::string& type, bool allow_void) {
+    if (type == "void") {
+        return allow_void;
+    }
+    static const std::set<std::string> primitives = {"bool",  "i8",  "i16", "i32", "i64",
+                                                     "u8",    "u16", "u32", "u64", "isize",
+                                                     "usize", "f32", "f64", "cstr"};
+    return primitives.contains(type);
+}
+
+bool is_c_abi_type(std::string type, bool allow_void) {
+    type = trim(std::move(type));
+    if (type.empty() || type.front() == '&' || type == "str" ||
+        type.find('.') != std::string::npos) {
+        return false;
+    }
+    if (type.front() == '*') {
+        return is_c_abi_type(type.substr(1), false) || starts_with(trim(type.substr(1)), "struct ");
+    }
+    return is_c_abi_primitive(type, allow_void);
+}
+
+void check_extern_c_signature(const FunctionDecl& fn) {
+    const std::string return_type = fn.return_type.empty() ? "void" : fn.return_type;
+    if (!is_c_abi_type(return_type, true)) {
+        fail(fn.location, "@extern_c return type is not C ABI safe: " + return_type);
+    }
+    for (const ParamDecl& param : fn.params) {
+        if (!is_c_abi_type(param.type, false)) {
+            fail(param.location, "@extern_c parameter type is not C ABI safe: " + param.type);
+        }
+    }
+}
+
 std::string target_mode(const ModuleAst& module) {
     const auto found = module.build_values.find("TARGET_MODE");
     if (found == module.build_values.end()) {
@@ -314,6 +357,9 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
             for (const Decorator& decorator : method.decorators) {
                 check_function_decorator(module, decorator);
             }
+            if (has_decorator(method, "extern_c")) {
+                fail(method.location, "@extern_c is only valid on free functions");
+            }
             std::set<std::string> params;
             for (const ParamDecl& param : method.params) {
                 if (!params.insert(param.name).second) {
@@ -334,6 +380,9 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
     for (const FunctionDecl& fn : module.functions) {
         for (const Decorator& decorator : fn.decorators) {
             check_function_decorator(module, decorator);
+        }
+        if (has_decorator(fn, "extern_c")) {
+            check_extern_c_signature(fn);
         }
         std::set<std::string> params;
         for (const ParamDecl& param : fn.params) {
