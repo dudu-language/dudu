@@ -1,0 +1,19 @@
+class TimerRegs:
+    status: volatile[u32]
+    clear: volatile[u32]
+    counter: volatile[u32]
+
+
+TIMER0: *volatile[TimerRegs] = *volatile[TimerRegs](0x4000_2000)
+
+
+def timer_pending(regs: *volatile[TimerRegs]) -> bool:
+    return (regs.status & 0x01) != 0
+
+
+@extern_c
+@section(".isr_vector")
+def SysTick_Handler():
+    regs: *volatile[TimerRegs] = TIMER0
+    if timer_pending(regs):
+        regs.clear = 1

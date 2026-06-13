@@ -17,6 +17,7 @@ required_examples=(
     function_pointers.dd
     glfw_opengl_triangle.dd
     image_filter.dd
+    interrupt_handler.dd
     layout_hardware.dd
     modules_visibility.dd
     native_escape.dd

@@ -37,6 +37,14 @@ grep -Fq "struct alignas(16) Mat4Block" "$repo_root/build/layout_hardware.cpp"
 grep -Fq "inline volatile UartRegs* const UART0" "$repo_root/build/layout_hardware.cpp"
 grep -Fq "offsetof(PacketHeader, flags)" "$repo_root/build/layout_hardware.cpp"
 
+"$repo_root/build/duc" emit "$repo_root/examples/interrupt_handler.dd" \
+    -o "$repo_root/build/interrupt_handler.cpp"
+grep -Fq 'extern "C" __attribute__((section(".isr_vector"))) void SysTick_Handler()' \
+    "$repo_root/build/interrupt_handler.cpp"
+grep -Fq "inline volatile TimerRegs* const TIMER0" \
+    "$repo_root/build/interrupt_handler.cpp"
+grep -Fq "regs->clear = 1;" "$repo_root/build/interrupt_handler.cpp"
+
 "$repo_root/build/duc" emit "$repo_root/examples/web_server.dd" -o "$repo_root/build/web_server.cpp"
 grep -Fq "app.Get(\"/todos" "$repo_root/build/web_server.cpp"
 grep -Fq "[&](auto&& req, auto&& res)" "$repo_root/build/web_server.cpp"
