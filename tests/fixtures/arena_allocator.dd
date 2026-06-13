@@ -1,0 +1,37 @@
+class Enemy:
+    hp: i32
+    x: f32
+    y: f32
+
+
+class Arena:
+    data: *u8
+    capacity: usize
+    used: usize
+
+    def alloc(self, size: usize, align: usize) -> *u8:
+        aligned = align_up(self.used, align)
+        if aligned + size > self.capacity:
+            return None
+        ptr = self.data + aligned
+        self.used = aligned + size
+        return ptr
+
+    def reset(self):
+        self.used = 0
+
+
+def main() -> i32:
+    storage: *u8 = malloc[u8](128)
+    arena = Arena(data=storage, capacity=128, used=0)
+    raw: *u8 = arena.alloc(sizeof[Enemy](), alignof[Enemy]())
+    if raw == None:
+        free(storage)
+        return 1
+
+    enemy: *Enemy = *Enemy(raw)
+    *enemy = Enemy(hp=40, x=1.0, y=2.0)
+    result: i32 = enemy.hp + i32(enemy.x) + i32(enemy.y)
+    arena.reset()
+    free(storage)
+    return result
