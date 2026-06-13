@@ -219,6 +219,11 @@ push. They are not release packaging work.
    module so CMake/Ninja can rebuild changed translation units instead of whole
    programs.
 
+   Status: direct native builds preserve generated C++ mtimes and skip the
+   C++ compile/link step when the generated C++, native build command, and
+   native source inputs are unchanged. True per-module generated C++ remains
+   the larger architecture step.
+
 6. Freestanding and embedded assert policy
 
    Hosted `assert` and `debug_assert` are implemented. Freestanding and

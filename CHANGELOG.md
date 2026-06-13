@@ -48,6 +48,8 @@
   pointer-to-const calls.
 - Added `duc clean-cache`/`dudu clean-cache` for clearing native-header scan
   cache files.
+- Added unchanged-build skipping for direct native builds when generated C++,
+  native command, and native source inputs are unchanged.
 - Added aliased lowercase native macro imports, such as `cassert.assert(...)`.
 - Added variadic native macro passthrough for fixed-leading-argument macros.
 - Added a macro-bomb fixture and example for imported C/C++ macro coverage.

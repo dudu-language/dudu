@@ -102,12 +102,63 @@ void write_text_output(const std::filesystem::path& path, const std::string& tex
     out << text;
 }
 
+std::string read_text_file(const std::filesystem::path& path);
+
+bool write_text_if_changed(const std::filesystem::path& path, const std::string& text) {
+    if (read_text_file(path) == text) {
+        return false;
+    }
+    write_text_output(path, text);
+    return true;
+}
+
 std::string read_text_file(const std::filesystem::path& path) {
     std::ifstream in(path);
     if (!in) {
         return {};
     }
     return {std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()};
+}
+
+bool file_newer_or_same(const std::filesystem::path& newer, const std::filesystem::path& older) {
+    std::error_code error;
+    if (!std::filesystem::exists(newer, error) || error ||
+        !std::filesystem::exists(older, error) || error) {
+        return false;
+    }
+    const auto newer_time = std::filesystem::last_write_time(newer, error);
+    if (error) {
+        return false;
+    }
+    const auto older_time = std::filesystem::last_write_time(older, error);
+    if (error) {
+        return false;
+    }
+    return newer_time >= older_time;
+}
+
+bool native_sources_older_than(const std::filesystem::path& output, const ProjectConfig& config) {
+    for (const std::string& source : config.cpp_sources) {
+        if (!file_newer_or_same(output, source)) {
+            return false;
+        }
+    }
+    for (const std::string& source : config.c_sources) {
+        if (!file_newer_or_same(output, source)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool build_is_up_to_date(const std::filesystem::path& output, const std::filesystem::path& cpp_path,
+                         const ProjectConfig& config, const std::string& command,
+                         bool cpp_changed) {
+    if (cpp_changed || !file_newer_or_same(output, cpp_path) ||
+        !native_sources_older_than(output, config)) {
+        return false;
+    }
+    return read_text_file(output.string() + ".command") == command;
 }
 
 void write_compile_commands(const std::filesystem::path& output,
@@ -259,7 +310,7 @@ std::filesystem::path build_executable(const NativeBuildOptions& options, const 
     std::filesystem::create_directories(output.parent_path().empty() ? "." : output.parent_path());
     const std::filesystem::path cpp_path = output.string() + ".cpp";
     const std::filesystem::path object_path = output.string() + ".o";
-    write_text_output(cpp_path, cpp);
+    const bool cpp_changed = write_text_if_changed(cpp_path, cpp);
 
     const char* env_cxx = std::getenv("CXX");
     const std::string cxx = options.config.compiler.empty() ? (env_cxx == nullptr ? "c++" : env_cxx)
@@ -305,6 +356,12 @@ std::filesystem::path build_executable(const NativeBuildOptions& options, const 
         }
     }
     write_compile_commands(output, cpp_path, command);
+    if (build_is_up_to_date(output, cpp_path, options.config, command, cpp_changed)) {
+        if (options.verbose) {
+            std::cerr << "up-to-date " << output.string() << '\n';
+        }
+        return output;
+    }
     if (options.verbose) {
         std::cerr << command << '\n';
     }
@@ -326,6 +383,7 @@ std::filesystem::path build_executable(const NativeBuildOptions& options, const 
                 native_failure_message("archive build", object_path, archive_command, archive_log));
         }
     }
+    write_text_output(output.string() + ".command", command);
     return output;
 }
 
