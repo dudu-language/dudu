@@ -41,12 +41,21 @@ std::string build_literal(const std::string& value) {
     return '"' + value + '"';
 }
 
-std::string build_type(const std::string& literal) {
+bool freestanding_like(const ModuleAst& module) {
+    const auto found = module.build_values.find("TARGET_MODE");
+    if (found == module.build_values.end()) {
+        return false;
+    }
+    const std::string mode = build_literal(found->second);
+    return mode == "\"freestanding\"" || mode == "\"embedded\"";
+}
+
+std::string build_type(const std::string& literal, bool freestanding) {
     if (literal == "true" || literal == "false") {
         return "bool";
     }
     if (!literal.empty() && literal.front() == '"') {
-        return "std::string_view";
+        return freestanding ? "const char*" : "std::string_view";
     }
     return "int";
 }
@@ -59,10 +68,11 @@ void emit_build_namespace(std::ostringstream& out, const ModuleAst& module) {
     }
 
     out << "namespace build {\n";
+    const bool freestanding = freestanding_like(module);
     for (const auto& [name, value] : values) {
         const std::string literal = build_literal(value);
-        out << "inline constexpr " << build_type(literal) << ' ' << name << " = " << literal
-            << ";\n";
+        out << "inline constexpr " << build_type(literal, freestanding) << ' ' << name << " = "
+            << literal << ";\n";
     }
     out << "} // namespace build\n\n";
 }
@@ -82,23 +92,34 @@ std::vector<std::string> namespace_aliases(const ModuleAst& module) {
 }
 
 void emit_includes(std::ostringstream& out, const ModuleAst& module) {
-    out << "#include <algorithm>\n"
-           "#include <array>\n"
-           "#include <atomic>\n"
-           "#include <cstddef>\n"
-           "#include <cstdint>\n"
-           "#include <cstdlib>\n"
-           "#include <functional>\n"
-           "#include <iostream>\n"
-           "#include <optional>\n"
-           "#include <string>\n"
-           "#include <string_view>\n"
-           "#include <type_traits>\n"
-           "#include <unordered_map>\n"
-           "#include <unordered_set>\n"
-           "#include <utility>\n"
-           "#include <variant>\n"
-           "#include <vector>\n";
+    if (freestanding_like(module)) {
+        out << "#include <algorithm>\n"
+               "#include <array>\n"
+               "#include <atomic>\n"
+               "#include <cstddef>\n"
+               "#include <cstdint>\n"
+               "#include <cstdlib>\n"
+               "#include <type_traits>\n"
+               "#include <utility>\n";
+    } else {
+        out << "#include <algorithm>\n"
+               "#include <array>\n"
+               "#include <atomic>\n"
+               "#include <cstddef>\n"
+               "#include <cstdint>\n"
+               "#include <cstdlib>\n"
+               "#include <functional>\n"
+               "#include <iostream>\n"
+               "#include <optional>\n"
+               "#include <string>\n"
+               "#include <string_view>\n"
+               "#include <type_traits>\n"
+               "#include <unordered_map>\n"
+               "#include <unordered_set>\n"
+               "#include <utility>\n"
+               "#include <variant>\n"
+               "#include <vector>\n";
+    }
 
     for (const ImportDecl& import : module.imports) {
         if (import.kind == ImportKind::ForeignC || import.kind == ImportKind::ForeignCpp) {
@@ -124,12 +145,16 @@ void emit_includes(std::ostringstream& out, const ModuleAst& module) {
 }
 
 void emit_result_prelude(std::ostringstream& out, const ModuleAst& module) {
+    const bool freestanding = freestanding_like(module);
     out << "namespace dudu {\n"
            "template <typename T> struct OkValue { T value; };\n"
            "template <typename E> struct ErrValue { E err; };\n"
            "template <typename T> OkValue<T> Ok(T value) { return {std::move(value)}; }\n"
            "template <typename E> ErrValue<E> Err(E err) { return {std::move(err)}; }\n";
-    out << "template <typename T> void print(const T& value) { std::cout << value << '\\n'; }\n";
+    if (!freestanding) {
+        out << "template <typename T> void print(const T& value) { std::cout << value << '\\n'; "
+               "}\n";
+    }
     if (!has_function(module, "align_up")) {
         out << "constexpr size_t align_up(size_t value, size_t alignment) {\n"
                "    return alignment == 0 ? value : ((value + alignment - 1) / alignment) * "
@@ -166,7 +191,9 @@ void emit_result_prelude(std::ostringstream& out, const ModuleAst& module) {
     if (!has_function(module, "align_up")) {
         out << "using dudu::align_up;\n";
     }
-    out << "using dudu::print;\n";
+    if (!freestanding) {
+        out << "using dudu::print;\n";
+    }
     out << "using std::max;\n"
            "using std::min;\n"
            "namespace shader {\n"

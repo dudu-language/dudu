@@ -65,7 +65,7 @@ void append_target_mode_flags(std::string& common_flags, const std::string& mode
     if (mode != "freestanding" && mode != "embedded") {
         return;
     }
-    for (const char* flag : {"-fno-exceptions", "-fno-rtti"}) {
+    for (const char* flag : {"-ffreestanding", "-fno-exceptions", "-fno-rtti"}) {
         common_flags += " " + shell_quote_arg(flag);
     }
 }
