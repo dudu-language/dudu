@@ -2,6 +2,7 @@
 #include "dudu/cpp_lower.hpp"
 #include "dudu/native_build.hpp"
 #include "dudu/native_header_cache.hpp"
+#include "dudu/native_header_merge.hpp"
 #include <chrono>
 #include <cstdlib>
 #include <fstream>
@@ -125,7 +126,6 @@ std::filesystem::path temp_base(const std::filesystem::path& source_dir) {
     const auto ticks = std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
     return source_dir / (".dudu_native_headers_" + ticks);
 }
-
 std::string run_capture(const std::string& command, const std::filesystem::path& output,
                         const std::filesystem::path& error) {
     const int status = std::system((command + " >" + shell_quote_path(output) + " 2>" +
@@ -198,7 +198,6 @@ std::vector<std::string> signature_params(const std::string& signature) {
     }
     return out;
 }
-
 std::string signature_return_type(const std::string& signature) {
     const size_t open = signature.find('(');
     return dudu_type(open == std::string::npos ? signature : signature.substr(0, open));
@@ -208,6 +207,10 @@ void add_unique(std::vector<T>& out, std::set<std::string>& seen, T value) {
     if (seen.insert(value.name).second) {
         out.push_back(std::move(value));
     }
+}
+void add_unique_function(std::vector<NativeFunctionDecl>& out, std::set<std::string>& seen,
+                         NativeFunctionDecl value) {
+    if (seen.insert(native_function_key(value)).second) out.push_back(std::move(value));
 }
 void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                     std::vector<std::pair<int, std::string>>& namespaces,
@@ -378,7 +381,7 @@ NativeHeaderScan dedupe_scan(NativeHeaderScan scan) {
     std::set<std::string> classes;
     for (auto item : scan.types) add_unique(out.types, types, std::move(item));
     for (auto item : scan.values) add_unique(out.values, values, std::move(item));
-    for (auto item : scan.functions) add_unique(out.functions, functions, std::move(item));
+    for (auto item : scan.functions) add_unique_function(out.functions, functions, std::move(item));
     for (auto item : scan.macros) add_unique(out.macros, macros, std::move(item));
     for (auto item : scan.namespaces) add_unique(out.namespaces, namespaces, std::move(item));
     for (auto item : scan.classes) add_unique(out.classes, classes, std::move(item));
@@ -388,7 +391,6 @@ std::string scan_key(const ImportDecl& import, const NativeHeaderOptions& option
                      const std::string& flags) {
     return unquoted(import.module_path) + "|" + options.config.cpp_std + "|" + flags;
 }
-
 NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOptions& options,
                                  const std::string& flags) {
     static std::map<std::string, NativeHeaderScan> cache;
@@ -466,12 +468,12 @@ NativeHeaderScan scan_native_headers(const ModuleAst& module, const NativeHeader
         append_unique(out.classes, scan.classes);
         if (direct_import(import)) {
             append_unique(out.values, scan.values);
-            append_unique(out.functions, scan.functions);
+            append_unique_native_functions(out.functions, scan.functions);
             append_unique(out.macros, scan.macros);
             append_unique(out.namespaces, scan.namespaces);
         } else {
             append_unique(out.values, prefixed_names(scan.values, import.alias));
-            append_unique(out.functions, prefixed_names(scan.functions, import.alias));
+            append_unique_native_functions(out.functions, prefixed_names(scan.functions, import.alias));
             append_unique(out.macros, prefixed_names(scan.macros, import.alias));
         }
     }
@@ -481,7 +483,7 @@ void merge_native_headers(ModuleAst& module, const NativeHeaderOptions& options)
     NativeHeaderScan scan = scan_native_headers(module, options);
     append_unique(module.native_types, scan.types);
     append_unique(module.native_values, scan.values);
-    append_unique(module.native_functions, scan.functions);
+    append_unique_native_functions(module.native_functions, scan.functions);
     append_unique(module.native_macros, scan.macros);
     append_unique(module.native_namespaces, scan.namespaces);
     append_unique(module.native_classes, scan.classes);

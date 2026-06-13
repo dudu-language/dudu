@@ -224,11 +224,13 @@ void test_native_header_type_scan(const std::filesystem::path& root) {
                                                 "    window: *DuduNativeWindow = None\n"
                                                 "    widget: DuduWidgetAlias\n"
                                                 "    other: Widget = Widget(5)\n"
+                                                "    amount: f32 = 2.0\n"
                                                 "    if DUDU_NATIVE_CHECK():\n"
                                                 "        return dudu_native.add(20, 22) + "
                                                 "DUDU_NATIVE_MAGIC\n"
                                                 "    if dudu_native_ready(&event):\n"
-                                                "        return DUDU_NATIVE_SCALE(other.scaled(3))\n"
+                                                "        return DUDU_NATIVE_SCALE(other.scaled(3)) + "
+                                                "i32(dudu_native.overloaded(amount))\n"
                                                 "    return event.type + widget.value + "
                                                 "other.value + dudu_native_kind_ok\n",
                                                 root / "tests/fixtures/native_scan.dd");

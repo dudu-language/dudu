@@ -20,6 +20,14 @@ inline int add(int a, int b) {
 inline bool ready() {
     return true;
 }
+
+inline int overloaded(int value) {
+    return value;
+}
+
+inline float overloaded(float value) {
+    return value;
+}
 } // namespace dudu_native
 
 using DuduWidgetAlias = dudu_native::Widget;
