@@ -1,0 +1,305 @@
+# Dudu Project Driver Plan
+
+This plan defines the `dudu` project command.
+
+`duc` remains the compiler driver. It should stay explicit, scriptable, and
+usable without a project manifest:
+
+```text
+duc check src/main.dd
+duc emit src/main.dd -o build/main.cpp
+duc build src/main.dd -o build/app
+```
+
+`dudu` is the Python-friendly project driver. It reads `dudu.toml`, calls
+`duc`, and coordinates normal C/C++ build tools without replacing them.
+
+## Goal
+
+Make Dudu projects feel close to Python for day-to-day use:
+
+```text
+dudu init
+dudu run
+dudu test
+dudu fmt
+```
+
+while keeping the C/C++ build surface visible and usable:
+
+```text
+duc emit src/main.dd -o build/main.cpp
+c++ build/main.cpp src/simd_support.cpp -Iinclude -lraylib -o build/app
+```
+
+The driver should smooth over include paths, link flags, generated C++ paths,
+and common compile/run commands. It should not become a package manager, a
+CMake replacement, or a walled garden.
+
+## Non-Goals
+
+- Do not hide CMake, Make, Ninja, pkg-config, or native link flags behind an
+  opaque build system.
+- Do not replace system package managers.
+- Do not make Dudu dependencies source-only.
+- Do not make `dudu.toml` required for `duc emit`, `duc check`, or explicit
+  compiler-driver workflows.
+- Do not promise portable binary dependency management in the first version.
+
+## Command Split
+
+```text
+duc   compiler driver
+dudu  project driver
+```
+
+`duc` should be the tool for low-level compiler actions:
+
+```text
+duc check <input.dd>
+duc emit <input.dd> -o <output.cpp>
+duc build <input.dd> -o <binary>
+duc run <input.dd>
+duc cmake <input.dd> -o CMakeLists.txt
+```
+
+`dudu` should be the tool for project actions:
+
+```text
+dudu init
+dudu new <name>
+dudu run [target]
+dudu build [target]
+dudu check [target]
+dudu fmt
+dudu test
+dudu cmake
+dudu clean
+```
+
+## Python-Friendly Behavior
+
+`dudu init` initializes the current directory:
+
+```text
+dudu.toml
+src/main.dd
+CHANGELOG.md
+README.md
+.gitignore
+```
+
+`dudu new hello` creates a new directory:
+
+```text
+hello/
+    dudu.toml
+    src/main.dd
+    CHANGELOG.md
+    README.md
+    .gitignore
+```
+
+`dudu run` should be the common path. It should emit C++, build the configured
+target, and launch the binary.
+
+The command should print the major steps so users can see the native build:
+
+```text
+emit  build/dudu/main.cpp
+c++   build/dudu/main.cpp src/support.cpp -Iinclude -lraylib -o build/bin/app
+run   build/bin/app
+```
+
+This keeps the workflow friendly without making it magical.
+
+## Manifest Shape
+
+The first `dudu.toml` should stay small:
+
+```toml
+name = "bunnymark"
+entry = "src/main.dd"
+
+[cxx]
+standard = "c++20"
+compiler = "c++"
+
+[include]
+paths = ["src", "include", "third_party/install/include"]
+
+[sources]
+cpp = ["src/simd_support.cpp"]
+c = []
+
+[pkg]
+libs = ["raylib"]
+
+[link]
+paths = ["third_party/install/lib"]
+libs = ["m", "pthread"]
+flags = []
+
+[build]
+dir = "build"
+```
+
+Open questions for implementation:
+
+- whether `entry` should become `[targets.app] entry = ...` immediately.
+- whether tests should be separate targets or a convention under `tests/`.
+- whether `compiler` should default to `c++`, `clang++`, or the platform CMake
+  compiler.
+
+## Targets
+
+Support one target first:
+
+```toml
+name = "hello"
+entry = "src/main.dd"
+```
+
+Then expand to named targets:
+
+```toml
+name = "game"
+
+[targets.app]
+entry = "src/main.dd"
+kind = "executable"
+
+[targets.tests]
+entry = "tests/main.dd"
+kind = "executable"
+```
+
+Expected commands:
+
+```text
+dudu run
+dudu run app
+dudu test
+dudu build tests
+```
+
+## Native Build Inputs
+
+The driver should pass through normal native build pieces:
+
+- Dudu entry files.
+- generated C++ files.
+- hand-written C++ files.
+- hand-written C files.
+- include directories.
+- library directories.
+- linked library names.
+- raw compile flags.
+- raw link flags.
+- pkg-config packages.
+
+pkg-config should be a convenience input, not a separate dependency universe:
+
+```toml
+[pkg]
+libs = ["raylib", "sdl3"]
+```
+
+The driver can translate that to `pkg-config --cflags --libs ...`.
+
+## CMake Emission
+
+`dudu cmake` should emit a boring CMake project from `dudu.toml`.
+
+The emitted file should be readable and editable. It should not depend on a
+hidden Dudu build runtime.
+
+Expected shape:
+
+```cmake
+cmake_minimum_required(VERSION 3.20)
+project(bunnymark LANGUAGES C CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+add_executable(bunnymark
+    build/dudu/main.cpp
+    src/simd_support.cpp
+)
+
+target_include_directories(bunnymark PRIVATE
+    src
+    include
+)
+```
+
+`dudu build` may either call the compiler directly for simple projects or use
+generated CMake for complex projects. If it uses CMake, it should say so in the
+printed steps.
+
+## Changelog
+
+Add `CHANGELOG.md` to new projects.
+
+Use a simple Keep a Changelog-style file:
+
+```markdown
+# Changelog
+
+## [Unreleased]
+
+### Added
+
+### Changed
+
+### Fixed
+```
+
+Project rule:
+
+```text
+When changing user-visible language behavior, CLI behavior, examples, or docs,
+update CHANGELOG.md under [Unreleased].
+```
+
+This prevents important changes from being spread across transient planning
+docs.
+
+## Implementation Slices
+
+1. Add `CHANGELOG.md` to this repository.
+2. Add a `dudu` executable entry point or command alias next to `duc`.
+3. Implement `dudu init`.
+4. Implement manifest parsing for the minimal single-target `dudu.toml`.
+5. Implement `dudu check`, `dudu build`, and `dudu run`.
+6. Add direct compiler invocation for simple projects.
+7. Add pkg-config include/link flag expansion.
+8. Add C and C++ source file passthrough.
+9. Implement `dudu cmake`.
+10. Add named targets.
+11. Add `dudu test`.
+12. Add `dudu new <name>`.
+13. Update examples to prefer `dudu run` where it improves usability.
+14. Keep `duc` workflows documented as the transparent fallback.
+
+## Acceptance Tests
+
+- `dudu init` creates a runnable hello project.
+- `dudu run` builds and runs hello from a clean directory.
+- `dudu run` prints the emitted C++ path, compiler command, and binary path.
+- `dudu build` can compile a project with a hand-written `.cpp` file.
+- `dudu build` can compile a project using a pkg-config package such as raylib.
+- `dudu cmake` emits a readable CMake project.
+- `duc emit` still works without a manifest.
+- `duc build` still works without a manifest.
+- Generated C++ remains inspectable.
+
+## Design Guardrails
+
+- Prefer visible native commands over hidden magic.
+- Keep `dudu.toml` declarative and small.
+- Let CMake remain CMake.
+- Let C++ linking remain visible.
+- Keep all native escape hatches available.
+- Make Python-shaped workflows easy without pretending Dudu is Python.
