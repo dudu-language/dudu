@@ -1,0 +1,6 @@
+class Color:
+    VALUE: i32 = 1
+
+
+def main() -> i32:
+    return Color.MISSING

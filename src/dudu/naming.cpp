@@ -116,6 +116,13 @@ void check_naming(const ModuleAst& module) {
             fail_naming(constant.location, "constant names must be ALL_CAPS", constant.name);
         }
     }
+    for (const ClassDecl& klass : module.classes) {
+        for (const ConstDecl& constant : klass.constants) {
+            if (!is_dudu_all_caps(constant.name)) {
+                fail_naming(constant.location, "constant names must be ALL_CAPS", constant.name);
+            }
+        }
+    }
 }
 
 } // namespace dudu

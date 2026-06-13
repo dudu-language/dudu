@@ -460,6 +460,7 @@ compile_and_expect atomic_volatile 44
 compile_and_expect branch_return 1
 compile_and_expect constructors 42
 compile_and_expect class_lifecycle 42
+compile_and_expect static_members 42
 compile_and_expect constructor_comparison_arg 42; compile_and_expect native_escape 42
 compile_and_expect result_option 42
 compile_and_expect function_pointers 42

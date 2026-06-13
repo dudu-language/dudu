@@ -112,19 +112,20 @@ struct FunctionDecl {
     SourceLocation location;
 };
 
+struct ConstDecl {
+    std::string name;
+    std::string type;
+    std::string value;
+    SourceLocation location;
+};
+
 struct ClassDecl {
     Visibility visibility = Visibility::Default;
     std::string name;
     std::vector<Decorator> decorators;
     std::vector<FieldDecl> fields;
+    std::vector<ConstDecl> constants;
     std::vector<FunctionDecl> methods;
-    SourceLocation location;
-};
-
-struct ConstDecl {
-    std::string name;
-    std::string type;
-    std::string value;
     SourceLocation location;
 };
 

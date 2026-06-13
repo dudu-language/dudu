@@ -1,0 +1,21 @@
+class Color:
+    r: f32
+    g: f32
+    b: f32
+    a: f32
+
+    @staticmethod
+    def gray(value: f32) -> Color:
+        return Color(value, value, value, 1.0)
+
+    WHITE: Color = Color(1.0, 1.0, 1.0, 1.0)
+    MAX_CHANNEL: i32 = 255
+
+
+def main() -> i32:
+    mid: Color = Color.gray(0.5)
+    white: Color = Color.WHITE
+
+    if Color.MAX_CHANNEL == 255 and mid.a == white.a:
+        return 42
+    return 1

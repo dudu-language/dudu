@@ -139,7 +139,7 @@ void check_function_decorator(const ModuleAst& module, const Decorator& decorato
     const std::string text = trim(decorator.text);
     if (text == "inline" || text == "constexpr" || text == "extern_c" || text == "cuda.global" ||
         text == "cuda.device" || text == "cuda.host" || text == "shader.compute" ||
-        text == "test" ||
+        text == "staticmethod" || text == "test" ||
         decorator_is_call(text, "workgroup_size") || decorator_is_call(text, "section")) {
         check_target_decorator_mode(module, decorator, text);
         return;
@@ -297,6 +297,9 @@ Symbols collect_symbols(const ModuleAst& module) {
         add_name(names, klass.name, klass.location);
         symbols.types.insert(klass.name);
         symbols.classes[klass.name] = &klass;
+        for (const ConstDecl& constant : klass.constants) {
+            symbols.native_values[klass.name + "." + constant.name] = constant.type;
+        }
     }
     for (const ClassDecl& klass : module.native_classes) {
         symbols.types.insert(klass.name);
@@ -363,10 +366,26 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                 fail(field.location, "unknown field type: " + field.type);
             }
         }
+        for (const ConstDecl& constant : klass.constants) {
+            if (!fields.insert(constant.name).second) {
+                fail(constant.location, "duplicate class member: " + constant.name);
+            }
+            check_supported_type_shape(constant.location, constant.type);
+            if (!known_type(symbols, constant.type)) {
+                fail(constant.location, "unknown class constant type: " + constant.type);
+            }
+        }
         for (const FunctionDecl& method : klass.methods) {
+            if (!fields.insert(method.name).second) {
+                fail(method.location, "duplicate class member: " + method.name);
+            }
+            const bool is_static = has_decorator(method, "staticmethod");
             if ((method.name == "__init__" || method.name == "__del__") &&
                 (method.params.empty() || method.params.front().name != "self")) {
                 fail(method.location, method.name + " requires self parameter");
+            }
+            if (is_static && !method.params.empty() && method.params.front().name == "self") {
+                fail(method.location, "@staticmethod methods cannot take self");
             }
             if (method.name == "__init__" && !method.return_type.empty() &&
                 method.return_type != "void") {
@@ -421,6 +440,9 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
             if (return_type != "void" && return_type != "bool" && return_type != "i32") {
                 fail(fn.location, "@test return type must be void, bool, or i32");
             }
+        }
+        if (has_decorator(fn, "staticmethod")) {
+            fail(fn.location, "@staticmethod is only valid on methods");
         }
         std::set<std::string> params;
         for (const ParamDecl& param : fn.params) {

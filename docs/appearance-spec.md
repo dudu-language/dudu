@@ -934,6 +934,43 @@ player: PlayerState = PlayerState(
 This should lower to aggregate initialization or constructor calls depending on
 the generated C++ type.
 
+## Static Members
+
+Class-scoped `ALL_CAPS` bindings are static constants and use type-qualified
+access:
+
+```python
+class Color:
+    r: f32
+    g: f32
+    b: f32
+    a: f32
+
+    WHITE: Color = Color(1.0, 1.0, 1.0, 1.0)
+    MAX_CHANNEL: i32 = 255
+
+
+white: Color = Color.WHITE
+limit: i32 = Color.MAX_CHANNEL
+```
+
+Static methods use Python's `@staticmethod` spelling:
+
+```python
+class Color:
+    r: f32
+    g: f32
+    b: f32
+    a: f32
+
+    @staticmethod
+    def gray(value: f32) -> Color:
+        return Color(value, value, value, 1.0)
+```
+
+Static methods do not take `self`. Type-qualified access lowers to C++ `::`,
+while instance field and method access keeps normal member access.
+
 ## C Interop
 
 ```python

@@ -17,5 +17,8 @@ bool is_member_path(const std::string& path);
 bool method_signature_for_type(const Symbols& symbols, std::string receiver_type,
                                const std::string& method_name, FunctionSignature& signature,
                                const SourceLocation* location);
+bool static_method_signature_for_type(const Symbols& symbols, const std::string& type_name,
+                                      const std::string& method_name, FunctionSignature& signature,
+                                      const SourceLocation* location);
 
 } // namespace dudu

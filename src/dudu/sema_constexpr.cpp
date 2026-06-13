@@ -92,8 +92,21 @@ void check_constexpr_uses(const ModuleAst& module) {
             constexpr_functions.insert(fn.name);
         }
     }
+    for (const ClassDecl& klass : module.classes) {
+        for (const FunctionDecl& method : klass.methods) {
+            functions.insert(klass.name + "." + method.name);
+            if (has_constexpr_decorator(method)) {
+                constexpr_functions.insert(klass.name + "." + method.name);
+            }
+        }
+    }
     for (const ConstDecl& constant : module.constants) {
         check_expr_calls(constant.location, constant.value, constexpr_functions, functions);
+    }
+    for (const ClassDecl& klass : module.classes) {
+        for (const ConstDecl& constant : klass.constants) {
+            check_expr_calls(constant.location, constant.value, constexpr_functions, functions);
+        }
     }
     for (const StaticAssertDecl& assertion : module.static_asserts) {
         check_expr_calls(assertion.location, assertion.expression, constexpr_functions, functions);

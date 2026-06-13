@@ -1,0 +1,8 @@
+class Color:
+    @staticmethod
+    def bad(self) -> i32:
+        return 0
+
+
+def main() -> i32:
+    return Color.bad()

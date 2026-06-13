@@ -160,6 +160,12 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
             const std::string receiver = trim(callee.substr(0, method_dot));
             const std::string method_name = trim(callee.substr(method_dot + 1));
             FunctionSignature signature;
+            if (scope.symbols.classes.contains(receiver) &&
+                static_method_signature_for_type(scope.symbols, receiver, method_name, signature,
+                                                 location)) {
+                check_call_args(scope, callee, signature, call_args(expr, call), location);
+                return signature.return_type;
+            }
             if (method_signature_for_type(
                     scope.symbols,
                     member_path_type(scope.symbols, scope.locals, nullptr, receiver, ""),

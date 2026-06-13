@@ -12,6 +12,7 @@ add_library(dudu_frontend
     src/dudu/cmake_emit.cpp
     src/dudu/control_flow.cpp
     src/dudu/cpp_emit.cpp
+    src/dudu/cpp_emit_classes.cpp
     src/dudu/cpp_emit_prelude.cpp
     src/dudu/cpp_expr_builtins.cpp
     src/dudu/cpp_lower.cpp

@@ -205,22 +205,35 @@ class Parser {
         if (!match(TokenKind::Indent)) {
             fail_current("expected indented class body");
         }
+        std::vector<Decorator> member_decorators;
         while (!at(TokenKind::Dedent) && !at(TokenKind::End)) {
             if (at(TokenKind::Newline)) {
                 ++cursor_;
                 continue;
             }
+            if (match(TokenKind::At)) {
+                member_decorators.push_back(parse_decorator(previous()));
+                continue;
+            }
             const Visibility member_visibility = parse_visibility();
             if (match_identifier("def")) {
                 klass.methods.push_back(
-                    parse_function(previous(), member_visibility, {}, klass.name));
+                    parse_function(previous(), member_visibility, member_decorators, klass.name));
+                member_decorators.clear();
+                continue;
+            }
+            if (is_all_caps_identifier(current())) {
+                require_no_decorators(member_decorators, "class constant");
+                klass.constants.push_back(parse_constant());
                 continue;
             }
             if (member_visibility != Visibility::Default) {
                 fail_current("expected def after class member visibility");
             }
+            require_no_decorators(member_decorators, "field");
             klass.fields.push_back(parse_field());
         }
+        require_no_decorators(member_decorators, "class body");
         consume(TokenKind::Dedent, "expected dedent after class body");
         return klass;
     }

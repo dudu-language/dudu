@@ -50,6 +50,10 @@ Related specs:
 
 Support class-scoped constants, static data, and static functions.
 
+Status: class-scoped constants and `@staticmethod` methods are implemented.
+Mutable static data and broader namespaced constants remain candidates if real
+examples need them.
+
 Python, Rust, C, and C++ all have ways to hang values off a type or namespace.
 Dudu needs that so constants and helpers do not all live in the global module
 scope.
