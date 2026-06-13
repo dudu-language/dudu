@@ -77,7 +77,7 @@ class Color:
 class Math:
     PI: f64 = 3.141592653589793
 
-    @static
+    @staticmethod
     def clamp(x: f32, lo: f32, hi: f32) -> f32:
         if x < lo:
             return lo
@@ -145,7 +145,7 @@ Do add compiler-recognized decorators when they remove real friction:
 - `@test`
 - `@inline`
 - `@extern_c`
-- `@static`
+- `@staticmethod`
 - `@operator`
 - target attributes such as `@cuda.global`
 
