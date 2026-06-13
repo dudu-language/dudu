@@ -233,7 +233,12 @@ void emit_test_harness(std::ostringstream& out, const ModuleAst& module,
             << "    if (dudu_test::run_one(" << cpp_string_literal(fn.name) << ", " << fn.name
             << ")) { ++passed; }\n";
     }
-    out << "    std::cout << passed << \"/\" << total << \" tests passed\\n\";\n"
+    out << "    if (total == 0) {\n"
+           "        std::cout << \"running 0 tests\\n\"\n"
+           "                     \"test result: ok. 0 passed; 0 failed; 0 filtered out\\n\";\n"
+           "        return 0;\n"
+           "    }\n"
+           "    std::cout << passed << \"/\" << total << \" tests passed\\n\";\n"
            "    return passed == total ? 0 : 1;\n"
            "}\n";
 }

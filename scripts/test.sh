@@ -132,6 +132,11 @@ grep -q "clean ./build" "$repo_root/build/dudu_clean.err"
 grep -q "3/3 tests passed" "$repo_root/build/dudu_tests.out"
 grep -Eq "emit build/dudu-tests/dudu_tests-[0-9a-f]+\\.cpp" "$repo_root/build/dudu_test_steps.err"
 grep -Eq "test build/dudu-tests/dudu_tests-[0-9a-f]+$" "$repo_root/build/dudu_test_steps.err"
+"$repo_root/build/dudu" test "$repo_root/tests/fixtures/simple_program.dd" \
+    >"$repo_root/build/dudu_tests_zero.out"
+grep -q "running 0 tests" "$repo_root/build/dudu_tests_zero.out"
+grep -q "test result: ok. 0 passed; 0 failed; 0 filtered out" \
+    "$repo_root/build/dudu_tests_zero.out"
 "$repo_root/build/dudu" test "$repo_root/tests/fixtures/dudu_tests.dd" --filter bool \
     >"$repo_root/build/dudu_tests_filter.out" 2>"$repo_root/build/dudu_test_filter_steps.err"
 grep -q "1/1 tests passed" "$repo_root/build/dudu_tests_filter.out"

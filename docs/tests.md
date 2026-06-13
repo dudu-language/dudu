@@ -62,15 +62,13 @@ Cargo test filtering is substring-based by default:
 cargo test add
 ```
 
-This runs every test whose full path contains `add`. Cargo also reports zero
-tests cleanly:
+This runs every test whose full path contains `add`. Dudu reports zero tests
+cleanly:
 
 ```text
 running 0 tests
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+test result: ok. 0 passed; 0 failed; 0 filtered out
 ```
-
-Dudu should move toward that output instead of `0/0 tests passed`.
 
 Dudu keeps generated test binaries under unique paths:
 

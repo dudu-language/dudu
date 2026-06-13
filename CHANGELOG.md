@@ -26,6 +26,7 @@
 - Added class-scoped constants and `@staticmethod` methods.
 - Added Dudu-native operator methods such as `__add__` and `__eq__`.
 - Improved native header scanning for pointer and reference parameter types.
+- Improved `dudu test` zero-test output.
 
 ### Changed
 
