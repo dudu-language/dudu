@@ -38,6 +38,8 @@ fi
 "$repo_root/build/duc" emit "$repo_root/benchmarks/scalar_sum.dd" -o "$bench_dir/scalar_sum_dudu.cpp"
 "$repo_root/build/duc" emit "$repo_root/benchmarks/pointer_sum.dd" -o "$bench_dir/pointer_sum_dudu.cpp"
 "$repo_root/build/duc" emit "$repo_root/benchmarks/field_dot.dd" -o "$bench_dir/field_dot_dudu.cpp"
+"$repo_root/build/duc" emit "$repo_root/benchmarks/fixed_array_mix.dd" \
+    -o "$bench_dir/fixed_array_mix_dudu.cpp"
 "$repo_root/build/duc" emit "$repo_root/benchmarks/tuple_accum.dd" -o "$bench_dir/tuple_accum_dudu.cpp"
 "$repo_root/build/duc" emit "$repo_root/benchmarks/callback_accum.dd" \
     -o "$bench_dir/callback_accum_dudu.cpp"
@@ -120,6 +122,28 @@ int main(int argc, char** argv) {
 }
 CPP
 
+cat >"$bench_dir/fixed_array_driver.cpp" <<'CPP'
+#include <chrono>
+#include <cstdint>
+#include <cstdlib>
+#include <iostream>
+
+int64_t fixed_array_mix(int32_t n);
+
+int main(int argc, char** argv) {
+    const int32_t n = argc > 1 ? int32_t(std::atoi(argv[1])) : 50000000;
+    volatile int64_t result = 0;
+    const auto start = std::chrono::steady_clock::now();
+    for (int i = 0; i < 5; ++i) {
+        result = fixed_array_mix(n);
+    }
+    const auto end = std::chrono::steady_clock::now();
+    const auto micros = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+    std::cout << micros << " us result=" << result << '\n';
+    return 0;
+}
+CPP
+
 cat >"$bench_dir/tuple_driver.cpp" <<'CPP'
 #include <chrono>
 #include <cstdint>
@@ -178,6 +202,10 @@ flags=(-std=c++20 -O3 -DNDEBUG)
     -o "$bench_dir/field_dot_dudu"
 "$cxx" "${flags[@]}" "$repo_root/benchmarks/field_dot.cpp" "$bench_dir/field_driver.cpp" \
     -o "$bench_dir/field_dot_cpp"
+"$cxx" "${flags[@]}" "$bench_dir/fixed_array_mix_dudu.cpp" "$bench_dir/fixed_array_driver.cpp" \
+    -o "$bench_dir/fixed_array_mix_dudu"
+"$cxx" "${flags[@]}" "$repo_root/benchmarks/fixed_array_mix.cpp" \
+    "$bench_dir/fixed_array_driver.cpp" -o "$bench_dir/fixed_array_mix_cpp"
 "$cxx" "${flags[@]}" "$bench_dir/tuple_accum_dudu.cpp" "$bench_dir/tuple_driver.cpp" \
     -o "$bench_dir/tuple_accum_dudu"
 "$cxx" "${flags[@]}" "$repo_root/benchmarks/tuple_accum.cpp" "$bench_dir/tuple_driver.cpp" \
@@ -211,6 +239,8 @@ run_bench "pointer dudu" "$bench_dir/pointer_sum_dudu"
 run_bench "pointer cpp" "$bench_dir/pointer_sum_cpp"
 run_bench "field dudu" "$bench_dir/field_dot_dudu"
 run_bench "field cpp" "$bench_dir/field_dot_cpp"
+run_bench "fixed_array dudu" "$bench_dir/fixed_array_mix_dudu"
+run_bench "fixed_array cpp" "$bench_dir/fixed_array_mix_cpp"
 run_bench "tuple dudu" "$bench_dir/tuple_accum_dudu"
 run_bench "tuple cpp" "$bench_dir/tuple_accum_cpp"
 run_bench "callback dudu" "$bench_dir/callback_accum_dudu"
@@ -250,6 +280,8 @@ summarize_label "pointer dudu"
 summarize_label "pointer cpp"
 summarize_label "field dudu"
 summarize_label "field cpp"
+summarize_label "fixed_array dudu"
+summarize_label "fixed_array cpp"
 summarize_label "tuple dudu"
 summarize_label "tuple cpp"
 summarize_label "callback dudu"
@@ -292,6 +324,8 @@ pointer_dudu_micros="$(bench_micros "pointer dudu")"
 pointer_cpp_micros="$(bench_micros "pointer cpp")"
 field_dudu_micros="$(bench_micros "field dudu")"
 field_cpp_micros="$(bench_micros "field cpp")"
+fixed_array_dudu_micros="$(bench_micros "fixed_array dudu")"
+fixed_array_cpp_micros="$(bench_micros "fixed_array cpp")"
 tuple_dudu_micros="$(bench_micros "tuple dudu")"
 tuple_cpp_micros="$(bench_micros "tuple cpp")"
 callback_dudu_micros="$(bench_micros "callback dudu")"
@@ -299,11 +333,13 @@ callback_cpp_micros="$(bench_micros "callback cpp")"
 scalar_ratio="$(bench_ratio "$scalar_dudu_micros" "$scalar_cpp_micros")"
 pointer_ratio="$(bench_ratio "$pointer_dudu_micros" "$pointer_cpp_micros")"
 field_ratio="$(bench_ratio "$field_dudu_micros" "$field_cpp_micros")"
+fixed_array_ratio="$(bench_ratio "$fixed_array_dudu_micros" "$fixed_array_cpp_micros")"
 tuple_ratio="$(bench_ratio "$tuple_dudu_micros" "$tuple_cpp_micros")"
 callback_ratio="$(bench_ratio "$callback_dudu_micros" "$callback_cpp_micros")"
 check_ratio scalar "$scalar_ratio"
 check_ratio pointer "$pointer_ratio"
 check_ratio field "$field_ratio"
+check_ratio fixed_array "$fixed_array_ratio"
 check_ratio tuple "$tuple_ratio"
 check_ratio callback "$callback_ratio"
 
@@ -333,19 +369,21 @@ if [[ -n "$report_path" ]]; then
             "$pointer_dudu_micros" "$pointer_cpp_micros" "$pointer_ratio"
         printf '    {"name": "field", "dudu_micros": %s, "cpp_micros": %s, "ratio": %s},\n' \
             "$field_dudu_micros" "$field_cpp_micros" "$field_ratio"
+        printf '    {"name": "fixed_array", "dudu_micros": %s, "cpp_micros": %s, "ratio": %s},\n' \
+            "$fixed_array_dudu_micros" "$fixed_array_cpp_micros" "$fixed_array_ratio"
         printf '    {"name": "tuple", "dudu_micros": %s, "cpp_micros": %s, "ratio": %s},\n' \
             "$tuple_dudu_micros" "$tuple_cpp_micros" "$tuple_ratio"
         printf '    {"name": "callback", "dudu_micros": %s, "cpp_micros": %s, "ratio": %s}\n' \
             "$callback_dudu_micros" "$callback_cpp_micros" "$callback_ratio"
         printf '  ],\n'
-        printf '  "generated": ["%s", "%s", "%s", "%s", "%s"],\n' \
+        printf '  "generated": ["%s", "%s", "%s", "%s", "%s", "%s"],\n' \
             "$bench_dir/scalar_sum_dudu.cpp" "$bench_dir/pointer_sum_dudu.cpp" \
-            "$bench_dir/field_dot_dudu.cpp" "$bench_dir/tuple_accum_dudu.cpp" \
-            "$bench_dir/callback_accum_dudu.cpp"
-        printf '  "comparison_sources": ["%s", "%s", "%s", "%s", "%s"]\n' \
+            "$bench_dir/field_dot_dudu.cpp" "$bench_dir/fixed_array_mix_dudu.cpp" \
+            "$bench_dir/tuple_accum_dudu.cpp" "$bench_dir/callback_accum_dudu.cpp"
+        printf '  "comparison_sources": ["%s", "%s", "%s", "%s", "%s", "%s"]\n' \
             "$repo_root/benchmarks/scalar_sum.cpp" "$repo_root/benchmarks/pointer_sum.cpp" \
-            "$repo_root/benchmarks/field_dot.cpp" "$repo_root/benchmarks/tuple_accum.cpp" \
-            "$repo_root/benchmarks/callback_accum.cpp"
+            "$repo_root/benchmarks/field_dot.cpp" "$repo_root/benchmarks/fixed_array_mix.cpp" \
+            "$repo_root/benchmarks/tuple_accum.cpp" "$repo_root/benchmarks/callback_accum.cpp"
         printf '}\n'
     } >"$report_path"
 fi
