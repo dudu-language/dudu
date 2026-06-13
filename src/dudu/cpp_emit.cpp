@@ -171,7 +171,7 @@ void emit_method(std::ostringstream& out, const FunctionDecl& method,
     for (size_t i = first_param; i < method.params.size(); ++i) {
         locals[method.params[i].name] = method.params[i].type;
     }
-    emit_raw_block(out, method.body, 2, aliases, locals);
+    emit_raw_block(out, method.body, 2, aliases, locals, method.return_type);
     out << "    }\n";
 }
 
@@ -264,7 +264,7 @@ void emit_function_body(std::ostringstream& out, const FunctionDecl& fn,
     for (const ParamDecl& param : fn.params) {
         locals[param.name] = param.type;
     }
-    emit_raw_block(out, fn.body, 1, aliases, locals);
+    emit_raw_block(out, fn.body, 1, aliases, locals, fn.return_type);
     out << "}\n\n";
 }
 

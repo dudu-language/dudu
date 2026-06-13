@@ -4,13 +4,19 @@ def choose(flag: bool) -> Result[i32, i32]:
     return Err(7)
 
 
+def choose_option(flag: bool) -> Option[i32]:
+    if flag:
+        return 2
+    return None
+
+
 def main() -> i32:
     result = choose(True)
     empty: Option[i32] = None
-    value: Option[i32] = 2
+    value: Option[i32] = choose_option(True)
     value = None
     value = 2
 
-    if result.ok and not empty.has_value():
+    if result.ok and not empty.has_value() and not choose_option(False).has_value():
         return result.value + value.value()
     return 1
