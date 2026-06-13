@@ -71,6 +71,11 @@ void check_statement(const RawStmt& stmt) {
         UnsupportedPrefix{"with", "context managers"},
         UnsupportedPrefix{"global", "global rebinding"},
         UnsupportedPrefix{"nonlocal", "nonlocal rebinding"},
+        UnsupportedPrefix{"del", "dynamic deletion"},
+        UnsupportedPrefix{"assert", "runtime assertions"},
+        UnsupportedPrefix{"import", "local imports"},
+        UnsupportedPrefix{"from", "local imports"},
+        UnsupportedPrefix{"match", "pattern matching"},
     };
     for (const UnsupportedPrefix& prefix : prefixes) {
         if (starts_statement(text, prefix.prefix)) {
