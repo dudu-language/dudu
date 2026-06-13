@@ -122,6 +122,10 @@ std::string lower_generic_type_constructor(std::string expr) {
         while (prefix > 0 && std::isspace(static_cast<unsigned char>(expr[prefix - 1])) != 0) {
             --prefix;
         }
+        if (prefix > 0 && expr[prefix - 1] == '.') {
+            open = expr.find('[', open + 1);
+            continue;
+        }
         if (prefix > 0 && expr[prefix - 1] == '*') {
             open = expr.find('[', open + 1);
             continue;

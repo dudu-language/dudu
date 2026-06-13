@@ -1,0 +1,8 @@
+import cpp "../tests/fixtures/cpp_template_member.hpp" as dudu_tpl
+
+
+def main() -> i32:
+    box: dudu_tpl.Box = dudu_tpl.Box(40)
+    box.set[i32](41)
+    value: i32 = box.get[i32]()
+    return value + 1

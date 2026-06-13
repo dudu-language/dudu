@@ -449,8 +449,9 @@ std::string lower_dotted_template_call(std::string expr,
         const std::string call_args = expr.substr(close + 2, args_close - close - 2);
         const std::string lowered_name =
             namespace_qualified_name(name, namespace_aliases) ? replace_dots(name) : name;
-        const std::string replacement = lowered_name + "<" + lower_cpp_type(arg) + ">(" +
-                                        lower_cpp_expr(call_args, namespace_aliases) + ")";
+        const std::string lowered_args = lower_cpp_expr(call_args, namespace_aliases);
+        const std::string replacement =
+            lowered_name + "<" + lower_cpp_type(arg) + ">(" + lowered_args + ")";
         expr.replace(name_start, args_close + 1 - name_start, replacement);
         open = expr.find('[', name_start + replacement.size());
     }
@@ -474,10 +475,10 @@ std::string lower_cpp_expr(std::string expr, const std::vector<std::string>& nam
     expr = lower_str_calls(std::move(expr));
     expr = lower_named_argument_calls(std::move(expr));
     expr = lower_enum_access(std::move(expr));
+    expr = lower_dotted_template_call(std::move(expr), namespace_aliases);
     expr = lower_template_value_call(std::move(expr), "list");
     expr = lower_template_value_call(std::move(expr), "dict");
     expr = lower_template_value_call(std::move(expr), "set");
-    expr = lower_dotted_template_call(std::move(expr), namespace_aliases);
     expr = qualify_namespace_aliases(std::move(expr), namespace_aliases);
     expr = replace_all(std::move(expr), ".append(", ".push_back(");
     expr = replace_all(std::move(expr), "push_back([])", "push_back({})");
