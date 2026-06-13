@@ -87,6 +87,7 @@ printf '#include "cpp_library.hpp"\nint main() { return 0; }\n' >"$repo_root/bui
     -o "$repo_root/build/duc_emit_simple.cpp"
 grep -q "dudu: .*simple_program.dd:7:" "$repo_root/build/duc_emit_simple.cpp"
 "$repo_root/scripts/test_c_api.sh"
+"$repo_root/scripts/test_dynamic_library.sh"
 "$repo_root/build/duc" fmt "$repo_root/tests/fixtures/simple_program.dd" \
     -o "$repo_root/build/duc_fmt_simple.dd"
 "$repo_root/build/duc" fmt "$repo_root/tests/fixtures/simple_program.dd" --check

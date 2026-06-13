@@ -1,0 +1,3 @@
+@extern_c
+def plugin_answer() -> i32:
+    return 42
