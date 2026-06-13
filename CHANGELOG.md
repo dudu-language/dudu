@@ -16,6 +16,7 @@
 - Added runtime `assert` lowering for test-friendly failures.
 - Added `docs/tests.md` with the Cargo-style test direction.
 - Added `docs/le_plan.md` as the next implementation roadmap.
+- Added `dudu clean` for removing a project's configured build directory.
 
 ### Changed
 

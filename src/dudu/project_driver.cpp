@@ -1,5 +1,7 @@
 #include "dudu/project_driver.hpp"
 
+#include "dudu/project_config.hpp"
+
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -59,6 +61,15 @@ bool init_git_repo(const std::filesystem::path& dir) {
 }
 
 } // namespace
+
+std::filesystem::path clean_project(const std::filesystem::path& dir) {
+    const std::filesystem::path root = dir.empty() ? "." : dir;
+    const ProjectConfig config = parse_project_config(root / "dudu.toml");
+    const std::filesystem::path build_dir = config.build_dir.empty() ? "build" : config.build_dir;
+    const std::filesystem::path target = build_dir.is_absolute() ? build_dir : root / build_dir;
+    std::filesystem::remove_all(target);
+    return target;
+}
 
 void init_project(const std::filesystem::path& dir) {
     const std::string name = project_name(dir);

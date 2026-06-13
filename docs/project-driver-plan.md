@@ -334,6 +334,7 @@ docs. Generated Dudu projects do not get a changelog by default.
 12. Add `dudu new <name>`.
 13. Update examples to prefer `dudu run` where it improves usability.
 14. Keep `duc` workflows documented as the transparent fallback.
+15. Add `dudu clean`.
 
 ## Acceptance Tests
 

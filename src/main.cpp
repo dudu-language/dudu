@@ -34,6 +34,7 @@ struct Options {
     bool bench = false;
     bool build = false;
     bool check = false;
+    bool clean = false;
     bool cmake = false;
     bool emit_cpp = false;
     bool format = false;
@@ -56,6 +57,7 @@ void print_usage(bool project_driver = false) {
                      "       dudu run [input.dd] [-o output]\n"
                      "       dudu build [input.dd] [-o output]\n"
                      "       dudu check [input.dd|dir]\n"
+                     "       dudu clean [path]\n"
                      "       dudu fmt <input.dd|dir> [--check]\n"
                      "       dudu test [input.dd|filter] [--filter text]\n"
                      "       dudu cmake [input.dd] [-o CMakeLists.txt]\n";
@@ -64,6 +66,7 @@ void print_usage(bool project_driver = false) {
     std::cout << "usage: duc bench [args...]\n"
                  "       duc build [input.dd] [-o output]\n"
                  "       duc check [input.dd]\n"
+                 "       duc clean [path]\n"
                  "       duc cmake [input.dd] [-o CMakeLists.txt]\n"
                  "       duc emit [input.dd] [-o output.cpp]\n"
                  "       duc fmt <input.dd|dir> [--check] [-o output.dd]\n"
@@ -111,6 +114,9 @@ Options parse_options(int argc, char** argv, bool project_driver) {
         first_arg = 2;
     } else if (argc > 1 && std::string(argv[1]) == "check") {
         options.check = true;
+        first_arg = 2;
+    } else if (argc > 1 && std::string(argv[1]) == "clean") {
+        options.clean = true;
         first_arg = 2;
     } else if (argc > 1 && std::string(argv[1]) == "cmake") {
         options.cmake = true;
@@ -223,6 +229,7 @@ Options parse_options(int argc, char** argv, bool project_driver) {
         fail("unexpected argument: " + arg);
     }
     if (options.input.empty() && !options.bench && !options.build && !options.check &&
+        !options.clean &&
         !options.cmake && !options.emit_cpp && !options.init_project && !options.new_project &&
         !options.run && !options.test) {
         fail("missing input file");
@@ -231,7 +238,8 @@ Options parse_options(int argc, char** argv, bool project_driver) {
 }
 
 Options resolve_project_input(Options options) {
-    if (options.bench || options.init_project || options.new_project || options.test) {
+    if (options.bench || options.clean || options.init_project || options.new_project ||
+        options.test) {
         return options;
     }
     if (!options.input.empty()) {
@@ -398,6 +406,13 @@ int main(int argc, char** argv) {
         }
         if (options.bench) {
             return run_project_benchmarks(options);
+        }
+        if (options.clean) {
+            const std::filesystem::path cleaned =
+                dudu::clean_project(options.input.empty() ? std::filesystem::path(".")
+                                                          : options.input);
+            std::cerr << "clean " << cleaned.string() << '\n';
+            return 0;
         }
         if (options.test) {
             return run_project_tests(options);

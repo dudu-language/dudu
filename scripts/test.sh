@@ -113,6 +113,17 @@ cp "$repo_root/tests/fixtures/unformatted.dd" "$fmt_dir/sample.dd"
 "$repo_root/build/duc" fmt "$repo_root/examples" --check
 "$repo_root/build/duc" run "$repo_root/tests/fixtures/run_zero.dd" \
     -o "$repo_root/build/duc_run_zero"
+clean_smoke="$repo_root/build/clean_smoke"
+rm -rf "$clean_smoke"
+"$repo_root/build/dudu" new "$clean_smoke" >/dev/null
+(
+    cd "$clean_smoke"
+    "$repo_root/build/dudu" run >/dev/null
+    test -d build
+    "$repo_root/build/dudu" clean 2>"$repo_root/build/dudu_clean.err"
+    test ! -e build
+)
+grep -q "clean ./build" "$repo_root/build/dudu_clean.err"
 "$repo_root/build/dudu" test "$repo_root/tests/fixtures/dudu_tests.dd" \
     >"$repo_root/build/dudu_tests.out"
 grep -q "3/3 tests passed" "$repo_root/build/dudu_tests.out"
