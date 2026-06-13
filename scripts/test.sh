@@ -315,6 +315,7 @@ compile_and_expect list_append_named 42
 compile_and_expect value_pointer_containers 42
 compile_and_expect class_methods 42
 compile_and_expect c_import_alias 42; compile_and_expect stdio_math 42; compile_and_expect c_qsort_callback 24; compile_and_expect c_struct_layout 42
+compile_and_expect c_audio_callback 26
 compile_and_expect pointer_cast 42
 compile_and_expect pointer_member 42
 compile_and_expect nested_fields 42

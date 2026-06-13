@@ -248,6 +248,14 @@ std::string lower_pointer_cast_calls(std::string expr) {
             }
             break;
         }
+        if (expr.compare(name_start, 7, "struct ") == 0) {
+            name_end = name_start + 7;
+            while (name_end < expr.size() &&
+                   (std::isalnum(static_cast<unsigned char>(expr[name_end])) != 0 ||
+                    expr[name_end] == '_')) {
+                ++name_end;
+            }
+        }
         if (!left_ok || name_end == name_start || name_end >= expr.size() ||
             expr[name_end] != '(') {
             pos = expr.find('*', pos + 1);
@@ -271,6 +279,7 @@ std::string lower_pointer_cast_calls(std::string expr) {
             type.find('[') == std::string::npos ? type : type.substr(0, type.find('['));
         const bool type_like = std::find(builtin_pointer_types.begin(), builtin_pointer_types.end(),
                                          type) != builtin_pointer_types.end() ||
+                               starts_with(type, "struct ") ||
                                type.find('[') != std::string::npos ||
                                type.find('.') != std::string::npos ||
                                std::isupper(static_cast<unsigned char>(base_type.front())) != 0;
