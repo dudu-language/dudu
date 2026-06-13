@@ -338,8 +338,8 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
         }
         return;
     }
-    if (starts_with(text, "assert ")) {
-        const std::vector<std::string> parts = split_top_level_args(text.substr(7));
+    if (starts_with(text, "assert ") || starts_with(text, "debug_assert ")) {
+        const auto parts = split_top_level_args(text.substr(starts_with(text, "assert ") ? 7 : 13));
         check_condition_type(scope, stmt, parts.empty() ? "" : parts.front());
         if (parts.size() > 1) (void)infer_expr(scope, parts[1], &stmt.location);
         return;

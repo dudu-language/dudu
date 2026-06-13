@@ -306,12 +306,19 @@ void emit_simple_statement(std::ostringstream& out, const RawStmt& stmt, int dep
         const std::string condition = parts.empty() ? "" : trim_copy(parts.front());
         out << indent(depth) << "if (!(" << lower_expr(condition, aliases, locals)
             << ")) { throw std::runtime_error(";
-        if (parts.size() >= 2) {
+        if (parts.size() >= 2)
             out << lower_expr(parts[1], aliases, locals);
-        } else {
+        else
             out << cpp_string_literal("assert failed: " + condition);
-        }
         out << "); }\n";
+        return;
+    }
+    if (starts_with(text, "debug_assert ")) {
+        const auto parts = split_top_level_args(text.substr(13));
+        const auto condition = parts.empty() ? "" : trim_copy(parts.front());
+        out << indent(depth) << "assert((" << lower_expr(condition, aliases, locals) << ")";
+        if (parts.size() >= 2) out << " && (" << lower_expr(parts[1], aliases, locals) << ")";
+        out << ");\n";
         return;
     }
     if (starts_with(text, "return")) {

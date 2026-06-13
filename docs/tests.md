@@ -57,21 +57,32 @@ scans, project-driver checks, and negative fixtures, so it is much slower.
 
 ## Assertions
 
-Runtime `assert` is now a language statement:
+Runtime `assert` is a language statement:
 
 ```python
 assert value > 0
 ```
 
-It lowers to a hosted C++ exception with a readable failure message. This is a
-language feature rather than a standard library function because it benefits
-from source-location-aware lowering and test harness integration.
+It is always checked. In hosted builds today it lowers through the generated
+test/runtime failure path with a readable failure message. This is a language
+feature rather than a standard library function because it benefits from
+source-location-aware lowering and test harness integration.
 
 Python-style custom messages are supported:
 
 ```python
 assert value > 0, "value must be positive"
 ```
+
+Use `debug_assert` when you want native C/C++ assertion behavior:
+
+```python
+debug_assert value > 0
+debug_assert value > 0, "value must be positive"
+```
+
+`debug_assert` lowers to `assert(...)` from `<cassert>`, so release builds that
+define `NDEBUG` can remove the check entirely.
 
 ## Cargo Behavior To Copy
 

@@ -93,6 +93,13 @@ grep -Fq "offsetof(PacketHeader, flags)" "$repo_root/build/binary_packet_parser.
 grep -Fq "std::array<uint8_t, 8> bytes" "$repo_root/build/binary_packet_parser.cpp"
 grep -Fq "<< 24" "$repo_root/build/binary_packet_parser.cpp"
 
+"$repo_root/build/duc" emit "$repo_root/tests/fixtures/debug_asserts.dd" \
+    -o "$repo_root/build/debug_asserts.cpp"
+grep -Fq "#include <cassert>" "$repo_root/build/debug_asserts.cpp"
+grep -Fq "assert((value == 42));" "$repo_root/build/debug_asserts.cpp"
+grep -Fq "assert((value > 0) && (\"value should be positive\"));" \
+    "$repo_root/build/debug_asserts.cpp"
+
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/bitwise_ops.dd" \
     -o "$repo_root/build/bitwise_ops.cpp"
 grep -Fq "1 << 5" "$repo_root/build/bitwise_ops.cpp"

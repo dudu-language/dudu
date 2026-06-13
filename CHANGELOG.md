@@ -36,6 +36,7 @@
 - Added default `dudu test` output capture plus `--no-capture`/`--nocapture`.
 - Added native header support for namespaced and nested C++ class names.
 - Added `scripts/test_fast.sh` for normal inner-loop compiler validation.
+- Added `debug_assert` for native C/C++ `assert(...)` semantics.
 
 ### Changed
 

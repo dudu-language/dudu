@@ -531,6 +531,7 @@ compile_and_expect cpp_nested_native 42
 compile_and_expect dudu_operator_overload 42
 compile_and_expect cpp_overloaded_constructor 42
 compile_and_expect cpp_digit_underscore_name 42
+compile_and_expect debug_asserts 42
 compile_and_expect std_vector_map_string 42
 compile_and_expect layout_attrs 21
 compile_and_expect atomic_volatile 44

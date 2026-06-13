@@ -1,0 +1,5 @@
+def main() -> i32:
+    value: i32 = 42
+    debug_assert value == 42
+    debug_assert value > 0, "value should be positive"
+    return value
