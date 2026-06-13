@@ -1,6 +1,7 @@
 #include "dudu/native_headers.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/native_build.hpp"
+#include "dudu/native_header_cache.hpp"
 #include <chrono>
 #include <cstdlib>
 #include <fstream>
@@ -34,7 +35,6 @@ std::string read_text(const std::filesystem::path& path) {
     }
     return {std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()};
 }
-
 void write_text(const std::filesystem::path& path, const std::string& text) {
     std::ofstream out(path);
     if (!out) {
@@ -104,7 +104,6 @@ std::string scanner_flags(const NativeHeaderOptions& options) {
     const std::string pkg_flags = capture_pkg_config_cflags(options.config.pkg_config_packages);
     return pkg_flags.empty() ? flags : flags + " " + pkg_flags;
 }
-
 bool can_resolve_header(const ImportDecl& import, const NativeHeaderOptions& options) {
     const std::filesystem::path header = unquoted(import.module_path);
     if (std::filesystem::exists(absolute_from(options.source_dir, header))) {
@@ -137,7 +136,6 @@ std::string run_capture(const std::string& command, const std::filesystem::path&
     }
     return read_text(output);
 }
-
 std::string clang_base_command(const NativeHeaderOptions& options, const std::filesystem::path& cpp,
                                bool ast_dump) {
     const char* clang_env = std::getenv("CLANGXX");
@@ -159,7 +157,6 @@ int ast_depth(const std::string& line) {
     }
     return depth;
 }
-
 std::string join_scope(const std::vector<std::pair<int, std::string>>& namespaces,
                        const std::string& name) {
     std::string out;
@@ -229,7 +226,6 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
     static const std::regex field_decl(R"(FieldDecl.*\b([A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
     static const std::regex enum_value_decl(R"(EnumConstantDecl.*\b([A-Za-z_][A-Za-z0-9_]*) ')");
     static const std::regex var_decl(R"(VarDecl.*\b([A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
-
     const int depth = ast_depth(line);
     while (!namespaces.empty() && namespaces.back().first >= depth) {
         namespaces.pop_back();
@@ -332,7 +328,6 @@ void parse_ast_dump(NativeHeaderScan& scan, const std::string& dump,
         parse_ast_line(scan, line, namespaces, classes, location);
     }
 }
-
 int macro_arity(std::string args) {
     args = trim_copy(std::move(args));
     if (args.empty()) {
@@ -401,6 +396,14 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
     if (const auto found = cache.find(key); found != cache.end()) {
         return found->second;
     }
+    NativeHeaderRawCache raw_cache = load_native_header_raw_cache(options, key);
+    if (raw_cache.hit) {
+        NativeHeaderScan scan;
+        parse_ast_dump(scan, raw_cache.ast_dump, import.location);
+        parse_macro_dump(scan, raw_cache.macro_dump, import.location);
+        cache[key] = dedupe_scan(std::move(scan));
+        return cache[key];
+    }
     const std::filesystem::path base = temp_base(options.source_dir);
     const std::filesystem::path cpp = base.string() + ".cpp";
     const std::filesystem::path ast = base.string() + ".ast";
@@ -418,8 +421,9 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
     const std::string macro_cmd = shell_quote_arg(clang) + " -std=" +
                                   shell_quote_arg(options.config.cpp_std) + " -x c++ -dM -E " +
                                   shell_quote_path(cpp) + flags;
-    parse_macro_dump(scan, run_capture(macro_cmd, macros, err), import.location);
-
+    const std::string macro_dump = run_capture(macro_cmd, macros, err);
+    parse_macro_dump(scan, macro_dump, import.location);
+    store_native_header_raw_cache(raw_cache, ast_dump, macro_dump);
     std::filesystem::remove(cpp);
     std::filesystem::remove(ast);
     std::filesystem::remove(macros);
@@ -427,7 +431,6 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
     cache[key] = dedupe_scan(std::move(scan));
     return cache[key];
 }
-
 template <typename T>
 void append_unique(std::vector<T>& target, const std::vector<T>& source) {
     std::set<std::string> seen;
@@ -440,7 +443,6 @@ void append_unique(std::vector<T>& target, const std::vector<T>& source) {
         }
     }
 }
-
 template <typename T>
 std::vector<T> prefixed_names(const std::vector<T>& source, const std::string& prefix) {
     std::vector<T> out;
@@ -451,9 +453,7 @@ std::vector<T> prefixed_names(const std::vector<T>& source, const std::string& p
     }
     return out;
 }
-
 } // namespace
-
 NativeHeaderScan scan_native_headers(const ModuleAst& module, const NativeHeaderOptions& options) {
     const std::string flags = scanner_flags(options);
     NativeHeaderScan out;
@@ -477,7 +477,6 @@ NativeHeaderScan scan_native_headers(const ModuleAst& module, const NativeHeader
     }
     return out;
 }
-
 void merge_native_headers(ModuleAst& module, const NativeHeaderOptions& options) {
     NativeHeaderScan scan = scan_native_headers(module, options);
     append_unique(module.native_types, scan.types);
@@ -487,7 +486,6 @@ void merge_native_headers(ModuleAst& module, const NativeHeaderOptions& options)
     append_unique(module.native_namespaces, scan.namespaces);
     append_unique(module.native_classes, scan.classes);
 }
-
 std::vector<NativeTypeDecl> scan_native_header_types(const ModuleAst& module,
                                                      const NativeHeaderOptions& options) {
     return scan_native_headers(module, options).types;

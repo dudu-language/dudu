@@ -232,14 +232,18 @@ void test_native_header_type_scan(const std::filesystem::path& root) {
                                                 "    return event.type + widget.value + "
                                                 "other.value + dudu_native_kind_ok\n",
                                                 root / "tests/fixtures/native_scan.dd");
-    dudu::merge_native_header_types(
-        module, {.config = dudu::ProjectConfig{}, .source_dir = root / "tests/fixtures"});
+    dudu::ProjectConfig config;
+    config.build_dir = root / "build" / "native-header-test-cache";
+    std::filesystem::remove_all(config.build_dir);
+    dudu::merge_native_header_types(module,
+                                    {.config = config, .source_dir = root / "tests/fixtures"});
     dudu::analyze_module(module, {.check_bodies = true});
     const std::string cpp = dudu::emit_cpp_source(module);
     assert(cpp.find("DuduNativeEvent event{};") != std::string::npos);
     assert(cpp.find("DuduNativeWindow* window = nullptr;") != std::string::npos);
     assert(cpp.find("DuduWidgetAlias widget{};") != std::string::npos);
     assert(cpp.find("Widget other = Widget(5);") != std::string::npos);
+    assert(std::filesystem::exists(config.build_dir / "dudu-header-cache"));
 }
 
 void test_image_filter_emission(const std::filesystem::path& root) {

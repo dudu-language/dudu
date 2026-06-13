@@ -23,6 +23,7 @@ add_library(dudu_frontend
     src/dudu/lexer.cpp
     src/dudu/module_loader.cpp
     src/dudu/native_build.cpp
+    src/dudu/native_header_cache.cpp
     src/dudu/native_headers.cpp
     src/dudu/naming.cpp
     src/dudu/parser.cpp
