@@ -1,0 +1,43 @@
+def less_i32(a: i32, b: i32) -> bool:
+    return a < b
+
+
+def greater_i32(a: i32, b: i32) -> bool:
+    return a > b
+
+
+def choose_comparator(descending: bool) -> fn(i32, i32) -> bool:
+    if descending:
+        return greater_i32
+    return less_i32
+
+
+def apply(value: i32, callback: fn(i32) -> i32) -> i32:
+    return callback(value)
+
+
+def add_two(value: i32) -> i32:
+    return value + 2
+
+
+def touch(value: i32):
+    print(value)
+
+
+def visit(value: i32, callback: fn(i32)):
+    callback(value)
+
+
+def main() -> i32:
+    asc = choose_comparator(False)
+    desc = choose_comparator(True)
+    if not asc(2, 5):
+        return 1
+    if asc(5, 2):
+        return 2
+    if not desc(5, 2):
+        return 3
+    if apply(40, add_two) != 42:
+        return 4
+    visit(42, touch)
+    return 42
