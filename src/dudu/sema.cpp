@@ -9,6 +9,7 @@
 #include "dudu/sema_bindings.hpp"
 #include "dudu/sema_constexpr.hpp"
 #include "dudu/sema_context.hpp"
+#include "dudu/sema_expr.hpp"
 #include "dudu/sema_function_type.hpp"
 #include "dudu/sema_index.hpp"
 #include "dudu/sema_methods.hpp"
@@ -25,11 +26,6 @@ namespace {
 [[noreturn]] void fail(const SourceLocation& location, const std::string& message) {
     throw CompileError(location, message);
 }
-struct FunctionScope {
-    const Symbols& symbols;
-    std::map<std::string, std::string> locals;
-    std::set<std::string> constants;
-};
 std::string infer_expr(const FunctionScope& scope, std::string expr,
                        const SourceLocation* location = nullptr);
 std::vector<std::string> call_args(std::string expr, size_t open) {
@@ -132,12 +128,8 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
     }
     if (starts_with(expr, "lambda "))
         return "lambda";
-    if (starts_with(expr, "not ")) {
-        const std::string got = infer_expr(scope, expr.substr(4), location);
-        if (location != nullptr && !got.empty() && got != "bool") {
-            fail(*location, "not expects bool, got " + got);
-        }
-        return "bool";
+    if (const auto type = infer_not_expr(scope, expr, location, infer_expr)) {
+        return *type;
     }
     if (expr.size() > 1 && expr.front() == '*') {
         const std::string name = trim(expr.substr(1));
@@ -226,33 +218,14 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
     if (expr == "True" || expr == "False") {
         return "bool";
     }
-    if (expr.size() >= 2 && ((expr.front() == '"' && expr.back() == '"') ||
-                             (expr.front() == '\'' && expr.back() == '\''))) {
+    if (is_string_literal_expr(expr)) {
         return "str";
     }
-    if (const size_t logical = find_top_level_logical(expr); logical != std::string::npos) {
-        const std::string op = expr.substr(logical, expr.substr(logical, 3) == "and" ? 3 : 2);
-        const std::string left = infer_expr(scope, expr.substr(0, logical), location);
-        const std::string right = infer_expr(scope, expr.substr(logical + op.size()), location);
-        if (location != nullptr && !left.empty() && left != "bool") {
-            fail(*location, op + " expects bool, got " + left);
-        }
-        if (location != nullptr && !right.empty() && right != "bool") {
-            fail(*location, op + " expects bool, got " + right);
-        }
-        return "bool";
+    if (const auto type = infer_logical_expr(scope, expr, location, infer_expr)) {
+        return *type;
     }
-    if (const size_t comparison = find_top_level_comparison(expr);
-        comparison != std::string::npos) {
-        const std::string op = top_level_comparison_text(expr, comparison);
-        const std::string left = infer_expr(scope, expr.substr(0, comparison), location);
-        const std::string right_expr = expr.substr(comparison + op.size());
-        const std::string right = infer_expr(scope, right_expr, location);
-        if (location != nullptr && !left.empty() && !right.empty() &&
-            !comparison_rhs_allowed(scope.symbols, op, left, right_expr, right)) {
-            fail(*location, "comparison " + op + " expects " + left + ", got " + right);
-        }
-        return "bool";
+    if (const auto type = infer_comparison_expr(scope, expr, location, infer_expr)) {
+        return *type;
     }
     const size_t op = find_top_level_operator(expr);
     if (op != std::string::npos) {
