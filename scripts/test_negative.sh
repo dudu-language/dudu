@@ -121,6 +121,8 @@ if "$repo_root/build/duc" build "$repo_root/tests/fixtures/bad_native_build.dd" 
 grep -q "C++ build failed" "$repo_root/build/bad_native_build.err"
 grep -q "source: .*bad_native_build.cpp" "$repo_root/build/bad_native_build.err"
 grep -q "dudu source: .*bad_native_build.dd:2:5" "$repo_root/build/bad_native_build.err"
+grep -q 'cpp("this is not valid c++;")' "$repo_root/build/bad_native_build.err"
+grep -q '    \^' "$repo_root/build/bad_native_build.err"
 grep -q "command: " "$repo_root/build/bad_native_build.err"
 grep -q "compiler output:" "$repo_root/build/bad_native_build.err"
 

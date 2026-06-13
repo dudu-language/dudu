@@ -1,11 +1,15 @@
 #include "dudu/native_build.hpp"
 
+#include "dudu/source.hpp"
+
+#include <algorithm>
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <optional>
+#include <sstream>
 #include <stdexcept>
 
 namespace dudu {
@@ -182,6 +186,41 @@ std::string dudu_source_for_generated_line(const std::filesystem::path& cpp_path
     return last_source;
 }
 
+std::optional<SourceLocation> parse_dudu_marker(const std::string& marker) {
+    const size_t second_colon = marker.rfind(':');
+    if (second_colon == std::string::npos || second_colon == 0) {
+        return std::nullopt;
+    }
+    const size_t first_colon = marker.rfind(':', second_colon - 1);
+    if (first_colon == std::string::npos || first_colon == 0) {
+        return std::nullopt;
+    }
+    SourceLocation location;
+    location.file = marker.substr(0, first_colon);
+    location.line =
+        std::atoi(marker.substr(first_colon + 1, second_colon - first_colon - 1).c_str());
+    location.column = std::atoi(marker.substr(second_colon + 1).c_str());
+    return location.line > 0 && location.column > 0 ? std::optional<SourceLocation>{location}
+                                                    : std::nullopt;
+}
+
+std::string source_excerpt(const SourceLocation& location) {
+    std::ifstream in(location.file);
+    if (!in) {
+        return {};
+    }
+    std::string line;
+    for (int current = 1; current <= location.line && std::getline(in, line); ++current) {
+    }
+    if (line.empty()) {
+        return {};
+    }
+    std::ostringstream out;
+    out << "    " << line << '\n'
+        << "    " << std::string(static_cast<size_t>(std::max(location.column - 1, 0)), ' ') << '^';
+    return out.str();
+}
+
 std::string native_failure_message(std::string label, const std::filesystem::path& source,
                                    const std::string& command,
                                    const std::filesystem::path& log_path) {
@@ -191,6 +230,12 @@ std::string native_failure_message(std::string label, const std::filesystem::pat
         const std::string dudu_source = dudu_source_for_generated_line(source, *line);
         if (!dudu_source.empty()) {
             message += "\ndudu source: " + dudu_source;
+            if (const std::optional<SourceLocation> location = parse_dudu_marker(dudu_source)) {
+                const std::string excerpt = source_excerpt(*location);
+                if (!excerpt.empty()) {
+                    message += "\n" + excerpt;
+                }
+            }
         }
     }
     message += "\ncommand: " + command;
