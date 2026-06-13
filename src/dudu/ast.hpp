@@ -127,6 +127,7 @@ struct ClassDecl {
     std::vector<Decorator> decorators;
     std::vector<FieldDecl> fields;
     std::vector<ConstDecl> constants;
+    std::vector<ConstDecl> static_fields;
     std::vector<FunctionDecl> methods;
     SourceLocation location;
 };

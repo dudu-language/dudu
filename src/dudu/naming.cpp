@@ -122,6 +122,11 @@ void check_naming(const ModuleAst& module) {
                 fail_naming(constant.location, "constant names must be ALL_CAPS", constant.name);
             }
         }
+        for (const ConstDecl& field : klass.static_fields) {
+            if (!is_dudu_snake_case(field.name)) {
+                fail_naming(field.location, "static field names must be snake_case", field.name);
+            }
+        }
     }
 }
 

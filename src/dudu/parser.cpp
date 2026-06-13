@@ -230,8 +230,13 @@ class Parser {
             if (member_visibility != Visibility::Default) {
                 fail_current("expected def after class member visibility");
             }
-            require_no_decorators(member_decorators, "field");
-            klass.fields.push_back(parse_field());
+            if (class_member_has_initializer()) {
+                require_no_decorators(member_decorators, "static field");
+                klass.static_fields.push_back(parse_constant());
+            } else {
+                require_no_decorators(member_decorators, "field");
+                klass.fields.push_back(parse_field());
+            }
         }
         require_no_decorators(member_decorators, "class body");
         consume(TokenKind::Dedent, "expected dedent after class body");
@@ -250,6 +255,15 @@ class Parser {
         }
         consume(TokenKind::Newline, "expected newline after field");
         return field;
+    }
+
+    bool class_member_has_initializer() const {
+        for (size_t i = cursor_; i < tokens_.size() && tokens_[i].kind != TokenKind::Newline; ++i) {
+            if (tokens_[i].kind == TokenKind::Assign) {
+                return true;
+            }
+        }
+        return false;
     }
 
     EnumDecl parse_enum(const Token& start) {

@@ -198,6 +198,10 @@ void emit_classes(std::ostringstream& out, const ModuleAst& module,
         for (const FieldDecl& field : klass.fields) {
             out << "    " << lower_cpp_type(field.type) << ' ' << field.name << "{};\n";
         }
+        for (const ConstDecl& field : klass.static_fields) {
+            out << "    inline static " << lower_cpp_type(field.type) << ' ' << field.name
+                << " = " << lower_cpp_expr(field.value, aliases) << ";\n";
+        }
         for (const ConstDecl& constant : klass.constants) {
             emit_class_constant_decl(out, constant);
         }

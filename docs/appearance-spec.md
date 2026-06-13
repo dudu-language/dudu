@@ -971,6 +971,18 @@ white: Color = Color.WHITE
 limit: i32 = Color.MAX_CHANNEL
 ```
 
+Lowercase class-level annotated assignments are mutable static fields:
+
+```python
+class Counter:
+    count: i32 = 0
+
+    @staticmethod
+    def bump() -> i32:
+        Counter.count += 1
+        return Counter.count
+```
+
 Static methods use Python's `@staticmethod` spelling:
 
 ```python

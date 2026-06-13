@@ -43,6 +43,8 @@
 - Added a macro-bomb fixture and example for imported C/C++ macro coverage.
 - Added the remaining language-completion checklist to `docs/le_plan.md`.
 - Added POSIX mmap and pthread checks to the optional real-library probe.
+- Added mutable class static fields with Python-style class-level annotated
+  assignments.
 
 ### Changed
 

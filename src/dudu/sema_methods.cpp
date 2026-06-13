@@ -181,6 +181,20 @@ std::string member_path_type(const Symbols& symbols,
                     break;
                 }
             }
+            for (const ConstDecl& field : klass->static_fields) {
+                if (field.name == member) {
+                    if (next == std::string::npos) {
+                        return field.type;
+                    }
+                    const auto next_class = symbols.classes.find(base_type(field.type));
+                    if (next_class == symbols.classes.end()) {
+                        return {};
+                    }
+                    klass = next_class->second;
+                    found = true;
+                    break;
+                }
+            }
             if (!found) {
                 if (location != nullptr) {
                     fail(*location, "unknown static member: " + path);

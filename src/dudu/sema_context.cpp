@@ -393,6 +393,15 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                 fail(constant.location, "unknown class constant type: " + constant.type);
             }
         }
+        for (const ConstDecl& field : klass.static_fields) {
+            if (!fields.insert(field.name).second) {
+                fail(field.location, "duplicate class member: " + field.name);
+            }
+            check_supported_type_shape(field.location, field.type);
+            if (!known_type(symbols, field.type)) {
+                fail(field.location, "unknown static field type: " + field.type);
+            }
+        }
         for (const FunctionDecl& method : klass.methods) {
             if (!fields.insert(method.name).second) {
                 fail(method.location, "duplicate class member: " + method.name);
