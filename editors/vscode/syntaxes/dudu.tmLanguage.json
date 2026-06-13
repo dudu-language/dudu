@@ -4,10 +4,17 @@
     { "include": "#comments" },
     { "include": "#strings" },
     { "include": "#decorators" },
+    { "include": "#declarations" },
+    { "include": "#imports" },
+    { "include": "#parameters" },
+    { "include": "#members" },
+    { "include": "#calls" },
     { "include": "#keywords" },
     { "include": "#types" },
     { "include": "#constants" },
-    { "include": "#numbers" }
+    { "include": "#numbers" },
+    { "include": "#operators" },
+    { "include": "#punctuation" }
   ],
   "repository": {
     "comments": {
@@ -27,6 +34,105 @@
         { "name": "meta.annotation.dudu", "match": "@[A-Za-z_][A-Za-z0-9_\\.]*" }
       ]
     },
+    "declarations": {
+      "patterns": [
+        {
+          "name": "meta.class.dudu",
+          "match": "^\\s*(?:(public|private)\\s+)?(class)\\s+([A-Z][A-Za-z0-9_]*)",
+          "captures": {
+            "1": { "name": "storage.modifier.dudu" },
+            "2": { "name": "keyword.declaration.class.dudu" },
+            "3": { "name": "entity.name.type.class.dudu" }
+          }
+        },
+        {
+          "name": "meta.function.dudu",
+          "match": "^\\s*(?:(public|private)\\s+)?(def)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": { "name": "storage.modifier.dudu" },
+            "2": { "name": "keyword.declaration.function.dudu" },
+            "3": { "name": "entity.name.function.dudu" }
+          }
+        },
+        {
+          "name": "meta.enum.dudu",
+          "match": "^\\s*(?:(public|private)\\s+)?(enum)\\s+([A-Z][A-Za-z0-9_]*)",
+          "captures": {
+            "1": { "name": "storage.modifier.dudu" },
+            "2": { "name": "keyword.declaration.enum.dudu" },
+            "3": { "name": "entity.name.type.enum.dudu" }
+          }
+        },
+        {
+          "name": "meta.type-alias.dudu",
+          "match": "^\\s*(?:(public|private)\\s+)?(type)\\s+([A-Z][A-Za-z0-9_]*)",
+          "captures": {
+            "1": { "name": "storage.modifier.dudu" },
+            "2": { "name": "keyword.declaration.type.dudu" },
+            "3": { "name": "entity.name.type.alias.dudu" }
+          }
+        }
+      ]
+    },
+    "imports": {
+      "patterns": [
+        {
+          "name": "meta.import.native.dudu",
+          "match": "^\\s*(import)\\s+(c|cpp)\\s+(\"[^\"]+\")\\s+(as)\\s+([a-z][a-z0-9_]*)",
+          "captures": {
+            "1": { "name": "keyword.control.import.dudu" },
+            "2": { "name": "storage.modifier.import-kind.dudu" },
+            "3": { "name": "string.quoted.double.dudu" },
+            "4": { "name": "keyword.control.import.as.dudu" },
+            "5": { "name": "entity.name.namespace.dudu" }
+          }
+        },
+        {
+          "name": "meta.import.dudu",
+          "match": "^\\s*(from|import)\\s+([A-Za-z_][A-Za-z0-9_\\.]*)",
+          "captures": {
+            "1": { "name": "keyword.control.import.dudu" },
+            "2": { "name": "entity.name.namespace.dudu" }
+          }
+        }
+      ]
+    },
+    "parameters": {
+      "patterns": [
+        {
+          "name": "variable.parameter.dudu",
+          "match": "\\b(self|[a-z_][A-Za-z0-9_]*)\\b(?=\\s*:)"
+        },
+        {
+          "name": "variable.other.named-argument.dudu",
+          "match": "\\b([a-z_][A-Za-z0-9_]*)\\b(?=\\s*=)"
+        }
+      ]
+    },
+    "members": {
+      "patterns": [
+        {
+          "name": "meta.member-access.dudu",
+          "match": "(\\.)([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": { "name": "punctuation.accessor.dudu" },
+            "2": { "name": "variable.other.member.dudu" }
+          }
+        }
+      ]
+    },
+    "calls": {
+      "patterns": [
+        {
+          "name": "entity.name.function.call.dudu",
+          "match": "\\b[a-z_][A-Za-z0-9_]*\\b(?=\\s*\\()"
+        },
+        {
+          "name": "entity.name.type.call.dudu",
+          "match": "\\b[A-Z][A-Za-z0-9_]*\\b(?=\\s*\\()"
+        }
+      ]
+    },
     "keywords": {
       "patterns": [
         { "name": "keyword.control.dudu", "match": "\\b(if|elif|else|while|for|in|return|break|continue|and|or|not)\\b" },
@@ -36,7 +142,9 @@
     },
     "types": {
       "patterns": [
-        { "name": "storage.type.dudu", "match": "\\b(bool|i8|i16|i32|i64|u8|u16|u32|u64|isize|usize|f32|f64|void|str|cstr|list|dict|set|tuple|Result|Option|fn|const|atomic|volatile|storage|shared|device)\\b" }
+        { "name": "storage.type.primitive.dudu", "match": "\\b(bool|i8|i16|i32|i64|u8|u16|u32|u64|isize|usize|f32|f64|void|str|cstr)\\b" },
+        { "name": "support.type.container.dudu", "match": "\\b(list|dict|set|tuple|Result|Option|fn|const|atomic|volatile|storage|shared|device)\\b" },
+        { "name": "entity.name.type.dudu", "match": "\\b[A-Z][A-Za-z0-9_]*\\b" }
       ]
     },
     "constants": {
@@ -47,6 +155,20 @@
     "numbers": {
       "patterns": [
         { "name": "constant.numeric.dudu", "match": "\\b[0-9]+(\\.[0-9]+)?\\b" }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        { "name": "keyword.operator.assignment.dudu", "match": "(\\+=|-=|\\*=|/=|%=|=)" },
+        { "name": "keyword.operator.comparison.dudu", "match": "(==|!=|<=|>=|<|>)" },
+        { "name": "keyword.operator.arithmetic.dudu", "match": "(\\+|-|\\*|/|%|&|\\|)" },
+        { "name": "keyword.operator.arrow.dudu", "match": "->" }
+      ]
+    },
+    "punctuation": {
+      "patterns": [
+        { "name": "punctuation.section.brackets.dudu", "match": "[\\[\\]\\(\\){}]" },
+        { "name": "punctuation.separator.dudu", "match": "[,:]" }
       ]
     }
   }
