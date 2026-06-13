@@ -1,3 +1,13 @@
 @extern_c
 def exported_answer() -> i32:
     return 42
+
+
+@extern_c
+def exported_add(left: i32, right: i32) -> i32:
+    return left + right
+
+
+@extern_c
+def exported_load(value: *i32) -> i32:
+    return value[0]
