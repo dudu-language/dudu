@@ -250,6 +250,16 @@ bool is_reference_binding(std::string expected, std::string got) {
     return wrapped_type_arg(trim_copy(expected.substr(1))) == got;
 }
 
+bool is_value_wrapper_assignment(std::string expected, const std::string& expr, std::string got) {
+    expected = trim_copy(std::move(expected));
+    got = trim_copy(std::move(got));
+    const std::string inner = wrapped_type_arg(expected);
+    if (inner == expected) {
+        return false;
+    }
+    return assignment_type_allowed(inner, expr, got);
+}
+
 bool is_null_pointer(std::string expected, std::string expr, std::string got) {
     expected = trim_copy(std::move(expected));
     expr = trim_copy(std::move(expr));
@@ -317,8 +327,10 @@ bool assignment_type_allowed(const std::string& expected, const std::string& exp
            is_container_literal(expected, expr) ||
            (!is_container_literal_expr(expr) && got.empty()) || got == "auto" || got == expected ||
            compact_type(expected) == compact_type(got) || is_option_value(expected, expr, got) ||
-           is_result_value(expected, expr, got) || is_null_pointer(expected, expr, got) ||
-           is_reference_binding(expected, got) || is_function_type_match(expected, got) ||
+           is_result_value(expected, expr, got) ||
+           is_value_wrapper_assignment(expected, expr, got) ||
+           is_null_pointer(expected, expr, got) || is_reference_binding(expected, got) ||
+           is_function_type_match(expected, got) ||
            (is_numeric_type(wrapped_type_arg(expected)) && is_numeric_literal(expr));
 }
 

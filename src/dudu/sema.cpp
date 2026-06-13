@@ -47,6 +47,10 @@ bool is_builtin_call(const std::string& callee) {
                                                    "max",      "min",    "print", "range"};
     return builtins.contains(callee);
 }
+bool is_local_member_call(const FunctionScope& scope, const std::string& callee) {
+    const size_t dot = callee.find('.');
+    return dot != std::string::npos && scope.locals.contains(trim(callee.substr(0, dot)));
+}
 void check_call_args(const FunctionScope& scope, const std::string& callee,
                      const FunctionSignature& signature, const std::vector<std::string>& args,
                      const SourceLocation* location) {
@@ -128,6 +132,13 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
     }
     if (starts_with(expr, "lambda "))
         return "lambda";
+    if (starts_with(expr, "not ")) {
+        const std::string got = infer_expr(scope, expr.substr(4), location);
+        if (location != nullptr && !got.empty() && got != "bool") {
+            fail(*location, "not expects bool, got " + got);
+        }
+        return "bool";
+    }
     if (expr.size() > 1 && expr.front() == '*') {
         const std::string name = trim(expr.substr(1));
         if (const auto local = scope.locals.find(name); local != scope.locals.end()) {
@@ -168,6 +179,10 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
             fn != scope.symbols.function_signatures.end()) {
             check_call_args(scope, callee, fn->second, call_args(expr, call), location);
             return fn->second.return_type;
+        }
+        if (!is_local_member_call(scope, callee) && callee.find('.') == std::string::npos &&
+            known_type(scope.symbols, callee)) {
+            return callee;
         }
         if (const auto local = scope.locals.find(callee); local != scope.locals.end()) {
             FunctionSignature signature;
@@ -218,7 +233,7 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
         const std::string right_expr = expr.substr(op + op_text.size());
         const std::string right = infer_expr(scope, right_expr, location);
         if (location != nullptr && !left.empty() && !right.empty() &&
-            !binary_rhs_allowed(scope.symbols, left, right_expr, right)) {
+            !binary_rhs_allowed(scope.symbols, op_text, left, right_expr, right)) {
             fail(*location, "operator " + op_text + " expects " + left + ", got " + right);
         }
         return left.empty() ? right : left;
