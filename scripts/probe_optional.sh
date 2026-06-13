@@ -4,11 +4,6 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 "$repo_root/scripts/build.sh" >/dev/null
 
-vendored_pkgconfig="$repo_root/../duduplayground/third_party/install/lib/pkgconfig"
-if [[ -d "$vendored_pkgconfig" ]]; then
-    export PKG_CONFIG_PATH="$vendored_pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
-fi
-
 probe_glm() {
     if [[ ! -f /usr/include/glm/glm.hpp ]]; then
         echo "skip glm: /usr/include/glm/glm.hpp not found"
