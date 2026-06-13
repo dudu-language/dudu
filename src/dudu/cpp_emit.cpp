@@ -210,32 +210,65 @@ void emit_early_functions(std::ostringstream& out, const ModuleAst& module,
 }
 
 void emit_test_harness(std::ostringstream& out, const ModuleAst& module,
-                       const std::string& filter) {
+                       const std::string& filter, bool capture_output) {
     out << "namespace dudu_test {\n"
+           "struct Capture {\n"
+           "    bool enabled = false;\n"
+           "    std::ostringstream stream;\n"
+           "    std::streambuf* previous = nullptr;\n"
+           "    explicit Capture(bool active) : enabled(active) {\n"
+           "        if (enabled) { previous = std::cout.rdbuf(stream.rdbuf()); }\n"
+           "    }\n"
+           "    ~Capture() { restore(); }\n"
+           "    void restore() {\n"
+           "        if (previous != nullptr) { std::cout.rdbuf(previous); previous = nullptr; }\n"
+           "    }\n"
+           "    std::string text() const { return stream.str(); }\n"
+           "};\n"
+           "void print_captured(const std::string& text) {\n"
+           "    if (!text.empty()) { std::cout << text; }\n"
+           "}\n"
            "template <typename F> bool run_one(const char* name, F fn) {\n"
+           "    Capture capture("
+        << (capture_output ? "true" : "false")
+        << ");\n"
            "    try {\n"
+           "        bool ok = true;\n"
            "        using R = decltype(fn());\n"
            "        if constexpr (std::is_same_v<R, void>) {\n"
            "            fn();\n"
            "        } else if constexpr (std::is_same_v<R, bool>) {\n"
-           "            if (!fn()) { std::cout << \"FAILED \" << name << \"\\n\"; return false; }\n"
+           "            ok = fn();\n"
            "        } else {\n"
-           "            if (fn() != 0) { std::cout << \"FAILED \" << name << \"\\n\"; return false; }\n"
+           "            ok = fn() == 0;\n"
+           "        }\n"
+           "        capture.restore();\n"
+           "        if (!ok) {\n"
+           "            print_captured(capture.text());\n"
+           "            std::cout << \"FAILED \" << name << \"\\n\";\n"
+           "            return false;\n"
            "        }\n"
            "        std::cout << \"ok \" << name << \"\\n\";\n"
            "        return true;\n"
            "    } catch (const std::exception& error) {\n"
+           "        capture.restore();\n"
+           "        print_captured(capture.text());\n"
            "        std::cout << \"FAILED \" << name << \": \" << error.what() << \"\\n\";\n"
            "        return false;\n"
            "    }\n"
            "}\n"
            "template <typename F> bool run_should_panic(const char* name, F fn, "
            "std::string_view expected) {\n"
+           "    Capture capture("
+        << (capture_output ? "true" : "false")
+        << ");\n"
            "    try {\n"
            "        fn();\n"
            "    } catch (const std::exception& error) {\n"
+           "        capture.restore();\n"
            "        const std::string_view message = error.what();\n"
            "        if (!expected.empty() && message.find(expected) == std::string_view::npos) {\n"
+           "            print_captured(capture.text());\n"
            "            std::cout << \"FAILED \" << name << \": expected panic containing \"\n"
            "                      << expected << \", got \" << message << \"\\n\";\n"
            "            return false;\n"
@@ -243,6 +276,8 @@ void emit_test_harness(std::ostringstream& out, const ModuleAst& module,
            "        std::cout << \"ok \" << name << \"\\n\";\n"
            "        return true;\n"
            "    }\n"
+           "    capture.restore();\n"
+           "    print_captured(capture.text());\n"
            "    std::cout << \"FAILED \" << name << \": expected panic\\n\";\n"
            "    return false;\n"
            "}\n"
@@ -370,7 +405,8 @@ std::string emit_cpp_source(const ModuleAst& module) {
     return out.str();
 }
 
-std::string emit_cpp_test_source(const ModuleAst& module, const std::string& filter) {
+std::string emit_cpp_test_source(const ModuleAst& module, const std::string& filter,
+                                 bool capture_output) {
     std::ostringstream out;
     const std::vector<std::string> aliases = namespace_aliases(module);
     const std::map<std::string, std::string> function_returns = function_return_types(module);
@@ -390,7 +426,7 @@ std::string emit_cpp_test_source(const ModuleAst& module, const std::string& fil
         emit_function_body(out, fn, aliases, function_returns);
     }
     emit_static_asserts(out, module, aliases);
-    emit_test_harness(out, module, filter);
+    emit_test_harness(out, module, filter, capture_output);
     return out.str();
 }
 

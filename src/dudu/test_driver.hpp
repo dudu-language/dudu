@@ -13,6 +13,7 @@ struct TestDriverOptions {
     std::map<std::string, std::string> build_values;
     std::string target_name;
     std::string test_filter;
+    bool no_capture = false;
     bool project_driver = false;
     bool verbose = false;
 };

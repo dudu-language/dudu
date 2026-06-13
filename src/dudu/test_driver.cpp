@@ -150,7 +150,8 @@ std::filesystem::path default_test_output(const TestDriverOptions& options,
                                  : config.build_dir / "dudu-tests";
     const std::string key = std::filesystem::absolute(options.input).string() + "|" +
                             options.target_name + "|" + options.test_filter + "|" +
-                            config.target_kind + "|" + config.target_mode;
+                            config.target_kind + "|" + config.target_mode + "|" +
+                            (options.no_capture ? "nocapture" : "capture");
     return root / (safe_stem(options.input) + "-" + hex_hash(fnv1a(key)));
 }
 
@@ -162,7 +163,8 @@ int run_one_test_entry(TestDriverOptions options) {
     print_project_step(options.project_driver, "test", output);
     const std::filesystem::path bin = build_executable(
         {.output = output, .config = config, .verbose = options.verbose},
-        emit_cpp_test_source(checked_module(options, source), options.test_filter));
+        emit_cpp_test_source(checked_module(options, source), options.test_filter,
+                             !options.no_capture));
     const std::filesystem::path command = bin.is_relative() && bin.parent_path().empty()
                                               ? std::filesystem::path(".") / bin
                                               : bin;

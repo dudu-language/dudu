@@ -107,8 +107,17 @@ test throws; the string form requires the thrown message to contain that text.
 
 ## Future Test Features
 
-Rust captures stdout by default and supports `cargo test -- --nocapture`.
-Dudu should eventually support a similar mode.
+Dudu captures C++ stream output from passing tests by default. Captured output
+is printed when a test fails, and `--no-capture` or `--nocapture` streams output
+while tests run:
+
+```sh
+dudu test --no-capture
+dudu test src/math.dd --filter add --nocapture
+```
+
+This covers Dudu `print` and C++ iostream output. Raw C file-descriptor output
+from APIs such as `printf` is not redirected by the Dudu harness.
 
 Project-wide tests include:
 

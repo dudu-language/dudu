@@ -43,6 +43,7 @@ struct Options {
     bool format = false;
     bool init_project = false;
     bool new_project = false;
+    bool no_capture = false;
     bool project_driver = false;
     bool run = false;
     bool test = false;
@@ -131,6 +132,10 @@ Options parse_options(int argc, char** argv, bool project_driver) {
                 fail("--filter requires text");
             }
             options.test_filter = argv[++i];
+            continue;
+        }
+        if (arg == "--no-capture" || arg == "--nocapture") {
+            options.no_capture = true;
             continue;
         }
         if (arg == "-o") {
@@ -368,6 +373,7 @@ int main(int argc, char** argv) {
                                             .build_values = options.build_values,
                                             .target_name = options.target_name,
                                             .test_filter = options.test_filter,
+                                            .no_capture = options.no_capture,
                                             .project_driver = options.project_driver,
                                             .verbose = options.verbose});
         }

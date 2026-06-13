@@ -128,8 +128,8 @@ Longer-term features:
 
 - `@test.ignore`: done
 - `@test.should_panic`: done
-- stdout capture
-- no-capture mode
+- stdout capture: done
+- no-capture mode: done
 
 ## 6. Keep Macros And Decorators Conservative
 

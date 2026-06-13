@@ -33,6 +33,7 @@
   derived-to-base pointer/reference calls.
 - Added clearer native-header scan diagnostics when project-relative C/C++
   headers are missing or cannot be parsed by Clang.
+- Added default `dudu test` output capture plus `--no-capture`/`--nocapture`.
 
 ### Changed
 

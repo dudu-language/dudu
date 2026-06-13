@@ -204,6 +204,34 @@ if "$repo_root/build/dudu" test "$repo_root/build/dudu_should_panic_fails.dd" \
 fi
 grep -q "FAILED does_not_panic: expected panic" \
     "$repo_root/build/dudu_should_panic_fails.out"
+cat >"$repo_root/build/dudu_capture_test.dd" <<'DD'
+@test
+def passing_output():
+    print("hidden line")
+
+@test
+def failing_output():
+    print("visible failure line")
+    assert 1 == 2
+DD
+"$repo_root/build/dudu" test "$repo_root/build/dudu_capture_test.dd" --filter passing \
+    >"$repo_root/build/dudu_capture_pass.out"
+grep -q "ok passing_output" "$repo_root/build/dudu_capture_pass.out"
+if grep -q "hidden line" "$repo_root/build/dudu_capture_pass.out"; then
+    echo "dudu test leaked captured output from passing test" >&2
+    exit 1
+fi
+"$repo_root/build/dudu" test "$repo_root/build/dudu_capture_test.dd" --filter passing \
+    --no-capture >"$repo_root/build/dudu_capture_nocapture.out"
+grep -q "hidden line" "$repo_root/build/dudu_capture_nocapture.out"
+if "$repo_root/build/dudu" test "$repo_root/build/dudu_capture_test.dd" --filter failing \
+    >"$repo_root/build/dudu_capture_fail.out"; then
+    echo "dudu capture failure test unexpectedly passed" >&2
+    exit 1
+fi
+grep -q "visible failure line" "$repo_root/build/dudu_capture_fail.out"
+grep -q "FAILED failing_output: assert failed: 1 == 2" \
+    "$repo_root/build/dudu_capture_fail.out"
 "$repo_root/scripts/test_codegen_shapes.sh"
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/package_build/main.dd" \
     -o "$repo_root/build/package_build.cpp"
