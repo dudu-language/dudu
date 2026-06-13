@@ -1,0 +1,57 @@
+# SDL3 plus Dear ImGui using native header awareness.
+
+import c "SDL3/SDL.h" as sdl
+import cpp "imgui.h"
+import c "backends/imgui_impl_sdl3.h" as imgui_sdl3
+import c "backends/imgui_impl_sdlrenderer3.h" as imgui_renderer
+
+
+def main() -> i32:
+    window: *struct SDL_Window = None
+    renderer: *struct SDL_Renderer = None
+
+    if not sdl.SDL_Init(sdl.SDL_INIT_VIDEO):
+        return 1
+
+    if not sdl.SDL_CreateWindowAndRenderer("dudu SDL3 imgui", 760, 420, sdl.SDL_WINDOW_RESIZABLE, &window, &renderer):
+        sdl.SDL_Quit()
+        return 2
+
+    IMGUI_CHECKVERSION()
+    ImGui.CreateContext()
+    ImGui.StyleColorsDark()
+    imgui_sdl3.ImGui_ImplSDL3_InitForSDLRenderer(window, renderer)
+    imgui_renderer.ImGui_ImplSDLRenderer3_Init(renderer)
+
+    quit: bool = False
+    event: SDL_Event
+    value: f32 = 0.45
+
+    while not quit:
+        while sdl.SDL_PollEvent(&event):
+            imgui_sdl3.ImGui_ImplSDL3_ProcessEvent(&event)
+            if event.type == sdl.SDL_EVENT_QUIT:
+                quit = True
+
+        imgui_renderer.ImGui_ImplSDLRenderer3_NewFrame()
+        imgui_sdl3.ImGui_ImplSDL3_NewFrame()
+        ImGui.NewFrame()
+
+        ImGui.Begin("dudu native headers")
+        ImGui.TextUnformatted("one imgui import, native SDL_Event")
+        ImGui.SliderFloat("value", &value, 0.0, 1.0)
+        ImGui.End()
+
+        ImGui.Render()
+        sdl.SDL_SetRenderDrawColor(renderer, 12, 14, 18, 255)
+        sdl.SDL_RenderClear(renderer)
+        imgui_renderer.ImGui_ImplSDLRenderer3_RenderDrawData(ImGui.GetDrawData(), renderer)
+        sdl.SDL_RenderPresent(renderer)
+
+    imgui_renderer.ImGui_ImplSDLRenderer3_Shutdown()
+    imgui_sdl3.ImGui_ImplSDL3_Shutdown()
+    ImGui.DestroyContext()
+    sdl.SDL_DestroyRenderer(renderer)
+    sdl.SDL_DestroyWindow(window)
+    sdl.SDL_Quit()
+    return 0

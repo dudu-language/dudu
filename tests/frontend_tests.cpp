@@ -74,7 +74,8 @@ void test_canonical_examples_parse(const std::filesystem::path& root) {
         "ffmpeg_probe_decode.dd", "function_pointers.dd", "glfw_opengl_triangle.dd",
         "image_filter.dd",        "layout_hardware.dd",   "modules_visibility.dd",
         "native_escape.dd",       "numerics_kmeans.dd",   "opencl_kernel_host.dd",
-        "raylib_game.dd",         "sdl3_window.dd",       "shader_compute.dd",
+        "raylib_game.dd",         "sdl3_imgui.dd",        "sdl3_window.dd",
+        "shader_compute.dd",
         "systems_mmap.dd",        "threading_atomics.dd", "vulkan_triangle.dd",
         "web_server.dd",
     };
