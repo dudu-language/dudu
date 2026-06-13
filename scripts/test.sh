@@ -70,6 +70,7 @@ grep -q 'registerCommand("dudu.fmtFile"' "$repo_root/editors/vscode/extension.js
 grep -q 'registerCommand("dudu.checkFile"' "$repo_root/editors/vscode/extension.js"
 grep -q 'registerCommand("dudu.buildProject"' "$repo_root/editors/vscode/extension.js"
 grep -q 'registerCommand("dudu.runFile"' "$repo_root/editors/vscode/extension.js"
+grep -q 'registerCompletionItemProvider("dudu"' "$repo_root/editors/vscode/extension.js"
 grep -q 'createDiagnosticCollection("dudu")' "$repo_root/editors/vscode/extension.js"
 grep -q '"onLanguage:dudu"' "$repo_root/editors/vscode/package.json"
 grep -q '"duc"' "$repo_root/editors/vscode/extension.js"

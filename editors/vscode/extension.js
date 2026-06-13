@@ -97,10 +97,58 @@ function checkDocument(document) {
   );
 }
 
+function completion(label, kind) {
+  return new vscode.CompletionItem(label, kind);
+}
+
+function collectDocumentCompletions(document) {
+  const items = [];
+  const text = document.getText();
+  const keywordKind = vscode.CompletionItemKind.Keyword;
+  for (const keyword of ["class", "def", "enum", "import", "return", "for", "if", "else"]) {
+    items.push(completion(keyword, keywordKind));
+  }
+  for (const type of ["bool", "i32", "i64", "u32", "u64", "f32", "f64", "str", "cstr"]) {
+    items.push(completion(type, vscode.CompletionItemKind.TypeParameter));
+  }
+  for (const line of text.split(/\r?\n/)) {
+    let match = /^(?:public |private )?class\s+([A-Z][A-Za-z0-9]*)\s*:/.exec(line);
+    if (match) {
+      items.push(completion(match[1], vscode.CompletionItemKind.Class));
+      continue;
+    }
+    match = /^enum\s+([A-Z][A-Za-z0-9]*)/.exec(line);
+    if (match) {
+      items.push(completion(match[1], vscode.CompletionItemKind.Enum));
+      continue;
+    }
+    match = /^(?:public |private )?def\s+([a-z][a-z0-9_]*)\s*\(/.exec(line);
+    if (match) {
+      items.push(completion(match[1], vscode.CompletionItemKind.Function));
+      continue;
+    }
+    match = /^import\s+(?:c|cpp)\s+"[^"]+"\s+as\s+([a-z][a-z0-9_]*)/.exec(line);
+    if (match) {
+      items.push(completion(match[1], vscode.CompletionItemKind.Module));
+      continue;
+    }
+    match = /^([A-Z][A-Z0-9_]*)\s*:/.exec(line);
+    if (match) {
+      items.push(completion(match[1], vscode.CompletionItemKind.Constant));
+    }
+  }
+  return items;
+}
+
 function activate(context) {
   diagnostics = vscode.languages.createDiagnosticCollection("dudu");
   context.subscriptions.push(
     diagnostics,
+    vscode.languages.registerCompletionItemProvider("dudu", {
+      provideCompletionItems(document) {
+        return collectDocumentCompletions(document);
+      },
+    }),
     vscode.commands.registerCommand("dudu.fmtFile", () => {
       const file = activeDuduFile();
       if (file) {
