@@ -1,0 +1,26 @@
+class Item:
+    value: i32
+
+
+def collect_ptrs(items: &list[Item]) -> list[*Item]:
+    ptrs: list[*Item] = []
+    for item: &Item in items:
+        ptrs.append(&item)
+    return ptrs
+
+
+def sum_values(items: &const[list[Item]]) -> i32:
+    total: i32 = 0
+    for item: &const[Item] in items:
+        total += item.value
+    return total
+
+
+def main() -> i32:
+    items: list[Item] = []
+    items.append(Item(value=20))
+    items.append(Item(value=22))
+
+    ptrs = collect_ptrs(items)
+    ptrs[0].value += 1
+    return sum_values(items) - 1

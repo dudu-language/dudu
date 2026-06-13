@@ -1,5 +1,6 @@
 #include "dudu/sema_methods.hpp"
 
+#include "dudu/sema_index.hpp"
 #include "dudu/sema_scan.hpp"
 #include "dudu/source.hpp"
 
@@ -32,6 +33,36 @@ std::string unwrap_receiver_type(const Symbols& symbols, std::string type) {
     }
 }
 
+bool is_indexed_local_segment(const std::string& text) {
+    const size_t index = text.find('[');
+    return index != std::string::npos && text.back() == ']' &&
+           is_plain_identifier(trim(text.substr(0, index)));
+}
+
+std::string first_path_type(const Symbols& symbols,
+                            const std::map<std::string, std::string>& locals,
+                            const SourceLocation* location, const std::string& first,
+                            const std::string& unknown_local_prefix) {
+    if (is_indexed_local_segment(first)) {
+        const std::string name = trim(first.substr(0, first.find('[')));
+        if (location == nullptr && !locals.contains(name)) {
+            return {};
+        }
+        return indexed_value_type(symbols, locals,
+                                  location == nullptr ? SourceLocation{} : *location, name,
+                                  unknown_local_prefix.empty() ? "indexed access to unknown local: "
+                                                               : unknown_local_prefix);
+    }
+    const auto local = locals.find(first);
+    if (local == locals.end()) {
+        if (location != nullptr && !unknown_local_prefix.empty()) {
+            fail(*location, unknown_local_prefix + first);
+        }
+        return {};
+    }
+    return local->second;
+}
+
 } // namespace
 
 std::string member_path_type(const Symbols& symbols,
@@ -46,14 +77,9 @@ std::string member_path_type(const Symbols& symbols,
         return {};
     }
     std::string current = path.substr(0, dot);
-    const auto local = locals.find(current);
-    if (local == locals.end()) {
-        if (location != nullptr && !unknown_local_prefix.empty()) {
-            fail(*location, unknown_local_prefix + current);
-        }
+    std::string type = first_path_type(symbols, locals, location, current, unknown_local_prefix);
+    if (type.empty())
         return {};
-    }
-    std::string type = local->second;
     size_t start = dot + 1;
     while (start < path.size()) {
         const size_t next = path.find('.', start);
@@ -98,7 +124,8 @@ bool is_member_path(const std::string& path) {
     while (start < path.size()) {
         const size_t dot = path.find('.', start);
         const std::string part = path.substr(start, dot == std::string::npos ? dot : dot - start);
-        if (!is_plain_identifier(trim(part))) {
+        const std::string trimmed = trim(part);
+        if (!is_plain_identifier(trimmed) && !is_indexed_local_segment(trimmed)) {
             return false;
         }
         if (dot == std::string::npos) {

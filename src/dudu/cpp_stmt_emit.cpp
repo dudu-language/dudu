@@ -1,9 +1,9 @@
 #include "dudu/cpp_stmt_emit.hpp"
 
 #include "dudu/cpp_lower.hpp"
+#include "dudu/cpp_pointer_members.hpp"
 #include "dudu/cpp_stmt_types.hpp"
 
-#include <cctype>
 #include <map>
 #include <sstream>
 
@@ -12,33 +12,6 @@ namespace {
 
 std::string indent(int depth) {
     return std::string(static_cast<size_t>(depth) * 4, ' ');
-}
-
-bool is_pointer_type(const std::string& type) {
-    return starts_with(trim_copy(type), "*");
-}
-
-std::string rewrite_pointer_members(std::string expr,
-                                    const std::map<std::string, std::string>& locals) {
-    for (const auto& [name, type] : locals) {
-        if (!is_pointer_type(type)) {
-            continue;
-        }
-        const std::string marker = name + ".";
-        size_t pos = expr.find(marker);
-        while (pos != std::string::npos) {
-            const bool left_ok =
-                pos == 0 || (std::isalnum(static_cast<unsigned char>(expr[pos - 1])) == 0 &&
-                             expr[pos - 1] != '_');
-            if (left_ok) {
-                expr.replace(pos, marker.size(), name + "->");
-                pos = expr.find(marker, pos + name.size() + 2);
-            } else {
-                pos = expr.find(marker, pos + marker.size());
-            }
-        }
-    }
-    return expr;
 }
 
 std::string lower_expr(std::string expr, const std::vector<std::string>& aliases,
