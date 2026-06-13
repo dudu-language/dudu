@@ -395,7 +395,11 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
     const size_t assign = find_top_level_char(text, '=');
     const size_t compound = compound_assign_pos(text, assign);
     if (compound != std::string::npos) {
-        (void)assign_target_type(scope, stmt, trim(text.substr(0, compound)));
+        const std::string target_type =
+            assign_target_type(scope, stmt, trim(text.substr(0, compound)));
+        if (!target_type.empty()) {
+            check_type_match(scope, stmt, target_type, text.substr(assign + 1));
+        }
         return;
     }
     if (colon != std::string::npos && (assign == std::string::npos || colon < assign)) {
