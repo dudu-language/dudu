@@ -101,8 +101,22 @@ probe_raylib() {
     echo "ok raylib"
 }
 
+probe_sdl3() {
+    if ! pkg-config --exists sdl3; then
+        echo "skip sdl3: pkg-config package not found"
+        return
+    fi
+
+    local cpp="$repo_root/build/probe_sdl3_window.cpp"
+    local bin="$repo_root/build/probe_sdl3_window"
+    "$repo_root/build/duc" emit "$repo_root/examples/sdl3_window.dd" -o "$cpp"
+    "${CXX:-c++}" -std=c++20 "$cpp" $(pkg-config --cflags --libs sdl3) -o "$bin"
+    echo "ok sdl3"
+}
+
 probe_glm
 probe_opencv
 probe_sqlite
 probe_threading
 probe_raylib
+probe_sdl3

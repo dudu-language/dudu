@@ -19,6 +19,7 @@ required_examples=(
     native_escape.dd
     numerics_kmeans.dd
     raylib_game.dd
+    sdl3_window.dd
     shader_compute.dd
     systems_mmap.dd
     threading_atomics.dd
