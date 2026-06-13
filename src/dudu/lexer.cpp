@@ -170,7 +170,8 @@ class Lexer {
         }
         const std::string two{peek(), peek(1)};
         if (two == "==" || two == "!=" || two == "<=" || two == ">=" || two == "+=" ||
-            two == "-=" || two == "*=" || two == "/=" || two == "<<" || two == ">>") {
+            two == "-=" || two == "*=" || two == "/=" || two == "%=" || two == "&=" ||
+            two == "|=" || two == "^=" || two == "<<" || two == ">>") {
             take();
             take();
             push(TokenKind::Operator, two, line_, column);
