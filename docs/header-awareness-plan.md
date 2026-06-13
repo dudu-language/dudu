@@ -3,24 +3,25 @@
 Dudu foreign imports should feel like C/C++ includes, not like hand-written
 binding files.
 
-Today this works at C++ emission time:
+This works at C++ emission time:
 
 ```python
 import c "SDL3/SDL.h" as sdl
 ```
 
 The generated C++ includes `SDL3/SDL.h`, and expression lowering turns
-`sdl.SDL_PollEvent` into `SDL_PollEvent`. The Dudu typechecker does not parse
-the imported header, so native typedefs such as `SDL_Event` are unknown unless
-the user writes:
+`sdl.SDL_PollEvent` into `SDL_PollEvent`. Dudu also runs a Clang-backed native
+header scan before semantic body checks, so native typedefs such as `SDL_Event`
+are available without hand-written declarations.
+
+Manual native declarations are still available as an escape hatch:
 
 ```python
 type SDL_Event
 ```
 
-That is acceptable as an escape hatch, but it is not acceptable as the normal
-interop workflow. Users should not have to know and predeclare every imported
-type by hand.
+That is not the normal interop workflow. Users should not have to know and
+predeclare every imported type by hand.
 
 ## Target Behavior
 
@@ -162,22 +163,25 @@ The scanner input should include:
 - C++ standard
 - target mode where relevant
 
-## First Useful Slice
+## Implemented Slice
 
-Start with types only. This removes the biggest current usability problem
-without requiring full overload/type modeling.
+Dudu currently discovers and registers:
 
-Discover and register:
-
-- typedef names
-- using aliases
+- typedef names and using aliases
 - structs and classes
 - unions
 - enums and enum constants
+- object-like macros as native values
+- function-like macros by arity
+- global functions, parameter types, return types, and varargs markers
+- C++ namespace-qualified functions
+- simple native overload sets by arity and assignability
+- C++ class fields, methods, and non-default constructor signatures
 
-Dudu should add discovered type names to the same symbol table path used by
-manual `type Name` declarations, but mark them as native-discovered so
-diagnostics can explain their origin.
+Discovered type names enter the same symbol path used by manual `type Name`
+declarations. Direct imports also expose native values, macros, functions,
+namespaces, and class shapes. Aliased imports keep the old hygienic lowering
+style while still making imported types visible.
 
 This is enough for:
 
@@ -189,18 +193,7 @@ renderer: *SDL_Renderer = None
 
 and for many OpenCL, Vulkan, POSIX, FFmpeg, SQLite, and GLFW handle types.
 
-## Second Slice
-
-Add native values and constants:
-
-- enum constants
-- object-like macros with simple literal values
-- global variables where present
-- C/C++ preprocessor constants such as `IMGUI_CHECKVERSION` when they can be
-  represented safely
-
-This makes C imports feel less magical because constants in headers become
-known symbols instead of only passing through to generated C++.
+## Macro Policy
 
 Macro policy should stay permissive for consumption and conservative for
 understanding. Dudu should not add C macro-definition syntax. Instead:
@@ -215,18 +208,9 @@ to preserve source spelling and avoid obvious arity mistakes. For example,
 `IMGUI_CHECKVERSION()` can lower directly to `IMGUI_CHECKVERSION();`. Prefer
 wrapper headers for macro-heavy APIs that cannot be represented cleanly.
 
-## Third Slice
+## Native Function Diagnostics
 
-Add functions:
-
-- function names
-- parameter types
-- return types
-- C varargs marker
-- C++ namespace-qualified functions
-- simple overload sets
-
-This enables better diagnostics:
+Native function metadata enables better diagnostics:
 
 ```text
 no matching overload for ImGui.SliderFloat(str, *i32, f32, f32)
@@ -236,21 +220,18 @@ candidate expects *f32 for parameter 2
 It also allows Dudu to infer return types from imported calls instead of
 falling back to loose expression typing.
 
-## Fourth Slice
+## Remaining Deep C++ Work
 
-Add C++ classes and richer constructs:
+Richer constructs still need deeper modeling:
 
-- constructors
-- destructors
-- methods
-- fields
 - nested types
 - templates with explicit arguments
 - overloaded operators
 - references and const correctness
+- destructor semantics
 
-This is the real C++ interop milestone. It should be built after the type and
-function scanner paths are stable.
+The current scanner intentionally covers the common SDL/imgui/raylib-style
+surface first. Template-heavy libraries may still need wrapper headers.
 
 ## Cache
 
@@ -374,9 +355,9 @@ Optional probes:
 
 ## Migration
 
-After the type-only scanner works:
+Current migration state:
 
-- remove `type SDL_Event` from the SDL3/imgui playground
+- `type SDL_Event` has been removed from the SDL3/imgui playground
 - keep one small `type Name` fixture as an escape-hatch test
-- update docs so `type Name` is described as manual override, not normal API
-- add a note that automatic native interop requires Clang tooling
+- docs describe `type Name` as manual override, not normal API
+- automatic native interop requires Clang tooling

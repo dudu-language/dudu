@@ -372,13 +372,11 @@ type PlayerId = u64
 type ScoreMap = dict[str, i32]
 ```
 
-Native typedefs from imported C/C++ headers can be declared without emitting a
-Dudu definition:
+Native typedefs from imported C/C++ headers are discovered automatically when
+Clang can scan the imported header:
 
 ```python
 import c "SDL3/SDL.h" as sdl
-
-type SDL_Event
 
 def pump_events() -> bool:
     event: SDL_Event
@@ -387,6 +385,10 @@ def pump_events() -> bool:
             return False
     return True
 ```
+
+Manual `type Name` declarations remain available as an escape hatch for unusual
+generated or platform headers, but normal C/C++ interop should use imported
+headers directly.
 
 An uninitialized local value such as `event: SDL_Event` lowers to C++ value
 initialization, `SDL_Event event{};`. `None` remains for null pointers and

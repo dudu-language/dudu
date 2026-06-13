@@ -12,6 +12,7 @@ namespace dudu {
 struct FunctionSignature {
     std::vector<std::string> params;
     std::string return_type;
+    bool variadic = false;
 };
 
 struct Symbols {
@@ -19,6 +20,9 @@ struct Symbols {
     std::map<std::string, std::string> aliases;
     std::map<std::string, std::string> functions;
     std::map<std::string, FunctionSignature> function_signatures;
+    std::map<std::string, std::vector<FunctionSignature>> native_function_signatures;
+    std::map<std::string, std::string> native_values;
+    std::map<std::string, ClassDecl> native_classes;
     std::map<std::string, const ClassDecl*> classes;
 };
 

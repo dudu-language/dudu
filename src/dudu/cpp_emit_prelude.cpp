@@ -88,6 +88,9 @@ std::vector<std::string> namespace_aliases(const ModuleAst& module) {
             aliases.push_back("!" + import.alias);
         }
     }
+    for (const NativeNamespaceDecl& ns : module.native_namespaces) {
+        aliases.push_back(ns.name);
+    }
     return aliases;
 }
 

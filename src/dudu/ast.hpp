@@ -63,6 +63,32 @@ struct NativeTypeDecl {
     SourceLocation location;
 };
 
+struct NativeValueDecl {
+    std::string name;
+    std::string type;
+    SourceLocation location;
+};
+
+struct NativeFunctionDecl {
+    std::string name;
+    std::vector<std::string> params;
+    std::string return_type;
+    bool variadic = false;
+    SourceLocation location;
+};
+
+struct NativeMacroDecl {
+    std::string name;
+    int arity = -1;
+    bool function_like = false;
+    SourceLocation location;
+};
+
+struct NativeNamespaceDecl {
+    std::string name;
+    SourceLocation location;
+};
+
 struct EnumValueDecl {
     std::string name;
     std::string value;
@@ -113,6 +139,11 @@ struct ModuleAst {
     std::vector<ImportDecl> imports;
     std::vector<TypeAliasDecl> aliases;
     std::vector<NativeTypeDecl> native_types;
+    std::vector<NativeValueDecl> native_values;
+    std::vector<NativeFunctionDecl> native_functions;
+    std::vector<NativeMacroDecl> native_macros;
+    std::vector<NativeNamespaceDecl> native_namespaces;
+    std::vector<ClassDecl> native_classes;
     std::vector<EnumDecl> enums;
     std::vector<ClassDecl> classes;
     std::vector<FunctionDecl> functions;

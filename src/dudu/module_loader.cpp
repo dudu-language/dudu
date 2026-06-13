@@ -42,6 +42,17 @@ void append_module(ModuleAst& target, ModuleAst source) {
     target.aliases.insert(target.aliases.end(), source.aliases.begin(), source.aliases.end());
     target.native_types.insert(target.native_types.end(), source.native_types.begin(),
                                source.native_types.end());
+    target.native_values.insert(target.native_values.end(), source.native_values.begin(),
+                                source.native_values.end());
+    target.native_functions.insert(target.native_functions.end(), source.native_functions.begin(),
+                                   source.native_functions.end());
+    target.native_macros.insert(target.native_macros.end(), source.native_macros.begin(),
+                                source.native_macros.end());
+    target.native_namespaces.insert(target.native_namespaces.end(),
+                                    source.native_namespaces.begin(),
+                                    source.native_namespaces.end());
+    target.native_classes.insert(target.native_classes.end(), source.native_classes.begin(),
+                                 source.native_classes.end());
     target.enums.insert(target.enums.end(), source.enums.begin(), source.enums.end());
     target.classes.insert(target.classes.end(), source.classes.begin(), source.classes.end());
     target.constants.insert(target.constants.end(), source.constants.begin(),

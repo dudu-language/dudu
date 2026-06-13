@@ -284,6 +284,10 @@ Symbols collect_symbols(const ModuleAst& module) {
         add_name(names, type.name, type.location);
         symbols.types.insert(type.name);
     }
+    for (const NativeValueDecl& value : module.native_values) {
+        add_name(names, value.name, value.location);
+        symbols.native_values[value.name] = value.type;
+    }
     for (const EnumDecl& en : module.enums) {
         add_name(names, en.name, en.location);
         symbols.types.insert(en.name);
@@ -292,6 +296,12 @@ Symbols collect_symbols(const ModuleAst& module) {
         add_name(names, klass.name, klass.location);
         symbols.types.insert(klass.name);
         symbols.classes[klass.name] = &klass;
+    }
+    for (const ClassDecl& klass : module.native_classes) {
+        symbols.types.insert(klass.name);
+        const auto [it, inserted] = symbols.native_classes.emplace(klass.name, klass);
+        (void)inserted;
+        symbols.classes[klass.name] = &it->second;
     }
     for (const FunctionDecl& fn : module.functions) {
         add_name(names, fn.name, fn.location);
@@ -302,6 +312,17 @@ Symbols collect_symbols(const ModuleAst& module) {
         signature.return_type = fn.return_type.empty() ? "void" : fn.return_type;
         symbols.functions[fn.name] = signature.return_type;
         symbols.function_signatures[fn.name] = std::move(signature);
+    }
+    std::set<std::string> native_function_names;
+    for (const NativeFunctionDecl& fn : module.native_functions) {
+        if (native_function_names.insert(fn.name).second) {
+            add_name(names, fn.name, fn.location);
+        }
+        FunctionSignature signature;
+        signature.params = fn.params;
+        signature.return_type = fn.return_type.empty() ? "auto" : fn.return_type;
+        signature.variadic = fn.variadic;
+        symbols.native_function_signatures[fn.name].push_back(std::move(signature));
     }
     for (const ConstDecl& constant : module.constants) {
         add_name(names, constant.name, constant.location);
