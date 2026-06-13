@@ -18,3 +18,4 @@ enum DuduNativeKind {
 
 bool dudu_native_ready(DuduNativeEvent* event);
 int dudu_native_add(int a, int b);
+const char* dudu_native_format(const char* text, ...);

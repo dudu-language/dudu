@@ -233,6 +233,8 @@ void test_native_header_type_scan(const std::filesystem::path& root) {
                                                 "    if dudu_native_ready(&event):\n"
                                                 "        return DUDU_NATIVE_SCALE(other.scaled(3)) + "
                                                 "i32(dudu_native.overloaded(amount))\n"
+                                                "    dudu_native_format(\"%d %d\", event.type, "
+                                                "dudu_native_kind_ok)\n"
                                                 "    return event.type + widget.value + "
                                                 "other.value + dudu_native_kind_ok\n",
                                                 root / "tests/fixtures/native_scan.dd");

@@ -21,7 +21,7 @@ bool args_match_signature(const FunctionScope& scope, const FunctionSignature& s
     if (!arity_matches(signature, args.size())) {
         return false;
     }
-    for (size_t i = 0; i < args.size(); ++i) {
+    for (size_t i = 0; i < signature.params.size(); ++i) {
         const std::string got = infer_expr(scope, args[i], location);
         if (!can_assign(signature.params[i], args[i], got)) {
             return false;
