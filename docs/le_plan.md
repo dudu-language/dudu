@@ -38,6 +38,10 @@ Make the C++ object model feel complete through Python-shaped syntax:
 - static methods
 - C++ interop behavior for all of the above
 
+Status: constructors, destructors, member methods, static methods, imported C++
+operator overloads, and Dudu-native operator methods are implemented. Broader
+overload-set polish remains part of header-awareness hardening.
+
 This is more important than user-defined macros because it directly affects
 normal systems and game code.
 

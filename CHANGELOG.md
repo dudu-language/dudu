@@ -24,6 +24,7 @@
 - Added recursive `dudu test ./...` and directory test discovery.
 - Added unique generated test binary paths under `build/dudu-tests/`.
 - Added class-scoped constants and `@staticmethod` methods.
+- Added Dudu-native operator methods such as `__add__` and `__eq__`.
 
 ### Changed
 

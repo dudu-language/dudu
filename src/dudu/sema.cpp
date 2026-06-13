@@ -213,6 +213,12 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
         const std::string op_text = top_level_operator_text(expr, op);
         const std::string right_expr = expr.substr(op + op_text.size());
         const std::string right = infer_expr(scope, right_expr, location);
+        if (const auto signature = dudu_operator_signature(scope.symbols, op_text, left)) {
+            if (location != nullptr) {
+                check_call_args(scope, op_text, *signature, {right_expr}, location);
+            }
+            return signature->return_type;
+        }
         if (location != nullptr && !left.empty() && !right.empty() &&
             !binary_rhs_allowed(scope.symbols, op_text, left, right_expr, right)) {
             fail(*location, "operator " + op_text + " expects " + left + ", got " + right);

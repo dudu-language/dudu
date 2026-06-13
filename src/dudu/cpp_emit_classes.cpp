@@ -89,6 +89,19 @@ bool function_has_decorator(const FunctionDecl& fn, std::string_view name) {
     return false;
 }
 
+std::string operator_name(const std::string& method_name) {
+    static const std::map<std::string, std::string> names = {
+        {"__add__", "operator+"},     {"__sub__", "operator-"},
+        {"__mul__", "operator*"},     {"__truediv__", "operator/"},
+        {"__mod__", "operator%"},     {"__eq__", "operator=="},
+        {"__ne__", "operator!="},     {"__lt__", "operator<"},
+        {"__le__", "operator<="},     {"__gt__", "operator>"},
+        {"__ge__", "operator>="},
+    };
+    const auto it = names.find(method_name);
+    return it == names.end() ? method_name : it->second;
+}
+
 std::string class_opening(const ClassDecl& klass) {
     const bool packed = class_has_decorator(klass, "packed");
     const std::string alignment = decorator_arg(klass, "align");
@@ -126,7 +139,7 @@ void emit_method(std::ostringstream& out, const std::string& class_name, const F
         if (function_has_decorator(method, "staticmethod")) {
             out << "static ";
         }
-        out << lower_cpp_type(method.return_type) << ' ' << method.name << '(';
+        out << lower_cpp_type(method.return_type) << ' ' << operator_name(method.name) << '(';
     }
     for (size_t i = first_param; i < method.params.size(); ++i) {
         if (i > first_param) {

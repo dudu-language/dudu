@@ -1,0 +1,19 @@
+class Vec2:
+    x: i32
+    y: i32
+
+    def __add__(self, other: Vec2) -> Vec2:
+        return Vec2(self.x + other.x, self.y + other.y)
+
+    def __eq__(self, other: Vec2) -> bool:
+        return self.x == other.x and self.y == other.y
+
+
+def main() -> i32:
+    left: Vec2 = Vec2(10, 20)
+    right: Vec2 = Vec2(5, 7)
+    total: Vec2 = left + right
+
+    if total == Vec2(15, 27):
+        return 42
+    return 1

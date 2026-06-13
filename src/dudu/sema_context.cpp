@@ -66,6 +66,21 @@ bool has_decorator(const FunctionDecl& fn, std::string_view name) {
     return false;
 }
 
+bool is_operator_method(const std::string& name) {
+    static const std::set<std::string> names = {
+        "__add__", "__sub__", "__mul__", "__truediv__", "__mod__", "__eq__",
+        "__ne__",  "__lt__",  "__le__",  "__gt__",      "__ge__",
+    };
+    return names.contains(name);
+}
+
+bool is_comparison_operator_method(const std::string& name) {
+    static const std::set<std::string> names = {
+        "__eq__", "__ne__", "__lt__", "__le__", "__gt__", "__ge__",
+    };
+    return names.contains(name);
+}
+
 bool is_c_abi_primitive(const std::string& type, bool allow_void) {
     if (type == "void") {
         return allow_void;
@@ -386,6 +401,18 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
             }
             if (is_static && !method.params.empty() && method.params.front().name == "self") {
                 fail(method.location, "@staticmethod methods cannot take self");
+            }
+            if (is_operator_method(method.name)) {
+                if (is_static) {
+                    fail(method.location, "operator methods cannot be static");
+                }
+                if (method.params.size() != 2 || method.params.front().name != "self") {
+                    fail(method.location, "operator methods require self and one parameter");
+                }
+                if (is_comparison_operator_method(method.name) &&
+                    (method.return_type.empty() || method.return_type != "bool")) {
+                    fail(method.location, "comparison operator methods must return bool");
+                }
             }
             if (method.name == "__init__" && !method.return_type.empty() &&
                 method.return_type != "void") {

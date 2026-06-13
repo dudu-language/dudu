@@ -1,0 +1,10 @@
+class Vec2:
+    x: i32
+    y: i32
+
+    def __eq__(self, other: Vec2) -> i32:
+        return 1
+
+
+def main() -> i32:
+    return 0

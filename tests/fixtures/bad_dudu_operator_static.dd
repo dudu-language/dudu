@@ -1,0 +1,11 @@
+class Vec2:
+    x: i32
+    y: i32
+
+    @staticmethod
+    def __add__(other: Vec2) -> Vec2:
+        return other
+
+
+def main() -> i32:
+    return 0

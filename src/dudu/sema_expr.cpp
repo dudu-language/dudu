@@ -3,6 +3,7 @@
 #include "dudu/cpp_lower.hpp"
 #include "dudu/sema_ops.hpp"
 #include "dudu/sema_scan.hpp"
+#include "dudu/type_compat.hpp"
 
 namespace dudu {
 namespace {
@@ -62,6 +63,21 @@ std::optional<std::string> infer_comparison_expr(const FunctionScope& scope,
     const std::string left = infer_expr(scope, expr.substr(0, comparison), location);
     const std::string right_expr = expr.substr(comparison + op.size());
     const std::string right = infer_expr(scope, right_expr, location);
+    if (const auto signature = dudu_operator_signature(scope.symbols, op, left)) {
+        if (location != nullptr) {
+            if (signature->params.size() != 1) {
+                fail(*location, "operator " + op + " expects 1 argument, got " +
+                                    std::to_string(signature->params.size()));
+            } else if (!assignment_type_allowed(signature->params.front(), right_expr, right)) {
+                fail(*location, "operator " + op + " expects " + signature->params.front() +
+                                    ", got " + right);
+            }
+            if (signature->return_type != "bool") {
+                fail(*location, "comparison operator " + op + " must return bool");
+            }
+        }
+        return "bool";
+    }
     if (location != nullptr && !left.empty() && !right.empty() &&
         !comparison_rhs_allowed(scope.symbols, op, left, right_expr, right)) {
         fail(*location, "comparison " + op + " expects " + left + ", got " + right);

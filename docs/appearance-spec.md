@@ -971,6 +971,28 @@ class Color:
 Static methods do not take `self`. Type-qualified access lowers to C++ `::`,
 while instance field and method access keeps normal member access.
 
+## Operator Methods
+
+Dudu-native operator overloads use Python dunder names and lower to C++
+operators:
+
+```python
+class Vec2:
+    x: i32
+    y: i32
+
+    def __add__(self, other: Vec2) -> Vec2:
+        return Vec2(self.x + other.x, self.y + other.y)
+
+    def __eq__(self, other: Vec2) -> bool:
+        return self.x == other.x and self.y == other.y
+```
+
+Supported binary operator methods are `__add__`, `__sub__`, `__mul__`,
+`__truediv__`, and `__mod__`. Supported comparison operator methods are
+`__eq__`, `__ne__`, `__lt__`, `__le__`, `__gt__`, and `__ge__`. Operator
+methods take `self` plus one argument. Comparison operators must return `bool`.
+
 ## C Interop
 
 ```python
