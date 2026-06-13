@@ -174,6 +174,36 @@ if "$repo_root/build/dudu" test "$repo_root/build/dudu_assert_message_test.dd" \
 fi
 grep -q "FAILED fails_with_message: numbers are still wrong" \
     "$repo_root/build/dudu_assert_message_test.out"
+cat >"$repo_root/build/dudu_test_decorators.dd" <<'DD'
+@test.ignore
+def slow_case():
+    assert 1 == 2
+
+@test.should_panic
+def panics():
+    assert 1 == 2
+
+@test.should_panic("bad input")
+def panics_with_message():
+    assert 1 == 2, "bad input reached"
+DD
+"$repo_root/build/dudu" test "$repo_root/build/dudu_test_decorators.dd" \
+    >"$repo_root/build/dudu_test_decorators.out"
+grep -q "ignored slow_case" "$repo_root/build/dudu_test_decorators.out"
+grep -q "ok panics" "$repo_root/build/dudu_test_decorators.out"
+grep -q "ok panics_with_message" "$repo_root/build/dudu_test_decorators.out"
+cat >"$repo_root/build/dudu_should_panic_fails.dd" <<'DD'
+@test.should_panic
+def does_not_panic():
+    pass
+DD
+if "$repo_root/build/dudu" test "$repo_root/build/dudu_should_panic_fails.dd" \
+    >"$repo_root/build/dudu_should_panic_fails.out"; then
+    echo "dudu should_panic test unexpectedly passed without panic" >&2
+    exit 1
+fi
+grep -q "FAILED does_not_panic: expected panic" \
+    "$repo_root/build/dudu_should_panic_fails.out"
 "$repo_root/scripts/test_codegen_shapes.sh"
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/package_build/main.dd" \
     -o "$repo_root/build/package_build.cpp"

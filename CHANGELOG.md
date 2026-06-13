@@ -28,6 +28,7 @@
 - Improved native header scanning for pointer and reference parameter types.
 - Improved `dudu test` zero-test output.
 - Added custom runtime assertion messages with `assert expr, "message"`.
+- Added `@test.ignore` and `@test.should_panic` test decorators.
 
 ### Changed
 

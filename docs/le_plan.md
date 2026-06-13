@@ -125,8 +125,8 @@ Short-term fixes:
 
 Longer-term features:
 
-- `@test.ignore`
-- `@test.should_panic`
+- `@test.ignore`: done
+- `@test.should_panic`: done
 - stdout capture
 - no-capture mode
 

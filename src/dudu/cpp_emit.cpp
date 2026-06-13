@@ -47,6 +47,17 @@ bool function_has_decorator(const FunctionDecl& fn, std::string_view name) {
     return false;
 }
 
+bool function_is_test(const FunctionDecl& fn) {
+    for (const Decorator& decorator : fn.decorators) {
+        const std::string text = trim_copy(decorator.text);
+        if (text == "test" || text == "test.ignore" || text == "test.should_panic" ||
+            starts_with(text, "test.should_panic(")) {
+            return true;
+        }
+    }
+    return false;
+}
+
 std::string cpp_string_literal(std::string text) {
     std::string out = "\"";
     for (const char c : text) {
@@ -75,7 +86,7 @@ bool visible_in_header(Visibility visibility) {
 }
 
 bool visible_function_in_header(const FunctionDecl& fn) {
-    return visible_in_header(fn.visibility) && !function_has_decorator(fn, "test");
+    return visible_in_header(fn.visibility) && !function_is_test(fn);
 }
 
 bool emit_before_constants(const FunctionDecl& fn) {
@@ -218,27 +229,59 @@ void emit_test_harness(std::ostringstream& out, const ModuleAst& module,
            "        return false;\n"
            "    }\n"
            "}\n"
+           "template <typename F> bool run_should_panic(const char* name, F fn, "
+           "std::string_view expected) {\n"
+           "    try {\n"
+           "        fn();\n"
+           "    } catch (const std::exception& error) {\n"
+           "        const std::string_view message = error.what();\n"
+           "        if (!expected.empty() && message.find(expected) == std::string_view::npos) {\n"
+           "            std::cout << \"FAILED \" << name << \": expected panic containing \"\n"
+           "                      << expected << \", got \" << message << \"\\n\";\n"
+           "            return false;\n"
+           "        }\n"
+           "        std::cout << \"ok \" << name << \"\\n\";\n"
+           "        return true;\n"
+           "    }\n"
+           "    std::cout << \"FAILED \" << name << \": expected panic\\n\";\n"
+           "    return false;\n"
+           "}\n"
            "} // namespace dudu_test\n\n"
            "int main() {\n"
            "    int total = 0;\n"
-           "    int passed = 0;\n";
+           "    int passed = 0;\n"
+           "    int ignored = 0;\n";
     for (const FunctionDecl& fn : module.functions) {
-        if (!function_has_decorator(fn, "test")) {
+        if (!function_is_test(fn)) {
             continue;
         }
         if (!filter.empty() && fn.name.find(filter) == std::string::npos) {
             continue;
         }
-        out << "    ++total;\n"
-            << "    if (dudu_test::run_one(" << cpp_string_literal(fn.name) << ", " << fn.name
-            << ")) { ++passed; }\n";
+        if (function_has_decorator(fn, "test.ignore")) {
+            out << "    ++ignored;\n"
+                << "    std::cout << \"ignored " << fn.name << "\\n\";\n";
+        } else if (function_has_decorator(fn, "test.should_panic") ||
+                   !function_decorator_arg(fn, "test.should_panic").empty()) {
+            const std::string expected = function_decorator_arg(fn, "test.should_panic");
+            out << "    ++total;\n"
+                << "    if (dudu_test::run_should_panic(" << cpp_string_literal(fn.name) << ", "
+                << fn.name << ", " << (expected.empty() ? "\"\"" : expected)
+                << ")) { ++passed; }\n";
+        } else {
+            out << "    ++total;\n"
+                << "    if (dudu_test::run_one(" << cpp_string_literal(fn.name) << ", "
+                << fn.name << ")) { ++passed; }\n";
+        }
     }
-    out << "    if (total == 0) {\n"
+    out << "    if (total == 0 && ignored == 0) {\n"
            "        std::cout << \"running 0 tests\\n\"\n"
            "                     \"test result: ok. 0 passed; 0 failed; 0 filtered out\\n\";\n"
            "        return 0;\n"
            "    }\n"
-           "    std::cout << passed << \"/\" << total << \" tests passed\\n\";\n"
+           "    std::cout << passed << \"/\" << total << \" tests passed\";\n"
+           "    if (ignored > 0) { std::cout << \"; \" << ignored << \" ignored\"; }\n"
+           "    std::cout << \"\\n\";\n"
            "    return passed == total ? 0 : 1;\n"
            "}\n";
 }

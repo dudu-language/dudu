@@ -66,6 +66,14 @@ bool has_decorator(const FunctionDecl& fn, std::string_view name) {
     return false;
 }
 
+bool is_test_decorator(const FunctionDecl& fn) {
+    for (const Decorator& decorator : fn.decorators) {
+        const std::string text = trim(decorator.text);
+        if (text == "test" || text == "test.ignore" || text == "test.should_panic" || decorator_is_call(text, "test.should_panic")) return true;
+    }
+    return false;
+}
+
 bool is_operator_method(const std::string& name) {
     static const std::set<std::string> names = {
         "__add__", "__sub__", "__mul__", "__truediv__", "__mod__", "__eq__",
@@ -154,7 +162,8 @@ void check_function_decorator(const ModuleAst& module, const Decorator& decorato
     const std::string text = trim(decorator.text);
     if (text == "inline" || text == "constexpr" || text == "extern_c" || text == "cuda.global" ||
         text == "cuda.device" || text == "cuda.host" || text == "shader.compute" ||
-        text == "staticmethod" || text == "test" ||
+        text == "staticmethod" || text == "test" || text == "test.ignore" ||
+        text == "test.should_panic" || decorator_is_call(text, "test.should_panic") ||
         decorator_is_call(text, "workgroup_size") || decorator_is_call(text, "section")) {
         check_target_decorator_mode(module, decorator, text);
         return;
@@ -432,7 +441,7 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
             if (has_decorator(method, "extern_c")) {
                 fail(method.location, "@extern_c is only valid on free functions");
             }
-            if (has_decorator(method, "test")) {
+            if (is_test_decorator(method)) {
                 fail(method.location, "@test is only valid on free functions");
             }
             std::set<std::string> params;
@@ -459,7 +468,7 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
         if (has_decorator(fn, "extern_c")) {
             check_extern_c_signature(fn);
         }
-        if (has_decorator(fn, "test")) {
+        if (is_test_decorator(fn)) {
             const std::string return_type = fn.return_type.empty() ? "void" : fn.return_type;
             if (!fn.params.empty()) {
                 fail(fn.location, "@test functions cannot take parameters");

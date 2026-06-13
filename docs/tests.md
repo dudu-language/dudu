@@ -80,9 +80,9 @@ The hash includes the entry path, target name, test filter, target kind, and
 target mode. That avoids parallel runs stomping each other and gives us a place
 to cache incremental test builds.
 
-## Future Test Features
+## Test Decorators
 
-These should stay Cargo-ish:
+These stay Cargo-ish:
 
 ```python
 @test
@@ -101,6 +101,11 @@ def panics():
 def panics_with_message():
     ...
 ```
+
+Ignored tests are listed but not run. `@test.should_panic` passes only when the
+test throws; the string form requires the thrown message to contain that text.
+
+## Future Test Features
 
 Rust captures stdout by default and supports `cargo test -- --nocapture`.
 Dudu should eventually support a similar mode.
