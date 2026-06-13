@@ -12,6 +12,7 @@
 #include <iostream>
 #include <map>
 #include <optional>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -28,6 +29,7 @@ struct Options {
     bool bench = false;
     bool build = false;
     bool check = false;
+    bool cmake = false;
     bool emit_cpp = false;
     bool format = false;
     bool run = false;
@@ -43,6 +45,7 @@ void print_usage() {
     std::cout << "usage: duc bench [args...]\n"
                  "       duc build [input.dd] [-o output]\n"
                  "       duc check [input.dd]\n"
+                 "       duc cmake [input.dd] [-o CMakeLists.txt]\n"
                  "       duc emit [input.dd] [-o output.cpp]\n"
                  "       duc fmt <input.dd|dir> [--check] [-o output.dd]\n"
                  "       duc run [input.dd] [-o output]\n"
@@ -82,6 +85,9 @@ Options parse_options(int argc, char** argv) {
         first_arg = 2;
     } else if (argc > 1 && std::string(argv[1]) == "check") {
         options.check = true;
+        first_arg = 2;
+    } else if (argc > 1 && std::string(argv[1]) == "cmake") {
+        options.cmake = true;
         first_arg = 2;
     } else if (argc > 1 && std::string(argv[1]) == "emit") {
         options.emit_cpp = true;
@@ -175,7 +181,7 @@ Options parse_options(int argc, char** argv) {
         fail("unexpected argument: " + arg);
     }
     if (options.input.empty() && !options.bench && !options.build && !options.check &&
-        !options.emit_cpp && !options.run && !options.test) {
+        !options.cmake && !options.emit_cpp && !options.run && !options.test) {
         fail("missing input file");
     }
     return options;
@@ -258,6 +264,86 @@ std::filesystem::path default_build_output(const dudu::ProjectConfig& config,
     return config.build_dir.empty() ? filename : config.build_dir / filename;
 }
 
+std::string cmake_quote(const std::string& value) {
+    std::string out = "\"";
+    for (const char c : value) {
+        if (c == '"' || c == '\\') {
+            out.push_back('\\');
+        }
+        out.push_back(c);
+    }
+    out.push_back('"');
+    return out;
+}
+
+std::filesystem::path project_relative_path(const std::filesystem::path& project_dir,
+                                            const std::string& value) {
+    const std::filesystem::path path = value;
+    return path.is_absolute() ? path : std::filesystem::absolute(project_dir / path);
+}
+
+void emit_cmake_list_values(std::ostringstream& out, std::string_view prefix,
+                            const std::vector<std::string>& values,
+                            const std::filesystem::path* project_dir = nullptr) {
+    if (values.empty()) {
+        return;
+    }
+    out << prefix;
+    for (const std::string& value : values) {
+        const std::string emitted =
+            project_dir == nullptr ? value : project_relative_path(*project_dir, value).string();
+        out << ' ' << cmake_quote(emitted);
+    }
+    out << ")\n";
+}
+
+std::string cmake_cpp_standard(const std::string& cpp_std) {
+    if (cpp_std.size() > 3 && cpp_std.substr(0, 3) == "c++") {
+        return cpp_std.substr(3);
+    }
+    return "20";
+}
+
+std::string emit_cmake_project(const dudu::ProjectConfig& config,
+                               const std::filesystem::path& input) {
+    const std::string target = config.name.empty() ? input.stem().string() : config.name;
+    const std::filesystem::path project_dir =
+        std::filesystem::absolute(input.parent_path().empty() ? "." : input.parent_path());
+    std::ostringstream out;
+    out << "cmake_minimum_required(VERSION 3.20)\n\n"
+        << "project(" << target << " LANGUAGES CXX)\n\n"
+        << "set(CMAKE_CXX_STANDARD " << cmake_cpp_standard(config.cpp_std) << ")\n"
+        << "set(CMAKE_CXX_STANDARD_REQUIRED ON)\n"
+        << "set(DUDU_EXECUTABLE duc CACHE FILEPATH \"Path to the duc compiler\")\n"
+        << "set(DUDU_PROJECT_DIR " << cmake_quote(project_dir.string()) << ")\n"
+        << "set(DUDU_SOURCE " << cmake_quote(input.filename().string()) << ")\n"
+        << "set(DUDU_GENERATED ${CMAKE_CURRENT_BINARY_DIR}/generated/" << target << ".cpp)\n\n"
+        << "add_custom_command(\n"
+        << "    OUTPUT ${DUDU_GENERATED}\n"
+        << "    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/generated\n"
+        << "    COMMAND ${DUDU_EXECUTABLE} emit ${DUDU_PROJECT_DIR}/${DUDU_SOURCE} -o "
+           "${DUDU_GENERATED}\n"
+        << "    DEPENDS ${DUDU_PROJECT_DIR}/${DUDU_SOURCE}\n"
+        << "    VERBATIM\n"
+        << ")\n\n";
+    if (config.target_kind == "library") {
+        out << "add_library(" << target << " STATIC ${DUDU_GENERATED})\n";
+    } else if (config.target_kind == "shared_library") {
+        out << "add_library(" << target << " SHARED ${DUDU_GENERATED})\n";
+    } else {
+        out << "add_executable(" << target << " ${DUDU_GENERATED})\n";
+    }
+    emit_cmake_list_values(out, "target_include_directories(" + target + " PRIVATE",
+                           config.include_dirs, &project_dir);
+    emit_cmake_list_values(out, "target_compile_definitions(" + target + " PRIVATE",
+                           config.defines);
+    emit_cmake_list_values(out, "target_compile_options(" + target + " PRIVATE", config.flags);
+    emit_cmake_list_values(out, "target_link_directories(" + target + " PRIVATE", config.lib_dirs,
+                           &project_dir);
+    emit_cmake_list_values(out, "target_link_libraries(" + target + " PRIVATE", config.libs);
+    return out.str();
+}
+
 dudu::ModuleAst checked_module(const Options& options, const std::string& source,
                                bool check_bodies) {
     dudu::ModuleAst module = options.input.empty() ? dudu::parse_source(source, options.input)
@@ -314,6 +400,11 @@ int main(int argc, char** argv) {
         }
         if (options.check) {
             (void)check_source_path(options);
+            return 0;
+        }
+        if (options.cmake) {
+            const dudu::ProjectConfig config = config_for_input(options.input);
+            write_text_output(options.output, emit_cmake_project(config, options.input));
             return 0;
         }
         const std::string source = read_text_file(options.input);

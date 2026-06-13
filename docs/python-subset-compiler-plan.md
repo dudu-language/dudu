@@ -1356,57 +1356,14 @@ Systems examples live in `examples/` and drive the long-range capability set:
 - `native_escape.dd`: inline C++ escape hatches
 - `modules_visibility.dd`: public/private generated header surface
 
-These examples are design fixtures. The first compiler slice only implements
-the subset named in the first goal run.
-
-## First Goal Run
-
-A good `/goal` objective:
-
-```text
-Implement the first Dudu Python-subset compiler slice: split the compiler,
-parse a tiny typed-Python `.dd` program, emit readable C++, compile it, and add
-tests for functions, classes, locals, returns, and one tuple return.
-```
-
-Concrete first slice:
-
-Input:
-
-```python
-class Vec2:
-    x: f32
-    y: f32
-
-
-def add(a: i32, b: i32) -> i32:
-    return a + b
-
-
-def divmod_i32(a: i32, b: i32) -> tuple[i32, i32]:
-    return a / b, a % b
-
-
-def main() -> i32:
-    q, r = divmod_i32(10, 3)
-    return add(q, r)
-```
-
-Expected:
-
-- parser accepts it
-- typechecker validates it
-- emitter generates C++ with a `Vec2` struct
-- tuple return lowers to generated aggregate
-- destructuring lowers to structured binding
-- generated C++ compiles and runs
+The core gate parses and emits these examples. Optional probes compile and run
+library-backed fixtures when local dependencies are installed.
 
 ## Risks
 
-- Python syntax is larger than the old Dudu syntax.
+- Python syntax is large, while Dudu deliberately supports only the static
+  systems subset.
 - Full C++ interop needs Clang tooling.
 - `*T` and `&T` are not Python syntax, so parser reuse is limited there.
 - Dot lowering between namespace/member/pointer access requires type knowledge.
 - Good diagnostics matter because users will expect Python-like clarity.
-
-These risks are manageable if the first goal stays narrow.

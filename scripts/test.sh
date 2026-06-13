@@ -209,6 +209,24 @@ if [[ "$project_default_output_status" -ne 42 ]]; then
     echo "project_default_output returned $project_default_output_status, expected 42" >&2
     exit 1
 fi
+cmake_project_dir="$repo_root/build/project_cmake"
+rm -rf "$cmake_project_dir" "$repo_root/build/project_cmake_build"
+mkdir -p "$cmake_project_dir"
+"$repo_root/build/duc" cmake "$repo_root/tests/fixtures/project_default_output/main.dd" \
+    -o "$cmake_project_dir/CMakeLists.txt"
+grep -q "add_executable(default_tool" "$cmake_project_dir/CMakeLists.txt"
+grep -q "DUDU_EXECUTABLE" "$cmake_project_dir/CMakeLists.txt"
+cmake -S "$cmake_project_dir" -B "$repo_root/build/project_cmake_build" \
+    -DDUDU_EXECUTABLE="$repo_root/build/duc" >/dev/null
+cmake --build "$repo_root/build/project_cmake_build" >/dev/null
+set +e
+"$repo_root/build/project_cmake_build/default_tool"
+project_cmake_status=$?
+set -e
+if [[ "$project_cmake_status" -ne 42 ]]; then
+    echo "project_cmake returned $project_cmake_status, expected 42" >&2
+    exit 1
+fi
 fake_pkg_config="$repo_root/build/fake-pkg-config"
 cat >"$fake_pkg_config" <<'SH'
 #!/usr/bin/env bash
