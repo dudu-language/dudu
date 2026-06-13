@@ -1,0 +1,12 @@
+class Vec2:
+    x: f32
+    y: f32
+
+
+def field_dot(a: Vec2, b: Vec2, n: i32) -> f32:
+    total: f32 = 0.0
+
+    for i: i32 in range(n):
+        total += a.x * b.x + a.y * b.y + f32(i & 7)
+
+    return total
