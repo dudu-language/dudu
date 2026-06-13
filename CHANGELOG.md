@@ -29,6 +29,8 @@
 - Improved `dudu test` zero-test output.
 - Added custom runtime assertion messages with `assert expr, "message"`.
 - Added `@test.ignore` and `@test.should_panic` test decorators.
+- Added imported C++ inheritance awareness for inherited method lookup and
+  derived-to-base pointer/reference calls.
 
 ### Changed
 

@@ -178,6 +178,8 @@ Dudu currently discovers and registers:
 - C++ namespace-qualified functions
 - simple native overload sets by arity and assignability
 - C++ class fields, methods, and non-default constructor signatures
+- imported C++ base classes for inherited method lookup
+- derived-to-base pointer/reference assignment for imported C++ classes
 
 Discovered type names enter the same symbol path used by manual `type Name`
 declarations. Direct imports also expose native values, macros, functions,
@@ -228,7 +230,7 @@ Richer constructs still need deeper modeling:
 - nested types
 - templates with explicit arguments
 - overloaded operators
-- references and const correctness
+- deeper references and const correctness
 - destructor semantics
 
 The current scanner intentionally covers the common SDL/imgui/raylib-style

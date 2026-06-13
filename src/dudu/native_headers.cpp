@@ -196,6 +196,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
     static const std::regex ctor_decl(
         R"(CXXConstructorDecl.*\b([A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
     static const std::regex field_decl(R"(FieldDecl.*\b([A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
+    static const std::regex base_decl(R"(\b(public|protected|private) '([^']+)')");
     static const std::regex enum_value_decl(R"(EnumConstantDecl.*\b([A-Za-z_][A-Za-z0-9_]*) ')");
     static const std::regex var_decl(R"(VarDecl.*\b([A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
     const int depth = ast_depth(line);
@@ -277,6 +278,8 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
     } else if (!classes.empty() && std::regex_search(line, match, field_decl)) {
         scan.classes[classes.back().second].fields.push_back(
             {.name = match[1].str(), .type = dudu_type(match[2].str()), .location = location});
+    } else if (!classes.empty() && std::regex_search(line, match, base_decl)) {
+        scan.classes[classes.back().second].base_classes.push_back(dudu_type(match[2].str()));
     } else if (std::regex_search(line, match, enum_value_decl)) {
         const std::string name = match[1].str();
         if (!starts_with(name, "__")) {

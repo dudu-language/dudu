@@ -39,8 +39,9 @@ Make the C++ object model feel complete through Python-shaped syntax:
 - C++ interop behavior for all of the above
 
 Status: constructors, destructors, member methods, static methods, imported C++
-operator overloads, and Dudu-native operator methods are implemented. Broader
-overload-set polish remains part of header-awareness hardening.
+operator overloads, Dudu-native operator methods, and imported C++ base-method
+lookup are implemented. Broader overload-set polish remains part of
+header-awareness hardening.
 
 This is more important than user-defined macros because it directly affects
 normal systems and game code.
@@ -164,9 +165,9 @@ Do not add Dudu-native inheritance unless real examples force it.
 For C++ interop, Dudu still needs to consume inherited C++ classes well enough
 to:
 
-- call inherited methods
-- construct C++ types that use inheritance
-- pass derived/base pointers and references correctly
+- call inherited methods: initial imported C++ support is implemented
+- construct C++ types that use inheritance: initial imported C++ support is implemented
+- pass derived/base pointers and references correctly: initial imported C++ support is implemented
 
 That is an interop requirement, not a reason to design inheritance into Dudu's
 own object model immediately.

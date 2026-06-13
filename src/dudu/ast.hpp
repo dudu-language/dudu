@@ -122,6 +122,7 @@ struct ConstDecl {
 struct ClassDecl {
     Visibility visibility = Visibility::Default;
     std::string name;
+    std::vector<std::string> base_classes;
     std::vector<Decorator> decorators;
     std::vector<FieldDecl> fields;
     std::vector<ConstDecl> constants;

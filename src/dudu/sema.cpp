@@ -12,6 +12,7 @@
 #include "dudu/sema_expr.hpp"
 #include "dudu/sema_function_type.hpp"
 #include "dudu/sema_index.hpp"
+#include "dudu/sema_inheritance.hpp"
 #include "dudu/sema_methods.hpp"
 #include "dudu/sema_native.hpp"
 #include "dudu/sema_ops.hpp"
@@ -19,7 +20,6 @@
 #include "dudu/type_compat.hpp"
 #include "dudu/unsupported.hpp"
 #include <cctype>
-#include <map>
 #include <set>
 namespace dudu {
 namespace {
@@ -33,8 +33,8 @@ std::vector<std::string> call_args(std::string expr, size_t open) {
 bool can_assign_expr(const FunctionScope& scope, const std::string& expected,
                      const std::string& expr, const std::string& got) {
     return assignment_type_allowed(expected, expr, got) ||
-           assignment_type_allowed(resolve_alias(scope.symbols, expected), expr,
-                                   resolve_alias(scope.symbols, got));
+           assignment_type_allowed(resolve_alias(scope.symbols, expected), expr, resolve_alias(scope.symbols, got)) ||
+           native_base_assignable(scope.symbols, expected, got);
 }
 bool is_builtin_call(const std::string& callee) {
     static const std::set<std::string> builtins = {"align_up", "delete", "free",  "len",

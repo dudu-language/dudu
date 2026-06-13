@@ -13,6 +13,28 @@ class Widget {
     int value = 0;
 };
 
+class BaseWidget {
+  public:
+    int base_scaled(int factor) const {
+        return base_value * factor;
+    }
+
+    int base_value = 3;
+};
+
+class DerivedWidget : public BaseWidget {
+  public:
+    explicit DerivedWidget(int initial) {
+        base_value = initial;
+    }
+
+    int derived_value = 7;
+};
+
+inline int use_base_widget(const BaseWidget* widget) {
+    return widget->base_value;
+}
+
 inline int add(int a, int b) {
     return a + b;
 }

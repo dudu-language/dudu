@@ -227,7 +227,12 @@ void test_native_header_type_scan(const std::filesystem::path& root) {
                                                 "    window: *DuduNativeWindow = None\n"
                                                 "    widget: DuduWidgetAlias\n"
                                                 "    other: Widget = Widget(5)\n"
+                                                "    derived: DerivedWidget = DerivedWidget(9)\n"
                                                 "    amount: f32 = 2.0\n"
+                                                "    if derived.base_scaled(2) != 18:\n"
+                                                "        return 1\n"
+                                                "    if dudu_native.use_base_widget(&derived) != 9:\n"
+                                                "        return 2\n"
                                                 "    if DUDU_NATIVE_CHECK():\n"
                                                 "        return dudu_native.add(20, 22) + "
                                                 "DUDU_NATIVE_MAGIC\n"
@@ -250,6 +255,9 @@ void test_native_header_type_scan(const std::filesystem::path& root) {
     assert(cpp.find("DuduNativeWindow* window = nullptr;") != std::string::npos);
     assert(cpp.find("DuduWidgetAlias widget{};") != std::string::npos);
     assert(cpp.find("Widget other = Widget(5);") != std::string::npos);
+    assert(cpp.find("DerivedWidget derived = DerivedWidget(9);") != std::string::npos);
+    assert(cpp.find("derived.base_scaled(2)") != std::string::npos);
+    assert(cpp.find("dudu_native::use_base_widget(& derived)") != std::string::npos);
     assert(std::filesystem::exists(config.build_dir / "dudu-header-cache"));
 }
 

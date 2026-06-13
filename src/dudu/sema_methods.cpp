@@ -197,6 +197,11 @@ bool method_signature_for_type(const Symbols& symbols, std::string receiver_type
         signature.return_type = method.return_type.empty() ? "void" : method.return_type;
         return true;
     }
+    for (const std::string& base : klass->second->base_classes) {
+        if (method_signature_for_type(symbols, base, method_name, signature, nullptr)) {
+            return true;
+        }
+    }
     if (location != nullptr) {
         fail(*location, "unknown method: " + type + "." + method_name);
     }
