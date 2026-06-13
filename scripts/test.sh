@@ -100,6 +100,7 @@ mkdir -p "$fmt_dir"
 cp "$repo_root/tests/fixtures/unformatted.dd" "$fmt_dir/sample.dd"
 "$repo_root/build/duc" fmt "$fmt_dir"
 "$repo_root/build/duc" fmt "$fmt_dir" --check
+"$repo_root/build/duc" fmt "$repo_root/examples" --check
 "$repo_root/build/duc" run "$repo_root/tests/fixtures/run_zero.dd" \
     -o "$repo_root/build/duc_run_zero"
 "$repo_root/build/dudu" "$repo_root/examples/compile_time.dd" --emit-cpp \
