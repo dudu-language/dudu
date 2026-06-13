@@ -1,0 +1,22 @@
+import c "../tests/fixtures/pthread_wrap.h" as pthreads
+
+
+def thread_main(user_data: *void) -> *void:
+    counter: *struct dudu_pthread_counter = *struct dudu_pthread_counter(user_data)
+    pthreads.dudu_pthread_counter_add(counter, 21)
+    return None
+
+
+def main() -> i32:
+    counter: struct dudu_pthread_counter
+    pthreads.dudu_pthread_counter_init(&counter)
+
+    err: i32 = pthreads.dudu_pthread_run_join(thread_main, &counter)
+    if err != 0:
+        pthreads.dudu_pthread_counter_destroy(&counter)
+        return 1
+
+    pthreads.dudu_pthread_counter_add(&counter, 21)
+    total: i32 = counter.value
+    pthreads.dudu_pthread_counter_destroy(&counter)
+    return total

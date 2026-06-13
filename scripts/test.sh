@@ -431,6 +431,7 @@ compile_and_expect nested_fields 42
 compile_and_expect align_up 42
 compile_and_expect loop_control 25
 compile_and_expect posix_mmap_hash 42
+compile_and_expect posix_threads_mutex 42
 compile_path_and_expect multifile tests/fixtures/multifile/main.dd 42
 
 direct_bin="$repo_root/build/dudu_build_simple"
