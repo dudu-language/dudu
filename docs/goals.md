@@ -15,6 +15,7 @@ No CPython runtime dependency.
 Authoritative docs:
 
 - [Appearance Spec](appearance-spec.md)
+- [Dudu Tests](tests.md)
 - [Python Subset Compiler Plan](python-subset-compiler-plan.md)
 
 The compiler should support practical systems programming: native values,
