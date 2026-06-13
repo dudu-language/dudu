@@ -11,6 +11,7 @@
 #include "dudu/sema_context.hpp"
 #include "dudu/sema_function_type.hpp"
 #include "dudu/sema_index.hpp"
+#include "dudu/sema_methods.hpp"
 #include "dudu/sema_scan.hpp"
 #include "dudu/type_compat.hpp"
 #include "dudu/unsupported.hpp"
@@ -28,49 +29,6 @@ struct FunctionScope {
     std::map<std::string, std::string> locals;
     std::set<std::string> constants;
 };
-std::string member_path_type(const FunctionScope& scope, const RawStmt* stmt,
-                             const std::string& path) {
-    const size_t dot = path.find('.');
-    if (dot == std::string::npos) {
-        if (const auto local = scope.locals.find(path); local != scope.locals.end())
-            return local->second;
-        return {};
-    }
-    std::string current = path.substr(0, dot);
-    const auto local = scope.locals.find(current);
-    if (local == scope.locals.end()) {
-        if (stmt != nullptr)
-            fail(stmt->location, "assignment through unknown local: " + current);
-        return {};
-    }
-    std::string type = local->second;
-    size_t start = dot + 1;
-    while (start < path.size()) {
-        const size_t next = path.find('.', start);
-        const std::string field =
-            path.substr(start, next == std::string::npos ? next : next - start);
-        const auto klass = scope.symbols.classes.find(base_type(type));
-        if (klass == scope.symbols.classes.end())
-            return {};
-        bool found = false;
-        for (const FieldDecl& decl : klass->second->fields) {
-            if (decl.name == field) {
-                type = decl.type;
-                found = true;
-                break;
-            }
-        }
-        if (!found) {
-            if (stmt != nullptr)
-                fail(stmt->location, "unknown field: " + path);
-            return {};
-        }
-        if (next == std::string::npos)
-            return type;
-        start = next + 1;
-    }
-    return type;
-}
 std::string infer_expr(const FunctionScope& scope, std::string expr,
                        const SourceLocation* location = nullptr);
 std::vector<std::string> call_args(std::string expr, size_t open) {
@@ -87,6 +45,29 @@ bool is_builtin_call(const std::string& callee) {
     static const std::set<std::string> builtins = {"align_up", "delete", "free",  "len",
                                                    "max",      "min",    "print", "range"};
     return builtins.contains(callee);
+}
+bool is_member_call_path(const std::string& callee) {
+    if (callee.find('.') == std::string::npos) {
+        return false;
+    }
+    for (const std::string& part : split_top_level(callee)) {
+        if (part != callee) {
+            return false;
+        }
+    }
+    size_t start = 0;
+    while (start < callee.size()) {
+        const size_t dot = callee.find('.', start);
+        const std::string part = callee.substr(start, dot == std::string::npos ? dot : dot - start);
+        if (!is_plain_identifier(trim(part))) {
+            return false;
+        }
+        if (dot == std::string::npos) {
+            return true;
+        }
+        start = dot + 1;
+    }
+    return false;
 }
 void check_call_args(const FunctionScope& scope, const std::string& callee,
                      const FunctionSignature& signature, const std::vector<std::string>& args,
@@ -217,6 +198,19 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
                 return signature.return_type;
             }
         }
+        const size_t method_dot = callee.rfind('.');
+        if (method_dot != std::string::npos && is_member_call_path(callee)) {
+            const std::string receiver = trim(callee.substr(0, method_dot));
+            const std::string method_name = trim(callee.substr(method_dot + 1));
+            FunctionSignature signature;
+            if (method_signature_for_type(
+                    scope.symbols,
+                    member_path_type(scope.symbols, scope.locals, nullptr, receiver, ""),
+                    method_name, signature, location)) {
+                check_call_args(scope, callee, signature, call_args(expr, call), location);
+                return signature.return_type;
+            }
+        }
         if (location != nullptr && callee.find('.') == std::string::npos &&
             callee.find('[') == std::string::npos && is_plain_identifier(callee) &&
             !known_type(scope.symbols, callee) && !is_builtin_call(callee)) {
@@ -260,7 +254,7 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
     }
     const size_t dot = expr.find('.');
     if (dot != std::string::npos) {
-        return member_path_type(scope, nullptr, expr);
+        return member_path_type(scope.symbols, scope.locals, nullptr, expr, "");
     }
     if (const auto local = scope.locals.find(expr); local != scope.locals.end()) {
         return local->second;
@@ -322,7 +316,8 @@ std::string assign_target_type(const FunctionScope& scope, const RawStmt& stmt,
         }
         return local->second;
     }
-    return member_path_type(scope, &stmt, lhs);
+    return member_path_type(scope.symbols, scope.locals, &stmt.location, lhs,
+                            "assignment through unknown local: ");
 }
 void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& return_type,
                 int loop_depth);
