@@ -2,7 +2,7 @@ if exists("b:current_syntax")
   finish
 endif
 
-syn keyword duduKeyword def class enum type import from as public private
+syn keyword duduKeyword def class enum extern type import from as public private
 syn keyword duduControl if elif else while for in return break continue and or not
 syn keyword duduBuiltin True False None static_assert
 syn keyword duduType bool i8 i16 i32 i64 u8 u16 u32 u64 isize usize f32 f64 void str cstr

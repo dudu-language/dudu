@@ -39,6 +39,9 @@ class Parser {
             } else if (match_identifier("enum")) {
                 require_no_decorators(decorators, "enum");
                 module.enums.push_back(parse_enum(previous()));
+            } else if (match_identifier("extern")) {
+                require_no_decorators(decorators, "extern type");
+                module.extern_types.push_back(parse_extern_type(previous()));
             } else if (match_identifier("type")) {
                 require_no_decorators(decorators, "type alias");
                 module.aliases.push_back(parse_type_alias(previous()));
@@ -268,6 +271,17 @@ class Parser {
         }
         consume(TokenKind::Dedent, "expected dedent after enum body");
         return en;
+    }
+
+    ExternTypeDecl parse_extern_type(const Token& start) {
+        if (!match_identifier("type")) {
+            fail_current("expected type after extern");
+        }
+        ExternTypeDecl type;
+        type.location = start.location;
+        type.name = consume_identifier("expected extern type name").text;
+        consume(TokenKind::Newline, "expected newline after extern type");
+        return type;
     }
 
     TypeAliasDecl parse_type_alias(const Token& start) {

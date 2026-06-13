@@ -40,6 +40,8 @@ std::filesystem::path module_path_to_file(const std::filesystem::path& base,
 void append_module(ModuleAst& target, ModuleAst source) {
     target.imports.insert(target.imports.end(), source.imports.begin(), source.imports.end());
     target.aliases.insert(target.aliases.end(), source.aliases.begin(), source.aliases.end());
+    target.extern_types.insert(target.extern_types.end(), source.extern_types.begin(),
+                               source.extern_types.end());
     target.enums.insert(target.enums.end(), source.enums.begin(), source.enums.end());
     target.classes.insert(target.classes.end(), source.classes.begin(), source.classes.end());
     target.constants.insert(target.constants.end(), source.constants.begin(),

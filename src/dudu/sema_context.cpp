@@ -280,6 +280,10 @@ Symbols collect_symbols(const ModuleAst& module) {
         symbols.types.insert(alias.name);
         symbols.aliases[alias.name] = alias.type;
     }
+    for (const ExternTypeDecl& type : module.extern_types) {
+        add_name(names, type.name, type.location);
+        symbols.types.insert(type.name);
+    }
     for (const EnumDecl& en : module.enums) {
         add_name(names, en.name, en.location);
         symbols.types.insert(en.name);

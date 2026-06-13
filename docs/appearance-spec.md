@@ -372,6 +372,26 @@ type PlayerId = u64
 type ScoreMap = dict[str, i32]
 ```
 
+Native typedefs from imported C/C++ headers can be declared without emitting a
+Dudu definition:
+
+```python
+import c "SDL3/SDL.h" as sdl
+
+extern type SDL_Event
+
+def pump_events() -> bool:
+    event: SDL_Event
+    while sdl.SDL_PollEvent(&event):
+        if event.type == sdl.SDL_EVENT_QUIT:
+            return False
+    return True
+```
+
+An uninitialized local value such as `event: SDL_Event` lowers to C++ value
+initialization, `SDL_Event event{};`. `None` remains for null pointers and
+optional values.
+
 This should lower to C++ `using`.
 
 ## Multiple Return Values
