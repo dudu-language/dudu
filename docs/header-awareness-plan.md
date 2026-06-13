@@ -283,7 +283,7 @@ duc clean-cache
 or:
 
 ```sh
-duc check --clear-header-cache
+dudu clean-cache
 ```
 
 ## CLI And Project Config

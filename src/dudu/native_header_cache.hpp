@@ -19,5 +19,7 @@ NativeHeaderRawCache load_native_header_raw_cache(const NativeHeaderOptions& opt
 void store_native_header_raw_cache(const NativeHeaderRawCache& cache,
                                    const std::string& ast_dump,
                                    const std::string& macro_dump);
+std::filesystem::path native_header_cache_dir(const NativeHeaderOptions& options);
+std::filesystem::path clean_native_header_cache(const NativeHeaderOptions& options);
 
 } // namespace dudu

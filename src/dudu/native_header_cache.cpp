@@ -34,6 +34,16 @@ std::string cache_id(const std::string& key) {
 
 } // namespace
 
+std::filesystem::path native_header_cache_dir(const NativeHeaderOptions& options) {
+    return default_cache_dir(options);
+}
+
+std::filesystem::path clean_native_header_cache(const NativeHeaderOptions& options) {
+    const std::filesystem::path dir = native_header_cache_dir(options);
+    std::filesystem::remove_all(dir);
+    return dir;
+}
+
 NativeHeaderRawCache load_native_header_raw_cache(const NativeHeaderOptions& options,
                                                   const std::string& key) {
     NativeHeaderRawCache cache;

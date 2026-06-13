@@ -4,6 +4,7 @@
 #include "dudu/format_path.hpp"
 #include "dudu/module_loader.hpp"
 #include "dudu/native_build.hpp"
+#include "dudu/native_header_cache.hpp"
 #include "dudu/native_headers.hpp"
 #include "dudu/parser.hpp"
 #include "dudu/project_config.hpp"
@@ -38,6 +39,7 @@ struct Options {
     bool build = false;
     bool check = false;
     bool clean = false;
+    bool clean_cache = false;
     bool cmake = false;
     bool emit_cpp = false;
     bool format = false;
@@ -91,6 +93,9 @@ Options parse_options(int argc, char** argv, bool project_driver) {
         first_arg = 2;
     } else if (argc > 1 && std::string(argv[1]) == "clean") {
         options.clean = true;
+        first_arg = 2;
+    } else if (argc > 1 && std::string(argv[1]) == "clean-cache") {
+        options.clean_cache = true;
         first_arg = 2;
     } else if (argc > 1 && std::string(argv[1]) == "cmake") {
         options.cmake = true;
@@ -207,7 +212,7 @@ Options parse_options(int argc, char** argv, bool project_driver) {
         fail("unexpected argument: " + arg);
     }
     if (options.input.empty() && !options.bench && !options.build && !options.check &&
-        !options.clean &&
+        !options.clean && !options.clean_cache &&
         !options.cmake && !options.emit_cpp && !options.init_project && !options.new_project &&
         !options.run && !options.test) {
         fail("missing input file");
@@ -216,8 +221,8 @@ Options parse_options(int argc, char** argv, bool project_driver) {
 }
 
 Options resolve_project_input(Options options) {
-    if (options.bench || options.clean || options.init_project || options.new_project ||
-        options.test) {
+    if (options.bench || options.clean || options.clean_cache || options.init_project ||
+        options.new_project || options.test) {
         return options;
     }
     const dudu::ProjectConfig project = dudu::parse_project_config("dudu.toml");
@@ -274,6 +279,14 @@ int run_project_benchmarks(const Options& options) {
 
 dudu::ProjectConfig config_for_input(const std::filesystem::path& input) {
     return dudu::parse_project_config(build_config_path(input));
+}
+
+dudu::NativeHeaderOptions native_header_options_for_clean_cache(const Options& options) {
+    if (options.input.empty() || std::filesystem::is_directory(options.input)) {
+        const std::filesystem::path root = options.input.empty() ? "." : options.input;
+        return {.config = dudu::parse_project_config(root / "dudu.toml"), .source_dir = root};
+    }
+    return {.config = config_for_input(options.input), .source_dir = options.input.parent_path()};
 }
 
 dudu::ProjectConfig config_for_options(const Options& options) {
@@ -365,6 +378,12 @@ int main(int argc, char** argv) {
                 dudu::clean_project(options.input.empty() ? std::filesystem::path(".")
                                                           : options.input);
             std::cerr << "clean " << cleaned.string() << '\n';
+            return 0;
+        }
+        if (options.clean_cache) {
+            const std::filesystem::path cleaned =
+                dudu::clean_native_header_cache(native_header_options_for_clean_cache(options));
+            std::cerr << "clean-cache " << cleaned.string() << '\n';
             return 0;
         }
         if (options.test) {

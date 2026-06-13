@@ -128,6 +128,35 @@ grep -q "emit build/clean_smoke.cpp" "$repo_root/build/dudu_run_steps.err"
 grep -q "build build/clean_smoke" "$repo_root/build/dudu_run_steps.err"
 grep -q "run build/clean_smoke" "$repo_root/build/dudu_run_steps.err"
 grep -q "clean ./build" "$repo_root/build/dudu_clean.err"
+cache_smoke="$repo_root/build/clean_cache_smoke"
+rm -rf "$cache_smoke"
+mkdir -p "$cache_smoke/include" "$cache_smoke/src"
+cp "$repo_root/tests/fixtures/native_headers/simple_cpp.hpp" "$cache_smoke/include/simple_cpp.hpp"
+cat >"$cache_smoke/dudu.toml" <<'TOML'
+name = "clean_cache_smoke"
+entry = "src/main.dd"
+
+[include]
+paths = ["include"]
+
+[build]
+dir = "build"
+TOML
+cat >"$cache_smoke/src/main.dd" <<'DD'
+import cpp "simple_cpp.hpp"
+
+
+def main() -> i32:
+    return dudu_native.add(20, 22)
+DD
+(
+    cd "$cache_smoke"
+    "$repo_root/build/dudu" build >/dev/null 2>/dev/null
+    test -d build/dudu-header-cache
+    "$repo_root/build/dudu" clean-cache 2>"$repo_root/build/dudu_clean_cache.err"
+    test ! -e build/dudu-header-cache
+)
+grep -q "clean-cache build/dudu-header-cache" "$repo_root/build/dudu_clean_cache.err"
 "$repo_root/build/dudu" test "$repo_root/tests/fixtures/dudu_tests.dd" \
     >"$repo_root/build/dudu_tests.out" 2>"$repo_root/build/dudu_test_steps.err"
 grep -q "3/3 tests passed" "$repo_root/build/dudu_tests.out"

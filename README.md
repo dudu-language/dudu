@@ -110,6 +110,7 @@ Then run project commands from the project directory:
 ../build/dudu build
 ../build/dudu run
 ../build/dudu test
+../build/dudu clean-cache
 ```
 
 Project manifests can also define named targets:
