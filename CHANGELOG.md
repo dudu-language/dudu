@@ -57,6 +57,8 @@
 - Added POSIX mmap and pthread checks to the optional real-library probe.
 - Added mutable class static fields with Python-style class-level annotated
   assignments.
+- Fixed aliased native C/C++ record types such as `rl.Vector2` resolving as
+  aliases of their underlying header types during overload checks.
 
 ### Changed
 

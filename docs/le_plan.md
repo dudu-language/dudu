@@ -195,9 +195,10 @@ push. They are not release packaging work.
    and FFmpeg style APIs with normal imports and minimal wrapper code.
 
    Current optional probes pass for glm, OpenCV, sqlite, threading, POSIX mmap,
-   POSIX pthread, GLFW, OpenCL, Vulkan, and FFmpeg on this machine. raylib and
-   SDL3 are skipped because pkg-config cannot find them in the current Ubuntu
-   24.04 package setup.
+   POSIX pthread, raylib, SDL3, GLFW, OpenCL, Vulkan, and FFmpeg on this
+   machine. raylib and SDL3 are installed as normal `/usr/local` pkg-config
+   packages here because Ubuntu 24.04 apt does not provide useful dev packages
+   for them.
 
 3. Broader namespace constants
 

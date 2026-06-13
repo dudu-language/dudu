@@ -503,6 +503,18 @@ std::vector<T> prefixed_names(const std::vector<T>& source, const std::string& p
     }
     return out;
 }
+std::vector<NativeTypeDecl> prefixed_type_names(const std::vector<NativeTypeDecl>& source,
+                                                const std::string& prefix) {
+    std::vector<NativeTypeDecl> out;
+    out.reserve(source.size());
+    for (NativeTypeDecl item : source) {
+        const std::string original = item.name;
+        item.name = prefix + "." + item.name;
+        if (item.type.empty()) item.type = original;
+        out.push_back(std::move(item));
+    }
+    return out;
+}
 std::vector<NativeMacroDecl> direct_macros(const std::vector<NativeMacroDecl>& source) {
     std::vector<NativeMacroDecl> out;
     for (const NativeMacroDecl& item : source) if (public_direct_macro_name(item.name)) out.push_back(item);
@@ -527,7 +539,7 @@ NativeHeaderScan scan_native_headers(const ModuleAst& module, const NativeHeader
         } else {
             append_unique(out.types, scan.types);
             append_unique(out.classes, scan.classes);
-            append_unique(out.types, prefixed_names(scan.types, import.alias));
+            append_unique(out.types, prefixed_type_names(scan.types, import.alias));
             append_unique(out.classes, prefixed_names(scan.classes, import.alias));
             append_unique(out.values, prefixed_names(scan.values, import.alias));
             append_unique_native_functions(out.functions, prefixed_names(scan.functions, import.alias));

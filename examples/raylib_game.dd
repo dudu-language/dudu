@@ -20,7 +20,7 @@ def length_sq(v: rl.Vector2) -> f32:
 
 def collides(player: Player, coin: Coin) -> bool:
     delta = rl.vec2(coin.pos.x - player.pos.x, coin.pos.y - player.pos.y)
-    r = player.radius + 8.0
+    r = player.radius + f32(8.0)
     return length_sq(delta) <= r * r
 
 
@@ -73,10 +73,13 @@ def main() -> i32:
 
         for coin: &const[Coin] in coins:
             if coin.active:
-                rl.DrawCircleV(coin.pos, 8.0, rl.gold())
+                coin_color: Color = rl.gold()
+                rl.DrawCircleV(coin.pos, f32(8.0), coin_color)
 
-        rl.DrawCircleV(player.pos, player.radius, rl.skyblue())
-        rl.DrawText(rl.TextFormat("score: %d", score), 20, 20, 24, rl.white())
+        player_color: Color = rl.skyblue()
+        text_color: Color = rl.white()
+        rl.DrawCircleV(player.pos, player.radius, player_color)
+        rl.DrawText(rl.TextFormat("score: %d", score), 20, 20, 24, text_color)
         rl.EndDrawing()
 
     rl.CloseWindow()
