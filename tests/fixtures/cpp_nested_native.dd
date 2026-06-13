@@ -9,4 +9,9 @@ def main() -> i32:
         return 1
     if dudu_native.use_base_widget(&derived) != 9:
         return 2
+    if dudu_native.read_const_ref(widget) != 5:
+        return 3
+    value: i32 = 42
+    if dudu_native.read_const_ptr(&value) != 42:
+        return 4
     return nested.doubled()

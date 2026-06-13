@@ -49,6 +49,14 @@ inline int use_base_widget(const BaseWidget* widget) {
     return widget->base_value;
 }
 
+inline int read_const_ptr(int const* value) {
+    return *value;
+}
+
+inline int read_const_ref(Widget const& widget) {
+    return widget.value;
+}
+
 inline int add(int a, int b) {
     return a + b;
 }

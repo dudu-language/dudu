@@ -290,6 +290,17 @@ bool is_void_pointer_target(std::string expected, std::string got) {
             wrapped_type_arg(expected.substr(1)) == "const[void]");
 }
 
+bool is_const_pointer_binding(std::string expected, std::string got) {
+    expected = trim_copy(std::move(expected));
+    got = trim_copy(std::move(got));
+    if (expected.size() < 9 || got.size() < 2 || expected.front() != '*' || got.front() != '*' ||
+        !starts_with(expected.substr(1), "const[") || expected.back() != ']') {
+        return false;
+    }
+    const std::string inner = expected.substr(7, expected.size() - 8);
+    return wrapped_type_arg(got.substr(1)) == inner;
+}
+
 bool is_pointer_to_reference_value(std::string expected, std::string got) {
     expected = trim_copy(std::move(expected));
     got = trim_copy(std::move(got));
@@ -379,6 +390,7 @@ bool assignment_type_allowed(const std::string& expected, const std::string& exp
            is_result_value(expected, expr, got) ||
            is_value_wrapper_assignment(expected, expr, got) ||
            is_null_pointer(expected, expr, got) || is_void_pointer_target(expected, got) ||
+           is_const_pointer_binding(expected, got) ||
            is_pointer_to_reference_value(expected, got) || is_reference_binding(expected, got) ||
            is_value_from_reference(expected, got) || is_function_type_match(expected, got) ||
            is_native_function_pointer(expected, got) ||

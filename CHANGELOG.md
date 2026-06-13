@@ -44,6 +44,8 @@
   and `dudu test` experiments.
 - Improved native-header scanner failure hints for missing include paths and
   broken Clang tooling.
+- Improved native const modeling for C++ `T const*`/`T const&` signatures and
+  pointer-to-const calls.
 - Added aliased lowercase native macro imports, such as `cassert.assert(...)`.
 - Added variadic native macro passthrough for fixed-leading-argument macros.
 - Added a macro-bomb fixture and example for imported C/C++ macro coverage.

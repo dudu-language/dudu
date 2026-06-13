@@ -71,9 +71,13 @@ std::string dudu_type(std::string type) {
         }
     }
     bool is_const = false;
-    while (starts_with(type, "const ")) {
+    while (starts_with(type, "const ") || ends_with(type, " const")) {
         is_const = true;
-        type = trim_copy(type.substr(6));
+        if (starts_with(type, "const ")) {
+            type = trim_copy(type.substr(6));
+        } else {
+            type = trim_copy(type.substr(0, type.size() - 6));
+        }
     }
     for (const char* prefix : {"class ", "struct ", "union "}) {
         if (starts_with(type, prefix)) {
