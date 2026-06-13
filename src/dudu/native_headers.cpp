@@ -191,14 +191,17 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         classes.pop_back();
     }
     std::smatch match;
-    if (std::regex_search(line, match, ns_decl)) {
+    if (line.find("NamespaceDecl") != std::string::npos &&
+        std::regex_search(line, match, ns_decl)) {
         const std::string name = match[1].str();
         if (starts_with(name, "__")) {
             return;
         }
         namespaces.push_back({depth, name});
         scan.namespaces.push_back({.name = name, .location = location});
-    } else if (std::regex_search(line, match, typedef_decl)) {
+    } else if ((line.find("TypedefDecl") != std::string::npos ||
+                line.find("TypeAliasDecl") != std::string::npos) &&
+               std::regex_search(line, match, typedef_decl)) {
         const std::string name = match[2].str();
         const std::string raw_type = match[3].str();
         const std::string lowered_type = dudu_type(raw_type);
@@ -208,7 +211,9 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                                   .type = useful_alias ? lowered_type : "",
                                   .location = location});
         }
-    } else if (std::regex_search(line, match, record_decl)) {
+    } else if ((line.find("RecordDecl") != std::string::npos ||
+                line.find("CXXRecordDecl") != std::string::npos) &&
+               std::regex_search(line, match, record_decl)) {
         const std::string raw_name = match[3].str();
         const std::string name = class_name(scan, namespaces, classes, raw_name);
         if (!starts_with(raw_name, "__")) {
@@ -221,12 +226,14 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                 classes.push_back({depth, scan.classes.size() - 1});
             }
         }
-    } else if (std::regex_search(line, match, enum_decl)) {
+    } else if (line.find("EnumDecl") != std::string::npos &&
+               std::regex_search(line, match, enum_decl)) {
         const std::string name = match[1].str();
         if (!starts_with(name, "__")) {
             scan.types.push_back({.name = name, .type = "", .location = location});
         }
-    } else if (std::regex_search(line, match, fn_decl)) {
+    } else if (line.find("FunctionDecl") != std::string::npos &&
+               std::regex_search(line, match, fn_decl)) {
         const std::string name = join_scope(namespaces, match[1].str());
         if (starts_with(name, "__")) {
             return;
@@ -239,7 +246,8 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                                       scan, namespaces, signature_return_type(signature)),
                                   .variadic = signature.find("...") != std::string::npos,
                                   .location = location});
-    } else if (!classes.empty() && std::regex_search(line, match, method_decl)) {
+    } else if (!classes.empty() && line.find("CXXMethodDecl") != std::string::npos &&
+               std::regex_search(line, match, method_decl)) {
         FunctionDecl method;
         method.name = match[1].str();
         method.return_type =
@@ -253,7 +261,8 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         }
         method.location = location;
         scan.classes[classes.back().second].methods.push_back(std::move(method));
-    } else if (!classes.empty() && std::regex_search(line, match, ctor_decl)) {
+    } else if (!classes.empty() && line.find("CXXConstructorDecl") != std::string::npos &&
+               std::regex_search(line, match, ctor_decl)) {
         const std::vector<std::string> params =
             qualify_scoped_types(scan, namespaces, signature_params(match[2].str()));
         FunctionDecl ctor;
@@ -267,20 +276,28 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         }
         ctor.location = location;
         scan.classes[classes.back().second].methods.push_back(std::move(ctor));
-    } else if (!classes.empty() && std::regex_search(line, match, field_decl)) {
+    } else if (!classes.empty() && line.find("FieldDecl") != std::string::npos &&
+               std::regex_search(line, match, field_decl)) {
         scan.classes[classes.back().second].fields.push_back(
             {.name = match[1].str(),
              .type = qualify_scoped_type(scan, namespaces, dudu_type(match[2].str())),
              .location = location});
-    } else if (!classes.empty() && std::regex_search(line, match, base_decl)) {
+    } else if (!classes.empty() &&
+               (line.find("public '") != std::string::npos ||
+                line.find("protected '") != std::string::npos ||
+                line.find("private '") != std::string::npos) &&
+               std::regex_search(line, match, base_decl)) {
         scan.classes[classes.back().second].base_classes.push_back(
             qualify_scoped_type(scan, namespaces, dudu_type(match[2].str())));
-    } else if (std::regex_search(line, match, enum_value_decl)) {
+    } else if (line.find("EnumConstantDecl") != std::string::npos &&
+               std::regex_search(line, match, enum_value_decl)) {
         const std::string name = match[1].str();
         if (!starts_with(name, "__")) {
             scan.values.push_back({.name = name, .type = "i32", .location = location});
         }
-    } else if (line.find("ParmVarDecl") == std::string::npos && std::regex_search(line, match, var_decl)) {
+    } else if (line.find("VarDecl") != std::string::npos &&
+               line.find("ParmVarDecl") == std::string::npos &&
+               std::regex_search(line, match, var_decl)) {
         const std::string name = match[1].str();
         if (!starts_with(name, "__")) {
             scan.values.push_back(

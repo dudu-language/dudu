@@ -53,6 +53,8 @@
 
 ### Fixed
 
+- Sped up native header AST parsing so standard-library imports no longer hang
+  `test_codegen_shapes.sh`.
 - Fixed native signature parsing for signatures with suffixes such as
   `noexcept(true)`.
 - Fixed `size_t` native type mapping to `usize`.
