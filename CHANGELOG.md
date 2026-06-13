@@ -17,6 +17,8 @@
 - Added `docs/tests.md` with the Cargo-style test direction.
 - Added `docs/le_plan.md` as the next implementation roadmap.
 - Added `dudu clean` for removing a project's configured build directory.
+- Added Cargo-ish stderr step logs for `dudu build`, `dudu run`, `dudu test`,
+  and `dudu cmake`.
 
 ### Changed
 

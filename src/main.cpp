@@ -40,6 +40,7 @@ struct Options {
     bool format = false;
     bool init_project = false;
     bool new_project = false;
+    bool project_driver = false;
     bool run = false;
     bool test = false;
     bool verbose = false;
@@ -99,6 +100,7 @@ std::filesystem::path build_config_path(const std::filesystem::path& input) {
 
 Options parse_options(int argc, char** argv, bool project_driver) {
     Options options;
+    options.project_driver = project_driver;
     int first_arg = 1;
     if (project_driver && argc > 1 && std::string(argv[1]) == "init") {
         options.init_project = true;
@@ -376,6 +378,8 @@ int run_project_tests(Options options) {
     const std::filesystem::path output =
         options.output.value_or(config.build_dir.empty() ? std::filesystem::path("build/dudu_tests")
                                                          : config.build_dir / "dudu_tests");
+    dudu::print_project_step(options.project_driver, "emit", output.string() + ".cpp");
+    dudu::print_project_step(options.project_driver, "test", output);
     const std::filesystem::path bin = dudu::build_executable(
         {.output = output, .config = config, .verbose = options.verbose},
         dudu::emit_cpp_test_source(checked_module(options, source, true), options.test_filter));
@@ -430,6 +434,8 @@ int main(int argc, char** argv) {
         }
         if (options.cmake) {
             const dudu::ProjectConfig config = config_for_input(options.input);
+            dudu::print_project_step(options.project_driver, "cmake",
+                                     options.output.value_or("CMakeLists.txt"));
             write_text_output(options.output, dudu::emit_cmake_project(config, options.input));
             return 0;
         }
@@ -437,10 +443,12 @@ int main(int argc, char** argv) {
         if (options.build) {
             const dudu::ProjectConfig config =
                 dudu::parse_project_config(build_config_path(options.input));
+            const std::filesystem::path output =
+                options.output.value_or(default_build_output(config, options.input));
+            dudu::print_project_step(options.project_driver, "emit", output.string() + ".cpp");
+            dudu::print_project_step(options.project_driver, "build", output);
             (void)dudu::build_executable(
-                {.output = options.output.value_or(default_build_output(config, options.input)),
-                 .config = config,
-                 .verbose = options.verbose},
+                {.output = output, .config = config, .verbose = options.verbose},
                 dudu::emit_cpp_source(checked_module(options, source, true)));
             return 0;
         }
@@ -449,14 +457,17 @@ int main(int argc, char** argv) {
             if (config.target_kind != "executable") {
                 fail("cannot run target kind: " + config.target_kind);
             }
+            const std::filesystem::path output =
+                options.output.value_or(default_build_output(config, options.input));
+            dudu::print_project_step(options.project_driver, "emit", output.string() + ".cpp");
+            dudu::print_project_step(options.project_driver, "build", output);
             const std::filesystem::path bin = dudu::build_executable(
-                {.output = options.output.value_or(default_build_output(config, options.input)),
-                 .config = config,
-                 .verbose = options.verbose},
+                {.output = output, .config = config, .verbose = options.verbose},
                 dudu::emit_cpp_source(checked_module(options, source, true)));
             const std::filesystem::path command = bin.is_relative() && bin.parent_path().empty()
                                                       ? std::filesystem::path(".") / bin
                                                       : bin;
+            dudu::print_project_step(options.project_driver, "run", command);
             return std::system(dudu::shell_quote_path(command).c_str()) == 0 ? 0 : 1;
         }
         if (options.header_output.has_value()) {

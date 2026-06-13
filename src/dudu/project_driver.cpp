@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <stdexcept>
 #include <string>
 
@@ -103,6 +104,12 @@ void new_project(const std::filesystem::path& dir) {
     }
     std::filesystem::create_directories(dir);
     init_project(dir);
+}
+
+void print_project_step(bool enabled, const std::string& label, const std::filesystem::path& path) {
+    if (enabled) {
+        std::cerr << label << ' ' << path.string() << '\n';
+    }
 }
 
 } // namespace dudu

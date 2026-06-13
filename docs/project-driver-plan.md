@@ -114,6 +114,8 @@ run   build/bin/app
 ```
 
 This keeps the workflow friendly without making it magical.
+Project-driver step logs go to stderr so the compiled program's stdout remains
+usable for scripts and tests.
 
 ## Manifest Shape
 

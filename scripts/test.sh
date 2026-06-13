@@ -118,15 +118,20 @@ rm -rf "$clean_smoke"
 "$repo_root/build/dudu" new "$clean_smoke" >/dev/null
 (
     cd "$clean_smoke"
-    "$repo_root/build/dudu" run >/dev/null
+    "$repo_root/build/dudu" run >/dev/null 2>"$repo_root/build/dudu_run_steps.err"
     test -d build
     "$repo_root/build/dudu" clean 2>"$repo_root/build/dudu_clean.err"
     test ! -e build
 )
+grep -q "emit build/clean_smoke.cpp" "$repo_root/build/dudu_run_steps.err"
+grep -q "build build/clean_smoke" "$repo_root/build/dudu_run_steps.err"
+grep -q "run build/clean_smoke" "$repo_root/build/dudu_run_steps.err"
 grep -q "clean ./build" "$repo_root/build/dudu_clean.err"
 "$repo_root/build/dudu" test "$repo_root/tests/fixtures/dudu_tests.dd" \
-    >"$repo_root/build/dudu_tests.out"
+    >"$repo_root/build/dudu_tests.out" 2>"$repo_root/build/dudu_test_steps.err"
 grep -q "3/3 tests passed" "$repo_root/build/dudu_tests.out"
+grep -q "emit build/dudu_tests.cpp" "$repo_root/build/dudu_test_steps.err"
+grep -q "test build/dudu_tests" "$repo_root/build/dudu_test_steps.err"
 "$repo_root/build/dudu" test "$repo_root/tests/fixtures/dudu_tests.dd" --filter bool \
     >"$repo_root/build/dudu_tests_filter.out"
 grep -q "1/1 tests passed" "$repo_root/build/dudu_tests_filter.out"
