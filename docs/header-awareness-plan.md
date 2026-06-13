@@ -54,15 +54,18 @@ bool pump_events() {
 ```
 
 One physical C/C++ header import should also expose all relevant symbol kinds
-from that header. Dear ImGui is the motivating case:
+from that header. A native import without `as` behaves like a normal C/C++
+include: discovered names enter the current Dudu module directly.
+
+Dear ImGui is the motivating case:
 
 ```python
-import cpp "imgui.h" as imgui
+import cpp "imgui.h"
 
 def init_imgui():
-    imgui.IMGUI_CHECKVERSION()
-    imgui.ImGui.CreateContext()
-    imgui.ImGui.StyleColorsDark()
+    IMGUI_CHECKVERSION()
+    ImGui.CreateContext()
+    ImGui.StyleColorsDark()
 ```
 
 Generated C++ should still look like normal ImGui C++:
@@ -81,6 +84,19 @@ Dudu should not require both `import c "imgui.h" as imgui` and
 `import cpp "imgui.h" as ImGui` for the same header. The scanner should attach
 object-like macros, global values/functions, and C++ namespaces to the same
 imported header model.
+
+`as` is still useful when the user wants hygiene:
+
+```python
+import cpp "windows.h" as win
+
+win.CreateWindowExA(...)
+```
+
+Direct native imports must be conservative about collisions. If a discovered
+direct-import name conflicts with a Dudu declaration or another direct native
+import, Dudu should emit an error and tell the user to add `as` to one import.
+Do not silently shadow native names.
 
 ## Tooling Policy
 
@@ -186,10 +202,18 @@ Add native values and constants:
 This makes C imports feel less magical because constants in headers become
 known symbols instead of only passing through to generated C++.
 
-Macro policy should stay conservative. Function-like macros are not normal
-functions, but widely used no-argument macros such as `IMGUI_CHECKVERSION()`
-should be supported when the scanner can preserve their call spelling exactly.
-Prefer wrapper headers for macro-heavy APIs that cannot be represented cleanly.
+Macro policy should stay permissive for consumption and conservative for
+understanding. Dudu should not add C macro-definition syntax. Instead:
+
+- known object-like macros can be used as native passthrough expression names
+- known function-like macros can be called when their arity is known
+- unknown all-caps native-looking names from imported headers may be emitted as
+  passthrough with a warning rather than blocking the user
+
+The scanner does not need to model macro bodies. It only needs enough metadata
+to preserve source spelling and avoid obvious arity mistakes. For example,
+`IMGUI_CHECKVERSION()` can lower directly to `IMGUI_CHECKVERSION();`. Prefer
+wrapper headers for macro-heavy APIs that cannot be represented cleanly.
 
 ## Third Slice
 
