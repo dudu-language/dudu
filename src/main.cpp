@@ -22,6 +22,7 @@ namespace {
 
 struct Options {
     std::filesystem::path input;
+    std::optional<std::filesystem::path> c_header_output;
     std::optional<std::filesystem::path> output;
     std::optional<std::filesystem::path> header_output;
     std::map<std::string, std::string> build_values;
@@ -51,7 +52,8 @@ void print_usage() {
                  "       duc run [input.dd] [-o output]\n"
                  "       duc test\n"
                  "       duc <input.dd> [--check] [--format <path|->] "
-                 "[--emit-header <path|->] [--emit-cpp <path|->] [-DNAME=value] [--verbose]\n";
+                 "[--emit-header <path|->] [--emit-c-header <path|->] "
+                 "[--emit-cpp <path|->] [-DNAME=value] [--verbose]\n";
 }
 
 void print_version() {
@@ -160,6 +162,15 @@ Options parse_options(int argc, char** argv) {
             }
             const std::string value = argv[++i];
             options.header_output =
+                value == "-" ? std::filesystem::path{} : std::filesystem::path{value};
+            continue;
+        }
+        if (arg == "--emit-c-header") {
+            if (i + 1 >= argc) {
+                fail("--emit-c-header requires a path or '-'");
+            }
+            const std::string value = argv[++i];
+            options.c_header_output =
                 value == "-" ? std::filesystem::path{} : std::filesystem::path{value};
             continue;
         }
@@ -436,6 +447,11 @@ int main(int argc, char** argv) {
         if (options.header_output.has_value()) {
             write_text_output(options.header_output,
                               dudu::emit_cpp_header(checked_module(options, source, false)));
+            return 0;
+        }
+        if (options.c_header_output.has_value()) {
+            write_text_output(options.c_header_output,
+                              dudu::emit_c_header(checked_module(options, source, false)));
             return 0;
         }
         if (options.emit_cpp) {

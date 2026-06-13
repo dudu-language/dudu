@@ -8,7 +8,7 @@ Interop requirements:
 - `import c "header.h" as alias`
 - `import cpp "header.hpp" as alias`
 - generated `.hpp`/`.cpp` files for C++ consumers
-- generated `.h` files for C ABI exports
+- generated `.h` files for `@extern_c` C ABI exports
 - generated includes
 - namespace/member lowering
 - constructors and destructors through generated C++

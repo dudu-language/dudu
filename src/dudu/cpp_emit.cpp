@@ -354,6 +354,37 @@ std::string emit_cpp_header(const ModuleAst& module) {
     return out.str();
 }
 
+std::string emit_c_header(const ModuleAst& module) {
+    std::ostringstream out;
+    out << "#pragma once\n\n"
+        << "#include <stdbool.h>\n"
+        << "#include <stddef.h>\n"
+        << "#include <stdint.h>\n\n"
+        << "#ifdef __cplusplus\n"
+        << "extern \"C\" {\n"
+        << "#endif\n\n";
+    for (const FunctionDecl& fn : module.functions) {
+        if (!function_has_decorator(fn, "extern_c") || !visible_in_header(fn.visibility)) {
+            continue;
+        }
+        out << lower_cpp_type(fn.return_type) << ' ' << fn.name << '(';
+        if (fn.params.empty()) {
+            out << "void";
+        }
+        for (size_t i = 0; i < fn.params.size(); ++i) {
+            if (i > 0) {
+                out << ", ";
+            }
+            out << lower_cpp_type(fn.params[i].type) << ' ' << fn.params[i].name;
+        }
+        out << ");\n";
+    }
+    out << "\n#ifdef __cplusplus\n"
+        << "}\n"
+        << "#endif\n";
+    return out.str();
+}
+
 std::string emit_cpp_source(const ModuleAst& module) {
     std::ostringstream out;
     const std::vector<std::string> aliases = namespace_aliases(module);

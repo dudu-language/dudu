@@ -71,6 +71,7 @@ Check, format, or emit code:
 ./build/duc emit tests/fixtures/simple_program.dd
 ./build/duc run tests/fixtures/run_zero.dd
 ./build/dudu examples/cpp_library.dd --emit-header -
+./build/duc tests/fixtures/c_api_export.dd --emit-c-header -
 ./build/duc emit examples/compile_time.dd -DDEBUG=true -DRENDER_BACKEND=raylib
 ```
 

@@ -1,0 +1,3 @@
+@extern_c
+def exported_answer() -> i32:
+    return 42

@@ -938,6 +938,8 @@ supports them.
 
 Dudu code should generate normal `.hpp` and `.cpp` files. Top-level Dudu
 functions and classes should be usable from C++ without extra export syntax.
+Functions marked `@extern_c` are also emitted in generated C headers for C
+callers.
 
 ```python
 class Camera:
