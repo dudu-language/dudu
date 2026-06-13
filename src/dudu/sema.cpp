@@ -223,7 +223,35 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
         out << "]";
         return out.str();
     }
-    if (expr == "True" || expr == "False" || find_top_level_comparison(expr) != std::string::npos) {
+    if (expr == "True" || expr == "False") {
+        return "bool";
+    }
+    if (expr.size() >= 2 && ((expr.front() == '"' && expr.back() == '"') ||
+                             (expr.front() == '\'' && expr.back() == '\''))) {
+        return "str";
+    }
+    if (const size_t logical = find_top_level_logical(expr); logical != std::string::npos) {
+        const std::string op = expr.substr(logical, expr.substr(logical, 3) == "and" ? 3 : 2);
+        const std::string left = infer_expr(scope, expr.substr(0, logical), location);
+        const std::string right = infer_expr(scope, expr.substr(logical + op.size()), location);
+        if (location != nullptr && !left.empty() && left != "bool") {
+            fail(*location, op + " expects bool, got " + left);
+        }
+        if (location != nullptr && !right.empty() && right != "bool") {
+            fail(*location, op + " expects bool, got " + right);
+        }
+        return "bool";
+    }
+    if (const size_t comparison = find_top_level_comparison(expr);
+        comparison != std::string::npos) {
+        const std::string op = top_level_comparison_text(expr, comparison);
+        const std::string left = infer_expr(scope, expr.substr(0, comparison), location);
+        const std::string right_expr = expr.substr(comparison + op.size());
+        const std::string right = infer_expr(scope, right_expr, location);
+        if (location != nullptr && !left.empty() && !right.empty() &&
+            !comparison_rhs_allowed(scope.symbols, op, left, right_expr, right)) {
+            fail(*location, "comparison " + op + " expects " + left + ", got " + right);
+        }
         return "bool";
     }
     const size_t op = find_top_level_operator(expr);

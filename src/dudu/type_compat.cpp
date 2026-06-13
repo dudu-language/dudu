@@ -41,6 +41,12 @@ bool is_numeric_literal(std::string expr) {
     return true;
 }
 
+bool is_string_literal(std::string expr) {
+    expr = trim_copy(std::move(expr));
+    return expr.size() >= 2 && ((expr.front() == '"' && expr.back() == '"') ||
+                                (expr.front() == '\'' && expr.back() == '\''));
+}
+
 std::string compact_type(std::string type) {
     std::string out;
     for (const char c : type) {
@@ -250,6 +256,15 @@ bool is_reference_binding(std::string expected, std::string got) {
     return wrapped_type_arg(trim_copy(expected.substr(1))) == got;
 }
 
+bool is_value_from_reference(std::string expected, std::string got) {
+    expected = trim_copy(std::move(expected));
+    got = trim_copy(std::move(got));
+    if (got.empty() || got.front() != '&') {
+        return false;
+    }
+    return expected == wrapped_type_arg(trim_copy(got.substr(1)));
+}
+
 bool is_value_wrapper_assignment(std::string expected, const std::string& expr, std::string got) {
     expected = trim_copy(std::move(expected));
     got = trim_copy(std::move(got));
@@ -330,7 +345,8 @@ bool assignment_type_allowed(const std::string& expected, const std::string& exp
            is_result_value(expected, expr, got) ||
            is_value_wrapper_assignment(expected, expr, got) ||
            is_null_pointer(expected, expr, got) || is_reference_binding(expected, got) ||
-           is_function_type_match(expected, got) ||
+           is_value_from_reference(expected, got) || is_function_type_match(expected, got) ||
+           (expected == "cstr" && got == "str" && is_string_literal(expr)) ||
            (is_numeric_type(wrapped_type_arg(expected)) && is_numeric_literal(expr));
 }
 

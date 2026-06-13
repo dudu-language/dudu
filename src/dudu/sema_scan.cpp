@@ -1,6 +1,7 @@
 #include "dudu/sema_scan.hpp"
 
 #include <cctype>
+#include <string_view>
 
 namespace dudu {
 
@@ -93,6 +94,54 @@ size_t find_call_close(const std::string& expr, size_t open) {
     return std::string::npos;
 }
 
+bool word_at(const std::string& expr, size_t pos, std::string_view word) {
+    if (pos + word.size() > expr.size() || expr.substr(pos, word.size()) != word) {
+        return false;
+    }
+    const bool before = pos == 0 || (std::isalnum(static_cast<unsigned char>(expr[pos - 1])) == 0 &&
+                                     expr[pos - 1] != '_');
+    const size_t after_pos = pos + word.size();
+    const bool after =
+        after_pos == expr.size() ||
+        (std::isalnum(static_cast<unsigned char>(expr[after_pos])) == 0 && expr[after_pos] != '_');
+    return before && after;
+}
+
+size_t find_top_level_logical(const std::string& expr) {
+    int depth = 0;
+    char quote = '\0';
+    bool escaped = false;
+    for (size_t i = 0; i < expr.size(); ++i) {
+        const char c = expr[i];
+        if (quote != '\0') {
+            if (escaped) {
+                escaped = false;
+            } else if (c == '\\') {
+                escaped = true;
+            } else if (c == quote) {
+                quote = '\0';
+            }
+            continue;
+        }
+        if (c == '"' || c == '\'') {
+            quote = c;
+            continue;
+        }
+        if (c == '(' || c == '[' || c == '{') {
+            ++depth;
+            continue;
+        }
+        if (c == ')' || c == ']' || c == '}') {
+            --depth;
+            continue;
+        }
+        if (depth == 0 && (word_at(expr, i, "and") || word_at(expr, i, "or"))) {
+            return i;
+        }
+    }
+    return std::string::npos;
+}
+
 size_t find_top_level_comparison(const std::string& expr) {
     int depth = 0;
     char quote = '\0';
@@ -140,6 +189,16 @@ size_t find_top_level_comparison(const std::string& expr) {
         }
     }
     return std::string::npos;
+}
+
+std::string top_level_comparison_text(const std::string& expr, size_t pos) {
+    if (pos + 1 < expr.size()) {
+        const std::string two = expr.substr(pos, 2);
+        if (two == "==" || two == "!=" || two == "<=" || two == ">=") {
+            return two;
+        }
+    }
+    return pos < expr.size() ? expr.substr(pos, 1) : std::string{};
 }
 
 size_t find_top_level_operator(const std::string& expr) {
