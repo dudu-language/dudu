@@ -9,6 +9,7 @@ mkdir -p "$bench_dir"
 n=50000000
 report_path=""
 max_ratio=""
+samples=1
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --emit-report)
@@ -19,12 +20,20 @@ while [[ $# -gt 0 ]]; do
             max_ratio="${2:?--max-ratio requires a value}"
             shift 2
             ;;
+        --samples)
+            samples="${2:?--samples requires a count}"
+            shift 2
+            ;;
         *)
             n="$1"
             shift
             ;;
     esac
 done
+if [[ "$samples" -lt 1 ]]; then
+    echo "--samples must be at least 1" >&2
+    exit 1
+fi
 
 "$repo_root/build/duc" emit "$repo_root/benchmarks/scalar_sum.dd" -o "$bench_dir/scalar_sum_dudu.cpp"
 "$repo_root/build/duc" emit "$repo_root/benchmarks/pointer_sum.dd" -o "$bench_dir/pointer_sum_dudu.cpp"
@@ -183,9 +192,16 @@ run_bench() {
     local bin="$2"
     echo "$label:"
     local output
-    output="$("$bin" "$n")"
-    echo "$output"
-    printf '%s|%s|%s\n' "$label" "${output%% us*}" "${output##*result=}" >>"$bench_dir/results.tsv"
+    for ((sample = 1; sample <= samples; ++sample)); do
+        output="$("$bin" "$n")"
+        if [[ "$samples" -eq 1 ]]; then
+            echo "$output"
+        else
+            echo "sample $sample/$samples: $output"
+        fi
+        printf '%s|%s|%s|%s\n' "$label" "$sample" "${output%% us*}" \
+            "${output##*result=}" >>"$bench_dir/results.tsv"
+    done
 }
 
 rm -f "$bench_dir/results.tsv"
@@ -200,9 +216,48 @@ run_bench "tuple cpp" "$bench_dir/tuple_accum_cpp"
 run_bench "callback dudu" "$bench_dir/callback_accum_dudu"
 run_bench "callback cpp" "$bench_dir/callback_accum_cpp"
 
+summarize_label() {
+    local label="$1"
+    mapfile -t values < <(awk -F'|' -v label="$label" '$1 == label { print $3 }' \
+        "$bench_dir/results.tsv" | sort -n)
+    local count="${#values[@]}"
+    if [[ "$count" -eq 0 ]]; then
+        echo "missing benchmark results for $label" >&2
+        exit 1
+    fi
+    local result
+    result="$(awk -F'|' -v label="$label" '$1 == label { print $4; exit }' \
+        "$bench_dir/results.tsv")"
+    local sum=0
+    for value in "${values[@]}"; do
+        sum=$((sum + value))
+    done
+    local mean
+    mean="$(awk -v sum="$sum" -v count="$count" 'BEGIN { printf "%.3f", sum / count }')"
+    local median="${values[$((count / 2))]}"
+    local p95_index=$(((count * 95 + 99) / 100 - 1))
+    if [[ "$p95_index" -ge "$count" ]]; then
+        p95_index=$((count - 1))
+    fi
+    printf '%s|%s|%s|%s|%s|%s\n' "$label" "$mean" "$median" \
+        "${values[$p95_index]}" "$count" "$result" >>"$bench_dir/summary.tsv"
+}
+
+rm -f "$bench_dir/summary.tsv"
+summarize_label "scalar dudu"
+summarize_label "scalar cpp"
+summarize_label "pointer dudu"
+summarize_label "pointer cpp"
+summarize_label "field dudu"
+summarize_label "field cpp"
+summarize_label "tuple dudu"
+summarize_label "tuple cpp"
+summarize_label "callback dudu"
+summarize_label "callback cpp"
+
 bench_micros() {
     local label="$1"
-    awk -F'|' -v label="$label" '$1 == label { print $2 }' "$bench_dir/results.tsv"
+    awk -F'|' -v label="$label" '$1 == label { print $3 }' "$bench_dir/summary.tsv"
 }
 
 bench_ratio() {
@@ -260,13 +315,16 @@ if [[ -n "$report_path" ]]; then
         printf '  "cxx": "%s",\n' "$cxx"
         printf '  "flags": "%s",\n' "${flags[*]}"
         printf '  "n": %s,\n' "$n"
+        printf '  "samples": %s,\n' "$samples"
         printf '  "benchmarks": [\n'
         first=1
-        while IFS='|' read -r label micros result; do
+        while IFS='|' read -r label mean median p95 count result; do
             [[ "$first" -eq 0 ]] && printf ',\n'
             first=0
-            printf '    {"name": "%s", "micros": %s, "result": "%s"}' "$label" "$micros" "$result"
-        done <"$bench_dir/results.tsv"
+            printf '    {"name": "%s", "mean_micros": %s, ' "$label" "$mean"
+            printf '"median_micros": %s, "p95_micros": %s, ' "$median" "$p95"
+            printf '"samples": %s, "result": "%s"}' "$count" "$result"
+        done <"$bench_dir/summary.tsv"
         printf '\n  ],\n'
         printf '  "comparisons": [\n'
         printf '    {"name": "scalar", "dudu_micros": %s, "cpp_micros": %s, "ratio": %s},\n' \

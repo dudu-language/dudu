@@ -133,6 +133,7 @@ Run the scalar-loop benchmark comparison:
 ./scripts/bench.sh
 ./scripts/bench.sh 10000000
 ./scripts/bench.sh 10000000 --emit-report build/benchmarks/report.json
+./scripts/bench.sh 10000000 --samples 5 --emit-report build/benchmarks/report.json
 ./scripts/bench.sh 10000000 --max-ratio 1.10
 ```
 
