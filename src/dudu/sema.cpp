@@ -253,8 +253,8 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
         }
     }
     const size_t dot = expr.find('.');
-    if (dot != std::string::npos) {
-        return member_path_type(scope.symbols, scope.locals, nullptr, expr, "");
+    if (dot != std::string::npos && is_member_call_path(expr)) {
+        return member_path_type(scope.symbols, scope.locals, location, expr, "");
     }
     if (const auto local = scope.locals.find(expr); local != scope.locals.end()) {
         return local->second;

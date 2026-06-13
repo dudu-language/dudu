@@ -353,6 +353,7 @@ expect_fail bad_method_type --emit-cpp "argument 1 for counter.add expects i32, 
 expect_fail bad_from_import_missing --emit-cpp "module 'bad_from_import_helper' has no symbol 'missing'"
 expect_fail bad_cycle_a --emit-cpp "cyclic module import"
 expect_fail bad_unknown_type --emit-cpp "unknown local type: MissingType"
+expect_fail bad_field_read --emit-cpp "unknown field: counter.missing"
 expect_fail bad_tuple_destructure --emit-cpp "tuple destructuring count mismatch"
 expect_fail bad_tuple_duplicate_binding --emit-cpp "duplicate destructuring binding: value"
 expect_fail bad_tuple_shadow_binding --emit-cpp "destructuring binding shadows local: value"

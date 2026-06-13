@@ -25,7 +25,7 @@ std::string member_path_type(const Symbols& symbols,
     std::string current = path.substr(0, dot);
     const auto local = locals.find(current);
     if (local == locals.end()) {
-        if (location != nullptr) {
+        if (location != nullptr && !unknown_local_prefix.empty()) {
             fail(*location, unknown_local_prefix + current);
         }
         return {};
