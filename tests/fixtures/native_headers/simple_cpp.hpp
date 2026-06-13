@@ -31,6 +31,20 @@ class DerivedWidget : public BaseWidget {
     int derived_value = 7;
 };
 
+class Outer {
+  public:
+    class Inner {
+      public:
+        explicit Inner(int initial) : value(initial) {}
+
+        int doubled() const {
+            return value * 2;
+        }
+
+        int value = 0;
+    };
+};
+
 inline int use_base_widget(const BaseWidget* widget) {
     return widget->base_value;
 }

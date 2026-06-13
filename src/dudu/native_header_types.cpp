@@ -36,6 +36,15 @@ std::string erase_all(std::string text, std::string_view token) {
     return text;
 }
 
+std::string cpp_scope_to_dudu(std::string type) {
+    size_t pos = type.find("::");
+    while (pos != std::string::npos) {
+        type.replace(pos, 2, ".");
+        pos = type.find("::", pos + 1);
+    }
+    return type;
+}
+
 } // namespace
 
 std::string dudu_type(std::string type) {
@@ -66,7 +75,13 @@ std::string dudu_type(std::string type) {
         is_const = true;
         type = trim_copy(type.substr(6));
     }
-    std::string out = scalar_dudu_type(type);
+    for (const char* prefix : {"class ", "struct ", "union "}) {
+        if (starts_with(type, prefix)) {
+            type = trim_copy(type.substr(std::string_view(prefix).size()));
+            break;
+        }
+    }
+    std::string out = cpp_scope_to_dudu(scalar_dudu_type(type));
     if (is_const) out = "const[" + out + "]";
     for (int i = 0; i < pointer_depth; ++i) out = "*" + out;
     return reference ? "&" + out : out;

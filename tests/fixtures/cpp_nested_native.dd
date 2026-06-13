@@ -1,0 +1,12 @@
+import cpp "native_headers/simple_cpp.hpp"
+
+def main() -> i32:
+    widget: Widget = Widget(5)
+    derived: dudu_native.DerivedWidget = dudu_native.DerivedWidget(9)
+    nested: dudu_native.Outer.Inner = dudu_native.Outer.Inner(21)
+
+    if widget.scaled(3) != 15:
+        return 1
+    if dudu_native.use_base_widget(&derived) != 9:
+        return 2
+    return nested.doubled()

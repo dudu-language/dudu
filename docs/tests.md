@@ -26,6 +26,25 @@ dudu test --filter add
 Cargo. `dudu test add` can run `add_works`, `add_more`, and any other test with
 `add` in its name.
 
+## Repository Validation
+
+Use the fast script for normal compiler development:
+
+```sh
+./scripts/test_fast.sh
+```
+
+It builds the compiler, runs the frontend CTest suite, and compiles/runs a few
+high-signal fixtures. Use the full sweep when changing broad project-driver,
+native interop, editor, or release behavior:
+
+```sh
+./scripts/test.sh
+```
+
+The full sweep intentionally runs many generated C++ compiles, native header
+scans, project-driver checks, and negative fixtures, so it is much slower.
+
 ## Test Function Rules
 
 - `@test` is only valid on free functions.

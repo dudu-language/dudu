@@ -228,14 +228,14 @@ falling back to loose expression typing.
 
 Richer constructs still need deeper modeling:
 
-- nested types
 - templates with explicit arguments
 - overloaded operators
 - deeper references and const correctness
 - destructor semantics
 
-The current scanner intentionally covers the common SDL/imgui/raylib-style
-surface first. Template-heavy libraries may still need wrapper headers.
+The scanner now preserves namespace and class scope for nested types such as
+`outer_namespace.Outer.Inner`. Template-heavy libraries may still need wrapper
+headers.
 
 ## Cache
 

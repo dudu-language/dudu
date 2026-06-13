@@ -34,6 +34,8 @@
 - Added clearer native-header scan diagnostics when project-relative C/C++
   headers are missing or cannot be parsed by Clang.
 - Added default `dudu test` output capture plus `--no-capture`/`--nocapture`.
+- Added native header support for namespaced and nested C++ class names.
+- Added `scripts/test_fast.sh` for normal inner-loop compiler validation.
 
 ### Changed
 

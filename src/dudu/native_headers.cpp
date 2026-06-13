@@ -3,6 +3,7 @@
 #include "dudu/native_build.hpp"
 #include "dudu/native_header_cache.hpp"
 #include "dudu/native_header_merge.hpp"
+#include "dudu/native_header_scope.hpp"
 #include "dudu/native_header_types.hpp"
 #include <chrono>
 #include <cstdlib>
@@ -126,15 +127,6 @@ int ast_depth(const std::string& line) {
     if (last == std::string::npos) return static_cast<int>(branch / 2);
     return static_cast<int>((branch < last ? branch : last) / 2);
 }
-std::string join_scope(const std::vector<std::pair<int, std::string>>& namespaces,
-                       const std::string& name) {
-    std::string out;
-    for (const auto& [depth, ns] : namespaces) {
-        (void)depth;
-        out += ns + ".";
-    }
-    return out + name;
-}
 template <typename T>
 void add_unique(std::vector<T>& out, std::set<std::string>& seen, T value) {
     if (seen.insert(value.name).second) {
@@ -216,8 +208,9 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                                   .location = location});
         }
     } else if (std::regex_search(line, match, record_decl)) {
-        const std::string name = match[3].str();
-        if (!starts_with(name, "__")) {
+        const std::string raw_name = match[3].str();
+        const std::string name = class_name(scan, namespaces, classes, raw_name);
+        if (!starts_with(raw_name, "__")) {
             scan.types.push_back({.name = name, .type = "", .location = location});
             if (line.find(" definition") != std::string::npos) {
                 ClassDecl klass;
@@ -239,25 +232,29 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         }
         const std::string signature = match[2].str();
         scan.functions.push_back({.name = name,
-                                  .params = signature_params(signature),
-                                  .return_type = signature_return_type(signature),
+                                  .params = qualify_scoped_types(
+                                      scan, namespaces, signature_params(signature)),
+                                  .return_type = qualify_scoped_type(
+                                      scan, namespaces, signature_return_type(signature)),
                                   .variadic = signature.find("...") != std::string::npos,
                                   .location = location});
     } else if (!classes.empty() && std::regex_search(line, match, method_decl)) {
         FunctionDecl method;
         method.name = match[1].str();
-        method.return_type = signature_return_type(match[2].str());
+        method.return_type =
+            qualify_scoped_type(scan, namespaces, signature_return_type(match[2].str()));
         for (const std::string& param : signature_params(match[2].str())) {
             ParamDecl decl;
             decl.name = "arg" + std::to_string(method.params.size());
-            decl.type = param;
+            decl.type = qualify_scoped_type(scan, namespaces, param);
             decl.location = location;
             method.params.push_back(std::move(decl));
         }
         method.location = location;
         scan.classes[classes.back().second].methods.push_back(std::move(method));
     } else if (!classes.empty() && std::regex_search(line, match, ctor_decl)) {
-        const std::vector<std::string> params = signature_params(match[2].str());
+        const std::vector<std::string> params =
+            qualify_scoped_types(scan, namespaces, signature_params(match[2].str()));
         FunctionDecl ctor;
         ctor.name = "__init__";
         for (const std::string& param : params) {
@@ -271,9 +268,12 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         scan.classes[classes.back().second].methods.push_back(std::move(ctor));
     } else if (!classes.empty() && std::regex_search(line, match, field_decl)) {
         scan.classes[classes.back().second].fields.push_back(
-            {.name = match[1].str(), .type = dudu_type(match[2].str()), .location = location});
+            {.name = match[1].str(),
+             .type = qualify_scoped_type(scan, namespaces, dudu_type(match[2].str())),
+             .location = location});
     } else if (!classes.empty() && std::regex_search(line, match, base_decl)) {
-        scan.classes[classes.back().second].base_classes.push_back(dudu_type(match[2].str()));
+        scan.classes[classes.back().second].base_classes.push_back(
+            qualify_scoped_type(scan, namespaces, dudu_type(match[2].str())));
     } else if (std::regex_search(line, match, enum_value_decl)) {
         const std::string name = match[1].str();
         if (!starts_with(name, "__")) {
@@ -381,6 +381,12 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
     const std::filesystem::path ast = base.string() + ".ast";
     const std::filesystem::path macros = base.string() + ".macros";
     const std::filesystem::path err = base.string() + ".err";
+    const auto cleanup = [&]() {
+        std::filesystem::remove(cpp);
+        std::filesystem::remove(ast);
+        std::filesystem::remove(macros);
+        std::filesystem::remove(err);
+    };
     write_text(cpp, "#include \"" + unquoted(import.module_path) + "\"\nint dudu_probe = 0;\n");
 
     NativeHeaderScan scan;
@@ -395,18 +401,19 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
                                   shell_quote_path(cpp) + flags;
     const std::string macro_dump = run_capture(macro_cmd, macros, err);
     if (ast_dump.empty() && macro_dump.empty()) {
-        if (!requires_scan_success(import)) return {};
+        if (!requires_scan_success(import)) {
+            cleanup();
+            return {};
+        }
         const std::string detail = read_text(err);
+        cleanup();
         throw CompileError(import.location, "could not scan native header " +
                                                 unquoted(import.module_path) +
                                                 (detail.empty() ? "" : "\n" + detail));
     }
     parse_macro_dump(scan, macro_dump, import.location);
     store_native_header_raw_cache(raw_cache, ast_dump, macro_dump);
-    std::filesystem::remove(cpp);
-    std::filesystem::remove(ast);
-    std::filesystem::remove(macros);
-    std::filesystem::remove(err);
+    cleanup();
     cache[key] = dedupe_scan(std::move(scan));
     return cache[key];
 }

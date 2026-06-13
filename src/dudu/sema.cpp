@@ -119,7 +119,7 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
             return callee + "[" +
                    (args.size() == 1 ? infer_expr(scope, args.front(), location) : "") + "]";
         }
-        if (const auto klass = scope.symbols.classes.find(callee);
+        if (const auto klass = scope.symbols.classes.find(resolve_alias(scope.symbols, callee));
             klass != scope.symbols.classes.end()) {
             check_constructor_args(scope, *klass->second, call_args(expr, call), location,
                                    infer_expr,

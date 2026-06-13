@@ -227,12 +227,17 @@ void test_native_header_type_scan(const std::filesystem::path& root) {
                                                 "    window: *DuduNativeWindow = None\n"
                                                 "    widget: DuduWidgetAlias\n"
                                                 "    other: Widget = Widget(5)\n"
-                                                "    derived: DerivedWidget = DerivedWidget(9)\n"
+                                                "    derived: dudu_native.DerivedWidget = "
+                                                "dudu_native.DerivedWidget(9)\n"
+                                                "    nested: dudu_native.Outer.Inner = "
+                                                "dudu_native.Outer.Inner(21)\n"
                                                 "    amount: f32 = 2.0\n"
                                                 "    if derived.base_scaled(2) != 18:\n"
                                                 "        return 1\n"
                                                 "    if dudu_native.use_base_widget(&derived) != 9:\n"
                                                 "        return 2\n"
+                                                "    if nested.doubled() != 42:\n"
+                                                "        return 4\n"
                                                 "    proc = dudu_native_proc()\n"
                                                 "    if proc == None:\n"
                                                 "        return 3\n"
@@ -258,8 +263,12 @@ void test_native_header_type_scan(const std::filesystem::path& root) {
     assert(cpp.find("DuduNativeWindow* window = nullptr;") != std::string::npos);
     assert(cpp.find("DuduWidgetAlias widget{};") != std::string::npos);
     assert(cpp.find("Widget other = Widget(5);") != std::string::npos);
-    assert(cpp.find("DerivedWidget derived = DerivedWidget(9);") != std::string::npos);
+    assert(cpp.find("dudu_native::DerivedWidget derived = dudu_native::DerivedWidget(9);") !=
+           std::string::npos);
+    assert(cpp.find("dudu_native::Outer::Inner nested = dudu_native::Outer::Inner(21);") !=
+           std::string::npos);
     assert(cpp.find("derived.base_scaled(2)") != std::string::npos);
+    assert(cpp.find("nested.doubled()") != std::string::npos);
     assert(cpp.find("dudu_native::use_base_widget(& derived)") != std::string::npos);
     assert(std::filesystem::exists(config.build_dir / "dudu-header-cache"));
 }
