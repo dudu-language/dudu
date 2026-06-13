@@ -1048,7 +1048,7 @@ Dudu targets systems programming directly. The language surface includes:
 - `volatile[T]`
 - `atomic[T]`
 - compile-time layout operators: `sizeof[T]`, `alignof[T]`, `offsetof[T](field)`
-- function attributes such as `@inline` and `@section(".name")`
+- function attributes such as `@inline`, `@extern_c`, and `@section(".name")`
 - target attributes such as `@cuda.global` and `@shader.compute`
 - address spaces such as `device[T]`, `storage[T]`, and `shared[T]`
 - native C++ escape hatches through `cpp(...)`

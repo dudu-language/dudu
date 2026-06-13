@@ -257,6 +257,9 @@ void emit_static_asserts(std::ostringstream& out, const ModuleAst& module,
 }
 
 void emit_function_signature(std::ostringstream& out, const FunctionDecl& fn) {
+    if (function_has_decorator(fn, "extern_c")) {
+        out << "extern \"C\" ";
+    }
     if (function_has_decorator(fn, "cuda.global")) {
         out << "DUDU_CUDA_GLOBAL ";
     }

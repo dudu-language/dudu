@@ -28,6 +28,15 @@ bool is_pascal_case(const std::string& name) {
     throw CompileError(location, std::string(rule) + ": " + name);
 }
 
+bool has_decorator(const FunctionDecl& fn, std::string_view name) {
+    for (const Decorator& decorator : fn.decorators) {
+        if (decorator.text == name) {
+            return true;
+        }
+    }
+    return false;
+}
+
 } // namespace
 
 bool is_dudu_snake_case(const std::string& name) {
@@ -93,7 +102,7 @@ void check_naming(const ModuleAst& module) {
         }
     }
     for (const FunctionDecl& fn : module.functions) {
-        if (!is_dudu_snake_case(fn.name)) {
+        if (!has_decorator(fn, "extern_c") && !is_dudu_snake_case(fn.name)) {
             fail_naming(fn.location, "function names must be snake_case", fn.name);
         }
         for (const ParamDecl& param : fn.params) {

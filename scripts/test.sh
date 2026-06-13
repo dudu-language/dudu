@@ -402,6 +402,7 @@ compile_and_expect result_option 42
 compile_and_expect function_pointers 42
 compile_and_expect function_attrs 42
 compile_and_expect section_attrs 42
+compile_and_expect extern_c_handler 42
 compile_and_expect cpp_namespace_alias 42
 compile_and_expect fixed_arrays 42
 compile_and_expect compound_assignment 46

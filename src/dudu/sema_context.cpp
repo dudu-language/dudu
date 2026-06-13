@@ -94,8 +94,8 @@ void check_class_decorator(const Decorator& decorator) {
 
 void check_function_decorator(const ModuleAst& module, const Decorator& decorator) {
     const std::string text = trim(decorator.text);
-    if (text == "inline" || text == "constexpr" || text == "cuda.global" || text == "cuda.device" ||
-        text == "cuda.host" || text == "shader.compute" ||
+    if (text == "inline" || text == "constexpr" || text == "extern_c" || text == "cuda.global" ||
+        text == "cuda.device" || text == "cuda.host" || text == "shader.compute" ||
         decorator_is_call(text, "workgroup_size") || decorator_is_call(text, "section")) {
         check_target_decorator_mode(module, decorator, text);
         return;
