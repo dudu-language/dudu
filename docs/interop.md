@@ -20,6 +20,9 @@ Interop requirements:
 - generated `.hpp` files usable from C++
 - Clang-backed header import for complete library understanding
 
+The native header scanner plan is
+[Native Header Awareness Plan](header-awareness-plan.md).
+
 Dudu code imports Dudu modules directly. Foreign headers are the boundary to
 the C and C++ ecosystem, not the normal Dudu module interface.
 
