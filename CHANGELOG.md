@@ -50,6 +50,8 @@
   cache files.
 - Added unchanged-build skipping for direct native builds when generated C++,
   native command, and native source inputs are unchanged.
+- Updated optional probes to auto-detect the sibling vendored raylib/SDL3
+  install used by `duduplayground`.
 - Added aliased lowercase native macro imports, such as `cassert.assert(...)`.
 - Added variadic native macro passthrough for fixed-leading-argument macros.
 - Added a macro-bomb fixture and example for imported C/C++ macro coverage.
