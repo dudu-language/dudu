@@ -152,6 +152,8 @@ to one shape-aware object rather than nested containers.
 Status: comma indexing lowers for Dudu-native fixed arrays, matching the current
 nested `std::array` representation. A matrix multiply fixture exercises
 function parameters, return values, nested loops, and comma indexing together.
+Partial indexing such as `mat[row]` now returns the remaining fixed-array row
+type, while over-indexing is diagnosed in Dudu source.
 
 ## Slicing
 

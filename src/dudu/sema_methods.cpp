@@ -185,14 +185,16 @@ std::string first_path_type(const Symbols& symbols,
                             const SourceLocation* location, const std::string& first,
                             const std::string& unknown_local_prefix) {
     if (is_indexed_local_segment(first)) {
-        const std::string name = trim(first.substr(0, first.find('[')));
+        const size_t index = first.find('[');
+        const std::string name = trim(first.substr(0, index));
+        const std::string index_expr = first.substr(index + 1, first.size() - index - 2);
         if (location == nullptr && !locals.contains(name)) {
             return {};
         }
-        return indexed_value_type(symbols, locals,
-                                  location == nullptr ? SourceLocation{} : *location, name,
-                                  unknown_local_prefix.empty() ? "indexed access to unknown local: "
-                                                               : unknown_local_prefix);
+        return indexed_value_type(
+            symbols, locals, location == nullptr ? SourceLocation{} : *location, name, index_expr,
+            unknown_local_prefix.empty() ? "indexed access to unknown local: "
+                                         : unknown_local_prefix);
     }
     const auto local = locals.find(first);
     if (local == locals.end()) {

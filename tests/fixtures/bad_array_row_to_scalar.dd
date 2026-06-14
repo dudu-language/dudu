@@ -1,0 +1,7 @@
+def main() -> i32:
+    matrix: array[i32] = [
+        [1, 2],
+        [3, 4],
+    ]
+    value: i32 = matrix[0]
+    return value

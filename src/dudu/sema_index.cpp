@@ -1,10 +1,12 @@
 #include "dudu/sema_index.hpp"
 
+#include "dudu/array_shape.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/type_compat.hpp"
 
 #include <cctype>
 #include <optional>
+#include <sstream>
 
 namespace dudu {
 namespace {
@@ -64,12 +66,25 @@ std::optional<std::string> canonical_array_element_type(const std::string& type)
     return trim(type.substr(6, element_close - 6));
 }
 
+std::string shaped_array_type(const std::string& element_type, const std::vector<size_t>& shape) {
+    std::ostringstream out;
+    out << "array[" << element_type << "][";
+    for (size_t i = 0; i < shape.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << shape[i];
+    }
+    out << "]";
+    return out.str();
+}
+
 } // namespace
 
 std::string indexed_value_type(const Symbols& symbols,
                                const std::map<std::string, std::string>& locals,
                                const SourceLocation& location, const std::string& name,
-                               std::string_view unknown_message) {
+                               const std::string& index_expr, std::string_view unknown_message) {
     const auto local = locals.find(name);
     if (local == locals.end()) {
         throw CompileError(location, std::string(unknown_message) + name);
@@ -95,6 +110,18 @@ std::string indexed_value_type(const Symbols& symbols,
     }
     if (starts_with(type, "list[") && type.back() == ']') {
         return trim(type.substr(5, type.size() - 6));
+    }
+    if (const std::vector<size_t> shape = explicit_array_shape(type); !shape.empty()) {
+        const size_t index_count = index_expr.empty() ? 1 : split_top_level_args(index_expr).size();
+        if (index_count > shape.size()) {
+            throw CompileError(location, "too many indices for array: " + name);
+        }
+        const std::string element = explicit_array_element_type(type);
+        if (index_count == shape.size()) {
+            return element;
+        }
+        return shaped_array_type(element,
+                                 std::vector<size_t>(shape.begin() + index_count, shape.end()));
     }
     if (const auto element = canonical_array_element_type(type)) {
         return *element;

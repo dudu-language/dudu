@@ -298,7 +298,8 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
     if (location != nullptr && index != std::string::npos && expr.back() == ']') {
         const std::string name = trim(expr.substr(0, index));
         if (is_plain_identifier(name)) {
-            return indexed_value_type(scope.symbols, scope.locals, *location, name,
+            const std::string index_expr = expr.substr(index + 1, expr.size() - index - 2);
+            return indexed_value_type(scope.symbols, scope.locals, *location, name, index_expr,
                                       "indexed access to unknown local: ");
         }
     }
@@ -403,8 +404,9 @@ std::string assign_target_type(const FunctionScope& scope, const Stmt& stmt,
         const size_t index = lhs.find('[');
         if (index != std::string::npos) {
             const std::string name = trim(lhs.substr(0, index));
+            const std::string index_expr = lhs.substr(index + 1, lhs.size() - index - 2);
             return indexed_value_type(scope.symbols, scope.locals, target_location, name,
-                                      "indexed assignment to unknown local: ");
+                                      index_expr, "indexed assignment to unknown local: ");
         }
         if (scope.constants.contains(lhs)) {
             fail(target_location, "cannot assign to constant: " + lhs);

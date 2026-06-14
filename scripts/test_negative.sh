@@ -64,6 +64,8 @@ expect_fail bad_array_ragged_inference --emit-cpp "ragged array literal"
 expect_fail bad_array_shape_mismatch --emit-cpp "array literal shape mismatch: expected \\[2, 2\\], got \\[3, 2\\]"
 expect_fail bad_array_empty_shape_mismatch --emit-cpp "array literal shape mismatch: expected \\[2\\], got \\[0\\]"
 expect_fail bad_array_element_type --emit-cpp "array literal element expects i32, got bool"
+expect_fail bad_array_row_to_scalar --emit-cpp "cannot assign array\\[i32\\]\\[2\\] to i32 without an explicit cast"
+expect_fail bad_array_too_many_indices --emit-cpp "too many indices for array: matrix"
 expect_fail bad_condition_type --emit-cpp "condition must be bool, got i32"
 expect_fail bad_debug_assert_condition --emit-cpp "condition must be bool, got i32"
 if "$repo_root/build/dudu" "$repo_root/tests/fixtures/bad_freestanding_assert.dd" \
