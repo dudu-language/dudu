@@ -319,6 +319,9 @@ pixels: array[Color][240 * 160]
 upload_texture(&pixels[0], len(pixels))
 ```
 
+Status: fixed arrays support `len(values)` and address-of indexed elements such
+as `&values[0]` for imported C/C++ pointer-and-count APIs.
+
 ## Target Examples
 
 These examples are the suite we should make compile and run as the feature

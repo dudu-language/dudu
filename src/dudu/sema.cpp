@@ -150,6 +150,10 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
         if (const auto local = scope.locals.find(name); local != scope.locals.end()) {
             return "*" + trim(local->second);
         }
+        const std::string value_type = infer_expr(scope, name, location);
+        if (!value_type.empty() && value_type != "void") {
+            return "*" + value_type;
+        }
     }
     const size_t call = find_call_open(expr);
     if (call != std::string::npos && find_call_close(expr, call) == expr.size() - 1) {

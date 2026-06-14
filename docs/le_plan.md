@@ -278,8 +278,9 @@ push. They are not release packaging work.
    string and TypeRef lowering paths, explicit-shaped literal initializers are
    checked, `array[T] = literal` infers fixed shapes, and comma indexing such as
    `mat[row, col]` lowers for Dudu-native fixed arrays. Partial array indexing
-   is type-aware and over-indexing is diagnosed. Slices, swizzling, and library
-   tensor hooks remain.
+   is type-aware and over-indexing is diagnosed. Fixed arrays work with
+   `len(values)` and `&values[0]` for native pointer/count handoff. Slices,
+   swizzling, and library tensor hooks remain.
 
 5. Native Dudu Generics
 

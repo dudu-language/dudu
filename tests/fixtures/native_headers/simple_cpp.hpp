@@ -53,6 +53,14 @@ inline int read_const_ptr(int const* value) {
     return *value;
 }
 
+inline int sum_ints(const int* values, int count) {
+    int total = 0;
+    for (int i = 0; i < count; ++i) {
+        total += values[i];
+    }
+    return total;
+}
+
 inline int read_const_ref(Widget const& widget) {
     return widget.value;
 }
