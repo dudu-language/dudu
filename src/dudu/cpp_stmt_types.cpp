@@ -1,10 +1,15 @@
 #include "dudu/cpp_stmt_types.hpp"
 
+#include "dudu/array_shape.hpp"
 #include "dudu/ast_expr.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/sema_scan.hpp"
 
 #include <cctype>
+#include <cstddef>
+#include <optional>
+#include <sstream>
+#include <vector>
 
 namespace dudu {
 namespace {
@@ -22,6 +27,64 @@ std::string receiver_base_type(std::string type) {
     }
     const size_t bracket = type.find('[');
     return bracket == std::string::npos ? type : trim_copy(type.substr(0, bracket));
+}
+
+std::optional<std::vector<std::string>> template_args(std::string_view type,
+                                                      std::string_view name) {
+    const std::string prefix = std::string(name) + "[";
+    if (!starts_with(type, prefix) || type.empty() || type.back() != ']') {
+        return std::nullopt;
+    }
+    return split_top_level_args(
+        std::string(type.substr(prefix.size(), type.size() - prefix.size() - 1)));
+}
+
+size_t index_count(const Expr& expr) {
+    if (expr.kind == ExprKind::TupleLiteral && !expr.children.empty()) {
+        return expr.children.size();
+    }
+    return 1;
+}
+
+std::string shaped_array_type(const std::string& element_type, const std::vector<size_t>& shape) {
+    std::ostringstream out;
+    out << "array[" << element_type << "][";
+    for (size_t i = 0; i < shape.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << shape[i];
+    }
+    out << "]";
+    return out.str();
+}
+
+std::string indexed_local_type(const std::string& receiver_type, const Expr& index_expr) {
+    const std::string type = trim_copy(receiver_type);
+    if (const auto args = template_args(type, "list"); args && args->size() == 1) {
+        return trim_copy(args->front());
+    }
+    if (const auto args = template_args(type, "span"); args && args->size() == 1) {
+        return trim_copy(args->front());
+    }
+    if (const auto args = template_args(type, "set"); args && args->size() == 1) {
+        return trim_copy(args->front());
+    }
+    if (const auto args = template_args(type, "dict"); args && args->size() == 2) {
+        return trim_copy((*args)[1]);
+    }
+    if (starts_with(type, "array[")) {
+        const std::string element_type = explicit_array_element_type(type);
+        const std::vector<size_t> shape = explicit_array_shape(type);
+        const size_t used_indices = index_count(index_expr);
+        if (element_type.empty() || shape.empty() || used_indices >= shape.size()) {
+            return element_type;
+        }
+        const std::vector<size_t> remaining_shape{
+            shape.begin() + static_cast<std::ptrdiff_t>(used_indices), shape.end()};
+        return shaped_array_type(element_type, remaining_shape);
+    }
+    return {};
 }
 
 bool looks_like_dudu_type(const std::string& name) {
@@ -81,6 +144,16 @@ std::string infer_emitted_local_type(const Expr& expr,
     }
     if (expr.kind == ExprKind::Call) {
         return infer_call_type(call_callee_text(expr), locals, function_returns);
+    }
+    if (expr.kind == ExprKind::Index && expr.children.size() == 2 &&
+        expr.children[0].kind == ExprKind::Name) {
+        if (const auto local = locals.find(expr.children[0].name); local != locals.end()) {
+            if (const std::string indexed_type =
+                    indexed_local_type(local->second, expr.children[1]);
+                !indexed_type.empty()) {
+                return indexed_type;
+            }
+        }
     }
     return infer_emitted_local_type(expr.text, locals, function_returns);
 }

@@ -1,5 +1,6 @@
 #include "dudu/cpp_emit.hpp"
 #include "dudu/cpp_lower.hpp"
+#include "dudu/cpp_stmt_types.hpp"
 #include "dudu/format.hpp"
 #include "dudu/lexer.hpp"
 #include "dudu/native_headers.hpp"
@@ -213,6 +214,24 @@ void test_legacy_allocation_type_ref_diagnostics() {
         rejected = true;
     }
     assert(rejected);
+}
+
+void test_emitted_local_index_type_inference() {
+    const std::map<std::string, std::string> locals = {
+        {"values", "list[i32]"},
+        {"names", "dict[str, Player]"},
+        {"matrix", "array[f32][3, 4]"},
+    };
+    const std::map<std::string, std::string> functions;
+
+    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("values[0]"), locals, functions) ==
+           "i32");
+    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("names[key]"), locals, functions) ==
+           "Player");
+    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("matrix[1]"), locals, functions) ==
+           "array[f32][4]");
+    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("matrix[1, 2]"), locals,
+                                          functions) == "f32");
 }
 
 void test_ast_constructor_assignment_compatibility() {
@@ -868,6 +887,7 @@ int main() {
         test_header_emission();
         test_semantic_diagnostics();
         test_legacy_allocation_type_ref_diagnostics();
+        test_emitted_local_index_type_inference();
         test_ast_constructor_assignment_compatibility();
         test_statement_ast_shape();
         test_expression_ast_shape();

@@ -107,6 +107,9 @@ Already structured:
   nodes instead of raw value text
 - generated local C++ type inference has an AST path for names and calls,
   leaving raw text as a fallback for unlifted expression shapes
+- generated local C++ type inference also follows parsed index expressions for
+  local `list`, `dict`, `set`, `span`, and shaped `array` receivers, so common
+  `value = items[i]` assignments do not fall back to raw expression text
 - C++ `if constexpr` detection for build-only conditions uses parsed condition
   expressions, with raw text scanning only as an unknown-expression fallback
 - C++ expression emission writes string, integer, and float literal expression
