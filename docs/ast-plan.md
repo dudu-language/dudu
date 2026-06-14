@@ -338,6 +338,11 @@ Comma-separated expression children now keep their own source columns for call
 arguments, list literals, tuple literals, set/dict entries, and template-call
 arguments parsed through expression lists.
 
+Dudu-defined function calls, function-pointer calls, static class functions, and
+Dudu-visible method calls now type-check parsed argument `Expr` nodes directly.
+Native calls, constructor calls, and template calls still use their specialized
+string-based paths until those subsystems accept structured argument nodes.
+
 ## Acceptance
 
 - Existing examples still compile and run.

@@ -99,6 +99,27 @@ void check_call_args(const FunctionScope& scope, const std::string& callee,
     }
 }
 
+void check_call_args_ast(const FunctionScope& scope, const std::string& callee,
+                         const FunctionSignature& signature, const std::vector<Expr>& args,
+                         const SourceLocation* location) {
+    if (location == nullptr)
+        return;
+    if ((!signature.variadic && args.size() != signature.params.size()) ||
+        (signature.variadic && args.size() < signature.params.size())) {
+        fail(*location, "function " + callee + " expects " +
+                            std::to_string(signature.params.size()) + " arguments, got " +
+                            std::to_string(args.size()));
+    }
+    for (size_t i = 0; i < signature.params.size(); ++i) {
+        const std::string got = infer_expr_ast(scope, args[i], location);
+        const std::string& expected = signature.params[i];
+        if (!can_assign_expr(scope, expected, args[i].text, got)) {
+            fail(*location, "argument " + std::to_string(i + 1) + " for " + callee + " expects " +
+                                expected + ", got " + got);
+        }
+    }
+}
+
 bool call_args_match(const FunctionScope& scope, const FunctionSignature& signature,
                      const std::vector<std::string>& args) {
     if ((!signature.variadic && args.size() != signature.params.size()) ||
@@ -114,11 +135,37 @@ bool call_args_match(const FunctionScope& scope, const FunctionSignature& signat
     return true;
 }
 
+bool call_args_match_ast(const FunctionScope& scope, const FunctionSignature& signature,
+                         const std::vector<Expr>& args) {
+    if ((!signature.variadic && args.size() != signature.params.size()) ||
+        (signature.variadic && args.size() < signature.params.size())) {
+        return false;
+    }
+    for (size_t i = 0; i < signature.params.size(); ++i) {
+        const std::string got = infer_expr_ast(scope, args[i], nullptr);
+        if (!can_assign_expr(scope, signature.params[i], args[i].text, got)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 std::optional<FunctionSignature> matching_signature(const FunctionScope& scope,
                                                     const std::vector<FunctionSignature>& options,
                                                     const std::vector<std::string>& args) {
     for (const FunctionSignature& signature : options) {
         if (call_args_match(scope, signature, args)) {
+            return signature;
+        }
+    }
+    return std::nullopt;
+}
+
+std::optional<FunctionSignature>
+matching_signature_ast(const FunctionScope& scope, const std::vector<FunctionSignature>& options,
+                       const std::vector<Expr>& args) {
+    for (const FunctionSignature& signature : options) {
+        if (call_args_match_ast(scope, signature, args)) {
             return signature;
         }
     }
@@ -523,7 +570,57 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
             return then_type.empty() ? else_type : then_type;
         }
         return infer_expr(scope, expr.text, use_location);
-    case ExprKind::Call:
+    case ExprKind::Call: {
+        const std::string callee = trim(expr.name);
+        if (known_type(scope.symbols, callee) ||
+            scope.symbols.classes.contains(resolve_alias(scope.symbols, callee))) {
+            return infer_expr(scope, expr.text, use_location);
+        }
+        if (const auto fn = scope.symbols.function_signatures.find(callee);
+            fn != scope.symbols.function_signatures.end()) {
+            check_call_args_ast(scope, callee, fn->second, expr.children, use_location);
+            return fn->second.return_type;
+        }
+        if (const auto local = scope.locals.find(callee); local != scope.locals.end()) {
+            FunctionSignature signature;
+            if (parse_function_type(resolve_alias(scope.symbols, local->second), signature)) {
+                check_call_args_ast(scope, callee, signature, expr.children, use_location);
+                return signature.return_type;
+            }
+        }
+        const size_t method_dot = callee.rfind('.');
+        if (method_dot != std::string::npos && is_member_path(callee)) {
+            const std::string receiver = trim(callee.substr(0, method_dot));
+            const std::string method_name = trim(callee.substr(method_dot + 1));
+            FunctionSignature signature;
+            if (!scope.locals.contains(receiver) && scope.symbols.classes.contains(receiver) &&
+                static_method_signature_for_type(scope.symbols, receiver, method_name, signature,
+                                                 use_location)) {
+                check_call_args_ast(scope, callee, signature, expr.children, use_location);
+                return signature.return_type;
+            }
+            const std::string receiver_type =
+                member_path_type(scope.symbols, scope.locals, nullptr, receiver, "");
+            if (method_signature_for_type(scope.symbols, receiver_type, method_name, signature,
+                                          use_location)) {
+                const std::vector<FunctionSignature> signatures =
+                    method_signatures_for_type(scope.symbols, receiver_type, method_name);
+                if (const auto match = matching_signature_ast(scope, signatures, expr.children)) {
+                    check_call_args_ast(scope, callee, *match, expr.children, use_location);
+                    return match->return_type;
+                }
+                if (foreign_cpp_type_name(resolve_alias(scope.symbols, receiver_type))) {
+                    for (const Expr& arg : expr.children) {
+                        (void)infer_expr_ast(scope, arg, use_location);
+                    }
+                    return "auto";
+                }
+                check_call_args_ast(scope, callee, signature, expr.children, use_location);
+                return signature.return_type;
+            }
+        }
+        return infer_expr(scope, expr.text, use_location);
+    }
     case ExprKind::TemplateCall:
     case ExprKind::CppEscape:
         return infer_expr(scope, expr.text, use_location);
