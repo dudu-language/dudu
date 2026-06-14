@@ -863,6 +863,9 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
     case ExprKind::NoneLiteral:
         return "None";
     case ExprKind::Lambda:
+        if (use_location != nullptr && expr.children.size() != 1) {
+            fail(*use_location, "lambda expression expects ':' body");
+        }
         return "lambda";
     case ExprKind::ListLiteral:
         return "list";

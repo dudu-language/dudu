@@ -189,6 +189,8 @@ Already structured:
 - unsupported `await` and expression-level `yield` forms parse into AST nodes
   and are rejected by the unsupported-feature pass without relying on raw text
   scanning
+- malformed lambda expressions are rejected during semantic checking instead of
+  being emitted through the raw expression fallback and left to the C++ compiler
 
 Still too string-based:
 

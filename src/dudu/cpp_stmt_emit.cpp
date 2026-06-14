@@ -264,7 +264,7 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
 std::string lower_lambda_expr(const Expr& expr, const std::vector<std::string>& aliases,
                               const std::map<std::string, std::string>& locals) {
     if (expr.children.size() != 1) {
-        return lower_expr(expr.text, aliases, locals);
+        return {};
     }
     std::ostringstream out;
     out << "[&](";
