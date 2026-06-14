@@ -1228,6 +1228,8 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
         FunctionScope nested = scope;
         if (!stmt.name.empty() && !stmt.type.empty() && !stmt.iterable.empty()) {
             check_local_binding_name(stmt.location, stmt.name);
+            check_known_type_ref(scope.symbols, node_location(stmt.location, stmt.type_ref),
+                                 stmt.type_ref, "unknown loop binding type: ");
             check_iterable_binding(scope.symbols, scope.locals,
                                    node_location(stmt.location, stmt.iterable_expr), stmt.type,
                                    stmt.iterable);

@@ -1,0 +1,3 @@
+def bad(values: list[i32]):
+    for value: list[MissingType] in values:
+        pass

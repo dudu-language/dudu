@@ -91,6 +91,7 @@ fi
 grep -q "runtime assert is not available in embedded target mode" \
     "$repo_root/build/bad_embedded_assert.err"
 expect_fail bad_for_binding_type --emit-cpp "loop binding expects bool, got i32"
+expect_fail bad_nested_for_type --emit-cpp "unknown loop binding type: MissingType"
 expect_fail bad_for_non_container --emit-cpp "cannot iterate non-container: value"
 expect_fail bad_build_flag --check "unknown build flag: build.NOPE"
 expect_fail bad_implicit_cast --emit-cpp "cannot assign i32 to i64 without an explicit cast"
