@@ -361,6 +361,10 @@ destructuring from parsed target expressions. C++ emission uses parsed
 assignment value expressions for those paths instead of lowering raw right-hand
 side text.
 
+Local variable C++ emission now lowers explicit declaration types through the
+parsed `TypeRef`. It still uses computed canonical type text when array literal
+shape inference changes the declared type.
+
 Bare comma expressions now parse as tuple literals, including Python-style
 multi-value returns. The shared AST comma splitter is quote-aware so commas
 inside string literals do not create phantom tuple elements.

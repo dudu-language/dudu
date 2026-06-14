@@ -358,6 +358,12 @@ std::string cpp_string_literal(std::string text) {
     return out;
 }
 
+std::string lower_declared_stmt_type(const Stmt& stmt, const std::string& effective_type,
+                                     const std::vector<std::string>& aliases) {
+    return effective_type == stmt.type ? lower_cpp_type(stmt.type_ref, aliases)
+                                       : lower_cpp_type(effective_type, aliases);
+}
+
 void emit_cpp_escape(std::ostringstream& out, const std::string& text, int depth) {
     std::istringstream body(cpp_escape_body(text));
     std::string line;
@@ -434,7 +440,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         const std::string type =
             inferred.status == ArrayShapeStatus::Inferred ? inferred.type : stmt.type;
         locals[name] = type;
-        out << indent(depth) << lower_cpp_type(type, aliases) << ' ' << name;
+        out << indent(depth) << lower_declared_stmt_type(stmt, type, aliases) << ' ' << name;
         if (!stmt.value.empty()) {
             const std::string& value = stmt.value;
             if (starts_with(type, "Option[") && value == "None") {
@@ -456,7 +462,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                 out << " = {" << lower_expr(value.substr(1, value.size() - 2), aliases, locals)
                     << '}';
             } else if (is_tuple_literal(value)) {
-                out << " = " << lower_cpp_type(type, aliases) << "{"
+                out << " = " << lower_declared_stmt_type(stmt, type, aliases) << "{"
                     << lower_expr(tuple_literal_body(value), aliases, locals) << '}';
             } else {
                 out << " = " << lower_expr(value, aliases, locals);
