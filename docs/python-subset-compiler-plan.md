@@ -316,7 +316,7 @@ list[T]             -> std::vector<T>
 dict[K, V]          -> std::unordered_map<K, V>
 set[T]              -> std::unordered_set<T>
 tuple[...]          -> generated aggregate by default
-array[T]            -> dynamic contiguous storage
+array[T] = literal  -> fixed contiguous storage with inferred shape
 array[T][N]         -> fixed contiguous storage
 array[T][M, N]      -> fixed contiguous matrix/tensor storage
 *T                  -> T*
@@ -866,6 +866,7 @@ Performance policy:
 - No hidden dynamic dispatch unless requested by the type being used.
 - No hidden heap allocation for value construction.
 - `list[T]` lowers to an owning dynamic array such as `std::vector<T>`.
+- `array[T] = literal` lowers to fixed contiguous storage with inferred shape.
 - `array[T][N]` lowers to fixed storage such as `std::array<T, N>`.
 - `array[T][M, N]` lowers to fixed contiguous matrix/tensor storage.
 - Tuple returns lower to small generated aggregates.
