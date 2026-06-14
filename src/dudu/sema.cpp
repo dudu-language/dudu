@@ -512,7 +512,7 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols) {
             check_block(scope, method.body,
                         method.return_type.empty() ? "void" : method.return_type, 0);
             if (!method.return_type.empty() && method.return_type != "void" &&
-                !block_guarantees_return(method.body)) {
+                !block_guarantees_return(method.statements)) {
                 fail(method.location, "missing return in function: " + method.name);
             }
         }
@@ -524,7 +524,7 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols) {
         }
         check_block(scope, fn.body, fn.return_type.empty() ? "void" : fn.return_type, 0);
         if (!fn.return_type.empty() && fn.return_type != "void" &&
-            !block_guarantees_return(fn.body)) {
+            !block_guarantees_return(fn.statements)) {
             fail(fn.location, "missing return in function: " + fn.name);
         }
     }
