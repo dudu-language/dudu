@@ -609,6 +609,20 @@ void fill_for(Stmt& stmt, std::string_view text) {
     stmt.iterable = strip_trailing_colon(header.substr(in_pos + 2));
 }
 
+void fill_except(Stmt& stmt, std::string_view text) {
+    const std::string header = strip_trailing_colon(text.substr(6));
+    if (header.empty()) {
+        return;
+    }
+    const size_t colon = find_top_level_colon_before_assign(header);
+    if (colon == std::string_view::npos) {
+        stmt.condition = header;
+        return;
+    }
+    stmt.name = trim_string(std::string_view(header).substr(0, colon));
+    stmt.type = trim_string(std::string_view(header).substr(colon + 1));
+}
+
 void fill_assert(Stmt& stmt, std::string_view text, SourceLocation location,
                  std::string_view keyword) {
     const std::string_view body = trim_view(text.substr(keyword.size()));
@@ -1115,6 +1129,11 @@ Stmt statement_from_text(std::string raw_text, SourceLocation location, SourceRa
             parse_type_text(stmt.type, location_for_piece(location, stmt.text, stmt.type));
         stmt.iterable_expr =
             parse_expr_text(stmt.iterable, location_for_piece(location, stmt.text, stmt.iterable));
+        break;
+    case StmtKind::Except:
+        fill_except(stmt, text);
+        stmt.type_ref =
+            parse_type_text(stmt.type, location_for_piece(location, stmt.text, stmt.type));
         break;
     case StmtKind::Assert:
         fill_assert(stmt, text, location, "assert");

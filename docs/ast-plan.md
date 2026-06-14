@@ -352,6 +352,10 @@ Assert and debug_assert statements now store separate condition and message
 expression nodes. Semantic checks and C++ emission no longer split their
 condition/message pieces from raw statement strings.
 
+Except clauses now store structured catch binding and catch type fields.
+Semantic checks and C++ emission no longer parse catch headers from raw
+statement text.
+
 Bare comma expressions now parse as tuple literals, including Python-style
 multi-value returns. The shared AST comma splitter is quote-aware so commas
 inside string literals do not create phantom tuple elements.

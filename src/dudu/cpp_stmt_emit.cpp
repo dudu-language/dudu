@@ -152,14 +152,6 @@ size_t find_top_level_colon(const std::string& text) {
     return std::string::npos;
 }
 
-std::string strip_trailing_colon(std::string text) {
-    text = trim_copy(std::move(text));
-    if (!text.empty() && text.back() == ':') {
-        text.pop_back();
-    }
-    return trim_copy(std::move(text));
-}
-
 bool is_identifier_char(char c) {
     return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_';
 }
@@ -533,15 +525,12 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         return;
     }
     if (stmt.kind == StmtKind::Except) {
-        const std::string header = strip_trailing_colon(text.substr(6));
-        const size_t colon = find_top_level_colon(header);
         out << indent(depth);
-        if (trim_copy(header).empty() || colon == std::string::npos) {
+        if (stmt.name.empty() || stmt.type.empty()) {
             out << "catch (...)";
         } else {
-            const std::string name = trim_copy(header.substr(0, colon));
-            const std::string type = trim_copy(header.substr(colon + 1));
-            out << "catch (const " << lower_cpp_type(type, aliases) << "& " << name << ")";
+            out << "catch (const " << lower_cpp_type(stmt.type_ref, aliases) << "& " << stmt.name
+                << ")";
         }
         out << " {\n";
         emit_block(out, stmt.children, depth + 1, aliases, locals, return_type, function_returns);

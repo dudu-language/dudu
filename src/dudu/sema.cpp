@@ -809,19 +809,14 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
     }
     if (stmt.kind == StmtKind::Except) {
         FunctionScope nested = scope;
-        std::string header = trim(text.substr(6));
-        if (!header.empty() && header.back() == ':')
-            header.pop_back();
-        const size_t colon = find_top_level_char(header, ':');
-        if (!header.empty() && colon == std::string::npos)
+        if (!stmt.condition.empty())
             fail(stmt.location, "expected except binding as name: Type");
-        if (colon != std::string::npos) {
-            const std::string name = trim(header.substr(0, colon));
-            const std::string type = trim(header.substr(colon + 1));
-            check_local_binding_name(stmt.location, name);
-            if (!known_type(scope.symbols, type))
-                fail(stmt.location, "unknown catch type: " + type);
-            nested.locals[name] = "&const[" + type + "]";
+        if (!stmt.name.empty()) {
+            check_local_binding_name(stmt.location, stmt.name);
+            if (!known_type(scope.symbols, stmt.type))
+                fail(node_location(stmt.location, stmt.type_ref),
+                     "unknown catch type: " + stmt.type);
+            nested.locals[stmt.name] = "&const[" + stmt.type + "]";
         }
         check_block(nested, stmt.children, return_type, loop_depth);
         return;
