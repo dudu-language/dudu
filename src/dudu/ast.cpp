@@ -374,6 +374,14 @@ size_t find_top_level_binary_operator(std::string_view text,
                 (i == 0 || text[i - 1] == '(' || text[i - 1] == '[' || text[i - 1] == ',')) {
                 continue;
             }
+            if (op == "<" &&
+                ((i > 0 && text[i - 1] == '<') || (i + 1 < text.size() && text[i + 1] == '<'))) {
+                continue;
+            }
+            if (op == ">" &&
+                ((i > 0 && text[i - 1] == '>') || (i + 1 < text.size() && text[i + 1] == '>'))) {
+                continue;
+            }
             return i;
         }
     }
@@ -829,7 +837,9 @@ Expr parse_expr_text(std::string_view text, SourceLocation location) {
     }
 
     const std::vector<std::vector<std::string_view>> precedence = {
-        {"or"}, {"and"}, {"==", "!=", "<=", ">=", "<", ">"}, {"+", "-"}, {"*", "/", "%"},
+        {"or"},       {"and"},    {"==", "!=", "<=", ">=", "<", ">"},
+        {"|"},        {"^"},      {"&"},
+        {"<<", ">>"}, {"+", "-"}, {"*", "/", "%"},
     };
     for (const std::vector<std::string_view>& ops : precedence) {
         const size_t op_pos = find_top_level_binary_operator(text, ops);

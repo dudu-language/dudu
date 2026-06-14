@@ -242,11 +242,12 @@ void test_expression_ast_shape() {
                            "    if not ready or count < 3:\n"
                            "        player.inventory[slot].name = Vec4[f32](1.0, 0.0, 0.0, 1.0)\n"
                            "    values: list[i32] = [1, 2, 3]\n"
+                           "    flags: i32 = mask & (1 << bit)\n"
                            "    return answer\n",
                            "expression_ast.dd");
     assert(module.functions.size() == 1);
     const dudu::FunctionDecl& main = module.functions.front();
-    assert(main.statements.size() == 4);
+    assert(main.statements.size() == 5);
 
     const dudu::Stmt& answer = main.statements[0];
     assert(answer.kind == dudu::StmtKind::VarDecl);
@@ -285,6 +286,13 @@ void test_expression_ast_shape() {
     assert(values.value_expr.children.size() == 3);
     assert(values.value_expr.range.start.line == 5);
     assert(values.value_expr.range.start.column > values.location.column);
+
+    const dudu::Stmt& flags = main.statements[3];
+    assert(flags.kind == dudu::StmtKind::VarDecl);
+    assert(flags.value_expr.kind == dudu::ExprKind::Binary);
+    assert(flags.value_expr.op == "&");
+    assert(flags.value_expr.children[1].kind == dudu::ExprKind::Binary);
+    assert(flags.value_expr.children[1].op == "<<");
 }
 
 void test_type_ast_shape() {

@@ -330,8 +330,9 @@ nodes for returns, assignments, local initializer inference, conditions, array
 literal element checks, and expression statements. Core AST expression kinds
 such as literals, names, unary/binary expressions, tuples, conditionals,
 member/index access, and collection literals are handled structurally. Complex
-calls and operators not yet represented correctly by the expression parser keep
-falling back to the old string inference path until the AST grows those nodes.
+calls still fall back to the old string inference path until the AST grows those
+nodes. Binary expression parsing covers logical, comparison, bitwise, shift,
+arithmetic, and modulo operators.
 
 ## Acceptance
 
