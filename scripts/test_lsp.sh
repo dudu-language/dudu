@@ -57,10 +57,12 @@ native_source = "\n".join(
     [
         'import c "native_headers/simple_c.h" as dudu_native',
         'import cpp "native_headers/simple_cpp.hpp" as native_cpp',
+        "import lsp_workspace_helper as helper",
         "",
         "def main() -> i32:",
         "    widget: native_cpp.Widget = native_cpp.Widget(3)",
         "    widget.scaled(2)",
+        "    helper.workspace_helper()",
         "    return dudu_native.dudu_native_add(20, 22)",
         "# dudu_native.DUDU_NATIVE_SCALE",
         "# workspace_helper",
@@ -213,7 +215,7 @@ messages = [
             "method": "textDocument/hover",
             "params": {
                 "textDocument": {"uri": native_uri},
-                "position": {"line": 6, "character": 30},
+                "position": {"line": 8, "character": 30},
             },
         }
     ),
@@ -224,7 +226,7 @@ messages = [
             "method": "textDocument/definition",
             "params": {
                 "textDocument": {"uri": native_uri},
-                "position": {"line": 6, "character": 30},
+                "position": {"line": 8, "character": 30},
             },
         }
     ),
@@ -235,7 +237,7 @@ messages = [
             "method": "textDocument/completion",
             "params": {
                 "textDocument": {"uri": native_uri},
-                "position": {"line": 6, "character": 11},
+                "position": {"line": 8, "character": 11},
             },
         }
     ),
@@ -246,7 +248,7 @@ messages = [
             "method": "textDocument/signatureHelp",
             "params": {
                 "textDocument": {"uri": native_uri},
-                "position": {"line": 6, "character": 44},
+                "position": {"line": 8, "character": 44},
             },
         }
     ),
@@ -257,7 +259,7 @@ messages = [
             "method": "textDocument/hover",
             "params": {
                 "textDocument": {"uri": native_uri},
-                "position": {"line": 7, "character": 17},
+                "position": {"line": 9, "character": 17},
             },
         }
     ),
@@ -268,7 +270,18 @@ messages = [
             "method": "textDocument/completion",
             "params": {
                 "textDocument": {"uri": native_uri},
-                "position": {"line": 5, "character": 11},
+                "position": {"line": 6, "character": 11},
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 23,
+            "method": "textDocument/completion",
+            "params": {
+                "textDocument": {"uri": native_uri},
+                "position": {"line": 7, "character": 11},
             },
         }
     ),
@@ -279,7 +292,7 @@ messages = [
             "method": "textDocument/references",
             "params": {
                 "textDocument": {"uri": native_uri},
-                "position": {"line": 8, "character": 5},
+                "position": {"line": 10, "character": 5},
             },
         }
     ),
@@ -431,6 +444,11 @@ native_member_labels = [item["label"] for item in native_member_completion["resu
 assert "value" in native_member_labels
 assert "scaled" in native_member_labels
 assert "return" not in native_member_labels
+
+module_completion = next(item for item in responses if item.get("id") == 23)
+module_completion_labels = [item["label"] for item in module_completion["result"]]
+assert "workspace_helper" in module_completion_labels
+assert "return" not in module_completion_labels
 
 workspace_references = next(item for item in responses if item.get("id") == 18)
 workspace_reference_uris = {item["uri"] for item in workspace_references["result"]}

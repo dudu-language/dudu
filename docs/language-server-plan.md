@@ -189,8 +189,9 @@ keywords, built-in types, and open-document Dudu symbols, and initial
 `textDocument/signatureHelp` support is implemented for open-document Dudu
 functions. VS Code now uses LSP completions and signature help. Initial
 member-aware completion is implemented for Dudu-native class locals with simple
-type annotations. Completion resolve, module symbol completion, deeper local
-scope completion, and native member completion remain.
+type annotations, and imported Dudu module aliases complete symbols from the
+imported file. Completion resolve, deeper local scope completion, and richer
+snippet coverage remain.
 
 ### Milestone 4: Native Header Navigation
 
@@ -253,6 +254,7 @@ formatting, Dudu symbols, references, rename, workspace symbols, native fixture
 imports, native macro hover/completion, and strict missing-header diagnostics.
 It also covers workspace symbols and references from an unopened sibling `.dd`
 file, plus Dudu-native and native C++ member completion.
+Imported Dudu module completion is covered with an unopened sibling module.
 
 ## Non-Goals
 

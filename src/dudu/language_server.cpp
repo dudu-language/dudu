@@ -993,6 +993,10 @@ class LanguageServer {
     }
 
     std::string member_completion_result(const Document& doc, const std::string& target) const {
+        if (const std::optional<std::string> module_result =
+                module_completion_result(doc, target)) {
+            return *module_result;
+        }
         const std::string type = local_type_before_cursor(doc, target);
         if (type.empty()) {
             return "[]";
@@ -1048,6 +1052,49 @@ class LanguageServer {
         }
         out << "]";
         return out.str();
+    }
+
+    std::optional<std::string> module_completion_result(const Document& doc,
+                                                        const std::string& target) const {
+        ModuleAst module;
+        try {
+            module = parse_source(doc.text, doc.path);
+        } catch (const std::exception&) {
+            return std::nullopt;
+        }
+        for (const ImportDecl& import : module.imports) {
+            if (import.kind != ImportKind::Module || bound_import_name(import) != target) {
+                continue;
+            }
+            const std::filesystem::path file =
+                module_path_to_file(doc.path.parent_path(), import.module_path);
+            std::ifstream input(file);
+            if (!input) {
+                return "[]";
+            }
+            const std::string text{std::istreambuf_iterator<char>(input),
+                                   std::istreambuf_iterator<char>()};
+            const Document imported{
+                .uri = file_uri(file),
+                .path = file,
+                .text = text,
+            };
+            std::ostringstream out;
+            out << "[";
+            bool first = true;
+            for (const Symbol& symbol : symbols_for(imported, false)) {
+                if (!first) {
+                    out << ",";
+                }
+                first = false;
+                out << "{\"label\":\"" << json_escape(symbol.name)
+                    << "\",\"kind\":" << completion_kind(symbol.kind) << ",\"detail\":\""
+                    << json_escape(symbol.detail) << "\"}";
+            }
+            out << "]";
+            return out.str();
+        }
+        return std::nullopt;
     }
 
     static std::set<std::string> member_candidate_types(const ModuleAst& module,
@@ -1375,6 +1422,23 @@ class LanguageServer {
             absolute = std::filesystem::absolute(absolute);
         }
         return "file://" + absolute.lexically_normal().string();
+    }
+
+    static std::filesystem::path module_path_to_file(const std::filesystem::path& base,
+                                                     const std::string& module_path) {
+        std::filesystem::path out = base;
+        size_t start = 0;
+        while (start < module_path.size()) {
+            const size_t dot = module_path.find('.', start);
+            const size_t end = dot == std::string::npos ? module_path.size() : dot;
+            out /= module_path.substr(start, end - start);
+            if (dot == std::string::npos) {
+                break;
+            }
+            start = dot + 1;
+        }
+        out += ".dd";
+        return out;
     }
 
     static std::vector<ReferenceLocation> references_in(const Document& doc,
