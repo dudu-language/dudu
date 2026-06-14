@@ -316,6 +316,29 @@ FunctionSignature instantiate_generic_signature(const FunctionDecl& fn,
     return signature;
 }
 
+ClassDecl instantiate_generic_class(ClassDecl klass, const std::vector<TypeRef>& args,
+                                    const std::string& instantiated_name) {
+    klass.name = instantiated_name;
+    for (FieldDecl& field : klass.fields) {
+        field.type = substitute_generic_type(std::move(field.type), klass.generic_params, args);
+    }
+    for (ConstDecl& field : klass.static_fields) {
+        field.type = substitute_generic_type(std::move(field.type), klass.generic_params, args);
+    }
+    for (ConstDecl& constant : klass.constants) {
+        constant.type = substitute_generic_type(std::move(constant.type), klass.generic_params,
+                                                args);
+    }
+    for (FunctionDecl& method : klass.methods) {
+        method.return_type = substitute_generic_type(std::move(method.return_type),
+                                                     klass.generic_params, args);
+        for (ParamDecl& param : method.params) {
+            param.type = substitute_generic_type(std::move(param.type), klass.generic_params, args);
+        }
+    }
+    return klass;
+}
+
 std::string join_type_ref_texts(const std::vector<TypeRef>& types) {
     std::ostringstream out;
     for (size_t i = 0; i < types.size(); ++i) {
@@ -740,6 +763,33 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
         const FunctionSignature signature = instantiate_generic_signature(*fn->second, type_args);
         check_call_args_ast(scope, callee, signature, expr.children, location);
         return signature.return_type;
+    }
+
+    if (const auto klass = scope.symbols.classes.find(resolve_alias(scope.symbols, callee_base));
+        klass != scope.symbols.classes.end() && !klass->second->generic_params.empty()) {
+        const std::vector<TypeRef> type_args = template_type_refs(expr);
+        if (location != nullptr && type_args.size() != klass->second->generic_params.size()) {
+            fail(*location, "type " + callee_base + " expects " +
+                                std::to_string(klass->second->generic_params.size()) +
+                                " type arguments, got " + std::to_string(type_args.size()));
+        }
+        if (location != nullptr) {
+            for (const TypeRef& type_arg : type_args) {
+                if (const auto unknown = unknown_type_ref(scope.symbols, type_arg)) {
+                    const SourceLocation type_location =
+                        unknown->second.line > 0 ? unknown->second : type_arg.location;
+                    fail(type_location, "unknown generic argument type: " + unknown->first);
+                }
+            }
+        }
+        const ClassDecl instantiated =
+            instantiate_generic_class(*klass->second, type_args, callee);
+        check_constructor_args_ast(
+            scope, instantiated, expr.children, location, infer_expr_ast,
+            [&](const std::string& expected, const Expr& value, const std::string& got) {
+                return can_assign_ast(scope, expected, value, got);
+            });
+        return callee;
     }
 
     if (const auto signature = native_signature_for_call(

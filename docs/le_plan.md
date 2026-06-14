@@ -298,11 +298,12 @@ push. They are not release packaging work.
    parses into the AST, type parameters are visible while checking declarations
    and bodies, duplicate generic parameters are diagnosed, and generic
    classes/functions emit readable C++ templates. Explicit generic class
-   construction works for simple value-type examples such as `Box[i32]`.
-   Explicit generic free-function calls such as `identity[i32](42)` instantiate
-   Dudu signatures from parsed template-call nodes and type-check parsed
-   runtime arguments. Call-site inference, generic methods, non-type
-   parameters, and richer instantiated diagnostics remain.
+   construction works for simple value-type examples such as `Box[i32]`, and
+   constructor arguments are checked against instantiated fields or `init`
+   signatures. Explicit generic free-function calls such as
+   `identity[i32](42)` instantiate Dudu signatures from parsed template-call
+   nodes and type-check parsed runtime arguments. Call-site inference, generic
+   methods, non-type parameters, and richer instantiated diagnostics remain.
 
 6. Sum Types And Pattern Matching
 
