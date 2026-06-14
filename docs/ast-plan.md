@@ -119,6 +119,10 @@ Already structured:
 - generated local C++ type inference also follows parsed index expressions for
   local `list`, `dict`, `set`, `span`, and shaped `array` receivers, so common
   `value = items[i]` assignments do not fall back to raw expression text
+- generated local C++ type inference handles parsed literals, unary
+  address/deref/not/minus expressions, binary expressions, conditionals, and
+  parsed template callees conservatively, so common `value = count + 1` style
+  locals do not need raw expression inference
 - C++ `if constexpr` detection for build-only conditions uses parsed condition
   expressions, with raw text scanning only as an unknown-expression fallback
 - C++ expression emission writes string, integer, and float literal expression

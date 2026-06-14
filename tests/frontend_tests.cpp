@@ -219,6 +219,9 @@ void test_legacy_allocation_type_ref_diagnostics() {
 
 void test_emitted_local_index_type_inference() {
     const std::map<std::string, std::string> locals = {
+        {"flag", "bool"},
+        {"count", "i32"},
+        {"scale", "f32"},
         {"values", "list[i32]"},
         {"names", "dict[str, Player]"},
         {"matrix", "array[f32][3, 4]"},
@@ -233,6 +236,42 @@ void test_emitted_local_index_type_inference() {
            "array[f32][4]");
     assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("matrix[1, 2]"), locals,
                                           functions) == "f32");
+}
+
+void test_emitted_local_expression_type_inference() {
+    const std::map<std::string, std::string> locals = {
+        {"flag", "bool"},
+        {"count", "i32"},
+        {"scale", "f32"},
+    };
+    const std::map<std::string, std::string> functions = {
+        {"make_count", "i32"},
+    };
+
+    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("True"), locals, functions) ==
+           "bool");
+    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("1_024"), locals, functions) ==
+           "i32");
+    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("1.5"), locals, functions) ==
+           "f64");
+    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("\"hi\""), locals, functions) ==
+           "str");
+    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("&count"), locals, functions) ==
+           "*i32");
+    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("*&count"), locals, functions) ==
+           "i32");
+    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("not flag"), locals, functions) ==
+           "bool");
+    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("count + 2"), locals, functions) ==
+           "i32");
+    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("scale + 2"), locals, functions) ==
+           "f32");
+    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("count < 4"), locals, functions) ==
+           "bool");
+    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("1 if flag else 2"), locals,
+                                          functions) == "i32");
+    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("make_count()"), locals,
+                                          functions) == "i32");
 }
 
 void test_ast_assignment_display_types() {
@@ -949,6 +988,7 @@ int main() {
         test_semantic_diagnostics();
         test_legacy_allocation_type_ref_diagnostics();
         test_emitted_local_index_type_inference();
+        test_emitted_local_expression_type_inference();
         test_ast_assignment_display_types();
         test_ast_constructor_assignment_compatibility();
         test_statement_ast_shape();

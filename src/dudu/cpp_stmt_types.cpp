@@ -117,6 +117,35 @@ std::string infer_call_type(const std::string& callee,
     return {};
 }
 
+std::string infer_binary_expr_type(const Expr& expr,
+                                   const std::map<std::string, std::string>& locals,
+                                   const std::map<std::string, std::string>& function_returns) {
+    if (expr.children.size() != 2) {
+        return {};
+    }
+    if (expr.op == "and" || expr.op == "or" || expr.op == "==" || expr.op == "!=" ||
+        expr.op == "<" || expr.op == "<=" || expr.op == ">" || expr.op == ">=") {
+        return "bool";
+    }
+    const std::string left = infer_emitted_local_type(expr.children[0], locals, function_returns);
+    const std::string right = infer_emitted_local_type(expr.children[1], locals, function_returns);
+    if (left.empty()) {
+        return right;
+    }
+    if (right.empty() || right == left) {
+        return left;
+    }
+    if ((left == "f64" || right == "f64") && (left == "f64" || left == "f32" || left == "i32") &&
+        (right == "f64" || right == "f32" || right == "i32")) {
+        return "f64";
+    }
+    if ((left == "f32" || right == "f32") && (left == "f32" || left == "i32") &&
+        (right == "f32" || right == "i32")) {
+        return "f32";
+    }
+    return {};
+}
+
 } // namespace
 
 std::string infer_emitted_local_type(const std::string& expr,
@@ -137,25 +166,87 @@ std::string infer_emitted_local_type(const std::string& expr,
 std::string infer_emitted_local_type(const Expr& expr,
                                      const std::map<std::string, std::string>& locals,
                                      const std::map<std::string, std::string>& function_returns) {
-    if (expr.kind == ExprKind::Name) {
+    switch (expr.kind) {
+    case ExprKind::BoolLiteral:
+        return "bool";
+    case ExprKind::IntLiteral:
+        return "i32";
+    case ExprKind::FloatLiteral:
+        return "f64";
+    case ExprKind::StringLiteral:
+        return "str";
+    case ExprKind::NoneLiteral:
+        return "None";
+    case ExprKind::Name:
         if (const auto local = locals.find(expr.name); local != locals.end()) {
             return local->second;
         }
-    }
-    if (expr.kind == ExprKind::Call) {
+        return {};
+    case ExprKind::Unary:
+        if (expr.children.size() != 1) {
+            return {};
+        }
+        if (expr.op == "not") {
+            return "bool";
+        }
+        if (expr.op == "&") {
+            const std::string child =
+                infer_emitted_local_type(expr.children.front(), locals, function_returns);
+            return child.empty() ? std::string{} : "*" + child;
+        }
+        if (expr.op == "*") {
+            std::string child = trim_copy(
+                infer_emitted_local_type(expr.children.front(), locals, function_returns));
+            if (!child.empty() && child.front() == '*') {
+                return trim_copy(child.substr(1));
+            }
+            return {};
+        }
+        if (expr.op == "-") {
+            return infer_emitted_local_type(expr.children.front(), locals, function_returns);
+        }
+        return {};
+    case ExprKind::Binary:
+        return infer_binary_expr_type(expr, locals, function_returns);
+    case ExprKind::Conditional:
+        if (expr.children.size() == 3) {
+            const std::string then_type =
+                infer_emitted_local_type(expr.children[0], locals, function_returns);
+            const std::string else_type =
+                infer_emitted_local_type(expr.children[2], locals, function_returns);
+            return then_type == else_type ? then_type : std::string{};
+        }
+        return {};
+    case ExprKind::Call:
         return infer_call_type(call_callee_text(expr), locals, function_returns);
-    }
-    if (expr.kind == ExprKind::Index && expr.children.size() == 2 &&
-        expr.children[0].kind == ExprKind::Name) {
-        if (const auto local = locals.find(expr.children[0].name); local != locals.end()) {
-            if (const std::string indexed_type =
-                    indexed_local_type(local->second, expr.children[1]);
-                !indexed_type.empty()) {
-                return indexed_type;
+    case ExprKind::Index:
+        if (expr.children.size() == 2 && expr.children[0].kind == ExprKind::Name) {
+            if (const auto local = locals.find(expr.children[0].name); local != locals.end()) {
+                if (const std::string indexed_type =
+                        indexed_local_type(local->second, expr.children[1]);
+                    !indexed_type.empty()) {
+                    return indexed_type;
+                }
             }
         }
+        return {};
+    case ExprKind::TemplateCall:
+        return infer_call_type(call_callee_text(expr), locals, function_returns);
+    case ExprKind::Unknown:
+        return infer_emitted_local_type(expr.text, locals, function_returns);
+    case ExprKind::CppEscape:
+    case ExprKind::DictEntry:
+    case ExprKind::DictLiteral:
+    case ExprKind::Lambda:
+    case ExprKind::ListLiteral:
+    case ExprKind::Member:
+    case ExprKind::NamedArg:
+    case ExprKind::SetLiteral:
+    case ExprKind::Slice:
+    case ExprKind::TupleLiteral:
+        return {};
     }
-    return infer_emitted_local_type(expr.text, locals, function_returns);
+    return {};
 }
 
 } // namespace dudu
