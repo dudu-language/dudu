@@ -82,6 +82,8 @@ Already structured:
 - integer and float literal parsing recognizes underscore separators, and
   integer literals recognize `0x`, `0b`, and `0o` prefixes so systems-style
   constants stay on the literal AST path
+- LSP local type inference recognizes the same systems numeric literal shapes,
+  keeping hover behavior aligned with compiler literal parsing
 
 Still too string-based:
 

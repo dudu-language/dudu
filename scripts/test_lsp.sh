@@ -211,7 +211,10 @@ messages = [
                             "def main(amount: i32) -> i32:",
                             "    inferred = 42",
                             "    explicit: f32 = 2.0",
-                            "    return amount + inferred",
+                            "    hex_value = 0x2A",
+                            "    inferred",
+                            "    hex_value",
+                            "    return amount + inferred + hex_value",
                             "",
                         ]
                     ),
@@ -226,7 +229,7 @@ messages = [
             "method": "textDocument/hover",
             "params": {
                 "textDocument": {"uri": hover_locals_uri},
-                "position": {"line": 3, "character": 20},
+                "position": {"line": 4, "character": 6},
             },
         }
     ),
@@ -238,6 +241,17 @@ messages = [
             "params": {
                 "textDocument": {"uri": hover_locals_uri},
                 "position": {"line": 2, "character": 6},
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 45,
+            "method": "textDocument/hover",
+            "params": {
+                "textDocument": {"uri": hover_locals_uri},
+                "position": {"line": 5, "character": 6},
             },
         }
     ),
@@ -1072,6 +1086,9 @@ assert "inferred: i32" in inferred_hover["result"]["contents"]["value"]
 
 typed_hover = next(item for item in responses if item.get("id") == 40)
 assert "explicit: f32" in typed_hover["result"]["contents"]["value"]
+
+hex_hover = next(item for item in responses if item.get("id") == 45)
+assert "hex_value: i32" in hex_hover["result"]["contents"]["value"]
 
 doc_hover = next(item for item in responses if item.get("id") == 41)
 doc_hover_value = doc_hover["result"]["contents"]["value"]

@@ -2211,13 +2211,54 @@ class LanguageServer {
         if (expr.empty()) {
             return false;
         }
-        const size_t start = (expr.front() == '-' || expr.front() == '+') ? 1 : 0;
+        size_t start = (expr.front() == '-' || expr.front() == '+') ? 1 : 0;
+        if (start == expr.size()) {
+            return false;
+        }
+        auto valid_digit = [](char c, int base) {
+            if (c == '_') {
+                return true;
+            }
+            if (base <= 10) {
+                return c >= '0' && c < static_cast<char>('0' + base);
+            }
+            return std::isdigit(static_cast<unsigned char>(c)) != 0 ||
+                   (c >= 'a' && c < static_cast<char>('a' + base - 10)) ||
+                   (c >= 'A' && c < static_cast<char>('A' + base - 10));
+        };
+        int base = 10;
+        if (start + 1 < expr.size() && expr[start] == '0') {
+            const char prefix = expr[start + 1];
+            if (prefix == 'x' || prefix == 'X') {
+                base = 16;
+                start += 2;
+            } else if (prefix == 'b' || prefix == 'B') {
+                base = 2;
+                start += 2;
+            } else if (prefix == 'o' || prefix == 'O') {
+                base = 8;
+                start += 2;
+            }
+        }
+        if (start == expr.size()) {
+            return false;
+        }
         bool digit = false;
         bool dot = false;
         for (size_t i = start; i < expr.size(); ++i) {
             const char c = expr[i];
+            if (base != 10) {
+                if (!valid_digit(c, base)) {
+                    return false;
+                }
+                digit = digit || c != '_';
+                continue;
+            }
             if (std::isdigit(static_cast<unsigned char>(c)) != 0) {
                 digit = true;
+                continue;
+            }
+            if (c == '_') {
                 continue;
             }
             if (c == '.' && !dot) {
