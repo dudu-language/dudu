@@ -41,8 +41,9 @@ Already structured:
 - array/list/dict index type inference uses parsed index expressions where
   available, so tuple-shaped multi-index expressions no longer depend on raw
   comma splitting
-- native C/C++ overload checks for ordinary parsed calls consume expression
-  children directly instead of flattening arguments back to strings
+- native C/C++ overload checks for ordinary and explicit-template parsed calls
+  consume expression children directly instead of flattening arguments back to
+  strings
 
 Still too string-based:
 

@@ -500,7 +500,7 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
     }
 
     if (const auto signature = native_signature_for_call(
-            scope, callee, args, location, infer_expr,
+            scope, callee, expr.children, location, infer_expr_ast,
             [&](const std::string& expected, const std::string& value, const std::string& got) {
                 return can_assign_expr(scope, expected, value, got);
             })) {
