@@ -920,7 +920,39 @@ class LanguageServer {
                 return out.str();
             }
         }
+        if (const std::optional<std::string> import_definition =
+                import_definition_result(*doc, word)) {
+            return *import_definition;
+        }
         return "null";
+    }
+
+    std::optional<std::string> import_definition_result(const Document& doc,
+                                                        const std::string& word) const {
+        if (word.empty()) {
+            return std::nullopt;
+        }
+        const std::string root = word.substr(0, word.find('.'));
+        try {
+            const ModuleAst module = parse_source(doc.text, doc.path);
+            for (const ImportDecl& import : module.imports) {
+                if (import.kind != ImportKind::Module) {
+                    continue;
+                }
+                if (bound_import_name(import) != root && import.module_path != root) {
+                    continue;
+                }
+                const std::filesystem::path file =
+                    module_path_to_file(doc.path.parent_path(), import.module_path);
+                std::error_code error;
+                if (!std::filesystem::exists(file, error) || error) {
+                    return std::nullopt;
+                }
+                return location_json(file_uri(file), range_json(0, 0, 0));
+            }
+        } catch (const std::exception&) {
+        }
+        return std::nullopt;
     }
 
     std::string references_result(const Json* params) const {

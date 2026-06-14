@@ -174,7 +174,8 @@ Status: initial Dudu-only `definition`, `hover`, `documentSymbol`,
 `textDocument/references`, and `workspace/symbol` support is implemented for
 open documents and wired into the VS Code extension. Workspace symbols and
 references also scan unopened `.dd` files under the active project roots, with
-open buffers taking precedence. A fuller import-graph project index remains.
+open buffers taking precedence. Go-to-definition resolves Dudu module import
+aliases to imported module files. A fuller import-graph project index remains.
 
 ### Milestone 3: Completion And Signature Help
 
@@ -274,6 +275,8 @@ known missing native header package.
 Workspace rename is covered across an open definition file and an unopened
 sibling use file.
 Unreachable-statement lint diagnostics and remove-line quick fixes are covered.
+Go-to-definition for Dudu module import aliases is covered with an unopened
+module file.
 
 ## Non-Goals
 
