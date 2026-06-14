@@ -29,30 +29,16 @@ void add_name(std::map<std::string, SourceLocation>& names, const std::string& n
     }
 }
 
-void check_supported_type_shape(const SourceLocation& location, std::string type);
-
-void check_type_args(const SourceLocation& location, const std::string& args) {
-    for (const std::string& arg : split_top_level(args)) {
-        check_supported_type_shape(location, arg);
+void check_supported_type_shape(const SourceLocation& location, const TypeRef& type) {
+    if (type.kind == TypeKind::Template && type.name == "tuple" &&
+        (type.children.empty() || type.children.size() > 8)) {
+        const SourceLocation error_location = type.location.line > 0 ? type.location : location;
+        fail(error_location,
+             "tuple supports 1 to 8 elements, got " + std::to_string(type.children.size()));
     }
-}
-
-void check_supported_type_shape(const SourceLocation& location, std::string type) {
-    type = trim(std::move(type));
-    while (!type.empty() && (type.front() == '*' || type.front() == '&')) {
-        type = trim(type.substr(1));
+    for (const TypeRef& child : type.children) {
+        check_supported_type_shape(location, child);
     }
-    const size_t open = type.find('[');
-    if (open == std::string::npos || type.back() != ']') {
-        return;
-    }
-    const std::string name = trim(type.substr(0, open));
-    const std::string args = type.substr(open + 1, type.size() - open - 2);
-    const std::vector<std::string> parts = split_top_level(args);
-    if (name == "tuple" && (parts.empty() || parts.size() > 8)) {
-        fail(location, "tuple supports 1 to 8 elements, got " + std::to_string(parts.size()));
-    }
-    check_type_args(location, args);
 }
 
 bool decorator_is_call(std::string_view text, std::string_view name) {
@@ -458,12 +444,13 @@ Symbols collect_symbols(const ModuleAst& module) {
 
 void check_declarations(const ModuleAst& module, const Symbols& symbols) {
     for (const TypeAliasDecl& alias : module.aliases) {
-        check_supported_type_shape(alias.location, alias.type);
+        check_supported_type_shape(alias.location, alias.type_ref);
         check_known_type_ref(symbols, alias.location, alias.type_ref,
                              "unknown type alias target: ");
     }
     for (const EnumDecl& en : module.enums) {
         if (!en.underlying_type.empty()) {
+            check_supported_type_shape(en.location, en.underlying_type_ref);
             check_known_type_ref(symbols, en.location, en.underlying_type_ref,
                                  "unknown enum underlying type: ");
         }
@@ -483,14 +470,14 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
             if (!fields.insert(field.name).second) {
                 fail(field.location, "duplicate field: " + field.name);
             }
-            check_supported_type_shape(field.location, field.type);
+            check_supported_type_shape(field.location, field.type_ref);
             check_known_type_ref(symbols, field.location, field.type_ref, "unknown field type: ");
         }
         for (const ConstDecl& constant : klass.constants) {
             if (!fields.insert(constant.name).second) {
                 fail(constant.location, "duplicate class member: " + constant.name);
             }
-            check_supported_type_shape(constant.location, constant.type);
+            check_supported_type_shape(constant.location, constant.type_ref);
             check_known_type_ref(symbols, constant.location, constant.type_ref,
                                  "unknown class constant type: ");
         }
@@ -498,7 +485,7 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
             if (!fields.insert(field.name).second) {
                 fail(field.location, "duplicate class member: " + field.name);
             }
-            check_supported_type_shape(field.location, field.type);
+            check_supported_type_shape(field.location, field.type_ref);
             check_known_type_ref(symbols, field.location, field.type_ref,
                                  "unknown static field type: ");
         }
@@ -559,12 +546,13 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                 if (!params.insert(param.name).second) {
                     fail(param.location, "duplicate parameter: " + param.name);
                 }
-                check_supported_type_shape(param.location, param.type);
+                check_supported_type_shape(param.location, param.type_ref);
                 check_known_type_ref(symbols, param.location, param.type_ref,
                                      "unknown parameter type: ");
             }
-            check_supported_type_shape(method.location,
-                                       method.return_type.empty() ? "void" : method.return_type);
+            if (!method.return_type.empty()) {
+                check_supported_type_shape(method.location, method.return_type_ref);
+            }
             check_known_type_ref(symbols, method.location, method.return_type_ref,
                                  "unknown return type: ");
         }
@@ -590,11 +578,13 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
             if (!params.insert(param.name).second) {
                 fail(param.location, "duplicate parameter: " + param.name);
             }
-            check_supported_type_shape(param.location, param.type);
+            check_supported_type_shape(param.location, param.type_ref);
             check_known_type_ref(symbols, param.location, param.type_ref,
                                  "unknown parameter type: ");
         }
-        check_supported_type_shape(fn.location, fn.return_type.empty() ? "void" : fn.return_type);
+        if (!fn.return_type.empty()) {
+            check_supported_type_shape(fn.location, fn.return_type_ref);
+        }
         check_known_type_ref(symbols, fn.location, fn.return_type_ref, "unknown return type: ");
     }
 }

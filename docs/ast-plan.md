@@ -40,6 +40,8 @@ Already structured:
   enum underlying types, fields, parameters, returns, constants, and static
   fields, so nested unknown types in containers/callbacks are diagnosed at the
   nested type source location
+- declaration type-shape validation, including Dudu tuple arity limits, also
+  walks `TypeRef` nodes instead of re-splitting type strings
 - function-body validation uses the same recursive `TypeRef` checks for local
   variable annotations, catch bindings, and typed `for` loop bindings
 - template calls keep template arguments separate from runtime call arguments,
