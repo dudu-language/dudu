@@ -4,6 +4,7 @@
 
 #include <map>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace dudu {
@@ -49,6 +50,36 @@ struct ParamDecl {
 struct RawStmt {
     std::string text;
     std::vector<RawStmt> children;
+    SourceLocation location;
+};
+
+enum class StmtKind {
+    Unknown,
+    Expr,
+    VarDecl,
+    Assign,
+    CompoundAssign,
+    Return,
+    If,
+    Elif,
+    Else,
+    While,
+    For,
+    Break,
+    Continue,
+    Try,
+    Except,
+    Raise,
+    Assert,
+    DebugAssert,
+    CppEscape,
+    Pass,
+};
+
+struct Stmt {
+    StmtKind kind = StmtKind::Unknown;
+    std::string text;
+    std::vector<Stmt> children;
     SourceLocation location;
 };
 
@@ -110,6 +141,7 @@ struct FunctionDecl {
     std::vector<ParamDecl> params;
     std::string return_type;
     std::vector<RawStmt> body;
+    std::vector<Stmt> statements;
     SourceLocation location;
 };
 
@@ -156,5 +188,9 @@ struct ModuleAst {
 };
 
 std::string bound_import_name(const ImportDecl& import);
+std::string_view statement_kind_name(StmtKind kind);
+StmtKind classify_statement_text(std::string_view text);
+Stmt statement_from_raw(const RawStmt& raw);
+std::vector<Stmt> statements_from_raw(const std::vector<RawStmt>& raw);
 
 } // namespace dudu

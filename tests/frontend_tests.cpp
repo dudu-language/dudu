@@ -166,6 +166,30 @@ void test_semantic_diagnostics() {
     }
 }
 
+void test_statement_ast_shape() {
+    const dudu::ModuleAst module =
+        dudu::parse_source("def main() -> i32:\n"
+                           "    total: i32 = 0\n"
+                           "    if total == 0:\n"
+                           "        total += 42\n"
+                           "    else:\n"
+                           "        total = 1\n"
+                           "    return total\n",
+                           "statement_ast.dd");
+    assert(module.functions.size() == 1);
+    const dudu::FunctionDecl& main = module.functions.front();
+    assert(main.body.size() == main.statements.size());
+    assert(main.statements.size() == 4);
+    assert(main.statements[0].kind == dudu::StmtKind::VarDecl);
+    assert(main.statements[1].kind == dudu::StmtKind::If);
+    assert(main.statements[1].children.size() == 1);
+    assert(main.statements[1].children[0].kind == dudu::StmtKind::CompoundAssign);
+    assert(main.statements[2].kind == dudu::StmtKind::Else);
+    assert(main.statements[2].children.size() == 1);
+    assert(main.statements[2].children[0].kind == dudu::StmtKind::Assign);
+    assert(main.statements[3].kind == dudu::StmtKind::Return);
+}
+
 void test_formatter() {
     const std::string formatted = dudu::format_source("def main() -> i32:   \n"
                                                       "    return 0\t\n"
@@ -475,6 +499,7 @@ int main() {
         test_canonical_examples_parse(root);
         test_header_emission();
         test_semantic_diagnostics();
+        test_statement_ast_shape();
         test_formatter();
         test_typed_for_emission();
         test_native_type_declaration_emission();
