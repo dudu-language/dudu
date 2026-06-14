@@ -88,6 +88,9 @@ Already structured:
   instead of the raw statement condition field
 - frontend AST shape tests cover systems integer literals and `Slice`
   expression nodes directly
+- nested expression ranges advance through whitespace and delimiters for call,
+  template-call, list, dict, set, tuple, index, and slice shapes instead of
+  blindly inheriting parent expression starts
 
 Still too string-based:
 

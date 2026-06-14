@@ -62,6 +62,20 @@ SourceLocation advance_columns(SourceLocation location, size_t columns) {
     return location;
 }
 
+std::string_view trim_view_with_location(std::string_view text, SourceLocation& location) {
+    const size_t trim_start = text.find_first_not_of(" \t\r\n");
+    if (trim_start == std::string_view::npos) {
+        location = advance_columns(std::move(location), text.size());
+        return {};
+    }
+    location = advance_columns(std::move(location), trim_start);
+    text.remove_prefix(trim_start);
+    while (!text.empty() && std::isspace(static_cast<unsigned char>(text.back())) != 0) {
+        text.remove_suffix(1);
+    }
+    return text;
+}
+
 SourceRange range_for_text(SourceLocation location, std::string_view text) {
     SourceRange range;
     range.start = location;
@@ -967,18 +981,18 @@ TypeRef parse_type_text(std::string_view text, SourceLocation location) {
 }
 
 Expr parse_expr_text(std::string_view text, SourceLocation location) {
-    text = trim_view(text);
+    text = trim_view_with_location(text, location);
     if (text.empty()) {
         return make_expr(ExprKind::Unknown, text, location);
     }
     if (enclosed_by_outer_pair(text, '(', ')')) {
-        const std::string_view inner = trim_view(text.substr(1, text.size() - 2));
-        if (split_top_level_commas(inner).size() > 1) {
+        const std::string_view inner = text.substr(1, text.size() - 2);
+        if (split_top_level_commas(trim_view(inner)).size() > 1) {
             Expr expr = make_expr(ExprKind::TupleLiteral, text, location);
-            expr.children = parse_expr_list(inner, location);
+            expr.children = parse_expr_list(inner, advance_columns(location, 1));
             return expr;
         }
-        return parse_expr_text(inner, location);
+        return parse_expr_text(inner, advance_columns(location, 1));
     }
     if (split_top_level_commas(text).size() > 1) {
         Expr expr = make_expr(ExprKind::TupleLiteral, text, location);
@@ -987,7 +1001,8 @@ Expr parse_expr_text(std::string_view text, SourceLocation location) {
     }
     if (enclosed_by_outer_pair(text, '[', ']')) {
         Expr expr = make_expr(ExprKind::ListLiteral, text, location);
-        expr.children = parse_expr_list(text.substr(1, text.size() - 2), location);
+        expr.children =
+            parse_expr_list(text.substr(1, text.size() - 2), advance_columns(location, 1));
         return expr;
     }
     if (enclosed_by_outer_pair(text, '{', '}')) {
@@ -995,8 +1010,9 @@ Expr parse_expr_text(std::string_view text, SourceLocation location) {
         Expr expr =
             make_expr(has_top_level_colon(body) ? ExprKind::DictLiteral : ExprKind::SetLiteral,
                       text, location);
-        expr.children = expr.kind == ExprKind::DictLiteral ? parse_dict_entries(body, location)
-                                                           : parse_expr_list(body, location);
+        expr.children = expr.kind == ExprKind::DictLiteral
+                            ? parse_dict_entries(body, advance_columns(location, 1))
+                            : parse_expr_list(body, advance_columns(location, 1));
         return expr;
     }
     if ((text.front() == '"' && text.back() == '"') ||
@@ -1115,15 +1131,16 @@ Expr parse_expr_text(std::string_view text, SourceLocation location) {
             std::string_view callee = trim_view(text.substr(0, open));
             Expr expr = make_expr(ExprKind::Call, text, location);
             expr.name = trim_string(callee);
-            expr.children =
-                parse_expr_list(text.substr(open + 1, text.size() - open - 2), location);
+            expr.children = parse_expr_list(text.substr(open + 1, text.size() - open - 2),
+                                            advance_columns(location, open + 1));
             if (callee.ends_with("]")) {
                 const size_t type_open = find_matching_open(callee, callee.size() - 1, '[', ']');
                 if (type_open != std::string_view::npos && type_open > 0) {
                     expr.kind = ExprKind::TemplateCall;
                     expr.name = trim_string(callee.substr(0, type_open));
-                    expr.template_args = parse_expr_list(
-                        callee.substr(type_open + 1, callee.size() - type_open - 2), location);
+                    expr.template_args =
+                        parse_expr_list(callee.substr(type_open + 1, callee.size() - type_open - 2),
+                                        advance_columns(location, type_open + 1));
                 }
             }
             return expr;
@@ -1134,8 +1151,8 @@ Expr parse_expr_text(std::string_view text, SourceLocation location) {
         if (open != std::string_view::npos && open > 0) {
             Expr expr = make_expr(ExprKind::Index, text, location);
             expr.children.push_back(parse_expr_text(text.substr(0, open), location));
-            expr.children.push_back(
-                parse_expr_text(text.substr(open + 1, text.size() - open - 2), location));
+            expr.children.push_back(parse_expr_text(text.substr(open + 1, text.size() - open - 2),
+                                                    advance_columns(location, open + 1)));
             return expr;
         }
     }

@@ -262,6 +262,7 @@ void test_expression_ast_shape() {
     assert(answer.value_expr.children.size() == 2);
     assert(answer.value_expr.children[0].kind == dudu::ExprKind::IntLiteral);
     assert(answer.value_expr.children[0].range.start.line == 2);
+    assert(answer.value_expr.children[0].range.start.column > answer.value_expr.range.start.column);
     assert(answer.value_expr.children[1].kind == dudu::ExprKind::Binary);
     assert(answer.value_expr.children[1].range.start.line == 2);
     assert(answer.value_expr.children[1].range.start.column >
@@ -289,12 +290,16 @@ void test_expression_ast_shape() {
     assert(assign.value_expr.template_args.size() == 1);
     assert(assign.value_expr.template_args[0].kind == dudu::ExprKind::Name);
     assert(assign.value_expr.template_args[0].name == "f32");
+    assert(assign.value_expr.template_args[0].range.start.column >
+           assign.value_expr.range.start.column);
     assert(assign.value_expr.children.size() == 4);
+    assert(assign.value_expr.children[0].range.start.column > assign.value_expr.range.start.column);
 
     const dudu::Stmt& values = main.statements[2];
     assert(values.kind == dudu::StmtKind::VarDecl);
     assert(values.value_expr.kind == dudu::ExprKind::ListLiteral);
     assert(values.value_expr.children.size() == 3);
+    assert(values.value_expr.children[0].range.start.column > values.value_expr.range.start.column);
     assert(values.value_expr.children[1].range.start.column >
            values.value_expr.children[0].range.start.column);
     assert(values.value_expr.children[2].range.start.column >
@@ -338,9 +343,14 @@ void test_expression_ast_shape() {
     assert(view.value_expr.kind == dudu::ExprKind::Index);
     assert(view.value_expr.children.size() == 2);
     assert(view.value_expr.children[1].kind == dudu::ExprKind::Slice);
+    assert(view.value_expr.children[1].range.start.column > view.value_expr.range.start.column);
     assert(view.value_expr.children[1].children.size() == 2);
     assert(view.value_expr.children[1].children[0].kind == dudu::ExprKind::IntLiteral);
     assert(view.value_expr.children[1].children[1].kind == dudu::ExprKind::IntLiteral);
+    assert(view.value_expr.children[1].children[0].range.start.column ==
+           view.value_expr.children[1].range.start.column);
+    assert(view.value_expr.children[1].children[1].range.start.column >
+           view.value_expr.children[1].children[0].range.start.column);
 }
 
 void test_type_ast_shape() {
