@@ -145,6 +145,29 @@ std::string lower_callee_expr(const Expr& expr, const std::vector<std::string>& 
     return lower_expr(expr.name, aliases, locals);
 }
 
+bool is_pointer_type(std::string type) {
+    type = trim_copy(std::move(type));
+    return !type.empty() && type.front() == '*';
+}
+
+bool is_pointer_list_type(std::string type) {
+    type = trim_copy(std::move(type));
+    return starts_with(type, "list[*") && ends_with(type, "]");
+}
+
+bool is_pointer_receiver_expr(const Expr& expr, const std::map<std::string, std::string>& locals) {
+    if (expr.kind == ExprKind::Name) {
+        const auto local = locals.find(expr.name);
+        return local != locals.end() && is_pointer_type(local->second);
+    }
+    if (expr.kind == ExprKind::Index && expr.children.size() == 2 &&
+        expr.children.front().kind == ExprKind::Name) {
+        const auto local = locals.find(expr.children.front().name);
+        return local != locals.end() && is_pointer_list_type(local->second);
+    }
+    return false;
+}
+
 std::optional<std::string>
 lower_pointer_cast_expr(const Expr& expr, const std::vector<std::string>& aliases,
                         const std::map<std::string, std::string>& locals) {
@@ -313,6 +336,9 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
     }
     case ExprKind::Member:
         if (expr.children.size() == 1) {
+            if (is_pointer_receiver_expr(expr.children.front(), locals)) {
+                return lower_expr(expr.children.front(), aliases, locals) + "->" + expr.name;
+            }
             return lower_expr(lower_expr(expr.children.front(), aliases, locals) + "." + expr.name,
                               aliases, locals);
         }

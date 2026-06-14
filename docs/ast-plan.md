@@ -142,6 +142,9 @@ Already structured:
 - parsed call emission lowers Dudu `list.append(...)` calls to C++
   `push_back(...)` at the callee node instead of relying on raw expression
   replacement
+- C++ member expression emission lowers proven pointer receivers from parsed
+  receiver nodes (`item->field`, `items[i]->field`) before falling back to raw
+  member rewriting for unresolved cases
 - integer and float literal parsing recognizes underscore separators, and
   integer literals recognize `0x`, `0b`, and `0o` prefixes so systems-style
   constants stay on the literal AST path

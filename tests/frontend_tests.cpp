@@ -892,6 +892,25 @@ void test_image_filter_emission(const std::filesystem::path& root) {
     assert(cpp.find("pixel[0]") != std::string::npos);
 }
 
+void test_pointer_member_emission(const std::filesystem::path& root) {
+    {
+        const std::filesystem::path path = root / "tests" / "fixtures" / "pointer_member.dd";
+        const dudu::ModuleAst module = dudu::parse_source(read_file(path), path);
+        dudu::analyze_module(module, {.check_bodies = true});
+        const std::string cpp = dudu::emit_cpp_source(module);
+        assert(cpp.find("item->value += 2") != std::string::npos);
+        assert(cpp.find("int32_t result = item->value;") != std::string::npos);
+    }
+    {
+        const std::filesystem::path path =
+            root / "tests" / "fixtures" / "value_pointer_containers.dd";
+        const dudu::ModuleAst module = dudu::parse_source(read_file(path), path);
+        dudu::analyze_module(module, {.check_bodies = true});
+        const std::string cpp = dudu::emit_cpp_source(module);
+        assert(cpp.find("ptrs[0]->value += 1") != std::string::npos);
+    }
+}
+
 } // namespace
 
 int main() {
@@ -920,6 +939,7 @@ int main() {
         test_native_header_pointer_diagnostics(root);
         test_project_driver_config(root);
         test_image_filter_emission(root);
+        test_pointer_member_emission(root);
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;
