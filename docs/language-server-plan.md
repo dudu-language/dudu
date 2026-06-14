@@ -134,8 +134,10 @@ The extension should not duplicate compiler logic in TypeScript. It should
 delegate intelligence to `duc lsp`.
 
 Status: the local VS Code extension starts `duc lsp`, forwards document
-open/change/save events, displays LSP diagnostics, and uses the LSP formatting
-provider for `Dudu: Format Current File` and format-on-save.
+open/change/save events, displays LSP diagnostics, uses the LSP formatting
+provider for `Dudu: Format Current File` and format-on-save, and shows a status
+bar item with LSP process state, configured `duc` path, and native-header
+diagnostic state. Target-mode status remains.
 
 ## Protocol Features By Milestone
 

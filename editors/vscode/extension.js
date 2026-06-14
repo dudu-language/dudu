@@ -5,6 +5,7 @@ const path = require("path");
 let terminal;
 let diagnostics;
 let lsp;
+let statusItem;
 
 function shellQuote(value) {
   return `'${value.replace(/'/g, "'\\''")}'`;
@@ -69,6 +70,17 @@ function toVscodeDiagnostic(item) {
   return diagnostic;
 }
 
+function updateStatus() {
+  if (!statusItem) {
+    return;
+  }
+  const state = lsp?.process ? "LSP" : "LSP stopped";
+  const nativeState = lsp?.hasNativeHeaderProblem() ? "native headers failing" : "native headers ok";
+  statusItem.text = `$(symbol-method) Dudu: ${state}`;
+  statusItem.tooltip = `duc: ${ducPath()}\n${nativeState}`;
+  statusItem.show();
+}
+
 class DuduLspClient {
   constructor(context) {
     this.context = context;
@@ -76,6 +88,7 @@ class DuduLspClient {
     this.nextId = 1;
     this.pending = new Map();
     this.buffer = Buffer.alloc(0);
+    this.nativeHeaderProblems = new Map();
   }
 
   start() {
@@ -86,6 +99,7 @@ class DuduLspClient {
       cwd: workspaceDirectory(),
       stdio: ["pipe", "pipe", "pipe"],
     });
+    updateStatus();
     this.process.stdout.on("data", (chunk) => this.onData(chunk));
     this.process.stderr.on("data", (chunk) => {
       const text = chunk.toString().trim();
@@ -99,6 +113,7 @@ class DuduLspClient {
         reject(error);
       }
       this.pending.clear();
+      updateStatus();
     });
     this.process.on("exit", () => {
       this.process = undefined;
@@ -106,6 +121,7 @@ class DuduLspClient {
         reject(new Error("duc lsp exited"));
       }
       this.pending.clear();
+      updateStatus();
     });
     this.request("initialize", {
       processId: process.pid,
@@ -124,7 +140,12 @@ class DuduLspClient {
         this.notify("exit", null);
         this.process?.kill();
         this.process = undefined;
+        updateStatus();
       });
+  }
+
+  hasNativeHeaderProblem() {
+    return [...this.nativeHeaderProblems.values()].some(Boolean);
   }
 
   send(payload) {
@@ -384,7 +405,13 @@ class DuduLspClient {
     }
     if (message.method === "textDocument/publishDiagnostics") {
       const uri = vscode.Uri.parse(message.params.uri);
-      diagnostics.set(uri, (message.params.diagnostics ?? []).map(toVscodeDiagnostic));
+      const items = message.params.diagnostics ?? [];
+      this.nativeHeaderProblems.set(
+        uri.toString(),
+        items.some((item) => item.source === "dudu/native-header"),
+      );
+      diagnostics.set(uri, items.map(toVscodeDiagnostic));
+      updateStatus();
     }
   }
 }
@@ -415,6 +442,7 @@ function codeActionKind(kind) {
 
 function activate(context) {
   diagnostics = vscode.languages.createDiagnosticCollection("dudu");
+  statusItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 90);
   lsp = new DuduLspClient(context);
   lsp.start();
 
@@ -424,6 +452,7 @@ function activate(context) {
 
   context.subscriptions.push(
     diagnostics,
+    statusItem,
     vscode.languages.registerDocumentFormattingEditProvider("dudu", {
       provideDocumentFormattingEdits(document) {
         return lsp.format(document);
