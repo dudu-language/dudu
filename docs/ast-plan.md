@@ -149,6 +149,9 @@ Already structured:
   cases instead of scanning raw statement text
 - parsed index expression type inference uses the AST receiver and index nodes
   regardless of whether the caller supplied an explicit diagnostic location
+- build flag validation walks parsed expression nodes for constants,
+  `static_assert`, and normal statements; raw text scanning remains only for
+  unknown statements and explicit C++ escape statements
 
 Still too string-based:
 

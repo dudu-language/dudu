@@ -136,9 +136,50 @@ void check_text(const std::set<std::string>& names, const SourceLocation& locati
     }
 }
 
+bool has_expr(const Expr& expr) {
+    return !expr.text.empty();
+}
+
+void check_expr(const std::set<std::string>& names, const Expr& expr) {
+    if (!has_expr(expr)) {
+        return;
+    }
+    if (expr.kind == ExprKind::Member && expr.children.size() == 1 &&
+        expr.children.front().kind == ExprKind::Name && expr.children.front().name == "build") {
+        if (!names.contains(expr.name)) {
+            throw CompileError(expr.location, "unknown build flag: build." + expr.name);
+        }
+    }
+    for (const Expr& child : expr.callee) {
+        check_expr(names, child);
+    }
+    for (const Expr& child : expr.params) {
+        check_expr(names, child);
+    }
+    for (const Expr& child : expr.template_args) {
+        check_expr(names, child);
+    }
+    for (const Expr& child : expr.children) {
+        check_expr(names, child);
+    }
+}
+
+void check_stmt(const std::set<std::string>& names, const Stmt& stmt) {
+    if (stmt.kind == StmtKind::Unknown || stmt.kind == StmtKind::CppEscape) {
+        check_text(names, stmt.location, stmt.text);
+        return;
+    }
+    check_expr(names, stmt.expr);
+    check_expr(names, stmt.value_expr);
+    check_expr(names, stmt.target_expr);
+    check_expr(names, stmt.condition_expr);
+    check_expr(names, stmt.message_expr);
+    check_expr(names, stmt.iterable_expr);
+}
+
 void check_body(const std::set<std::string>& names, const std::vector<Stmt>& body) {
     for (const Stmt& stmt : body) {
-        check_text(names, stmt.location, stmt.text);
+        check_stmt(names, stmt);
         check_body(names, stmt.children);
     }
 }
@@ -152,13 +193,13 @@ void check_build_flags(const ModuleAst& module) {
         names.insert(name);
     }
     for (const ConstDecl& constant : module.constants) {
-        check_text(names, constant.location, constant.value);
+        check_expr(names, constant.value_expr);
         if (const std::optional<int64_t> value = eval_int(constant.value, int_constants)) {
             int_constants[constant.name] = *value;
         }
     }
     for (const StaticAssertDecl& assertion : module.static_asserts) {
-        check_text(names, assertion.location, assertion.expression);
+        check_expr(names, assertion.expression_expr);
         check_static_assert(assertion, int_constants);
     }
     for (const ClassDecl& klass : module.classes) {
