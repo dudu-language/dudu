@@ -23,7 +23,7 @@
   and CMake generation.
 - Added recursive `dudu test ./...` and directory test discovery.
 - Added unique generated test binary paths under `build/dudu-tests/`.
-- Added class-scoped constants and `@staticmethod` methods.
+- Added class-scoped constants and class-scoped methods without `self`.
 - Added Dudu-native operator methods through `@operator(...)`.
 - Improved native header scanning for pointer and reference parameter types.
 - Improved `dudu test` zero-test output.
@@ -40,8 +40,7 @@
 - Added C++ exception interop with `try`, `except`, and `raise`.
 - Tightened semantic checks for imported C++ template function calls such as
   `namespace.identity[i32](value)`.
-- Added `duduplayground/` as a checked-in scratch project for local `dudu run`
-  and `dudu test` experiments.
+- Added local playground guidance for `dudu run` and `dudu test` experiments.
 - Improved native-header scanner failure hints for missing include paths and
   broken Clang tooling.
 - Improved native const modeling for C++ `T const*`/`T const&` signatures and
