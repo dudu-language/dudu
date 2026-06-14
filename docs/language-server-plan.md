@@ -93,6 +93,10 @@ The server must avoid repeating expensive scans in a tight loop. Native header
 scans should use the existing cache and should debounce document changes before
 requesting Clang work.
 
+Status: native header scanning uses the existing in-memory and raw on-disk
+header cache, and the VS Code client debounces full-document change
+notifications before requesting fresh diagnostics.
+
 ## Diagnostics
 
 Diagnostics should be grouped by source:
@@ -134,13 +138,13 @@ The extension should not duplicate compiler logic in TypeScript. It should
 delegate intelligence to `duc lsp`.
 
 Status: the local VS Code extension starts `duc lsp`, forwards document
-open/change/save events, displays LSP diagnostics, uses the LSP formatting
-provider for `Dudu: Format Current File` and format-on-save, and shows a status
-bar item with LSP process state, configured `duc` path, and native-header
-diagnostic state. The status tooltip also shows the current `dudu.toml`
-`[target]` kind/mode when available. Command palette actions are registered for
-formatting, checking the current file, building the project, running the current
-file, and running project tests.
+open/change/save events, debounces rapid change notifications, displays LSP
+diagnostics, uses the LSP formatting provider for `Dudu: Format Current File`
+and format-on-save, and shows a status bar item with LSP process state,
+configured `duc` path, and native-header diagnostic state. The status tooltip
+also shows the current `dudu.toml` `[target]` kind/mode when available. Command
+palette actions are registered for formatting, checking the current file,
+building the project, running the current file, and running project tests.
 
 ## Protocol Features By Milestone
 

@@ -140,6 +140,7 @@ class DuduLspClient {
     this.pending = new Map();
     this.buffer = Buffer.alloc(0);
     this.nativeHeaderProblems = new Map();
+    this.changeTimers = new Map();
   }
 
   start() {
@@ -182,6 +183,10 @@ class DuduLspClient {
   }
 
   stop() {
+    for (const timer of this.changeTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.changeTimers.clear();
     if (!this.process) {
       return;
     }
@@ -236,6 +241,21 @@ class DuduLspClient {
     if (!isDuduDocument(document)) {
       return;
     }
+    const uri = document.uri.toString();
+    const existing = this.changeTimers.get(uri);
+    if (existing) {
+      clearTimeout(existing);
+    }
+    this.changeTimers.set(
+      uri,
+      setTimeout(() => {
+        this.changeTimers.delete(uri);
+        this.sendDidChange(document);
+      }, 250),
+    );
+  }
+
+  sendDidChange(document) {
     this.notify("textDocument/didChange", {
       textDocument: { uri: document.uri.toString(), version: document.version },
       contentChanges: [{ text: document.getText() }],
@@ -245,6 +265,13 @@ class DuduLspClient {
   didSave(document) {
     if (!isDuduDocument(document)) {
       return;
+    }
+    const uri = document.uri.toString();
+    const existing = this.changeTimers.get(uri);
+    if (existing) {
+      clearTimeout(existing);
+      this.changeTimers.delete(uri);
+      this.sendDidChange(document);
     }
     this.notify("textDocument/didSave", {
       textDocument: { uri: document.uri.toString() },
