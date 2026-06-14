@@ -3,11 +3,12 @@
 #include "dudu/cpp_lower.hpp"
 
 namespace dudu {
+namespace {
 
-std::optional<std::string> infer_allocation_call(const Symbols& symbols,
-                                                 const SourceLocation* location,
-                                                 const std::string& callee,
-                                                 const std::vector<std::string>& args) {
+std::optional<std::string> infer_allocation_call_with_count(const Symbols& symbols,
+                                                            const SourceLocation* location,
+                                                            const std::string& callee,
+                                                            const size_t arg_count) {
     const size_t open = callee.find('[');
     if (open == std::string::npos || callee.back() != ']') {
         return std::nullopt;
@@ -20,11 +21,27 @@ std::optional<std::string> infer_allocation_call(const Symbols& symbols,
     if (location != nullptr && !known_type(symbols, type)) {
         throw CompileError(*location, "unknown allocation type: " + type);
     }
-    if (location != nullptr && name == "malloc" && args.size() != 1) {
+    if (location != nullptr && name == "malloc" && arg_count != 1) {
         throw CompileError(*location,
-                           "malloc expects 1 count argument, got " + std::to_string(args.size()));
+                           "malloc expects 1 count argument, got " + std::to_string(arg_count));
     }
     return "*" + type;
+}
+
+} // namespace
+
+std::optional<std::string> infer_allocation_call(const Symbols& symbols,
+                                                 const SourceLocation* location,
+                                                 const std::string& callee,
+                                                 const std::vector<std::string>& args) {
+    return infer_allocation_call_with_count(symbols, location, callee, args.size());
+}
+
+std::optional<std::string> infer_allocation_call(const Symbols& symbols,
+                                                 const SourceLocation* location,
+                                                 const std::string& callee,
+                                                 const std::vector<Expr>& args) {
+    return infer_allocation_call_with_count(symbols, location, callee, args.size());
 }
 
 bool is_deallocation_call(std::string_view callee) {

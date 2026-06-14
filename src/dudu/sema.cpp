@@ -172,15 +172,6 @@ matching_signature_ast(const FunctionScope& scope, const std::vector<FunctionSig
     return std::nullopt;
 }
 
-std::vector<std::string> expr_texts(const std::vector<Expr>& exprs) {
-    std::vector<std::string> out;
-    out.reserve(exprs.size());
-    for (const Expr& expr : exprs) {
-        out.push_back(expr.text);
-    }
-    return out;
-}
-
 std::string template_call_callee(const Expr& expr) {
     std::ostringstream out;
     out << expr.name << "[";
@@ -464,9 +455,8 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
         return infer_expr(scope, expr.text, location);
     }
     const std::string callee = template_call_callee(expr);
-    const std::vector<std::string> args = expr_texts(expr.children);
 
-    if (const auto type = infer_allocation_call(scope.symbols, location, callee, args)) {
+    if (const auto type = infer_allocation_call(scope.symbols, location, callee, expr.children)) {
         for (const Expr& arg : expr.children) {
             (void)infer_expr_ast(scope, arg, location);
         }
