@@ -1,0 +1,10 @@
+class FileHandle:
+    fd: i32
+
+    def __del__(self):
+        self.fd = -1
+
+
+def main() -> i32:
+    handle = FileHandle(4)
+    return handle.fd

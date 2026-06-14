@@ -331,13 +331,16 @@ Indexing operators belong with the array/tensor plan:
 - `@operator("[]")`
 - `@operator("[]=")`
 
-Status: implemented for the first operator set. Indexing operators remain part
-of the array/tensor plan.
+Status: implemented for the first operator set. `@operator("[]")` read hooks
+are implemented for library-style tensor wrappers. Indexed assignment hooks
+remain part of the array/tensor plan.
 
 ## Inheritance
 
-Dudu-native inheritance should not be part of the first native object model.
-Composition and generics cover most Dudu-native examples.
+Dudu-native inheritance is planned separately and should be implemented against
+the real AST/type model, not as a string-lowering patch. Composition and
+generics cover many Dudu-native examples, but imported C++ and some native
+systems patterns need a deliberate inheritance surface.
 
 ```python
 class Player:
@@ -352,11 +355,14 @@ Imported C++ inheritance must work well enough to consume real C++ APIs:
 - pass derived/base pointers and references
 - resolve inherited overloads
 
-Dudu-native inheritance can be designed later if real Dudu code needs it.
+Dudu-native inheritance follows the inheritance plan: method-only `@abstract`,
+`@override`, `@virtual`, `super`, strict multiple inheritance, and
+interface-like abstract classes.
 
 ## Virtual Methods
 
-Do not add Dudu-native virtual methods in the first object model.
+Do not add Dudu-native virtual methods as a narrow OOP patch. Implement them as
+part of the native inheritance plan.
 
 C++ virtual dispatch remains available through imported C++ classes. Dudu can
 call virtual methods on imported objects because the generated C++ uses normal
@@ -387,7 +393,6 @@ Dudu-native classes should not support:
 - metaclasses
 - descriptors
 - runtime class creation
-- multiple inheritance
 - implicit `__dict__`
 
 These features are powerful in Python, but they fight native layout, generated
@@ -401,4 +406,4 @@ C++, predictable performance, and editor tooling.
 - `_name` visibility affects generated/imported public surface.
 - `@operator(...)` overloads lower to C++ operators.
 - Imported C++ inheritance remains consumable.
-- Dudu-native inheritance remains rejected until separately designed.
+- Dudu-native inheritance follows the separate inheritance plan.

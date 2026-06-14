@@ -1,0 +1,13 @@
+class Color:
+    @classmethod
+    def rgb(r: f32, g: f32, b: f32) -> Color:
+        return Color(r, g, b)
+
+    r: f32
+    g: f32
+    b: f32
+
+
+def main() -> i32:
+    color = Color.rgb(1.0, 0.5, 0.25)
+    return i32(color.r)

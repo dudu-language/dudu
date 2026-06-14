@@ -1,0 +1,12 @@
+class Player:
+    hp: i32
+    max_hp: i32
+
+    @property
+    def health_percent(self) -> f32:
+        return f32(self.hp) / f32(self.max_hp)
+
+
+def main() -> i32:
+    player = Player(50, 100)
+    return i32(player.health_percent())
