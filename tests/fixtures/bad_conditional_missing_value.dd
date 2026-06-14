@@ -1,0 +1,3 @@
+def bad(flag: bool) -> i32:
+    value = 1 if flag else
+    return value

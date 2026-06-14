@@ -197,6 +197,9 @@ Already structured:
 - standalone slice expressions are rejected during semantic checking, and parsed
   expression nodes that fail structural C++ lowering no longer fall back to raw
   expression rewriting
+- malformed unary, binary, and conditional expression nodes are rejected during
+  semantic checking with Dudu diagnostics instead of falling through legacy
+  expression inference
 
 Still too string-based:
 

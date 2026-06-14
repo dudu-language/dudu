@@ -843,6 +843,10 @@ std::vector<Expr> index_arg_exprs(const Expr& index_expr) {
     return {index_expr};
 }
 
+bool missing_expr(const Expr& expr) {
+    return expr.text.empty() || (expr.kind == ExprKind::Unknown && trim(expr.text).empty());
+}
+
 std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                            const SourceLocation* location) {
     const SourceLocation* use_location =
@@ -926,8 +930,11 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
         }
         return {};
     case ExprKind::Unary:
-        if (expr.children.empty()) {
-            return infer_expr(scope, expr.text, use_location);
+        if (expr.children.empty() || missing_expr(expr.children.front())) {
+            if (use_location != nullptr) {
+                fail(*use_location, "operator " + expr.op + " expects an operand");
+            }
+            return {};
         }
         if (expr.op == "not") {
             const std::string got = infer_expr_ast(scope, expr.children.front(), use_location);
@@ -956,8 +963,12 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
         }
         return infer_expr(scope, expr.text, use_location);
     case ExprKind::Binary: {
-        if (expr.children.size() != 2) {
-            return infer_expr(scope, expr.text, use_location);
+        if (expr.children.size() != 2 || missing_expr(expr.children[0]) ||
+            missing_expr(expr.children[1])) {
+            if (use_location != nullptr) {
+                fail(*use_location, "operator " + expr.op + " expects left and right operands");
+            }
+            return {};
         }
         const std::string left = infer_expr_ast(scope, expr.children[0], use_location);
         const std::string right = infer_expr_ast(scope, expr.children[1], use_location);
@@ -1041,7 +1052,15 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
         }
         return infer_expr(scope, expr.text, use_location);
     case ExprKind::Conditional:
-        if (expr.children.size() == 3) {
+        if (expr.children.size() != 3 || missing_expr(expr.children[0]) ||
+            missing_expr(expr.children[1]) || missing_expr(expr.children[2])) {
+            if (use_location != nullptr) {
+                fail(*use_location,
+                     "conditional expression expects then, condition, and else values");
+            }
+            return {};
+        }
+        {
             const std::string condition = infer_expr_ast(scope, expr.children[1], use_location);
             if (use_location != nullptr && !condition.empty() && condition != "bool") {
                 fail(*use_location, "condition must be bool, got " + condition);
@@ -1050,7 +1069,6 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
             const std::string else_type = infer_expr_ast(scope, expr.children[2], use_location);
             return then_type.empty() ? else_type : then_type;
         }
-        return infer_expr(scope, expr.text, use_location);
     case ExprKind::Await:
         return {};
     case ExprKind::Yield:

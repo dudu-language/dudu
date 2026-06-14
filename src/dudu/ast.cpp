@@ -492,7 +492,7 @@ size_t find_top_level_binary_operator(std::string_view text,
             if (i + op.size() > text.size() || text.substr(i, op.size()) != op) {
                 continue;
             }
-            if (i == 0 || i + op.size() >= text.size()) {
+            if (i == 0) {
                 continue;
             }
             if ((op == "and" || op == "or") && !((i == 0 || !is_identifier_continue(text[i - 1])) &&

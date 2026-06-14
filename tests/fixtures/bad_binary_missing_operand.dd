@@ -1,0 +1,3 @@
+def bad(count: i32) -> i32:
+    value = count +
+    return value
