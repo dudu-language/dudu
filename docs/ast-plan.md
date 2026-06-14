@@ -74,14 +74,15 @@ Already structured:
 
 Still too string-based:
 
-- semantic analysis of local variable declarations
-- semantic analysis of assignment and compound assignment
-- semantic analysis of if, elif, else
-- semantic analysis of while and for
-- try, except
-- C++ emission of calls, member access, operators, constructors, lambdas, and
-  C++ macro calls
-- semantic analysis and most C++ emission paths for type strings
+- remaining semantic fallback paths for expression shapes still parsed as
+  `Unknown`
+- raw string fallback overloads kept for legacy expression inference while AST
+  coverage is incomplete
+- C++ emission fallback paths for unknown expressions, C++ escapes, and raw
+  macro shapes
+- lambdas and user-facing macro/decorator forms still need deeper AST nodes
+- some type compatibility and native-header checks still route through type
+  strings after `TypeRef` parsing
 - exact original-token ranges inside function bodies; current body-node ranges
   are derived from normalized joined statement text
 
@@ -155,6 +156,7 @@ Required expression nodes:
 - `TemplateCallExpr`
 - `MemberExpr`
 - `IndexExpr`
+- `SliceExpr`
 - `ConstructorExpr`
 - `ListLiteralExpr`
 - `DictLiteralExpr`
