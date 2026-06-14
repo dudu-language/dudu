@@ -146,10 +146,38 @@ void test_semantic_diagnostics() {
                                                           "    return True\n",
                                                           "bad_return.dd");
         dudu::analyze_module(module, {.check_bodies = true});
-    } catch (const dudu::CompileError&) {
+    } catch (const dudu::CompileError& error) {
+        assert(error.location().line == 2);
+        assert(error.location().column > 5);
         bad_return = true;
     }
     assert(bad_return);
+
+    bool bad_local_value = false;
+    try {
+        const dudu::ModuleAst module = dudu::parse_source("def bad_value():\n"
+                                                          "    value: i32 = \"nope\"\n",
+                                                          "bad_value.dd");
+        dudu::analyze_module(module, {.check_bodies = true});
+    } catch (const dudu::CompileError& error) {
+        assert(error.location().line == 2);
+        assert(error.location().column > 5);
+        bad_local_value = true;
+    }
+    assert(bad_local_value);
+
+    bool bad_local_type = false;
+    try {
+        const dudu::ModuleAst module = dudu::parse_source("def bad_type_name():\n"
+                                                          "    value: MissingType = 1\n",
+                                                          "bad_type_name.dd");
+        dudu::analyze_module(module, {.check_bodies = true});
+    } catch (const dudu::CompileError& error) {
+        assert(error.location().line == 2);
+        assert(error.location().column > 5);
+        bad_local_type = true;
+    }
+    assert(bad_local_type);
 
     for (const std::string type : {"int", "float", "double"}) {
         bool rejected = false;

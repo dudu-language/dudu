@@ -32,6 +32,9 @@ Already structured:
 - initial type shape capture for names, qualified names, templates, pointers,
   references, wrappers, fixed arrays, and function-like type signatures
 - source range fields on statement, expression, and type nodes
+- semantic diagnostics for return values, local initializer values, local type
+  names, conditions, and assignment targets use expression/type node locations
+  where available
 
 Still too string-based:
 

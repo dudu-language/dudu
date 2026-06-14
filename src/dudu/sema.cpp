@@ -54,6 +54,14 @@ bool freestanding_like(const FunctionScope& scope) {
     return scope.target_mode == "freestanding" || scope.target_mode == "embedded";
 }
 
+const SourceLocation& node_location(const SourceLocation& fallback, const Expr& expr) {
+    return expr.range.end.column > expr.range.start.column ? expr.location : fallback;
+}
+
+const SourceLocation& node_location(const SourceLocation& fallback, const TypeRef& type) {
+    return type.range.end.column > type.range.start.column ? type.location : fallback;
+}
+
 bool foreign_cpp_type_name(const std::string& type) {
     return type.find('.') != std::string::npos || type.find("::") != std::string::npos;
 }
@@ -314,35 +322,37 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
     }
     return {};
 }
-void check_type_match(const FunctionScope& scope, const Stmt& stmt, const std::string& expected,
-                      const std::string& expr) {
-    const std::string got = infer_expr(scope, expr, &stmt.location);
+void check_type_match(const FunctionScope& scope, const std::string& expected,
+                      const std::string& expr, const SourceLocation& location) {
+    const std::string got = infer_expr(scope, expr, &location);
     if (can_assign_expr(scope, expected, expr, got)) {
         return;
     }
-    fail(stmt.location, assignment_error(expected, expr, got));
+    fail(location, assignment_error(expected, expr, got));
 }
 void check_condition_type(const FunctionScope& scope, const Stmt& stmt, std::string expr) {
     expr = trim(std::move(expr));
     if (!expr.empty() && expr.back() == ':') {
         expr.pop_back();
     }
-    const std::string got = infer_expr(scope, expr, &stmt.location);
+    const SourceLocation& location = node_location(stmt.location, stmt.condition_expr);
+    const std::string got = infer_expr(scope, expr, &location);
     if (!got.empty() && got != "bool" && got != "auto") {
-        fail(stmt.location, "condition must be bool, got " + got);
+        fail(location, "condition must be bool, got " + got);
     }
 }
 std::string assign_target_type(const FunctionScope& scope, const Stmt& stmt,
                                const std::string& lhs) {
+    const SourceLocation& target_location = node_location(stmt.location, stmt.target_expr);
     if (lhs.size() > 1 && lhs.front() == '*') {
         const std::string name = trim(lhs.substr(1));
         const auto local = scope.locals.find(name);
         if (local == scope.locals.end()) {
-            fail(stmt.location, "assignment through unknown local: " + name);
+            fail(target_location, "assignment through unknown local: " + name);
         }
         std::string type = trim(local->second);
         if (type.empty() || type.front() != '*') {
-            fail(stmt.location, "cannot dereference non-pointer: " + name);
+            fail(target_location, "cannot dereference non-pointer: " + name);
         }
         return trim(type.substr(1));
     }
@@ -350,19 +360,19 @@ std::string assign_target_type(const FunctionScope& scope, const Stmt& stmt,
         const size_t index = lhs.find('[');
         if (index != std::string::npos) {
             const std::string name = trim(lhs.substr(0, index));
-            return indexed_value_type(scope.symbols, scope.locals, stmt.location, name,
+            return indexed_value_type(scope.symbols, scope.locals, target_location, name,
                                       "indexed assignment to unknown local: ");
         }
         if (scope.constants.contains(lhs)) {
-            fail(stmt.location, "cannot assign to constant: " + lhs);
+            fail(target_location, "cannot assign to constant: " + lhs);
         }
         const auto local = scope.locals.find(lhs);
         if (local == scope.locals.end()) {
-            fail(stmt.location, "assignment to unknown local: " + lhs);
+            fail(target_location, "assignment to unknown local: " + lhs);
         }
         return local->second;
     }
-    return member_path_type(scope.symbols, scope.locals, &stmt.location, lhs,
+    return member_path_type(scope.symbols, scope.locals, &target_location, lhs,
                             "assignment through unknown local: ");
 }
 void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& return_type,
@@ -379,11 +389,12 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
     check_local_address_escape(stmt, scope.locals);
     if (stmt.kind == StmtKind::Return) {
         const std::string expr = stmt.value;
-        const std::string got = infer_expr(scope, expr, &stmt.location);
+        const SourceLocation& value_location = node_location(stmt.location, stmt.value_expr);
+        const std::string got = infer_expr(scope, expr, &value_location);
         if (return_type == "void" && got != "void")
-            fail(stmt.location, "void function cannot return " + got);
+            fail(value_location, "void function cannot return " + got);
         if (return_type != "void" && !can_assign_expr(scope, return_type, expr, got)) {
-            fail(stmt.location, "return type mismatch: expected " + return_type + ", got " + got);
+            fail(value_location, "return type mismatch: expected " + return_type + ", got " + got);
         }
         return;
     }
@@ -397,13 +408,13 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
         const auto parts = split_top_level_args(stmt.condition);
         check_condition_type(scope, stmt, parts.empty() ? "" : parts.front());
         if (parts.size() > 1)
-            (void)infer_expr(scope, parts[1], &stmt.location);
+            (void)infer_expr(scope, parts[1], &node_location(stmt.location, stmt.condition_expr));
         return;
     }
     if (stmt.kind == StmtKind::Raise) {
         const std::string expr = stmt.value;
         if (!expr.empty())
-            (void)infer_expr(scope, expr, &stmt.location);
+            (void)infer_expr(scope, expr, &node_location(stmt.location, stmt.value_expr));
         return;
     }
     if (stmt.kind == StmtKind::CppEscape || stmt.kind == StmtKind::Pass)
@@ -465,7 +476,8 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
         FunctionScope nested = scope;
         if (!stmt.name.empty() && !stmt.type.empty() && !stmt.iterable.empty()) {
             check_local_binding_name(stmt.location, stmt.name);
-            check_iterable_binding(scope.symbols, scope.locals, stmt.location, stmt.type,
+            check_iterable_binding(scope.symbols, scope.locals,
+                                   node_location(stmt.location, stmt.iterable_expr), stmt.type,
                                    stmt.iterable);
             nested.locals[stmt.name] = stmt.type;
         }
@@ -475,17 +487,19 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
     if (stmt.kind == StmtKind::CompoundAssign) {
         const std::string target_type = assign_target_type(scope, stmt, stmt.target);
         if (!target_type.empty()) {
-            check_type_match(scope, stmt, target_type, stmt.value);
+            check_type_match(scope, target_type, stmt.value,
+                             node_location(stmt.location, stmt.value_expr));
         }
         return;
     }
     if (stmt.kind == StmtKind::VarDecl) {
         check_local_binding_name(stmt.location, stmt.name);
         if (!known_type(scope.symbols, stmt.type)) {
-            fail(stmt.location, "unknown local type: " + stmt.type);
+            fail(node_location(stmt.location, stmt.type_ref), "unknown local type: " + stmt.type);
         }
         if (!stmt.value.empty()) {
-            check_type_match(scope, stmt, stmt.type, stmt.value);
+            check_type_match(scope, stmt.type, stmt.value,
+                             node_location(stmt.location, stmt.value_expr));
         }
         scope.locals[stmt.name] = stmt.type;
         if (is_dudu_all_caps(stmt.name)) {
@@ -497,10 +511,12 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
         const std::string lhs = stmt.target;
         if (split_top_level(lhs).size() > 1) {
             const std::vector<std::string> names = split_top_level(lhs);
-            const std::vector<std::string> types =
-                tuple_types(scope.symbols, infer_expr(scope, stmt.value, &stmt.location));
+            const std::vector<std::string> types = tuple_types(
+                scope.symbols,
+                infer_expr(scope, stmt.value, &node_location(stmt.location, stmt.value_expr)));
             if (names.size() != types.size()) {
-                fail(stmt.location, "tuple destructuring count mismatch");
+                fail(node_location(stmt.location, stmt.value_expr),
+                     "tuple destructuring count mismatch");
             }
             check_destructure_bindings(stmt.location, names, scope.locals);
             for (size_t i = 0; i < names.size(); ++i) {
@@ -511,7 +527,8 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
         if (lhs.find('.') == std::string::npos && !starts_with(lhs, "*") &&
             lhs.find('[') == std::string::npos && !scope.locals.contains(lhs)) {
             check_local_binding_name(stmt.location, lhs);
-            const std::string inferred = infer_expr(scope, stmt.value, &stmt.location);
+            const std::string inferred =
+                infer_expr(scope, stmt.value, &node_location(stmt.location, stmt.value_expr));
             scope.locals[lhs] = inferred.empty() ? "auto" : inferred;
             if (is_dudu_all_caps(lhs)) {
                 scope.constants.insert(lhs);
@@ -520,7 +537,8 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
         }
         const std::string target_type = assign_target_type(scope, stmt, lhs);
         if (!target_type.empty()) {
-            check_type_match(scope, stmt, target_type, stmt.value);
+            check_type_match(scope, target_type, stmt.value,
+                             node_location(stmt.location, stmt.value_expr));
         }
         return;
     }
