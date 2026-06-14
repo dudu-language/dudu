@@ -76,14 +76,6 @@ bool is_test_decorator(const FunctionDecl& fn) {
     return false;
 }
 
-bool is_operator_method(const std::string& name) {
-    static const std::set<std::string> names = {
-        "__add__", "__sub__", "__mul__", "__truediv__", "__mod__", "__eq__",
-        "__ne__",  "__lt__",  "__le__",  "__gt__",      "__ge__",
-    };
-    return names.contains(name);
-}
-
 std::string decorator_arg(const Decorator& decorator, std::string_view name) {
     const std::string text = trim(decorator.text);
     const std::string prefix = std::string(name) + "(";
@@ -108,30 +100,20 @@ std::string operator_decorator_arg(const FunctionDecl& fn) {
 }
 
 bool is_operator_method(const FunctionDecl& method) {
-    return is_operator_method(method.name) || !operator_decorator_arg(method).empty();
-}
-
-bool is_comparison_operator_method(const std::string& name) {
-    static const std::set<std::string> names = {
-        "__eq__", "__ne__", "__lt__", "__le__", "__gt__", "__ge__",
-    };
-    return names.contains(name);
+    return !operator_decorator_arg(method).empty();
 }
 
 bool is_comparison_operator_method(const FunctionDecl& method) {
-    if (is_comparison_operator_method(method.name)) {
-        return true;
-    }
     static const std::set<std::string> ops = {"==", "!=", "<", "<=", ">", ">="};
     return ops.contains(operator_decorator_arg(method));
 }
 
 bool is_constructor_method(const FunctionDecl& method) {
-    return method.name == "init" || method.name == "__init__";
+    return method.name == "init";
 }
 
 bool is_destructor_method(const FunctionDecl& method) {
-    return method.name == "drop" || method.name == "__del__";
+    return method.name == "drop";
 }
 
 bool is_c_abi_primitive(const std::string& type, bool allow_void) {
@@ -207,10 +189,9 @@ void check_function_decorator(const ModuleAst& module, const Decorator& decorato
     const std::string text = trim(decorator.text);
     if (text == "inline" || text == "constexpr" || text == "extern_c" || text == "cuda.global" ||
         text == "cuda.device" || text == "cuda.host" || text == "shader.compute" ||
-        text == "staticmethod" || decorator_is_call(text, "operator") || text == "test" ||
-        text == "test.ignore" || text == "test.should_panic" ||
-        decorator_is_call(text, "test.should_panic") || decorator_is_call(text, "workgroup_size") ||
-        decorator_is_call(text, "section")) {
+        decorator_is_call(text, "operator") || text == "test" || text == "test.ignore" ||
+        text == "test.should_panic" || decorator_is_call(text, "test.should_panic") ||
+        decorator_is_call(text, "workgroup_size") || decorator_is_call(text, "section")) {
         check_target_decorator_mode(module, decorator, text);
         return;
     }
@@ -463,14 +444,10 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
             if (!fields.insert(method.name).second) {
                 fail(method.location, "duplicate class member: " + method.name);
             }
-            const bool is_static = has_decorator(method, "staticmethod") || method.params.empty() ||
-                                   method.params.front().name != "self";
+            const bool is_static = method.params.empty() || method.params.front().name != "self";
             if ((is_constructor_method(method) || is_destructor_method(method)) &&
                 (method.params.empty() || method.params.front().name != "self")) {
                 fail(method.location, method.name + " requires self parameter");
-            }
-            if (is_static && !method.params.empty() && method.params.front().name == "self") {
-                fail(method.location, "@staticmethod methods cannot take self");
             }
             if (is_operator_method(method)) {
                 if (is_static) {
@@ -543,9 +520,6 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
             if (return_type != "void" && return_type != "bool" && return_type != "i32") {
                 fail(fn.location, "@test return type must be void, bool, or i32");
             }
-        }
-        if (has_decorator(fn, "staticmethod")) {
-            fail(fn.location, "@staticmethod is only valid on methods");
         }
         std::set<std::string> params;
         for (const ParamDecl& param : fn.params) {

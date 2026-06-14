@@ -378,7 +378,7 @@ struct TextEdit {
 };
 
 bool is_constructor_method_name(const std::string& name) {
-    return name == "init" || name == "__init__";
+    return name == "init";
 }
 
 class LanguageServer {

@@ -4,7 +4,6 @@
 #include "dudu/cpp_stmt_emit.hpp"
 
 #include <cctype>
-#include <map>
 #include <set>
 #include <sstream>
 #include <string_view>
@@ -80,15 +79,6 @@ bool class_has_decorator(const ClassDecl& klass, std::string_view name) {
     return false;
 }
 
-bool function_has_decorator(const FunctionDecl& fn, std::string_view name) {
-    for (const Decorator& decorator : fn.decorators) {
-        if (trim_copy(decorator.text) == name) {
-            return true;
-        }
-    }
-    return false;
-}
-
 std::string function_decorator_arg(const FunctionDecl& fn, std::string_view name) {
     const std::string prefix = std::string(name) + "(";
     for (const Decorator& decorator : fn.decorators) {
@@ -110,22 +100,11 @@ std::string unquoted(std::string text) {
 }
 
 bool is_constructor_method(const FunctionDecl& method) {
-    return method.name == "init" || method.name == "__init__";
+    return method.name == "init";
 }
 
 bool is_destructor_method(const FunctionDecl& method) {
-    return method.name == "drop" || method.name == "__del__";
-}
-
-std::string operator_name(const std::string& method_name) {
-    static const std::map<std::string, std::string> names = {
-        {"__add__", "operator+"},     {"__sub__", "operator-"}, {"__mul__", "operator*"},
-        {"__truediv__", "operator/"}, {"__mod__", "operator%"}, {"__eq__", "operator=="},
-        {"__ne__", "operator!="},     {"__lt__", "operator<"},  {"__le__", "operator<="},
-        {"__gt__", "operator>"},      {"__ge__", "operator>="},
-    };
-    const auto it = names.find(method_name);
-    return it == names.end() ? method_name : it->second;
+    return method.name == "drop";
 }
 
 std::string operator_name(const FunctionDecl& method) {
@@ -133,7 +112,7 @@ std::string operator_name(const FunctionDecl& method) {
     if (!op.empty()) {
         return op == "bool" ? "operator bool" : "operator" + op;
     }
-    return operator_name(method.name);
+    return method.name;
 }
 
 std::string class_opening(const ClassDecl& klass) {
@@ -170,7 +149,7 @@ void emit_method(std::ostringstream& out, const std::string& class_name, const F
         out << "    ~" << class_name << '(';
     } else {
         out << "    ";
-        if (first_param == 0 || function_has_decorator(method, "staticmethod")) {
+        if (first_param == 0) {
             out << "static ";
         }
         const std::string lowered_name = operator_name(method);

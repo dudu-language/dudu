@@ -16,7 +16,7 @@ namespace {
 
 std::vector<ConstructorParam> constructor_params(const ClassDecl& klass) {
     for (const FunctionDecl& method : klass.methods) {
-        if (method.name != "init" && method.name != "__init__") {
+        if (method.name != "init") {
             continue;
         }
         std::vector<ConstructorParam> out;
@@ -76,7 +76,7 @@ void check_constructor_args(const FunctionScope& scope, const ClassDecl& klass,
     if (!has_named_arg) {
         size_t ctor_count = 0;
         for (const FunctionDecl& method : klass.methods) {
-            if (method.name != "init" && method.name != "__init__")
+            if (method.name != "init")
                 continue;
             ++ctor_count;
             if (positional_constructor_matches(scope, method_constructor_params(method), args,

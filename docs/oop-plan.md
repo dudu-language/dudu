@@ -149,8 +149,8 @@ This lowers to a C++ constructor. `init` is not a normal callable method.
 Heap allocation stays explicit with `new[T](...)`; `init` only describes how a
 value is constructed.
 
-Status: implemented. The older `__init__` spelling is still accepted for
-compatibility with existing Dudu code, but new examples should use `init`.
+Status: implemented. `init` is the only constructor spelling; Python dunder
+aliases are not part of Dudu's class surface.
 
 ## Destructors And RAII
 
@@ -175,8 +175,8 @@ rules.
 code. Manually owned heap objects use the allocation helpers documented in the
 appearance spec, such as `delete(ptr)` for memory created by `new[T](...)`.
 
-Status: implemented. The older `__del__` spelling is still accepted for
-compatibility with existing Dudu code, but new examples should use `drop`.
+Status: implemented. `drop` is the only destructor spelling; Python dunder
+aliases are not part of Dudu's class surface.
 
 ## Class Constants And Static Fields
 
@@ -225,7 +225,7 @@ instance field named `count`.
 
 ## Class Methods
 
-Python has `@staticmethod` and `@classmethod`, but Dudu does not need those
+Python has `@staticmethod` and `@classmethod`, but Dudu does not use those
 decorators for the core object model. A class-scoped function is just a function
 inside a class with no `self` parameter:
 
@@ -237,6 +237,9 @@ class Color:
 
 Keep `@classmethod` out of core unless concrete C++ interop or generic class
 object examples require it.
+
+`@staticmethod` is not accepted as a compatibility alias. Leaving off `self` is
+the spelling.
 
 ## Visibility
 

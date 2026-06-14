@@ -351,7 +351,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         const std::vector<std::string> params =
             qualify_scoped_types(scan, namespaces, signature_params(match[2].str()));
         FunctionDecl ctor;
-        ctor.name = "__init__";
+        ctor.name = "init";
         for (const std::string& param : params) {
             ParamDecl decl;
             decl.name = "arg" + std::to_string(ctor.params.size());

@@ -1,0 +1,12 @@
+class Vec2:
+    x: i32
+
+    def __add__(self, other: Vec2) -> Vec2:
+        return Vec2(self.x + other.x)
+
+
+def main() -> i32:
+    a = Vec2(1)
+    b = Vec2(2)
+    c = a + b
+    return c.x

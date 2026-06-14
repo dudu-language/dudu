@@ -2,7 +2,6 @@
 
 #include "dudu/type_compat.hpp"
 
-#include <map>
 #include <set>
 
 namespace dudu {
@@ -65,15 +64,11 @@ bool same_or_assignable(const std::string& left, const std::string& right_expr,
            assignment_type_allowed(right, "", left);
 }
 
-std::string operator_method_name(const std::string& op) {
-    static const std::map<std::string, std::string> names = {
-        {"+", "__add__"},      {"-", "__sub__"}, {"*", "__mul__"}, {"/", "__truediv__"},
-        {"%", "__mod__"},      {"==", "__eq__"}, {"!=", "__ne__"}, {"<", "__lt__"},
-        {"<=", "__le__"},      {">", "__gt__"},  {">=", "__ge__"}, {"bool", "__bool__"},
-        {"[]", "__getitem__"},
+bool is_supported_dudu_operator(const std::string& op) {
+    static const std::set<std::string> operators = {
+        "+", "-", "*", "/", "%", "==", "!=", "<", "<=", ">", ">=", "bool", "[]",
     };
-    const auto it = names.find(op);
-    return it == names.end() ? "" : it->second;
+    return operators.contains(op);
 }
 
 std::string unquoted(std::string text) {
@@ -101,8 +96,7 @@ bool method_has_operator(const FunctionDecl& method, const std::string& op) {
 
 std::optional<FunctionSignature>
 dudu_operator_signature(const Symbols& symbols, const std::string& op, const std::string& left) {
-    const std::string method_name = operator_method_name(op);
-    if (method_name.empty()) {
+    if (!is_supported_dudu_operator(op)) {
         return std::nullopt;
     }
     const auto klass = symbols.classes.find(unwrap_value_type(symbols, left));
@@ -110,7 +104,7 @@ dudu_operator_signature(const Symbols& symbols, const std::string& op, const std
         return std::nullopt;
     }
     for (const FunctionDecl& method : klass->second->methods) {
-        if (method.name != method_name && !method_has_operator(method, op)) {
+        if (!method_has_operator(method, op)) {
             continue;
         }
         FunctionSignature signature;
