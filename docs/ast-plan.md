@@ -53,6 +53,8 @@ Already structured:
   names from parsed callee nodes
 - parsed member/callee path reconstruction lives in a shared AST expression
   helper instead of duplicated sema/emission utilities
+- AST type compatibility checks use parsed call callees for explicit casts and
+  `Ok(...)`/`Err(...)` result construction
 - semantic highlighting uses parsed call callees so method calls can color the
   receiver and called member separately instead of treating dotted callees as
   one raw span

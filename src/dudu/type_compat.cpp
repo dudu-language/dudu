@@ -1,5 +1,6 @@
 #include "dudu/type_compat.hpp"
 
+#include "dudu/ast_expr.hpp"
 #include "dudu/cpp_lower.hpp"
 
 #include <cctype>
@@ -63,7 +64,7 @@ bool is_explicit_cast_to(const std::string& expected, std::string expr) {
 
 bool is_explicit_cast_to(const std::string& expected, const Expr& expr) {
     return (expr.kind == ExprKind::Call || expr.kind == ExprKind::TemplateCall) &&
-           compact_type(expr.name) == compact_type(expected);
+           compact_type(call_callee_text(expr)) == compact_type(expected);
 }
 
 bool is_option_value(const std::string& expected, std::string expr, const std::string& got) {
@@ -495,11 +496,12 @@ bool is_result_value(const std::string& expected, const Expr& expr, const std::s
     if (parts.size() != 2 || expr.kind != ExprKind::Call || expr.children.size() != 1) {
         return false;
     }
-    if (starts_with(got, "Ok[") && got.back() == ']' && expr.name == "Ok") {
+    const std::string callee = call_callee_text(expr);
+    if (starts_with(got, "Ok[") && got.back() == ']' && callee == "Ok") {
         return assignment_type_allowed(parts[0], expr.children.front(),
                                        got.substr(3, got.size() - 4));
     }
-    if (starts_with(got, "Err[") && got.back() == ']' && expr.name == "Err") {
+    if (starts_with(got, "Err[") && got.back() == ']' && callee == "Err") {
         return assignment_type_allowed(parts[1], expr.children.front(),
                                        got.substr(4, got.size() - 5));
     }
