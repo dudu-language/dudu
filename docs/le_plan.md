@@ -225,19 +225,26 @@ push. They are not release packaging work.
    native source inputs are unchanged. True per-module generated C++ remains
    the larger architecture step.
 
-6. Freestanding and embedded assert policy
+6. Language server
+
+   Implement `duc lsp` so editors can show diagnostics, warnings, hover,
+   completion, go to definition, find references, rename, formatting, and native
+   header navigation. The concrete plan is
+   [Language Server Plan](language-server-plan.md).
+
+7. Freestanding and embedded assert policy
 
    Hosted `assert` and `debug_assert` are implemented. Freestanding and
    embedded targets reject runtime `assert` instead of accidentally emitting
    hosted runtime machinery.
 
-7. Macro edge cases
+8. Macro edge cases
 
    Normal imported macros are covered. Keep token-pasting, declaration-
    generating, and partial-syntax macros behind wrapper headers unless a real
    library forces a better design.
 
-8. Slow or hung validation
+9. Slow or hung validation
 
    The `std_vector_map_string` codegen-shape hang is fixed and the fast suite
    is reliable again. Keep new validation targeted and guarded so one slow
