@@ -1030,6 +1030,12 @@ Expr parse_expr_text(std::string_view text, SourceLocation location) {
         expr.children.push_back(parse_expr_text(text.substr(1), location));
         return expr;
     }
+    if (text.front() == '&') {
+        Expr expr = make_expr(ExprKind::Unary, text, location);
+        expr.op = "&";
+        expr.children.push_back(parse_expr_text(text.substr(1), location));
+        return expr;
+    }
 
     if (text.ends_with(")")) {
         const size_t open = find_matching_open(text, text.size() - 1, '(', ')');
@@ -1070,6 +1076,12 @@ Expr parse_expr_text(std::string_view text, SourceLocation location) {
     }
     if (starts_keyword(text, "cpp")) {
         return make_expr(ExprKind::CppEscape, text, location);
+    }
+    if (text.front() == '*') {
+        Expr expr = make_expr(ExprKind::Unary, text, location);
+        expr.op = "*";
+        expr.children.push_back(parse_expr_text(text.substr(1), location));
+        return expr;
     }
     if (is_float_literal(text)) {
         Expr expr = make_expr(ExprKind::FloatLiteral, text, location);

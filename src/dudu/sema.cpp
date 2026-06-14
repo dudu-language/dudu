@@ -172,6 +172,51 @@ matching_signature_ast(const FunctionScope& scope, const std::vector<FunctionSig
     return std::nullopt;
 }
 
+std::vector<std::string> expr_texts(const std::vector<Expr>& exprs) {
+    std::vector<std::string> out;
+    out.reserve(exprs.size());
+    for (const Expr& expr : exprs) {
+        out.push_back(expr.text);
+    }
+    return out;
+}
+
+std::string template_call_callee(const Expr& expr) {
+    std::ostringstream out;
+    out << expr.name << "[";
+    for (size_t i = 0; i < expr.template_args.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << expr.template_args[i].text;
+    }
+    out << "]";
+    return out.str();
+}
+
+std::string template_method_name(const Expr& expr, size_t method_dot) {
+    std::ostringstream out;
+    out << trim(expr.name.substr(method_dot + 1)) << "[";
+    for (size_t i = 0; i < expr.template_args.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << expr.template_args[i].text;
+    }
+    out << "]";
+    return out.str();
+}
+
+bool known_template_constructor_type(const FunctionScope& scope, const std::string& callee) {
+    const std::string base = base_type(callee);
+    if (base.find('.') != std::string::npos || base.find("::") != std::string::npos) {
+        return scope.symbols.types.contains(base) || scope.symbols.native_classes.contains(base) ||
+               scope.symbols.classes.contains(resolve_alias(scope.symbols, callee));
+    }
+    return known_type(scope.symbols, callee) ||
+           scope.symbols.classes.contains(resolve_alias(scope.symbols, callee));
+}
+
 std::string infer_expr(const FunctionScope& scope, std::string expr,
                        const SourceLocation* location) {
     expr = trim(std::move(expr));
@@ -413,6 +458,110 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
     return {};
 }
 
+std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr,
+                                    const SourceLocation* location) {
+    if (expr.template_args.empty()) {
+        return infer_expr(scope, expr.text, location);
+    }
+    const std::string callee = template_call_callee(expr);
+    const std::vector<std::string> args = expr_texts(expr.children);
+
+    if (const auto type = infer_allocation_call(scope.symbols, location, callee, args)) {
+        for (const Expr& arg : expr.children) {
+            (void)infer_expr_ast(scope, arg, location);
+        }
+        return *type;
+    }
+    if (expr.name == "sizeof" || expr.name == "alignof") {
+        if (location != nullptr && expr.template_args.size() != 1) {
+            fail(*location, expr.name + " expects 1 type argument, got " +
+                                std::to_string(expr.template_args.size()));
+        }
+        if (expr.template_args.size() == 1 && location != nullptr &&
+            !known_type(scope.symbols, expr.template_args.front().text)) {
+            fail(*location, "unknown " + expr.name + " type: " + expr.template_args.front().text);
+        }
+        return "usize";
+    }
+    if (expr.name == "offsetof") {
+        if (location != nullptr && expr.template_args.size() != 1) {
+            fail(*location, "offsetof expects 1 type argument, got " +
+                                std::to_string(expr.template_args.size()));
+        }
+        if (location != nullptr && expr.children.size() != 1) {
+            fail(*location,
+                 "offsetof expects 1 field argument, got " + std::to_string(expr.children.size()));
+        }
+        if (expr.template_args.size() == 1 && location != nullptr &&
+            !known_type(scope.symbols, expr.template_args.front().text)) {
+            fail(*location, "unknown offsetof type: " + expr.template_args.front().text);
+        }
+        return "usize";
+    }
+
+    if (const auto signature = native_signature_for_call(
+            scope, callee, args, location, infer_expr,
+            [&](const std::string& expected, const std::string& value, const std::string& got) {
+                return can_assign_expr(scope, expected, value, got);
+            })) {
+        return signature->return_type;
+    }
+    const size_t method_dot = expr.name.rfind('.');
+    if (method_dot != std::string::npos && is_member_path(expr.name)) {
+        const std::string receiver = trim(expr.name.substr(0, method_dot));
+        const std::string method_name = template_method_name(expr, method_dot);
+        FunctionSignature signature;
+        if (!scope.locals.contains(receiver) && scope.symbols.classes.contains(receiver) &&
+            static_method_signature_for_type(scope.symbols, receiver, method_name, signature,
+                                             location)) {
+            check_call_args_ast(scope, callee, signature, expr.children, location);
+            return signature.return_type;
+        }
+        const std::string receiver_type =
+            member_path_type(scope.symbols, scope.locals, nullptr, receiver, "");
+        if (scope.locals.contains(receiver) && (receiver_type.empty() || receiver_type == "auto")) {
+            for (const Expr& arg : expr.children) {
+                (void)infer_expr_ast(scope, arg, location);
+            }
+            return "auto";
+        }
+        if (method_signature_for_type(scope.symbols, receiver_type, method_name, signature,
+                                      location)) {
+            const std::vector<FunctionSignature> signatures =
+                method_signatures_for_type(scope.symbols, receiver_type, method_name);
+            if (const auto match = matching_signature_ast(scope, signatures, expr.children)) {
+                check_call_args_ast(scope, callee, *match, expr.children, location);
+                return match->return_type;
+            }
+            if (foreign_cpp_type_name(resolve_alias(scope.symbols, receiver_type))) {
+                for (const Expr& arg : expr.children) {
+                    (void)infer_expr_ast(scope, arg, location);
+                }
+                return "auto";
+            }
+            check_call_args_ast(scope, callee, signature, expr.children, location);
+            return signature.return_type;
+        }
+        if (foreign_cpp_type_name(resolve_alias(scope.symbols, receiver_type))) {
+            for (const Expr& arg : expr.children) {
+                (void)infer_expr_ast(scope, arg, location);
+            }
+            return "auto";
+        }
+    }
+    if (known_template_constructor_type(scope, callee)) {
+        for (const Expr& arg : expr.children) {
+            (void)infer_expr_ast(scope, arg, location);
+        }
+        return callee;
+    }
+    if (location != nullptr && expr.name.find('.') == std::string::npos &&
+        is_plain_identifier(expr.name) && !known_type(scope.symbols, expr.name)) {
+        fail(*location, "unknown function: " + callee);
+    }
+    return infer_expr(scope, expr.text, location);
+}
+
 std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                            const SourceLocation* location) {
     const SourceLocation* use_location =
@@ -490,6 +639,21 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
         }
         if (expr.op == "-") {
             return infer_expr_ast(scope, expr.children.front(), use_location);
+        }
+        if (expr.op == "*") {
+            const std::string got = infer_expr_ast(scope, expr.children.front(), use_location);
+            const std::string type = trim(got);
+            if (!type.empty() && type.front() == '*') {
+                return trim(type.substr(1));
+            }
+            if (use_location != nullptr && !type.empty() && type != "auto") {
+                fail(*use_location, "cannot dereference non-pointer: " + type);
+            }
+            return {};
+        }
+        if (expr.op == "&") {
+            const std::string got = infer_expr_ast(scope, expr.children.front(), use_location);
+            return got.empty() ? std::string{} : "*" + got;
         }
         return infer_expr(scope, expr.text, use_location);
     case ExprKind::Binary: {
@@ -636,6 +800,7 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
         return infer_expr(scope, expr.text, use_location);
     }
     case ExprKind::TemplateCall:
+        return infer_template_call_ast(scope, expr, use_location);
     case ExprKind::CppEscape:
         return infer_expr(scope, expr.text, use_location);
     }

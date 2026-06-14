@@ -418,6 +418,13 @@ instead of falling through the unknown-statement raw text path.
 The old raw-text compound-assignment normalization fallback has been removed.
 Compound assignment is emitted only through the parsed `CompoundAssign` node;
 the statement catch-all is now limited to `Unknown` statements.
+
+Template-call semantic inference now has an AST path that uses parsed template
+arguments and parsed runtime arguments. Native/header interop still receives
+string argument text at its existing boundary, but `infer_expr_ast` no longer
+re-enters whole-expression parsing for template calls. Unary address-of and
+dereference expressions are parsed as `Unary` nodes, which keeps pointer
+assignment targets such as `*ptr = value` on the AST-backed assignment path.
 Common dict initializer C++ emission lowers those parsed entries instead of
 splitting literal text again.
 

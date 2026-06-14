@@ -243,11 +243,12 @@ void test_expression_ast_shape() {
                            "        player.inventory[slot].name = Vec4[f32](1.0, 0.0, 0.0, 1.0)\n"
                            "    values: list[i32] = [1, 2, 3]\n"
                            "    flags: i32 = mask & (1 << bit)\n"
+                           "    *ptr = &values[0]\n"
                            "    return answer\n",
                            "expression_ast.dd");
     assert(module.functions.size() == 1);
     const dudu::FunctionDecl& main = module.functions.front();
-    assert(main.statements.size() == 5);
+    assert(main.statements.size() == 6);
 
     const dudu::Stmt& answer = main.statements[0];
     assert(answer.kind == dudu::StmtKind::VarDecl);
@@ -304,6 +305,14 @@ void test_expression_ast_shape() {
     assert(flags.value_expr.op == "&");
     assert(flags.value_expr.children[1].kind == dudu::ExprKind::Binary);
     assert(flags.value_expr.children[1].op == "<<");
+
+    const dudu::Stmt& pointer_assign = main.statements[4];
+    assert(pointer_assign.kind == dudu::StmtKind::Assign);
+    assert(pointer_assign.target_expr.kind == dudu::ExprKind::Unary);
+    assert(pointer_assign.target_expr.op == "*");
+    assert(pointer_assign.value_expr.kind == dudu::ExprKind::Unary);
+    assert(pointer_assign.value_expr.op == "&");
+    assert(pointer_assign.value_expr.children[0].kind == dudu::ExprKind::Index);
 }
 
 void test_type_ast_shape() {
@@ -510,7 +519,7 @@ void test_native_header_type_scan(const std::filesystem::path& root) {
            std::string::npos);
     assert(cpp.find("derived.base_scaled(2)") != std::string::npos);
     assert(cpp.find("nested.doubled()") != std::string::npos);
-    assert(cpp.find("dudu_native::use_base_widget(& derived)") != std::string::npos);
+    assert(cpp.find("dudu_native::use_base_widget((&derived))") != std::string::npos);
     assert(cpp.find("dudu_native::read_const_ref(namespaced)") != std::string::npos);
     assert(std::filesystem::exists(config.build_dir / "dudu-header-cache"));
 }
