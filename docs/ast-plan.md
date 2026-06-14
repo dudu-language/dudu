@@ -385,6 +385,10 @@ for break/continue diagnostics.
 Structured control-flow C++ emission no longer creates a raw statement text
 copy before dispatching.
 
+Return statements and common local list, set, and tuple initializers now use
+parsed value expression kinds and children for C++ emission instead of raw
+comma splitting and substring extraction.
+
 Bare comma expressions now parse as tuple literals, including Python-style
 multi-value returns. The shared AST comma splitter is quote-aware so commas
 inside string literals do not create phantom tuple elements.

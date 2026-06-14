@@ -167,19 +167,6 @@ bool is_identifier_char(char c) {
     return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_';
 }
 
-bool is_tuple_literal(const std::string& value) {
-    if (split_top_level_args(value).size() > 1) {
-        return true;
-    }
-    return starts_with(value, "(") && ends_with(value, ")") &&
-           split_top_level_args(value.substr(1, value.size() - 2)).size() > 1;
-}
-
-std::string tuple_literal_body(const std::string& value) {
-    return starts_with(value, "(") && ends_with(value, ")") ? value.substr(1, value.size() - 2)
-                                                            : value;
-}
-
 std::string lower_literal_value(const std::string& value, const std::vector<std::string>& aliases,
                                 const std::map<std::string, std::string>& locals);
 
@@ -423,12 +410,12 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         return;
     }
     if (stmt.kind == StmtKind::Return) {
-        const std::string value = stmt.value;
         out << indent(depth) << "return";
-        if (!value.empty()) {
-            if (starts_with(return_type, "Option[") && value == "None") {
+        if (!stmt.value.empty()) {
+            if (starts_with(return_type, "Option[") &&
+                stmt.value_expr.kind == ExprKind::NoneLiteral) {
                 out << " std::nullopt";
-            } else if (split_top_level_args(value).size() > 1) {
+            } else if (stmt.value_expr.kind == ExprKind::TupleLiteral) {
                 out << " {" << lower_expr(stmt.value_expr, aliases, locals) << '}';
             } else {
                 out << ' ' << lower_expr(stmt.value_expr, aliases, locals);
@@ -452,22 +439,23 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
             } else if (starts_with(type, "array[") &&
                        stmt.value_expr.kind == ExprKind::ListLiteral) {
                 out << " = {" << lower_array_literal(stmt.value_expr, aliases, locals) << "}";
-            } else if (starts_with(type, "list[") && value == "[]") {
+            } else if (starts_with(type, "list[") &&
+                       stmt.value_expr.kind == ExprKind::ListLiteral &&
+                       stmt.value_expr.children.empty()) {
                 out << " = {}";
-            } else if (starts_with(type, "list[") && starts_with(value, "[") &&
-                       ends_with(value, "]")) {
-                out << " = {" << lower_expr(value.substr(1, value.size() - 2), aliases, locals)
-                    << '}';
+            } else if (starts_with(type, "list[") &&
+                       stmt.value_expr.kind == ExprKind::ListLiteral) {
+                out << " = {" << join_lowered_exprs(stmt.value_expr.children, aliases, locals)
+                    << "}";
             } else if (starts_with(type, "dict[") && starts_with(value, "{") &&
                        ends_with(value, "}")) {
                 out << " = {" << lower_dict_literal_body(value, aliases, locals) << '}';
-            } else if (starts_with(type, "set[") && starts_with(value, "{") &&
-                       ends_with(value, "}")) {
-                out << " = {" << lower_expr(value.substr(1, value.size() - 2), aliases, locals)
-                    << '}';
-            } else if (is_tuple_literal(value)) {
+            } else if (starts_with(type, "set[") && stmt.value_expr.kind == ExprKind::SetLiteral) {
+                out << " = {" << join_lowered_exprs(stmt.value_expr.children, aliases, locals)
+                    << "}";
+            } else if (stmt.value_expr.kind == ExprKind::TupleLiteral) {
                 out << " = " << lower_declared_stmt_type(stmt, type, aliases) << "{"
-                    << lower_expr(tuple_literal_body(value), aliases, locals) << '}';
+                    << join_lowered_exprs(stmt.value_expr.children, aliases, locals) << '}';
             } else {
                 out << " = " << lower_expr(value, aliases, locals);
             }
