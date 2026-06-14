@@ -6,6 +6,7 @@
 #include "dudu/parser.hpp"
 #include "dudu/project_config.hpp"
 #include "dudu/sema.hpp"
+#include "dudu/sema_alloc.hpp"
 #include "dudu/sema_function_type.hpp"
 
 #include <cassert>
@@ -194,6 +195,24 @@ void test_semantic_diagnostics() {
         }
         assert(rejected);
     }
+}
+
+void test_legacy_allocation_type_ref_diagnostics() {
+    dudu::Symbols symbols;
+    const dudu::SourceLocation location{.file = "legacy_alloc.dd", .line = 7, .column = 12};
+
+    bool rejected = false;
+    try {
+        (void)dudu::infer_allocation_call(symbols, &location, "new[list[MissingType]]",
+                                          std::vector<std::string>{});
+    } catch (const dudu::CompileError& error) {
+        assert(error.location().line == 7);
+        assert(error.location().column > location.column);
+        assert(std::string(error.what()).find("unknown allocation type: MissingType") !=
+               std::string::npos);
+        rejected = true;
+    }
+    assert(rejected);
 }
 
 void test_ast_constructor_assignment_compatibility() {
@@ -848,6 +867,7 @@ int main() {
         test_canonical_examples_parse(root);
         test_header_emission();
         test_semantic_diagnostics();
+        test_legacy_allocation_type_ref_diagnostics();
         test_ast_constructor_assignment_compatibility();
         test_statement_ast_shape();
         test_expression_ast_shape();

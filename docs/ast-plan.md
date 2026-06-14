@@ -45,6 +45,9 @@ Already structured:
 - type-shaped builtins such as `new[T]`, `malloc[T]`, `sizeof[T]`,
   `alignof[T]`, and `offsetof[T]` validate parsed `TypeRef` arguments
   recursively, so nested unknown types get precise diagnostics
+- the legacy raw-callee allocation fallback reparses bracketed allocation types
+  into `TypeRef` before validation, keeping nested diagnostics consistent while
+  callers migrate to parsed template calls
 - source range fields on statement, expression, and type nodes
 - semantic diagnostics for return values, local initializer values, local type
   names, conditions, and assignment targets use expression/type node locations

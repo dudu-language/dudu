@@ -17,9 +17,20 @@ std::optional<std::string> infer_allocation_call_with_count(const Symbols& symbo
     if (name != "new" && name != "malloc") {
         return std::nullopt;
     }
-    const std::string type = trim_copy(callee.substr(open + 1, callee.size() - open - 2));
-    if (location != nullptr && !known_type(symbols, type)) {
-        throw CompileError(*location, "unknown allocation type: " + type);
+    SourceLocation type_location;
+    if (location != nullptr) {
+        type_location = *location;
+        type_location.column += static_cast<int>(open + 1);
+    }
+    const TypeRef type_ref =
+        parse_type_text(callee.substr(open + 1, callee.size() - open - 2), type_location);
+    const std::string type = trim_copy(type_ref.text);
+    if (location != nullptr) {
+        if (const auto unknown = unknown_type_ref(symbols, type_ref)) {
+            const SourceLocation error_location =
+                unknown->second.line > 0 ? unknown->second : type_location;
+            throw CompileError(error_location, "unknown allocation type: " + unknown->first);
+        }
     }
     if (location != nullptr && name == "malloc" && arg_count != 1) {
         throw CompileError(*location,
