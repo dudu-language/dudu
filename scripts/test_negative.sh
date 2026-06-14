@@ -82,6 +82,7 @@ expect_fail bad_generic_duplicate_param --check "duplicate generic parameter: T"
 expect_fail bad_generic_function_arg_type --check "argument 1 for identity\\[i32\\] expects i32, got bool"
 expect_fail bad_generic_box_arg_type --check "constructor Box\\[i32\\] argument 1 expects i32, got bool"
 expect_fail bad_generic_method_arg_type --check "argument 1 for box.id\\[i32\\] expects i32, got bool"
+expect_fail bad_generic_pair_arg_type --check "constructor Pair\\[str, i32\\] argument 1 expects str, got i32"
 expect_fail bad_condition_type --emit-cpp "condition must be bool, got i32"
 expect_fail bad_debug_assert_condition --emit-cpp "condition must be bool, got i32"
 if "$repo_root/build/dudu" "$repo_root/tests/fixtures/bad_freestanding_assert.dd" \

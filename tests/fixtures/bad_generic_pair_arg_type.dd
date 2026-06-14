@@ -1,0 +1,8 @@
+class Pair[T, U]:
+    first: T
+    second: U
+
+
+def main() -> i32:
+    pair: Pair[str, i32] = Pair[str, i32](42, 7)
+    return pair.second

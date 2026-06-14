@@ -1,0 +1,12 @@
+class Pair[T, U]:
+    first: T
+    second: U
+
+
+def choose_second[T, U](first: T, second: U) -> U:
+    return second
+
+
+def main() -> i32:
+    pair: Pair[str, i32] = Pair[str, i32]("answer", 40)
+    return choose_second[str, i32](pair.first, pair.second + 2)

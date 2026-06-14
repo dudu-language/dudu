@@ -78,7 +78,9 @@ declared Dudu signature, and type-check parsed runtime arguments. Explicit
 single-parameter generic methods such as `box.id[i32](42)` emit C++ method
 templates and type-check parsed runtime arguments. Call-site type inference,
 richer instantiated diagnostics, broader generic methods, and non-type template
-parameters remain.
+parameters remain. Multi-parameter generic functions and classes such as
+`Pair[str, i32]` substitute receiver member types through the declared class
+generic parameter names.
 
 Unsupported operations on `T` should produce useful diagnostics that mention:
 

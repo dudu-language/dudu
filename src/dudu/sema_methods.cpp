@@ -172,6 +172,15 @@ std::string substitute_receiver_template_type(std::string type,
     return type;
 }
 
+std::string substitute_class_template_type(std::string type,
+                                           const std::vector<std::string>& generic_params,
+                                           const std::vector<std::string>& receiver_args) {
+    for (size_t i = 0; i < generic_params.size() && i < receiver_args.size(); ++i) {
+        type = replace_type_identifier(std::move(type), generic_params[i], receiver_args[i]);
+    }
+    return type;
+}
+
 std::string first_path_type(const Symbols& symbols,
                             const std::map<std::string, std::string>& locals,
                             const SourceLocation* location, const std::string& first,
@@ -273,7 +282,10 @@ std::string member_path_type(const Symbols& symbols,
         bool found = false;
         for (const FieldDecl& decl : klass->second->fields) {
             if (decl.name == field) {
-                type = substitute_receiver_template_type(decl.type, template_args_from_type(type));
+                const std::vector<std::string> receiver_args = template_args_from_type(type);
+                type = substitute_class_template_type(decl.type, klass->second->generic_params,
+                                                      receiver_args);
+                type = substitute_receiver_template_type(std::move(type), receiver_args);
                 found = true;
                 break;
             }
@@ -340,12 +352,18 @@ bool method_signature_for_type(const Symbols& symbols, std::string receiver_type
             !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
         for (size_t i = first_param; i < method.params.size(); ++i) {
             std::string param_type = substitute_template_type(method.params[i].type, template_arg);
+            param_type = substitute_class_template_type(std::move(param_type),
+                                                        klass->second->generic_params,
+                                                        receiver_args);
             signature.params.push_back(
                 substitute_receiver_template_type(std::move(param_type), receiver_args));
         }
         signature.return_type = method.return_type.empty()
                                     ? "void"
                                     : substitute_template_type(method.return_type, template_arg);
+        signature.return_type = substitute_class_template_type(std::move(signature.return_type),
+                                                               klass->second->generic_params,
+                                                               receiver_args);
         signature.return_type =
             substitute_receiver_template_type(std::move(signature.return_type), receiver_args);
         return true;
@@ -387,12 +405,18 @@ std::vector<FunctionSignature> method_signatures_for_type(const Symbols& symbols
             !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
         for (size_t i = first_param; i < method.params.size(); ++i) {
             std::string param_type = substitute_template_type(method.params[i].type, template_arg);
+            param_type = substitute_class_template_type(std::move(param_type),
+                                                        klass->second->generic_params,
+                                                        receiver_args);
             signature.params.push_back(
                 substitute_receiver_template_type(std::move(param_type), receiver_args));
         }
         signature.return_type = method.return_type.empty()
                                     ? "void"
                                     : substitute_template_type(method.return_type, template_arg);
+        signature.return_type = substitute_class_template_type(std::move(signature.return_type),
+                                                               klass->second->generic_params,
+                                                               receiver_args);
         signature.return_type =
             substitute_receiver_template_type(std::move(signature.return_type), receiver_args);
         out.push_back(std::move(signature));

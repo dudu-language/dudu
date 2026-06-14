@@ -306,6 +306,9 @@ push. They are not release packaging work.
    generic methods such as `box.id[i32](42)` emit C++ method templates and
    type-check parsed runtime arguments. Call-site inference, broader generic
    methods, non-type parameters, and richer instantiated diagnostics remain.
+   Multi-parameter generic functions and classes such as `Pair[str, i32]`
+   substitute receiver member types through the declared class generic
+   parameter names.
 
 6. Sum Types And Pattern Matching
 
