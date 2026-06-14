@@ -1,0 +1,2 @@
+def rename_target() -> i32:
+    return 1

@@ -39,6 +39,8 @@ native_uri = f"file://{repo_root}/tests/fixtures/dudu_lsp_native.dd"
 missing_native_uri = f"file://{repo_root}/tests/fixtures/dudu_lsp_missing_native.dd"
 native_pkg_uri = f"file://{repo_root}/tests/fixtures/lsp_pkg_project/main.dd"
 native_pkg_config_uri = f"file://{repo_root}/tests/fixtures/lsp_pkg_project/dudu.toml"
+rename_uri = f"file://{repo_root}/tests/fixtures/lsp_rename_main.dd"
+rename_user_uri = f"file://{repo_root}/tests/fixtures/lsp_rename_user.dd"
 source = "\n".join(
     [
         "class Player:",
@@ -93,6 +95,38 @@ messages = [
                     "version": 1,
                     "text": source,
                 }
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "method": "textDocument/didOpen",
+            "params": {
+                "textDocument": {
+                    "uri": rename_uri,
+                    "languageId": "dudu",
+                    "version": 1,
+                    "text": "\n".join(
+                        [
+                            "def rename_target() -> i32:",
+                            "    return 1",
+                            "",
+                        ]
+                    ),
+                }
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 28,
+            "method": "textDocument/rename",
+            "params": {
+                "textDocument": {"uri": rename_uri},
+                "position": {"line": 0, "character": 5},
+                "newName": "renamed_target",
             },
         }
     ),
@@ -605,6 +639,17 @@ assert native_config_edit["newText"] == (
     "\n"
     "[pkg]\n"
     'libs = ["raylib"]\n'
+)
+
+workspace_rename = next(item for item in responses if item.get("id") == 28)
+assert rename_uri in workspace_rename["result"]["changes"]
+assert rename_user_uri in workspace_rename["result"]["changes"]
+workspace_rename_user_edits = workspace_rename["result"]["changes"][rename_user_uri]
+assert any(
+    edit["range"]["start"]["line"] == 1
+    and edit["range"]["start"]["character"] == 11
+    and edit["newText"] == "renamed_target"
+    for edit in workspace_rename_user_edits
 )
 
 workspace_references = next(item for item in responses if item.get("id") == 18)

@@ -224,9 +224,10 @@ display and broader real-library coverage remain.
   project config suggests the fix
 - optional warnings and lint code actions
 
-Status: conservative `textDocument/rename` is implemented for Dudu symbols in
-currently open documents and wired into the VS Code extension. It validates the
-replacement as an identifier and refuses dotted/native symbols. Initial
+Status: conservative `textDocument/rename` is implemented for Dudu symbols
+across open documents and unopened `.dd` workspace files, and is wired into the
+VS Code extension. It validates the replacement as an identifier and refuses
+dotted/native symbols. Initial
 `textDocument/codeAction` support is implemented with a format-document source
 action wired into VS Code. Organize-imports code actions are implemented for the
 leading import block and return a WorkspaceEdit through the VS Code adapter.
@@ -234,7 +235,7 @@ Missing-import quick fixes are implemented for unambiguous Dudu workspace
 symbols and insert a `from module import symbol` edit. Native config quick fixes
 are implemented for known missing native headers that map cleanly to
 `pkg-config` packages such as `raylib`, `sqlite3`, `sdl3`, `glfw3`, and
-`vulkan`. Project-wide rename beyond open documents remains.
+`vulkan`.
 
 ## Tests
 
@@ -268,6 +269,8 @@ Format and organize-imports code actions are covered.
 Missing-import quick fixes are covered using an unopened workspace file.
 Native config quick fixes are covered with a fixture `dudu.toml` edit for a
 known missing native header package.
+Workspace rename is covered across an open definition file and an unopened
+sibling use file.
 
 ## Non-Goals
 
