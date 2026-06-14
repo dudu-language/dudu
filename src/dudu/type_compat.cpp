@@ -186,8 +186,10 @@ std::string simple_literal_type(const Expr& expr) {
     case ExprKind::IntLiteral:
     case ExprKind::FloatLiteral:
         return "number";
-    default:
+    case ExprKind::Unknown:
         return simple_literal_type(expr.text);
+    default:
+        return {};
     }
 }
 

@@ -9,6 +9,7 @@
 #include "dudu/sema.hpp"
 #include "dudu/sema_alloc.hpp"
 #include "dudu/sema_function_type.hpp"
+#include "dudu/type_compat.hpp"
 
 #include <cassert>
 #include <filesystem>
@@ -232,6 +233,21 @@ void test_emitted_local_index_type_inference() {
            "array[f32][4]");
     assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("matrix[1, 2]"), locals,
                                           functions) == "f32");
+}
+
+void test_ast_assignment_display_types() {
+    assert(dudu::assignment_error("bool", dudu::parse_expr_text("123"), "") ==
+           "cannot assign number to bool without an explicit cast");
+    assert(dudu::assignment_error("bool", dudu::parse_expr_text("\"hi\""), "") ==
+           "cannot assign str to bool without an explicit cast");
+    assert(dudu::assignment_error("bool", dudu::parse_expr_text("value"), "") ==
+           "cannot assign  to bool without an explicit cast");
+
+    dudu::Expr unknown;
+    unknown.kind = dudu::ExprKind::Unknown;
+    unknown.text = "123";
+    assert(dudu::assignment_error("bool", unknown, "") ==
+           "cannot assign number to bool without an explicit cast");
 }
 
 void test_ast_constructor_assignment_compatibility() {
@@ -888,6 +904,7 @@ int main() {
         test_semantic_diagnostics();
         test_legacy_allocation_type_ref_diagnostics();
         test_emitted_local_index_type_inference();
+        test_ast_assignment_display_types();
         test_ast_constructor_assignment_compatibility();
         test_statement_ast_shape();
         test_expression_ast_shape();
