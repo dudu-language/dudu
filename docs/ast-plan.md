@@ -462,6 +462,10 @@ collection use those declaration expression nodes instead of raw strings.
 Enum value initializers now store parsed expression nodes as well; enum C++
 emission and semantic-token collection use those nodes.
 
+Dudu-native `@operator("[]")` semantic checks now consume parsed index
+argument nodes, including tuple-shaped multi-index expressions, instead of
+splitting raw index text.
+
 `range(...)` for-loop C++ emission now reads parsed call arguments from the
 iterable expression instead of parsing them back out of lowered C++ text.
 

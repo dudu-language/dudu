@@ -666,6 +666,13 @@ std::optional<std::string> infer_pointer_cast_call_ast(const FunctionScope& scop
     return "*" + type;
 }
 
+std::vector<Expr> index_arg_exprs(const Expr& index_expr) {
+    if (index_expr.kind == ExprKind::TupleLiteral) {
+        return index_expr.children;
+    }
+    return {index_expr};
+}
+
 std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                            const SourceLocation* location) {
     const SourceLocation* use_location =
@@ -829,8 +836,8 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                     local != scope.locals.end()) {
                     if (const auto signature =
                             dudu_operator_signature(scope.symbols, "[]", local->second)) {
-                        check_call_args(scope, receiver.name + "[]", *signature,
-                                        split_top_level_args(index_expr), use_location);
+                        check_call_args_ast(scope, receiver.name + "[]", *signature,
+                                            index_arg_exprs(expr.children[1]), use_location);
                     }
                 }
                 return indexed_value_type(scope.symbols, scope.locals, *use_location, receiver.name,
