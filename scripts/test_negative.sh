@@ -75,6 +75,9 @@ expect_fail bad_array_too_many_indices --emit-cpp "too many indices for array: m
 expect_fail bad_array_open_slice --emit-cpp "array slice requires explicit start and end: values"
 expect_fail bad_array_matrix_slice --emit-cpp "array slicing requires one-dimensional fixed array: matrix"
 expect_fail bad_tensor_index_type --emit-cpp "argument 1 for tensor\\[\\] expects i32, got bool"
+expect_fail bad_tensor_index_set_index_type --emit-cpp "argument 1 for tensor\\[\\]= expects i32, got bool"
+expect_fail bad_tensor_index_set_value_type --emit-cpp "argument 2 for tensor\\[\\]= expects i32, got bool"
+expect_fail bad_tensor_index_set_return --check "indexed assignment operator methods must return void"
 expect_fail bad_condition_type --emit-cpp "condition must be bool, got i32"
 expect_fail bad_debug_assert_condition --emit-cpp "condition must be bool, got i32"
 if "$repo_root/build/dudu" "$repo_root/tests/fixtures/bad_freestanding_assert.dd" \

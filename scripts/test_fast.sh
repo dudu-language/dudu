@@ -29,6 +29,7 @@ compile_and_expect array_c_handoff 42
 compile_and_expect array_slice_view 42
 compile_and_expect matrix_math 26
 compile_and_expect tensor_index_hook 42
+compile_and_expect tensor_index_set_hook 42
 compile_and_expect static_fields 42
 compile_and_expect native_template_function 42
 compile_and_expect native_scan_local 42

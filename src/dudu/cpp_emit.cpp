@@ -4,6 +4,7 @@
 #include "dudu/cpp_emit_prelude.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/cpp_stmt_emit.hpp"
+#include "dudu/sema_context.hpp"
 
 #include <map>
 #include <sstream>
@@ -181,14 +182,15 @@ void emit_function_signature(std::ostringstream& out, const FunctionDecl& fn,
 
 void emit_function_body(std::ostringstream& out, const FunctionDecl& fn,
                         const std::vector<std::string>& aliases,
-                        const std::map<std::string, std::string>& function_returns) {
+                        const std::map<std::string, std::string>& function_returns,
+                        const Symbols& symbols) {
     emit_function_signature(out, fn, aliases);
     out << " {\n";
     std::map<std::string, std::string> locals;
     for (const ParamDecl& param : fn.params) {
         locals[param.name] = param.type;
     }
-    emit_block(out, fn.statements, 1, aliases, locals, fn.return_type, function_returns);
+    emit_block(out, fn.statements, 1, aliases, locals, fn.return_type, function_returns, &symbols);
     out << "}\n\n";
 }
 
@@ -199,6 +201,7 @@ bool should_emit_function(const FunctionDecl& fn, bool test_source) {
 void emit_early_functions(std::ostringstream& out, const ModuleAst& module,
                           const std::vector<std::string>& aliases,
                           const std::map<std::string, std::string>& function_returns,
+                          const Symbols& symbols,
                           bool header_only, bool test_source = false) {
     for (const FunctionDecl& fn : module.functions) {
         if (!emit_before_constants(fn) || !should_emit_function(fn, test_source)) {
@@ -207,7 +210,7 @@ void emit_early_functions(std::ostringstream& out, const ModuleAst& module,
         if (header_only && !visible_function_in_header(fn)) {
             continue;
         }
-        emit_function_body(out, fn, aliases, function_returns);
+        emit_function_body(out, fn, aliases, function_returns, symbols);
     }
 }
 
@@ -329,14 +332,15 @@ std::string emit_cpp_header(const ModuleAst& module) {
     std::ostringstream out;
     const std::vector<std::string> aliases = namespace_aliases(module);
     const std::map<std::string, std::string> function_returns = function_return_types(module);
+    const Symbols symbols = collect_symbols(module);
     out << "#pragma once\n\n";
     emit_includes(out, module);
     emit_result_prelude(out, module);
 
     emit_aliases(out, module);
     emit_enums(out, module, aliases);
-    emit_classes(out, module, aliases, function_returns, true);
-    emit_early_functions(out, module, aliases, function_returns, true);
+    emit_classes(out, module, aliases, function_returns, symbols, true);
+    emit_early_functions(out, module, aliases, function_returns, symbols, true);
     emit_constants(out, module, aliases);
 
     for (const FunctionDecl& fn : module.functions) {
@@ -388,20 +392,21 @@ std::string emit_cpp_source(const ModuleAst& module) {
     std::ostringstream out;
     const std::vector<std::string> aliases = namespace_aliases(module);
     const std::map<std::string, std::string> function_returns = function_return_types(module);
+    const Symbols symbols = collect_symbols(module);
     emit_includes(out, module);
     emit_result_prelude(out, module);
 
     emit_aliases(out, module);
     emit_enums(out, module, aliases);
-    emit_classes(out, module, aliases, function_returns);
-    emit_early_functions(out, module, aliases, function_returns, false);
+    emit_classes(out, module, aliases, function_returns, symbols);
+    emit_early_functions(out, module, aliases, function_returns, symbols, false);
     emit_constants(out, module, aliases);
 
     for (const FunctionDecl& fn : module.functions) {
         if (emit_before_constants(fn)) {
             continue;
         }
-        emit_function_body(out, fn, aliases, function_returns);
+        emit_function_body(out, fn, aliases, function_returns, symbols);
     }
     emit_static_asserts(out, module, aliases);
     return out.str();
@@ -412,20 +417,21 @@ std::string emit_cpp_test_source(const ModuleAst& module, const std::string& fil
     std::ostringstream out;
     const std::vector<std::string> aliases = namespace_aliases(module);
     const std::map<std::string, std::string> function_returns = function_return_types(module);
+    const Symbols symbols = collect_symbols(module);
     emit_includes(out, module);
     emit_result_prelude(out, module);
 
     emit_aliases(out, module);
     emit_enums(out, module, aliases);
-    emit_classes(out, module, aliases, function_returns);
-    emit_early_functions(out, module, aliases, function_returns, false, true);
+    emit_classes(out, module, aliases, function_returns, symbols);
+    emit_early_functions(out, module, aliases, function_returns, symbols, false, true);
     emit_constants(out, module, aliases);
 
     for (const FunctionDecl& fn : module.functions) {
         if (emit_before_constants(fn) || !should_emit_function(fn, true)) {
             continue;
         }
-        emit_function_body(out, fn, aliases, function_returns);
+        emit_function_body(out, fn, aliases, function_returns, symbols);
     }
     emit_static_asserts(out, module, aliases);
     emit_test_harness(out, module, filter, capture_output);

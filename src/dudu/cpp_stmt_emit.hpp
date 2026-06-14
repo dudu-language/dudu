@@ -9,6 +9,8 @@
 
 namespace dudu {
 
+struct Symbols;
+
 std::string lower_cpp_expr_ast(const Expr& expr, const std::vector<std::string>& aliases,
                                const std::map<std::string, std::string>& locals = {});
 
@@ -18,6 +20,7 @@ void emit_block(std::ostringstream& out, const std::vector<Stmt>& body, int dept
                 const std::vector<std::string>& aliases,
                 const std::map<std::string, std::string>& locals,
                 const std::string& return_type = {},
-                const std::map<std::string, std::string>& function_returns = {});
+                const std::map<std::string, std::string>& function_returns = {},
+                const Symbols* symbols = nullptr);
 
 } // namespace dudu

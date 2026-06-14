@@ -76,7 +76,7 @@ bool same_or_assignable(const std::string& left, const Expr& right_expr, const s
 
 bool is_supported_dudu_operator(const std::string& op) {
     static const std::set<std::string> operators = {
-        "+", "-", "*", "/", "%", "==", "!=", "<", "<=", ">", ">=", "bool", "[]",
+        "+", "-", "*", "/", "%", "==", "!=", "<", "<=", ">", ">=", "bool", "[]", "[]=",
     };
     return operators.contains(op);
 }

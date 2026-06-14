@@ -1222,9 +1222,30 @@ std::string assign_target_type(const FunctionScope& scope, const Stmt& stmt,
     }
     if (stmt.target_expr.kind == ExprKind::Index && stmt.target_expr.children.size() == 2 &&
         stmt.target_expr.children[0].kind == ExprKind::Name) {
+        const std::string& name = stmt.target_expr.children[0].name;
+        if (const auto local = scope.locals.find(name); local != scope.locals.end()) {
+            if (const auto signature = dudu_operator_signature(scope.symbols, "[]=", local->second)) {
+                std::vector<Expr> args = index_arg_exprs(stmt.target_expr.children[1]);
+                args.push_back(stmt.value_expr);
+                check_call_args_ast(scope, name + "[]=", *signature, args, &target_location);
+                return {};
+            }
+        }
         return indexed_value_type(scope.symbols, scope.locals, target_location,
-                                  stmt.target_expr.children[0].name, stmt.target_expr.children[1],
+                                  name, stmt.target_expr.children[1],
                                   "indexed assignment to unknown local: ");
+    }
+    if (stmt.target_expr.kind == ExprKind::Index && stmt.target_expr.children.size() == 2) {
+        const Expr& receiver = stmt.target_expr.children[0];
+        if (const std::optional<std::string> receiver_path = member_path_from_expr(receiver)) {
+            const std::string receiver_type =
+                member_path_type(scope.symbols, scope.locals, &target_location, *receiver_path,
+                                 "assignment through unknown local: ");
+            if (!receiver_type.empty()) {
+                return indexed_type_from_type(scope.symbols, target_location, receiver_type,
+                                              stmt.target_expr.children[1], *receiver_path);
+            }
+        }
     }
     if (stmt.target_expr.kind == ExprKind::Name) {
         const std::string& name = stmt.target_expr.name;

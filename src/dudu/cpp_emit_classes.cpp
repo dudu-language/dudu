@@ -2,6 +2,7 @@
 
 #include "dudu/cpp_lower.hpp"
 #include "dudu/cpp_stmt_emit.hpp"
+#include "dudu/sema_context.hpp"
 
 #include <cctype>
 #include <set>
@@ -110,6 +111,9 @@ bool is_destructor_method(const FunctionDecl& method) {
 std::string operator_name(const FunctionDecl& method) {
     const std::string op = unquoted(function_decorator_arg(method, "operator"));
     if (!op.empty()) {
+        if (op == "[]=") {
+            return method.name;
+        }
         return op == "bool" ? "operator bool" : "operator" + op;
     }
     return method.name;
@@ -140,7 +144,8 @@ std::string_view class_section_for_method(Visibility visibility) {
 
 void emit_method(std::ostringstream& out, const std::string& class_name, const FunctionDecl& method,
                  const std::vector<std::string>& aliases,
-                 const std::map<std::string, std::string>& function_returns) {
+                 const std::map<std::string, std::string>& function_returns,
+                 const Symbols& symbols) {
     const size_t first_param =
         !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
     if (is_constructor_method(method)) {
@@ -174,7 +179,8 @@ void emit_method(std::ostringstream& out, const std::string& class_name, const F
     for (size_t i = first_param; i < method.params.size(); ++i) {
         locals[method.params[i].name] = method.params[i].type;
     }
-    emit_block(out, method.statements, 2, aliases, locals, method.return_type, function_returns);
+    emit_block(out, method.statements, 2, aliases, locals, method.return_type, function_returns,
+               &symbols);
     out << "    }\n";
 }
 
@@ -207,7 +213,8 @@ void emit_class_constant_definition(std::ostringstream& out, const std::string& 
 
 void emit_classes(std::ostringstream& out, const ModuleAst& module,
                   const std::vector<std::string>& aliases,
-                  const std::map<std::string, std::string>& function_returns, bool header_only) {
+                  const std::map<std::string, std::string>& function_returns, const Symbols& symbols,
+                  bool header_only) {
     for (const size_t index : class_emit_order(module.classes)) {
         const ClassDecl& klass = module.classes[index];
         if (header_only && !visible_in_header(klass.visibility)) {
@@ -237,7 +244,7 @@ void emit_classes(std::ostringstream& out, const ModuleAst& module,
                 out << method_section << ":\n";
                 current_section = method_section;
             }
-            emit_method(out, klass.name, method, aliases, function_returns);
+            emit_method(out, klass.name, method, aliases, function_returns, symbols);
         }
         out << "};\n\n";
         for (const ConstDecl& constant : klass.constants) {

@@ -503,12 +503,21 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                 if (is_static) {
                     fail(method.location, "operator methods cannot be static");
                 }
-                if (operator_decorator_arg(method) == "bool") {
+                const std::string op = operator_decorator_arg(method);
+                if (op == "bool") {
                     if (method.params.size() != 1 || method.params.front().name != "self") {
                         fail(method.location, "bool operator methods require only self");
                     }
                     if (method.return_type.empty() || method.return_type != "bool") {
                         fail(method.location, "bool operator methods must return bool");
+                    }
+                } else if (op == "[]=") {
+                    if (method.params.size() != 3 || method.params.front().name != "self") {
+                        fail(method.location,
+                             "indexed assignment operator methods require self, index, and value");
+                    }
+                    if (!method.return_type.empty() && method.return_type != "void") {
+                        fail(method.location, "indexed assignment operator methods must return void");
                     }
                 } else if (method.params.size() != 2 || method.params.front().name != "self") {
                     fail(method.location, "operator methods require self and one parameter");

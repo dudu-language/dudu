@@ -332,8 +332,8 @@ Indexing operators belong with the array/tensor plan:
 - `@operator("[]=")`
 
 Status: implemented for the first operator set. `@operator("[]")` read hooks
-are implemented for library-style tensor wrappers. Indexed assignment hooks
-remain part of the array/tensor plan.
+and `@operator("[]=")` indexed assignment hooks are implemented for
+library-style tensor wrappers.
 
 ## Inheritance
 
