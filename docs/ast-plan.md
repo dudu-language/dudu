@@ -382,6 +382,9 @@ plus the parsed compound operator instead of normalizing raw statement text.
 The main statement semantic dispatcher no longer depends on raw statement text
 for break/continue diagnostics.
 
+Structured control-flow C++ emission no longer creates a raw statement text
+copy before dispatching.
+
 Bare comma expressions now parse as tuple literals, including Python-style
 multi-value returns. The shared AST comma splitter is quote-aware so commas
 inside string literals do not create phantom tuple elements.

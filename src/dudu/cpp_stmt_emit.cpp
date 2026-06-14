@@ -521,7 +521,6 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                     const std::vector<std::string>& aliases,
                     std::map<std::string, std::string>& locals, const std::string& return_type,
                     const std::map<std::string, std::string>& function_returns) {
-    const std::string text = trim_copy(stmt.text);
     emit_source_comment(out, stmt, depth);
     if (stmt.kind == StmtKind::If) {
         const std::string& condition = stmt.condition;
