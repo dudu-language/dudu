@@ -78,8 +78,9 @@ fixed arrays own inline storage, lists own dynamic storage, and spans/views do
 not own data.
 
 Status: explicit `array[T][N]` and `array[T][M, N]` compile and lower to nested
-`std::array` storage. `array[T] = literal` infers fixed shapes from non-empty
-rectangular literals.
+`std::array` storage. Explicit-shaped literal initializers are checked for
+rectangular shape and element type. `array[T] = literal` infers fixed shapes
+from non-empty rectangular literals.
 
 ## Construction
 

@@ -61,6 +61,9 @@ expect_fail bad_index_read_type --emit-cpp "cannot assign i32 to bool without an
 expect_fail bad_index_non_container --emit-cpp "cannot index non-container: value"
 expect_fail bad_array_empty_inference --emit-cpp "array shape cannot be inferred from an empty literal"
 expect_fail bad_array_ragged_inference --emit-cpp "ragged array literal"
+expect_fail bad_array_shape_mismatch --emit-cpp "array literal shape mismatch: expected \\[2, 2\\], got \\[3, 2\\]"
+expect_fail bad_array_empty_shape_mismatch --emit-cpp "array literal shape mismatch: expected \\[2\\], got \\[0\\]"
+expect_fail bad_array_element_type --emit-cpp "array literal element expects i32, got bool"
 expect_fail bad_condition_type --emit-cpp "condition must be bool, got i32"
 expect_fail bad_debug_assert_condition --emit-cpp "condition must be bool, got i32"
 if "$repo_root/build/dudu" "$repo_root/tests/fixtures/bad_freestanding_assert.dd" \

@@ -24,6 +24,7 @@
 
 #include <cctype>
 #include <set>
+#include <sstream>
 namespace dudu {
 namespace {
 [[noreturn]] void fail(const SourceLocation& location, const std::string& message) {
@@ -355,6 +356,19 @@ std::string effective_var_type(const Stmt& stmt) {
     return inferred.status == ArrayShapeStatus::Inferred ? inferred.type : stmt.type;
 }
 
+std::string shape_text(const std::vector<size_t>& shape) {
+    std::ostringstream out;
+    out << "[";
+    for (size_t i = 0; i < shape.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << shape[i];
+    }
+    out << "]";
+    return out.str();
+}
+
 void check_condition_type(const FunctionScope& scope, const Stmt& stmt, std::string expr) {
     expr = trim(std::move(expr));
     if (!expr.empty() && expr.back() == ':') {
@@ -532,6 +546,26 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
         if (inferred.status == ArrayShapeStatus::RaggedLiteral) {
             fail(node_location(stmt.location, stmt.value_expr), "ragged array literal");
         }
+        const std::vector<size_t> explicit_shape = explicit_array_shape(stmt.type);
+        const std::string explicit_element = explicit_array_element_type(stmt.type);
+        if (!explicit_shape.empty() && stmt.value_expr.kind == ExprKind::ListLiteral) {
+            const ArrayShapeInference actual =
+                infer_array_literal_shape_type("array[" + explicit_element + "]", stmt.value_expr);
+            if (actual.status == ArrayShapeStatus::RaggedLiteral) {
+                fail(node_location(stmt.location, stmt.value_expr), "ragged array literal");
+            }
+            if (actual.status == ArrayShapeStatus::EmptyLiteral &&
+                explicit_shape != std::vector<size_t>{0}) {
+                fail(node_location(stmt.location, stmt.value_expr),
+                     "array literal shape mismatch: expected " + shape_text(explicit_shape) +
+                         ", got [0]");
+            }
+            if (actual.status == ArrayShapeStatus::Inferred && actual.shape != explicit_shape) {
+                fail(node_location(stmt.location, stmt.value_expr),
+                     "array literal shape mismatch: expected " + shape_text(explicit_shape) +
+                         ", got " + shape_text(actual.shape));
+            }
+        }
         const std::string type = effective_var_type(stmt);
         if (!known_type(scope.symbols, type)) {
             fail(node_location(stmt.location, stmt.type_ref), "unknown local type: " + stmt.type);
@@ -540,6 +574,9 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
             if (inferred.status == ArrayShapeStatus::Inferred &&
                 is_array_literal(stmt.value_expr)) {
                 check_array_literal_elements(scope, inferred.element_type, stmt.value_expr,
+                                             node_location(stmt.location, stmt.value_expr));
+            } else if (!explicit_element.empty() && is_array_literal(stmt.value_expr)) {
+                check_array_literal_elements(scope, explicit_element, stmt.value_expr,
                                              node_location(stmt.location, stmt.value_expr));
             } else {
                 check_type_match(scope, type, stmt.value,

@@ -275,9 +275,10 @@ push. They are not release packaging work.
    natural without hidden allocation.
 
    Status: explicit `array[T][N]` and `array[T][M, N]` compile through the
-   string and TypeRef lowering paths, `array[T] = literal` infers fixed shapes,
-   and comma indexing such as `mat[row, col]` lowers for Dudu-native fixed
-   arrays. Slices, swizzling, and library tensor hooks remain.
+   string and TypeRef lowering paths, explicit-shaped literal initializers are
+   checked, `array[T] = literal` infers fixed shapes, and comma indexing such as
+   `mat[row, col]` lowers for Dudu-native fixed arrays. Slices, swizzling, and
+   library tensor hooks remain.
 
 5. Native Dudu Generics
 

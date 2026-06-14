@@ -35,6 +35,41 @@ std::optional<std::string> inferred_array_element_type(const std::string& declar
     return trim_copy(type.substr(6, close - 6));
 }
 
+std::optional<std::pair<std::string, std::vector<size_t>>>
+explicit_array_type_info(const std::string& declared_type) {
+    const std::string type = trim_copy(declared_type);
+    if (!starts_with(type, "array[")) {
+        return std::nullopt;
+    }
+    const size_t element_close = find_matching_bracket(type, 5);
+    if (element_close == std::string::npos || element_close + 1 >= type.size() ||
+        type[element_close + 1] != '[' || !ends_with(type, "]")) {
+        return std::nullopt;
+    }
+    const size_t shape_open = element_close + 1;
+    const size_t shape_close = find_matching_bracket(type, shape_open);
+    if (shape_close != type.size() - 1) {
+        return std::nullopt;
+    }
+    std::vector<size_t> shape;
+    const std::vector<std::string> dims =
+        split_top_level_args(type.substr(shape_open + 1, shape_close - shape_open - 1));
+    for (const std::string& dim : dims) {
+        if (dim.empty()) {
+            return std::nullopt;
+        }
+        size_t value = 0;
+        for (const char c : dim) {
+            if (c < '0' || c > '9') {
+                return std::nullopt;
+            }
+            value = value * 10 + static_cast<size_t>(c - '0');
+        }
+        shape.push_back(value);
+    }
+    return std::pair{trim_copy(type.substr(6, element_close - 6)), shape};
+}
+
 std::optional<std::vector<size_t>> literal_shape(const Expr& expr) {
     if (expr.kind != ExprKind::ListLiteral) {
         return std::vector<size_t>{};
@@ -86,17 +121,32 @@ ArrayShapeInference infer_array_literal_shape_type(const std::string& declared_t
         return {};
     }
     if (value.children.empty()) {
-        return {
-            .status = ArrayShapeStatus::EmptyLiteral, .type = {}, .element_type = *element_type};
+        return {.status = ArrayShapeStatus::EmptyLiteral,
+                .type = {},
+                .element_type = *element_type,
+                .shape = {}};
     }
     const auto shape = literal_shape(value);
     if (!shape) {
-        return {
-            .status = ArrayShapeStatus::RaggedLiteral, .type = {}, .element_type = *element_type};
+        return {.status = ArrayShapeStatus::RaggedLiteral,
+                .type = {},
+                .element_type = *element_type,
+                .shape = {}};
     }
     return {.status = ArrayShapeStatus::Inferred,
             .type = shaped_array_type(*element_type, *shape),
-            .element_type = *element_type};
+            .element_type = *element_type,
+            .shape = *shape};
+}
+
+std::vector<size_t> explicit_array_shape(const std::string& declared_type) {
+    const auto info = explicit_array_type_info(declared_type);
+    return info ? info->second : std::vector<size_t>{};
+}
+
+std::string explicit_array_element_type(const std::string& declared_type) {
+    const auto info = explicit_array_type_info(declared_type);
+    return info ? info->first : std::string{};
 }
 
 } // namespace dudu
