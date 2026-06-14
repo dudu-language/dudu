@@ -79,6 +79,9 @@ Already structured:
 - parsed call emission lowers Dudu `list.append(...)` calls to C++
   `push_back(...)` at the callee node instead of relying on raw expression
   replacement
+- integer and float literal parsing recognizes underscore separators, and
+  integer literals recognize `0x`, `0b`, and `0o` prefixes so systems-style
+  constants stay on the literal AST path
 
 Still too string-based:
 

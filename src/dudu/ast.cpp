@@ -103,12 +103,39 @@ bool is_integer_literal(std::string_view text) {
     if (pos == text.size()) {
         return false;
     }
-    for (; pos < text.size(); ++pos) {
-        if (std::isdigit(static_cast<unsigned char>(text[pos])) == 0) {
-            return false;
+    auto valid_digit = [](char c, int base) {
+        if (c == '_') {
+            return true;
+        }
+        if (base <= 10) {
+            return c >= '0' && c < static_cast<char>('0' + base);
+        }
+        return std::isdigit(static_cast<unsigned char>(c)) != 0 ||
+               (c >= 'a' && c < static_cast<char>('a' + base - 10)) ||
+               (c >= 'A' && c < static_cast<char>('A' + base - 10));
+    };
+    int base = 10;
+    if (pos + 2 <= text.size() && text[pos] == '0' && pos + 1 < text.size()) {
+        const char prefix = text[pos + 1];
+        if (prefix == 'x' || prefix == 'X') {
+            base = 16;
+            pos += 2;
+        } else if (prefix == 'b' || prefix == 'B') {
+            base = 2;
+            pos += 2;
+        } else if (prefix == 'o' || prefix == 'O') {
+            base = 8;
+            pos += 2;
         }
     }
-    return true;
+    bool saw_digit = false;
+    for (; pos < text.size(); ++pos) {
+        if (!valid_digit(text[pos], base)) {
+            return false;
+        }
+        saw_digit = saw_digit || text[pos] != '_';
+    }
+    return saw_digit;
 }
 
 bool is_float_literal(std::string_view text) {
@@ -120,6 +147,9 @@ bool is_float_literal(std::string_view text) {
         const char c = text[pos];
         if (std::isdigit(static_cast<unsigned char>(c)) != 0) {
             saw_digit = true;
+            continue;
+        }
+        if (c == '_') {
             continue;
         }
         if (c == '.' && !saw_dot) {
