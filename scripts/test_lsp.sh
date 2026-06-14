@@ -45,6 +45,7 @@ lint_uri = "file:///tmp/dudu_lsp_lint.dd"
 unused_uri = "file:///tmp/dudu_lsp_unused.dd"
 shadow_uri = "file:///tmp/dudu_lsp_shadow.dd"
 hover_locals_uri = "file:///tmp/dudu_lsp_hover_locals.dd"
+hover_docs_uri = "file:///tmp/dudu_lsp_hover_docs.dd"
 bad_config_uri = f"file://{repo_root}/tests/fixtures/lsp_bad_config/main.dd"
 overload_uri = f"file://{repo_root}/tests/fixtures/dudu_lsp_overload.dd"
 scope_uri = "file:///tmp/dudu_lsp_scope.dd"
@@ -104,6 +105,39 @@ messages = [
                     "version": 1,
                     "text": source,
                 }
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "method": "textDocument/didOpen",
+            "params": {
+                "textDocument": {
+                    "uri": hover_docs_uri,
+                    "languageId": "dudu",
+                    "version": 1,
+                    "text": "\n".join(
+                        [
+                            "# Adds two numbers.",
+                            "# Used by hover docs.",
+                            "def documented_add(a: i32, b: i32) -> i32:",
+                            "    return a + b",
+                            "",
+                        ]
+                    ),
+                }
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 41,
+            "method": "textDocument/hover",
+            "params": {
+                "textDocument": {"uri": hover_docs_uri},
+                "position": {"line": 2, "character": 6},
             },
         }
     ),
@@ -921,6 +955,12 @@ assert "inferred: i32" in inferred_hover["result"]["contents"]["value"]
 
 typed_hover = next(item for item in responses if item.get("id") == 40)
 assert "explicit: f32" in typed_hover["result"]["contents"]["value"]
+
+doc_hover = next(item for item in responses if item.get("id") == 41)
+doc_hover_value = doc_hover["result"]["contents"]["value"]
+assert "def documented_add" in doc_hover_value
+assert "Adds two numbers." in doc_hover_value
+assert "Used by hover docs." in doc_hover_value
 
 definition = next(item for item in responses if item.get("id") == 4)
 assert definition["result"]["range"]["start"]["line"] == 3

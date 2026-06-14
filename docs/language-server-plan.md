@@ -180,7 +180,8 @@ open buffers taking precedence. Go-to-definition resolves Dudu module import
 aliases to imported module files and resolves `from module import symbol`
 bindings to the imported declaration. A fuller import-graph project index
 remains. Hover includes Dudu declarations plus visible typed locals and simple
-inferred locals.
+inferred locals. Dudu declaration hover also includes contiguous source
+comments immediately above the declaration.
 
 ### Milestone 3: Completion And Signature Help
 
@@ -286,6 +287,7 @@ Completion resolve, snippets, and typed local completions are covered.
 Common-form snippets for functions, classes, control flow, imports, enums, and
 exception handlers are covered.
 Hover for typed locals and simple inferred locals is covered.
+Hover for Dudu declaration doc comments is covered.
 Format and organize-imports code actions are covered.
 Missing-import quick fixes are covered using an unopened workspace file.
 Native config quick fixes are covered with a fixture `dudu.toml` edit for a
