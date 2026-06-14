@@ -214,7 +214,9 @@ This milestone is the one that makes Dudu feel serious for interop.
 Status: initial native C/C++ symbols from local fixture headers are now scanned
 into LSP symbols. Completion, hover, signature help, and definition can resolve
 aliased imported functions such as `dudu_native.dudu_native_add`, and definition
-uses the real header location when Clang provides it. Macro metadata,
+uses the real header location when Clang provides it. Direct native imports
+without aliases are covered for completion, signature help, and definition.
+Macro metadata,
 including object-like/function-like macro hover and completion, is also exposed
 for scanned native headers. Initial native C++ member completion is implemented
 for locals annotated with scanned native class types or aliases, and
@@ -281,6 +283,8 @@ Format and organize-imports code actions are covered.
 Missing-import quick fixes are covered using an unopened workspace file.
 Native config quick fixes are covered with a fixture `dudu.toml` edit for a
 known missing native header package.
+Direct native imports without aliases are covered for completion, signature
+help, and definition with a local fixture header.
 Workspace rename is covered across an open definition file and an unopened
 sibling use file.
 Unreachable-statement lint diagnostics and remove-line quick fixes are covered.

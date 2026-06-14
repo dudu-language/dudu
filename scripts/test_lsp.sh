@@ -46,6 +46,7 @@ unused_uri = "file:///tmp/dudu_lsp_unused.dd"
 bad_config_uri = f"file://{repo_root}/tests/fixtures/lsp_bad_config/main.dd"
 overload_uri = f"file://{repo_root}/tests/fixtures/dudu_lsp_overload.dd"
 scope_uri = "file:///tmp/dudu_lsp_scope.dd"
+direct_native_uri = f"file://{repo_root}/tests/fixtures/dudu_lsp_direct_native.dd"
 source = "\n".join(
     [
         "class Player:",
@@ -100,6 +101,62 @@ messages = [
                     "version": 1,
                     "text": source,
                 }
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "method": "textDocument/didOpen",
+            "params": {
+                "textDocument": {
+                    "uri": direct_native_uri,
+                    "languageId": "dudu",
+                    "version": 1,
+                    "text": "\n".join(
+                        [
+                            'import c "native_headers/simple_c.h"',
+                            "",
+                            "def main() -> i32:",
+                            "    event: DuduNativeEvent",
+                            "    return dudu_native_add(20, 22)",
+                            "",
+                        ]
+                    ),
+                }
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 35,
+            "method": "textDocument/completion",
+            "params": {
+                "textDocument": {"uri": direct_native_uri},
+                "position": {"line": 4, "character": 11},
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 36,
+            "method": "textDocument/signatureHelp",
+            "params": {
+                "textDocument": {"uri": direct_native_uri},
+                "position": {"line": 4, "character": 30},
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 37,
+            "method": "textDocument/definition",
+            "params": {
+                "textDocument": {"uri": direct_native_uri},
+                "position": {"line": 4, "character": 14},
             },
         }
     ),
@@ -829,9 +886,22 @@ native_completion = next(item for item in responses if item.get("id") == 11)
 native_completion_labels = [item["label"] for item in native_completion["result"]]
 assert "dudu_native.dudu_native_add" in native_completion_labels
 
+direct_native_completion = next(item for item in responses if item.get("id") == 35)
+direct_native_labels = [item["label"] for item in direct_native_completion["result"]]
+assert "dudu_native_add" in direct_native_labels
+assert "DUDU_NATIVE_MAGIC" in direct_native_labels
+
 native_signature = next(item for item in responses if item.get("id") == 12)
 assert "dudu_native.dudu_native_add(i32, i32) -> i32" in native_signature["result"]["signatures"][0]["label"]
 assert native_signature["result"]["activeParameter"] == 1
+
+direct_native_signature = next(item for item in responses if item.get("id") == 36)
+assert "dudu_native_add(i32, i32) -> i32" in direct_native_signature["result"]["signatures"][0]["label"]
+assert direct_native_signature["result"]["activeParameter"] == 1
+
+direct_native_definition = next(item for item in responses if item.get("id") == 37)
+assert direct_native_definition["result"]["uri"].endswith("/tests/fixtures/native_headers/simple_c.h")
+assert direct_native_definition["result"]["range"]["start"]["line"] == 20
 
 overload_signature = next(item for item in responses if item.get("id") == 32)
 overload_labels = [item["label"] for item in overload_signature["result"]["signatures"]]
