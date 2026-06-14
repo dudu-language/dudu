@@ -138,7 +138,9 @@ open/change/save events, displays LSP diagnostics, uses the LSP formatting
 provider for `Dudu: Format Current File` and format-on-save, and shows a status
 bar item with LSP process state, configured `duc` path, and native-header
 diagnostic state. The status tooltip also shows the current `dudu.toml`
-`[target]` kind/mode when available.
+`[target]` kind/mode when available. Command palette actions are registered for
+formatting, checking the current file, building the project, running the current
+file, and running project tests.
 
 ## Protocol Features By Milestone
 

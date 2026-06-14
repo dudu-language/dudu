@@ -565,7 +565,13 @@ function activate(context) {
           return lsp.codeActions(document, range, context);
         },
       },
-      { providedCodeActionKinds: [vscode.CodeActionKind.Source.append("format")] },
+      {
+        providedCodeActionKinds: [
+          vscode.CodeActionKind.QuickFix,
+          vscode.CodeActionKind.Source.append("format"),
+          vscode.CodeActionKind.SourceOrganizeImports,
+        ],
+      },
     ),
     vscode.languages.registerHoverProvider("dudu", {
       provideHover(document, position) {
@@ -602,9 +608,9 @@ function activate(context) {
       }
     }),
     vscode.commands.registerCommand("dudu.checkFile", () => {
-      const editor = vscode.window.activeTextEditor;
-      if (editor && isDuduDocument(editor.document)) {
-        lsp.didSave(editor.document);
+      const file = activeDuduFile();
+      if (file) {
+        runCommand(`${shellQuote(ducPath())} check ${shellQuote(file)}`);
       }
     }),
     vscode.commands.registerCommand("dudu.buildProject", () => {
@@ -615,6 +621,9 @@ function activate(context) {
       if (file) {
         runCommand(`${shellQuote(ducPath())} run ${shellQuote(file)}`);
       }
+    }),
+    vscode.commands.registerCommand("dudu.testProject", () => {
+      runCommand(`${shellQuote(ducPath())} test`);
     }),
     vscode.workspace.onDidOpenTextDocument((document) => lsp.didOpen(document)),
     vscode.workspace.onDidChangeTextDocument((event) => lsp.didChange(event.document)),

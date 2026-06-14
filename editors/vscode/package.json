@@ -13,7 +13,8 @@
     "onCommand:dudu.fmtFile",
     "onCommand:dudu.checkFile",
     "onCommand:dudu.buildProject",
-    "onCommand:dudu.runFile"
+    "onCommand:dudu.runFile",
+    "onCommand:dudu.testProject"
   ],
   "categories": [
     "Programming Languages"
@@ -55,6 +56,10 @@
       {
         "command": "dudu.runFile",
         "title": "Dudu: Run Current File"
+      },
+      {
+        "command": "dudu.testProject",
+        "title": "Dudu: Test Project"
       }
     ],
     "configuration": {
