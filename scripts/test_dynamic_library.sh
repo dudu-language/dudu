@@ -8,6 +8,8 @@ header="$repo_root/build/dudu_plugin.h"
 host_c="$repo_root/build/dudu_plugin_host.c"
 host="$repo_root/build/dudu_plugin_host"
 
+rm -f "$lib" "$header" "$host_c" "$host"
+
 (
     cd "$project"
     "$repo_root/build/duc" build -o "$lib" --verbose \

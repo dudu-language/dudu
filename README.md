@@ -155,11 +155,14 @@ Generated headers are available for C and C++ integration:
 ./build/duc examples/cpp_library.dd --emit-header build/cpp_library.hpp
 ```
 
-Validate the checked-in examples that do not need external libraries:
+Run the core repository validation suite:
 
 ```sh
 ./scripts/test.sh
 ```
+
+This suite avoids package-SDK examples that require raylib, SDL3, OpenCV,
+Vulkan, FFmpeg, and similar installs.
 
 Run optional native interop probes:
 
@@ -171,6 +174,12 @@ These probes compile examples against real libraries such as raylib, SDL3,
 OpenCV, Vulkan, and FFmpeg when those libraries are available. They are for
 Dudu compiler development, not for normal users building the compiler. Missing
 packages are skipped.
+
+Run both core validation and optional native probes:
+
+```sh
+./scripts/test_full.sh
+```
 
 For dev machines that do not have raylib or SDL3 through the system package
 manager, install local probe-only copies into the ignored `third_party/`

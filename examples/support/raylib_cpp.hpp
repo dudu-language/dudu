@@ -4,19 +4,27 @@
 
 namespace rl {
 using ::Color;
+using ::AudioStream;
 using ::Vector2;
 
 using ::BeginDrawing;
+using ::CloseAudioDevice;
 using ::ClearBackground;
 using ::CloseWindow;
 using ::DrawCircleV;
 using ::DrawText;
 using ::EndDrawing;
 using ::GetFrameTime;
+using ::InitAudioDevice;
 using ::InitWindow;
+using ::IsAudioStreamProcessed;
 using ::IsKeyDown;
+using ::LoadAudioStream;
+using ::PlayAudioStream;
 using ::SetTargetFPS;
 using ::TextFormat;
+using ::UnloadAudioStream;
+using ::UpdateAudioStream;
 using ::WindowShouldClose;
 
 using ::KEY_DOWN;

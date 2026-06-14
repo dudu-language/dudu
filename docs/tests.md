@@ -35,15 +35,30 @@ Use the fast script for normal compiler development:
 ```
 
 It builds the compiler, runs the frontend CTest suite, and compiles/runs a few
-high-signal fixtures. Use the full sweep when changing broad project-driver,
-native interop, editor, or release behavior:
+high-signal fixtures. Use the core full sweep when changing broad
+project-driver, language, editor, or release behavior:
 
 ```sh
 ./scripts/test.sh
 ```
 
-The full sweep intentionally runs many generated C++ compiles, native header
-scans, project-driver checks, and negative fixtures, so it is much slower.
+The core full sweep intentionally runs many generated C++ compiles, native
+header scans, project-driver checks, and negative fixtures, so it is much
+slower. It avoids package-SDK examples that need raylib, SDL3, OpenCV, Vulkan,
+FFmpeg, and similar installs.
+
+Use optional native probes when changing real-library interop:
+
+```sh
+./scripts/probe_optional.sh
+```
+
+Those probes skip missing packages. Compiler developers who want the widest
+local signal can run both tiers:
+
+```sh
+./scripts/test_full.sh
+```
 
 ## Test Function Rules
 

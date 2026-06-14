@@ -61,6 +61,8 @@
   aliases of their underlying header types during overload checks.
 - Added opt-in developer dependency setup for local raylib/SDL3 probe installs
   under the ignored `third_party/` directory.
+- Split core repository validation from optional package-SDK native probes with
+  `scripts/test_full.sh` for running both tiers.
 
 ### Changed
 

@@ -8,38 +8,26 @@ ctest --test-dir "$repo_root/build" --output-on-failure
 
 required_examples=(
     allocators.dd
-    audio_synth.dd
     compile_time.dd
     cpp_library.dd
     cuda_kernel.dd
     cuda_shared_memory_tile.dd
-    ffmpeg_probe_decode.dd
     function_pointers.dd
-    glfw_opengl_triangle.dd
-    image_filter.dd
     interrupt_handler.dd
     layout_hardware.dd
     macro_bomb.dd
     modules_visibility.dd
     native_escape.dd
     numerics_kmeans.dd
-    opencl_kernel_host.dd
-    raylib_game.dd
-    sdl3_window.dd
     shader_compute.dd
     systems_mmap.dd
     threading_atomics.dd
-    vulkan_triangle.dd
-    web_server.dd
 )
 
 for example in "${required_examples[@]}"; do
     test -f "$repo_root/examples/$example"
     "$repo_root/build/dudu" "$repo_root/examples/$example" --check
 done
-"$repo_root/build/duc" emit "$repo_root/examples/raylib_game.dd" \
-    -o "$repo_root/build/raylib_game_semantics.cpp"
-grep -q "player.vel.x" "$repo_root/build/raylib_game_semantics.cpp"
 
 object_examples=(
     allocators.dd
@@ -323,6 +311,7 @@ grep -q 'inline constexpr std::string_view TARGET_MODE = "hosted";' \
     "$repo_root/build/project_mode.cpp"
 grep -q 'if constexpr (build::DEBUG && build::TARGET_KIND == "executable" && build::TARGET_MODE == "hosted")' \
     "$repo_root/build/project_mode.cpp"
+rm -f "$repo_root/build/project_cc_bin" "$repo_root/build/project_cc_bin.cpp"
 (
     cd "$repo_root/tests/fixtures/project_cc"
     "$repo_root/build/duc" build -o "$repo_root/build/project_cc_bin" --verbose \
@@ -347,6 +336,7 @@ if [[ "$project_cc_status" -ne 42 ]]; then
     echo "project_cc returned $project_cc_status, expected 42" >&2
     exit 1
 fi
+rm -rf "$repo_root/build/project_default_output"
 (
     cd "$repo_root/tests/fixtures/project_default_output"
     "$repo_root/build/duc" build --verbose 2>"$repo_root/build/project_default_output_verbose.err"
@@ -362,6 +352,7 @@ if [[ "$project_default_output_status" -ne 42 ]]; then
     echo "project_default_output returned $project_default_output_status, expected 42" >&2
     exit 1
 fi
+rm -f "$repo_root/build/project_linker_script_bin" "$repo_root/build/project_linker_script_bin.cpp"
 (
     cd "$repo_root/tests/fixtures/project_linker_script"
     "$repo_root/build/duc" build -o "$repo_root/build/project_linker_script_bin" --verbose \
@@ -448,6 +439,7 @@ fi
 printf '%s\n' '-Iinclude'
 SH
 chmod +x "$fake_pkg_config"
+rm -f "$repo_root/build/project_pkg_config_bin" "$repo_root/build/project_pkg_config_bin.cpp"
 (
     cd "$repo_root/tests/fixtures/project_pkg_config"
     PKG_CONFIG="$fake_pkg_config" "$repo_root/build/duc" build \
@@ -465,6 +457,7 @@ if [[ "$project_pkg_config_status" -ne 42 ]]; then
     echo "project_pkg_config returned $project_pkg_config_status, expected 42" >&2
     exit 1
 fi
+rm -f "$repo_root/build/libproject_library.a" "$repo_root/build/libproject_library.a.cpp"
 (
     cd "$repo_root/tests/fixtures/project_library"
     "$repo_root/build/duc" build -o "$repo_root/build/libproject_library.a" --verbose \
@@ -490,6 +483,7 @@ if [[ "$project_library_status" -ne 42 ]]; then
     echo "project_library_caller returned $project_library_status, expected 42" >&2
     exit 1
 fi
+rm -f "$repo_root/build/libproject_shared.so" "$repo_root/build/libproject_shared.so.cpp"
 (
     cd "$repo_root/tests/fixtures/project_shared_library"
     "$repo_root/build/duc" build -o "$repo_root/build/libproject_shared.so" --verbose \
@@ -512,6 +506,7 @@ if [[ "$project_shared_library_status" -ne 42 ]]; then
     echo "project_shared_library_caller returned $project_shared_library_status, expected 42" >&2
     exit 1
 fi
+rm -f "$repo_root/build/libproject_freestanding.a" "$repo_root/build/libproject_freestanding.a.cpp"
 (
     cd "$repo_root/tests/fixtures/project_freestanding_mode"
     "$repo_root/build/duc" build -o "$repo_root/build/libproject_freestanding.a" --verbose \
@@ -525,6 +520,7 @@ if grep -q "#include <iostream>" "$repo_root/build/libproject_freestanding.a.cpp
     echo "freestanding prelude unexpectedly included iostream" >&2
     exit 1
 fi
+rm -f "$repo_root/build/libproject_embedded_uart.a" "$repo_root/build/libproject_embedded_uart.a.cpp"
 (
     cd "$repo_root/tests/fixtures/project_embedded_uart"
     "$repo_root/build/duc" build -o "$repo_root/build/libproject_embedded_uart.a" --verbose \

@@ -1,7 +1,7 @@
 # Realtime audio callback style code.
 
-import cpp "raylib.h" as rl
-import cpp "cmath" as cmath
+import cpp "support/raylib_cpp.hpp" as rl
+import cpp "cmath" as std
 
 
 SAMPLE_RATE: f32 = 48000.0
@@ -15,7 +15,7 @@ class Oscillator:
 
 
 def next_sample(osc: &Oscillator) -> f32:
-    value = f32(cmath.sin(osc.phase)) * osc.gain
+    value = f32(std.sin(osc.phase)) * osc.gain
     osc.phase += TAU * osc.frequency / SAMPLE_RATE
 
     if osc.phase >= TAU:
@@ -36,7 +36,7 @@ def main() -> i32:
     left = Oscillator(phase=0.0, frequency=220.0, gain=0.2)
     right = Oscillator(phase=0.0, frequency=277.18, gain=0.2)
 
-    stream = rl.LoadAudioStream(i32(SAMPLE_RATE), 32, 2)
+    stream = rl.LoadAudioStream(u32(SAMPLE_RATE), u32(32), u32(2))
     rl.PlayAudioStream(stream)
 
     samples: f32[2048]
