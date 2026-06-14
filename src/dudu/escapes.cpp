@@ -13,12 +13,12 @@ bool is_borrowed_or_pointer(std::string type) {
     return !type.empty() && (type.front() == '&' || type.front() == '*');
 }
 
-void fail_if_value_local_escapes(const RawStmt& stmt,
+void fail_if_value_local_escapes(const SourceLocation& location,
                                  const std::map<std::string, std::string>& locals,
                                  const std::string& name) {
     const auto it = locals.find(name);
     if (it != locals.end() && !is_borrowed_or_pointer(it->second)) {
-        throw CompileError(stmt.location, "cannot let local address escape: " + name);
+        throw CompileError(location, "cannot let local address escape: " + name);
     }
 }
 
@@ -37,21 +37,26 @@ std::string address_name_after(const std::string& text, size_t ampersand) {
 
 } // namespace
 
-void check_local_address_escape(const RawStmt& stmt,
+void check_local_address_escape(const Stmt& stmt,
                                 const std::map<std::string, std::string>& locals) {
     const std::string text = trim_copy(stmt.text);
     if (starts_with(text, "return &")) {
-        fail_if_value_local_escapes(stmt, locals, address_name_after(text, text.find('&')));
+        fail_if_value_local_escapes(stmt.location, locals, address_name_after(text, text.find('&')));
         return;
     }
     for (const std::string pattern : {".append(&", ".push_back(&"}) {
         size_t pos = text.find(pattern);
         while (pos != std::string::npos) {
-            fail_if_value_local_escapes(stmt, locals,
+            fail_if_value_local_escapes(stmt.location, locals,
                                         address_name_after(text, pos + pattern.size() - 1));
             pos = text.find(pattern, pos + 1);
         }
     }
+}
+
+void check_local_address_escape(const RawStmt& stmt,
+                                const std::map<std::string, std::string>& locals) {
+    check_local_address_escape(statement_from_raw(stmt), locals);
 }
 
 } // namespace dudu

@@ -268,7 +268,7 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
     }
     return {};
 }
-void check_type_match(const FunctionScope& scope, const RawStmt& stmt, const std::string& expected,
+void check_type_match(const FunctionScope& scope, const Stmt& stmt, const std::string& expected,
                       const std::string& expr) {
     const std::string got = infer_expr(scope, expr, &stmt.location);
     if (can_assign_expr(scope, expected, expr, got)) {
@@ -276,7 +276,7 @@ void check_type_match(const FunctionScope& scope, const RawStmt& stmt, const std
     }
     fail(stmt.location, assignment_error(expected, expr, got));
 }
-void check_condition_type(const FunctionScope& scope, const RawStmt& stmt, std::string expr) {
+void check_condition_type(const FunctionScope& scope, const Stmt& stmt, std::string expr) {
     expr = trim(std::move(expr));
     if (!expr.empty() && expr.back() == ':') {
         expr.pop_back();
@@ -286,7 +286,7 @@ void check_condition_type(const FunctionScope& scope, const RawStmt& stmt, std::
         fail(stmt.location, "condition must be bool, got " + got);
     }
 }
-std::string assign_target_type(const FunctionScope& scope, const RawStmt& stmt,
+std::string assign_target_type(const FunctionScope& scope, const Stmt& stmt,
                                const std::string& lhs) {
     if (lhs.size() > 1 && lhs.front() == '*') {
         const std::string name = trim(lhs.substr(1));
@@ -319,20 +319,20 @@ std::string assign_target_type(const FunctionScope& scope, const RawStmt& stmt,
     return member_path_type(scope.symbols, scope.locals, &stmt.location, lhs,
                             "assignment through unknown local: ");
 }
-void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& return_type,
+void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& return_type,
                 int loop_depth);
-void check_block(FunctionScope& scope, const std::vector<RawStmt>& body,
+void check_block(FunctionScope& scope, const std::vector<Stmt>& body,
                  const std::string& return_type, int loop_depth) {
-    for (const RawStmt& stmt : body) {
+    for (const Stmt& stmt : body) {
         check_stmt(scope, stmt, return_type, loop_depth);
     }
 }
-void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& return_type,
+void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& return_type,
                 int loop_depth) {
     const std::string text = trim(stmt.text);
     check_local_address_escape(stmt, scope.locals);
-    if (starts_with(text, "return")) {
-        const std::string expr = text.substr(6);
+    if (stmt.kind == StmtKind::Return) {
+        const std::string expr = stmt.value;
         const std::string got = infer_expr(scope, expr, &stmt.location);
         if (return_type == "void" && got != "void")
             fail(stmt.location, "void function cannot return " + got);
@@ -341,55 +341,55 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
         }
         return;
     }
-    if (starts_with(text, "assert ") || starts_with(text, "debug_assert ")) {
-        const bool debug = starts_with(text, "debug_assert ");
+    if (stmt.kind == StmtKind::Assert || stmt.kind == StmtKind::DebugAssert) {
+        const bool debug = stmt.kind == StmtKind::DebugAssert;
         if (!debug && freestanding_like(scope)) {
             fail(stmt.location,
                  "runtime assert is not available in " + scope.target_mode +
                      " target mode; use debug_assert or a target-specific assert handler");
         }
-        const auto parts = split_top_level_args(text.substr(debug ? 13 : 7));
+        const auto parts = split_top_level_args(stmt.condition);
         check_condition_type(scope, stmt, parts.empty() ? "" : parts.front());
         if (parts.size() > 1) (void)infer_expr(scope, parts[1], &stmt.location);
         return;
     }
-    if (starts_with(text, "raise")) {
-        const std::string expr = trim(text.substr(5));
+    if (stmt.kind == StmtKind::Raise) {
+        const std::string expr = stmt.value;
         if (!expr.empty()) (void)infer_expr(scope, expr, &stmt.location);
         return;
     }
-    if (starts_with(text, "cpp(") || text == "pass")
+    if (stmt.kind == StmtKind::CppEscape || stmt.kind == StmtKind::Pass)
         return;
     if (starts_with(text, "delete ")) {
         check_deallocation_args(stmt.location, "delete",
                                 {infer_expr(scope, text.substr(7), &stmt.location)});
         return;
     }
-    if ((text == "break" || text == "continue") && loop_depth == 0) {
+    if ((stmt.kind == StmtKind::Break || stmt.kind == StmtKind::Continue) && loop_depth == 0) {
         fail(stmt.location, text + " outside loop");
     }
-    if (text == "break" || text == "continue") {
+    if (stmt.kind == StmtKind::Break || stmt.kind == StmtKind::Continue) {
         return;
     }
-    if (starts_with(text, "if ")) {
-        check_condition_type(scope, stmt, text.substr(3));
+    if (stmt.kind == StmtKind::If) {
+        check_condition_type(scope, stmt, stmt.condition);
         check_block(scope, stmt.children, return_type, loop_depth);
         return;
     }
-    if (starts_with(text, "elif ")) {
-        check_condition_type(scope, stmt, text.substr(5));
+    if (stmt.kind == StmtKind::Elif) {
+        check_condition_type(scope, stmt, stmt.condition);
         check_block(scope, stmt.children, return_type, loop_depth);
         return;
     }
-    if (text == "else:") {
+    if (stmt.kind == StmtKind::Else) {
         check_block(scope, stmt.children, return_type, loop_depth);
         return;
     }
-    if (text == "try:") {
+    if (stmt.kind == StmtKind::Try) {
         check_block(scope, stmt.children, return_type, loop_depth);
         return;
     }
-    if (starts_with(text, "except")) {
+    if (stmt.kind == StmtKind::Except) {
         FunctionScope nested = scope;
         std::string header = trim(text.substr(6));
         if (!header.empty() && header.back() == ':') header.pop_back();
@@ -406,62 +406,49 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
         check_block(nested, stmt.children, return_type, loop_depth);
         return;
     }
-    if (starts_with(text, "while ")) {
-        check_condition_type(scope, stmt, text.substr(6));
+    if (stmt.kind == StmtKind::While) {
+        check_condition_type(scope, stmt, stmt.condition);
         check_block(scope, stmt.children, return_type, loop_depth + 1);
         return;
     }
-    if (starts_with(text, "for ")) {
+    if (stmt.kind == StmtKind::For) {
         FunctionScope nested = scope;
-        const size_t colon = text.find(':');
-        const size_t in_pos = text.find(" in ");
-        if (colon != std::string::npos && in_pos != std::string::npos && colon < in_pos) {
-            const std::string name = trim(text.substr(4, colon - 4));
-            std::string iterable = trim(text.substr(in_pos + 4));
-            if (!iterable.empty() && iterable.back() == ':') {
-                iterable.pop_back();
-            }
-            check_local_binding_name(stmt.location, name);
-            const std::string type = trim(text.substr(colon + 1, in_pos - colon - 1));
-            check_iterable_binding(scope.symbols, scope.locals, stmt.location, type, iterable);
-            nested.locals[name] = type;
+        if (!stmt.name.empty() && !stmt.type.empty() && !stmt.iterable.empty()) {
+            check_local_binding_name(stmt.location, stmt.name);
+            check_iterable_binding(scope.symbols, scope.locals, stmt.location, stmt.type,
+                                   stmt.iterable);
+            nested.locals[stmt.name] = stmt.type;
         }
         check_block(nested, stmt.children, return_type, loop_depth + 1);
         return;
     }
-    const size_t colon = find_top_level_char(text, ':');
-    const size_t assign = find_top_level_char(text, '=');
-    const size_t compound = compound_assign_pos(text, assign);
-    if (compound != std::string::npos) {
-        const std::string target_type =
-            assign_target_type(scope, stmt, trim(text.substr(0, compound)));
+    if (stmt.kind == StmtKind::CompoundAssign) {
+        const std::string target_type = assign_target_type(scope, stmt, stmt.target);
         if (!target_type.empty()) {
-            check_type_match(scope, stmt, target_type, text.substr(assign + 1));
+            check_type_match(scope, stmt, target_type, stmt.value);
         }
         return;
     }
-    if (colon != std::string::npos && (assign == std::string::npos || colon < assign)) {
-        const std::string name = trim(text.substr(0, colon));
-        const std::string type = trim(text.substr(colon + 1, assign - colon - 1));
-        check_local_binding_name(stmt.location, name);
-        if (!known_type(scope.symbols, type)) {
-            fail(stmt.location, "unknown local type: " + type);
+    if (stmt.kind == StmtKind::VarDecl) {
+        check_local_binding_name(stmt.location, stmt.name);
+        if (!known_type(scope.symbols, stmt.type)) {
+            fail(stmt.location, "unknown local type: " + stmt.type);
         }
-        if (assign != std::string::npos) {
-            check_type_match(scope, stmt, type, text.substr(assign + 1));
+        if (!stmt.value.empty()) {
+            check_type_match(scope, stmt, stmt.type, stmt.value);
         }
-        scope.locals[name] = type;
-        if (is_dudu_all_caps(name)) {
-            scope.constants.insert(name);
+        scope.locals[stmt.name] = stmt.type;
+        if (is_dudu_all_caps(stmt.name)) {
+            scope.constants.insert(stmt.name);
         }
         return;
     }
-    if (assign != std::string::npos && text.find("==") == std::string::npos) {
-        const std::string lhs = trim(text.substr(0, assign));
+    if (stmt.kind == StmtKind::Assign) {
+        const std::string lhs = stmt.target;
         if (split_top_level(lhs).size() > 1) {
             const std::vector<std::string> names = split_top_level(lhs);
             const std::vector<std::string> types = tuple_types(
-                scope.symbols, infer_expr(scope, text.substr(assign + 1), &stmt.location));
+                scope.symbols, infer_expr(scope, stmt.value, &stmt.location));
             if (names.size() != types.size()) {
                 fail(stmt.location, "tuple destructuring count mismatch");
             }
@@ -474,7 +461,7 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
         if (lhs.find('.') == std::string::npos && !starts_with(lhs, "*") &&
             lhs.find('[') == std::string::npos && !scope.locals.contains(lhs)) {
             check_local_binding_name(stmt.location, lhs);
-            const std::string inferred = infer_expr(scope, text.substr(assign + 1), &stmt.location);
+            const std::string inferred = infer_expr(scope, stmt.value, &stmt.location);
             scope.locals[lhs] = inferred.empty() ? "auto" : inferred;
             if (is_dudu_all_caps(lhs)) {
                 scope.constants.insert(lhs);
@@ -483,7 +470,7 @@ void check_stmt(FunctionScope& scope, const RawStmt& stmt, const std::string& re
         }
         const std::string target_type = assign_target_type(scope, stmt, lhs);
         if (!target_type.empty()) {
-            check_type_match(scope, stmt, target_type, text.substr(assign + 1));
+            check_type_match(scope, stmt, target_type, stmt.value);
         }
         return;
     }
@@ -509,7 +496,7 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols) {
             for (const ParamDecl& param : method.params) {
                 scope.locals[param.name] = param.type;
             }
-            check_block(scope, method.body,
+            check_block(scope, method.statements,
                         method.return_type.empty() ? "void" : method.return_type, 0);
             if (!method.return_type.empty() && method.return_type != "void" &&
                 !block_guarantees_return(method.statements)) {
@@ -522,7 +509,7 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols) {
         for (const ParamDecl& param : fn.params) {
             scope.locals[param.name] = param.type;
         }
-        check_block(scope, fn.body, fn.return_type.empty() ? "void" : fn.return_type, 0);
+        check_block(scope, fn.statements, fn.return_type.empty() ? "void" : fn.return_type, 0);
         if (!fn.return_type.empty() && fn.return_type != "void" &&
             !block_guarantees_return(fn.statements)) {
             fail(fn.location, "missing return in function: " + fn.name);

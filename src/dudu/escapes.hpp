@@ -9,5 +9,7 @@ namespace dudu {
 
 void check_local_address_escape(const RawStmt& stmt,
                                 const std::map<std::string, std::string>& locals);
+void check_local_address_escape(const Stmt& stmt,
+                                const std::map<std::string, std::string>& locals);
 
 } // namespace dudu
