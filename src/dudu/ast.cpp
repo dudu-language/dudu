@@ -29,6 +29,22 @@ bool starts_keyword(std::string_view text, std::string_view keyword) {
     return !is_identifier_continue(text[keyword.size()]);
 }
 
+bool starts_keyword_exact(std::string_view text, std::string_view keyword) {
+    if (!text.starts_with(keyword)) {
+        return false;
+    }
+    if (text.size() == keyword.size()) {
+        return true;
+    }
+    return !is_identifier_continue(text[keyword.size()]);
+}
+
+bool starts_statement_keyword(std::string_view text, std::string_view keyword) {
+    text = trim_view(text);
+    return text.starts_with(keyword) && text.size() > keyword.size() &&
+           std::isspace(static_cast<unsigned char>(text[keyword.size()])) != 0;
+}
+
 std::string trim_string(std::string_view text) {
     text = trim_view(text);
     return std::string(text);
@@ -127,7 +143,7 @@ size_t find_top_level_word(std::string_view text, std::string_view word) {
             --brace_depth;
         } else if (bracket_depth == 0 && paren_depth == 0 && brace_depth == 0 &&
                    (i == 0 || !is_identifier_continue(text[i - 1])) &&
-                   starts_keyword(text.substr(i), word)) {
+                   starts_keyword_exact(text.substr(i), word)) {
             return i;
         }
     }
@@ -317,10 +333,10 @@ StmtKind classify_statement_text(std::string_view text) {
     if (starts_keyword(text, "raise")) {
         return StmtKind::Raise;
     }
-    if (starts_keyword(text, "debug_assert")) {
+    if (starts_statement_keyword(text, "debug_assert")) {
         return StmtKind::DebugAssert;
     }
-    if (starts_keyword(text, "assert")) {
+    if (starts_statement_keyword(text, "assert")) {
         return StmtKind::Assert;
     }
     if (starts_keyword(text, "cpp")) {

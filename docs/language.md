@@ -20,7 +20,7 @@ Core forms:
 - pointers: `*T`
 - references: `&T`
 - const-qualified types: `const[T]`
-- contiguous arrays: `array[T]`, `array[T][N]`, `array[T][M, N]`
+- contiguous arrays: `array[T] = literal`, `array[T][N]`, `array[T][M, N]`
 - dynamic containers: `list[T]`, `dict[K, V]`, `set[T]`
 - function pointer types: `fn(A, B) -> R`
 - result types: `Result[T, E]`
@@ -28,6 +28,20 @@ Core forms:
 
 Dudu-native code uses the fixed-width scalar names above. `int`, `float`, and
 `double` are C/C++ interop spellings, not Dudu source aliases.
+
+`array[T]` without an initializer is incomplete. Use `array[T][shape]` when the
+shape is not inferable from the right-hand side.
+
+Vector-like types can opt into GLSL-style swizzling:
+
+```python
+xy = v.xy
+rgb = color.rgb
+v.xy = Vec2[f32](1.0, 2.0)
+```
+
+Swizzles are compile-time, type-aware member forms. Reads may repeat components
+such as `v.xx`; writes may not repeat components.
 
 Imports are qualified by default. Direct imported names must not collide unless
 they are explicitly aliased.

@@ -155,7 +155,7 @@ void emit_method(std::ostringstream& out, const std::string& class_name, const F
     for (size_t i = first_param; i < method.params.size(); ++i) {
         locals[method.params[i].name] = method.params[i].type;
     }
-    emit_raw_block(out, method.body, 2, aliases, locals, method.return_type, function_returns);
+    emit_block(out, method.statements, 2, aliases, locals, method.return_type, function_returns);
     out << "    }\n";
 }
 
