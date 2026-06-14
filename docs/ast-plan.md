@@ -74,6 +74,11 @@ Already structured:
 - parsed lambda expressions keep their argument text and body expression node;
   C++ emission lowers the lambda body structurally while full lambda typing
   remains future work
+- named-argument constructor emission relies on parsed `NamedArg` nodes only;
+  the old raw `field=value` child-text fallback has been removed
+- parsed call emission lowers Dudu `list.append(...)` calls to C++
+  `push_back(...)` at the callee node instead of relying on raw expression
+  replacement
 
 Still too string-based:
 

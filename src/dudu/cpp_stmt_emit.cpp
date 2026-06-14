@@ -89,55 +89,9 @@ std::string cpp_binary_operator(const std::string& op) {
     return op;
 }
 
-size_t top_level_equal(std::string_view text) {
-    int bracket_depth = 0;
-    int paren_depth = 0;
-    int brace_depth = 0;
-    char quote = '\0';
-    bool escaped = false;
-    for (size_t i = 0; i < text.size(); ++i) {
-        const char c = text[i];
-        if (quote != '\0') {
-            if (escaped) {
-                escaped = false;
-            } else if (c == '\\') {
-                escaped = true;
-            } else if (c == quote) {
-                quote = '\0';
-            }
-            continue;
-        }
-        if (c == '"' || c == '\'') {
-            quote = c;
-            continue;
-        }
-        if (c == '[') {
-            ++bracket_depth;
-        } else if (c == ']') {
-            --bracket_depth;
-        } else if (c == '(') {
-            ++paren_depth;
-        } else if (c == ')') {
-            --paren_depth;
-        } else if (c == '{') {
-            ++brace_depth;
-        } else if (c == '}') {
-            --brace_depth;
-        } else if (c == '=' && bracket_depth == 0 && paren_depth == 0 && brace_depth == 0) {
-            const char prev = i == 0 ? '\0' : text[i - 1];
-            const char next = i + 1 >= text.size() ? '\0' : text[i + 1];
-            if (prev == '=' || prev == '!' || prev == '<' || prev == '>' || next == '=') {
-                continue;
-            }
-            return i;
-        }
-    }
-    return std::string_view::npos;
-}
-
 bool has_named_argument_shape(const std::vector<Expr>& args) {
     for (const Expr& arg : args) {
-        if (arg.kind == ExprKind::NamedArg || top_level_equal(arg.text) != std::string_view::npos) {
+        if (arg.kind == ExprKind::NamedArg) {
             return true;
         }
     }
@@ -187,15 +141,7 @@ std::string lower_named_argument_call(const Expr& expr, const std::vector<std::s
                 << lower_expr(expr.children[i].children.front(), aliases, locals);
             continue;
         }
-        const size_t equal = top_level_equal(expr.children[i].text);
-        if (equal == std::string_view::npos) {
-            out << lower_expr(expr.children[i], aliases, locals);
-            continue;
-        }
-        const std::string field = trim_copy(expr.children[i].text.substr(0, equal));
-        const std::string value = trim_copy(expr.children[i].text.substr(equal + 1));
-        out << "." << field << " = "
-            << lower_expr(parse_expr_text(value, expr.children[i].location), aliases, locals);
+        out << lower_expr(expr.children[i], aliases, locals);
     }
     out << "}";
     return out.str();
@@ -226,8 +172,11 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
         return lower_cpp_type(expr.name, aliases) + "(" +
                join_lowered_exprs(expr.children, aliases, locals) + ")";
     }
-    return lower_expr(expr.name, aliases, locals) + "(" +
-           join_lowered_exprs(expr.children, aliases, locals) + ")";
+    std::string callee = lower_expr(expr.name, aliases, locals);
+    if (ends_with(callee, ".append")) {
+        callee.replace(callee.size() - 7, 7, ".push_back");
+    }
+    return callee + "(" + join_lowered_exprs(expr.children, aliases, locals) + ")";
 }
 
 std::string lower_lambda_expr(const Expr& expr, const std::vector<std::string>& aliases,
