@@ -50,6 +50,8 @@ Already structured:
   nodes instead of using raw statement value strings
 - type compatibility has AST overloads for simple literals and list/set/dict
   literals, reducing reliance on string parsing for assignment checks
+- C++ assignment emission detects `Option` reset from `NoneLiteral` expression
+  nodes instead of raw value text
 
 Still too string-based:
 

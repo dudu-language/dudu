@@ -558,10 +558,10 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         return;
     }
     if (stmt.kind == StmtKind::Raise) {
-        const std::string value = stmt.value;
         out << indent(depth) << "throw";
-        if (!value.empty())
+        if (!stmt.value.empty()) {
             out << ' ' << lower_expr(stmt.value_expr, aliases, locals);
+        }
         out << ";\n";
         return;
     }
@@ -652,11 +652,11 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         }
         if (stmt.target_expr.kind == ExprKind::Name && !stmt.target_expr.name.empty()) {
             const std::string& lhs = stmt.target_expr.name;
-            const std::string& raw_value = stmt.value;
             const std::string value = lower_expr(stmt.value_expr, aliases, locals);
             if (locals.contains(lhs)) {
                 out << indent(depth) << lhs << " = ";
-                if (starts_with(locals.at(lhs), "Option[") && raw_value == "None") {
+                if (starts_with(locals.at(lhs), "Option[") &&
+                    stmt.value_expr.kind == ExprKind::NoneLiteral) {
                     out << "std::nullopt";
                 } else {
                     out << value;
@@ -664,7 +664,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                 out << ";\n";
             } else {
                 const std::string inferred =
-                    infer_emitted_local_type(raw_value, locals, function_returns);
+                    infer_emitted_local_type(stmt.value, locals, function_returns);
                 locals.emplace(lhs, inferred.empty() ? "auto" : inferred);
                 out << indent(depth) << "auto " << lhs << " = " << value << ";\n";
             }
