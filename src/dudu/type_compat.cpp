@@ -61,6 +61,11 @@ bool is_explicit_cast_to(const std::string& expected, std::string expr) {
     return starts_with(compact_type(std::move(expr)), compact_type(expected) + "(");
 }
 
+bool is_explicit_cast_to(const std::string& expected, const Expr& expr) {
+    return (expr.kind == ExprKind::Call || expr.kind == ExprKind::TemplateCall) &&
+           compact_type(expr.name) == compact_type(expected);
+}
+
 bool is_option_value(const std::string& expected, std::string expr, const std::string& got) {
     if (!starts_with(expected, "Option[") || expected.back() != ']') {
         return false;
@@ -361,6 +366,16 @@ bool is_value_wrapper_assignment(std::string expected, const std::string& expr, 
     return assignment_type_allowed(inner, expr, got);
 }
 
+bool is_value_wrapper_assignment(std::string expected, const Expr& expr, std::string got) {
+    expected = trim_copy(std::move(expected));
+    got = trim_copy(std::move(got));
+    const std::string inner = wrapped_type_arg(expected);
+    if (inner == expected) {
+        return false;
+    }
+    return assignment_type_allowed(inner, expr, got);
+}
+
 bool is_null_pointer(std::string expected, std::string expr, std::string got) {
     expected = trim_copy(std::move(expected));
     expr = trim_copy(std::move(expr));
@@ -471,6 +486,26 @@ bool is_result_value(const std::string& expected, const std::string& expr, const
     return false;
 }
 
+bool is_result_value(const std::string& expected, const Expr& expr, const std::string& got) {
+    if (!starts_with(expected, "Result[") || expected.back() != ']') {
+        return false;
+    }
+    const std::vector<std::string> parts =
+        split_top_level_args(expected.substr(7, expected.size() - 8));
+    if (parts.size() != 2 || expr.kind != ExprKind::Call || expr.children.size() != 1) {
+        return false;
+    }
+    if (starts_with(got, "Ok[") && got.back() == ']' && expr.name == "Ok") {
+        return assignment_type_allowed(parts[0], expr.children.front(),
+                                       got.substr(3, got.size() - 4));
+    }
+    if (starts_with(got, "Err[") && got.back() == ']' && expr.name == "Err") {
+        return assignment_type_allowed(parts[1], expr.children.front(),
+                                       got.substr(4, got.size() - 5));
+    }
+    return false;
+}
+
 bool is_option_value(const std::string& expected, const Expr& expr, const std::string& got) {
     if (!starts_with(expected, "Option[") || expected.back() != ']') {
         return false;
@@ -502,13 +537,13 @@ bool assignment_type_allowed(const std::string& expected, const std::string& exp
 
 bool assignment_type_allowed(const std::string& expected, const Expr& expr,
                              const std::string& got) {
-    return expected == "auto" || is_explicit_cast_to(expected, expr.text) ||
+    return expected == "auto" || is_explicit_cast_to(expected, expr) ||
            is_container_literal(expected, expr) ||
            (!is_container_literal_expr(expr) && got.empty()) || got == "auto" || got == expected ||
            compact_type(expected) == compact_type(got) || is_option_value(expected, expr, got) ||
            compact_type(normalize_c_tags(expected)) == compact_type(normalize_c_tags(got)) ||
-           is_result_value(expected, expr.text, got) ||
-           is_value_wrapper_assignment(expected, expr.text, got) ||
+           is_result_value(expected, expr, got) ||
+           is_value_wrapper_assignment(expected, expr, got) ||
            is_null_pointer(expected, expr, got) || is_void_pointer_target(expected, got) ||
            is_const_pointer_binding(expected, got) ||
            is_pointer_to_reference_value(expected, got) || is_reference_binding(expected, got) ||

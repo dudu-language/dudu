@@ -68,6 +68,9 @@ Already structured:
   optional statement values/messages instead of raw statement value strings
 - semantic compatibility checks for parsed binary and comparison operators use
   the right-hand expression node instead of stringifying it for assignment rules
+- assignment compatibility for parsed explicit casts, value-wrapper
+  assignments, and `Ok(...)`/`Err(...)` result construction inspects call
+  expression nodes instead of rediscovering those forms from raw text
 
 Still too string-based:
 
