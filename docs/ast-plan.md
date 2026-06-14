@@ -71,6 +71,9 @@ Already structured:
 - assignment compatibility for parsed explicit casts, value-wrapper
   assignments, and `Ok(...)`/`Err(...)` result construction inspects call
   expression nodes instead of rediscovering those forms from raw text
+- parsed lambda expressions keep their argument text and body expression node;
+  C++ emission lowers the lambda body structurally while full lambda typing
+  remains future work
 
 Still too string-based:
 
@@ -80,7 +83,9 @@ Still too string-based:
   coverage is incomplete
 - C++ emission fallback paths for unknown expressions, C++ escapes, and raw
   macro shapes
-- lambdas and user-facing macro/decorator forms still need deeper AST nodes
+- user-facing macro/decorator forms still need deeper AST nodes
+- lambda parameter declarations and target-type-aware lambda checking remain
+  shallow
 - some type compatibility and native-header checks still route through type
   strings after `TypeRef` parsing
 - exact original-token ranges inside function bodies; current body-node ranges

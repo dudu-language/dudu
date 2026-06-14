@@ -230,6 +230,24 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
            join_lowered_exprs(expr.children, aliases, locals) + ")";
 }
 
+std::string lower_lambda_expr(const Expr& expr, const std::vector<std::string>& aliases,
+                              const std::map<std::string, std::string>& locals) {
+    if (expr.children.size() != 1) {
+        return lower_expr(expr.text, aliases, locals);
+    }
+    const std::vector<std::string> args = split_top_level_args(expr.name);
+    std::ostringstream out;
+    out << "[&](";
+    for (size_t i = 0; i < args.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << "auto&& " << trim_copy(args[i]);
+    }
+    out << ") { return " << lower_expr(expr.children.front(), aliases, locals) << "; }";
+    return out.str();
+}
+
 std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases,
                        const std::map<std::string, std::string>& locals) {
     if (expr.text.empty() || expr.kind == ExprKind::Unknown) {
@@ -351,7 +369,7 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
     case ExprKind::TupleLiteral:
         return join_lowered_exprs(expr.children, aliases, locals);
     case ExprKind::Lambda:
-        break;
+        return lower_lambda_expr(expr, aliases, locals);
     case ExprKind::Unknown:
         break;
     }

@@ -984,7 +984,20 @@ Expr parse_expr_text(std::string_view text, SourceLocation location) {
         return make_expr(ExprKind::NoneLiteral, text, location);
     }
     if (starts_keyword(text, "lambda")) {
-        return make_expr(ExprKind::Lambda, text, location);
+        Expr expr = make_expr(ExprKind::Lambda, text, location);
+        size_t args_start = 6;
+        while (args_start < text.size() &&
+               std::isspace(static_cast<unsigned char>(text[args_start])) != 0) {
+            ++args_start;
+        }
+        const std::string_view body = text.substr(args_start);
+        const size_t colon = find_top_level_colon(body);
+        if (colon != std::string_view::npos) {
+            expr.name = trim_string(body.substr(0, colon));
+            expr.children.push_back(parse_expr_text(
+                body.substr(colon + 1), advance_columns(location, args_start + colon + 1)));
+        }
+        return expr;
     }
 
     const size_t slice_colon = find_top_level_colon(text);
