@@ -5,8 +5,12 @@
 #include "dudu/cpp_pointer_members.hpp"
 #include "dudu/cpp_stmt_types.hpp"
 
+#include <algorithm>
+#include <cctype>
 #include <map>
+#include <optional>
 #include <sstream>
+#include <vector>
 
 namespace dudu {
 namespace {
@@ -181,6 +185,36 @@ bool has_named_argument_shape(const std::vector<Expr>& args) {
     return false;
 }
 
+bool is_builtin_cast_call(std::string_view name) {
+    static const std::vector<std::string_view> types = {"bool", "i8",  "i16", "i32", "i64",
+                                                        "u8",   "u16", "u32", "u64", "usize",
+                                                        "f32",  "f64", "str", "cstr"};
+    return std::find(types.begin(), types.end(), name) != types.end();
+}
+
+bool is_pointer_cast_type_like(const std::string& type) {
+    const std::string base =
+        type.find('[') == std::string::npos ? type : type.substr(0, type.find('['));
+    return is_builtin_cast_call(type) || starts_with(type, "struct ") ||
+           type.find('[') != std::string::npos || type.find('.') != std::string::npos ||
+           (!base.empty() && std::isupper(static_cast<unsigned char>(base.front())) != 0);
+}
+
+std::optional<std::string>
+lower_pointer_cast_expr(const Expr& expr, const std::vector<std::string>& aliases,
+                        const std::map<std::string, std::string>& locals) {
+    if (expr.op != "*" || expr.children.size() != 1 ||
+        expr.children.front().kind != ExprKind::Call) {
+        return std::nullopt;
+    }
+    const Expr& call = expr.children.front();
+    if (!is_pointer_cast_type_like(call.name)) {
+        return std::nullopt;
+    }
+    return "reinterpret_cast<" + lower_cpp_type("*" + call.name, aliases) + ">(" +
+           join_lowered_exprs(call.children, aliases, locals) + ")";
+}
+
 std::string lower_named_argument_call(const Expr& expr, const std::vector<std::string>& aliases,
                                       const std::map<std::string, std::string>& locals) {
     std::ostringstream out;
@@ -208,6 +242,29 @@ std::string lower_named_argument_call(const Expr& expr, const std::vector<std::s
     return out.str();
 }
 
+std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& aliases,
+                            const std::map<std::string, std::string>& locals) {
+    if (has_named_argument_shape(expr.children)) {
+        return lower_named_argument_call(expr, aliases, locals);
+    }
+    if (starts_with(expr.name, "*")) {
+        const std::string type = trim_copy(expr.name.substr(1));
+        if (is_pointer_cast_type_like(type)) {
+            return "reinterpret_cast<" + lower_cpp_type("*" + type, aliases) + ">(" +
+                   join_lowered_exprs(expr.children, aliases, locals) + ")";
+        }
+    }
+    if (expr.name == "len" && expr.children.size() == 1) {
+        return "(" + lower_expr(expr.children.front(), aliases, locals) + ").size()";
+    }
+    if (is_builtin_cast_call(expr.name)) {
+        return lower_cpp_type(expr.name, aliases) + "(" +
+               join_lowered_exprs(expr.children, aliases, locals) + ")";
+    }
+    return lower_expr(expr.name, aliases, locals) + "(" +
+           join_lowered_exprs(expr.children, aliases, locals) + ")";
+}
+
 std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases,
                        const std::map<std::string, std::string>& locals) {
     if (expr.text.empty() || expr.kind == ExprKind::Unknown) {
@@ -225,6 +282,9 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
     case ExprKind::CppEscape:
         return lower_expr(expr.text, aliases, locals);
     case ExprKind::Unary:
+        if (const auto pointer_cast = lower_pointer_cast_expr(expr, aliases, locals)) {
+            return *pointer_cast;
+        }
         if (expr.children.size() == 1) {
             const std::string op = expr.op == "not" ? "!" : expr.op;
             return "(" + op + lower_expr(expr.children.front(), aliases, locals) + ")";
@@ -246,12 +306,7 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
         }
         break;
     case ExprKind::Call:
-        if (has_named_argument_shape(expr.children)) {
-            return lower_named_argument_call(expr, aliases, locals);
-        }
-        return lower_expr(expr.name + "(" + join_lowered_exprs(expr.children, aliases, locals) +
-                              ")",
-                          aliases, locals);
+        return lower_call_expr(expr, aliases, locals);
     case ExprKind::TemplateCall: {
         if (expr.template_args.empty()) {
             break;

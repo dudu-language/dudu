@@ -445,6 +445,11 @@ Built-in calls such as `len(...)`, `range(...)`, `min(...)`, `max(...)`,
 semantic inference path, including arity/type diagnostics for the checked
 built-ins.
 
+Ordinary C++ call emission now lowers parsed callee and argument nodes directly
+instead of rebuilding a raw call string. Built-in primitive casts such as
+`i32(value)`, `len(value)`, and pointer cast calls such as
+`*struct Native(user_data)` have explicit AST emission paths.
+
 `range(...)` for-loop C++ emission now reads parsed call arguments from the
 iterable expression instead of parsing them back out of lowered C++ text.
 
