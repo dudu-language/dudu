@@ -1212,9 +1212,8 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
             fail(stmt.location, "expected except binding as name: Type");
         if (!stmt.name.empty()) {
             check_local_binding_name(stmt.location, stmt.name);
-            if (!known_type(scope.symbols, stmt.type))
-                fail(node_location(stmt.location, stmt.type_ref),
-                     "unknown catch type: " + stmt.type);
+            check_known_type_ref(scope.symbols, node_location(stmt.location, stmt.type_ref),
+                                 stmt.type_ref, "unknown catch type: ");
             nested.locals[stmt.name] = "&const[" + stmt.type + "]";
         }
         check_block(nested, stmt.children, return_type, loop_depth);
@@ -1277,8 +1276,11 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
             }
         }
         const std::string type = effective_var_type(stmt);
-        if (!known_type(scope.symbols, type)) {
-            fail(node_location(stmt.location, stmt.type_ref), "unknown local type: " + stmt.type);
+        if (stmt.type == type) {
+            check_known_type_ref(scope.symbols, node_location(stmt.location, stmt.type_ref),
+                                 stmt.type_ref, "unknown local type: ");
+        } else if (!known_type(scope.symbols, type)) {
+            fail(node_location(stmt.location, stmt.type_ref), "unknown local type: " + type);
         }
         if (has_expr(stmt.value_expr)) {
             if (inferred.status == ArrayShapeStatus::Inferred &&

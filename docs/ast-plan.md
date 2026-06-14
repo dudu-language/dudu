@@ -40,6 +40,8 @@ Already structured:
   enum underlying types, fields, parameters, returns, constants, and static
   fields, so nested unknown types in containers/callbacks are diagnosed at the
   nested type source location
+- function-body validation uses the same recursive `TypeRef` checks for local
+  variable annotations and catch bindings
 - template calls keep template arguments separate from runtime call arguments,
   and C++ emission lowers them from the parsed expression node
 - template calls also keep parsed `TypeRef` nodes for bracketed arguments, so

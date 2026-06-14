@@ -3,8 +3,10 @@
 #include "dudu/ast.hpp"
 
 #include <map>
+#include <optional>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace dudu {
@@ -30,6 +32,10 @@ struct Symbols {
 std::string trim(std::string text);
 std::string base_type(std::string type);
 bool known_type(const Symbols& symbols, const std::string& type);
+std::optional<std::pair<std::string, SourceLocation>> unknown_type_ref(const Symbols& symbols,
+                                                                       const TypeRef& type);
+void check_known_type_ref(const Symbols& symbols, const SourceLocation& location,
+                          const TypeRef& type, const std::string& message);
 std::string resolve_alias(const Symbols& symbols, std::string type);
 std::vector<std::string> split_top_level(std::string text);
 size_t find_top_level_char(const std::string& text, char wanted);

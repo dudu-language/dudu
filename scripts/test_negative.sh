@@ -35,6 +35,7 @@ expect_fail bad_from_import_missing --emit-cpp "module 'bad_from_import_helper' 
 expect_fail bad_cycle_a --emit-cpp "cyclic module import"
 expect_fail bad_unknown_type --emit-cpp "unknown local type: MissingType"
 expect_fail bad_nested_type --check "unknown parameter type: MissingType"
+expect_fail bad_nested_local_type --emit-cpp "unknown local type: MissingType"
 expect_fail bad_field_read --emit-cpp "unknown field: counter.missing"
 expect_fail bad_const_ref_field --emit-cpp "unknown field: coin.missing"
 expect_fail bad_tuple_destructure --emit-cpp "tuple destructuring count mismatch"
