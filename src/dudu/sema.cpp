@@ -500,8 +500,8 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                     if (signature->params.size() != 1) {
                         fail(*use_location, "operator " + expr.op + " expects 1 argument, got " +
                                                 std::to_string(signature->params.size()));
-                    } else if (!assignment_type_allowed(signature->params.front(),
-                                                        expr.children[1].text, right)) {
+                    } else if (!can_assign_expr(scope, signature->params.front(),
+                                                expr.children[1].text, right)) {
                         fail(*use_location, "operator " + expr.op + " expects " +
                                                 signature->params.front() + ", got " + right);
                     }
@@ -521,7 +521,8 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
         }
         if (const auto signature = dudu_operator_signature(scope.symbols, expr.op, left)) {
             if (use_location != nullptr) {
-                check_call_args(scope, expr.op, *signature, {expr.children[1].text}, use_location);
+                check_call_args_ast(scope, expr.op, *signature, std::vector<Expr>{expr.children[1]},
+                                    use_location);
             }
             return signature->return_type;
         }
