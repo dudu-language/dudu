@@ -152,6 +152,20 @@ void test_semantic_diagnostics() {
         bad_return = true;
     }
     assert(bad_return);
+
+    for (const std::string type : {"int", "float", "double"}) {
+        bool rejected = false;
+        try {
+            const dudu::ModuleAst module = dudu::parse_source("def bad_type():\n"
+                                                              "    value: " +
+                                                                  type + " = 0\n",
+                                                              "bad_type.dd");
+            dudu::analyze_module(module, {.check_bodies = true});
+        } catch (const dudu::CompileError&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
 }
 
 void test_formatter() {
