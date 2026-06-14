@@ -23,6 +23,7 @@
 #include "dudu/unsupported.hpp"
 
 #include <cctype>
+#include <optional>
 #include <set>
 #include <sstream>
 namespace dudu {
@@ -94,6 +95,25 @@ const SourceLocation& node_location(const SourceLocation& fallback, const TypeRe
 
 bool foreign_cpp_type_name(const std::string& type) {
     return type.find('.') != std::string::npos || type.find("::") != std::string::npos;
+}
+
+std::optional<std::string> member_path_from_expr(const Expr& expr) {
+    if (expr.kind == ExprKind::Name && !expr.name.empty()) {
+        return expr.name;
+    }
+    if (expr.kind == ExprKind::Member && expr.children.size() == 1 && !expr.name.empty()) {
+        const std::optional<std::string> receiver = member_path_from_expr(expr.children.front());
+        if (receiver.has_value()) {
+            return *receiver + "." + expr.name;
+        }
+    }
+    if (expr.kind == ExprKind::Index && expr.children.size() == 2) {
+        const std::optional<std::string> receiver = member_path_from_expr(expr.children.front());
+        if (receiver.has_value() && !expr.children[1].text.empty()) {
+            return *receiver + "[" + expr.children[1].text + "]";
+        }
+    }
+    return std::nullopt;
 }
 
 void check_call_args(const FunctionScope& scope, const std::string& callee,
@@ -840,7 +860,10 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
         return left.empty() ? right : left;
     }
     case ExprKind::Member:
-        return member_path_type(scope.symbols, scope.locals, use_location, expr.text, "");
+        if (const std::optional<std::string> path = member_path_from_expr(expr)) {
+            return member_path_type(scope.symbols, scope.locals, use_location, *path, "");
+        }
+        return infer_expr(scope, expr.text, use_location);
     case ExprKind::Index:
         if (use_location != nullptr && expr.children.size() == 2) {
             const Expr& receiver = expr.children[0];
@@ -856,12 +879,12 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                 return indexed_value_type(scope.symbols, scope.locals, *use_location, receiver.name,
                                           expr.children[1], "indexed access to unknown local: ");
             }
-            if (is_member_path(receiver.text)) {
+            if (const std::optional<std::string> receiver_path = member_path_from_expr(receiver)) {
                 const std::string receiver_type =
-                    member_path_type(scope.symbols, scope.locals, use_location, receiver.text, "");
+                    member_path_type(scope.symbols, scope.locals, use_location, *receiver_path, "");
                 if (!receiver_type.empty()) {
                     return indexed_type_from_type(scope.symbols, *use_location, receiver_type,
-                                                  expr.children[1], receiver.text);
+                                                  expr.children[1], *receiver_path);
                 }
             }
         }
@@ -1036,8 +1059,11 @@ std::string assign_target_type(const FunctionScope& scope, const Stmt& stmt,
         return local->second;
     }
     if (stmt.target_expr.kind == ExprKind::Member) {
-        return member_path_type(scope.symbols, scope.locals, &target_location,
-                                stmt.target_expr.text, "assignment through unknown local: ");
+        if (const std::optional<std::string> path = member_path_from_expr(stmt.target_expr)) {
+            return member_path_type(scope.symbols, scope.locals, &target_location, *path,
+                                    "assignment through unknown local: ");
+        }
+        fail(target_location, "unsupported assignment target: " + stmt.target_expr.text);
     }
     if (stmt.target_expr.kind != ExprKind::Unknown && lhs.empty()) {
         fail(target_location, "unsupported assignment target: " + stmt.target_expr.text);

@@ -66,6 +66,8 @@ Already structured:
   expressions before falling back to raw target text
 - semantic checks for plain-name and member assignment targets use parsed
   target expressions before falling back to raw target text for complex shapes
+- member-path type checks reconstruct paths from parsed name/member/index
+  expression nodes instead of directly trusting the original expression text
 - semantic checks and C++ statement emission use expression-node presence for
   optional statement values/messages instead of raw statement value strings
 - semantic compatibility checks for parsed binary and comparison operators use
