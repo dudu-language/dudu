@@ -1134,6 +1134,7 @@ Expr parse_expr_text(std::string_view text, SourceLocation location) {
             std::string_view callee = trim_view(text.substr(0, open));
             Expr expr = make_expr(ExprKind::Call, text, location);
             expr.name = trim_string(callee);
+            expr.callee.push_back(parse_expr_text(callee, location));
             expr.children = parse_expr_list(text.substr(open + 1, text.size() - open - 2),
                                             advance_columns(location, open + 1));
             if (callee.ends_with("]")) {
@@ -1141,6 +1142,8 @@ Expr parse_expr_text(std::string_view text, SourceLocation location) {
                 if (type_open != std::string_view::npos && type_open > 0) {
                     expr.kind = ExprKind::TemplateCall;
                     expr.name = trim_string(callee.substr(0, type_open));
+                    expr.callee.clear();
+                    expr.callee.push_back(parse_expr_text(callee.substr(0, type_open), location));
                     expr.template_args =
                         parse_expr_list(callee.substr(type_open + 1, callee.size() - type_open - 2),
                                         advance_columns(location, type_open + 1));

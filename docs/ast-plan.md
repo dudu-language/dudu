@@ -38,6 +38,11 @@ Already structured:
 - initial `TypeRef` C++ lowering is implemented and used for type aliases
 - template calls keep template arguments separate from runtime call arguments,
   and C++ emission lowers them from the parsed expression node
+- ordinary calls and template calls keep a parsed callee expression alongside
+  the compatibility `name` field, so sema/emission/LSP can migrate away from
+  raw callee strings incrementally
+- ordinary call C++ emission lowers parsed callee expressions instead of
+  lowering the callee name string directly
 - array/list/dict index type inference uses parsed index expressions where
   available, so tuple-shaped multi-index expressions no longer depend on raw
   comma splitting

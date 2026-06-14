@@ -113,6 +113,14 @@ bool is_pointer_cast_type_like(const std::string& type) {
            (!base.empty() && std::isupper(static_cast<unsigned char>(base.front())) != 0);
 }
 
+std::string lower_callee_expr(const Expr& expr, const std::vector<std::string>& aliases,
+                              const std::map<std::string, std::string>& locals) {
+    if (!expr.callee.empty()) {
+        return lower_expr(expr.callee.front(), aliases, locals);
+    }
+    return lower_expr(expr.name, aliases, locals);
+}
+
 std::optional<std::string>
 lower_pointer_cast_expr(const Expr& expr, const std::vector<std::string>& aliases,
                         const std::map<std::string, std::string>& locals) {
@@ -131,7 +139,7 @@ lower_pointer_cast_expr(const Expr& expr, const std::vector<std::string>& aliase
 std::string lower_named_argument_call(const Expr& expr, const std::vector<std::string>& aliases,
                                       const std::map<std::string, std::string>& locals) {
     std::ostringstream out;
-    out << lower_expr(expr.name, aliases, locals) << "{";
+    out << lower_callee_expr(expr, aliases, locals) << "{";
     for (size_t i = 0; i < expr.children.size(); ++i) {
         if (i > 0) {
             out << ", ";
@@ -172,7 +180,7 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
         return lower_cpp_type(expr.name, aliases) + "(" +
                join_lowered_exprs(expr.children, aliases, locals) + ")";
     }
-    std::string callee = lower_expr(expr.name, aliases, locals);
+    std::string callee = lower_callee_expr(expr, aliases, locals);
     if (ends_with(callee, ".append")) {
         callee.replace(callee.size() - 7, 7, ".push_back");
     }

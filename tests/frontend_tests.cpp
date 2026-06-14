@@ -271,6 +271,9 @@ void test_expression_ast_shape() {
     assert(answer.kind == dudu::StmtKind::VarDecl);
     assert(answer.value_expr.kind == dudu::ExprKind::Call);
     assert(answer.value_expr.name == "add");
+    assert(answer.value_expr.callee.size() == 1);
+    assert(answer.value_expr.callee[0].kind == dudu::ExprKind::Name);
+    assert(answer.value_expr.callee[0].name == "add");
     assert(answer.value_expr.range.start.line == 2);
     assert(answer.value_expr.range.start.column > answer.location.column);
     assert(answer.value_expr.children.size() == 2);
@@ -305,6 +308,9 @@ void test_expression_ast_shape() {
     assert(assign.target_expr.children[0].kind == dudu::ExprKind::Index);
     assert(assign.value_expr.kind == dudu::ExprKind::TemplateCall);
     assert(assign.value_expr.name == "Vec4");
+    assert(assign.value_expr.callee.size() == 1);
+    assert(assign.value_expr.callee[0].kind == dudu::ExprKind::Name);
+    assert(assign.value_expr.callee[0].name == "Vec4");
     assert(assign.value_expr.template_args.size() == 1);
     assert(assign.value_expr.template_args[0].kind == dudu::ExprKind::Name);
     assert(assign.value_expr.template_args[0].name == "f32");
@@ -351,6 +357,9 @@ void test_expression_ast_shape() {
     const dudu::Stmt& point = main.statements[5];
     assert(point.kind == dudu::StmtKind::VarDecl);
     assert(point.value_expr.kind == dudu::ExprKind::Call);
+    assert(point.value_expr.callee.size() == 1);
+    assert(point.value_expr.callee[0].kind == dudu::ExprKind::Name);
+    assert(point.value_expr.callee[0].name == "Point");
     assert(point.value_expr.children.size() == 2);
     assert(point.value_expr.children[0].kind == dudu::ExprKind::NamedArg);
     assert(point.value_expr.children[0].name == "x");
