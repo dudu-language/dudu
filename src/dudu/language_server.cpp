@@ -1226,6 +1226,10 @@ class LanguageServer {
                        "`\"},\"range\":" + range_json(symbol.location) + "}";
             }
         }
+        if (const std::string type = local_type_before_cursor(*doc, word, params); !type.empty()) {
+            return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"`" + json_escape(word) +
+                   ": " + json_escape(type) + "`\"}}";
+        }
         return "null";
     }
 
@@ -1639,8 +1643,9 @@ class LanguageServer {
         return std::nullopt;
     }
 
-    static std::string local_type_before_cursor(const Document& doc, const std::string& name) {
-        const std::map<std::string, std::string> locals = local_types_before_cursor(doc, nullptr);
+    static std::string local_type_before_cursor(const Document& doc, const std::string& name,
+                                                const Json* params = nullptr) {
+        const std::map<std::string, std::string> locals = local_types_before_cursor(doc, params);
         const auto found = locals.find(name);
         return found == locals.end() ? std::string{} : found->second;
     }
@@ -1649,6 +1654,9 @@ class LanguageServer {
                                                                         const Json* params) {
         static const std::regex local_decl(
             R"(^\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([A-Za-z_][A-Za-z0-9_\.]*)\b)");
+        static const std::regex assign_decl(
+            R"(^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*([^=].*)$)");
+        static const std::regex def_decl(R"(^\s*def\s+[A-Za-z_][A-Za-z0-9_]*\(([^)]*)\))");
         const Json* position = params == nullptr ? nullptr : params->get("position");
         const int max_line = position == nullptr ? std::numeric_limits<int>::max()
                                                  : int_value(position->get("line"));
@@ -1662,14 +1670,77 @@ class LanguageServer {
                 break;
             }
             std::smatch match;
+            if (std::regex_search(line, match, def_decl)) {
+                for (const std::string& param : split_top_level_args(match[1].str())) {
+                    const size_t colon = param.find(':');
+                    if (colon == std::string::npos) {
+                        continue;
+                    }
+                    const std::string name = trim_copy(param.substr(0, colon));
+                    const std::string type = trim_copy(param.substr(colon + 1));
+                    if (!name.empty() && !type.empty()) {
+                        out[name] = type;
+                    }
+                }
+            }
             if (std::regex_search(line, match, local_decl)) {
                 if (leading_spaces(line) > target_indent) {
                     continue;
                 }
                 out[match[1].str()] = match[2].str();
+            } else if (std::regex_search(line, match, assign_decl)) {
+                if (leading_spaces(line) > target_indent) {
+                    continue;
+                }
+                const std::string inferred = infer_simple_assignment_type(match[2].str());
+                if (!inferred.empty()) {
+                    out[match[1].str()] = inferred;
+                }
             }
         }
         return out;
+    }
+
+    static std::string infer_simple_assignment_type(std::string expr) {
+        expr = trim_copy(std::move(expr));
+        if (expr == "True" || expr == "False") {
+            return "bool";
+        }
+        if (expr.size() >= 2 && ((expr.front() == '"' && expr.back() == '"') ||
+                                 (expr.front() == '\'' && expr.back() == '\''))) {
+            return "str";
+        }
+        if (is_numeric_literal_text(expr)) {
+            return expr.find('.') == std::string::npos ? "i32" : "f64";
+        }
+        const size_t call = expr.find('(');
+        if (call != std::string::npos && call > 0 &&
+            std::isupper(static_cast<unsigned char>(expr.front())) != 0) {
+            return trim_copy(expr.substr(0, call));
+        }
+        return {};
+    }
+
+    static bool is_numeric_literal_text(const std::string& expr) {
+        if (expr.empty()) {
+            return false;
+        }
+        const size_t start = (expr.front() == '-' || expr.front() == '+') ? 1 : 0;
+        bool digit = false;
+        bool dot = false;
+        for (size_t i = start; i < expr.size(); ++i) {
+            const char c = expr[i];
+            if (std::isdigit(static_cast<unsigned char>(c)) != 0) {
+                digit = true;
+                continue;
+            }
+            if (c == '.' && !dot) {
+                dot = true;
+                continue;
+            }
+            return false;
+        }
+        return digit;
     }
 
     static int target_line_indent(const Document& doc, int target_line) {

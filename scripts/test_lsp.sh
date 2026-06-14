@@ -44,6 +44,7 @@ rename_user_uri = f"file://{repo_root}/tests/fixtures/lsp_rename_user.dd"
 lint_uri = "file:///tmp/dudu_lsp_lint.dd"
 unused_uri = "file:///tmp/dudu_lsp_unused.dd"
 shadow_uri = "file:///tmp/dudu_lsp_shadow.dd"
+hover_locals_uri = "file:///tmp/dudu_lsp_hover_locals.dd"
 bad_config_uri = f"file://{repo_root}/tests/fixtures/lsp_bad_config/main.dd"
 overload_uri = f"file://{repo_root}/tests/fixtures/dudu_lsp_overload.dd"
 scope_uri = "file:///tmp/dudu_lsp_scope.dd"
@@ -103,6 +104,50 @@ messages = [
                     "version": 1,
                     "text": source,
                 }
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "method": "textDocument/didOpen",
+            "params": {
+                "textDocument": {
+                    "uri": hover_locals_uri,
+                    "languageId": "dudu",
+                    "version": 1,
+                    "text": "\n".join(
+                        [
+                            "def main(amount: i32) -> i32:",
+                            "    inferred = 42",
+                            "    explicit: f32 = 2.0",
+                            "    return amount + inferred",
+                            "",
+                        ]
+                    ),
+                }
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 39,
+            "method": "textDocument/hover",
+            "params": {
+                "textDocument": {"uri": hover_locals_uri},
+                "position": {"line": 3, "character": 20},
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 40,
+            "method": "textDocument/hover",
+            "params": {
+                "textDocument": {"uri": hover_locals_uri},
+                "position": {"line": 2, "character": 6},
             },
         }
     ),
@@ -870,6 +915,12 @@ assert "main" in symbol_names
 
 hover = next(item for item in responses if item.get("id") == 3)
 assert "def add" in hover["result"]["contents"]["value"]
+
+inferred_hover = next(item for item in responses if item.get("id") == 39)
+assert "inferred: i32" in inferred_hover["result"]["contents"]["value"]
+
+typed_hover = next(item for item in responses if item.get("id") == 40)
+assert "explicit: f32" in typed_hover["result"]["contents"]["value"]
 
 definition = next(item for item in responses if item.get("id") == 4)
 assert definition["result"]["range"]["start"]["line"] == 3
