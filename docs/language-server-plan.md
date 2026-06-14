@@ -242,7 +242,8 @@ symbols and insert a `from module import symbol` edit. Native config quick fixes
 are implemented for known missing native headers that map cleanly to
 `pkg-config` packages such as `raylib`, `sqlite3`, `sdl3`, `glfw3`, and
 `vulkan`. Initial lint diagnostics warn on unreachable statements after
-`return`, with a quick fix that removes the unreachable line.
+`return` and simple unused typed locals, with quick fixes that remove the
+flagged line.
 
 ## Tests
 
@@ -280,6 +281,7 @@ known missing native header package.
 Workspace rename is covered across an open definition file and an unopened
 sibling use file.
 Unreachable-statement lint diagnostics and remove-line quick fixes are covered.
+Unused-local lint diagnostics and remove-line quick fixes are covered.
 Go-to-definition for Dudu module import aliases is covered with an unopened
 module file.
 Go-to-definition for native C++ member methods is covered with a local fixture

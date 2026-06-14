@@ -619,11 +619,21 @@ class LanguageServer {
 
     static std::vector<Diagnostic> lint_diagnostics(const Document& doc) {
         std::vector<Diagnostic> out;
+        struct LocalDecl {
+            std::string name;
+            int line = 0;
+            int column = 0;
+        };
+        std::vector<std::string> lines;
+        std::vector<LocalDecl> locals;
+        static const std::regex local_decl(
+            R"(^(\s*)([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([A-Za-z_][A-Za-z0-9_\.]*)\b)");
         std::istringstream in(doc.text);
         std::string line;
         int row = 0;
         std::optional<int> returned_indent;
         while (std::getline(in, line)) {
+            lines.push_back(line);
             ++row;
             const std::string trimmed = trim_copy(line);
             if (trimmed.empty() || starts_with(trimmed, "#")) {
@@ -645,8 +655,46 @@ class LanguageServer {
                  std::isspace(static_cast<unsigned char>(trimmed[6])) != 0)) {
                 returned_indent = indent;
             }
+            std::smatch match;
+            if (std::regex_search(line, match, local_decl)) {
+                locals.push_back({.name = match[2].str(), .line = row, .column = indent + 1});
+            }
+        }
+        for (const LocalDecl& local : locals) {
+            bool used = false;
+            for (size_t i = static_cast<size_t>(local.line); i < lines.size(); ++i) {
+                if (contains_identifier(lines[i], local.name)) {
+                    used = true;
+                    break;
+                }
+            }
+            if (!used) {
+                out.push_back(
+                    {.location = {.file = doc.path, .line = local.line, .column = local.column},
+                     .message = "unused local: " + local.name,
+                     .source = "dudu/lint",
+                     .severity = 2});
+            }
         }
         return out;
+    }
+
+    static bool contains_identifier(const std::string& line, const std::string& name) {
+        for (size_t start = 0; start < line.size();) {
+            if (!identifier_char(line[start])) {
+                ++start;
+                continue;
+            }
+            size_t end = start + 1;
+            while (end < line.size() && identifier_char(line[end])) {
+                ++end;
+            }
+            if (line.substr(start, end - start) == name) {
+                return true;
+            }
+            start = end;
+        }
+        return false;
     }
 
     static int leading_spaces(const std::string& line) {
@@ -1693,8 +1741,13 @@ class LanguageServer {
         }
         std::set<int> seen_lines;
         for (const Json& diagnostic : *array) {
-            if (string_value(diagnostic.get("source")) != "dudu/lint" ||
-                string_value(diagnostic.get("message")) != "unreachable statement after return") {
+            if (string_value(diagnostic.get("source")) != "dudu/lint") {
+                continue;
+            }
+            const std::string message = string_value(diagnostic.get("message"));
+            const bool unreachable = message == "unreachable statement after return";
+            const bool unused_local = starts_with(message, "unused local: ");
+            if (!unreachable && !unused_local) {
                 continue;
             }
             const Json* range = diagnostic.get("range");
@@ -1703,14 +1756,17 @@ class LanguageServer {
             if (line < 0 || !seen_lines.insert(line).second) {
                 continue;
             }
-            if (const std::optional<std::string> action = remove_line_action(doc, line)) {
+            const std::string title =
+                unused_local ? "Remove unused local" : "Remove unreachable statement";
+            if (const std::optional<std::string> action = remove_line_action(doc, line, title)) {
                 out.push_back(*action);
             }
         }
         return out;
     }
 
-    static std::optional<std::string> remove_line_action(const Document& doc, int line) {
+    static std::optional<std::string> remove_line_action(const Document& doc, int line,
+                                                         const std::string& title) {
         std::vector<std::string> lines;
         std::istringstream in(doc.text);
         std::string text_line;
@@ -1725,7 +1781,8 @@ class LanguageServer {
             has_next ? range_json(line, 0, line + 1, 0)
                      : range_json(line, 0, line,
                                   static_cast<int>(lines[static_cast<size_t>(line)].size()));
-        return "{\"title\":\"Remove unreachable statement\",\"kind\":\"quickfix\","
+        return "{\"title\":\"" + json_escape(title) +
+               "\",\"kind\":\"quickfix\","
                "\"edit\":{\"changes\":{\"" +
                json_escape(doc.uri) + "\":[{\"range\":" + range + ",\"newText\":\"\"}]}}}";
     }
