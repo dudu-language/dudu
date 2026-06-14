@@ -21,11 +21,11 @@ void check_constructor_args(const FunctionScope& scope, const ClassDecl& klass,
                                                             const SourceLocation*)>& infer_expr,
                             const std::function<bool(const std::string&, const std::string&,
                                                      const std::string&)>& can_assign);
-void check_constructor_args_ast(const FunctionScope& scope, const ClassDecl& klass,
-                                const std::vector<Expr>& args, const SourceLocation* location,
-                                const std::function<std::string(const FunctionScope&, const Expr&,
-                                                                const SourceLocation*)>& infer_expr,
-                                const std::function<bool(const std::string&, const std::string&,
-                                                         const std::string&)>& can_assign);
+void check_constructor_args_ast(
+    const FunctionScope& scope, const ClassDecl& klass, const std::vector<Expr>& args,
+    const SourceLocation* location,
+    const std::function<std::string(const FunctionScope&, const Expr&, const SourceLocation*)>&
+        infer_expr,
+    const std::function<bool(const std::string&, const Expr&, const std::string&)>& can_assign);
 
 } // namespace dudu

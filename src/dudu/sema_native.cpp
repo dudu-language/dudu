@@ -154,13 +154,13 @@ bool args_match_signature(const FunctionScope& scope, const FunctionSignature& s
 bool args_match_signature_ast(const FunctionScope& scope, const FunctionSignature& signature,
                               const std::vector<Expr>& args, const SourceLocation* location,
                               const NativeInferExprAstFn& infer_expr,
-                              const NativeCanAssignFn& can_assign) {
+                              const NativeCanAssignAstFn& can_assign) {
     if (!arity_matches(signature, args.size())) {
         return false;
     }
     for (size_t i = 0; i < signature.params.size(); ++i) {
         const std::string got = infer_expr(scope, args[i], location);
-        if (!can_assign(signature.params[i], args[i].text, got) &&
+        if (!can_assign(signature.params[i], args[i], got) &&
             !native_numeric_promotion(signature.params[i], got)) {
             return false;
         }
@@ -228,7 +228,7 @@ std::optional<FunctionSignature> native_signature_for_call(const FunctionScope& 
                                                            const std::vector<Expr>& args,
                                                            const SourceLocation* location,
                                                            const NativeInferExprAstFn& infer_expr,
-                                                           const NativeCanAssignFn& can_assign) {
+                                                           const NativeCanAssignAstFn& can_assign) {
     const auto template_call = template_call_base(callee);
     const std::string lookup = template_call ? template_call->first : callee;
     const auto found = scope.symbols.native_function_signatures.find(lookup);

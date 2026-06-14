@@ -509,8 +509,8 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
 
     if (const auto signature = native_signature_for_call(
             scope, callee, expr.children, location, infer_expr_ast,
-            [&](const std::string& expected, const std::string& value, const std::string& got) {
-                return can_assign_expr(scope, expected, value, got);
+            [&](const std::string& expected, const Expr& value, const std::string& got) {
+                return can_assign_ast(scope, expected, value, got);
             })) {
         return signature->return_type;
     }
@@ -576,8 +576,8 @@ std::string infer_constructor_call_ast(const FunctionScope& scope, const Expr& e
         klass != scope.symbols.classes.end()) {
         check_constructor_args_ast(
             scope, *klass->second, expr.children, location, infer_expr_ast,
-            [&](const std::string& expected, const std::string& value, const std::string& got) {
-                return can_assign_expr(scope, expected, value, got);
+            [&](const std::string& expected, const Expr& value, const std::string& got) {
+                return can_assign_ast(scope, expected, value, got);
             });
         return callee;
     }
@@ -890,8 +890,8 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
         }
         if (const auto signature = native_signature_for_call(
                 scope, callee, expr.children, use_location, infer_expr_ast,
-                [&](const std::string& expected, const std::string& value, const std::string& got) {
-                    return can_assign_expr(scope, expected, value, got);
+                [&](const std::string& expected, const Expr& value, const std::string& got) {
+                    return can_assign_ast(scope, expected, value, got);
                 })) {
             return signature->return_type;
         }

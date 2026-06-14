@@ -195,6 +195,19 @@ void test_semantic_diagnostics() {
     }
 }
 
+void test_ast_constructor_assignment_compatibility() {
+    const dudu::ModuleAst module = dudu::parse_source("class Bag:\n"
+                                                      "    names: dict[str, i32]\n"
+                                                      "    values: list[i32]\n"
+                                                      "\n"
+                                                      "def make_bag() -> Bag:\n"
+                                                      "    first: Bag = Bag({}, [])\n"
+                                                      "    second: Bag = Bag(names={}, values=[])\n"
+                                                      "    return first\n",
+                                                      "ast_constructor_assignment.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+}
+
 void test_statement_ast_shape() {
     const dudu::ModuleAst module = dudu::parse_source("def main() -> i32:\n"
                                                       "    total: i32 = 0\n"
@@ -789,6 +802,7 @@ int main() {
         test_canonical_examples_parse(root);
         test_header_emission();
         test_semantic_diagnostics();
+        test_ast_constructor_assignment_compatibility();
         test_statement_ast_shape();
         test_expression_ast_shape();
         test_type_ast_shape();

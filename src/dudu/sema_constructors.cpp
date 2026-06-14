@@ -67,8 +67,7 @@ bool positional_constructor_matches_ast(
     const std::vector<Expr>& args,
     const std::function<std::string(const FunctionScope&, const Expr&, const SourceLocation*)>&
         infer_expr,
-    const std::function<bool(const std::string&, const std::string&, const std::string&)>&
-        can_assign,
+    const std::function<bool(const std::string&, const Expr&, const std::string&)>& can_assign,
     const SourceLocation* location) {
     if (args.size() != expected.size())
         return false;
@@ -76,7 +75,7 @@ bool positional_constructor_matches_ast(
         if (args[i].kind == ExprKind::NamedArg)
             return false;
         const std::string got = infer_expr(scope, args[i], location);
-        if (!can_assign(expected[i].type, args[i].text, got))
+        if (!can_assign(expected[i].type, args[i], got))
             return false;
     }
     return true;
@@ -154,12 +153,12 @@ void check_constructor_args(const FunctionScope& scope, const ClassDecl& klass,
     }
 }
 
-void check_constructor_args_ast(const FunctionScope& scope, const ClassDecl& klass,
-                                const std::vector<Expr>& args, const SourceLocation* location,
-                                const std::function<std::string(const FunctionScope&, const Expr&,
-                                                                const SourceLocation*)>& infer_expr,
-                                const std::function<bool(const std::string&, const std::string&,
-                                                         const std::string&)>& can_assign) {
+void check_constructor_args_ast(
+    const FunctionScope& scope, const ClassDecl& klass, const std::vector<Expr>& args,
+    const SourceLocation* location,
+    const std::function<std::string(const FunctionScope&, const Expr&, const SourceLocation*)>&
+        infer_expr,
+    const std::function<bool(const std::string&, const Expr&, const std::string&)>& can_assign) {
     if (location == nullptr)
         return;
     bool has_named_arg = false;
@@ -201,7 +200,7 @@ void check_constructor_args_ast(const FunctionScope& scope, const ClassDecl& kla
                                     std::to_string(args.size()));
             const ConstructorParam& param = expected[positional];
             const std::string got = infer_expr(scope, arg, location);
-            if (!can_assign(param.type, arg.text, got))
+            if (!can_assign(param.type, arg, got))
                 fail(*location, "constructor " + klass.name + " argument " +
                                     std::to_string(positional + 1) + " expects " + param.type +
                                     ", got " + got);
@@ -219,7 +218,7 @@ void check_constructor_args_ast(const FunctionScope& scope, const ClassDecl& kla
             fail(*location, "unknown constructor field: " + klass.name + "." + name);
         const Expr& value = arg.children.empty() ? arg : arg.children.front();
         const std::string got = infer_expr(scope, value, location);
-        if (!can_assign(param->type, value.text, got))
+        if (!can_assign(param->type, value, got))
             fail(*location, "constructor field " + klass.name + "." + name + " expects " +
                                 param->type + ", got " + got);
     }
