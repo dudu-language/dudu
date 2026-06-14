@@ -876,6 +876,8 @@ std::string_view expression_kind_name(ExprKind kind) {
         return "conditional";
     case ExprKind::Await:
         return "await";
+    case ExprKind::Yield:
+        return "yield";
     case ExprKind::CppEscape:
         return "cpp_escape";
     }
@@ -1135,6 +1137,11 @@ Expr parse_expr_text(std::string_view text, SourceLocation location) {
     }
     if (starts_keyword(text, "await")) {
         Expr expr = make_expr(ExprKind::Await, text, location);
+        expr.children.push_back(parse_expr_text(text.substr(5), advance_columns(location, 5)));
+        return expr;
+    }
+    if (starts_keyword(text, "yield")) {
+        Expr expr = make_expr(ExprKind::Yield, text, location);
         expr.children.push_back(parse_expr_text(text.substr(5), advance_columns(location, 5)));
         return expr;
     }

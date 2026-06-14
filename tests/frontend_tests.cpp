@@ -357,11 +357,12 @@ void test_expression_ast_shape() {
                            "    choice: i32 = 1 if ready else 2\n"
                            "    callback = lambda left, right: left + right\n"
                            "    pending = await fetch()\n"
+                           "    produced = yield answer\n"
                            "    return answer\n",
                            "expression_ast.dd");
     assert(module.functions.size() == 1);
     const dudu::FunctionDecl& main = module.functions.front();
-    assert(main.statements.size() == 12);
+    assert(main.statements.size() == 13);
 
     const dudu::Stmt& answer = main.statements[0];
     assert(answer.kind == dudu::StmtKind::VarDecl);
@@ -521,6 +522,15 @@ void test_expression_ast_shape() {
     assert(pending.value_expr.children[0].name == "fetch");
     assert(pending.value_expr.children[0].range.start.column >
            pending.value_expr.range.start.column);
+
+    const dudu::Stmt& produced = main.statements[11];
+    assert(produced.kind == dudu::StmtKind::Assign);
+    assert(produced.value_expr.kind == dudu::ExprKind::Yield);
+    assert(produced.value_expr.children.size() == 1);
+    assert(produced.value_expr.children[0].kind == dudu::ExprKind::Name);
+    assert(produced.value_expr.children[0].name == "answer");
+    assert(produced.value_expr.children[0].range.start.column >
+           produced.value_expr.range.start.column);
 }
 
 void test_type_ast_shape() {

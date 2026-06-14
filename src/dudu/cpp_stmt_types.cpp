@@ -219,6 +219,8 @@ std::string infer_emitted_local_type(const Expr& expr,
         return {};
     case ExprKind::Await:
         return {};
+    case ExprKind::Yield:
+        return {};
     case ExprKind::Call:
         return infer_call_type(call_callee_text(expr), locals, function_returns);
     case ExprKind::Index:

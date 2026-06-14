@@ -118,6 +118,7 @@ enum class ExprKind {
     Lambda,
     Conditional,
     Await,
+    Yield,
     CppEscape,
 };
 
