@@ -940,6 +940,14 @@ TypeRef parse_type_text(std::string_view text, SourceLocation location) {
         type.children.insert(type.children.end(), parsed_params.begin(), parsed_params.end());
         return type;
     }
+    if (text.starts_with("fn(") && text.ends_with(")")) {
+        TypeRef type = make_type(TypeKind::Function, text, location);
+        type.children.push_back(parse_type_text("void", location));
+        std::string_view params = text.substr(3, text.size() - 4);
+        std::vector<TypeRef> parsed_params = parse_type_list(params, advance_columns(location, 3));
+        type.children.insert(type.children.end(), parsed_params.begin(), parsed_params.end());
+        return type;
+    }
     if (text.front() == '*') {
         TypeRef type = make_type(TypeKind::Pointer, text, location);
         type.children.push_back(parse_type_text(text.substr(1), advance_columns(location, 1)));

@@ -20,28 +20,24 @@ std::string function_type(const FunctionSignature& signature) {
 }
 
 bool parse_function_type(std::string type, FunctionSignature& out) {
-    type = trim_copy(std::move(type));
-    const size_t open = type.find('[');
-    if (open != std::string::npos && type.back() == ']') {
-        const std::string inner = trim_copy(type.substr(open + 1, type.size() - open - 2));
-        if (starts_with(inner, "fn(")) {
-            type = inner;
-        }
+    return parse_function_type(parse_type_text(type), out);
+}
+
+bool parse_function_type(const TypeRef& type, FunctionSignature& out) {
+    const TypeRef* function = &type;
+    if (type.kind == TypeKind::Template && type.children.size() == 1 &&
+        type.children.front().kind == TypeKind::Function) {
+        function = &type.children.front();
     }
-    if (!starts_with(type, "fn(")) {
-        return false;
-    }
-    const size_t close = type.find(')');
-    const size_t arrow = type.find("->", close == std::string::npos ? 0 : close);
-    if (close == std::string::npos) {
+    if (function->kind != TypeKind::Function || function->children.empty()) {
         return false;
     }
     out.params.clear();
-    const std::string args = trim_copy(type.substr(3, close - 3));
-    if (!args.empty()) {
-        out.params = split_top_level_args(args);
+    out.return_type =
+        function->children.front().text.empty() ? "void" : function->children.front().text;
+    for (size_t i = 1; i < function->children.size(); ++i) {
+        out.params.push_back(function->children[i].text);
     }
-    out.return_type = arrow == std::string::npos ? "void" : trim_copy(type.substr(arrow + 2));
     if (out.return_type.empty()) {
         out.return_type = "void";
     }

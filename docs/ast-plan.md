@@ -31,6 +31,9 @@ Already structured:
   conditionals, and collection literals
 - initial type shape capture for names, qualified names, templates, pointers,
   references, wrappers, fixed arrays, and function-like type signatures
+- function pointer/callback signature parsing can consume parsed `TypeRef`
+  nodes directly, including omitted-return `fn(...)` as `void` and wrapper
+  templates such as `std.function[fn(...)]`
 - source range fields on statement, expression, and type nodes
 - semantic diagnostics for return values, local initializer values, local type
   names, conditions, and assignment targets use expression/type node locations

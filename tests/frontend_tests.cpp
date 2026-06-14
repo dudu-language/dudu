@@ -6,6 +6,7 @@
 #include "dudu/parser.hpp"
 #include "dudu/project_config.hpp"
 #include "dudu/sema.hpp"
+#include "dudu/sema_function_type.hpp"
 
 #include <cassert>
 #include <filesystem>
@@ -490,6 +491,23 @@ void test_type_ast_shape() {
     assert(dudu::lower_cpp_type(dudu::parse_type_text("&const[Player]")) == "const Player&");
     assert(dudu::lower_cpp_type(dudu::parse_type_text("fn(i32, f32) -> bool")) ==
            "std::add_pointer_t<bool(int32_t, float)>");
+    assert(dudu::lower_cpp_type(dudu::parse_type_text("fn(i32)")) ==
+           "std::add_pointer_t<void(int32_t)>");
+    dudu::FunctionSignature signature;
+    assert(dudu::parse_function_type(dudu::parse_type_text("fn(i32, f32) -> bool"), signature));
+    assert(signature.params.size() == 2);
+    assert(signature.params[0] == "i32");
+    assert(signature.params[1] == "f32");
+    assert(signature.return_type == "bool");
+    assert(dudu::parse_function_type(dudu::parse_type_text("fn(i32)"), signature));
+    assert(signature.params.size() == 1);
+    assert(signature.params[0] == "i32");
+    assert(signature.return_type == "void");
+    assert(dudu::parse_function_type(dudu::parse_type_text("std.function[fn(i32) -> i32]"),
+                                     signature));
+    assert(signature.params.size() == 1);
+    assert(signature.params[0] == "i32");
+    assert(signature.return_type == "i32");
     assert(dudu::lower_cpp_type(player.fields[0].type_ref) ==
            "std::array<std::array<float, 4>, 4>");
     assert(dudu::lower_cpp_type("array[i32][3]") == "std::array<int32_t, 3>");
