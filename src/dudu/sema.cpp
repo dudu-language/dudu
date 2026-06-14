@@ -771,9 +771,17 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
         return;
     }
     if (stmt.kind == StmtKind::Delete) {
-        check_deallocation_args(stmt.location, "delete",
-                                {infer_expr_ast(scope, stmt.value_expr,
-                                                &node_location(stmt.location, stmt.value_expr))});
+        std::vector<std::string> arg_types;
+        if (stmt.value_expr.kind == ExprKind::TupleLiteral) {
+            for (const Expr& child : stmt.value_expr.children) {
+                arg_types.push_back(
+                    infer_expr_ast(scope, child, &node_location(stmt.location, child)));
+            }
+        } else {
+            arg_types.push_back(infer_expr_ast(scope, stmt.value_expr,
+                                               &node_location(stmt.location, stmt.value_expr)));
+        }
+        check_deallocation_args(stmt.location, "delete", arg_types);
         return;
     }
     if (stmt.kind == StmtKind::CppEscape || stmt.kind == StmtKind::Pass)

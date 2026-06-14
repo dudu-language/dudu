@@ -376,6 +376,9 @@ directly instead of accepting raw condition text and reparsing on mismatch.
 Semantic checks, C++ emission, and semantic token collection no longer detect
 it by scanning raw statement text.
 
+Compound assignment C++ emission now uses parsed target and value expressions
+plus the parsed compound operator instead of normalizing raw statement text.
+
 Bare comma expressions now parse as tuple literals, including Python-style
 multi-value returns. The shared AST comma splitter is quote-aware so commas
 inside string literals do not create phantom tuple elements.
