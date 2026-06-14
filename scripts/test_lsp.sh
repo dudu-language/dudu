@@ -55,9 +55,9 @@ source = "\n".join(
 )
 native_source = "\n".join(
     [
-        'import c "native_headers/simple_c.h" as dudu_native',
-        'import cpp "native_headers/simple_cpp.hpp" as native_cpp',
         "import lsp_workspace_helper as helper",
+        'import cpp "native_headers/simple_cpp.hpp" as native_cpp',
+        'import c "native_headers/simple_c.h" as dudu_native',
         "",
         "def main() -> i32:",
         "    widget: native_cpp.Widget = native_cpp.Widget(3)",
@@ -302,6 +302,21 @@ messages = [
     packet(
         {
             "jsonrpc": "2.0",
+            "id": 25,
+            "method": "textDocument/codeAction",
+            "params": {
+                "textDocument": {"uri": native_uri},
+                "range": {
+                    "start": {"line": 0, "character": 0},
+                    "end": {"line": 0, "character": 0},
+                },
+                "context": {"diagnostics": []},
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
             "id": 18,
             "method": "textDocument/references",
             "params": {
@@ -474,6 +489,19 @@ module_completion = next(item for item in responses if item.get("id") == 23)
 module_completion_labels = [item["label"] for item in module_completion["result"]]
 assert "workspace_helper" in module_completion_labels
 assert "return" not in module_completion_labels
+
+native_code_actions = next(item for item in responses if item.get("id") == 25)
+organize_imports = next(
+    item for item in native_code_actions["result"] if item["title"] == "Organize imports"
+)
+organize_edit = organize_imports["edit"]["changes"][native_uri][0]
+assert organize_edit["range"]["start"]["line"] == 0
+assert organize_edit["range"]["end"]["line"] == 3
+assert organize_edit["newText"].splitlines() == [
+    'import c "native_headers/simple_c.h" as dudu_native',
+    'import cpp "native_headers/simple_cpp.hpp" as native_cpp',
+    "import lsp_workspace_helper as helper",
+]
 
 workspace_references = next(item for item in responses if item.get("id") == 18)
 workspace_reference_uris = {item["uri"] for item in workspace_references["result"]}

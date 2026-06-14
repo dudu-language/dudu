@@ -1,5 +1,6 @@
 #include "dudu/language_server.hpp"
 
+#include "dudu/cpp_lower.hpp"
 #include "dudu/format.hpp"
 #include "dudu/native_headers.hpp"
 #include "dudu/parser.hpp"
@@ -343,6 +344,11 @@ struct Symbol {
 struct ReferenceLocation {
     std::string uri;
     std::string range;
+};
+
+struct TextEdit {
+    std::string range;
+    std::string new_text;
 };
 
 class LanguageServer {
@@ -936,12 +942,22 @@ class LanguageServer {
     }
 
     std::string code_action_result(const Json* params) const {
-        if (document_from_params(params) == nullptr) {
+        const Document* doc = document_from_params(params);
+        if (doc == nullptr) {
             return "[]";
         }
-        return "[{\"title\":\"Format document\",\"kind\":\"source.format\","
+        std::ostringstream out;
+        out << "[{\"title\":\"Format document\",\"kind\":\"source.format\","
                "\"command\":{\"title\":\"Format document\","
-               "\"command\":\"editor.action.formatDocument\"}}]";
+               "\"command\":\"editor.action.formatDocument\"}}";
+        if (const std::optional<TextEdit> edit = organize_imports_edit(*doc)) {
+            out << ",{\"title\":\"Organize imports\",\"kind\":\"source.organizeImports\","
+                << "\"edit\":{\"changes\":{\"" << json_escape(doc->uri)
+                << "\":[{\"range\":" << edit->range << ",\"newText\":\""
+                << json_escape(edit->new_text) << "\"}]}}}";
+        }
+        out << "]";
+        return out.str();
     }
 
     std::string hover_result(const Json* params) const {
@@ -1271,9 +1287,14 @@ class LanguageServer {
     }
 
     static std::string range_json(int line, int start_character, int end_character) {
+        return range_json(line, start_character, line, end_character);
+    }
+
+    static std::string range_json(int start_line, int start_character, int end_line,
+                                  int end_character) {
         std::ostringstream out;
-        out << "{\"start\":{\"line\":" << line << ",\"character\":" << start_character
-            << "},\"end\":{\"line\":" << line << ",\"character\":" << end_character << "}}";
+        out << "{\"start\":{\"line\":" << start_line << ",\"character\":" << start_character
+            << "},\"end\":{\"line\":" << end_line << ",\"character\":" << end_character << "}}";
         return out.str();
     }
 
@@ -1395,6 +1416,45 @@ class LanguageServer {
             return detail;
         }
         return label;
+    }
+
+    static std::optional<TextEdit> organize_imports_edit(const Document& doc) {
+        std::istringstream in(doc.text);
+        std::vector<std::string> lines;
+        std::string line;
+        while (std::getline(in, line)) {
+            lines.push_back(line);
+        }
+        size_t start = 0;
+        while (start < lines.size() && trim_copy(lines[start]).empty()) {
+            ++start;
+        }
+        size_t end = start;
+        std::vector<std::string> imports;
+        while (end < lines.size()) {
+            const std::string trimmed = trim_copy(lines[end]);
+            if (!(starts_with(trimmed, "import ") || starts_with(trimmed, "from "))) {
+                break;
+            }
+            imports.push_back(lines[end]);
+            ++end;
+        }
+        if (imports.size() < 2) {
+            return std::nullopt;
+        }
+        std::vector<std::string> sorted = imports;
+        std::sort(sorted.begin(), sorted.end(), [](const std::string& lhs, const std::string& rhs) {
+            return trim_copy(lhs) < trim_copy(rhs);
+        });
+        if (sorted == imports) {
+            return std::nullopt;
+        }
+        std::ostringstream replacement;
+        for (const std::string& import : sorted) {
+            replacement << import << "\n";
+        }
+        return TextEdit{.range = range_json(static_cast<int>(start), 0, static_cast<int>(end), 0),
+                        .new_text = replacement.str()};
     }
 
     static bool valid_identifier(const std::string& value) {

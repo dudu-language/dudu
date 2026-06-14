@@ -228,8 +228,10 @@ Status: conservative `textDocument/rename` is implemented for Dudu symbols in
 currently open documents and wired into the VS Code extension. It validates the
 replacement as an identifier and refuses dotted/native symbols. Initial
 `textDocument/codeAction` support is implemented with a format-document source
-action wired into VS Code. Organize imports, missing-import fixes, native config
-quick fixes, and project-wide rename beyond open documents remain.
+action wired into VS Code. Organize-imports code actions are implemented for the
+leading import block and return a WorkspaceEdit through the VS Code adapter.
+Missing-import fixes, native config quick fixes, and project-wide rename beyond
+open documents remain.
 
 ## Tests
 
@@ -259,6 +261,7 @@ It also covers workspace symbols and references from an unopened sibling `.dd`
 file, plus Dudu-native and native C++ member completion.
 Imported Dudu module completion is covered with an unopened sibling module.
 Completion resolve, snippets, and typed local completions are covered.
+Format and organize-imports code actions are covered.
 
 ## Non-Goals
 

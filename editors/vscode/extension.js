@@ -353,6 +353,9 @@ class DuduLspClient {
     });
     return actions.map((item) => {
       const action = new vscode.CodeAction(item.title, codeActionKind(item.kind));
+      if (item.edit) {
+        action.edit = workspaceEditFromLsp(item.edit);
+      }
       if (item.command) {
         action.command = {
           title: item.command.title,
@@ -477,6 +480,17 @@ class DuduLspClient {
       updateStatus();
     }
   }
+}
+
+function workspaceEditFromLsp(edit) {
+  const workspaceEdit = new vscode.WorkspaceEdit();
+  for (const [uriText, edits] of Object.entries(edit.changes ?? {})) {
+    const uri = vscode.Uri.parse(uriText);
+    for (const item of edits) {
+      workspaceEdit.replace(uri, toRange(item.range), item.newText);
+    }
+  }
+  return workspaceEdit;
 }
 
 function toRange(range) {
