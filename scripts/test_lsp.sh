@@ -126,6 +126,15 @@ messages = [
     packet(
         {
             "jsonrpc": "2.0",
+            "id": 13,
+            "method": "textDocument/references",
+            "params": {"textDocument": {"uri": uri}, "position": {"line": 7, "character": 18}},
+        }
+    ),
+    packet({"jsonrpc": "2.0", "id": 14, "method": "workspace/symbol", "params": {"query": "add"}}),
+    packet(
+        {
+            "jsonrpc": "2.0",
             "method": "textDocument/didOpen",
             "params": {
                 "textDocument": {
@@ -208,6 +217,8 @@ responses = read_packets(proc.stdout)
 initialize = next(item for item in responses if item.get("id") == 1)
 assert initialize["result"]["capabilities"]["textDocumentSync"] == 2
 assert initialize["result"]["capabilities"]["documentFormattingProvider"] is True
+assert initialize["result"]["capabilities"]["referencesProvider"] is True
+assert initialize["result"]["capabilities"]["workspaceSymbolProvider"] is True
 
 diagnostics = next(item for item in responses if item.get("method") == "textDocument/publishDiagnostics")
 diag = diagnostics["params"]["diagnostics"][0]
@@ -239,6 +250,18 @@ assert signature["result"]["activeParameter"] == 1
 
 formatting = next(item for item in responses if item.get("id") == 7)
 assert "def main() -> i32:\n    value: i32 = add(1, 2)\n    return True\n" in formatting["result"][0]["newText"]
+
+references = next(item for item in responses if item.get("id") == 13)
+reference_starts = {
+    (item["range"]["start"]["line"], item["range"]["start"]["character"])
+    for item in references["result"]
+}
+assert (3, 4) in reference_starts
+assert (7, 17) in reference_starts
+
+workspace_symbols = next(item for item in responses if item.get("id") == 14)
+workspace_symbol_names = [item["name"] for item in workspace_symbols["result"]]
+assert "add" in workspace_symbol_names
 
 native_symbols = next(item for item in responses if item.get("id") == 8)
 native_symbol_names = [item["name"] for item in native_symbols["result"]]

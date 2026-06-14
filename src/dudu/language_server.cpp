@@ -336,6 +336,11 @@ struct Symbol {
     int kind = 13;
 };
 
+struct ReferenceLocation {
+    std::string uri;
+    std::string range;
+};
+
 class LanguageServer {
   public:
     LanguageServer(std::istream& in, std::ostream& out, std::ostream& err)
@@ -461,6 +466,10 @@ class LanguageServer {
             if (id != nullptr) {
                 respond(*id, definition_result(params));
             }
+        } else if (method == "textDocument/references") {
+            if (id != nullptr) {
+                respond(*id, references_result(params));
+            }
         } else if (method == "textDocument/hover") {
             if (id != nullptr) {
                 respond(*id, hover_result(params));
@@ -472,6 +481,10 @@ class LanguageServer {
         } else if (method == "textDocument/signatureHelp") {
             if (id != nullptr) {
                 respond(*id, signature_help_result(params));
+            }
+        } else if (method == "workspace/symbol") {
+            if (id != nullptr) {
+                respond(*id, workspace_symbol_result(params));
             }
         } else if (id != nullptr) {
             respond(*id, "null");
@@ -487,9 +500,11 @@ class LanguageServer {
                "\"documentFormattingProvider\":true,"
                "\"documentSymbolProvider\":true,"
                "\"definitionProvider\":true,"
+               "\"referencesProvider\":true,"
                "\"hoverProvider\":true,"
                "\"completionProvider\":{\"resolveProvider\":false,\"triggerCharacters\":[\".\"]},"
-               "\"signatureHelpProvider\":{\"triggerCharacters\":[\"(\",\",\"]}"
+               "\"signatureHelpProvider\":{\"triggerCharacters\":[\"(\",\",\"]},"
+               "\"workspaceSymbolProvider\":true"
                "},\"serverInfo\":{\"name\":\"duc lsp\",\"version\":\"0.1.0\"}}";
     }
 
@@ -767,6 +782,29 @@ class LanguageServer {
         return out.str();
     }
 
+    std::string workspace_symbol_result(const Json* params) const {
+        const std::string query =
+            lower_copy(params == nullptr ? std::string{} : string_value(params->get("query")));
+        std::ostringstream out;
+        out << "[";
+        bool first = true;
+        for (const auto& [uri, doc] : documents_) {
+            (void)uri;
+            for (const Symbol& symbol : symbols_for(doc)) {
+                if (!query.empty() && lower_copy(symbol.name).find(query) == std::string::npos) {
+                    continue;
+                }
+                if (!first) {
+                    out << ",";
+                }
+                first = false;
+                out << symbol_json(symbol, doc);
+            }
+        }
+        out << "]";
+        return out.str();
+    }
+
     std::string definition_result(const Json* params) const {
         const Document* doc = document_from_params(params);
         if (doc == nullptr) {
@@ -782,6 +820,32 @@ class LanguageServer {
             }
         }
         return "null";
+    }
+
+    std::string references_result(const Json* params) const {
+        const Document* doc = document_from_params(params);
+        if (doc == nullptr) {
+            return "[]";
+        }
+        const std::string query = symbol_at(*doc, params);
+        if (query.empty()) {
+            return "[]";
+        }
+        std::ostringstream out;
+        out << "[";
+        bool first = true;
+        for (const auto& [uri, candidate] : documents_) {
+            (void)uri;
+            for (const ReferenceLocation& location : references_in(candidate, query)) {
+                if (!first) {
+                    out << ",";
+                }
+                first = false;
+                out << location_json(location.uri, location.range);
+            }
+        }
+        out << "]";
+        return out.str();
     }
 
     std::string hover_result(const Json* params) const {
@@ -930,9 +994,13 @@ class LanguageServer {
     static std::string range_json(const SourceLocation& location) {
         const int line = std::max(0, location.line - 1);
         const int column = std::max(0, location.column - 1);
+        return range_json(line, column, column + 1);
+    }
+
+    static std::string range_json(int line, int start_character, int end_character) {
         std::ostringstream out;
-        out << "{\"start\":{\"line\":" << line << ",\"character\":" << column
-            << "},\"end\":{\"line\":" << line << ",\"character\":" << (column + 1) << "}}";
+        out << "{\"start\":{\"line\":" << line << ",\"character\":" << start_character
+            << "},\"end\":{\"line\":" << line << ",\"character\":" << end_character << "}}";
         return out.str();
     }
 
@@ -988,6 +1056,42 @@ class LanguageServer {
             path = std::filesystem::absolute(path);
         }
         return "file://" + path.lexically_normal().string();
+    }
+
+    static std::vector<ReferenceLocation> references_in(const Document& doc,
+                                                        const std::string& query) {
+        std::vector<ReferenceLocation> out;
+        std::istringstream in(doc.text);
+        std::string line;
+        for (int row = 0; std::getline(in, line); ++row) {
+            for (int start = 0; start < static_cast<int>(line.size());) {
+                if (!symbol_char(line[static_cast<size_t>(start)])) {
+                    ++start;
+                    continue;
+                }
+                int end = start + 1;
+                while (end < static_cast<int>(line.size()) &&
+                       symbol_char(line[static_cast<size_t>(end)])) {
+                    ++end;
+                }
+                if (line.substr(static_cast<size_t>(start), static_cast<size_t>(end - start)) ==
+                    query) {
+                    out.push_back({doc.uri, range_json(row, start, end)});
+                }
+                start = end;
+            }
+        }
+        return out;
+    }
+
+    static std::string location_json(const std::string& uri, const std::string& range) {
+        return "{\"uri\":\"" + json_escape(uri) + "\",\"range\":" + range + "}";
+    }
+
+    static std::string lower_copy(std::string value) {
+        std::transform(value.begin(), value.end(), value.begin(),
+                       [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        return value;
     }
 };
 

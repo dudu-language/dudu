@@ -225,6 +225,17 @@ class DuduLspClient {
     return new vscode.Location(vscode.Uri.parse(location.uri), toRange(location.range));
   }
 
+  async references(document, position) {
+    const locations = await this.request("textDocument/references", {
+      textDocument: { uri: document.uri.toString() },
+      position: { line: position.line, character: position.character },
+      context: { includeDeclaration: true },
+    });
+    return locations.map(
+      (location) => new vscode.Location(vscode.Uri.parse(location.uri), toRange(location.range)),
+    );
+  }
+
   async hover(document, position) {
     const hover = await this.request("textDocument/hover", {
       textDocument: { uri: document.uri.toString() },
@@ -260,6 +271,19 @@ class DuduLspClient {
       (signature) => new vscode.SignatureInformation(signature.label),
     );
     return result;
+  }
+
+  async workspaceSymbols(query) {
+    const symbols = await this.request("workspace/symbol", { query });
+    return symbols.map((symbol) => {
+      const range = toRange(symbol.location.range);
+      return new vscode.SymbolInformation(
+        symbol.name,
+        symbolKind(symbol.kind),
+        symbol.detail ?? "",
+        new vscode.Location(vscode.Uri.parse(symbol.location.uri), range),
+      );
+    });
   }
 
   onData(chunk) {
@@ -352,6 +376,11 @@ function activate(context) {
         return lsp.definition(document, position);
       },
     }),
+    vscode.languages.registerReferenceProvider("dudu", {
+      provideReferences(document, position) {
+        return lsp.references(document, position);
+      },
+    }),
     vscode.languages.registerHoverProvider("dudu", {
       provideHover(document, position) {
         return lsp.hover(document, position);
@@ -372,6 +401,11 @@ function activate(context) {
       "(",
       ",",
     ),
+    vscode.languages.registerWorkspaceSymbolProvider({
+      provideWorkspaceSymbols(query) {
+        return lsp.workspaceSymbols(query);
+      },
+    }),
     vscode.commands.registerCommand("dudu.fmtFile", async () => {
       const editor = vscode.window.activeTextEditor;
       if (editor && isDuduDocument(editor.document)) {
