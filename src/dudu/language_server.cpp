@@ -629,7 +629,10 @@ class LanguageServer {
     std::vector<Symbol> symbols_for(const Document& doc) const {
         std::vector<Symbol> out;
         try {
-            const ModuleAst module = parse_source(doc.text, doc.path);
+            ModuleAst module = parse_source(doc.text, doc.path);
+            const ProjectConfig config = config_for_file(doc.path);
+            merge_native_header_types(module,
+                                      {.config = config, .source_dir = doc.path.parent_path()});
             for (const ClassDecl& klass : module.classes) {
                 out.push_back({.name = klass.name,
                                .detail = "class " + klass.name,
@@ -666,6 +669,37 @@ class LanguageServer {
                                .location = fn.location,
                                .kind = 12});
             }
+            for (const NativeTypeDecl& type : module.native_types) {
+                out.push_back(
+                    {.name = type.name,
+                     .detail = type.type.empty() ? "native type" : "native type = " + type.type,
+                     .location = type.location,
+                     .kind = 23});
+            }
+            for (const NativeValueDecl& value : module.native_values) {
+                out.push_back({.name = value.name,
+                               .detail = value.name + ": " + value.type,
+                               .location = value.location,
+                               .kind = 14});
+            }
+            for (const NativeFunctionDecl& fn : module.native_functions) {
+                out.push_back({.name = fn.name,
+                               .detail = native_function_detail(fn),
+                               .location = fn.location,
+                               .kind = 12});
+            }
+            for (const ClassDecl& klass : module.native_classes) {
+                out.push_back({.name = klass.name,
+                               .detail = "native class " + klass.name,
+                               .location = klass.location,
+                               .kind = 5});
+                for (const FunctionDecl& method : klass.methods) {
+                    out.push_back({.name = klass.name + "." + method.name,
+                                   .detail = function_detail(method),
+                                   .location = method.location,
+                                   .kind = method.name == "__init__" ? 9 : 6});
+                }
+            }
         } catch (const std::exception&) {
         }
         return out;
@@ -687,6 +721,25 @@ class LanguageServer {
         return out.str();
     }
 
+    static std::string native_function_detail(const NativeFunctionDecl& fn) {
+        std::ostringstream out;
+        out << fn.name << "(";
+        for (size_t i = 0; i < fn.params.size(); ++i) {
+            if (i > 0) {
+                out << ", ";
+            }
+            out << fn.params[i];
+        }
+        if (fn.variadic) {
+            if (!fn.params.empty()) {
+                out << ", ";
+            }
+            out << "...";
+        }
+        out << ") -> " << fn.return_type;
+        return out.str();
+    }
+
     std::string document_symbol_result(const Json* params) const {
         const Document* doc = document_from_params(params);
         if (doc == nullptr) {
@@ -699,17 +752,18 @@ class LanguageServer {
             if (i > 0) {
                 out << ",";
             }
-            out << symbol_json(symbols[i], doc->uri);
+            out << symbol_json(symbols[i], *doc);
         }
         out << "]";
         return out.str();
     }
 
-    static std::string symbol_json(const Symbol& symbol, const std::string& uri) {
+    static std::string symbol_json(const Symbol& symbol, const Document& doc) {
         std::ostringstream out;
         out << "{\"name\":\"" << json_escape(symbol.name) << "\",\"kind\":" << symbol.kind
             << ",\"detail\":\"" << json_escape(symbol.detail) << "\",\"location\":{\"uri\":\""
-            << json_escape(uri) << "\",\"range\":" << range_json(symbol.location) << "}}";
+            << json_escape(uri_for_location(symbol.location, doc))
+            << "\",\"range\":" << range_json(symbol.location) << "}}";
         return out.str();
     }
 
@@ -718,11 +772,11 @@ class LanguageServer {
         if (doc == nullptr) {
             return "null";
         }
-        const std::string word = word_at(*doc, params);
+        const std::string word = symbol_at(*doc, params);
         for (const Symbol& symbol : symbols_for(*doc)) {
-            if (symbol.name == word) {
+            if (symbol_matches(symbol.name, word)) {
                 std::ostringstream out;
-                out << "{\"uri\":\"" << json_escape(doc->uri)
+                out << "{\"uri\":\"" << json_escape(uri_for_location(symbol.location, *doc))
                     << "\",\"range\":" << range_json(symbol.location) << "}";
                 return out.str();
             }
@@ -735,9 +789,9 @@ class LanguageServer {
         if (doc == nullptr) {
             return "null";
         }
-        const std::string word = word_at(*doc, params);
+        const std::string word = symbol_at(*doc, params);
         for (const Symbol& symbol : symbols_for(*doc)) {
-            if (symbol.name == word) {
+            if (symbol_matches(symbol.name, word)) {
                 return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"`" +
                        json_escape(symbol.detail) +
                        "`\"},\"range\":" + range_json(symbol.location) + "}";
@@ -813,7 +867,7 @@ class LanguageServer {
             return "{\"signatures\":[],\"activeSignature\":0,\"activeParameter\":0}";
         }
         for (const Symbol& symbol : symbols_for(*doc)) {
-            if (symbol.name == call.name && (symbol.kind == 12 || symbol.kind == 6)) {
+            if (symbol_matches(symbol.name, call.name) && (symbol.kind == 12 || symbol.kind == 6)) {
                 return "{\"signatures\":[{\"label\":\"" + json_escape(symbol.detail) +
                        "\"}],\"activeSignature\":0,\"activeParameter\":" +
                        std::to_string(call.parameter) + "}";
@@ -851,7 +905,7 @@ class LanguageServer {
                         --end;
                     }
                     int start = end;
-                    while (start > 0 && identifier_char(line[static_cast<size_t>(start - 1)])) {
+                    while (start > 0 && symbol_char(line[static_cast<size_t>(start - 1)])) {
                         --start;
                     }
                     return {
@@ -882,7 +936,7 @@ class LanguageServer {
         return out.str();
     }
 
-    std::string word_at(const Document& doc, const Json* params) const {
+    std::string symbol_at(const Document& doc, const Json* params) const {
         const Json* position = params == nullptr ? nullptr : params->get("position");
         const int target_line = int_value(position == nullptr ? nullptr : position->get("line"));
         const int target_character =
@@ -894,12 +948,12 @@ class LanguageServer {
                 continue;
             }
             int start = std::min(target_character, static_cast<int>(line.size()));
-            while (start > 0 && identifier_char(line[static_cast<size_t>(start - 1)])) {
+            while (start > 0 && symbol_char(line[static_cast<size_t>(start - 1)])) {
                 --start;
             }
             int end = std::min(target_character, static_cast<int>(line.size()));
             while (end < static_cast<int>(line.size()) &&
-                   identifier_char(line[static_cast<size_t>(end)])) {
+                   symbol_char(line[static_cast<size_t>(end)])) {
                 ++end;
             }
             return start < end
@@ -909,8 +963,31 @@ class LanguageServer {
         return {};
     }
 
+    static bool symbol_matches(const std::string& symbol, const std::string& query) {
+        if (symbol == query) {
+            return true;
+        }
+        const size_t dot = symbol.rfind('.');
+        return dot != std::string::npos && symbol.substr(dot + 1) == query;
+    }
+
+    static bool symbol_char(char c) {
+        return identifier_char(c) || c == '.';
+    }
+
     static bool identifier_char(char c) {
         return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_';
+    }
+
+    static std::string uri_for_location(const SourceLocation& location, const Document& doc) {
+        if (location.file.empty() || std::filesystem::path(location.file) == doc.path) {
+            return doc.uri;
+        }
+        std::filesystem::path path = location.file;
+        if (path.is_relative()) {
+            path = std::filesystem::absolute(path);
+        }
+        return "file://" + path.lexically_normal().string();
     }
 };
 

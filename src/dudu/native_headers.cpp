@@ -172,6 +172,39 @@ int ast_depth(const std::string& line) {
         return static_cast<int>(branch / 2);
     return static_cast<int>((branch < last ? branch : last) / 2);
 }
+
+std::string ast_concrete_source_file(const std::string& line) {
+    static const std::regex expansion(R"( <([^<>:]+):([0-9]+):([0-9]+)[,>])");
+    std::smatch match;
+    if (!std::regex_search(line, match, expansion)) {
+        return {};
+    }
+    const std::string file = match[1].str();
+    return file == "line" || file == "col" ? std::string{} : file;
+}
+
+SourceLocation ast_source_location(const std::string& line, const SourceLocation& fallback,
+                                   const std::string& current_file) {
+    static const std::regex expansion(R"( <([^<>:]+):([0-9]+):([0-9]+)[,>])");
+    static const std::regex spelling(R"( col:([0-9]+))");
+    std::smatch match;
+    if (!std::regex_search(line, match, expansion)) {
+        return fallback;
+    }
+    const std::string file = match[1].str();
+    if ((file == "line" || file == "col") && current_file.empty()) {
+        return fallback;
+    }
+    SourceLocation out;
+    out.file = file == "line" || file == "col" ? current_file : file;
+    out.line = std::stoi(match[2].str());
+    out.column = std::stoi(match[3].str());
+    if (std::regex_search(line, match, spelling)) {
+        out.column = std::stoi(match[1].str());
+    }
+    return out;
+}
+
 template <typename T> void add_unique(std::vector<T>& out, std::set<std::string>& seen, T value) {
     if (seen.insert(value.name).second) {
         out.push_back(std::move(value));
@@ -217,7 +250,12 @@ void add_unique_class(std::vector<ClassDecl>& out, std::set<std::string>& seen, 
 }
 void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                     std::vector<std::pair<int, std::string>>& namespaces,
-                    std::vector<std::pair<int, size_t>>& classes, const SourceLocation& location) {
+                    std::vector<std::pair<int, size_t>>& classes, const SourceLocation& location,
+                    std::string& current_file) {
+    const SourceLocation decl_location = ast_source_location(line, location, current_file);
+    if (const std::string concrete_file = ast_concrete_source_file(line); !concrete_file.empty()) {
+        current_file = concrete_file;
+    }
     static const std::regex typedef_decl(
         R"((TypedefDecl|TypeAliasDecl).*\b([A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
     static const std::regex record_decl(
@@ -247,7 +285,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
             return;
         }
         namespaces.push_back({depth, name});
-        scan.namespaces.push_back({.name = name, .location = location});
+        scan.namespaces.push_back({.name = name, .location = decl_location});
     } else if ((line.find("TypedefDecl") != std::string::npos ||
                 line.find("TypeAliasDecl") != std::string::npos) &&
                std::regex_search(line, match, typedef_decl)) {
@@ -256,8 +294,9 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         const std::string lowered_type = dudu_type(raw_type);
         const bool useful_alias = lowered_type != name;
         if (!starts_with(name, "__") || is_simd_vector_type_name(name) || useful_alias) {
-            scan.types.push_back(
-                {.name = name, .type = useful_alias ? lowered_type : "", .location = location});
+            scan.types.push_back({.name = name,
+                                  .type = useful_alias ? lowered_type : "",
+                                  .location = decl_location});
         }
     } else if ((line.find("RecordDecl") != std::string::npos ||
                 line.find("CXXRecordDecl") != std::string::npos) &&
@@ -265,11 +304,11 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         const std::string raw_name = match[3].str();
         const std::string name = class_name(scan, namespaces, classes, raw_name);
         if (!starts_with(raw_name, "__")) {
-            scan.types.push_back({.name = name, .type = "", .location = location});
+            scan.types.push_back({.name = name, .type = "", .location = decl_location});
             if (line.find(" definition") != std::string::npos) {
                 ClassDecl klass;
                 klass.name = name;
-                klass.location = location;
+                klass.location = decl_location;
                 scan.classes.push_back(std::move(klass));
                 classes.push_back({depth, scan.classes.size() - 1});
             }
@@ -278,7 +317,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                std::regex_search(line, match, enum_decl)) {
         const std::string name = match[1].str();
         if (!starts_with(name, "__")) {
-            scan.types.push_back({.name = name, .type = "", .location = location});
+            scan.types.push_back({.name = name, .type = "", .location = decl_location});
         }
     } else if (line.find("FunctionDecl") != std::string::npos &&
                std::regex_search(line, match, fn_decl)) {
@@ -292,7 +331,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
              .params = qualify_scoped_types(scan, namespaces, signature_params(signature)),
              .return_type = qualify_scoped_type(scan, namespaces, signature_return_type(signature)),
              .variadic = signature.find("...") != std::string::npos,
-             .location = location});
+             .location = decl_location});
     } else if (!classes.empty() && line.find("CXXMethodDecl") != std::string::npos &&
                std::regex_search(line, match, method_decl)) {
         FunctionDecl method;
@@ -303,10 +342,10 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
             ParamDecl decl;
             decl.name = "arg" + std::to_string(method.params.size());
             decl.type = qualify_scoped_type(scan, namespaces, param);
-            decl.location = location;
+            decl.location = decl_location;
             method.params.push_back(std::move(decl));
         }
-        method.location = location;
+        method.location = decl_location;
         scan.classes[classes.back().second].methods.push_back(std::move(method));
     } else if (!classes.empty() && line.find("CXXConstructorDecl") != std::string::npos &&
                std::regex_search(line, match, ctor_decl)) {
@@ -318,17 +357,17 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
             ParamDecl decl;
             decl.name = "arg" + std::to_string(ctor.params.size());
             decl.type = param;
-            decl.location = location;
+            decl.location = decl_location;
             ctor.params.push_back(std::move(decl));
         }
-        ctor.location = location;
+        ctor.location = decl_location;
         scan.classes[classes.back().second].methods.push_back(std::move(ctor));
     } else if (!classes.empty() && line.find("FieldDecl") != std::string::npos &&
                std::regex_search(line, match, field_decl)) {
         scan.classes[classes.back().second].fields.push_back(
             {.name = match[1].str(),
              .type = qualify_scoped_type(scan, namespaces, dudu_type(match[2].str())),
-             .location = location});
+             .location = decl_location});
     } else if (!classes.empty() &&
                (line.find("public '") != std::string::npos ||
                 line.find("protected '") != std::string::npos ||
@@ -340,7 +379,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                std::regex_search(line, match, enum_value_decl)) {
         const std::string name = match[1].str();
         if (!starts_with(name, "__")) {
-            scan.values.push_back({.name = name, .type = "i32", .location = location});
+            scan.values.push_back({.name = name, .type = "i32", .location = decl_location});
         }
     } else if (line.find("VarDecl") != std::string::npos &&
                line.find("ParmVarDecl") == std::string::npos &&
@@ -348,7 +387,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         const std::string name = match[1].str();
         if (!starts_with(name, "__")) {
             scan.values.push_back(
-                {.name = name, .type = dudu_type(match[2].str()), .location = location});
+                {.name = name, .type = dudu_type(match[2].str()), .location = decl_location});
         }
     }
 }
@@ -356,10 +395,11 @@ void parse_ast_dump(NativeHeaderScan& scan, const std::string& dump,
                     const SourceLocation& location) {
     std::vector<std::pair<int, std::string>> namespaces;
     std::vector<std::pair<int, size_t>> classes;
+    std::string current_file;
     std::istringstream in(dump);
     std::string line;
     while (std::getline(in, line)) {
-        parse_ast_line(scan, line, namespaces, classes, location);
+        parse_ast_line(scan, line, namespaces, classes, location, current_file);
     }
 }
 struct MacroParams {

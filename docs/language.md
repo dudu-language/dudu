@@ -26,5 +26,8 @@ Core forms:
 - result types: `Result[T, E]`
 - optional values: `Option[T]`
 
+Dudu-native code uses the fixed-width scalar names above. `int`, `float`, and
+`double` are C/C++ interop spellings, not Dudu source aliases.
+
 Imports are qualified by default. Direct imported names must not collide unless
 they are explicitly aliased.

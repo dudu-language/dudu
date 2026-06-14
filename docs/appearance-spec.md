@@ -195,6 +195,11 @@ str
 cstr
 ```
 
+Dudu source uses these spellings directly. It does not accept `int`, `float`,
+or `double` as core-type aliases, because those names are ambiguous across C and
+C++ ABIs. Imported C/C++ headers are still normalized into Dudu's fixed-width
+type model for checking and editor tooling.
+
 Likely C++ lowerings:
 
 ```text

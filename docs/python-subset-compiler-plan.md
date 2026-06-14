@@ -82,6 +82,11 @@ str
 cstr
 ```
 
+Dudu-native source uses the fixed-width names above. It does not provide
+`int`, `float`, or `double` as source-level aliases. Imported C/C++ headers can
+still contain those spellings; the header scanner maps them into Dudu types for
+semantic checks and editor tooling.
+
 Containers:
 
 ```python

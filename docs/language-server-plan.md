@@ -196,6 +196,13 @@ resolve, member-aware completion, and native symbol completion remain.
 
 This milestone is the one that makes Dudu feel serious for interop.
 
+Status: initial native C/C++ symbols from local fixture headers are now scanned
+into LSP symbols. Completion, hover, signature help, and definition can resolve
+aliased imported functions such as `dudu_native.dudu_native_add`, and definition
+uses the real header location when Clang provides it. Macro metadata,
+member-aware native completion, deeper overload display, and broader real-library
+coverage remain.
+
 ### Milestone 5: Refactors And Code Actions
 
 - safe rename for Dudu symbols

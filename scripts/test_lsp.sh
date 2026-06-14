@@ -35,6 +35,7 @@ def read_packets(data):
     return out
 
 uri = "file:///tmp/dudu_lsp_bad.dd"
+native_uri = f"file://{repo_root}/tests/fixtures/dudu_lsp_native.dd"
 source = "\n".join(
     [
         "class Player:",
@@ -46,6 +47,15 @@ source = "\n".join(
         "def main() -> i32:   ",
         "    value: i32 = add(1, 2)",
         "    return True",
+        "",
+    ]
+)
+native_source = "\n".join(
+    [
+        'import c "native_headers/simple_c.h" as dudu_native',
+        "",
+        "def main() -> i32:",
+        "    return dudu_native.dudu_native_add(20, 22)",
         "",
     ]
 )
@@ -113,7 +123,73 @@ messages = [
             "params": {"textDocument": {"uri": uri}, "options": {"tabSize": 4}},
         }
     ),
-    packet({"jsonrpc": "2.0", "id": 8, "method": "shutdown", "params": None}),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "method": "textDocument/didOpen",
+            "params": {
+                "textDocument": {
+                    "uri": native_uri,
+                    "languageId": "dudu",
+                    "version": 1,
+                    "text": native_source,
+                }
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 8,
+            "method": "textDocument/documentSymbol",
+            "params": {"textDocument": {"uri": native_uri}},
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 9,
+            "method": "textDocument/hover",
+            "params": {
+                "textDocument": {"uri": native_uri},
+                "position": {"line": 3, "character": 30},
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 10,
+            "method": "textDocument/definition",
+            "params": {
+                "textDocument": {"uri": native_uri},
+                "position": {"line": 3, "character": 30},
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 11,
+            "method": "textDocument/completion",
+            "params": {
+                "textDocument": {"uri": native_uri},
+                "position": {"line": 3, "character": 11},
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 12,
+            "method": "textDocument/signatureHelp",
+            "params": {
+                "textDocument": {"uri": native_uri},
+                "position": {"line": 3, "character": 44},
+            },
+        }
+    ),
+    packet({"jsonrpc": "2.0", "id": 20, "method": "shutdown", "params": None}),
     packet({"jsonrpc": "2.0", "method": "exit", "params": None}),
 ]
 
@@ -164,7 +240,26 @@ assert signature["result"]["activeParameter"] == 1
 formatting = next(item for item in responses if item.get("id") == 7)
 assert "def main() -> i32:\n    value: i32 = add(1, 2)\n    return True\n" in formatting["result"][0]["newText"]
 
-shutdown = next(item for item in responses if item.get("id") == 8)
+native_symbols = next(item for item in responses if item.get("id") == 8)
+native_symbol_names = [item["name"] for item in native_symbols["result"]]
+assert "dudu_native.dudu_native_add" in native_symbol_names
+
+native_hover = next(item for item in responses if item.get("id") == 9)
+assert "dudu_native.dudu_native_add(i32, i32) -> i32" in native_hover["result"]["contents"]["value"]
+
+native_definition = next(item for item in responses if item.get("id") == 10)
+assert native_definition["result"]["uri"].endswith("/tests/fixtures/native_headers/simple_c.h")
+assert native_definition["result"]["range"]["start"]["line"] == 20
+
+native_completion = next(item for item in responses if item.get("id") == 11)
+native_completion_labels = [item["label"] for item in native_completion["result"]]
+assert "dudu_native.dudu_native_add" in native_completion_labels
+
+native_signature = next(item for item in responses if item.get("id") == 12)
+assert "dudu_native.dudu_native_add(i32, i32) -> i32" in native_signature["result"]["signatures"][0]["label"]
+assert native_signature["result"]["activeParameter"] == 1
+
+shutdown = next(item for item in responses if item.get("id") == 20)
 assert shutdown["result"] is None
 PY
 
