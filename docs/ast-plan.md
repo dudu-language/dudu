@@ -36,6 +36,10 @@ Already structured:
   names, conditions, and assignment targets use expression/type node locations
   where available
 - initial `TypeRef` C++ lowering is implemented and used for type aliases
+- declaration validation walks parsed `TypeRef` nodes recursively for aliases,
+  enum underlying types, fields, parameters, returns, constants, and static
+  fields, so nested unknown types in containers/callbacks are diagnosed at the
+  nested type source location
 - template calls keep template arguments separate from runtime call arguments,
   and C++ emission lowers them from the parsed expression node
 - template calls also keep parsed `TypeRef` nodes for bracketed arguments, so

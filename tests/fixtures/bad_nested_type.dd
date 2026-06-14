@@ -1,0 +1,2 @@
+def bad(values: list[MissingType]) -> i32:
+    return 0

@@ -4,6 +4,8 @@
 #include "dudu/source.hpp"
 
 #include <cctype>
+#include <optional>
+#include <utility>
 
 namespace dudu {
 namespace {
@@ -246,6 +248,59 @@ bool known_type(const Symbols& symbols, const std::string& type) {
            base == "shared" || base == "device";
 }
 
+std::optional<std::pair<std::string, SourceLocation>> unknown_type_ref(const Symbols& symbols,
+                                                                       const TypeRef& type) {
+    switch (type.kind) {
+    case TypeKind::Named:
+    case TypeKind::Qualified:
+        return known_type(symbols, type.text)
+                   ? std::nullopt
+                   : std::optional<std::pair<std::string, SourceLocation>>{
+                         std::pair{type.text, type.location}};
+    case TypeKind::Template:
+        if (!known_type(symbols, type.name)) {
+            return std::pair{type.name, type.location};
+        }
+        for (const TypeRef& child : type.children) {
+            if (const auto unknown = unknown_type_ref(symbols, child)) {
+                return unknown;
+            }
+        }
+        return std::nullopt;
+    case TypeKind::Pointer:
+    case TypeKind::Reference:
+    case TypeKind::Const:
+    case TypeKind::Volatile:
+    case TypeKind::Atomic:
+    case TypeKind::Device:
+    case TypeKind::Storage:
+    case TypeKind::Shared:
+    case TypeKind::Static:
+    case TypeKind::FixedArray:
+    case TypeKind::Function:
+        for (const TypeRef& child : type.children) {
+            if (const auto unknown = unknown_type_ref(symbols, child)) {
+                return unknown;
+            }
+        }
+        return std::nullopt;
+    case TypeKind::Unknown:
+        return known_type(symbols, type.text)
+                   ? std::nullopt
+                   : std::optional<std::pair<std::string, SourceLocation>>{
+                         std::pair{type.text, type.location}};
+    }
+    return std::nullopt;
+}
+
+void check_known_type_ref(const Symbols& symbols, const SourceLocation& location,
+                          const TypeRef& type, const std::string& message) {
+    if (const auto unknown = unknown_type_ref(symbols, type)) {
+        const SourceLocation error_location = unknown->second.line > 0 ? unknown->second : location;
+        fail(error_location, message + unknown->first);
+    }
+}
+
 std::string resolve_alias(const Symbols& symbols, std::string type) {
     type = trim(std::move(type));
     for (size_t guard = 0; guard < symbols.aliases.size(); ++guard) {
@@ -404,13 +459,13 @@ Symbols collect_symbols(const ModuleAst& module) {
 void check_declarations(const ModuleAst& module, const Symbols& symbols) {
     for (const TypeAliasDecl& alias : module.aliases) {
         check_supported_type_shape(alias.location, alias.type);
-        if (!known_type(symbols, alias.type)) {
-            fail(alias.location, "unknown type alias target: " + alias.type);
-        }
+        check_known_type_ref(symbols, alias.location, alias.type_ref,
+                             "unknown type alias target: ");
     }
     for (const EnumDecl& en : module.enums) {
-        if (!en.underlying_type.empty() && !known_type(symbols, en.underlying_type)) {
-            fail(en.location, "unknown enum underlying type: " + en.underlying_type);
+        if (!en.underlying_type.empty()) {
+            check_known_type_ref(symbols, en.location, en.underlying_type_ref,
+                                 "unknown enum underlying type: ");
         }
         std::set<std::string> values;
         for (const EnumValueDecl& value : en.values) {
@@ -429,27 +484,23 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                 fail(field.location, "duplicate field: " + field.name);
             }
             check_supported_type_shape(field.location, field.type);
-            if (!known_type(symbols, field.type)) {
-                fail(field.location, "unknown field type: " + field.type);
-            }
+            check_known_type_ref(symbols, field.location, field.type_ref, "unknown field type: ");
         }
         for (const ConstDecl& constant : klass.constants) {
             if (!fields.insert(constant.name).second) {
                 fail(constant.location, "duplicate class member: " + constant.name);
             }
             check_supported_type_shape(constant.location, constant.type);
-            if (!known_type(symbols, constant.type)) {
-                fail(constant.location, "unknown class constant type: " + constant.type);
-            }
+            check_known_type_ref(symbols, constant.location, constant.type_ref,
+                                 "unknown class constant type: ");
         }
         for (const ConstDecl& field : klass.static_fields) {
             if (!fields.insert(field.name).second) {
                 fail(field.location, "duplicate class member: " + field.name);
             }
             check_supported_type_shape(field.location, field.type);
-            if (!known_type(symbols, field.type)) {
-                fail(field.location, "unknown static field type: " + field.type);
-            }
+            check_known_type_ref(symbols, field.location, field.type_ref,
+                                 "unknown static field type: ");
         }
         for (const FunctionDecl& method : klass.methods) {
             if (const std::string op = dunder_operator_name(method.name); !op.empty()) {
@@ -509,15 +560,13 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                     fail(param.location, "duplicate parameter: " + param.name);
                 }
                 check_supported_type_shape(param.location, param.type);
-                if (!known_type(symbols, param.type)) {
-                    fail(param.location, "unknown parameter type: " + param.type);
-                }
+                check_known_type_ref(symbols, param.location, param.type_ref,
+                                     "unknown parameter type: ");
             }
             check_supported_type_shape(method.location,
                                        method.return_type.empty() ? "void" : method.return_type);
-            if (!known_type(symbols, method.return_type.empty() ? "void" : method.return_type)) {
-                fail(method.location, "unknown return type: " + method.return_type);
-            }
+            check_known_type_ref(symbols, method.location, method.return_type_ref,
+                                 "unknown return type: ");
         }
     }
     for (const FunctionDecl& fn : module.functions) {
@@ -542,14 +591,11 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                 fail(param.location, "duplicate parameter: " + param.name);
             }
             check_supported_type_shape(param.location, param.type);
-            if (!known_type(symbols, param.type)) {
-                fail(param.location, "unknown parameter type: " + param.type);
-            }
+            check_known_type_ref(symbols, param.location, param.type_ref,
+                                 "unknown parameter type: ");
         }
         check_supported_type_shape(fn.location, fn.return_type.empty() ? "void" : fn.return_type);
-        if (!known_type(symbols, fn.return_type.empty() ? "void" : fn.return_type)) {
-            fail(fn.location, "unknown return type: " + fn.return_type);
-        }
+        check_known_type_ref(symbols, fn.location, fn.return_type_ref, "unknown return type: ");
     }
 }
 

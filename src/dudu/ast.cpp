@@ -603,7 +603,8 @@ std::vector<TypeRef> parse_type_list(std::string_view text, SourceLocation locat
     std::vector<TypeRef> out;
     for (const std::string_view part : split_top_level_commas(text)) {
         if (!trim_view(part).empty()) {
-            out.push_back(parse_type_text(part, location));
+            const size_t offset = static_cast<size_t>(part.data() - text.data());
+            out.push_back(parse_type_text(part, advance_columns(location, offset)));
         }
     }
     return out;
@@ -923,25 +924,30 @@ TypeRef parse_type_text(std::string_view text, SourceLocation location) {
     const size_t arrow = find_top_level_arrow(text);
     if (arrow != std::string_view::npos) {
         TypeRef type = make_type(TypeKind::Function, text, location);
-        type.children.push_back(parse_type_text(text.substr(arrow + 2), location));
+        type.children.push_back(
+            parse_type_text(text.substr(arrow + 2), advance_columns(location, arrow + 2)));
         std::string_view params = trim_view(text.substr(0, arrow));
+        size_t params_offset = 0;
         if (params.starts_with("fn(") && params.ends_with(")")) {
+            params_offset = 3;
             params = params.substr(3, params.size() - 4);
         } else if (enclosed_by_outer_pair(params, '(', ')')) {
+            params_offset = 1;
             params = params.substr(1, params.size() - 2);
         }
-        std::vector<TypeRef> parsed_params = parse_type_list(params, location);
+        std::vector<TypeRef> parsed_params =
+            parse_type_list(params, advance_columns(location, params_offset));
         type.children.insert(type.children.end(), parsed_params.begin(), parsed_params.end());
         return type;
     }
     if (text.front() == '*') {
         TypeRef type = make_type(TypeKind::Pointer, text, location);
-        type.children.push_back(parse_type_text(text.substr(1), location));
+        type.children.push_back(parse_type_text(text.substr(1), advance_columns(location, 1)));
         return type;
     }
     if (text.front() == '&') {
         TypeRef type = make_type(TypeKind::Reference, text, location);
-        type.children.push_back(parse_type_text(text.substr(1), location));
+        type.children.push_back(parse_type_text(text.substr(1), advance_columns(location, 1)));
         return type;
     }
     if (text.ends_with("]")) {
@@ -952,7 +958,8 @@ TypeRef parse_type_text(std::string_view text, SourceLocation location) {
             const TypeKind wrapper = wrapper_type_kind(head);
             if (wrapper != TypeKind::Unknown) {
                 TypeRef type = make_type(wrapper, text, location);
-                type.children.push_back(parse_type_text(inner, location));
+                type.children.push_back(
+                    parse_type_text(inner, advance_columns(location, open + 1)));
                 return type;
             }
             if (head.ends_with("]")) {
@@ -963,7 +970,7 @@ TypeRef parse_type_text(std::string_view text, SourceLocation location) {
             }
             TypeRef type = make_type(TypeKind::Template, text, location);
             type.name = trim_string(head);
-            type.children = parse_type_list(inner, location);
+            type.children = parse_type_list(inner, advance_columns(location, open + 1));
             return type;
         }
     }
