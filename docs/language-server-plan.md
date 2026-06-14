@@ -147,6 +147,12 @@ delegate intelligence to `duc lsp`.
 This milestone proves the server process, document sync, parse errors, semantic
 errors, and formatter integration.
 
+Status: initial `duc lsp` support is implemented. It speaks JSON-RPC over
+stdio, handles full-document sync, publishes parse/semantic/native-header
+diagnostics, and returns full-document formatting edits. The implementation
+uses the existing parser, semantic checker, formatter, and native-header scanner
+in-process.
+
 ### Milestone 2: Dudu Navigation
 
 - `textDocument/definition`
@@ -213,4 +219,3 @@ library probes under optional native tests.
 - promising perfect macro expansion navigation for every C/C++ macro shape
 - jumping to generated C++ as the primary definition target when a real Dudu or
   native source location exists
-

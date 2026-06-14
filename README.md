@@ -212,6 +212,11 @@ The VS Code folder is a local extension with `.dd` highlighting and command
 palette actions for formatting, checking, building, and running Dudu files.
 The planned language server is tracked in
 [`docs/language-server-plan.md`](docs/language-server-plan.md).
+Start the current language server with:
+
+```sh
+duc lsp
+```
 
 ## Working Name
 

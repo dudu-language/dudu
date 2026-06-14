@@ -1,7 +1,8 @@
-#include "dudu/cpp_emit.hpp"
 #include "dudu/cli_usage.hpp"
 #include "dudu/cmake_emit.hpp"
+#include "dudu/cpp_emit.hpp"
 #include "dudu/format_path.hpp"
+#include "dudu/language_server.hpp"
 #include "dudu/module_loader.hpp"
 #include "dudu/native_build.hpp"
 #include "dudu/native_header_cache.hpp"
@@ -44,6 +45,7 @@ struct Options {
     bool emit_cpp = false;
     bool format = false;
     bool init_project = false;
+    bool lsp = false;
     bool new_project = false;
     bool no_capture = false;
     bool project_driver = false;
@@ -105,6 +107,9 @@ Options parse_options(int argc, char** argv, bool project_driver) {
         first_arg = 2;
     } else if (argc > 1 && std::string(argv[1]) == "fmt") {
         options.format = true;
+        first_arg = 2;
+    } else if (argc > 1 && std::string(argv[1]) == "lsp") {
+        options.lsp = true;
         first_arg = 2;
     } else if (argc > 1 && std::string(argv[1]) == "run") {
         options.run = true;
@@ -212,9 +217,9 @@ Options parse_options(int argc, char** argv, bool project_driver) {
         fail("unexpected argument: " + arg);
     }
     if (options.input.empty() && !options.bench && !options.build && !options.check &&
-        !options.clean && !options.clean_cache &&
-        !options.cmake && !options.emit_cpp && !options.init_project && !options.new_project &&
-        !options.run && !options.test) {
+        !options.clean && !options.clean_cache && !options.cmake && !options.emit_cpp &&
+        !options.init_project && !options.lsp && !options.new_project && !options.run &&
+        !options.test) {
         fail("missing input file");
     }
     return options;
@@ -222,7 +227,7 @@ Options parse_options(int argc, char** argv, bool project_driver) {
 
 Options resolve_project_input(Options options) {
     if (options.bench || options.clean || options.clean_cache || options.init_project ||
-        options.new_project || options.test) {
+        options.lsp || options.new_project || options.test) {
         return options;
     }
     const dudu::ProjectConfig project = dudu::parse_project_config("dudu.toml");
@@ -359,6 +364,9 @@ int main(int argc, char** argv) {
             argc > 0 ? std::filesystem::path(argv[0]).stem().string() : "duc";
         const bool project_driver = executable == "dudu";
         const Options options = resolve_project_input(parse_options(argc, argv, project_driver));
+        if (options.lsp) {
+            return dudu::run_language_server(std::cin, std::cout, std::cerr);
+        }
         if (options.init_project) {
             dudu::init_project(options.input.empty() ? std::filesystem::path(".") : options.input);
             return 0;
@@ -374,9 +382,8 @@ int main(int argc, char** argv) {
             return run_project_benchmarks(options);
         }
         if (options.clean) {
-            const std::filesystem::path cleaned =
-                dudu::clean_project(options.input.empty() ? std::filesystem::path(".")
-                                                          : options.input);
+            const std::filesystem::path cleaned = dudu::clean_project(
+                options.input.empty() ? std::filesystem::path(".") : options.input);
             std::cerr << "clean " << cleaned.string() << '\n';
             return 0;
         }
