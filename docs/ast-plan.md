@@ -411,6 +411,9 @@ Local declaration initializer fallback now lowers from the parsed
 `value_expr`. Slice index expressions such as `values[1:4]` also emit from the
 parsed index node, preserving `span[T]` view lowering without requiring a raw
 whole-expression rewrite.
+
+`break` and `continue` statements now emit directly from their `StmtKind`
+instead of falling through the unknown-statement raw text path.
 Common dict initializer C++ emission lowers those parsed entries instead of
 splitting literal text again.
 

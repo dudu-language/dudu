@@ -426,6 +426,14 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         out << indent(depth) << "(void)0;\n";
         return;
     }
+    if (stmt.kind == StmtKind::Break) {
+        out << indent(depth) << "break;\n";
+        return;
+    }
+    if (stmt.kind == StmtKind::Continue) {
+        out << indent(depth) << "continue;\n";
+        return;
+    }
     if (stmt.kind == StmtKind::Raise) {
         const std::string value = stmt.value;
         out << indent(depth) << "throw";
