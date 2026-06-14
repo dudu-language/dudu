@@ -1009,9 +1009,13 @@ class LanguageServer {
                 << ",\"detail\":\"" << json_escape(detail) << "\"}";
         };
         try {
-            const ModuleAst module = parse_source(doc.text, doc.path);
+            ModuleAst module = parse_source(doc.text, doc.path);
+            const ProjectConfig config = config_for_file(doc.path);
+            merge_native_header_types(module,
+                                      {.config = config, .source_dir = doc.path.parent_path()});
+            const std::set<std::string> candidate_types = member_candidate_types(module, type);
             for (const ClassDecl& klass : module.classes) {
-                if (klass.name != type) {
+                if (!candidate_types.contains(klass.name)) {
                     continue;
                 }
                 for (const FieldDecl& field : klass.fields) {
@@ -1028,10 +1032,44 @@ class LanguageServer {
                 }
                 break;
             }
+            for (const ClassDecl& klass : module.native_classes) {
+                if (!candidate_types.contains(klass.name)) {
+                    continue;
+                }
+                for (const FieldDecl& field : klass.fields) {
+                    add(field.name, 5, field.name + ": " + field.type);
+                }
+                for (const FunctionDecl& method : klass.methods) {
+                    add(method.name, method.name == "__init__" ? 4 : 2, function_detail(method));
+                }
+                break;
+            }
         } catch (const std::exception&) {
         }
         out << "]";
         return out.str();
+    }
+
+    static std::set<std::string> member_candidate_types(const ModuleAst& module,
+                                                        const std::string& type) {
+        std::set<std::string> out{type};
+        bool changed = true;
+        while (changed) {
+            changed = false;
+            for (const NativeTypeDecl& alias : module.native_types) {
+                if (!alias.type.empty() && out.contains(alias.name) &&
+                    out.insert(alias.type).second) {
+                    changed = true;
+                }
+            }
+            for (const TypeAliasDecl& alias : module.aliases) {
+                if (!alias.type.empty() && out.contains(alias.name) &&
+                    out.insert(alias.type).second) {
+                    changed = true;
+                }
+            }
+        }
+        return out;
     }
 
     static int completion_kind(int symbol_kind) {

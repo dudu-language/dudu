@@ -207,8 +207,9 @@ into LSP symbols. Completion, hover, signature help, and definition can resolve
 aliased imported functions such as `dudu_native.dudu_native_add`, and definition
 uses the real header location when Clang provides it. Macro metadata,
 including object-like/function-like macro hover and completion, is also exposed
-for scanned native headers. Member-aware native completion, deeper overload
-display, and broader real-library coverage remain.
+for scanned native headers. Initial native C++ member completion is implemented
+for locals annotated with scanned native class types or aliases. Deeper overload
+display and broader real-library coverage remain.
 
 ### Milestone 5: Refactors And Code Actions
 
@@ -251,7 +252,7 @@ Status: the smoke suite now drives LSP JSON-RPC for single-file diagnostics,
 formatting, Dudu symbols, references, rename, workspace symbols, native fixture
 imports, native macro hover/completion, and strict missing-header diagnostics.
 It also covers workspace symbols and references from an unopened sibling `.dd`
-file.
+file, plus Dudu-native and native C++ member completion.
 
 ## Non-Goals
 
