@@ -1,0 +1,22 @@
+def mat2_mul(a: array[i32][2, 2], b: array[i32][2, 2]) -> array[i32][2, 2]:
+    out: array[i32][2, 2]
+    for row: i32 in range(2):
+        for col: i32 in range(2):
+            sum: i32 = 0
+            for k: i32 in range(2):
+                sum += a[row, k] * b[k, col]
+            out[row, col] = sum
+    return out
+
+
+def main() -> i32:
+    a: array[i32] = [
+        [1, 2],
+        [3, 4],
+    ]
+    b: array[i32] = [
+        [2, 0],
+        [1, 2],
+    ]
+    out = mat2_mul(a, b)
+    return out[0, 0] + out[0, 1] + out[1, 0] + out[1, 1]

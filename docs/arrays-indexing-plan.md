@@ -150,7 +150,8 @@ But fixed multidimensional arrays should prefer comma indexing because it maps
 to one shape-aware object rather than nested containers.
 
 Status: comma indexing lowers for Dudu-native fixed arrays, matching the current
-nested `std::array` representation.
+nested `std::array` representation. A matrix multiply fixture exercises
+function parameters, return values, nested loops, and comma indexing together.
 
 ## Slicing
 
