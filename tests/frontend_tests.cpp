@@ -282,7 +282,10 @@ void test_expression_ast_shape() {
     assert(assign.target_expr.children[0].kind == dudu::ExprKind::Index);
     assert(assign.value_expr.kind == dudu::ExprKind::TemplateCall);
     assert(assign.value_expr.name == "Vec4");
-    assert(assign.value_expr.children.size() == 5);
+    assert(assign.value_expr.template_args.size() == 1);
+    assert(assign.value_expr.template_args[0].kind == dudu::ExprKind::Name);
+    assert(assign.value_expr.template_args[0].name == "f32");
+    assert(assign.value_expr.children.size() == 4);
 
     const dudu::Stmt& values = main.statements[2];
     assert(values.kind == dudu::StmtKind::VarDecl);

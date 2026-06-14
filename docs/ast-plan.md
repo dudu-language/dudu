@@ -36,6 +36,8 @@ Already structured:
   names, conditions, and assignment targets use expression/type node locations
   where available
 - initial `TypeRef` C++ lowering is implemented and used for type aliases
+- template calls keep template arguments separate from runtime call arguments,
+  and C++ emission lowers them from the parsed expression node
 
 Still too string-based:
 
@@ -44,8 +46,8 @@ Still too string-based:
 - semantic analysis of if, elif, else
 - semantic analysis of while and for
 - try, except
-- C++ emission of calls, member access, indexing, operators, constructors,
-  template calls, lambdas, tuple destructuring, and C++ macro calls
+- C++ emission of calls, member access, operators, constructors, lambdas, and
+  C++ macro calls
 - semantic analysis and most C++ emission paths for type strings
 - exact original-token ranges inside function bodies; current body-node ranges
   are derived from normalized joined statement text
@@ -393,6 +395,13 @@ Typed `for` loop binding C++ emission now lowers the binding type through the
 parsed `TypeRef`.
 
 Dict literals now parse key/value pairs as `DictEntry` expression nodes.
+
+Template calls now preserve template arguments separately from runtime call
+arguments in `Expr::template_args`. C++ expression emission handles ordinary C++
+template calls and built-in template-shaped forms such as `new[T](...)`,
+`malloc[T](...)`, `sizeof[T]()`, `alignof[T]()`, `offsetof[T](field)`, and empty
+`list[T]()`/`dict[K, V]()`/`set[T]()` value construction without falling back to
+the raw expression text.
 Common dict initializer C++ emission lowers those parsed entries instead of
 splitting literal text again.
 

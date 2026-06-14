@@ -1044,11 +1044,8 @@ Expr parse_expr_text(std::string_view text, SourceLocation location) {
                 if (type_open != std::string_view::npos && type_open > 0) {
                     expr.kind = ExprKind::TemplateCall;
                     expr.name = trim_string(callee.substr(0, type_open));
-                    std::vector<Expr> template_args = parse_expr_list(
+                    expr.template_args = parse_expr_list(
                         callee.substr(type_open + 1, callee.size() - type_open - 2), location);
-                    template_args.insert(template_args.end(), expr.children.begin(),
-                                         expr.children.end());
-                    expr.children = std::move(template_args);
                 }
             }
             return expr;

@@ -48,6 +48,29 @@ std::string join_names(const std::vector<std::string>& names) {
     return out.str();
 }
 
+std::string join_lowered_template_args(const std::vector<Expr>& exprs,
+                                       const std::vector<std::string>& aliases) {
+    std::ostringstream out;
+    for (size_t i = 0; i < exprs.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << lower_template_call_arg(exprs[i].text, aliases);
+    }
+    return out.str();
+}
+
+std::string join_template_arg_texts(const std::vector<Expr>& exprs) {
+    std::ostringstream out;
+    for (size_t i = 0; i < exprs.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << exprs[i].text;
+    }
+    return out.str();
+}
+
 std::string cpp_binary_operator(const std::string& op) {
     if (op == "and") {
         return "&&";
@@ -111,6 +134,37 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
         return lower_expr(expr.name + "(" + join_lowered_exprs(expr.children, aliases, locals) +
                               ")",
                           aliases, locals);
+    case ExprKind::TemplateCall: {
+        if (expr.template_args.empty()) {
+            break;
+        }
+        const std::string lowered_template_args =
+            join_lowered_template_args(expr.template_args, aliases);
+        const std::string lowered_call_args = join_lowered_exprs(expr.children, aliases, locals);
+        if (expr.name == "new") {
+            return "new " + lowered_template_args + "(" + lowered_call_args + ")";
+        }
+        if (expr.name == "malloc") {
+            const std::string type = lowered_template_args;
+            return "static_cast<" + type + "*>(std::malloc(sizeof(" + type + ") * (" +
+                   lowered_call_args + ")))";
+        }
+        if (expr.name == "sizeof" || expr.name == "alignof") {
+            return expr.name + "(" + lowered_template_args + ")";
+        }
+        if (expr.name == "offsetof" && expr.children.size() == 1) {
+            return "offsetof(" + lowered_template_args + ", " + expr.children.front().text + ")";
+        }
+        if ((expr.name == "list" || expr.name == "dict" || expr.name == "set") &&
+            expr.children.empty()) {
+            return lower_cpp_type(expr.name + "[" + join_template_arg_texts(expr.template_args) +
+                                      "]",
+                                  aliases) +
+                   "{}";
+        }
+        return lower_expr(expr.name, aliases, locals) + "<" + lowered_template_args + ">(" +
+               lowered_call_args + ")";
+    }
     case ExprKind::Member:
         if (expr.children.size() == 1) {
             return lower_expr(lower_expr(expr.children.front(), aliases, locals) + "." + expr.name,
@@ -143,7 +197,6 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
     case ExprKind::TupleLiteral:
         return join_lowered_exprs(expr.children, aliases, locals);
     case ExprKind::Lambda:
-    case ExprKind::TemplateCall:
         break;
     case ExprKind::Unknown:
         break;

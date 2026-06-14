@@ -1016,6 +1016,9 @@ class LanguageServer {
         for (const Expr& child : expr.children) {
             collect_expr_tokens(child, tokens);
         }
+        for (const Expr& arg : expr.template_args) {
+            collect_expr_tokens(arg, tokens);
+        }
     }
 
     static void collect_stmt_tokens(const std::vector<Stmt>& statements,
