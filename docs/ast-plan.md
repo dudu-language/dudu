@@ -47,6 +47,8 @@ Already structured:
   from the parsed callee expression where possible
 - template-call semantic inference and template method lookup use the parsed
   callee expression when reconstructing lookup names
+- generated local type inference for call expressions derives callee lookup
+  names from parsed callee nodes
 - semantic highlighting uses parsed call callees so method calls can color the
   receiver and called member separately instead of treating dotted callees as
   one raw span
