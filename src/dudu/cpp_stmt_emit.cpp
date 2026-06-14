@@ -69,6 +69,29 @@ std::string join_lowered_template_args(const std::vector<Expr>& exprs,
     return out.str();
 }
 
+std::string join_lowered_type_args(const std::vector<TypeRef>& types,
+                                   const std::vector<std::string>& aliases) {
+    std::ostringstream out;
+    for (size_t i = 0; i < types.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << lower_cpp_type(types[i], aliases);
+    }
+    return out.str();
+}
+
+std::string join_type_arg_texts(const std::vector<TypeRef>& types) {
+    std::ostringstream out;
+    for (size_t i = 0; i < types.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << types[i].text;
+    }
+    return out.str();
+}
+
 std::string join_template_arg_texts(const std::vector<Expr>& exprs) {
     std::ostringstream out;
     for (size_t i = 0; i < exprs.size(); ++i) {
@@ -256,11 +279,13 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
     case ExprKind::Call:
         return lower_call_expr(expr, aliases, locals);
     case ExprKind::TemplateCall: {
-        if (expr.template_args.empty()) {
+        if (expr.template_args.empty() && expr.template_type_args.empty()) {
             break;
         }
         const std::string lowered_template_args =
-            join_lowered_template_args(expr.template_args, aliases);
+            !expr.template_type_args.empty()
+                ? join_lowered_type_args(expr.template_type_args, aliases)
+                : join_lowered_template_args(expr.template_args, aliases);
         const std::string lowered_call_args = join_lowered_exprs(expr.children, aliases, locals);
         if (expr.name == "new") {
             return "new " + lowered_template_args + "(" + lowered_call_args + ")";
@@ -278,10 +303,10 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
         }
         if ((expr.name == "list" || expr.name == "dict" || expr.name == "set") &&
             expr.children.empty()) {
-            return lower_cpp_type(expr.name + "[" + join_template_arg_texts(expr.template_args) +
-                                      "]",
-                                  aliases) +
-                   "{}";
+            const std::string type_args = !expr.template_type_args.empty()
+                                              ? join_type_arg_texts(expr.template_type_args)
+                                              : join_template_arg_texts(expr.template_args);
+            return lower_cpp_type(expr.name + "[" + type_args + "]", aliases) + "{}";
         }
         return lower_callee_expr(expr, aliases, locals) + "<" + lowered_template_args + ">(" +
                lowered_call_args + ")";

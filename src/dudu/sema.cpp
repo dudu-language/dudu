@@ -195,27 +195,44 @@ matching_signature_ast(const FunctionScope& scope, const std::vector<FunctionSig
 std::string template_call_callee(const Expr& expr) {
     std::ostringstream out;
     out << call_callee_text(expr) << "[";
-    for (size_t i = 0; i < expr.template_args.size(); ++i) {
+    if (!expr.template_type_args.empty()) {
+        for (size_t i = 0; i < expr.template_type_args.size(); ++i) {
+            if (i > 0) {
+                out << ", ";
+            }
+            out << expr.template_type_args[i].text;
+        }
+    } else {
+        for (size_t i = 0; i < expr.template_args.size(); ++i) {
+            if (i > 0) {
+                out << ", ";
+            }
+            out << expr.template_args[i].text;
+        }
+    }
+    out << "]";
+    return out.str();
+}
+
+std::string template_args_lookup_text(const Expr& expr) {
+    std::ostringstream out;
+    const size_t count = !expr.template_type_args.empty() ? expr.template_type_args.size()
+                                                          : expr.template_args.size();
+    for (size_t i = 0; i < count; ++i) {
         if (i > 0) {
             out << ", ";
         }
-        out << expr.template_args[i].text;
+        out << (!expr.template_type_args.empty() ? expr.template_type_args[i].text
+                                                 : expr.template_args[i].text);
     }
-    out << "]";
     return out.str();
 }
 
 std::string template_method_name(const Expr& expr, const std::string& callee_base,
                                  size_t method_dot) {
     std::ostringstream out;
-    out << trim(callee_base.substr(method_dot + 1)) << "[";
-    for (size_t i = 0; i < expr.template_args.size(); ++i) {
-        if (i > 0) {
-            out << ", ";
-        }
-        out << expr.template_args[i].text;
-    }
-    out << "]";
+    out << trim(callee_base.substr(method_dot + 1)) << "[" << template_args_lookup_text(expr)
+        << "]";
     return out.str();
 }
 
@@ -472,40 +489,64 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
 
 std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr,
                                     const SourceLocation* location) {
-    if (expr.template_args.empty()) {
+    if (expr.template_args.empty() && expr.template_type_args.empty()) {
         return infer_expr(scope, expr.text, location);
     }
     const std::string callee = template_call_callee(expr);
 
-    if (const auto type = infer_allocation_call(scope.symbols, location, callee, expr.children)) {
+    const auto allocation =
+        !expr.template_type_args.empty()
+            ? infer_allocation_call(scope.symbols, location, expr.name, expr.template_type_args,
+                                    expr.children.size())
+            : infer_allocation_call(scope.symbols, location, callee, expr.children);
+    if (allocation) {
         for (const Expr& arg : expr.children) {
             (void)infer_expr_ast(scope, arg, location);
         }
-        return *type;
+        return *allocation;
     }
     if (expr.name == "sizeof" || expr.name == "alignof") {
-        if (location != nullptr && expr.template_args.size() != 1) {
-            fail(*location, expr.name + " expects 1 type argument, got " +
-                                std::to_string(expr.template_args.size()));
+        const size_t arg_count = !expr.template_type_args.empty() ? expr.template_type_args.size()
+                                                                  : expr.template_args.size();
+        if (location != nullptr && arg_count != 1) {
+            fail(*location,
+                 expr.name + " expects 1 type argument, got " + std::to_string(arg_count));
         }
-        if (expr.template_args.size() == 1 && location != nullptr &&
-            !known_type(scope.symbols, expr.template_args.front().text)) {
-            fail(*location, "unknown " + expr.name + " type: " + expr.template_args.front().text);
+        const std::string type =
+            !expr.template_type_args.empty()
+                ? expr.template_type_args.front().text
+                : (expr.template_args.empty() ? std::string{} : expr.template_args.front().text);
+        const SourceLocation type_location =
+            !expr.template_type_args.empty()
+                ? expr.template_type_args.front().location
+                : (expr.template_args.empty() ? expr.location
+                                              : expr.template_args.front().location);
+        if (arg_count == 1 && location != nullptr && !known_type(scope.symbols, type)) {
+            fail(type_location, "unknown " + expr.name + " type: " + type);
         }
         return "usize";
     }
     if (expr.name == "offsetof") {
-        if (location != nullptr && expr.template_args.size() != 1) {
-            fail(*location, "offsetof expects 1 type argument, got " +
-                                std::to_string(expr.template_args.size()));
+        const size_t arg_count = !expr.template_type_args.empty() ? expr.template_type_args.size()
+                                                                  : expr.template_args.size();
+        if (location != nullptr && arg_count != 1) {
+            fail(*location, "offsetof expects 1 type argument, got " + std::to_string(arg_count));
         }
         if (location != nullptr && expr.children.size() != 1) {
             fail(*location,
                  "offsetof expects 1 field argument, got " + std::to_string(expr.children.size()));
         }
-        if (expr.template_args.size() == 1 && location != nullptr &&
-            !known_type(scope.symbols, expr.template_args.front().text)) {
-            fail(*location, "unknown offsetof type: " + expr.template_args.front().text);
+        const std::string type =
+            !expr.template_type_args.empty()
+                ? expr.template_type_args.front().text
+                : (expr.template_args.empty() ? std::string{} : expr.template_args.front().text);
+        const SourceLocation type_location =
+            !expr.template_type_args.empty()
+                ? expr.template_type_args.front().location
+                : (expr.template_args.empty() ? expr.location
+                                              : expr.template_args.front().location);
+        if (arg_count == 1 && location != nullptr && !known_type(scope.symbols, type)) {
+            fail(type_location, "unknown offsetof type: " + type);
         }
         return "usize";
     }

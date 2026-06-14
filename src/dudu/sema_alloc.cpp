@@ -28,6 +28,27 @@ std::optional<std::string> infer_allocation_call_with_count(const Symbols& symbo
     return "*" + type;
 }
 
+std::optional<std::string> infer_allocation_call_from_type_args(
+    const Symbols& symbols, const SourceLocation* location, const std::string& callee,
+    const std::vector<TypeRef>& type_args, const size_t arg_count) {
+    if (callee != "new" && callee != "malloc") {
+        return std::nullopt;
+    }
+    if (location != nullptr && type_args.size() != 1) {
+        throw CompileError(*location, callee + " expects 1 type argument, got " +
+                                          std::to_string(type_args.size()));
+    }
+    const std::string type = type_args.size() == 1 ? trim_copy(type_args.front().text) : "";
+    if (location != nullptr && !type.empty() && !known_type(symbols, type)) {
+        throw CompileError(type_args.front().location, "unknown allocation type: " + type);
+    }
+    if (location != nullptr && callee == "malloc" && arg_count != 1) {
+        throw CompileError(*location,
+                           "malloc expects 1 count argument, got " + std::to_string(arg_count));
+    }
+    return "*" + type;
+}
+
 } // namespace
 
 std::optional<std::string> infer_allocation_call(const Symbols& symbols,
@@ -42,6 +63,14 @@ std::optional<std::string> infer_allocation_call(const Symbols& symbols,
                                                  const std::string& callee,
                                                  const std::vector<Expr>& args) {
     return infer_allocation_call_with_count(symbols, location, callee, args.size());
+}
+
+std::optional<std::string> infer_allocation_call(const Symbols& symbols,
+                                                 const SourceLocation* location,
+                                                 const std::string& callee,
+                                                 const std::vector<TypeRef>& type_args,
+                                                 const size_t arg_count) {
+    return infer_allocation_call_from_type_args(symbols, location, callee, type_args, arg_count);
 }
 
 bool is_deallocation_call(std::string_view callee) {

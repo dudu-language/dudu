@@ -38,6 +38,11 @@ Already structured:
 - initial `TypeRef` C++ lowering is implemented and used for type aliases
 - template calls keep template arguments separate from runtime call arguments,
   and C++ emission lowers them from the parsed expression node
+- template calls also keep parsed `TypeRef` nodes for bracketed arguments, so
+  type-shaped builtins such as `new[T]`, `malloc[T]`, `sizeof[T]`,
+  `alignof[T]`, `offsetof[T]`, and empty `list[T]`/`dict[T]`/`set[T]`
+  construction can check and emit type arguments without reparsing them as
+  expression text
 - ordinary calls and template calls keep a parsed callee expression alongside
   the compatibility `name` field, so sema/emission/LSP can migrate away from
   raw callee strings incrementally

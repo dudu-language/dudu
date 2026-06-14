@@ -1051,8 +1051,14 @@ class LanguageServer {
         for (const Expr& child : expr.children) {
             collect_expr_tokens(child, tokens);
         }
-        for (const Expr& arg : expr.template_args) {
-            collect_expr_tokens(arg, tokens);
+        if (!expr.template_type_args.empty()) {
+            for (const TypeRef& arg : expr.template_type_args) {
+                collect_type_tokens(arg, tokens);
+            }
+        } else {
+            for (const Expr& arg : expr.template_args) {
+                collect_expr_tokens(arg, tokens);
+            }
         }
     }
 

@@ -317,6 +317,11 @@ void test_expression_ast_shape() {
     assert(assign.value_expr.template_args[0].name == "f32");
     assert(assign.value_expr.template_args[0].range.start.column >
            assign.value_expr.range.start.column);
+    assert(assign.value_expr.template_type_args.size() == 1);
+    assert(assign.value_expr.template_type_args[0].kind == dudu::TypeKind::Named);
+    assert(assign.value_expr.template_type_args[0].name == "f32");
+    assert(assign.value_expr.template_type_args[0].range.start.column >
+           assign.value_expr.range.start.column);
     assert(assign.value_expr.children.size() == 4);
     assert(assign.value_expr.children[0].range.start.column > assign.value_expr.range.start.column);
 

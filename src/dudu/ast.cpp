@@ -1148,6 +1148,9 @@ Expr parse_expr_text(std::string_view text, SourceLocation location) {
                     expr.template_args =
                         parse_expr_list(callee.substr(type_open + 1, callee.size() - type_open - 2),
                                         advance_columns(location, type_open + 1));
+                    expr.template_type_args =
+                        parse_type_list(callee.substr(type_open + 1, callee.size() - type_open - 2),
+                                        advance_columns(location, type_open + 1));
                 }
             }
             return expr;
