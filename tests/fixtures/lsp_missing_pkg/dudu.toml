@@ -1,0 +1,5 @@
+name = "lsp_missing_pkg"
+entry = "main.dd"
+
+[pkg]
+libs = ["definitely_missing_dudu_pkg_config_package"]

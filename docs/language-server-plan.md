@@ -158,7 +158,8 @@ errors, and formatter integration.
 
 Status: initial `duc lsp` support is implemented. It speaks JSON-RPC over
 stdio, handles full-document sync, publishes parse/semantic/native-header
-and build-configuration diagnostics, and returns full-document formatting edits.
+and build-configuration diagnostics, including invalid project config and
+missing `pkg-config` package diagnostics, and returns full-document formatting edits.
 The implementation uses the existing parser, semantic checker, formatter, and
 native-header scanner in-process.
 
@@ -296,6 +297,8 @@ Format and organize-imports code actions are covered.
 Missing-import quick fixes are covered using an unopened workspace file.
 Native config quick fixes are covered with a fixture `dudu.toml` edit for a
 known missing native header package.
+Missing `pkg-config` package diagnostics are covered with a fixture
+`dudu.toml`.
 Direct native imports without aliases are covered for completion, signature
 help, and definition with a local fixture header.
 Native enum values from scanned headers are covered in symbol and completion

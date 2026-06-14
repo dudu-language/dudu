@@ -49,6 +49,7 @@ hover_docs_uri = "file:///tmp/dudu_lsp_hover_docs.dd"
 hazard_uri = "file:///tmp/dudu_lsp_hazards.dd"
 import_graph_uri = f"file://{repo_root}/tests/fixtures/lsp_import_graph_entry.dd"
 bad_config_uri = f"file://{repo_root}/tests/fixtures/lsp_bad_config/main.dd"
+missing_pkg_uri = f"file://{repo_root}/tests/fixtures/lsp_missing_pkg/main.dd"
 overload_uri = f"file://{repo_root}/tests/fixtures/dudu_lsp_overload.dd"
 scope_uri = "file:///tmp/dudu_lsp_scope.dd"
 direct_native_uri = f"file://{repo_root}/tests/fixtures/dudu_lsp_direct_native.dd"
@@ -451,6 +452,26 @@ messages = [
                             "def main() -> i32:",
                             "    amount: f32 = 2.0",
                             "    return i32(native_cpp.dudu_native.overloaded(amount))",
+                            "",
+                        ]
+                    ),
+                }
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "method": "textDocument/didOpen",
+            "params": {
+                "textDocument": {
+                    "uri": missing_pkg_uri,
+                    "languageId": "dudu",
+                    "version": 1,
+                    "text": "\n".join(
+                        [
+                            "def main() -> i32:",
+                            "    return 0",
                             "",
                         ]
                     ),
@@ -1004,6 +1025,16 @@ build_config_diagnostics = next(
 build_config_diag = build_config_diagnostics["params"]["diagnostics"][0]
 assert build_config_diag["source"] == "dudu/build-config"
 assert "invalid [target] kind" in build_config_diag["message"]
+
+missing_pkg_diagnostics = next(
+    item
+    for item in responses
+    if item.get("method") == "textDocument/publishDiagnostics"
+    and item["params"]["uri"] == missing_pkg_uri
+)
+missing_pkg_diag = missing_pkg_diagnostics["params"]["diagnostics"][0]
+assert missing_pkg_diag["source"] == "dudu/build-config"
+assert "missing pkg-config package: definitely_missing_dudu_pkg_config_package" in missing_pkg_diag["message"]
 
 symbols = next(item for item in responses if item.get("id") == 2)
 symbol_names = [item["name"] for item in symbols["result"]]

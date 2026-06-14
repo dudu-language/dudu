@@ -2,6 +2,7 @@
 
 #include "dudu/cpp_lower.hpp"
 #include "dudu/format.hpp"
+#include "dudu/native_build.hpp"
 #include "dudu/native_headers.hpp"
 #include "dudu/parser.hpp"
 #include "dudu/project_config.hpp"
@@ -10,6 +11,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -587,6 +589,12 @@ class LanguageServer {
                          "dudu/build-config",
                          1}};
             }
+            if (const std::optional<std::string> missing = missing_pkg_config_package(config)) {
+                return {{{.file = doc.path, .line = 1, .column = 1},
+                         "missing pkg-config package: " + *missing,
+                         "dudu/build-config",
+                         1}};
+            }
             module.build_values = config.build_values;
             module.build_values["TARGET_KIND"] = '"' + config.target_kind + '"';
             module.build_values["TARGET_MODE"] = '"' + config.target_mode + '"';
@@ -623,6 +631,20 @@ class LanguageServer {
             return "dudu/parser";
         }
         return "dudu/sema";
+    }
+
+    static std::optional<std::string> missing_pkg_config_package(const ProjectConfig& config) {
+        const char* pkg_config = std::getenv("PKG_CONFIG");
+        const std::string executable =
+            pkg_config == nullptr ? "pkg-config" : std::string(pkg_config);
+        for (const std::string& package : config.pkg_config_packages) {
+            const std::string command = shell_quote_arg(executable) + " --exists " +
+                                        shell_quote_arg(package) + " 2>/dev/null";
+            if (std::system(command.c_str()) != 0) {
+                return package;
+            }
+        }
+        return std::nullopt;
     }
 
     static std::vector<Diagnostic> lint_diagnostics(const Document& doc) {
