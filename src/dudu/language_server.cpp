@@ -470,6 +470,10 @@ class LanguageServer {
             if (id != nullptr) {
                 respond(*id, references_result(params));
             }
+        } else if (method == "textDocument/rename") {
+            if (id != nullptr) {
+                respond(*id, rename_result(params));
+            }
         } else if (method == "textDocument/hover") {
             if (id != nullptr) {
                 respond(*id, hover_result(params));
@@ -501,6 +505,7 @@ class LanguageServer {
                "\"documentSymbolProvider\":true,"
                "\"definitionProvider\":true,"
                "\"referencesProvider\":true,"
+               "\"renameProvider\":true,"
                "\"hoverProvider\":true,"
                "\"completionProvider\":{\"resolveProvider\":false,\"triggerCharacters\":[\".\"]},"
                "\"signatureHelpProvider\":{\"triggerCharacters\":[\"(\",\",\"]},"
@@ -870,6 +875,44 @@ class LanguageServer {
         return out.str();
     }
 
+    std::string rename_result(const Json* params) const {
+        const Document* doc = document_from_params(params);
+        if (doc == nullptr) {
+            return "null";
+        }
+        const std::string old_name = symbol_at(*doc, params);
+        const std::string new_name =
+            params == nullptr ? std::string{} : string_value(params->get("newName"));
+        if (!valid_identifier(new_name) || !renameable_symbol(*doc, old_name)) {
+            return "null";
+        }
+        std::ostringstream out;
+        out << "{\"changes\":{";
+        bool first_doc = true;
+        for (const auto& [uri, candidate] : documents_) {
+            (void)uri;
+            const std::vector<ReferenceLocation> locations = references_in(candidate, old_name);
+            if (locations.empty()) {
+                continue;
+            }
+            if (!first_doc) {
+                out << ",";
+            }
+            first_doc = false;
+            out << "\"" << json_escape(candidate.uri) << "\":[";
+            for (size_t i = 0; i < locations.size(); ++i) {
+                if (i > 0) {
+                    out << ",";
+                }
+                out << "{\"range\":" << locations[i].range << ",\"newText\":\""
+                    << json_escape(new_name) << "\"}";
+            }
+            out << "]";
+        }
+        out << "}}";
+        return out.str();
+    }
+
     std::string hover_result(const Json* params) const {
         const Document* doc = document_from_params(params);
         if (doc == nullptr) {
@@ -1065,8 +1108,30 @@ class LanguageServer {
         return identifier_char(c) || c == '.';
     }
 
+    static bool valid_identifier(const std::string& value) {
+        if (value.empty() || (std::isalpha(static_cast<unsigned char>(value.front())) == 0 &&
+                              value.front() != '_')) {
+            return false;
+        }
+        return std::all_of(value.begin() + 1, value.end(), identifier_char);
+    }
+
     static bool identifier_char(char c) {
         return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_';
+    }
+
+    bool renameable_symbol(const Document& doc, const std::string& name) const {
+        if (name.empty() || name.find('.') != std::string::npos) {
+            return false;
+        }
+        for (const Symbol& symbol : symbols_for(doc)) {
+            if (symbol.name == name && std::filesystem::path(symbol.location.file) == doc.path &&
+                (symbol.kind == 5 || symbol.kind == 6 || symbol.kind == 8 || symbol.kind == 10 ||
+                 symbol.kind == 12 || symbol.kind == 14)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     static std::string uri_for_location(const SourceLocation& location, const Document& doc) {

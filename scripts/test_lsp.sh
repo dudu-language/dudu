@@ -132,6 +132,18 @@ messages = [
             "params": {"textDocument": {"uri": uri}, "position": {"line": 7, "character": 18}},
         }
     ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 16,
+            "method": "textDocument/rename",
+            "params": {
+                "textDocument": {"uri": uri},
+                "position": {"line": 3, "character": 5},
+                "newName": "sum_values",
+            },
+        }
+    ),
     packet({"jsonrpc": "2.0", "id": 14, "method": "workspace/symbol", "params": {"query": "add"}}),
     packet(
         {
@@ -230,6 +242,7 @@ initialize = next(item for item in responses if item.get("id") == 1)
 assert initialize["result"]["capabilities"]["textDocumentSync"] == 2
 assert initialize["result"]["capabilities"]["documentFormattingProvider"] is True
 assert initialize["result"]["capabilities"]["referencesProvider"] is True
+assert initialize["result"]["capabilities"]["renameProvider"] is True
 assert initialize["result"]["capabilities"]["workspaceSymbolProvider"] is True
 
 diagnostics = next(item for item in responses if item.get("method") == "textDocument/publishDiagnostics")
@@ -270,6 +283,15 @@ reference_starts = {
 }
 assert (3, 4) in reference_starts
 assert (7, 17) in reference_starts
+
+rename = next(item for item in responses if item.get("id") == 16)
+rename_edits = rename["result"]["changes"][uri]
+rename_starts = {
+    (item["range"]["start"]["line"], item["range"]["start"]["character"], item["newText"])
+    for item in rename_edits
+}
+assert (3, 4, "sum_values") in rename_starts
+assert (7, 17, "sum_values") in rename_starts
 
 workspace_symbols = next(item for item in responses if item.get("id") == 14)
 workspace_symbol_names = [item["name"] for item in workspace_symbols["result"]]

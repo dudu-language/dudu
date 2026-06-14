@@ -236,6 +236,25 @@ class DuduLspClient {
     );
   }
 
+  async rename(document, position, newName) {
+    const edit = await this.request("textDocument/rename", {
+      textDocument: { uri: document.uri.toString() },
+      position: { line: position.line, character: position.character },
+      newName,
+    });
+    if (!edit) {
+      return undefined;
+    }
+    const workspaceEdit = new vscode.WorkspaceEdit();
+    for (const [uriText, edits] of Object.entries(edit.changes ?? {})) {
+      const uri = vscode.Uri.parse(uriText);
+      for (const item of edits) {
+        workspaceEdit.replace(uri, toRange(item.range), item.newText);
+      }
+    }
+    return workspaceEdit;
+  }
+
   async hover(document, position) {
     const hover = await this.request("textDocument/hover", {
       textDocument: { uri: document.uri.toString() },
@@ -379,6 +398,11 @@ function activate(context) {
     vscode.languages.registerReferenceProvider("dudu", {
       provideReferences(document, position) {
         return lsp.references(document, position);
+      },
+    }),
+    vscode.languages.registerRenameProvider("dudu", {
+      provideRenameEdits(document, position, newName) {
+        return lsp.rename(document, position, newName);
       },
     }),
     vscode.languages.registerHoverProvider("dudu", {

@@ -214,6 +214,11 @@ display, and broader real-library coverage remain.
   project config suggests the fix
 - optional warnings and lint code actions
 
+Status: conservative `textDocument/rename` is implemented for Dudu symbols in
+currently open documents and wired into the VS Code extension. It validates the
+replacement as an identifier and refuses dotted/native symbols. Code actions,
+organize imports, and project-wide rename beyond open documents remain.
+
 ## Tests
 
 Add language-server tests that drive the server with LSP JSON-RPC messages.
