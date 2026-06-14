@@ -12,6 +12,11 @@ struct SourceLocation {
     int column = 1;
 };
 
+struct SourceRange {
+    SourceLocation start;
+    SourceLocation end;
+};
+
 class CompileError : public std::runtime_error {
   public:
     CompileError(SourceLocation location, const std::string& message);

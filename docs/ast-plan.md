@@ -31,6 +31,7 @@ Already structured:
   and collection literals
 - initial type shape capture for names, qualified names, templates, pointers,
   references, wrappers, fixed arrays, and function-like type signatures
+- source range fields on statement, expression, and type nodes
 
 Still too string-based:
 
@@ -43,6 +44,8 @@ Still too string-based:
 - C++ emission of calls, member access, indexing, operators, constructors,
   template calls, lambdas, tuple destructuring, and C++ macro calls
 - semantic analysis and C++ emission of type strings
+- exact original-token ranges inside function bodies; current body-node ranges
+  are derived from normalized joined statement text
 
 ## Target Architecture
 

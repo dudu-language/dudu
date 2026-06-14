@@ -224,6 +224,8 @@ void test_expression_ast_shape() {
     assert(answer.kind == dudu::StmtKind::VarDecl);
     assert(answer.value_expr.kind == dudu::ExprKind::Call);
     assert(answer.value_expr.name == "add");
+    assert(answer.value_expr.range.start.line == 2);
+    assert(answer.value_expr.range.start.column > answer.location.column);
     assert(answer.value_expr.children.size() == 2);
     assert(answer.value_expr.children[0].kind == dudu::ExprKind::IntLiteral);
     assert(answer.value_expr.children[1].kind == dudu::ExprKind::Binary);
@@ -253,6 +255,8 @@ void test_expression_ast_shape() {
     assert(values.kind == dudu::StmtKind::VarDecl);
     assert(values.value_expr.kind == dudu::ExprKind::ListLiteral);
     assert(values.value_expr.children.size() == 3);
+    assert(values.value_expr.range.start.line == 5);
+    assert(values.value_expr.range.start.column > values.location.column);
 }
 
 void test_type_ast_shape() {
@@ -298,6 +302,8 @@ void test_type_ast_shape() {
     assert(update.params[1].type_ref.kind == dudu::TypeKind::Template);
     assert(update.params[1].type_ref.children[0].name == "str");
     assert(update.statements[0].type_ref.kind == dudu::TypeKind::Const);
+    assert(update.statements[0].type_ref.range.start.line == 11);
+    assert(update.statements[0].type_ref.range.start.column > update.statements[0].location.column);
     assert(update.statements[0].type_ref.children[0].kind == dudu::TypeKind::Template);
 }
 

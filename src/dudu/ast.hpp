@@ -60,6 +60,7 @@ struct TypeRef {
     std::string value;
     std::vector<TypeRef> children;
     SourceLocation location;
+    SourceRange range;
 };
 
 struct FieldDecl {
@@ -80,6 +81,7 @@ struct RawStmt {
     std::string text;
     std::vector<RawStmt> children;
     SourceLocation location;
+    SourceRange range;
 };
 
 enum class StmtKind {
@@ -136,6 +138,7 @@ struct Expr {
     std::string op;
     std::vector<Expr> children;
     SourceLocation location;
+    SourceRange range;
 };
 
 struct Stmt {
@@ -156,6 +159,7 @@ struct Stmt {
     Expr iterable_expr;
     std::vector<Stmt> children;
     SourceLocation location;
+    SourceRange range;
 };
 
 struct TypeAliasDecl {

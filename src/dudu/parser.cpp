@@ -7,6 +7,13 @@
 
 namespace dudu {
 namespace {
+SourceRange range_for_line_text(SourceLocation location, std::string_view text) {
+    return {.start = location,
+            .end = {.file = location.file,
+                    .line = location.line,
+                    .column = location.column + static_cast<int>(text.size())}};
+}
+
 class Parser {
   public:
     explicit Parser(std::span<const Token> tokens) : tokens_(tokens) {
@@ -430,6 +437,7 @@ class Parser {
             RawStmt stmt;
             stmt.location = current().location;
             stmt.text = join_until({TokenKind::Newline});
+            stmt.range = range_for_line_text(stmt.location, stmt.text);
             consume(TokenKind::Newline, "expected newline after statement");
             if (at(TokenKind::Indent)) {
                 stmt.children = parse_raw_block();
