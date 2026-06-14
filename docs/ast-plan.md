@@ -52,6 +52,8 @@ Already structured:
   literals, reducing reliance on string parsing for assignment checks
 - C++ assignment emission detects `Option` reset from `NoneLiteral` expression
   nodes instead of raw value text
+- generated local C++ type inference has an AST path for names and calls,
+  leaving raw text as a fallback for unlifted expression shapes
 
 Still too string-based:
 

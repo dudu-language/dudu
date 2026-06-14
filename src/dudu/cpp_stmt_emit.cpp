@@ -664,7 +664,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                 out << ";\n";
             } else {
                 const std::string inferred =
-                    infer_emitted_local_type(stmt.value, locals, function_returns);
+                    infer_emitted_local_type(stmt.value_expr, locals, function_returns);
                 locals.emplace(lhs, inferred.empty() ? "auto" : inferred);
                 out << indent(depth) << "auto " << lhs << " = " << value << ";\n";
             }
