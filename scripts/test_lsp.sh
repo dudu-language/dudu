@@ -48,6 +48,7 @@ bad_config_uri = f"file://{repo_root}/tests/fixtures/lsp_bad_config/main.dd"
 overload_uri = f"file://{repo_root}/tests/fixtures/dudu_lsp_overload.dd"
 scope_uri = "file:///tmp/dudu_lsp_scope.dd"
 direct_native_uri = f"file://{repo_root}/tests/fixtures/dudu_lsp_direct_native.dd"
+from_import_uri = f"file://{repo_root}/tests/fixtures/dudu_lsp_from_import.dd"
 source = "\n".join(
     [
         "class Player:",
@@ -102,6 +103,39 @@ messages = [
                     "version": 1,
                     "text": source,
                 }
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "method": "textDocument/didOpen",
+            "params": {
+                "textDocument": {
+                    "uri": from_import_uri,
+                    "languageId": "dudu",
+                    "version": 1,
+                    "text": "\n".join(
+                        [
+                            "from lsp_workspace_helper import workspace_helper as direct_helper",
+                            "",
+                            "def main() -> i32:",
+                            "    return direct_helper()",
+                            "",
+                        ]
+                    ),
+                }
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 38,
+            "method": "textDocument/definition",
+            "params": {
+                "textDocument": {"uri": from_import_uri},
+                "position": {"line": 3, "character": 12},
             },
         }
     ),
@@ -963,6 +997,10 @@ assert "return" not in module_completion_labels
 import_definition = next(item for item in responses if item.get("id") == 30)
 assert import_definition["result"]["uri"].endswith("/tests/fixtures/lsp_workspace_helper.dd")
 assert import_definition["result"]["range"]["start"]["line"] == 0
+
+from_import_definition = next(item for item in responses if item.get("id") == 38)
+assert from_import_definition["result"]["uri"].endswith("/tests/fixtures/lsp_workspace_helper.dd")
+assert from_import_definition["result"]["range"]["start"]["line"] == 0
 
 native_member_definition = next(item for item in responses if item.get("id") == 31)
 assert native_member_definition["result"]["uri"].endswith("/tests/fixtures/native_headers/simple_cpp.hpp")

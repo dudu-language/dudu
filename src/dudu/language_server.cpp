@@ -1069,19 +1069,42 @@ class LanguageServer {
         try {
             const ModuleAst module = parse_source(doc.text, doc.path);
             for (const ImportDecl& import : module.imports) {
-                if (import.kind != ImportKind::Module) {
+                if (import.kind != ImportKind::Module && import.kind != ImportKind::From) {
                     continue;
                 }
-                if (bound_import_name(import) != root && import.module_path != root) {
+                if (import.kind == ImportKind::Module &&
+                    bound_import_name(import) != root && import.module_path != root) {
+                    continue;
+                }
+                if (import.kind == ImportKind::From && bound_import_name(import) != word) {
                     continue;
                 }
                 const std::filesystem::path file =
                     module_path_to_file(doc.path.parent_path(), import.module_path);
                 std::error_code error;
                 if (!std::filesystem::exists(file, error) || error) {
-                    return std::nullopt;
+                    continue;
                 }
-                return location_json(file_uri(file), range_json(0, 0, 0));
+                if (import.kind == ImportKind::Module) {
+                    return location_json(file_uri(file), range_json(0, 0, 0));
+                }
+                std::ifstream input(file);
+                if (!input) {
+                    continue;
+                }
+                const std::string text{std::istreambuf_iterator<char>(input),
+                                       std::istreambuf_iterator<char>()};
+                const Document imported{
+                    .uri = file_uri(file),
+                    .path = file,
+                    .text = text,
+                };
+                for (const Symbol& symbol : symbols_for(imported, false)) {
+                    if (symbol.name == import.imported_name) {
+                        return location_json(uri_for_location(symbol.location, imported),
+                                             range_json(symbol.location));
+                    }
+                }
             }
         } catch (const std::exception&) {
         }

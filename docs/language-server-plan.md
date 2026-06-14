@@ -177,7 +177,9 @@ Status: initial Dudu-only `definition`, `hover`, `documentSymbol`,
 open documents and wired into the VS Code extension. Workspace symbols and
 references also scan unopened `.dd` files under the active project roots, with
 open buffers taking precedence. Go-to-definition resolves Dudu module import
-aliases to imported module files. A fuller import-graph project index remains.
+aliases to imported module files and resolves `from module import symbol`
+bindings to the imported declaration. A fuller import-graph project index
+remains.
 
 ### Milestone 3: Completion And Signature Help
 
@@ -293,7 +295,8 @@ Unreachable-statement lint diagnostics and remove-line quick fixes are covered.
 Unused-local lint diagnostics and remove-line quick fixes are covered.
 Local-shadowing lint diagnostics are covered.
 Go-to-definition for Dudu module import aliases is covered with an unopened
-module file.
+module file. Go-to-definition for `from module import symbol` aliases is
+covered with an unopened module file.
 Go-to-definition for native C++ member methods is covered with a local fixture
 header.
 Native overloaded function signature help is covered with a local fixture
