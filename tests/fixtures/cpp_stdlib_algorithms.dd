@@ -1,0 +1,64 @@
+import cpp "algorithm" as std
+import cpp "deque" as std
+import cpp "numeric" as std
+import cpp "queue" as std
+import cpp "set" as std
+import cpp "string" as std
+import cpp "tuple" as std
+import cpp "vector" as std
+
+
+def main() -> i32:
+    values: std.vector[i32]
+    values.push_back(4)
+    values.push_back(1)
+    values.push_back(3)
+    values.push_back(2)
+    values.push_back(3)
+
+    std.sort(values.begin(), values.end())
+    lower = std.lower_bound(values.begin(), values.end(), 3)
+    if lower == values.end():
+        return 1
+    if lower[0] != 3:
+        return 2
+
+    new_end = std.remove(values.begin(), values.end(), 3)
+    values.erase(new_end, values.end())
+    if values.size() != 3:
+        return 3
+    if std.accumulate(values.begin(), values.end(), 0) != 7:
+        return 4
+
+    unique: std.set[i32]
+    unique.insert(7)
+    unique.insert(7)
+    unique.insert(9)
+    if unique.size() != 2:
+        return 5
+
+    deck: std.deque[i32]
+    deck.push_back(40)
+    deck.push_front(2)
+    if deck.front() + deck.back() != 42:
+        return 6
+
+    jobs: std.priority_queue[i32]
+    jobs.push(10)
+    jobs.push(42)
+    jobs.push(7)
+    if jobs.top() != 42:
+        return 7
+    jobs.pop()
+    if jobs.top() != 10:
+        return 8
+
+    pair: std.pair[std.string, i32] = std.make_pair(std.string("answer"), 42)
+    if pair.second != 42:
+        return 9
+
+    tup: std.tuple[std.string, i32] = std.make_tuple(std.string("value"), 42)
+    if std.get[1](tup) != 42:
+        return 10
+
+    return std.get[1](tup)

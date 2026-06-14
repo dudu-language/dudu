@@ -43,7 +43,10 @@ std::string unwrap_value_type(const Symbols& symbols, std::string type) {
 
 bool unknown_or_auto(const std::string& type) {
     const std::string text = trim(type);
-    return text.empty() || text == "auto";
+    return text.empty() || text == "auto" || text == "reference" || text == "const_reference" ||
+           text == "iterator" || text == "const_iterator" || text.ends_with(".reference") ||
+           text.ends_with(".const_reference") || text.ends_with(".iterator") ||
+           text.ends_with(".const_iterator");
 }
 
 bool same_foreign_cpp_type(const std::string& left, const std::string& right) {
@@ -64,9 +67,9 @@ bool same_or_assignable(const std::string& left, const std::string& right_expr,
 
 std::string operator_method_name(const std::string& op) {
     static const std::map<std::string, std::string> names = {
-        {"+", "__add__"},  {"-", "__sub__"}, {"*", "__mul__"},  {"/", "__truediv__"},
-        {"%", "__mod__"},  {"==", "__eq__"}, {"!=", "__ne__"}, {"<", "__lt__"},
-        {"<=", "__le__"},  {">", "__gt__"},  {">=", "__ge__"},
+        {"+", "__add__"}, {"-", "__sub__"}, {"*", "__mul__"}, {"/", "__truediv__"},
+        {"%", "__mod__"}, {"==", "__eq__"}, {"!=", "__ne__"}, {"<", "__lt__"},
+        {"<=", "__le__"}, {">", "__gt__"},  {">=", "__ge__"},
     };
     const auto it = names.find(op);
     return it == names.end() ? "" : it->second;
@@ -74,9 +77,8 @@ std::string operator_method_name(const std::string& op) {
 
 } // namespace
 
-std::optional<FunctionSignature> dudu_operator_signature(const Symbols& symbols,
-                                                         const std::string& op,
-                                                         const std::string& left) {
+std::optional<FunctionSignature>
+dudu_operator_signature(const Symbols& symbols, const std::string& op, const std::string& left) {
     const std::string method_name = operator_method_name(op);
     if (method_name.empty()) {
         return std::nullopt;
@@ -107,7 +109,8 @@ bool binary_rhs_allowed(const Symbols& symbols, const std::string& op, const std
     const std::string resolved_right = resolve_alias(symbols, right);
     const std::string value_left = unwrap_value_type(symbols, left);
     const std::string value_right = unwrap_value_type(symbols, right);
-    if (unknown_or_auto(value_left) || unknown_or_auto(value_right)) {
+    if (unknown_or_auto(left) || unknown_or_auto(right) || unknown_or_auto(value_left) ||
+        unknown_or_auto(value_right)) {
         return true;
     }
     if (same_foreign_cpp_type(value_left, value_right)) {
@@ -136,7 +139,8 @@ bool comparison_rhs_allowed(const Symbols& symbols, const std::string& op, const
                             const std::string& right_expr, const std::string& right) {
     const std::string value_left = unwrap_value_type(symbols, left);
     const std::string value_right = unwrap_value_type(symbols, right);
-    if (unknown_or_auto(value_left) || unknown_or_auto(value_right)) {
+    if (unknown_or_auto(left) || unknown_or_auto(right) || unknown_or_auto(value_left) ||
+        unknown_or_auto(value_right)) {
         return true;
     }
     if (same_foreign_cpp_type(value_left, value_right)) {

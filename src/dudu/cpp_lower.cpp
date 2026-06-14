@@ -33,6 +33,61 @@ bool ends_with(std::string_view text, std::string_view suffix) {
     return text.size() >= suffix.size() && text.substr(text.size() - suffix.size()) == suffix;
 }
 
+bool is_non_type_template_arg(const std::string& text) {
+    const std::string trimmed = trim_copy(text);
+    if (trimmed.empty()) {
+        return false;
+    }
+    size_t start = trimmed.front() == '-' ? 1 : 0;
+    if (start >= trimmed.size()) {
+        return false;
+    }
+    for (size_t i = start; i < trimmed.size(); ++i) {
+        if (std::isdigit(static_cast<unsigned char>(trimmed[i])) == 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+std::string lower_function_template_arg(const std::string& type,
+                                        const std::vector<std::string>& namespace_aliases) {
+    const size_t open = type.find('(');
+    const size_t close = type.find(')', open);
+    if (open == std::string::npos || close == std::string::npos) {
+        return replace_dots(type);
+    }
+    std::string result = "void";
+    const size_t arrow = type.find("->", close);
+    if (arrow != std::string::npos) {
+        result = lower_cpp_type(type.substr(arrow + 2), namespace_aliases);
+    }
+    std::ostringstream out;
+    out << result << '(';
+    const std::vector<std::string> args =
+        split_top_level_args(type.substr(open + 1, close - open - 1));
+    for (size_t i = 0; i < args.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << lower_cpp_type(args[i], namespace_aliases);
+    }
+    out << ')';
+    return out.str();
+}
+
+std::string lower_template_call_arg(const std::string& arg,
+                                    const std::vector<std::string>& namespace_aliases) {
+    const std::string trimmed = trim_copy(arg);
+    if (is_non_type_template_arg(trimmed)) {
+        return trimmed;
+    }
+    if (starts_with(trimmed, "fn(")) {
+        return lower_function_template_arg(trimmed, namespace_aliases);
+    }
+    return lower_cpp_type(trimmed, namespace_aliases);
+}
+
 std::vector<std::string> split_top_level_args(const std::string& args) {
     std::vector<std::string> out;
     int depth = 0;
@@ -472,18 +527,19 @@ std::string lower_dotted_template_call(std::string expr,
         const std::string call_args = expr.substr(close + 2, args_close - close - 2);
         const std::string lowered_args = lower_cpp_expr(call_args, namespace_aliases);
         std::string lowered_template;
-        if (namespace_qualified_name(name, namespace_aliases)) {
-            lowered_template = lower_cpp_type(name + "[" + arg + "]", namespace_aliases);
-        } else {
+        {
             std::ostringstream lowered_template_args;
             const std::vector<std::string> template_args = split_top_level_args(arg);
             for (size_t i = 0; i < template_args.size(); ++i) {
                 if (i > 0) {
                     lowered_template_args << ", ";
                 }
-                lowered_template_args << lower_cpp_type(template_args[i], namespace_aliases);
+                lowered_template_args
+                    << lower_template_call_arg(template_args[i], namespace_aliases);
             }
-            lowered_template = name + "<" + lowered_template_args.str() + ">";
+            lowered_template =
+                (namespace_qualified_name(name, namespace_aliases) ? replace_dots(name) : name) +
+                "<" + lowered_template_args.str() + ">";
         }
         const std::string replacement = lowered_template + "(" + lowered_args + ")";
         expr.replace(name_start, args_close + 1 - name_start, replacement);

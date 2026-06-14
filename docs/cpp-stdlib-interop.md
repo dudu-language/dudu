@@ -27,6 +27,11 @@ The important proof is compile-and-run coverage. Shape-only tests are useful, bu
 - `std::sort`
 - `std::count`
 - `std::find`
+- `std::lower_bound`
+- `std::remove` plus container `erase`
+- `std::set`, `std::deque`, `std::priority_queue`
+- `std::pair`, `std::tuple`, `std::make_pair`, `std::make_tuple`, and
+  templated `std::get`
 - Dudu-side diagnostics for stdlib callback argument mismatches
 - Dudu surface containers lowering to STL containers:
   - `list[T]` -> `std::vector<T>`
@@ -52,6 +57,7 @@ constructor fallback when scanner metadata is incomplete.
 ## Executed Fixtures
 
 - `tests/fixtures/cpp_stdlib_interop.dd`
+- `tests/fixtures/cpp_stdlib_algorithms.dd`
 - `tests/fixtures/cpp_std_variant.dd`
 - `tests/fixtures/bad_cpp_std_function_call.dd`
 

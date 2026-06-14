@@ -15,7 +15,9 @@ bool is_builtin_type(const std::string& type) {
     return builtins.contains(type);
 }
 
-[[noreturn]] void fail(const SourceLocation& location, const std::string& message) { throw CompileError(location, message); }
+[[noreturn]] void fail(const SourceLocation& location, const std::string& message) {
+    throw CompileError(location, message);
+}
 
 void add_name(std::map<std::string, SourceLocation>& names, const std::string& name,
               const SourceLocation& location) {
@@ -67,7 +69,9 @@ bool has_decorator(const FunctionDecl& fn, std::string_view name) {
 bool is_test_decorator(const FunctionDecl& fn) {
     for (const Decorator& decorator : fn.decorators) {
         const std::string text = trim(decorator.text);
-        if (text == "test" || text == "test.ignore" || text == "test.should_panic" || decorator_is_call(text, "test.should_panic")) return true;
+        if (text == "test" || text == "test.ignore" || text == "test.should_panic" ||
+            decorator_is_call(text, "test.should_panic"))
+            return true;
     }
     return false;
 }
@@ -293,6 +297,13 @@ std::vector<std::string> tuple_types(const Symbols& symbols, std::string type) {
 
 Symbols collect_symbols(const ModuleAst& module) {
     Symbols symbols;
+    for (const ImportDecl& import : module.imports) {
+        if (import.kind == ImportKind::ForeignCpp && !import.alias.empty() &&
+            import.module_path.find('/') == std::string::npos &&
+            import.module_path.find('\\') == std::string::npos) {
+            symbols.native_template_fallback_prefixes.insert(import.alias);
+        }
+    }
     std::map<std::string, SourceLocation> names;
     for (const char* type : {"bool", "i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64", "isize",
                              "usize", "f32", "f64", "void", "str", "cstr"}) {
@@ -305,7 +316,8 @@ Symbols collect_symbols(const ModuleAst& module) {
     }
     for (const NativeTypeDecl& type : module.native_types) {
         symbols.types.insert(type.name);
-        if (!type.type.empty()) symbols.aliases[type.name] = type.type;
+        if (!type.type.empty())
+            symbols.aliases[type.name] = type.type;
     }
     for (const NativeValueDecl& value : module.native_values) {
         add_name(names, value.name, value.location);

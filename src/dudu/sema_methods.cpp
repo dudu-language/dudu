@@ -1,10 +1,9 @@
 #include "dudu/sema_methods.hpp"
 
+#include "dudu/cpp_lower.hpp"
 #include "dudu/sema_index.hpp"
 #include "dudu/sema_scan.hpp"
 #include "dudu/source.hpp"
-
-#include "dudu/cpp_lower.hpp"
 
 #include <cctype>
 
@@ -159,13 +158,19 @@ std::string substitute_receiver_template_type(std::string type,
         return type;
     }
     const std::string& first = receiver_args.front();
-    for (const char* name : {"T", "_T", "_Tp", "_Tp1", "_Ty", "_Ty1", "value_type",
-                             "element_type"}) {
+    for (const char* name :
+         {"T", "_T", "_Tp", "_Tp1", "_Ty", "_Ty1", "value_type", "element_type"}) {
         type = replace_type_identifier(std::move(type), name, first);
     }
     if (receiver_args.size() >= 2) {
         type = replace_type_identifier(std::move(type), "_Key", receiver_args[0]);
         type = replace_type_identifier(std::move(type), "_Val", receiver_args[1]);
+        type = replace_type_identifier(std::move(type), "_T1", receiver_args[0]);
+        type = replace_type_identifier(std::move(type), "_T2", receiver_args[1]);
+        type = replace_type_identifier(std::move(type), "_Tp1", receiver_args[0]);
+        type = replace_type_identifier(std::move(type), "_Tp2", receiver_args[1]);
+        type = replace_type_identifier(std::move(type), "_Ty1", receiver_args[0]);
+        type = replace_type_identifier(std::move(type), "_Ty2", receiver_args[1]);
         type = replace_type_identifier(std::move(type), "mapped_type", receiver_args[1]);
         type = replace_type_identifier(std::move(type), "key_type", receiver_args[0]);
     }
@@ -271,7 +276,7 @@ std::string member_path_type(const Symbols& symbols,
         bool found = false;
         for (const FieldDecl& decl : klass->second->fields) {
             if (decl.name == field) {
-                type = decl.type;
+                type = substitute_receiver_template_type(decl.type, template_args_from_type(type));
                 found = true;
                 break;
             }
@@ -357,6 +362,50 @@ bool method_signature_for_type(const Symbols& symbols, std::string receiver_type
         fail(*location, "unknown method: " + type + "." + method_name);
     }
     return false;
+}
+
+std::vector<FunctionSignature> method_signatures_for_type(const Symbols& symbols,
+                                                          std::string receiver_type,
+                                                          const std::string& method_name) {
+    FunctionSignature builtin;
+    if (builtin_cpp_method_signature(symbols, receiver_type, method_name, builtin)) {
+        return {builtin};
+    }
+    std::vector<FunctionSignature> out;
+    const std::string templated_receiver = receiver_template_type(symbols, receiver_type);
+    const std::vector<std::string> receiver_args = template_args_from_type(templated_receiver);
+    const std::string type = unwrap_receiver_type(symbols, std::move(receiver_type));
+    const std::string lookup_name = template_method_name(method_name);
+    const std::string template_arg = template_method_arg(method_name);
+    const auto klass = symbols.classes.find(type);
+    if (klass == symbols.classes.end()) {
+        return out;
+    }
+    for (const FunctionDecl& method : klass->second->methods) {
+        if (method.name != lookup_name) {
+            continue;
+        }
+        FunctionSignature signature;
+        const size_t first_param =
+            !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
+        for (size_t i = first_param; i < method.params.size(); ++i) {
+            std::string param_type = substitute_template_type(method.params[i].type, template_arg);
+            signature.params.push_back(
+                substitute_receiver_template_type(std::move(param_type), receiver_args));
+        }
+        signature.return_type = method.return_type.empty()
+                                    ? "void"
+                                    : substitute_template_type(method.return_type, template_arg);
+        signature.return_type =
+            substitute_receiver_template_type(std::move(signature.return_type), receiver_args);
+        out.push_back(std::move(signature));
+    }
+    for (const std::string& base : klass->second->base_classes) {
+        std::vector<FunctionSignature> base_signatures =
+            method_signatures_for_type(symbols, base, method_name);
+        out.insert(out.end(), base_signatures.begin(), base_signatures.end());
+    }
+    return out;
 }
 
 bool static_method_signature_for_type(const Symbols& symbols, const std::string& type_name,

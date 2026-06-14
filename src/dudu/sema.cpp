@@ -1,4 +1,5 @@
 #include "dudu/sema.hpp"
+
 #include "dudu/build_flags.hpp"
 #include "dudu/control_flow.hpp"
 #include "dudu/cpp_lower.hpp"
@@ -19,11 +20,14 @@
 #include "dudu/sema_scan.hpp"
 #include "dudu/type_compat.hpp"
 #include "dudu/unsupported.hpp"
+
 #include <cctype>
 #include <set>
 namespace dudu {
 namespace {
-[[noreturn]] void fail(const SourceLocation& location, const std::string& message) { throw CompileError(location, message); }
+[[noreturn]] void fail(const SourceLocation& location, const std::string& message) {
+    throw CompileError(location, message);
+}
 std::string infer_expr(const FunctionScope& scope, std::string expr,
                        const SourceLocation* location = nullptr);
 std::vector<std::string> call_args(std::string expr, size_t open) {
@@ -33,7 +37,8 @@ std::vector<std::string> call_args(std::string expr, size_t open) {
 bool can_assign_expr(const FunctionScope& scope, const std::string& expected,
                      const std::string& expr, const std::string& got) {
     return assignment_type_allowed(expected, expr, got) ||
-           assignment_type_allowed(resolve_alias(scope.symbols, expected), expr, resolve_alias(scope.symbols, got)) ||
+           assignment_type_allowed(resolve_alias(scope.symbols, expected), expr,
+                                   resolve_alias(scope.symbols, got)) ||
            native_base_assignable(scope.symbols, expected, got);
 }
 bool is_builtin_call(const std::string& callee) {
@@ -48,6 +53,11 @@ bool is_local_member_call(const FunctionScope& scope, const std::string& callee)
 bool freestanding_like(const FunctionScope& scope) {
     return scope.target_mode == "freestanding" || scope.target_mode == "embedded";
 }
+
+bool foreign_cpp_type_name(const std::string& type) {
+    return type.find('.') != std::string::npos || type.find("::") != std::string::npos;
+}
+
 void check_call_args(const FunctionScope& scope, const std::string& callee,
                      const FunctionSignature& signature, const std::vector<std::string>& args,
                      const SourceLocation* location) {
@@ -68,6 +78,33 @@ void check_call_args(const FunctionScope& scope, const std::string& callee,
         }
     }
 }
+
+bool call_args_match(const FunctionScope& scope, const FunctionSignature& signature,
+                     const std::vector<std::string>& args) {
+    if ((!signature.variadic && args.size() != signature.params.size()) ||
+        (signature.variadic && args.size() < signature.params.size())) {
+        return false;
+    }
+    for (size_t i = 0; i < signature.params.size(); ++i) {
+        const std::string got = infer_expr(scope, args[i], nullptr);
+        if (!can_assign_expr(scope, signature.params[i], args[i], got)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+std::optional<FunctionSignature> matching_signature(const FunctionScope& scope,
+                                                    const std::vector<FunctionSignature>& options,
+                                                    const std::vector<std::string>& args) {
+    for (const FunctionSignature& signature : options) {
+        if (call_args_match(scope, signature, args)) {
+            return signature;
+        }
+    }
+    return std::nullopt;
+}
+
 std::string infer_expr(const FunctionScope& scope, std::string expr,
                        const SourceLocation* location) {
     expr = trim(std::move(expr));
@@ -124,12 +161,11 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
         }
         if (const auto klass = scope.symbols.classes.find(resolve_alias(scope.symbols, callee));
             klass != scope.symbols.classes.end()) {
-            check_constructor_args(scope, *klass->second, call_args(expr, call), location,
-                                   infer_expr,
-                                   [&](const std::string& expected, const std::string& value,
-                                       const std::string& got) {
-                                       return can_assign_expr(scope, expected, value, got);
-                                   });
+            check_constructor_args(
+                scope, *klass->second, call_args(expr, call), location, infer_expr,
+                [&](const std::string& expected, const std::string& value, const std::string& got) {
+                    return can_assign_expr(scope, expected, value, got);
+                });
             return callee;
         }
         if (const auto fn = scope.symbols.function_signatures.find(callee);
@@ -137,14 +173,11 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
             check_call_args(scope, callee, fn->second, call_args(expr, call), location);
             return fn->second.return_type;
         }
-        if (const auto signature =
-                native_signature_for_call(scope, callee, call_args(expr, call), location,
-                                          infer_expr,
-                                          [&](const std::string& expected,
-                                              const std::string& value,
-                                              const std::string& got) {
-                                              return can_assign_expr(scope, expected, value, got);
-                                          })) {
+        if (const auto signature = native_signature_for_call(
+                scope, callee, call_args(expr, call), location, infer_expr,
+                [&](const std::string& expected, const std::string& value, const std::string& got) {
+                    return can_assign_expr(scope, expected, value, got);
+                })) {
             return signature->return_type;
         }
         if (!is_local_member_call(scope, callee) && callee.find('.') == std::string::npos &&
@@ -169,11 +202,24 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
                 check_call_args(scope, callee, signature, call_args(expr, call), location);
                 return signature.return_type;
             }
-            if (method_signature_for_type(
-                    scope.symbols,
-                    member_path_type(scope.symbols, scope.locals, nullptr, receiver, ""),
-                    method_name, signature, location)) {
-                check_call_args(scope, callee, signature, call_args(expr, call), location);
+            const std::string receiver_type =
+                member_path_type(scope.symbols, scope.locals, nullptr, receiver, "");
+            if (method_signature_for_type(scope.symbols, receiver_type, method_name, signature,
+                                          location)) {
+                const std::vector<std::string> args = call_args(expr, call);
+                const std::vector<FunctionSignature> signatures =
+                    method_signatures_for_type(scope.symbols, receiver_type, method_name);
+                if (const auto match = matching_signature(scope, signatures, args)) {
+                    check_call_args(scope, callee, *match, args, location);
+                    return match->return_type;
+                }
+                if (foreign_cpp_type_name(resolve_alias(scope.symbols, receiver_type))) {
+                    for (const std::string& arg : args) {
+                        (void)infer_expr(scope, arg, location);
+                    }
+                    return "auto";
+                }
+                check_call_args(scope, callee, signature, args, location);
                 return signature.return_type;
             }
         }
@@ -350,12 +396,14 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
         }
         const auto parts = split_top_level_args(stmt.condition);
         check_condition_type(scope, stmt, parts.empty() ? "" : parts.front());
-        if (parts.size() > 1) (void)infer_expr(scope, parts[1], &stmt.location);
+        if (parts.size() > 1)
+            (void)infer_expr(scope, parts[1], &stmt.location);
         return;
     }
     if (stmt.kind == StmtKind::Raise) {
         const std::string expr = stmt.value;
-        if (!expr.empty()) (void)infer_expr(scope, expr, &stmt.location);
+        if (!expr.empty())
+            (void)infer_expr(scope, expr, &stmt.location);
         return;
     }
     if (stmt.kind == StmtKind::CppEscape || stmt.kind == StmtKind::Pass)
@@ -392,7 +440,8 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
     if (stmt.kind == StmtKind::Except) {
         FunctionScope nested = scope;
         std::string header = trim(text.substr(6));
-        if (!header.empty() && header.back() == ':') header.pop_back();
+        if (!header.empty() && header.back() == ':')
+            header.pop_back();
         const size_t colon = find_top_level_char(header, ':');
         if (!header.empty() && colon == std::string::npos)
             fail(stmt.location, "expected except binding as name: Type");
@@ -400,7 +449,8 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
             const std::string name = trim(header.substr(0, colon));
             const std::string type = trim(header.substr(colon + 1));
             check_local_binding_name(stmt.location, name);
-            if (!known_type(scope.symbols, type)) fail(stmt.location, "unknown catch type: " + type);
+            if (!known_type(scope.symbols, type))
+                fail(stmt.location, "unknown catch type: " + type);
             nested.locals[name] = "&const[" + type + "]";
         }
         check_block(nested, stmt.children, return_type, loop_depth);
@@ -447,8 +497,8 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
         const std::string lhs = stmt.target;
         if (split_top_level(lhs).size() > 1) {
             const std::vector<std::string> names = split_top_level(lhs);
-            const std::vector<std::string> types = tuple_types(
-                scope.symbols, infer_expr(scope, stmt.value, &stmt.location));
+            const std::vector<std::string> types =
+                tuple_types(scope.symbols, infer_expr(scope, stmt.value, &stmt.location));
             if (names.size() != types.size()) {
                 fail(stmt.location, "tuple destructuring count mismatch");
             }

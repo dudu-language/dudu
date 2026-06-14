@@ -130,6 +130,16 @@ bool args_match_signature(const FunctionScope& scope, const FunctionSignature& s
     return true;
 }
 
+bool template_fallback_allowed(const FunctionScope& scope, const std::string& lookup,
+                               bool explicit_template_call) {
+    (void)explicit_template_call;
+    const size_t dot = lookup.find('.');
+    if (dot == std::string::npos) {
+        return false;
+    }
+    return scope.symbols.native_template_fallback_prefixes.contains(lookup.substr(0, dot));
+}
+
 } // namespace
 
 std::optional<FunctionSignature> native_signature_for_call(const FunctionScope& scope,
@@ -154,6 +164,19 @@ std::optional<FunctionSignature> native_signature_for_call(const FunctionScope& 
         if (args_match_signature(scope, signature, args, location, infer_expr, can_assign)) {
             return signature;
         }
+    }
+    bool has_variadic_candidate = false;
+    for (const FunctionSignature& signature : candidates) {
+        has_variadic_candidate = has_variadic_candidate || signature.variadic;
+    }
+    if (!has_variadic_candidate &&
+        template_fallback_allowed(scope, lookup, template_call.has_value())) {
+        for (const std::string& arg : args) {
+            (void)infer_expr(scope, arg, location);
+        }
+        FunctionSignature signature;
+        signature.return_type = "auto";
+        return signature;
     }
     if (location != nullptr) {
         fail(*location,
