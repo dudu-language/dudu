@@ -232,7 +232,9 @@ action wired into VS Code. Organize-imports code actions are implemented for the
 leading import block and return a WorkspaceEdit through the VS Code adapter.
 Missing-import quick fixes are implemented for unambiguous Dudu workspace
 symbols and insert a `from module import symbol` edit. Native config quick fixes
-and project-wide rename beyond open documents remain.
+are implemented for known missing native headers that map cleanly to
+`pkg-config` packages such as `raylib`, `sqlite3`, `sdl3`, `glfw3`, and
+`vulkan`. Project-wide rename beyond open documents remains.
 
 ## Tests
 
@@ -264,6 +266,8 @@ Imported Dudu module completion is covered with an unopened sibling module.
 Completion resolve, snippets, and typed local completions are covered.
 Format and organize-imports code actions are covered.
 Missing-import quick fixes are covered using an unopened workspace file.
+Native config quick fixes are covered with a fixture `dudu.toml` edit for a
+known missing native header package.
 
 ## Non-Goals
 

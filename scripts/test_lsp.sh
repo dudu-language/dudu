@@ -37,6 +37,8 @@ def read_packets(data):
 uri = "file:///tmp/dudu_lsp_bad.dd"
 native_uri = f"file://{repo_root}/tests/fixtures/dudu_lsp_native.dd"
 missing_native_uri = f"file://{repo_root}/tests/fixtures/dudu_lsp_missing_native.dd"
+native_pkg_uri = f"file://{repo_root}/tests/fixtures/lsp_pkg_project/main.dd"
+native_pkg_config_uri = f"file://{repo_root}/tests/fixtures/lsp_pkg_project/dudu.toml"
 source = "\n".join(
     [
         "class Player:",
@@ -373,6 +375,54 @@ messages = [
             },
         }
     ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "method": "textDocument/didOpen",
+            "params": {
+                "textDocument": {
+                    "uri": native_pkg_uri,
+                    "languageId": "dudu",
+                    "version": 1,
+                    "text": "\n".join(
+                        [
+                            'import c "raylib.h"',
+                            "",
+                            "def main() -> i32:",
+                            "    return 0",
+                            "",
+                        ]
+                    ),
+                }
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 27,
+            "method": "textDocument/codeAction",
+            "params": {
+                "textDocument": {"uri": native_pkg_uri},
+                "range": {
+                    "start": {"line": 0, "character": 0},
+                    "end": {"line": 0, "character": 18},
+                },
+                "context": {
+                    "diagnostics": [
+                        {
+                            "range": {
+                                "start": {"line": 0, "character": 0},
+                                "end": {"line": 0, "character": 18},
+                            },
+                            "source": "dudu/native-header",
+                            "message": "could not scan native header raylib.h\nfatal error: 'raylib.h' file not found",
+                        }
+                    ]
+                },
+            },
+        }
+    ),
     packet({"jsonrpc": "2.0", "id": 20, "method": "shutdown", "params": None}),
     packet({"jsonrpc": "2.0", "method": "exit", "params": None}),
 ]
@@ -540,6 +590,22 @@ assert missing_import["kind"] == "quickfix"
 assert missing_import_edit["range"]["start"]["line"] == 3
 assert missing_import_edit["range"]["end"]["line"] == 3
 assert missing_import_edit["newText"] == "from lsp_import_target import missing_helper\n"
+
+native_config_actions = next(item for item in responses if item.get("id") == 27)
+native_config_fix = next(
+    item
+    for item in native_config_actions["result"]
+    if item["title"] == "Add pkg-config package raylib to dudu.toml"
+)
+native_config_edit = native_config_fix["edit"]["changes"][native_pkg_config_uri][0]
+assert native_config_fix["kind"] == "quickfix"
+assert native_config_edit["newText"] == (
+    'name = "lsp_pkg_project"\n'
+    'entry = "main.dd"\n'
+    "\n"
+    "[pkg]\n"
+    'libs = ["raylib"]\n'
+)
 
 workspace_references = next(item for item in responses if item.get("id") == 18)
 workspace_reference_uris = {item["uri"] for item in workspace_references["result"]}

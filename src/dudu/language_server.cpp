@@ -959,6 +959,9 @@ class LanguageServer {
         for (const std::string& action : missing_import_actions(*doc, params)) {
             actions.push_back(action);
         }
+        for (const std::string& action : native_config_actions(*doc, params)) {
+            actions.push_back(action);
+        }
         std::ostringstream out;
         out << "[";
         for (size_t i = 0; i < actions.size(); ++i) {
@@ -1489,6 +1492,152 @@ class LanguageServer {
             }
         }
         return out;
+    }
+
+    std::vector<std::string> native_config_actions(const Document& doc, const Json* params) const {
+        std::vector<std::string> out;
+        const Json* context = params == nullptr ? nullptr : params->get("context");
+        const Json* diagnostics = context == nullptr ? nullptr : context->get("diagnostics");
+        const JsonArray* array = diagnostics == nullptr ? nullptr : diagnostics->array();
+        if (array == nullptr) {
+            return out;
+        }
+        std::set<std::string> seen_packages;
+        for (const Json& diagnostic : *array) {
+            if (string_value(diagnostic.get("source")) != "dudu/native-header") {
+                continue;
+            }
+            const std::optional<std::string> header =
+                missing_native_header(string_value(diagnostic.get("message")));
+            if (!header) {
+                continue;
+            }
+            const std::optional<std::string> package = package_for_header(*header);
+            if (!package || !seen_packages.insert(*package).second) {
+                continue;
+            }
+            const std::optional<std::string> action = pkg_config_action(doc, *package);
+            if (action) {
+                out.push_back(*action);
+            }
+        }
+        return out;
+    }
+
+    std::optional<std::string> pkg_config_action(const Document& doc,
+                                                 const std::string& package) const {
+        const std::filesystem::path config_path = project_config_path(doc.path);
+        if (config_path.empty()) {
+            return std::nullopt;
+        }
+        const ProjectConfig config = parse_project_config(config_path);
+        if (std::find(config.pkg_config_packages.begin(), config.pkg_config_packages.end(),
+                      package) != config.pkg_config_packages.end()) {
+            return std::nullopt;
+        }
+        std::ifstream file(config_path);
+        if (!file) {
+            return std::nullopt;
+        }
+        const std::string text{std::istreambuf_iterator<char>(file),
+                               std::istreambuf_iterator<char>()};
+        const std::string replacement = add_pkg_config_package(text, package);
+        if (replacement == text) {
+            return std::nullopt;
+        }
+        const int end_line = line_count(text);
+        const std::string config_uri = file_uri(config_path);
+        return "{\"title\":\"Add pkg-config package " + json_escape(package) +
+               " to dudu.toml\",\"kind\":\"quickfix\",\"edit\":{\"changes\":{\"" +
+               json_escape(config_uri) + "\":[{\"range\":" + range_json(0, 0, end_line, 0) +
+               ",\"newText\":\"" + json_escape(replacement) + "\"}]}}}";
+    }
+
+    static std::optional<std::string> missing_native_header(const std::string& message) {
+        constexpr std::string_view prefix = "could not scan native header ";
+        const size_t start = message.find(prefix);
+        if (start == std::string::npos) {
+            return std::nullopt;
+        }
+        std::string header = message.substr(start + prefix.size());
+        if (const size_t newline = header.find('\n'); newline != std::string::npos) {
+            header = header.substr(0, newline);
+        }
+        header = trim_copy(std::move(header));
+        return header.empty() ? std::nullopt : std::optional<std::string>{header};
+    }
+
+    static std::optional<std::string> package_for_header(const std::string& header) {
+        static const std::map<std::string, std::string> packages = {
+            {"GLFW/glfw3.h", "glfw3"}, {"SDL3/SDL.h", "sdl3"},        {"raylib.h", "raylib"},
+            {"sqlite3.h", "sqlite3"},  {"vulkan/vulkan.h", "vulkan"},
+        };
+        const auto found = packages.find(header);
+        return found == packages.end() ? std::nullopt : std::optional<std::string>{found->second};
+    }
+
+    static std::string add_pkg_config_package(const std::string& text, const std::string& package) {
+        std::vector<std::string> lines;
+        std::istringstream in(text);
+        std::string line;
+        while (std::getline(in, line)) {
+            lines.push_back(line);
+        }
+        const bool trailing_newline = !text.empty() && text.back() == '\n';
+        bool in_pkg = false;
+        int pkg_section = -1;
+        int pkg_section_end = static_cast<int>(lines.size());
+        for (int i = 0; i < static_cast<int>(lines.size()); ++i) {
+            const std::string trimmed = trim_copy(lines[static_cast<size_t>(i)]);
+            if (trimmed.size() >= 2 && trimmed.front() == '[' && trimmed.back() == ']') {
+                if (in_pkg) {
+                    pkg_section_end = i;
+                    break;
+                }
+                in_pkg = trimmed == "[pkg]";
+                if (in_pkg) {
+                    pkg_section = i;
+                }
+                continue;
+            }
+            if (in_pkg && starts_with(trimmed, "libs")) {
+                const size_t open = lines[static_cast<size_t>(i)].find('[');
+                const size_t close = lines[static_cast<size_t>(i)].rfind(']');
+                if (open == std::string::npos || close == std::string::npos || close < open) {
+                    return text;
+                }
+                const std::string existing =
+                    trim_copy(lines[static_cast<size_t>(i)].substr(open + 1, close - open - 1));
+                const std::string insert =
+                    existing.empty() ? "\"" + package + "\"" : ", \"" + package + "\"";
+                lines[static_cast<size_t>(i)].insert(close, insert);
+                return join_lines(lines, trailing_newline);
+            }
+        }
+        if (pkg_section >= 0) {
+            lines.insert(lines.begin() + pkg_section_end, "libs = [\"" + package + "\"]");
+            return join_lines(lines, trailing_newline);
+        }
+        if (!lines.empty() && !trim_copy(lines.back()).empty()) {
+            lines.push_back("");
+        }
+        lines.push_back("[pkg]");
+        lines.push_back("libs = [\"" + package + "\"]");
+        return join_lines(lines, true);
+    }
+
+    static std::string join_lines(const std::vector<std::string>& lines, bool trailing_newline) {
+        std::ostringstream out;
+        for (size_t i = 0; i < lines.size(); ++i) {
+            if (i > 0) {
+                out << "\n";
+            }
+            out << lines[i];
+        }
+        if (trailing_newline) {
+            out << "\n";
+        }
+        return out.str();
     }
 
     std::optional<std::string> missing_import_action(const Document& doc,
