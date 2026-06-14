@@ -334,6 +334,10 @@ calls still fall back to the old string inference path until the AST grows those
 nodes. Binary expression parsing covers logical, comparison, bitwise, shift,
 arithmetic, and modulo operators.
 
+Comma-separated expression children now keep their own source columns for call
+arguments, list literals, tuple literals, set/dict entries, and template-call
+arguments parsed through expression lists.
+
 ## Acceptance
 
 - Existing examples still compile and run.

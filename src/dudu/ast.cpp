@@ -255,8 +255,22 @@ bool enclosed_by_outer_pair(std::string_view text, char open, char close) {
     return find_matching_open(text, text.size() - 1, open, close) == 0;
 }
 
-std::vector<std::string_view> split_top_level_commas(std::string_view text) {
-    std::vector<std::string_view> parts;
+struct CommaPart {
+    std::string_view text;
+    size_t offset = 0;
+};
+
+CommaPart trim_comma_part(std::string_view text, size_t offset) {
+    const size_t trim_start = text.find_first_not_of(" \t\r\n");
+    if (trim_start == std::string_view::npos) {
+        return {{}, offset + text.size()};
+    }
+    const size_t trim_end = text.find_last_not_of(" \t\r\n");
+    return {text.substr(trim_start, trim_end - trim_start + 1), offset + trim_start};
+}
+
+std::vector<CommaPart> split_top_level_comma_parts(std::string_view text) {
+    std::vector<CommaPart> parts;
     int bracket_depth = 0;
     int paren_depth = 0;
     int brace_depth = 0;
@@ -276,11 +290,19 @@ std::vector<std::string_view> split_top_level_commas(std::string_view text) {
         } else if (c == '}') {
             --brace_depth;
         } else if (bracket_depth == 0 && paren_depth == 0 && brace_depth == 0 && c == ',') {
-            parts.push_back(trim_view(text.substr(start, i - start)));
+            parts.push_back(trim_comma_part(text.substr(start, i - start), start));
             start = i + 1;
         }
     }
-    parts.push_back(trim_view(text.substr(start)));
+    parts.push_back(trim_comma_part(text.substr(start), start));
+    return parts;
+}
+
+std::vector<std::string_view> split_top_level_commas(std::string_view text) {
+    std::vector<std::string_view> parts;
+    for (const CommaPart& part : split_top_level_comma_parts(text)) {
+        parts.push_back(part.text);
+    }
     return parts;
 }
 
@@ -403,9 +425,9 @@ Expr make_expr(ExprKind kind, std::string_view text, SourceLocation location) {
 
 std::vector<Expr> parse_expr_list(std::string_view text, SourceLocation location) {
     std::vector<Expr> out;
-    for (const std::string_view part : split_top_level_commas(text)) {
-        if (!trim_view(part).empty()) {
-            out.push_back(parse_expr_text(part, location));
+    for (const CommaPart& part : split_top_level_comma_parts(text)) {
+        if (!part.text.empty()) {
+            out.push_back(parse_expr_text(part.text, advance_columns(location, part.offset)));
         }
     }
     return out;

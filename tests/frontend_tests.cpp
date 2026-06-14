@@ -257,7 +257,11 @@ void test_expression_ast_shape() {
     assert(answer.value_expr.range.start.column > answer.location.column);
     assert(answer.value_expr.children.size() == 2);
     assert(answer.value_expr.children[0].kind == dudu::ExprKind::IntLiteral);
+    assert(answer.value_expr.children[0].range.start.line == 2);
     assert(answer.value_expr.children[1].kind == dudu::ExprKind::Binary);
+    assert(answer.value_expr.children[1].range.start.line == 2);
+    assert(answer.value_expr.children[1].range.start.column >
+           answer.value_expr.children[0].range.start.column);
     assert(answer.value_expr.children[1].op == "+");
     assert(answer.value_expr.children[1].children[0].kind == dudu::ExprKind::Index);
 
@@ -284,6 +288,10 @@ void test_expression_ast_shape() {
     assert(values.kind == dudu::StmtKind::VarDecl);
     assert(values.value_expr.kind == dudu::ExprKind::ListLiteral);
     assert(values.value_expr.children.size() == 3);
+    assert(values.value_expr.children[1].range.start.column >
+           values.value_expr.children[0].range.start.column);
+    assert(values.value_expr.children[2].range.start.column >
+           values.value_expr.children[1].range.start.column);
     assert(values.value_expr.range.start.line == 5);
     assert(values.value_expr.range.start.column > values.location.column);
 
