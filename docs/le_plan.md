@@ -96,11 +96,10 @@ Make the C++ object model feel complete through Python-shaped syntax:
 - C++ interop behavior for all of the above
 
 Status: constructors, destructors, member methods, imported C++ operator
-overloads, Dudu-native operator methods, and imported C++ base-method lookup are
-implemented. Align the implementation with the OOP plan's target surface:
+overloads, Dudu-native operator methods, imported C++ base-method lookup,
 `init`/`drop`, class-scoped functions without `@staticmethod`, explicit
-`static` fields, and `@operator(...)`. Broader overload-set polish remains part
-of header-awareness hardening.
+`static[T]` fields, and `@operator(...)` are implemented. Broader overload-set
+polish remains part of header-awareness hardening.
 
 This is more important than user-defined macros because it directly affects
 normal systems and game code.
@@ -114,11 +113,11 @@ Related specs:
 
 Support class-scoped constants, static data, and static functions.
 
-Status: align this with the OOP plan. Class-scoped `ALL_CAPS` constants are
-static constants, `name: static[T] = value` is mutable class-shared state, and
-functions inside a class with no `self` are class-scoped functions. Broader
-module and namespace constants remain a candidate if real examples need cleaner
-organization than file-level constants.
+Status: class-scoped `ALL_CAPS` constants are static constants,
+`name: static[T] = value` is mutable class-shared state, and functions inside a
+class with no `self` are class-scoped functions. Broader module and namespace
+constants remain a candidate if real examples need cleaner organization than
+file-level constants.
 
 Python, Rust, C, and C++ all have ways to hang values off a type or namespace.
 Dudu needs that so constants and helpers do not all live in the global module

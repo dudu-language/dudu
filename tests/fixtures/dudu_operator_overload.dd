@@ -2,10 +2,12 @@ class Vec2:
     x: i32
     y: i32
 
-    def __add__(self, other: Vec2) -> Vec2:
+    @operator("+")
+    def add(self, other: Vec2) -> Vec2:
         return Vec2(self.x + other.x, self.y + other.y)
 
-    def __eq__(self, other: Vec2) -> bool:
+    @operator("==")
+    def equals(self, other: Vec2) -> bool:
         return self.x == other.x and self.y == other.y
 
 

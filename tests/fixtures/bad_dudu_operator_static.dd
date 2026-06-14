@@ -2,8 +2,8 @@ class Vec2:
     x: i32
     y: i32
 
-    @staticmethod
-    def __add__(other: Vec2) -> Vec2:
+    @operator("+")
+    def add(other: Vec2) -> Vec2:
         return other
 
 

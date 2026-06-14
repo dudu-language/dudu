@@ -89,6 +89,34 @@ bool function_has_decorator(const FunctionDecl& fn, std::string_view name) {
     return false;
 }
 
+std::string function_decorator_arg(const FunctionDecl& fn, std::string_view name) {
+    const std::string prefix = std::string(name) + "(";
+    for (const Decorator& decorator : fn.decorators) {
+        const std::string text = trim_copy(decorator.text);
+        if (starts_with(text, prefix) && ends_with(text, ")")) {
+            return trim_copy(text.substr(prefix.size(), text.size() - prefix.size() - 1));
+        }
+    }
+    return {};
+}
+
+std::string unquoted(std::string text) {
+    text = trim_copy(std::move(text));
+    if (text.size() >= 2 && ((text.front() == '"' && text.back() == '"') ||
+                             (text.front() == '\'' && text.back() == '\''))) {
+        return text.substr(1, text.size() - 2);
+    }
+    return text;
+}
+
+bool is_constructor_method(const FunctionDecl& method) {
+    return method.name == "init" || method.name == "__init__";
+}
+
+bool is_destructor_method(const FunctionDecl& method) {
+    return method.name == "drop" || method.name == "__del__";
+}
+
 std::string operator_name(const std::string& method_name) {
     static const std::map<std::string, std::string> names = {
         {"__add__", "operator+"},     {"__sub__", "operator-"}, {"__mul__", "operator*"},
@@ -98,6 +126,14 @@ std::string operator_name(const std::string& method_name) {
     };
     const auto it = names.find(method_name);
     return it == names.end() ? method_name : it->second;
+}
+
+std::string operator_name(const FunctionDecl& method) {
+    const std::string op = unquoted(function_decorator_arg(method, "operator"));
+    if (!op.empty()) {
+        return op == "bool" ? "operator bool" : "operator" + op;
+    }
+    return operator_name(method.name);
 }
 
 std::string class_opening(const ClassDecl& klass) {
@@ -128,17 +164,21 @@ void emit_method(std::ostringstream& out, const std::string& class_name, const F
                  const std::map<std::string, std::string>& function_returns) {
     const size_t first_param =
         !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
-    if (method.name == "__init__") {
+    if (is_constructor_method(method)) {
         out << "    " << class_name << '(';
-    } else if (method.name == "__del__") {
+    } else if (is_destructor_method(method)) {
         out << "    ~" << class_name << '(';
     } else {
         out << "    ";
         if (first_param == 0 || function_has_decorator(method, "staticmethod")) {
             out << "static ";
         }
-        out << lower_cpp_type(method.return_type, aliases) << ' ' << operator_name(method.name)
-            << '(';
+        const std::string lowered_name = operator_name(method);
+        if (lowered_name == "operator bool") {
+            out << "explicit " << lowered_name << '(';
+        } else {
+            out << lower_cpp_type(method.return_type, aliases) << ' ' << lowered_name << '(';
+        }
     }
     for (size_t i = first_param; i < method.params.size(); ++i) {
         if (i > first_param) {

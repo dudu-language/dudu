@@ -1,14 +1,14 @@
 class Counter:
     value: i32
 
-    def __init__(self, seed: i32, bonus: i32):
+    def init(self, seed: i32, bonus: i32):
         self.value = seed + bonus + 1
 
 
 class Tracker:
     out: *i32
 
-    def __del__(self):
+    def drop(self):
         cpp("*self.out += 1;")
 
 

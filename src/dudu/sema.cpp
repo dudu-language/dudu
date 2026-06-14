@@ -338,6 +338,10 @@ void check_condition_type(const FunctionScope& scope, const Stmt& stmt, std::str
     const SourceLocation& location = node_location(stmt.location, stmt.condition_expr);
     const std::string got = infer_expr(scope, expr, &location);
     if (!got.empty() && got != "bool" && got != "auto") {
+        if (const auto signature = dudu_operator_signature(scope.symbols, "bool", got);
+            signature && signature->params.empty() && signature->return_type == "bool") {
+            return;
+        }
         fail(location, "condition must be bool, got " + got);
     }
 }

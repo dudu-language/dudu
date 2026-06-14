@@ -2,7 +2,8 @@ class Vec2:
     x: i32
     y: i32
 
-    def __add__(self, other: Vec2) -> Vec2:
+    @operator("+")
+    def add(self, other: Vec2) -> Vec2:
         return other
 
 

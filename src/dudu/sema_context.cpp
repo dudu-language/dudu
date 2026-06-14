@@ -84,11 +84,54 @@ bool is_operator_method(const std::string& name) {
     return names.contains(name);
 }
 
+std::string decorator_arg(const Decorator& decorator, std::string_view name) {
+    const std::string text = trim(decorator.text);
+    const std::string prefix = std::string(name) + "(";
+    if (text.empty() || !starts_with(text, prefix) || text.back() != ')') {
+        return {};
+    }
+    std::string value = trim(text.substr(prefix.size(), text.size() - prefix.size() - 1));
+    if (value.size() >= 2 && ((value.front() == '"' && value.back() == '"') ||
+                              (value.front() == '\'' && value.back() == '\''))) {
+        value = value.substr(1, value.size() - 2);
+    }
+    return value;
+}
+
+std::string operator_decorator_arg(const FunctionDecl& fn) {
+    for (const Decorator& decorator : fn.decorators) {
+        if (std::string value = decorator_arg(decorator, "operator"); !value.empty()) {
+            return value;
+        }
+    }
+    return {};
+}
+
+bool is_operator_method(const FunctionDecl& method) {
+    return is_operator_method(method.name) || !operator_decorator_arg(method).empty();
+}
+
 bool is_comparison_operator_method(const std::string& name) {
     static const std::set<std::string> names = {
         "__eq__", "__ne__", "__lt__", "__le__", "__gt__", "__ge__",
     };
     return names.contains(name);
+}
+
+bool is_comparison_operator_method(const FunctionDecl& method) {
+    if (is_comparison_operator_method(method.name)) {
+        return true;
+    }
+    static const std::set<std::string> ops = {"==", "!=", "<", "<=", ">", ">="};
+    return ops.contains(operator_decorator_arg(method));
+}
+
+bool is_constructor_method(const FunctionDecl& method) {
+    return method.name == "init" || method.name == "__init__";
+}
+
+bool is_destructor_method(const FunctionDecl& method) {
+    return method.name == "drop" || method.name == "__del__";
 }
 
 bool is_c_abi_primitive(const std::string& type, bool allow_void) {
@@ -164,9 +207,10 @@ void check_function_decorator(const ModuleAst& module, const Decorator& decorato
     const std::string text = trim(decorator.text);
     if (text == "inline" || text == "constexpr" || text == "extern_c" || text == "cuda.global" ||
         text == "cuda.device" || text == "cuda.host" || text == "shader.compute" ||
-        text == "staticmethod" || text == "test" || text == "test.ignore" ||
-        text == "test.should_panic" || decorator_is_call(text, "test.should_panic") ||
-        decorator_is_call(text, "workgroup_size") || decorator_is_call(text, "section")) {
+        text == "staticmethod" || decorator_is_call(text, "operator") || text == "test" ||
+        text == "test.ignore" || text == "test.should_panic" ||
+        decorator_is_call(text, "test.should_panic") || decorator_is_call(text, "workgroup_size") ||
+        decorator_is_call(text, "section")) {
         check_target_decorator_mode(module, decorator, text);
         return;
     }
@@ -418,36 +462,43 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
             if (!fields.insert(method.name).second) {
                 fail(method.location, "duplicate class member: " + method.name);
             }
-            const bool is_static = has_decorator(method, "staticmethod");
-            if ((method.name == "__init__" || method.name == "__del__") &&
+            const bool is_static = has_decorator(method, "staticmethod") || method.params.empty() ||
+                                   method.params.front().name != "self";
+            if ((is_constructor_method(method) || is_destructor_method(method)) &&
                 (method.params.empty() || method.params.front().name != "self")) {
                 fail(method.location, method.name + " requires self parameter");
             }
             if (is_static && !method.params.empty() && method.params.front().name == "self") {
                 fail(method.location, "@staticmethod methods cannot take self");
             }
-            if (is_operator_method(method.name)) {
+            if (is_operator_method(method)) {
                 if (is_static) {
                     fail(method.location, "operator methods cannot be static");
                 }
-                if (method.params.size() != 2 || method.params.front().name != "self") {
+                if (operator_decorator_arg(method) == "bool") {
+                    if (method.params.size() != 1 || method.params.front().name != "self") {
+                        fail(method.location, "bool operator methods require only self");
+                    }
+                    if (method.return_type.empty() || method.return_type != "bool") {
+                        fail(method.location, "bool operator methods must return bool");
+                    }
+                } else if (method.params.size() != 2 || method.params.front().name != "self") {
                     fail(method.location, "operator methods require self and one parameter");
-                }
-                if (is_comparison_operator_method(method.name) &&
-                    (method.return_type.empty() || method.return_type != "bool")) {
+                } else if (is_comparison_operator_method(method) &&
+                           (method.return_type.empty() || method.return_type != "bool")) {
                     fail(method.location, "comparison operator methods must return bool");
                 }
             }
-            if (method.name == "__init__" && !method.return_type.empty() &&
+            if (is_constructor_method(method) && !method.return_type.empty() &&
                 method.return_type != "void") {
-                fail(method.location, "__init__ cannot declare a return type");
+                fail(method.location, method.name + " cannot declare a return type");
             }
-            if (method.name == "__del__") {
+            if (is_destructor_method(method)) {
                 if (method.params.size() != 1) {
-                    fail(method.location, "__del__ cannot take parameters");
+                    fail(method.location, method.name + " cannot take parameters");
                 }
                 if (!method.return_type.empty() && method.return_type != "void") {
-                    fail(method.location, "__del__ cannot declare a return type");
+                    fail(method.location, method.name + " cannot declare a return type");
                 }
             }
             for (const Decorator& decorator : method.decorators) {

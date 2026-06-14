@@ -1,5 +1,5 @@
 class Counter:
-    badName: i32 = 0
+    badName: static[i32] = 0
 
 
 def main() -> i32:

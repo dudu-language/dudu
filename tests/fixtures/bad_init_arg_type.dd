@@ -1,7 +1,7 @@
 class Counter:
     value: i32
 
-    def __init__(self, seed: bool):
+    def init(self, seed: bool):
         self.value = i32(seed)
 
 

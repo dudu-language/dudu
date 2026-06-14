@@ -1,0 +1,13 @@
+class Handle:
+    value: i32
+
+    @operator("bool")
+    def valid(self) -> bool:
+        return self.value != 0
+
+
+def main() -> i32:
+    handle = Handle(7)
+    if handle:
+        return 42
+    return 1

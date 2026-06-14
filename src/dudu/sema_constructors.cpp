@@ -16,7 +16,7 @@ namespace {
 
 std::vector<ConstructorParam> constructor_params(const ClassDecl& klass) {
     for (const FunctionDecl& method : klass.methods) {
-        if (method.name != "__init__") {
+        if (method.name != "init" && method.name != "__init__") {
             continue;
         }
         std::vector<ConstructorParam> out;
@@ -52,21 +52,22 @@ bool positional_constructor_matches(
     const std::function<bool(const std::string&, const std::string&, const std::string&)>&
         can_assign,
     const SourceLocation* location) {
-    if (args.size() != expected.size()) return false;
+    if (args.size() != expected.size())
+        return false;
     for (size_t i = 0; i < args.size(); ++i) {
         const std::string got = infer_expr(scope, args[i], location);
-        if (!can_assign(expected[i].type, args[i], got)) return false;
+        if (!can_assign(expected[i].type, args[i], got))
+            return false;
     }
     return true;
 }
 
-void check_constructor_args(
-    const FunctionScope& scope, const ClassDecl& klass, const std::vector<std::string>& args,
-    const SourceLocation* location,
-    const std::function<std::string(const FunctionScope&, std::string, const SourceLocation*)>&
-        infer_expr,
-    const std::function<bool(const std::string&, const std::string&, const std::string&)>&
-        can_assign) {
+void check_constructor_args(const FunctionScope& scope, const ClassDecl& klass,
+                            const std::vector<std::string>& args, const SourceLocation* location,
+                            const std::function<std::string(const FunctionScope&, std::string,
+                                                            const SourceLocation*)>& infer_expr,
+                            const std::function<bool(const std::string&, const std::string&,
+                                                     const std::string&)>& can_assign) {
     if (location == nullptr)
         return;
     bool has_named_arg = false;
@@ -75,7 +76,8 @@ void check_constructor_args(
     if (!has_named_arg) {
         size_t ctor_count = 0;
         for (const FunctionDecl& method : klass.methods) {
-            if (method.name != "__init__") continue;
+            if (method.name != "init" && method.name != "__init__")
+                continue;
             ++ctor_count;
             if (positional_constructor_matches(scope, method_constructor_params(method), args,
                                                infer_expr, can_assign, location)) {
@@ -100,7 +102,8 @@ void check_constructor_args(
         const size_t equal = find_top_level_char(arg, '=');
         if (equal == std::string::npos) {
             if (!named_fields.empty())
-                fail(*location, "positional constructor argument after named fields: " + klass.name);
+                fail(*location,
+                     "positional constructor argument after named fields: " + klass.name);
             if (positional >= expected.size())
                 fail(*location, "constructor " + klass.name + " expects at most " +
                                     std::to_string(expected.size()) + " arguments, got " +

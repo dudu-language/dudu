@@ -377,6 +377,10 @@ struct TextEdit {
     std::string new_text;
 };
 
+bool is_constructor_method_name(const std::string& name) {
+    return name == "init" || name == "__init__";
+}
+
 class LanguageServer {
   public:
     LanguageServer(std::istream& in, std::ostream& out, std::ostream& err)
@@ -1147,7 +1151,7 @@ class LanguageServer {
                     out.push_back({.name = method.name,
                                    .detail = function_detail(method),
                                    .location = method.location,
-                                   .kind = method.name == "__init__" ? 9 : 6});
+                                   .kind = is_constructor_method_name(method.name) ? 9 : 6});
                 }
             }
             for (const EnumDecl& en : module.enums) {
@@ -1205,7 +1209,7 @@ class LanguageServer {
                     out.push_back({.name = klass.name + "." + method.name,
                                    .detail = function_detail(method),
                                    .location = method.location,
-                                   .kind = method.name == "__init__" ? 9 : 6});
+                                   .kind = is_constructor_method_name(method.name) ? 9 : 6});
                 }
             }
         } catch (const std::exception&) {
@@ -1825,7 +1829,8 @@ class LanguageServer {
                     add(field.name, 5, field.name + ": " + field.type);
                 }
                 for (const FunctionDecl& method : klass.methods) {
-                    add(method.name, method.name == "__init__" ? 4 : 2, function_detail(method));
+                    add(method.name, is_constructor_method_name(method.name) ? 4 : 2,
+                        function_detail(method));
                 }
                 break;
             }
@@ -1837,7 +1842,8 @@ class LanguageServer {
                     add(field.name, 5, field.name + ": " + field.type);
                 }
                 for (const FunctionDecl& method : klass.methods) {
-                    add(method.name, method.name == "__init__" ? 4 : 2, function_detail(method));
+                    add(method.name, is_constructor_method_name(method.name) ? 4 : 2,
+                        function_detail(method));
                 }
                 break;
             }

@@ -69,10 +69,31 @@ std::string operator_method_name(const std::string& op) {
     static const std::map<std::string, std::string> names = {
         {"+", "__add__"}, {"-", "__sub__"}, {"*", "__mul__"}, {"/", "__truediv__"},
         {"%", "__mod__"}, {"==", "__eq__"}, {"!=", "__ne__"}, {"<", "__lt__"},
-        {"<=", "__le__"}, {">", "__gt__"},  {">=", "__ge__"},
+        {"<=", "__le__"}, {">", "__gt__"},  {">=", "__ge__"}, {"bool", "__bool__"},
     };
     const auto it = names.find(op);
     return it == names.end() ? "" : it->second;
+}
+
+std::string unquoted(std::string text) {
+    text = trim(std::move(text));
+    if (text.size() >= 2 && ((text.front() == '"' && text.back() == '"') ||
+                             (text.front() == '\'' && text.back() == '\''))) {
+        return text.substr(1, text.size() - 2);
+    }
+    return text;
+}
+
+bool method_has_operator(const FunctionDecl& method, const std::string& op) {
+    for (const Decorator& decorator : method.decorators) {
+        const std::string text = trim(decorator.text);
+        const std::string prefix = "operator(";
+        if (text.starts_with(prefix) && text.ends_with(")") &&
+            unquoted(text.substr(prefix.size(), text.size() - prefix.size() - 1)) == op) {
+            return true;
+        }
+    }
+    return false;
 }
 
 } // namespace
@@ -88,7 +109,7 @@ dudu_operator_signature(const Symbols& symbols, const std::string& op, const std
         return std::nullopt;
     }
     for (const FunctionDecl& method : klass->second->methods) {
-        if (method.name != method_name) {
+        if (method.name != method_name && !method_has_operator(method, op)) {
             continue;
         }
         FunctionSignature signature;

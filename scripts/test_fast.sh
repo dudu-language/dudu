@@ -20,6 +20,7 @@ grep -Fq "assert((value == 42)" "$repo_root/build/freestanding_debug_assert.cpp"
 compile_and_expect cpp_exceptions 42
 compile_and_expect cpp_nested_native 42
 compile_and_expect dudu_operator_overload 42
+compile_and_expect dudu_operator_bool 42
 compile_and_expect static_fields 42
 compile_and_expect native_template_function 42
 compile_and_expect native_scan_local 42

@@ -149,6 +149,9 @@ This lowers to a C++ constructor. `init` is not a normal callable method.
 Heap allocation stays explicit with `new[T](...)`; `init` only describes how a
 value is constructed.
 
+Status: implemented. The older `__init__` spelling is still accepted for
+compatibility with existing Dudu code, but new examples should use `init`.
+
 ## Destructors And RAII
 
 Dudu should use RAII as the cleanup model.
@@ -171,6 +174,9 @@ rules.
 `drop` lowers to a C++ destructor. It is not called manually by normal Dudu
 code. Manually owned heap objects use the allocation helpers documented in the
 appearance spec, such as `delete(ptr)` for memory created by `new[T](...)`.
+
+Status: implemented. The older `__del__` spelling is still accepted for
+compatibility with existing Dudu code, but new examples should use `drop`.
 
 ## Class Constants And Static Fields
 
@@ -320,6 +326,9 @@ Indexing operators belong with the array/tensor plan:
 
 - `@operator("[]")`
 - `@operator("[]=")`
+
+Status: implemented for the first operator set. Indexing operators remain part
+of the array/tensor plan.
 
 ## Inheritance
 
