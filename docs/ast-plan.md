@@ -56,6 +56,8 @@ Already structured:
   leaving raw text as a fallback for unlifted expression shapes
 - C++ `if constexpr` detection for build-only conditions uses parsed condition
   expressions, with raw text scanning only as an unknown-expression fallback
+- semantic checks for assignment through `*ptr` use parsed unary target
+  expressions before falling back to raw target text
 
 Still too string-based:
 

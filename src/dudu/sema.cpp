@@ -994,6 +994,20 @@ void check_condition_type(const FunctionScope& scope, const Stmt& stmt) {
 std::string assign_target_type(const FunctionScope& scope, const Stmt& stmt,
                                const std::string& lhs) {
     const SourceLocation& target_location = node_location(stmt.location, stmt.target_expr);
+    if (stmt.target_expr.kind == ExprKind::Unary && stmt.target_expr.op == "*" &&
+        stmt.target_expr.children.size() == 1 &&
+        stmt.target_expr.children.front().kind == ExprKind::Name) {
+        const std::string& name = stmt.target_expr.children.front().name;
+        const auto local = scope.locals.find(name);
+        if (local == scope.locals.end()) {
+            fail(target_location, "assignment through unknown local: " + name);
+        }
+        std::string type = trim(local->second);
+        if (type.empty() || type.front() != '*') {
+            fail(target_location, "cannot dereference non-pointer: " + name);
+        }
+        return trim(type.substr(1));
+    }
     if (stmt.target_expr.kind == ExprKind::Index && stmt.target_expr.children.size() == 2 &&
         stmt.target_expr.children[0].kind == ExprKind::Name) {
         return indexed_value_type(scope.symbols, scope.locals, target_location,
@@ -1067,10 +1081,10 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
         return;
     }
     if (stmt.kind == StmtKind::Raise) {
-        const std::string expr = stmt.value;
-        if (!expr.empty())
+        if (!stmt.value.empty()) {
             (void)infer_expr_ast(scope, stmt.value_expr,
                                  &node_location(stmt.location, stmt.value_expr));
+        }
         return;
     }
     if (stmt.kind == StmtKind::Delete) {
