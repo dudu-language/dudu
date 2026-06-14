@@ -379,6 +379,9 @@ it by scanning raw statement text.
 Compound assignment C++ emission now uses parsed target and value expressions
 plus the parsed compound operator instead of normalizing raw statement text.
 
+The main statement semantic dispatcher no longer depends on raw statement text
+for break/continue diagnostics.
+
 Bare comma expressions now parse as tuple literals, including Python-style
 multi-value returns. The shared AST comma splitter is quote-aware so commas
 inside string literals do not create phantom tuple elements.

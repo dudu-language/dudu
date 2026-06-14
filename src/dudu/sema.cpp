@@ -737,7 +737,6 @@ void check_block(FunctionScope& scope, const std::vector<Stmt>& body,
 }
 void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& return_type,
                 int loop_depth) {
-    const std::string text = trim(stmt.text);
     check_local_address_escape(stmt, scope.locals);
     if (stmt.kind == StmtKind::Return) {
         const std::string expr = stmt.value;
@@ -787,7 +786,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
     if (stmt.kind == StmtKind::CppEscape || stmt.kind == StmtKind::Pass)
         return;
     if ((stmt.kind == StmtKind::Break || stmt.kind == StmtKind::Continue) && loop_depth == 0) {
-        fail(stmt.location, text + " outside loop");
+        fail(stmt.location, std::string(statement_kind_name(stmt.kind)) + " outside loop");
     }
     if (stmt.kind == StmtKind::Break || stmt.kind == StmtKind::Continue) {
         return;
