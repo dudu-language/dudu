@@ -1543,6 +1543,8 @@ class LanguageServer {
         const Json* position = params == nullptr ? nullptr : params->get("position");
         const int max_line = position == nullptr ? std::numeric_limits<int>::max()
                                                  : int_value(position->get("line"));
+        const int target_indent =
+            params == nullptr ? std::numeric_limits<int>::max() : target_line_indent(doc, max_line);
         std::map<std::string, std::string> out;
         std::istringstream in(doc.text);
         std::string line;
@@ -1552,10 +1554,24 @@ class LanguageServer {
             }
             std::smatch match;
             if (std::regex_search(line, match, local_decl)) {
+                if (leading_spaces(line) > target_indent) {
+                    continue;
+                }
                 out[match[1].str()] = match[2].str();
             }
         }
         return out;
+    }
+
+    static int target_line_indent(const Document& doc, int target_line) {
+        std::istringstream in(doc.text);
+        std::string line;
+        for (int row = 0; std::getline(in, line); ++row) {
+            if (row == target_line) {
+                return leading_spaces(line);
+            }
+        }
+        return std::numeric_limits<int>::max();
     }
 
     static std::string completion_documentation(const std::string& label,

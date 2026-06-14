@@ -194,8 +194,9 @@ member-aware completion is implemented for Dudu-native class locals with simple
 type annotations, and imported Dudu module aliases complete symbols from the
 imported file. Completion resolve is implemented, common-form snippets are
 returned with snippet insert text, and typed locals in the current document are
-included in completion. Deeper block-sensitive local scope completion and richer
-snippet coverage remain.
+included in completion. Local completion now filters out declarations from
+deeper indentation levels when completing in an outer block. Richer snippet
+coverage remains.
 
 ### Milestone 4: Native Header Navigation
 
@@ -283,6 +284,8 @@ Go-to-definition for native C++ member methods is covered with a local fixture
 header.
 Native overloaded function signature help is covered with a local fixture
 header.
+Local completion scope filtering is covered so deeper-block locals do not leak
+into outer-block completions.
 
 ## Non-Goals
 
