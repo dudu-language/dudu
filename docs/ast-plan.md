@@ -365,6 +365,10 @@ Local variable C++ emission now lowers explicit declaration types through the
 parsed `TypeRef`. It still uses computed canonical type text when array literal
 shape inference changes the declared type.
 
+Top-level function signatures, generated C headers, class method signatures,
+class constants, and static fields now lower declared C++ types through parsed
+`TypeRef` nodes.
+
 Bare comma expressions now parse as tuple literals, including Python-style
 multi-value returns. The shared AST comma splitter is quote-aware so commas
 inside string literals do not create phantom tuple elements.

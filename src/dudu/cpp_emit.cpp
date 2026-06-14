@@ -110,7 +110,7 @@ std::map<std::string, std::string> function_return_types(const ModuleAst& module
 void emit_constants(std::ostringstream& out, const ModuleAst& module,
                     const std::vector<std::string>& aliases) {
     for (const ConstDecl& constant : module.constants) {
-        const std::string lowered_type = lower_cpp_type(constant.type, aliases);
+        const std::string lowered_type = lower_cpp_type(constant.type_ref, aliases);
         const bool runtime_address = constant.type.find('*') != std::string::npos ||
                                      constant.type.find("volatile") != std::string::npos;
         out << "inline ";
@@ -168,12 +168,12 @@ void emit_function_signature(std::ostringstream& out, const FunctionDecl& fn,
     if (function_has_decorator(fn, "constexpr")) {
         out << "constexpr ";
     }
-    out << lower_cpp_type(fn.return_type, aliases) << ' ' << fn.name << '(';
+    out << lower_cpp_type(fn.return_type_ref, aliases) << ' ' << fn.name << '(';
     for (size_t i = 0; i < fn.params.size(); ++i) {
         if (i > 0) {
             out << ", ";
         }
-        out << lower_cpp_type(fn.params[i].type, aliases) << ' ' << fn.params[i].name;
+        out << lower_cpp_type(fn.params[i].type_ref, aliases) << ' ' << fn.params[i].name;
     }
     out << ')';
 }
@@ -365,7 +365,7 @@ std::string emit_c_header(const ModuleAst& module) {
         if (!function_has_decorator(fn, "extern_c") || !visible_function_in_header(fn)) {
             continue;
         }
-        out << lower_cpp_type(fn.return_type) << ' ' << fn.name << '(';
+        out << lower_cpp_type(fn.return_type_ref) << ' ' << fn.name << '(';
         if (fn.params.empty()) {
             out << "void";
         }
@@ -373,7 +373,7 @@ std::string emit_c_header(const ModuleAst& module) {
             if (i > 0) {
                 out << ", ";
             }
-            out << lower_cpp_type(fn.params[i].type) << ' ' << fn.params[i].name;
+            out << lower_cpp_type(fn.params[i].type_ref) << ' ' << fn.params[i].name;
         }
         out << ");\n";
     }

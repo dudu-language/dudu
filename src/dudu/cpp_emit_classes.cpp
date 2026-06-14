@@ -156,14 +156,14 @@ void emit_method(std::ostringstream& out, const std::string& class_name, const F
         if (lowered_name == "operator bool") {
             out << "explicit " << lowered_name << '(';
         } else {
-            out << lower_cpp_type(method.return_type, aliases) << ' ' << lowered_name << '(';
+            out << lower_cpp_type(method.return_type_ref, aliases) << ' ' << lowered_name << '(';
         }
     }
     for (size_t i = first_param; i < method.params.size(); ++i) {
         if (i > first_param) {
             out << ", ";
         }
-        out << lower_cpp_type(method.params[i].type, aliases) << ' ' << method.params[i].name;
+        out << lower_cpp_type(method.params[i].type_ref, aliases) << ' ' << method.params[i].name;
     }
     out << ") {\n";
     std::map<std::string, std::string> locals;
@@ -180,7 +180,7 @@ void emit_method(std::ostringstream& out, const std::string& class_name, const F
 
 void emit_class_constant_decl(std::ostringstream& out, const ConstDecl& constant,
                               const std::vector<std::string>& aliases) {
-    const std::string lowered_type = lower_cpp_type(constant.type, aliases);
+    const std::string lowered_type = lower_cpp_type(constant.type_ref, aliases);
     const bool pointer = constant.type.find('*') != std::string::npos;
     out << "    static ";
     out << (pointer ? lowered_type + " const " : "const " + lowered_type + " ");
@@ -190,7 +190,7 @@ void emit_class_constant_decl(std::ostringstream& out, const ConstDecl& constant
 void emit_class_constant_definition(std::ostringstream& out, const std::string& class_name,
                                     const ConstDecl& constant,
                                     const std::vector<std::string>& aliases) {
-    const std::string lowered_type = lower_cpp_type(constant.type, aliases);
+    const std::string lowered_type = lower_cpp_type(constant.type_ref, aliases);
     const bool runtime_address = constant.type.find('*') != std::string::npos ||
                                  constant.type.find("volatile") != std::string::npos;
     out << "inline ";
@@ -224,8 +224,8 @@ void emit_classes(std::ostringstream& out, const ModuleAst& module,
             out << ";\n";
         }
         for (const ConstDecl& field : klass.static_fields) {
-            out << "    inline static " << lower_cpp_type(field.type, aliases) << ' ' << field.name
-                << " = " << lower_cpp_expr(field.value, aliases) << ";\n";
+            out << "    inline static " << lower_cpp_type(field.type_ref, aliases) << ' '
+                << field.name << " = " << lower_cpp_expr(field.value, aliases) << ";\n";
         }
         for (const ConstDecl& constant : klass.constants) {
             emit_class_constant_decl(out, constant, aliases);
