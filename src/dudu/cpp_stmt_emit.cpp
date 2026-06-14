@@ -257,6 +257,12 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
     if (expr.name == "len" && expr.children.size() == 1) {
         return "(" + lower_expr(expr.children.front(), aliases, locals) + ").size()";
     }
+    if (expr.name == "str" && expr.children.size() == 1) {
+        if (expr.children.front().kind == ExprKind::StringLiteral) {
+            return "std::string(" + lower_expr(expr.children.front(), aliases, locals) + ")";
+        }
+        return "std::to_string(" + lower_expr(expr.children.front(), aliases, locals) + ")";
+    }
     if (is_builtin_cast_call(expr.name)) {
         return lower_cpp_type(expr.name, aliases) + "(" +
                join_lowered_exprs(expr.children, aliases, locals) + ")";
@@ -277,10 +283,12 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
         return "nullptr";
     case ExprKind::IntLiteral:
     case ExprKind::FloatLiteral:
-    case ExprKind::StringLiteral:
+        return lower_numeric_separators(expr.text);
     case ExprKind::Name:
     case ExprKind::CppEscape:
         return lower_expr(expr.text, aliases, locals);
+    case ExprKind::StringLiteral:
+        return expr.text;
     case ExprKind::Unary:
         if (const auto pointer_cast = lower_pointer_cast_expr(expr, aliases, locals)) {
             return *pointer_cast;

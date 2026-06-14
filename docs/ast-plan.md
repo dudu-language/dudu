@@ -57,6 +57,9 @@ Already structured:
   leaving raw text as a fallback for unlifted expression shapes
 - C++ `if constexpr` detection for build-only conditions uses parsed condition
   expressions, with raw text scanning only as an unknown-expression fallback
+- C++ expression emission writes string, integer, and float literal expression
+  nodes directly, and lowers `str(value)` calls through an explicit AST path
+  instead of sending them through raw expression lowering
 - semantic checks for assignment through `*ptr` use parsed unary target
   expressions before falling back to raw target text
 - semantic checks for plain-name and member assignment targets use parsed
