@@ -1,5 +1,6 @@
 const vscode = require("vscode");
 const childProcess = require("child_process");
+const fs = require("fs");
 const path = require("path");
 
 let terminal;
@@ -76,9 +77,59 @@ function updateStatus() {
   }
   const state = lsp?.process ? "LSP" : "LSP stopped";
   const nativeState = lsp?.hasNativeHeaderProblem() ? "native headers failing" : "native headers ok";
+  const target = targetStatus();
   statusItem.text = `$(symbol-method) Dudu: ${state}`;
-  statusItem.tooltip = `duc: ${ducPath()}\n${nativeState}`;
+  statusItem.tooltip = `duc: ${ducPath()}\ntarget: ${target}\n${nativeState}`;
   statusItem.show();
+}
+
+function targetStatus() {
+  const config = findProjectConfig(workspaceDirectory());
+  if (!config) {
+    return "default executable/hosted";
+  }
+  const text = fs.readFileSync(config, "utf8");
+  let section = "";
+  let kind = "executable";
+  let mode = "hosted";
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = rawLine.replace(/#.*/, "").trim();
+    if (!line) {
+      continue;
+    }
+    if (line.startsWith("[") && line.endsWith("]")) {
+      section = line.slice(1, -1).trim();
+      continue;
+    }
+    if (section !== "target") {
+      continue;
+    }
+    const match = line.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*"?([^"]+)"?\s*$/);
+    if (!match) {
+      continue;
+    }
+    if (match[1] === "kind") {
+      kind = match[2];
+    } else if (match[1] === "mode") {
+      mode = match[2];
+    }
+  }
+  return `${kind}/${mode}`;
+}
+
+function findProjectConfig(start) {
+  let current = path.resolve(start);
+  while (true) {
+    const candidate = path.join(current, "dudu.toml");
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+    const parent = path.dirname(current);
+    if (parent === current) {
+      return undefined;
+    }
+    current = parent;
+  }
 }
 
 class DuduLspClient {

@@ -137,7 +137,8 @@ Status: the local VS Code extension starts `duc lsp`, forwards document
 open/change/save events, displays LSP diagnostics, uses the LSP formatting
 provider for `Dudu: Format Current File` and format-on-save, and shows a status
 bar item with LSP process state, configured `duc` path, and native-header
-diagnostic state. Target-mode status remains.
+diagnostic state. The status tooltip also shows the current `dudu.toml`
+`[target]` kind/mode when available.
 
 ## Protocol Features By Milestone
 
