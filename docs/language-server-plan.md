@@ -178,10 +178,12 @@ open documents and wired into the VS Code extension. Workspace symbols and
 references also scan unopened `.dd` files under the active project roots, with
 open buffers taking precedence. Go-to-definition resolves Dudu module import
 aliases to imported module files and resolves `from module import symbol`
-bindings to the imported declaration. A fuller import-graph project index
-remains. Hover includes Dudu declarations plus visible typed locals and simple
-inferred locals. Dudu declaration hover also includes contiguous source
-comments immediately above the declaration.
+bindings to the imported declaration. The workspace index now follows imported
+Dudu modules before broad workspace scanning, so direct import dependencies are
+available even when they live under directories excluded from recursive scans.
+Hover includes Dudu declarations plus visible typed locals and simple inferred
+locals. Dudu declaration hover also includes contiguous source comments
+immediately above the declaration.
 
 ### Milestone 3: Completion And Signature Help
 
@@ -282,7 +284,8 @@ formatting, Dudu symbols, references, rename, workspace symbols, native fixture
 imports, native macro hover/completion, strict missing-header diagnostics, and
 build-configuration diagnostics from a broken `dudu.toml`.
 It also covers workspace symbols and references from an unopened sibling `.dd`
-file, plus Dudu-native and native C++ member completion.
+file, imported modules from a skipped `vendor` directory, plus Dudu-native and
+native C++ member completion.
 Imported Dudu module completion is covered with an unopened sibling module.
 Completion resolve, snippets, and typed local completions are covered.
 Common-form snippets for functions, classes, control flow, imports, enums, and

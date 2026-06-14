@@ -47,6 +47,7 @@ shadow_uri = "file:///tmp/dudu_lsp_shadow.dd"
 hover_locals_uri = "file:///tmp/dudu_lsp_hover_locals.dd"
 hover_docs_uri = "file:///tmp/dudu_lsp_hover_docs.dd"
 hazard_uri = "file:///tmp/dudu_lsp_hazards.dd"
+import_graph_uri = f"file://{repo_root}/tests/fixtures/lsp_import_graph_entry.dd"
 bad_config_uri = f"file://{repo_root}/tests/fixtures/lsp_bad_config/main.dd"
 overload_uri = f"file://{repo_root}/tests/fixtures/dudu_lsp_overload.dd"
 scope_uri = "file:///tmp/dudu_lsp_scope.dd"
@@ -107,6 +108,36 @@ messages = [
                     "text": source,
                 }
             },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "method": "textDocument/didOpen",
+            "params": {
+                "textDocument": {
+                    "uri": import_graph_uri,
+                    "languageId": "dudu",
+                    "version": 1,
+                    "text": "\n".join(
+                        [
+                            "import vendor.lsp_import_graph_helper as vendored",
+                            "",
+                            "def main() -> i32:",
+                            "    return vendored.vendored_helper()",
+                            "",
+                        ]
+                    ),
+                }
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 42,
+            "method": "workspace/symbol",
+            "params": {"query": "vendored_helper"},
         }
     ),
     packet(
@@ -1214,6 +1245,13 @@ assert "workspace_helper" in workspace_helper_names
 assert any(
     item["location"]["uri"].endswith("/tests/fixtures/lsp_workspace_helper.dd")
     for item in workspace_helper_symbols["result"]
+)
+
+import_graph_symbols = next(item for item in responses if item.get("id") == 42)
+assert any(
+    item["name"] == "vendored_helper"
+    and item["location"]["uri"].endswith("/tests/fixtures/vendor/lsp_import_graph_helper.dd")
+    for item in import_graph_symbols["result"]
 )
 
 shutdown = next(item for item in responses if item.get("id") == 20)
