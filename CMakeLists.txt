@@ -7,6 +7,7 @@ option(DUDU_WARN_AS_ERROR "Treat warnings as errors" OFF)
 option(DUDU_BUILD_TESTS "Build Dudu compiler tests" OFF)
 
 add_library(dudu_frontend
+    src/dudu/array_shape.cpp
     src/dudu/ast.cpp
     src/dudu/build_flags.cpp
     src/dudu/cli_usage.cpp

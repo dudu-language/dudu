@@ -1,5 +1,6 @@
 #include "dudu/sema.hpp"
 
+#include "dudu/array_shape.hpp"
 #include "dudu/build_flags.hpp"
 #include "dudu/control_flow.hpp"
 #include "dudu/cpp_lower.hpp"
@@ -52,6 +53,10 @@ bool is_local_member_call(const FunctionScope& scope, const std::string& callee)
 }
 bool freestanding_like(const FunctionScope& scope) {
     return scope.target_mode == "freestanding" || scope.target_mode == "embedded";
+}
+
+bool is_array_literal(const Expr& expr) {
+    return expr.kind == ExprKind::ListLiteral;
 }
 
 const SourceLocation& node_location(const SourceLocation& fallback, const Expr& expr) {
@@ -330,6 +335,26 @@ void check_type_match(const FunctionScope& scope, const std::string& expected,
     }
     fail(location, assignment_error(expected, expr, got));
 }
+
+void check_array_literal_elements(const FunctionScope& scope, const std::string& element_type,
+                                  const Expr& expr, const SourceLocation& location) {
+    if (expr.kind == ExprKind::ListLiteral) {
+        for (const Expr& child : expr.children) {
+            check_array_literal_elements(scope, element_type, child, location);
+        }
+        return;
+    }
+    const std::string got = infer_expr(scope, expr.text, &expr.location);
+    if (!can_assign_expr(scope, element_type, expr.text, got)) {
+        fail(location, "array literal element expects " + element_type + ", got " + got);
+    }
+}
+
+std::string effective_var_type(const Stmt& stmt) {
+    const ArrayShapeInference inferred = infer_array_literal_shape_type(stmt.type, stmt.value_expr);
+    return inferred.status == ArrayShapeStatus::Inferred ? inferred.type : stmt.type;
+}
+
 void check_condition_type(const FunctionScope& scope, const Stmt& stmt, std::string expr) {
     expr = trim(std::move(expr));
     if (!expr.empty() && expr.back() == ':') {
@@ -498,14 +523,30 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
     }
     if (stmt.kind == StmtKind::VarDecl) {
         check_local_binding_name(stmt.location, stmt.name);
-        if (!known_type(scope.symbols, stmt.type)) {
+        const ArrayShapeInference inferred =
+            infer_array_literal_shape_type(stmt.type, stmt.value_expr);
+        if (inferred.status == ArrayShapeStatus::EmptyLiteral) {
+            fail(node_location(stmt.location, stmt.value_expr),
+                 "array shape cannot be inferred from an empty literal");
+        }
+        if (inferred.status == ArrayShapeStatus::RaggedLiteral) {
+            fail(node_location(stmt.location, stmt.value_expr), "ragged array literal");
+        }
+        const std::string type = effective_var_type(stmt);
+        if (!known_type(scope.symbols, type)) {
             fail(node_location(stmt.location, stmt.type_ref), "unknown local type: " + stmt.type);
         }
         if (!stmt.value.empty()) {
-            check_type_match(scope, stmt.type, stmt.value,
-                             node_location(stmt.location, stmt.value_expr));
+            if (inferred.status == ArrayShapeStatus::Inferred &&
+                is_array_literal(stmt.value_expr)) {
+                check_array_literal_elements(scope, inferred.element_type, stmt.value_expr,
+                                             node_location(stmt.location, stmt.value_expr));
+            } else {
+                check_type_match(scope, type, stmt.value,
+                                 node_location(stmt.location, stmt.value_expr));
+            }
         }
-        scope.locals[stmt.name] = stmt.type;
+        scope.locals[stmt.name] = type;
         if (is_dudu_all_caps(stmt.name)) {
             scope.constants.insert(stmt.name);
         }

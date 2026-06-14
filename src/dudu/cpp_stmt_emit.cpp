@@ -1,5 +1,6 @@
 #include "dudu/cpp_stmt_emit.hpp"
 
+#include "dudu/array_shape.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/cpp_pointer_members.hpp"
 #include "dudu/cpp_stmt_types.hpp"
@@ -77,6 +78,23 @@ std::string tuple_literal_body(const std::string& value) {
 
 std::string lower_literal_value(const std::string& value, const std::vector<std::string>& aliases,
                                 const std::map<std::string, std::string>& locals);
+
+std::string lower_array_literal(const Expr& expr, const std::vector<std::string>& aliases,
+                                const std::map<std::string, std::string>& locals) {
+    if (expr.kind != ExprKind::ListLiteral) {
+        return lower_expr(expr.text, aliases, locals);
+    }
+    std::ostringstream out;
+    out << "{";
+    for (size_t i = 0; i < expr.children.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << lower_array_literal(expr.children[i], aliases, locals);
+    }
+    out << "}";
+    return out.str();
+}
 
 std::string lower_dict_literal_body(const std::string& value,
                                     const std::vector<std::string>& aliases,
@@ -310,13 +328,19 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
     }
     if (stmt.kind == StmtKind::VarDecl) {
         const std::string& name = stmt.name;
-        const std::string& type = stmt.type;
+        const ArrayShapeInference inferred =
+            infer_array_literal_shape_type(stmt.type, stmt.value_expr);
+        const std::string type =
+            inferred.status == ArrayShapeStatus::Inferred ? inferred.type : stmt.type;
         locals[name] = type;
         out << indent(depth) << lower_cpp_type(type, aliases) << ' ' << name;
         if (!stmt.value.empty()) {
             const std::string& value = stmt.value;
             if (starts_with(type, "Option[") && value == "None") {
                 out << " = std::nullopt";
+            } else if (starts_with(type, "array[") &&
+                       stmt.value_expr.kind == ExprKind::ListLiteral) {
+                out << " = {" << lower_array_literal(stmt.value_expr, aliases, locals) << "}";
             } else if (starts_with(type, "list[") && value == "[]") {
                 out << " = {}";
             } else if (starts_with(type, "list[") && starts_with(value, "[") &&
@@ -345,8 +369,8 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
     if (stmt.kind == StmtKind::Assign) {
         const std::string& lhs = stmt.target;
         if (split_top_level_args(lhs).size() > 1) {
-            out << indent(depth) << "auto [" << lhs
-                << "] = " << lower_cpp_expr(stmt.value, aliases) << ";\n";
+            out << indent(depth) << "auto [" << lhs << "] = " << lower_cpp_expr(stmt.value, aliases)
+                << ";\n";
             return;
         }
         if (!lhs.empty() && lhs.find_first_of(" .[]+-*/%<>") == std::string::npos) {
@@ -382,8 +406,7 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         const std::string& condition = stmt.condition;
         out << indent(depth) << if_keyword_for_condition(condition) << " ("
             << lower_expr(condition, aliases, locals) << ") {\n";
-        emit_block(out, stmt.children, depth + 1, aliases, locals, return_type,
-                   function_returns);
+        emit_block(out, stmt.children, depth + 1, aliases, locals, return_type, function_returns);
         out << indent(depth) << "}\n";
         return;
     }
@@ -391,22 +414,19 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         const std::string& condition = stmt.condition;
         out << indent(depth) << "else " << if_keyword_for_condition(condition) << " ("
             << lower_expr(condition, aliases, locals) << ") {\n";
-        emit_block(out, stmt.children, depth + 1, aliases, locals, return_type,
-                   function_returns);
+        emit_block(out, stmt.children, depth + 1, aliases, locals, return_type, function_returns);
         out << indent(depth) << "}\n";
         return;
     }
     if (stmt.kind == StmtKind::Else) {
         out << indent(depth) << "else {\n";
-        emit_block(out, stmt.children, depth + 1, aliases, locals, return_type,
-                   function_returns);
+        emit_block(out, stmt.children, depth + 1, aliases, locals, return_type, function_returns);
         out << indent(depth) << "}\n";
         return;
     }
     if (stmt.kind == StmtKind::Try) {
         out << indent(depth) << "try {\n";
-        emit_block(out, stmt.children, depth + 1, aliases, locals, return_type,
-                   function_returns);
+        emit_block(out, stmt.children, depth + 1, aliases, locals, return_type, function_returns);
         out << indent(depth) << "}\n";
         return;
     }
@@ -422,16 +442,13 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
             out << "catch (const " << lower_cpp_type(type, aliases) << "& " << name << ")";
         }
         out << " {\n";
-        emit_block(out, stmt.children, depth + 1, aliases, locals, return_type,
-                   function_returns);
+        emit_block(out, stmt.children, depth + 1, aliases, locals, return_type, function_returns);
         out << indent(depth) << "}\n";
         return;
     }
     if (stmt.kind == StmtKind::While) {
-        out << indent(depth) << "while (" << lower_expr(stmt.condition, aliases, locals)
-            << ") {\n";
-        emit_block(out, stmt.children, depth + 1, aliases, locals, return_type,
-                   function_returns);
+        out << indent(depth) << "while (" << lower_expr(stmt.condition, aliases, locals) << ") {\n";
+        emit_block(out, stmt.children, depth + 1, aliases, locals, return_type, function_returns);
         out << indent(depth) << "}\n";
         return;
     }
@@ -450,18 +467,15 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
             const std::string end = args.size() == 1 ? args.at(0) : args.at(1);
             const std::string step = args.size() >= 3 ? args.at(2) : "1";
             out << indent(depth) << "for (" << binding_type << ' ' << binding << " = " << start
-                << "; " << binding << " < " << end << "; " << binding << " += " << step
-                << ") {\n";
+                << "; " << binding << " < " << end << "; " << binding << " += " << step << ") {\n";
             emit_block(out, stmt.children, depth + 1, aliases, locals, return_type,
                        function_returns);
             out << indent(depth) << "}\n";
             return;
         }
         const std::string loop_type = stmt.type.empty() ? "auto&&" : binding_type;
-        out << indent(depth) << "for (" << loop_type << ' ' << binding << " : " << range
-            << ") {\n";
-        emit_block(out, stmt.children, depth + 1, aliases, locals, return_type,
-                   function_returns);
+        out << indent(depth) << "for (" << loop_type << ' ' << binding << " : " << range << ") {\n";
+        emit_block(out, stmt.children, depth + 1, aliases, locals, return_type, function_returns);
         out << indent(depth) << "}\n";
         return;
     }
