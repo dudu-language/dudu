@@ -875,7 +875,7 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
             return fn->second.return_type;
         }
         if (const auto signature = native_signature_for_call(
-                scope, callee, expr_texts(expr.children), use_location, infer_expr,
+                scope, callee, expr.children, use_location, infer_expr_ast,
                 [&](const std::string& expected, const std::string& value, const std::string& got) {
                     return can_assign_expr(scope, expected, value, got);
                 })) {
