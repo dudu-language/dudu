@@ -813,8 +813,7 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                 return "bool";
             }
             if (use_location != nullptr && !left.empty() && !right.empty() &&
-                !comparison_rhs_allowed(scope.symbols, expr.op, left, expr.children[1].text,
-                                        right)) {
+                !comparison_rhs_allowed(scope.symbols, expr.op, left, expr.children[1], right)) {
                 fail(*use_location,
                      "comparison " + expr.op + " expects " + left + ", got " + right);
             }
@@ -828,7 +827,7 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
             return signature->return_type;
         }
         if (use_location != nullptr && !left.empty() && !right.empty() &&
-            !binary_rhs_allowed(scope.symbols, expr.op, left, expr.children[1].text, right)) {
+            !binary_rhs_allowed(scope.symbols, expr.op, left, expr.children[1], right)) {
             fail(*use_location, "operator " + expr.op + " expects " + left + ", got " + right);
         }
         return left.empty() ? right : left;

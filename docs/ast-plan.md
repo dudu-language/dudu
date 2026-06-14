@@ -66,6 +66,8 @@ Already structured:
   target expressions before falling back to raw target text for complex shapes
 - semantic checks and C++ statement emission use expression-node presence for
   optional statement values/messages instead of raw statement value strings
+- semantic compatibility checks for parsed binary and comparison operators use
+  the right-hand expression node instead of stringifying it for assignment rules
 
 Still too string-based:
 

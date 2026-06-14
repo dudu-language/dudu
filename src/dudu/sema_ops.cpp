@@ -58,8 +58,18 @@ bool numeric_operand_allowed(const std::string& expected, const std::string& exp
     return is_numeric_type(expected) && assignment_type_allowed(expected, expr, got);
 }
 
+bool numeric_operand_allowed(const std::string& expected, const Expr& expr,
+                             const std::string& got) {
+    return is_numeric_type(expected) && assignment_type_allowed(expected, expr, got);
+}
+
 bool same_or_assignable(const std::string& left, const std::string& right_expr,
                         const std::string& right) {
+    return assignment_type_allowed(left, right_expr, right) ||
+           assignment_type_allowed(right, "", left);
+}
+
+bool same_or_assignable(const std::string& left, const Expr& right_expr, const std::string& right) {
     return assignment_type_allowed(left, right_expr, right) ||
            assignment_type_allowed(right, "", left);
 }
@@ -122,7 +132,37 @@ dudu_operator_signature(const Symbols& symbols, const std::string& op, const std
 bool binary_rhs_allowed(const Symbols& symbols, const std::string& op, const std::string& left,
                         const std::string& right_expr, const std::string& right) {
     const std::string resolved_left = resolve_alias(symbols, left);
-    const std::string resolved_right = resolve_alias(symbols, right);
+    const std::string value_left = unwrap_value_type(symbols, left);
+    const std::string value_right = unwrap_value_type(symbols, right);
+    if (unknown_or_auto(left) || unknown_or_auto(right) || unknown_or_auto(value_left) ||
+        unknown_or_auto(value_right)) {
+        return true;
+    }
+    if (same_foreign_cpp_type(value_left, value_right)) {
+        return true;
+    }
+    if (op == "+" && value_left == "str") {
+        return assignment_type_allowed(value_left, right_expr, value_right);
+    }
+    if (op == "+" || op == "-") {
+        return (!trim(resolved_left).empty() && trim(resolved_left).front() == '*' &&
+                is_integer_type(value_right)) ||
+               numeric_operand_allowed(value_left, right_expr, value_right);
+    }
+    if (op == "*" || op == "/") {
+        return numeric_operand_allowed(value_left, right_expr, value_right);
+    }
+    if (op == "%" || op == "^" || op == "&" || op == "|" || op == "<<" || op == ">>") {
+        return is_integer_type(value_left) &&
+               (assignment_type_allowed(value_left, right_expr, value_right) ||
+                is_integer_type(value_right));
+    }
+    return false;
+}
+
+bool binary_rhs_allowed(const Symbols& symbols, const std::string& op, const std::string& left,
+                        const Expr& right_expr, const std::string& right) {
+    const std::string resolved_left = resolve_alias(symbols, left);
     const std::string value_left = unwrap_value_type(symbols, left);
     const std::string value_right = unwrap_value_type(symbols, right);
     if (unknown_or_auto(left) || unknown_or_auto(right) || unknown_or_auto(value_left) ||
@@ -153,6 +193,26 @@ bool binary_rhs_allowed(const Symbols& symbols, const std::string& op, const std
 
 bool comparison_rhs_allowed(const Symbols& symbols, const std::string& op, const std::string& left,
                             const std::string& right_expr, const std::string& right) {
+    const std::string value_left = unwrap_value_type(symbols, left);
+    const std::string value_right = unwrap_value_type(symbols, right);
+    if (unknown_or_auto(left) || unknown_or_auto(right) || unknown_or_auto(value_left) ||
+        unknown_or_auto(value_right)) {
+        return true;
+    }
+    if (same_foreign_cpp_type(value_left, value_right)) {
+        return true;
+    }
+    if (op == "==" || op == "!=") {
+        return same_or_assignable(value_left, right_expr, value_right);
+    }
+    if (value_left == "str") {
+        return assignment_type_allowed(value_left, right_expr, value_right);
+    }
+    return numeric_operand_allowed(value_left, right_expr, value_right);
+}
+
+bool comparison_rhs_allowed(const Symbols& symbols, const std::string& op, const std::string& left,
+                            const Expr& right_expr, const std::string& right) {
     const std::string value_left = unwrap_value_type(symbols, left);
     const std::string value_right = unwrap_value_type(symbols, right);
     if (unknown_or_auto(left) || unknown_or_auto(right) || unknown_or_auto(value_left) ||
