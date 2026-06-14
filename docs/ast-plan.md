@@ -43,6 +43,9 @@ Already structured:
   raw callee strings incrementally
 - ordinary call C++ emission lowers parsed callee expressions instead of
   lowering the callee name string directly
+- semantic highlighting uses parsed call callees so method calls can color the
+  receiver and called member separately instead of treating dotted callees as
+  one raw span
 - array/list/dict index type inference uses parsed index expressions where
   available, so tuple-shaped multi-index expressions no longer depend on raw
   comma splitting

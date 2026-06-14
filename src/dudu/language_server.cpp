@@ -985,6 +985,26 @@ class LanguageServer {
         }
     }
 
+    static void collect_call_callee_tokens(const Expr& expr, std::vector<SemanticToken>& tokens) {
+        if (expr.kind == ExprKind::Name) {
+            add_semantic_token(tokens, expr.location, expr.name, 4);
+            return;
+        }
+        if (expr.kind == ExprKind::Member) {
+            for (const Expr& child : expr.children) {
+                collect_expr_tokens(child, tokens);
+            }
+            const SourceLocation member_location{
+                .file = expr.location.file,
+                .line = expr.location.line,
+                .column =
+                    expr.location.column + static_cast<int>(expr.text.size() - expr.name.size())};
+            add_semantic_token(tokens, member_location, expr.name, 4);
+            return;
+        }
+        collect_expr_tokens(expr, tokens);
+    }
+
     static void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens) {
         switch (expr.kind) {
         case ExprKind::Name:
@@ -992,7 +1012,11 @@ class LanguageServer {
             break;
         case ExprKind::Call:
         case ExprKind::TemplateCall:
-            add_semantic_token(tokens, expr.location, expr.name, 4);
+            if (!expr.callee.empty()) {
+                collect_call_callee_tokens(expr.callee.front(), tokens);
+            } else {
+                add_semantic_token(tokens, expr.location, expr.name, 4);
+            }
             break;
         case ExprKind::Member: {
             const SourceLocation member_location{
@@ -1015,6 +1039,11 @@ class LanguageServer {
             break;
         default:
             break;
+        }
+        if (expr.kind != ExprKind::Call && expr.kind != ExprKind::TemplateCall) {
+            for (const Expr& callee : expr.callee) {
+                collect_expr_tokens(callee, tokens);
+            }
         }
         for (const Expr& child : expr.children) {
             collect_expr_tokens(child, tokens);
