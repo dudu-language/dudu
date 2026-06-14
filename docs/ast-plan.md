@@ -147,6 +147,8 @@ Already structured:
 - local address escape checks walk parsed return/call/unary expression nodes
   for `return &local` and container `.append(&local)` / `.push_back(&local)`
   cases instead of scanning raw statement text
+- parsed index expression type inference uses the AST receiver and index nodes
+  regardless of whether the caller supplied an explicit diagnostic location
 
 Still too string-based:
 

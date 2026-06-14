@@ -921,7 +921,9 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
         }
         return infer_expr(scope, expr.text, use_location);
     case ExprKind::Index:
-        if (use_location != nullptr && expr.children.size() == 2) {
+        if (expr.children.size() == 2) {
+            const SourceLocation& index_location =
+                use_location != nullptr ? *use_location : expr.location;
             const Expr& receiver = expr.children[0];
             if (receiver.kind == ExprKind::Name) {
                 if (const auto local = scope.locals.find(receiver.name);
@@ -932,14 +934,15 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                                             index_arg_exprs(expr.children[1]), use_location);
                     }
                 }
-                return indexed_value_type(scope.symbols, scope.locals, *use_location, receiver.name,
-                                          expr.children[1], "indexed access to unknown local: ");
+                return indexed_value_type(scope.symbols, scope.locals, index_location,
+                                          receiver.name, expr.children[1],
+                                          "indexed access to unknown local: ");
             }
             if (const std::optional<std::string> receiver_path = member_path_from_expr(receiver)) {
                 const std::string receiver_type =
                     member_path_type(scope.symbols, scope.locals, use_location, *receiver_path, "");
                 if (!receiver_type.empty()) {
-                    return indexed_type_from_type(scope.symbols, *use_location, receiver_type,
+                    return indexed_type_from_type(scope.symbols, index_location, receiver_type,
                                                   expr.children[1], *receiver_path);
                 }
             }
