@@ -126,6 +126,16 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
     case ExprKind::DictLiteral:
         return "{" + join_lowered_exprs(expr.children, aliases, locals) + "}";
     case ExprKind::Index:
+        if (expr.children.size() == 2) {
+            std::string out = lower_expr(expr.children[0], aliases, locals);
+            if (expr.children[1].kind == ExprKind::TupleLiteral) {
+                for (const Expr& index : expr.children[1].children) {
+                    out += "[" + lower_expr(index, aliases, locals) + "]";
+                }
+                return out;
+            }
+            return out + "[" + lower_expr(expr.children[1], aliases, locals) + "]";
+        }
         break;
     case ExprKind::ListLiteral:
     case ExprKind::TupleLiteral:
