@@ -79,6 +79,9 @@ void check_expr(const Expr& expr) {
         check_unsupported_text(expr.location, expr.text);
         return;
     }
+    if (expr.kind == ExprKind::Await) {
+        throw CompileError(expr.location, "unsupported Python feature: async");
+    }
     if (expr.kind == ExprKind::Call) {
         const std::string callee = call_callee_text(expr);
         if (callee == "eval" || callee == "exec") {

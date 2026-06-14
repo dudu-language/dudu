@@ -186,6 +186,8 @@ Already structured:
 - unsupported Python call checks for `eval`, `exec`, `getattr`, and `setattr`
   walk parsed call expressions, with raw text scanning kept for unsupported or
   unknown expression shapes
+- unsupported `await` expressions parse into an AST node and are rejected by the
+  unsupported-feature pass without relying on raw text scanning
 
 Still too string-based:
 

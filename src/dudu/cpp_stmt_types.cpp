@@ -217,6 +217,8 @@ std::string infer_emitted_local_type(const Expr& expr,
             return then_type == else_type ? then_type : std::string{};
         }
         return {};
+    case ExprKind::Await:
+        return {};
     case ExprKind::Call:
         return infer_call_type(call_callee_text(expr), locals, function_returns);
     case ExprKind::Index:

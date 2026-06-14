@@ -117,6 +117,7 @@ enum class ExprKind {
     TupleLiteral,
     Lambda,
     Conditional,
+    Await,
     CppEscape,
 };
 

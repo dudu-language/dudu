@@ -325,6 +325,8 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
                    lower_expr(expr.children[2], aliases, locals) + ")";
         }
         break;
+    case ExprKind::Await:
+        break;
     case ExprKind::Call:
         return lower_call_expr(expr, aliases, locals);
     case ExprKind::TemplateCall: {

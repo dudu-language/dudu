@@ -356,11 +356,12 @@ void test_expression_ast_shape() {
                            "    view: span[i32] = values[1:3]\n"
                            "    choice: i32 = 1 if ready else 2\n"
                            "    callback = lambda left, right: left + right\n"
+                           "    pending = await fetch()\n"
                            "    return answer\n",
                            "expression_ast.dd");
     assert(module.functions.size() == 1);
     const dudu::FunctionDecl& main = module.functions.front();
-    assert(main.statements.size() == 11);
+    assert(main.statements.size() == 12);
 
     const dudu::Stmt& answer = main.statements[0];
     assert(answer.kind == dudu::StmtKind::VarDecl);
@@ -511,6 +512,15 @@ void test_expression_ast_shape() {
            callback.value_expr.params[0].range.start.column);
     assert(callback.value_expr.children.size() == 1);
     assert(callback.value_expr.children[0].kind == dudu::ExprKind::Binary);
+
+    const dudu::Stmt& pending = main.statements[10];
+    assert(pending.kind == dudu::StmtKind::Assign);
+    assert(pending.value_expr.kind == dudu::ExprKind::Await);
+    assert(pending.value_expr.children.size() == 1);
+    assert(pending.value_expr.children[0].kind == dudu::ExprKind::Call);
+    assert(pending.value_expr.children[0].name == "fetch");
+    assert(pending.value_expr.children[0].range.start.column >
+           pending.value_expr.range.start.column);
 }
 
 void test_type_ast_shape() {

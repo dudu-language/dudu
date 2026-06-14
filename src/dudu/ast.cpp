@@ -874,6 +874,8 @@ std::string_view expression_kind_name(ExprKind kind) {
         return "lambda";
     case ExprKind::Conditional:
         return "conditional";
+    case ExprKind::Await:
+        return "await";
     case ExprKind::CppEscape:
         return "cpp_escape";
     }
@@ -1129,6 +1131,11 @@ Expr parse_expr_text(std::string_view text, SourceLocation location) {
         Expr expr = make_expr(ExprKind::Unary, text, location);
         expr.op = "not";
         expr.children.push_back(parse_expr_text(text.substr(3), advance_columns(location, 3)));
+        return expr;
+    }
+    if (starts_keyword(text, "await")) {
+        Expr expr = make_expr(ExprKind::Await, text, location);
+        expr.children.push_back(parse_expr_text(text.substr(5), advance_columns(location, 5)));
         return expr;
     }
     if (text.front() == '-' && !is_integer_literal(text) && !is_float_literal(text)) {

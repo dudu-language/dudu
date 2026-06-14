@@ -1045,6 +1045,8 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
             return then_type.empty() ? else_type : then_type;
         }
         return infer_expr(scope, expr.text, use_location);
+    case ExprKind::Await:
+        return {};
     case ExprKind::Call: {
         const std::string callee = call_callee_text(expr);
         if (const auto pointer_cast =
