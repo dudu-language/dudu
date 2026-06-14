@@ -623,11 +623,14 @@ class LanguageServer {
             std::string name;
             int line = 0;
             int column = 0;
+            int indent = 0;
         };
         std::vector<std::string> lines;
         std::vector<LocalDecl> locals;
+        std::vector<LocalDecl> active_decls;
         static const std::regex local_decl(
             R"(^(\s*)([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([A-Za-z_][A-Za-z0-9_\.]*)\b)");
+        static const std::regex def_decl(R"(^(\s*)def\s+[A-Za-z_][A-Za-z0-9_]*\(([^)]*)\))");
         std::istringstream in(doc.text);
         std::string line;
         int row = 0;
@@ -640,6 +643,9 @@ class LanguageServer {
                 continue;
             }
             const int indent = leading_spaces(line);
+            while (!active_decls.empty() && active_decls.back().indent > indent) {
+                active_decls.pop_back();
+            }
             if (returned_indent && indent >= *returned_indent) {
                 out.push_back({.location = {.file = doc.path, .line = row, .column = indent + 1},
                                .message = "unreachable statement after return",
@@ -656,8 +662,35 @@ class LanguageServer {
                 returned_indent = indent;
             }
             std::smatch match;
+            if (std::regex_search(line, match, def_decl)) {
+                const std::vector<std::string> params = split_top_level_args(match[2].str());
+                for (const std::string& param : params) {
+                    const size_t colon = param.find(':');
+                    if (colon == std::string::npos) {
+                        continue;
+                    }
+                    const std::string name = trim_copy(param.substr(0, colon));
+                    if (!name.empty() && name != "self") {
+                        active_decls.push_back(
+                            {.name = name, .line = row, .column = indent + 1, .indent = indent + 4});
+                    }
+                }
+            }
             if (std::regex_search(line, match, local_decl)) {
-                locals.push_back({.name = match[2].str(), .line = row, .column = indent + 1});
+                const std::string name = match[2].str();
+                for (const LocalDecl& outer : active_decls) {
+                    if (outer.name == name && outer.line != row && outer.indent <= indent) {
+                        out.push_back(
+                            {.location = {.file = doc.path, .line = row, .column = indent + 1},
+                             .message = "local shadows outer binding: " + name,
+                             .source = "dudu/lint",
+                             .severity = 2});
+                        break;
+                    }
+                }
+                LocalDecl local{.name = name, .line = row, .column = indent + 1, .indent = indent};
+                locals.push_back(local);
+                active_decls.push_back(std::move(local));
             }
         }
         for (const LocalDecl& local : locals) {

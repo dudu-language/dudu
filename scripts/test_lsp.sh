@@ -43,6 +43,7 @@ rename_uri = f"file://{repo_root}/tests/fixtures/lsp_rename_main.dd"
 rename_user_uri = f"file://{repo_root}/tests/fixtures/lsp_rename_user.dd"
 lint_uri = "file:///tmp/dudu_lsp_lint.dd"
 unused_uri = "file:///tmp/dudu_lsp_unused.dd"
+shadow_uri = "file:///tmp/dudu_lsp_shadow.dd"
 bad_config_uri = f"file://{repo_root}/tests/fixtures/lsp_bad_config/main.dd"
 overload_uri = f"file://{repo_root}/tests/fixtures/dudu_lsp_overload.dd"
 scope_uri = "file:///tmp/dudu_lsp_scope.dd"
@@ -205,6 +206,30 @@ messages = [
                         }
                     ]
                 },
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "method": "textDocument/didOpen",
+            "params": {
+                "textDocument": {
+                    "uri": shadow_uri,
+                    "languageId": "dudu",
+                    "version": 1,
+                    "text": "\n".join(
+                        [
+                            "def main(a: i32) -> i32:",
+                            "    value: i32 = 1",
+                            "    if a > 0:",
+                            "        value: i32 = 2",
+                            "        return value",
+                            "    return value",
+                            "",
+                        ]
+                    ),
+                }
             },
         }
     ),
@@ -784,6 +809,14 @@ unused_diagnostics = next(
 unused_messages = [item["message"] for item in unused_diagnostics["params"]["diagnostics"]]
 assert "unused local: unused_value" in unused_messages
 assert "unused local: used_value" not in unused_messages
+
+shadow_diagnostics = next(
+    item
+    for item in responses
+    if item.get("method") == "textDocument/publishDiagnostics" and item["params"]["uri"] == shadow_uri
+)
+shadow_messages = [item["message"] for item in shadow_diagnostics["params"]["diagnostics"]]
+assert "local shadows outer binding: value" in shadow_messages
 
 build_config_diagnostics = next(
     item
