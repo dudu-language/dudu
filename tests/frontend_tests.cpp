@@ -316,8 +316,8 @@ void test_type_ast_shape() {
     assert(module.classes.size() == 1);
     const dudu::ClassDecl& player = module.classes[0];
     assert(player.static_fields.size() == 1);
-    assert(player.static_fields[0].type_ref.kind == dudu::TypeKind::Static);
-    assert(player.static_fields[0].type_ref.children[0].kind == dudu::TypeKind::Named);
+    assert(player.static_fields[0].type == "i32");
+    assert(player.static_fields[0].type_ref.kind == dudu::TypeKind::Named);
     assert(player.fields.size() == 1);
     assert(player.fields[0].type_ref.kind == dudu::TypeKind::FixedArray);
     assert(player.fields[0].type_ref.value == "4, 4");
@@ -385,6 +385,31 @@ void test_typed_for_emission() {
     const std::string cpp = dudu::emit_cpp_source(module);
     assert(cpp.find("for (Item& item : items)") != std::string::npos);
     assert(cpp.find("for (auto&& copy : items)") != std::string::npos);
+}
+
+void test_class_field_defaults_and_static_fields() {
+    const dudu::ModuleAst module = dudu::parse_source("class Counter:\n"
+                                                      "    value: i32 = 7\n"
+                                                      "    count: static[i32] = 0\n"
+                                                      "\n"
+                                                      "    def bump() -> i32:\n"
+                                                      "        Counter.count += 1\n"
+                                                      "        return Counter.count\n",
+                                                      "class_defaults.dd");
+    assert(module.classes.size() == 1);
+    const dudu::ClassDecl& counter = module.classes.front();
+    assert(counter.fields.size() == 1);
+    assert(counter.fields[0].name == "value");
+    assert(counter.fields[0].value == "7");
+    assert(counter.static_fields.size() == 1);
+    assert(counter.static_fields[0].name == "count");
+    assert(counter.static_fields[0].type == "i32");
+    assert(counter.methods.size() == 1);
+
+    const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find("int32_t value = 7;") != std::string::npos);
+    assert(cpp.find("inline static int32_t count = 0;") != std::string::npos);
+    assert(cpp.find("static int32_t bump()") != std::string::npos);
 }
 
 void test_native_type_declaration_emission() {
@@ -657,6 +682,7 @@ int main() {
         test_type_ast_shape();
         test_formatter();
         test_typed_for_emission();
+        test_class_field_defaults_and_static_fields();
         test_native_type_declaration_emission();
         test_native_header_type_scan(root);
         test_native_call_arity(root);

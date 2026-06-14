@@ -134,7 +134,7 @@ void emit_method(std::ostringstream& out, const std::string& class_name, const F
         out << "    ~" << class_name << '(';
     } else {
         out << "    ";
-        if (function_has_decorator(method, "staticmethod")) {
+        if (first_param == 0 || function_has_decorator(method, "staticmethod")) {
             out << "static ";
         }
         out << lower_cpp_type(method.return_type, aliases) << ' ' << operator_name(method.name)
@@ -196,7 +196,13 @@ void emit_classes(std::ostringstream& out, const ModuleAst& module,
         }
         out << class_opening(klass) << " {\n";
         for (const FieldDecl& field : klass.fields) {
-            out << "    " << lower_cpp_type(field.type, aliases) << ' ' << field.name << "{};\n";
+            out << "    " << lower_cpp_type(field.type_ref, aliases) << ' ' << field.name;
+            if (field.value.empty()) {
+                out << "{}";
+            } else {
+                out << " = " << lower_cpp_expr(field.value, aliases);
+            }
+            out << ";\n";
         }
         for (const ConstDecl& field : klass.static_fields) {
             out << "    inline static " << lower_cpp_type(field.type, aliases) << ' ' << field.name

@@ -237,12 +237,24 @@ class Parser {
             if (member_visibility != Visibility::Default) {
                 fail_current("expected def after class member visibility");
             }
-            if (class_member_has_initializer()) {
-                require_no_decorators(member_decorators, "static field");
-                klass.static_fields.push_back(parse_constant());
+            require_no_decorators(member_decorators, "field");
+            FieldDecl field = parse_field();
+            if (field.type_ref.kind == TypeKind::Static) {
+                if (field.value.empty()) {
+                    throw CompileError(field.location, "static field requires an initializer");
+                }
+                ConstDecl static_field;
+                static_field.name = field.name;
+                static_field.type =
+                    field.type_ref.children.empty() ? field.type : field.type_ref.children[0].text;
+                static_field.type_ref = field.type_ref.children.empty()
+                                            ? parse_type_text(static_field.type, field.location)
+                                            : field.type_ref.children[0];
+                static_field.value = field.value;
+                static_field.location = field.location;
+                klass.static_fields.push_back(std::move(static_field));
             } else {
-                require_no_decorators(member_decorators, "field");
-                klass.fields.push_back(parse_field());
+                klass.fields.push_back(std::move(field));
             }
         }
         require_no_decorators(member_decorators, "class body");
@@ -256,22 +268,17 @@ class Parser {
         field.name = name.text;
         field.location = name.location;
         consume(TokenKind::Colon, "expected : after field name");
-        field.type = join_until({TokenKind::Newline});
+        field.type = join_until({TokenKind::Assign, TokenKind::Newline});
         if (field.type.empty()) {
             throw CompileError(name.location, "field requires a type");
         }
         field.type_ref = parse_type_text(field.type, name.location);
+        if (match(TokenKind::Assign)) {
+            field.value = join_until({TokenKind::Newline});
+            field.value_expr = parse_expr_text(field.value, name.location);
+        }
         consume(TokenKind::Newline, "expected newline after field");
         return field;
-    }
-
-    bool class_member_has_initializer() const {
-        for (size_t i = cursor_; i < tokens_.size() && tokens_[i].kind != TokenKind::Newline; ++i) {
-            if (tokens_[i].kind == TokenKind::Assign) {
-                return true;
-            }
-        }
-        return false;
     }
 
     EnumDecl parse_enum(const Token& start) {

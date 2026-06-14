@@ -63,13 +63,6 @@ struct TypeRef {
     SourceRange range;
 };
 
-struct FieldDecl {
-    std::string name;
-    std::string type;
-    TypeRef type_ref;
-    SourceLocation location;
-};
-
 struct ParamDecl {
     std::string name;
     std::string type;
@@ -139,6 +132,15 @@ struct Expr {
     std::vector<Expr> children;
     SourceLocation location;
     SourceRange range;
+};
+
+struct FieldDecl {
+    std::string name;
+    std::string type;
+    std::string value;
+    TypeRef type_ref;
+    Expr value_expr;
+    SourceLocation location;
 };
 
 struct Stmt {

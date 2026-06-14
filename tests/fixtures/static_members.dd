@@ -4,7 +4,6 @@ class Color:
     b: f32
     a: f32
 
-    @staticmethod
     def gray(value: f32) -> Color:
         return Color(value, value, value, 1.0)
 

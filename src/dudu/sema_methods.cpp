@@ -96,6 +96,9 @@ bool is_indexed_local_segment(const std::string& text) {
 }
 
 bool method_is_static(const FunctionDecl& method) {
+    if (method.params.empty() || method.params.front().name != "self") {
+        return true;
+    }
     for (const Decorator& decorator : method.decorators) {
         if (trim(decorator.text) == "staticmethod") {
             return true;

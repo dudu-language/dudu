@@ -1,8 +1,7 @@
 class Counter:
-    count: i32 = 0
-    scale: i32 = 2
+    count: static[i32] = 0
+    scale: static[i32] = 2
 
-    @staticmethod
     def bump() -> i32:
         Counter.count += 1
         return Counter.count * Counter.scale

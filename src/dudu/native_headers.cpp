@@ -367,8 +367,10 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         scan.classes[classes.back().second].fields.push_back(
             {.name = match[1].str(),
              .type = qualify_scoped_type(scan, namespaces, dudu_type(match[2].str())),
+             .value = "",
              .type_ref = parse_type_text(
                  qualify_scoped_type(scan, namespaces, dudu_type(match[2].str())), decl_location),
+             .value_expr = {},
              .location = decl_location});
     } else if (!classes.empty() &&
                (line.find("public '") != std::string::npos ||

@@ -204,6 +204,10 @@ class Counter:
 This maps to C++ static data members: one value shared by the class, not one
 value stored in each instance.
 
+Status: instance fields with default values and explicit `static[T]` class
+fields are implemented. Functions inside classes with no `self` lower as static
+member functions without requiring `@staticmethod`.
+
 Static fields must be accessed with the type-qualified name:
 
 ```python
