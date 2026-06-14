@@ -94,6 +94,16 @@ const SourceLocation& node_location(const SourceLocation& fallback, const TypeRe
     return type.range.end.column > type.range.start.column ? type.location : fallback;
 }
 
+void bind_local(FunctionScope& scope, const std::string& name, const std::string& type,
+                const TypeRef& type_ref = {}) {
+    scope.locals[name] = type;
+    if (type_ref.kind != TypeKind::Unknown || !type_ref.text.empty()) {
+        scope.local_type_refs[name] = type_ref;
+    } else {
+        scope.local_type_refs.erase(name);
+    }
+}
+
 bool foreign_cpp_type_name(const std::string& type) {
     return type.find('.') != std::string::npos || type.find("::") != std::string::npos;
 }
@@ -342,7 +352,10 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
         }
         if (const auto local = scope.locals.find(callee); local != scope.locals.end()) {
             FunctionSignature signature;
-            if (parse_function_type(resolve_alias(scope.symbols, local->second), signature)) {
+            const auto local_type = scope.local_type_refs.find(callee);
+            if ((local_type != scope.local_type_refs.end() &&
+                 parse_function_type(local_type->second, signature)) ||
+                parse_function_type(resolve_alias(scope.symbols, local->second), signature)) {
                 check_call_args(scope, callee, signature, call_args(expr, call), location);
                 return signature.return_type;
             }
@@ -948,7 +961,10 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
         }
         if (const auto local = scope.locals.find(callee); local != scope.locals.end()) {
             FunctionSignature signature;
-            if (parse_function_type(resolve_alias(scope.symbols, local->second), signature)) {
+            const auto local_type = scope.local_type_refs.find(callee);
+            if ((local_type != scope.local_type_refs.end() &&
+                 parse_function_type(local_type->second, signature)) ||
+                parse_function_type(resolve_alias(scope.symbols, local->second), signature)) {
                 check_call_args_ast(scope, callee, signature, expr.children, use_location);
                 return signature.return_type;
             }
@@ -1214,7 +1230,8 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
             check_local_binding_name(stmt.location, stmt.name);
             check_known_type_ref(scope.symbols, node_location(stmt.location, stmt.type_ref),
                                  stmt.type_ref, "unknown catch type: ");
-            nested.locals[stmt.name] = "&const[" + stmt.type + "]";
+            bind_local(nested, stmt.name, "&const[" + stmt.type + "]",
+                       parse_type_text("&const[" + stmt.type + "]", stmt.location));
         }
         check_block(nested, stmt.children, return_type, loop_depth);
         return;
@@ -1233,7 +1250,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
             check_iterable_binding(scope.symbols, scope.locals,
                                    node_location(stmt.location, stmt.iterable_expr), stmt.type,
                                    stmt.iterable);
-            nested.locals[stmt.name] = stmt.type;
+            bind_local(nested, stmt.name, stmt.type, stmt.type_ref);
         }
         check_block(nested, stmt.children, return_type, loop_depth + 1);
         return;
@@ -1297,7 +1314,8 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
                                  node_location(stmt.location, stmt.value_expr));
             }
         }
-        scope.locals[stmt.name] = type;
+        bind_local(scope, stmt.name, type,
+                   stmt.type == type ? stmt.type_ref : parse_type_text(type));
         if (is_dudu_all_caps(stmt.name)) {
             scope.constants.insert(stmt.name);
         }
@@ -1316,7 +1334,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
             }
             check_destructure_bindings(stmt.location, names, scope.locals);
             for (size_t i = 0; i < names.size(); ++i) {
-                scope.locals[names[i]] = types[i];
+                bind_local(scope, names[i], types[i]);
             }
             return;
         }
@@ -1330,7 +1348,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
             check_local_binding_name(node_location(stmt.location, stmt.target_expr), name);
             const std::string inferred = infer_expr_ast(
                 scope, stmt.value_expr, &node_location(stmt.location, stmt.value_expr));
-            scope.locals[name] = inferred.empty() ? "auto" : inferred;
+            bind_local(scope, name, inferred.empty() ? "auto" : inferred);
             if (is_dudu_all_caps(name)) {
                 scope.constants.insert(name);
             }
@@ -1346,7 +1364,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
     (void)infer_expr_ast(scope, stmt.expr, &stmt.location);
 }
 void check_bodies(const ModuleAst& module, const Symbols& symbols) {
-    FunctionScope base{symbols, {}, {}};
+    FunctionScope base{symbols};
     const auto mode = module.build_values.find("TARGET_MODE");
     if (mode != module.build_values.end()) {
         base.target_mode = trim(mode->second);
@@ -1356,14 +1374,14 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols) {
         }
     }
     for (const ConstDecl& constant : module.constants) {
-        base.locals[constant.name] = constant.type;
+        bind_local(base, constant.name, constant.type, constant.type_ref);
         base.constants.insert(constant.name);
     }
     for (const ClassDecl& klass : module.classes) {
         for (const FunctionDecl& method : klass.methods) {
             FunctionScope scope = base;
             for (const ParamDecl& param : method.params) {
-                scope.locals[param.name] = param.type;
+                bind_local(scope, param.name, param.type, param.type_ref);
             }
             check_block(scope, method.statements,
                         method.return_type.empty() ? "void" : method.return_type, 0);
@@ -1376,7 +1394,7 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols) {
     for (const FunctionDecl& fn : module.functions) {
         FunctionScope scope = base;
         for (const ParamDecl& param : fn.params) {
-            scope.locals[param.name] = param.type;
+            bind_local(scope, param.name, param.type, param.type_ref);
         }
         check_block(scope, fn.statements, fn.return_type.empty() ? "void" : fn.return_type, 0);
         if (!fn.return_type.empty() && fn.return_type != "void" &&

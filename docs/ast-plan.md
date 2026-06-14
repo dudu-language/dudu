@@ -34,6 +34,9 @@ Already structured:
 - function pointer/callback signature parsing can consume parsed `TypeRef`
   nodes directly, including omitted-return `fn(...)` as `void` and wrapper
   templates such as `std.function[fn(...)]`
+- local scopes preserve parsed `TypeRef` nodes for declared parameters,
+  constants, locals, catch bindings, and typed loop bindings, so function
+  pointer calls can check signatures without reparsing declared type text
 - source range fields on statement, expression, and type nodes
 - semantic diagnostics for return values, local initializer values, local type
   names, conditions, and assignment targets use expression/type node locations
