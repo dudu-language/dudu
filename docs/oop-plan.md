@@ -33,7 +33,7 @@ Python OOP includes:
 - dynamic attributes
 - monkeypatching
 - metaclasses/descriptors
-- dunder operator methods
+- dunder protocol methods
 
 Dudu should keep the readable pieces and reject the dynamic runtime pieces.
 
@@ -292,9 +292,10 @@ class Player:
 
 ## Operator Overloads
 
-Dudu-native operator overloads use explicit operator decorators. This avoids
-Python's dunder name table and gives Dudu room for operators Python does not
-spell cleanly:
+Dudu-native operator overloads use explicit operator decorators. Dudu reserves
+Python-style `__name__` protocol methods instead of translating them, which
+keeps the native surface small and gives Dudu room for operators Python does
+not spell cleanly:
 
 ```python
 class Vec2:

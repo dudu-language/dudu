@@ -96,15 +96,8 @@ bool is_comparison_operator_method(const FunctionDecl& method) {
     return ops.contains(operator_decorator_arg(method));
 }
 
-std::string dunder_operator_name(const std::string& name) {
-    static const std::map<std::string, std::string> names = {
-        {"__add__", "+"},      {"__sub__", "-"},       {"__mul__", "*"}, {"__truediv__", "/"},
-        {"__mod__", "%"},      {"__eq__", "=="},       {"__ne__", "!="}, {"__lt__", "<"},
-        {"__le__", "<="},      {"__gt__", ">"},        {"__ge__", ">="}, {"__bool__", "bool"},
-        {"__getitem__", "[]"}, {"__setitem__", "[]="},
-    };
-    const auto it = names.find(name);
-    return it == names.end() ? std::string{} : it->second;
+bool is_reserved_dunder_name(const std::string& name) {
+    return name.size() > 4 && starts_with(name, "__") && name.ends_with("__");
 }
 
 bool is_constructor_method(const FunctionDecl& method) {
@@ -493,9 +486,10 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                                  "unknown static field type: ");
         }
         for (const FunctionDecl& method : klass.methods) {
-            if (const std::string op = dunder_operator_name(method.name); !op.empty()) {
-                fail(method.location, "Dudu operator methods use @operator(\"" + op +
-                                          "\") on a normal method name, not " + method.name);
+            if (is_reserved_dunder_name(method.name)) {
+                fail(method.location,
+                     "reserved Python-style dunder method name: " + method.name +
+                         "; use normal Dudu names and decorators such as @operator(...)");
             }
             if (!fields.insert(method.name).second) {
                 fail(method.location, "duplicate class member: " + method.name);
