@@ -354,10 +354,11 @@ Comma-separated expression children now keep their own source columns for call
 arguments, list literals, tuple literals, set/dict entries, and template-call
 arguments parsed through expression lists.
 
-Dudu-defined function calls, function-pointer calls, static class functions, and
-Dudu-visible method calls now type-check parsed argument `Expr` nodes directly.
-Native calls, constructor calls, and template calls still use their specialized
-string-based paths until those subsystems accept structured argument nodes.
+Dudu-defined function calls, function-pointer calls, static class functions,
+Dudu-visible method calls, native calls, constructor calls, and template calls
+now type-check parsed argument `Expr` nodes directly. Remaining call-related
+string fallback is limited to unsupported expression shapes and the old raw
+inference path.
 
 C++ statement emission now lowers return values, assert/debug_assert
 conditions, raise values, if/elif/while conditions, for iterables, and bare
@@ -436,11 +437,11 @@ Compound assignment is emitted only through the parsed `CompoundAssign` node;
 the statement catch-all is now limited to `Unknown` statements.
 
 Template-call semantic inference now has an AST path that uses parsed template
-arguments and parsed runtime arguments. Native/header interop still receives
-string argument text at its existing boundary, but `infer_expr_ast` no longer
-re-enters whole-expression parsing for template calls. Unary address-of and
-dereference expressions are parsed as `Unary` nodes, which keeps pointer
-assignment targets such as `*ptr = value` on the AST-backed assignment path.
+arguments and parsed runtime arguments. Native/header interop overload checks
+also consume parsed runtime argument nodes for ordinary and explicit-template
+calls. Unary address-of and dereference expressions are parsed as `Unary` nodes,
+which keeps pointer assignment targets such as `*ptr = value` on the AST-backed
+assignment path.
 
 Ordinary constructor and explicit-cast call semantic inference now uses parsed
 runtime call arguments. Dotted constructor calls are only treated as constructors
