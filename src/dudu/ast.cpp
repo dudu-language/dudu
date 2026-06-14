@@ -274,9 +274,25 @@ std::vector<CommaPart> split_top_level_comma_parts(std::string_view text) {
     int bracket_depth = 0;
     int paren_depth = 0;
     int brace_depth = 0;
+    char quote = '\0';
+    bool escaped = false;
     size_t start = 0;
     for (size_t i = 0; i < text.size(); ++i) {
         const char c = text[i];
+        if (quote != '\0') {
+            if (escaped) {
+                escaped = false;
+            } else if (c == '\\') {
+                escaped = true;
+            } else if (c == quote) {
+                quote = '\0';
+            }
+            continue;
+        }
+        if (c == '"' || c == '\'') {
+            quote = c;
+            continue;
+        }
         if (c == '[') {
             ++bracket_depth;
         } else if (c == ']') {
@@ -386,6 +402,9 @@ size_t find_top_level_binary_operator(std::string_view text,
         }
         for (const std::string_view op : ops) {
             if (i + op.size() > text.size() || text.substr(i, op.size()) != op) {
+                continue;
+            }
+            if (i == 0 || i + op.size() >= text.size()) {
                 continue;
             }
             if ((op == "and" || op == "or") && !((i == 0 || !is_identifier_continue(text[i - 1])) &&
@@ -811,6 +830,11 @@ Expr parse_expr_text(std::string_view text, SourceLocation location) {
             return expr;
         }
         return parse_expr_text(inner, location);
+    }
+    if (split_top_level_commas(text).size() > 1) {
+        Expr expr = make_expr(ExprKind::TupleLiteral, text, location);
+        expr.children = parse_expr_list(text, location);
+        return expr;
     }
     if (enclosed_by_outer_pair(text, '[', ']')) {
         Expr expr = make_expr(ExprKind::ListLiteral, text, location);

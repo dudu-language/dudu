@@ -259,7 +259,7 @@ grep -q "FAILED failing_output: assert failed: 1 == 2" \
 grep -q "inline constexpr bool DEBUG = true;" "$repo_root/build/package_build.cpp"
 grep -q 'inline constexpr std::string_view RENDER_BACKEND = "raylib";' \
     "$repo_root/build/package_build.cpp"
-grep -q "if constexpr (build::DEBUG && build::RENDER_BACKEND == \"raylib\")" \
+grep -q "if constexpr ((build::DEBUG && (build::RENDER_BACKEND == \"raylib\")))" \
     "$repo_root/build/package_build.cpp"
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/package_build/main.dd" \
     -o "$repo_root/build/package_build_override.cpp" -DDEBUG=false
@@ -310,7 +310,7 @@ grep -q 'inline constexpr std::string_view TARGET_KIND = "executable";' \
     "$repo_root/build/project_mode.cpp"
 grep -q 'inline constexpr std::string_view TARGET_MODE = "hosted";' \
     "$repo_root/build/project_mode.cpp"
-grep -q 'if constexpr (build::DEBUG && build::TARGET_KIND == "executable" && build::TARGET_MODE == "hosted")' \
+grep -q 'if constexpr (((build::DEBUG && (build::TARGET_KIND == "executable")) && (build::TARGET_MODE == "hosted")))' \
     "$repo_root/build/project_mode.cpp"
 rm -f "$repo_root/build/project_cc_bin" "$repo_root/build/project_cc_bin.cpp"
 (
@@ -563,7 +563,7 @@ compile_and_expect cpp_digit_underscore_name 42
 compile_and_expect debug_asserts 42
 "$repo_root/build/dudu" "$repo_root/tests/fixtures/freestanding_debug_assert.dd" \
     --emit-cpp "$repo_root/build/freestanding_debug_assert.cpp" -DTARGET_MODE=freestanding
-grep -Fq "assert((value == 42)" "$repo_root/build/freestanding_debug_assert.cpp"
+grep -Fq "assert(((value == 42)))" "$repo_root/build/freestanding_debug_assert.cpp"
 ! grep -Fq "runtime_error" "$repo_root/build/freestanding_debug_assert.cpp"
 compile_and_expect cpp_exceptions 42
 compile_and_expect std_vector_map_string 42

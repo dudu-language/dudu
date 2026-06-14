@@ -189,6 +189,17 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
     if (const auto type = infer_not_expr(scope, expr, location, infer_expr)) {
         return *type;
     }
+    const size_t pointer_cast_call = find_call_open(expr);
+    if (expr.size() > 1 && expr.front() == '*' && pointer_cast_call != std::string::npos &&
+        find_call_close(expr, pointer_cast_call) == expr.size() - 1) {
+        const std::string type = trim(expr.substr(1, pointer_cast_call - 1));
+        if (known_type(scope.symbols, type)) {
+            for (const std::string& arg : call_args(expr, pointer_cast_call)) {
+                (void)infer_expr(scope, arg, location);
+            }
+            return "*" + type;
+        }
+    }
     if (expr.size() > 1 && expr.front() == '*') {
         const std::string name = trim(expr.substr(1));
         if (const auto local = scope.locals.find(name); local != scope.locals.end()) {

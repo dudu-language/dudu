@@ -144,7 +144,7 @@ std::string indexed_type_from_type(const Symbols& symbols, const SourceLocation&
         }
     }
     if (pointer_index) {
-        return type;
+        return unwrap_reference_and_const(type);
     }
     if (starts_with(type, "list[") && type.back() == ']') {
         return trim(type.substr(5, type.size() - 6));

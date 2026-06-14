@@ -59,7 +59,7 @@ grep -Fq "dudu::Result<Todo, DbError> fetch_todo" "$repo_root/build/sqlite_crud.
     -o "$repo_root/build/c_macro_constants.cpp"
 grep -Fq '#include "c_macro_wrap.h"' "$repo_root/build/c_macro_constants.cpp"
 grep -Fq "DUDU_WRAP_SCALE(5)" "$repo_root/build/c_macro_constants.cpp"
-grep -Fq "return total + DUDU_WRAP_MAGIC - 7;" "$repo_root/build/c_macro_constants.cpp"
+grep -Fq "return ((total + DUDU_WRAP_MAGIC) - 7);" "$repo_root/build/c_macro_constants.cpp"
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/c_variadic_macro.dd" \
     -o "$repo_root/build/c_variadic_macro.cpp"
 grep -Fq "DUDU_WRAP_FIRST(20, 1, 2, 3)" "$repo_root/build/c_variadic_macro.cpp"
@@ -117,8 +117,8 @@ grep -Fq "<< 24" "$repo_root/build/binary_packet_parser.cpp"
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/debug_asserts.dd" \
     -o "$repo_root/build/debug_asserts.cpp"
 grep -Fq "#include <cassert>" "$repo_root/build/debug_asserts.cpp"
-grep -Fq "assert((value == 42));" "$repo_root/build/debug_asserts.cpp"
-grep -Fq "assert((value > 0) && (\"value should be positive\"));" \
+grep -Fq "assert(((value == 42)));" "$repo_root/build/debug_asserts.cpp"
+grep -Fq "assert(((value > 0)) && (\"value should be positive\"));" \
     "$repo_root/build/debug_asserts.cpp"
 
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/bitwise_ops.dd" \

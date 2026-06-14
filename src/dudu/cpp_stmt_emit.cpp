@@ -20,6 +20,107 @@ std::string lower_expr(std::string expr, const std::vector<std::string>& aliases
     return lower_cpp_expr(rewrite_pointer_members(std::move(expr), locals), aliases);
 }
 
+std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases,
+                       const std::map<std::string, std::string>& locals);
+
+std::string join_lowered_exprs(const std::vector<Expr>& exprs,
+                               const std::vector<std::string>& aliases,
+                               const std::map<std::string, std::string>& locals,
+                               std::string_view separator = ", ") {
+    std::ostringstream out;
+    for (size_t i = 0; i < exprs.size(); ++i) {
+        if (i > 0) {
+            out << separator;
+        }
+        out << lower_expr(exprs[i], aliases, locals);
+    }
+    return out.str();
+}
+
+std::string cpp_binary_operator(const std::string& op) {
+    if (op == "and") {
+        return "&&";
+    }
+    if (op == "or") {
+        return "||";
+    }
+    return op;
+}
+
+bool has_named_argument_shape(const std::vector<Expr>& args) {
+    for (const Expr& arg : args) {
+        if (arg.text.find('=') != std::string::npos) {
+            return true;
+        }
+    }
+    return false;
+}
+
+std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases,
+                       const std::map<std::string, std::string>& locals) {
+    if (expr.text.empty() || expr.kind == ExprKind::Unknown) {
+        return lower_expr(expr.text, aliases, locals);
+    }
+    switch (expr.kind) {
+    case ExprKind::BoolLiteral:
+        return expr.text == "True" ? "true" : "false";
+    case ExprKind::NoneLiteral:
+        return "nullptr";
+    case ExprKind::IntLiteral:
+    case ExprKind::FloatLiteral:
+    case ExprKind::StringLiteral:
+    case ExprKind::Name:
+    case ExprKind::CppEscape:
+        return lower_expr(expr.text, aliases, locals);
+    case ExprKind::Unary:
+        if (expr.children.size() == 1) {
+            const std::string op = expr.op == "not" ? "!" : expr.op;
+            return "(" + op + lower_expr(expr.children.front(), aliases, locals) + ")";
+        }
+        break;
+    case ExprKind::Binary:
+        if (expr.children.size() == 2 && !trim_copy(expr.children[0].text).empty() &&
+            !trim_copy(expr.children[1].text).empty()) {
+            return "(" + lower_expr(expr.children[0], aliases, locals) + " " +
+                   cpp_binary_operator(expr.op) + " " +
+                   lower_expr(expr.children[1], aliases, locals) + ")";
+        }
+        break;
+    case ExprKind::Conditional:
+        if (expr.children.size() == 3) {
+            return "(" + lower_expr(expr.children[1], aliases, locals) + " ? " +
+                   lower_expr(expr.children[0], aliases, locals) + " : " +
+                   lower_expr(expr.children[2], aliases, locals) + ")";
+        }
+        break;
+    case ExprKind::Call:
+        if (has_named_argument_shape(expr.children)) {
+            break;
+        }
+        return lower_expr(expr.name + "(" + join_lowered_exprs(expr.children, aliases, locals) +
+                              ")",
+                          aliases, locals);
+    case ExprKind::Member:
+        if (expr.children.size() == 1) {
+            return lower_expr(lower_expr(expr.children.front(), aliases, locals) + "." + expr.name,
+                              aliases, locals);
+        }
+        break;
+    case ExprKind::Index:
+        break;
+    case ExprKind::ListLiteral:
+    case ExprKind::TupleLiteral:
+    case ExprKind::SetLiteral:
+    case ExprKind::DictLiteral:
+    case ExprKind::Lambda:
+    case ExprKind::TemplateCall:
+        break;
+    case ExprKind::Unknown:
+        break;
+    }
+    return lower_expr(expr.text, aliases, locals);
+}
+
 size_t find_top_level_colon(const std::string& text) {
     int depth = 0;
     char quote = '\0';
@@ -286,14 +387,15 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         const std::string value = stmt.value;
         out << indent(depth) << "throw";
         if (!value.empty())
-            out << ' ' << lower_expr(value, aliases, locals);
+            out << ' ' << lower_expr(stmt.value_expr, aliases, locals);
         out << ";\n";
         return;
     }
     if (stmt.kind == StmtKind::Assert) {
         const std::vector<std::string> parts = split_top_level_args(stmt.condition);
         const std::string condition = parts.empty() ? "" : trim_copy(parts.front());
-        out << indent(depth) << "if (!(" << lower_expr(condition, aliases, locals)
+        const Expr condition_expr = parse_expr_text(condition, stmt.location);
+        out << indent(depth) << "if (!(" << lower_expr(condition_expr, aliases, locals)
             << ")) { throw std::runtime_error(";
         if (parts.size() >= 2)
             out << lower_expr(parts[1], aliases, locals);
@@ -305,7 +407,8 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
     if (stmt.kind == StmtKind::DebugAssert) {
         const auto parts = split_top_level_args(stmt.condition);
         const auto condition = parts.empty() ? "" : trim_copy(parts.front());
-        out << indent(depth) << "assert((" << lower_expr(condition, aliases, locals) << ")";
+        const Expr condition_expr = parse_expr_text(condition, stmt.location);
+        out << indent(depth) << "assert((" << lower_expr(condition_expr, aliases, locals) << ")";
         if (parts.size() >= 2)
             out << " && (" << lower_expr(parts[1], aliases, locals) << ")";
         out << ");\n";
@@ -318,9 +421,9 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
             if (starts_with(return_type, "Option[") && value == "None") {
                 out << " std::nullopt";
             } else if (split_top_level_args(value).size() > 1) {
-                out << " {" << lower_expr(value, aliases, locals) << '}';
+                out << " {" << lower_expr(stmt.value_expr, aliases, locals) << '}';
             } else {
-                out << ' ' << lower_expr(value, aliases, locals);
+                out << ' ' << lower_expr(stmt.value_expr, aliases, locals);
             }
         }
         out << ";\n";
@@ -393,6 +496,10 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
             return;
         }
     }
+    if (stmt.kind == StmtKind::Expr) {
+        out << indent(depth) << lower_expr(stmt.expr, aliases, locals) << ";\n";
+        return;
+    }
     out << indent(depth) << lower_expr(normalize_spaced_compound(text), aliases, locals) << ";\n";
 }
 
@@ -405,7 +512,7 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
     if (stmt.kind == StmtKind::If) {
         const std::string& condition = stmt.condition;
         out << indent(depth) << if_keyword_for_condition(condition) << " ("
-            << lower_expr(condition, aliases, locals) << ") {\n";
+            << lower_expr(stmt.condition_expr, aliases, locals) << ") {\n";
         emit_block(out, stmt.children, depth + 1, aliases, locals, return_type, function_returns);
         out << indent(depth) << "}\n";
         return;
@@ -413,7 +520,7 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
     if (stmt.kind == StmtKind::Elif) {
         const std::string& condition = stmt.condition;
         out << indent(depth) << "else " << if_keyword_for_condition(condition) << " ("
-            << lower_expr(condition, aliases, locals) << ") {\n";
+            << lower_expr(stmt.condition_expr, aliases, locals) << ") {\n";
         emit_block(out, stmt.children, depth + 1, aliases, locals, return_type, function_returns);
         out << indent(depth) << "}\n";
         return;
@@ -447,14 +554,15 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         return;
     }
     if (stmt.kind == StmtKind::While) {
-        out << indent(depth) << "while (" << lower_expr(stmt.condition, aliases, locals) << ") {\n";
+        out << indent(depth) << "while (" << lower_expr(stmt.condition_expr, aliases, locals)
+            << ") {\n";
         emit_block(out, stmt.children, depth + 1, aliases, locals, return_type, function_returns);
         out << indent(depth) << "}\n";
         return;
     }
     if (stmt.kind == StmtKind::For && !stmt.iterable.empty()) {
         std::string binding = stmt.name;
-        const std::string range = lower_expr(stmt.iterable, aliases, locals);
+        const std::string range = lower_expr(stmt.iterable_expr, aliases, locals);
         std::string binding_type = "auto";
         if (!stmt.type.empty()) {
             binding_type = lower_cpp_type(stmt.type, aliases);

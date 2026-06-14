@@ -44,7 +44,6 @@ Still too string-based:
 - semantic analysis of if, elif, else
 - semantic analysis of while and for
 - try, except
-- C++ emission of return/assert/debug_assert and expression statements
 - C++ emission of calls, member access, indexing, operators, constructors,
   template calls, lambdas, tuple destructuring, and C++ macro calls
 - semantic analysis and most C++ emission paths for type strings
@@ -341,6 +340,17 @@ Dudu-defined function calls, function-pointer calls, static class functions, and
 Dudu-visible method calls now type-check parsed argument `Expr` nodes directly.
 Native calls, constructor calls, and template calls still use their specialized
 string-based paths until those subsystems accept structured argument nodes.
+
+C++ statement emission now lowers return values, assert/debug_assert
+conditions, raise values, if/elif/while conditions, for iterables, and bare
+expression statements from parsed `Expr` nodes where those nodes are
+structurally reliable. Complex collection literals, lambdas, template calls,
+native calls, and unsupported expression shapes still fall back to the existing
+string lowering path.
+
+Bare comma expressions now parse as tuple literals, including Python-style
+multi-value returns. The shared AST comma splitter is quote-aware so commas
+inside string literals do not create phantom tuple elements.
 
 ## Acceptance
 
