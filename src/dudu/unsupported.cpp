@@ -58,7 +58,7 @@ bool contains_word(std::string_view text, std::string_view name) {
     return false;
 }
 
-void check_statement(const RawStmt& stmt) {
+void check_statement(const Stmt& stmt) {
     const std::string text = trim_copy(stmt.text);
     constexpr std::array prefixes = {
         UnsupportedPrefix{"finally", "exceptions"},
@@ -88,7 +88,7 @@ void check_statement(const RawStmt& stmt) {
     if (contains_word(text, "await")) {
         throw CompileError(stmt.location, "unsupported Python feature: async");
     }
-    for (const RawStmt& child : stmt.children) {
+    for (const Stmt& child : stmt.children) {
         check_statement(child);
     }
 }
@@ -98,13 +98,13 @@ void check_statement(const RawStmt& stmt) {
 void check_unsupported_python(const ModuleAst& module) {
     for (const ClassDecl& klass : module.classes) {
         for (const FunctionDecl& method : klass.methods) {
-            for (const RawStmt& stmt : method.body) {
+            for (const Stmt& stmt : method.statements) {
                 check_statement(stmt);
             }
         }
     }
     for (const FunctionDecl& fn : module.functions) {
-        for (const RawStmt& stmt : fn.body) {
+        for (const Stmt& stmt : fn.statements) {
             check_statement(stmt);
         }
     }
