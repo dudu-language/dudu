@@ -70,13 +70,6 @@ struct ParamDecl {
     SourceLocation location;
 };
 
-struct RawStmt {
-    std::string text;
-    std::vector<RawStmt> children;
-    SourceLocation location;
-    SourceRange range;
-};
-
 enum class StmtKind {
     Unknown,
     Expr,
@@ -278,7 +271,7 @@ std::string_view type_kind_name(TypeKind kind);
 StmtKind classify_statement_text(std::string_view text);
 Expr parse_expr_text(std::string_view text, SourceLocation location = {});
 TypeRef parse_type_text(std::string_view text, SourceLocation location = {});
-Stmt statement_from_raw(const RawStmt& raw);
-std::vector<Stmt> statements_from_raw(const std::vector<RawStmt>& raw);
+Stmt statement_from_text(std::string text, SourceLocation location, SourceRange range,
+                         std::vector<Stmt> children = {});
 
 } // namespace dudu

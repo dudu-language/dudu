@@ -24,7 +24,7 @@ Already structured:
 - constants
 - decorators
 - native header metadata
-- parser-internal raw statement blocks
+- direct parser construction of statement nodes for function and method bodies
 - parsed `Stmt` bodies stored on functions and methods
 - initial expression shape capture for common names, literals, calls,
   template calls, member/index access, unary/binary operators, conditionals,
@@ -53,8 +53,8 @@ Still too string-based:
 
 ## Target Architecture
 
-Keep the outer `ModuleAst`, but replace `RawStmt` with real statements and
-expressions.
+Keep the outer `ModuleAst`, and make function bodies real statements and
+expressions all the way through checking and lowering.
 
 Recommended high-level compiler pipeline:
 
@@ -308,7 +308,7 @@ should prefer structured input and structured output.
 
 ## Migration Plan
 
-1. Add AST node types alongside `RawStmt`: done.
+1. Add AST node types alongside the old raw statement bridge: done.
 2. Parse simple statements into AST while preserving old lowering for unsupported
    forms.
 3. Parse expressions into AST with source ranges.
@@ -321,9 +321,8 @@ should prefer structured input and structured output.
 Status: functions and methods now store parsed `Stmt` bodies directly. The old
 duplicate `FunctionDecl::body` raw statement storage and raw-body C++/control
 flow helper overloads have been removed. The local escape checker also consumes
-parsed `Stmt` nodes directly. `RawStmt` still exists as a parser-internal bridge
-while expression and statement parsing continue moving toward exact source-token
-AST nodes.
+parsed `Stmt` nodes directly. The parser now constructs `Stmt` nodes directly
+instead of staging through a raw statement tree.
 
 Statement semantic checks now enter expression inference through parsed `Expr`
 nodes for returns, assignments, local initializer inference, conditions, array

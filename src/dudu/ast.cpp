@@ -1017,96 +1017,87 @@ StmtKind classify_statement_text(std::string_view text) {
     return StmtKind::Expr;
 }
 
-Stmt statement_from_raw(const RawStmt& raw) {
+Stmt statement_from_text(std::string raw_text, SourceLocation location, SourceRange range,
+                         std::vector<Stmt> children) {
     Stmt stmt;
-    stmt.kind = classify_statement_text(raw.text);
-    stmt.text = raw.text;
-    stmt.location = raw.location;
-    stmt.range = raw.range.end.column <= raw.range.start.column
-                     ? range_for_text(raw.location, raw.text)
-                     : raw.range;
-    const std::string_view text = trim_view(raw.text);
+    stmt.kind = classify_statement_text(raw_text);
+    stmt.text = std::move(raw_text);
+    stmt.location = location;
+    stmt.range =
+        range.end.column <= range.start.column ? range_for_text(location, stmt.text) : range;
+    const std::string_view text = trim_view(stmt.text);
     switch (stmt.kind) {
     case StmtKind::VarDecl:
         fill_var_decl(stmt, text);
         stmt.type_ref =
-            parse_type_text(stmt.type, location_for_piece(raw.location, raw.text, stmt.type));
+            parse_type_text(stmt.type, location_for_piece(location, stmt.text, stmt.type));
         stmt.value_expr =
-            parse_expr_text(stmt.value, location_for_piece(raw.location, raw.text, stmt.value));
+            parse_expr_text(stmt.value, location_for_piece(location, stmt.text, stmt.value));
         break;
     case StmtKind::Assign:
         fill_assignment(stmt, text, false);
         stmt.target_expr =
-            parse_expr_text(stmt.target, location_for_piece(raw.location, raw.text, stmt.target));
+            parse_expr_text(stmt.target, location_for_piece(location, stmt.text, stmt.target));
         stmt.value_expr =
-            parse_expr_text(stmt.value, location_for_piece(raw.location, raw.text, stmt.value));
+            parse_expr_text(stmt.value, location_for_piece(location, stmt.text, stmt.value));
         break;
     case StmtKind::CompoundAssign:
         fill_assignment(stmt, text, true);
         stmt.target_expr =
-            parse_expr_text(stmt.target, location_for_piece(raw.location, raw.text, stmt.target));
+            parse_expr_text(stmt.target, location_for_piece(location, stmt.text, stmt.target));
         stmt.value_expr =
-            parse_expr_text(stmt.value, location_for_piece(raw.location, raw.text, stmt.value));
+            parse_expr_text(stmt.value, location_for_piece(location, stmt.text, stmt.value));
         break;
     case StmtKind::Return:
         stmt.value = trim_string(text.substr(6));
         stmt.value_expr =
-            parse_expr_text(stmt.value, location_for_piece(raw.location, raw.text, stmt.value));
+            parse_expr_text(stmt.value, location_for_piece(location, stmt.text, stmt.value));
         break;
     case StmtKind::If:
         fill_condition(stmt, text, "if");
         stmt.condition_expr = parse_expr_text(
-            stmt.condition, location_for_piece(raw.location, raw.text, stmt.condition));
+            stmt.condition, location_for_piece(location, stmt.text, stmt.condition));
         break;
     case StmtKind::Elif:
         fill_condition(stmt, text, "elif");
         stmt.condition_expr = parse_expr_text(
-            stmt.condition, location_for_piece(raw.location, raw.text, stmt.condition));
+            stmt.condition, location_for_piece(location, stmt.text, stmt.condition));
         break;
     case StmtKind::While:
         fill_condition(stmt, text, "while");
         stmt.condition_expr = parse_expr_text(
-            stmt.condition, location_for_piece(raw.location, raw.text, stmt.condition));
+            stmt.condition, location_for_piece(location, stmt.text, stmt.condition));
         break;
     case StmtKind::For:
         fill_for(stmt, text);
         stmt.type_ref =
-            parse_type_text(stmt.type, location_for_piece(raw.location, raw.text, stmt.type));
-        stmt.iterable_expr = parse_expr_text(
-            stmt.iterable, location_for_piece(raw.location, raw.text, stmt.iterable));
+            parse_type_text(stmt.type, location_for_piece(location, stmt.text, stmt.type));
+        stmt.iterable_expr =
+            parse_expr_text(stmt.iterable, location_for_piece(location, stmt.text, stmt.iterable));
         break;
     case StmtKind::Assert:
         stmt.condition = trim_string(text.substr(6));
         stmt.condition_expr = parse_expr_text(
-            stmt.condition, location_for_piece(raw.location, raw.text, stmt.condition));
+            stmt.condition, location_for_piece(location, stmt.text, stmt.condition));
         break;
     case StmtKind::DebugAssert:
         stmt.condition = trim_string(text.substr(12));
         stmt.condition_expr = parse_expr_text(
-            stmt.condition, location_for_piece(raw.location, raw.text, stmt.condition));
+            stmt.condition, location_for_piece(location, stmt.text, stmt.condition));
         break;
     case StmtKind::Raise:
         stmt.value = trim_string(text.substr(5));
         stmt.value_expr =
-            parse_expr_text(stmt.value, location_for_piece(raw.location, raw.text, stmt.value));
+            parse_expr_text(stmt.value, location_for_piece(location, stmt.text, stmt.value));
         break;
     case StmtKind::Expr:
-        stmt.expr = parse_expr_text(text, raw.location);
+        stmt.expr = parse_expr_text(text, location);
         break;
     default:
         break;
     }
-    stmt.children = statements_from_raw(raw.children);
+    stmt.children = std::move(children);
     return stmt;
-}
-
-std::vector<Stmt> statements_from_raw(const std::vector<RawStmt>& raw) {
-    std::vector<Stmt> out;
-    out.reserve(raw.size());
-    for (const RawStmt& stmt : raw) {
-        out.push_back(statement_from_raw(stmt));
-    }
-    return out;
 }
 
 } // namespace dudu

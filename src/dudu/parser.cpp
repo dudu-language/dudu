@@ -431,8 +431,8 @@ class Parser {
         return assertion;
     }
 
-    std::vector<RawStmt> parse_raw_block() {
-        std::vector<RawStmt> out;
+    std::vector<Stmt> parse_statement_block() {
+        std::vector<Stmt> out;
         if (!match(TokenKind::Indent)) {
             return out;
         }
@@ -440,22 +440,19 @@ class Parser {
             if (match(TokenKind::Newline)) {
                 continue;
             }
-            RawStmt stmt;
-            stmt.location = current().location;
-            stmt.text = join_until({TokenKind::Newline});
-            stmt.range = range_for_line_text(stmt.location, stmt.text);
+            const SourceLocation location = current().location;
+            std::string text = join_until({TokenKind::Newline});
+            const SourceRange range = range_for_line_text(location, text);
             consume(TokenKind::Newline, "expected newline after statement");
+            std::vector<Stmt> children;
             if (at(TokenKind::Indent)) {
-                stmt.children = parse_raw_block();
+                children = parse_statement_block();
             }
-            out.push_back(std::move(stmt));
+            out.push_back(
+                statement_from_text(std::move(text), location, range, std::move(children)));
         }
         consume(TokenKind::Dedent, "expected dedent after block");
         return out;
-    }
-
-    std::vector<Stmt> parse_statement_block() {
-        return statements_from_raw(parse_raw_block());
     }
 
     std::string join_until(std::initializer_list<TokenKind> stops) {
