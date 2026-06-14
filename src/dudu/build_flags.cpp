@@ -136,8 +136,8 @@ void check_text(const std::set<std::string>& names, const SourceLocation& locati
     }
 }
 
-void check_body(const std::set<std::string>& names, const std::vector<RawStmt>& body) {
-    for (const RawStmt& stmt : body) {
+void check_body(const std::set<std::string>& names, const std::vector<Stmt>& body) {
+    for (const Stmt& stmt : body) {
         check_text(names, stmt.location, stmt.text);
         check_body(names, stmt.children);
     }
@@ -163,11 +163,11 @@ void check_build_flags(const ModuleAst& module) {
     }
     for (const ClassDecl& klass : module.classes) {
         for (const FunctionDecl& method : klass.methods) {
-            check_body(names, method.body);
+            check_body(names, method.statements);
         }
     }
     for (const FunctionDecl& fn : module.functions) {
-        check_body(names, fn.body);
+        check_body(names, fn.statements);
     }
 }
 
