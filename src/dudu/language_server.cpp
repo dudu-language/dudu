@@ -697,6 +697,12 @@ class LanguageServer {
                                .location = value.location,
                                .kind = 14});
             }
+            for (const NativeMacroDecl& macro : module.native_macros) {
+                out.push_back({.name = macro.name,
+                               .detail = native_macro_detail(macro),
+                               .location = macro.location,
+                               .kind = macro.function_like ? 3 : 14});
+            }
             for (const NativeFunctionDecl& fn : module.native_functions) {
                 out.push_back({.name = fn.name,
                                .detail = native_function_detail(fn),
@@ -733,6 +739,22 @@ class LanguageServer {
         if (!fn.return_type.empty()) {
             out << " -> " << fn.return_type;
         }
+        return out.str();
+    }
+
+    static std::string native_macro_detail(const NativeMacroDecl& macro) {
+        if (!macro.function_like) {
+            return "macro " + macro.name;
+        }
+        std::ostringstream out;
+        out << "macro " << macro.name << "(";
+        for (int i = 0; i < macro.arity; ++i) {
+            if (i > 0) {
+                out << ", ";
+            }
+            out << "arg" << i;
+        }
+        out << ")";
         return out.str();
     }
 

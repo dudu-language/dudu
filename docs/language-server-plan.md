@@ -201,8 +201,9 @@ Status: initial native C/C++ symbols from local fixture headers are now scanned
 into LSP symbols. Completion, hover, signature help, and definition can resolve
 aliased imported functions such as `dudu_native.dudu_native_add`, and definition
 uses the real header location when Clang provides it. Macro metadata,
-member-aware native completion, deeper overload display, and broader real-library
-coverage remain.
+including object-like/function-like macro hover and completion, is also exposed
+for scanned native headers. Member-aware native completion, deeper overload
+display, and broader real-library coverage remain.
 
 ### Milestone 5: Refactors And Code Actions
 

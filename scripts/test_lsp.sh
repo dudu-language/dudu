@@ -56,6 +56,7 @@ native_source = "\n".join(
         "",
         "def main() -> i32:",
         "    return dudu_native.dudu_native_add(20, 22)",
+        "# dudu_native.DUDU_NATIVE_SCALE",
         "",
     ]
 )
@@ -198,6 +199,17 @@ messages = [
             },
         }
     ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 15,
+            "method": "textDocument/hover",
+            "params": {
+                "textDocument": {"uri": native_uri},
+                "position": {"line": 4, "character": 17},
+            },
+        }
+    ),
     packet({"jsonrpc": "2.0", "id": 20, "method": "shutdown", "params": None}),
     packet({"jsonrpc": "2.0", "method": "exit", "params": None}),
 ]
@@ -266,6 +278,8 @@ assert "add" in workspace_symbol_names
 native_symbols = next(item for item in responses if item.get("id") == 8)
 native_symbol_names = [item["name"] for item in native_symbols["result"]]
 assert "dudu_native.dudu_native_add" in native_symbol_names
+assert "dudu_native.DUDU_NATIVE_MAGIC" in native_symbol_names
+assert "dudu_native.DUDU_NATIVE_SCALE" in native_symbol_names
 
 native_hover = next(item for item in responses if item.get("id") == 9)
 assert "dudu_native.dudu_native_add(i32, i32) -> i32" in native_hover["result"]["contents"]["value"]
@@ -281,6 +295,9 @@ assert "dudu_native.dudu_native_add" in native_completion_labels
 native_signature = next(item for item in responses if item.get("id") == 12)
 assert "dudu_native.dudu_native_add(i32, i32) -> i32" in native_signature["result"]["signatures"][0]["label"]
 assert native_signature["result"]["activeParameter"] == 1
+
+native_macro_hover = next(item for item in responses if item.get("id") == 15)
+assert "macro dudu_native.DUDU_NATIVE_SCALE(arg0)" in native_macro_hover["result"]["contents"]["value"]
 
 shutdown = next(item for item in responses if item.get("id") == 20)
 assert shutdown["result"] is None
