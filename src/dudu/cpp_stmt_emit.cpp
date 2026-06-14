@@ -52,6 +52,10 @@ std::string join_names(const std::vector<std::string>& names) {
     return out.str();
 }
 
+bool has_expr(const Expr& expr) {
+    return !expr.text.empty();
+}
+
 std::string join_lowered_template_args(const std::vector<Expr>& exprs,
                                        const std::vector<std::string>& aliases) {
     std::ostringstream out;
@@ -623,7 +627,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
     }
     if (stmt.kind == StmtKind::Raise) {
         out << indent(depth) << "throw";
-        if (!stmt.value.empty()) {
+        if (has_expr(stmt.value_expr)) {
             out << ' ' << lower_expr(stmt.value_expr, aliases, locals);
         }
         out << ";\n";
@@ -636,7 +640,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
     if (stmt.kind == StmtKind::Assert) {
         out << indent(depth) << "if (!(" << lower_expr(stmt.condition_expr, aliases, locals)
             << ")) { throw std::runtime_error(";
-        if (!stmt.message.empty())
+        if (has_expr(stmt.message_expr))
             out << lower_expr(stmt.message_expr, aliases, locals);
         else
             out << cpp_string_literal("assert failed: " + stmt.condition);
@@ -646,14 +650,14 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
     if (stmt.kind == StmtKind::DebugAssert) {
         out << indent(depth) << "assert((" << lower_expr(stmt.condition_expr, aliases, locals)
             << ")";
-        if (!stmt.message.empty())
+        if (has_expr(stmt.message_expr))
             out << " && (" << lower_expr(stmt.message_expr, aliases, locals) << ")";
         out << ");\n";
         return;
     }
     if (stmt.kind == StmtKind::Return) {
         out << indent(depth) << "return";
-        if (!stmt.value.empty()) {
+        if (has_expr(stmt.value_expr)) {
             if (starts_with(return_type, "Option[") &&
                 stmt.value_expr.kind == ExprKind::NoneLiteral) {
                 out << " std::nullopt";
@@ -674,7 +678,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
             inferred.status == ArrayShapeStatus::Inferred ? inferred.type : stmt.type;
         locals[name] = type;
         out << indent(depth) << lower_declared_stmt_type(stmt, type, aliases) << ' ' << name;
-        if (!stmt.value.empty()) {
+        if (has_expr(stmt.value_expr)) {
             if (starts_with(type, "Option[") && stmt.value_expr.kind == ExprKind::NoneLiteral) {
                 out << " = std::nullopt";
             } else if (starts_with(type, "array[") &&

@@ -76,6 +76,10 @@ bool is_array_literal(const Expr& expr) {
     return expr.kind == ExprKind::ListLiteral;
 }
 
+bool has_expr(const Expr& expr) {
+    return !expr.text.empty();
+}
+
 bool is_comparison_op(const std::string& op) {
     return op == "==" || op == "!=" || op == "<" || op == "<=" || op == ">" || op == ">=";
 }
@@ -1093,13 +1097,13 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
                      " target mode; use debug_assert or a target-specific assert handler");
         }
         check_condition_type(scope, stmt);
-        if (!stmt.message.empty())
+        if (has_expr(stmt.message_expr))
             (void)infer_expr_ast(scope, stmt.message_expr,
                                  &node_location(stmt.location, stmt.message_expr));
         return;
     }
     if (stmt.kind == StmtKind::Raise) {
-        if (!stmt.value.empty()) {
+        if (has_expr(stmt.value_expr)) {
             (void)infer_expr_ast(scope, stmt.value_expr,
                                  &node_location(stmt.location, stmt.value_expr));
         }
@@ -1219,7 +1223,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
         if (!known_type(scope.symbols, type)) {
             fail(node_location(stmt.location, stmt.type_ref), "unknown local type: " + stmt.type);
         }
-        if (!stmt.value.empty()) {
+        if (has_expr(stmt.value_expr)) {
             if (inferred.status == ArrayShapeStatus::Inferred &&
                 is_array_literal(stmt.value_expr)) {
                 check_array_literal_elements(scope, inferred.element_type, stmt.value_expr,
