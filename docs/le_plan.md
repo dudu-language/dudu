@@ -378,3 +378,15 @@ push. They are not release packaging work.
    Normal imported macros are covered. Keep token-pasting, declaration-
    generating, and partial-syntax macros behind wrapper headers unless a real
    library forces a better design.
+
+16. Remove Prototype Cruft
+
+   Before calling this language push complete, scan the codebase and docs for
+   prototype-era compatibility paths, internal alternate spellings, and legacy
+   conveniences that do not match the current language design. Dudu has no
+   compatibility promise to existing users, so stale paths should be removed
+   instead of preserved.
+
+   Specific examples to audit include old dunder-style operator spellings,
+   wrapper workarounds that were replaced by header awareness, and any hidden
+   string-lowering shortcuts that bypass the real AST/sema model.
