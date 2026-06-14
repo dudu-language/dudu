@@ -9,6 +9,7 @@ option(DUDU_BUILD_TESTS "Build Dudu compiler tests" OFF)
 add_library(dudu_frontend
     src/dudu/array_shape.cpp
     src/dudu/ast.cpp
+    src/dudu/ast_expr.cpp
     src/dudu/build_flags.cpp
     src/dudu/cli_usage.cpp
     src/dudu/cmake_emit.cpp

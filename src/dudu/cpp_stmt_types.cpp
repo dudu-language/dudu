@@ -1,10 +1,10 @@
 #include "dudu/cpp_stmt_types.hpp"
 
+#include "dudu/ast_expr.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/sema_scan.hpp"
 
 #include <cctype>
-#include <optional>
 
 namespace dudu {
 namespace {
@@ -27,34 +27,6 @@ std::string receiver_base_type(std::string type) {
 bool looks_like_dudu_type(const std::string& name) {
     return !name.empty() && name.find('.') == std::string::npos &&
            std::isupper(static_cast<unsigned char>(name.front())) != 0;
-}
-
-std::optional<std::string> member_path_from_expr(const Expr& expr) {
-    if (expr.kind == ExprKind::Name && !expr.name.empty()) {
-        return expr.name;
-    }
-    if (expr.kind == ExprKind::Member && expr.children.size() == 1 && !expr.name.empty()) {
-        const std::optional<std::string> receiver = member_path_from_expr(expr.children.front());
-        if (receiver.has_value()) {
-            return *receiver + "." + expr.name;
-        }
-    }
-    if (expr.kind == ExprKind::Index && expr.children.size() == 2) {
-        const std::optional<std::string> receiver = member_path_from_expr(expr.children.front());
-        if (receiver.has_value() && !expr.children[1].text.empty()) {
-            return *receiver + "[" + expr.children[1].text + "]";
-        }
-    }
-    return std::nullopt;
-}
-
-std::string call_callee_text(const Expr& expr) {
-    if (!expr.callee.empty()) {
-        if (const std::optional<std::string> path = member_path_from_expr(expr.callee.front())) {
-            return *path;
-        }
-    }
-    return trim_copy(expr.name);
 }
 
 std::string infer_call_type(const std::string& callee,
