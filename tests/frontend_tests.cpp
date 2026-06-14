@@ -970,6 +970,22 @@ void test_pointer_member_emission(const std::filesystem::path& root) {
     }
 }
 
+void test_value_member_emission() {
+    const dudu::ModuleAst module = dudu::parse_source("import cpp \"cmath\" as std\n"
+                                                      "\n"
+                                                      "class Player:\n"
+                                                      "    health: i32\n"
+                                                      "\n"
+                                                      "def read(player: Player) -> i32:\n"
+                                                      "    wave = std.sin(1.0)\n"
+                                                      "    return player.health\n",
+                                                      "value_member_emission.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+    const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find("auto wave = std::sin(1.0);") != std::string::npos);
+    assert(cpp.find("return player.health;") != std::string::npos);
+}
+
 void test_templated_pointer_cast_emission() {
     const dudu::ModuleAst module =
         dudu::parse_source("def read_i32(left: *const[void]) -> const[i32]:\n"
@@ -1036,6 +1052,7 @@ int main() {
         test_project_driver_config(root);
         test_image_filter_emission(root);
         test_pointer_member_emission(root);
+        test_value_member_emission();
         test_templated_pointer_cast_emission();
         test_offsetof_field_emission();
         test_array_literal_scalar_ast_emission();

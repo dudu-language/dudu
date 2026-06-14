@@ -161,6 +161,9 @@ Already structured:
 - C++ member expression emission lowers proven pointer receivers from parsed
   receiver nodes (`item->field`, `items[i]->field`) before falling back to raw
   member rewriting for unresolved cases
+- C++ member expression emission lowers normal value receivers from parsed
+  receiver nodes and applies namespace alias qualification directly, avoiding
+  the full raw expression rewrite path for `player.field` and `std.sin` shapes
 - integer and float literal parsing recognizes underscore separators, and
   integer literals recognize `0x`, `0b`, and `0o` prefixes so systems-style
   constants stay on the literal AST path

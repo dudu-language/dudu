@@ -379,8 +379,8 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
             if (is_pointer_receiver_expr(expr.children.front(), locals)) {
                 return lower_expr(expr.children.front(), aliases, locals) + "->" + expr.name;
             }
-            return lower_expr(lower_expr(expr.children.front(), aliases, locals) + "." + expr.name,
-                              aliases, locals);
+            return lower_cpp_expr(
+                lower_expr(expr.children.front(), aliases, locals) + "." + expr.name, aliases);
         }
         break;
     case ExprKind::DictEntry:
