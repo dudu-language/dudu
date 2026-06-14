@@ -45,6 +45,17 @@ bool can_assign_expr(const FunctionScope& scope, const std::string& expected,
                                    resolve_alias(scope.symbols, got)) ||
            native_base_assignable(scope.symbols, expected, got);
 }
+
+bool can_assign_ast(const FunctionScope& scope, const std::string& expected, const Expr& expr,
+                    const std::string& got) {
+    return can_assign_expr(scope, expected, expr.text, got);
+}
+
+std::string assignment_error_ast(const std::string& expected, const Expr& expr,
+                                 const std::string& got) {
+    return assignment_error(expected, expr.text, got);
+}
+
 bool is_builtin_call(const std::string& callee) {
     static const std::set<std::string> builtins = {"align_up", "delete", "free",  "len",
                                                    "max",      "min",    "print", "range"};
@@ -113,7 +124,7 @@ void check_call_args_ast(const FunctionScope& scope, const std::string& callee,
     for (size_t i = 0; i < signature.params.size(); ++i) {
         const std::string got = infer_expr_ast(scope, args[i], location);
         const std::string& expected = signature.params[i];
-        if (!can_assign_expr(scope, expected, args[i].text, got)) {
+        if (!can_assign_ast(scope, expected, args[i], got)) {
             fail(*location, "argument " + std::to_string(i + 1) + " for " + callee + " expects " +
                                 expected + ", got " + got);
         }
@@ -143,7 +154,7 @@ bool call_args_match_ast(const FunctionScope& scope, const FunctionSignature& si
     }
     for (size_t i = 0; i < signature.params.size(); ++i) {
         const std::string got = infer_expr_ast(scope, args[i], nullptr);
-        if (!can_assign_expr(scope, signature.params[i], args[i].text, got)) {
+        if (!can_assign_ast(scope, signature.params[i], args[i], got)) {
             return false;
         }
     }
@@ -608,7 +619,7 @@ std::string infer_builtin_call_ast(const FunctionScope& scope, const Expr& expr,
                 first = got;
                 continue;
             }
-            if (location != nullptr && !can_assign_expr(scope, first, expr.children[i].text, got)) {
+            if (location != nullptr && !can_assign_ast(scope, first, expr.children[i], got)) {
                 fail(*location, callee + " argument 2 expects " + first + ", got " + got);
             }
         }
@@ -783,8 +794,8 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                     if (signature->params.size() != 1) {
                         fail(*use_location, "operator " + expr.op + " expects 1 argument, got " +
                                                 std::to_string(signature->params.size()));
-                    } else if (!can_assign_expr(scope, signature->params.front(),
-                                                expr.children[1].text, right)) {
+                    } else if (!can_assign_ast(scope, signature->params.front(), expr.children[1],
+                                               right)) {
                         fail(*use_location, "operator " + expr.op + " expects " +
                                                 signature->params.front() + ", got " + right);
                     }
@@ -928,10 +939,10 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
 void check_type_match(const FunctionScope& scope, const std::string& expected, const Expr& expr,
                       const SourceLocation& location) {
     const std::string got = infer_expr_ast(scope, expr, &location);
-    if (can_assign_expr(scope, expected, expr.text, got)) {
+    if (can_assign_ast(scope, expected, expr, got)) {
         return;
     }
-    fail(location, assignment_error(expected, expr.text, got));
+    fail(location, assignment_error_ast(expected, expr, got));
 }
 
 void check_array_literal_elements(const FunctionScope& scope, const std::string& element_type,
@@ -943,7 +954,7 @@ void check_array_literal_elements(const FunctionScope& scope, const std::string&
         return;
     }
     const std::string got = infer_expr_ast(scope, expr, &expr.location);
-    if (!can_assign_expr(scope, element_type, expr.text, got)) {
+    if (!can_assign_ast(scope, element_type, expr, got)) {
         fail(location, "array literal element expects " + element_type + ", got " + got);
     }
 }
@@ -1030,12 +1041,11 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
                 int loop_depth) {
     check_local_address_escape(stmt, scope.locals);
     if (stmt.kind == StmtKind::Return) {
-        const std::string expr = stmt.value;
         const SourceLocation& value_location = node_location(stmt.location, stmt.value_expr);
         const std::string got = infer_expr_ast(scope, stmt.value_expr, &value_location);
         if (return_type == "void" && got != "void")
             fail(value_location, "void function cannot return " + got);
-        if (return_type != "void" && !can_assign_expr(scope, return_type, expr, got)) {
+        if (return_type != "void" && !can_assign_ast(scope, return_type, stmt.value_expr, got)) {
             fail(value_location, "return type mismatch: expected " + return_type + ", got " + got);
         }
         return;

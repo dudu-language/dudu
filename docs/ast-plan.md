@@ -46,6 +46,8 @@ Already structured:
   strings
 - parsed `new[T]` and `malloc[T]` allocation calls validate argument counts
   from expression children instead of stringified call arguments
+- AST-backed statement checks route assignment compatibility through expression
+  nodes instead of using raw statement value strings
 
 Still too string-based:
 
