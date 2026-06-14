@@ -469,6 +469,10 @@ class LanguageServer {
             if (id != nullptr) {
                 respond(*id, completion_result(params));
             }
+        } else if (method == "textDocument/signatureHelp") {
+            if (id != nullptr) {
+                respond(*id, signature_help_result(params));
+            }
         } else if (id != nullptr) {
             respond(*id, "null");
         }
@@ -484,7 +488,8 @@ class LanguageServer {
                "\"documentSymbolProvider\":true,"
                "\"definitionProvider\":true,"
                "\"hoverProvider\":true,"
-               "\"completionProvider\":{\"resolveProvider\":false,\"triggerCharacters\":[\".\"]}"
+               "\"completionProvider\":{\"resolveProvider\":false,\"triggerCharacters\":[\".\"]},"
+               "\"signatureHelpProvider\":{\"triggerCharacters\":[\"(\",\",\"]}"
                "},\"serverInfo\":{\"name\":\"duc lsp\",\"version\":\"0.1.0\"}}";
     }
 
@@ -791,6 +796,73 @@ class LanguageServer {
         default:
             return 6;
         }
+    }
+
+    struct CallSite {
+        std::string name;
+        int parameter = 0;
+    };
+
+    std::string signature_help_result(const Json* params) const {
+        const Document* doc = document_from_params(params);
+        if (doc == nullptr) {
+            return "{\"signatures\":[],\"activeSignature\":0,\"activeParameter\":0}";
+        }
+        const CallSite call = call_site_at(*doc, params);
+        if (call.name.empty()) {
+            return "{\"signatures\":[],\"activeSignature\":0,\"activeParameter\":0}";
+        }
+        for (const Symbol& symbol : symbols_for(*doc)) {
+            if (symbol.name == call.name && (symbol.kind == 12 || symbol.kind == 6)) {
+                return "{\"signatures\":[{\"label\":\"" + json_escape(symbol.detail) +
+                       "\"}],\"activeSignature\":0,\"activeParameter\":" +
+                       std::to_string(call.parameter) + "}";
+            }
+        }
+        return "{\"signatures\":[],\"activeSignature\":0,\"activeParameter\":0}";
+    }
+
+    CallSite call_site_at(const Document& doc, const Json* params) const {
+        const Json* position = params == nullptr ? nullptr : params->get("position");
+        const int target_line = int_value(position == nullptr ? nullptr : position->get("line"));
+        const int target_character =
+            int_value(position == nullptr ? nullptr : position->get("character"));
+        std::istringstream in(doc.text);
+        std::string line;
+        for (int row = 0; std::getline(in, line); ++row) {
+            if (row != target_line) {
+                continue;
+            }
+            const int cursor = std::min(target_character, static_cast<int>(line.size()));
+            int depth = 0;
+            int parameter = 0;
+            for (int i = cursor - 1; i >= 0; --i) {
+                const char c = line[static_cast<size_t>(i)];
+                if (c == ')') {
+                    ++depth;
+                } else if (c == '(') {
+                    if (depth > 0) {
+                        --depth;
+                        continue;
+                    }
+                    int end = i;
+                    while (end > 0 && std::isspace(static_cast<unsigned char>(
+                                          line[static_cast<size_t>(end - 1)])) != 0) {
+                        --end;
+                    }
+                    int start = end;
+                    while (start > 0 && identifier_char(line[static_cast<size_t>(start - 1)])) {
+                        --start;
+                    }
+                    return {
+                        line.substr(static_cast<size_t>(start), static_cast<size_t>(end - start)),
+                        parameter};
+                } else if (c == ',' && depth == 0) {
+                    ++parameter;
+                }
+            }
+        }
+        return {};
     }
 
     const Document* document_from_params(const Json* params) const {

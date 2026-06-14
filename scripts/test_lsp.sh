@@ -44,6 +44,7 @@ source = "\n".join(
         "    return a + b",
         "",
         "def main() -> i32:   ",
+        "    value: i32 = add(1, 2)",
         "    return True",
         "",
     ]
@@ -93,18 +94,26 @@ messages = [
             "jsonrpc": "2.0",
             "id": 5,
             "method": "textDocument/completion",
-            "params": {"textDocument": {"uri": uri}, "position": {"line": 7, "character": 4}},
+            "params": {"textDocument": {"uri": uri}, "position": {"line": 8, "character": 4}},
         }
     ),
     packet(
         {
             "jsonrpc": "2.0",
             "id": 6,
+            "method": "textDocument/signatureHelp",
+            "params": {"textDocument": {"uri": uri}, "position": {"line": 7, "character": 25}},
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 7,
             "method": "textDocument/formatting",
             "params": {"textDocument": {"uri": uri}, "options": {"tabSize": 4}},
         }
     ),
-    packet({"jsonrpc": "2.0", "id": 7, "method": "shutdown", "params": None}),
+    packet({"jsonrpc": "2.0", "id": 8, "method": "shutdown", "params": None}),
     packet({"jsonrpc": "2.0", "method": "exit", "params": None}),
 ]
 
@@ -148,10 +157,14 @@ assert "i32" in completion_labels
 assert "add" in completion_labels
 assert "Player" in completion_labels
 
-formatting = next(item for item in responses if item.get("id") == 6)
-assert "def main() -> i32:\n    return True\n" in formatting["result"][0]["newText"]
+signature = next(item for item in responses if item.get("id") == 6)
+assert "def add(a: i32, b: i32) -> i32" in signature["result"]["signatures"][0]["label"]
+assert signature["result"]["activeParameter"] == 1
 
-shutdown = next(item for item in responses if item.get("id") == 7)
+formatting = next(item for item in responses if item.get("id") == 7)
+assert "def main() -> i32:\n    value: i32 = add(1, 2)\n    return True\n" in formatting["result"][0]["newText"]
+
+shutdown = next(item for item in responses if item.get("id") == 8)
 assert shutdown["result"] is None
 PY
 

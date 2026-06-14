@@ -248,6 +248,20 @@ class DuduLspClient {
     });
   }
 
+  async signatureHelp(document, position) {
+    const help = await this.request("textDocument/signatureHelp", {
+      textDocument: { uri: document.uri.toString() },
+      position: { line: position.line, character: position.character },
+    });
+    const result = new vscode.SignatureHelp();
+    result.activeSignature = help.activeSignature ?? 0;
+    result.activeParameter = help.activeParameter ?? 0;
+    result.signatures = (help.signatures ?? []).map(
+      (signature) => new vscode.SignatureInformation(signature.label),
+    );
+    return result;
+  }
+
   onData(chunk) {
     this.buffer = Buffer.concat([this.buffer, chunk]);
     while (true) {
@@ -348,6 +362,16 @@ function activate(context) {
         return lsp.completion(document, position);
       },
     }, "."),
+    vscode.languages.registerSignatureHelpProvider(
+      "dudu",
+      {
+        provideSignatureHelp(document, position) {
+          return lsp.signatureHelp(document, position);
+        },
+      },
+      "(",
+      ",",
+    ),
     vscode.commands.registerCommand("dudu.fmtFile", async () => {
       const editor = vscode.window.activeTextEditor;
       if (editor && isDuduDocument(editor.document)) {
