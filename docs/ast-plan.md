@@ -389,6 +389,9 @@ Return statements and common local list, set, and tuple initializers now use
 parsed value expression kinds and children for C++ emission instead of raw
 comma splitting and substring extraction.
 
+Typed `for` loop binding C++ emission now lowers the binding type through the
+parsed `TypeRef`.
+
 Bare comma expressions now parse as tuple literals, including Python-style
 multi-value returns. The shared AST comma splitter is quote-aware so commas
 inside string literals do not create phantom tuple elements.

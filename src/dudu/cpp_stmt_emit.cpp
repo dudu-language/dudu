@@ -563,7 +563,7 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         const std::string range = lower_expr(stmt.iterable_expr, aliases, locals);
         std::string binding_type = "auto";
         if (!stmt.type.empty()) {
-            binding_type = lower_cpp_type(stmt.type, aliases);
+            binding_type = lower_cpp_type(stmt.type_ref, aliases);
             locals[stmt.name] = stmt.type;
         }
         if (starts_with(range, "range(") && ends_with(range, ")")) {
