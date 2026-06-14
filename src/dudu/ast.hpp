@@ -232,6 +232,7 @@ struct ConstDecl {
     std::string type;
     std::string value;
     TypeRef type_ref;
+    Expr value_expr;
     SourceLocation location;
 };
 
@@ -249,6 +250,7 @@ struct ClassDecl {
 
 struct StaticAssertDecl {
     std::string expression;
+    Expr expression_expr;
     SourceLocation location;
 };
 

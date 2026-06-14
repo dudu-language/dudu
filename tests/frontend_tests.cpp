@@ -331,11 +331,15 @@ void test_type_ast_shape() {
     const dudu::ModuleAst module =
         dudu::parse_source("type PlayerList = list[*Player]\n"
                            "\n"
+                           "MAX_PLAYERS: i32 = 4 * 2\n"
+                           "static_assert(MAX_PLAYERS == 8)\n"
+                           "\n"
                            "enum Mode: u8\n"
                            "    Idle = 0\n"
                            "\n"
                            "class Player:\n"
                            "    count: static[i32] = 0\n"
+                           "    DEFAULT_HP: i32 = MAX_PLAYERS + 34\n"
                            "    transform: array[f32][4, 4]\n"
                            "\n"
                            "def update(player: &Player, names: list[str]) -> *Player:\n"
@@ -348,6 +352,13 @@ void test_type_ast_shape() {
     assert(module.aliases[0].type_ref.children.size() == 1);
     assert(module.aliases[0].type_ref.children[0].kind == dudu::TypeKind::Pointer);
 
+    assert(module.constants.size() == 1);
+    assert(module.constants[0].value_expr.kind == dudu::ExprKind::Binary);
+    assert(module.constants[0].value_expr.op == "*");
+    assert(module.static_asserts.size() == 1);
+    assert(module.static_asserts[0].expression_expr.kind == dudu::ExprKind::Binary);
+    assert(module.static_asserts[0].expression_expr.op == "==");
+
     assert(module.enums.size() == 1);
     assert(module.enums[0].underlying_type_ref.kind == dudu::TypeKind::Named);
     assert(module.enums[0].underlying_type_ref.name == "u8");
@@ -357,6 +368,10 @@ void test_type_ast_shape() {
     assert(player.static_fields.size() == 1);
     assert(player.static_fields[0].type == "i32");
     assert(player.static_fields[0].type_ref.kind == dudu::TypeKind::Named);
+    assert(player.static_fields[0].value_expr.kind == dudu::ExprKind::IntLiteral);
+    assert(player.constants.size() == 1);
+    assert(player.constants[0].value_expr.kind == dudu::ExprKind::Binary);
+    assert(player.constants[0].value_expr.op == "+");
     assert(player.fields.size() == 1);
     assert(player.fields[0].type_ref.kind == dudu::TypeKind::FixedArray);
     assert(player.fields[0].type_ref.value == "4, 4");
@@ -370,7 +385,7 @@ void test_type_ast_shape() {
     assert(update.params[1].type_ref.kind == dudu::TypeKind::Template);
     assert(update.params[1].type_ref.children[0].name == "str");
     assert(update.statements[0].type_ref.kind == dudu::TypeKind::Const);
-    assert(update.statements[0].type_ref.range.start.line == 11);
+    assert(update.statements[0].type_ref.range.start.line == 15);
     assert(update.statements[0].type_ref.range.start.column > update.statements[0].location.column);
     assert(update.statements[0].type_ref.children[0].kind == dudu::TypeKind::Template);
 

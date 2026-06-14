@@ -120,7 +120,7 @@ void emit_constants(std::ostringstream& out, const ModuleAst& module,
             out << (runtime_address ? "const " : "constexpr ") << lowered_type << ' '
                 << constant.name;
         }
-        out << " = " << lower_cpp_expr(constant.value, aliases) << ";\n";
+        out << " = " << lower_cpp_expr_ast(constant.value_expr, aliases) << ";\n";
     }
     if (!module.constants.empty()) {
         out << '\n';
@@ -130,7 +130,7 @@ void emit_constants(std::ostringstream& out, const ModuleAst& module,
 void emit_static_asserts(std::ostringstream& out, const ModuleAst& module,
                          const std::vector<std::string>& aliases) {
     for (const StaticAssertDecl& assertion : module.static_asserts) {
-        out << "static_assert" << lower_cpp_expr(assertion.expression, aliases) << ";\n";
+        out << "static_assert" << lower_cpp_expr_ast(assertion.expression_expr, aliases) << ";\n";
     }
     if (!module.static_asserts.empty()) {
         out << '\n';

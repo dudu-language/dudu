@@ -200,7 +200,7 @@ void emit_class_constant_definition(std::ostringstream& out, const std::string& 
         out << (runtime_address ? "const " : "constexpr ") << lowered_type << ' ' << class_name
             << "::" << constant.name;
     }
-    out << " = " << lower_cpp_expr(constant.value, aliases) << ";\n";
+    out << " = " << lower_cpp_expr_ast(constant.value_expr, aliases) << ";\n";
 }
 
 } // namespace
@@ -225,7 +225,7 @@ void emit_classes(std::ostringstream& out, const ModuleAst& module,
         }
         for (const ConstDecl& field : klass.static_fields) {
             out << "    inline static " << lower_cpp_type(field.type_ref, aliases) << ' '
-                << field.name << " = " << lower_cpp_expr(field.value, aliases) << ";\n";
+                << field.name << " = " << lower_cpp_expr_ast(field.value_expr, aliases) << ";\n";
         }
         for (const ConstDecl& constant : klass.constants) {
             emit_class_constant_decl(out, constant, aliases);

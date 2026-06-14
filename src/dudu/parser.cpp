@@ -251,6 +251,7 @@ class Parser {
                                             ? parse_type_text(static_field.type, field.location)
                                             : field.type_ref.children[0];
                 static_field.value = field.value;
+                static_field.value_expr = field.value_expr;
                 static_field.location = field.location;
                 klass.static_fields.push_back(std::move(static_field));
             } else {
@@ -418,6 +419,7 @@ class Parser {
         constant.type_ref = parse_type_text(constant.type, name.location);
         consume(TokenKind::Assign, "expected = after constant type");
         constant.value = join_until({TokenKind::Newline});
+        constant.value_expr = parse_expr_text(constant.value, name.location);
         consume(TokenKind::Newline, "expected newline after constant");
         return constant;
     }
@@ -427,6 +429,7 @@ class Parser {
         const Token& start = consume_identifier("expected static_assert");
         assertion.location = start.location;
         assertion.expression = join_until({TokenKind::Newline});
+        assertion.expression_expr = parse_expr_text(assertion.expression, start.location);
         consume(TokenKind::Newline, "expected newline after static_assert");
         return assertion;
     }

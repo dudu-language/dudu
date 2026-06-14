@@ -1074,14 +1074,17 @@ class LanguageServer {
             for (const FieldDecl& field : klass.fields) {
                 add_semantic_token(tokens, field.location, field.name, 8, 1);
                 collect_type_tokens(field.type_ref, tokens);
+                collect_expr_tokens(field.value_expr, tokens);
             }
             for (const ConstDecl& constant : klass.constants) {
                 add_semantic_token(tokens, constant.location, constant.name, 8, 1 | 4);
                 collect_type_tokens(constant.type_ref, tokens);
+                collect_expr_tokens(constant.value_expr, tokens);
             }
             for (const ConstDecl& field : klass.static_fields) {
                 add_semantic_token(tokens, field.location, field.name, 8, 1 | 8);
                 collect_type_tokens(field.type_ref, tokens);
+                collect_expr_tokens(field.value_expr, tokens);
             }
             for (const FunctionDecl& method : klass.methods) {
                 add_semantic_token(tokens, shifted_location(method.location, 4), method.name, 5, 1);
@@ -1096,6 +1099,10 @@ class LanguageServer {
         for (const ConstDecl& constant : module.constants) {
             add_semantic_token(tokens, constant.location, constant.name, 6, 1 | 4);
             collect_type_tokens(constant.type_ref, tokens);
+            collect_expr_tokens(constant.value_expr, tokens);
+        }
+        for (const StaticAssertDecl& assertion : module.static_asserts) {
+            collect_expr_tokens(assertion.expression_expr, tokens);
         }
         for (const FunctionDecl& fn : module.functions) {
             add_semantic_token(tokens, shifted_location(fn.location, 4), fn.name, 4, 1);
