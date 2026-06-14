@@ -399,6 +399,9 @@ splitting literal text again.
 `range(...)` for-loop C++ emission now reads parsed call arguments from the
 iterable expression instead of parsing them back out of lowered C++ text.
 
+Simple indexed assignment semantic checks now use parsed `Index` target
+expressions when the indexed base is a local name.
+
 Bare comma expressions now parse as tuple literals, including Python-style
 multi-value returns. The shared AST comma splitter is quote-aware so commas
 inside string literals do not create phantom tuple elements.

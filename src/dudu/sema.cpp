@@ -697,6 +697,12 @@ void check_condition_type(const FunctionScope& scope, const Stmt& stmt) {
 std::string assign_target_type(const FunctionScope& scope, const Stmt& stmt,
                                const std::string& lhs) {
     const SourceLocation& target_location = node_location(stmt.location, stmt.target_expr);
+    if (stmt.target_expr.kind == ExprKind::Index && stmt.target_expr.children.size() == 2 &&
+        stmt.target_expr.children[0].kind == ExprKind::Name) {
+        return indexed_value_type(
+            scope.symbols, scope.locals, target_location, stmt.target_expr.children[0].name,
+            stmt.target_expr.children[1].text, "indexed assignment to unknown local: ");
+    }
     if (lhs.size() > 1 && lhs.front() == '*') {
         const std::string name = trim(lhs.substr(1));
         const auto local = scope.locals.find(name);
