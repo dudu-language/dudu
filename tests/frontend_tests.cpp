@@ -911,6 +911,18 @@ void test_pointer_member_emission(const std::filesystem::path& root) {
     }
 }
 
+void test_templated_pointer_cast_emission() {
+    const dudu::ModuleAst module =
+        dudu::parse_source("def read_i32(left: *const[void]) -> const[i32]:\n"
+                           "    value: *const[i32] = *const[i32](left)\n"
+                           "    return *value\n",
+                           "templated_pointer_cast.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+    const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find("const int32_t* value = reinterpret_cast<int32_t const*>(left);") !=
+           std::string::npos);
+}
+
 } // namespace
 
 int main() {
@@ -940,6 +952,7 @@ int main() {
         test_project_driver_config(root);
         test_image_filter_emission(root);
         test_pointer_member_emission(root);
+        test_templated_pointer_cast_emission();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;

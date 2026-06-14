@@ -1,0 +1,2 @@
+def bad(ptr: *void) -> *void:
+    return *list[MissingType](ptr)

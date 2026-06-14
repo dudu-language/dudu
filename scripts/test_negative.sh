@@ -58,6 +58,7 @@ expect_fail bad_result_err_type --emit-cpp "return type mismatch: expected Resul
 expect_fail bad_ok_arity --emit-cpp "Ok expects 1 argument, got 0"; expect_fail bad_err_arity --emit-cpp "Err expects 1 argument, got 2"
 expect_fail bad_new_assignment --emit-cpp "cannot assign \\*Node to \\* i32 without an explicit cast"; expect_fail bad_malloc_arity --emit-cpp "malloc expects 1 count argument, got 0"; expect_fail bad_alloc_type --emit-cpp "unknown allocation type: MissingType"; expect_fail bad_alloc_nested_type --emit-cpp "unknown allocation type: MissingType"
 expect_fail bad_sizeof_nested_type --emit-cpp "unknown sizeof type: MissingType"; expect_fail bad_offsetof_nested_type --emit-cpp "unknown offsetof type: MissingType"
+expect_fail bad_pointer_cast_nested_type --emit-cpp "unknown pointer cast type: MissingType"
 expect_fail bad_delete_arity --emit-cpp "delete expects 1 pointer argument, got 2"; expect_fail bad_free_type --emit-cpp "free expects pointer, got i32"; expect_fail bad_bare_delete_type --emit-cpp "delete expects pointer, got i32"
 expect_fail bad_void_return --emit-cpp "void function cannot return i32"; expect_fail bad_break_outside_loop --emit-cpp "break outside loop"
 expect_fail bad_continue_outside_loop --emit-cpp "continue outside loop"

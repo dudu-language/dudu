@@ -259,6 +259,17 @@ std::string template_args_lookup_text(const Expr& expr) {
     return out.str();
 }
 
+std::string join_type_ref_texts(const std::vector<TypeRef>& types) {
+    std::ostringstream out;
+    for (size_t i = 0; i < types.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << types[i].text;
+    }
+    return out.str();
+}
+
 std::string template_method_name(const Expr& expr, const std::string& callee_base,
                                  size_t method_dot) {
     std::ostringstream out;
@@ -297,8 +308,17 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
     const size_t pointer_cast_call = find_call_open(expr);
     if (expr.size() > 1 && expr.front() == '*' && pointer_cast_call != std::string::npos &&
         find_call_close(expr, pointer_cast_call) == expr.size() - 1) {
-        const std::string type = trim(expr.substr(1, pointer_cast_call - 1));
-        if (known_type(scope.symbols, type)) {
+        const TypeRef type_ref =
+            parse_type_text(expr.substr(1, pointer_cast_call - 1),
+                            location == nullptr ? SourceLocation{} : *location);
+        const std::string type = trim(type_ref.text);
+        if (const auto unknown = unknown_type_ref(scope.symbols, type_ref)) {
+            if (location != nullptr) {
+                const SourceLocation error_location =
+                    unknown->second.line > 0 ? unknown->second : *location;
+                fail(error_location, "unknown pointer cast type: " + unknown->first);
+            }
+        } else {
             for (const std::string& arg : call_args(expr, pointer_cast_call)) {
                 (void)infer_expr(scope, arg, location);
             }
@@ -524,6 +544,35 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
         return infer_expr(scope, expr.text, location);
     }
     const std::string callee = template_call_callee(expr);
+
+    if (starts_with(expr.name, "*")) {
+        const size_t arg_count = !expr.template_type_args.empty() ? expr.template_type_args.size()
+                                                                  : expr.template_args.size();
+        if (location != nullptr && arg_count == 0) {
+            fail(*location, "pointer casts expect at least 1 type argument");
+        }
+        if (location != nullptr && expr.children.size() != 1) {
+            fail(*location,
+                 "pointer casts expect 1 argument, got " + std::to_string(expr.children.size()));
+        }
+        const std::string pointee = !expr.template_type_args.empty()
+                                        ? trim(expr.name.substr(1)) + "[" +
+                                              join_type_ref_texts(expr.template_type_args) + "]"
+                                        : trim(callee.substr(1));
+        const TypeRef pointee_ref = parse_type_text(pointee, expr.location);
+        if (const auto unknown = unknown_type_ref(scope.symbols, pointee_ref)) {
+            if (location != nullptr) {
+                const SourceLocation type_location =
+                    unknown->second.line > 0 ? unknown->second : expr.location;
+                fail(type_location, "unknown pointer cast type: " + unknown->first);
+            }
+            return {};
+        }
+        for (const Expr& arg : expr.children) {
+            (void)infer_expr_ast(scope, arg, location);
+        }
+        return "*" + pointee_ref.text;
+    }
 
     const auto allocation =
         !expr.template_type_args.empty()
@@ -756,8 +805,14 @@ std::optional<std::string> infer_pointer_cast_call_ast(const FunctionScope& scop
     if (!starts_with(callee, "*")) {
         return std::nullopt;
     }
-    const std::string type = trim(callee.substr(1));
-    if (!known_type(scope.symbols, type)) {
+    const TypeRef type_ref = parse_type_text(callee.substr(1), expr.location);
+    const std::string type = trim(type_ref.text);
+    if (const auto unknown = unknown_type_ref(scope.symbols, type_ref)) {
+        if (location != nullptr) {
+            const SourceLocation error_location =
+                unknown->second.line > 0 ? unknown->second : expr.location;
+            fail(error_location, "unknown pointer cast type: " + unknown->first);
+        }
         return std::nullopt;
     }
     for (const Expr& arg : expr.children) {

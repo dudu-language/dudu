@@ -318,6 +318,15 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
             return "static_cast<" + type + "*>(std::malloc(sizeof(" + type + ") * (" +
                    lowered_call_args + ")))";
         }
+        if (starts_with(expr.name, "*")) {
+            const std::string pointee = !expr.template_type_args.empty()
+                                            ? trim_copy(expr.name.substr(1)) + "[" +
+                                                  join_type_arg_texts(expr.template_type_args) + "]"
+                                            : trim_copy(expr.name.substr(1)) + "[" +
+                                                  join_template_arg_texts(expr.template_args) + "]";
+            return "reinterpret_cast<" + lower_cpp_type("*" + pointee, aliases) + ">(" +
+                   lowered_call_args + ")";
+        }
         if (expr.name == "sizeof" || expr.name == "alignof") {
             return expr.name + "(" + lowered_template_args + ")";
         }

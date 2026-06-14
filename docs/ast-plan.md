@@ -75,6 +75,9 @@ Already structured:
   lowering the callee name string directly
 - template-call fallback emission and pointer-cast emission use parsed callee
   helper paths for non-keyword callees
+- templated pointer casts such as `*const[i32](ptr)` validate parsed
+  `TypeRef` arguments recursively and lower through the AST template-call path
+  instead of falling into generic template-call emission
 - ordinary call semantic inference uses a callee lookup string reconstructed
   from the parsed callee expression where possible
 - template-call semantic inference and template method lookup use the parsed
