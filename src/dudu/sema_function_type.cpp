@@ -21,6 +21,13 @@ std::string function_type(const FunctionSignature& signature) {
 
 bool parse_function_type(std::string type, FunctionSignature& out) {
     type = trim_copy(std::move(type));
+    const size_t open = type.find('[');
+    if (open != std::string::npos && type.back() == ']') {
+        const std::string inner = trim_copy(type.substr(open + 1, type.size() - open - 2));
+        if (starts_with(inner, "fn(")) {
+            type = inner;
+        }
+    }
     if (!starts_with(type, "fn(")) {
         return false;
     }

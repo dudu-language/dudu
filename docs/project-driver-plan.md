@@ -25,6 +25,9 @@ dudu test
 dudu fmt
 ```
 
+`dudu fmt` should be the normal project formatter. `duc fmt` remains the direct
+file-oriented formatter underneath it.
+
 while keeping the C/C++ build surface visible and usable:
 
 ```text

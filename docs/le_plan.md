@@ -5,6 +5,60 @@ This is the next practical roadmap for Dudu.
 Dudu is far enough along to guide development by making real examples easier
 instead of planning the whole language in the abstract.
 
+## Engineering Bar
+
+Dudu has moved past throwaway prototype mode. Treat it as a real systems
+language project.
+
+Work on this plan should avoid temporary syntax, name-specific imported-library
+hacks, string-lowering shortcuts for new language features, and hidden behavior
+that cannot be explained as normal Dudu semantics. When a feature needs compiler
+architecture first, build the architecture instead of adding a narrow workaround.
+
+The standard is:
+
+- real AST-backed language features
+- readable generated C++
+- diagnostics that point at Dudu source
+- no imported library special cases
+- no wrapper-header dependency for normal C/C++ interop
+- examples that compile and run
+- tests that prove behavior without trapping the dev loop in slow validation
+- LSP/editor support that follows the same compiler model
+
+If a planned feature cannot meet that bar yet, document the missing prerequisite
+and implement the prerequisite first.
+
+## Feature Validation Bar
+
+Every major language feature should land with both small and realistic Dudu
+programs:
+
+- parser/codegen shape fixtures for the simplest form
+- negative fixtures for the obvious mistakes and diagnostics
+- executable examples for normal use
+- at least one real-ish stress example that combines the feature with another
+  subsystem or imported C/C++ library when that is the reason the feature
+  exists
+- fast tests by default, with heavyweight or optional native-library probes kept
+  separate from the normal dev loop
+
+Examples of the expected bar:
+
+- generics should cover `clamp[T]`, `Box[T]`, `Vec2[T]`, containers, callbacks,
+  and imported C++ algorithm interop
+- arrays should cover `array[T][N]`, `array[T][M, N]`, image/matrix kernels,
+  inferred literal shapes, swizzling, slicing views, C pointer/span handoff,
+  and library tensor indexing hooks
+- sum types should cover lexer tokens, UI/game events, network messages,
+  recursive expression trees, and exhaustive-match diagnostics
+- inheritance should cover simple bases, abstract contracts, partial abstract
+  bases, multiple interface-like bases, `super`, imported C++ bases, and an
+  autograd-style graph
+- macro prerequisites should include serde-like derives, binary serialization,
+  reflection metadata, generated tests, and export-table generation as target
+  examples
+
 ## 1. Finish The Project Driver
 
 Primary plan: [Dudu Project Driver Plan](project-driver-plan.md).
@@ -23,6 +77,8 @@ easier to build, run, and test.
 
 ## 2. Constructors, Destructors, And Operators
 
+Primary plan: [OOP Plan](oop-plan.md).
+
 Related specs:
 
 - [Appearance Spec](appearance-spec.md)
@@ -35,13 +91,16 @@ Make the C++ object model feel complete through Python-shaped syntax:
 - overloads
 - operator overloads
 - member methods
-- static methods
+- class-scoped functions
+- explicit static fields
 - C++ interop behavior for all of the above
 
-Status: constructors, destructors, member methods, static methods, imported C++
-operator overloads, Dudu-native operator methods, and imported C++ base-method
-lookup are implemented. Broader overload-set polish remains part of
-header-awareness hardening.
+Status: constructors, destructors, member methods, imported C++ operator
+overloads, Dudu-native operator methods, and imported C++ base-method lookup are
+implemented. Align the implementation with the OOP plan's target surface:
+`init`/`drop`, class-scoped functions without `@staticmethod`, explicit
+`static` fields, and `@operator(...)`. Broader overload-set polish remains part
+of header-awareness hardening.
 
 This is more important than user-defined macros because it directly affects
 normal systems and game code.
@@ -55,9 +114,11 @@ Related specs:
 
 Support class-scoped constants, static data, and static functions.
 
-Status: class-scoped constants, mutable static fields, and `@staticmethod`
-methods are implemented. Broader module and namespace constants remain a
-candidate if real examples need cleaner organization than file-level constants.
+Status: align this with the OOP plan. Class-scoped `ALL_CAPS` constants are
+static constants, `name: static[T] = value` is mutable class-shared state, and
+functions inside a class with no `self` are class-scoped functions. Broader
+module and namespace constants remain a candidate if real examples need cleaner
+organization than file-level constants.
 
 Python, Rust, C, and C++ all have ways to hang values off a type or namespace.
 Dudu needs that so constants and helpers do not all live in the global module
@@ -77,7 +138,6 @@ class Color:
 class Math:
     PI: f64 = 3.141592653589793
 
-    @staticmethod
     def clamp(x: f32, lo: f32, hi: f32) -> f32:
         if x < lo:
             return lo
@@ -145,7 +205,6 @@ Do add compiler-recognized decorators when they remove real friction:
 - `@test`
 - `@inline`
 - `@extern_c`
-- `@staticmethod`
 - `@operator`
 - target attributes such as `@cuda.global`
 
@@ -153,14 +212,16 @@ User-defined decorators, hygienic macros, and lisp-style compile-time
 metaprogramming are separate language design work and should not block the
 core C/C++ replacement layer.
 
-## 7. Avoid Native Dudu Inheritance For Now
+## 7. Add Native Inheritance Deliberately
 
 Related docs:
 
+- [Inheritance Plan](inheritance-plan.md)
 - [Native Header Awareness Plan](header-awareness-plan.md)
 - [Python Subset Compiler Plan](python-subset-compiler-plan.md)
 
-Do not add Dudu-native inheritance unless real examples force it.
+Dudu-native inheritance is now planned, but it should be implemented against the
+real AST/type model rather than patched onto string lowering.
 
 For C++ interop, Dudu still needs to consume inherited C++ classes well enough
 to:
@@ -169,15 +230,84 @@ to:
 - construct C++ types that use inheritance: initial imported C++ support is implemented
 - pass derived/base pointers and references correctly: initial imported C++ support is implemented
 
-That is an interop requirement, not a reason to design inheritance into Dudu's
-own object model immediately.
+Native inheritance should follow the inheritance plan: method-only `@abstract`,
+`@override`, `@virtual`, `super`, strict multiple inheritance, interface-like
+abstract classes, and C++-faithful diagnostics.
 
 ## Remaining Completion Checklist
 
 These are the remaining practical completion areas for the current language
 push. They are not release packaging work.
 
-1. Native header hardening
+1. Guard The Development Loop
+
+   Keep validation fast before starting broad compiler rewrites. Split or guard
+   slow fixtures, keep optional native-library probes optional, and avoid
+   repeatedly running heavyweight tests while iterating on parser/sema changes.
+
+   Status: the `std_vector_map_string` codegen-shape hang is fixed and the fast
+   suite is reliable again. Keep new validation targeted and guarded so one slow
+   fixture does not stall the development loop.
+
+2. Real AST Architecture
+
+   Primary plan: [AST Plan](ast-plan.md).
+
+   Move function bodies from raw statement strings to real statement,
+   expression, and type AST nodes. This unlocks better errors, fix-its, semantic
+   highlighting, LSP quality, native Dudu generics, and structured macros.
+
+3. OOP Surface Cleanup
+
+   Primary plan: [OOP Plan](oop-plan.md).
+
+   Align implementation with the documented surface: `init`, `drop`,
+   `static[T]`, no `@staticmethod`, no properties, `@operator(...)`, and static
+   access through `Type.name` or `class.name`.
+
+4. Arrays, Matrices, Tensors, And Slicing
+
+   Primary plan: [Arrays, Matrix, Tensor, And Slicing Plan](arrays-indexing-plan.md).
+
+   Migrate current fixed-array syntax to canonical `array[T][shape]`, add
+   initializer-based shape inference for `array[T] = literal`, then add
+   shape-aware fixed arrays, matrix/tensor indexing, swizzling, and explicit
+   view/copy slicing semantics so numeric, graphics, and image code feels
+   natural without hidden allocation.
+
+5. Native Dudu Generics
+
+   Primary plan: [Generics Plan](generics-plan.md).
+
+   Add compile-time generic functions and classes such as `def clamp[T](...)`
+   and `class Vec2[T]`, lowering to readable C++ templates and producing
+   Dudu-source diagnostics for instantiated errors.
+
+6. Sum Types And Pattern Matching
+
+   Primary plan: [Sum Types And Pattern Matching Plan](sum-types-plan.md).
+
+   Extend simple enums into safe Rust-style tagged unions with payload variants
+   and exhaustive `match`. This gives Dudu static heterogeneous data without
+   `Any` or silent dynamic containers.
+
+7. Native Inheritance
+
+   Primary plan: [Inheritance Plan](inheritance-plan.md).
+
+   Implement method-only `@abstract`, `@virtual`, `@override`, `super`, current
+   class static access, strict multiple inheritance, and interface-like abstract
+   classes. Keep imported C++ inheritance behavior generic and header-driven.
+
+8. Macro Surface Prerequisites
+
+   Primary plan: [Macro Syntax Plan](macro-syntax-plan.md).
+
+   Start with target syntax for derives, field attributes, serde-like codegen,
+   tests, reflection metadata, binary serialization, and binding generation.
+   Prefer AST-backed declaration macros over raw string macros.
+
+9. Native Header Hardening
 
    Improve overload diagnostics, const/reference modeling, explicit C++
    template calls, template-heavy library behavior, header cache invalidation,
@@ -189,7 +319,7 @@ push. They are not release packaging work.
    implemented. Template-heavy library behavior and deeper overload behavior
    remain the main hardening areas.
 
-2. Real library stress tests
+10. Real Library Stress Tests
 
    Keep proving SDL3, ImGui, raylib, glm, sqlite, POSIX, OpenCL, Vulkan, GLFW,
    and FFmpeg style APIs with normal imports and minimal wrapper code.
@@ -200,21 +330,7 @@ push. They are not release packaging work.
    `third_party/install` prefix with `scripts/setup_dev_deps.sh`; the main Dudu
    build does not require them.
 
-3. Broader namespace constants
-
-   Class constants, mutable static fields, and `@staticmethod` are
-   implemented. Cleaner namespace/module constants remain a candidate if real
-   examples need them.
-
-4. Project driver polish
-
-   Keep using `dudu` on real projects and fix friction in native build inputs,
-   target selection, diagnostics, and generated build files.
-
-   Status: `duduplayground/` is a checked-in scratch project that runs through
-   `dudu run` and `dudu test`.
-
-5. Incremental build strategy
+11. Incremental Build Strategy
 
    Move beyond generated-one-file builds where needed. Generate C++ per Dudu
    module so CMake/Ninja can rebuild changed translation units instead of whole
@@ -223,29 +339,32 @@ push. They are not release packaging work.
    Status: direct native builds preserve generated C++ mtimes and skip the
    C++ compile/link step when the generated C++, native build command, and
    native source inputs are unchanged. True per-module generated C++ remains
-   the larger architecture step.
+   the larger architecture step and is a major requirement for a serious C/C++
+   ecosystem-facing toolchain.
 
-6. Language server
+12. Language Server And Formatter
 
    Implement `duc lsp` so editors can show diagnostics, warnings, hover,
    completion, go to definition, find references, rename, formatting, and native
    header navigation. The concrete plan is
    [Language Server Plan](language-server-plan.md).
 
-7. Freestanding and embedded assert policy
+   Build LSP and formatter behavior from the same AST/sema model used by the
+   compiler.
+
+13. Project Driver Polish
+
+   Keep using `dudu` on real projects and fix friction in native build inputs,
+   target selection, diagnostics, generated build files, and examples.
+
+14. Freestanding And Embedded Assert Policy
 
    Hosted `assert` and `debug_assert` are implemented. Freestanding and
    embedded targets reject runtime `assert` instead of accidentally emitting
    hosted runtime machinery.
 
-8. Macro edge cases
+15. Macro Edge Cases
 
    Normal imported macros are covered. Keep token-pasting, declaration-
    generating, and partial-syntax macros behind wrapper headers unless a real
    library forces a better design.
-
-9. Slow or hung validation
-
-   The `std_vector_map_string` codegen-shape hang is fixed and the fast suite
-   is reliable again. Keep new validation targeted and guarded so one slow
-   fixture does not stall the development loop.

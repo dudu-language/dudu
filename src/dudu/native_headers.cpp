@@ -24,10 +24,6 @@ bool is_foreign(const ImportDecl& import) {
 bool direct_import(const ImportDecl& import) {
     return import.alias.empty();
 }
-bool is_simd_vector_type_name(std::string_view name) {
-    return name == "__m64" || starts_with(name, "__m128") || starts_with(name, "__m256") ||
-           starts_with(name, "__m512");
-}
 std::string unquoted(std::string value) {
     if (value.size() >= 2 && value.front() == '"' && value.back() == '"') {
         return value.substr(1, value.size() - 2);
@@ -294,7 +290,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         const std::string raw_type = match[3].str();
         const std::string lowered_type = dudu_type(raw_type);
         const bool useful_alias = lowered_type != name;
-        if (!starts_with(name, "__") || is_simd_vector_type_name(name) || useful_alias) {
+        if (!starts_with(name, "__") || useful_alias) {
             scan.types.push_back({.name = name,
                                   .type = useful_alias ? lowered_type : "",
                                   .location = decl_location});
@@ -424,21 +420,17 @@ MacroParams macro_params(std::string args) {
 void parse_macro_dump(NativeHeaderScan& scan, const std::string& dump,
                       const SourceLocation& location) {
     static const std::regex function_macro(R"(^#define ([A-Za-z_][A-Za-z0-9_]*)\(([^)]*)\))");
-    static const std::regex simd_function_macro(R"(^#define ((_mm|_MM_)[A-Za-z0-9_]*)\(([^)]*)\))");
     static const std::regex object_macro(R"(^#define ([A-Z_][A-Z0-9_]*)(\s|$))");
     std::istringstream in(dump);
     std::string line;
     while (std::getline(in, line)) {
         std::smatch match;
-        bool is_function_macro = std::regex_search(line, match, function_macro);
-        const bool is_simd_macro =
-            is_function_macro ? false : std::regex_search(line, match, simd_function_macro);
-        if (is_function_macro || is_simd_macro) {
+        if (std::regex_search(line, match, function_macro)) {
             const std::string name = match[1].str();
-            if (starts_with(name, "_") && !starts_with(name, "_mm") && !starts_with(name, "_MM_")) {
+            if (starts_with(name, "_")) {
                 continue;
             }
-            const MacroParams params = macro_params(match[is_simd_macro ? 3 : 2].str());
+            const MacroParams params = macro_params(match[2].str());
             scan.macros.push_back(
                 {.name = name, .arity = params.arity, .function_like = true, .location = location});
             scan.functions.push_back(

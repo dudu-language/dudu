@@ -69,7 +69,19 @@ Show the compiler-driver commands:
 ./build/duc --version
 ```
 
-Use `duc` for direct compiler-driver actions:
+Use `dudu` for normal project work. It is the Cargo-like front door for creating
+projects, building, running, testing, and cleaning:
+
+```sh
+./build/dudu init hello
+cd hello
+../build/dudu run
+../build/dudu test
+../build/dudu clean
+```
+
+Use `duc` for direct compiler-driver actions, similar to how `rustc` sits under
+Cargo:
 
 ```sh
 ./build/duc check tests/fixtures/simple_program.dd
@@ -79,16 +91,6 @@ Use `duc` for direct compiler-driver actions:
 ./build/duc run tests/fixtures/run_zero.dd
 ./build/duc tests/fixtures/c_api_export.dd --emit-c-header -
 ./build/duc emit examples/compile_time.dd -DDEBUG=true -DRENDER_BACKEND=raylib
-```
-
-Use `dudu` for project-level work:
-
-```sh
-./build/dudu init hello
-cd hello
-../build/dudu run
-../build/dudu test
-../build/dudu clean
 ```
 
 A `dudu.toml` project can name its entry file and native build settings:
@@ -137,14 +139,6 @@ kind = "executable"
 ```sh
 ../build/dudu run app
 ../build/dudu build tests
-../build/dudu test
-```
-
-A checked-in scratch project lives in `duduplayground/`:
-
-```sh
-cd duduplayground
-../build/dudu run
 ../build/dudu test
 ```
 

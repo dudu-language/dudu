@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -320,7 +321,22 @@ std::filesystem::path project_config_path(const std::filesystem::path& file) {
 
 ProjectConfig config_for_file(const std::filesystem::path& file) {
     const std::filesystem::path config = project_config_path(file);
-    return config.empty() ? ProjectConfig{} : parse_project_config(config);
+    if (config.empty()) {
+        return {};
+    }
+    ProjectConfig parsed = parse_project_config(config);
+    const std::filesystem::path project_dir = config.parent_path();
+    auto absolutize = [&](std::vector<std::string>& paths) {
+        for (std::string& path_text : paths) {
+            const std::filesystem::path path = path_text;
+            if (!path.is_absolute()) {
+                path_text = (project_dir / path).lexically_normal().string();
+            }
+        }
+    };
+    absolutize(parsed.include_dirs);
+    absolutize(parsed.lib_dirs);
+    return parsed;
 }
 
 struct Document {
@@ -1093,6 +1109,9 @@ class LanguageServer {
         if (doc == nullptr) {
             return "null";
         }
+        if (const std::optional<std::string> header = header_definition_result(*doc, params)) {
+            return *header;
+        }
         const std::string word = symbol_at(*doc, params);
         for (const Symbol& symbol : symbols_for(*doc)) {
             if (symbol_matches(symbol.name, word)) {
@@ -1111,6 +1130,109 @@ class LanguageServer {
             return *import_definition;
         }
         return "null";
+    }
+
+    std::optional<std::string> header_definition_result(const Document& doc,
+                                                        const Json* params) const {
+        const Json* position = params == nullptr ? nullptr : params->get("position");
+        const int target_line = int_value(position == nullptr ? nullptr : position->get("line"));
+        const int target_character =
+            int_value(position == nullptr ? nullptr : position->get("character"));
+        std::istringstream in(doc.text);
+        std::string line;
+        for (int row = 0; std::getline(in, line); ++row) {
+            if (row != target_line) {
+                continue;
+            }
+            const std::optional<std::string> header = header_import_at(line, target_character);
+            if (!header) {
+                return std::nullopt;
+            }
+            const ProjectConfig config = config_for_file(doc.path);
+            const std::optional<std::filesystem::path> resolved =
+                resolve_header_path(doc.path.parent_path(), config, *header);
+            if (!resolved) {
+                return std::nullopt;
+            }
+            return location_json(file_uri(*resolved), range_json(0, 0, 0));
+        }
+        return std::nullopt;
+    }
+
+    static std::optional<std::string> header_import_at(const std::string& line, int character) {
+        static const std::regex import_regex(R"DD(^\s*import\s+(?:c|cpp)\s+"([^"]+)")DD");
+        std::smatch match;
+        if (!std::regex_search(line, match, import_regex)) {
+            return std::nullopt;
+        }
+        const int start = static_cast<int>(match.position(1));
+        const int end = start + static_cast<int>(match.length(1));
+        return character >= start && character <= end ? std::optional<std::string>{match[1].str()}
+                                                      : std::nullopt;
+    }
+
+    static std::optional<std::filesystem::path>
+    resolve_header_path(const std::filesystem::path& source_dir, const ProjectConfig& config,
+                        const std::string& header) {
+        const std::filesystem::path header_path = header;
+        std::vector<std::filesystem::path> roots;
+        if (header_path.is_absolute()) {
+            roots.push_back({});
+        } else {
+            roots.push_back(source_dir);
+            for (const std::string& include_dir : config.include_dirs) {
+                const std::filesystem::path path = include_dir;
+                roots.push_back(path.is_absolute() ? path : source_dir / path);
+            }
+            for (const std::filesystem::path& include_dir : pkg_config_include_dirs(config)) {
+                roots.push_back(include_dir);
+            }
+        }
+        for (std::filesystem::path root : roots) {
+            std::filesystem::path candidate = root.empty() ? header_path : root / header_path;
+            std::error_code error;
+            if (std::filesystem::exists(candidate, error) && !error) {
+                const std::filesystem::path resolved =
+                    std::filesystem::weakly_canonical(candidate, error);
+                return error ? candidate.lexically_normal() : resolved;
+            }
+        }
+        return std::nullopt;
+    }
+
+    static std::vector<std::filesystem::path> pkg_config_include_dirs(const ProjectConfig& config) {
+        if (config.pkg_config_packages.empty()) {
+            return {};
+        }
+        const char* pkg_config = std::getenv("PKG_CONFIG");
+        const std::string executable =
+            pkg_config == nullptr ? "pkg-config" : std::string(pkg_config);
+        std::string command = shell_quote_arg(executable) + " --cflags";
+        for (const std::string& package : config.pkg_config_packages) {
+            command += " " + shell_quote_arg(package);
+        }
+        command += " 2>/dev/null";
+        FILE* pipe = popen(command.c_str(), "r");
+        if (pipe == nullptr) {
+            return {};
+        }
+        std::string output;
+        char buffer[256];
+        while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+            output += buffer;
+        }
+        if (pclose(pipe) != 0) {
+            return {};
+        }
+        std::vector<std::filesystem::path> out;
+        std::istringstream flags(output);
+        std::string flag;
+        while (flags >> flag) {
+            if (starts_with(flag, "-I") && flag.size() > 2) {
+                out.emplace_back(flag.substr(2));
+            }
+        }
+        return out;
     }
 
     std::optional<std::string> member_definition_result(const Document& doc,
@@ -1294,9 +1416,6 @@ class LanguageServer {
                               ",\"newText\":\"" + json_escape(edit->new_text) + "\"}]}}}");
         }
         for (const std::string& action : missing_import_actions(*doc, params)) {
-            actions.push_back(action);
-        }
-        for (const std::string& action : native_config_actions(*doc, params)) {
             actions.push_back(action);
         }
         for (const std::string& action : lint_actions(*doc, params)) {
@@ -1967,36 +2086,6 @@ class LanguageServer {
         return out;
     }
 
-    std::vector<std::string> native_config_actions(const Document& doc, const Json* params) const {
-        std::vector<std::string> out;
-        const Json* context = params == nullptr ? nullptr : params->get("context");
-        const Json* diagnostics = context == nullptr ? nullptr : context->get("diagnostics");
-        const JsonArray* array = diagnostics == nullptr ? nullptr : diagnostics->array();
-        if (array == nullptr) {
-            return out;
-        }
-        std::set<std::string> seen_packages;
-        for (const Json& diagnostic : *array) {
-            if (string_value(diagnostic.get("source")) != "dudu/native-header") {
-                continue;
-            }
-            const std::optional<std::string> header =
-                missing_native_header(string_value(diagnostic.get("message")));
-            if (!header) {
-                continue;
-            }
-            const std::optional<std::string> package = package_for_header(*header);
-            if (!package || !seen_packages.insert(*package).second) {
-                continue;
-            }
-            const std::optional<std::string> action = pkg_config_action(doc, *package);
-            if (action) {
-                out.push_back(*action);
-            }
-        }
-        return out;
-    }
-
     std::vector<std::string> lint_actions(const Document& doc, const Json* params) const {
         std::vector<std::string> out;
         const Json* context = params == nullptr ? nullptr : params->get("context");
@@ -2051,108 +2140,6 @@ class LanguageServer {
                "\",\"kind\":\"quickfix\","
                "\"edit\":{\"changes\":{\"" +
                json_escape(doc.uri) + "\":[{\"range\":" + range + ",\"newText\":\"\"}]}}}";
-    }
-
-    std::optional<std::string> pkg_config_action(const Document& doc,
-                                                 const std::string& package) const {
-        const std::filesystem::path config_path = project_config_path(doc.path);
-        if (config_path.empty()) {
-            return std::nullopt;
-        }
-        const ProjectConfig config = parse_project_config(config_path);
-        if (std::find(config.pkg_config_packages.begin(), config.pkg_config_packages.end(),
-                      package) != config.pkg_config_packages.end()) {
-            return std::nullopt;
-        }
-        std::ifstream file(config_path);
-        if (!file) {
-            return std::nullopt;
-        }
-        const std::string text{std::istreambuf_iterator<char>(file),
-                               std::istreambuf_iterator<char>()};
-        const std::string replacement = add_pkg_config_package(text, package);
-        if (replacement == text) {
-            return std::nullopt;
-        }
-        const int end_line = line_count(text);
-        const std::string config_uri = file_uri(config_path);
-        return "{\"title\":\"Add pkg-config package " + json_escape(package) +
-               " to dudu.toml\",\"kind\":\"quickfix\",\"edit\":{\"changes\":{\"" +
-               json_escape(config_uri) + "\":[{\"range\":" + range_json(0, 0, end_line, 0) +
-               ",\"newText\":\"" + json_escape(replacement) + "\"}]}}}";
-    }
-
-    static std::optional<std::string> missing_native_header(const std::string& message) {
-        constexpr std::string_view prefix = "could not scan native header ";
-        const size_t start = message.find(prefix);
-        if (start == std::string::npos) {
-            return std::nullopt;
-        }
-        std::string header = message.substr(start + prefix.size());
-        if (const size_t newline = header.find('\n'); newline != std::string::npos) {
-            header = header.substr(0, newline);
-        }
-        header = trim_copy(std::move(header));
-        return header.empty() ? std::nullopt : std::optional<std::string>{header};
-    }
-
-    static std::optional<std::string> package_for_header(const std::string& header) {
-        static const std::map<std::string, std::string> packages = {
-            {"GLFW/glfw3.h", "glfw3"}, {"SDL3/SDL.h", "sdl3"},        {"raylib.h", "raylib"},
-            {"sqlite3.h", "sqlite3"},  {"vulkan/vulkan.h", "vulkan"},
-        };
-        const auto found = packages.find(header);
-        return found == packages.end() ? std::nullopt : std::optional<std::string>{found->second};
-    }
-
-    static std::string add_pkg_config_package(const std::string& text, const std::string& package) {
-        std::vector<std::string> lines;
-        std::istringstream in(text);
-        std::string line;
-        while (std::getline(in, line)) {
-            lines.push_back(line);
-        }
-        const bool trailing_newline = !text.empty() && text.back() == '\n';
-        bool in_pkg = false;
-        int pkg_section = -1;
-        int pkg_section_end = static_cast<int>(lines.size());
-        for (int i = 0; i < static_cast<int>(lines.size()); ++i) {
-            const std::string trimmed = trim_copy(lines[static_cast<size_t>(i)]);
-            if (trimmed.size() >= 2 && trimmed.front() == '[' && trimmed.back() == ']') {
-                if (in_pkg) {
-                    pkg_section_end = i;
-                    break;
-                }
-                in_pkg = trimmed == "[pkg]";
-                if (in_pkg) {
-                    pkg_section = i;
-                }
-                continue;
-            }
-            if (in_pkg && starts_with(trimmed, "libs")) {
-                const size_t open = lines[static_cast<size_t>(i)].find('[');
-                const size_t close = lines[static_cast<size_t>(i)].rfind(']');
-                if (open == std::string::npos || close == std::string::npos || close < open) {
-                    return text;
-                }
-                const std::string existing =
-                    trim_copy(lines[static_cast<size_t>(i)].substr(open + 1, close - open - 1));
-                const std::string insert =
-                    existing.empty() ? "\"" + package + "\"" : ", \"" + package + "\"";
-                lines[static_cast<size_t>(i)].insert(close, insert);
-                return join_lines(lines, trailing_newline);
-            }
-        }
-        if (pkg_section >= 0) {
-            lines.insert(lines.begin() + pkg_section_end, "libs = [\"" + package + "\"]");
-            return join_lines(lines, trailing_newline);
-        }
-        if (!lines.empty() && !trim_copy(lines.back()).empty()) {
-            lines.push_back("");
-        }
-        lines.push_back("[pkg]");
-        lines.push_back("libs = [\"" + package + "\"]");
-        return join_lines(lines, true);
     }
 
     static std::string join_lines(const std::vector<std::string>& lines, bool trailing_newline) {

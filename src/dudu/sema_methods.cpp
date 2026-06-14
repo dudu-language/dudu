@@ -4,6 +4,10 @@
 #include "dudu/sema_scan.hpp"
 #include "dudu/source.hpp"
 
+#include "dudu/cpp_lower.hpp"
+
+#include <cctype>
+
 namespace dudu {
 namespace {
 
@@ -49,21 +53,20 @@ std::string first_type_arg(const std::string& type) {
     int depth = 0;
     const size_t close = type.size() - 1;
     for (size_t i = open + 1; i < close; ++i) {
-        if (type[i] == '[') ++depth;
-        if (type[i] == ']') --depth;
-        if (type[i] == ',' && depth == 0) return trim(type.substr(open + 1, i - open - 1));
+        if (type[i] == '[')
+            ++depth;
+        if (type[i] == ']')
+            --depth;
+        if (type[i] == ',' && depth == 0)
+            return trim(type.substr(open + 1, i - open - 1));
     }
     return trim(type.substr(open + 1, close - open - 1));
-}
-
-bool has_prefix(const std::string& text, const char* prefix) {
-    return text.rfind(prefix, 0) == 0;
 }
 
 bool builtin_cpp_method_signature(const Symbols& symbols, std::string receiver_type,
                                   const std::string& method_name, FunctionSignature& signature) {
     const std::string templated = receiver_template_type(symbols, std::move(receiver_type));
-    if (has_prefix(templated, "std.vector[") || has_prefix(templated, "list[")) {
+    if (starts_with(templated, "list[")) {
         const std::string item = first_type_arg(templated);
         if (method_name == "push_back" || method_name == "append") {
             signature.params = {item.empty() ? "auto" : item};
@@ -83,10 +86,6 @@ bool builtin_cpp_method_signature(const Symbols& symbols, std::string receiver_t
             signature.return_type = "bool";
             return true;
         }
-    }
-    if (templated == "std.thread" && method_name == "join") {
-        signature.return_type = "void";
-        return true;
     }
     return false;
 }
@@ -113,12 +112,64 @@ std::string template_method_name(const std::string& method_name) {
 
 std::string template_method_arg(const std::string& method_name) {
     const size_t open = method_name.find('[');
-    if (open == std::string::npos || method_name.back() != ']') return {};
+    if (open == std::string::npos || method_name.back() != ']')
+        return {};
     return trim(method_name.substr(open + 1, method_name.size() - open - 2));
 }
 
 std::string substitute_template_type(std::string type, const std::string& arg) {
     return !arg.empty() && trim(type) == "T" ? arg : type;
+}
+
+std::vector<std::string> template_args_from_type(const std::string& type) {
+    const size_t open = type.find('[');
+    if (open == std::string::npos || type.empty() || type.back() != ']') {
+        return {};
+    }
+    return split_top_level_args(type.substr(open + 1, type.size() - open - 2));
+}
+
+bool is_identifier_char(char ch) {
+    return std::isalnum(static_cast<unsigned char>(ch)) != 0 || ch == '_';
+}
+
+std::string replace_type_identifier(std::string type, const std::string& from,
+                                    const std::string& to) {
+    if (from.empty() || to.empty()) {
+        return type;
+    }
+    size_t pos = type.find(from);
+    while (pos != std::string::npos) {
+        const bool left_ok = pos == 0 || !is_identifier_char(type[pos - 1]);
+        const size_t end = pos + from.size();
+        const bool right_ok = end == type.size() || !is_identifier_char(type[end]);
+        if (left_ok && right_ok) {
+            type.replace(pos, from.size(), to);
+            pos = type.find(from, pos + to.size());
+        } else {
+            pos = type.find(from, end);
+        }
+    }
+    return type;
+}
+
+std::string substitute_receiver_template_type(std::string type,
+                                              const std::vector<std::string>& receiver_args) {
+    if (receiver_args.empty()) {
+        return type;
+    }
+    const std::string& first = receiver_args.front();
+    for (const char* name : {"T", "_T", "_Tp", "_Tp1", "_Ty", "_Ty1", "value_type",
+                             "element_type"}) {
+        type = replace_type_identifier(std::move(type), name, first);
+    }
+    if (receiver_args.size() >= 2) {
+        type = replace_type_identifier(std::move(type), "_Key", receiver_args[0]);
+        type = replace_type_identifier(std::move(type), "_Val", receiver_args[1]);
+        type = replace_type_identifier(std::move(type), "mapped_type", receiver_args[1]);
+        type = replace_type_identifier(std::move(type), "key_type", receiver_args[0]);
+    }
+    return type;
 }
 
 std::string first_path_type(const Symbols& symbols,
@@ -270,6 +321,8 @@ bool method_signature_for_type(const Symbols& symbols, std::string receiver_type
     if (builtin_cpp_method_signature(symbols, receiver_type, method_name, signature)) {
         return true;
     }
+    const std::string templated_receiver = receiver_template_type(symbols, receiver_type);
+    const std::vector<std::string> receiver_args = template_args_from_type(templated_receiver);
     const std::string type = unwrap_receiver_type(symbols, std::move(receiver_type));
     const std::string lookup_name = template_method_name(method_name);
     const std::string template_arg = template_method_arg(method_name);
@@ -284,11 +337,15 @@ bool method_signature_for_type(const Symbols& symbols, std::string receiver_type
         const size_t first_param =
             !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
         for (size_t i = first_param; i < method.params.size(); ++i) {
-            signature.params.push_back(substitute_template_type(method.params[i].type, template_arg));
+            std::string param_type = substitute_template_type(method.params[i].type, template_arg);
+            signature.params.push_back(
+                substitute_receiver_template_type(std::move(param_type), receiver_args));
         }
         signature.return_type = method.return_type.empty()
                                     ? "void"
                                     : substitute_template_type(method.return_type, template_arg);
+        signature.return_type =
+            substitute_receiver_template_type(std::move(signature.return_type), receiver_args);
         return true;
     }
     for (const std::string& base : klass->second->base_classes) {

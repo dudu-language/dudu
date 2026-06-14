@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.20)
 project(dudu LANGUAGES CXX)
 
 option(DUDU_STRICT "Enable strict compiler warnings" ON)
-option(DUDU_WARN_AS_ERROR "Treat warnings as errors" ON)
+option(DUDU_WARN_AS_ERROR "Treat warnings as errors" OFF)
 option(DUDU_BUILD_TESTS "Build Dudu compiler tests" OFF)
 
 add_library(dudu_frontend

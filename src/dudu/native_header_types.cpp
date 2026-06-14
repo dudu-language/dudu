@@ -3,6 +3,7 @@
 #include "dudu/cpp_lower.hpp"
 
 #include <string_view>
+#include <vector>
 
 namespace dudu {
 namespace {
@@ -18,22 +19,21 @@ std::string scalar_dudu_type(const std::string& type) {
         return "f64";
     if (type == "size_t")
         return "usize";
-    if (type == "int8_t" || type == "Sint8" || type == "signed char")
+    if (type == "int8_t" || type == "signed char")
         return "i8";
-    if (type == "uint8_t" || type == "Uint8" || type == "unsigned char")
+    if (type == "uint8_t" || type == "unsigned char")
         return "u8";
-    if (type == "int16_t" || type == "Sint16" || type == "short")
+    if (type == "int16_t" || type == "short")
         return "i16";
-    if (type == "uint16_t" || type == "Uint16" || type == "unsigned short")
+    if (type == "uint16_t" || type == "unsigned short")
         return "u16";
-    if (type == "int" || type == "int32_t" || type == "Sint32")
+    if (type == "int" || type == "int32_t")
         return "i32";
-    if (type == "unsigned int" || type == "uint32_t" || type == "Uint32")
+    if (type == "unsigned int" || type == "uint32_t")
         return "u32";
-    if (type == "long" || type == "long long" || type == "int64_t" || type == "Sint64")
+    if (type == "long" || type == "long long" || type == "int64_t")
         return "i64";
-    if (type == "unsigned long" || type == "unsigned long long" || type == "uint64_t" ||
-        type == "Uint64") {
+    if (type == "unsigned long" || type == "unsigned long long" || type == "uint64_t") {
         return "u64";
     }
     return type.empty() ? "auto" : type;
@@ -70,6 +70,44 @@ size_t matching_paren(std::string_view text, size_t open) {
         }
     }
     return std::string::npos;
+}
+
+size_t matching_angle(std::string_view text, size_t open) {
+    int depth = 0;
+    for (size_t i = open; i < text.size(); ++i) {
+        if (text[i] == '<') {
+            ++depth;
+        } else if (text[i] == '>') {
+            --depth;
+            if (depth == 0) {
+                return i;
+            }
+        }
+    }
+    return std::string::npos;
+}
+
+std::string lower_template_type(std::string type) {
+    const size_t open = type.find('<');
+    if (open == std::string::npos) {
+        return cpp_scope_to_dudu(scalar_dudu_type(type));
+    }
+    const size_t close = matching_angle(type, open);
+    if (close == std::string::npos || trim_copy(type.substr(close + 1)).empty() == false) {
+        return cpp_scope_to_dudu(scalar_dudu_type(type));
+    }
+    std::string out = cpp_scope_to_dudu(scalar_dudu_type(trim_copy(type.substr(0, open))));
+    out.push_back('[');
+    bool first = true;
+    for (std::string arg : split_top_level_args(type.substr(open + 1, close - open - 1))) {
+        if (!first) {
+            out += ", ";
+        }
+        first = false;
+        out += dudu_type(std::move(arg));
+    }
+    out.push_back(']');
+    return out;
 }
 
 } // namespace
@@ -113,7 +151,7 @@ std::string dudu_type(std::string type) {
             break;
         }
     }
-    std::string out = cpp_scope_to_dudu(scalar_dudu_type(type));
+    std::string out = lower_template_type(type);
     if (is_const)
         out = "const[" + out + "]";
     for (int i = 0; i < pointer_depth; ++i)

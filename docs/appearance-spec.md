@@ -380,22 +380,23 @@ Enums can stay simple.
 
 ```python
 enum Direction:
-    north
-    south
-    east
-    west
+    North
+    South
+    East
+    West
 ```
 
 With backing type:
 
 ```python
 enum Color: u8
-    red = 1
-    green = 2
-    blue = 3
+    Red = 1
+    Green = 2
+    Blue = 3
 ```
 
-Enum values are `snake_case`.
+Enum variants are `PascalCase`. A plain integer enum is the zero-payload form of
+the same enum model used by payload variants.
 
 ## Type Aliases
 
@@ -550,8 +551,9 @@ Use Python typing spellings.
 
 ```python
 values: list[i32]
-tiles: Tile[256]
-matrix: f32[4][4]
+tiles: array[Tile][256]
+matrix: array[f32][4, 4]
+palette: array[Color] = [Color.RED, Color.GREEN, Color.BLUE]
 scores: dict[str, i32]
 visited: set[TileId]
 cache: dict[str, dict[i32, set[f32]]]
@@ -561,20 +563,74 @@ Likely C++ lowerings:
 
 ```text
 list[T]      -> std::vector<T>
-T[N]         -> std::array<T, N>
+array[T] = literal -> fixed contiguous storage with inferred shape
+array[T][N]  -> fixed contiguous storage
+array[T][M, N] -> fixed contiguous matrix/tensor storage
 dict[K, V]   -> std::unordered_map<K, V>
 set[T]       -> std::unordered_set<T>
 tuple[...]   -> dudu::TupleN<...> aggregate
 ```
 
+`array[T]` without an initializer does not specify enough storage. Use
+`array[T][shape]` when there is no RHS:
+
+```python
+scratch: array[f32][4, 4]
+identity: array[f32] = [
+    [1.0, 0.0, 0.0, 0.0],
+    [0.0, 1.0, 0.0, 0.0],
+    [0.0, 0.0, 1.0, 0.0],
+    [0.0, 0.0, 0.0, 1.0],
+]
+```
+
+Ragged literals are errors, and empty literals need an explicit shape.
+
 Indexing is Python indexing:
 
 ```python
 x = values[3]
-cell = grid[y][x]
+cell = grid[y, x]
 values[3] = 10
 scores["bob"] = 42
 ```
+
+Multidimensional fixed arrays and tensor-like values should support comma
+indexing:
+
+```python
+mat: array[f32][4, 4]
+mat[row, col] = 1.0
+
+image: array[Color][height, width]
+pixel = image[y, x]
+```
+
+Slicing should be supported for numeric and graphics code, but copy-vs-view
+semantics must be explicit. The preferred model is that slices produce views
+where possible, and callers explicitly copy when they want ownership:
+
+```python
+row = mat[row_index, :]
+patch = image[y0:y1, x0:x1]
+copy = list(row)
+```
+
+The detailed indexing and slicing design is tracked in
+[Arrays, Matrix, Tensor, And Slicing Plan](arrays-indexing-plan.md).
+
+Vector-like types can support GLSL-style swizzling when the type opts into
+known components:
+
+```python
+v: Vec4[f32]
+xy = v.xy
+rgb = color.rgb
+v.xy = Vec2[f32](1.0, 2.0)
+```
+
+Swizzling is compile-time syntax for vector-like types, not dynamic member
+lookup. Repeated components are allowed on reads such as `v.xx`, but not writes.
 
 ## Literals
 
@@ -728,6 +784,19 @@ Rules:
 - `malloc[T](count)` allocates raw storage for `count` `T` values.
 - `free(p)` frees memory created by `malloc`.
 - custom allocators are ordinary library APIs, not language rules.
+- fixed-size arrays use `array[T][N]` or `array[T][M, N]`.
+- dynamic owning arrays use `list[T]`.
+
+Specialized allocation belongs to libraries and arenas:
+
+```python
+players = arena.list[Player](count)
+scratch = frame_allocator.list[f32](1024)
+```
+
+Those APIs should return normal library-owned values with RAII/destructor
+cleanup where possible. Raw pointers remain available for low-level interop, but
+they are not the main array story.
 
 Value containers own values:
 
@@ -752,6 +821,29 @@ players: list[*Player] = []
 The programmer or library must ensure pointed-to objects live long enough. The
 compiler should reject obvious escapes like returning `&local_value` through a
 pointer container.
+
+## Scope Cleanup
+
+Dudu should prefer RAII and value ownership over a `defer` statement.
+
+Use values whose destructors close resources:
+
+```python
+file = File.open(path)
+data = file.read_all()
+```
+
+Use explicit scope blocks when lifetime needs to be visually constrained:
+
+```python
+with_scope:
+    lock = LockGuard(mutex)
+    update_shared_state()
+```
+
+The exact scope-block spelling can change, but the core rule is that cleanup is
+owned by destructors and lexical scope. Dudu should not add Go/Zig-style
+`defer` as the primary cleanup model.
 
 Arena example:
 
@@ -864,6 +956,27 @@ Conditional expressions can use Python spelling:
 status = "dead" if hp <= 0 else "alive"
 ```
 
+## Async And Concurrency
+
+Dudu should not copy Python's `async`/`await` model into the core language.
+C++ coroutine support exists, but it is library- and ABI-shaped in ways that do
+not map cleanly to Python async syntax.
+
+Concurrency should start with ordinary native tools:
+
+- threads
+- atomics
+- mutexes and lock guards
+- event loops from imported C/C++ libraries
+- callbacks
+- nonblocking I/O APIs
+- C++ coroutine/task libraries through normal interop
+
+This is not a death sentence for networking code. C and C++ networking is often
+written with event loops, callbacks, worker threads, or library-provided task
+types. Dudu should consume those APIs well before designing its own coroutine
+runtime.
+
 ## Loops
 
 While:
@@ -903,6 +1016,23 @@ over copy, mutable reference, and const reference behavior without predeclaring
 loop variables.
 
 `range` should lower to a C++ integer loop.
+
+Labeled loops are allowed for nested loop control. Labels attach only to
+`for`/`while`, not arbitrary statements, and can only be targeted by `break` or
+`continue`.
+
+```python
+outer: for y: i32 in range(height):
+    for x: i32 in range(width):
+        if blocked(x, y):
+            break outer
+        if skip_column(x):
+            continue outer
+        visit(x, y)
+```
+
+This covers the useful Rust-style nested-loop escape without adding general
+`goto`.
 
 ## Conversions
 
@@ -956,7 +1086,15 @@ player: PlayerState = PlayerState(
 This should lower to aggregate initialization or constructor calls depending on
 the generated C++ type.
 
-## Static Members
+## Class Constants, Static Fields, And Class-Scoped Functions
+
+Class body annotations are instance fields by default, including defaults:
+
+```python
+class Player:
+    hp: i32
+    speed: f32 = 240.0
+```
 
 Class-scoped `ALL_CAPS` bindings are static constants and use type-qualified
 access:
@@ -976,19 +1114,22 @@ white: Color = Color.WHITE
 limit: i32 = Color.MAX_CHANNEL
 ```
 
-Lowercase class-level annotated assignments are mutable static fields:
+Mutable class-shared state must use `static[T]`:
 
 ```python
 class Counter:
-    count: i32 = 0
+    count: static[i32] = 0
 
-    @staticmethod
     def bump() -> i32:
         Counter.count += 1
         return Counter.count
 ```
 
-Static methods use Python's `@staticmethod` spelling:
+Static fields must be accessed through the type name. `self.count` always means
+an instance field named `count`; it does not fall back to `Counter.count`.
+
+Functions inside classes that do not take `self` are class-scoped functions and
+lower to C++ static member functions:
 
 ```python
 class Color:
@@ -997,35 +1138,34 @@ class Color:
     b: f32
     a: f32
 
-    @staticmethod
     def gray(value: f32) -> Color:
         return Color(value, value, value, 1.0)
 ```
 
-Static methods do not take `self`. Type-qualified access lowers to C++ `::`,
-while instance field and method access keeps normal member access.
+Class-scoped functions do not take `self`. Type-qualified access lowers to C++
+`::`, while instance field and method access keeps normal member access.
 
 ## Operator Methods
 
-Dudu-native operator overloads use Python dunder names and lower to C++
-operators:
+Dudu-native operator overloads use `@operator(...)` and lower to C++ operators:
 
 ```python
 class Vec2:
     x: i32
     y: i32
 
-    def __add__(self, other: Vec2) -> Vec2:
+    @operator("+")
+    def add(self, other: Vec2) -> Vec2:
         return Vec2(self.x + other.x, self.y + other.y)
 
-    def __eq__(self, other: Vec2) -> bool:
+    @operator("==")
+    def equals(self, other: Vec2) -> bool:
         return self.x == other.x and self.y == other.y
 ```
 
-Supported binary operator methods are `__add__`, `__sub__`, `__mul__`,
-`__truediv__`, and `__mod__`. Supported comparison operator methods are
-`__eq__`, `__ne__`, `__lt__`, `__le__`, `__gt__`, and `__ge__`. Operator
-methods take `self` plus one argument. Comparison operators must return `bool`.
+Supported binary operators are `+`, `-`, `*`, `/`, and `%`. Supported comparison
+operators are `==`, `!=`, `<`, `<=`, `>`, and `>=`. Operator methods take
+`self` plus one argument. Comparison operators must return `bool`.
 
 ## C Interop
 
@@ -1136,7 +1276,9 @@ predictable C++ semantics.
 
 ## Formatter
 
-`duc fmt` should behave like `black` for Dudu.
+Dudu should have one canonical format. `dudu fmt` should behave like `black`
+for Dudu projects, and `duc fmt` should provide the same formatter for direct
+file-oriented compiler use.
 
 It owns:
 
@@ -1151,11 +1293,125 @@ It owns:
 Expected commands:
 
 ```sh
+dudu fmt
+dudu fmt --check
 duc fmt src/**/*.dd
 duc fmt --check .
 ```
 
-Editors should run `duc fmt` on save.
+Editors should run the canonical formatter on save. Formatting should be stable
+and non-configurable except for compatibility switches that are forced by a
+future language version.
+
+## Type Inference
+
+Dudu should infer local variable types from initializers when the type is clear:
+
+```python
+count = 0
+name = "dudu"
+player = Player(hp=100, x=1.0, y=2.0)
+dt = rl.GetFrameTime()
+```
+
+Inference is local and compile-time. It should not turn Dudu into dynamic
+Python. A binding gets one static type, and assigning a different type later is
+an error.
+
+Empty container literals can use Rust-style local constraints:
+
+```python
+players = []
+players.append(Player(hp=100, x=1.0, y=2.0))
+players.append(Player(hp=80, x=4.0, y=8.0))
+```
+
+This should infer `list[Player]`. The empty list starts as an unresolved
+`list[?T]`, and later local uses add constraints until `T` is known.
+
+Conflicting constraints are errors, not silent heterogeneous containers:
+
+```python
+items = []
+items.append(1)
+items.append("hello")  # error: list element type already constrained to i32
+```
+
+If mixed values are intentional, use an explicit sum type or variant-like type:
+
+```python
+enum Item:
+    Number:
+        value: i32
+    Text:
+        value: str
+
+items: list[Item] = []
+items.append(Item.Number(value=1))
+items.append(Item.Text(value="hello"))
+```
+
+Annotations are still required or strongly preferred for:
+
+- function parameters
+- function return types
+- class fields
+- constants
+- uninitialized locals with no constraining later use
+- fixed arrays
+- raw pointers, references, and native handles when the initializer is `None`
+- public ABI boundaries
+- places where the programmer wants a narrower or wider explicit type
+
+Examples:
+
+```python
+window: *struct SDL_Window = None
+pixels: Color[PIXELS]
+SAMPLE_RATE: i32 = 48000
+
+def update(player: &Player, dt: f32):
+    speed = 240.0
+    player.x += speed * dt
+```
+
+The goal is aggressive-enough local inference for pleasant code, not global
+guessing. If inference is ambiguous, Dudu should ask for a type annotation.
+
+Inference should not cross arbitrary function side effects. This is valid when
+`take_players` has a known parameter type:
+
+```python
+players = []
+take_players(players)  # constrains players to list[Player] if the signature says so
+```
+
+This should remain ambiguous unless `load_items` has an explicit signature that
+constrains the argument:
+
+```python
+items = []
+load_items(items)
+```
+
+## Strictness
+
+Dudu should feel Rust-like about correctness while still interoperating with
+C/C++.
+
+Default behavior:
+
+- Dudu semantic errors are strict.
+- Dudu semantic warnings should be visible by default once the warning is
+  reliable.
+- Dudu-generated C++ should be warning-clean under normal strict flags.
+- User-provided C/C++ sources and system headers should not inherit Dudu's full
+  warning policy automatically.
+- `-Werror` should be opt-in for generated/native user builds.
+- The Dudu compiler repository can use `-Werror` in developer scripts.
+
+This keeps generated code clean without making package builds fail because a
+different compiler or imported native header emits a warning.
 
 ## Packages And CLI
 

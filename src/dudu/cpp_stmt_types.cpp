@@ -51,8 +51,9 @@ std::string infer_emitted_local_type(const std::string& expr,
             const std::string receiver = trim_copy(callee.substr(0, dot));
             const auto local = locals.find(receiver);
             if (local != locals.end()) {
-                const std::string key =
-                    receiver_base_type(local->second) + "." + trim_copy(callee.substr(dot + 1));
+                const std::string method_name = trim_copy(callee.substr(dot + 1));
+                const std::string receiver_type = trim_copy(local->second);
+                const std::string key = receiver_base_type(receiver_type) + "." + method_name;
                 if (const auto method = function_returns.find(key);
                     method != function_returns.end()) {
                     return method->second;

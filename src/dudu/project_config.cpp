@@ -119,6 +119,29 @@ bool starts_with(std::string_view text, std::string_view prefix) {
     return text.size() >= prefix.size() && text.substr(0, prefix.size()) == prefix;
 }
 
+bool array_is_closed(const std::string& value) {
+    char quote = '\0';
+    bool escaped = false;
+    for (const char c : value) {
+        if (quote != '\0') {
+            if (escaped) {
+                escaped = false;
+            } else if (c == '\\') {
+                escaped = true;
+            } else if (c == quote) {
+                quote = '\0';
+            }
+            continue;
+        }
+        if (c == '"' || c == '\'') {
+            quote = c;
+        } else if (c == ']') {
+            return true;
+        }
+    }
+    return false;
+}
+
 } // namespace
 
 ProjectConfig apply_project_target(ProjectConfig config, const std::string& target_name) {
@@ -163,6 +186,16 @@ ProjectConfig parse_project_config(const std::filesystem::path& path) {
         }
         const std::string name = trim_copy(std::string_view(line).substr(0, equal));
         std::string value = trim_copy(std::string_view(line).substr(equal + 1));
+        if (starts_with(value, "[") && !array_is_closed(value)) {
+            std::string continuation;
+            while (std::getline(file, continuation)) {
+                continuation = trim_copy(strip_comment(std::move(continuation)));
+                value += continuation;
+                if (array_is_closed(value)) {
+                    break;
+                }
+            }
+        }
         if (name.empty() || value.empty()) {
             fail(path, section == "build" ? "invalid [build] entry" : "invalid entry", line);
         }

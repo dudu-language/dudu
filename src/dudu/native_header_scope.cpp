@@ -37,7 +37,7 @@ std::string qualify_scoped_type(const NativeHeaderScan& scan,
                                 const std::vector<std::pair<int, std::string>>& namespaces,
                                 std::string type) {
     type = trim_copy(std::move(type));
-    if (type.empty() || type.find('.') != std::string::npos) return type;
+    if (type.empty()) return type;
     if (type.front() == '*' || type.front() == '&')
         return std::string(1, type.front()) +
                qualify_scoped_type(scan, namespaces, type.substr(1));
@@ -49,6 +49,23 @@ std::string qualify_scoped_type(const NativeHeaderScan& scan,
                                                             type.size() - prefix.size() - 1)) +
                    "]";
     }
+    const size_t open = type.find('[');
+    if (open != std::string::npos && ends_with(type, "]")) {
+        std::string out =
+            qualify_scoped_type(scan, namespaces, type.substr(0, open)) + "[";
+        bool first = true;
+        for (std::string arg :
+             split_top_level_args(type.substr(open + 1, type.size() - open - 2))) {
+            if (!first) {
+                out += ", ";
+            }
+            first = false;
+            out += qualify_scoped_type(scan, namespaces, std::move(arg));
+        }
+        out.push_back(']');
+        return out;
+    }
+    if (type.find('.') != std::string::npos) return type;
     const std::string scoped = join_scope(namespaces, type);
     return scan_has_type(scan, scoped) ? scoped : type;
 }

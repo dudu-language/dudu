@@ -1,0 +1,12 @@
+import cpp "string" as std
+import cpp "variant" as std
+
+
+def main() -> i32:
+    value: std.variant[i32, std.string] = std.variant[i32, std.string](std.string("forty-two"))
+    if not std.holds_alternative[std.string](value):
+        return 1
+    text: std.string = std.get[std.string](value)
+    if text == std.string("forty-two"):
+        return 42
+    return 2

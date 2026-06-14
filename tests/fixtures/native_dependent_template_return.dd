@@ -1,0 +1,7 @@
+import cpp "native_dependent_template_return.hpp" as dep
+
+
+def main() -> i32:
+    holder: dep.Holder[i32] = dep.Holder[i32](42)
+    box: dep.Box[i32] = holder.box()
+    return box.get()

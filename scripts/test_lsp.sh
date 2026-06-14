@@ -333,6 +333,17 @@ messages = [
     packet(
         {
             "jsonrpc": "2.0",
+            "id": 43,
+            "method": "textDocument/definition",
+            "params": {
+                "textDocument": {"uri": direct_native_uri},
+                "position": {"line": 0, "character": 18},
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
             "method": "textDocument/didOpen",
             "params": {
                 "textDocument": {
@@ -1159,6 +1170,10 @@ direct_native_definition = next(item for item in responses if item.get("id") == 
 assert direct_native_definition["result"]["uri"].endswith("/tests/fixtures/native_headers/simple_c.h")
 assert direct_native_definition["result"]["range"]["start"]["line"] == 20
 
+direct_native_header_definition = next(item for item in responses if item.get("id") == 43)
+assert direct_native_header_definition["result"]["uri"].endswith("/tests/fixtures/native_headers/simple_c.h")
+assert direct_native_header_definition["result"]["range"]["start"]["line"] == 0
+
 overload_signature = next(item for item in responses if item.get("id") == 32)
 overload_labels = [item["label"] for item in overload_signature["result"]["signatures"]]
 assert "native_cpp.dudu_native.overloaded(i32) -> i32" in overload_labels
@@ -1221,19 +1236,9 @@ assert missing_import_edit["range"]["end"]["line"] == 3
 assert missing_import_edit["newText"] == "from lsp_import_target import missing_helper\n"
 
 native_config_actions = next(item for item in responses if item.get("id") == 27)
-native_config_fix = next(
-    item
+assert not any(
+    item["title"].startswith("Add pkg-config package ")
     for item in native_config_actions["result"]
-    if item["title"] == "Add pkg-config package raylib to dudu.toml"
-)
-native_config_edit = native_config_fix["edit"]["changes"][native_pkg_config_uri][0]
-assert native_config_fix["kind"] == "quickfix"
-assert native_config_edit["newText"] == (
-    'name = "lsp_pkg_project"\n'
-    'entry = "main.dd"\n'
-    "\n"
-    "[pkg]\n"
-    'libs = ["raylib"]\n'
 )
 
 workspace_rename = next(item for item in responses if item.get("id") == 28)

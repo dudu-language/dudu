@@ -470,11 +470,22 @@ std::string lower_dotted_template_call(std::string expr,
         }
         const std::string arg = expr.substr(open + 1, close - open - 1);
         const std::string call_args = expr.substr(close + 2, args_close - close - 2);
-        const std::string lowered_name =
-            namespace_qualified_name(name, namespace_aliases) ? replace_dots(name) : name;
         const std::string lowered_args = lower_cpp_expr(call_args, namespace_aliases);
-        const std::string replacement =
-            lowered_name + "<" + lower_cpp_type(arg, namespace_aliases) + ">(" + lowered_args + ")";
+        std::string lowered_template;
+        if (namespace_qualified_name(name, namespace_aliases)) {
+            lowered_template = lower_cpp_type(name + "[" + arg + "]", namespace_aliases);
+        } else {
+            std::ostringstream lowered_template_args;
+            const std::vector<std::string> template_args = split_top_level_args(arg);
+            for (size_t i = 0; i < template_args.size(); ++i) {
+                if (i > 0) {
+                    lowered_template_args << ", ";
+                }
+                lowered_template_args << lower_cpp_type(template_args[i], namespace_aliases);
+            }
+            lowered_template = name + "<" + lowered_template_args.str() + ">";
+        }
+        const std::string replacement = lowered_template + "(" + lowered_args + ")";
         expr.replace(name_start, args_close + 1 - name_start, replacement);
         open = expr.find('[', name_start + replacement.size());
     }

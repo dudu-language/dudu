@@ -51,8 +51,9 @@ Implement this first:
 - `def name(args...) -> Return:`.
 - Python calls with parentheses and commas.
 - `return`, `if`/`elif`/`else`, `while`, `for`, `break`, `continue`.
+- labeled `for`/`while` loops with `break label` and `continue label`.
 - typed local annotations: `x: i32 = 0`.
-- local type inference from initializers.
+- local type inference from clear initializers.
 - constants via mandatory `ALL_CAPS` bindings.
 - compile-time build flags through `build.NAME`.
 - static assertions with `static_assert(...)`.
@@ -94,8 +95,8 @@ values: list[i32]
 names: dict[str, i32]
 seen: set[str]
 pair: tuple[i32, f32]
-static_values: i32[256]
-matrix: f32[4][4]
+static_values: array[i32][256]
+matrix: array[f32][4, 4]
 ```
 
 Native low-level types:
@@ -269,7 +270,7 @@ Type AST forms:
 
 - named type: `i32`, `PlayerState`, `glm.vec3`
 - generic type: `list[i32]`, `Result[T, E]`
-- fixed array suffix: `i32[256]`
+- array shape: `array[i32][256]`, `array[f32][4, 4]`
 - pointer: `*T`
 - reference: `&T`
 - const: `const[T]`
@@ -315,7 +316,9 @@ list[T]             -> std::vector<T>
 dict[K, V]          -> std::unordered_map<K, V>
 set[T]              -> std::unordered_set<T>
 tuple[...]          -> generated aggregate by default
-T[N]                -> std::array<T, N>
+array[T]            -> dynamic contiguous storage
+array[T][N]         -> fixed contiguous storage
+array[T][M, N]      -> fixed contiguous matrix/tensor storage
 *T                  -> T*
 &T                  -> T&
 const[T]            -> const T
@@ -624,6 +627,7 @@ libs = ["raylib", "imgui"]
 [cc]
 defines = ["IMGUI_IMPL_OPENGL_LOADER_GLAD"]
 flags = ["-Wall", "-Wextra"]
+warnings_as_errors = false
 
 [pkg]
 libs = ["raylib", "sdl3"]
@@ -862,7 +866,8 @@ Performance policy:
 - No hidden dynamic dispatch unless requested by the type being used.
 - No hidden heap allocation for value construction.
 - `list[T]` lowers to an owning dynamic array such as `std::vector<T>`.
-- `T[N]` lowers to fixed storage such as `std::array<T, N>`.
+- `array[T][N]` lowers to fixed storage such as `std::array<T, N>`.
+- `array[T][M, N]` lowers to fixed contiguous matrix/tensor storage.
 - Tuple returns lower to small generated aggregates.
 - Function pointer calls lower to raw function pointer calls.
 - Raw pointer operations lower to raw pointer operations.
@@ -1068,8 +1073,8 @@ or compiles against the actual target library.
    - rejected implicit narrowing/widening in Dudu-native code
 
 6. **fixed_arrays**
-   - `T[N]`
-   - nested fixed arrays
+   - `array[T][N]`
+   - shaped fixed arrays such as `array[f32][4, 4]`
    - indexing and passing by reference
 
 7. **function_pointers**

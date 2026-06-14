@@ -1,0 +1,10 @@
+import cpp "functional" as std
+
+
+def add_one(value: i32) -> i32:
+    return value + 1
+
+
+def main() -> i32:
+    callback: std.function[fn(i32) -> i32] = std.function[fn(i32) -> i32](add_one)
+    return callback(True)

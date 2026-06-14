@@ -1,0 +1,96 @@
+import cpp "algorithm" as std
+import cpp "array" as std
+import cpp "functional" as std
+import cpp "map" as std
+import cpp "memory" as std
+import cpp "mutex" as std
+import cpp "numeric" as std
+import cpp "optional" as std
+import cpp "span" as std
+import cpp "string" as std
+import cpp "string_view" as std
+import cpp "unordered_set" as std
+import cpp "vector" as std
+
+
+class Counter:
+    value: i32
+
+
+def add_one(value: i32) -> i32:
+    return value + 1
+
+
+def sum_span(values: std.span[i32]) -> i32:
+    total: i32 = 0
+    for index: usize in range(values.size()):
+        total += values[index]
+    return total
+
+
+def main() -> i32:
+    maybe: std.optional[i32] = std.optional[i32](40)
+    if not maybe.has_value():
+        return 1
+
+    label: std.string_view = std.string_view("dudu")
+    if label.size() != 4:
+        return 2
+
+    fixed: std.array[i32, 3] = std.array[i32, 3]({1, 2, 3})
+    if fixed[2] != 3:
+        return 3
+
+    view: std.span[i32] = std.span[i32](fixed)
+    if sum_span(view) != 6:
+        return 4
+
+    names: std.unordered_set[std.string]
+    names.insert(std.string("bob"))
+    names.insert(std.string("ada"))
+    if names.count(std.string("ada")) != 1:
+        return 5
+
+    bob: std.string = std.string("bob")
+    ada: std.string = std.string("ada")
+    scores: std.map[std.string, i32]
+    scores[bob] = 20
+    scores[ada] = 22
+    if scores[ada] != 22:
+        return 6
+
+    values: std.vector[i32]
+    values.push_back(3)
+    values.push_back(1)
+    values.push_back(2)
+    std.sort(values.begin(), values.end())
+    if values[0] != 1:
+        return 7
+    if std.count(values.begin(), values.end(), 2) != 1:
+        return 8
+    found = std.find(values.begin(), values.end(), 3)
+    if found == values.end():
+        return 10
+    if not std.all_of(values.begin(), values.end(), lambda value: value > 0):
+        return 14
+    std.reverse(values.begin(), values.end())
+    if values[0] != 3:
+        return 15
+    std.sort(values.begin(), values.end())
+    if not std.binary_search(values.begin(), values.end(), 3):
+        return 16
+    if std.accumulate(values.begin(), values.end(), 0) != 6:
+        return 17
+
+    callback: std.function[fn(i32) -> i32] = std.function[fn(i32) -> i32](add_one)
+    if callback(41) != 42:
+        return 11
+
+    owned: std.shared_ptr[Counter] = std.make_shared[Counter](Counter(value=42))
+    weak: std.weak_ptr[Counter] = std.weak_ptr[Counter](owned)
+    locked: std.shared_ptr[Counter] = weak.lock()
+
+    mutex: std.mutex
+    guard: std.lock_guard[std.mutex] = std.lock_guard[std.mutex](mutex)
+
+    return i32(maybe.value()) + scores[bob] - 18

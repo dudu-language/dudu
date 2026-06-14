@@ -70,16 +70,14 @@ void test_import_bindings() {
 
 void test_canonical_examples_parse(const std::filesystem::path& root) {
     const std::vector<std::string> examples = {
-        "allocators.dd",          "audio_synth.dd",       "compile_time.dd",
-        "cpp_library.dd",         "cuda_kernel.dd",       "cuda_shared_memory_tile.dd",
-        "ffmpeg_probe_decode.dd", "fibonacci.dd",         "function_pointers.dd",
-        "glfw_opengl_triangle.dd",
-        "image_filter.dd",        "layout_hardware.dd",   "modules_visibility.dd",
-        "native_escape.dd",       "numerics_kmeans.dd",   "opencl_kernel_host.dd",
-        "raylib_game.dd",         "sdl3_imgui.dd",        "sdl3_window.dd",
-        "shader_compute.dd",
-        "systems_mmap.dd",        "threading_atomics.dd", "vulkan_triangle.dd",
-        "web_server.dd",
+        "allocators.dd",           "audio_synth.dd",     "compile_time.dd",
+        "cpp_library.dd",          "cuda_kernel.dd",     "cuda_shared_memory_tile.dd",
+        "ffmpeg_probe_decode.dd",  "fibonacci.dd",       "function_pointers.dd",
+        "glfw_opengl_triangle.dd", "image_filter.dd",    "layout_hardware.dd",
+        "modules_visibility.dd",   "native_escape.dd",   "numerics_kmeans.dd",
+        "opencl_kernel_host.dd",   "raylib_game.dd",     "sdl3_imgui.dd",
+        "sdl3_window.dd",          "shader_compute.dd",  "systems_mmap.dd",
+        "threading_atomics.dd",    "vulkan_triangle.dd", "web_server.dd",
     };
 
     for (const std::string& example : examples) {
@@ -233,43 +231,44 @@ void test_native_type_declaration_emission() {
 }
 
 void test_native_header_type_scan(const std::filesystem::path& root) {
-    dudu::ModuleAst module = dudu::parse_source("import c \"native_headers/simple_c.h\"\n"
-                                                "import cpp \"native_headers/simple_cpp.hpp\"\n"
-                                                "\n"
-                                                "def main() -> i32:\n"
-                                                "    event: DuduNativeEvent\n"
-                                                "    window: *DuduNativeWindow = None\n"
-                                                "    widget: DuduWidgetAlias\n"
-                                                "    other: Widget = Widget(5)\n"
-                                                "    namespaced: dudu_native.Widget = "
-                                                "dudu_native.Widget(6)\n"
-                                                "    derived: dudu_native.DerivedWidget = "
-                                                "dudu_native.DerivedWidget(9)\n"
-                                                "    nested: dudu_native.Outer.Inner = "
-                                                "dudu_native.Outer.Inner(21)\n"
-                                                "    amount: f32 = 2.0\n"
-                                                "    if derived.base_scaled(2) != 18:\n"
-                                                "        return 1\n"
-                                                "    if dudu_native.use_base_widget(&derived) != 9:\n"
-                                                "        return 2\n"
-                                                "    if dudu_native.read_const_ref(namespaced) != 6:\n"
-                                                "        return 5\n"
-                                                "    if nested.doubled() != 42:\n"
-                                                "        return 4\n"
-                                                "    proc = dudu_native_proc()\n"
-                                                "    if proc == None:\n"
-                                                "        return 3\n"
-                                                "    if DUDU_NATIVE_CHECK():\n"
-                                                "        return dudu_native.add(20, 22) + "
-                                                "DUDU_NATIVE_MAGIC\n"
-                                                "    if dudu_native_ready(&event):\n"
-                                                "        return DUDU_NATIVE_SCALE(other.scaled(3)) + "
-                                                "i32(dudu_native.overloaded(amount))\n"
-                                                "    dudu_native_format(\"%d %d\", event.type, "
-                                                "dudu_native_kind_ok)\n"
-                                                "    return event.type + widget.value + "
-                                                "other.value + dudu_native_kind_ok\n",
-                                                root / "tests/fixtures/native_scan.dd");
+    dudu::ModuleAst module =
+        dudu::parse_source("import c \"native_headers/simple_c.h\"\n"
+                           "import cpp \"native_headers/simple_cpp.hpp\"\n"
+                           "\n"
+                           "def main() -> i32:\n"
+                           "    event: DuduNativeEvent\n"
+                           "    window: *DuduNativeWindow = None\n"
+                           "    widget: DuduWidgetAlias\n"
+                           "    other: Widget = Widget(5)\n"
+                           "    namespaced: dudu_native.Widget = "
+                           "dudu_native.Widget(6)\n"
+                           "    derived: dudu_native.DerivedWidget = "
+                           "dudu_native.DerivedWidget(9)\n"
+                           "    nested: dudu_native.Outer.Inner = "
+                           "dudu_native.Outer.Inner(21)\n"
+                           "    amount: f32 = 2.0\n"
+                           "    if derived.base_scaled(2) != 18:\n"
+                           "        return 1\n"
+                           "    if dudu_native.use_base_widget(&derived) != 9:\n"
+                           "        return 2\n"
+                           "    if dudu_native.read_const_ref(namespaced) != 6:\n"
+                           "        return 5\n"
+                           "    if nested.doubled() != 42:\n"
+                           "        return 4\n"
+                           "    proc = dudu_native_proc()\n"
+                           "    if proc == None:\n"
+                           "        return 3\n"
+                           "    if DUDU_NATIVE_CHECK():\n"
+                           "        return dudu_native.add(20, 22) + "
+                           "DUDU_NATIVE_MAGIC\n"
+                           "    if dudu_native_ready(&event):\n"
+                           "        return DUDU_NATIVE_SCALE(other.scaled(3)) + "
+                           "i32(dudu_native.overloaded(amount))\n"
+                           "    dudu_native_format(\"%d %d\", event.type, "
+                           "dudu_native_kind_ok)\n"
+                           "    return event.type + widget.value + "
+                           "other.value + dudu_native_kind_ok\n",
+                           root / "tests/fixtures/native_scan.dd");
     dudu::ProjectConfig config;
     config.build_dir = root / "build" / "native-header-test-cache";
     std::filesystem::remove_all(config.build_dir);
@@ -292,6 +291,23 @@ void test_native_header_type_scan(const std::filesystem::path& root) {
     assert(cpp.find("dudu_native::use_base_widget(& derived)") != std::string::npos);
     assert(cpp.find("dudu_native::read_const_ref(namespaced)") != std::string::npos);
     assert(std::filesystem::exists(config.build_dir / "dudu-header-cache"));
+}
+
+void test_native_call_arity(const std::filesystem::path& root) {
+    dudu::ModuleAst module = dudu::parse_source("import c \"native_headers/simple_c.h\"\n"
+                                                "\n"
+                                                "def main() -> i32:\n"
+                                                "    return dudu_native_add()\n",
+                                                root / "tests/fixtures/native_bad_arity.dd");
+    dudu::merge_native_header_types(
+        module, {.config = dudu::ProjectConfig{}, .source_dir = root / "tests/fixtures"});
+    bool rejected = false;
+    try {
+        dudu::analyze_module(module, {.check_bodies = true});
+    } catch (const dudu::CompileError&) {
+        rejected = true;
+    }
+    assert(rejected);
 }
 
 void test_native_header_collision(const std::filesystem::path& root) {
@@ -387,7 +403,10 @@ void test_project_driver_config(const std::filesystem::path& root) {
                "compiler = \"clang++\"\n"
                "\n"
                "[include]\n"
-               "paths = [\"src\", \"include\"]\n"
+               "paths = [\n"
+               "    \"src\",\n"
+               "    \"include\",\n"
+               "]\n"
                "\n"
                "[sources]\n"
                "cpp = [\"src/native.cpp\"]\n"
@@ -460,6 +479,7 @@ int main() {
         test_typed_for_emission();
         test_native_type_declaration_emission();
         test_native_header_type_scan(root);
+        test_native_call_arity(root);
         test_native_header_collision(root);
         test_native_header_cache_invalidates_local_header(root);
         test_native_header_pointer_diagnostics(root);

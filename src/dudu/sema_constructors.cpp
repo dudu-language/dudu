@@ -69,15 +69,6 @@ void check_constructor_args(
         can_assign) {
     if (location == nullptr)
         return;
-    if (klass.name == "std.thread") {
-        if (args.empty()) {
-            fail(*location, "constructor std.thread expects at least 1 argument, got 0");
-        }
-        for (const std::string& arg : args) {
-            (void)infer_expr(scope, arg, location);
-        }
-        return;
-    }
     bool has_named_arg = false;
     for (const std::string& arg : args)
         has_named_arg = has_named_arg || find_top_level_char(arg, '=') != std::string::npos;
@@ -90,6 +81,12 @@ void check_constructor_args(
                                                infer_expr, can_assign, location)) {
                 return;
             }
+        }
+        if (scope.symbols.native_classes.contains(base_type(klass.name))) {
+            for (const std::string& arg : args) {
+                (void)infer_expr(scope, arg, location);
+            }
+            return;
         }
         if (ctor_count > 1) {
             fail(*location, "no constructor overload of " + klass.name + " accepts " +

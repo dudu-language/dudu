@@ -566,6 +566,9 @@ grep -Fq "assert((value == 42)" "$repo_root/build/freestanding_debug_assert.cpp"
 ! grep -Fq "runtime_error" "$repo_root/build/freestanding_debug_assert.cpp"
 compile_and_expect cpp_exceptions 42
 compile_and_expect std_vector_map_string 42
+compile_and_expect cpp_stdlib_interop 42
+compile_and_expect cpp_std_variant 42
+compile_and_expect native_dependent_template_return 42
 compile_and_expect layout_attrs 21
 compile_and_expect atomic_volatile 44
 compile_and_expect branch_return 1

@@ -36,81 +36,7 @@ bool is_array_dimension(std::string_view text) {
     return is_decimal_number(text) || is_constant_name(text);
 }
 
-std::string lower_template_type(std::string_view name, const std::string& args) {
-    if (name == "list") {
-        return "std::vector<" + lower_cpp_type(args) + ">";
-    }
-    if (name == "dict") {
-        std::ostringstream out;
-        out << "std::unordered_map<";
-        const std::vector<std::string> parts = split_top_level_args(args);
-        for (size_t i = 0; i < parts.size(); ++i) {
-            if (i > 0) {
-                out << ", ";
-            }
-            out << lower_cpp_type(parts[i]);
-        }
-        out << ">";
-        return out.str();
-    }
-    if (name == "set") {
-        return "std::unordered_set<" + lower_cpp_type(args) + ">";
-    }
-    if (name == "Option") {
-        return "std::optional<" + lower_cpp_type(args) + ">";
-    }
-    if (name == "Result") {
-        std::ostringstream out;
-        out << "dudu::Result<";
-        const std::vector<std::string> parts = split_top_level_args(args);
-        for (size_t i = 0; i < parts.size(); ++i) {
-            if (i > 0) {
-                out << ", ";
-            }
-            out << lower_cpp_type(parts[i]);
-        }
-        out << ">";
-        return out.str();
-    }
-    if (name == "tuple") {
-        std::ostringstream out;
-        const std::vector<std::string> parts = split_top_level_args(args);
-        out << "dudu::Tuple" << parts.size() << "<";
-        for (size_t i = 0; i < parts.size(); ++i) {
-            if (i > 0) {
-                out << ", ";
-            }
-            out << lower_cpp_type(parts[i]);
-        }
-        out << ">";
-        return out.str();
-    }
-    if (name == "const") {
-        return "const " + lower_cpp_type(args);
-    }
-    if (name == "atomic") {
-        return "std::atomic<" + lower_cpp_type(args) + ">";
-    }
-    if (name == "volatile") {
-        return "volatile " + lower_cpp_type(args);
-    }
-    if (name == "device" || name == "storage" || name == "shared") {
-        return lower_cpp_type(args);
-    }
-    std::ostringstream out;
-    out << replace_dots(std::string(name)) << "<";
-    const std::vector<std::string> parts = split_top_level_args(args);
-    for (size_t i = 0; i < parts.size(); ++i) {
-        if (i > 0) {
-            out << ", ";
-        }
-        out << lower_cpp_type(parts[i]);
-    }
-    out << ">";
-    return out.str();
-}
-
-std::string lower_function_type(const std::string& type) {
+std::string lower_function_signature_type(const std::string& type, bool pointer) {
     const size_t open = type.find('(');
     const size_t close = type.find(')', open);
     if (open == std::string::npos || close == std::string::npos) {
@@ -123,17 +49,103 @@ std::string lower_function_type(const std::string& type) {
         result = lower_cpp_type(type.substr(arrow + 2));
     }
 
+    std::ostringstream signature;
+    signature << result << '(';
+    const std::vector<std::string> parts = split_top_level_args(args);
+    for (size_t i = 0; i < parts.size(); ++i) {
+        if (i > 0) {
+            signature << ", ";
+        }
+        signature << lower_cpp_type(parts[i]);
+    }
+    signature << ')';
+    return pointer ? "std::add_pointer_t<" + signature.str() + ">" : signature.str();
+}
+
+std::string lower_template_arg_type(const std::string& type) {
+    const std::string trimmed = trim_copy(type);
+    if (starts_with(trimmed, "fn(")) {
+        return lower_function_signature_type(trimmed, false);
+    }
+    return lower_cpp_type(trimmed);
+}
+
+std::string lower_template_type(std::string_view name, const std::string& args) {
+    if (name == "list") {
+        return "std::vector<" + lower_template_arg_type(args) + ">";
+    }
+    if (name == "dict") {
+        std::ostringstream out;
+        out << "std::unordered_map<";
+        const std::vector<std::string> parts = split_top_level_args(args);
+        for (size_t i = 0; i < parts.size(); ++i) {
+            if (i > 0) {
+                out << ", ";
+            }
+            out << lower_template_arg_type(parts[i]);
+        }
+        out << ">";
+        return out.str();
+    }
+    if (name == "set") {
+        return "std::unordered_set<" + lower_template_arg_type(args) + ">";
+    }
+    if (name == "Option") {
+        return "std::optional<" + lower_template_arg_type(args) + ">";
+    }
+    if (name == "Result") {
+        std::ostringstream out;
+        out << "dudu::Result<";
+        const std::vector<std::string> parts = split_top_level_args(args);
+        for (size_t i = 0; i < parts.size(); ++i) {
+            if (i > 0) {
+                out << ", ";
+            }
+            out << lower_template_arg_type(parts[i]);
+        }
+        out << ">";
+        return out.str();
+    }
+    if (name == "tuple") {
+        std::ostringstream out;
+        const std::vector<std::string> parts = split_top_level_args(args);
+        out << "dudu::Tuple" << parts.size() << "<";
+        for (size_t i = 0; i < parts.size(); ++i) {
+            if (i > 0) {
+                out << ", ";
+            }
+            out << lower_template_arg_type(parts[i]);
+        }
+        out << ">";
+        return out.str();
+    }
+    if (name == "const") {
+        return "const " + lower_template_arg_type(args);
+    }
+    if (name == "atomic") {
+        return "std::atomic<" + lower_template_arg_type(args) + ">";
+    }
+    if (name == "volatile") {
+        return "volatile " + lower_template_arg_type(args);
+    }
+    if (name == "device" || name == "storage" || name == "shared") {
+        return lower_template_arg_type(args);
+    }
     std::ostringstream out;
-    out << "std::add_pointer_t<" << result << '(';
+    out << replace_dots(std::string(name)) << "<";
     const std::vector<std::string> parts = split_top_level_args(args);
     for (size_t i = 0; i < parts.size(); ++i) {
         if (i > 0) {
             out << ", ";
         }
-        out << lower_cpp_type(parts[i]);
+        out << lower_template_arg_type(parts[i]);
     }
-    out << ")>";
+    out << ">";
     return out.str();
+}
+
+std::string lower_function_type(const std::string& type) {
+    return lower_function_signature_type(type, true);
 }
 
 std::vector<std::string> fixed_array_dimensions(const std::string& type) {

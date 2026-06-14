@@ -20,7 +20,7 @@ Core forms:
 - pointers: `*T`
 - references: `&T`
 - const-qualified types: `const[T]`
-- fixed arrays: `T[N]`
+- contiguous arrays: `array[T]`, `array[T][N]`, `array[T][M, N]`
 - dynamic containers: `list[T]`, `dict[K, V]`, `set[T]`
 - function pointer types: `fn(A, B) -> R`
 - result types: `Result[T, E]`

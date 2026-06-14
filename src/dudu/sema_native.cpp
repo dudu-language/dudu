@@ -14,7 +14,7 @@ namespace {
 
 bool arity_matches(const FunctionSignature& signature, size_t arg_count) {
     return signature.variadic ? arg_count >= signature.params.size()
-                              : arg_count <= signature.params.size();
+                              : arg_count == signature.params.size();
 }
 
 bool native_numeric_promotion(const std::string& expected, const std::string& got) {
@@ -25,12 +25,12 @@ std::string replace_template_type(std::string type, const std::string& arg) {
     size_t pos = type.find('T');
     while (pos != std::string::npos) {
         const bool left_ok =
-            pos == 0 || (std::isalnum(static_cast<unsigned char>(type[pos - 1])) == 0 &&
-                         type[pos - 1] != '_');
+            pos == 0 ||
+            (std::isalnum(static_cast<unsigned char>(type[pos - 1])) == 0 && type[pos - 1] != '_');
         const size_t end = pos + 1;
         const bool right_ok =
-            end >= type.size() || (std::isalnum(static_cast<unsigned char>(type[end])) == 0 &&
-                                   type[end] != '_');
+            end >= type.size() ||
+            (std::isalnum(static_cast<unsigned char>(type[end])) == 0 && type[end] != '_');
         if (left_ok && right_ok) {
             type.replace(pos, 1, arg);
             pos = type.find('T', pos + arg.size());
@@ -41,7 +41,8 @@ std::string replace_template_type(std::string type, const std::string& arg) {
     return type;
 }
 
-FunctionSignature substitute_template_signature(FunctionSignature signature, const std::string& arg) {
+FunctionSignature substitute_template_signature(FunctionSignature signature,
+                                                const std::string& arg) {
     for (std::string& param : signature.params) {
         param = replace_template_type(std::move(param), arg);
     }
@@ -78,11 +79,13 @@ std::string signature_text(const std::string& callee, const FunctionSignature& s
     std::ostringstream out;
     out << callee << "(";
     for (size_t i = 0; i < signature.params.size(); ++i) {
-        if (i > 0) out << ", ";
+        if (i > 0)
+            out << ", ";
         out << signature.params[i];
     }
     if (signature.variadic) {
-        if (!signature.params.empty()) out << ", ";
+        if (!signature.params.empty())
+            out << ", ";
         out << "...";
     }
     out << ") -> " << signature.return_type;
@@ -99,7 +102,8 @@ std::string native_overload_message(const FunctionScope& scope, const std::strin
     if (!args.empty()) {
         out << "\narguments: ";
         for (size_t i = 0; i < args.size(); ++i) {
-            if (i > 0) out << ", ";
+            if (i > 0)
+                out << ", ";
             out << infer_expr(scope, args[i], location);
         }
     }
@@ -128,10 +132,12 @@ bool args_match_signature(const FunctionScope& scope, const FunctionSignature& s
 
 } // namespace
 
-std::optional<FunctionSignature> native_signature_for_call(
-    const FunctionScope& scope, const std::string& callee, const std::vector<std::string>& args,
-    const SourceLocation* location, const NativeInferExprFn& infer_expr,
-    const NativeCanAssignFn& can_assign) {
+std::optional<FunctionSignature> native_signature_for_call(const FunctionScope& scope,
+                                                           const std::string& callee,
+                                                           const std::vector<std::string>& args,
+                                                           const SourceLocation* location,
+                                                           const NativeInferExprFn& infer_expr,
+                                                           const NativeCanAssignFn& can_assign) {
     const auto template_call = template_call_base(callee);
     const std::string lookup = template_call ? template_call->first : callee;
     const auto found = scope.symbols.native_function_signatures.find(lookup);
