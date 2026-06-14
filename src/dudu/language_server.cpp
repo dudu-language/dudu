@@ -10,9 +10,11 @@
 #include <algorithm>
 #include <cctype>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <map>
 #include <optional>
+#include <set>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -651,13 +653,15 @@ class LanguageServer {
         return lines + 1;
     }
 
-    std::vector<Symbol> symbols_for(const Document& doc) const {
+    std::vector<Symbol> symbols_for(const Document& doc, bool include_native = true) const {
         std::vector<Symbol> out;
         try {
             ModuleAst module = parse_source(doc.text, doc.path);
-            const ProjectConfig config = config_for_file(doc.path);
-            merge_native_header_types(module,
-                                      {.config = config, .source_dir = doc.path.parent_path()});
+            if (include_native) {
+                const ProjectConfig config = config_for_file(doc.path);
+                merge_native_header_types(module,
+                                          {.config = config, .source_dir = doc.path.parent_path()});
+            }
             for (const ClassDecl& klass : module.classes) {
                 out.push_back({.name = klass.name,
                                .detail = "class " + klass.name,
@@ -693,6 +697,9 @@ class LanguageServer {
                                .detail = function_detail(fn),
                                .location = fn.location,
                                .kind = 12});
+            }
+            if (!include_native) {
+                return out;
             }
             for (const NativeTypeDecl& type : module.native_types) {
                 out.push_back(
@@ -820,9 +827,11 @@ class LanguageServer {
         std::ostringstream out;
         out << "[";
         bool first = true;
-        for (const auto& [uri, doc] : documents_) {
+        const std::map<std::string, Document> workspace = workspace_documents();
+        for (const auto& [uri, doc] : workspace) {
             (void)uri;
-            for (const Symbol& symbol : symbols_for(doc)) {
+            const bool include_native = documents_.contains(uri);
+            for (const Symbol& symbol : symbols_for(doc, include_native)) {
                 if (!query.empty() && lower_copy(symbol.name).find(query) == std::string::npos) {
                     continue;
                 }
@@ -866,7 +875,8 @@ class LanguageServer {
         std::ostringstream out;
         out << "[";
         bool first = true;
-        for (const auto& [uri, candidate] : documents_) {
+        const std::map<std::string, Document> workspace = workspace_documents();
+        for (const auto& [uri, candidate] : workspace) {
             (void)uri;
             for (const ReferenceLocation& location : references_in(candidate, query)) {
                 if (!first) {
@@ -894,7 +904,8 @@ class LanguageServer {
         std::ostringstream out;
         out << "{\"changes\":{";
         bool first_doc = true;
-        for (const auto& [uri, candidate] : documents_) {
+        const std::map<std::string, Document> workspace = workspace_documents();
+        for (const auto& [uri, candidate] : workspace) {
             (void)uri;
             const std::vector<ReferenceLocation> locations = references_in(candidate, old_name);
             if (locations.empty()) {
@@ -1148,6 +1159,67 @@ class LanguageServer {
         return false;
     }
 
+    std::map<std::string, Document> workspace_documents() const {
+        std::map<std::string, Document> out = documents_;
+        std::set<std::filesystem::path> open_paths;
+        std::set<std::filesystem::path> roots;
+        for (const auto& [uri, doc] : documents_) {
+            (void)uri;
+            std::error_code error;
+            open_paths.insert(std::filesystem::weakly_canonical(doc.path, error));
+            const std::filesystem::path config = project_config_path(doc.path);
+            roots.insert(config.empty() ? doc.path.parent_path() : config.parent_path());
+        }
+        size_t scanned = 0;
+        for (const std::filesystem::path& root : roots) {
+            collect_workspace_documents(root, open_paths, out, scanned);
+        }
+        return out;
+    }
+
+    static void collect_workspace_documents(const std::filesystem::path& root,
+                                            const std::set<std::filesystem::path>& open_paths,
+                                            std::map<std::string, Document>& out, size_t& scanned) {
+        std::error_code error;
+        if (root.empty() || !std::filesystem::exists(root, error) || error) {
+            return;
+        }
+        for (std::filesystem::recursive_directory_iterator it(
+                 root, std::filesystem::directory_options::skip_permission_denied, error);
+             !error && it != std::filesystem::recursive_directory_iterator(); it.increment(error)) {
+            const std::filesystem::directory_entry& entry = *it;
+            const std::filesystem::path path = entry.path();
+            if (entry.is_directory(error) && skip_workspace_dir(path.filename().string())) {
+                it.disable_recursion_pending();
+                continue;
+            }
+            if (!entry.is_regular_file(error) || path.extension() != ".dd") {
+                continue;
+            }
+            const std::filesystem::path canonical = std::filesystem::weakly_canonical(path, error);
+            if (error || open_paths.contains(canonical)) {
+                error.clear();
+                continue;
+            }
+            std::ifstream file(path);
+            if (!file) {
+                continue;
+            }
+            const std::string text{std::istreambuf_iterator<char>(file),
+                                   std::istreambuf_iterator<char>()};
+            const std::string uri = file_uri(path);
+            out[uri] = {.uri = uri, .path = path, .text = text};
+            if (++scanned >= 1000) {
+                return;
+            }
+        }
+    }
+
+    static bool skip_workspace_dir(const std::string& name) {
+        return name == ".git" || name == "build" || name == ".dudu" || name == "node_modules" ||
+               name == "vendor" || name == "third_party";
+    }
+
     static std::string uri_for_location(const SourceLocation& location, const Document& doc) {
         if (location.file.empty() || std::filesystem::path(location.file) == doc.path) {
             return doc.uri;
@@ -1157,6 +1229,14 @@ class LanguageServer {
             path = std::filesystem::absolute(path);
         }
         return "file://" + path.lexically_normal().string();
+    }
+
+    static std::string file_uri(const std::filesystem::path& path) {
+        std::filesystem::path absolute = path;
+        if (absolute.is_relative()) {
+            absolute = std::filesystem::absolute(absolute);
+        }
+        return "file://" + absolute.lexically_normal().string();
     }
 
     static std::vector<ReferenceLocation> references_in(const Document& doc,

@@ -58,6 +58,7 @@ native_source = "\n".join(
         "def main() -> i32:",
         "    return dudu_native.dudu_native_add(20, 22)",
         "# dudu_native.DUDU_NATIVE_SCALE",
+        "# workspace_helper",
         "",
     ]
 )
@@ -250,6 +251,25 @@ messages = [
     packet(
         {
             "jsonrpc": "2.0",
+            "id": 18,
+            "method": "textDocument/references",
+            "params": {
+                "textDocument": {"uri": native_uri},
+                "position": {"line": 5, "character": 5},
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 19,
+            "method": "workspace/symbol",
+            "params": {"query": "workspace_helper"},
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
             "method": "textDocument/didOpen",
             "params": {
                 "textDocument": {
@@ -376,6 +396,19 @@ assert native_signature["result"]["activeParameter"] == 1
 
 native_macro_hover = next(item for item in responses if item.get("id") == 15)
 assert "macro dudu_native.DUDU_NATIVE_SCALE(arg0)" in native_macro_hover["result"]["contents"]["value"]
+
+workspace_references = next(item for item in responses if item.get("id") == 18)
+workspace_reference_uris = {item["uri"] for item in workspace_references["result"]}
+assert native_uri in workspace_reference_uris
+assert any(uri.endswith("/tests/fixtures/lsp_workspace_helper.dd") for uri in workspace_reference_uris)
+
+workspace_helper_symbols = next(item for item in responses if item.get("id") == 19)
+workspace_helper_names = [item["name"] for item in workspace_helper_symbols["result"]]
+assert "workspace_helper" in workspace_helper_names
+assert any(
+    item["location"]["uri"].endswith("/tests/fixtures/lsp_workspace_helper.dd")
+    for item in workspace_helper_symbols["result"]
+)
 
 shutdown = next(item for item in responses if item.get("id") == 20)
 assert shutdown["result"] is None

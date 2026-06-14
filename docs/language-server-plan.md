@@ -171,8 +171,9 @@ This milestone covers Dudu-only code before native header navigation.
 
 Status: initial Dudu-only `definition`, `hover`, `documentSymbol`,
 `textDocument/references`, and `workspace/symbol` support is implemented for
-open documents and wired into the VS Code extension. Cross-file indexing beyond
-currently open documents remains.
+open documents and wired into the VS Code extension. Workspace symbols and
+references also scan unopened `.dd` files under the active project roots, with
+open buffers taking precedence. A fuller import-graph project index remains.
 
 ### Milestone 3: Completion And Signature Help
 
@@ -247,6 +248,8 @@ library probes under optional native tests.
 Status: the smoke suite now drives LSP JSON-RPC for single-file diagnostics,
 formatting, Dudu symbols, references, rename, workspace symbols, native fixture
 imports, native macro hover/completion, and strict missing-header diagnostics.
+It also covers workspace symbols and references from an unopened sibling `.dd`
+file.
 
 ## Non-Goals
 

@@ -1,0 +1,2 @@
+def workspace_helper() -> i32:
+    return 7
