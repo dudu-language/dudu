@@ -180,6 +180,38 @@ cases = [
         "signature_contains": "InitWindow",
         "definition_position": {"line": 3, "character": 10},
     },
+    {
+        "name": "sdl3",
+        "pkg": "sdl3",
+        "source": [
+            'import c "SDL3/SDL.h"',
+            "",
+            "def main() -> i32:",
+            "    SDL_Init(0)",
+            "    return 0",
+        ],
+        "completion_position": {"line": 3, "character": 4},
+        "completion_labels": ["SDL_Init"],
+        "signature_position": {"line": 3, "character": 13},
+        "signature_contains": "SDL_Init",
+        "definition_position": {"line": 3, "character": 6},
+    },
+    {
+        "name": "glfw3",
+        "pkg": "glfw3",
+        "source": [
+            'import c "GLFW/glfw3.h"',
+            "",
+            "def main() -> i32:",
+            "    glfwInit()",
+            "    return 0",
+        ],
+        "completion_position": {"line": 3, "character": 4},
+        "completion_labels": ["glfwInit"],
+        "signature_position": {"line": 3, "character": 13},
+        "signature_contains": "glfwInit",
+        "definition_position": {"line": 3, "character": 7},
+    },
 ]
 
 

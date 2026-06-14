@@ -225,7 +225,8 @@ for locals annotated with scanned native class types or aliases, and
 go-to-definition for those native C++ members jumps to the scanned header
 location. Signature help returns all scanned overloads for matching native
 functions. Optional LSP probes cover real `sqlite3` and `raylib` headers through
-`pkg-config`; broader real-library coverage can continue in that optional suite.
+`pkg-config`, along with real `SDL3` and `GLFW` headers when those packages are
+available; broader real-library coverage can continue in that optional suite.
 
 ### Milestone 5: Refactors And Code Actions
 
@@ -304,7 +305,8 @@ header.
 Local completion scope filtering is covered so deeper-block locals do not leak
 into outer-block completions.
 Optional LSP probes cover real `sqlite3` and `raylib` headers through
-`pkg-config`, including diagnostics, completion, signature help, and definition.
+`pkg-config`, plus `SDL3` and `GLFW` when installed, including diagnostics,
+completion, signature help, and definition.
 
 ## Non-Goals
 
