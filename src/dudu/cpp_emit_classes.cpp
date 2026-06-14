@@ -219,7 +219,7 @@ void emit_classes(std::ostringstream& out, const ModuleAst& module,
             if (field.value.empty()) {
                 out << "{}";
             } else {
-                out << " = " << lower_cpp_expr(field.value, aliases);
+                out << " = " << lower_cpp_expr_ast(field.value_expr, aliases);
             }
             out << ";\n";
         }

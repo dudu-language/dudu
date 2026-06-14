@@ -777,6 +777,11 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
 
 } // namespace
 
+std::string lower_cpp_expr_ast(const Expr& expr, const std::vector<std::string>& aliases,
+                               const std::map<std::string, std::string>& locals) {
+    return lower_expr(expr, aliases, locals);
+}
+
 void emit_block(std::ostringstream& out, const std::vector<Stmt>& body, int depth,
                 const std::vector<std::string>& aliases) {
     emit_block(out, body, depth, aliases, {});

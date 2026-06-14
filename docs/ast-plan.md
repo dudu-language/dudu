@@ -453,6 +453,9 @@ Pointer cast calls also have an AST semantic inference path, so native callback
 patterns such as `*struct State(user_data)` no longer depend on the raw
 expression inference fallback.
 
+Class instance field initializer emission now uses parsed field `value_expr`
+nodes instead of raw initializer strings.
+
 `range(...)` for-loop C++ emission now reads parsed call arguments from the
 iterable expression instead of parsing them back out of lowered C++ text.
 
