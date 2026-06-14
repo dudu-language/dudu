@@ -104,6 +104,25 @@ void bind_local(FunctionScope& scope, const std::string& name, const std::string
     }
 }
 
+bool parse_local_function_type(const FunctionScope& scope, const std::string& name,
+                               const std::string& type, FunctionSignature& out) {
+    if (const auto local_type = scope.local_type_refs.find(name);
+        local_type != scope.local_type_refs.end()) {
+        if (parse_function_type(local_type->second, out)) {
+            return true;
+        }
+        if (local_type->second.kind == TypeKind::Named) {
+            if (const auto alias = scope.symbols.alias_type_refs.find(local_type->second.name);
+                alias != scope.symbols.alias_type_refs.end()) {
+                if (parse_function_type(alias->second, out)) {
+                    return true;
+                }
+            }
+        }
+    }
+    return parse_function_type(resolve_alias(scope.symbols, type), out);
+}
+
 bool foreign_cpp_type_name(const std::string& type) {
     return type.find('.') != std::string::npos || type.find("::") != std::string::npos;
 }
@@ -352,10 +371,7 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
         }
         if (const auto local = scope.locals.find(callee); local != scope.locals.end()) {
             FunctionSignature signature;
-            const auto local_type = scope.local_type_refs.find(callee);
-            if ((local_type != scope.local_type_refs.end() &&
-                 parse_function_type(local_type->second, signature)) ||
-                parse_function_type(resolve_alias(scope.symbols, local->second), signature)) {
+            if (parse_local_function_type(scope, callee, local->second, signature)) {
                 check_call_args(scope, callee, signature, call_args(expr, call), location);
                 return signature.return_type;
             }
@@ -961,10 +977,7 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
         }
         if (const auto local = scope.locals.find(callee); local != scope.locals.end()) {
             FunctionSignature signature;
-            const auto local_type = scope.local_type_refs.find(callee);
-            if ((local_type != scope.local_type_refs.end() &&
-                 parse_function_type(local_type->second, signature)) ||
-                parse_function_type(resolve_alias(scope.symbols, local->second), signature)) {
+            if (parse_local_function_type(scope, callee, local->second, signature)) {
                 check_call_args_ast(scope, callee, signature, expr.children, use_location);
                 return signature.return_type;
             }

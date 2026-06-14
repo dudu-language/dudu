@@ -391,11 +391,14 @@ Symbols collect_symbols(const ModuleAst& module) {
         add_name(names, alias.name, alias.location);
         symbols.types.insert(alias.name);
         symbols.aliases[alias.name] = alias.type;
+        symbols.alias_type_refs[alias.name] = alias.type_ref;
     }
     for (const NativeTypeDecl& type : module.native_types) {
         symbols.types.insert(type.name);
-        if (!type.type.empty())
+        if (!type.type.empty()) {
             symbols.aliases[type.name] = type.type;
+            symbols.alias_type_refs[type.name] = parse_type_text(type.type, type.location);
+        }
     }
     for (const NativeValueDecl& value : module.native_values) {
         add_name(names, value.name, value.location);

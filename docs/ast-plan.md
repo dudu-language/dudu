@@ -37,6 +37,9 @@ Already structured:
 - local scopes preserve parsed `TypeRef` nodes for declared parameters,
   constants, locals, catch bindings, and typed loop bindings, so function
   pointer calls can check signatures without reparsing declared type text
+- type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
+  local callback aliases such as `type Visit = fn(...)` to resolve through the
+  structured type path
 - source range fields on statement, expression, and type nodes
 - semantic diagnostics for return values, local initializer values, local type
   names, conditions, and assignment targets use expression/type node locations

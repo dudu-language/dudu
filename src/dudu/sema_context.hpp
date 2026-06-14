@@ -20,6 +20,7 @@ struct FunctionSignature {
 struct Symbols {
     std::set<std::string> types;
     std::map<std::string, std::string> aliases;
+    std::map<std::string, TypeRef> alias_type_refs;
     std::map<std::string, std::string> functions;
     std::map<std::string, FunctionSignature> function_signatures;
     std::map<std::string, std::vector<FunctionSignature>> native_function_signatures;
