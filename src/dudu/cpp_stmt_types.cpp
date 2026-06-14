@@ -224,13 +224,20 @@ std::string infer_emitted_local_type(const Expr& expr,
     case ExprKind::Call:
         return infer_call_type(call_callee_text(expr), locals, function_returns);
     case ExprKind::Index:
-        if (expr.children.size() == 2 && expr.children[0].kind == ExprKind::Name) {
-            if (const auto local = locals.find(expr.children[0].name); local != locals.end()) {
-                if (const std::string indexed_type =
-                        indexed_local_type(local->second, expr.children[1]);
-                    !indexed_type.empty()) {
-                    return indexed_type;
+        if (expr.children.size() == 2) {
+            if (expr.children[0].kind == ExprKind::Name) {
+                if (const auto local = locals.find(expr.children[0].name); local != locals.end()) {
+                    if (const std::string indexed_type =
+                            indexed_local_type(local->second, expr.children[1]);
+                        !indexed_type.empty()) {
+                        return indexed_type;
+                    }
                 }
+            }
+            const std::string receiver_type =
+                infer_emitted_local_type(expr.children[0], locals, function_returns);
+            if (!receiver_type.empty()) {
+                return indexed_local_type(receiver_type, expr.children[1]);
             }
         }
         return {};

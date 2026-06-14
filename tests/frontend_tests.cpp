@@ -245,6 +245,8 @@ void test_emitted_local_expression_type_inference() {
         {"scale", "f32"},
     };
     const std::map<std::string, std::string> functions = {
+        {"make_matrix", "array[i32][2, 2]"},
+        {"make_values", "list[i32]"},
         {"make_count", "i32"},
     };
 
@@ -271,6 +273,10 @@ void test_emitted_local_expression_type_inference() {
     assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("1 if flag else 2"), locals,
                                           functions) == "i32");
     assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("make_count()"), locals,
+                                          functions) == "i32");
+    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("make_values()[0]"), locals,
+                                          functions) == "i32");
+    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("make_matrix()[1][0]"), locals,
                                           functions) == "i32");
 }
 

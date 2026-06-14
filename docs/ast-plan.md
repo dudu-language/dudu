@@ -119,6 +119,9 @@ Already structured:
 - generated local C++ type inference also follows parsed index expressions for
   local `list`, `dict`, `set`, `span`, and shaped `array` receivers, so common
   `value = items[i]` assignments do not fall back to raw expression text
+- generated local C++ type inference follows parsed index expression receivers,
+  so `value = make_values()[0]` and chained fixed-array row indexes can infer
+  types without raw expression parsing
 - generated local C++ type inference handles parsed literals, unary
   address/deref/not/minus expressions, binary expressions, conditionals, and
   parsed template callees conservatively, so common `value = count + 1` style
