@@ -320,9 +320,10 @@ should prefer structured input and structured output.
 
 Status: functions and methods now store parsed `Stmt` bodies directly. The old
 duplicate `FunctionDecl::body` raw statement storage and raw-body C++/control
-flow helper overloads have been removed. `RawStmt` still exists as a
-parser-internal bridge while expression and statement parsing continue moving
-toward exact source-token AST nodes.
+flow helper overloads have been removed. The local escape checker also consumes
+parsed `Stmt` nodes directly. `RawStmt` still exists as a parser-internal bridge
+while expression and statement parsing continue moving toward exact source-token
+AST nodes.
 
 ## Acceptance
 

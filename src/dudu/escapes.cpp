@@ -54,9 +54,4 @@ void check_local_address_escape(const Stmt& stmt,
     }
 }
 
-void check_local_address_escape(const RawStmt& stmt,
-                                const std::map<std::string, std::string>& locals) {
-    check_local_address_escape(statement_from_raw(stmt), locals);
-}
-
 } // namespace dudu

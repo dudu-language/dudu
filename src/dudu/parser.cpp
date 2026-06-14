@@ -352,7 +352,7 @@ class Parser {
         }
         consume(TokenKind::Colon, "expected : after function header");
         consume(TokenKind::Newline, "expected newline after function header");
-        fn.statements = statements_from_raw(parse_raw_block());
+        fn.statements = parse_statement_block();
         return fn;
     }
 
@@ -452,6 +452,10 @@ class Parser {
         }
         consume(TokenKind::Dedent, "expected dedent after block");
         return out;
+    }
+
+    std::vector<Stmt> parse_statement_block() {
+        return statements_from_raw(parse_raw_block());
     }
 
     std::string join_until(std::initializer_list<TokenKind> stops) {
