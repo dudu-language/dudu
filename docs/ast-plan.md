@@ -144,6 +144,9 @@ Already structured:
   blindly inheriting parent expression starts
 - unary, binary, and conditional expression children keep source locations on
   the child expression text rather than on the outer expression
+- local address escape checks walk parsed return/call/unary expression nodes
+  for `return &local` and container `.append(&local)` / `.push_back(&local)`
+  cases instead of scanning raw statement text
 
 Still too string-based:
 

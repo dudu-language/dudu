@@ -1,5 +1,6 @@
 #include "dudu/escapes.hpp"
 
+#include "dudu/ast_expr.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/sema.hpp"
 
@@ -22,34 +23,53 @@ void fail_if_value_local_escapes(const SourceLocation& location,
     }
 }
 
-std::string address_name_after(const std::string& text, size_t ampersand) {
-    size_t start = ampersand + 1;
-    while (start < text.size() && text[start] == ' ') {
-        ++start;
+bool is_address_of_local(const Expr& expr, std::string& name) {
+    if (expr.kind != ExprKind::Unary || expr.op != "&" || expr.children.size() != 1) {
+        return false;
     }
-    size_t end = start;
-    while (end < text.size() &&
-           (std::isalnum(static_cast<unsigned char>(text[end])) != 0 || text[end] == '_')) {
-        ++end;
+    const Expr& child = expr.children.front();
+    if (child.kind != ExprKind::Name) {
+        return false;
     }
-    return text.substr(start, end - start);
+    name = child.name;
+    return true;
+}
+
+void fail_if_address_of_value_local_escapes(const SourceLocation& location,
+                                            const std::map<std::string, std::string>& locals,
+                                            const Expr& expr) {
+    std::string name;
+    if (is_address_of_local(expr, name)) {
+        fail_if_value_local_escapes(location, locals, name);
+    }
+}
+
+void check_return_address_escape(const std::map<std::string, std::string>& locals,
+                                 const Expr& expr) {
+    std::string name;
+    if (is_address_of_local(expr, name)) {
+        fail_if_value_local_escapes(expr.location, locals, name);
+        return;
+    }
+    for (const Expr& child : expr.children) {
+        check_return_address_escape(locals, child);
+    }
 }
 
 } // namespace
 
 void check_local_address_escape(const Stmt& stmt,
                                 const std::map<std::string, std::string>& locals) {
-    const std::string text = trim_copy(stmt.text);
-    if (starts_with(text, "return &")) {
-        fail_if_value_local_escapes(stmt.location, locals, address_name_after(text, text.find('&')));
+    if (stmt.kind == StmtKind::Return) {
+        check_return_address_escape(locals, stmt.value_expr);
         return;
     }
-    for (const std::string pattern : {".append(&", ".push_back(&"}) {
-        size_t pos = text.find(pattern);
-        while (pos != std::string::npos) {
-            fail_if_value_local_escapes(stmt.location, locals,
-                                        address_name_after(text, pos + pattern.size() - 1));
-            pos = text.find(pattern, pos + 1);
+    if (stmt.kind == StmtKind::Expr && stmt.expr.kind == ExprKind::Call) {
+        const std::string callee = call_callee_text(stmt.expr);
+        if (ends_with(callee, ".append") || ends_with(callee, ".push_back")) {
+            for (const Expr& arg : stmt.expr.children) {
+                fail_if_address_of_value_local_escapes(arg.location, locals, arg);
+            }
         }
     }
 }
