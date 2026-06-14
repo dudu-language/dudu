@@ -36,6 +36,7 @@ def read_packets(data):
 
 uri = "file:///tmp/dudu_lsp_bad.dd"
 native_uri = f"file://{repo_root}/tests/fixtures/dudu_lsp_native.dd"
+missing_native_uri = f"file://{repo_root}/tests/fixtures/dudu_lsp_missing_native.dd"
 source = "\n".join(
     [
         "class Player:",
@@ -57,6 +58,15 @@ native_source = "\n".join(
         "def main() -> i32:",
         "    return dudu_native.dudu_native_add(20, 22)",
         "# dudu_native.DUDU_NATIVE_SCALE",
+        "",
+    ]
+)
+missing_native_source = "\n".join(
+    [
+        'import c "./native_headers/does_not_exist.h"',
+        "",
+        "def main() -> i32:",
+        "    return 0",
         "",
     ]
 )
@@ -237,6 +247,20 @@ messages = [
             },
         }
     ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "method": "textDocument/didOpen",
+            "params": {
+                "textDocument": {
+                    "uri": missing_native_uri,
+                    "languageId": "dudu",
+                    "version": 1,
+                    "text": missing_native_source,
+                }
+            },
+        }
+    ),
     packet({"jsonrpc": "2.0", "id": 20, "method": "shutdown", "params": None}),
     packet({"jsonrpc": "2.0", "method": "exit", "params": None}),
 ]
@@ -265,6 +289,17 @@ diagnostics = next(item for item in responses if item.get("method") == "textDocu
 diag = diagnostics["params"]["diagnostics"][0]
 assert diag["source"] == "dudu/sema"
 assert "return type mismatch" in diag["message"]
+
+missing_native_diagnostics = next(
+    item
+    for item in responses
+    if item.get("method") == "textDocument/publishDiagnostics"
+    and item["params"]["uri"] == missing_native_uri
+)
+missing_native_diag = missing_native_diagnostics["params"]["diagnostics"][0]
+assert missing_native_diag["source"] == "dudu/native-header"
+assert "could not scan native header" in missing_native_diag["message"]
+assert "hint: add the header directory" in missing_native_diag["message"]
 
 symbols = next(item for item in responses if item.get("id") == 2)
 symbol_names = [item["name"] for item in symbols["result"]]

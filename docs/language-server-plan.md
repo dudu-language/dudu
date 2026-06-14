@@ -242,6 +242,10 @@ These tests should not require every optional native dependency for the core
 suite. Use small local fixture headers for core LSP behavior, and keep real
 library probes under optional native tests.
 
+Status: the smoke suite now drives LSP JSON-RPC for single-file diagnostics,
+formatting, Dudu symbols, references, rename, workspace symbols, native fixture
+imports, native macro hover/completion, and strict missing-header diagnostics.
+
 ## Non-Goals
 
 - implementing a separate parser in TypeScript
