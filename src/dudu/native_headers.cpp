@@ -90,7 +90,8 @@ std::string scanner_flags(const NativeHeaderOptions& options) {
     for (const std::string& flag : options.config.flags) {
         flags += " " + shell_quote_arg(flag);
     }
-    const std::string pkg_flags = capture_pkg_config_cflags(options.config.pkg_config_packages);
+    const std::string pkg_flags =
+        trim_copy(capture_pkg_config_cflags(options.config.pkg_config_packages));
     return pkg_flags.empty() ? flags : flags + " " + pkg_flags;
 }
 std::filesystem::path temp_base(const std::filesystem::path& source_dir) {
