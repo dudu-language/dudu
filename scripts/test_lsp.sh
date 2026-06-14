@@ -1032,6 +1032,7 @@ native_symbol_names = [item["name"] for item in native_symbols["result"]]
 assert "dudu_native.dudu_native_add" in native_symbol_names
 assert "dudu_native.DUDU_NATIVE_MAGIC" in native_symbol_names
 assert "dudu_native.DUDU_NATIVE_SCALE" in native_symbol_names
+assert "dudu_native.dudu_native_kind_ok" in native_symbol_names
 
 native_hover = next(item for item in responses if item.get("id") == 9)
 assert "dudu_native.dudu_native_add(i32, i32) -> i32" in native_hover["result"]["contents"]["value"]
@@ -1043,11 +1044,13 @@ assert native_definition["result"]["range"]["start"]["line"] == 20
 native_completion = next(item for item in responses if item.get("id") == 11)
 native_completion_labels = [item["label"] for item in native_completion["result"]]
 assert "dudu_native.dudu_native_add" in native_completion_labels
+assert "dudu_native.dudu_native_kind_ok" in native_completion_labels
 
 direct_native_completion = next(item for item in responses if item.get("id") == 35)
 direct_native_labels = [item["label"] for item in direct_native_completion["result"]]
 assert "dudu_native_add" in direct_native_labels
 assert "DUDU_NATIVE_MAGIC" in direct_native_labels
+assert "dudu_native_kind_ok" in direct_native_labels
 
 native_signature = next(item for item in responses if item.get("id") == 12)
 assert "dudu_native.dudu_native_add(i32, i32) -> i32" in native_signature["result"]["signatures"][0]["label"]

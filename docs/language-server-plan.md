@@ -294,6 +294,8 @@ Native config quick fixes are covered with a fixture `dudu.toml` edit for a
 known missing native header package.
 Direct native imports without aliases are covered for completion, signature
 help, and definition with a local fixture header.
+Native enum values from scanned headers are covered in symbol and completion
+results.
 Workspace rename is covered across an open definition file and an unopened
 sibling use file.
 Unreachable-statement lint diagnostics and remove-line quick fixes are covered.
