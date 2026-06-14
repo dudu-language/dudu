@@ -40,49 +40,6 @@ function runCommand(command) {
   terminal.sendText(`cd ${shellQuote(workspaceDirectory())} && ${command}`);
 }
 
-function completion(label, kind) {
-  return new vscode.CompletionItem(label, kind);
-}
-
-function collectDocumentCompletions(document) {
-  const items = [];
-  const text = document.getText();
-  const keywordKind = vscode.CompletionItemKind.Keyword;
-  for (const keyword of ["class", "def", "enum", "import", "return", "for", "if", "else"]) {
-    items.push(completion(keyword, keywordKind));
-  }
-  for (const type of ["bool", "i32", "i64", "u32", "u64", "f32", "f64", "str", "cstr"]) {
-    items.push(completion(type, vscode.CompletionItemKind.TypeParameter));
-  }
-  for (const line of text.split(/\r?\n/)) {
-    let match = /^(?:public |private )?class\s+([A-Z][A-Za-z0-9]*)\s*:/.exec(line);
-    if (match) {
-      items.push(completion(match[1], vscode.CompletionItemKind.Class));
-      continue;
-    }
-    match = /^enum\s+([A-Z][A-Za-z0-9]*)/.exec(line);
-    if (match) {
-      items.push(completion(match[1], vscode.CompletionItemKind.Enum));
-      continue;
-    }
-    match = /^(?:public |private )?def\s+([a-z][a-z0-9_]*)\s*\(/.exec(line);
-    if (match) {
-      items.push(completion(match[1], vscode.CompletionItemKind.Function));
-      continue;
-    }
-    match = /^import\s+(?:c|cpp)\s+"[^"]+"\s+as\s+([a-z][a-z0-9_]*)/.exec(line);
-    if (match) {
-      items.push(completion(match[1], vscode.CompletionItemKind.Module));
-      continue;
-    }
-    match = /^([A-Z][A-Z0-9_]*)\s*:/.exec(line);
-    if (match) {
-      items.push(completion(match[1], vscode.CompletionItemKind.Constant));
-    }
-  }
-  return items;
-}
-
 function isDuduDocument(document) {
   return document.languageId === "dudu" || document.fileName.endsWith(".dd");
 }
@@ -279,6 +236,18 @@ class DuduLspClient {
     return new vscode.Hover(new vscode.MarkdownString(hover.contents.value), toRange(hover.range));
   }
 
+  async completion(document, position) {
+    const items = await this.request("textDocument/completion", {
+      textDocument: { uri: document.uri.toString() },
+      position: { line: position.line, character: position.character },
+    });
+    return items.map((item) => {
+      const completion = new vscode.CompletionItem(item.label, completionKind(item.kind));
+      completion.detail = item.detail;
+      return completion;
+    });
+  }
+
   onData(chunk) {
     this.buffer = Buffer.concat([this.buffer, chunk]);
     while (true) {
@@ -339,6 +308,10 @@ function symbolKind(lspKind) {
   return Math.max(0, Number(lspKind ?? 13) - 1);
 }
 
+function completionKind(lspKind) {
+  return Math.max(0, Number(lspKind ?? 1) - 1);
+}
+
 function activate(context) {
   diagnostics = vscode.languages.createDiagnosticCollection("dudu");
   lsp = new DuduLspClient(context);
@@ -371,10 +344,10 @@ function activate(context) {
       },
     }),
     vscode.languages.registerCompletionItemProvider("dudu", {
-      provideCompletionItems(document) {
-        return collectDocumentCompletions(document);
+      provideCompletionItems(document, position) {
+        return lsp.completion(document, position);
       },
-    }),
+    }, "."),
     vscode.commands.registerCommand("dudu.fmtFile", async () => {
       const editor = vscode.window.activeTextEditor;
       if (editor && isDuduDocument(editor.document)) {

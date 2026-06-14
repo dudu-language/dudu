@@ -465,6 +465,10 @@ class LanguageServer {
             if (id != nullptr) {
                 respond(*id, hover_result(params));
             }
+        } else if (method == "textDocument/completion") {
+            if (id != nullptr) {
+                respond(*id, completion_result(params));
+            }
         } else if (id != nullptr) {
             respond(*id, "null");
         }
@@ -479,7 +483,8 @@ class LanguageServer {
                "\"documentFormattingProvider\":true,"
                "\"documentSymbolProvider\":true,"
                "\"definitionProvider\":true,"
-               "\"hoverProvider\":true"
+               "\"hoverProvider\":true,"
+               "\"completionProvider\":{\"resolveProvider\":false,\"triggerCharacters\":[\".\"]}"
                "},\"serverInfo\":{\"name\":\"duc lsp\",\"version\":\"0.1.0\"}}";
     }
 
@@ -734,6 +739,58 @@ class LanguageServer {
             }
         }
         return "null";
+    }
+
+    std::string completion_result(const Json* params) const {
+        const Document* doc = document_from_params(params);
+        std::ostringstream out;
+        out << "[";
+        bool first = true;
+        const auto add = [&](std::string_view label, int kind, std::string_view detail) {
+            if (!first) {
+                out << ",";
+            }
+            first = false;
+            out << "{\"label\":\"" << json_escape(label) << "\",\"kind\":" << kind
+                << ",\"detail\":\"" << json_escape(detail) << "\"}";
+        };
+        for (std::string_view keyword :
+             {"class", "def", "enum", "import", "return", "for", "if", "elif", "else", "while",
+              "try", "except", "True", "False", "None"}) {
+            add(keyword, 14, "keyword");
+        }
+        for (std::string_view type : {"bool", "i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64",
+                                      "isize", "usize", "f32", "f64", "str", "cstr"}) {
+            add(type, 25, "type");
+        }
+        if (doc != nullptr) {
+            for (const Symbol& symbol : symbols_for(*doc)) {
+                add(symbol.name, completion_kind(symbol.kind), symbol.detail);
+            }
+        }
+        out << "]";
+        return out.str();
+    }
+
+    static int completion_kind(int symbol_kind) {
+        switch (symbol_kind) {
+        case 5:
+            return 7;
+        case 6:
+            return 2;
+        case 8:
+            return 5;
+        case 9:
+            return 4;
+        case 10:
+            return 13;
+        case 12:
+            return 3;
+        case 14:
+            return 21;
+        default:
+            return 6;
+        }
     }
 
     const Document* document_from_params(const Json* params) const {

@@ -180,6 +180,11 @@ extension. Cross-file references and workspace symbols remain.
 This milestone should include local symbols, module symbols, class members, and
 basic native symbols.
 
+Status: initial `textDocument/completion` support is implemented for Dudu
+keywords, built-in types, and open-document Dudu symbols, and VS Code now uses
+LSP completions. Signature help, completion resolve, member-aware completion,
+and native symbol completion remain.
+
 ### Milestone 4: Native Header Navigation
 
 - definition/hover/completion/signature help for imported C/C++ symbols

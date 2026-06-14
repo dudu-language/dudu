@@ -92,11 +92,19 @@ messages = [
         {
             "jsonrpc": "2.0",
             "id": 5,
+            "method": "textDocument/completion",
+            "params": {"textDocument": {"uri": uri}, "position": {"line": 7, "character": 4}},
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 6,
             "method": "textDocument/formatting",
             "params": {"textDocument": {"uri": uri}, "options": {"tabSize": 4}},
         }
     ),
-    packet({"jsonrpc": "2.0", "id": 6, "method": "shutdown", "params": None}),
+    packet({"jsonrpc": "2.0", "id": 7, "method": "shutdown", "params": None}),
     packet({"jsonrpc": "2.0", "method": "exit", "params": None}),
 ]
 
@@ -133,10 +141,17 @@ assert "def add" in hover["result"]["contents"]["value"]
 definition = next(item for item in responses if item.get("id") == 4)
 assert definition["result"]["range"]["start"]["line"] == 3
 
-formatting = next(item for item in responses if item.get("id") == 5)
+completion = next(item for item in responses if item.get("id") == 5)
+completion_labels = [item["label"] for item in completion["result"]]
+assert "return" in completion_labels
+assert "i32" in completion_labels
+assert "add" in completion_labels
+assert "Player" in completion_labels
+
+formatting = next(item for item in responses if item.get("id") == 6)
 assert "def main() -> i32:\n    return True\n" in formatting["result"][0]["newText"]
 
-shutdown = next(item for item in responses if item.get("id") == 6)
+shutdown = next(item for item in responses if item.get("id") == 7)
 assert shutdown["result"] is None
 PY
 
