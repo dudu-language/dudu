@@ -213,8 +213,9 @@ aliased imported functions such as `dudu_native.dudu_native_add`, and definition
 uses the real header location when Clang provides it. Macro metadata,
 including object-like/function-like macro hover and completion, is also exposed
 for scanned native headers. Initial native C++ member completion is implemented
-for locals annotated with scanned native class types or aliases. Deeper overload
-display and broader real-library coverage remain.
+for locals annotated with scanned native class types or aliases, and
+go-to-definition for those native C++ members jumps to the scanned header
+location. Deeper overload display and broader real-library coverage remain.
 
 ### Milestone 5: Refactors And Code Actions
 
@@ -277,6 +278,8 @@ sibling use file.
 Unreachable-statement lint diagnostics and remove-line quick fixes are covered.
 Go-to-definition for Dudu module import aliases is covered with an unopened
 module file.
+Go-to-definition for native C++ member methods is covered with a local fixture
+header.
 
 ## Non-Goals
 

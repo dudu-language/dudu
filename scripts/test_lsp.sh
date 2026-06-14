@@ -418,6 +418,17 @@ messages = [
     packet(
         {
             "jsonrpc": "2.0",
+            "id": 31,
+            "method": "textDocument/definition",
+            "params": {
+                "textDocument": {"uri": native_uri},
+                "position": {"line": 6, "character": 13},
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
             "id": 25,
             "method": "textDocument/codeAction",
             "params": {
@@ -704,6 +715,10 @@ assert "return" not in module_completion_labels
 import_definition = next(item for item in responses if item.get("id") == 30)
 assert import_definition["result"]["uri"].endswith("/tests/fixtures/lsp_workspace_helper.dd")
 assert import_definition["result"]["range"]["start"]["line"] == 0
+
+native_member_definition = next(item for item in responses if item.get("id") == 31)
+assert native_member_definition["result"]["uri"].endswith("/tests/fixtures/native_headers/simple_cpp.hpp")
+assert native_member_definition["result"]["range"]["start"]["line"] == 8
 
 native_code_actions = next(item for item in responses if item.get("id") == 25)
 organize_imports = next(

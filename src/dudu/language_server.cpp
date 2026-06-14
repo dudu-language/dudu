@@ -920,11 +920,63 @@ class LanguageServer {
                 return out.str();
             }
         }
+        if (const std::optional<std::string> member_definition =
+                member_definition_result(*doc, word)) {
+            return *member_definition;
+        }
         if (const std::optional<std::string> import_definition =
                 import_definition_result(*doc, word)) {
             return *import_definition;
         }
         return "null";
+    }
+
+    std::optional<std::string> member_definition_result(const Document& doc,
+                                                        const std::string& word) const {
+        const size_t dot = word.find('.');
+        if (dot == std::string::npos || dot == 0 || dot + 1 >= word.size()) {
+            return std::nullopt;
+        }
+        const std::string receiver = word.substr(0, dot);
+        const std::string member = word.substr(dot + 1);
+        const std::string type = local_type_before_cursor(doc, receiver);
+        if (type.empty()) {
+            return std::nullopt;
+        }
+        try {
+            ModuleAst module = parse_source(doc.text, doc.path);
+            const ProjectConfig config = config_for_file(doc.path);
+            merge_native_header_types(module,
+                                      {.config = config, .source_dir = doc.path.parent_path()});
+            const std::set<std::string> candidate_types = member_candidate_types(module, type);
+            const auto find_member =
+                [&](const std::vector<ClassDecl>& classes) -> std::optional<std::string> {
+                for (const ClassDecl& klass : classes) {
+                    if (!candidate_types.contains(klass.name)) {
+                        continue;
+                    }
+                    for (const FieldDecl& field : klass.fields) {
+                        if (field.name == member) {
+                            return location_json(uri_for_location(field.location, doc),
+                                                 range_json(field.location));
+                        }
+                    }
+                    for (const FunctionDecl& method : klass.methods) {
+                        if (method.name == member) {
+                            return location_json(uri_for_location(method.location, doc),
+                                                 range_json(method.location));
+                        }
+                    }
+                }
+                return std::nullopt;
+            };
+            if (const std::optional<std::string> native = find_member(module.native_classes)) {
+                return native;
+            }
+            return find_member(module.classes);
+        } catch (const std::exception&) {
+        }
+        return std::nullopt;
     }
 
     std::optional<std::string> import_definition_result(const Document& doc,
