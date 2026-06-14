@@ -1076,9 +1076,11 @@ Expr parse_expr_text(std::string_view text, SourceLocation location) {
             Expr expr = make_expr(ExprKind::Conditional, text, location);
             const size_t else_pos = conditional_if + 2 + conditional_else;
             expr.children.push_back(parse_expr_text(text.substr(0, conditional_if), location));
-            expr.children.push_back(parse_expr_text(
-                text.substr(conditional_if + 2, else_pos - conditional_if - 2), location));
-            expr.children.push_back(parse_expr_text(text.substr(else_pos + 4), location));
+            expr.children.push_back(
+                parse_expr_text(text.substr(conditional_if + 2, else_pos - conditional_if - 2),
+                                advance_columns(location, conditional_if + 2)));
+            expr.children.push_back(parse_expr_text(text.substr(else_pos + 4),
+                                                    advance_columns(location, else_pos + 4)));
             return expr;
         }
     }
@@ -1101,7 +1103,8 @@ Expr parse_expr_text(std::string_view text, SourceLocation location) {
             Expr expr = make_expr(ExprKind::Binary, text, location);
             expr.op = std::string(op);
             expr.children.push_back(parse_expr_text(text.substr(0, op_pos), location));
-            expr.children.push_back(parse_expr_text(text.substr(op_pos + op.size()), location));
+            expr.children.push_back(parse_expr_text(text.substr(op_pos + op.size()),
+                                                    advance_columns(location, op_pos + op.size())));
             return expr;
         }
     }
@@ -1109,19 +1112,19 @@ Expr parse_expr_text(std::string_view text, SourceLocation location) {
     if (starts_keyword(text, "not")) {
         Expr expr = make_expr(ExprKind::Unary, text, location);
         expr.op = "not";
-        expr.children.push_back(parse_expr_text(text.substr(3), location));
+        expr.children.push_back(parse_expr_text(text.substr(3), advance_columns(location, 3)));
         return expr;
     }
     if (text.front() == '-' && !is_integer_literal(text) && !is_float_literal(text)) {
         Expr expr = make_expr(ExprKind::Unary, text, location);
         expr.op = "-";
-        expr.children.push_back(parse_expr_text(text.substr(1), location));
+        expr.children.push_back(parse_expr_text(text.substr(1), advance_columns(location, 1)));
         return expr;
     }
     if (text.front() == '&') {
         Expr expr = make_expr(ExprKind::Unary, text, location);
         expr.op = "&";
-        expr.children.push_back(parse_expr_text(text.substr(1), location));
+        expr.children.push_back(parse_expr_text(text.substr(1), advance_columns(location, 1)));
         return expr;
     }
 
@@ -1169,7 +1172,7 @@ Expr parse_expr_text(std::string_view text, SourceLocation location) {
     if (text.front() == '*') {
         Expr expr = make_expr(ExprKind::Unary, text, location);
         expr.op = "*";
-        expr.children.push_back(parse_expr_text(text.substr(1), location));
+        expr.children.push_back(parse_expr_text(text.substr(1), advance_columns(location, 1)));
         return expr;
     }
     if (is_float_literal(text)) {

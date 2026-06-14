@@ -247,11 +247,12 @@ void test_expression_ast_shape() {
                            "    point: Point = Point(x=1, y=2)\n"
                            "    hex_mask: i32 = 0x80\n"
                            "    view: span[i32] = values[1:3]\n"
+                           "    choice: i32 = 1 if ready else 2\n"
                            "    return answer\n",
                            "expression_ast.dd");
     assert(module.functions.size() == 1);
     const dudu::FunctionDecl& main = module.functions.front();
-    assert(main.statements.size() == 9);
+    assert(main.statements.size() == 10);
 
     const dudu::Stmt& answer = main.statements[0];
     assert(answer.kind == dudu::StmtKind::VarDecl);
@@ -276,8 +277,12 @@ void test_expression_ast_shape() {
     assert(branch.condition_expr.op == "or");
     assert(branch.condition_expr.children[0].kind == dudu::ExprKind::Unary);
     assert(branch.condition_expr.children[0].op == "not");
+    assert(branch.condition_expr.children[0].children[0].range.start.column >
+           branch.condition_expr.children[0].range.start.column);
     assert(branch.condition_expr.children[1].kind == dudu::ExprKind::Binary);
     assert(branch.condition_expr.children[1].op == "<");
+    assert(branch.condition_expr.children[1].children[1].range.start.column >
+           branch.condition_expr.children[1].children[0].range.start.column);
     assert(branch.children.size() == 1);
 
     const dudu::Stmt& assign = branch.children[0];
@@ -313,14 +318,22 @@ void test_expression_ast_shape() {
     assert(flags.value_expr.op == "&");
     assert(flags.value_expr.children[1].kind == dudu::ExprKind::Binary);
     assert(flags.value_expr.children[1].op == "<<");
+    assert(flags.value_expr.children[1].range.start.column >
+           flags.value_expr.children[0].range.start.column);
+    assert(flags.value_expr.children[1].children[1].range.start.column >
+           flags.value_expr.children[1].children[0].range.start.column);
 
     const dudu::Stmt& pointer_assign = main.statements[4];
     assert(pointer_assign.kind == dudu::StmtKind::Assign);
     assert(pointer_assign.target_expr.kind == dudu::ExprKind::Unary);
     assert(pointer_assign.target_expr.op == "*");
+    assert(pointer_assign.target_expr.children[0].range.start.column >
+           pointer_assign.target_expr.range.start.column);
     assert(pointer_assign.value_expr.kind == dudu::ExprKind::Unary);
     assert(pointer_assign.value_expr.op == "&");
     assert(pointer_assign.value_expr.children[0].kind == dudu::ExprKind::Index);
+    assert(pointer_assign.value_expr.children[0].range.start.column >
+           pointer_assign.value_expr.range.start.column);
 
     const dudu::Stmt& point = main.statements[5];
     assert(point.kind == dudu::StmtKind::VarDecl);
@@ -351,6 +364,18 @@ void test_expression_ast_shape() {
            view.value_expr.children[1].range.start.column);
     assert(view.value_expr.children[1].children[1].range.start.column >
            view.value_expr.children[1].children[0].range.start.column);
+
+    const dudu::Stmt& choice = main.statements[8];
+    assert(choice.kind == dudu::StmtKind::VarDecl);
+    assert(choice.value_expr.kind == dudu::ExprKind::Conditional);
+    assert(choice.value_expr.children.size() == 3);
+    assert(choice.value_expr.children[0].kind == dudu::ExprKind::IntLiteral);
+    assert(choice.value_expr.children[1].kind == dudu::ExprKind::Name);
+    assert(choice.value_expr.children[2].kind == dudu::ExprKind::IntLiteral);
+    assert(choice.value_expr.children[1].range.start.column >
+           choice.value_expr.children[0].range.start.column);
+    assert(choice.value_expr.children[2].range.start.column >
+           choice.value_expr.children[1].range.start.column);
 }
 
 void test_type_ast_shape() {

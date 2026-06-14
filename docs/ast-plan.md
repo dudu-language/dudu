@@ -91,6 +91,8 @@ Already structured:
 - nested expression ranges advance through whitespace and delimiters for call,
   template-call, list, dict, set, tuple, index, and slice shapes instead of
   blindly inheriting parent expression starts
+- unary, binary, and conditional expression children keep source locations on
+  the child expression text rather than on the outer expression
 
 Still too string-based:
 
