@@ -39,8 +39,12 @@ std::optional<std::string> infer_allocation_call_from_type_args(
                                           std::to_string(type_args.size()));
     }
     const std::string type = type_args.size() == 1 ? trim_copy(type_args.front().text) : "";
-    if (location != nullptr && !type.empty() && !known_type(symbols, type)) {
-        throw CompileError(type_args.front().location, "unknown allocation type: " + type);
+    if (location != nullptr && type_args.size() == 1) {
+        if (const auto unknown = unknown_type_ref(symbols, type_args.front())) {
+            const SourceLocation error_location =
+                unknown->second.line > 0 ? unknown->second : type_args.front().location;
+            throw CompileError(error_location, "unknown allocation type: " + unknown->first);
+        }
     }
     if (location != nullptr && callee == "malloc" && arg_count != 1) {
         throw CompileError(*location,

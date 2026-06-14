@@ -42,6 +42,9 @@ Already structured:
   structured type path
 - callback alias lookup follows parsed `TypeRef` alias chains with a cycle
   guard before falling back to resolved type text
+- type-shaped builtins such as `new[T]`, `malloc[T]`, `sizeof[T]`,
+  `alignof[T]`, and `offsetof[T]` validate parsed `TypeRef` arguments
+  recursively, so nested unknown types get precise diagnostics
 - source range fields on statement, expression, and type nodes
 - semantic diagnostics for return values, local initializer values, local type
   names, conditions, and assignment targets use expression/type node locations

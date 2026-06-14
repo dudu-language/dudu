@@ -1,0 +1,2 @@
+def bad() -> usize:
+    return sizeof[list[MissingType]]()

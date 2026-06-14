@@ -1,0 +1,2 @@
+def bad() -> usize:
+    return offsetof[list[MissingType]](value)
