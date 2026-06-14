@@ -43,6 +43,8 @@ Already structured:
   raw callee strings incrementally
 - ordinary call C++ emission lowers parsed callee expressions instead of
   lowering the callee name string directly
+- ordinary call semantic inference uses a callee lookup string reconstructed
+  from the parsed callee expression where possible
 - semantic highlighting uses parsed call callees so method calls can color the
   receiver and called member separately instead of treating dotted callees as
   one raw span

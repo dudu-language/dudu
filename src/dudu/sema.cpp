@@ -116,6 +116,15 @@ std::optional<std::string> member_path_from_expr(const Expr& expr) {
     return std::nullopt;
 }
 
+std::string call_callee_text(const Expr& expr) {
+    if (!expr.callee.empty()) {
+        if (const std::optional<std::string> path = member_path_from_expr(expr.callee.front())) {
+            return *path;
+        }
+    }
+    return trim(expr.name);
+}
+
 void check_call_args(const FunctionScope& scope, const std::string& callee,
                      const FunctionSignature& signature, const std::vector<std::string>& args,
                      const SourceLocation* location) {
@@ -901,7 +910,7 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
         }
         return infer_expr(scope, expr.text, use_location);
     case ExprKind::Call: {
-        const std::string callee = trim(expr.name);
+        const std::string callee = call_callee_text(expr);
         if (const auto pointer_cast =
                 infer_pointer_cast_call_ast(scope, expr, callee, use_location)) {
             return *pointer_cast;
