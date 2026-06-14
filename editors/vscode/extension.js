@@ -383,8 +383,20 @@ class DuduLspClient {
     return items.map((item) => {
       const completion = new vscode.CompletionItem(item.label, completionKind(item.kind));
       completion.detail = item.detail;
+      completion.insertText =
+        item.insertTextFormat === 2 ? new vscode.SnippetString(item.insertText) : item.insertText;
+      completion.data = item;
       return completion;
     });
+  }
+
+  async resolveCompletion(item) {
+    const resolved = await this.request("completionItem/resolve", item.data ?? item);
+    item.detail = resolved.detail ?? item.detail;
+    if (resolved.documentation?.value) {
+      item.documentation = new vscode.MarkdownString(resolved.documentation.value);
+    }
+    return item;
   }
 
   async signatureHelp(document, position) {
@@ -546,6 +558,9 @@ function activate(context) {
     vscode.languages.registerCompletionItemProvider("dudu", {
       provideCompletionItems(document, position) {
         return lsp.completion(document, position);
+      },
+      resolveCompletionItem(item) {
+        return lsp.resolveCompletion(item);
       },
     }, "."),
     vscode.languages.registerSignatureHelpProvider(

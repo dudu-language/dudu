@@ -12,6 +12,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <map>
 #include <optional>
 #include <regex>
@@ -489,6 +490,10 @@ class LanguageServer {
             if (id != nullptr) {
                 respond(*id, completion_result(params));
             }
+        } else if (method == "completionItem/resolve") {
+            if (id != nullptr) {
+                respond(*id, completion_resolve_result(params));
+            }
         } else if (method == "textDocument/signatureHelp") {
             if (id != nullptr) {
                 respond(*id, signature_help_result(params));
@@ -515,7 +520,7 @@ class LanguageServer {
                "\"renameProvider\":true,"
                "\"codeActionProvider\":true,"
                "\"hoverProvider\":true,"
-               "\"completionProvider\":{\"resolveProvider\":false,\"triggerCharacters\":[\".\"]},"
+               "\"completionProvider\":{\"resolveProvider\":true,\"triggerCharacters\":[\".\"]},"
                "\"signatureHelpProvider\":{\"triggerCharacters\":[\"(\",\",\"]},"
                "\"workspaceSymbolProvider\":true"
                "},\"serverInfo\":{\"name\":\"duc lsp\",\"version\":\"0.1.0\"}}";
@@ -974,21 +979,65 @@ class LanguageServer {
             out << "{\"label\":\"" << json_escape(label) << "\",\"kind\":" << kind
                 << ",\"detail\":\"" << json_escape(detail) << "\"}";
         };
+        const auto add_snippet = [&](std::string_view label, std::string_view detail,
+                                     std::string_view insert_text) {
+            if (!first) {
+                out << ",";
+            }
+            first = false;
+            out << "{\"label\":\"" << json_escape(label) << "\",\"kind\":15,\"detail\":\""
+                << json_escape(detail) << "\",\"insertText\":\"" << json_escape(insert_text)
+                << "\",\"insertTextFormat\":2}";
+        };
         for (std::string_view keyword :
              {"class", "def", "enum", "import", "return", "for", "if", "elif", "else", "while",
               "try", "except", "True", "False", "None"}) {
             add(keyword, 14, "keyword");
         }
+        add_snippet("def", "snippet", "def ${1:name}(${2:args}) -> ${3:i32}:\n    ${0:return 0}");
+        add_snippet("class", "snippet", "class ${1:Name}:\n    ${0:field: i32}");
+        add_snippet("if", "snippet", "if ${1:condition}:\n    ${0:pass}");
+        add_snippet("for", "snippet", "for ${1:item}: ${2:i32} in ${3:items}:\n    ${0:pass}");
+        add_snippet("try", "snippet",
+                    "try:\n    ${1:pass}\nexcept ${2:Exception} as ${3:error}:\n    ${0:pass}");
         for (std::string_view type : {"bool", "i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64",
                                       "isize", "usize", "f32", "f64", "str", "cstr"}) {
             add(type, 25, "type");
         }
         if (doc != nullptr) {
+            for (const auto& [name, type] : local_types_before_cursor(*doc, params)) {
+                add(name, 6, name + ": " + type);
+            }
             for (const Symbol& symbol : symbols_for(*doc)) {
                 add(symbol.name, completion_kind(symbol.kind), symbol.detail);
             }
         }
         out << "]";
+        return out.str();
+    }
+
+    std::string completion_resolve_result(const Json* params) const {
+        const std::string label =
+            params == nullptr ? std::string{} : string_value(params->get("label"));
+        const int kind = int_value(params == nullptr ? nullptr : params->get("kind"));
+        const std::string detail =
+            params == nullptr ? std::string{} : string_value(params->get("detail"));
+        std::ostringstream out;
+        out << "{\"label\":\"" << json_escape(label) << "\",\"kind\":" << kind;
+        if (!detail.empty()) {
+            out << ",\"detail\":\"" << json_escape(detail) << "\"";
+        }
+        if (const Json* insert_text = params == nullptr ? nullptr : params->get("insertText");
+            insert_text != nullptr && insert_text->string() != nullptr) {
+            out << ",\"insertText\":\"" << json_escape(*insert_text->string()) << "\"";
+        }
+        if (const int insert_format =
+                int_value(params == nullptr ? nullptr : params->get("insertTextFormat"));
+            insert_format != 0) {
+            out << ",\"insertTextFormat\":" << insert_format;
+        }
+        out << ",\"documentation\":{\"kind\":\"markdown\",\"value\":\""
+            << json_escape(completion_documentation(label, detail)) << "\"}}";
         return out.str();
     }
 
@@ -1304,18 +1353,48 @@ class LanguageServer {
     }
 
     static std::string local_type_before_cursor(const Document& doc, const std::string& name) {
+        const std::map<std::string, std::string> locals = local_types_before_cursor(doc, nullptr);
+        const auto found = locals.find(name);
+        return found == locals.end() ? std::string{} : found->second;
+    }
+
+    static std::map<std::string, std::string> local_types_before_cursor(const Document& doc,
+                                                                        const Json* params) {
         static const std::regex local_decl(
             R"(^\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([A-Za-z_][A-Za-z0-9_\.]*)\b)");
-        std::string out;
+        const Json* position = params == nullptr ? nullptr : params->get("position");
+        const int max_line = position == nullptr ? std::numeric_limits<int>::max()
+                                                 : int_value(position->get("line"));
+        std::map<std::string, std::string> out;
         std::istringstream in(doc.text);
         std::string line;
-        while (std::getline(in, line)) {
+        for (int row = 0; std::getline(in, line); ++row) {
+            if (row > max_line) {
+                break;
+            }
             std::smatch match;
-            if (std::regex_search(line, match, local_decl) && match[1].str() == name) {
-                out = match[2].str();
+            if (std::regex_search(line, match, local_decl)) {
+                out[match[1].str()] = match[2].str();
             }
         }
         return out;
+    }
+
+    static std::string completion_documentation(const std::string& label,
+                                                const std::string& detail) {
+        if (detail == "snippet") {
+            return "Dudu snippet for `" + label + "`.";
+        }
+        if (detail == "keyword") {
+            return "Dudu keyword `" + label + "`.";
+        }
+        if (detail == "type") {
+            return "Built-in Dudu type `" + label + "`.";
+        }
+        if (!detail.empty()) {
+            return detail;
+        }
+        return label;
     }
 
     static bool valid_identifier(const std::string& value) {

@@ -129,6 +129,20 @@ messages = [
     packet(
         {
             "jsonrpc": "2.0",
+            "id": 24,
+            "method": "completionItem/resolve",
+            "params": {
+                "label": "def",
+                "kind": 15,
+                "detail": "snippet",
+                "insertText": "def ${1:name}(${2:args}) -> ${3:i32}:\n    ${0:return 0}",
+                "insertTextFormat": 2,
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
             "id": 6,
             "method": "textDocument/signatureHelp",
             "params": {"textDocument": {"uri": uri}, "position": {"line": 7, "character": 25}},
@@ -340,6 +354,7 @@ assert initialize["result"]["capabilities"]["documentFormattingProvider"] is Tru
 assert initialize["result"]["capabilities"]["referencesProvider"] is True
 assert initialize["result"]["capabilities"]["renameProvider"] is True
 assert initialize["result"]["capabilities"]["codeActionProvider"] is True
+assert initialize["result"]["capabilities"]["completionProvider"]["resolveProvider"] is True
 assert initialize["result"]["capabilities"]["workspaceSymbolProvider"] is True
 
 diagnostics = next(item for item in responses if item.get("method") == "textDocument/publishDiagnostics")
@@ -376,6 +391,16 @@ assert "return" in completion_labels
 assert "i32" in completion_labels
 assert "add" in completion_labels
 assert "Player" in completion_labels
+assert "value" in completion_labels
+assert "player" in completion_labels
+assert any(
+    item["label"] == "def" and item.get("insertTextFormat") == 2 and "${1:name}" in item.get("insertText", "")
+    for item in completion["result"]
+)
+
+resolved_completion = next(item for item in responses if item.get("id") == 24)
+assert resolved_completion["result"]["documentation"]["kind"] == "markdown"
+assert "Dudu snippet" in resolved_completion["result"]["documentation"]["value"]
 
 member_completion = next(item for item in responses if item.get("id") == 21)
 member_completion_labels = [item["label"] for item in member_completion["result"]]
