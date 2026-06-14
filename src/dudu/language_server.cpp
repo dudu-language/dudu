@@ -1368,14 +1368,22 @@ class LanguageServer {
         if (call.name.empty()) {
             return "{\"signatures\":[],\"activeSignature\":0,\"activeParameter\":0}";
         }
+        std::vector<std::string> signatures;
         for (const Symbol& symbol : symbols_for(*doc)) {
             if (symbol_matches(symbol.name, call.name) && (symbol.kind == 12 || symbol.kind == 6)) {
-                return "{\"signatures\":[{\"label\":\"" + json_escape(symbol.detail) +
-                       "\"}],\"activeSignature\":0,\"activeParameter\":" +
-                       std::to_string(call.parameter) + "}";
+                signatures.push_back(symbol.detail);
             }
         }
-        return "{\"signatures\":[],\"activeSignature\":0,\"activeParameter\":0}";
+        std::ostringstream out;
+        out << "{\"signatures\":[";
+        for (size_t i = 0; i < signatures.size(); ++i) {
+            if (i > 0) {
+                out << ",";
+            }
+            out << "{\"label\":\"" << json_escape(signatures[i]) << "\"}";
+        }
+        out << "],\"activeSignature\":0,\"activeParameter\":" << call.parameter << "}";
+        return out.str();
     }
 
     CallSite call_site_at(const Document& doc, const Json* params) const {

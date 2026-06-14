@@ -43,6 +43,7 @@ rename_uri = f"file://{repo_root}/tests/fixtures/lsp_rename_main.dd"
 rename_user_uri = f"file://{repo_root}/tests/fixtures/lsp_rename_user.dd"
 lint_uri = "file:///tmp/dudu_lsp_lint.dd"
 bad_config_uri = f"file://{repo_root}/tests/fixtures/lsp_bad_config/main.dd"
+overload_uri = f"file://{repo_root}/tests/fixtures/dudu_lsp_overload.dd"
 source = "\n".join(
     [
         "class Player:",
@@ -97,6 +98,40 @@ messages = [
                     "version": 1,
                     "text": source,
                 }
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "method": "textDocument/didOpen",
+            "params": {
+                "textDocument": {
+                    "uri": overload_uri,
+                    "languageId": "dudu",
+                    "version": 1,
+                    "text": "\n".join(
+                        [
+                            'import cpp "native_headers/simple_cpp.hpp" as native_cpp',
+                            "",
+                            "def main() -> i32:",
+                            "    amount: f32 = 2.0",
+                            "    return i32(native_cpp.dudu_native.overloaded(amount))",
+                            "",
+                        ]
+                    ),
+                }
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 32,
+            "method": "textDocument/signatureHelp",
+            "params": {
+                "textDocument": {"uri": overload_uri},
+                "position": {"line": 4, "character": 51},
             },
         }
     ),
@@ -697,6 +732,11 @@ assert "dudu_native.dudu_native_add" in native_completion_labels
 native_signature = next(item for item in responses if item.get("id") == 12)
 assert "dudu_native.dudu_native_add(i32, i32) -> i32" in native_signature["result"]["signatures"][0]["label"]
 assert native_signature["result"]["activeParameter"] == 1
+
+overload_signature = next(item for item in responses if item.get("id") == 32)
+overload_labels = [item["label"] for item in overload_signature["result"]["signatures"]]
+assert "native_cpp.dudu_native.overloaded(i32) -> i32" in overload_labels
+assert "native_cpp.dudu_native.overloaded(f32) -> f32" in overload_labels
 
 native_macro_hover = next(item for item in responses if item.get("id") == 15)
 assert "macro dudu_native.DUDU_NATIVE_SCALE(arg0)" in native_macro_hover["result"]["contents"]["value"]
