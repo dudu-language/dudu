@@ -74,9 +74,11 @@ class construction such as `Box[i32](42)` compiles through C++ template
 lowering and type-checks constructor arguments against the instantiated class
 fields or `init` signature. Explicit generic free-function calls such as
 `identity[i32](42)` resolve through parsed template-call nodes, instantiate the
-declared Dudu signature, and type-check parsed runtime arguments. Call-site
-type inference, richer instantiated diagnostics, generic methods, and non-type
-template parameters remain.
+declared Dudu signature, and type-check parsed runtime arguments. Explicit
+single-parameter generic methods such as `box.id[i32](42)` emit C++ method
+templates and type-check parsed runtime arguments. Call-site type inference,
+richer instantiated diagnostics, broader generic methods, and non-type template
+parameters remain.
 
 Unsupported operations on `T` should produce useful diagnostics that mention:
 

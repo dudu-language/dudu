@@ -138,11 +138,12 @@ bool visible_in_header(Visibility visibility) {
     return visibility != Visibility::Private;
 }
 
-void emit_template_params(std::ostringstream& out, const std::vector<std::string>& params) {
+void emit_template_params(std::ostringstream& out, const std::vector<std::string>& params,
+                          std::string_view prefix = {}) {
     if (params.empty()) {
         return;
     }
-    out << "template <";
+    out << prefix << "template <";
     for (size_t i = 0; i < params.size(); ++i) {
         if (i > 0) {
             out << ", ";
@@ -162,6 +163,7 @@ void emit_method(std::ostringstream& out, const std::string& class_name, const F
                  const Symbols& symbols) {
     const size_t first_param =
         !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
+    emit_template_params(out, method.generic_params, "    ");
     if (is_constructor_method(method)) {
         out << "    " << class_name << '(';
     } else if (is_destructor_method(method)) {
