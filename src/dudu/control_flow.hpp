@@ -6,7 +6,6 @@
 
 namespace dudu {
 
-bool block_guarantees_return(const std::vector<RawStmt>& body);
 bool block_guarantees_return(const std::vector<Stmt>& body);
 
 } // namespace dudu

@@ -35,8 +35,4 @@ bool block_guarantees_return(const std::vector<Stmt>& body) {
     return false;
 }
 
-bool block_guarantees_return(const std::vector<RawStmt>& body) {
-    return block_guarantees_return(statements_from_raw(body));
-}
-
 } // namespace dudu

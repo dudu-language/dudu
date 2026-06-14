@@ -352,8 +352,7 @@ class Parser {
         }
         consume(TokenKind::Colon, "expected : after function header");
         consume(TokenKind::Newline, "expected newline after function header");
-        fn.body = parse_raw_block();
-        fn.statements = statements_from_raw(fn.body);
+        fn.statements = statements_from_raw(parse_raw_block());
         return fn;
     }
 

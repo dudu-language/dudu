@@ -24,8 +24,8 @@ Already structured:
 - constants
 - decorators
 - native header metadata
-- nested raw statement blocks
-- statement classification into `Stmt` nodes
+- parser-internal raw statement blocks
+- parsed `Stmt` bodies stored on functions and methods
 - initial expression shape capture for common names, literals, calls,
   template calls, member/index access, unary/binary operators, conditionals,
   and collection literals
@@ -308,7 +308,7 @@ should prefer structured input and structured output.
 
 ## Migration Plan
 
-1. Add AST node types alongside `RawStmt`.
+1. Add AST node types alongside `RawStmt`: done.
 2. Parse simple statements into AST while preserving old lowering for unsupported
    forms.
 3. Parse expressions into AST with source ranges.
@@ -317,6 +317,12 @@ should prefer structured input and structured output.
 6. Convert formatter and LSP to use AST nodes.
 7. Remove raw statement lowering for normal Dudu syntax.
 8. Keep `cpp(...)` as the explicit raw C++ escape hatch.
+
+Status: functions and methods now store parsed `Stmt` bodies directly. The old
+duplicate `FunctionDecl::body` raw statement storage and raw-body C++/control
+flow helper overloads have been removed. `RawStmt` still exists as a
+parser-internal bridge while expression and statement parsing continue moving
+toward exact source-token AST nodes.
 
 ## Acceptance
 

@@ -500,18 +500,4 @@ void emit_block(std::ostringstream& out, const std::vector<Stmt>& body, int dept
     }
 }
 
-void emit_raw_block(std::ostringstream& out, const std::vector<RawStmt>& body, int depth,
-                    const std::vector<std::string>& aliases) {
-    emit_block(out, statements_from_raw(body), depth, aliases);
-}
-
-void emit_raw_block(std::ostringstream& out, const std::vector<RawStmt>& body, int depth,
-                    const std::vector<std::string>& aliases,
-                    const std::map<std::string, std::string>& initial_locals,
-                    const std::string& return_type,
-                    const std::map<std::string, std::string>& function_returns) {
-    emit_block(out, statements_from_raw(body), depth, aliases, initial_locals, return_type,
-               function_returns);
-}
-
 } // namespace dudu

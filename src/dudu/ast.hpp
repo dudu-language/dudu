@@ -224,7 +224,6 @@ struct FunctionDecl {
     std::vector<ParamDecl> params;
     std::string return_type;
     TypeRef return_type_ref;
-    std::vector<RawStmt> body;
     std::vector<Stmt> statements;
     SourceLocation location;
 };

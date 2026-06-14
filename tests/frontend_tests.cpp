@@ -208,7 +208,6 @@ void test_statement_ast_shape() {
                                                       "statement_ast.dd");
     assert(module.functions.size() == 1);
     const dudu::FunctionDecl& main = module.functions.front();
-    assert(main.body.size() == main.statements.size());
     assert(main.statements.size() == 5);
     assert(main.statements[0].kind == dudu::StmtKind::VarDecl);
     assert(main.statements[0].name == "total");
