@@ -144,6 +144,21 @@ messages = [
             },
         }
     ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 17,
+            "method": "textDocument/codeAction",
+            "params": {
+                "textDocument": {"uri": uri},
+                "range": {
+                    "start": {"line": 0, "character": 0},
+                    "end": {"line": 0, "character": 0},
+                },
+                "context": {"diagnostics": []},
+            },
+        }
+    ),
     packet({"jsonrpc": "2.0", "id": 14, "method": "workspace/symbol", "params": {"query": "add"}}),
     packet(
         {
@@ -243,6 +258,7 @@ assert initialize["result"]["capabilities"]["textDocumentSync"] == 2
 assert initialize["result"]["capabilities"]["documentFormattingProvider"] is True
 assert initialize["result"]["capabilities"]["referencesProvider"] is True
 assert initialize["result"]["capabilities"]["renameProvider"] is True
+assert initialize["result"]["capabilities"]["codeActionProvider"] is True
 assert initialize["result"]["capabilities"]["workspaceSymbolProvider"] is True
 
 diagnostics = next(item for item in responses if item.get("method") == "textDocument/publishDiagnostics")
@@ -292,6 +308,11 @@ rename_starts = {
 }
 assert (3, 4, "sum_values") in rename_starts
 assert (7, 17, "sum_values") in rename_starts
+
+code_actions = next(item for item in responses if item.get("id") == 17)
+assert code_actions["result"][0]["title"] == "Format document"
+assert code_actions["result"][0]["kind"] == "source.format"
+assert code_actions["result"][0]["command"]["command"] == "editor.action.formatDocument"
 
 workspace_symbols = next(item for item in responses if item.get("id") == 14)
 workspace_symbol_names = [item["name"] for item in workspace_symbols["result"]]

@@ -255,6 +255,43 @@ class DuduLspClient {
     return workspaceEdit;
   }
 
+  async codeActions(document, range, context) {
+    const actions = await this.request("textDocument/codeAction", {
+      textDocument: { uri: document.uri.toString() },
+      range: {
+        start: { line: range.start.line, character: range.start.character },
+        end: { line: range.end.line, character: range.end.character },
+      },
+      context: {
+        diagnostics: context.diagnostics.map((diagnostic) => ({
+          range: {
+            start: {
+              line: diagnostic.range.start.line,
+              character: diagnostic.range.start.character,
+            },
+            end: {
+              line: diagnostic.range.end.line,
+              character: diagnostic.range.end.character,
+            },
+          },
+          message: diagnostic.message,
+          source: diagnostic.source,
+        })),
+      },
+    });
+    return actions.map((item) => {
+      const action = new vscode.CodeAction(item.title, codeActionKind(item.kind));
+      if (item.command) {
+        action.command = {
+          title: item.command.title,
+          command: item.command.command,
+          arguments: item.command.arguments ?? [],
+        };
+      }
+      return action;
+    });
+  }
+
   async hover(document, position) {
     const hover = await this.request("textDocument/hover", {
       textDocument: { uri: document.uri.toString() },
@@ -369,6 +406,13 @@ function completionKind(lspKind) {
   return Math.max(0, Number(lspKind ?? 1) - 1);
 }
 
+function codeActionKind(kind) {
+  if (kind === "source.format") {
+    return vscode.CodeActionKind.Source.append("format");
+  }
+  return kind ? new vscode.CodeActionKind(kind) : vscode.CodeActionKind.Empty;
+}
+
 function activate(context) {
   diagnostics = vscode.languages.createDiagnosticCollection("dudu");
   lsp = new DuduLspClient(context);
@@ -405,6 +449,15 @@ function activate(context) {
         return lsp.rename(document, position, newName);
       },
     }),
+    vscode.languages.registerCodeActionsProvider(
+      "dudu",
+      {
+        provideCodeActions(document, range, context) {
+          return lsp.codeActions(document, range, context);
+        },
+      },
+      { providedCodeActionKinds: [vscode.CodeActionKind.Source.append("format")] },
+    ),
     vscode.languages.registerHoverProvider("dudu", {
       provideHover(document, position) {
         return lsp.hover(document, position);

@@ -474,6 +474,10 @@ class LanguageServer {
             if (id != nullptr) {
                 respond(*id, rename_result(params));
             }
+        } else if (method == "textDocument/codeAction") {
+            if (id != nullptr) {
+                respond(*id, code_action_result(params));
+            }
         } else if (method == "textDocument/hover") {
             if (id != nullptr) {
                 respond(*id, hover_result(params));
@@ -506,6 +510,7 @@ class LanguageServer {
                "\"definitionProvider\":true,"
                "\"referencesProvider\":true,"
                "\"renameProvider\":true,"
+               "\"codeActionProvider\":true,"
                "\"hoverProvider\":true,"
                "\"completionProvider\":{\"resolveProvider\":false,\"triggerCharacters\":[\".\"]},"
                "\"signatureHelpProvider\":{\"triggerCharacters\":[\"(\",\",\"]},"
@@ -911,6 +916,15 @@ class LanguageServer {
         }
         out << "}}";
         return out.str();
+    }
+
+    std::string code_action_result(const Json* params) const {
+        if (document_from_params(params) == nullptr) {
+            return "[]";
+        }
+        return "[{\"title\":\"Format document\",\"kind\":\"source.format\","
+               "\"command\":{\"title\":\"Format document\","
+               "\"command\":\"editor.action.formatDocument\"}}]";
     }
 
     std::string hover_result(const Json* params) const {
