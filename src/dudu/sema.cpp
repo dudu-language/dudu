@@ -650,6 +650,22 @@ std::string infer_builtin_call_ast(const FunctionScope& scope, const Expr& expr,
     return {};
 }
 
+std::optional<std::string> infer_pointer_cast_call_ast(const FunctionScope& scope, const Expr& expr,
+                                                       const std::string& callee,
+                                                       const SourceLocation* location) {
+    if (!starts_with(callee, "*")) {
+        return std::nullopt;
+    }
+    const std::string type = trim(callee.substr(1));
+    if (!known_type(scope.symbols, type)) {
+        return std::nullopt;
+    }
+    for (const Expr& arg : expr.children) {
+        (void)infer_expr_ast(scope, arg, location);
+    }
+    return "*" + type;
+}
+
 std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                            const SourceLocation* location) {
     const SourceLocation* use_location =
@@ -843,6 +859,10 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
         return infer_expr(scope, expr.text, use_location);
     case ExprKind::Call: {
         const std::string callee = trim(expr.name);
+        if (const auto pointer_cast =
+                infer_pointer_cast_call_ast(scope, expr, callee, use_location)) {
+            return *pointer_cast;
+        }
         if (const auto fn = scope.symbols.function_signatures.find(callee);
             fn != scope.symbols.function_signatures.end()) {
             check_call_args_ast(scope, callee, fn->second, expr.children, use_location);
