@@ -1,10 +1,10 @@
 const vscode = require("vscode");
 const childProcess = require("child_process");
-const os = require("os");
 const path = require("path");
 
 let terminal;
 let diagnostics;
+let lsp;
 
 function shellQuote(value) {
   return `'${value.replace(/'/g, "'\\''")}'`;
@@ -38,67 +38,6 @@ function runCommand(command) {
   }
   terminal.show();
   terminal.sendText(`cd ${shellQuote(workspaceDirectory())} && ${command}`);
-}
-
-function activeDuduDocument() {
-  const editor = vscode.window.activeTextEditor;
-  if (!editor) {
-    vscode.window.showErrorMessage("Open a .dd file first.");
-    return undefined;
-  }
-  if (editor.document.languageId !== "dudu" && !editor.document.fileName.endsWith(".dd")) {
-    vscode.window.showErrorMessage("The active file is not a Dudu .dd file.");
-    return undefined;
-  }
-  return editor.document;
-}
-
-function parseDiagnostic(line) {
-  const match = /^dudu: (.*):([0-9]+):([0-9]+): (.*)$/.exec(line.trim());
-  if (!match) {
-    return undefined;
-  }
-  const file = match[1];
-  const row = Math.max(Number(match[2]) - 1, 0);
-  const col = Math.max(Number(match[3]) - 1, 0);
-  return {
-    file,
-    diagnostic: new vscode.Diagnostic(
-      new vscode.Range(row, col, row, col + 1),
-      match[4],
-      vscode.DiagnosticSeverity.Error,
-    ),
-  };
-}
-
-function checkDocument(document) {
-  const output = path.join(os.tmpdir(), `dudu-vscode-${process.pid}.cpp`);
-  childProcess.execFile(
-    ducPath(),
-    ["emit", document.fileName, "-o", output],
-    { cwd: workspaceDirectory() },
-    (error, _stdout, stderr) => {
-      const byFile = new Map();
-      for (const line of stderr.split(/\r?\n/)) {
-        const parsed = parseDiagnostic(line);
-        if (!parsed) {
-          continue;
-        }
-        const uri = vscode.Uri.file(path.resolve(workspaceDirectory(), parsed.file));
-        const key = uri.toString();
-        const list = byFile.get(key) ?? [];
-        list.push(parsed.diagnostic);
-        byFile.set(key, list);
-      }
-      diagnostics.clear();
-      for (const [key, list] of byFile) {
-        diagnostics.set(vscode.Uri.parse(key), list);
-      }
-      if (error && byFile.size === 0) {
-        vscode.window.showErrorMessage(stderr.trim() || String(error));
-      }
-    },
-  );
 }
 
 function completion(label, kind) {
@@ -144,25 +83,242 @@ function collectDocumentCompletions(document) {
   return items;
 }
 
+function isDuduDocument(document) {
+  return document.languageId === "dudu" || document.fileName.endsWith(".dd");
+}
+
+function diagnosticSeverity(value) {
+  if (value === 2) {
+    return vscode.DiagnosticSeverity.Warning;
+  }
+  if (value === 3) {
+    return vscode.DiagnosticSeverity.Information;
+  }
+  if (value === 4) {
+    return vscode.DiagnosticSeverity.Hint;
+  }
+  return vscode.DiagnosticSeverity.Error;
+}
+
+function toVscodeDiagnostic(item) {
+  const start = item.range?.start ?? { line: 0, character: 0 };
+  const end = item.range?.end ?? start;
+  const diagnostic = new vscode.Diagnostic(
+    new vscode.Range(start.line, start.character, end.line, end.character),
+    item.message ?? "Dudu diagnostic",
+    diagnosticSeverity(item.severity),
+  );
+  diagnostic.source = item.source ?? "dudu";
+  return diagnostic;
+}
+
+class DuduLspClient {
+  constructor(context) {
+    this.context = context;
+    this.process = undefined;
+    this.nextId = 1;
+    this.pending = new Map();
+    this.buffer = Buffer.alloc(0);
+  }
+
+  start() {
+    if (this.process) {
+      return;
+    }
+    this.process = childProcess.spawn(ducPath(), ["lsp"], {
+      cwd: workspaceDirectory(),
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    this.process.stdout.on("data", (chunk) => this.onData(chunk));
+    this.process.stderr.on("data", (chunk) => {
+      const text = chunk.toString().trim();
+      if (text) {
+        console.error(`dudu lsp: ${text}`);
+      }
+    });
+    this.process.on("error", (error) => {
+      vscode.window.showErrorMessage(`Could not start duc lsp: ${error.message}`);
+      for (const { reject } of this.pending.values()) {
+        reject(error);
+      }
+      this.pending.clear();
+    });
+    this.process.on("exit", () => {
+      this.process = undefined;
+      for (const { reject } of this.pending.values()) {
+        reject(new Error("duc lsp exited"));
+      }
+      this.pending.clear();
+    });
+    this.request("initialize", {
+      processId: process.pid,
+      rootUri: vscode.workspace.workspaceFolders?.[0]?.uri.toString(),
+      capabilities: {},
+    }).catch((error) => vscode.window.showErrorMessage(`Dudu LSP failed: ${error.message}`));
+  }
+
+  stop() {
+    if (!this.process) {
+      return;
+    }
+    this.request("shutdown", null)
+      .catch(() => undefined)
+      .finally(() => {
+        this.notify("exit", null);
+        this.process?.kill();
+        this.process = undefined;
+      });
+  }
+
+  send(payload) {
+    this.start();
+    const body = JSON.stringify(payload);
+    this.process.stdin.write(`Content-Length: ${Buffer.byteLength(body, "utf8")}\r\n\r\n${body}`);
+  }
+
+  request(method, params) {
+    const id = this.nextId++;
+    const promise = new Promise((resolve, reject) => {
+      this.pending.set(id, { resolve, reject });
+    });
+    this.send({ jsonrpc: "2.0", id, method, params });
+    return promise;
+  }
+
+  notify(method, params) {
+    this.send({ jsonrpc: "2.0", method, params });
+  }
+
+  didOpen(document) {
+    if (!isDuduDocument(document)) {
+      return;
+    }
+    this.notify("textDocument/didOpen", {
+      textDocument: {
+        uri: document.uri.toString(),
+        languageId: "dudu",
+        version: document.version,
+        text: document.getText(),
+      },
+    });
+  }
+
+  didChange(document) {
+    if (!isDuduDocument(document)) {
+      return;
+    }
+    this.notify("textDocument/didChange", {
+      textDocument: { uri: document.uri.toString(), version: document.version },
+      contentChanges: [{ text: document.getText() }],
+    });
+  }
+
+  didSave(document) {
+    if (!isDuduDocument(document)) {
+      return;
+    }
+    this.notify("textDocument/didSave", {
+      textDocument: { uri: document.uri.toString() },
+    });
+  }
+
+  async format(document) {
+    const edits = await this.request("textDocument/formatting", {
+      textDocument: { uri: document.uri.toString() },
+      options: { tabSize: 4, insertSpaces: true },
+    });
+    return edits.map(
+      (edit) =>
+        new vscode.TextEdit(
+          new vscode.Range(
+            edit.range.start.line,
+            edit.range.start.character,
+            edit.range.end.line,
+            edit.range.end.character,
+          ),
+          edit.newText,
+        ),
+    );
+  }
+
+  onData(chunk) {
+    this.buffer = Buffer.concat([this.buffer, chunk]);
+    while (true) {
+      const headerEnd = this.buffer.indexOf("\r\n\r\n");
+      if (headerEnd < 0) {
+        return;
+      }
+      const header = this.buffer.slice(0, headerEnd).toString();
+      const lengthLine = header
+        .split("\r\n")
+        .find((line) => line.toLowerCase().startsWith("content-length:"));
+      if (!lengthLine) {
+        this.buffer = this.buffer.slice(headerEnd + 4);
+        continue;
+      }
+      const length = Number(lengthLine.split(":", 2)[1].trim());
+      const bodyStart = headerEnd + 4;
+      const bodyEnd = bodyStart + length;
+      if (this.buffer.length < bodyEnd) {
+        return;
+      }
+      const body = this.buffer.slice(bodyStart, bodyEnd).toString();
+      this.buffer = this.buffer.slice(bodyEnd);
+      this.handleMessage(JSON.parse(body));
+    }
+  }
+
+  handleMessage(message) {
+    if (message.id !== undefined) {
+      const pending = this.pending.get(message.id);
+      if (pending) {
+        this.pending.delete(message.id);
+        if (message.error) {
+          pending.reject(new Error(message.error.message ?? "Dudu LSP request failed"));
+        } else {
+          pending.resolve(message.result);
+        }
+      }
+      return;
+    }
+    if (message.method === "textDocument/publishDiagnostics") {
+      const uri = vscode.Uri.parse(message.params.uri);
+      diagnostics.set(uri, (message.params.diagnostics ?? []).map(toVscodeDiagnostic));
+    }
+  }
+}
+
 function activate(context) {
   diagnostics = vscode.languages.createDiagnosticCollection("dudu");
+  lsp = new DuduLspClient(context);
+  lsp.start();
+
+  for (const document of vscode.workspace.textDocuments) {
+    lsp.didOpen(document);
+  }
+
   context.subscriptions.push(
     diagnostics,
+    vscode.languages.registerDocumentFormattingEditProvider("dudu", {
+      provideDocumentFormattingEdits(document) {
+        return lsp.format(document);
+      },
+    }),
     vscode.languages.registerCompletionItemProvider("dudu", {
       provideCompletionItems(document) {
         return collectDocumentCompletions(document);
       },
     }),
-    vscode.commands.registerCommand("dudu.fmtFile", () => {
-      const file = activeDuduFile();
-      if (file) {
-        runCommand(`${shellQuote(ducPath())} fmt ${shellQuote(file)}`);
+    vscode.commands.registerCommand("dudu.fmtFile", async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (editor && isDuduDocument(editor.document)) {
+        await vscode.commands.executeCommand("editor.action.formatDocument");
       }
     }),
     vscode.commands.registerCommand("dudu.checkFile", () => {
-      const document = activeDuduDocument();
-      if (document) {
-        checkDocument(document);
+      const editor = vscode.window.activeTextEditor;
+      if (editor && isDuduDocument(editor.document)) {
+        lsp.didSave(editor.document);
       }
     }),
     vscode.commands.registerCommand("dudu.buildProject", () => {
@@ -174,15 +330,14 @@ function activate(context) {
         runCommand(`${shellQuote(ducPath())} run ${shellQuote(file)}`);
       }
     }),
-    vscode.workspace.onDidSaveTextDocument((document) => {
-      if (document.languageId === "dudu" || document.fileName.endsWith(".dd")) {
-        checkDocument(document);
-      }
-    }),
+    vscode.workspace.onDidOpenTextDocument((document) => lsp.didOpen(document)),
+    vscode.workspace.onDidChangeTextDocument((event) => lsp.didChange(event.document)),
+    vscode.workspace.onDidSaveTextDocument((document) => lsp.didSave(document)),
   );
 }
 
 function deactivate() {
+  lsp?.stop();
   diagnostics?.dispose();
 }
 

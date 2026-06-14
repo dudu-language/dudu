@@ -1,7 +1,7 @@
 {
   "name": "dudu-syntax",
-  "displayName": "Dudu Syntax",
-  "description": "Syntax highlighting for Dudu .dd source files.",
+  "displayName": "Dudu",
+  "description": "Syntax highlighting, formatting, diagnostics, and commands for Dudu .dd source files.",
   "version": "0.1.0",
   "publisher": "dudu",
   "main": "./extension.js",
@@ -63,7 +63,7 @@
         "dudu.ducPath": {
           "type": "string",
           "default": "duc",
-          "description": "Path to the Dudu compiler executable used by editor commands and diagnostics."
+          "description": "Path to the Dudu compiler executable used by editor commands and the language server."
         }
       }
     }
