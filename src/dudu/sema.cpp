@@ -24,6 +24,7 @@
 #include "dudu/unsupported.hpp"
 
 #include <cctype>
+#include <functional>
 #include <optional>
 #include <set>
 #include <sstream>
@@ -106,19 +107,20 @@ void bind_local(FunctionScope& scope, const std::string& name, const std::string
 
 bool parse_local_function_type(const FunctionScope& scope, const std::string& name,
                                const std::string& type, FunctionSignature& out) {
-    if (const auto local_type = scope.local_type_refs.find(name);
-        local_type != scope.local_type_refs.end()) {
-        if (parse_function_type(local_type->second, out)) {
+    std::set<std::string> seen_aliases;
+    std::function<bool(const TypeRef&)> parse_ref = [&](const TypeRef& type_ref) -> bool {
+        if (parse_function_type(type_ref, out)) {
             return true;
         }
-        if (local_type->second.kind == TypeKind::Named) {
-            if (const auto alias = scope.symbols.alias_type_refs.find(local_type->second.name);
-                alias != scope.symbols.alias_type_refs.end()) {
-                if (parse_function_type(alias->second, out)) {
-                    return true;
-                }
-            }
+        if (type_ref.kind != TypeKind::Named || !seen_aliases.insert(type_ref.name).second) {
+            return false;
         }
+        const auto alias = scope.symbols.alias_type_refs.find(type_ref.name);
+        return alias != scope.symbols.alias_type_refs.end() && parse_ref(alias->second);
+    };
+    if (const auto local_type = scope.local_type_refs.find(name);
+        local_type != scope.local_type_refs.end() && parse_ref(local_type->second)) {
+        return true;
     }
     return parse_function_type(resolve_alias(scope.symbols, type), out);
 }

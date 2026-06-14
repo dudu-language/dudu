@@ -40,6 +40,8 @@ Already structured:
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path
+- callback alias lookup follows parsed `TypeRef` alias chains with a cycle
+  guard before falling back to resolved type text
 - source range fields on statement, expression, and type nodes
 - semantic diagnostics for return values, local initializer values, local type
   names, conditions, and assignment targets use expression/type node locations

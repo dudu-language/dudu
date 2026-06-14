@@ -2,6 +2,7 @@ type PlayerId = u64
 type Scores = dict[str, i32]
 type Pair = tuple[i32, i32]
 type Visit = fn(PlayerId) -> i32
+type PlayerVisit = Visit
 
 
 def bump_player(player_id: PlayerId) -> PlayerId:
@@ -17,7 +18,7 @@ def visit_player(player_id: PlayerId) -> i32:
     return i32(player_id)
 
 
-def apply_visit(player_id: PlayerId, visitor: Visit) -> i32:
+def apply_visit(player_id: PlayerId, visitor: PlayerVisit) -> i32:
     return visitor(player_id)
 
 
