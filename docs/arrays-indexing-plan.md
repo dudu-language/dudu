@@ -184,6 +184,9 @@ explicit copy:
 copy = list(items[a:b])
 ```
 
+Status: one-dimensional fixed arrays support explicit `start:end` slices as
+`span[T]` views. Open-ended slices and multidimensional slices are rejected.
+
 ## Advanced Indexing
 
 Useful target forms:

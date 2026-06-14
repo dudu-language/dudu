@@ -115,6 +115,9 @@ std::string lower_template_type(std::string_view name, const std::string& args) 
     if (name == "list") {
         return "std::vector<" + lower_template_arg_type(args) + ">";
     }
+    if (name == "span") {
+        return "std::span<" + lower_template_arg_type(args) + ">";
+    }
     if (name == "dict") {
         std::ostringstream out;
         out << "std::unordered_map<";
@@ -200,6 +203,9 @@ std::string lower_template_type(const TypeRef& type) {
     const std::string& name = type.name;
     if (name == "list") {
         return "std::vector<" + join_lowered_type_args(type.children) + ">";
+    }
+    if (name == "span") {
+        return "std::span<" + join_lowered_type_args(type.children) + ">";
     }
     if (name == "dict") {
         return "std::unordered_map<" + join_lowered_type_args(type.children) + ">";

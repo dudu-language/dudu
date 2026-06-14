@@ -1,0 +1,4 @@
+def main() -> i32:
+    values: array[i32] = [1, 2, 3]
+    view: span[i32] = values[:2]
+    return 0

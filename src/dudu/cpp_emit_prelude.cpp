@@ -111,6 +111,7 @@ void emit_includes(std::ostringstream& out, const ModuleAst& module) {
                "#include <cstddef>\n"
                "#include <cstdint>\n"
                "#include <cstdlib>\n"
+               "#include <span>\n"
                "#include <type_traits>\n"
                "#include <utility>\n";
     } else {
@@ -124,6 +125,7 @@ void emit_includes(std::ostringstream& out, const ModuleAst& module) {
                "#include <functional>\n"
                "#include <iostream>\n"
                "#include <optional>\n"
+               "#include <span>\n"
                "#include <stdexcept>\n"
                "#include <string>\n"
                "#include <sstream>\n"

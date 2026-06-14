@@ -40,6 +40,37 @@ bool foreign_indexable_type(const std::string& type) {
            type.find("::") != std::string::npos;
 }
 
+size_t top_level_colon(const std::string& text) {
+    int depth = 0;
+    char quote = '\0';
+    bool escaped = false;
+    for (size_t i = 0; i < text.size(); ++i) {
+        const char c = text[i];
+        if (quote != '\0') {
+            if (escaped) {
+                escaped = false;
+            } else if (c == '\\') {
+                escaped = true;
+            } else if (c == quote) {
+                quote = '\0';
+            }
+            continue;
+        }
+        if (c == '"' || c == '\'') {
+            quote = c;
+            continue;
+        }
+        if (c == '[' || c == '(' || c == '{') {
+            ++depth;
+        } else if (c == ']' || c == ')' || c == '}') {
+            --depth;
+        } else if (c == ':' && depth == 0) {
+            return i;
+        }
+    }
+    return std::string::npos;
+}
+
 size_t find_matching_bracket(std::string_view text, const size_t open) {
     int depth = 1;
     size_t cursor = open + 1;
@@ -112,6 +143,19 @@ std::string indexed_value_type(const Symbols& symbols,
         return trim(type.substr(5, type.size() - 6));
     }
     if (const std::vector<size_t> shape = explicit_array_shape(type); !shape.empty()) {
+        if (top_level_colon(index_expr) != std::string::npos) {
+            if (shape.size() != 1) {
+                throw CompileError(location,
+                                   "array slicing requires one-dimensional fixed array: " + name);
+            }
+            const size_t colon = top_level_colon(index_expr);
+            if (trim(index_expr.substr(0, colon)).empty() ||
+                trim(index_expr.substr(colon + 1)).empty()) {
+                throw CompileError(location,
+                                   "array slice requires explicit start and end: " + name);
+            }
+            return "span[" + explicit_array_element_type(type) + "]";
+        }
         const size_t index_count = index_expr.empty() ? 1 : split_top_level_args(index_expr).size();
         if (index_count > shape.size()) {
             throw CompileError(location, "too many indices for array: " + name);
@@ -148,6 +192,9 @@ std::string iterable_value_type(const Symbols& symbols,
     }
     const std::string type = unwrap_reference_and_const(resolve_alias(symbols, local->second));
     if (starts_with(type, "list[") && type.back() == ']') {
+        return trim(type.substr(5, type.size() - 6));
+    }
+    if (starts_with(type, "span[") && type.back() == ']') {
         return trim(type.substr(5, type.size() - 6));
     }
     if (const auto element = canonical_array_element_type(type)) {

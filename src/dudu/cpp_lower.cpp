@@ -576,6 +576,78 @@ std::string lower_comma_indexing(std::string expr) {
     return expr;
 }
 
+size_t top_level_colon_in_text(const std::string& text) {
+    int depth = 0;
+    char quote = '\0';
+    bool escaped = false;
+    for (size_t i = 0; i < text.size(); ++i) {
+        const char c = text[i];
+        if (quote != '\0') {
+            if (escaped) {
+                escaped = false;
+            } else if (c == '\\') {
+                escaped = true;
+            } else if (c == quote) {
+                quote = '\0';
+            }
+            continue;
+        }
+        if (c == '"' || c == '\'') {
+            quote = c;
+            continue;
+        }
+        if (c == '[' || c == '(' || c == '{') {
+            ++depth;
+        } else if (c == ']' || c == ')' || c == '}') {
+            --depth;
+        } else if (c == ':' && depth == 0) {
+            return i;
+        }
+    }
+    return std::string::npos;
+}
+
+std::string lower_slice_indexing(std::string expr) {
+    size_t open = expr.find('[');
+    while (open != std::string::npos) {
+        const size_t close = find_matching(expr, open, '[', ']');
+        if (close == std::string::npos) {
+            break;
+        }
+        const std::string inside = expr.substr(open + 1, close - open - 1);
+        const size_t colon = top_level_colon_in_text(inside);
+        if (colon == std::string::npos) {
+            open = expr.find('[', close + 1);
+            continue;
+        }
+        size_t name_start = open;
+        while (name_start > 0) {
+            const char c = expr[name_start - 1];
+            if (std::isalnum(static_cast<unsigned char>(c)) == 0 && c != '_' && c != '.') {
+                break;
+            }
+            --name_start;
+        }
+        if (name_start == open) {
+            open = expr.find('[', close + 1);
+            continue;
+        }
+        const std::string target = expr.substr(name_start, open - name_start);
+        const std::string start = trim_copy(inside.substr(0, colon));
+        const std::string end = trim_copy(inside.substr(colon + 1));
+        if (start.empty() || end.empty()) {
+            open = expr.find('[', close + 1);
+            continue;
+        }
+        const std::string replacement = "std::span(&(" + target + ")[" + lower_cpp_expr(start) +
+                                        "], (" + lower_cpp_expr(end) + ") - (" +
+                                        lower_cpp_expr(start) + "))";
+        expr.replace(name_start, close + 1 - name_start, replacement);
+        open = expr.find('[', name_start + replacement.size());
+    }
+    return expr;
+}
+
 std::string lower_cpp_expr(std::string expr, const std::vector<std::string>& namespace_aliases) {
     expr = lower_lambda_expr(std::move(expr));
     expr = lower_conditional_expr(std::move(expr));
@@ -597,6 +669,7 @@ std::string lower_cpp_expr(std::string expr, const std::vector<std::string>& nam
     expr = lower_template_value_call(std::move(expr), "list");
     expr = lower_template_value_call(std::move(expr), "dict");
     expr = lower_template_value_call(std::move(expr), "set");
+    expr = lower_slice_indexing(std::move(expr));
     expr = lower_comma_indexing(std::move(expr));
     expr = qualify_namespace_aliases(std::move(expr), namespace_aliases);
     expr = replace_all(std::move(expr), ".append(", ".push_back(");
