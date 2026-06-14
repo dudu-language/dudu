@@ -611,6 +611,14 @@ messages = [
     packet(
         {
             "jsonrpc": "2.0",
+            "id": 44,
+            "method": "textDocument/semanticTokens/full",
+            "params": {"textDocument": {"uri": uri}},
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
             "id": 3,
             "method": "textDocument/hover",
             "params": {"textDocument": {"uri": uri}, "position": {"line": 3, "character": 5}},
@@ -973,6 +981,9 @@ assert initialize["result"]["capabilities"]["renameProvider"] is True
 assert initialize["result"]["capabilities"]["codeActionProvider"] is True
 assert initialize["result"]["capabilities"]["completionProvider"]["resolveProvider"] is True
 assert initialize["result"]["capabilities"]["workspaceSymbolProvider"] is True
+semantic_provider = initialize["result"]["capabilities"]["semanticTokensProvider"]
+assert semantic_provider["full"] is True
+assert "class" in semantic_provider["legend"]["tokenTypes"]
 
 diagnostics = next(item for item in responses if item.get("method") == "textDocument/publishDiagnostics")
 diag = diagnostics["params"]["diagnostics"][0]
@@ -1070,6 +1081,25 @@ assert "Used by hover docs." in doc_hover_value
 
 definition = next(item for item in responses if item.get("id") == 4)
 assert definition["result"]["range"]["start"]["line"] == 3
+
+semantic_tokens = next(item for item in responses if item.get("id") == 44)
+semantic_data = semantic_tokens["result"]["data"]
+assert semantic_data
+legend = semantic_provider["legend"]["tokenTypes"]
+decoded = []
+line = 0
+character = 0
+for i in range(0, len(semantic_data), 5):
+    delta_line, delta_start, length, token_type, modifiers = semantic_data[i : i + 5]
+    line += delta_line
+    character = character + delta_start if delta_line == 0 else delta_start
+    decoded.append((line, character, length, legend[token_type], modifiers))
+assert (0, 6, 6, "class", 1) in decoded
+assert (1, 4, 2, "property", 1) in decoded
+assert (3, 4, 3, "function", 1) in decoded
+assert any(item[3] == "parameter" and item[2] == 1 for item in decoded)
+assert any(item[3] == "type" and item[2] == 3 for item in decoded)
+assert any(item[3] == "variable" and item[2] == 5 for item in decoded)
 
 completion = next(item for item in responses if item.get("id") == 5)
 completion_labels = [item["label"] for item in completion["result"]]

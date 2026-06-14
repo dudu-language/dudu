@@ -352,6 +352,14 @@ struct Diagnostic {
     int severity = 1;
 };
 
+struct SemanticToken {
+    int line = 0;
+    int column = 0;
+    int length = 0;
+    int type = 0;
+    int modifiers = 0;
+};
+
 struct Symbol {
     std::string name;
     std::string detail;
@@ -498,6 +506,10 @@ class LanguageServer {
             if (id != nullptr) {
                 respond(*id, document_symbol_result(params));
             }
+        } else if (method == "textDocument/semanticTokens/full") {
+            if (id != nullptr) {
+                respond(*id, semantic_tokens_result(params));
+            }
         } else if (method == "textDocument/definition") {
             if (id != nullptr) {
                 respond(*id, definition_result(params));
@@ -551,6 +563,11 @@ class LanguageServer {
                "\"referencesProvider\":true,"
                "\"renameProvider\":true,"
                "\"codeActionProvider\":true,"
+               "\"semanticTokensProvider\":{\"legend\":{\"tokenTypes\":[\"namespace\",\"type\","
+               "\"class\",\"enum\",\"function\",\"method\",\"variable\",\"parameter\","
+               "\"property\",\"enumMember\",\"macro\",\"keyword\",\"number\",\"string\","
+               "\"operator\"],\"tokenModifiers\":[\"declaration\",\"definition\",\"readonly\","
+               "\"static\",\"native\",\"unresolved\"]},\"full\":true},"
                "\"hoverProvider\":true,"
                "\"completionProvider\":{\"resolveProvider\":true,\"triggerCharacters\":[\".\"]},"
                "\"signatureHelpProvider\":{\"triggerCharacters\":[\"(\",\",\"]},"
@@ -883,6 +900,201 @@ class LanguageServer {
             << json_escape(diagnostic.source) << "\",\"message\":\""
             << json_escape(diagnostic.message) << "\"}";
         return out.str();
+    }
+
+    std::string semantic_tokens_result(const Json* params) const {
+        const Json* text_document = params == nullptr ? nullptr : params->get("textDocument");
+        const std::string uri =
+            text_document == nullptr ? std::string{} : string_value(text_document->get("uri"));
+        const auto found = documents_.find(uri);
+        if (found == documents_.end()) {
+            return "{\"data\":[]}";
+        }
+        ModuleAst module;
+        try {
+            module = parse_source(found->second.text, found->second.path);
+        } catch (const std::exception&) {
+            return "{\"data\":[]}";
+        }
+        std::vector<SemanticToken> tokens;
+        collect_semantic_tokens(module, tokens);
+        std::sort(tokens.begin(), tokens.end(),
+                  [](const SemanticToken& left, const SemanticToken& right) {
+                      if (left.line != right.line) {
+                          return left.line < right.line;
+                      }
+                      if (left.column != right.column) {
+                          return left.column < right.column;
+                      }
+                      if (left.length != right.length) {
+                          return left.length < right.length;
+                      }
+                      return left.type < right.type;
+                  });
+
+        std::ostringstream out;
+        out << "{\"data\":[";
+        int previous_line = 0;
+        int previous_column = 0;
+        for (size_t i = 0; i < tokens.size(); ++i) {
+            const SemanticToken& token = tokens[i];
+            if (i > 0) {
+                out << ',';
+            }
+            const int delta_line = i == 0 ? token.line : token.line - previous_line;
+            const int delta_column =
+                delta_line == 0 ? token.column - previous_column : token.column;
+            out << delta_line << ',' << delta_column << ',' << token.length << ',' << token.type
+                << ',' << token.modifiers;
+            previous_line = token.line;
+            previous_column = token.column;
+        }
+        out << "]}";
+        return out.str();
+    }
+
+    static void add_semantic_token(std::vector<SemanticToken>& tokens, const SourceLocation& loc,
+                                   std::string_view text, int type, int modifiers = 0) {
+        if (text.empty() || loc.line <= 0 || loc.column <= 0) {
+            return;
+        }
+        tokens.push_back({.line = loc.line - 1,
+                          .column = loc.column - 1,
+                          .length = static_cast<int>(text.size()),
+                          .type = type,
+                          .modifiers = modifiers});
+    }
+
+    static SourceLocation shifted_location(SourceLocation loc, int columns) {
+        loc.column += columns;
+        return loc;
+    }
+
+    static void collect_type_tokens(const TypeRef& type, std::vector<SemanticToken>& tokens) {
+        if (type.kind == TypeKind::Named || type.kind == TypeKind::Qualified ||
+            type.kind == TypeKind::Template) {
+            const std::string_view label = type.name.empty() ? type.text : type.name;
+            add_semantic_token(tokens, type.location, label, 1);
+        }
+        for (const TypeRef& child : type.children) {
+            collect_type_tokens(child, tokens);
+        }
+    }
+
+    static void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens) {
+        switch (expr.kind) {
+        case ExprKind::Name:
+            add_semantic_token(tokens, expr.location, expr.name, 6);
+            break;
+        case ExprKind::Call:
+        case ExprKind::TemplateCall:
+            add_semantic_token(tokens, expr.location, expr.name, 4);
+            break;
+        case ExprKind::Member: {
+            const SourceLocation member_location{
+                .file = expr.location.file,
+                .line = expr.location.line,
+                .column =
+                    expr.location.column + static_cast<int>(expr.text.size() - expr.name.size())};
+            add_semantic_token(tokens, member_location, expr.name, 8);
+            break;
+        }
+        case ExprKind::IntLiteral:
+        case ExprKind::FloatLiteral:
+            add_semantic_token(tokens, expr.location, expr.text, 12);
+            break;
+        case ExprKind::StringLiteral:
+            add_semantic_token(tokens, expr.location, expr.text, 13);
+            break;
+        default:
+            break;
+        }
+        for (const Expr& child : expr.children) {
+            collect_expr_tokens(child, tokens);
+        }
+    }
+
+    static void collect_stmt_tokens(const std::vector<Stmt>& statements,
+                                    std::vector<SemanticToken>& tokens) {
+        for (const Stmt& stmt : statements) {
+            if (stmt.kind == StmtKind::VarDecl) {
+                add_semantic_token(tokens, stmt.location, stmt.name, 6, 1);
+                collect_type_tokens(stmt.type_ref, tokens);
+                collect_expr_tokens(stmt.value_expr, tokens);
+            } else if (stmt.kind == StmtKind::Assign || stmt.kind == StmtKind::CompoundAssign) {
+                collect_expr_tokens(stmt.target_expr, tokens);
+                collect_expr_tokens(stmt.value_expr, tokens);
+            } else if (stmt.kind == StmtKind::Return || stmt.kind == StmtKind::Raise) {
+                collect_expr_tokens(stmt.value_expr, tokens);
+            } else if (stmt.kind == StmtKind::If || stmt.kind == StmtKind::Elif ||
+                       stmt.kind == StmtKind::While || stmt.kind == StmtKind::Assert ||
+                       stmt.kind == StmtKind::DebugAssert) {
+                collect_expr_tokens(stmt.condition_expr, tokens);
+            } else if (stmt.kind == StmtKind::For) {
+                add_semantic_token(tokens, stmt.location, stmt.name, 6, 1);
+                collect_type_tokens(stmt.type_ref, tokens);
+                collect_expr_tokens(stmt.iterable_expr, tokens);
+            } else if (stmt.kind == StmtKind::Expr) {
+                collect_expr_tokens(stmt.expr, tokens);
+            }
+            collect_stmt_tokens(stmt.children, tokens);
+        }
+    }
+
+    static void collect_semantic_tokens(const ModuleAst& module,
+                                        std::vector<SemanticToken>& tokens) {
+        for (const ImportDecl& import : module.imports) {
+            add_semantic_token(tokens, shifted_location(import.location, 7),
+                               bound_import_name(import), 0);
+        }
+        for (const TypeAliasDecl& alias : module.aliases) {
+            add_semantic_token(tokens, shifted_location(alias.location, 5), alias.name, 1, 1);
+            collect_type_tokens(alias.type_ref, tokens);
+        }
+        for (const EnumDecl& en : module.enums) {
+            add_semantic_token(tokens, shifted_location(en.location, 5), en.name, 3, 1);
+            collect_type_tokens(en.underlying_type_ref, tokens);
+            for (const EnumValueDecl& value : en.values) {
+                add_semantic_token(tokens, value.location, value.name, 9, 1);
+            }
+        }
+        for (const ClassDecl& klass : module.classes) {
+            add_semantic_token(tokens, shifted_location(klass.location, 6), klass.name, 2, 1);
+            for (const FieldDecl& field : klass.fields) {
+                add_semantic_token(tokens, field.location, field.name, 8, 1);
+                collect_type_tokens(field.type_ref, tokens);
+            }
+            for (const ConstDecl& constant : klass.constants) {
+                add_semantic_token(tokens, constant.location, constant.name, 8, 1 | 4);
+                collect_type_tokens(constant.type_ref, tokens);
+            }
+            for (const ConstDecl& field : klass.static_fields) {
+                add_semantic_token(tokens, field.location, field.name, 8, 1 | 8);
+                collect_type_tokens(field.type_ref, tokens);
+            }
+            for (const FunctionDecl& method : klass.methods) {
+                add_semantic_token(tokens, shifted_location(method.location, 4), method.name, 5, 1);
+                for (const ParamDecl& param : method.params) {
+                    add_semantic_token(tokens, param.location, param.name, 7, 1);
+                    collect_type_tokens(param.type_ref, tokens);
+                }
+                collect_type_tokens(method.return_type_ref, tokens);
+                collect_stmt_tokens(method.statements, tokens);
+            }
+        }
+        for (const ConstDecl& constant : module.constants) {
+            add_semantic_token(tokens, constant.location, constant.name, 6, 1 | 4);
+            collect_type_tokens(constant.type_ref, tokens);
+        }
+        for (const FunctionDecl& fn : module.functions) {
+            add_semantic_token(tokens, shifted_location(fn.location, 4), fn.name, 4, 1);
+            for (const ParamDecl& param : fn.params) {
+                add_semantic_token(tokens, param.location, param.name, 7, 1);
+                collect_type_tokens(param.type_ref, tokens);
+            }
+            collect_type_tokens(fn.return_type_ref, tokens);
+            collect_stmt_tokens(fn.statements, tokens);
+        }
     }
 
     std::string formatting_result(const Json* params) const {

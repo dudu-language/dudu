@@ -247,6 +247,11 @@ Useful modifiers:
 This is how Dudu gets real coloring for args, variables, members, classes, and
 native symbols.
 
+Status: initial full-document LSP semantic tokens are implemented from the
+parsed AST for Dudu declarations, parameters, fields, locals, types, literals,
+calls, and member expressions. Native-symbol semantic coloring still needs to
+come from the resolved native header metadata layer.
+
 ## LSP Implications
 
 The AST should power:

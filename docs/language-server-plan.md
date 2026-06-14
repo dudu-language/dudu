@@ -190,6 +190,10 @@ Hover includes Dudu declarations plus visible typed locals and simple inferred
 locals. Dudu declaration hover also includes contiguous source comments
 immediately above the declaration.
 
+Initial full-document semantic tokens are also implemented for Dudu AST nodes,
+covering declarations, parameters, fields, locals, types, literals, calls, and
+member expressions.
+
 ### Milestone 3: Completion And Signature Help
 
 - `textDocument/completion`
