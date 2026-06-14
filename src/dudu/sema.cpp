@@ -562,6 +562,24 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
     return infer_expr(scope, expr.text, location);
 }
 
+std::string infer_constructor_call_ast(const FunctionScope& scope, const Expr& expr,
+                                       const std::string& callee, const SourceLocation* location) {
+    const std::vector<std::string> args = expr_texts(expr.children);
+    if (const auto klass = scope.symbols.classes.find(resolve_alias(scope.symbols, callee));
+        klass != scope.symbols.classes.end()) {
+        check_constructor_args(
+            scope, *klass->second, args, location, infer_expr,
+            [&](const std::string& expected, const std::string& value, const std::string& got) {
+                return can_assign_expr(scope, expected, value, got);
+            });
+        return callee;
+    }
+    for (const Expr& arg : expr.children) {
+        (void)infer_expr_ast(scope, arg, location);
+    }
+    return callee;
+}
+
 std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                            const SourceLocation* location) {
     const SourceLocation* use_location =
@@ -750,14 +768,20 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
         return infer_expr(scope, expr.text, use_location);
     case ExprKind::Call: {
         const std::string callee = trim(expr.name);
-        if (known_type(scope.symbols, callee) ||
-            scope.symbols.classes.contains(resolve_alias(scope.symbols, callee))) {
-            return infer_expr(scope, expr.text, use_location);
-        }
         if (const auto fn = scope.symbols.function_signatures.find(callee);
             fn != scope.symbols.function_signatures.end()) {
             check_call_args_ast(scope, callee, fn->second, expr.children, use_location);
             return fn->second.return_type;
+        }
+        if (const auto signature = native_signature_for_call(
+                scope, callee, expr_texts(expr.children), use_location, infer_expr,
+                [&](const std::string& expected, const std::string& value, const std::string& got) {
+                    return can_assign_expr(scope, expected, value, got);
+                })) {
+            return signature->return_type;
+        }
+        if (known_template_constructor_type(scope, callee)) {
+            return infer_constructor_call_ast(scope, expr, callee, use_location);
         }
         if (const auto local = scope.locals.find(callee); local != scope.locals.end()) {
             FunctionSignature signature;

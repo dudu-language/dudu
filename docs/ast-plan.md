@@ -425,6 +425,12 @@ string argument text at its existing boundary, but `infer_expr_ast` no longer
 re-enters whole-expression parsing for template calls. Unary address-of and
 dereference expressions are parsed as `Unary` nodes, which keeps pointer
 assignment targets such as `*ptr = value` on the AST-backed assignment path.
+
+Ordinary constructor and explicit-cast call semantic inference now uses parsed
+runtime call arguments. Dotted constructor calls are only treated as constructors
+when the callee is a known scanned/imported type, so imported C functions such
+as `sdl.SDL_PollEvent(...)` do not get misclassified as type construction just
+because the name is dotted.
 Common dict initializer C++ emission lowers those parsed entries instead of
 splitting literal text again.
 
