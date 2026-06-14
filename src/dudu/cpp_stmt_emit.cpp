@@ -89,51 +89,6 @@ std::string cpp_binary_operator(const std::string& op) {
     return op;
 }
 
-size_t top_level_char(std::string_view text, char wanted) {
-    int bracket_depth = 0;
-    int paren_depth = 0;
-    int brace_depth = 0;
-    char quote = '\0';
-    bool escaped = false;
-    for (size_t i = 0; i < text.size(); ++i) {
-        const char c = text[i];
-        if (quote != '\0') {
-            if (escaped) {
-                escaped = false;
-            } else if (c == '\\') {
-                escaped = true;
-            } else if (c == quote) {
-                quote = '\0';
-            }
-            continue;
-        }
-        if (c == '"' || c == '\'') {
-            quote = c;
-            continue;
-        }
-        if (c == '[') {
-            ++bracket_depth;
-        } else if (c == ']') {
-            --bracket_depth;
-        } else if (c == '(') {
-            ++paren_depth;
-        } else if (c == ')') {
-            --paren_depth;
-        } else if (c == '{') {
-            ++brace_depth;
-        } else if (c == '}') {
-            --brace_depth;
-        } else if (c == wanted && bracket_depth == 0 && paren_depth == 0 && brace_depth == 0) {
-            return i;
-        }
-    }
-    return std::string_view::npos;
-}
-
-size_t top_level_colon(std::string_view text) {
-    return top_level_char(text, ':');
-}
-
 size_t top_level_equal(std::string_view text) {
     int bracket_depth = 0;
     int paren_depth = 0;
@@ -367,20 +322,19 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
             return "." + expr.name + " = " + lower_expr(expr.children.front(), aliases, locals);
         }
         break;
+    case ExprKind::Slice:
+        break;
     case ExprKind::DictLiteral:
         return "{" + join_lowered_exprs(expr.children, aliases, locals) + "}";
     case ExprKind::Index:
         if (expr.children.size() == 2) {
             std::string out = lower_expr(expr.children[0], aliases, locals);
-            const size_t colon = top_level_colon(expr.children[1].text);
-            if (colon != std::string_view::npos) {
-                const std::string start = trim_copy(expr.children[1].text.substr(0, colon));
-                const std::string end = trim_copy(expr.children[1].text.substr(colon + 1));
-                if (!start.empty() && !end.empty()) {
-                    return "std::span(&(" + out + ")[" + lower_expr(start, aliases, locals) +
-                           "], (" + lower_expr(end, aliases, locals) + ") - (" +
-                           lower_expr(start, aliases, locals) + "))";
-                }
+            if (expr.children[1].kind == ExprKind::Slice && expr.children[1].children.size() == 2 &&
+                !expr.children[1].children[0].text.empty() &&
+                !expr.children[1].children[1].text.empty()) {
+                const std::string start = lower_expr(expr.children[1].children[0], aliases, locals);
+                const std::string end = lower_expr(expr.children[1].children[1], aliases, locals);
+                return "std::span(&(" + out + ")[" + start + "], (" + end + ") - (" + start + "))";
             }
             if (expr.children[1].kind == ExprKind::TupleLiteral) {
                 for (const Expr& index : expr.children[1].children) {

@@ -713,6 +713,13 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
             return infer_expr_ast(scope, expr.children.front(), use_location);
         }
         return "auto";
+    case ExprKind::Slice:
+        for (const Expr& child : expr.children) {
+            if (!child.text.empty()) {
+                (void)infer_expr_ast(scope, child, use_location);
+            }
+        }
+        return "slice";
     case ExprKind::SetLiteral:
         return "set";
     case ExprKind::TupleLiteral: {

@@ -819,6 +819,8 @@ std::string_view expression_kind_name(ExprKind kind) {
         return "dict_entry";
     case ExprKind::NamedArg:
         return "named_arg";
+    case ExprKind::Slice:
+        return "slice";
     case ExprKind::SetLiteral:
         return "set_literal";
     case ExprKind::TupleLiteral:
@@ -983,6 +985,15 @@ Expr parse_expr_text(std::string_view text, SourceLocation location) {
     }
     if (starts_keyword(text, "lambda")) {
         return make_expr(ExprKind::Lambda, text, location);
+    }
+
+    const size_t slice_colon = find_top_level_colon(text);
+    if (slice_colon != std::string_view::npos) {
+        Expr expr = make_expr(ExprKind::Slice, text, location);
+        expr.children.push_back(parse_expr_text(text.substr(0, slice_colon), location));
+        expr.children.push_back(parse_expr_text(text.substr(slice_colon + 1),
+                                                advance_columns(location, slice_colon + 1)));
+        return expr;
     }
 
     const size_t named_arg_assign = find_top_level_assignment(text, false);

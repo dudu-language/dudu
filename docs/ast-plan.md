@@ -27,8 +27,8 @@ Already structured:
 - direct parser construction of statement nodes for function and method bodies
 - parsed `Stmt` bodies stored on functions and methods
 - initial expression shape capture for common names, literals, calls,
-  template calls, member/index access, unary/binary operators, conditionals,
-  and collection literals
+  template calls, member/index/slice access, unary/binary operators,
+  conditionals, and collection literals
 - initial type shape capture for names, qualified names, templates, pointers,
   references, wrappers, fixed arrays, and function-like type signatures
 - source range fields on statement, expression, and type nodes
@@ -439,9 +439,10 @@ paths and index expressions directly from `target_expr` and `value_expr`. Bare
 name assignment still owns the local-binding inference path.
 
 Local declaration initializer fallback now lowers from the parsed
-`value_expr`. Slice index expressions such as `values[1:4]` also emit from the
-parsed index node, preserving `span[T]` view lowering without requiring a raw
-whole-expression rewrite.
+`value_expr`. Slice index expressions such as `values[1:4]` parse the `1:4`
+range as a `Slice` expression node and emit from the parsed index node,
+preserving `span[T]` view lowering without requiring a raw whole-expression
+rewrite.
 
 `break` and `continue` statements now emit directly from their `StmtKind`
 instead of falling through the unknown-statement raw text path.

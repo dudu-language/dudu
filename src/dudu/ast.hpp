@@ -112,6 +112,7 @@ enum class ExprKind {
     DictLiteral,
     DictEntry,
     NamedArg,
+    Slice,
     SetLiteral,
     TupleLiteral,
     Lambda,

@@ -118,11 +118,40 @@ size_t index_count_from_expr(const Expr& index_expr) {
     return 1;
 }
 
+bool is_slice_expr(const Expr& expr) {
+    if (expr.kind == ExprKind::Slice) {
+        return true;
+    }
+    if (expr.kind == ExprKind::TupleLiteral) {
+        for (const Expr& child : expr.children) {
+            if (is_slice_expr(child)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool has_open_slice_bound(const Expr& expr) {
+    if (expr.kind == ExprKind::Slice) {
+        return expr.children.size() != 2 || expr.children[0].text.empty() ||
+               expr.children[1].text.empty();
+    }
+    if (expr.kind == ExprKind::TupleLiteral) {
+        for (const Expr& child : expr.children) {
+            if (has_open_slice_bound(child)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 std::string indexed_type_from_type_with_count(const Symbols& symbols,
                                               const SourceLocation& location,
-                                              const std::string& raw_type,
-                                              const std::string& index_expr,
-                                              const size_t index_count, const std::string& label) {
+                                              const std::string& raw_type, const size_t index_count,
+                                              const bool is_slice, const bool has_open_slice,
+                                              const std::string& label) {
     std::string type = resolve_alias(symbols, raw_type);
     if (foreign_indexable_type(type)) {
         return "auto";
@@ -146,14 +175,12 @@ std::string indexed_type_from_type_with_count(const Symbols& symbols,
         return trim(type.substr(5, type.size() - 6));
     }
     if (const std::vector<size_t> shape = explicit_array_shape(type); !shape.empty()) {
-        if (top_level_colon(index_expr) != std::string::npos) {
+        if (is_slice) {
             if (shape.size() != 1) {
                 throw CompileError(location,
                                    "array slicing requires one-dimensional fixed array: " + label);
             }
-            const size_t colon = top_level_colon(index_expr);
-            if (trim(index_expr.substr(0, colon)).empty() ||
-                trim(index_expr.substr(colon + 1)).empty()) {
+            if (has_open_slice) {
                 throw CompileError(location,
                                    "array slice requires explicit start and end: " + label);
             }
@@ -216,15 +243,20 @@ std::string indexed_type_from_type(const Symbols& symbols, const SourceLocation&
                                    const std::string& raw_type, const std::string& index_expr,
                                    const std::string& label) {
     const size_t index_count = index_expr.empty() ? 1 : split_top_level_args(index_expr).size();
-    return indexed_type_from_type_with_count(symbols, location, raw_type, index_expr, index_count,
-                                             label);
+    const size_t colon = top_level_colon(index_expr);
+    const bool has_slice = colon != std::string::npos;
+    const bool open_slice = has_slice && (trim(index_expr.substr(0, colon)).empty() ||
+                                          trim(index_expr.substr(colon + 1)).empty());
+    return indexed_type_from_type_with_count(symbols, location, raw_type, index_count, has_slice,
+                                             open_slice, label);
 }
 
 std::string indexed_type_from_type(const Symbols& symbols, const SourceLocation& location,
                                    const std::string& raw_type, const Expr& index_expr,
                                    const std::string& label) {
-    return indexed_type_from_type_with_count(symbols, location, raw_type, index_expr.text,
-                                             index_count_from_expr(index_expr), label);
+    return indexed_type_from_type_with_count(
+        symbols, location, raw_type, index_count_from_expr(index_expr), is_slice_expr(index_expr),
+        has_open_slice_bound(index_expr), label);
 }
 
 std::string iterable_value_type(const Symbols& symbols,
