@@ -923,6 +923,20 @@ void test_templated_pointer_cast_emission() {
            std::string::npos);
 }
 
+void test_offsetof_field_emission() {
+    const dudu::ModuleAst module =
+        dudu::parse_source("class Packet:\n"
+                           "    flags: u8\n"
+                           "\n"
+                           "FLAGS_OFFSET: usize = offsetof[Packet](flags)\n"
+                           "FLAGS_OFFSET_STR: usize = offsetof[Packet](\"flags\")\n",
+                           "offsetof_field.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+    const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find("FLAGS_OFFSET = offsetof(Packet, flags);") != std::string::npos);
+    assert(cpp.find("FLAGS_OFFSET_STR = offsetof(Packet, flags);") != std::string::npos);
+}
+
 } // namespace
 
 int main() {
@@ -953,6 +967,7 @@ int main() {
         test_image_filter_emission(root);
         test_pointer_member_emission(root);
         test_templated_pointer_cast_emission();
+        test_offsetof_field_emission();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;

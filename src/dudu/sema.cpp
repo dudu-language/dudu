@@ -270,6 +270,16 @@ std::string join_type_ref_texts(const std::vector<TypeRef>& types) {
     return out.str();
 }
 
+bool is_offsetof_field_expr(const Expr& expr) {
+    if (expr.kind == ExprKind::Name || expr.kind == ExprKind::StringLiteral) {
+        return true;
+    }
+    if (expr.kind == ExprKind::Member) {
+        return member_path_from_expr(expr).has_value();
+    }
+    return false;
+}
+
 std::string template_method_name(const Expr& expr, const std::string& callee_base,
                                  size_t method_dot) {
     std::ostringstream out;
@@ -623,6 +633,11 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
         if (location != nullptr && expr.children.size() != 1) {
             fail(*location,
                  "offsetof expects 1 field argument, got " + std::to_string(expr.children.size()));
+        }
+        if (location != nullptr && expr.children.size() == 1 &&
+            !is_offsetof_field_expr(expr.children.front())) {
+            fail(node_location(*location, expr.children.front()),
+                 "offsetof field argument must be a field name");
         }
         if (arg_count == 1 && location != nullptr) {
             if (!expr.template_type_args.empty()) {

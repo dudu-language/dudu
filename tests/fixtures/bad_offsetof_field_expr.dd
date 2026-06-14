@@ -1,0 +1,6 @@
+class Packet:
+    flags: u8
+
+
+def bad() -> usize:
+    return offsetof[Packet](flags + 1)

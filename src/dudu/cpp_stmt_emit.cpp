@@ -168,6 +168,31 @@ bool is_pointer_receiver_expr(const Expr& expr, const std::map<std::string, std:
     return false;
 }
 
+std::string unquoted_string_literal(std::string text) {
+    text = trim_copy(std::move(text));
+    if (text.size() >= 2 && ((text.front() == '"' && text.back() == '"') ||
+                             (text.front() == '\'' && text.back() == '\''))) {
+        return text.substr(1, text.size() - 2);
+    }
+    return text;
+}
+
+std::string lower_offsetof_field(const Expr& expr, const std::vector<std::string>& aliases,
+                                 const std::map<std::string, std::string>& locals) {
+    if (expr.kind == ExprKind::Name && !expr.name.empty()) {
+        return expr.name;
+    }
+    if (expr.kind == ExprKind::StringLiteral) {
+        return unquoted_string_literal(expr.text);
+    }
+    if (expr.kind == ExprKind::Member) {
+        if (const std::optional<std::string> path = member_path_from_expr(expr)) {
+            return *path;
+        }
+    }
+    return lower_expr(expr, aliases, locals);
+}
+
 std::optional<std::string>
 lower_pointer_cast_expr(const Expr& expr, const std::vector<std::string>& aliases,
                         const std::map<std::string, std::string>& locals) {
@@ -331,7 +356,8 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
             return expr.name + "(" + lowered_template_args + ")";
         }
         if (expr.name == "offsetof" && expr.children.size() == 1) {
-            return "offsetof(" + lowered_template_args + ", " + expr.children.front().text + ")";
+            return "offsetof(" + lowered_template_args + ", " +
+                   lower_offsetof_field(expr.children.front(), aliases, locals) + ")";
         }
         if ((expr.name == "list" || expr.name == "dict" || expr.name == "set") &&
             expr.children.empty()) {

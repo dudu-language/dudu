@@ -78,6 +78,9 @@ Already structured:
 - templated pointer casts such as `*const[i32](ptr)` validate parsed
   `TypeRef` arguments recursively and lower through the AST template-call path
   instead of falling into generic template-call emission
+- `offsetof[T](field)` validates the field designator through the parsed field
+  expression and lowers bare, dotted, and string field names structurally
+  instead of emitting raw child expression text
 - ordinary call semantic inference uses a callee lookup string reconstructed
   from the parsed callee expression where possible
 - template-call semantic inference and template method lookup use the parsed
