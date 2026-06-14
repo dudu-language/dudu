@@ -107,6 +107,8 @@ expect_fail bad_shift_bool --emit-cpp "cannot assign i32 to bool without an expl
 expect_fail bad_comparison_bool_order --emit-cpp "comparison < expects bool, got bool"
 expect_fail bad_comparison_mixed_width --emit-cpp "comparison < expects i32, got i64"
 expect_fail bad_logical_operand --emit-cpp "and expects bool, got i32"
+expect_fail bad_len_arity --emit-cpp "len expects 1 arguments, got 0"
+expect_fail bad_min_type --emit-cpp "min argument 2 expects i32, got bool"
 expect_fail bad_const_assignment --emit-cpp "cannot assign to constant: LIMIT"
 expect_fail bad_except_binding --emit-cpp "expected except binding as name: Type"
 expect_fail bad_finally --check "unsupported Python feature: exceptions"

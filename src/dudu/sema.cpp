@@ -579,6 +579,77 @@ std::string infer_constructor_call_ast(const FunctionScope& scope, const Expr& e
     return callee;
 }
 
+std::string infer_builtin_call_ast(const FunctionScope& scope, const Expr& expr,
+                                   const std::string& callee, const SourceLocation* location) {
+    auto check_arity = [&](size_t min, size_t max) {
+        if (location != nullptr && (expr.children.size() < min || expr.children.size() > max)) {
+            std::ostringstream message;
+            message << callee << " expects ";
+            if (min == max) {
+                message << min;
+            } else {
+                message << min << " to " << max;
+            }
+            message << " arguments, got " << expr.children.size();
+            fail(*location, message.str());
+        }
+    };
+
+    if (callee == "len") {
+        check_arity(1, 1);
+        for (const Expr& arg : expr.children) {
+            (void)infer_expr_ast(scope, arg, location);
+        }
+        return "usize";
+    }
+    if (callee == "range") {
+        check_arity(1, 3);
+        for (const Expr& arg : expr.children) {
+            (void)infer_expr_ast(scope, arg, location);
+        }
+        return "range";
+    }
+    if (callee == "min" || callee == "max") {
+        check_arity(2, 2);
+        std::string first;
+        for (size_t i = 0; i < expr.children.size(); ++i) {
+            const std::string got = infer_expr_ast(scope, expr.children[i], location);
+            if (i == 0) {
+                first = got;
+                continue;
+            }
+            if (location != nullptr && !can_assign_expr(scope, first, expr.children[i].text, got)) {
+                fail(*location, callee + " argument 2 expects " + first + ", got " + got);
+            }
+        }
+        return first.empty() ? "auto" : first;
+    }
+    if (callee == "align_up") {
+        check_arity(2, 2);
+        for (const Expr& arg : expr.children) {
+            (void)infer_expr_ast(scope, arg, location);
+        }
+        return "usize";
+    }
+    if (callee == "print") {
+        for (const Expr& arg : expr.children) {
+            (void)infer_expr_ast(scope, arg, location);
+        }
+        return "void";
+    }
+    if (is_deallocation_call(callee)) {
+        std::vector<std::string> types;
+        for (const Expr& arg : expr.children) {
+            types.push_back(infer_expr_ast(scope, arg, location));
+        }
+        if (location != nullptr) {
+            check_deallocation_args(*location, callee, types);
+        }
+        return "void";
+    }
+    return {};
+}
+
 std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                            const SourceLocation* location) {
     const SourceLocation* use_location =
@@ -793,6 +864,9 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                 check_call_args_ast(scope, callee, signature, expr.children, use_location);
                 return signature.return_type;
             }
+        }
+        if (is_builtin_call(callee)) {
+            return infer_builtin_call_ast(scope, expr, callee, use_location);
         }
         const size_t method_dot = callee.rfind('.');
         if (method_dot != std::string::npos && is_member_path(callee)) {

@@ -440,6 +440,11 @@ rediscovering named fields from raw argument strings.
 Common dict initializer C++ emission lowers those parsed entries instead of
 splitting literal text again.
 
+Built-in calls such as `len(...)`, `range(...)`, `min(...)`, `max(...)`,
+`align_up(...)`, `print(...)`, `delete(...)`, and `free(...)` now have an AST
+semantic inference path, including arity/type diagnostics for the checked
+built-ins.
+
 `range(...)` for-loop C++ emission now reads parsed call arguments from the
 iterable expression instead of parsing them back out of lowered C++ text.
 
