@@ -414,6 +414,10 @@ whole-expression rewrite.
 
 `break` and `continue` statements now emit directly from their `StmtKind`
 instead of falling through the unknown-statement raw text path.
+
+The old raw-text compound-assignment normalization fallback has been removed.
+Compound assignment is emitted only through the parsed `CompoundAssign` node;
+the statement catch-all is now limited to `Unknown` statements.
 Common dict initializer C++ emission lowers those parsed entries instead of
 splitting literal text again.
 

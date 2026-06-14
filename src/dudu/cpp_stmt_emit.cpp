@@ -328,20 +328,6 @@ std::string if_keyword_for_condition(const std::string& condition) {
     return is_build_only_condition(condition) ? "if constexpr" : "if";
 }
 
-std::string normalize_spaced_compound(std::string text) {
-    for (const std::pair<std::string_view, std::string_view> op :
-         {std::pair{" + =", " +="}, std::pair{" - =", " -="}, std::pair{" * =", " *="},
-          std::pair{" / =", " /="}, std::pair{" % =", " %="}, std::pair{" ^ =", " ^="},
-          std::pair{" & =", " &="}, std::pair{" | =", " |="}}) {
-        size_t pos = text.find(op.first);
-        while (pos != std::string::npos) {
-            text.replace(pos, op.first.size(), op.second);
-            pos = text.find(op.first, pos + op.second.size());
-        }
-    }
-    return text;
-}
-
 std::string unescape_cpp_string(std::string text) {
     std::string out;
     out.reserve(text.size());
@@ -562,7 +548,9 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         out << indent(depth) << lower_expr(stmt.expr, aliases, locals) << ";\n";
         return;
     }
-    out << indent(depth) << lower_expr(normalize_spaced_compound(text), aliases, locals) << ";\n";
+    if (stmt.kind == StmtKind::Unknown) {
+        out << indent(depth) << lower_expr(text, aliases, locals) << ";\n";
+    }
 }
 
 void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
