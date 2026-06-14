@@ -461,7 +461,63 @@ bool is_build_only_condition(const std::string& text) {
     return text.find("build.") != std::string::npos;
 }
 
-std::string if_keyword_for_condition(const std::string& condition) {
+bool is_build_value_expr(const Expr& expr);
+
+bool is_build_member_expr(const Expr& expr) {
+    return expr.kind == ExprKind::Member && expr.children.size() == 1 &&
+           expr.children.front().kind == ExprKind::Name && expr.children.front().name == "build";
+}
+
+bool is_build_only_condition(const Expr& expr) {
+    switch (expr.kind) {
+    case ExprKind::BoolLiteral:
+    case ExprKind::IntLiteral:
+    case ExprKind::FloatLiteral:
+    case ExprKind::StringLiteral:
+        return true;
+    case ExprKind::Member:
+        return is_build_member_expr(expr);
+    case ExprKind::Unary:
+        return expr.children.size() == 1 && expr.op == "not" &&
+               is_build_only_condition(expr.children.front());
+    case ExprKind::Binary:
+        if (expr.children.size() != 2) {
+            return false;
+        }
+        if (expr.op == "and" || expr.op == "or" || expr.op == "==" || expr.op == "!=" ||
+            expr.op == "<" || expr.op == "<=" || expr.op == ">" || expr.op == ">=") {
+            return is_build_value_expr(expr.children[0]) && is_build_value_expr(expr.children[1]);
+        }
+        return false;
+    case ExprKind::Unknown:
+        return is_build_only_condition(expr.text);
+    default:
+        return false;
+    }
+}
+
+bool is_build_value_expr(const Expr& expr) {
+    switch (expr.kind) {
+    case ExprKind::BoolLiteral:
+    case ExprKind::IntLiteral:
+    case ExprKind::FloatLiteral:
+    case ExprKind::StringLiteral:
+        return true;
+    case ExprKind::Member:
+        return is_build_member_expr(expr);
+    case ExprKind::Unary:
+        return expr.children.size() == 1 && expr.op == "not" &&
+               is_build_value_expr(expr.children.front());
+    case ExprKind::Binary:
+        return is_build_only_condition(expr);
+    case ExprKind::Unknown:
+        return is_build_only_condition(expr.text);
+    default:
+        return false;
+    }
+}
+
+std::string if_keyword_for_condition(const Expr& condition) {
     return is_build_only_condition(condition) ? "if constexpr" : "if";
 }
 
@@ -696,16 +752,14 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                     const std::map<std::string, std::string>& function_returns) {
     emit_source_comment(out, stmt, depth);
     if (stmt.kind == StmtKind::If) {
-        const std::string& condition = stmt.condition;
-        out << indent(depth) << if_keyword_for_condition(condition) << " ("
+        out << indent(depth) << if_keyword_for_condition(stmt.condition_expr) << " ("
             << lower_expr(stmt.condition_expr, aliases, locals) << ") {\n";
         emit_block(out, stmt.children, depth + 1, aliases, locals, return_type, function_returns);
         out << indent(depth) << "}\n";
         return;
     }
     if (stmt.kind == StmtKind::Elif) {
-        const std::string& condition = stmt.condition;
-        out << indent(depth) << "else " << if_keyword_for_condition(condition) << " ("
+        out << indent(depth) << "else " << if_keyword_for_condition(stmt.condition_expr) << " ("
             << lower_expr(stmt.condition_expr, aliases, locals) << ") {\n";
         emit_block(out, stmt.children, depth + 1, aliases, locals, return_type, function_returns);
         out << indent(depth) << "}\n";

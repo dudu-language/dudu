@@ -54,6 +54,8 @@ Already structured:
   nodes instead of raw value text
 - generated local C++ type inference has an AST path for names and calls,
   leaving raw text as a fallback for unlifted expression shapes
+- C++ `if constexpr` detection for build-only conditions uses parsed condition
+  expressions, with raw text scanning only as an unknown-expression fallback
 
 Still too string-based:
 
