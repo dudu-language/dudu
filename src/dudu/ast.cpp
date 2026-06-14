@@ -641,6 +641,21 @@ void fill_assert(Stmt& stmt, std::string_view text, SourceLocation location,
 }
 } // namespace
 
+std::vector<std::string> tuple_binding_names(const Expr& expr) {
+    if (expr.kind != ExprKind::TupleLiteral) {
+        return {};
+    }
+    std::vector<std::string> names;
+    names.reserve(expr.children.size());
+    for (const Expr& child : expr.children) {
+        if (child.kind != ExprKind::Name || child.name.empty()) {
+            return {};
+        }
+        names.push_back(child.name);
+    }
+    return names;
+}
+
 std::string bound_import_name(const ImportDecl& import) {
     if (!import.alias.empty()) {
         return import.alias;

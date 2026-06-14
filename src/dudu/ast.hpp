@@ -273,6 +273,7 @@ std::string_view type_kind_name(TypeKind kind);
 StmtKind classify_statement_text(std::string_view text);
 Expr parse_expr_text(std::string_view text, SourceLocation location = {});
 TypeRef parse_type_text(std::string_view text, SourceLocation location = {});
+std::vector<std::string> tuple_binding_names(const Expr& expr);
 Stmt statement_from_text(std::string text, SourceLocation location, SourceRange range,
                          std::vector<Stmt> children = {});
 

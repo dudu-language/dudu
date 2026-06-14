@@ -681,21 +681,6 @@ std::string shape_text(const std::vector<size_t>& shape) {
     return out.str();
 }
 
-std::vector<std::string> tuple_binding_names(const Expr& expr) {
-    if (expr.kind != ExprKind::TupleLiteral) {
-        return {};
-    }
-    std::vector<std::string> names;
-    names.reserve(expr.children.size());
-    for (const Expr& child : expr.children) {
-        if (child.kind != ExprKind::Name || child.name.empty()) {
-            return {};
-        }
-        names.push_back(child.name);
-    }
-    return names;
-}
-
 void check_condition_type(const FunctionScope& scope, const Stmt& stmt, std::string expr) {
     expr = trim(std::move(expr));
     if (!expr.empty() && expr.back() == ':') {

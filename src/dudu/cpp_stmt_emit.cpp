@@ -37,21 +37,6 @@ std::string join_lowered_exprs(const std::vector<Expr>& exprs,
     return out.str();
 }
 
-std::vector<std::string> tuple_binding_names(const Expr& expr) {
-    if (expr.kind != ExprKind::TupleLiteral) {
-        return {};
-    }
-    std::vector<std::string> names;
-    names.reserve(expr.children.size());
-    for (const Expr& child : expr.children) {
-        if (child.kind != ExprKind::Name || child.name.empty()) {
-            return {};
-        }
-        names.push_back(child.name);
-    }
-    return names;
-}
-
 std::string join_names(const std::vector<std::string>& names) {
     std::ostringstream out;
     for (size_t i = 0; i < names.size(); ++i) {
