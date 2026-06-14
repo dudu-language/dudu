@@ -578,7 +578,7 @@ class LanguageServer {
             merge_native_header_types(module,
                                       {.config = config, .source_dir = doc.path.parent_path()});
             analyze_module(module, {.check_bodies = true});
-            return {};
+            return lint_diagnostics(doc);
         } catch (const CompileError& error) {
             return {{.location = error.location(),
                      .message = error.what(),
@@ -607,6 +607,46 @@ class LanguageServer {
             return "dudu/parser";
         }
         return "dudu/sema";
+    }
+
+    static std::vector<Diagnostic> lint_diagnostics(const Document& doc) {
+        std::vector<Diagnostic> out;
+        std::istringstream in(doc.text);
+        std::string line;
+        int row = 0;
+        std::optional<int> returned_indent;
+        while (std::getline(in, line)) {
+            ++row;
+            const std::string trimmed = trim_copy(line);
+            if (trimmed.empty() || starts_with(trimmed, "#")) {
+                continue;
+            }
+            const int indent = leading_spaces(line);
+            if (returned_indent && indent >= *returned_indent) {
+                out.push_back({.location = {.file = doc.path, .line = row, .column = indent + 1},
+                               .message = "unreachable statement after return",
+                               .source = "dudu/lint",
+                               .severity = 2});
+                continue;
+            }
+            if (returned_indent && indent < *returned_indent) {
+                returned_indent = std::nullopt;
+            }
+            if (starts_with(trimmed, "return") &&
+                (trimmed.size() == 6 ||
+                 std::isspace(static_cast<unsigned char>(trimmed[6])) != 0)) {
+                returned_indent = indent;
+            }
+        }
+        return out;
+    }
+
+    static int leading_spaces(const std::string& line) {
+        int out = 0;
+        while (out < static_cast<int>(line.size()) && line[static_cast<size_t>(out)] == ' ') {
+            ++out;
+        }
+        return out;
     }
 
     void publish_diagnostics(const std::string& uri) {
@@ -960,6 +1000,9 @@ class LanguageServer {
             actions.push_back(action);
         }
         for (const std::string& action : native_config_actions(*doc, params)) {
+            actions.push_back(action);
+        }
+        for (const std::string& action : lint_actions(*doc, params)) {
             actions.push_back(action);
         }
         std::ostringstream out;
@@ -1522,6 +1565,53 @@ class LanguageServer {
             }
         }
         return out;
+    }
+
+    std::vector<std::string> lint_actions(const Document& doc, const Json* params) const {
+        std::vector<std::string> out;
+        const Json* context = params == nullptr ? nullptr : params->get("context");
+        const Json* diagnostics = context == nullptr ? nullptr : context->get("diagnostics");
+        const JsonArray* array = diagnostics == nullptr ? nullptr : diagnostics->array();
+        if (array == nullptr) {
+            return out;
+        }
+        std::set<int> seen_lines;
+        for (const Json& diagnostic : *array) {
+            if (string_value(diagnostic.get("source")) != "dudu/lint" ||
+                string_value(diagnostic.get("message")) != "unreachable statement after return") {
+                continue;
+            }
+            const Json* range = diagnostic.get("range");
+            const Json* start = range == nullptr ? nullptr : range->get("start");
+            const int line = int_value(start == nullptr ? nullptr : start->get("line"), -1);
+            if (line < 0 || !seen_lines.insert(line).second) {
+                continue;
+            }
+            if (const std::optional<std::string> action = remove_line_action(doc, line)) {
+                out.push_back(*action);
+            }
+        }
+        return out;
+    }
+
+    static std::optional<std::string> remove_line_action(const Document& doc, int line) {
+        std::vector<std::string> lines;
+        std::istringstream in(doc.text);
+        std::string text_line;
+        while (std::getline(in, text_line)) {
+            lines.push_back(text_line);
+        }
+        if (line < 0 || line >= static_cast<int>(lines.size())) {
+            return std::nullopt;
+        }
+        const bool has_next = line + 1 <= line_count(doc.text);
+        const std::string range =
+            has_next ? range_json(line, 0, line + 1, 0)
+                     : range_json(line, 0, line,
+                                  static_cast<int>(lines[static_cast<size_t>(line)].size()));
+        return "{\"title\":\"Remove unreachable statement\",\"kind\":\"quickfix\","
+               "\"edit\":{\"changes\":{\"" +
+               json_escape(doc.uri) + "\":[{\"range\":" + range + ",\"newText\":\"\"}]}}}";
     }
 
     std::optional<std::string> pkg_config_action(const Document& doc,

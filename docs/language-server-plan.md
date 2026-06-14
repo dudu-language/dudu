@@ -235,7 +235,8 @@ Missing-import quick fixes are implemented for unambiguous Dudu workspace
 symbols and insert a `from module import symbol` edit. Native config quick fixes
 are implemented for known missing native headers that map cleanly to
 `pkg-config` packages such as `raylib`, `sqlite3`, `sdl3`, `glfw3`, and
-`vulkan`.
+`vulkan`. Initial lint diagnostics warn on unreachable statements after
+`return`, with a quick fix that removes the unreachable line.
 
 ## Tests
 
@@ -271,6 +272,7 @@ Native config quick fixes are covered with a fixture `dudu.toml` edit for a
 known missing native header package.
 Workspace rename is covered across an open definition file and an unopened
 sibling use file.
+Unreachable-statement lint diagnostics and remove-line quick fixes are covered.
 
 ## Non-Goals
 

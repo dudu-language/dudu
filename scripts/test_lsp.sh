@@ -41,6 +41,7 @@ native_pkg_uri = f"file://{repo_root}/tests/fixtures/lsp_pkg_project/main.dd"
 native_pkg_config_uri = f"file://{repo_root}/tests/fixtures/lsp_pkg_project/dudu.toml"
 rename_uri = f"file://{repo_root}/tests/fixtures/lsp_rename_main.dd"
 rename_user_uri = f"file://{repo_root}/tests/fixtures/lsp_rename_user.dd"
+lint_uri = "file:///tmp/dudu_lsp_lint.dd"
 source = "\n".join(
     [
         "class Player:",
@@ -95,6 +96,53 @@ messages = [
                     "version": 1,
                     "text": source,
                 }
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "method": "textDocument/didOpen",
+            "params": {
+                "textDocument": {
+                    "uri": lint_uri,
+                    "languageId": "dudu",
+                    "version": 1,
+                    "text": "\n".join(
+                        [
+                            "def main() -> i32:",
+                            "    return 0",
+                            "    value: i32 = 1",
+                            "",
+                        ]
+                    ),
+                }
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 29,
+            "method": "textDocument/codeAction",
+            "params": {
+                "textDocument": {"uri": lint_uri},
+                "range": {
+                    "start": {"line": 2, "character": 4},
+                    "end": {"line": 2, "character": 18},
+                },
+                "context": {
+                    "diagnostics": [
+                        {
+                            "range": {
+                                "start": {"line": 2, "character": 4},
+                                "end": {"line": 2, "character": 5},
+                            },
+                            "source": "dudu/lint",
+                            "message": "unreachable statement after return",
+                        }
+                    ]
+                },
             },
         }
     ),
@@ -498,6 +546,17 @@ assert missing_native_diag["source"] == "dudu/native-header"
 assert "could not scan native header" in missing_native_diag["message"]
 assert "hint: add the header directory" in missing_native_diag["message"]
 
+lint_diagnostics = next(
+    item
+    for item in responses
+    if item.get("method") == "textDocument/publishDiagnostics" and item["params"]["uri"] == lint_uri
+)
+lint_diag = lint_diagnostics["params"]["diagnostics"][0]
+assert lint_diag["source"] == "dudu/lint"
+assert lint_diag["severity"] == 2
+assert lint_diag["message"] == "unreachable statement after return"
+assert lint_diag["range"]["start"]["line"] == 2
+
 symbols = next(item for item in responses if item.get("id") == 2)
 symbol_names = [item["name"] for item in symbols["result"]]
 assert "Player" in symbol_names
@@ -651,6 +710,16 @@ assert any(
     and edit["newText"] == "renamed_target"
     for edit in workspace_rename_user_edits
 )
+
+lint_actions = next(item for item in responses if item.get("id") == 29)
+lint_fix = next(
+    item for item in lint_actions["result"] if item["title"] == "Remove unreachable statement"
+)
+lint_edit = lint_fix["edit"]["changes"][lint_uri][0]
+assert lint_fix["kind"] == "quickfix"
+assert lint_edit["range"]["start"]["line"] == 2
+assert lint_edit["range"]["end"]["line"] == 3
+assert lint_edit["newText"] == ""
 
 workspace_references = next(item for item in responses if item.get("id") == 18)
 workspace_reference_uris = {item["uri"] for item in workspace_references["result"]}
