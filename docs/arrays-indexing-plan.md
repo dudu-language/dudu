@@ -279,8 +279,9 @@ Dudu syntax to CPU views, GPU buffer views, lazy expressions, kernel launches,
 or backend calls without the core language embedding CUDA/Vulkan/OpenCL logic.
 
 Status: Dudu-native `@operator("[]")` methods are recognized by indexing
-semantics for read expressions. Indexed assignment hooks and member-path
-indexing such as `self.values[i]` still need structured AST-backed lowering.
+semantics for read expressions, including index argument type checking. Indexed
+assignment hooks and member-path indexing such as `self.values[i]` still need
+structured AST-backed lowering.
 
 This also applies to imported C++ libraries if native header awareness can see
 or adapt the relevant operators:

@@ -303,6 +303,13 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
         const std::string name = trim(expr.substr(0, index));
         if (is_plain_identifier(name)) {
             const std::string index_expr = expr.substr(index + 1, expr.size() - index - 2);
+            if (const auto local = scope.locals.find(name); local != scope.locals.end()) {
+                if (const auto signature =
+                        dudu_operator_signature(scope.symbols, "[]", local->second)) {
+                    check_call_args(scope, name + "[]", *signature,
+                                    split_top_level_args(index_expr), location);
+                }
+            }
             return indexed_value_type(scope.symbols, scope.locals, *location, name, index_expr,
                                       "indexed access to unknown local: ");
         }

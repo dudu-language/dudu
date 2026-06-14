@@ -1,0 +1,11 @@
+class Tensor2:
+    offset: i32
+
+    @operator("[]")
+    def at(self, index: i32) -> i32:
+        return self.offset + index
+
+
+def main() -> i32:
+    tensor = Tensor2(13)
+    return tensor[True]
