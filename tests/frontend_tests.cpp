@@ -302,6 +302,22 @@ void test_ast_constructor_assignment_compatibility() {
     dudu::analyze_module(module, {.check_bodies = true});
 }
 
+void test_ast_index_receiver_type_inference() {
+    const dudu::ModuleAst module = dudu::parse_source("def make_values() -> list[i32]:\n"
+                                                      "    return [1, 2]\n"
+                                                      "\n"
+                                                      "def make_matrix() -> array[i32][2, 2]:\n"
+                                                      "    matrix: array[i32] = [[1, 2], [3, 4]]\n"
+                                                      "    return matrix\n"
+                                                      "\n"
+                                                      "def main() -> i32:\n"
+                                                      "    first: i32 = make_values()[0]\n"
+                                                      "    second: i32 = make_matrix()[1][0]\n"
+                                                      "    return first + second\n",
+                                                      "ast_index_receiver.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+}
+
 void test_statement_ast_shape() {
     const dudu::ModuleAst module = dudu::parse_source("def main() -> i32:\n"
                                                       "    total: i32 = 0\n"
@@ -1037,6 +1053,7 @@ int main() {
         test_emitted_local_expression_type_inference();
         test_ast_assignment_display_types();
         test_ast_constructor_assignment_compatibility();
+        test_ast_index_receiver_type_inference();
         test_statement_ast_shape();
         test_expression_ast_shape();
         test_type_ast_shape();

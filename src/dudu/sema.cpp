@@ -1049,6 +1049,12 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                                                   expr.children[1], *receiver_path);
                 }
             }
+            const std::string receiver_type = infer_expr_ast(scope, receiver, use_location);
+            if (!receiver_type.empty()) {
+                return indexed_type_from_type(
+                    scope.symbols, index_location, receiver_type, expr.children[1],
+                    receiver.text.empty() ? "indexed expression" : receiver.text);
+            }
         }
         return infer_expr(scope, expr.text, use_location);
     case ExprKind::Conditional:
