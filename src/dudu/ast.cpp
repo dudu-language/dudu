@@ -346,6 +346,47 @@ bool has_top_level_colon(std::string_view text) {
     return false;
 }
 
+size_t find_top_level_colon(std::string_view text) {
+    int bracket_depth = 0;
+    int paren_depth = 0;
+    int brace_depth = 0;
+    char quote = '\0';
+    bool escaped = false;
+    for (size_t i = 0; i < text.size(); ++i) {
+        const char c = text[i];
+        if (quote != '\0') {
+            if (escaped) {
+                escaped = false;
+            } else if (c == '\\') {
+                escaped = true;
+            } else if (c == quote) {
+                quote = '\0';
+            }
+            continue;
+        }
+        if (c == '"' || c == '\'') {
+            quote = c;
+            continue;
+        }
+        if (c == '[') {
+            ++bracket_depth;
+        } else if (c == ']') {
+            --bracket_depth;
+        } else if (c == '(') {
+            ++paren_depth;
+        } else if (c == ')') {
+            --paren_depth;
+        } else if (c == '{') {
+            ++brace_depth;
+        } else if (c == '}') {
+            --brace_depth;
+        } else if (bracket_depth == 0 && paren_depth == 0 && brace_depth == 0 && c == ':') {
+            return i;
+        }
+    }
+    return std::string_view::npos;
+}
+
 size_t find_top_level_member_dot(std::string_view text) {
     int bracket_depth = 0;
     int paren_depth = 0;
@@ -448,6 +489,27 @@ std::vector<Expr> parse_expr_list(std::string_view text, SourceLocation location
         if (!part.text.empty()) {
             out.push_back(parse_expr_text(part.text, advance_columns(location, part.offset)));
         }
+    }
+    return out;
+}
+
+std::vector<Expr> parse_dict_entries(std::string_view text, SourceLocation location) {
+    std::vector<Expr> out;
+    for (const CommaPart& part : split_top_level_comma_parts(text)) {
+        if (part.text.empty()) {
+            continue;
+        }
+        Expr entry =
+            make_expr(ExprKind::DictEntry, part.text, advance_columns(location, part.offset));
+        const size_t colon = find_top_level_colon(part.text);
+        if (colon == std::string_view::npos) {
+            entry.children.push_back(parse_expr_text(part.text, entry.location));
+        } else {
+            entry.children.push_back(parse_expr_text(part.text.substr(0, colon), entry.location));
+            entry.children.push_back(parse_expr_text(part.text.substr(colon + 1),
+                                                     advance_columns(entry.location, colon + 1)));
+        }
+        out.push_back(std::move(entry));
     }
     return out;
 }
@@ -750,6 +812,8 @@ std::string_view expression_kind_name(ExprKind kind) {
         return "list_literal";
     case ExprKind::DictLiteral:
         return "dict_literal";
+    case ExprKind::DictEntry:
+        return "dict_entry";
     case ExprKind::SetLiteral:
         return "set_literal";
     case ExprKind::TupleLiteral:
@@ -890,11 +954,12 @@ Expr parse_expr_text(std::string_view text, SourceLocation location) {
         return expr;
     }
     if (enclosed_by_outer_pair(text, '{', '}')) {
+        const std::string_view body = text.substr(1, text.size() - 2);
         Expr expr =
-            make_expr(has_top_level_colon(text.substr(1, text.size() - 2)) ? ExprKind::DictLiteral
-                                                                           : ExprKind::SetLiteral,
+            make_expr(has_top_level_colon(body) ? ExprKind::DictLiteral : ExprKind::SetLiteral,
                       text, location);
-        expr.children = parse_expr_list(text.substr(1, text.size() - 2), location);
+        expr.children = expr.kind == ExprKind::DictLiteral ? parse_dict_entries(body, location)
+                                                           : parse_expr_list(body, location);
         return expr;
     }
     if ((text.front() == '"' && text.back() == '"') ||

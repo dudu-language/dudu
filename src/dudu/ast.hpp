@@ -110,6 +110,7 @@ enum class ExprKind {
     Index,
     ListLiteral,
     DictLiteral,
+    DictEntry,
     SetLiteral,
     TupleLiteral,
     Lambda,

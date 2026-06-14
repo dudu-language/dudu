@@ -438,6 +438,8 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
         return "list";
     case ExprKind::DictLiteral:
         return "dict";
+    case ExprKind::DictEntry:
+        return "auto";
     case ExprKind::SetLiteral:
         return "set";
     case ExprKind::TupleLiteral: {

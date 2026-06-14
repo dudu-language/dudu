@@ -392,6 +392,10 @@ comma splitting and substring extraction.
 Typed `for` loop binding C++ emission now lowers the binding type through the
 parsed `TypeRef`.
 
+Dict literals now parse key/value pairs as `DictEntry` expression nodes.
+Common dict initializer C++ emission lowers those parsed entries instead of
+splitting literal text again.
+
 Bare comma expressions now parse as tuple literals, including Python-style
 multi-value returns. The shared AST comma splitter is quote-aware so commas
 inside string literals do not create phantom tuple elements.

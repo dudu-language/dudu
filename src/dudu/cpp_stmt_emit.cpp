@@ -117,12 +117,19 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
                               aliases, locals);
         }
         break;
+    case ExprKind::DictEntry:
+        if (expr.children.size() == 2) {
+            return "{" + lower_expr(expr.children[0], aliases, locals) + ", " +
+                   lower_expr(expr.children[1], aliases, locals) + "}";
+        }
+        break;
+    case ExprKind::DictLiteral:
+        return "{" + join_lowered_exprs(expr.children, aliases, locals) + "}";
     case ExprKind::Index:
         break;
     case ExprKind::ListLiteral:
     case ExprKind::TupleLiteral:
     case ExprKind::SetLiteral:
-    case ExprKind::DictLiteral:
     case ExprKind::Lambda:
     case ExprKind::TemplateCall:
         break;
@@ -132,43 +139,9 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
     return lower_expr(expr.text, aliases, locals);
 }
 
-size_t find_top_level_colon(const std::string& text) {
-    int depth = 0;
-    char quote = '\0';
-    bool escaped = false;
-    for (size_t i = 0; i < text.size(); ++i) {
-        const char c = text[i];
-        if (quote != '\0') {
-            if (escaped) {
-                escaped = false;
-            } else if (c == '\\') {
-                escaped = true;
-            } else if (c == quote) {
-                quote = '\0';
-            }
-            continue;
-        }
-        if (c == '"' || c == '\'') {
-            quote = c;
-            continue;
-        }
-        if (c == '(' || c == '[' || c == '{') {
-            ++depth;
-        } else if (c == ')' || c == ']' || c == '}') {
-            --depth;
-        } else if (c == ':' && depth == 0) {
-            return i;
-        }
-    }
-    return std::string::npos;
-}
-
 bool is_identifier_char(char c) {
     return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_';
 }
-
-std::string lower_literal_value(const std::string& value, const std::vector<std::string>& aliases,
-                                const std::map<std::string, std::string>& locals);
 
 std::string lower_array_literal(const Expr& expr, const std::vector<std::string>& aliases,
                                 const std::map<std::string, std::string>& locals) {
@@ -185,48 +158,6 @@ std::string lower_array_literal(const Expr& expr, const std::vector<std::string>
     }
     out << "}";
     return out.str();
-}
-
-std::string lower_dict_literal_body(const std::string& value,
-                                    const std::vector<std::string>& aliases,
-                                    const std::map<std::string, std::string>& locals) {
-    const std::string body = value.substr(1, value.size() - 2);
-    std::ostringstream out;
-    const std::vector<std::string> entries = split_top_level_args(body);
-    for (size_t i = 0; i < entries.size(); ++i) {
-        const size_t colon = find_top_level_colon(entries[i]);
-        if (colon == std::string::npos) {
-            continue;
-        }
-        if (i > 0) {
-            out << ", ";
-        }
-        out << "{" << lower_expr(entries[i].substr(0, colon), aliases, locals) << ", ";
-        out << lower_literal_value(entries[i].substr(colon + 1), aliases, locals) << "}";
-    }
-    return out.str();
-}
-
-bool is_dict_literal_value(std::string value) {
-    value = trim_copy(std::move(value));
-    if (!starts_with(value, "{") || !ends_with(value, "}")) {
-        return false;
-    }
-    for (const std::string& entry : split_top_level_args(value.substr(1, value.size() - 2))) {
-        if (find_top_level_colon(entry) != std::string::npos) {
-            return true;
-        }
-    }
-    return false;
-}
-
-std::string lower_literal_value(const std::string& value, const std::vector<std::string>& aliases,
-                                const std::map<std::string, std::string>& locals) {
-    const std::string trimmed = trim_copy(value);
-    if (is_dict_literal_value(trimmed)) {
-        return "{" + lower_dict_literal_body(trimmed, aliases, locals) + "}";
-    }
-    return lower_expr(trimmed, aliases, locals);
 }
 
 bool is_build_only_condition(const std::string& text) {
@@ -447,9 +378,10 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                        stmt.value_expr.kind == ExprKind::ListLiteral) {
                 out << " = {" << join_lowered_exprs(stmt.value_expr.children, aliases, locals)
                     << "}";
-            } else if (starts_with(type, "dict[") && starts_with(value, "{") &&
-                       ends_with(value, "}")) {
-                out << " = {" << lower_dict_literal_body(value, aliases, locals) << '}';
+            } else if (starts_with(type, "dict[") &&
+                       stmt.value_expr.kind == ExprKind::DictLiteral) {
+                out << " = {" << join_lowered_exprs(stmt.value_expr.children, aliases, locals)
+                    << "}";
             } else if (starts_with(type, "set[") && stmt.value_expr.kind == ExprKind::SetLiteral) {
                 out << " = {" << join_lowered_exprs(stmt.value_expr.children, aliases, locals)
                     << "}";
