@@ -356,6 +356,11 @@ Except clauses now store structured catch binding and catch type fields.
 Semantic checks and C++ emission no longer parse catch headers from raw
 statement text.
 
+Simple assignment handling now recognizes fresh local bindings and tuple
+destructuring from parsed target expressions. C++ emission uses parsed
+assignment value expressions for those paths instead of lowering raw right-hand
+side text.
+
 Bare comma expressions now parse as tuple literals, including Python-style
 multi-value returns. The shared AST comma splitter is quote-aware so commas
 inside string literals do not create phantom tuple elements.

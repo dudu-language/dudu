@@ -37,6 +37,32 @@ std::string join_lowered_exprs(const std::vector<Expr>& exprs,
     return out.str();
 }
 
+std::vector<std::string> tuple_binding_names(const Expr& expr) {
+    if (expr.kind != ExprKind::TupleLiteral) {
+        return {};
+    }
+    std::vector<std::string> names;
+    names.reserve(expr.children.size());
+    for (const Expr& child : expr.children) {
+        if (child.kind != ExprKind::Name || child.name.empty()) {
+            return {};
+        }
+        names.push_back(child.name);
+    }
+    return names;
+}
+
+std::string join_names(const std::vector<std::string>& names) {
+    std::ostringstream out;
+    for (size_t i = 0; i < names.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << names[i];
+    }
+    return out.str();
+}
+
 std::string cpp_binary_operator(const std::string& op) {
     if (op == "and") {
         return "&&";
@@ -457,15 +483,16 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         return;
     }
     if (stmt.kind == StmtKind::Assign) {
-        const std::string& lhs = stmt.target;
-        if (split_top_level_args(lhs).size() > 1) {
-            out << indent(depth) << "auto [" << lhs << "] = " << lower_cpp_expr(stmt.value, aliases)
-                << ";\n";
+        if (const std::vector<std::string> names = tuple_binding_names(stmt.target_expr);
+            !names.empty()) {
+            out << indent(depth) << "auto [" << join_names(names)
+                << "] = " << lower_expr(stmt.value_expr, aliases, locals) << ";\n";
             return;
         }
-        if (!lhs.empty() && lhs.find_first_of(" .[]+-*/%<>") == std::string::npos) {
+        if (stmt.target_expr.kind == ExprKind::Name && !stmt.target_expr.name.empty()) {
+            const std::string& lhs = stmt.target_expr.name;
             const std::string& raw_value = stmt.value;
-            const std::string value = lower_expr(raw_value, aliases, locals);
+            const std::string value = lower_expr(stmt.value_expr, aliases, locals);
             if (locals.contains(lhs)) {
                 out << indent(depth) << lhs << " = ";
                 if (starts_with(locals.at(lhs), "Option[") && raw_value == "None") {

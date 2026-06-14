@@ -681,6 +681,21 @@ std::string shape_text(const std::vector<size_t>& shape) {
     return out.str();
 }
 
+std::vector<std::string> tuple_binding_names(const Expr& expr) {
+    if (expr.kind != ExprKind::TupleLiteral) {
+        return {};
+    }
+    std::vector<std::string> names;
+    names.reserve(expr.children.size());
+    for (const Expr& child : expr.children) {
+        if (child.kind != ExprKind::Name || child.name.empty()) {
+            return {};
+        }
+        names.push_back(child.name);
+    }
+    return names;
+}
+
 void check_condition_type(const FunctionScope& scope, const Stmt& stmt, std::string expr) {
     expr = trim(std::move(expr));
     if (!expr.empty() && expr.back() == ':') {
@@ -902,8 +917,8 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
     }
     if (stmt.kind == StmtKind::Assign) {
         const std::string lhs = stmt.target;
-        if (split_top_level(lhs).size() > 1) {
-            const std::vector<std::string> names = split_top_level(lhs);
+        if (const std::vector<std::string> names = tuple_binding_names(stmt.target_expr);
+            !names.empty()) {
             const std::vector<std::string> types = tuple_types(
                 scope.symbols, infer_expr_ast(scope, stmt.value_expr,
                                               &node_location(stmt.location, stmt.value_expr)));
@@ -917,14 +932,19 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
             }
             return;
         }
-        if (lhs.find('.') == std::string::npos && !starts_with(lhs, "*") &&
-            lhs.find('[') == std::string::npos && !scope.locals.contains(lhs)) {
-            check_local_binding_name(stmt.location, lhs);
+        if (stmt.target_expr.kind == ExprKind::TupleLiteral) {
+            fail(node_location(stmt.location, stmt.target_expr),
+                 "tuple destructuring targets must be names");
+        }
+        if (stmt.target_expr.kind == ExprKind::Name &&
+            !scope.locals.contains(stmt.target_expr.name)) {
+            const std::string& name = stmt.target_expr.name;
+            check_local_binding_name(node_location(stmt.location, stmt.target_expr), name);
             const std::string inferred = infer_expr_ast(
                 scope, stmt.value_expr, &node_location(stmt.location, stmt.value_expr));
-            scope.locals[lhs] = inferred.empty() ? "auto" : inferred;
-            if (is_dudu_all_caps(lhs)) {
-                scope.constants.insert(lhs);
+            scope.locals[name] = inferred.empty() ? "auto" : inferred;
+            if (is_dudu_all_caps(name)) {
+                scope.constants.insert(name);
             }
             return;
         }
