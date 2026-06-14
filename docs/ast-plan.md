@@ -369,6 +369,9 @@ Top-level function signatures, generated C headers, class method signatures,
 class constants, and static fields now lower declared C++ types through parsed
 `TypeRef` nodes.
 
+Condition semantic checks now consume parsed statement condition expressions
+directly instead of accepting raw condition text and reparsing on mismatch.
+
 Bare comma expressions now parse as tuple literals, including Python-style
 multi-value returns. The shared AST comma splitter is quote-aware so commas
 inside string literals do not create phantom tuple elements.

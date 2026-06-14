@@ -681,15 +681,9 @@ std::string shape_text(const std::vector<size_t>& shape) {
     return out.str();
 }
 
-void check_condition_type(const FunctionScope& scope, const Stmt& stmt, std::string expr) {
-    expr = trim(std::move(expr));
-    if (!expr.empty() && expr.back() == ':') {
-        expr.pop_back();
-    }
+void check_condition_type(const FunctionScope& scope, const Stmt& stmt) {
     const SourceLocation& location = node_location(stmt.location, stmt.condition_expr);
-    const Expr condition_expr =
-        trim(stmt.condition) == expr ? stmt.condition_expr : parse_expr_text(expr, location);
-    const std::string got = infer_expr_ast(scope, condition_expr, &location);
+    const std::string got = infer_expr_ast(scope, stmt.condition_expr, &location);
     if (!got.empty() && got != "bool" && got != "auto") {
         if (const auto signature = dudu_operator_signature(scope.symbols, "bool", got);
             signature && signature->params.empty() && signature->return_type == "bool") {
@@ -763,7 +757,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
                  "runtime assert is not available in " + scope.target_mode +
                      " target mode; use debug_assert or a target-specific assert handler");
         }
-        check_condition_type(scope, stmt, stmt.condition);
+        check_condition_type(scope, stmt);
         if (!stmt.message.empty())
             (void)infer_expr_ast(scope, stmt.message_expr,
                                  &node_location(stmt.location, stmt.message_expr));
@@ -790,12 +784,12 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
         return;
     }
     if (stmt.kind == StmtKind::If) {
-        check_condition_type(scope, stmt, stmt.condition);
+        check_condition_type(scope, stmt);
         check_block(scope, stmt.children, return_type, loop_depth);
         return;
     }
     if (stmt.kind == StmtKind::Elif) {
-        check_condition_type(scope, stmt, stmt.condition);
+        check_condition_type(scope, stmt);
         check_block(scope, stmt.children, return_type, loop_depth);
         return;
     }
@@ -822,7 +816,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
         return;
     }
     if (stmt.kind == StmtKind::While) {
-        check_condition_type(scope, stmt, stmt.condition);
+        check_condition_type(scope, stmt);
         check_block(scope, stmt.children, return_type, loop_depth + 1);
         return;
     }
