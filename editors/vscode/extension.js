@@ -511,6 +511,9 @@ function completionKind(lspKind) {
 }
 
 function codeActionKind(kind) {
+  if (kind === "quickfix") {
+    return vscode.CodeActionKind.QuickFix;
+  }
   if (kind === "source.format") {
     return vscode.CodeActionKind.Source.append("format");
   }

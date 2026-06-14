@@ -1,0 +1,2 @@
+def missing_helper() -> i32:
+    return 11

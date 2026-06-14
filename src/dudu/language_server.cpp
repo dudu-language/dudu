@@ -946,15 +946,26 @@ class LanguageServer {
         if (doc == nullptr) {
             return "[]";
         }
-        std::ostringstream out;
-        out << "[{\"title\":\"Format document\",\"kind\":\"source.format\","
-               "\"command\":{\"title\":\"Format document\","
-               "\"command\":\"editor.action.formatDocument\"}}";
+        std::vector<std::string> actions;
+        actions.push_back("{\"title\":\"Format document\",\"kind\":\"source.format\","
+                          "\"command\":{\"title\":\"Format document\","
+                          "\"command\":\"editor.action.formatDocument\"}}");
         if (const std::optional<TextEdit> edit = organize_imports_edit(*doc)) {
-            out << ",{\"title\":\"Organize imports\",\"kind\":\"source.organizeImports\","
-                << "\"edit\":{\"changes\":{\"" << json_escape(doc->uri)
-                << "\":[{\"range\":" << edit->range << ",\"newText\":\""
-                << json_escape(edit->new_text) << "\"}]}}}";
+            actions.push_back("{\"title\":\"Organize imports\",\"kind\":\"source.organizeImports\","
+                              "\"edit\":{\"changes\":{\"" +
+                              json_escape(doc->uri) + "\":[{\"range\":" + edit->range +
+                              ",\"newText\":\"" + json_escape(edit->new_text) + "\"}]}}}");
+        }
+        for (const std::string& action : missing_import_actions(*doc, params)) {
+            actions.push_back(action);
+        }
+        std::ostringstream out;
+        out << "[";
+        for (size_t i = 0; i < actions.size(); ++i) {
+            if (i > 0) {
+                out << ",";
+            }
+            out << actions[i];
         }
         out << "]";
         return out.str();
@@ -1455,6 +1466,172 @@ class LanguageServer {
         }
         return TextEdit{.range = range_json(static_cast<int>(start), 0, static_cast<int>(end), 0),
                         .new_text = replacement.str()};
+    }
+
+    std::vector<std::string> missing_import_actions(const Document& doc, const Json* params) const {
+        std::vector<std::string> out;
+        const Json* context = params == nullptr ? nullptr : params->get("context");
+        const Json* diagnostics = context == nullptr ? nullptr : context->get("diagnostics");
+        const JsonArray* array = diagnostics == nullptr ? nullptr : diagnostics->array();
+        if (array == nullptr) {
+            return out;
+        }
+        std::set<std::string> seen;
+        for (const Json& diagnostic : *array) {
+            const std::string message = string_value(diagnostic.get("message"));
+            const std::optional<std::string> name = missing_identifier(message);
+            if (!name || !seen.insert(*name).second) {
+                continue;
+            }
+            const std::optional<std::string> action = missing_import_action(doc, *name);
+            if (action) {
+                out.push_back(*action);
+            }
+        }
+        return out;
+    }
+
+    std::optional<std::string> missing_import_action(const Document& doc,
+                                                     const std::string& name) const {
+        const std::map<std::string, Document> workspace = workspace_documents();
+        std::optional<Document> match_doc;
+        std::optional<Symbol> match_symbol;
+        for (const auto& [uri, candidate] : workspace) {
+            (void)uri;
+            if (same_path(candidate.path, doc.path)) {
+                continue;
+            }
+            for (const Symbol& symbol : symbols_for(candidate, false)) {
+                if (symbol.name != name || !importable_symbol_kind(symbol.kind)) {
+                    continue;
+                }
+                if (match_symbol) {
+                    return std::nullopt;
+                }
+                match_doc = candidate;
+                match_symbol = symbol;
+            }
+        }
+        if (!match_doc || !match_symbol) {
+            return std::nullopt;
+        }
+        const std::optional<std::string> module_path =
+            module_path_for_import(doc.path.parent_path(), match_doc->path);
+        if (!module_path || import_already_present(doc, *module_path, name)) {
+            return std::nullopt;
+        }
+        const int line = static_cast<int>(import_insertion_line(doc));
+        const std::string edit_text = "from " + *module_path + " import " + name + "\n";
+        return "{\"title\":\"Import " + json_escape(name) + " from " + json_escape(*module_path) +
+               "\",\"kind\":\"quickfix\",\"edit\":{\"changes\":{\"" + json_escape(doc.uri) +
+               "\":[{\"range\":" + range_json(line, 0, line, 0) + ",\"newText\":\"" +
+               json_escape(edit_text) + "\"}]}}}";
+    }
+
+    static std::optional<std::string> missing_identifier(const std::string& message) {
+        constexpr std::string_view prefix = "unknown identifier: ";
+        const size_t start = message.find(prefix);
+        if (start == std::string::npos) {
+            return std::nullopt;
+        }
+        std::string name = trim_copy(message.substr(start + prefix.size()));
+        const size_t end = name.find_first_not_of(
+            "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_");
+        if (end != std::string::npos) {
+            name = name.substr(0, end);
+        }
+        return valid_identifier(name) ? std::optional<std::string>{name} : std::nullopt;
+    }
+
+    static bool importable_symbol_kind(int kind) {
+        return kind == 5 || kind == 10 || kind == 12 || kind == 14 || kind == 23;
+    }
+
+    static size_t import_insertion_line(const Document& doc) {
+        std::istringstream in(doc.text);
+        std::vector<std::string> lines;
+        std::string line;
+        while (std::getline(in, line)) {
+            lines.push_back(line);
+        }
+        size_t current = 0;
+        while (current < lines.size() && trim_copy(lines[current]).empty()) {
+            ++current;
+        }
+        while (current < lines.size()) {
+            const std::string trimmed = trim_copy(lines[current]);
+            if (!(starts_with(trimmed, "import ") || starts_with(trimmed, "from "))) {
+                break;
+            }
+            ++current;
+        }
+        return current;
+    }
+
+    static bool import_already_present(const Document& doc, const std::string& module_path,
+                                       const std::string& name) {
+        std::istringstream in(doc.text);
+        std::string line;
+        while (std::getline(in, line)) {
+            const std::string trimmed = trim_copy(line);
+            if (trimmed == "import " + module_path ||
+                starts_with(trimmed, "import " + module_path + " as ") ||
+                starts_with(trimmed, "from " + module_path + " import ")) {
+                return trimmed.find(name) != std::string::npos ||
+                       starts_with(trimmed, "import " + module_path);
+            }
+        }
+        return false;
+    }
+
+    static std::optional<std::string> module_path_for_import(const std::filesystem::path& base,
+                                                             const std::filesystem::path& file) {
+        std::error_code error;
+        std::filesystem::path relative = std::filesystem::relative(file, base, error);
+        if (error || relative.empty() || relative.is_absolute()) {
+            relative = file.filename();
+        }
+        relative.replace_extension();
+        if (relative.empty()) {
+            return std::nullopt;
+        }
+        std::vector<std::string> parts;
+        for (const std::filesystem::path& part : relative) {
+            const std::string text = part.string();
+            if (text.empty() || text == ".") {
+                continue;
+            }
+            if (!valid_identifier(text)) {
+                return std::nullopt;
+            }
+            parts.push_back(text);
+        }
+        if (parts.empty()) {
+            return std::nullopt;
+        }
+        std::ostringstream out;
+        for (size_t i = 0; i < parts.size(); ++i) {
+            if (i > 0) {
+                out << ".";
+            }
+            out << parts[i];
+        }
+        return out.str();
+    }
+
+    static bool same_path(const std::filesystem::path& lhs, const std::filesystem::path& rhs) {
+        std::error_code error;
+        const std::filesystem::path left = std::filesystem::weakly_canonical(lhs, error);
+        if (error) {
+            error.clear();
+            return lhs.lexically_normal() == rhs.lexically_normal();
+        }
+        const std::filesystem::path right = std::filesystem::weakly_canonical(rhs, error);
+        if (error) {
+            error.clear();
+            return lhs.lexically_normal() == rhs.lexically_normal();
+        }
+        return left == right;
     }
 
     static bool valid_identifier(const std::string& value) {

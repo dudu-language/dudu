@@ -317,6 +317,32 @@ messages = [
     packet(
         {
             "jsonrpc": "2.0",
+            "id": 26,
+            "method": "textDocument/codeAction",
+            "params": {
+                "textDocument": {"uri": native_uri},
+                "range": {
+                    "start": {"line": 8, "character": 11},
+                    "end": {"line": 8, "character": 25},
+                },
+                "context": {
+                    "diagnostics": [
+                        {
+                            "range": {
+                                "start": {"line": 8, "character": 11},
+                                "end": {"line": 8, "character": 25},
+                            },
+                            "source": "dudu/sema",
+                            "message": "unknown identifier: missing_helper",
+                        }
+                    ]
+                },
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
             "id": 18,
             "method": "textDocument/references",
             "params": {
@@ -502,6 +528,18 @@ assert organize_edit["newText"].splitlines() == [
     'import cpp "native_headers/simple_cpp.hpp" as native_cpp',
     "import lsp_workspace_helper as helper",
 ]
+
+missing_import_actions = next(item for item in responses if item.get("id") == 26)
+missing_import = next(
+    item
+    for item in missing_import_actions["result"]
+    if item["title"] == "Import missing_helper from lsp_import_target"
+)
+missing_import_edit = missing_import["edit"]["changes"][native_uri][0]
+assert missing_import["kind"] == "quickfix"
+assert missing_import_edit["range"]["start"]["line"] == 3
+assert missing_import_edit["range"]["end"]["line"] == 3
+assert missing_import_edit["newText"] == "from lsp_import_target import missing_helper\n"
 
 workspace_references = next(item for item in responses if item.get("id") == 18)
 workspace_reference_uris = {item["uri"] for item in workspace_references["result"]}
