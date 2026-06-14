@@ -1187,7 +1187,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
         return;
     }
     if (stmt.kind == StmtKind::CompoundAssign) {
-        const std::string target_type = assign_target_type(scope, stmt, stmt.target);
+        const std::string target_type = assign_target_type(scope, stmt, "");
         if (!target_type.empty()) {
             check_type_match(scope, target_type, stmt.value_expr,
                              node_location(stmt.location, stmt.value_expr));

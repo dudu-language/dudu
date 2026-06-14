@@ -48,6 +48,8 @@ Already structured:
   from expression children instead of stringified call arguments
 - AST-backed statement checks route assignment compatibility through expression
   nodes instead of using raw statement value strings
+- compound-assignment target checks use the parsed target expression path
+  instead of feeding the target text back into legacy target analysis
 - type compatibility has AST overloads for simple literals and list/set/dict
   literals, including expected-type disambiguation for empty `{}` dict
   initializers, reducing reliance on string parsing for assignment checks
