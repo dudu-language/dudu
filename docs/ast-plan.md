@@ -84,6 +84,8 @@ Already structured:
   constants stay on the literal AST path
 - LSP local type inference recognizes the same systems numeric literal shapes,
   keeping hover behavior aligned with compiler literal parsing
+- default `assert` message emission uses the parsed condition expression text
+  instead of the raw statement condition field
 
 Still too string-based:
 
@@ -484,11 +486,11 @@ when the callee is a known scanned/imported type, so imported C functions such
 as `sdl.SDL_PollEvent(...)` do not get misclassified as type construction just
 because the name is dotted.
 
-Named-argument call C++ emission now emits from parsed call children. The raw
-named-call rewrite remains only as a fallback for unknown/raw expression paths.
-Named call arguments such as `Point(x=1)` now parse as `NamedArg` expression
-nodes, and constructor semantic checks consume those nodes directly instead of
-rediscovering named fields from raw argument strings.
+Named-argument call C++ emission now emits from parsed call children. Named call
+arguments such as `Point(x=1)` parse as `NamedArg` expression nodes, and
+constructor semantic checks consume those nodes directly instead of
+rediscovering named fields from raw argument strings. The old raw named-call
+rewrite has been removed for parsed calls.
 Common dict initializer C++ emission lowers those parsed entries instead of
 splitting literal text again.
 

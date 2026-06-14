@@ -564,7 +564,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         if (has_expr(stmt.message_expr))
             out << lower_expr(stmt.message_expr, aliases, locals);
         else
-            out << cpp_string_literal("assert failed: " + stmt.condition);
+            out << cpp_string_literal("assert failed: " + stmt.condition_expr.text);
         out << "); }\n";
         return;
     }
