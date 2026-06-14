@@ -152,6 +152,9 @@ Already structured:
 - build flag validation walks parsed expression nodes for constants,
   `static_assert`, and normal statements; raw text scanning remains only for
   unknown statements and explicit C++ escape statements
+- unsupported Python call checks for `eval`, `exec`, `getattr`, and `setattr`
+  walk parsed call expressions, with raw text scanning kept for unsupported or
+  unknown expression shapes
 
 Still too string-based:
 

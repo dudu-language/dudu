@@ -1,5 +1,6 @@
 #include "dudu/unsupported.hpp"
 
+#include "dudu/ast_expr.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/sema.hpp"
 
@@ -58,7 +59,51 @@ bool contains_word(std::string_view text, std::string_view name) {
     return false;
 }
 
-void check_statement(const Stmt& stmt) {
+void check_unsupported_text(const SourceLocation& location, const std::string& text) {
+    if (contains_call(text, "eval") || contains_call(text, "exec")) {
+        throw CompileError(location, "unsupported Python feature: dynamic execution");
+    }
+    if (contains_call(text, "getattr") || contains_call(text, "setattr")) {
+        throw CompileError(location, "unsupported Python feature: dynamic attribute access");
+    }
+    if (contains_word(text, "await")) {
+        throw CompileError(location, "unsupported Python feature: async");
+    }
+}
+
+void check_expr(const Expr& expr) {
+    if (expr.text.empty()) {
+        return;
+    }
+    if (expr.kind == ExprKind::Unknown) {
+        check_unsupported_text(expr.location, expr.text);
+        return;
+    }
+    if (expr.kind == ExprKind::Call) {
+        const std::string callee = call_callee_text(expr);
+        if (callee == "eval" || callee == "exec") {
+            throw CompileError(expr.location, "unsupported Python feature: dynamic execution");
+        }
+        if (callee == "getattr" || callee == "setattr") {
+            throw CompileError(expr.location,
+                               "unsupported Python feature: dynamic attribute access");
+        }
+    }
+    for (const Expr& child : expr.callee) {
+        check_expr(child);
+    }
+    for (const Expr& child : expr.params) {
+        check_expr(child);
+    }
+    for (const Expr& child : expr.template_args) {
+        check_expr(child);
+    }
+    for (const Expr& child : expr.children) {
+        check_expr(child);
+    }
+}
+
+void check_statement_prefix(const Stmt& stmt) {
     const std::string text = trim_copy(stmt.text);
     constexpr std::array prefixes = {
         UnsupportedPrefix{"finally", "exceptions"},
@@ -79,14 +124,19 @@ void check_statement(const Stmt& stmt) {
                                "unsupported Python feature: " + std::string(prefix.feature));
         }
     }
-    if (contains_call(text, "eval") || contains_call(text, "exec")) {
-        throw CompileError(stmt.location, "unsupported Python feature: dynamic execution");
-    }
-    if (contains_call(text, "getattr") || contains_call(text, "setattr")) {
-        throw CompileError(stmt.location, "unsupported Python feature: dynamic attribute access");
-    }
-    if (contains_word(text, "await")) {
-        throw CompileError(stmt.location, "unsupported Python feature: async");
+}
+
+void check_statement(const Stmt& stmt) {
+    check_statement_prefix(stmt);
+    if (stmt.kind == StmtKind::Unknown) {
+        check_unsupported_text(stmt.location, trim_copy(stmt.text));
+    } else {
+        check_expr(stmt.expr);
+        check_expr(stmt.value_expr);
+        check_expr(stmt.target_expr);
+        check_expr(stmt.condition_expr);
+        check_expr(stmt.message_expr);
+        check_expr(stmt.iterable_expr);
     }
     for (const Stmt& child : stmt.children) {
         check_statement(child);
