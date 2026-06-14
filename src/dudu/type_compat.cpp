@@ -303,6 +303,9 @@ bool is_container_literal(const std::string& expected, const Expr& expr) {
     if (!starts_with(expected, "dict[")) {
         return false;
     }
+    if (expr.kind == ExprKind::SetLiteral && expr.children.empty()) {
+        return true;
+    }
     if (expr.kind != ExprKind::DictLiteral) {
         return false;
     }

@@ -49,7 +49,8 @@ Already structured:
 - AST-backed statement checks route assignment compatibility through expression
   nodes instead of using raw statement value strings
 - type compatibility has AST overloads for simple literals and list/set/dict
-  literals, reducing reliance on string parsing for assignment checks
+  literals, including expected-type disambiguation for empty `{}` dict
+  initializers, reducing reliance on string parsing for assignment checks
 - C++ assignment emission detects `Option` reset from `NoneLiteral` expression
   nodes instead of raw value text
 - generated local C++ type inference has an AST path for names and calls,
@@ -58,6 +59,8 @@ Already structured:
   expressions, with raw text scanning only as an unknown-expression fallback
 - semantic checks for assignment through `*ptr` use parsed unary target
   expressions before falling back to raw target text
+- semantic checks for plain-name and member assignment targets use parsed
+  target expressions before falling back to raw target text for complex shapes
 
 Still too string-based:
 

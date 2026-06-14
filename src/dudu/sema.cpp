@@ -1014,6 +1014,24 @@ std::string assign_target_type(const FunctionScope& scope, const Stmt& stmt,
                                   stmt.target_expr.children[0].name, stmt.target_expr.children[1],
                                   "indexed assignment to unknown local: ");
     }
+    if (stmt.target_expr.kind == ExprKind::Name) {
+        const std::string& name = stmt.target_expr.name;
+        if (scope.constants.contains(name)) {
+            fail(target_location, "cannot assign to constant: " + name);
+        }
+        const auto local = scope.locals.find(name);
+        if (local == scope.locals.end()) {
+            fail(target_location, "assignment to unknown local: " + name);
+        }
+        return local->second;
+    }
+    if (stmt.target_expr.kind == ExprKind::Member) {
+        return member_path_type(scope.symbols, scope.locals, &target_location,
+                                stmt.target_expr.text, "assignment through unknown local: ");
+    }
+    if (stmt.target_expr.kind != ExprKind::Unknown && lhs.empty()) {
+        fail(target_location, "unsupported assignment target: " + stmt.target_expr.text);
+    }
     if (lhs.size() > 1 && lhs.front() == '*') {
         const std::string name = trim(lhs.substr(1));
         const auto local = scope.locals.find(name);
