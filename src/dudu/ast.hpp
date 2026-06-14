@@ -76,6 +76,39 @@ enum class StmtKind {
     Pass,
 };
 
+enum class ExprKind {
+    Unknown,
+    Name,
+    BoolLiteral,
+    IntLiteral,
+    FloatLiteral,
+    StringLiteral,
+    NoneLiteral,
+    Unary,
+    Binary,
+    Call,
+    TemplateCall,
+    Member,
+    Index,
+    ListLiteral,
+    DictLiteral,
+    SetLiteral,
+    TupleLiteral,
+    Lambda,
+    Conditional,
+    CppEscape,
+};
+
+struct Expr {
+    ExprKind kind = ExprKind::Unknown;
+    std::string text;
+    std::string name;
+    std::string value;
+    std::string op;
+    std::vector<Expr> children;
+    SourceLocation location;
+};
+
 struct Stmt {
     StmtKind kind = StmtKind::Unknown;
     std::string text;
@@ -86,6 +119,11 @@ struct Stmt {
     std::string op;
     std::string condition;
     std::string iterable;
+    Expr expr;
+    Expr value_expr;
+    Expr target_expr;
+    Expr condition_expr;
+    Expr iterable_expr;
     std::vector<Stmt> children;
     SourceLocation location;
 };
@@ -196,7 +234,9 @@ struct ModuleAst {
 
 std::string bound_import_name(const ImportDecl& import);
 std::string_view statement_kind_name(StmtKind kind);
+std::string_view expression_kind_name(ExprKind kind);
 StmtKind classify_statement_text(std::string_view text);
+Expr parse_expr_text(std::string_view text, SourceLocation location = {});
 Stmt statement_from_raw(const RawStmt& raw);
 std::vector<Stmt> statements_from_raw(const std::vector<RawStmt>& raw);
 

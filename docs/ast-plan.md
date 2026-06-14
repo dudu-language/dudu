@@ -25,25 +25,22 @@ Already structured:
 - decorators
 - native header metadata
 - nested raw statement blocks
+- statement classification into `Stmt` nodes
+- initial expression shape capture for common names, literals, calls,
+  template calls, member/index access, unary/binary operators, conditionals,
+  and collection literals
 
 Still too string-based:
 
-- local variable declarations
-- assignment and compound assignment
-- if, elif, else
-- while and for
+- semantic analysis of local variable declarations
+- semantic analysis of assignment and compound assignment
+- semantic analysis of if, elif, else
+- semantic analysis of while and for
 - try, except
-- return
-- assert and debug_assert
-- calls
-- member access
-- indexing
-- binary and unary operators
-- constructors
-- template calls
-- lambdas
-- tuple destructuring
-- C++ macro calls
+- C++ emission of return/assert/debug_assert and expression statements
+- C++ emission of calls, member access, indexing, operators, constructors,
+  template calls, lambdas, tuple destructuring, and C++ macro calls
+- type strings
 
 ## Target Architecture
 

@@ -1,6 +1,9 @@
 #include "dudu/ast.hpp"
 
 #include <cctype>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace dudu {
 namespace {
@@ -16,6 +19,10 @@ std::string_view trim_view(std::string_view text) {
 
 bool is_identifier_continue(char c) {
     return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_';
+}
+
+bool is_identifier_start(char c) {
+    return std::isalpha(static_cast<unsigned char>(c)) != 0 || c == '_';
 }
 
 bool starts_keyword(std::string_view text, std::string_view keyword) {
@@ -48,6 +55,56 @@ bool starts_statement_keyword(std::string_view text, std::string_view keyword) {
 std::string trim_string(std::string_view text) {
     text = trim_view(text);
     return std::string(text);
+}
+
+bool is_identifier(std::string_view text) {
+    text = trim_view(text);
+    if (text.empty() || !is_identifier_start(text.front())) {
+        return false;
+    }
+    for (const char c : text.substr(1)) {
+        if (!is_identifier_continue(c)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool is_integer_literal(std::string_view text) {
+    text = trim_view(text);
+    if (text.empty()) {
+        return false;
+    }
+    size_t pos = text.front() == '-' || text.front() == '+' ? 1 : 0;
+    if (pos == text.size()) {
+        return false;
+    }
+    for (; pos < text.size(); ++pos) {
+        if (std::isdigit(static_cast<unsigned char>(text[pos])) == 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool is_float_literal(std::string_view text) {
+    text = trim_view(text);
+    bool saw_dot = false;
+    bool saw_digit = false;
+    size_t pos = text.front() == '-' || text.front() == '+' ? 1 : 0;
+    for (; pos < text.size(); ++pos) {
+        const char c = text[pos];
+        if (std::isdigit(static_cast<unsigned char>(c)) != 0) {
+            saw_digit = true;
+            continue;
+        }
+        if (c == '.' && !saw_dot) {
+            saw_dot = true;
+            continue;
+        }
+        return false;
+    }
+    return saw_dot && saw_digit;
 }
 
 std::string strip_trailing_colon(std::string_view text) {
@@ -150,6 +207,173 @@ size_t find_top_level_word(std::string_view text, std::string_view word) {
     return std::string_view::npos;
 }
 
+size_t find_matching_open(std::string_view text, size_t close_pos, char open, char close) {
+    int depth = 0;
+    for (size_t pos = close_pos + 1; pos > 0; --pos) {
+        const size_t i = pos - 1;
+        if (text[i] == close) {
+            ++depth;
+        } else if (text[i] == open) {
+            --depth;
+            if (depth == 0) {
+                return i;
+            }
+        }
+    }
+    return std::string_view::npos;
+}
+
+bool enclosed_by_outer_pair(std::string_view text, char open, char close) {
+    text = trim_view(text);
+    if (text.size() < 2 || text.front() != open || text.back() != close) {
+        return false;
+    }
+    return find_matching_open(text, text.size() - 1, open, close) == 0;
+}
+
+std::vector<std::string_view> split_top_level_commas(std::string_view text) {
+    std::vector<std::string_view> parts;
+    int bracket_depth = 0;
+    int paren_depth = 0;
+    int brace_depth = 0;
+    size_t start = 0;
+    for (size_t i = 0; i < text.size(); ++i) {
+        const char c = text[i];
+        if (c == '[') {
+            ++bracket_depth;
+        } else if (c == ']') {
+            --bracket_depth;
+        } else if (c == '(') {
+            ++paren_depth;
+        } else if (c == ')') {
+            --paren_depth;
+        } else if (c == '{') {
+            ++brace_depth;
+        } else if (c == '}') {
+            --brace_depth;
+        } else if (bracket_depth == 0 && paren_depth == 0 && brace_depth == 0 && c == ',') {
+            parts.push_back(trim_view(text.substr(start, i - start)));
+            start = i + 1;
+        }
+    }
+    parts.push_back(trim_view(text.substr(start)));
+    return parts;
+}
+
+bool has_top_level_colon(std::string_view text) {
+    int bracket_depth = 0;
+    int paren_depth = 0;
+    int brace_depth = 0;
+    for (const char c : text) {
+        if (c == '[') {
+            ++bracket_depth;
+        } else if (c == ']') {
+            --bracket_depth;
+        } else if (c == '(') {
+            ++paren_depth;
+        } else if (c == ')') {
+            --paren_depth;
+        } else if (c == '{') {
+            ++brace_depth;
+        } else if (c == '}') {
+            --brace_depth;
+        } else if (bracket_depth == 0 && paren_depth == 0 && brace_depth == 0 && c == ':') {
+            return true;
+        }
+    }
+    return false;
+}
+
+size_t find_top_level_member_dot(std::string_view text) {
+    int bracket_depth = 0;
+    int paren_depth = 0;
+    int brace_depth = 0;
+    for (size_t pos = text.size(); pos > 0; --pos) {
+        const size_t i = pos - 1;
+        const char c = text[i];
+        if (c == ']') {
+            ++bracket_depth;
+        } else if (c == '[') {
+            --bracket_depth;
+        } else if (c == ')') {
+            ++paren_depth;
+        } else if (c == '(') {
+            --paren_depth;
+        } else if (c == '}') {
+            ++brace_depth;
+        } else if (c == '{') {
+            --brace_depth;
+        } else if (bracket_depth == 0 && paren_depth == 0 && brace_depth == 0 && c == '.') {
+            const char prev = i == 0 ? '\0' : text[i - 1];
+            const char next = i + 1 < text.size() ? text[i + 1] : '\0';
+            if (std::isdigit(static_cast<unsigned char>(prev)) == 0 && is_identifier_start(next)) {
+                return i;
+            }
+        }
+    }
+    return std::string_view::npos;
+}
+
+size_t find_top_level_binary_operator(std::string_view text,
+                                      const std::vector<std::string_view>& ops) {
+    int bracket_depth = 0;
+    int paren_depth = 0;
+    int brace_depth = 0;
+    for (size_t pos = text.size(); pos > 0; --pos) {
+        const size_t i = pos - 1;
+        const char c = text[i];
+        if (c == ']') {
+            ++bracket_depth;
+        } else if (c == '[') {
+            --bracket_depth;
+        } else if (c == ')') {
+            ++paren_depth;
+        } else if (c == '(') {
+            --paren_depth;
+        } else if (c == '}') {
+            ++brace_depth;
+        } else if (c == '{') {
+            --brace_depth;
+        }
+        if (bracket_depth != 0 || paren_depth != 0 || brace_depth != 0) {
+            continue;
+        }
+        for (const std::string_view op : ops) {
+            if (i + op.size() > text.size() || text.substr(i, op.size()) != op) {
+                continue;
+            }
+            if ((op == "and" || op == "or") && !((i == 0 || !is_identifier_continue(text[i - 1])) &&
+                                                 starts_keyword_exact(text.substr(i), op))) {
+                continue;
+            }
+            if ((op == "+" || op == "-") &&
+                (i == 0 || text[i - 1] == '(' || text[i - 1] == '[' || text[i - 1] == ',')) {
+                continue;
+            }
+            return i;
+        }
+    }
+    return std::string_view::npos;
+}
+
+Expr make_expr(ExprKind kind, std::string_view text, SourceLocation location) {
+    Expr expr;
+    expr.kind = kind;
+    expr.text = trim_string(text);
+    expr.location = location;
+    return expr;
+}
+
+std::vector<Expr> parse_expr_list(std::string_view text, SourceLocation location) {
+    std::vector<Expr> out;
+    for (const std::string_view part : split_top_level_commas(text)) {
+        if (!trim_view(part).empty()) {
+            out.push_back(parse_expr_text(part, location));
+        }
+    }
+    return out;
+}
+
 std::string compound_operator_before_assign(std::string_view text, size_t assign) {
     if (assign == std::string_view::npos) {
         return {};
@@ -194,8 +418,7 @@ void fill_assignment(Stmt& stmt, std::string_view text, bool compound) {
     if (compound) {
         stmt.op = compound_operator_before_assign(text, assign);
         size_t op_start = assign;
-        while (op_start > 0 &&
-               std::isspace(static_cast<unsigned char>(text[op_start - 1])) != 0) {
+        while (op_start > 0 && std::isspace(static_cast<unsigned char>(text[op_start - 1])) != 0) {
             --op_start;
         }
         op_start -= stmt.op.size();
@@ -295,6 +518,207 @@ std::string_view statement_kind_name(StmtKind kind) {
     return "unknown";
 }
 
+std::string_view expression_kind_name(ExprKind kind) {
+    switch (kind) {
+    case ExprKind::Unknown:
+        return "unknown";
+    case ExprKind::Name:
+        return "name";
+    case ExprKind::BoolLiteral:
+        return "bool_literal";
+    case ExprKind::IntLiteral:
+        return "int_literal";
+    case ExprKind::FloatLiteral:
+        return "float_literal";
+    case ExprKind::StringLiteral:
+        return "string_literal";
+    case ExprKind::NoneLiteral:
+        return "none_literal";
+    case ExprKind::Unary:
+        return "unary";
+    case ExprKind::Binary:
+        return "binary";
+    case ExprKind::Call:
+        return "call";
+    case ExprKind::TemplateCall:
+        return "template_call";
+    case ExprKind::Member:
+        return "member";
+    case ExprKind::Index:
+        return "index";
+    case ExprKind::ListLiteral:
+        return "list_literal";
+    case ExprKind::DictLiteral:
+        return "dict_literal";
+    case ExprKind::SetLiteral:
+        return "set_literal";
+    case ExprKind::TupleLiteral:
+        return "tuple_literal";
+    case ExprKind::Lambda:
+        return "lambda";
+    case ExprKind::Conditional:
+        return "conditional";
+    case ExprKind::CppEscape:
+        return "cpp_escape";
+    }
+    return "unknown";
+}
+
+Expr parse_expr_text(std::string_view text, SourceLocation location) {
+    text = trim_view(text);
+    if (text.empty()) {
+        return make_expr(ExprKind::Unknown, text, location);
+    }
+    if (enclosed_by_outer_pair(text, '(', ')')) {
+        const std::string_view inner = trim_view(text.substr(1, text.size() - 2));
+        if (split_top_level_commas(inner).size() > 1) {
+            Expr expr = make_expr(ExprKind::TupleLiteral, text, location);
+            expr.children = parse_expr_list(inner, location);
+            return expr;
+        }
+        return parse_expr_text(inner, location);
+    }
+    if (enclosed_by_outer_pair(text, '[', ']')) {
+        Expr expr = make_expr(ExprKind::ListLiteral, text, location);
+        expr.children = parse_expr_list(text.substr(1, text.size() - 2), location);
+        return expr;
+    }
+    if (enclosed_by_outer_pair(text, '{', '}')) {
+        Expr expr =
+            make_expr(has_top_level_colon(text.substr(1, text.size() - 2)) ? ExprKind::DictLiteral
+                                                                           : ExprKind::SetLiteral,
+                      text, location);
+        expr.children = parse_expr_list(text.substr(1, text.size() - 2), location);
+        return expr;
+    }
+    if ((text.front() == '"' && text.back() == '"') ||
+        (text.front() == '\'' && text.back() == '\'')) {
+        Expr expr = make_expr(ExprKind::StringLiteral, text, location);
+        expr.value = std::string(text.substr(1, text.size() - 2));
+        return expr;
+    }
+    if (text == "True" || text == "False") {
+        Expr expr = make_expr(ExprKind::BoolLiteral, text, location);
+        expr.value = std::string(text);
+        return expr;
+    }
+    if (text == "None") {
+        return make_expr(ExprKind::NoneLiteral, text, location);
+    }
+    if (starts_keyword(text, "lambda")) {
+        return make_expr(ExprKind::Lambda, text, location);
+    }
+
+    const size_t conditional_if = find_top_level_word(text, "if");
+    if (conditional_if != std::string_view::npos) {
+        const size_t conditional_else =
+            find_top_level_word(text.substr(conditional_if + 2), "else");
+        if (conditional_else != std::string_view::npos) {
+            Expr expr = make_expr(ExprKind::Conditional, text, location);
+            const size_t else_pos = conditional_if + 2 + conditional_else;
+            expr.children.push_back(parse_expr_text(text.substr(0, conditional_if), location));
+            expr.children.push_back(parse_expr_text(
+                text.substr(conditional_if + 2, else_pos - conditional_if - 2), location));
+            expr.children.push_back(parse_expr_text(text.substr(else_pos + 4), location));
+            return expr;
+        }
+    }
+
+    const std::vector<std::vector<std::string_view>> precedence = {
+        {"or"}, {"and"}, {"==", "!=", "<=", ">=", "<", ">"}, {"+", "-"}, {"*", "/", "%"},
+    };
+    for (const std::vector<std::string_view>& ops : precedence) {
+        const size_t op_pos = find_top_level_binary_operator(text, ops);
+        if (op_pos != std::string_view::npos) {
+            std::string_view op;
+            for (const std::string_view candidate : ops) {
+                if (text.substr(op_pos, candidate.size()) == candidate) {
+                    op = candidate;
+                    break;
+                }
+            }
+            Expr expr = make_expr(ExprKind::Binary, text, location);
+            expr.op = std::string(op);
+            expr.children.push_back(parse_expr_text(text.substr(0, op_pos), location));
+            expr.children.push_back(parse_expr_text(text.substr(op_pos + op.size()), location));
+            return expr;
+        }
+    }
+
+    if (starts_keyword(text, "not")) {
+        Expr expr = make_expr(ExprKind::Unary, text, location);
+        expr.op = "not";
+        expr.children.push_back(parse_expr_text(text.substr(3), location));
+        return expr;
+    }
+    if (text.front() == '-' && !is_integer_literal(text) && !is_float_literal(text)) {
+        Expr expr = make_expr(ExprKind::Unary, text, location);
+        expr.op = "-";
+        expr.children.push_back(parse_expr_text(text.substr(1), location));
+        return expr;
+    }
+
+    if (text.ends_with(")")) {
+        const size_t open = find_matching_open(text, text.size() - 1, '(', ')');
+        if (open != std::string_view::npos && open > 0) {
+            std::string_view callee = trim_view(text.substr(0, open));
+            Expr expr = make_expr(ExprKind::Call, text, location);
+            expr.name = trim_string(callee);
+            expr.children =
+                parse_expr_list(text.substr(open + 1, text.size() - open - 2), location);
+            if (callee.ends_with("]")) {
+                const size_t type_open = find_matching_open(callee, callee.size() - 1, '[', ']');
+                if (type_open != std::string_view::npos && type_open > 0) {
+                    expr.kind = ExprKind::TemplateCall;
+                    expr.name = trim_string(callee.substr(0, type_open));
+                    std::vector<Expr> template_args = parse_expr_list(
+                        callee.substr(type_open + 1, callee.size() - type_open - 2), location);
+                    template_args.insert(template_args.end(), expr.children.begin(),
+                                         expr.children.end());
+                    expr.children = std::move(template_args);
+                }
+            }
+            return expr;
+        }
+    }
+    if (text.ends_with("]")) {
+        const size_t open = find_matching_open(text, text.size() - 1, '[', ']');
+        if (open != std::string_view::npos && open > 0) {
+            Expr expr = make_expr(ExprKind::Index, text, location);
+            expr.children.push_back(parse_expr_text(text.substr(0, open), location));
+            expr.children.push_back(
+                parse_expr_text(text.substr(open + 1, text.size() - open - 2), location));
+            return expr;
+        }
+    }
+    const size_t dot = find_top_level_member_dot(text);
+    if (dot != std::string_view::npos) {
+        Expr expr = make_expr(ExprKind::Member, text, location);
+        expr.name = trim_string(text.substr(dot + 1));
+        expr.children.push_back(parse_expr_text(text.substr(0, dot), location));
+        return expr;
+    }
+    if (starts_keyword(text, "cpp")) {
+        return make_expr(ExprKind::CppEscape, text, location);
+    }
+    if (is_float_literal(text)) {
+        Expr expr = make_expr(ExprKind::FloatLiteral, text, location);
+        expr.value = std::string(text);
+        return expr;
+    }
+    if (is_integer_literal(text)) {
+        Expr expr = make_expr(ExprKind::IntLiteral, text, location);
+        expr.value = std::string(text);
+        return expr;
+    }
+    if (is_identifier(text)) {
+        Expr expr = make_expr(ExprKind::Name, text, location);
+        expr.name = std::string(text);
+        return expr;
+    }
+    return make_expr(ExprKind::Unknown, text, location);
+}
+
 StmtKind classify_statement_text(std::string_view text) {
     text = trim_view(text);
     if (text.empty()) {
@@ -366,36 +790,52 @@ Stmt statement_from_raw(const RawStmt& raw) {
     switch (stmt.kind) {
     case StmtKind::VarDecl:
         fill_var_decl(stmt, text);
+        stmt.value_expr = parse_expr_text(stmt.value, raw.location);
         break;
     case StmtKind::Assign:
         fill_assignment(stmt, text, false);
+        stmt.target_expr = parse_expr_text(stmt.target, raw.location);
+        stmt.value_expr = parse_expr_text(stmt.value, raw.location);
         break;
     case StmtKind::CompoundAssign:
         fill_assignment(stmt, text, true);
+        stmt.target_expr = parse_expr_text(stmt.target, raw.location);
+        stmt.value_expr = parse_expr_text(stmt.value, raw.location);
         break;
     case StmtKind::Return:
         stmt.value = trim_string(text.substr(6));
+        stmt.value_expr = parse_expr_text(stmt.value, raw.location);
         break;
     case StmtKind::If:
         fill_condition(stmt, text, "if");
+        stmt.condition_expr = parse_expr_text(stmt.condition, raw.location);
         break;
     case StmtKind::Elif:
         fill_condition(stmt, text, "elif");
+        stmt.condition_expr = parse_expr_text(stmt.condition, raw.location);
         break;
     case StmtKind::While:
         fill_condition(stmt, text, "while");
+        stmt.condition_expr = parse_expr_text(stmt.condition, raw.location);
         break;
     case StmtKind::For:
         fill_for(stmt, text);
+        stmt.iterable_expr = parse_expr_text(stmt.iterable, raw.location);
         break;
     case StmtKind::Assert:
         stmt.condition = trim_string(text.substr(6));
+        stmt.condition_expr = parse_expr_text(stmt.condition, raw.location);
         break;
     case StmtKind::DebugAssert:
         stmt.condition = trim_string(text.substr(12));
+        stmt.condition_expr = parse_expr_text(stmt.condition, raw.location);
         break;
     case StmtKind::Raise:
         stmt.value = trim_string(text.substr(5));
+        stmt.value_expr = parse_expr_text(stmt.value, raw.location);
+        break;
+    case StmtKind::Expr:
+        stmt.expr = parse_expr_text(text, raw.location);
         break;
     default:
         break;

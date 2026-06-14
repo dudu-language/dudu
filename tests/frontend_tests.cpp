@@ -167,17 +167,16 @@ void test_semantic_diagnostics() {
 }
 
 void test_statement_ast_shape() {
-    const dudu::ModuleAst module =
-        dudu::parse_source("def main() -> i32:\n"
-                           "    total: i32 = 0\n"
-                           "    for item: i32 in values:\n"
-                           "        total += item\n"
-                           "    if total == 0:\n"
-                           "        total += 42\n"
-                           "    else:\n"
-                           "        total = 1\n"
-                           "    return total\n",
-                           "statement_ast.dd");
+    const dudu::ModuleAst module = dudu::parse_source("def main() -> i32:\n"
+                                                      "    total: i32 = 0\n"
+                                                      "    for item: i32 in values:\n"
+                                                      "        total += item\n"
+                                                      "    if total == 0:\n"
+                                                      "        total += 42\n"
+                                                      "    else:\n"
+                                                      "        total = 1\n"
+                                                      "    return total\n",
+                                                      "statement_ast.dd");
     assert(module.functions.size() == 1);
     const dudu::FunctionDecl& main = module.functions.front();
     assert(main.body.size() == main.statements.size());
@@ -206,6 +205,54 @@ void test_statement_ast_shape() {
     assert(main.statements[3].children[0].value == "1");
     assert(main.statements[4].kind == dudu::StmtKind::Return);
     assert(main.statements[4].value == "total");
+}
+
+void test_expression_ast_shape() {
+    const dudu::ModuleAst module =
+        dudu::parse_source("def main() -> i32:\n"
+                           "    answer: i32 = add(20, values[0] + 2)\n"
+                           "    if not ready or count < 3:\n"
+                           "        player.inventory[slot].name = Vec4[f32](1.0, 0.0, 0.0, 1.0)\n"
+                           "    values: list[i32] = [1, 2, 3]\n"
+                           "    return answer\n",
+                           "expression_ast.dd");
+    assert(module.functions.size() == 1);
+    const dudu::FunctionDecl& main = module.functions.front();
+    assert(main.statements.size() == 4);
+
+    const dudu::Stmt& answer = main.statements[0];
+    assert(answer.kind == dudu::StmtKind::VarDecl);
+    assert(answer.value_expr.kind == dudu::ExprKind::Call);
+    assert(answer.value_expr.name == "add");
+    assert(answer.value_expr.children.size() == 2);
+    assert(answer.value_expr.children[0].kind == dudu::ExprKind::IntLiteral);
+    assert(answer.value_expr.children[1].kind == dudu::ExprKind::Binary);
+    assert(answer.value_expr.children[1].op == "+");
+    assert(answer.value_expr.children[1].children[0].kind == dudu::ExprKind::Index);
+
+    const dudu::Stmt& branch = main.statements[1];
+    assert(branch.kind == dudu::StmtKind::If);
+    assert(branch.condition_expr.kind == dudu::ExprKind::Binary);
+    assert(branch.condition_expr.op == "or");
+    assert(branch.condition_expr.children[0].kind == dudu::ExprKind::Unary);
+    assert(branch.condition_expr.children[0].op == "not");
+    assert(branch.condition_expr.children[1].kind == dudu::ExprKind::Binary);
+    assert(branch.condition_expr.children[1].op == "<");
+    assert(branch.children.size() == 1);
+
+    const dudu::Stmt& assign = branch.children[0];
+    assert(assign.kind == dudu::StmtKind::Assign);
+    assert(assign.target_expr.kind == dudu::ExprKind::Member);
+    assert(assign.target_expr.name == "name");
+    assert(assign.target_expr.children[0].kind == dudu::ExprKind::Index);
+    assert(assign.value_expr.kind == dudu::ExprKind::TemplateCall);
+    assert(assign.value_expr.name == "Vec4");
+    assert(assign.value_expr.children.size() == 5);
+
+    const dudu::Stmt& values = main.statements[2];
+    assert(values.kind == dudu::StmtKind::VarDecl);
+    assert(values.value_expr.kind == dudu::ExprKind::ListLiteral);
+    assert(values.value_expr.children.size() == 3);
 }
 
 void test_formatter() {
@@ -518,6 +565,7 @@ int main() {
         test_header_emission();
         test_semantic_diagnostics();
         test_statement_ast_shape();
+        test_expression_ast_shape();
         test_formatter();
         test_typed_for_emission();
         test_native_type_declaration_emission();
