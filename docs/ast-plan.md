@@ -405,6 +405,9 @@ expressions when the indexed base is a local name.
 Index expression C++ emission now lowers parsed base and index child
 expressions directly.
 
+List, set, and tuple literal C++ expression emission now uses parsed literal
+children instead of raw literal text.
+
 Bare comma expressions now parse as tuple literals, including Python-style
 multi-value returns. The shared AST comma splitter is quote-aware so commas
 inside string literals do not create phantom tuple elements.

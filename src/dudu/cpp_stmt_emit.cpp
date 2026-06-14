@@ -138,8 +138,10 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
         }
         break;
     case ExprKind::ListLiteral:
-    case ExprKind::TupleLiteral:
     case ExprKind::SetLiteral:
+        return "{" + join_lowered_exprs(expr.children, aliases, locals) + "}";
+    case ExprKind::TupleLiteral:
+        return join_lowered_exprs(expr.children, aliases, locals);
     case ExprKind::Lambda:
     case ExprKind::TemplateCall:
         break;
