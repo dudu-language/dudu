@@ -294,6 +294,14 @@ push. They are not release packaging work.
    and `class Vec2[T]`, lowering to readable C++ templates and producing
    Dudu-source diagnostics for instantiated errors.
 
+   Status: generic parameter syntax for Dudu-native classes and functions
+   parses into the AST, type parameters are visible while checking declarations
+   and bodies, duplicate generic parameters are diagnosed, and generic
+   classes/functions emit readable C++ templates. Explicit generic class
+   construction works for simple value-type examples such as `Box[i32]`.
+   Call-site inference, generic methods, non-type parameters, and richer
+   instantiated diagnostics remain.
+
 6. Sum Types And Pattern Matching
 
    Primary plan: [Sum Types And Pattern Matching Plan](sum-types-plan.md).

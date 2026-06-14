@@ -95,6 +95,20 @@ bool emit_before_constants(const FunctionDecl& fn) {
     return function_has_decorator(fn, "constexpr");
 }
 
+void emit_template_params(std::ostringstream& out, const std::vector<std::string>& params) {
+    if (params.empty()) {
+        return;
+    }
+    out << "template <";
+    for (size_t i = 0; i < params.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << "typename " << params[i];
+    }
+    out << ">\n";
+}
+
 std::map<std::string, std::string> function_return_types(const ModuleAst& module) {
     std::map<std::string, std::string> out;
     for (const FunctionDecl& fn : module.functions) {
@@ -184,6 +198,7 @@ void emit_function_body(std::ostringstream& out, const FunctionDecl& fn,
                         const std::vector<std::string>& aliases,
                         const std::map<std::string, std::string>& function_returns,
                         const Symbols& symbols) {
+    emit_template_params(out, fn.generic_params);
     emit_function_signature(out, fn, aliases);
     out << " {\n";
     std::map<std::string, std::string> locals;
@@ -201,8 +216,7 @@ bool should_emit_function(const FunctionDecl& fn, bool test_source) {
 void emit_early_functions(std::ostringstream& out, const ModuleAst& module,
                           const std::vector<std::string>& aliases,
                           const std::map<std::string, std::string>& function_returns,
-                          const Symbols& symbols,
-                          bool header_only, bool test_source = false) {
+                          const Symbols& symbols, bool header_only, bool test_source = false) {
     for (const FunctionDecl& fn : module.functions) {
         if (!emit_before_constants(fn) || !should_emit_function(fn, test_source)) {
             continue;
@@ -350,6 +364,7 @@ std::string emit_cpp_header(const ModuleAst& module) {
         if (!visible_function_in_header(fn)) {
             continue;
         }
+        emit_template_params(out, fn.generic_params);
         emit_function_signature(out, fn, aliases);
         out << ";\n";
     }

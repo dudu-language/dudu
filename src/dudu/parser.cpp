@@ -207,6 +207,7 @@ class Parser {
         klass.decorators = decorators;
         klass.location = start.location;
         klass.name = consume_identifier("expected class name").text;
+        klass.generic_params = parse_generic_params();
         consume(TokenKind::Colon, "expected : after class name");
         consume(TokenKind::Newline, "expected newline after class header");
         if (!match(TokenKind::Indent)) {
@@ -341,6 +342,7 @@ class Parser {
         fn.decorators = decorators;
         fn.location = start.location;
         fn.name = consume_identifier("expected function name").text;
+        fn.generic_params = parse_generic_params();
         consume(TokenKind::LParen, "expected ( after function name");
         skip_signature_separators();
         if (!at(TokenKind::RParen)) {
@@ -356,6 +358,25 @@ class Parser {
         consume(TokenKind::Newline, "expected newline after function header");
         fn.statements = parse_statement_block();
         return fn;
+    }
+
+    std::vector<std::string> parse_generic_params() {
+        std::vector<std::string> params;
+        if (!match(TokenKind::LBracket)) {
+            return params;
+        }
+        if (at(TokenKind::RBracket)) {
+            fail_current("generic parameter list cannot be empty");
+        }
+        while (true) {
+            params.push_back(consume_identifier("expected generic parameter name").text);
+            if (match(TokenKind::Comma)) {
+                continue;
+            }
+            break;
+        }
+        consume(TokenKind::RBracket, "expected ] after generic parameters");
+        return params;
     }
 
     void parse_params(std::vector<ParamDecl>& params, std::string_view receiver_type) {

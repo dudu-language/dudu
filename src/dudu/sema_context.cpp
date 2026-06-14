@@ -100,6 +100,22 @@ bool is_reserved_dunder_name(const std::string& name) {
     return name.size() > 4 && starts_with(name, "__") && name.ends_with("__");
 }
 
+void check_generic_params(const SourceLocation& location, const std::vector<std::string>& params) {
+    std::set<std::string> seen;
+    for (const std::string& param : params) {
+        if (!seen.insert(param).second) {
+            fail(location, "duplicate generic parameter: " + param);
+        }
+    }
+}
+
+Symbols with_generic_params(Symbols symbols, const std::vector<std::string>& params) {
+    for (const std::string& param : params) {
+        symbols.types.insert(param);
+    }
+    return symbols;
+}
+
 bool is_constructor_method(const FunctionDecl& method) {
     return method.name == "init";
 }
@@ -458,6 +474,8 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
         }
     }
     for (const ClassDecl& klass : module.classes) {
+        check_generic_params(klass.location, klass.generic_params);
+        const Symbols class_symbols = with_generic_params(symbols, klass.generic_params);
         for (const Decorator& decorator : klass.decorators) {
             check_class_decorator(decorator);
         }
@@ -467,14 +485,15 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                 fail(field.location, "duplicate field: " + field.name);
             }
             check_supported_type_shape(field.location, field.type_ref);
-            check_known_type_ref(symbols, field.location, field.type_ref, "unknown field type: ");
+            check_known_type_ref(class_symbols, field.location, field.type_ref,
+                                 "unknown field type: ");
         }
         for (const ConstDecl& constant : klass.constants) {
             if (!fields.insert(constant.name).second) {
                 fail(constant.location, "duplicate class member: " + constant.name);
             }
             check_supported_type_shape(constant.location, constant.type_ref);
-            check_known_type_ref(symbols, constant.location, constant.type_ref,
+            check_known_type_ref(class_symbols, constant.location, constant.type_ref,
                                  "unknown class constant type: ");
         }
         for (const ConstDecl& field : klass.static_fields) {
@@ -482,10 +501,13 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                 fail(field.location, "duplicate class member: " + field.name);
             }
             check_supported_type_shape(field.location, field.type_ref);
-            check_known_type_ref(symbols, field.location, field.type_ref,
+            check_known_type_ref(class_symbols, field.location, field.type_ref,
                                  "unknown static field type: ");
         }
         for (const FunctionDecl& method : klass.methods) {
+            check_generic_params(method.location, method.generic_params);
+            const Symbols method_symbols =
+                with_generic_params(class_symbols, method.generic_params);
             if (is_reserved_dunder_name(method.name)) {
                 fail(method.location,
                      "reserved Python-style dunder method name: " + method.name +
@@ -517,7 +539,8 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                              "indexed assignment operator methods require self, index, and value");
                     }
                     if (!method.return_type.empty() && method.return_type != "void") {
-                        fail(method.location, "indexed assignment operator methods must return void");
+                        fail(method.location,
+                             "indexed assignment operator methods must return void");
                     }
                 } else if (method.params.size() != 2 || method.params.front().name != "self") {
                     fail(method.location, "operator methods require self and one parameter");
@@ -553,17 +576,19 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                     fail(param.location, "duplicate parameter: " + param.name);
                 }
                 check_supported_type_shape(param.location, param.type_ref);
-                check_known_type_ref(symbols, param.location, param.type_ref,
+                check_known_type_ref(method_symbols, param.location, param.type_ref,
                                      "unknown parameter type: ");
             }
             if (!method.return_type.empty()) {
                 check_supported_type_shape(method.location, method.return_type_ref);
             }
-            check_known_type_ref(symbols, method.location, method.return_type_ref,
+            check_known_type_ref(method_symbols, method.location, method.return_type_ref,
                                  "unknown return type: ");
         }
     }
     for (const FunctionDecl& fn : module.functions) {
+        check_generic_params(fn.location, fn.generic_params);
+        const Symbols function_symbols = with_generic_params(symbols, fn.generic_params);
         for (const Decorator& decorator : fn.decorators) {
             check_function_decorator(module, decorator);
         }
@@ -585,13 +610,14 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                 fail(param.location, "duplicate parameter: " + param.name);
             }
             check_supported_type_shape(param.location, param.type_ref);
-            check_known_type_ref(symbols, param.location, param.type_ref,
+            check_known_type_ref(function_symbols, param.location, param.type_ref,
                                  "unknown parameter type: ");
         }
         if (!fn.return_type.empty()) {
             check_supported_type_shape(fn.location, fn.return_type_ref);
         }
-        check_known_type_ref(symbols, fn.location, fn.return_type_ref, "unknown return type: ");
+        check_known_type_ref(function_symbols, fn.location, fn.return_type_ref,
+                             "unknown return type: ");
     }
 }
 

@@ -1224,15 +1224,16 @@ std::string assign_target_type(const FunctionScope& scope, const Stmt& stmt,
         stmt.target_expr.children[0].kind == ExprKind::Name) {
         const std::string& name = stmt.target_expr.children[0].name;
         if (const auto local = scope.locals.find(name); local != scope.locals.end()) {
-            if (const auto signature = dudu_operator_signature(scope.symbols, "[]=", local->second)) {
+            if (const auto signature =
+                    dudu_operator_signature(scope.symbols, "[]=", local->second)) {
                 std::vector<Expr> args = index_arg_exprs(stmt.target_expr.children[1]);
                 args.push_back(stmt.value_expr);
                 check_call_args_ast(scope, name + "[]=", *signature, args, &target_location);
                 return {};
             }
         }
-        return indexed_value_type(scope.symbols, scope.locals, target_location,
-                                  name, stmt.target_expr.children[1],
+        return indexed_value_type(scope.symbols, scope.locals, target_location, name,
+                                  stmt.target_expr.children[1],
                                   "indexed assignment to unknown local: ");
     }
     if (stmt.target_expr.kind == ExprKind::Index && stmt.target_expr.children.size() == 2) {
@@ -1522,6 +1523,21 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
     }
     (void)infer_expr_ast(scope, stmt.expr, &stmt.location);
 }
+
+Symbols with_generic_params(Symbols symbols, const std::vector<std::string>& params) {
+    for (const std::string& param : params) {
+        symbols.types.insert(param);
+    }
+    return symbols;
+}
+
+void copy_base_scope_state(FunctionScope& dst, const FunctionScope& src) {
+    dst.locals = src.locals;
+    dst.constants = src.constants;
+    dst.target_mode = src.target_mode;
+    dst.local_type_refs = src.local_type_refs;
+}
+
 void check_bodies(const ModuleAst& module, const Symbols& symbols) {
     FunctionScope base{symbols};
     const auto mode = module.build_values.find("TARGET_MODE");
@@ -1538,7 +1554,10 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols) {
     }
     for (const ClassDecl& klass : module.classes) {
         for (const FunctionDecl& method : klass.methods) {
-            FunctionScope scope = base;
+            Symbols method_symbols = with_generic_params(symbols, klass.generic_params);
+            method_symbols = with_generic_params(method_symbols, method.generic_params);
+            FunctionScope scope{method_symbols};
+            copy_base_scope_state(scope, base);
             for (const ParamDecl& param : method.params) {
                 bind_local(scope, param.name, param.type, param.type_ref);
             }
@@ -1551,7 +1570,9 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols) {
         }
     }
     for (const FunctionDecl& fn : module.functions) {
-        FunctionScope scope = base;
+        Symbols function_symbols = with_generic_params(symbols, fn.generic_params);
+        FunctionScope scope{function_symbols};
+        copy_base_scope_state(scope, base);
         for (const ParamDecl& param : fn.params) {
             bind_local(scope, param.name, param.type, param.type_ref);
         }

@@ -226,6 +226,7 @@ struct EnumDecl {
 struct FunctionDecl {
     Visibility visibility = Visibility::Default;
     std::string name;
+    std::vector<std::string> generic_params;
     std::vector<Decorator> decorators;
     std::vector<ParamDecl> params;
     std::string return_type;
@@ -246,6 +247,7 @@ struct ConstDecl {
 struct ClassDecl {
     Visibility visibility = Visibility::Default;
     std::string name;
+    std::vector<std::string> generic_params;
     std::vector<std::string> base_classes;
     std::vector<Decorator> decorators;
     std::vector<FieldDecl> fields;

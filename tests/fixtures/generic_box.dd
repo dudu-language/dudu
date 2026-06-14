@@ -1,0 +1,14 @@
+class Box[T]:
+    value: T
+
+    def get(self) -> T:
+        return self.value
+
+    def set(self, value: T):
+        self.value = value
+
+
+def main() -> i32:
+    box: Box[i32] = Box[i32](10)
+    box.set(42)
+    return box.get()

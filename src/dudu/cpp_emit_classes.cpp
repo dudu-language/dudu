@@ -138,6 +138,20 @@ bool visible_in_header(Visibility visibility) {
     return visibility != Visibility::Private;
 }
 
+void emit_template_params(std::ostringstream& out, const std::vector<std::string>& params) {
+    if (params.empty()) {
+        return;
+    }
+    out << "template <";
+    for (size_t i = 0; i < params.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << "typename " << params[i];
+    }
+    out << ">\n";
+}
+
 std::string_view class_section_for_method(Visibility visibility) {
     return visibility == Visibility::Private ? "private" : "public";
 }
@@ -213,13 +227,14 @@ void emit_class_constant_definition(std::ostringstream& out, const std::string& 
 
 void emit_classes(std::ostringstream& out, const ModuleAst& module,
                   const std::vector<std::string>& aliases,
-                  const std::map<std::string, std::string>& function_returns, const Symbols& symbols,
-                  bool header_only) {
+                  const std::map<std::string, std::string>& function_returns,
+                  const Symbols& symbols, bool header_only) {
     for (const size_t index : class_emit_order(module.classes)) {
         const ClassDecl& klass = module.classes[index];
         if (header_only && !visible_in_header(klass.visibility)) {
             continue;
         }
+        emit_template_params(out, klass.generic_params);
         out << class_opening(klass) << " {\n";
         for (const FieldDecl& field : klass.fields) {
             out << "    " << lower_cpp_type(field.type_ref, aliases) << ' ' << field.name;

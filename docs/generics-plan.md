@@ -66,6 +66,14 @@ Generics are compile-time only.
 - Generic code is checked against its syntax and instantiated uses.
 - No trait system, concepts, or where-clauses are required for the first design.
 
+Status: generic parameter syntax for Dudu-native classes and functions parses
+into the AST. Generic type parameters are visible to declaration and body
+checking, duplicate type parameters are diagnosed, and generic classes/functions
+emit readable C++ `template <typename ...>` declarations. Explicit generic
+class construction such as `Box[i32](42)` compiles through C++ template
+lowering. Call-site type inference, richer instantiated diagnostics, generic
+methods, and non-type template parameters remain.
+
 Unsupported operations on `T` should produce useful diagnostics that mention:
 
 - the generic declaration

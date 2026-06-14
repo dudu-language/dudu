@@ -649,6 +649,26 @@ void test_type_ast_shape() {
     assert(dudu::lower_cpp_type("array[f32][4, 4]") == "std::array<std::array<float, 4>, 4>");
 }
 
+void test_generic_decl_ast_shape() {
+    const dudu::ModuleAst module = dudu::parse_source("class Box[T]:\n"
+                                                      "    value: T\n"
+                                                      "\n"
+                                                      "    def get(self) -> T:\n"
+                                                      "        return self.value\n"
+                                                      "\n"
+                                                      "def id[T](value: T) -> T:\n"
+                                                      "    return value\n",
+                                                      "generic_decl_shape.dd");
+    assert(module.classes.size() == 1);
+    assert(module.classes[0].name == "Box");
+    assert(module.classes[0].generic_params == std::vector<std::string>{"T"});
+    assert(module.classes[0].methods.size() == 1);
+    assert(module.classes[0].methods[0].return_type == "T");
+    assert(module.functions.size() == 1);
+    assert(module.functions[0].name == "id");
+    assert(module.functions[0].generic_params == std::vector<std::string>{"T"});
+}
+
 void test_formatter() {
     const std::string formatted = dudu::format_source("def main() -> i32:   \n"
                                                       "    return 0\t\n"
@@ -1063,6 +1083,7 @@ int main() {
         test_statement_ast_shape();
         test_expression_ast_shape();
         test_type_ast_shape();
+        test_generic_decl_ast_shape();
         test_formatter();
         test_typed_for_emission();
         test_class_field_defaults_and_static_fields();
