@@ -81,7 +81,7 @@ std::string cpp_binary_operator(const std::string& op) {
     return op;
 }
 
-size_t top_level_colon(std::string_view text) {
+size_t top_level_char(std::string_view text, char wanted) {
     int bracket_depth = 0;
     int paren_depth = 0;
     int brace_depth = 0;
@@ -115,7 +115,57 @@ size_t top_level_colon(std::string_view text) {
             ++brace_depth;
         } else if (c == '}') {
             --brace_depth;
-        } else if (c == ':' && bracket_depth == 0 && paren_depth == 0 && brace_depth == 0) {
+        } else if (c == wanted && bracket_depth == 0 && paren_depth == 0 && brace_depth == 0) {
+            return i;
+        }
+    }
+    return std::string_view::npos;
+}
+
+size_t top_level_colon(std::string_view text) {
+    return top_level_char(text, ':');
+}
+
+size_t top_level_equal(std::string_view text) {
+    int bracket_depth = 0;
+    int paren_depth = 0;
+    int brace_depth = 0;
+    char quote = '\0';
+    bool escaped = false;
+    for (size_t i = 0; i < text.size(); ++i) {
+        const char c = text[i];
+        if (quote != '\0') {
+            if (escaped) {
+                escaped = false;
+            } else if (c == '\\') {
+                escaped = true;
+            } else if (c == quote) {
+                quote = '\0';
+            }
+            continue;
+        }
+        if (c == '"' || c == '\'') {
+            quote = c;
+            continue;
+        }
+        if (c == '[') {
+            ++bracket_depth;
+        } else if (c == ']') {
+            --bracket_depth;
+        } else if (c == '(') {
+            ++paren_depth;
+        } else if (c == ')') {
+            --paren_depth;
+        } else if (c == '{') {
+            ++brace_depth;
+        } else if (c == '}') {
+            --brace_depth;
+        } else if (c == '=' && bracket_depth == 0 && paren_depth == 0 && brace_depth == 0) {
+            const char prev = i == 0 ? '\0' : text[i - 1];
+            const char next = i + 1 >= text.size() ? '\0' : text[i + 1];
+            if (prev == '=' || prev == '!' || prev == '<' || prev == '>' || next == '=') {
+                continue;
+            }
             return i;
         }
     }
@@ -124,11 +174,33 @@ size_t top_level_colon(std::string_view text) {
 
 bool has_named_argument_shape(const std::vector<Expr>& args) {
     for (const Expr& arg : args) {
-        if (arg.text.find('=') != std::string::npos) {
+        if (top_level_equal(arg.text) != std::string_view::npos) {
             return true;
         }
     }
     return false;
+}
+
+std::string lower_named_argument_call(const Expr& expr, const std::vector<std::string>& aliases,
+                                      const std::map<std::string, std::string>& locals) {
+    std::ostringstream out;
+    out << lower_expr(expr.name, aliases, locals) << "{";
+    for (size_t i = 0; i < expr.children.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        const size_t equal = top_level_equal(expr.children[i].text);
+        if (equal == std::string_view::npos) {
+            out << lower_expr(expr.children[i], aliases, locals);
+            continue;
+        }
+        const std::string field = trim_copy(expr.children[i].text.substr(0, equal));
+        const std::string value = trim_copy(expr.children[i].text.substr(equal + 1));
+        out << "." << field << " = "
+            << lower_expr(parse_expr_text(value, expr.children[i].location), aliases, locals);
+    }
+    out << "}";
+    return out.str();
 }
 
 std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases,
@@ -170,7 +242,7 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
         break;
     case ExprKind::Call:
         if (has_named_argument_shape(expr.children)) {
-            break;
+            return lower_named_argument_call(expr, aliases, locals);
         }
         return lower_expr(expr.name + "(" + join_lowered_exprs(expr.children, aliases, locals) +
                               ")",

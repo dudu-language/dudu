@@ -431,6 +431,9 @@ runtime call arguments. Dotted constructor calls are only treated as constructor
 when the callee is a known scanned/imported type, so imported C functions such
 as `sdl.SDL_PollEvent(...)` do not get misclassified as type construction just
 because the name is dotted.
+
+Named-argument call C++ emission now emits from parsed call children. The raw
+named-call rewrite remains only as a fallback for unknown/raw expression paths.
 Common dict initializer C++ emission lowers those parsed entries instead of
 splitting literal text again.
 
