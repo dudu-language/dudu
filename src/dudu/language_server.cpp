@@ -1211,8 +1211,13 @@ class LanguageServer {
         add_snippet("class", "snippet", "class ${1:Name}:\n    ${0:field: i32}");
         add_snippet("if", "snippet", "if ${1:condition}:\n    ${0:pass}");
         add_snippet("for", "snippet", "for ${1:item}: ${2:i32} in ${3:items}:\n    ${0:pass}");
+        add_snippet("while", "snippet", "while ${1:condition}:\n    ${0:pass}");
+        add_snippet("enum", "snippet", "enum ${1:Name}:\n    ${0:VALUE}");
+        add_snippet("import", "snippet", "import ${1:module}");
+        add_snippet("from", "snippet", "from ${1:module} import ${2:symbol}");
         add_snippet("try", "snippet",
                     "try:\n    ${1:pass}\nexcept ${2:Exception} as ${3:error}:\n    ${0:pass}");
+        add_snippet("except", "snippet", "except ${1:Exception} as ${2:error}:\n    ${0:pass}");
         for (std::string_view type : {"bool", "i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64",
                                       "isize", "usize", "f32", "f64", "str", "cstr"}) {
             add(type, 25, "type");

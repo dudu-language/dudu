@@ -762,6 +762,13 @@ assert any(
     item["label"] == "def" and item.get("insertTextFormat") == 2 and "${1:name}" in item.get("insertText", "")
     for item in completion["result"]
 )
+for snippet_label in ["while", "enum", "import", "from", "except"]:
+    assert any(
+        item["label"] == snippet_label
+        and item.get("insertTextFormat") == 2
+        and "${" in item.get("insertText", "")
+        for item in completion["result"]
+    )
 
 resolved_completion = next(item for item in responses if item.get("id") == 24)
 assert resolved_completion["result"]["documentation"]["kind"] == "markdown"

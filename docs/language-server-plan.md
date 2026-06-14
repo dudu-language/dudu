@@ -198,7 +198,8 @@ imported file. Completion resolve is implemented, common-form snippets are
 returned with snippet insert text, and typed locals in the current document are
 included in completion. Local completion now filters out declarations from
 deeper indentation levels when completing in an outer block. Richer snippet
-coverage remains.
+coverage is implemented for common function, type, control-flow, import, and
+exception forms.
 
 ### Milestone 4: Native Header Navigation
 
@@ -274,6 +275,8 @@ It also covers workspace symbols and references from an unopened sibling `.dd`
 file, plus Dudu-native and native C++ member completion.
 Imported Dudu module completion is covered with an unopened sibling module.
 Completion resolve, snippets, and typed local completions are covered.
+Common-form snippets for functions, classes, control flow, imports, enums, and
+exception handlers are covered.
 Format and organize-imports code actions are covered.
 Missing-import quick fixes are covered using an unopened workspace file.
 Native config quick fixes are covered with a fixture `dudu.toml` edit for a
