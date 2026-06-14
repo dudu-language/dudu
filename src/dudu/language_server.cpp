@@ -1028,7 +1028,8 @@ class LanguageServer {
             } else if (stmt.kind == StmtKind::Assign || stmt.kind == StmtKind::CompoundAssign) {
                 collect_expr_tokens(stmt.target_expr, tokens);
                 collect_expr_tokens(stmt.value_expr, tokens);
-            } else if (stmt.kind == StmtKind::Return || stmt.kind == StmtKind::Raise) {
+            } else if (stmt.kind == StmtKind::Return || stmt.kind == StmtKind::Raise ||
+                       stmt.kind == StmtKind::Delete) {
                 collect_expr_tokens(stmt.value_expr, tokens);
             } else if (stmt.kind == StmtKind::If || stmt.kind == StmtKind::Elif ||
                        stmt.kind == StmtKind::While || stmt.kind == StmtKind::Assert ||

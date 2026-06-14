@@ -704,6 +704,8 @@ std::string_view statement_kind_name(StmtKind kind) {
         return "except";
     case StmtKind::Raise:
         return "raise";
+    case StmtKind::Delete:
+        return "delete";
     case StmtKind::Assert:
         return "assert";
     case StmtKind::DebugAssert:
@@ -1063,6 +1065,9 @@ StmtKind classify_statement_text(std::string_view text) {
     if (starts_keyword(text, "raise")) {
         return StmtKind::Raise;
     }
+    if (starts_keyword(text, "delete")) {
+        return StmtKind::Delete;
+    }
     if (starts_statement_keyword(text, "debug_assert")) {
         return StmtKind::DebugAssert;
     }
@@ -1158,6 +1163,11 @@ Stmt statement_from_text(std::string raw_text, SourceLocation location, SourceRa
         break;
     case StmtKind::Raise:
         stmt.value = trim_string(text.substr(5));
+        stmt.value_expr =
+            parse_expr_text(stmt.value, location_for_piece(location, stmt.text, stmt.value));
+        break;
+    case StmtKind::Delete:
+        stmt.value = trim_string(text.substr(6));
         stmt.value_expr =
             parse_expr_text(stmt.value, location_for_piece(location, stmt.text, stmt.value));
         break;

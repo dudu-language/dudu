@@ -770,13 +770,14 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
                                  &node_location(stmt.location, stmt.value_expr));
         return;
     }
-    if (stmt.kind == StmtKind::CppEscape || stmt.kind == StmtKind::Pass)
-        return;
-    if (starts_with(text, "delete ")) {
+    if (stmt.kind == StmtKind::Delete) {
         check_deallocation_args(stmt.location, "delete",
-                                {infer_expr(scope, text.substr(7), &stmt.location)});
+                                {infer_expr_ast(scope, stmt.value_expr,
+                                                &node_location(stmt.location, stmt.value_expr))});
         return;
     }
+    if (stmt.kind == StmtKind::CppEscape || stmt.kind == StmtKind::Pass)
+        return;
     if ((stmt.kind == StmtKind::Break || stmt.kind == StmtKind::Continue) && loop_depth == 0) {
         fail(stmt.location, text + " outside loop");
     }

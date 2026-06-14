@@ -87,6 +87,7 @@ enum class StmtKind {
     Try,
     Except,
     Raise,
+    Delete,
     Assert,
     DebugAssert,
     CppEscape,

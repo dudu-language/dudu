@@ -400,6 +400,10 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         out << ";\n";
         return;
     }
+    if (stmt.kind == StmtKind::Delete) {
+        out << indent(depth) << "delete " << lower_expr(stmt.value_expr, aliases, locals) << ";\n";
+        return;
+    }
     if (stmt.kind == StmtKind::Assert) {
         out << indent(depth) << "if (!(" << lower_expr(stmt.condition_expr, aliases, locals)
             << ")) { throw std::runtime_error(";
