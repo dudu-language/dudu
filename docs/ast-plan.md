@@ -38,6 +38,9 @@ Already structured:
 - initial `TypeRef` C++ lowering is implemented and used for type aliases
 - template calls keep template arguments separate from runtime call arguments,
   and C++ emission lowers them from the parsed expression node
+- array/list/dict index type inference uses parsed index expressions where
+  available, so tuple-shaped multi-index expressions no longer depend on raw
+  comma splitting
 
 Still too string-based:
 

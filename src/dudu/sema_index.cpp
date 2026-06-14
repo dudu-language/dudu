@@ -111,22 +111,18 @@ std::string shaped_array_type(const std::string& element_type, const std::vector
     return out.str();
 }
 
-} // namespace
-
-std::string indexed_value_type(const Symbols& symbols,
-                               const std::map<std::string, std::string>& locals,
-                               const SourceLocation& location, const std::string& name,
-                               const std::string& index_expr, std::string_view unknown_message) {
-    const auto local = locals.find(name);
-    if (local == locals.end()) {
-        throw CompileError(location, std::string(unknown_message) + name);
+size_t index_count_from_expr(const Expr& index_expr) {
+    if (index_expr.kind == ExprKind::TupleLiteral) {
+        return index_expr.children.empty() ? 1 : index_expr.children.size();
     }
-    return indexed_type_from_type(symbols, location, local->second, index_expr, name);
+    return 1;
 }
 
-std::string indexed_type_from_type(const Symbols& symbols, const SourceLocation& location,
-                                   const std::string& raw_type, const std::string& index_expr,
-                                   const std::string& label) {
+std::string indexed_type_from_type_with_count(const Symbols& symbols,
+                                              const SourceLocation& location,
+                                              const std::string& raw_type,
+                                              const std::string& index_expr,
+                                              const size_t index_count, const std::string& label) {
     std::string type = resolve_alias(symbols, raw_type);
     if (foreign_indexable_type(type)) {
         return "auto";
@@ -163,7 +159,6 @@ std::string indexed_type_from_type(const Symbols& symbols, const SourceLocation&
             }
             return "span[" + explicit_array_element_type(type) + "]";
         }
-        const size_t index_count = index_expr.empty() ? 1 : split_top_level_args(index_expr).size();
         if (index_count > shape.size()) {
             throw CompileError(location, "too many indices for array: " + label);
         }
@@ -191,6 +186,45 @@ std::string indexed_type_from_type(const Symbols& symbols, const SourceLocation&
         return trim(type.substr(0, type_index));
     }
     throw CompileError(location, "cannot index non-container: " + label);
+}
+
+} // namespace
+
+std::string indexed_value_type(const Symbols& symbols,
+                               const std::map<std::string, std::string>& locals,
+                               const SourceLocation& location, const std::string& name,
+                               const std::string& index_expr, std::string_view unknown_message) {
+    const auto local = locals.find(name);
+    if (local == locals.end()) {
+        throw CompileError(location, std::string(unknown_message) + name);
+    }
+    return indexed_type_from_type(symbols, location, local->second, index_expr, name);
+}
+
+std::string indexed_value_type(const Symbols& symbols,
+                               const std::map<std::string, std::string>& locals,
+                               const SourceLocation& location, const std::string& name,
+                               const Expr& index_expr, std::string_view unknown_message) {
+    const auto local = locals.find(name);
+    if (local == locals.end()) {
+        throw CompileError(location, std::string(unknown_message) + name);
+    }
+    return indexed_type_from_type(symbols, location, local->second, index_expr, name);
+}
+
+std::string indexed_type_from_type(const Symbols& symbols, const SourceLocation& location,
+                                   const std::string& raw_type, const std::string& index_expr,
+                                   const std::string& label) {
+    const size_t index_count = index_expr.empty() ? 1 : split_top_level_args(index_expr).size();
+    return indexed_type_from_type_with_count(symbols, location, raw_type, index_expr, index_count,
+                                             label);
+}
+
+std::string indexed_type_from_type(const Symbols& symbols, const SourceLocation& location,
+                                   const std::string& raw_type, const Expr& index_expr,
+                                   const std::string& label) {
+    return indexed_type_from_type_with_count(symbols, location, raw_type, index_expr.text,
+                                             index_count_from_expr(index_expr), label);
 }
 
 std::string iterable_value_type(const Symbols& symbols,

@@ -830,7 +830,6 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
     case ExprKind::Index:
         if (use_location != nullptr && expr.children.size() == 2) {
             const Expr& receiver = expr.children[0];
-            const std::string& index_expr = expr.children[1].text;
             if (receiver.kind == ExprKind::Name) {
                 if (const auto local = scope.locals.find(receiver.name);
                     local != scope.locals.end()) {
@@ -841,14 +840,14 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                     }
                 }
                 return indexed_value_type(scope.symbols, scope.locals, *use_location, receiver.name,
-                                          index_expr, "indexed access to unknown local: ");
+                                          expr.children[1], "indexed access to unknown local: ");
             }
             if (is_member_path(receiver.text)) {
                 const std::string receiver_type =
                     member_path_type(scope.symbols, scope.locals, use_location, receiver.text, "");
                 if (!receiver_type.empty()) {
                     return indexed_type_from_type(scope.symbols, *use_location, receiver_type,
-                                                  index_expr, receiver.text);
+                                                  expr.children[1], receiver.text);
                 }
             }
         }
@@ -993,9 +992,9 @@ std::string assign_target_type(const FunctionScope& scope, const Stmt& stmt,
     const SourceLocation& target_location = node_location(stmt.location, stmt.target_expr);
     if (stmt.target_expr.kind == ExprKind::Index && stmt.target_expr.children.size() == 2 &&
         stmt.target_expr.children[0].kind == ExprKind::Name) {
-        return indexed_value_type(
-            scope.symbols, scope.locals, target_location, stmt.target_expr.children[0].name,
-            stmt.target_expr.children[1].text, "indexed assignment to unknown local: ");
+        return indexed_value_type(scope.symbols, scope.locals, target_location,
+                                  stmt.target_expr.children[0].name, stmt.target_expr.children[1],
+                                  "indexed assignment to unknown local: ");
     }
     if (lhs.size() > 1 && lhs.front() == '*') {
         const std::string name = trim(lhs.substr(1));
