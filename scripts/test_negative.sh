@@ -101,7 +101,7 @@ expect_fail bad_cpp_operator_mismatch --emit-cpp "operator + expects dudu_op.Vec
 expect_fail bad_dudu_operator_rhs --emit-cpp "argument 1 for + expects Vec2, got i32"
 expect_fail bad_dudu_operator_compare_return --check "comparison operator methods must return bool"
 expect_fail bad_dudu_operator_static --check "operator methods cannot be static"
-expect_fail bad_dunder_operator --emit-cpp "operator + expects Vec2, got Vec2"
+expect_fail bad_dunder_operator --check "Dudu operator methods use @operator(\"+\") on a normal method name, not __add__"
 expect_fail bad_compound_assignment_type --emit-cpp "cannot assign bool to i32 without an explicit cast"
 expect_fail bad_shift_bool --emit-cpp "cannot assign i32 to bool without an explicit cast"
 expect_fail bad_comparison_bool_order --emit-cpp "comparison < expects bool, got bool"
