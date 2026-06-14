@@ -48,12 +48,15 @@ bool can_assign_expr(const FunctionScope& scope, const std::string& expected,
 
 bool can_assign_ast(const FunctionScope& scope, const std::string& expected, const Expr& expr,
                     const std::string& got) {
-    return can_assign_expr(scope, expected, expr.text, got);
+    return assignment_type_allowed(expected, expr, got) ||
+           assignment_type_allowed(resolve_alias(scope.symbols, expected), expr,
+                                   resolve_alias(scope.symbols, got)) ||
+           native_base_assignable(scope.symbols, expected, got);
 }
 
 std::string assignment_error_ast(const std::string& expected, const Expr& expr,
                                  const std::string& got) {
-    return assignment_error(expected, expr.text, got);
+    return assignment_error(expected, expr, got);
 }
 
 bool is_builtin_call(const std::string& callee) {

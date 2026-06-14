@@ -163,7 +163,35 @@ std::string simple_literal_type(std::string expr) {
     return {};
 }
 
+std::string simple_literal_type(const Expr& expr) {
+    switch (expr.kind) {
+    case ExprKind::BoolLiteral:
+        return "bool";
+    case ExprKind::NoneLiteral:
+        return "None";
+    case ExprKind::ListLiteral:
+        return "list";
+    case ExprKind::DictLiteral:
+        return "dict";
+    case ExprKind::SetLiteral:
+        return "set";
+    case ExprKind::StringLiteral:
+        return "str";
+    case ExprKind::IntLiteral:
+    case ExprKind::FloatLiteral:
+        return "number";
+    default:
+        return simple_literal_type(expr.text);
+    }
+}
+
 bool literal_assignable_to(const std::string& expected, const std::string& expr) {
+    const std::string got = simple_literal_type(expr);
+    return got == "number" ? is_numeric_type(wrapped_type_arg(expected))
+                           : assignment_type_allowed(expected, expr, got);
+}
+
+bool literal_assignable_to(const std::string& expected, const Expr& expr) {
     const std::string got = simple_literal_type(expr);
     return got == "number" ? is_numeric_type(wrapped_type_arg(expected))
                            : assignment_type_allowed(expected, expr, got);
@@ -241,10 +269,65 @@ bool is_container_literal(const std::string& expected, std::string expr) {
     return true;
 }
 
+bool is_container_literal(const std::string& expected, const Expr& expr) {
+    if (starts_with(expected, "list[")) {
+        if (expr.kind != ExprKind::ListLiteral) {
+            return false;
+        }
+        const std::vector<std::string> args = type_args(expected, "list[");
+        if (args.size() != 1) {
+            return false;
+        }
+        for (const Expr& entry : expr.children) {
+            if (!literal_assignable_to(args[0], entry)) {
+                return false;
+            }
+        }
+        return true;
+    }
+    if (starts_with(expected, "set[")) {
+        if (expr.kind != ExprKind::SetLiteral) {
+            return false;
+        }
+        const std::vector<std::string> args = type_args(expected, "set[");
+        if (args.size() != 1) {
+            return false;
+        }
+        for (const Expr& entry : expr.children) {
+            if (!literal_assignable_to(args[0], entry)) {
+                return false;
+            }
+        }
+        return true;
+    }
+    if (!starts_with(expected, "dict[")) {
+        return false;
+    }
+    if (expr.kind != ExprKind::DictLiteral) {
+        return false;
+    }
+    const std::vector<std::string> args = type_args(expected, "dict[");
+    if (args.size() != 2) {
+        return false;
+    }
+    for (const Expr& entry : expr.children) {
+        if (entry.children.size() != 2 || !literal_assignable_to(args[0], entry.children[0]) ||
+            !literal_assignable_to(args[1], entry.children[1])) {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool is_container_literal_expr(std::string expr) {
     expr = trim_copy(std::move(expr));
     return (starts_with(expr, "[") && ends_with(expr, "]")) ||
            (starts_with(expr, "{") && ends_with(expr, "}"));
+}
+
+bool is_container_literal_expr(const Expr& expr) {
+    return expr.kind == ExprKind::ListLiteral || expr.kind == ExprKind::SetLiteral ||
+           expr.kind == ExprKind::DictLiteral;
 }
 
 bool is_reference_binding(std::string expected, std::string got) {
@@ -280,6 +363,13 @@ bool is_null_pointer(std::string expected, std::string expr, std::string got) {
     expr = trim_copy(std::move(expr));
     got = trim_copy(std::move(got));
     return !expected.empty() && expected.front() == '*' && expr == "None" && got == "None";
+}
+
+bool is_null_pointer(std::string expected, const Expr& expr, std::string got) {
+    expected = trim_copy(std::move(expected));
+    got = trim_copy(std::move(got));
+    return !expected.empty() && expected.front() == '*' && expr.kind == ExprKind::NoneLiteral &&
+           got == "None";
 }
 
 bool is_void_pointer_target(std::string expected, std::string got) {
@@ -378,6 +468,15 @@ bool is_result_value(const std::string& expected, const std::string& expr, const
     return false;
 }
 
+bool is_option_value(const std::string& expected, const Expr& expr, const std::string& got) {
+    if (!starts_with(expected, "Option[") || expected.back() != ']') {
+        return false;
+    }
+    const std::string inner = trim_copy(expected.substr(7, expected.size() - 8));
+    return expr.kind == ExprKind::NoneLiteral || got == inner ||
+           (is_numeric_type(wrapped_type_arg(inner)) && simple_literal_type(expr) == "number");
+}
+
 } // namespace
 
 bool assignment_type_allowed(const std::string& expected, const std::string& expr,
@@ -398,11 +497,39 @@ bool assignment_type_allowed(const std::string& expected, const std::string& exp
            (is_numeric_type(wrapped_type_arg(expected)) && is_numeric_literal(expr));
 }
 
+bool assignment_type_allowed(const std::string& expected, const Expr& expr,
+                             const std::string& got) {
+    return expected == "auto" || is_explicit_cast_to(expected, expr.text) ||
+           is_container_literal(expected, expr) ||
+           (!is_container_literal_expr(expr) && got.empty()) || got == "auto" || got == expected ||
+           compact_type(expected) == compact_type(got) || is_option_value(expected, expr, got) ||
+           compact_type(normalize_c_tags(expected)) == compact_type(normalize_c_tags(got)) ||
+           is_result_value(expected, expr.text, got) ||
+           is_value_wrapper_assignment(expected, expr.text, got) ||
+           is_null_pointer(expected, expr, got) || is_void_pointer_target(expected, got) ||
+           is_const_pointer_binding(expected, got) ||
+           is_pointer_to_reference_value(expected, got) || is_reference_binding(expected, got) ||
+           is_value_from_reference(expected, got) || is_function_type_match(expected, got) ||
+           is_native_function_pointer(expected, got) ||
+           (expected == "cstr" && got == "str" && expr.kind == ExprKind::StringLiteral) ||
+           (is_numeric_type(wrapped_type_arg(expected)) && simple_literal_type(expr) == "number");
+}
+
 std::string display_type(const std::string& expr, const std::string& got) {
     return got.empty() ? simple_literal_type(expr) : got;
 }
 
+std::string display_type(const Expr& expr, const std::string& got) {
+    return got.empty() ? simple_literal_type(expr) : got;
+}
+
 std::string assignment_error(const std::string& expected, const std::string& expr,
+                             const std::string& got) {
+    return "cannot assign " + display_type(expr, got) + " to " + expected +
+           " without an explicit cast";
+}
+
+std::string assignment_error(const std::string& expected, const Expr& expr,
                              const std::string& got) {
     return "cannot assign " + display_type(expr, got) + " to " + expected +
            " without an explicit cast";

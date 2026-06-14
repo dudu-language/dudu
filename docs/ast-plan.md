@@ -48,6 +48,8 @@ Already structured:
   from expression children instead of stringified call arguments
 - AST-backed statement checks route assignment compatibility through expression
   nodes instead of using raw statement value strings
+- type compatibility has AST overloads for simple literals and list/set/dict
+  literals, reducing reliance on string parsing for assignment checks
 
 Still too string-based:
 
