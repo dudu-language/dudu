@@ -156,9 +156,9 @@ errors, and formatter integration.
 
 Status: initial `duc lsp` support is implemented. It speaks JSON-RPC over
 stdio, handles full-document sync, publishes parse/semantic/native-header
-diagnostics, and returns full-document formatting edits. The implementation
-uses the existing parser, semantic checker, formatter, and native-header scanner
-in-process.
+and build-configuration diagnostics, and returns full-document formatting edits.
+The implementation uses the existing parser, semantic checker, formatter, and
+native-header scanner in-process.
 
 ### Milestone 2: Dudu Navigation
 
@@ -261,7 +261,8 @@ library probes under optional native tests.
 
 Status: the smoke suite now drives LSP JSON-RPC for single-file diagnostics,
 formatting, Dudu symbols, references, rename, workspace symbols, native fixture
-imports, native macro hover/completion, and strict missing-header diagnostics.
+imports, native macro hover/completion, strict missing-header diagnostics, and
+build-configuration diagnostics from a broken `dudu.toml`.
 It also covers workspace symbols and references from an unopened sibling `.dd`
 file, plus Dudu-native and native C++ member completion.
 Imported Dudu module completion is covered with an unopened sibling module.

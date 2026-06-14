@@ -42,6 +42,7 @@ native_pkg_config_uri = f"file://{repo_root}/tests/fixtures/lsp_pkg_project/dudu
 rename_uri = f"file://{repo_root}/tests/fixtures/lsp_rename_main.dd"
 rename_user_uri = f"file://{repo_root}/tests/fixtures/lsp_rename_user.dd"
 lint_uri = "file:///tmp/dudu_lsp_lint.dd"
+bad_config_uri = f"file://{repo_root}/tests/fixtures/lsp_bad_config/main.dd"
 source = "\n".join(
     [
         "class Player:",
@@ -95,6 +96,26 @@ messages = [
                     "languageId": "dudu",
                     "version": 1,
                     "text": source,
+                }
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "method": "textDocument/didOpen",
+            "params": {
+                "textDocument": {
+                    "uri": bad_config_uri,
+                    "languageId": "dudu",
+                    "version": 1,
+                    "text": "\n".join(
+                        [
+                            "def main() -> i32:",
+                            "    return 0",
+                            "",
+                        ]
+                    ),
                 }
             },
         }
@@ -556,6 +577,16 @@ assert lint_diag["source"] == "dudu/lint"
 assert lint_diag["severity"] == 2
 assert lint_diag["message"] == "unreachable statement after return"
 assert lint_diag["range"]["start"]["line"] == 2
+
+build_config_diagnostics = next(
+    item
+    for item in responses
+    if item.get("method") == "textDocument/publishDiagnostics"
+    and item["params"]["uri"] == bad_config_uri
+)
+build_config_diag = build_config_diagnostics["params"]["diagnostics"][0]
+assert build_config_diag["source"] == "dudu/build-config"
+assert "invalid [target] kind" in build_config_diag["message"]
 
 symbols = next(item for item in responses if item.get("id") == 2)
 symbol_names = [item["name"] for item in symbols["result"]]

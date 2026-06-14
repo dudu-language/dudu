@@ -570,7 +570,15 @@ class LanguageServer {
     std::vector<Diagnostic> diagnostics_for(const Document& doc) {
         try {
             ModuleAst module = parse_source(doc.text, doc.path);
-            const ProjectConfig config = config_for_file(doc.path);
+            ProjectConfig config;
+            try {
+                config = config_for_file(doc.path);
+            } catch (const std::exception& error) {
+                return {{{.file = doc.path, .line = 1, .column = 1},
+                         error.what(),
+                         "dudu/build-config",
+                         1}};
+            }
             module.build_values = config.build_values;
             module.build_values["TARGET_KIND"] = '"' + config.target_kind + '"';
             module.build_values["TARGET_MODE"] = '"' + config.target_mode + '"';

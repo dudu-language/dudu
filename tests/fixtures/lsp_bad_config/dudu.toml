@@ -1,0 +1,5 @@
+name = "lsp_bad_config"
+entry = "main.dd"
+
+[target]
+kind = "banana"
