@@ -282,8 +282,8 @@ push. They are not release packaging work.
    `len(values)` and `&values[0]` for native pointer/count handoff.
    One-dimensional fixed-array `start:end` slices produce `span[T]` views.
    Dudu-native `@operator("[]")` read hooks work for library-style tensor
-   wrappers. Indexed assignment hooks, member-path indexing, multidimensional
-   slices, and swizzling remain.
+   wrappers, and indexed member paths such as `self.values[i]` type-check.
+   Indexed assignment hooks, multidimensional slices, and swizzling remain.
 
 5. Native Dudu Generics
 

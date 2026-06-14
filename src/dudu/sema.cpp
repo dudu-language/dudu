@@ -301,8 +301,8 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
     const size_t index = expr.find('[');
     if (location != nullptr && index != std::string::npos && expr.back() == ']') {
         const std::string name = trim(expr.substr(0, index));
+        const std::string index_expr = expr.substr(index + 1, expr.size() - index - 2);
         if (is_plain_identifier(name)) {
-            const std::string index_expr = expr.substr(index + 1, expr.size() - index - 2);
             if (const auto local = scope.locals.find(name); local != scope.locals.end()) {
                 if (const auto signature =
                         dudu_operator_signature(scope.symbols, "[]", local->second)) {
@@ -312,6 +312,14 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
             }
             return indexed_value_type(scope.symbols, scope.locals, *location, name, index_expr,
                                       "indexed access to unknown local: ");
+        }
+        if (is_member_path(name)) {
+            const std::string receiver_type =
+                member_path_type(scope.symbols, scope.locals, location, name, "");
+            if (!receiver_type.empty()) {
+                return indexed_type_from_type(scope.symbols, *location, receiver_type, index_expr,
+                                              name);
+            }
         }
     }
     const size_t dot = expr.find('.');

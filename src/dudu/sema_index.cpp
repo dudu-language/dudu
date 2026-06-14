@@ -121,7 +121,13 @@ std::string indexed_value_type(const Symbols& symbols,
     if (local == locals.end()) {
         throw CompileError(location, std::string(unknown_message) + name);
     }
-    std::string type = resolve_alias(symbols, local->second);
+    return indexed_type_from_type(symbols, location, local->second, index_expr, name);
+}
+
+std::string indexed_type_from_type(const Symbols& symbols, const SourceLocation& location,
+                                   const std::string& raw_type, const std::string& index_expr,
+                                   const std::string& label) {
+    std::string type = resolve_alias(symbols, raw_type);
     if (foreign_indexable_type(type)) {
         return "auto";
     }
@@ -147,19 +153,19 @@ std::string indexed_value_type(const Symbols& symbols,
         if (top_level_colon(index_expr) != std::string::npos) {
             if (shape.size() != 1) {
                 throw CompileError(location,
-                                   "array slicing requires one-dimensional fixed array: " + name);
+                                   "array slicing requires one-dimensional fixed array: " + label);
             }
             const size_t colon = top_level_colon(index_expr);
             if (trim(index_expr.substr(0, colon)).empty() ||
                 trim(index_expr.substr(colon + 1)).empty()) {
                 throw CompileError(location,
-                                   "array slice requires explicit start and end: " + name);
+                                   "array slice requires explicit start and end: " + label);
             }
             return "span[" + explicit_array_element_type(type) + "]";
         }
         const size_t index_count = index_expr.empty() ? 1 : split_top_level_args(index_expr).size();
         if (index_count > shape.size()) {
-            throw CompileError(location, "too many indices for array: " + name);
+            throw CompileError(location, "too many indices for array: " + label);
         }
         const std::string element = explicit_array_element_type(type);
         if (index_count == shape.size()) {
@@ -184,7 +190,7 @@ std::string indexed_value_type(const Symbols& symbols,
     if (type_index != std::string::npos && type.back() == ']') {
         return trim(type.substr(0, type_index));
     }
-    throw CompileError(location, "cannot index non-container: " + name);
+    throw CompileError(location, "cannot index non-container: " + label);
 }
 
 std::string iterable_value_type(const Symbols& symbols,
