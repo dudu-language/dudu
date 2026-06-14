@@ -67,9 +67,10 @@ bool same_or_assignable(const std::string& left, const std::string& right_expr,
 
 std::string operator_method_name(const std::string& op) {
     static const std::map<std::string, std::string> names = {
-        {"+", "__add__"}, {"-", "__sub__"}, {"*", "__mul__"}, {"/", "__truediv__"},
-        {"%", "__mod__"}, {"==", "__eq__"}, {"!=", "__ne__"}, {"<", "__lt__"},
-        {"<=", "__le__"}, {">", "__gt__"},  {">=", "__ge__"}, {"bool", "__bool__"},
+        {"+", "__add__"},      {"-", "__sub__"}, {"*", "__mul__"}, {"/", "__truediv__"},
+        {"%", "__mod__"},      {"==", "__eq__"}, {"!=", "__ne__"}, {"<", "__lt__"},
+        {"<=", "__le__"},      {">", "__gt__"},  {">=", "__ge__"}, {"bool", "__bool__"},
+        {"[]", "__getitem__"},
     };
     const auto it = names.find(op);
     return it == names.end() ? "" : it->second;

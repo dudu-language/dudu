@@ -2,6 +2,7 @@
 
 #include "dudu/array_shape.hpp"
 #include "dudu/cpp_lower.hpp"
+#include "dudu/sema_ops.hpp"
 #include "dudu/type_compat.hpp"
 
 #include <cctype>
@@ -175,6 +176,9 @@ std::string indexed_value_type(const Symbols& symbols,
         if (args.size() == 2) {
             return args[1];
         }
+    }
+    if (const auto signature = dudu_operator_signature(symbols, "[]", type)) {
+        return signature->return_type;
     }
     const size_t type_index = type.find('[');
     if (type_index != std::string::npos && type.back() == ']') {
