@@ -374,6 +374,75 @@ std::vector<Expr> parse_expr_list(std::string_view text, SourceLocation location
     return out;
 }
 
+TypeRef make_type(TypeKind kind, std::string_view text, SourceLocation location) {
+    TypeRef type;
+    type.kind = kind;
+    type.text = trim_string(text);
+    type.location = location;
+    return type;
+}
+
+TypeKind wrapper_type_kind(std::string_view name) {
+    if (name == "const") {
+        return TypeKind::Const;
+    }
+    if (name == "volatile") {
+        return TypeKind::Volatile;
+    }
+    if (name == "atomic") {
+        return TypeKind::Atomic;
+    }
+    if (name == "device") {
+        return TypeKind::Device;
+    }
+    if (name == "storage") {
+        return TypeKind::Storage;
+    }
+    if (name == "shared") {
+        return TypeKind::Shared;
+    }
+    if (name == "static") {
+        return TypeKind::Static;
+    }
+    return TypeKind::Unknown;
+}
+
+std::vector<TypeRef> parse_type_list(std::string_view text, SourceLocation location) {
+    std::vector<TypeRef> out;
+    for (const std::string_view part : split_top_level_commas(text)) {
+        if (!trim_view(part).empty()) {
+            out.push_back(parse_type_text(part, location));
+        }
+    }
+    return out;
+}
+
+size_t find_top_level_arrow(std::string_view text) {
+    int bracket_depth = 0;
+    int paren_depth = 0;
+    int brace_depth = 0;
+    for (size_t i = 0; i + 1 < text.size(); ++i) {
+        const char c = text[i];
+        if (c == '[') {
+            ++bracket_depth;
+        } else if (c == ']') {
+            --bracket_depth;
+        } else if (c == '(') {
+            ++paren_depth;
+        } else if (c == ')') {
+            --paren_depth;
+        } else if (c == '{') {
+            ++brace_depth;
+        } else if (c == '}') {
+            --brace_depth;
+        } else if (bracket_depth == 0 && paren_depth == 0 && brace_depth == 0 &&
+                   text.substr(i, 2) == "->") {
+            return i;
+        }
+    }
+    return std::string_view::npos;
+}
+
 std::string compound_operator_before_assign(std::string_view text, size_t assign) {
     if (assign == std::string_view::npos) {
         return {};
@@ -562,6 +631,105 @@ std::string_view expression_kind_name(ExprKind kind) {
         return "cpp_escape";
     }
     return "unknown";
+}
+
+std::string_view type_kind_name(TypeKind kind) {
+    switch (kind) {
+    case TypeKind::Unknown:
+        return "unknown";
+    case TypeKind::Named:
+        return "named";
+    case TypeKind::Qualified:
+        return "qualified";
+    case TypeKind::Template:
+        return "template";
+    case TypeKind::Pointer:
+        return "pointer";
+    case TypeKind::Reference:
+        return "reference";
+    case TypeKind::Const:
+        return "const";
+    case TypeKind::Volatile:
+        return "volatile";
+    case TypeKind::Atomic:
+        return "atomic";
+    case TypeKind::Device:
+        return "device";
+    case TypeKind::Storage:
+        return "storage";
+    case TypeKind::Shared:
+        return "shared";
+    case TypeKind::Static:
+        return "static";
+    case TypeKind::FixedArray:
+        return "fixed_array";
+    case TypeKind::Function:
+        return "function";
+    }
+    return "unknown";
+}
+
+TypeRef parse_type_text(std::string_view text, SourceLocation location) {
+    text = trim_view(text);
+    if (text.empty()) {
+        return make_type(TypeKind::Unknown, text, location);
+    }
+    const size_t arrow = find_top_level_arrow(text);
+    if (arrow != std::string_view::npos) {
+        TypeRef type = make_type(TypeKind::Function, text, location);
+        type.children.push_back(parse_type_text(text.substr(arrow + 2), location));
+        std::string_view params = trim_view(text.substr(0, arrow));
+        if (enclosed_by_outer_pair(params, '(', ')')) {
+            params = params.substr(1, params.size() - 2);
+        }
+        std::vector<TypeRef> parsed_params = parse_type_list(params, location);
+        type.children.insert(type.children.end(), parsed_params.begin(), parsed_params.end());
+        return type;
+    }
+    if (text.front() == '*') {
+        TypeRef type = make_type(TypeKind::Pointer, text, location);
+        type.children.push_back(parse_type_text(text.substr(1), location));
+        return type;
+    }
+    if (text.front() == '&') {
+        TypeRef type = make_type(TypeKind::Reference, text, location);
+        type.children.push_back(parse_type_text(text.substr(1), location));
+        return type;
+    }
+    if (text.ends_with("]")) {
+        const size_t open = find_matching_open(text, text.size() - 1, '[', ']');
+        if (open != std::string_view::npos && open > 0) {
+            const std::string_view head = trim_view(text.substr(0, open));
+            const std::string_view inner = text.substr(open + 1, text.size() - open - 2);
+            const TypeKind wrapper = wrapper_type_kind(head);
+            if (wrapper != TypeKind::Unknown) {
+                TypeRef type = make_type(wrapper, text, location);
+                type.children.push_back(parse_type_text(inner, location));
+                return type;
+            }
+            if (head.ends_with("]")) {
+                TypeRef type = make_type(TypeKind::FixedArray, text, location);
+                type.children.push_back(parse_type_text(head, location));
+                type.value = trim_string(inner);
+                return type;
+            }
+            TypeRef type = make_type(TypeKind::Template, text, location);
+            type.name = trim_string(head);
+            type.children = parse_type_list(inner, location);
+            return type;
+        }
+    }
+    if (text.find('.') != std::string_view::npos) {
+        TypeRef type = make_type(TypeKind::Qualified, text, location);
+        type.name = std::string(text);
+        return type;
+    }
+    if (is_identifier(text)) {
+        TypeRef type = make_type(TypeKind::Named, text, location);
+        type.name = std::string(text);
+        return type;
+    }
+    return make_type(TypeKind::Unknown, text, location);
 }
 
 Expr parse_expr_text(std::string_view text, SourceLocation location) {
@@ -790,6 +958,7 @@ Stmt statement_from_raw(const RawStmt& raw) {
     switch (stmt.kind) {
     case StmtKind::VarDecl:
         fill_var_decl(stmt, text);
+        stmt.type_ref = parse_type_text(stmt.type, raw.location);
         stmt.value_expr = parse_expr_text(stmt.value, raw.location);
         break;
     case StmtKind::Assign:
@@ -820,6 +989,7 @@ Stmt statement_from_raw(const RawStmt& raw) {
         break;
     case StmtKind::For:
         fill_for(stmt, text);
+        stmt.type_ref = parse_type_text(stmt.type, raw.location);
         stmt.iterable_expr = parse_expr_text(stmt.iterable, raw.location);
         break;
     case StmtKind::Assert:

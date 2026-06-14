@@ -253,6 +253,7 @@ class Parser {
         if (field.type.empty()) {
             throw CompileError(name.location, "field requires a type");
         }
+        field.type_ref = parse_type_text(field.type, name.location);
         consume(TokenKind::Newline, "expected newline after field");
         return field;
     }
@@ -273,6 +274,7 @@ class Parser {
         consume(TokenKind::Colon, "expected : after enum name");
         if (!at(TokenKind::Newline)) {
             en.underlying_type = join_until({TokenKind::Newline});
+            en.underlying_type_ref = parse_type_text(en.underlying_type, start.location);
         }
         consume(TokenKind::Newline, "expected newline after enum header");
         if (!match(TokenKind::Indent)) {
@@ -303,6 +305,7 @@ class Parser {
             alias.location = start.location;
             alias.name = name.text;
             alias.type = join_until({TokenKind::Newline});
+            alias.type_ref = parse_type_text(alias.type, start.location);
             consume(TokenKind::Newline, "expected newline after type alias");
             module.aliases.push_back(std::move(alias));
             return;
@@ -331,6 +334,7 @@ class Parser {
         consume(TokenKind::RParen, "expected ) after parameters");
         if (match(TokenKind::Arrow)) {
             fn.return_type = join_until({TokenKind::Colon});
+            fn.return_type_ref = parse_type_text(fn.return_type, start.location);
         }
         consume(TokenKind::Colon, "expected : after function header");
         consume(TokenKind::Newline, "expected newline after function header");
@@ -352,6 +356,7 @@ class Parser {
             if (!receiver_type.empty() && params.empty() && param.name == "self" &&
                 !at(TokenKind::Colon)) {
                 param.type = std::string(receiver_type);
+                param.type_ref = parse_type_text(param.type, name.location);
                 params.push_back(std::move(param));
                 if (match(TokenKind::Comma)) {
                     continue;
@@ -366,6 +371,7 @@ class Parser {
             if (param.type.empty()) {
                 throw CompileError(name.location, "parameter requires a type");
             }
+            param.type_ref = parse_type_text(param.type, name.location);
             params.push_back(std::move(param));
             if (match(TokenKind::Comma)) {
                 continue;
@@ -396,6 +402,7 @@ class Parser {
         if (constant.type.empty()) {
             throw CompileError(name.location, "constant requires a type");
         }
+        constant.type_ref = parse_type_text(constant.type, name.location);
         consume(TokenKind::Assign, "expected = after constant type");
         constant.value = join_until({TokenKind::Newline});
         consume(TokenKind::Newline, "expected newline after constant");

@@ -335,10 +335,12 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         method.name = match[1].str();
         method.return_type =
             qualify_scoped_type(scan, namespaces, signature_return_type(match[2].str()));
+        method.return_type_ref = parse_type_text(method.return_type, decl_location);
         for (const std::string& param : signature_params(match[2].str())) {
             ParamDecl decl;
             decl.name = "arg" + std::to_string(method.params.size());
             decl.type = qualify_scoped_type(scan, namespaces, param);
+            decl.type_ref = parse_type_text(decl.type, decl_location);
             decl.location = decl_location;
             method.params.push_back(std::move(decl));
         }
@@ -354,6 +356,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
             ParamDecl decl;
             decl.name = "arg" + std::to_string(ctor.params.size());
             decl.type = param;
+            decl.type_ref = parse_type_text(decl.type, decl_location);
             decl.location = decl_location;
             ctor.params.push_back(std::move(decl));
         }
@@ -364,6 +367,8 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         scan.classes[classes.back().second].fields.push_back(
             {.name = match[1].str(),
              .type = qualify_scoped_type(scan, namespaces, dudu_type(match[2].str())),
+             .type_ref = parse_type_text(
+                 qualify_scoped_type(scan, namespaces, dudu_type(match[2].str())), decl_location),
              .location = decl_location});
     } else if (!classes.empty() &&
                (line.find("public '") != std::string::npos ||

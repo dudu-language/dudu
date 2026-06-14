@@ -35,15 +35,44 @@ struct Decorator {
     SourceLocation location;
 };
 
+enum class TypeKind {
+    Unknown,
+    Named,
+    Qualified,
+    Template,
+    Pointer,
+    Reference,
+    Const,
+    Volatile,
+    Atomic,
+    Device,
+    Storage,
+    Shared,
+    Static,
+    FixedArray,
+    Function,
+};
+
+struct TypeRef {
+    TypeKind kind = TypeKind::Unknown;
+    std::string text;
+    std::string name;
+    std::string value;
+    std::vector<TypeRef> children;
+    SourceLocation location;
+};
+
 struct FieldDecl {
     std::string name;
     std::string type;
+    TypeRef type_ref;
     SourceLocation location;
 };
 
 struct ParamDecl {
     std::string name;
     std::string type;
+    TypeRef type_ref;
     SourceLocation location;
 };
 
@@ -115,6 +144,7 @@ struct Stmt {
     std::string name;
     std::string type;
     std::string value;
+    TypeRef type_ref;
     std::string target;
     std::string op;
     std::string condition;
@@ -131,6 +161,7 @@ struct Stmt {
 struct TypeAliasDecl {
     std::string name;
     std::string type;
+    TypeRef type_ref;
     SourceLocation location;
 };
 
@@ -175,6 +206,7 @@ struct EnumValueDecl {
 struct EnumDecl {
     std::string name;
     std::string underlying_type;
+    TypeRef underlying_type_ref;
     std::vector<EnumValueDecl> values;
     SourceLocation location;
 };
@@ -185,6 +217,7 @@ struct FunctionDecl {
     std::vector<Decorator> decorators;
     std::vector<ParamDecl> params;
     std::string return_type;
+    TypeRef return_type_ref;
     std::vector<RawStmt> body;
     std::vector<Stmt> statements;
     SourceLocation location;
@@ -194,6 +227,7 @@ struct ConstDecl {
     std::string name;
     std::string type;
     std::string value;
+    TypeRef type_ref;
     SourceLocation location;
 };
 
@@ -235,8 +269,10 @@ struct ModuleAst {
 std::string bound_import_name(const ImportDecl& import);
 std::string_view statement_kind_name(StmtKind kind);
 std::string_view expression_kind_name(ExprKind kind);
+std::string_view type_kind_name(TypeKind kind);
 StmtKind classify_statement_text(std::string_view text);
 Expr parse_expr_text(std::string_view text, SourceLocation location = {});
+TypeRef parse_type_text(std::string_view text, SourceLocation location = {});
 Stmt statement_from_raw(const RawStmt& raw);
 std::vector<Stmt> statements_from_raw(const std::vector<RawStmt>& raw);
 

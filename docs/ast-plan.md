@@ -29,6 +29,8 @@ Already structured:
 - initial expression shape capture for common names, literals, calls,
   template calls, member/index access, unary/binary operators, conditionals,
   and collection literals
+- initial type shape capture for names, qualified names, templates, pointers,
+  references, wrappers, fixed arrays, and function-like type signatures
 
 Still too string-based:
 
@@ -40,7 +42,7 @@ Still too string-based:
 - C++ emission of return/assert/debug_assert and expression statements
 - C++ emission of calls, member access, indexing, operators, constructors,
   template calls, lambdas, tuple destructuring, and C++ macro calls
-- type strings
+- semantic analysis and C++ emission of type strings
 
 ## Target Architecture
 

@@ -255,6 +255,52 @@ void test_expression_ast_shape() {
     assert(values.value_expr.children.size() == 3);
 }
 
+void test_type_ast_shape() {
+    const dudu::ModuleAst module =
+        dudu::parse_source("type PlayerList = list[*Player]\n"
+                           "\n"
+                           "enum Mode: u8\n"
+                           "    Idle = 0\n"
+                           "\n"
+                           "class Player:\n"
+                           "    count: static[i32] = 0\n"
+                           "    transform: array[f32][4, 4]\n"
+                           "\n"
+                           "def update(player: &Player, names: list[str]) -> *Player:\n"
+                           "    local: const[list[i32]] = [1, 2]\n"
+                           "    return None\n",
+                           "type_ast.dd");
+    assert(module.aliases.size() == 1);
+    assert(module.aliases[0].type_ref.kind == dudu::TypeKind::Template);
+    assert(module.aliases[0].type_ref.name == "list");
+    assert(module.aliases[0].type_ref.children.size() == 1);
+    assert(module.aliases[0].type_ref.children[0].kind == dudu::TypeKind::Pointer);
+
+    assert(module.enums.size() == 1);
+    assert(module.enums[0].underlying_type_ref.kind == dudu::TypeKind::Named);
+    assert(module.enums[0].underlying_type_ref.name == "u8");
+
+    assert(module.classes.size() == 1);
+    const dudu::ClassDecl& player = module.classes[0];
+    assert(player.static_fields.size() == 1);
+    assert(player.static_fields[0].type_ref.kind == dudu::TypeKind::Static);
+    assert(player.static_fields[0].type_ref.children[0].kind == dudu::TypeKind::Named);
+    assert(player.fields.size() == 1);
+    assert(player.fields[0].type_ref.kind == dudu::TypeKind::FixedArray);
+    assert(player.fields[0].type_ref.value == "4, 4");
+    assert(player.fields[0].type_ref.children[0].kind == dudu::TypeKind::Template);
+    assert(player.fields[0].type_ref.children[0].name == "array");
+
+    assert(module.functions.size() == 1);
+    const dudu::FunctionDecl& update = module.functions[0];
+    assert(update.return_type_ref.kind == dudu::TypeKind::Pointer);
+    assert(update.params[0].type_ref.kind == dudu::TypeKind::Reference);
+    assert(update.params[1].type_ref.kind == dudu::TypeKind::Template);
+    assert(update.params[1].type_ref.children[0].name == "str");
+    assert(update.statements[0].type_ref.kind == dudu::TypeKind::Const);
+    assert(update.statements[0].type_ref.children[0].kind == dudu::TypeKind::Template);
+}
+
 void test_formatter() {
     const std::string formatted = dudu::format_source("def main() -> i32:   \n"
                                                       "    return 0\t\n"
@@ -566,6 +612,7 @@ int main() {
         test_semantic_diagnostics();
         test_statement_ast_shape();
         test_expression_ast_shape();
+        test_type_ast_shape();
         test_formatter();
         test_typed_for_emission();
         test_native_type_declaration_emission();
