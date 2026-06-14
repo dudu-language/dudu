@@ -1045,6 +1045,9 @@ class LanguageServer {
                 collect_expr_tokens(callee, tokens);
             }
         }
+        for (const Expr& param : expr.params) {
+            collect_expr_tokens(param, tokens);
+        }
         for (const Expr& child : expr.children) {
             collect_expr_tokens(child, tokens);
         }

@@ -261,11 +261,12 @@ void test_expression_ast_shape() {
                            "    hex_mask: i32 = 0x80\n"
                            "    view: span[i32] = values[1:3]\n"
                            "    choice: i32 = 1 if ready else 2\n"
+                           "    callback = lambda left, right: left + right\n"
                            "    return answer\n",
                            "expression_ast.dd");
     assert(module.functions.size() == 1);
     const dudu::FunctionDecl& main = module.functions.front();
-    assert(main.statements.size() == 10);
+    assert(main.statements.size() == 11);
 
     const dudu::Stmt& answer = main.statements[0];
     assert(answer.kind == dudu::StmtKind::VarDecl);
@@ -398,6 +399,19 @@ void test_expression_ast_shape() {
            choice.value_expr.children[0].range.start.column);
     assert(choice.value_expr.children[2].range.start.column >
            choice.value_expr.children[1].range.start.column);
+
+    const dudu::Stmt& callback = main.statements[9];
+    assert(callback.kind == dudu::StmtKind::Assign);
+    assert(callback.value_expr.kind == dudu::ExprKind::Lambda);
+    assert(callback.value_expr.params.size() == 2);
+    assert(callback.value_expr.params[0].kind == dudu::ExprKind::Name);
+    assert(callback.value_expr.params[0].name == "left");
+    assert(callback.value_expr.params[1].kind == dudu::ExprKind::Name);
+    assert(callback.value_expr.params[1].name == "right");
+    assert(callback.value_expr.params[1].range.start.column >
+           callback.value_expr.params[0].range.start.column);
+    assert(callback.value_expr.children.size() == 1);
+    assert(callback.value_expr.children[0].kind == dudu::ExprKind::Binary);
 }
 
 void test_type_ast_shape() {

@@ -195,14 +195,17 @@ std::string lower_lambda_expr(const Expr& expr, const std::vector<std::string>& 
     if (expr.children.size() != 1) {
         return lower_expr(expr.text, aliases, locals);
     }
-    const std::vector<std::string> args = split_top_level_args(expr.name);
     std::ostringstream out;
     out << "[&](";
-    for (size_t i = 0; i < args.size(); ++i) {
+    for (size_t i = 0; i < expr.params.size(); ++i) {
         if (i > 0) {
             out << ", ";
         }
-        out << "auto&& " << trim_copy(args[i]);
+        if (expr.params[i].kind == ExprKind::Name && !expr.params[i].name.empty()) {
+            out << "auto&& " << expr.params[i].name;
+        } else {
+            out << "auto&& " << lower_expr(expr.params[i], aliases, locals);
+        }
     }
     out << ") { return " << lower_expr(expr.children.front(), aliases, locals) << "; }";
     return out.str();

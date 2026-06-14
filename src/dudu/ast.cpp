@@ -994,6 +994,24 @@ Expr parse_expr_text(std::string_view text, SourceLocation location) {
         }
         return parse_expr_text(inner, advance_columns(location, 1));
     }
+    if (starts_keyword(text, "lambda")) {
+        Expr expr = make_expr(ExprKind::Lambda, text, location);
+        size_t args_start = 6;
+        while (args_start < text.size() &&
+               std::isspace(static_cast<unsigned char>(text[args_start])) != 0) {
+            ++args_start;
+        }
+        const std::string_view body = text.substr(args_start);
+        const size_t colon = find_top_level_colon(body);
+        if (colon != std::string_view::npos) {
+            const std::string_view args = body.substr(0, colon);
+            expr.name = trim_string(args);
+            expr.params = parse_expr_list(args, advance_columns(location, args_start));
+            expr.children.push_back(parse_expr_text(
+                body.substr(colon + 1), advance_columns(location, args_start + colon + 1)));
+        }
+        return expr;
+    }
     if (split_top_level_commas(text).size() > 1) {
         Expr expr = make_expr(ExprKind::TupleLiteral, text, location);
         expr.children = parse_expr_list(text, location);
@@ -1029,23 +1047,6 @@ Expr parse_expr_text(std::string_view text, SourceLocation location) {
     if (text == "None") {
         return make_expr(ExprKind::NoneLiteral, text, location);
     }
-    if (starts_keyword(text, "lambda")) {
-        Expr expr = make_expr(ExprKind::Lambda, text, location);
-        size_t args_start = 6;
-        while (args_start < text.size() &&
-               std::isspace(static_cast<unsigned char>(text[args_start])) != 0) {
-            ++args_start;
-        }
-        const std::string_view body = text.substr(args_start);
-        const size_t colon = find_top_level_colon(body);
-        if (colon != std::string_view::npos) {
-            expr.name = trim_string(body.substr(0, colon));
-            expr.children.push_back(parse_expr_text(
-                body.substr(colon + 1), advance_columns(location, args_start + colon + 1)));
-        }
-        return expr;
-    }
-
     const size_t slice_colon = find_top_level_colon(text);
     if (slice_colon != std::string_view::npos) {
         Expr expr = make_expr(ExprKind::Slice, text, location);

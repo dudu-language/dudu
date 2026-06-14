@@ -98,9 +98,9 @@ Already structured:
 - assignment compatibility for parsed explicit casts, value-wrapper
   assignments, and `Ok(...)`/`Err(...)` result construction inspects call
   expression nodes instead of rediscovering those forms from raw text
-- parsed lambda expressions keep their argument text and body expression node;
-  C++ emission lowers the lambda body structurally while full lambda typing
-  remains future work
+- parsed lambda expressions keep parameter expression nodes and body expression
+  nodes; C++ emission lowers lambda parameters and bodies structurally while
+  full lambda typing remains future work
 - named-argument constructor emission relies on parsed `NamedArg` nodes only;
   the old raw `field=value` child-text fallback has been removed
 - parsed call emission lowers Dudu `list.append(...)` calls to C++
