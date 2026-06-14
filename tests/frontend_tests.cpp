@@ -170,6 +170,8 @@ void test_statement_ast_shape() {
     const dudu::ModuleAst module =
         dudu::parse_source("def main() -> i32:\n"
                            "    total: i32 = 0\n"
+                           "    for item: i32 in values:\n"
+                           "        total += item\n"
                            "    if total == 0:\n"
                            "        total += 42\n"
                            "    else:\n"
@@ -179,15 +181,31 @@ void test_statement_ast_shape() {
     assert(module.functions.size() == 1);
     const dudu::FunctionDecl& main = module.functions.front();
     assert(main.body.size() == main.statements.size());
-    assert(main.statements.size() == 4);
+    assert(main.statements.size() == 5);
     assert(main.statements[0].kind == dudu::StmtKind::VarDecl);
-    assert(main.statements[1].kind == dudu::StmtKind::If);
+    assert(main.statements[0].name == "total");
+    assert(main.statements[0].type == "i32");
+    assert(main.statements[0].value == "0");
+    assert(main.statements[1].kind == dudu::StmtKind::For);
+    assert(main.statements[1].name == "item");
+    assert(main.statements[1].type == "i32");
+    assert(main.statements[1].iterable == "values");
     assert(main.statements[1].children.size() == 1);
     assert(main.statements[1].children[0].kind == dudu::StmtKind::CompoundAssign);
-    assert(main.statements[2].kind == dudu::StmtKind::Else);
+    assert(main.statements[1].children[0].target == "total");
+    assert(main.statements[1].children[0].op == "+");
+    assert(main.statements[1].children[0].value == "item");
+    assert(main.statements[2].kind == dudu::StmtKind::If);
+    assert(main.statements[2].condition == "total == 0");
     assert(main.statements[2].children.size() == 1);
-    assert(main.statements[2].children[0].kind == dudu::StmtKind::Assign);
-    assert(main.statements[3].kind == dudu::StmtKind::Return);
+    assert(main.statements[2].children[0].kind == dudu::StmtKind::CompoundAssign);
+    assert(main.statements[3].kind == dudu::StmtKind::Else);
+    assert(main.statements[3].children.size() == 1);
+    assert(main.statements[3].children[0].kind == dudu::StmtKind::Assign);
+    assert(main.statements[3].children[0].target == "total");
+    assert(main.statements[3].children[0].value == "1");
+    assert(main.statements[4].kind == dudu::StmtKind::Return);
+    assert(main.statements[4].value == "total");
 }
 
 void test_formatter() {

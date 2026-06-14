@@ -79,6 +79,13 @@ enum class StmtKind {
 struct Stmt {
     StmtKind kind = StmtKind::Unknown;
     std::string text;
+    std::string name;
+    std::string type;
+    std::string value;
+    std::string target;
+    std::string op;
+    std::string condition;
+    std::string iterable;
     std::vector<Stmt> children;
     SourceLocation location;
 };
