@@ -1,0 +1,3 @@
+def bad() -> i32:
+    value = 1:3
+    return value

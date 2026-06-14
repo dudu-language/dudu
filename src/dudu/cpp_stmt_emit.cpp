@@ -427,7 +427,7 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
     case ExprKind::Unknown:
         break;
     }
-    return lower_expr(expr.text, aliases, locals);
+    return {};
 }
 
 bool is_identifier_char(char c) {

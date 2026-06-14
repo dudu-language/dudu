@@ -191,6 +191,9 @@ Already structured:
   scanning
 - malformed lambda expressions are rejected during semantic checking instead of
   being emitted through the raw expression fallback and left to the C++ compiler
+- standalone slice expressions are rejected during semantic checking, and parsed
+  expression nodes that fail structural C++ lowering no longer fall back to raw
+  expression rewriting
 
 Still too string-based:
 

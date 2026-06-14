@@ -879,6 +879,9 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
         }
         return "auto";
     case ExprKind::Slice:
+        if (use_location != nullptr) {
+            fail(*use_location, "slice expression must be used inside an index");
+        }
         for (const Expr& child : expr.children) {
             if (!child.text.empty()) {
                 (void)infer_expr_ast(scope, child, use_location);
