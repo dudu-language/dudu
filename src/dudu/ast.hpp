@@ -146,11 +146,13 @@ struct Stmt {
     std::string target;
     std::string op;
     std::string condition;
+    std::string message;
     std::string iterable;
     Expr expr;
     Expr value_expr;
     Expr target_expr;
     Expr condition_expr;
+    Expr message_expr;
     Expr iterable_expr;
     std::vector<Stmt> children;
     SourceLocation location;

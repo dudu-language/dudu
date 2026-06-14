@@ -392,25 +392,20 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         return;
     }
     if (stmt.kind == StmtKind::Assert) {
-        const std::vector<std::string> parts = split_top_level_args(stmt.condition);
-        const std::string condition = parts.empty() ? "" : trim_copy(parts.front());
-        const Expr condition_expr = parse_expr_text(condition, stmt.location);
-        out << indent(depth) << "if (!(" << lower_expr(condition_expr, aliases, locals)
+        out << indent(depth) << "if (!(" << lower_expr(stmt.condition_expr, aliases, locals)
             << ")) { throw std::runtime_error(";
-        if (parts.size() >= 2)
-            out << lower_expr(parts[1], aliases, locals);
+        if (!stmt.message.empty())
+            out << lower_expr(stmt.message_expr, aliases, locals);
         else
-            out << cpp_string_literal("assert failed: " + condition);
+            out << cpp_string_literal("assert failed: " + stmt.condition);
         out << "); }\n";
         return;
     }
     if (stmt.kind == StmtKind::DebugAssert) {
-        const auto parts = split_top_level_args(stmt.condition);
-        const auto condition = parts.empty() ? "" : trim_copy(parts.front());
-        const Expr condition_expr = parse_expr_text(condition, stmt.location);
-        out << indent(depth) << "assert((" << lower_expr(condition_expr, aliases, locals) << ")";
-        if (parts.size() >= 2)
-            out << " && (" << lower_expr(parts[1], aliases, locals) << ")";
+        out << indent(depth) << "assert((" << lower_expr(stmt.condition_expr, aliases, locals)
+            << ")";
+        if (!stmt.message.empty())
+            out << " && (" << lower_expr(stmt.message_expr, aliases, locals) << ")";
         out << ");\n";
         return;
     }

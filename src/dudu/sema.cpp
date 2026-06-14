@@ -763,10 +763,10 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
                  "runtime assert is not available in " + scope.target_mode +
                      " target mode; use debug_assert or a target-specific assert handler");
         }
-        const auto parts = split_top_level_args(stmt.condition);
-        check_condition_type(scope, stmt, parts.empty() ? "" : parts.front());
-        if (parts.size() > 1)
-            (void)infer_expr(scope, parts[1], &node_location(stmt.location, stmt.condition_expr));
+        check_condition_type(scope, stmt, stmt.condition);
+        if (!stmt.message.empty())
+            (void)infer_expr_ast(scope, stmt.message_expr,
+                                 &node_location(stmt.location, stmt.message_expr));
         return;
     }
     if (stmt.kind == StmtKind::Raise) {

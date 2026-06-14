@@ -608,6 +608,23 @@ void fill_for(Stmt& stmt, std::string_view text) {
     }
     stmt.iterable = strip_trailing_colon(header.substr(in_pos + 2));
 }
+
+void fill_assert(Stmt& stmt, std::string_view text, SourceLocation location,
+                 std::string_view keyword) {
+    const std::string_view body = trim_view(text.substr(keyword.size()));
+    const std::vector<CommaPart> parts = split_top_level_comma_parts(body);
+    if (parts.empty()) {
+        return;
+    }
+    stmt.condition = trim_string(parts.front().text);
+    stmt.condition_expr = parse_expr_text(
+        stmt.condition, advance_columns(location, keyword.size() + parts.front().offset));
+    if (parts.size() >= 2) {
+        stmt.message = trim_string(parts[1].text);
+        stmt.message_expr = parse_expr_text(
+            stmt.message, advance_columns(location, keyword.size() + parts[1].offset));
+    }
+}
 } // namespace
 
 std::string bound_import_name(const ImportDecl& import) {
@@ -1100,14 +1117,10 @@ Stmt statement_from_text(std::string raw_text, SourceLocation location, SourceRa
             parse_expr_text(stmt.iterable, location_for_piece(location, stmt.text, stmt.iterable));
         break;
     case StmtKind::Assert:
-        stmt.condition = trim_string(text.substr(6));
-        stmt.condition_expr = parse_expr_text(
-            stmt.condition, location_for_piece(location, stmt.text, stmt.condition));
+        fill_assert(stmt, text, location, "assert");
         break;
     case StmtKind::DebugAssert:
-        stmt.condition = trim_string(text.substr(12));
-        stmt.condition_expr = parse_expr_text(
-            stmt.condition, location_for_piece(location, stmt.text, stmt.condition));
+        fill_assert(stmt, text, location, "debug_assert");
         break;
     case StmtKind::Raise:
         stmt.value = trim_string(text.substr(5));
