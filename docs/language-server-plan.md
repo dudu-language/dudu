@@ -187,8 +187,10 @@ basic native symbols.
 Status: initial `textDocument/completion` support is implemented for Dudu
 keywords, built-in types, and open-document Dudu symbols, and initial
 `textDocument/signatureHelp` support is implemented for open-document Dudu
-functions. VS Code now uses LSP completions and signature help. Completion
-resolve, member-aware completion, and native symbol completion remain.
+functions. VS Code now uses LSP completions and signature help. Initial
+member-aware completion is implemented for Dudu-native class locals with simple
+type annotations. Completion resolve, module symbol completion, deeper local
+scope completion, and native member completion remain.
 
 ### Milestone 4: Native Header Navigation
 

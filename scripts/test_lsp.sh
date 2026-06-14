@@ -47,6 +47,8 @@ source = "\n".join(
         "",
         "def main() -> i32:   ",
         "    value: i32 = add(1, 2)",
+        "    player: Player = Player(3)",
+        "    player.hp",
         "    return True",
         "",
     ]
@@ -125,6 +127,14 @@ messages = [
             "id": 6,
             "method": "textDocument/signatureHelp",
             "params": {"textDocument": {"uri": uri}, "position": {"line": 7, "character": 25}},
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 21,
+            "method": "textDocument/completion",
+            "params": {"textDocument": {"uri": uri}, "position": {"line": 9, "character": 11}},
         }
     ),
     packet(
@@ -340,12 +350,17 @@ assert "i32" in completion_labels
 assert "add" in completion_labels
 assert "Player" in completion_labels
 
+member_completion = next(item for item in responses if item.get("id") == 21)
+member_completion_labels = [item["label"] for item in member_completion["result"]]
+assert "hp" in member_completion_labels
+assert "return" not in member_completion_labels
+
 signature = next(item for item in responses if item.get("id") == 6)
 assert "def add(a: i32, b: i32) -> i32" in signature["result"]["signatures"][0]["label"]
 assert signature["result"]["activeParameter"] == 1
 
 formatting = next(item for item in responses if item.get("id") == 7)
-assert "def main() -> i32:\n    value: i32 = add(1, 2)\n    return True\n" in formatting["result"][0]["newText"]
+assert "def main() -> i32:\n    value: i32 = add(1, 2)\n    player: Player = Player(3)\n    player.hp\n    return True\n" in formatting["result"][0]["newText"]
 
 references = next(item for item in responses if item.get("id") == 13)
 reference_starts = {

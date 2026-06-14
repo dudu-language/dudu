@@ -14,6 +14,7 @@
 #include <iostream>
 #include <map>
 #include <optional>
+#include <regex>
 #include <set>
 #include <sstream>
 #include <string>
@@ -956,6 +957,12 @@ class LanguageServer {
 
     std::string completion_result(const Json* params) const {
         const Document* doc = document_from_params(params);
+        if (doc != nullptr) {
+            if (const std::optional<std::string> member_target =
+                    member_completion_target(*doc, params)) {
+                return member_completion_result(*doc, *member_target);
+            }
+        }
         std::ostringstream out;
         out << "[";
         bool first = true;
@@ -980,6 +987,48 @@ class LanguageServer {
             for (const Symbol& symbol : symbols_for(*doc)) {
                 add(symbol.name, completion_kind(symbol.kind), symbol.detail);
             }
+        }
+        out << "]";
+        return out.str();
+    }
+
+    std::string member_completion_result(const Document& doc, const std::string& target) const {
+        const std::string type = local_type_before_cursor(doc, target);
+        if (type.empty()) {
+            return "[]";
+        }
+        std::ostringstream out;
+        out << "[";
+        bool first = true;
+        const auto add = [&](std::string_view label, int kind, std::string_view detail) {
+            if (!first) {
+                out << ",";
+            }
+            first = false;
+            out << "{\"label\":\"" << json_escape(label) << "\",\"kind\":" << kind
+                << ",\"detail\":\"" << json_escape(detail) << "\"}";
+        };
+        try {
+            const ModuleAst module = parse_source(doc.text, doc.path);
+            for (const ClassDecl& klass : module.classes) {
+                if (klass.name != type) {
+                    continue;
+                }
+                for (const FieldDecl& field : klass.fields) {
+                    add(field.name, 5, field.name + ": " + field.type);
+                }
+                for (const ConstDecl& constant : klass.constants) {
+                    add(constant.name, 21, constant.name + ": " + constant.type);
+                }
+                for (const ConstDecl& field : klass.static_fields) {
+                    add(field.name, 5, field.name + ": " + field.type);
+                }
+                for (const FunctionDecl& method : klass.methods) {
+                    add(method.name, method.name == "__init__" ? 4 : 2, function_detail(method));
+                }
+                break;
+            }
+        } catch (const std::exception&) {
         }
         out << "]";
         return out.str();
@@ -1131,6 +1180,57 @@ class LanguageServer {
 
     static bool symbol_char(char c) {
         return identifier_char(c) || c == '.';
+    }
+
+    std::optional<std::string> member_completion_target(const Document& doc,
+                                                        const Json* params) const {
+        const Json* position = params == nullptr ? nullptr : params->get("position");
+        const int target_line = int_value(position == nullptr ? nullptr : position->get("line"));
+        const int target_character =
+            int_value(position == nullptr ? nullptr : position->get("character"));
+        std::istringstream in(doc.text);
+        std::string line;
+        for (int row = 0; std::getline(in, line); ++row) {
+            if (row != target_line) {
+                continue;
+            }
+            int cursor = std::min(target_character, static_cast<int>(line.size()));
+            while (cursor > 0 && identifier_char(line[static_cast<size_t>(cursor - 1)])) {
+                --cursor;
+            }
+            if (cursor <= 0 || line[static_cast<size_t>(cursor - 1)] != '.') {
+                return std::nullopt;
+            }
+            int end = cursor - 1;
+            while (end > 0 && std::isspace(static_cast<unsigned char>(
+                                  line[static_cast<size_t>(end - 1)])) != 0) {
+                --end;
+            }
+            int start = end;
+            while (start > 0 && identifier_char(line[static_cast<size_t>(start - 1)])) {
+                --start;
+            }
+            if (start == end) {
+                return std::nullopt;
+            }
+            return line.substr(static_cast<size_t>(start), static_cast<size_t>(end - start));
+        }
+        return std::nullopt;
+    }
+
+    static std::string local_type_before_cursor(const Document& doc, const std::string& name) {
+        static const std::regex local_decl(
+            R"(^\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([A-Za-z_][A-Za-z0-9_\.]*)\b)");
+        std::string out;
+        std::istringstream in(doc.text);
+        std::string line;
+        while (std::getline(in, line)) {
+            std::smatch match;
+            if (std::regex_search(line, match, local_decl) && match[1].str() == name) {
+                out = match[2].str();
+            }
+        }
+        return out;
     }
 
     static bool valid_identifier(const std::string& value) {
