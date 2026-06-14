@@ -32,6 +32,8 @@ namespace {
 }
 std::string infer_expr(const FunctionScope& scope, std::string expr,
                        const SourceLocation* location = nullptr);
+std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
+                           const SourceLocation* location = nullptr);
 std::vector<std::string> call_args(std::string expr, size_t open) {
     std::string args = trim(expr.substr(open + 1, expr.size() - open - 2));
     return args.empty() ? std::vector<std::string>{} : split_top_level_args(args);
@@ -58,6 +60,10 @@ bool freestanding_like(const FunctionScope& scope) {
 
 bool is_array_literal(const Expr& expr) {
     return expr.kind == ExprKind::ListLiteral;
+}
+
+bool is_comparison_op(const std::string& op) {
+    return op == "==" || op == "!=" || op == "<" || op == "<=" || op == ">" || op == ">=";
 }
 
 const SourceLocation& node_location(const SourceLocation& fallback, const Expr& expr) {
@@ -348,13 +354,194 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
     }
     return {};
 }
-void check_type_match(const FunctionScope& scope, const std::string& expected,
-                      const std::string& expr, const SourceLocation& location) {
-    const std::string got = infer_expr(scope, expr, &location);
-    if (can_assign_expr(scope, expected, expr, got)) {
+
+std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
+                           const SourceLocation* location) {
+    const SourceLocation* use_location =
+        location != nullptr
+            ? location
+            : (expr.range.end.column > expr.range.start.column ? &expr.location : nullptr);
+    switch (expr.kind) {
+    case ExprKind::Unknown:
+        return infer_expr(scope, expr.text, use_location);
+    case ExprKind::BoolLiteral:
+        return "bool";
+    case ExprKind::IntLiteral:
+        return "i32";
+    case ExprKind::FloatLiteral:
+        return "f64";
+    case ExprKind::StringLiteral:
+        return "str";
+    case ExprKind::NoneLiteral:
+        return "None";
+    case ExprKind::Lambda:
+        return "lambda";
+    case ExprKind::ListLiteral:
+        return "list";
+    case ExprKind::DictLiteral:
+        return "dict";
+    case ExprKind::SetLiteral:
+        return "set";
+    case ExprKind::TupleLiteral: {
+        std::ostringstream out;
+        out << "tuple[";
+        for (size_t i = 0; i < expr.children.size(); ++i) {
+            if (i > 0) {
+                out << ", ";
+            }
+            out << infer_expr_ast(scope, expr.children[i], use_location);
+        }
+        out << "]";
+        return out.str();
+    }
+    case ExprKind::Name:
+        if (const auto local = scope.locals.find(expr.name); local != scope.locals.end()) {
+            return local->second;
+        }
+        if (const auto fn = scope.symbols.function_signatures.find(expr.name);
+            fn != scope.symbols.function_signatures.end()) {
+            return function_type(fn->second);
+        }
+        if (const auto value = scope.symbols.native_values.find(expr.name);
+            value != scope.symbols.native_values.end()) {
+            return value->second;
+        }
+        if (const auto native = scope.symbols.native_function_signatures.find(expr.name);
+            native != scope.symbols.native_function_signatures.end() && !native->second.empty()) {
+            return function_type(native->second.front());
+        }
+        if (is_dudu_all_caps(expr.name)) {
+            return "i32";
+        }
+        if (use_location != nullptr) {
+            fail(*use_location, "unknown identifier: " + expr.name);
+        }
+        return {};
+    case ExprKind::Unary:
+        if (expr.children.empty()) {
+            return infer_expr(scope, expr.text, use_location);
+        }
+        if (expr.op == "not") {
+            const std::string got = infer_expr_ast(scope, expr.children.front(), use_location);
+            if (use_location != nullptr && !got.empty() && got != "bool") {
+                fail(*use_location, "not expects bool, got " + got);
+            }
+            return "bool";
+        }
+        if (expr.op == "-") {
+            return infer_expr_ast(scope, expr.children.front(), use_location);
+        }
+        return infer_expr(scope, expr.text, use_location);
+    case ExprKind::Binary: {
+        if (expr.text.find("<<") != std::string::npos ||
+            expr.text.find(">>") != std::string::npos) {
+            return infer_expr(scope, expr.text, use_location);
+        }
+        if (expr.children.size() != 2) {
+            return infer_expr(scope, expr.text, use_location);
+        }
+        const std::string left = infer_expr_ast(scope, expr.children[0], use_location);
+        const std::string right = infer_expr_ast(scope, expr.children[1], use_location);
+        if (expr.op == "and" || expr.op == "or") {
+            if (use_location != nullptr && !left.empty() && left != "bool") {
+                fail(*use_location, expr.op + " expects bool, got " + left);
+            }
+            if (use_location != nullptr && !right.empty() && right != "bool") {
+                fail(*use_location, expr.op + " expects bool, got " + right);
+            }
+            return "bool";
+        }
+        if (is_comparison_op(expr.op)) {
+            if (const auto signature = dudu_operator_signature(scope.symbols, expr.op, left)) {
+                if (use_location != nullptr) {
+                    if (signature->params.size() != 1) {
+                        fail(*use_location, "operator " + expr.op + " expects 1 argument, got " +
+                                                std::to_string(signature->params.size()));
+                    } else if (!assignment_type_allowed(signature->params.front(),
+                                                        expr.children[1].text, right)) {
+                        fail(*use_location, "operator " + expr.op + " expects " +
+                                                signature->params.front() + ", got " + right);
+                    }
+                    if (signature->return_type != "bool") {
+                        fail(*use_location, "comparison operator " + expr.op + " must return bool");
+                    }
+                }
+                return "bool";
+            }
+            if (use_location != nullptr && !left.empty() && !right.empty() &&
+                !comparison_rhs_allowed(scope.symbols, expr.op, left, expr.children[1].text,
+                                        right)) {
+                fail(*use_location,
+                     "comparison " + expr.op + " expects " + left + ", got " + right);
+            }
+            return "bool";
+        }
+        if (const auto signature = dudu_operator_signature(scope.symbols, expr.op, left)) {
+            if (use_location != nullptr) {
+                check_call_args(scope, expr.op, *signature, {expr.children[1].text}, use_location);
+            }
+            return signature->return_type;
+        }
+        if (use_location != nullptr && !left.empty() && !right.empty() &&
+            !binary_rhs_allowed(scope.symbols, expr.op, left, expr.children[1].text, right)) {
+            fail(*use_location, "operator " + expr.op + " expects " + left + ", got " + right);
+        }
+        return left.empty() ? right : left;
+    }
+    case ExprKind::Member:
+        return member_path_type(scope.symbols, scope.locals, use_location, expr.text, "");
+    case ExprKind::Index:
+        if (use_location != nullptr && expr.children.size() == 2) {
+            const Expr& receiver = expr.children[0];
+            const std::string& index_expr = expr.children[1].text;
+            if (receiver.kind == ExprKind::Name) {
+                if (const auto local = scope.locals.find(receiver.name);
+                    local != scope.locals.end()) {
+                    if (const auto signature =
+                            dudu_operator_signature(scope.symbols, "[]", local->second)) {
+                        check_call_args(scope, receiver.name + "[]", *signature,
+                                        split_top_level_args(index_expr), use_location);
+                    }
+                }
+                return indexed_value_type(scope.symbols, scope.locals, *use_location, receiver.name,
+                                          index_expr, "indexed access to unknown local: ");
+            }
+            if (is_member_path(receiver.text)) {
+                const std::string receiver_type =
+                    member_path_type(scope.symbols, scope.locals, use_location, receiver.text, "");
+                if (!receiver_type.empty()) {
+                    return indexed_type_from_type(scope.symbols, *use_location, receiver_type,
+                                                  index_expr, receiver.text);
+                }
+            }
+        }
+        return infer_expr(scope, expr.text, use_location);
+    case ExprKind::Conditional:
+        if (expr.children.size() == 3) {
+            const std::string condition = infer_expr_ast(scope, expr.children[1], use_location);
+            if (use_location != nullptr && !condition.empty() && condition != "bool") {
+                fail(*use_location, "condition must be bool, got " + condition);
+            }
+            const std::string then_type = infer_expr_ast(scope, expr.children[0], use_location);
+            const std::string else_type = infer_expr_ast(scope, expr.children[2], use_location);
+            return then_type.empty() ? else_type : then_type;
+        }
+        return infer_expr(scope, expr.text, use_location);
+    case ExprKind::Call:
+    case ExprKind::TemplateCall:
+    case ExprKind::CppEscape:
+        return infer_expr(scope, expr.text, use_location);
+    }
+    return infer_expr(scope, expr.text, use_location);
+}
+
+void check_type_match(const FunctionScope& scope, const std::string& expected, const Expr& expr,
+                      const SourceLocation& location) {
+    const std::string got = infer_expr_ast(scope, expr, &location);
+    if (can_assign_expr(scope, expected, expr.text, got)) {
         return;
     }
-    fail(location, assignment_error(expected, expr, got));
+    fail(location, assignment_error(expected, expr.text, got));
 }
 
 void check_array_literal_elements(const FunctionScope& scope, const std::string& element_type,
@@ -365,7 +552,7 @@ void check_array_literal_elements(const FunctionScope& scope, const std::string&
         }
         return;
     }
-    const std::string got = infer_expr(scope, expr.text, &expr.location);
+    const std::string got = infer_expr_ast(scope, expr, &expr.location);
     if (!can_assign_expr(scope, element_type, expr.text, got)) {
         fail(location, "array literal element expects " + element_type + ", got " + got);
     }
@@ -395,7 +582,9 @@ void check_condition_type(const FunctionScope& scope, const Stmt& stmt, std::str
         expr.pop_back();
     }
     const SourceLocation& location = node_location(stmt.location, stmt.condition_expr);
-    const std::string got = infer_expr(scope, expr, &location);
+    const Expr condition_expr =
+        trim(stmt.condition) == expr ? stmt.condition_expr : parse_expr_text(expr, location);
+    const std::string got = infer_expr_ast(scope, condition_expr, &location);
     if (!got.empty() && got != "bool" && got != "auto") {
         if (const auto signature = dudu_operator_signature(scope.symbols, "bool", got);
             signature && signature->params.empty() && signature->return_type == "bool") {
@@ -454,7 +643,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
     if (stmt.kind == StmtKind::Return) {
         const std::string expr = stmt.value;
         const SourceLocation& value_location = node_location(stmt.location, stmt.value_expr);
-        const std::string got = infer_expr(scope, expr, &value_location);
+        const std::string got = infer_expr_ast(scope, stmt.value_expr, &value_location);
         if (return_type == "void" && got != "void")
             fail(value_location, "void function cannot return " + got);
         if (return_type != "void" && !can_assign_expr(scope, return_type, expr, got)) {
@@ -478,7 +667,8 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
     if (stmt.kind == StmtKind::Raise) {
         const std::string expr = stmt.value;
         if (!expr.empty())
-            (void)infer_expr(scope, expr, &node_location(stmt.location, stmt.value_expr));
+            (void)infer_expr_ast(scope, stmt.value_expr,
+                                 &node_location(stmt.location, stmt.value_expr));
         return;
     }
     if (stmt.kind == StmtKind::CppEscape || stmt.kind == StmtKind::Pass)
@@ -551,7 +741,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
     if (stmt.kind == StmtKind::CompoundAssign) {
         const std::string target_type = assign_target_type(scope, stmt, stmt.target);
         if (!target_type.empty()) {
-            check_type_match(scope, target_type, stmt.value,
+            check_type_match(scope, target_type, stmt.value_expr,
                              node_location(stmt.location, stmt.value_expr));
         }
         return;
@@ -600,7 +790,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
                 check_array_literal_elements(scope, explicit_element, stmt.value_expr,
                                              node_location(stmt.location, stmt.value_expr));
             } else {
-                check_type_match(scope, type, stmt.value,
+                check_type_match(scope, type, stmt.value_expr,
                                  node_location(stmt.location, stmt.value_expr));
             }
         }
@@ -615,8 +805,8 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
         if (split_top_level(lhs).size() > 1) {
             const std::vector<std::string> names = split_top_level(lhs);
             const std::vector<std::string> types = tuple_types(
-                scope.symbols,
-                infer_expr(scope, stmt.value, &node_location(stmt.location, stmt.value_expr)));
+                scope.symbols, infer_expr_ast(scope, stmt.value_expr,
+                                              &node_location(stmt.location, stmt.value_expr)));
             if (names.size() != types.size()) {
                 fail(node_location(stmt.location, stmt.value_expr),
                      "tuple destructuring count mismatch");
@@ -630,8 +820,8 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
         if (lhs.find('.') == std::string::npos && !starts_with(lhs, "*") &&
             lhs.find('[') == std::string::npos && !scope.locals.contains(lhs)) {
             check_local_binding_name(stmt.location, lhs);
-            const std::string inferred =
-                infer_expr(scope, stmt.value, &node_location(stmt.location, stmt.value_expr));
+            const std::string inferred = infer_expr_ast(
+                scope, stmt.value_expr, &node_location(stmt.location, stmt.value_expr));
             scope.locals[lhs] = inferred.empty() ? "auto" : inferred;
             if (is_dudu_all_caps(lhs)) {
                 scope.constants.insert(lhs);
@@ -640,12 +830,12 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
         }
         const std::string target_type = assign_target_type(scope, stmt, lhs);
         if (!target_type.empty()) {
-            check_type_match(scope, target_type, stmt.value,
+            check_type_match(scope, target_type, stmt.value_expr,
                              node_location(stmt.location, stmt.value_expr));
         }
         return;
     }
-    (void)infer_expr(scope, text, &stmt.location);
+    (void)infer_expr_ast(scope, stmt.expr, &stmt.location);
 }
 void check_bodies(const ModuleAst& module, const Symbols& symbols) {
     FunctionScope base{symbols, {}, {}};

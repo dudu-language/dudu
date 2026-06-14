@@ -325,6 +325,14 @@ parsed `Stmt` nodes directly. `RawStmt` still exists as a parser-internal bridge
 while expression and statement parsing continue moving toward exact source-token
 AST nodes.
 
+Statement semantic checks now enter expression inference through parsed `Expr`
+nodes for returns, assignments, local initializer inference, conditions, array
+literal element checks, and expression statements. Core AST expression kinds
+such as literals, names, unary/binary expressions, tuples, conditionals,
+member/index access, and collection literals are handled structurally. Complex
+calls and operators not yet represented correctly by the expression parser keep
+falling back to the old string inference path until the AST grows those nodes.
+
 ## Acceptance
 
 - Existing examples still compile and run.
