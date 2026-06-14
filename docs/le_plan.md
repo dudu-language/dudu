@@ -299,8 +299,10 @@ push. They are not release packaging work.
    and bodies, duplicate generic parameters are diagnosed, and generic
    classes/functions emit readable C++ templates. Explicit generic class
    construction works for simple value-type examples such as `Box[i32]`.
-   Call-site inference, generic methods, non-type parameters, and richer
-   instantiated diagnostics remain.
+   Explicit generic free-function calls such as `identity[i32](42)` instantiate
+   Dudu signatures from parsed template-call nodes and type-check parsed
+   runtime arguments. Call-site inference, generic methods, non-type
+   parameters, and richer instantiated diagnostics remain.
 
 6. Sum Types And Pattern Matching
 

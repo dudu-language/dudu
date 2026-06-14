@@ -440,6 +440,7 @@ Symbols collect_symbols(const ModuleAst& module) {
         signature.return_type = fn.return_type.empty() ? "void" : fn.return_type;
         symbols.functions[fn.name] = signature.return_type;
         symbols.function_signatures[fn.name] = std::move(signature);
+        symbols.function_decls[fn.name] = &fn;
     }
     for (const NativeFunctionDecl& fn : module.native_functions) {
         FunctionSignature signature;

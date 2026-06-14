@@ -23,6 +23,7 @@ struct Symbols {
     std::map<std::string, TypeRef> alias_type_refs;
     std::map<std::string, std::string> functions;
     std::map<std::string, FunctionSignature> function_signatures;
+    std::map<std::string, const FunctionDecl*> function_decls;
     std::map<std::string, std::vector<FunctionSignature>> native_function_signatures;
     std::set<std::string> native_template_fallback_prefixes;
     std::map<std::string, std::string> native_values;

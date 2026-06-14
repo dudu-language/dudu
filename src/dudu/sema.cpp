@@ -259,6 +259,63 @@ std::string template_args_lookup_text(const Expr& expr) {
     return out.str();
 }
 
+std::vector<TypeRef> template_type_refs(const Expr& expr) {
+    if (!expr.template_type_args.empty()) {
+        return expr.template_type_args;
+    }
+    std::vector<TypeRef> out;
+    out.reserve(expr.template_args.size());
+    for (const Expr& arg : expr.template_args) {
+        out.push_back(parse_type_text(arg.text, arg.location));
+    }
+    return out;
+}
+
+bool is_identifier_char(char ch) {
+    return std::isalnum(static_cast<unsigned char>(ch)) != 0 || ch == '_';
+}
+
+std::string replace_type_parameter(std::string type, const std::string& from,
+                                   const std::string& to) {
+    if (from.empty() || to.empty()) {
+        return type;
+    }
+    size_t pos = type.find(from);
+    while (pos != std::string::npos) {
+        const bool left_ok = pos == 0 || !is_identifier_char(type[pos - 1]);
+        const size_t end = pos + from.size();
+        const bool right_ok = end == type.size() || !is_identifier_char(type[end]);
+        if (left_ok && right_ok) {
+            type.replace(pos, from.size(), to);
+            pos = type.find(from, pos + to.size());
+        } else {
+            pos = type.find(from, end);
+        }
+    }
+    return type;
+}
+
+std::string substitute_generic_type(std::string type, const std::vector<std::string>& params,
+                                    const std::vector<TypeRef>& args) {
+    for (size_t i = 0; i < params.size() && i < args.size(); ++i) {
+        type = replace_type_parameter(std::move(type), params[i], args[i].text);
+    }
+    return type;
+}
+
+FunctionSignature instantiate_generic_signature(const FunctionDecl& fn,
+                                                const std::vector<TypeRef>& args) {
+    FunctionSignature signature;
+    signature.return_type =
+        substitute_generic_type(fn.return_type.empty() ? "void" : fn.return_type,
+                                fn.generic_params, args);
+    for (const ParamDecl& param : fn.params) {
+        signature.params.push_back(
+            substitute_generic_type(param.type, fn.generic_params, args));
+    }
+    return signature;
+}
+
 std::string join_type_ref_texts(const std::vector<TypeRef>& types) {
     std::ostringstream out;
     for (size_t i = 0; i < types.size(); ++i) {
@@ -554,6 +611,7 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
         return infer_expr(scope, expr.text, location);
     }
     const std::string callee = template_call_callee(expr);
+    const std::string callee_base = call_callee_text(expr);
 
     if (starts_with(expr.name, "*")) {
         const size_t arg_count = !expr.template_type_args.empty() ? expr.template_type_args.size()
@@ -662,6 +720,28 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
         return "usize";
     }
 
+    if (const auto fn = scope.symbols.function_decls.find(callee_base);
+        fn != scope.symbols.function_decls.end() && !fn->second->generic_params.empty()) {
+        const std::vector<TypeRef> type_args = template_type_refs(expr);
+        if (location != nullptr && type_args.size() != fn->second->generic_params.size()) {
+            fail(*location, "function " + callee_base + " expects " +
+                                std::to_string(fn->second->generic_params.size()) +
+                                " type arguments, got " + std::to_string(type_args.size()));
+        }
+        if (location != nullptr) {
+            for (const TypeRef& type_arg : type_args) {
+                if (const auto unknown = unknown_type_ref(scope.symbols, type_arg)) {
+                    const SourceLocation type_location =
+                        unknown->second.line > 0 ? unknown->second : type_arg.location;
+                    fail(type_location, "unknown generic argument type: " + unknown->first);
+                }
+            }
+        }
+        const FunctionSignature signature = instantiate_generic_signature(*fn->second, type_args);
+        check_call_args_ast(scope, callee, signature, expr.children, location);
+        return signature.return_type;
+    }
+
     if (const auto signature = native_signature_for_call(
             scope, callee, expr.children, location, infer_expr_ast,
             [&](const std::string& expected, const Expr& value, const std::string& got) {
@@ -669,7 +749,6 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
             })) {
         return signature->return_type;
     }
-    const std::string callee_base = call_callee_text(expr);
     const size_t method_dot = callee_base.rfind('.');
     if (method_dot != std::string::npos && is_member_path(callee_base)) {
         const std::string receiver = trim(callee_base.substr(0, method_dot));

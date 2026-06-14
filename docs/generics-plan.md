@@ -71,8 +71,11 @@ into the AST. Generic type parameters are visible to declaration and body
 checking, duplicate type parameters are diagnosed, and generic classes/functions
 emit readable C++ `template <typename ...>` declarations. Explicit generic
 class construction such as `Box[i32](42)` compiles through C++ template
-lowering. Call-site type inference, richer instantiated diagnostics, generic
-methods, and non-type template parameters remain.
+lowering. Explicit generic free-function calls such as `identity[i32](42)`
+resolve through parsed template-call nodes, instantiate the declared Dudu
+signature, and type-check parsed runtime arguments. Call-site type inference,
+richer instantiated diagnostics, generic methods, and non-type template
+parameters remain.
 
 Unsupported operations on `T` should produce useful diagnostics that mention:
 
