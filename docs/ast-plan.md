@@ -459,6 +459,8 @@ nodes instead of raw initializer strings.
 Module constants, class constants, static fields, and `static_assert`
 declarations now store parsed expression nodes. C++ emission and semantic-token
 collection use those declaration expression nodes instead of raw strings.
+Enum value initializers now store parsed expression nodes as well; enum C++
+emission and semantic-token collection use those nodes.
 
 `range(...)` for-loop C++ emission now reads parsed call arguments from the
 iterable expression instead of parsing them back out of lowered C++ text.

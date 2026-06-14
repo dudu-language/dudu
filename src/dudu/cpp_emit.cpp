@@ -20,7 +20,8 @@ void emit_aliases(std::ostringstream& out, const ModuleAst& module) {
         out << '\n';
     }
 }
-void emit_enums(std::ostringstream& out, const ModuleAst& module) {
+void emit_enums(std::ostringstream& out, const ModuleAst& module,
+                const std::vector<std::string>& aliases) {
     for (const EnumDecl& en : module.enums) {
         out << "enum class " << en.name;
         if (!en.underlying_type.empty()) {
@@ -30,7 +31,7 @@ void emit_enums(std::ostringstream& out, const ModuleAst& module) {
         for (const EnumValueDecl& value : en.values) {
             out << "    " << value.name;
             if (!value.value.empty()) {
-                out << " = " << value.value;
+                out << " = " << lower_cpp_expr_ast(value.value_expr, aliases);
             }
             out << ",\n";
         }
@@ -333,7 +334,7 @@ std::string emit_cpp_header(const ModuleAst& module) {
     emit_result_prelude(out, module);
 
     emit_aliases(out, module);
-    emit_enums(out, module);
+    emit_enums(out, module, aliases);
     emit_classes(out, module, aliases, function_returns, true);
     emit_early_functions(out, module, aliases, function_returns, true);
     emit_constants(out, module, aliases);
@@ -391,7 +392,7 @@ std::string emit_cpp_source(const ModuleAst& module) {
     emit_result_prelude(out, module);
 
     emit_aliases(out, module);
-    emit_enums(out, module);
+    emit_enums(out, module, aliases);
     emit_classes(out, module, aliases, function_returns);
     emit_early_functions(out, module, aliases, function_returns, false);
     emit_constants(out, module, aliases);
@@ -415,7 +416,7 @@ std::string emit_cpp_test_source(const ModuleAst& module, const std::string& fil
     emit_result_prelude(out, module);
 
     emit_aliases(out, module);
-    emit_enums(out, module);
+    emit_enums(out, module, aliases);
     emit_classes(out, module, aliases, function_returns);
     emit_early_functions(out, module, aliases, function_returns, false, true);
     emit_constants(out, module, aliases);

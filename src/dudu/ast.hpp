@@ -205,6 +205,7 @@ struct NativeNamespaceDecl {
 struct EnumValueDecl {
     std::string name;
     std::string value;
+    Expr value_expr;
     SourceLocation location;
 };
 

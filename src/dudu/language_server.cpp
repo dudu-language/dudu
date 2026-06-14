@@ -1067,6 +1067,7 @@ class LanguageServer {
             collect_type_tokens(en.underlying_type_ref, tokens);
             for (const EnumValueDecl& value : en.values) {
                 add_semantic_token(tokens, value.location, value.name, 9, 1);
+                collect_expr_tokens(value.value_expr, tokens);
             }
         }
         for (const ClassDecl& klass : module.classes) {

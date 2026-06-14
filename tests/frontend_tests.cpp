@@ -336,6 +336,7 @@ void test_type_ast_shape() {
                            "\n"
                            "enum Mode: u8\n"
                            "    Idle = 0\n"
+                           "    Running = 1 + 1\n"
                            "\n"
                            "class Player:\n"
                            "    count: static[i32] = 0\n"
@@ -362,6 +363,10 @@ void test_type_ast_shape() {
     assert(module.enums.size() == 1);
     assert(module.enums[0].underlying_type_ref.kind == dudu::TypeKind::Named);
     assert(module.enums[0].underlying_type_ref.name == "u8");
+    assert(module.enums[0].values.size() == 2);
+    assert(module.enums[0].values[0].value_expr.kind == dudu::ExprKind::IntLiteral);
+    assert(module.enums[0].values[1].value_expr.kind == dudu::ExprKind::Binary);
+    assert(module.enums[0].values[1].value_expr.op == "+");
 
     assert(module.classes.size() == 1);
     const dudu::ClassDecl& player = module.classes[0];
@@ -385,7 +390,7 @@ void test_type_ast_shape() {
     assert(update.params[1].type_ref.kind == dudu::TypeKind::Template);
     assert(update.params[1].type_ref.children[0].name == "str");
     assert(update.statements[0].type_ref.kind == dudu::TypeKind::Const);
-    assert(update.statements[0].type_ref.range.start.line == 15);
+    assert(update.statements[0].type_ref.range.start.line == 16);
     assert(update.statements[0].type_ref.range.start.column > update.statements[0].location.column);
     assert(update.statements[0].type_ref.children[0].kind == dudu::TypeKind::Template);
 

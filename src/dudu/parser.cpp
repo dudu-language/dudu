@@ -305,6 +305,7 @@ class Parser {
             value.location = name.location;
             if (match(TokenKind::Assign)) {
                 value.value = join_until({TokenKind::Newline});
+                value.value_expr = parse_expr_text(value.value, name.location);
             }
             consume(TokenKind::Newline, "expected newline after enum value");
             en.values.push_back(std::move(value));
