@@ -91,12 +91,10 @@ bool function_has_decorator(const FunctionDecl& fn, std::string_view name) {
 
 std::string operator_name(const std::string& method_name) {
     static const std::map<std::string, std::string> names = {
-        {"__add__", "operator+"},     {"__sub__", "operator-"},
-        {"__mul__", "operator*"},     {"__truediv__", "operator/"},
-        {"__mod__", "operator%"},     {"__eq__", "operator=="},
-        {"__ne__", "operator!="},     {"__lt__", "operator<"},
-        {"__le__", "operator<="},     {"__gt__", "operator>"},
-        {"__ge__", "operator>="},
+        {"__add__", "operator+"},     {"__sub__", "operator-"}, {"__mul__", "operator*"},
+        {"__truediv__", "operator/"}, {"__mod__", "operator%"}, {"__eq__", "operator=="},
+        {"__ne__", "operator!="},     {"__lt__", "operator<"},  {"__le__", "operator<="},
+        {"__gt__", "operator>"},      {"__ge__", "operator>="},
     };
     const auto it = names.find(method_name);
     return it == names.end() ? method_name : it->second;
@@ -139,13 +137,14 @@ void emit_method(std::ostringstream& out, const std::string& class_name, const F
         if (function_has_decorator(method, "staticmethod")) {
             out << "static ";
         }
-        out << lower_cpp_type(method.return_type) << ' ' << operator_name(method.name) << '(';
+        out << lower_cpp_type(method.return_type, aliases) << ' ' << operator_name(method.name)
+            << '(';
     }
     for (size_t i = first_param; i < method.params.size(); ++i) {
         if (i > first_param) {
             out << ", ";
         }
-        out << lower_cpp_type(method.params[i].type) << ' ' << method.params[i].name;
+        out << lower_cpp_type(method.params[i].type, aliases) << ' ' << method.params[i].name;
     }
     out << ") {\n";
     std::map<std::string, std::string> locals;
@@ -160,8 +159,9 @@ void emit_method(std::ostringstream& out, const std::string& class_name, const F
     out << "    }\n";
 }
 
-void emit_class_constant_decl(std::ostringstream& out, const ConstDecl& constant) {
-    const std::string lowered_type = lower_cpp_type(constant.type);
+void emit_class_constant_decl(std::ostringstream& out, const ConstDecl& constant,
+                              const std::vector<std::string>& aliases) {
+    const std::string lowered_type = lower_cpp_type(constant.type, aliases);
     const bool pointer = constant.type.find('*') != std::string::npos;
     out << "    static ";
     out << (pointer ? lowered_type + " const " : "const " + lowered_type + " ");
@@ -171,7 +171,7 @@ void emit_class_constant_decl(std::ostringstream& out, const ConstDecl& constant
 void emit_class_constant_definition(std::ostringstream& out, const std::string& class_name,
                                     const ConstDecl& constant,
                                     const std::vector<std::string>& aliases) {
-    const std::string lowered_type = lower_cpp_type(constant.type);
+    const std::string lowered_type = lower_cpp_type(constant.type, aliases);
     const bool runtime_address = constant.type.find('*') != std::string::npos ||
                                  constant.type.find("volatile") != std::string::npos;
     out << "inline ";
@@ -196,14 +196,14 @@ void emit_classes(std::ostringstream& out, const ModuleAst& module,
         }
         out << class_opening(klass) << " {\n";
         for (const FieldDecl& field : klass.fields) {
-            out << "    " << lower_cpp_type(field.type) << ' ' << field.name << "{};\n";
+            out << "    " << lower_cpp_type(field.type, aliases) << ' ' << field.name << "{};\n";
         }
         for (const ConstDecl& field : klass.static_fields) {
-            out << "    inline static " << lower_cpp_type(field.type) << ' ' << field.name
+            out << "    inline static " << lower_cpp_type(field.type, aliases) << ' ' << field.name
                 << " = " << lower_cpp_expr(field.value, aliases) << ";\n";
         }
         for (const ConstDecl& constant : klass.constants) {
-            emit_class_constant_decl(out, constant);
+            emit_class_constant_decl(out, constant, aliases);
         }
         std::string_view current_section = "public";
         for (const FunctionDecl& method : klass.methods) {

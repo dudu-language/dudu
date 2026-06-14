@@ -110,7 +110,7 @@ std::map<std::string, std::string> function_return_types(const ModuleAst& module
 void emit_constants(std::ostringstream& out, const ModuleAst& module,
                     const std::vector<std::string>& aliases) {
     for (const ConstDecl& constant : module.constants) {
-        const std::string lowered_type = lower_cpp_type(constant.type);
+        const std::string lowered_type = lower_cpp_type(constant.type, aliases);
         const bool runtime_address = constant.type.find('*') != std::string::npos ||
                                      constant.type.find("volatile") != std::string::npos;
         out << "inline ";
@@ -137,7 +137,8 @@ void emit_static_asserts(std::ostringstream& out, const ModuleAst& module,
     }
 }
 
-void emit_function_signature(std::ostringstream& out, const FunctionDecl& fn) {
+void emit_function_signature(std::ostringstream& out, const FunctionDecl& fn,
+                             const std::vector<std::string>& aliases) {
     if (function_has_decorator(fn, "extern_c")) {
         out << "extern \"C\" ";
     }
@@ -167,12 +168,12 @@ void emit_function_signature(std::ostringstream& out, const FunctionDecl& fn) {
     if (function_has_decorator(fn, "constexpr")) {
         out << "constexpr ";
     }
-    out << lower_cpp_type(fn.return_type) << ' ' << fn.name << '(';
+    out << lower_cpp_type(fn.return_type, aliases) << ' ' << fn.name << '(';
     for (size_t i = 0; i < fn.params.size(); ++i) {
         if (i > 0) {
             out << ", ";
         }
-        out << lower_cpp_type(fn.params[i].type) << ' ' << fn.params[i].name;
+        out << lower_cpp_type(fn.params[i].type, aliases) << ' ' << fn.params[i].name;
     }
     out << ')';
 }
@@ -180,7 +181,7 @@ void emit_function_signature(std::ostringstream& out, const FunctionDecl& fn) {
 void emit_function_body(std::ostringstream& out, const FunctionDecl& fn,
                         const std::vector<std::string>& aliases,
                         const std::map<std::string, std::string>& function_returns) {
-    emit_function_signature(out, fn);
+    emit_function_signature(out, fn, aliases);
     out << " {\n";
     std::map<std::string, std::string> locals;
     for (const ParamDecl& param : fn.params) {
@@ -209,8 +210,8 @@ void emit_early_functions(std::ostringstream& out, const ModuleAst& module,
     }
 }
 
-void emit_test_harness(std::ostringstream& out, const ModuleAst& module,
-                       const std::string& filter, bool capture_output) {
+void emit_test_harness(std::ostringstream& out, const ModuleAst& module, const std::string& filter,
+                       bool capture_output) {
     out << "namespace dudu_test {\n"
            "struct Capture {\n"
            "    bool enabled = false;\n"
@@ -305,8 +306,8 @@ void emit_test_harness(std::ostringstream& out, const ModuleAst& module,
                 << ")) { ++passed; }\n";
         } else {
             out << "    ++total;\n"
-                << "    if (dudu_test::run_one(" << cpp_string_literal(fn.name) << ", "
-                << fn.name << ")) { ++passed; }\n";
+                << "    if (dudu_test::run_one(" << cpp_string_literal(fn.name) << ", " << fn.name
+                << ")) { ++passed; }\n";
         }
     }
     out << "    if (total == 0 && ignored == 0) {\n"
@@ -344,7 +345,7 @@ std::string emit_cpp_header(const ModuleAst& module) {
         if (!visible_function_in_header(fn)) {
             continue;
         }
-        emit_function_signature(out, fn);
+        emit_function_signature(out, fn, aliases);
         out << ";\n";
     }
     emit_static_asserts(out, module, aliases);

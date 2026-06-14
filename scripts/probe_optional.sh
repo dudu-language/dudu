@@ -60,8 +60,7 @@ probe_sqlite() {
     local cpp="$repo_root/build/probe_sqlite_crud.cpp"
     local bin="$repo_root/build/probe_sqlite_crud"
     "$repo_root/build/duc" emit "$repo_root/tests/fixtures/sqlite_crud.dd" -o "$cpp"
-    "${CXX:-c++}" -std=c++20 -I"$repo_root/tests/fixtures" "$cpp" \
-        $(pkg-config --cflags --libs sqlite3) -o "$bin"
+    "${CXX:-c++}" -std=c++20 "$cpp" $(pkg-config --cflags --libs sqlite3) -o "$bin"
     set +e
     "$bin"
     local status=$?
@@ -130,15 +129,13 @@ probe_raylib() {
     local cpp="$repo_root/build/probe_raylib_game.cpp"
     local bin="$repo_root/build/probe_raylib_game"
     "$repo_root/build/duc" emit "$repo_root/examples/raylib_game.dd" -o "$cpp"
-    "${CXX:-c++}" -std=c++20 -I"$repo_root/examples" "$cpp" \
-        $(pkg-config --cflags --libs raylib) -o "$bin"
+    "${CXX:-c++}" -std=c++20 "$cpp" $(pkg-config --cflags --libs raylib) -o "$bin"
     grep -q "player.vel.x" "$cpp"
 
     local audio_cpp="$repo_root/build/probe_raylib_audio_synth.cpp"
     local audio_bin="$repo_root/build/probe_raylib_audio_synth"
     "$repo_root/build/duc" emit "$repo_root/examples/audio_synth.dd" -o "$audio_cpp"
-    "${CXX:-c++}" -std=c++20 -I"$repo_root/examples" "$audio_cpp" \
-        $(pkg-config --cflags --libs raylib) -o "$audio_bin"
+    "${CXX:-c++}" -std=c++20 "$audio_cpp" $(pkg-config --cflags --libs raylib) -o "$audio_bin"
     echo "ok raylib"
 }
 

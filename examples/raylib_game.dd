@@ -1,6 +1,6 @@
 # Small raylib arcade loop.
 
-import cpp "support/raylib_cpp.hpp" as rl
+import c "raylib.h" as rl
 
 
 class Player:
@@ -19,14 +19,14 @@ def length_sq(v: rl.Vector2) -> f32:
 
 
 def collides(player: Player, coin: Coin) -> bool:
-    delta = rl.vec2(coin.pos.x - player.pos.x, coin.pos.y - player.pos.y)
+    delta = rl.Vector2(x=coin.pos.x - player.pos.x, y=coin.pos.y - player.pos.y)
     r = player.radius + f32(8.0)
     return length_sq(delta) <= r * r
 
 
 def update_player(player: &Player, dt: f32):
     speed: f32 = 240.0
-    player.vel = rl.vec2(0.0, 0.0)
+    player.vel = rl.Vector2(x=0.0, y=0.0)
 
     if rl.IsKeyDown(rl.KEY_LEFT):
         player.vel.x -= speed
@@ -46,15 +46,15 @@ def main() -> i32:
     rl.SetTargetFPS(144)
 
     player = Player(
-        pos=rl.vec2(400.0, 225.0),
-        vel=rl.vec2(0.0, 0.0),
+        pos=rl.Vector2(x=400.0, y=225.0),
+        vel=rl.Vector2(x=0.0, y=0.0),
         radius=18.0,
     )
 
     coins: list[Coin] = [
-        Coin(pos=rl.vec2(140.0, 120.0), active=True),
-        Coin(pos=rl.vec2(620.0, 180.0), active=True),
-        Coin(pos=rl.vec2(390.0, 360.0), active=True),
+        Coin(pos=rl.Vector2(x=140.0, y=120.0), active=True),
+        Coin(pos=rl.Vector2(x=620.0, y=180.0), active=True),
+        Coin(pos=rl.Vector2(x=390.0, y=360.0), active=True),
     ]
 
     score: i32 = 0
@@ -69,15 +69,15 @@ def main() -> i32:
                 score += 1
 
         rl.BeginDrawing()
-        rl.ClearBackground(rl.black())
+        rl.ClearBackground(rl.BLACK)
 
         for coin: &const[Coin] in coins:
             if coin.active:
-                coin_color: Color = rl.gold()
+                coin_color: rl.Color = rl.GOLD
                 rl.DrawCircleV(coin.pos, f32(8.0), coin_color)
 
-        player_color: Color = rl.skyblue()
-        text_color: Color = rl.white()
+        player_color: rl.Color = rl.SKYBLUE
+        text_color: rl.Color = rl.WHITE
         rl.DrawCircleV(player.pos, player.radius, player_color)
         rl.DrawText(rl.TextFormat("score: %d", score), 20, 20, 24, text_color)
         rl.EndDrawing()

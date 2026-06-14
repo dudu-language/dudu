@@ -159,6 +159,33 @@ std::string fixed_array_base(const std::string& type) {
     return open == std::string::npos ? type : type.substr(0, open);
 }
 
+std::string strip_c_import_type_aliases(std::string type,
+                                        const std::vector<std::string>& namespace_aliases) {
+    for (const std::string& alias : namespace_aliases) {
+        if (alias.empty() || alias.front() != '!') {
+            continue;
+        }
+        const std::string name = alias.substr(1);
+        if (name.empty() || name.find('.') != std::string::npos) {
+            continue;
+        }
+        const std::string marker = name + ".";
+        size_t pos = type.find(marker);
+        while (pos != std::string::npos) {
+            const bool left_ok =
+                pos == 0 || (std::isalnum(static_cast<unsigned char>(type[pos - 1])) == 0 &&
+                             type[pos - 1] != '_');
+            if (left_ok) {
+                type.erase(pos, marker.size());
+            } else {
+                pos += marker.size();
+            }
+            pos = type.find(marker, pos);
+        }
+    }
+    return type;
+}
+
 } // namespace
 
 std::string lower_cpp_type(const std::string& raw_type) {
@@ -216,6 +243,11 @@ std::string lower_cpp_type(const std::string& raw_type) {
         return lower_template_type(name, args);
     }
     return replace_dots(type);
+}
+
+std::string lower_cpp_type(const std::string& raw_type,
+                           const std::vector<std::string>& namespace_aliases) {
+    return lower_cpp_type(strip_c_import_type_aliases(raw_type, namespace_aliases));
 }
 
 } // namespace dudu

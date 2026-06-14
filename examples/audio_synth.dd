@@ -1,6 +1,6 @@
 # Realtime audio callback style code.
 
-import cpp "support/raylib_cpp.hpp" as rl
+import c "raylib.h" as rl
 import cpp "cmath" as std
 
 

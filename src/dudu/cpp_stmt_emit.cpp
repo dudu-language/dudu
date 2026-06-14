@@ -304,7 +304,8 @@ void emit_simple_statement(std::ostringstream& out, const RawStmt& stmt, int dep
     if (starts_with(text, "raise")) {
         const std::string value = trim_copy(text.substr(5));
         out << indent(depth) << "throw";
-        if (!value.empty()) out << ' ' << lower_expr(value, aliases, locals);
+        if (!value.empty())
+            out << ' ' << lower_expr(value, aliases, locals);
         out << ";\n";
         return;
     }
@@ -324,7 +325,8 @@ void emit_simple_statement(std::ostringstream& out, const RawStmt& stmt, int dep
         const auto parts = split_top_level_args(text.substr(13));
         const auto condition = parts.empty() ? "" : trim_copy(parts.front());
         out << indent(depth) << "assert((" << lower_expr(condition, aliases, locals) << ")";
-        if (parts.size() >= 2) out << " && (" << lower_expr(parts[1], aliases, locals) << ")";
+        if (parts.size() >= 2)
+            out << " && (" << lower_expr(parts[1], aliases, locals) << ")";
         out << ");\n";
         return;
     }
@@ -347,7 +349,7 @@ void emit_simple_statement(std::ostringstream& out, const RawStmt& stmt, int dep
         const std::string name = trim_copy(text.substr(0, colon));
         const std::string type = trim_copy(text.substr(colon + 1, assign - colon - 1));
         locals[name] = type;
-        out << indent(depth) << lower_cpp_type(type) << ' ' << name;
+        out << indent(depth) << lower_cpp_type(type, aliases) << ' ' << name;
         if (assign != std::string::npos) {
             const std::string value = trim_copy(text.substr(assign + 1));
             if (starts_with(type, "Option[") && value == "None") {
@@ -366,7 +368,7 @@ void emit_simple_statement(std::ostringstream& out, const RawStmt& stmt, int dep
                 out << " = {" << lower_expr(value.substr(1, value.size() - 2), aliases, locals)
                     << '}';
             } else if (is_tuple_literal(value)) {
-                out << " = " << lower_cpp_type(type) << "{"
+                out << " = " << lower_cpp_type(type, aliases) << "{"
                     << lower_expr(tuple_literal_body(value), aliases, locals) << '}';
             } else {
                 out << " = " << lower_expr(value, aliases, locals);
@@ -454,7 +456,7 @@ void emit_raw_statement(std::ostringstream& out, const RawStmt& stmt, int depth,
         } else {
             const std::string name = trim_copy(header.substr(0, colon));
             const std::string type = trim_copy(header.substr(colon + 1));
-            out << "catch (const " << lower_cpp_type(type) << "& " << name << ")";
+            out << "catch (const " << lower_cpp_type(type, aliases) << "& " << name << ")";
         }
         out << " {\n";
         emit_raw_block(out, stmt.children, depth + 1, aliases, locals, return_type,
@@ -480,7 +482,7 @@ void emit_raw_statement(std::ostringstream& out, const RawStmt& stmt, int depth,
             std::string binding_type = "auto";
             const size_t typed = binding.find(':');
             if (typed != std::string::npos) {
-                binding_type = lower_cpp_type(trim_copy(binding.substr(typed + 1)));
+                binding_type = lower_cpp_type(trim_copy(binding.substr(typed + 1)), aliases);
                 locals[trim_copy(binding.substr(0, typed))] = trim_copy(binding.substr(typed + 1));
                 binding = trim_copy(binding.substr(0, typed));
             }

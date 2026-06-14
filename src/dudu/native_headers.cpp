@@ -1,12 +1,14 @@
 #include "dudu/native_headers.hpp"
+
 #include "dudu/cpp_lower.hpp"
 #include "dudu/native_build.hpp"
 #include "dudu/native_header_cache.hpp"
 #include "dudu/native_header_merge.hpp"
 #include "dudu/native_header_scope.hpp"
 #include "dudu/native_header_types.hpp"
-#include <chrono>
+
 #include <cctype>
+#include <chrono>
 #include <cstdlib>
 #include <fstream>
 #include <map>
@@ -121,9 +123,8 @@ std::string header_stamp(const ImportDecl& import, const NativeHeaderOptions& op
 }
 std::string run_capture(const std::string& command, const std::filesystem::path& output,
                         const std::filesystem::path& error) {
-    const int status = std::system((command + " >" + shell_quote_path(output) + " 2>" +
-                                    shell_quote_path(error))
-                                       .c_str());
+    const int status = std::system(
+        (command + " >" + shell_quote_path(output) + " 2>" + shell_quote_path(error)).c_str());
     if (status != 0) {
         return {};
     }
@@ -136,7 +137,8 @@ std::string clangxx_command() {
 std::string clang_base_command(const NativeHeaderOptions& options, const std::filesystem::path& cpp,
                                bool ast_dump) {
     const std::string clang = clangxx_command();
-    std::string command = shell_quote_arg(clang) + " -std=" + shell_quote_arg(options.config.cpp_std) +
+    std::string command = shell_quote_arg(clang) +
+                          " -std=" + shell_quote_arg(options.config.cpp_std) +
                           " -x c++ -fsyntax-only -fno-color-diagnostics ";
     if (ast_dump) {
         command += "-Xclang -ast-dump ";
@@ -154,7 +156,7 @@ std::string scan_error_message(const ImportDecl& import, std::string detail,
     if (!clang.empty() && detail.find(clang) != std::string::npos) {
         out << "\nhint: native header awareness requires clang++; install clang or set CLANGXX";
     } else if (detail.find("not found") != std::string::npos ||
-        detail.find("No such file") != std::string::npos) {
+               detail.find("No such file") != std::string::npos) {
         out << "\nhint: add the header directory to [include].paths or the package to [pkg].libs";
     } else {
         out << "\nhint: native header awareness requires clang++; install clang or set CLANGXX";
@@ -164,37 +166,45 @@ std::string scan_error_message(const ImportDecl& import, std::string detail,
 int ast_depth(const std::string& line) {
     const size_t branch = line.find("|-");
     const size_t last = line.find("`-");
-    if (branch == std::string::npos) return last == std::string::npos ? 0 : static_cast<int>(last / 2);
-    if (last == std::string::npos) return static_cast<int>(branch / 2);
+    if (branch == std::string::npos)
+        return last == std::string::npos ? 0 : static_cast<int>(last / 2);
+    if (last == std::string::npos)
+        return static_cast<int>(branch / 2);
     return static_cast<int>((branch < last ? branch : last) / 2);
 }
-template <typename T>
-void add_unique(std::vector<T>& out, std::set<std::string>& seen, T value) {
+template <typename T> void add_unique(std::vector<T>& out, std::set<std::string>& seen, T value) {
     if (seen.insert(value.name).second) {
         out.push_back(std::move(value));
     }
 }
 void add_unique_function(std::vector<NativeFunctionDecl>& out, std::set<std::string>& seen,
                          NativeFunctionDecl value) {
-    if (seen.insert(native_function_key(value)).second) out.push_back(std::move(value));
+    if (seen.insert(native_function_key(value)).second)
+        out.push_back(std::move(value));
 }
 std::string method_key(const FunctionDecl& fn) {
     std::string key = fn.name + "(";
-    for (const ParamDecl& param : fn.params) key += param.type + ",";
+    for (const ParamDecl& param : fn.params)
+        key += param.type + ",";
     return key + ")->" + fn.return_type;
 }
 void merge_class(ClassDecl& target, const ClassDecl& source) {
     std::set<std::string> bases(target.base_classes.begin(), target.base_classes.end());
     for (const std::string& base : source.base_classes)
-        if (bases.insert(base).second) target.base_classes.push_back(base);
+        if (bases.insert(base).second)
+            target.base_classes.push_back(base);
     std::set<std::string> fields;
-    for (const FieldDecl& field : target.fields) fields.insert(field.name);
+    for (const FieldDecl& field : target.fields)
+        fields.insert(field.name);
     for (const FieldDecl& field : source.fields)
-        if (fields.insert(field.name).second) target.fields.push_back(field);
+        if (fields.insert(field.name).second)
+            target.fields.push_back(field);
     std::set<std::string> methods;
-    for (const FunctionDecl& method : target.methods) methods.insert(method_key(method));
+    for (const FunctionDecl& method : target.methods)
+        methods.insert(method_key(method));
     for (const FunctionDecl& method : source.methods)
-        if (methods.insert(method_key(method)).second) target.methods.push_back(method);
+        if (methods.insert(method_key(method)).second)
+            target.methods.push_back(method);
 }
 void add_unique_class(std::vector<ClassDecl>& out, std::set<std::string>& seen, ClassDecl value) {
     if (seen.insert(value.name).second) {
@@ -202,12 +212,12 @@ void add_unique_class(std::vector<ClassDecl>& out, std::set<std::string>& seen, 
         return;
     }
     for (ClassDecl& klass : out)
-        if (klass.name == value.name) merge_class(klass, value);
+        if (klass.name == value.name)
+            merge_class(klass, value);
 }
 void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                     std::vector<std::pair<int, std::string>>& namespaces,
-                    std::vector<std::pair<int, size_t>>& classes,
-                    const SourceLocation& location) {
+                    std::vector<std::pair<int, size_t>>& classes, const SourceLocation& location) {
     static const std::regex typedef_decl(
         R"((TypedefDecl|TypeAliasDecl).*\b([A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
     static const std::regex record_decl(
@@ -215,8 +225,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
     static const std::regex enum_decl(R"(EnumDecl.*\b([A-Za-z_][A-Za-z0-9_]*)\b)");
     static const std::regex ns_decl(R"(NamespaceDecl.*\b([A-Za-z_][A-Za-z0-9_]*)$)");
     static const std::regex fn_decl(R"(FunctionDecl.*\b([A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
-    static const std::regex method_decl(
-        R"(CXXMethodDecl.*\b([A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
+    static const std::regex method_decl(R"(CXXMethodDecl.*\b([A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
     static const std::regex ctor_decl(
         R"(CXXConstructorDecl.*\b([A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
     static const std::regex field_decl(R"(FieldDecl.*\b([A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
@@ -245,11 +254,10 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         const std::string name = match[2].str();
         const std::string raw_type = match[3].str();
         const std::string lowered_type = dudu_type(raw_type);
-        const bool useful_alias = lowered_type != raw_type && lowered_type != name;
+        const bool useful_alias = lowered_type != name;
         if (!starts_with(name, "__") || is_simd_vector_type_name(name) || useful_alias) {
-            scan.types.push_back({.name = name,
-                                  .type = useful_alias ? lowered_type : "",
-                                  .location = location});
+            scan.types.push_back(
+                {.name = name, .type = useful_alias ? lowered_type : "", .location = location});
         }
     } else if ((line.find("RecordDecl") != std::string::npos ||
                 line.find("CXXRecordDecl") != std::string::npos) &&
@@ -279,13 +287,12 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
             return;
         }
         const std::string signature = match[2].str();
-        scan.functions.push_back({.name = name,
-                                  .params = qualify_scoped_types(
-                                      scan, namespaces, signature_params(signature)),
-                                  .return_type = qualify_scoped_type(
-                                      scan, namespaces, signature_return_type(signature)),
-                                  .variadic = signature.find("...") != std::string::npos,
-                                  .location = location});
+        scan.functions.push_back(
+            {.name = name,
+             .params = qualify_scoped_types(scan, namespaces, signature_params(signature)),
+             .return_type = qualify_scoped_type(scan, namespaces, signature_return_type(signature)),
+             .variadic = signature.find("...") != std::string::npos,
+             .location = location});
     } else if (!classes.empty() && line.find("CXXMethodDecl") != std::string::npos &&
                std::regex_search(line, match, method_decl)) {
         FunctionDecl method;
@@ -355,10 +362,14 @@ void parse_ast_dump(NativeHeaderScan& scan, const std::string& dump,
         parse_ast_line(scan, line, namespaces, classes, location);
     }
 }
-struct MacroParams { int arity = 0; bool variadic = false; };
+struct MacroParams {
+    int arity = 0;
+    bool variadic = false;
+};
 MacroParams macro_params(std::string args) {
     args = trim_copy(std::move(args));
-    if (args.empty()) return {};
+    if (args.empty())
+        return {};
     MacroParams out;
     for (std::string part : split_top_level_args(args)) {
         part = trim_copy(std::move(part));
@@ -371,8 +382,7 @@ MacroParams macro_params(std::string args) {
 }
 void parse_macro_dump(NativeHeaderScan& scan, const std::string& dump,
                       const SourceLocation& location) {
-    static const std::regex function_macro(
-        R"(^#define ([A-Za-z_][A-Za-z0-9_]*)\(([^)]*)\))");
+    static const std::regex function_macro(R"(^#define ([A-Za-z_][A-Za-z0-9_]*)\(([^)]*)\))");
     static const std::regex simd_function_macro(R"(^#define ((_mm|_MM_)[A-Za-z0-9_]*)\(([^)]*)\))");
     static const std::regex object_macro(R"(^#define ([A-Z_][A-Z0-9_]*)(\s|$))");
     std::istringstream in(dump);
@@ -388,16 +398,14 @@ void parse_macro_dump(NativeHeaderScan& scan, const std::string& dump,
                 continue;
             }
             const MacroParams params = macro_params(match[is_simd_macro ? 3 : 2].str());
-            scan.macros.push_back({.name = name,
-                                   .arity = params.arity,
-                                   .function_like = true,
-                                   .location = location});
-            scan.functions.push_back({.name = name,
-                                      .params = std::vector<std::string>(
-                                          static_cast<size_t>(params.arity), "auto"),
-                                      .return_type = "auto",
-                                      .variadic = params.variadic,
-                                      .location = location});
+            scan.macros.push_back(
+                {.name = name, .arity = params.arity, .function_like = true, .location = location});
+            scan.functions.push_back(
+                {.name = name,
+                 .params = std::vector<std::string>(static_cast<size_t>(params.arity), "auto"),
+                 .return_type = "auto",
+                 .variadic = params.variadic,
+                 .location = location});
         } else if (std::regex_search(line, match, object_macro)) {
             const std::string name = match[1].str();
             if (starts_with(name, "_")) {
@@ -409,8 +417,8 @@ void parse_macro_dump(NativeHeaderScan& scan, const std::string& dump,
     }
 }
 bool public_direct_macro_name(const std::string& name) {
-    return !name.empty() && (std::isupper(static_cast<unsigned char>(name.front())) != 0 ||
-                             name.front() == '_');
+    return !name.empty() &&
+           (std::isupper(static_cast<unsigned char>(name.front())) != 0 || name.front() == '_');
 }
 NativeHeaderScan dedupe_scan(NativeHeaderScan scan) {
     NativeHeaderScan out;
@@ -420,18 +428,24 @@ NativeHeaderScan dedupe_scan(NativeHeaderScan scan) {
     std::set<std::string> macros;
     std::set<std::string> namespaces;
     std::set<std::string> classes;
-    for (auto item : scan.types) add_unique(out.types, types, std::move(item));
-    for (auto item : scan.values) add_unique(out.values, values, std::move(item));
-    for (auto item : scan.functions) add_unique_function(out.functions, functions, std::move(item));
-    for (auto item : scan.macros) add_unique(out.macros, macros, std::move(item));
-    for (auto item : scan.namespaces) add_unique(out.namespaces, namespaces, std::move(item));
-    for (auto item : scan.classes) add_unique_class(out.classes, classes, std::move(item));
+    for (auto item : scan.types)
+        add_unique(out.types, types, std::move(item));
+    for (auto item : scan.values)
+        add_unique(out.values, values, std::move(item));
+    for (auto item : scan.functions)
+        add_unique_function(out.functions, functions, std::move(item));
+    for (auto item : scan.macros)
+        add_unique(out.macros, macros, std::move(item));
+    for (auto item : scan.namespaces)
+        add_unique(out.namespaces, namespaces, std::move(item));
+    for (auto item : scan.classes)
+        add_unique_class(out.classes, classes, std::move(item));
     return out;
 }
 std::string scan_key(const ImportDecl& import, const NativeHeaderOptions& options,
                      const std::string& flags) {
-    return unquoted(import.module_path) + "|" + clangxx_command() + "|" + options.config.cpp_std + "|" + flags +
-           header_stamp(import, options);
+    return unquoted(import.module_path) + "|" + clangxx_command() + "|" + options.config.cpp_std +
+           "|" + flags + header_stamp(import, options);
 }
 NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOptions& options,
                                  const std::string& flags) {
@@ -467,9 +481,9 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
         parse_ast_dump(scan, ast_dump, import.location);
     }
     const std::string clang = clangxx_command();
-    const std::string macro_cmd = shell_quote_arg(clang) + " -std=" +
-                                  shell_quote_arg(options.config.cpp_std) + " -x c++ -dM -E " +
-                                  shell_quote_path(cpp) + flags;
+    const std::string macro_cmd = shell_quote_arg(clang) +
+                                  " -std=" + shell_quote_arg(options.config.cpp_std) +
+                                  " -x c++ -dM -E " + shell_quote_path(cpp) + flags;
     const std::string macro_dump = run_capture(macro_cmd, macros, err);
     if (ast_dump.empty() && macro_dump.empty()) {
         if (!requires_scan_success(import)) {
@@ -486,12 +500,13 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
     cache[key] = dedupe_scan(std::move(scan));
     return cache[key];
 }
-template <typename T>
-void append_unique(std::vector<T>& target, const std::vector<T>& source) {
+template <typename T> void append_unique(std::vector<T>& target, const std::vector<T>& source) {
     std::set<std::string> seen;
-    for (const T& item : target) seen.insert(item.name);
+    for (const T& item : target)
+        seen.insert(item.name);
     for (const T& item : source)
-        if (seen.insert(item.name).second) target.push_back(item);
+        if (seen.insert(item.name).second)
+            target.push_back(item);
 }
 template <typename T>
 std::vector<T> prefixed_names(const std::vector<T>& source, const std::string& prefix) {
@@ -510,14 +525,17 @@ std::vector<NativeTypeDecl> prefixed_type_names(const std::vector<NativeTypeDecl
     for (NativeTypeDecl item : source) {
         const std::string original = item.name;
         item.name = prefix + "." + item.name;
-        if (item.type.empty()) item.type = original;
+        if (item.type.empty())
+            item.type = original;
         out.push_back(std::move(item));
     }
     return out;
 }
 std::vector<NativeMacroDecl> direct_macros(const std::vector<NativeMacroDecl>& source) {
     std::vector<NativeMacroDecl> out;
-    for (const NativeMacroDecl& item : source) if (public_direct_macro_name(item.name)) out.push_back(item);
+    for (const NativeMacroDecl& item : source)
+        if (public_direct_macro_name(item.name))
+            out.push_back(item);
     return out;
 }
 } // namespace
@@ -542,7 +560,8 @@ NativeHeaderScan scan_native_headers(const ModuleAst& module, const NativeHeader
             append_unique(out.types, prefixed_type_names(scan.types, import.alias));
             append_unique(out.classes, prefixed_names(scan.classes, import.alias));
             append_unique(out.values, prefixed_names(scan.values, import.alias));
-            append_unique_native_functions(out.functions, prefixed_names(scan.functions, import.alias));
+            append_unique_native_functions(out.functions,
+                                           prefixed_names(scan.functions, import.alias));
             append_unique(out.macros, prefixed_names(scan.macros, import.alias));
         }
     }

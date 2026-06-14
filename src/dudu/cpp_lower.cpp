@@ -168,10 +168,9 @@ std::string qualify_namespace_aliases(std::string expr,
                     pos == 0 || (std::isalnum(static_cast<unsigned char>(expr[pos - 1])) == 0 &&
                                  expr[pos - 1] != '_');
                 const size_t after = pos + name.size();
-                const bool right_ok =
-                    after >= expr.size() ||
-                    (std::isalnum(static_cast<unsigned char>(expr[after])) == 0 &&
-                     expr[after] != '_' && expr[after] != '.');
+                const bool right_ok = after >= expr.size() ||
+                                      (std::isalnum(static_cast<unsigned char>(expr[after])) == 0 &&
+                                       expr[after] != '_' && expr[after] != '.');
                 if (left_ok && right_ok) {
                     const size_t dot = name.rfind('.');
                     const std::string replacement = name.substr(dot + 1);
@@ -475,7 +474,7 @@ std::string lower_dotted_template_call(std::string expr,
             namespace_qualified_name(name, namespace_aliases) ? replace_dots(name) : name;
         const std::string lowered_args = lower_cpp_expr(call_args, namespace_aliases);
         const std::string replacement =
-            lowered_name + "<" + lower_cpp_type(arg) + ">(" + lowered_args + ")";
+            lowered_name + "<" + lower_cpp_type(arg, namespace_aliases) + ">(" + lowered_args + ")";
         expr.replace(name_start, args_close + 1 - name_start, replacement);
         open = expr.find('[', name_start + replacement.size());
     }
