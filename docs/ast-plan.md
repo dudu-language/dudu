@@ -43,6 +43,8 @@ Already structured:
   raw callee strings incrementally
 - ordinary call C++ emission lowers parsed callee expressions instead of
   lowering the callee name string directly
+- template-call fallback emission and pointer-cast emission use parsed callee
+  helper paths for non-keyword callees
 - ordinary call semantic inference uses a callee lookup string reconstructed
   from the parsed callee expression where possible
 - template-call semantic inference and template method lookup use the parsed

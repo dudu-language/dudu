@@ -1,6 +1,7 @@
 #include "dudu/cpp_stmt_emit.hpp"
 
 #include "dudu/array_shape.hpp"
+#include "dudu/ast_expr.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/cpp_pointer_members.hpp"
 #include "dudu/cpp_stmt_types.hpp"
@@ -129,10 +130,11 @@ lower_pointer_cast_expr(const Expr& expr, const std::vector<std::string>& aliase
         return std::nullopt;
     }
     const Expr& call = expr.children.front();
-    if (!is_pointer_cast_type_like(call.name)) {
+    const std::string type_name = call_callee_text(call);
+    if (!is_pointer_cast_type_like(type_name)) {
         return std::nullopt;
     }
-    return "reinterpret_cast<" + lower_cpp_type("*" + call.name, aliases) + ">(" +
+    return "reinterpret_cast<" + lower_cpp_type("*" + type_name, aliases) + ">(" +
            join_lowered_exprs(call.children, aliases, locals) + ")";
 }
 
@@ -160,8 +162,9 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
     if (has_named_argument_shape(expr.children)) {
         return lower_named_argument_call(expr, aliases, locals);
     }
-    if (starts_with(expr.name, "*")) {
-        const std::string type = trim_copy(expr.name.substr(1));
+    const std::string callee_name = call_callee_text(expr);
+    if (starts_with(callee_name, "*")) {
+        const std::string type = trim_copy(callee_name.substr(1));
         if (is_pointer_cast_type_like(type)) {
             return "reinterpret_cast<" + lower_cpp_type("*" + type, aliases) + ">(" +
                    join_lowered_exprs(expr.children, aliases, locals) + ")";
@@ -277,7 +280,7 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
                                   aliases) +
                    "{}";
         }
-        return lower_expr(expr.name, aliases, locals) + "<" + lowered_template_args + ">(" +
+        return lower_callee_expr(expr, aliases, locals) + "<" + lowered_template_args + ">(" +
                lowered_call_args + ")";
     }
     case ExprKind::Member:
