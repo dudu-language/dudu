@@ -77,6 +77,10 @@ The exact C++ helper type can change, but the Dudu semantics should be stable:
 fixed arrays own inline storage, lists own dynamic storage, and spans/views do
 not own data.
 
+Status: explicit `array[T][N]` and `array[T][M, N]` compile and lower to nested
+`std::array` storage. `array[T] = literal` shape inference is still a planned
+follow-up.
+
 ## Construction
 
 Fixed arrays can be initialized with literals:
@@ -143,6 +147,9 @@ value = rows[y][x]
 
 But fixed multidimensional arrays should prefer comma indexing because it maps
 to one shape-aware object rather than nested containers.
+
+Status: comma indexing lowers for Dudu-native fixed arrays, matching the current
+nested `std::array` representation.
 
 ## Slicing
 

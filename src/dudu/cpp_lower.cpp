@@ -547,6 +547,35 @@ std::string lower_dotted_template_call(std::string expr,
     }
     return expr;
 }
+
+std::string lower_comma_indexing(std::string expr) {
+    size_t open = expr.find('[');
+    while (open != std::string::npos) {
+        const size_t close = find_matching(expr, open, '[', ']');
+        if (close == std::string::npos) {
+            break;
+        }
+        if (close + 1 < expr.size() && expr[close + 1] == '(') {
+            open = expr.find('[', close + 1);
+            continue;
+        }
+        const std::vector<std::string> parts =
+            split_top_level_args(expr.substr(open + 1, close - open - 1));
+        if (parts.size() <= 1) {
+            open = expr.find('[', close + 1);
+            continue;
+        }
+        std::ostringstream replacement;
+        for (const std::string& part : parts) {
+            replacement << "[" << trim_copy(part) << "]";
+        }
+        const std::string text = replacement.str();
+        expr.replace(open, close + 1 - open, text);
+        open = expr.find('[', open + text.size());
+    }
+    return expr;
+}
+
 std::string lower_cpp_expr(std::string expr, const std::vector<std::string>& namespace_aliases) {
     expr = lower_lambda_expr(std::move(expr));
     expr = lower_conditional_expr(std::move(expr));
@@ -568,6 +597,7 @@ std::string lower_cpp_expr(std::string expr, const std::vector<std::string>& nam
     expr = lower_template_value_call(std::move(expr), "list");
     expr = lower_template_value_call(std::move(expr), "dict");
     expr = lower_template_value_call(std::move(expr), "set");
+    expr = lower_comma_indexing(std::move(expr));
     expr = qualify_namespace_aliases(std::move(expr), namespace_aliases);
     expr = replace_all(std::move(expr), ".append(", ".push_back(");
     expr = replace_all(std::move(expr), "push_back([])", "push_back({})");

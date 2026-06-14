@@ -274,6 +274,11 @@ push. They are not release packaging work.
    view/copy slicing semantics so numeric, graphics, and image code feels
    natural without hidden allocation.
 
+   Status: explicit `array[T][N]` and `array[T][M, N]` compile through the
+   string and TypeRef lowering paths, and comma indexing such as `mat[row, col]`
+   lowers for Dudu-native fixed arrays. Initializer shape inference, slices,
+   swizzling, and library tensor hooks remain.
+
 5. Native Dudu Generics
 
    Primary plan: [Generics Plan](generics-plan.md).

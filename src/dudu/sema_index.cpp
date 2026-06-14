@@ -4,6 +4,7 @@
 #include "dudu/type_compat.hpp"
 
 #include <cctype>
+#include <optional>
 
 namespace dudu {
 namespace {
@@ -35,6 +36,32 @@ bool plain_identifier(const std::string& text) {
 bool foreign_indexable_type(const std::string& type) {
     return type.empty() || type == "auto" || type.find('.') != std::string::npos ||
            type.find("::") != std::string::npos;
+}
+
+size_t find_matching_bracket(std::string_view text, const size_t open) {
+    int depth = 1;
+    size_t cursor = open + 1;
+    while (cursor < text.size() && depth > 0) {
+        if (text[cursor] == '[') {
+            ++depth;
+        } else if (text[cursor] == ']') {
+            --depth;
+        }
+        ++cursor;
+    }
+    return depth == 0 ? cursor - 1 : std::string::npos;
+}
+
+std::optional<std::string> canonical_array_element_type(const std::string& type) {
+    if (!starts_with(type, "array[")) {
+        return std::nullopt;
+    }
+    const size_t element_close = find_matching_bracket(type, 5);
+    if (element_close == std::string::npos || element_close + 1 >= type.size() ||
+        type[element_close + 1] != '[' || !ends_with(type, "]")) {
+        return std::nullopt;
+    }
+    return trim(type.substr(6, element_close - 6));
 }
 
 } // namespace
@@ -69,6 +96,9 @@ std::string indexed_value_type(const Symbols& symbols,
     if (starts_with(type, "list[") && type.back() == ']') {
         return trim(type.substr(5, type.size() - 6));
     }
+    if (const auto element = canonical_array_element_type(type)) {
+        return *element;
+    }
     if (starts_with(type, "dict[") && type.back() == ']') {
         const std::vector<std::string> args = split_top_level(type.substr(5, type.size() - 6));
         if (args.size() == 2) {
@@ -92,6 +122,9 @@ std::string iterable_value_type(const Symbols& symbols,
     const std::string type = unwrap_reference_and_const(resolve_alias(symbols, local->second));
     if (starts_with(type, "list[") && type.back() == ']') {
         return trim(type.substr(5, type.size() - 6));
+    }
+    if (const auto element = canonical_array_element_type(type)) {
+        return *element;
     }
     const size_t type_index = type.find('[');
     if (type_index != std::string::npos && type.back() == ']') {

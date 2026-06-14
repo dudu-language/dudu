@@ -341,6 +341,8 @@ void test_type_ast_shape() {
            "std::add_pointer_t<bool(int32_t, float)>");
     assert(dudu::lower_cpp_type(player.fields[0].type_ref) ==
            "std::array<std::array<float, 4>, 4>");
+    assert(dudu::lower_cpp_type("array[i32][3]") == "std::array<int32_t, 3>");
+    assert(dudu::lower_cpp_type("array[f32][4, 4]") == "std::array<std::array<float, 4>, 4>");
 }
 
 void test_formatter() {

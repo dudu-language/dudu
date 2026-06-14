@@ -248,9 +248,10 @@ bool known_type(const Symbols& symbols, const std::string& type) {
     const std::string base = base_type(type);
     return base.empty() || is_builtin_type(base) || symbols.types.contains(base) ||
            base.find('.') != std::string::npos || starts_with(base, "struct ") || base == "list" ||
-           base == "dict" || base == "set" || base == "tuple" || base == "Result" ||
-           base == "Option" || base == "fn" || base == "const" || base == "atomic" ||
-           base == "volatile" || base == "storage" || base == "shared" || base == "device";
+           base == "array" || base == "dict" || base == "set" || base == "tuple" ||
+           base == "Result" || base == "Option" || base == "fn" || base == "const" ||
+           base == "atomic" || base == "volatile" || base == "storage" || base == "shared" ||
+           base == "device";
 }
 
 std::string resolve_alias(const Symbols& symbols, std::string type) {
