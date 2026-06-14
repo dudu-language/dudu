@@ -402,6 +402,10 @@ template calls and built-in template-shaped forms such as `new[T](...)`,
 `malloc[T](...)`, `sizeof[T]()`, `alignof[T]()`, `offsetof[T](field)`, and empty
 `list[T]()`/`dict[K, V]()`/`set[T]()` value construction without falling back to
 the raw expression text.
+
+Assignment C++ emission now handles parsed non-binding targets such as member
+paths and index expressions directly from `target_expr` and `value_expr`. Bare
+name assignment still owns the local-binding inference path.
 Common dict initializer C++ emission lowers those parsed entries instead of
 splitting literal text again.
 

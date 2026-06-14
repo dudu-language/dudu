@@ -489,6 +489,11 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
             }
             return;
         }
+        if (stmt.target_expr.kind != ExprKind::Unknown) {
+            out << indent(depth) << lower_expr(stmt.target_expr, aliases, locals) << " = "
+                << lower_expr(stmt.value_expr, aliases, locals) << ";\n";
+            return;
+        }
     }
     if (stmt.kind == StmtKind::CompoundAssign) {
         out << indent(depth) << lower_expr(stmt.target_expr, aliases, locals) << ' ' << stmt.op
