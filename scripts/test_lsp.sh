@@ -46,6 +46,7 @@ unused_uri = "file:///tmp/dudu_lsp_unused.dd"
 shadow_uri = "file:///tmp/dudu_lsp_shadow.dd"
 hover_locals_uri = "file:///tmp/dudu_lsp_hover_locals.dd"
 hover_docs_uri = "file:///tmp/dudu_lsp_hover_docs.dd"
+hazard_uri = "file:///tmp/dudu_lsp_hazards.dd"
 bad_config_uri = f"file://{repo_root}/tests/fixtures/lsp_bad_config/main.dd"
 overload_uri = f"file://{repo_root}/tests/fixtures/dudu_lsp_overload.dd"
 scope_uri = "file:///tmp/dudu_lsp_scope.dd"
@@ -104,6 +105,29 @@ messages = [
                     "languageId": "dudu",
                     "version": 1,
                     "text": source,
+                }
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "method": "textDocument/didOpen",
+            "params": {
+                "textDocument": {
+                    "uri": hazard_uri,
+                    "languageId": "dudu",
+                    "version": 1,
+                    "text": "\n".join(
+                        [
+                            "def main() -> i32:",
+                            "    wide: i64 = 42",
+                            "    small: i32 = i32(wide)",
+                            '    cpp("asm volatile(\\\"pause\\\" ::: \\\"memory\\\");")',
+                            "    return small",
+                            "",
+                        ]
+                    ),
                 }
             },
         }
@@ -930,6 +954,15 @@ shadow_diagnostics = next(
 )
 shadow_messages = [item["message"] for item in shadow_diagnostics["params"]["diagnostics"]]
 assert "local shadows outer binding: value" in shadow_messages
+
+hazard_diagnostics = next(
+    item
+    for item in responses
+    if item.get("method") == "textDocument/publishDiagnostics" and item["params"]["uri"] == hazard_uri
+)
+hazard_messages = [item["message"] for item in hazard_diagnostics["params"]["diagnostics"]]
+assert "suspicious narrowing cast: i32(wide) from i64" in hazard_messages
+assert "native interop hazard: raw cpp escape hatch" in hazard_messages
 
 build_config_diagnostics = next(
     item

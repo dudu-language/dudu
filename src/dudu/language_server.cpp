@@ -372,6 +372,14 @@ class LanguageServer {
     }
 
   private:
+    struct LintLocal {
+        std::string name;
+        std::string type;
+        int line = 0;
+        int column = 0;
+        int indent = 0;
+    };
+
     std::istream& in_;
     std::ostream& out_;
     std::ostream& err_;
@@ -619,15 +627,9 @@ class LanguageServer {
 
     static std::vector<Diagnostic> lint_diagnostics(const Document& doc) {
         std::vector<Diagnostic> out;
-        struct LocalDecl {
-            std::string name;
-            int line = 0;
-            int column = 0;
-            int indent = 0;
-        };
         std::vector<std::string> lines;
-        std::vector<LocalDecl> locals;
-        std::vector<LocalDecl> active_decls;
+        std::vector<LintLocal> locals;
+        std::vector<LintLocal> active_decls;
         static const std::regex local_decl(
             R"(^(\s*)([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([A-Za-z_][A-Za-z0-9_\.]*)\b)");
         static const std::regex def_decl(R"(^(\s*)def\s+[A-Za-z_][A-Za-z0-9_]*\(([^)]*)\))");
@@ -670,15 +672,27 @@ class LanguageServer {
                         continue;
                     }
                     const std::string name = trim_copy(param.substr(0, colon));
+                    const std::string type = trim_copy(param.substr(colon + 1));
                     if (!name.empty() && name != "self") {
-                        active_decls.push_back(
-                            {.name = name, .line = row, .column = indent + 1, .indent = indent + 4});
+                        active_decls.push_back({.name = name,
+                                                .type = type,
+                                                .line = row,
+                                                .column = indent + 1,
+                                                .indent = indent + 4});
                     }
                 }
             }
+            lint_suspicious_casts(line, active_decls, doc, row, out);
+            if (starts_with(trimmed, "cpp(")) {
+                out.push_back({.location = {.file = doc.path, .line = row, .column = indent + 1},
+                               .message = "native interop hazard: raw cpp escape hatch",
+                               .source = "dudu/lint",
+                               .severity = 2});
+            }
             if (std::regex_search(line, match, local_decl)) {
                 const std::string name = match[2].str();
-                for (const LocalDecl& outer : active_decls) {
+                const std::string type = trim_copy(match[3].str());
+                for (const LintLocal& outer : active_decls) {
                     if (outer.name == name && outer.line != row && outer.indent <= indent) {
                         out.push_back(
                             {.location = {.file = doc.path, .line = row, .column = indent + 1},
@@ -688,12 +702,16 @@ class LanguageServer {
                         break;
                     }
                 }
-                LocalDecl local{.name = name, .line = row, .column = indent + 1, .indent = indent};
+                LintLocal local{.name = name,
+                                .type = type,
+                                .line = row,
+                                .column = indent + 1,
+                                .indent = indent};
                 locals.push_back(local);
                 active_decls.push_back(std::move(local));
             }
         }
-        for (const LocalDecl& local : locals) {
+        for (const LintLocal& local : locals) {
             bool used = false;
             for (size_t i = static_cast<size_t>(local.line); i < lines.size(); ++i) {
                 if (contains_identifier(lines[i], local.name)) {
@@ -710,6 +728,67 @@ class LanguageServer {
             }
         }
         return out;
+    }
+
+    static void lint_suspicious_casts(const std::string& line,
+                                      const std::vector<LintLocal>& active_decls,
+                                      const Document& doc, int row, std::vector<Diagnostic>& out) {
+        static const std::regex cast_call(
+            R"(\b(i8|i16|i32|i64|u8|u16|u32|u64|isize|usize|f32|f64)\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*\))");
+        for (std::sregex_iterator it(line.begin(), line.end(), cast_call), end; it != end; ++it) {
+            const std::string target = (*it)[1].str();
+            const std::string source_name = (*it)[2].str();
+            const std::string source_type = visible_local_type(active_decls, source_name);
+            if (source_type.empty() || !is_suspicious_numeric_cast(target, source_type)) {
+                continue;
+            }
+            out.push_back({.location = {.file = doc.path,
+                                        .line = row,
+                                        .column = static_cast<int>(it->position(0)) + 1},
+                           .message = "suspicious narrowing cast: " + target + "(" + source_name +
+                                      ") from " + source_type,
+                           .source = "dudu/lint",
+                           .severity = 2});
+        }
+    }
+
+    static std::string visible_local_type(const std::vector<LintLocal>& active_decls,
+                                          const std::string& name) {
+        for (auto it = active_decls.rbegin(); it != active_decls.rend(); ++it) {
+            if (it->name == name) {
+                return it->type;
+            }
+        }
+        return {};
+    }
+
+    static bool is_suspicious_numeric_cast(const std::string& target, std::string source) {
+        source = trim_copy(std::move(source));
+        if (target == source) {
+            return false;
+        }
+        static const std::map<std::string, int> integer_bits = {
+            {"i8", 8},   {"u8", 8},   {"i16", 16}, {"u16", 16},   {"i32", 32},
+            {"u32", 32}, {"i64", 64}, {"u64", 64}, {"isize", 64}, {"usize", 64},
+        };
+        const bool source_float = source == "f32" || source == "f64";
+        const auto source_integer = integer_bits.find(source);
+        const auto target_integer = integer_bits.find(target);
+        if (source_float && target_integer != integer_bits.end()) {
+            return true;
+        }
+        if (source == "f64" && target == "f32") {
+            return true;
+        }
+        if (source_integer != integer_bits.end() && target_integer != integer_bits.end() &&
+            target_integer->second < source_integer->second) {
+            return true;
+        }
+        if (source_integer != integer_bits.end() && target == "f32" &&
+            source_integer->second > 24) {
+            return true;
+        }
+        return false;
     }
 
     static bool contains_identifier(const std::string& line, const std::string& name) {
@@ -1072,8 +1151,8 @@ class LanguageServer {
                 if (import.kind != ImportKind::Module && import.kind != ImportKind::From) {
                     continue;
                 }
-                if (import.kind == ImportKind::Module &&
-                    bound_import_name(import) != root && import.module_path != root) {
+                if (import.kind == ImportKind::Module && bound_import_name(import) != root &&
+                    import.module_path != root) {
                     continue;
                 }
                 if (import.kind == ImportKind::From && bound_import_name(import) != word) {
@@ -1228,14 +1307,13 @@ class LanguageServer {
                         markdown += "\n\n" + docs;
                     }
                 }
-                return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"" +
-                       json_escape(markdown) +
+                return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"" + json_escape(markdown) +
                        "\"},\"range\":" + range_json(symbol.location) + "}";
             }
         }
         if (const std::string type = local_type_before_cursor(*doc, word, params); !type.empty()) {
-            return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"`" + json_escape(word) +
-                   ": " + json_escape(type) + "`\"}}";
+            return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"`" + json_escape(word) + ": " +
+                   json_escape(type) + "`\"}}";
         }
         return "null";
     }
@@ -1689,8 +1767,7 @@ class LanguageServer {
                                                                         const Json* params) {
         static const std::regex local_decl(
             R"(^\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([A-Za-z_][A-Za-z0-9_\.]*)\b)");
-        static const std::regex assign_decl(
-            R"(^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*([^=].*)$)");
+        static const std::regex assign_decl(R"(^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*([^=].*)$)");
         static const std::regex def_decl(R"(^\s*def\s+[A-Za-z_][A-Za-z0-9_]*\(([^)]*)\))");
         const Json* position = params == nullptr ? nullptr : params->get("position");
         const int max_line = position == nullptr ? std::numeric_limits<int>::max()

@@ -252,8 +252,9 @@ are implemented for known missing native headers that map cleanly to
 `pkg-config` packages such as `raylib`, `sqlite3`, `sdl3`, `glfw3`, and
 `vulkan`. Initial lint diagnostics warn on unreachable statements after
 `return`, simple unused typed locals, and local bindings that shadow visible
-outer bindings. Unreachable and unused-local diagnostics include quick fixes
-that remove the flagged line.
+outer bindings. They also warn on known numeric narrowing casts and raw
+`cpp(...)` escape hatches. Unreachable and unused-local diagnostics include
+quick fixes that remove the flagged line.
 
 ## Tests
 
@@ -301,6 +302,8 @@ sibling use file.
 Unreachable-statement lint diagnostics and remove-line quick fixes are covered.
 Unused-local lint diagnostics and remove-line quick fixes are covered.
 Local-shadowing lint diagnostics are covered.
+Suspicious narrowing-cast and raw native escape-hatch lint diagnostics are
+covered.
 Go-to-definition for Dudu module import aliases is covered with an unopened
 module file. Go-to-definition for `from module import symbol` aliases is
 covered with an unopened module file.
