@@ -269,6 +269,16 @@ std::string string_value(const Json* json) {
     return text == nullptr ? std::string{} : *text;
 }
 
+int int_value(const Json* json, int fallback = 0) {
+    if (json == nullptr) {
+        return fallback;
+    }
+    if (const double* number = std::get_if<double>(&json->value)) {
+        return static_cast<int>(*number);
+    }
+    return fallback;
+}
+
 std::string file_uri_to_path(std::string uri) {
     constexpr std::string_view prefix = "file://";
     if (uri.rfind(prefix, 0) == 0) {
@@ -317,6 +327,13 @@ struct Diagnostic {
     std::string message;
     std::string source;
     int severity = 1;
+};
+
+struct Symbol {
+    std::string name;
+    std::string detail;
+    SourceLocation location;
+    int kind = 13;
 };
 
 class LanguageServer {
@@ -436,6 +453,18 @@ class LanguageServer {
             if (id != nullptr) {
                 respond(*id, formatting_result(params));
             }
+        } else if (method == "textDocument/documentSymbol") {
+            if (id != nullptr) {
+                respond(*id, document_symbol_result(params));
+            }
+        } else if (method == "textDocument/definition") {
+            if (id != nullptr) {
+                respond(*id, definition_result(params));
+            }
+        } else if (method == "textDocument/hover") {
+            if (id != nullptr) {
+                respond(*id, hover_result(params));
+            }
         } else if (id != nullptr) {
             respond(*id, "null");
         }
@@ -447,7 +476,10 @@ class LanguageServer {
     static std::string initialize_result() {
         return "{\"capabilities\":{"
                "\"textDocumentSync\":2,"
-               "\"documentFormattingProvider\":true"
+               "\"documentFormattingProvider\":true,"
+               "\"documentSymbolProvider\":true,"
+               "\"definitionProvider\":true,"
+               "\"hoverProvider\":true"
                "},\"serverInfo\":{\"name\":\"duc lsp\",\"version\":\"0.1.0\"}}";
     }
 
@@ -582,6 +614,174 @@ class LanguageServer {
             }
         }
         return lines + 1;
+    }
+
+    std::vector<Symbol> symbols_for(const Document& doc) const {
+        std::vector<Symbol> out;
+        try {
+            const ModuleAst module = parse_source(doc.text, doc.path);
+            for (const ClassDecl& klass : module.classes) {
+                out.push_back({.name = klass.name,
+                               .detail = "class " + klass.name,
+                               .location = klass.location,
+                               .kind = 5});
+                for (const FieldDecl& field : klass.fields) {
+                    out.push_back({.name = field.name,
+                                   .detail = field.name + ": " + field.type,
+                                   .location = field.location,
+                                   .kind = 8});
+                }
+                for (const FunctionDecl& method : klass.methods) {
+                    out.push_back({.name = method.name,
+                                   .detail = function_detail(method),
+                                   .location = method.location,
+                                   .kind = method.name == "__init__" ? 9 : 6});
+                }
+            }
+            for (const EnumDecl& en : module.enums) {
+                out.push_back({.name = en.name,
+                               .detail = "enum " + en.name,
+                               .location = en.location,
+                               .kind = 10});
+            }
+            for (const ConstDecl& constant : module.constants) {
+                out.push_back({.name = constant.name,
+                               .detail = constant.name + ": " + constant.type,
+                               .location = constant.location,
+                               .kind = 14});
+            }
+            for (const FunctionDecl& fn : module.functions) {
+                out.push_back({.name = fn.name,
+                               .detail = function_detail(fn),
+                               .location = fn.location,
+                               .kind = 12});
+            }
+        } catch (const std::exception&) {
+        }
+        return out;
+    }
+
+    static std::string function_detail(const FunctionDecl& fn) {
+        std::ostringstream out;
+        out << "def " << fn.name << "(";
+        for (size_t i = 0; i < fn.params.size(); ++i) {
+            if (i > 0) {
+                out << ", ";
+            }
+            out << fn.params[i].name << ": " << fn.params[i].type;
+        }
+        out << ")";
+        if (!fn.return_type.empty()) {
+            out << " -> " << fn.return_type;
+        }
+        return out.str();
+    }
+
+    std::string document_symbol_result(const Json* params) const {
+        const Document* doc = document_from_params(params);
+        if (doc == nullptr) {
+            return "[]";
+        }
+        std::ostringstream out;
+        out << "[";
+        const std::vector<Symbol> symbols = symbols_for(*doc);
+        for (size_t i = 0; i < symbols.size(); ++i) {
+            if (i > 0) {
+                out << ",";
+            }
+            out << symbol_json(symbols[i], doc->uri);
+        }
+        out << "]";
+        return out.str();
+    }
+
+    static std::string symbol_json(const Symbol& symbol, const std::string& uri) {
+        std::ostringstream out;
+        out << "{\"name\":\"" << json_escape(symbol.name) << "\",\"kind\":" << symbol.kind
+            << ",\"detail\":\"" << json_escape(symbol.detail) << "\",\"location\":{\"uri\":\""
+            << json_escape(uri) << "\",\"range\":" << range_json(symbol.location) << "}}";
+        return out.str();
+    }
+
+    std::string definition_result(const Json* params) const {
+        const Document* doc = document_from_params(params);
+        if (doc == nullptr) {
+            return "null";
+        }
+        const std::string word = word_at(*doc, params);
+        for (const Symbol& symbol : symbols_for(*doc)) {
+            if (symbol.name == word) {
+                std::ostringstream out;
+                out << "{\"uri\":\"" << json_escape(doc->uri)
+                    << "\",\"range\":" << range_json(symbol.location) << "}";
+                return out.str();
+            }
+        }
+        return "null";
+    }
+
+    std::string hover_result(const Json* params) const {
+        const Document* doc = document_from_params(params);
+        if (doc == nullptr) {
+            return "null";
+        }
+        const std::string word = word_at(*doc, params);
+        for (const Symbol& symbol : symbols_for(*doc)) {
+            if (symbol.name == word) {
+                return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"`" +
+                       json_escape(symbol.detail) +
+                       "`\"},\"range\":" + range_json(symbol.location) + "}";
+            }
+        }
+        return "null";
+    }
+
+    const Document* document_from_params(const Json* params) const {
+        const Json* text_document = params == nullptr ? nullptr : params->get("textDocument");
+        const std::string uri =
+            text_document == nullptr ? std::string{} : string_value(text_document->get("uri"));
+        const auto found = documents_.find(uri);
+        return found == documents_.end() ? nullptr : &found->second;
+    }
+
+    static std::string range_json(const SourceLocation& location) {
+        const int line = std::max(0, location.line - 1);
+        const int column = std::max(0, location.column - 1);
+        std::ostringstream out;
+        out << "{\"start\":{\"line\":" << line << ",\"character\":" << column
+            << "},\"end\":{\"line\":" << line << ",\"character\":" << (column + 1) << "}}";
+        return out.str();
+    }
+
+    std::string word_at(const Document& doc, const Json* params) const {
+        const Json* position = params == nullptr ? nullptr : params->get("position");
+        const int target_line = int_value(position == nullptr ? nullptr : position->get("line"));
+        const int target_character =
+            int_value(position == nullptr ? nullptr : position->get("character"));
+        std::istringstream in(doc.text);
+        std::string line;
+        for (int row = 0; std::getline(in, line); ++row) {
+            if (row != target_line) {
+                continue;
+            }
+            int start = std::min(target_character, static_cast<int>(line.size()));
+            while (start > 0 && identifier_char(line[static_cast<size_t>(start - 1)])) {
+                --start;
+            }
+            int end = std::min(target_character, static_cast<int>(line.size()));
+            while (end < static_cast<int>(line.size()) &&
+                   identifier_char(line[static_cast<size_t>(end)])) {
+                ++end;
+            }
+            return start < end
+                       ? line.substr(static_cast<size_t>(start), static_cast<size_t>(end - start))
+                       : std::string{};
+        }
+        return {};
+    }
+
+    static bool identifier_char(char c) {
+        return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_';
     }
 };
 

@@ -167,6 +167,10 @@ in-process.
 
 This milestone covers Dudu-only code before native header navigation.
 
+Status: initial Dudu-only `definition`, `hover`, and `documentSymbol` support is
+implemented for symbols in the open document and wired into the VS Code
+extension. Cross-file references and workspace symbols remain.
+
 ### Milestone 3: Completion And Signature Help
 
 - `textDocument/completion`

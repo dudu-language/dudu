@@ -241,6 +241,44 @@ class DuduLspClient {
     );
   }
 
+  async documentSymbols(document) {
+    const symbols = await this.request("textDocument/documentSymbol", {
+      textDocument: { uri: document.uri.toString() },
+    });
+    return symbols.map((symbol) => {
+      const range = toRange(symbol.location.range);
+      const item = new vscode.SymbolInformation(
+        symbol.name,
+        symbolKind(symbol.kind),
+        symbol.detail ?? "",
+        new vscode.Location(vscode.Uri.parse(symbol.location.uri), range),
+      );
+      return item;
+    });
+  }
+
+  async definition(document, position) {
+    const location = await this.request("textDocument/definition", {
+      textDocument: { uri: document.uri.toString() },
+      position: { line: position.line, character: position.character },
+    });
+    if (!location) {
+      return undefined;
+    }
+    return new vscode.Location(vscode.Uri.parse(location.uri), toRange(location.range));
+  }
+
+  async hover(document, position) {
+    const hover = await this.request("textDocument/hover", {
+      textDocument: { uri: document.uri.toString() },
+      position: { line: position.line, character: position.character },
+    });
+    if (!hover) {
+      return undefined;
+    }
+    return new vscode.Hover(new vscode.MarkdownString(hover.contents.value), toRange(hover.range));
+  }
+
   onData(chunk) {
     this.buffer = Buffer.concat([this.buffer, chunk]);
     while (true) {
@@ -288,6 +326,19 @@ class DuduLspClient {
   }
 }
 
+function toRange(range) {
+  return new vscode.Range(
+    range.start.line,
+    range.start.character,
+    range.end.line,
+    range.end.character,
+  );
+}
+
+function symbolKind(lspKind) {
+  return Math.max(0, Number(lspKind ?? 13) - 1);
+}
+
 function activate(context) {
   diagnostics = vscode.languages.createDiagnosticCollection("dudu");
   lsp = new DuduLspClient(context);
@@ -302,6 +353,21 @@ function activate(context) {
     vscode.languages.registerDocumentFormattingEditProvider("dudu", {
       provideDocumentFormattingEdits(document) {
         return lsp.format(document);
+      },
+    }),
+    vscode.languages.registerDocumentSymbolProvider("dudu", {
+      provideDocumentSymbols(document) {
+        return lsp.documentSymbols(document);
+      },
+    }),
+    vscode.languages.registerDefinitionProvider("dudu", {
+      provideDefinition(document, position) {
+        return lsp.definition(document, position);
+      },
+    }),
+    vscode.languages.registerHoverProvider("dudu", {
+      provideHover(document, position) {
+        return lsp.hover(document, position);
       },
     }),
     vscode.languages.registerCompletionItemProvider("dudu", {
