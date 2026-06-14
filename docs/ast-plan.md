@@ -406,6 +406,11 @@ the raw expression text.
 Assignment C++ emission now handles parsed non-binding targets such as member
 paths and index expressions directly from `target_expr` and `value_expr`. Bare
 name assignment still owns the local-binding inference path.
+
+Local declaration initializer fallback now lowers from the parsed
+`value_expr`. Slice index expressions such as `values[1:4]` also emit from the
+parsed index node, preserving `span[T]` view lowering without requiring a raw
+whole-expression rewrite.
 Common dict initializer C++ emission lowers those parsed entries instead of
 splitting literal text again.
 

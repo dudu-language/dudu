@@ -81,6 +81,47 @@ std::string cpp_binary_operator(const std::string& op) {
     return op;
 }
 
+size_t top_level_colon(std::string_view text) {
+    int bracket_depth = 0;
+    int paren_depth = 0;
+    int brace_depth = 0;
+    char quote = '\0';
+    bool escaped = false;
+    for (size_t i = 0; i < text.size(); ++i) {
+        const char c = text[i];
+        if (quote != '\0') {
+            if (escaped) {
+                escaped = false;
+            } else if (c == '\\') {
+                escaped = true;
+            } else if (c == quote) {
+                quote = '\0';
+            }
+            continue;
+        }
+        if (c == '"' || c == '\'') {
+            quote = c;
+            continue;
+        }
+        if (c == '[') {
+            ++bracket_depth;
+        } else if (c == ']') {
+            --bracket_depth;
+        } else if (c == '(') {
+            ++paren_depth;
+        } else if (c == ')') {
+            --paren_depth;
+        } else if (c == '{') {
+            ++brace_depth;
+        } else if (c == '}') {
+            --brace_depth;
+        } else if (c == ':' && bracket_depth == 0 && paren_depth == 0 && brace_depth == 0) {
+            return i;
+        }
+    }
+    return std::string_view::npos;
+}
+
 bool has_named_argument_shape(const std::vector<Expr>& args) {
     for (const Expr& arg : args) {
         if (arg.text.find('=') != std::string::npos) {
@@ -182,6 +223,16 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
     case ExprKind::Index:
         if (expr.children.size() == 2) {
             std::string out = lower_expr(expr.children[0], aliases, locals);
+            const size_t colon = top_level_colon(expr.children[1].text);
+            if (colon != std::string_view::npos) {
+                const std::string start = trim_copy(expr.children[1].text.substr(0, colon));
+                const std::string end = trim_copy(expr.children[1].text.substr(colon + 1));
+                if (!start.empty() && !end.empty()) {
+                    return "std::span(&(" + out + ")[" + lower_expr(start, aliases, locals) +
+                           "], (" + lower_expr(end, aliases, locals) + ") - (" +
+                           lower_expr(start, aliases, locals) + "))";
+                }
+            }
             if (expr.children[1].kind == ExprKind::TupleLiteral) {
                 for (const Expr& index : expr.children[1].children) {
                     out += "[" + lower_expr(index, aliases, locals) + "]";
@@ -429,8 +480,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         locals[name] = type;
         out << indent(depth) << lower_declared_stmt_type(stmt, type, aliases) << ' ' << name;
         if (!stmt.value.empty()) {
-            const std::string& value = stmt.value;
-            if (starts_with(type, "Option[") && value == "None") {
+            if (starts_with(type, "Option[") && stmt.value_expr.kind == ExprKind::NoneLiteral) {
                 out << " = std::nullopt";
             } else if (starts_with(type, "array[") &&
                        stmt.value_expr.kind == ExprKind::ListLiteral) {
@@ -454,7 +504,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                 out << " = " << lower_declared_stmt_type(stmt, type, aliases) << "{"
                     << join_lowered_exprs(stmt.value_expr.children, aliases, locals) << '}';
             } else {
-                out << " = " << lower_expr(value, aliases, locals);
+                out << " = " << lower_expr(stmt.value_expr, aliases, locals);
             }
         } else {
             out << "{}";
