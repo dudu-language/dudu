@@ -976,6 +976,16 @@ void test_offsetof_field_emission() {
     assert(cpp.find("FLAGS_OFFSET_STR = offsetof(Packet, flags);") != std::string::npos);
 }
 
+void test_array_literal_scalar_ast_emission() {
+    const dudu::ModuleAst module = dudu::parse_source("def values() -> i32:\n"
+                                                      "    xs: array[i32] = [1_000, 2]\n"
+                                                      "    return xs[0]\n",
+                                                      "array_literal_scalar_ast.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+    const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find("std::array<int32_t, 2> xs = {{1000, 2}};") != std::string::npos);
+}
+
 } // namespace
 
 int main() {
@@ -1008,6 +1018,7 @@ int main() {
         test_pointer_member_emission(root);
         test_templated_pointer_cast_emission();
         test_offsetof_field_emission();
+        test_array_literal_scalar_ast_emission();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;

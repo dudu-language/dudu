@@ -128,6 +128,9 @@ Already structured:
 - C++ expression emission writes string, integer, and float literal expression
   nodes directly, and lowers `str(value)` calls through an explicit AST path
   instead of sending them through raw expression lowering
+- nested fixed-array literal scalar emission uses parsed expression nodes, so
+  Dudu numeric literal normalization and other scalar expression lowering stays
+  consistent inside array initializers
 - semantic checks for assignment through `*ptr` use parsed unary target
   expressions before falling back to raw target text
 - semantic checks for plain-name and member assignment targets use parsed

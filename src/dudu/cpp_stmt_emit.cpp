@@ -432,7 +432,7 @@ bool is_identifier_char(char c) {
 std::string lower_array_literal(const Expr& expr, const std::vector<std::string>& aliases,
                                 const std::map<std::string, std::string>& locals) {
     if (expr.kind != ExprKind::ListLiteral) {
-        return lower_expr(expr.text, aliases, locals);
+        return lower_expr(expr, aliases, locals);
     }
     std::ostringstream out;
     out << "{";
