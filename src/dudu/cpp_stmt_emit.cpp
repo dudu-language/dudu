@@ -498,12 +498,14 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
             binding_type = lower_cpp_type(stmt.type_ref, aliases);
             locals[stmt.name] = stmt.type;
         }
-        if (starts_with(range, "range(") && ends_with(range, ")")) {
-            const std::vector<std::string> args =
-                split_top_level_args(range.substr(6, range.size() - 7));
-            const std::string start = args.size() == 1 ? "0" : args.at(0);
-            const std::string end = args.size() == 1 ? args.at(0) : args.at(1);
-            const std::string step = args.size() >= 3 ? args.at(2) : "1";
+        if (stmt.iterable_expr.kind == ExprKind::Call && stmt.iterable_expr.name == "range") {
+            const std::vector<Expr>& args = stmt.iterable_expr.children;
+            const std::string start =
+                args.size() == 1 ? "0" : lower_expr(args.at(0), aliases, locals);
+            const std::string end = args.size() == 1 ? lower_expr(args.at(0), aliases, locals)
+                                                     : lower_expr(args.at(1), aliases, locals);
+            const std::string step =
+                args.size() >= 3 ? lower_expr(args.at(2), aliases, locals) : "1";
             out << indent(depth) << "for (" << binding_type << ' ' << binding << " = " << start
                 << "; " << binding << " < " << end << "; " << binding << " += " << step << ") {\n";
             emit_block(out, stmt.children, depth + 1, aliases, locals, return_type,

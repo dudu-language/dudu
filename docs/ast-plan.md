@@ -396,6 +396,9 @@ Dict literals now parse key/value pairs as `DictEntry` expression nodes.
 Common dict initializer C++ emission lowers those parsed entries instead of
 splitting literal text again.
 
+`range(...)` for-loop C++ emission now reads parsed call arguments from the
+iterable expression instead of parsing them back out of lowered C++ text.
+
 Bare comma expressions now parse as tuple literals, including Python-style
 multi-value returns. The shared AST comma splitter is quote-aware so commas
 inside string literals do not create phantom tuple elements.
