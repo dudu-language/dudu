@@ -221,7 +221,7 @@ matching_signature_ast(const FunctionScope& scope, const std::vector<FunctionSig
 
 std::string template_call_callee(const Expr& expr) {
     std::ostringstream out;
-    out << expr.name << "[";
+    out << call_callee_text(expr) << "[";
     for (size_t i = 0; i < expr.template_args.size(); ++i) {
         if (i > 0) {
             out << ", ";
@@ -232,9 +232,10 @@ std::string template_call_callee(const Expr& expr) {
     return out.str();
 }
 
-std::string template_method_name(const Expr& expr, size_t method_dot) {
+std::string template_method_name(const Expr& expr, const std::string& callee_base,
+                                 size_t method_dot) {
     std::ostringstream out;
-    out << trim(expr.name.substr(method_dot + 1)) << "[";
+    out << trim(callee_base.substr(method_dot + 1)) << "[";
     for (size_t i = 0; i < expr.template_args.size(); ++i) {
         if (i > 0) {
             out << ", ";
@@ -543,10 +544,11 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
             })) {
         return signature->return_type;
     }
-    const size_t method_dot = expr.name.rfind('.');
-    if (method_dot != std::string::npos && is_member_path(expr.name)) {
-        const std::string receiver = trim(expr.name.substr(0, method_dot));
-        const std::string method_name = template_method_name(expr, method_dot);
+    const std::string callee_base = call_callee_text(expr);
+    const size_t method_dot = callee_base.rfind('.');
+    if (method_dot != std::string::npos && is_member_path(callee_base)) {
+        const std::string receiver = trim(callee_base.substr(0, method_dot));
+        const std::string method_name = template_method_name(expr, callee_base, method_dot);
         FunctionSignature signature;
         if (!scope.locals.contains(receiver) && scope.symbols.classes.contains(receiver) &&
             static_method_signature_for_type(scope.symbols, receiver, method_name, signature,
@@ -592,8 +594,8 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
         }
         return callee;
     }
-    if (location != nullptr && expr.name.find('.') == std::string::npos &&
-        is_plain_identifier(expr.name) && !known_type(scope.symbols, expr.name)) {
+    if (location != nullptr && callee_base.find('.') == std::string::npos &&
+        is_plain_identifier(callee_base) && !known_type(scope.symbols, callee_base)) {
         fail(*location, "unknown function: " + callee);
     }
     return infer_expr(scope, expr.text, location);

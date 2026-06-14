@@ -45,6 +45,8 @@ Already structured:
   lowering the callee name string directly
 - ordinary call semantic inference uses a callee lookup string reconstructed
   from the parsed callee expression where possible
+- template-call semantic inference and template method lookup use the parsed
+  callee expression when reconstructing lookup names
 - semantic highlighting uses parsed call callees so method calls can color the
   receiver and called member separately instead of treating dotted callees as
   one raw span
