@@ -296,6 +296,7 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
     case ExprKind::FloatLiteral:
         return lower_numeric_separators(expr.text);
     case ExprKind::Name:
+        return lower_cpp_expr(expr.name, aliases);
     case ExprKind::CppEscape:
         return lower_expr(expr.text, aliases, locals);
     case ExprKind::StringLiteral:

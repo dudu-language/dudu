@@ -128,6 +128,9 @@ Already structured:
 - C++ expression emission writes string, integer, and float literal expression
   nodes directly, and lowers `str(value)` calls through an explicit AST path
   instead of sending them through raw expression lowering
+- C++ expression emission lowers parsed plain-name nodes directly through
+  namespace alias qualification instead of sending them through full raw
+  expression rewriting
 - nested fixed-array literal scalar emission uses parsed expression nodes, so
   Dudu numeric literal normalization and other scalar expression lowering stays
   consistent inside array initializers
