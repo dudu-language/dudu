@@ -1,4 +1,5 @@
 #include "dudu/cpp_emit.hpp"
+#include "dudu/cpp_lower.hpp"
 #include "dudu/format.hpp"
 #include "dudu/lexer.hpp"
 #include "dudu/native_headers.hpp"
@@ -333,6 +334,13 @@ void test_type_ast_shape() {
     assert(update.statements[0].type_ref.range.start.line == 11);
     assert(update.statements[0].type_ref.range.start.column > update.statements[0].location.column);
     assert(update.statements[0].type_ref.children[0].kind == dudu::TypeKind::Template);
+
+    assert(dudu::lower_cpp_type(dudu::parse_type_text("list[*Player]")) == "std::vector<Player*>");
+    assert(dudu::lower_cpp_type(dudu::parse_type_text("&const[Player]")) == "const Player&");
+    assert(dudu::lower_cpp_type(dudu::parse_type_text("fn(i32, f32) -> bool")) ==
+           "std::add_pointer_t<bool(int32_t, float)>");
+    assert(dudu::lower_cpp_type(player.fields[0].type_ref) ==
+           "std::array<std::array<float, 4>, 4>");
 }
 
 void test_formatter() {

@@ -35,6 +35,7 @@ Already structured:
 - semantic diagnostics for return values, local initializer values, local type
   names, conditions, and assignment targets use expression/type node locations
   where available
+- initial `TypeRef` C++ lowering is implemented and used for type aliases
 
 Still too string-based:
 
@@ -46,7 +47,7 @@ Still too string-based:
 - C++ emission of return/assert/debug_assert and expression statements
 - C++ emission of calls, member access, indexing, operators, constructors,
   template calls, lambdas, tuple destructuring, and C++ macro calls
-- semantic analysis and C++ emission of type strings
+- semantic analysis and most C++ emission paths for type strings
 - exact original-token ranges inside function bodies; current body-node ranges
   are derived from normalized joined statement text
 

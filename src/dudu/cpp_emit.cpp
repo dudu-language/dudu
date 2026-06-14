@@ -14,7 +14,7 @@ namespace dudu {
 namespace {
 void emit_aliases(std::ostringstream& out, const ModuleAst& module) {
     for (const TypeAliasDecl& alias : module.aliases) {
-        out << "using " << alias.name << " = " << lower_cpp_type(alias.type) << ";\n";
+        out << "using " << alias.name << " = " << lower_cpp_type(alias.type_ref) << ";\n";
     }
     if (!module.aliases.empty()) {
         out << '\n';

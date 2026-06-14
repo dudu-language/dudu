@@ -713,7 +713,9 @@ TypeRef parse_type_text(std::string_view text, SourceLocation location) {
         TypeRef type = make_type(TypeKind::Function, text, location);
         type.children.push_back(parse_type_text(text.substr(arrow + 2), location));
         std::string_view params = trim_view(text.substr(0, arrow));
-        if (enclosed_by_outer_pair(params, '(', ')')) {
+        if (params.starts_with("fn(") && params.ends_with(")")) {
+            params = params.substr(3, params.size() - 4);
+        } else if (enclosed_by_outer_pair(params, '(', ')')) {
             params = params.substr(1, params.size() - 2);
         }
         std::vector<TypeRef> parsed_params = parse_type_list(params, location);
