@@ -434,6 +434,9 @@ because the name is dotted.
 
 Named-argument call C++ emission now emits from parsed call children. The raw
 named-call rewrite remains only as a fallback for unknown/raw expression paths.
+Named call arguments such as `Point(x=1)` now parse as `NamedArg` expression
+nodes, and constructor semantic checks consume those nodes directly instead of
+rediscovering named fields from raw argument strings.
 Common dict initializer C++ emission lowers those parsed entries instead of
 splitting literal text again.
 

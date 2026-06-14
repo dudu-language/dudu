@@ -174,7 +174,7 @@ size_t top_level_equal(std::string_view text) {
 
 bool has_named_argument_shape(const std::vector<Expr>& args) {
     for (const Expr& arg : args) {
-        if (top_level_equal(arg.text) != std::string_view::npos) {
+        if (arg.kind == ExprKind::NamedArg || top_level_equal(arg.text) != std::string_view::npos) {
             return true;
         }
     }
@@ -188,6 +188,11 @@ std::string lower_named_argument_call(const Expr& expr, const std::vector<std::s
     for (size_t i = 0; i < expr.children.size(); ++i) {
         if (i > 0) {
             out << ", ";
+        }
+        if (expr.children[i].kind == ExprKind::NamedArg && expr.children[i].children.size() == 1) {
+            out << "." << expr.children[i].name << " = "
+                << lower_expr(expr.children[i].children.front(), aliases, locals);
+            continue;
         }
         const size_t equal = top_level_equal(expr.children[i].text);
         if (equal == std::string_view::npos) {
@@ -288,6 +293,11 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
         if (expr.children.size() == 2) {
             return "{" + lower_expr(expr.children[0], aliases, locals) + ", " +
                    lower_expr(expr.children[1], aliases, locals) + "}";
+        }
+        break;
+    case ExprKind::NamedArg:
+        if (expr.children.size() == 1) {
+            return "." + expr.name + " = " + lower_expr(expr.children.front(), aliases, locals);
         }
         break;
     case ExprKind::DictLiteral:

@@ -1003,6 +1003,9 @@ class LanguageServer {
             add_semantic_token(tokens, member_location, expr.name, 8);
             break;
         }
+        case ExprKind::NamedArg:
+            add_semantic_token(tokens, expr.location, expr.name, 9);
+            break;
         case ExprKind::IntLiteral:
         case ExprKind::FloatLiteral:
             add_semantic_token(tokens, expr.location, expr.text, 12);

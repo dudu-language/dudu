@@ -196,6 +196,9 @@ size_t find_top_level_assignment(std::string_view text, bool compound) {
             const bool is_compound = prev == '+' || prev == '-' || prev == '*' || prev == '/' ||
                                      prev == '%' || prev == '|' || prev == '&' || prev == '^' ||
                                      prev == '<' || prev == '>';
+            if (prev == '!') {
+                continue;
+            }
             if (compound == is_compound) {
                 return i;
             }
@@ -814,6 +817,8 @@ std::string_view expression_kind_name(ExprKind kind) {
         return "dict_literal";
     case ExprKind::DictEntry:
         return "dict_entry";
+    case ExprKind::NamedArg:
+        return "named_arg";
     case ExprKind::SetLiteral:
         return "set_literal";
     case ExprKind::TupleLiteral:
@@ -978,6 +983,19 @@ Expr parse_expr_text(std::string_view text, SourceLocation location) {
     }
     if (starts_keyword(text, "lambda")) {
         return make_expr(ExprKind::Lambda, text, location);
+    }
+
+    const size_t named_arg_assign = find_top_level_assignment(text, false);
+    if (named_arg_assign != std::string_view::npos) {
+        const std::string_view name = trim_view(text.substr(0, named_arg_assign));
+        if (is_identifier(name)) {
+            Expr expr = make_expr(ExprKind::NamedArg, text, location);
+            expr.name = std::string(name);
+            expr.children.push_back(
+                parse_expr_text(text.substr(named_arg_assign + 1),
+                                advance_columns(location, named_arg_assign + 1)));
+            return expr;
+        }
     }
 
     const size_t conditional_if = find_top_level_word(text, "if");

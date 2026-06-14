@@ -244,11 +244,12 @@ void test_expression_ast_shape() {
                            "    values: list[i32] = [1, 2, 3]\n"
                            "    flags: i32 = mask & (1 << bit)\n"
                            "    *ptr = &values[0]\n"
+                           "    point: Point = Point(x=1, y=2)\n"
                            "    return answer\n",
                            "expression_ast.dd");
     assert(module.functions.size() == 1);
     const dudu::FunctionDecl& main = module.functions.front();
-    assert(main.statements.size() == 6);
+    assert(main.statements.size() == 7);
 
     const dudu::Stmt& answer = main.statements[0];
     assert(answer.kind == dudu::StmtKind::VarDecl);
@@ -313,6 +314,17 @@ void test_expression_ast_shape() {
     assert(pointer_assign.value_expr.kind == dudu::ExprKind::Unary);
     assert(pointer_assign.value_expr.op == "&");
     assert(pointer_assign.value_expr.children[0].kind == dudu::ExprKind::Index);
+
+    const dudu::Stmt& point = main.statements[5];
+    assert(point.kind == dudu::StmtKind::VarDecl);
+    assert(point.value_expr.kind == dudu::ExprKind::Call);
+    assert(point.value_expr.children.size() == 2);
+    assert(point.value_expr.children[0].kind == dudu::ExprKind::NamedArg);
+    assert(point.value_expr.children[0].name == "x");
+    assert(point.value_expr.children[0].children.size() == 1);
+    assert(point.value_expr.children[0].children[0].kind == dudu::ExprKind::IntLiteral);
+    assert(point.value_expr.children[1].kind == dudu::ExprKind::NamedArg);
+    assert(point.value_expr.children[1].name == "y");
 }
 
 void test_type_ast_shape() {

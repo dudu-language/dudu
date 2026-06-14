@@ -564,11 +564,10 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
 
 std::string infer_constructor_call_ast(const FunctionScope& scope, const Expr& expr,
                                        const std::string& callee, const SourceLocation* location) {
-    const std::vector<std::string> args = expr_texts(expr.children);
     if (const auto klass = scope.symbols.classes.find(resolve_alias(scope.symbols, callee));
         klass != scope.symbols.classes.end()) {
-        check_constructor_args(
-            scope, *klass->second, args, location, infer_expr,
+        check_constructor_args_ast(
+            scope, *klass->second, expr.children, location, infer_expr_ast,
             [&](const std::string& expected, const std::string& value, const std::string& got) {
                 return can_assign_expr(scope, expected, value, got);
             });
@@ -606,6 +605,11 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
     case ExprKind::DictLiteral:
         return "dict";
     case ExprKind::DictEntry:
+        return "auto";
+    case ExprKind::NamedArg:
+        if (expr.children.size() == 1) {
+            return infer_expr_ast(scope, expr.children.front(), use_location);
+        }
         return "auto";
     case ExprKind::SetLiteral:
         return "set";
