@@ -86,6 +86,8 @@ Already structured:
   keeping hover behavior aligned with compiler literal parsing
 - default `assert` message emission uses the parsed condition expression text
   instead of the raw statement condition field
+- frontend AST shape tests cover systems integer literals and `Slice`
+  expression nodes directly
 
 Still too string-based:
 

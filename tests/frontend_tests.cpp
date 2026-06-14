@@ -245,11 +245,13 @@ void test_expression_ast_shape() {
                            "    flags: i32 = mask & (1 << bit)\n"
                            "    *ptr = &values[0]\n"
                            "    point: Point = Point(x=1, y=2)\n"
+                           "    hex_mask: i32 = 0x80\n"
+                           "    view: span[i32] = values[1:3]\n"
                            "    return answer\n",
                            "expression_ast.dd");
     assert(module.functions.size() == 1);
     const dudu::FunctionDecl& main = module.functions.front();
-    assert(main.statements.size() == 7);
+    assert(main.statements.size() == 9);
 
     const dudu::Stmt& answer = main.statements[0];
     assert(answer.kind == dudu::StmtKind::VarDecl);
@@ -325,6 +327,20 @@ void test_expression_ast_shape() {
     assert(point.value_expr.children[0].children[0].kind == dudu::ExprKind::IntLiteral);
     assert(point.value_expr.children[1].kind == dudu::ExprKind::NamedArg);
     assert(point.value_expr.children[1].name == "y");
+
+    const dudu::Stmt& hex_mask = main.statements[6];
+    assert(hex_mask.kind == dudu::StmtKind::VarDecl);
+    assert(hex_mask.value_expr.kind == dudu::ExprKind::IntLiteral);
+    assert(hex_mask.value_expr.text == "0x80");
+
+    const dudu::Stmt& view = main.statements[7];
+    assert(view.kind == dudu::StmtKind::VarDecl);
+    assert(view.value_expr.kind == dudu::ExprKind::Index);
+    assert(view.value_expr.children.size() == 2);
+    assert(view.value_expr.children[1].kind == dudu::ExprKind::Slice);
+    assert(view.value_expr.children[1].children.size() == 2);
+    assert(view.value_expr.children[1].children[0].kind == dudu::ExprKind::IntLiteral);
+    assert(view.value_expr.children[1].children[1].kind == dudu::ExprKind::IntLiteral);
 }
 
 void test_type_ast_shape() {
