@@ -518,10 +518,13 @@ push. They are not release packaging work.
    hatch, not the replacement for the normal command surface.
 
    This is not a Zig-style attempt to make the language build system own every
-   native project. Dudu can use a direct compiler backend for small native
-   graphs, generate CMake for inspectable native builds, or drive user-owned
-   CMake when the project already has one. Those are backend modes behind the
-   same command surface, not separate classes of Dudu project.
+   native project. Zig's normal model is a `build.zig` graph that owns the
+   build and can compile/link C and C++ inputs through that graph. Dudu's
+   native interop goal is broader in a different direction: direct compiler
+   builds, generated CMake builds, and user-owned CMake builds are backend
+   modes behind the same command surface, not separate classes of Dudu project.
+   CMake-backed builds should still be launched through `dudu build`,
+   `dudu run`, and `dudu test`.
 
    Status: `dudu build` and `dudu run` currently use the direct backend.
    Native inputs such as include paths, library paths, libraries, flags,

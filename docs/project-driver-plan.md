@@ -362,11 +362,18 @@ native package discovery, platform generators, vendored C/C++ dependencies,
 and user-owned CMake files.
 
 This is also not a Zig-style claim that Dudu's build system should replace the
-project's native build system. Zig can describe and build C/C++ inputs through
-its own build graph. Dudu's interop goal is broader in a different direction:
-existing CMake projects, generated CMake projects, direct compiler builds, and
-plain native flags should all be valid ways for the same Dudu command surface
-to reach the C/C++ ecosystem.
+project's native build system. Zig's normal model is a `build.zig` graph that
+owns the build and can compile/link C and C++ inputs through that graph. Dudu's
+interop goal is broader in a different direction: existing CMake projects,
+generated CMake projects, direct compiler builds, and plain native flags should
+all be valid ways for the same Dudu command surface to reach the C/C++
+ecosystem.
+
+Dudu should not make CMake use feel like leaving the language tool. If a
+project already has a serious CMake build, `dudu build` should be able to drive
+that declared target. If a project does not, `dudu build` can either use the
+direct backend or generate and drive CMake internally. In all cases, the user
+command remains Dudu's command.
 
 The practical target is:
 
