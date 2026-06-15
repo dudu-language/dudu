@@ -1136,6 +1136,9 @@ guesses:
   the declaration instead of guessed return/parameter usage.
 - native overload matching uses parsed `TypeRef` binding for template-shaped
   parameter matching before falling back to compatibility checks.
+- native C++ artifact normalization for tuple element/reference types renders
+  parsed `TypeRef` children through the shared helper instead of reading raw
+  child text directly.
 - compiler-recognized decorators can read the full parsed argument list, which
   keeps multi-argument attributes such as `@workgroup_size(8, 8, 1)` intact.
 - C struct/class/union/enum tags are normalized during member lookup, so

@@ -76,7 +76,7 @@ std::string normalize_tuple_element(std::string type) {
     type = trim_copy(std::move(type));
     const TypeRef parsed = parse_type_text(type);
     if (parsed.kind == TypeKind::Reference && parsed.children.size() == 1) {
-        return "&" + normalize_tuple_element(parsed.children.front().text);
+        return "&" + normalize_tuple_element(substitute_type_ref_text(parsed.children.front(), {}));
     }
     if (parsed.kind != TypeKind::Template || parsed.name != "__tuple_element_t" ||
         parsed.children.size() != 2 || parsed.children[0].kind != TypeKind::Value) {
@@ -95,7 +95,7 @@ std::string normalize_tuple_element(std::string type) {
     if (index >= tuple_type.children.size()) {
         return type;
     }
-    return trim_copy(tuple_type.children[index].text);
+    return substitute_type_ref_text(tuple_type.children[index], {});
 }
 
 } // namespace
