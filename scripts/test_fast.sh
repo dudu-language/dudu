@@ -44,6 +44,15 @@ compile_and_expect inheritance_super_method 42
 compile_and_expect inheritance_super_init 42
 compile_and_expect inheritance_virtual_override 42
 compile_and_expect inheritance_multiple_interfaces 42
+compile_and_expect inheritance_virtual_destructor 42
+compile_and_expect inheritance_virtual_drop 42
+"$repo_root/build/dudu" "$repo_root/tests/fixtures/inheritance_virtual_destructor.dd" \
+    --emit-cpp "$repo_root/build/inheritance_virtual_destructor.cpp"
+grep -Fq "virtual ~Base() = default;" "$repo_root/build/inheritance_virtual_destructor.cpp"
+grep -Fq "virtual ~Derived() = default;" "$repo_root/build/inheritance_virtual_destructor.cpp"
+"$repo_root/build/dudu" "$repo_root/tests/fixtures/inheritance_virtual_drop.dd" \
+    --emit-cpp "$repo_root/build/inheritance_virtual_drop.cpp"
+grep -Fq "virtual ~Resource(" "$repo_root/build/inheritance_virtual_drop.cpp"
 compile_and_expect native_inheritance_basic 42
 compile_and_expect native_template_function 42
 compile_and_expect native_scan_local 42

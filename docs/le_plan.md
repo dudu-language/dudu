@@ -349,7 +349,9 @@ push. They are not release packaging work.
    across multiple storage bases remain rejected. Strict native multiple
    inheritance rules are implemented for the common one-storage-base plus
    interface-like abstract bases shape, including duplicate concrete-method
-   diagnostics. Virtual destructor policy remains.
+   diagnostics. Classes with virtual or abstract instance methods, and classes
+   deriving from them, now emit virtual destructors automatically; `drop`
+   lowers to a virtual destructor in those classes.
 
 8. Macro Surface Prerequisites
 

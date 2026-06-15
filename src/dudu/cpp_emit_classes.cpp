@@ -213,6 +213,45 @@ std::string join_lowered_args(const std::vector<Expr>& args, const std::vector<s
     return out.str();
 }
 
+bool method_is_instance(const FunctionDecl& method) {
+    return !method.params.empty() && method.params.front().name == "self";
+}
+
+bool has_drop_method(const ClassDecl& klass) {
+    for (const FunctionDecl& method : klass.methods) {
+        if (is_destructor_method(method)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool class_is_polymorphic(const Symbols& symbols, const ClassDecl& klass,
+                          std::set<std::string>& seen) {
+    if (!seen.insert(klass.name).second) {
+        return false;
+    }
+    for (const FunctionDecl& method : klass.methods) {
+        if (method_is_instance(method) &&
+            (method_has_decorator(method, "virtual") || method_has_decorator(method, "abstract"))) {
+            return true;
+        }
+    }
+    for (const std::string& base : klass.base_classes) {
+        const auto parent = symbols.classes.find(base_type(base));
+        if (parent != symbols.classes.end() && class_is_polymorphic(symbols, *parent->second,
+                                                                    seen)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool class_is_polymorphic(const Symbols& symbols, const ClassDecl& klass) {
+    std::set<std::string> seen;
+    return class_is_polymorphic(symbols, klass, seen);
+}
+
 bool visible_in_header(Visibility visibility) {
     return visibility != Visibility::Private;
 }
@@ -246,7 +285,13 @@ void emit_method(std::ostringstream& out, const std::string& class_name, const F
     if (is_constructor_method(method)) {
         out << "    " << class_name << '(';
     } else if (is_destructor_method(method)) {
-        out << "    ~" << class_name << '(';
+        const auto klass = symbols.classes.find(class_name);
+        if (klass != symbols.classes.end() && class_is_polymorphic(symbols, *klass->second)) {
+            out << "    virtual ";
+        } else {
+            out << "    ";
+        }
+        out << "~" << class_name << '(';
     } else {
         out << "    ";
         if (first_param == 0) {
@@ -365,6 +410,9 @@ void emit_classes(std::ostringstream& out, const ModuleAst& module,
         }
         for (const ConstDecl& constant : klass.constants) {
             emit_class_constant_decl(out, constant, aliases);
+        }
+        if (class_is_polymorphic(symbols, klass) && !has_drop_method(klass)) {
+            out << "    virtual ~" << klass.name << "() = default;\n";
         }
         std::string_view current_section = "public";
         for (const FunctionDecl& method : klass.methods) {

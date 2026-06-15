@@ -1,0 +1,15 @@
+class Base:
+    @virtual
+    def value(self) -> i32:
+        return 1
+
+
+class Derived(Base):
+    @override
+    def value(self) -> i32:
+        return 42
+
+
+def main() -> i32:
+    value: Derived = Derived()
+    return value.value()

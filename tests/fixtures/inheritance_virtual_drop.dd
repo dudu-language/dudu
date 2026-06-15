@@ -1,0 +1,17 @@
+class Resource:
+    closed: i32
+
+    def init(self, closed: i32):
+        self.closed = closed
+
+    @virtual
+    def value(self) -> i32:
+        return self.closed
+
+    def drop(self):
+        self.closed = 1
+
+
+def main() -> i32:
+    resource: Resource = Resource(42)
+    return resource.value()

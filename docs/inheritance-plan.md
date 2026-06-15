@@ -127,6 +127,11 @@ If a class is used through a base pointer and has virtual methods, generated C++
 must provide a virtual destructor or diagnose that deletion through the base type
 is unsafe.
 
+Status: classes with virtual or abstract instance methods, plus classes that
+derive from them, emit virtual destructors automatically. A user `drop` method
+lowers to a virtual destructor for those classes; otherwise a default virtual
+destructor is emitted.
+
 ## Overrides
 
 Use an explicit decorator for override checking:
@@ -576,6 +581,7 @@ field declaration where possible.
 - target examples exist as fixtures or runnable examples.
 - Multiple concrete native bases are rejected: done for multiple
   storage-bearing Dudu bases.
+- Virtual destructor policy is handled for Dudu-native polymorphic classes.
 - Imported C++ inherited methods remain callable.
 - Imported C++ derived/base pointer and reference conversions work.
 - Static fields use `static[T]`, and `class.name` works inside class scope.
