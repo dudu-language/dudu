@@ -331,7 +331,8 @@ push. They are not release packaging work.
    inferred method type arguments, and richer instantiated diagnostics remain.
    Multi-parameter generic functions and classes such as `Pair[str, i32]`
    substitute receiver member types through the declared class generic
-   parameter names.
+   parameter names. Target fixtures now cover `Stack[T]`, `Result[T, E]`
+   helpers, and generic span math.
 
 6. Sum Types And Pattern Matching
 

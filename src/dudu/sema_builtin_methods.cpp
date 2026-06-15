@@ -98,6 +98,14 @@ bool builtin_cpp_method_signature(const Symbols& symbols, std::string receiver_t
             signature.return_type = "usize";
             return true;
         }
+        if (method_name == "back" || method_name == "front") {
+            signature.return_type = item.empty() ? "auto" : item;
+            return true;
+        }
+        if (method_name == "pop_back") {
+            signature.return_type = "void";
+            return true;
+        }
         if (method_name == "empty") {
             signature.return_type = "bool";
             return true;

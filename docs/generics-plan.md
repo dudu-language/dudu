@@ -84,7 +84,9 @@ parameter can be bound from argument types, including nested forms such as
 `list[T]`. Generic bodies allow operators where both operands are the same
 visible generic type parameter, which supports target examples such as
 `Vec2[T].add` and `Vec2[T].dot` while leaving concrete operator validation to
-instantiation. Richer instantiated diagnostics, inferred method type
+instantiation. Executable fixtures now cover a generic `Stack[T]` over
+`list[T]`, a generic `unwrap_or[T, E]` helper over `Result[T, E]`, and generic
+span math over `span[T]`. Richer instantiated diagnostics, inferred method type
 arguments, and non-type template parameters remain. Multi-parameter generic
 functions and classes such as `Pair[str, i32]` substitute receiver member types
 through the declared class generic parameter names.
@@ -223,6 +225,9 @@ class Stack[T]:
         return value
 ```
 
+Status: an executable `Stack[T]` fixture covers a Dudu-native generic class
+using `list[T]`, `append`, `back`, `pop_back`, and `Option[T]`.
+
 ### Arena Handle
 
 ```python
@@ -248,6 +253,9 @@ def unwrap_or[T, E](result: Result[T, E], fallback: T) -> T:
     return fallback
 ```
 
+Status: an executable fixture covers inferred `unwrap_or[T, E]` calls over
+`Result[T, E]`.
+
 ### Generic Sort Wrapper
 
 ```python
@@ -269,6 +277,10 @@ def sum[T](values: span[T]) -> T:
 
 This stresses default construction, imported span-like types, iteration, and
 operator use.
+
+Status: an executable fixture covers generic span iteration and same-parameter
+generic compound arithmetic. It passes an explicit zero value rather than
+depending on generic default construction.
 
 ### Fixed Vector
 

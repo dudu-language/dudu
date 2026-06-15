@@ -58,6 +58,9 @@ compile_and_expect generic_inferred_structured 42
 compile_and_expect generic_method 42
 compile_and_expect generic_method_multi 42
 compile_and_expect generic_pair 42
+compile_and_expect generic_result_helpers 42
+compile_and_expect generic_span_sum 42
+compile_and_expect generic_stack 42
 compile_and_expect generic_substitution_shapes 42
 compile_and_expect generic_vec2 42
 compile_and_expect inheritance_abstract 42

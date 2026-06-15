@@ -1,0 +1,14 @@
+def choose(flag: bool) -> Result[i32, str]:
+    if flag:
+        return Ok(42)
+    return Err(str("missing"))
+
+
+def unwrap_or[T, E](result: Result[T, E], fallback: T) -> T:
+    if result.ok:
+        return result.value
+    return fallback
+
+
+def main() -> i32:
+    return unwrap_or(choose(True), 1)

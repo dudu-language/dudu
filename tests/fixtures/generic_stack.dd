@@ -1,0 +1,24 @@
+class Stack[T]:
+    items: list[T]
+
+    def push(self, value: T):
+        self.items.append(value)
+
+    def pop(self) -> Option[T]:
+        if len(self.items) == 0:
+            return None
+        value: T = self.items.back()
+        self.items.pop_back()
+        return value
+
+
+def main() -> i32:
+    stack: Stack[i32] = Stack[i32]()
+    stack.push(20)
+    stack.push(22)
+    value: Option[i32] = stack.pop()
+    match value:
+        case Some(inner):
+            return inner + 20
+        case None:
+            return 1
