@@ -1396,6 +1396,8 @@ Stmt statement_from_text(std::string raw_text, SourceLocation location, SourceRa
         fill_except(stmt, text);
         stmt.type_ref =
             parse_type_text(stmt.type, location_for_piece(location, stmt.text, stmt.type));
+        stmt.condition_expr = parse_expr_text(
+            stmt.condition, location_for_piece(location, stmt.text, stmt.condition));
         break;
     case StmtKind::Assert:
         fill_assert(stmt, text, location, "assert");

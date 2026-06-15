@@ -2042,7 +2042,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
     }
     if (stmt.kind == StmtKind::Except) {
         FunctionScope nested = scope;
-        if (stmt.name.empty() && has_type_ref(stmt.type_ref)) {
+        if (has_expr(stmt.condition_expr) || (stmt.name.empty() != !has_type_ref(stmt.type_ref))) {
             fail(stmt.location, "expected except binding as name: Type");
         }
         if (!stmt.name.empty()) {
@@ -2068,7 +2068,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
                                  stmt.type_ref, "unknown loop binding type: ");
             check_iterable_binding(scope.symbols, scope.locals,
                                    node_location(stmt.location, stmt.iterable_expr), stmt.type,
-                                   stmt.iterable);
+                                   stmt.iterable_expr);
             bind_local(nested, stmt.name, stmt.type, stmt.type_ref);
         }
         check_block(nested, stmt.children, return_type, loop_depth + 1);

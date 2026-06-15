@@ -5,7 +5,6 @@
 #include "dudu/sema_ops.hpp"
 #include "dudu/type_compat.hpp"
 
-#include <cctype>
 #include <optional>
 #include <sstream>
 
@@ -21,19 +20,6 @@ std::string unwrap_reference_and_const(std::string type) {
         type = trim(type.substr(6, type.size() - 7));
     }
     return type;
-}
-
-bool plain_identifier(const std::string& text) {
-    if (text.empty() ||
-        (std::isalpha(static_cast<unsigned char>(text.front())) == 0 && text.front() != '_')) {
-        return false;
-    }
-    for (const char c : text) {
-        if (std::isalnum(static_cast<unsigned char>(c)) == 0 && c != '_') {
-            return false;
-        }
-    }
-    return true;
 }
 
 bool foreign_indexable_type(const std::string& type) {
@@ -286,16 +272,20 @@ std::string iterable_value_type(const Symbols& symbols,
 void check_iterable_binding(const Symbols& symbols,
                             const std::map<std::string, std::string>& locals,
                             const SourceLocation& location, const std::string& binding_type,
-                            const std::string& iterable) {
-    if (starts_with(iterable, "range(") || !plain_identifier(iterable)) {
+                            const Expr& iterable) {
+    if (iterable.kind == ExprKind::Call && iterable.name == "range") {
         return;
     }
-    if (!locals.contains(iterable)) {
-        throw CompileError(location, "iteration over unknown local: " + iterable);
+    if (iterable.kind != ExprKind::Name) {
+        return;
     }
-    const std::string element = iterable_value_type(symbols, locals, iterable);
+    const std::string& name = iterable.name;
+    if (!locals.contains(name)) {
+        throw CompileError(location, "iteration over unknown local: " + name);
+    }
+    const std::string element = iterable_value_type(symbols, locals, name);
     if (element.empty()) {
-        throw CompileError(location, "cannot iterate non-container: " + iterable);
+        throw CompileError(location, "cannot iterate non-container: " + name);
     }
     if (!type_assignment_allowed(binding_type, element) &&
         !type_assignment_allowed(resolve_alias(symbols, binding_type),

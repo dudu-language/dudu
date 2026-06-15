@@ -29,6 +29,6 @@ std::string iterable_value_type(const Symbols& symbols,
 void check_iterable_binding(const Symbols& symbols,
                             const std::map<std::string, std::string>& locals,
                             const SourceLocation& location, const std::string& binding_type,
-                            const std::string& iterable);
+                            const Expr& iterable);
 
 } // namespace dudu
