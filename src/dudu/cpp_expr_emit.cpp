@@ -78,18 +78,6 @@ bool has_expr(const Expr& expr) {
     return !expr.text.empty();
 }
 
-std::string join_lowered_template_args(const std::vector<Expr>& exprs,
-                                       const std::vector<std::string>& aliases) {
-    std::ostringstream out;
-    for (size_t i = 0; i < exprs.size(); ++i) {
-        if (i > 0) {
-            out << ", ";
-        }
-        out << lower_template_call_arg(exprs[i].text, aliases);
-    }
-    return out.str();
-}
-
 std::string join_lowered_type_args(const std::vector<TypeRef>& types,
                                    const std::vector<std::string>& aliases) {
     std::ostringstream out;
@@ -109,17 +97,6 @@ std::string join_type_arg_texts(const std::vector<TypeRef>& types) {
             out << ", ";
         }
         out << types[i].text;
-    }
-    return out.str();
-}
-
-std::string join_template_arg_texts(const std::vector<Expr>& exprs) {
-    std::ostringstream out;
-    for (size_t i = 0; i < exprs.size(); ++i) {
-        if (i > 0) {
-            out << ", ";
-        }
-        out << exprs[i].text;
     }
     return out.str();
 }
@@ -192,9 +169,7 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
             break;
         }
         const std::string lowered_template_args =
-            !expr.template_type_args.empty()
-                ? join_lowered_type_args(expr.template_type_args, aliases)
-                : join_lowered_template_args(expr.template_args, aliases);
+            join_lowered_type_args(expr.template_type_args, aliases);
         const std::string lowered_call_args = join_lowered_exprs(expr.children, aliases, locals);
         if (expr.name == "new") {
             return "new " + lowered_template_args + "(" + lowered_call_args + ")";
@@ -205,11 +180,9 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
                    lowered_call_args + ")))";
         }
         if (starts_with(expr.name, "*")) {
-            const std::string pointee = !expr.template_type_args.empty()
-                                            ? trim_copy(expr.name.substr(1)) + "[" +
-                                                  join_type_arg_texts(expr.template_type_args) + "]"
-                                            : trim_copy(expr.name.substr(1)) + "[" +
-                                                  join_template_arg_texts(expr.template_args) + "]";
+            const std::string pointee =
+                trim_copy(expr.name.substr(1)) + "[" + join_type_arg_texts(expr.template_type_args) +
+                "]";
             return "reinterpret_cast<" + lower_cpp_type("*" + pointee, aliases) + ">(" +
                    lowered_call_args + ")";
         }
@@ -221,9 +194,7 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
                    lower_offsetof_field(expr.children.front(), aliases, locals) + ")";
         }
         if (is_builtin_template_constructor(expr.name)) {
-            const std::string type_args = !expr.template_type_args.empty()
-                                              ? join_type_arg_texts(expr.template_type_args)
-                                              : join_template_arg_texts(expr.template_args);
+            const std::string type_args = join_type_arg_texts(expr.template_type_args);
             const std::string type = lower_cpp_type(expr.name + "[" + type_args + "]", aliases);
             return expr.children.empty() ? type + "{}" : type + "(" + lowered_call_args + ")";
         }

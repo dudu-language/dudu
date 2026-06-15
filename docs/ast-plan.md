@@ -63,6 +63,9 @@ Already structured:
   variable annotations, catch bindings, and typed `for` loop bindings
 - template calls keep template arguments separate from runtime call arguments,
   and C++ emission lowers them from the parsed expression node
+- normal template-call emission lowers bracket arguments from parsed `TypeRef`
+  nodes, including non-type value arguments, instead of falling back to raw
+  expression text
 - empty parsed template calls such as `identity[]()` are rejected during
   semantic checking instead of falling through raw expression inference and
   emitting invalid C++
