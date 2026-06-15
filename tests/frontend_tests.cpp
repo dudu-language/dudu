@@ -238,8 +238,10 @@ void test_emitted_local_index_type_inference() {
 void test_index_type_inference_uses_type_ast() {
     dudu::Symbols symbols;
     const dudu::SourceLocation location{.file = "index_types.dd", .line = 1, .column = 1};
-    assert(dudu::indexed_type_from_type(symbols, location, "*const[Item]", "0", "items") == "Item");
-    assert(dudu::indexed_type_from_type(symbols, location, "Bag[Item]", "0", "bag") == "Item");
+    assert(dudu::indexed_type_from_type(symbols, location, "*const[Item]",
+                                        dudu::parse_expr_text("0", location), "items") == "Item");
+    assert(dudu::indexed_type_from_type(symbols, location, "Bag[Item]",
+                                        dudu::parse_expr_text("0", location), "bag") == "Item");
 
     const std::map<std::string, std::string> locals = {
         {"bag", "Bag[Item]"},

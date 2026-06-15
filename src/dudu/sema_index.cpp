@@ -31,37 +31,6 @@ bool foreign_indexable_type(const std::string& type) {
            type.find("::") != std::string::npos;
 }
 
-size_t top_level_colon(const std::string& text) {
-    int depth = 0;
-    char quote = '\0';
-    bool escaped = false;
-    for (size_t i = 0; i < text.size(); ++i) {
-        const char c = text[i];
-        if (quote != '\0') {
-            if (escaped) {
-                escaped = false;
-            } else if (c == '\\') {
-                escaped = true;
-            } else if (c == quote) {
-                quote = '\0';
-            }
-            continue;
-        }
-        if (c == '"' || c == '\'') {
-            quote = c;
-            continue;
-        }
-        if (c == '[' || c == '(' || c == '{') {
-            ++depth;
-        } else if (c == ']' || c == ')' || c == '}') {
-            --depth;
-        } else if (c == ':' && depth == 0) {
-            return i;
-        }
-    }
-    return std::string::npos;
-}
-
 std::optional<std::string> fixed_array_element_type(const TypeRef& type) {
     if (type.kind != TypeKind::FixedArray || type.children.empty()) {
         return std::nullopt;
@@ -236,16 +205,6 @@ std::string indexed_value_type(const Symbols& symbols,
         throw CompileError(location, std::string(unknown_message) + name);
     }
     return indexed_type_from_type(symbols, location, local->second, index_expr, name);
-}
-
-std::string indexed_type_from_type(const Symbols& symbols, const SourceLocation& location,
-                                   const std::string& raw_type, const std::string& index_expr,
-                                   const std::string& label) {
-    const size_t index_count = index_expr.empty() ? 1 : split_top_level_args(index_expr).size();
-    const size_t colon = top_level_colon(index_expr);
-    const bool has_slice = colon != std::string::npos;
-    return indexed_type_from_type_with_count(symbols, location, raw_type, index_count, has_slice,
-                                             false, label);
 }
 
 std::string indexed_type_from_type(const Symbols& symbols, const SourceLocation& location,

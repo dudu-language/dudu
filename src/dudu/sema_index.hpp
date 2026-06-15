@@ -10,9 +10,6 @@
 namespace dudu {
 
 std::string indexed_type_from_type(const Symbols& symbols, const SourceLocation& location,
-                                   const std::string& type, const std::string& index_expr,
-                                   const std::string& label);
-std::string indexed_type_from_type(const Symbols& symbols, const SourceLocation& location,
                                    const std::string& type, const Expr& index_expr,
                                    const std::string& label);
 std::string indexed_value_type(const Symbols& symbols,

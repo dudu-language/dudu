@@ -237,8 +237,8 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
             const std::string receiver_type =
                 member_path_type(scope.symbols, scope.locals, location, name, "");
             if (!receiver_type.empty()) {
-                return indexed_type_from_type(scope.symbols, *location, receiver_type, index_expr,
-                                              name);
+                return indexed_type_from_type(scope.symbols, *location, receiver_type,
+                                              parse_expr_text(index_expr, *location), name);
             }
         }
     }

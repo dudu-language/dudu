@@ -355,9 +355,10 @@ Already structured:
   cases instead of scanning raw statement text
 - parsed index expression type inference uses the AST receiver and index nodes
   regardless of whether the caller supplied an explicit diagnostic location
-- normal local indexed-value inference no longer exposes a string-index
-  overload; callers must provide parsed index expressions, with string index
-  text limited to explicit `cpp(...)` escape compatibility
+- indexed type inference no longer exposes a public string-index overload;
+  callers must provide parsed index expressions. Explicit `cpp(...)` escape
+  type inference parses indexed member-path indexes into `Expr` nodes before
+  asking sema for the indexed type.
 - parsed index expression type inference handles expression receivers such as
   `make_values()[0]` and chained array rows without falling back to raw
   expression inference
