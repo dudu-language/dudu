@@ -192,6 +192,8 @@ Already structured:
 - parsed index expression type inference handles expression receivers such as
   `make_values()[0]` and chained array rows without falling back to raw
   expression inference
+- malformed parsed index expressions such as `values[]` are rejected during
+  semantic checking instead of being emitted through raw expression fallback
 - build flag validation walks parsed expression nodes for constants,
   `static_assert`, and normal statements; raw text scanning remains only for
   unknown statements and explicit C++ escape statements

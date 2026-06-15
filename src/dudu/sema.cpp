@@ -1520,6 +1520,12 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
         return {};
     case ExprKind::Index:
         if (expr.children.size() == 2) {
+            if (missing_expr(expr.children[0]) || missing_expr(expr.children[1])) {
+                if (use_location != nullptr) {
+                    fail(*use_location, "index expression expects receiver and index");
+                }
+                return {};
+            }
             const SourceLocation& index_location =
                 use_location != nullptr ? *use_location : expr.location;
             const Expr& receiver = expr.children[0];
@@ -1557,7 +1563,10 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                     receiver.text.empty() ? "indexed expression" : receiver.text);
             }
         }
-        return infer_expr(scope, expr.text, use_location);
+        if (use_location != nullptr) {
+            fail(*use_location, "unsupported index expression: " + expr.text);
+        }
+        return {};
     case ExprKind::Conditional:
         if (expr.children.size() != 3 || missing_expr(expr.children[0]) ||
             missing_expr(expr.children[1]) || missing_expr(expr.children[2])) {
