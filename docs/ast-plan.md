@@ -155,6 +155,9 @@ Already structured:
 - a shared AST type helper owns `TypeRef` substitution rendering, so generic
   functions, generic classes, and Dudu-native method/class template
   substitutions use the same structured path
+- receiver-derived template placeholder substitution also uses the shared
+  `TypeRef` path for Dudu-shaped type metadata, with raw identifier replacement
+  isolated to native C++ spellings the Dudu type parser cannot represent
 - fixed-array indexing and iteration recover `array[T][shape]` element types
   from parsed `TypeRef::FixedArray` nodes instead of hand-matching nested
   brackets in the type text

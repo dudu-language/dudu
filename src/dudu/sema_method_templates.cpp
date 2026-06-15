@@ -35,6 +35,43 @@ std::string replace_type_identifier(std::string type, const std::string& from,
     return type;
 }
 
+std::map<std::string, std::string>
+receiver_template_substitutions(const std::vector<std::string>& receiver_args) {
+    std::map<std::string, std::string> substitutions;
+    if (receiver_args.empty()) {
+        return substitutions;
+    }
+    const std::string first = trim_copy(receiver_args.front());
+    for (const char* name :
+         {"T", "_T", "_Tp", "_Tp1", "_Ty", "_Ty1", "value_type", "element_type", "key_type"}) {
+        substitutions.emplace(name, first);
+    }
+    if (receiver_args.size() >= 2) {
+        const std::string first_arg = trim_copy(receiver_args[0]);
+        const std::string second_arg = trim_copy(receiver_args[1]);
+        substitutions.insert_or_assign("_Key", first_arg);
+        substitutions.insert_or_assign("_Val", second_arg);
+        substitutions.insert_or_assign("_T1", first_arg);
+        substitutions.insert_or_assign("_T2", second_arg);
+        substitutions.insert_or_assign("_Tp1", first_arg);
+        substitutions.insert_or_assign("_Tp2", second_arg);
+        substitutions.insert_or_assign("_Ty1", first_arg);
+        substitutions.insert_or_assign("_Ty2", second_arg);
+        substitutions.insert_or_assign("mapped_type", second_arg);
+        substitutions.insert_or_assign("key_type", first_arg);
+    }
+    return substitutions;
+}
+
+std::string
+substitute_native_type_identifiers(std::string type,
+                                   const std::map<std::string, std::string>& substitutions) {
+    for (const auto& [name, value] : substitutions) {
+        type = replace_type_identifier(std::move(type), name, value);
+    }
+    return type;
+}
+
 } // namespace
 
 std::vector<std::string> template_args_from_type(const std::string& type) {
@@ -62,27 +99,16 @@ std::string substitute_method_template_type(std::string type,
 
 std::string substitute_receiver_template_type(std::string type,
                                               const std::vector<std::string>& receiver_args) {
-    if (receiver_args.empty()) {
+    const std::map<std::string, std::string> substitutions =
+        receiver_template_substitutions(receiver_args);
+    if (substitutions.empty()) {
         return type;
     }
-    const std::string& first = receiver_args.front();
-    for (const char* name :
-         {"T", "_T", "_Tp", "_Tp1", "_Ty", "_Ty1", "value_type", "element_type", "key_type"}) {
-        type = replace_type_identifier(std::move(type), name, first);
+    const TypeRef parsed = parse_type_text(type);
+    if (parsed.kind != TypeKind::Unknown) {
+        return substitute_type_ref_text(parsed, substitutions);
     }
-    if (receiver_args.size() >= 2) {
-        type = replace_type_identifier(std::move(type), "_Key", receiver_args[0]);
-        type = replace_type_identifier(std::move(type), "_Val", receiver_args[1]);
-        type = replace_type_identifier(std::move(type), "_T1", receiver_args[0]);
-        type = replace_type_identifier(std::move(type), "_T2", receiver_args[1]);
-        type = replace_type_identifier(std::move(type), "_Tp1", receiver_args[0]);
-        type = replace_type_identifier(std::move(type), "_Tp2", receiver_args[1]);
-        type = replace_type_identifier(std::move(type), "_Ty1", receiver_args[0]);
-        type = replace_type_identifier(std::move(type), "_Ty2", receiver_args[1]);
-        type = replace_type_identifier(std::move(type), "mapped_type", receiver_args[1]);
-        type = replace_type_identifier(std::move(type), "key_type", receiver_args[0]);
-    }
-    return type;
+    return substitute_native_type_identifiers(std::move(type), substitutions);
 }
 
 std::string substitute_class_template_type(std::string type,

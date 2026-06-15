@@ -7,6 +7,7 @@
 #include "dudu/sema.hpp"
 #include "dudu/sema_context.hpp"
 #include "dudu/sema_function_type.hpp"
+#include "dudu/sema_method_templates.hpp"
 #include "dudu/type_compat.hpp"
 
 #include <cassert>
@@ -80,6 +81,14 @@ void test_core_type_helpers_use_type_ast() {
     assert(tuple.size() == 2);
     assert(tuple[0] == "i32");
     assert(tuple[1] == "list[str]");
+}
+
+void test_receiver_template_substitution_uses_type_ast() {
+    assert(dudu::substitute_receiver_template_type("list[value_type]", {"i32"}) == "list[i32]");
+    assert(dudu::substitute_receiver_template_type("fn(value_type) -> element_type", {"f32"}) ==
+           "fn(f32) -> f32");
+    assert(dudu::substitute_receiver_template_type("std::vector<value_type>", {"i32"}) ==
+           "std::vector<i32>");
 }
 
 void test_native_semantic_tokens() {
@@ -646,6 +655,7 @@ int main() {
         test_ast_assignment_display_types();
         test_type_compat_uses_type_ast_for_pointers();
         test_core_type_helpers_use_type_ast();
+        test_receiver_template_substitution_uses_type_ast();
         test_native_semantic_tokens();
         test_ast_constructor_assignment_compatibility();
         test_ast_index_receiver_type_inference();
