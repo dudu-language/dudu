@@ -153,6 +153,7 @@ struct FieldDecl {
 struct Stmt {
     StmtKind kind = StmtKind::Unknown;
     std::string text;
+    std::string source_text;
     std::string name;
     std::string type;
     std::string value;
@@ -306,7 +307,7 @@ StmtKind classify_statement_text(std::string_view text);
 Expr parse_expr_text(std::string_view text, SourceLocation location = {});
 TypeRef parse_type_text(std::string_view text, SourceLocation location = {});
 std::vector<std::string> tuple_binding_names(const Expr& expr);
-Stmt statement_from_text(std::string text, SourceLocation location, SourceRange range,
-                         std::vector<Stmt> children = {});
+Stmt statement_from_text(std::string text, std::string source_text, SourceLocation location,
+                         SourceRange range, std::vector<Stmt> children = {});
 
 } // namespace dudu

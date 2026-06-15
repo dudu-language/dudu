@@ -14,10 +14,13 @@ void test_statement_source_range_uses_token_span() {
     const dudu::FunctionDecl& main = module.functions.front();
     const dudu::Stmt& assign = main.statements.front();
     assert(assign.text == "value = add(1, 2)");
+    assert(assign.source_text == "value   =    add(1, 2)");
     assert(assign.range.start.line == 2);
     assert(assign.range.start.column == 5);
     assert(assign.range.end.line == 2);
     assert(assign.range.end.column == 27);
+    assert(assign.target_expr.range.start.column == 5);
+    assert(assign.value_expr.range.start.column == 18);
 }
 
 } // namespace

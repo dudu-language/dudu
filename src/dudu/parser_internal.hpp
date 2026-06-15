@@ -16,6 +16,7 @@ class Parser {
   private:
     struct JoinedTokens {
         std::string text;
+        std::string source_text;
         SourceRange range;
         bool has_tokens = false;
     };

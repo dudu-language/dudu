@@ -294,8 +294,8 @@ Still too string-based:
 - some type compatibility and native-header checks still route through type
   strings after `TypeRef` parsing
 - exact original-token ranges inside function bodies; current body-node ranges
-  now use the first and last real statement tokens, but subexpression ranges are
-  still derived from normalized statement text
+  now use the first and last real statement tokens, and statement nodes preserve
+  reconstructed source spacing for child expression/type location lookup
 
 ## Target Architecture
 
@@ -804,6 +804,9 @@ Statement source ranges now preserve the first and last real statement token
 span even when the parser keeps normalized compatibility text such as
 `value = call(...)`. This improves diagnostics and editor squiggles without
 waiting for every declaration/body field to stop carrying compatibility strings.
+Statement nodes also retain reconstructed `source_text`, so child expression
+and type nodes can locate common subpieces against the original token spacing
+instead of only searching the normalized compatibility string.
 
 ## Compiler File Shape
 

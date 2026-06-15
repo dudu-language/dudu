@@ -28,6 +28,20 @@ SourceLocation token_end_location(const Token& token) {
     return end;
 }
 
+void append_source_token(std::ostringstream& out, SourceLocation& cursor, const Token& token) {
+    while (cursor.line < token.location.line) {
+        out << '\n';
+        ++cursor.line;
+        cursor.column = 1;
+    }
+    while (cursor.column < token.location.column) {
+        out << ' ';
+        ++cursor.column;
+    }
+    out << token.text;
+    cursor = token_end_location(token);
+}
+
 } // namespace
 
 Parser::Parser(std::span<const Token> tokens) : tokens_(tokens) {
@@ -237,7 +251,8 @@ std::vector<Stmt> Parser::parse_statement_block() {
         if (at(TokenKind::Indent)) {
             children = parse_statement_block();
         }
-        out.push_back(statement_from_text(std::move(text), location, range, std::move(children)));
+        out.push_back(statement_from_text(std::move(text), std::move(joined.source_text), location,
+                                          range, std::move(children)));
     }
     consume(TokenKind::Dedent, "expected dedent after block");
     return out;
@@ -250,6 +265,8 @@ std::string Parser::join_until(std::initializer_list<TokenKind> stops) {
 Parser::JoinedTokens Parser::join_until_with_range(std::initializer_list<TokenKind> stops) {
     JoinedTokens joined;
     std::ostringstream out;
+    std::ostringstream source_out;
+    SourceLocation source_cursor;
     bool first = true;
     TokenKind previous_kind = TokenKind::End;
     int bracket_depth = 0;
@@ -274,9 +291,11 @@ Parser::JoinedTokens Parser::join_until_with_range(std::initializer_list<TokenKi
         const Token& token = current();
         if (!joined.has_tokens) {
             joined.range.start = token.location;
+            source_cursor = token.location;
             joined.has_tokens = true;
         }
         joined.range.end = token_end_location(token);
+        append_source_token(source_out, source_cursor, token);
         if (!first && parser_needs_space_between(previous_kind, current().kind)) {
             out << ' ';
         }
@@ -299,6 +318,7 @@ Parser::JoinedTokens Parser::join_until_with_range(std::initializer_list<TokenKi
         ++cursor_;
     }
     joined.text = out.str();
+    joined.source_text = source_out.str();
     return joined;
 }
 
