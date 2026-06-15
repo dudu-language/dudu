@@ -140,6 +140,8 @@ Already structured:
 - indexed and iterable element inference reads parsed `TypeRef` wrappers and
   template children for `list[T]`, `dict[K, V]`, `span[T]`, and storage-like
   wrappers instead of slicing those type strings directly
+- member field inference for `Result[T, E]` reads parsed `TypeRef` template
+  children for `.value` and `.err` instead of re-splitting the result type text
 - native C/C++ overload checks for ordinary and explicit-template parsed calls
   consume expression children directly instead of flattening arguments back to
   strings

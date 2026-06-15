@@ -1,5 +1,6 @@
 #include "dudu/sema_methods.hpp"
 
+#include "dudu/ast_parse_utils.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/sema_builtin_methods.hpp"
 #include "dudu/sema_index.hpp"
@@ -60,6 +61,19 @@ std::vector<std::string> template_method_args(const std::string& method_name) {
         return {};
     }
     return split_top_level_args(method_name.substr(open + 1, method_name.size() - open - 2));
+}
+
+std::vector<std::string> template_type_arg_texts(const std::string& type, std::string_view name) {
+    const TypeRef parsed = parse_type_text(type);
+    if (parsed.kind != TypeKind::Template || parsed.name != name) {
+        return {};
+    }
+    std::vector<std::string> out;
+    out.reserve(parsed.children.size());
+    for (const TypeRef& child : parsed.children) {
+        out.push_back(trim(child.text));
+    }
+    return out;
 }
 
 std::optional<std::string> field_type_for_class(const Symbols& symbols, const ClassDecl& klass,
@@ -228,17 +242,16 @@ std::optional<std::string> field_type_for_type(const Symbols& symbols,
                                                const std::string& receiver_type,
                                                const std::string& field) {
     const std::string resolved = resolve_alias(symbols, receiver_type);
-    if (starts_with(resolved, "Result[") && resolved.back() == ']') {
-        const std::vector<std::string> args =
-            split_top_level_args(resolved.substr(7, resolved.size() - 8));
+    const std::vector<std::string> result_args = template_type_arg_texts(resolved, "Result");
+    if (!result_args.empty()) {
         if (field == "ok") {
             return "bool";
         }
-        if (field == "value" && !args.empty()) {
-            return args[0];
+        if (field == "value" && !result_args.empty()) {
+            return result_args[0];
         }
-        if (field == "err" && args.size() >= 2) {
-            return args[1];
+        if (field == "err" && result_args.size() >= 2) {
+            return result_args[1];
         }
     }
     const auto klass = symbols.classes.find(unwrap_receiver_type(symbols, receiver_type));
