@@ -209,13 +209,20 @@ FunctionDecl Parser::parse_function(const Token& start, Visibility visibility,
     fn.visibility = visibility;
     fn.decorators = decorators;
     fn.location = start.location;
-    fn.name = consume_identifier("expected function name").text;
+    const Token& name = consume_identifier("expected function name");
+    fn.name = name.text;
+    if (receiver_type.empty() && match(TokenKind::Dot)) {
+        fn.receiver_type = fn.name;
+        fn.name = consume_identifier("expected method name after .").text;
+    } else {
+        fn.receiver_type = std::string(receiver_type);
+    }
     fn.visibility = visibility_from_name(fn.visibility, fn.name);
     fn.generic_params = parse_generic_params();
     consume(TokenKind::LParen, "expected ( after function name");
     skip_signature_separators();
     if (!at(TokenKind::RParen)) {
-        parse_params(fn.params, receiver_type);
+        parse_params(fn.params, fn.receiver_type);
     }
     skip_signature_separators();
     consume(TokenKind::RParen, "expected ) after parameters");

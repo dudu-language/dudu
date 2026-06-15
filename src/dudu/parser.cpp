@@ -42,6 +42,17 @@ void append_source_token(std::ostringstream& out, SourceLocation& cursor, const 
     cursor = token_end_location(token);
 }
 
+void attach_out_of_line_method(ModuleAst& module, FunctionDecl method) {
+    for (ClassDecl& klass : module.classes) {
+        if (klass.name == method.receiver_type) {
+            klass.methods.push_back(std::move(method));
+            return;
+        }
+    }
+    throw CompileError(method.location, "out-of-line method receiver is not a known class: " +
+                                            method.receiver_type);
+}
+
 } // namespace
 
 Parser::Parser(std::span<const Token> tokens) : tokens_(tokens) {
@@ -78,7 +89,12 @@ ModuleAst Parser::parse() {
             require_no_decorators(decorators, "type declaration");
             parse_type_decl(previous(), module);
         } else if (match_identifier("def")) {
-            module.functions.push_back(parse_function(previous(), visibility, decorators));
+            FunctionDecl fn = parse_function(previous(), visibility, decorators);
+            if (fn.receiver_type.empty()) {
+                module.functions.push_back(std::move(fn));
+            } else {
+                attach_out_of_line_method(module, std::move(fn));
+            }
             decorators.clear();
         } else if (is_all_caps_identifier(current())) {
             require_no_decorators(decorators, "constant");

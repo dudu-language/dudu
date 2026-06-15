@@ -1,0 +1,10 @@
+class Player:
+    hp: i32
+
+def Player.damage(self, amount: i32):
+    self.hp -= amount
+
+def main() -> i32:
+    player = Player(10)
+    player.damage(3)
+    return player.hp

@@ -246,6 +246,7 @@ struct EnumDecl {
 struct FunctionDecl {
     Visibility visibility = Visibility::Default;
     std::string name;
+    std::string receiver_type;
     std::vector<std::string> generic_params;
     std::vector<Decorator> decorators;
     std::vector<ParamDecl> params;

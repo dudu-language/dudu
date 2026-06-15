@@ -95,6 +95,11 @@ def Player.damage(self, amount: i32):
     self.hp -= amount
 ```
 
+Status: implemented for methods attached to classes already declared in the
+same module. The dotted `def Player.damage(...)` is parsed as a real method on
+`Player`, so `self` gets the same implicit receiver type as an in-class method
+and sema/emission use the normal method path.
+
 Functions inside a class that do not take `self` are class-scoped functions.
 They lower to C++ static member functions:
 

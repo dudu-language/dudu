@@ -296,7 +296,9 @@ push. They are not release packaging work.
    Status: explicit `public`/`private` visibility keywords are rejected for
    normal Dudu syntax. Function and method privacy follows Python naming:
    leading-underscore names stay out of generated public headers while normal
-   names remain public.
+   names remain public. Out-of-line methods such as
+   `def Player.damage(self, amount: i32):` attach to the declared class and use
+   the normal method sema/emission path.
 
 4. Arrays, Matrices, Tensors, And Slicing
 
