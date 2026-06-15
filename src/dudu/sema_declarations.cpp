@@ -67,10 +67,6 @@ bool is_comparison_operator_method(const FunctionDecl& method) {
     return ops.contains(operator_decorator_arg(method));
 }
 
-bool is_reserved_dunder_name(const std::string& name) {
-    return name.size() > 4 && starts_with(name, "__") && name.ends_with("__");
-}
-
 void check_generic_params(const SourceLocation& location, const std::vector<std::string>& params) {
     std::set<std::string> seen;
     for (const std::string& param : params) {
@@ -262,11 +258,6 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
             check_generic_params(method.location, method.generic_params);
             const Symbols method_symbols =
                 with_generic_params(class_symbols, method.generic_params);
-            if (is_reserved_dunder_name(method.name)) {
-                fail(method.location,
-                     "reserved Python-style dunder method name: " + method.name +
-                         "; use normal Dudu names and decorators such as @operator(...)");
-            }
             if (!fields.insert(method.name).second) {
                 fail(method.location, "duplicate class member: " + method.name);
             }
@@ -377,10 +368,6 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
     for (const FunctionDecl& fn : module.functions) {
         check_generic_params(fn.location, fn.generic_params);
         const Symbols function_symbols = with_generic_params(symbols, fn.generic_params);
-        if (is_reserved_dunder_name(fn.name)) {
-            fail(fn.location, "reserved Python-style dunder function name: " + fn.name +
-                                  "; use normal Dudu names and decorators such as @operator(...)");
-        }
         for (const Decorator& decorator : fn.decorators) {
             check_function_decorator(module, decorator);
         }

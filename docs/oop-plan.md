@@ -33,7 +33,6 @@ Python OOP includes:
 - dynamic attributes
 - monkeypatching
 - metaclasses/descriptors
-- dunder protocol methods
 
 Dudu should keep the readable pieces and reject the dynamic runtime pieces.
 

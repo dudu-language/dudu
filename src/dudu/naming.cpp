@@ -25,6 +25,10 @@ bool is_pascal_case(const std::string& name) {
     return true;
 }
 
+bool is_reserved_dunder_name(const std::string& name) {
+    return name.size() > 4 && starts_with(name, "__") && name.ends_with("__");
+}
+
 [[noreturn]] void fail_naming(const SourceLocation& location, std::string_view rule,
                               const std::string& name) {
     throw CompileError(location, std::string(rule) + ": " + name);
@@ -42,7 +46,7 @@ bool is_dudu_snake_case(const std::string& name) {
         text.remove_prefix(1);
     }
     if (text.empty() || std::islower(static_cast<unsigned char>(text.front())) == 0) {
-        return name.size() > 4 && starts_with(name, "__") && name.substr(name.size() - 2) == "__";
+        return false;
     }
     for (const char c : text) {
         if (std::islower(static_cast<unsigned char>(c)) == 0 &&
@@ -100,6 +104,12 @@ void check_naming(const ModuleAst& module) {
             }
         }
         for (const FunctionDecl& method : klass.methods) {
+            if (is_reserved_dunder_name(method.name)) {
+                throw CompileError(method.location,
+                                   "reserved Python-style dunder method name: " + method.name +
+                                       "; use normal Dudu names and decorators such as "
+                                       "@operator(...)");
+            }
             if (!is_dudu_snake_case(method.name)) {
                 fail_naming(method.location, "function names must be snake_case", method.name);
             }
@@ -111,6 +121,11 @@ void check_naming(const ModuleAst& module) {
         }
     }
     for (const FunctionDecl& fn : module.functions) {
+        if (is_reserved_dunder_name(fn.name)) {
+            throw CompileError(fn.location,
+                               "reserved Python-style dunder function name: " + fn.name +
+                                   "; use normal Dudu names and decorators such as @operator(...)");
+        }
         if (!has_decorator(fn, "extern_c") && !is_dudu_snake_case(fn.name)) {
             fail_naming(fn.location, "function names must be snake_case", fn.name);
         }
