@@ -1,0 +1,27 @@
+enum Expr:
+    Number(f64)
+
+    Add:
+        left: *Expr
+        right: *Expr
+
+
+def eval_expr(expr: Expr) -> f64:
+    match expr:
+        case Expr.Number(value):
+            return value
+        case Expr.Add(left, right):
+            return eval_expr(*left) + eval_expr(*right)
+
+
+def main() -> i32:
+    left: *Expr = new[Expr](Expr.Number(20.0))
+    right: *Expr = new[Expr](Expr.Number(22.0))
+    root: *Expr = new[Expr](Expr.Add(left=left, right=right))
+    value = eval_expr(*root)
+
+    delete root
+    delete right
+    delete left
+
+    return i32(value)

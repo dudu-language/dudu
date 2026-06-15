@@ -335,7 +335,8 @@ push. They are not release packaging work.
    are implemented and type-checked as `bool`; guarded cases do not count
    toward exhaustiveness. `Option[T]` and `Result[T, E]` wrapper matching is
    implemented with exhaustive `Some`/`None` and `Ok`/`Err` cases. Recursive
-   enum examples and anonymous `variant[...]` remain.
+   enum examples using pointer indirection compile and run. Anonymous
+   `variant[...]` remains.
 
 7. Native Inheritance
 

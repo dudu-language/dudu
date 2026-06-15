@@ -212,8 +212,11 @@ Match guards are implemented and type-checked as `bool`. Guarded cases do not
 count toward exhaustiveness, so a guarded variant must still have an unguarded
 case or a wildcard case somewhere later in the match.
 
-Still remaining: recursive enum examples, richer unreachable-pattern
-diagnostics, and anonymous `variant[...]`.
+Recursive enum examples are covered with pointer indirection, matching the
+planned ownership-neutral shape for recursive data.
+
+Still remaining: richer unreachable-pattern diagnostics and anonymous
+`variant[...]`.
 
 ## Recursive Data
 
