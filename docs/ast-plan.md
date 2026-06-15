@@ -847,9 +847,15 @@ Parser construction has been split by grammar responsibility:
 - `parser_internal.hpp` keeps the private parser surface explicit so future
   parser work does not grow one mixed implementation file again.
 
+Native header awareness has been split by scanner responsibility:
+
+- `native_headers.cpp` owns foreign import selection, clang/pkg-config command
+  construction, raw scan cache orchestration, and final merge/prefix behavior.
+- `native_header_parse.cpp` owns clang AST dump parsing, macro dump parsing,
+  and scan dedupe.
+
 The remaining oversized frontend files are now outside the core semantic split:
-`language_server.cpp`, `cpp_lower.cpp`, `native_headers.cpp`, and
-`cpp_type.cpp`.
+`language_server.cpp` and `cpp_type.cpp`.
 
 ## Acceptance
 
