@@ -281,14 +281,15 @@ push. They are not release packaging work.
    is type-aware and over-indexing is diagnosed. Fixed arrays work with
    `len(values)` and `&values[0]` for native pointer/count handoff.
    One-dimensional fixed-array `start:end`, `:end`, `start:`, and `:` slices
-   produce `span[T]` views.
+   produce `span[T]` views. Fixed multidimensional arrays support trailing row
+   views such as `mat[row, :]`.
    Dudu-native `@operator("[]")` read hooks and `@operator("[]=")` indexed
    assignment hooks work for library-style tensor wrappers, and indexed member
-   paths such as `self.values[i]` type-check. Step slices, multidimensional
-   slices, different-width swizzle result construction, swizzle assignment, and
-   imported vector swizzle metadata remain. Same-width Dudu-native `xyzw`,
-   `rgba`, and `stpq` read swizzles are implemented for local class receivers
-   and expression receivers.
+   paths such as `self.values[i]` type-check. Step slices, column/general
+   multidimensional slices, different-width swizzle result construction,
+   swizzle assignment, and imported vector swizzle metadata remain. Same-width
+   Dudu-native `xyzw`, `rgba`, and `stpq` read swizzles are implemented for
+   local class receivers and expression receivers.
 
 5. Native Dudu Generics
 
