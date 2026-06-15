@@ -1,6 +1,7 @@
 #include "dudu/type_compat.hpp"
 
 #include "dudu/ast_expr.hpp"
+#include "dudu/ast_parse_utils.hpp"
 #include "dudu/cpp_lower.hpp"
 
 #include <cctype>
@@ -91,15 +92,13 @@ std::string normalize_tuple_element(std::string type) {
     if (!starts_with(type, "__tuple_element_t[") || !type.ends_with("]")) {
         return type;
     }
-    std::vector<std::string> args =
-        split_top_level_args(type.substr(18, type.size() - 19));
+    std::vector<std::string> args = split_top_level_args(type.substr(18, type.size() - 19));
     if (args.size() != 2) {
         return type;
     }
     args[0] = trim_copy(args[0]);
     args[1] = trim_copy(args[1]);
-    if (args[0].empty() ||
-        args[0].find_first_not_of("0123456789") != std::string::npos ||
+    if (args[0].empty() || args[0].find_first_not_of("0123456789") != std::string::npos ||
         (!starts_with(args[1], "std.tuple[") && !starts_with(args[1], "tuple[")) ||
         !args[1].ends_with("]")) {
         return type;
@@ -164,46 +163,52 @@ bool literal_assignable_to(const std::string& expected, const Expr& expr) {
                            : assignment_type_allowed(expected, expr, got);
 }
 
-std::vector<std::string> type_args(const std::string& type, std::string_view prefix) {
-    const std::string text = trim_copy(type);
-    if (!starts_with(text, prefix) || !ends_with(text, "]")) {
+std::vector<std::string> template_type_arg_texts(const std::string& type, std::string_view name) {
+    const TypeRef parsed = parse_type_text(type);
+    if (parsed.kind != TypeKind::Template || parsed.name != name) {
         return {};
     }
-    return split_top_level_args(text.substr(prefix.size(), text.size() - prefix.size() - 1));
+    std::vector<std::string> out;
+    out.reserve(parsed.children.size());
+    for (const TypeRef& child : parsed.children) {
+        out.push_back(trim_copy(child.text));
+    }
+    return out;
 }
 
 bool is_container_literal(const std::string& expected, const Expr& expr) {
-    if (starts_with(expected, "list[")) {
+    const std::vector<std::string> list_args = template_type_arg_texts(expected, "list");
+    if (!list_args.empty()) {
         if (expr.kind != ExprKind::ListLiteral) {
             return false;
         }
-        const std::vector<std::string> args = type_args(expected, "list[");
-        if (args.size() != 1) {
+        if (list_args.size() != 1) {
             return false;
         }
         for (const Expr& entry : expr.children) {
-            if (!literal_assignable_to(args[0], entry)) {
+            if (!literal_assignable_to(list_args[0], entry)) {
                 return false;
             }
         }
         return true;
     }
-    if (starts_with(expected, "set[")) {
+    const std::vector<std::string> set_args = template_type_arg_texts(expected, "set");
+    if (!set_args.empty()) {
         if (expr.kind != ExprKind::SetLiteral) {
             return false;
         }
-        const std::vector<std::string> args = type_args(expected, "set[");
-        if (args.size() != 1) {
+        if (set_args.size() != 1) {
             return false;
         }
         for (const Expr& entry : expr.children) {
-            if (!literal_assignable_to(args[0], entry)) {
+            if (!literal_assignable_to(set_args[0], entry)) {
                 return false;
             }
         }
         return true;
     }
-    if (!starts_with(expected, "dict[")) {
+    const std::vector<std::string> dict_args = template_type_arg_texts(expected, "dict");
+    if (dict_args.empty()) {
         return false;
     }
     if (expr.kind == ExprKind::SetLiteral && expr.children.empty()) {
@@ -212,13 +217,12 @@ bool is_container_literal(const std::string& expected, const Expr& expr) {
     if (expr.kind != ExprKind::DictLiteral) {
         return false;
     }
-    const std::vector<std::string> args = type_args(expected, "dict[");
-    if (args.size() != 2) {
+    if (dict_args.size() != 2) {
         return false;
     }
     for (const Expr& entry : expr.children) {
-        if (entry.children.size() != 2 || !literal_assignable_to(args[0], entry.children[0]) ||
-            !literal_assignable_to(args[1], entry.children[1])) {
+        if (entry.children.size() != 2 || !literal_assignable_to(dict_args[0], entry.children[0]) ||
+            !literal_assignable_to(dict_args[1], entry.children[1])) {
             return false;
         }
     }
@@ -299,9 +303,8 @@ bool is_cpp_associated_type_binding(std::string expected, std::string got) {
         return true;
     }
     static const std::set<std::string> associated = {
-        "iterator",       "const_iterator", "reference",     "const_reference",
-        "value_type",     "pointer",        "const_pointer", "size_type",
-        "difference_type"};
+        "iterator", "const_iterator", "reference", "const_reference", "value_type",
+        "pointer",  "const_pointer",  "size_type", "difference_type"};
     if (!associated.contains(expected)) {
         return false;
     }
@@ -350,11 +353,7 @@ std::string normalize_c_tags(std::string type) {
 }
 
 bool is_result_value(const std::string& expected, const Expr& expr, const std::string& got) {
-    if (!starts_with(expected, "Result[") || expected.back() != ']') {
-        return false;
-    }
-    const std::vector<std::string> parts =
-        split_top_level_args(expected.substr(7, expected.size() - 8));
+    const std::vector<std::string> parts = template_type_arg_texts(expected, "Result");
     if (parts.size() != 2 || expr.kind != ExprKind::Call || expr.children.size() != 1) {
         return false;
     }
@@ -371,10 +370,11 @@ bool is_result_value(const std::string& expected, const Expr& expr, const std::s
 }
 
 bool is_option_value(const std::string& expected, const Expr& expr, const std::string& got) {
-    if (!starts_with(expected, "Option[") || expected.back() != ']') {
+    const std::vector<std::string> parts = template_type_arg_texts(expected, "Option");
+    if (parts.size() != 1) {
         return false;
     }
-    const std::string inner = trim_copy(expected.substr(7, expected.size() - 8));
+    const std::string& inner = parts[0];
     return expr.kind == ExprKind::NoneLiteral || got == inner ||
            (is_numeric_type(wrapped_type_arg(inner)) && simple_literal_type(expr) == "number");
 }
