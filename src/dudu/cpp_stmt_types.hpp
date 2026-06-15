@@ -7,9 +7,6 @@
 
 namespace dudu {
 
-std::string infer_emitted_local_type(const std::string& expr,
-                                     const std::map<std::string, std::string>& locals,
-                                     const std::map<std::string, std::string>& function_returns);
 std::string infer_emitted_local_type(const Expr& expr,
                                      const std::map<std::string, std::string>& locals,
                                      const std::map<std::string, std::string>& function_returns);

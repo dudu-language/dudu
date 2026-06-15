@@ -116,6 +116,9 @@ Already structured:
   callee expression when reconstructing lookup names
 - generated local type inference for call expressions derives callee lookup
   names from parsed callee nodes
+- generated local type inference no longer has a raw-string helper for
+  `Unknown` expression nodes; unsupported expression shapes are rejected before
+  emission instead of guessed from text
 - parsed member/callee path reconstruction lives in a shared AST expression
   helper instead of duplicated sema/emission utilities
 - AST type compatibility checks use parsed call callees for explicit casts and

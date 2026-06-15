@@ -148,21 +148,6 @@ std::string infer_binary_expr_type(const Expr& expr,
 
 } // namespace
 
-std::string infer_emitted_local_type(const std::string& expr,
-                                     const std::map<std::string, std::string>& locals,
-                                     const std::map<std::string, std::string>& function_returns) {
-    const std::string text = trim_copy(expr);
-    if (const auto local = locals.find(text); local != locals.end()) {
-        return local->second;
-    }
-    const size_t call = find_call_open(text);
-    if (call != std::string::npos && find_call_close(text, call) == text.size() - 1) {
-        const std::string callee = trim_copy(text.substr(0, call));
-        return infer_call_type(callee, locals, function_returns);
-    }
-    return {};
-}
-
 std::string infer_emitted_local_type(const Expr& expr,
                                      const std::map<std::string, std::string>& locals,
                                      const std::map<std::string, std::string>& function_returns) {
@@ -244,7 +229,7 @@ std::string infer_emitted_local_type(const Expr& expr,
     case ExprKind::TemplateCall:
         return infer_call_type(call_callee_text(expr), locals, function_returns);
     case ExprKind::Unknown:
-        return infer_emitted_local_type(expr.text, locals, function_returns);
+        return {};
     case ExprKind::CppEscape:
     case ExprKind::DictEntry:
     case ExprKind::DictLiteral:
