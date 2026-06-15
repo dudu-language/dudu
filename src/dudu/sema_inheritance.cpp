@@ -35,7 +35,8 @@ std::string unwrap_type(const Symbols& symbols, std::string type) {
 
 bool ref_like(std::string type) {
     type = trim(std::move(type));
-    return !type.empty() && (type.front() == '*' || type.front() == '&');
+    const TypeRef parsed = parse_type_text(type);
+    return parsed.kind == TypeKind::Pointer || parsed.kind == TypeKind::Reference;
 }
 
 bool derives_from_impl(const Symbols& symbols, const std::string& derived, const std::string& base,

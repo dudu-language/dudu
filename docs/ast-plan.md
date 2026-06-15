@@ -988,6 +988,10 @@ string checks.
 the parsed type tree while preserving the existing primitive and
 pointer-to-`struct ...` ABI rules.
 
+Pointer arithmetic and native base-class pointer/reference assignability now
+classify pointer/reference type shapes through parsed `TypeRef` nodes instead
+of leading-character string checks.
+
 Parser construction has been split by grammar responsibility:
 
 - `parser.cpp` owns module orchestration, token cursor helpers, imports,

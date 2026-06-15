@@ -131,7 +131,7 @@ bool binary_rhs_allowed(const Symbols& symbols, const std::string& op, const std
         return assignment_type_allowed(value_left, right_expr, value_right);
     }
     if (op == "+" || op == "-") {
-        return (!trim(resolved_left).empty() && trim(resolved_left).front() == '*' &&
+        return (parse_type_text(resolved_left).kind == TypeKind::Pointer &&
                 is_integer_type(value_right)) ||
                numeric_operand_allowed(value_left, right_expr, value_right);
     }

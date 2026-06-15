@@ -391,6 +391,31 @@ void test_extern_c_signature_uses_type_ast() {
     assert(rejected);
 }
 
+void test_pointer_arithmetic_uses_type_ast() {
+    const dudu::ModuleAst module = dudu::parse_source("def next_ptr(ptr: *i32) -> *i32:\n"
+                                                      "    return ptr + 1\n",
+                                                      "pointer_arithmetic_type_ast.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+}
+
+void test_base_pointer_assignment_uses_type_ast() {
+    const dudu::ModuleAst module = dudu::parse_source("class Base:\n"
+                                                      "    @virtual\n"
+                                                      "    def id(self) -> i32:\n"
+                                                      "        return 1\n"
+                                                      "\n"
+                                                      "class Derived(Base):\n"
+                                                      "    @override\n"
+                                                      "    def id(self) -> i32:\n"
+                                                      "        return 2\n"
+                                                      "\n"
+                                                      "def assign(value: *Derived) -> *Base:\n"
+                                                      "    base: *Base = value\n"
+                                                      "    return base\n",
+                                                      "base_pointer_assignment_type_ast.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+}
+
 void test_bare_void_return() {
     const dudu::ModuleAst module = dudu::parse_source("def done():\n"
                                                       "    return\n"
@@ -533,6 +558,8 @@ int main() {
         test_reference_list_indexing();
         test_pointer_dereference_uses_type_ast();
         test_extern_c_signature_uses_type_ast();
+        test_pointer_arithmetic_uses_type_ast();
+        test_base_pointer_assignment_uses_type_ast();
         test_bare_void_return();
         test_typed_for_emission();
         test_class_field_defaults_and_static_fields();
