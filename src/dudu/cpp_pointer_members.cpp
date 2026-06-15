@@ -1,5 +1,6 @@
 #include "dudu/cpp_pointer_members.hpp"
 
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 
 #include <cctype>
@@ -8,12 +9,16 @@ namespace dudu {
 namespace {
 
 bool is_pointer_type(const std::string& type) {
-    return starts_with(trim_copy(type), "*");
+    return parse_type_text(type).kind == TypeKind::Pointer;
 }
 
 bool is_pointer_list_type(std::string type) {
     type = trim_copy(std::move(type));
-    return starts_with(type, "list[*") && ends_with(type, "]");
+    const TypeRef parsed = parse_type_text(type);
+    if (parsed.kind != TypeKind::Template || parsed.name != "list" || parsed.children.size() != 1) {
+        return false;
+    }
+    return parsed.children.front().kind == TypeKind::Pointer;
 }
 
 size_t matching_bracket(const std::string& text, size_t open) {

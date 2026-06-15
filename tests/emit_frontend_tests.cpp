@@ -46,6 +46,18 @@ void test_pointer_member_emission(const std::filesystem::path& root) {
         const std::string cpp = dudu::emit_cpp_source(module);
         assert(cpp.find("ptrs[0]->value += 1") != std::string::npos);
     }
+    {
+        const dudu::ModuleAst module =
+            dudu::parse_source("class Item:\n"
+                               "    value: i32\n"
+                               "\n"
+                               "def read(ptrs: list[*const[Item]]) -> i32:\n"
+                               "    return ptrs[0].value\n",
+                               "pointer_const_list_member.dd");
+        dudu::analyze_module(module, {.check_bodies = true});
+        const std::string cpp = dudu::emit_cpp_source(module);
+        assert(cpp.find("return ptrs[0]->value;") != std::string::npos);
+    }
 }
 
 void test_value_member_emission() {

@@ -299,6 +299,9 @@ Already structured:
 - C++ member expression emission lowers proven pointer receivers from parsed
   receiver nodes (`item->field`, `items[i]->field`) before falling back to raw
   member rewriting for unresolved cases
+- the remaining raw pointer-member rewrite fallback classifies pointer locals
+  and lists of pointer elements from parsed `TypeRef` nodes instead of string
+  prefixes
 - C++ member expression emission lowers normal value receivers from parsed
   receiver nodes and applies namespace alias qualification directly, avoiding
   the full raw expression rewrite path for `player.field` and `std.sin` shapes
