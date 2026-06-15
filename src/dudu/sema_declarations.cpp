@@ -168,6 +168,17 @@ void check_class_decorator(const Decorator& decorator) {
 
 void check_function_decorator(const ModuleAst& module, const Decorator& decorator) {
     const std::string text = decorator_name(decorator);
+    if (text == "staticmethod") {
+        fail(decorator.location,
+             "@staticmethod is not supported; omit self for a class-scoped function");
+    }
+    if (text == "classmethod") {
+        fail(decorator.location,
+             "@classmethod is not supported; use a class-scoped function or explicit type name");
+    }
+    if (text == "property") {
+        fail(decorator.location, "@property is not supported; use an explicit method");
+    }
     if (text == "inline" || text == "constexpr" || text == "extern_c" || text == "cuda.global" ||
         text == "cuda.device" || text == "cuda.host" || text == "shader.compute" ||
         text == "virtual" || text == "override" || text == "abstract" || text == "test" ||

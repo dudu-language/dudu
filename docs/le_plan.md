@@ -305,7 +305,8 @@ push. They are not release packaging work.
    leading-underscore names stay out of generated public headers while normal
    names remain public. Out-of-line methods such as
    `def Player.damage(self, amount: i32):` attach to the declared class and use
-   the normal method sema/emission path.
+   the normal method sema/emission path. `@staticmethod`, `@classmethod`, and
+   `@property` are rejected with explicit OOP-surface diagnostics.
 
 4. Arrays, Matrices, Tensors, And Slicing
 

@@ -256,6 +256,9 @@ object examples require it.
 `@staticmethod` is not accepted as a compatibility alias. Leaving off `self` is
 the spelling.
 
+Status: `@staticmethod`, `@classmethod`, and `@property` are rejected with
+explicit OOP-surface diagnostics instead of generic unknown-decorator errors.
+
 ## Visibility
 
 Use Python naming convention:
