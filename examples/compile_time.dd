@@ -47,7 +47,7 @@ def init_renderer() -> i32:
 
 
 def main() -> i32:
-    pixels: Color[PIXELS]
+    pixels: array[Color][PIXELS]
 
     debug_bonus: i32 = 0
     if build.DEBUG:

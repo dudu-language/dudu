@@ -515,8 +515,8 @@ Example:
 
 ```python
 enum ReadError:
-    not_found
-    permission_denied
+    NotFound
+    PermissionDenied
     invalid_utf8
 
 

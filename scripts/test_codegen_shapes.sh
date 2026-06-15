@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+trap 'echo "test_codegen_shapes.sh failed near line $LINENO" >&2' ERR
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
@@ -73,10 +74,10 @@ grep -Fq "DUDU_MACRO_BOMB_SUM2(7, 13, 99)" "$repo_root/build/cpp_macro_bomb.cpp"
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/c_lowercase_macro.dd" \
     -o "$repo_root/build/c_lowercase_macro.cpp"
 grep -Fq "#include \"assert.h\"" "$repo_root/build/c_lowercase_macro.cpp"
-grep -Fq "assert(value == 42);" "$repo_root/build/c_lowercase_macro.cpp"
+grep -Fq "assert((value == 42));" "$repo_root/build/c_lowercase_macro.cpp"
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/c_direct_lowercase_macro.dd" \
     -o "$repo_root/build/c_direct_lowercase_macro.cpp"
-grep -Fq "assert(value == 42);" "$repo_root/build/c_direct_lowercase_macro.cpp"
+grep -Fq "assert((value == 42));" "$repo_root/build/c_direct_lowercase_macro.cpp"
 
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/named_callback.dd" \
     -o "$repo_root/build/function_pointer.cpp"
@@ -124,13 +125,13 @@ grep -Fq "assert(((value > 0)) && (\"value should be positive\"));" \
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/bitwise_ops.dd" \
     -o "$repo_root/build/bitwise_ops.cpp"
 grep -Fq "1 << 5" "$repo_root/build/bitwise_ops.cpp"
-grep -Fq "flags |= 1 << 3" "$repo_root/build/bitwise_ops.cpp"
-grep -Fq "flags ^= 1 << 3" "$repo_root/build/bitwise_ops.cpp"
+grep -Fq "flags |= (1 << 3)" "$repo_root/build/bitwise_ops.cpp"
+grep -Fq "flags ^= (1 << 3)" "$repo_root/build/bitwise_ops.cpp"
 grep -Fq "flags >>= 1" "$repo_root/build/bitwise_ops.cpp"
 
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/tuple_return.dd" \
     -o "$repo_root/build/tuple_return.cpp"
 grep -Fq "dudu::Tuple2<int32_t, int32_t> divmod_i32" "$repo_root/build/tuple_return.cpp"
-grep -Fq "return {value / divisor, value % divisor};" "$repo_root/build/tuple_return.cpp"
+grep -Fq "return {(value / divisor), (value % divisor)};" "$repo_root/build/tuple_return.cpp"
 ! grep -q "std::tuple" "$repo_root/build/tuple_return.cpp"
 ! grep -q "#include <tuple>" "$repo_root/build/tuple_return.cpp"

@@ -11,7 +11,7 @@ def saxpy_kernel(x: *device[const[f32]], y: *device[f32], a: f32, n: i32):
         y[i] = a * x[i] + y[i]
 
 
-def saxpy(x: *f32, y: *f32, a: f32, n: i32) -> Result[None, cuda.cudaError_t]:
+def saxpy(x: *f32, y: *f32, a: f32, n: i32) -> Result[i32, cuda.cudaError_t]:
     dev_x: *device[f32] = None
     dev_y: *device[f32] = None
     bytes = usize(n) * sizeof[f32]()
@@ -35,4 +35,4 @@ def saxpy(x: *f32, y: *f32, a: f32, n: i32) -> Result[None, cuda.cudaError_t]:
     cuda.cudaMemcpy(y, dev_y, bytes, cuda.cudaMemcpyDeviceToHost)
     cuda.cudaFree(dev_x)
     cuda.cudaFree(dev_y)
-    return Ok(None)
+    return Ok(0)

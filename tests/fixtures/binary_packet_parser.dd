@@ -13,13 +13,13 @@ static_assert(HEADER_SIZE == 8)
 static_assert(FLAGS_OFFSET == 3)
 
 
-def read_le16(bytes: &u8[8], offset: usize) -> u16:
+def read_le16(bytes: &array[u8][8], offset: usize) -> u16:
     lo: u16 = u16(bytes[offset])
     hi: u16 = u16(bytes[offset + 1]) << 8
     return lo | hi
 
 
-def read_le32(bytes: &u8[8], offset: usize) -> u32:
+def read_le32(bytes: &array[u8][8], offset: usize) -> u32:
     b0: u32 = u32(bytes[offset])
     b1: u32 = u32(bytes[offset + 1]) << 8
     b2: u32 = u32(bytes[offset + 2]) << 16
@@ -28,7 +28,7 @@ def read_le32(bytes: &u8[8], offset: usize) -> u32:
 
 
 def main() -> i32:
-    bytes: u8[8]
+    bytes: array[u8][8]
     bytes[0] = 0x34
     bytes[1] = 0x12
     bytes[2] = 0x02

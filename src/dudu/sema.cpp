@@ -93,8 +93,8 @@ std::string assignment_error_ast(const std::string& expected, const Expr& expr,
 }
 
 bool is_builtin_call(const std::string& callee) {
-    static const std::set<std::string> builtins = {"align_up", "delete", "free",  "len",
-                                                   "max",      "min",    "print", "range"};
+    static const std::set<std::string> builtins = {"delete", "free",  "len",  "max",
+                                                   "min",    "print", "range"};
     return builtins.contains(callee);
 }
 bool is_local_member_call(const FunctionScope& scope, const std::string& callee) {
@@ -555,10 +555,6 @@ bool parse_local_function_type(const FunctionScope& scope, const std::string& na
         return true;
     }
     return parse_function_type(resolve_alias(scope.symbols, type), out);
-}
-
-bool foreign_cpp_type_name(const std::string& type) {
-    return type.find('.') != std::string::npos || type.find("::") != std::string::npos;
 }
 
 void check_call_args_ast(const FunctionScope& scope, const std::string& callee,
@@ -1033,7 +1029,7 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
             const std::string receiver_type =
                 member_path_type(scope.symbols, scope.locals, nullptr, receiver, "");
             if (scope.locals.contains(receiver) &&
-                foreign_cpp_type_name(resolve_alias(scope.symbols, receiver_type))) {
+                foreign_cpp_type_name(scope.symbols, resolve_alias(scope.symbols, receiver_type))) {
                 for (const Expr& arg : args) {
                     (void)infer_expr_ast(scope, arg, location);
                 }
@@ -1047,7 +1043,8 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
                     check_call_args_ast(scope, callee, *match, args, location);
                     return match->return_type;
                 }
-                if (foreign_cpp_type_name(resolve_alias(scope.symbols, receiver_type))) {
+                if (foreign_cpp_type_name(scope.symbols,
+                                          resolve_alias(scope.symbols, receiver_type))) {
                     for (const Expr& arg : args) {
                         (void)infer_expr_ast(scope, arg, location);
                     }
@@ -1070,13 +1067,13 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
             }
             if (const auto local = scope.locals.find(prefix);
                 local != scope.locals.end() &&
-                foreign_cpp_type_name(resolve_alias(scope.symbols, local->second))) {
+                foreign_cpp_type_name(scope.symbols, resolve_alias(scope.symbols, local->second))) {
                 for (const Expr& arg : args) {
                     (void)infer_expr_ast(scope, arg, location);
                 }
                 return "auto";
             }
-            if (scope.symbols.native_import_prefixes.contains(prefix)) {
+            if (native_import_path_prefix(scope.symbols, callee)) {
                 for (const Expr& arg : args) {
                     (void)infer_expr_ast(scope, arg, location);
                 }
@@ -1348,7 +1345,7 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
                 check_call_args_ast(scope, callee, *match, expr.children, location);
                 return match->return_type;
             }
-            if (foreign_cpp_type_name(resolve_alias(scope.symbols, receiver_type))) {
+            if (foreign_cpp_type_name(scope.symbols, resolve_alias(scope.symbols, receiver_type))) {
                 for (const Expr& arg : expr.children) {
                     (void)infer_expr_ast(scope, arg, location);
                 }
@@ -1357,7 +1354,7 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
             check_call_args_ast(scope, callee, signature, expr.children, location);
             return signature.return_type;
         }
-        if (foreign_cpp_type_name(resolve_alias(scope.symbols, receiver_type))) {
+        if (foreign_cpp_type_name(scope.symbols, resolve_alias(scope.symbols, receiver_type))) {
             for (const Expr& arg : expr.children) {
                 (void)infer_expr_ast(scope, arg, location);
             }
@@ -1376,7 +1373,7 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
     }
     if (method_dot != std::string::npos) {
         const std::string prefix = trim(callee_base.substr(0, method_dot));
-        if (scope.symbols.native_import_prefixes.contains(prefix)) {
+        if (native_import_path_prefix(scope.symbols, callee_base)) {
             for (const Expr& arg : expr.children) {
                 (void)infer_expr_ast(scope, arg, location);
             }
@@ -1461,13 +1458,6 @@ std::string infer_builtin_call_ast(const FunctionScope& scope, const Expr& expr,
             }
         }
         return first.empty() ? "auto" : first;
-    }
-    if (callee == "align_up") {
-        check_arity(2, 2);
-        for (const Expr& arg : expr.children) {
-            (void)infer_expr_ast(scope, arg, location);
-        }
-        return "usize";
     }
     if (callee == "print") {
         for (const Expr& arg : expr.children) {
@@ -1628,6 +1618,13 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
         if (expr.op == "-") {
             return infer_expr_ast(scope, expr.children.front(), use_location);
         }
+        if (expr.op == "~") {
+            const std::string got = infer_expr_ast(scope, expr.children.front(), use_location);
+            if (use_location != nullptr && !got.empty() && got != "auto" && !is_integer_type(got)) {
+                fail(*use_location, "~ expects integer, got " + got);
+            }
+            return got;
+        }
         if (expr.op == "*") {
             const std::string got = infer_expr_ast(scope, expr.children.front(), use_location);
             const std::string type = trim(got);
@@ -1711,6 +1708,9 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                 }
                 return variant->first->name;
             }
+            if (const auto native = native_member_path_type(scope.symbols, *path)) {
+                return *native;
+            }
         }
         if (expr.children.size() == 1 && expr.children.front().kind == ExprKind::Name &&
             scope.locals.contains(expr.children.front().name)) {
@@ -1725,8 +1725,12 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
             }
         }
         if (const std::optional<std::string> path = member_path_from_expr(expr)) {
-            return member_path_type(scope.symbols, scope.locals, use_location,
-                                    normalize_current_class_path(scope, *path, use_location), "");
+            const std::string found =
+                member_path_type(scope.symbols, scope.locals, use_location,
+                                 normalize_current_class_path(scope, *path, use_location), "");
+            if (!found.empty()) {
+                return found;
+            }
         }
         if (expr.children.size() == 1) {
             const Expr& receiver = expr.children.front();
@@ -1741,7 +1745,7 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                     swizzle_type_for_type(scope.symbols, receiver_type, expr.name)) {
                 return *swizzle;
             }
-            if (foreign_cpp_type_name(resolve_alias(scope.symbols, receiver_type))) {
+            if (foreign_cpp_type_name(scope.symbols, resolve_alias(scope.symbols, receiver_type))) {
                 return "auto";
             }
             if (use_location != nullptr) {
@@ -1883,9 +1887,7 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
             if (!bare_nonlocal_receiver) {
                 const std::string receiver_type =
                     infer_expr_ast(scope, receiver_expr, use_location);
-                if ((receiver_type.empty() || receiver_type == "auto") &&
-                    receiver_expr.kind == ExprKind::Name &&
-                    scope.locals.contains(receiver_expr.name)) {
+                if (receiver_type.empty() || receiver_type == "auto") {
                     for (const Expr& arg : expr.children) {
                         (void)infer_expr_ast(scope, arg, use_location);
                     }
@@ -1894,8 +1896,8 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                 if (receiver_type.empty()) {
                     return {};
                 }
-                const bool foreign_receiver =
-                    foreign_cpp_type_name(resolve_alias(scope.symbols, receiver_type));
+                const bool foreign_receiver = foreign_cpp_type_name(
+                    scope.symbols, resolve_alias(scope.symbols, receiver_type));
                 FunctionSignature signature;
                 if (method_signature_for_type(scope.symbols, receiver_type, member.name, signature,
                                               foreign_receiver ? nullptr : use_location)) {
@@ -1931,7 +1933,7 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
             const std::string receiver_type =
                 member_path_type(scope.symbols, scope.locals, nullptr, receiver, "");
             if (scope.locals.contains(receiver) &&
-                foreign_cpp_type_name(resolve_alias(scope.symbols, receiver_type))) {
+                foreign_cpp_type_name(scope.symbols, resolve_alias(scope.symbols, receiver_type))) {
                 for (const Expr& arg : expr.children) {
                     (void)infer_expr_ast(scope, arg, use_location);
                 }
@@ -1945,7 +1947,8 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                     check_call_args_ast(scope, callee, *match, expr.children, use_location);
                     return match->return_type;
                 }
-                if (foreign_cpp_type_name(resolve_alias(scope.symbols, receiver_type))) {
+                if (foreign_cpp_type_name(scope.symbols,
+                                          resolve_alias(scope.symbols, receiver_type))) {
                     for (const Expr& arg : expr.children) {
                         (void)infer_expr_ast(scope, arg, use_location);
                     }
@@ -1968,13 +1971,13 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
             }
             if (const auto local = scope.locals.find(prefix);
                 local != scope.locals.end() &&
-                foreign_cpp_type_name(resolve_alias(scope.symbols, local->second))) {
+                foreign_cpp_type_name(scope.symbols, resolve_alias(scope.symbols, local->second))) {
                 for (const Expr& arg : expr.children) {
                     (void)infer_expr_ast(scope, arg, use_location);
                 }
                 return "auto";
             }
-            if (scope.symbols.native_import_prefixes.contains(prefix)) {
+            if (native_import_path_prefix(scope.symbols, callee)) {
                 for (const Expr& arg : expr.children) {
                     (void)infer_expr_ast(scope, arg, use_location);
                 }
@@ -2147,6 +2150,13 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
     check_local_address_escape(stmt, scope.locals);
     if (stmt.kind == StmtKind::Return) {
         const SourceLocation& value_location = node_location(stmt.location, stmt.value_expr);
+        if (missing_expr(stmt.value_expr)) {
+            if (return_type != "void") {
+                fail(value_location,
+                     "return type mismatch: expected " + return_type + ", got void");
+            }
+            return;
+        }
         const std::string got = infer_expr_ast(scope, stmt.value_expr, &value_location);
         if (return_type == "void" && got != "void")
             fail(value_location, "void function cannot return " + got);

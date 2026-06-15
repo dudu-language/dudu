@@ -68,9 +68,8 @@ bool builtin_cpp_method_signature(const Symbols& symbols, std::string receiver_t
                                   const std::string& method_name, FunctionSignature& signature) {
     const std::string templated = receiver_template_type(symbols, std::move(receiver_type));
     if (templated == "str" || templated == "string" || templated == "string_view" ||
-        templated == "std.string" || templated == "std.string_view" ||
-        templated == "std::string" || templated == "std::string_view" ||
-        templated.find("basic_string") != std::string::npos) {
+        templated == "std.string" || templated == "std.string_view" || templated == "std::string" ||
+        templated == "std::string_view" || templated.find("basic_string") != std::string::npos) {
         if (method_name == "size" || method_name == "length") {
             signature.return_type = "usize";
             return true;
@@ -79,8 +78,12 @@ bool builtin_cpp_method_signature(const Symbols& symbols, std::string receiver_t
             signature.return_type = "bool";
             return true;
         }
+        if (method_name == "c_str") {
+            signature.return_type = "cstr";
+            return true;
+        }
     }
-    if (starts_with(templated, "list[")) {
+    if (starts_with(templated, "list[") || templated.find("vector<") != std::string::npos) {
         const std::string item = first_type_arg(templated);
         if (method_name == "push_back" || method_name == "append") {
             signature.params = {item.empty() ? "auto" : item};
@@ -97,6 +100,33 @@ bool builtin_cpp_method_signature(const Symbols& symbols, std::string receiver_t
             return true;
         }
         if (method_name == "empty") {
+            signature.return_type = "bool";
+            return true;
+        }
+        if (method_name == "begin" || method_name == "end") {
+            signature.return_type = "auto";
+            return true;
+        }
+    }
+    if (starts_with(templated, "atomic[") || templated.find("atomic<") != std::string::npos) {
+        const std::string item = first_type_arg(templated);
+        const std::string value_type = item.empty() ? "auto" : item;
+        if (method_name == "load") {
+            signature.return_type = value_type;
+            return true;
+        }
+        if (method_name == "store") {
+            signature.params = {value_type};
+            signature.return_type = "void";
+            return true;
+        }
+        if (method_name == "exchange" || method_name == "fetch_add" || method_name == "fetch_sub" ||
+            method_name == "fetch_and" || method_name == "fetch_or" || method_name == "fetch_xor") {
+            signature.params = {value_type};
+            signature.return_type = value_type;
+            return true;
+        }
+        if (method_name == "is_lock_free") {
             signature.return_type = "bool";
             return true;
         }
@@ -174,8 +204,8 @@ std::string substitute_receiver_template_type(std::string type,
         return type;
     }
     const std::string& first = receiver_args.front();
-    for (const char* name : {"T", "_T", "_Tp", "_Tp1", "_Ty", "_Ty1", "value_type",
-                             "element_type", "key_type"}) {
+    for (const char* name :
+         {"T", "_T", "_Tp", "_Tp1", "_Ty", "_Ty1", "value_type", "element_type", "key_type"}) {
         type = replace_type_identifier(std::move(type), name, first);
     }
     if (receiver_args.size() >= 2) {
@@ -367,6 +397,20 @@ bool is_member_path(const std::string& path) {
 std::optional<std::string> field_type_for_type(const Symbols& symbols,
                                                const std::string& receiver_type,
                                                const std::string& field) {
+    const std::string resolved = resolve_alias(symbols, receiver_type);
+    if (starts_with(resolved, "Result[") && resolved.back() == ']') {
+        const std::vector<std::string> args =
+            split_top_level_args(resolved.substr(7, resolved.size() - 8));
+        if (field == "ok") {
+            return "bool";
+        }
+        if (field == "value" && !args.empty()) {
+            return args[0];
+        }
+        if (field == "err" && args.size() >= 2) {
+            return args[1];
+        }
+    }
     const auto klass = symbols.classes.find(unwrap_receiver_type(symbols, receiver_type));
     if (klass == symbols.classes.end()) {
         return std::nullopt;
@@ -446,8 +490,7 @@ bool method_signature_for_type(const Symbols& symbols, std::string receiver_type
             if (location != nullptr) {
                 fail(*location, "method " + type + "." + lookup_name + " expects " +
                                     std::to_string(method.generic_params.size()) +
-                                    " type arguments, got " +
-                                    std::to_string(method_args.size()));
+                                    " type arguments, got " + std::to_string(method_args.size()));
             }
             return false;
         }
@@ -456,20 +499,17 @@ bool method_signature_for_type(const Symbols& symbols, std::string receiver_type
         for (size_t i = first_param; i < method.params.size(); ++i) {
             std::string param_type = substitute_method_template_type(
                 method.params[i].type, method.generic_params, method_args);
-            param_type = substitute_class_template_type(std::move(param_type),
-                                                        klass->second->generic_params,
-                                                        receiver_args);
+            param_type = substitute_class_template_type(
+                std::move(param_type), klass->second->generic_params, receiver_args);
             signature.params.push_back(
                 substitute_receiver_template_type(std::move(param_type), receiver_args));
         }
-        signature.return_type =
-            method.return_type.empty()
-                ? "void"
-                : substitute_method_template_type(method.return_type, method.generic_params,
-                                                  method_args);
-        signature.return_type = substitute_class_template_type(std::move(signature.return_type),
-                                                               klass->second->generic_params,
-                                                               receiver_args);
+        signature.return_type = method.return_type.empty()
+                                    ? "void"
+                                    : substitute_method_template_type(
+                                          method.return_type, method.generic_params, method_args);
+        signature.return_type = substitute_class_template_type(
+            std::move(signature.return_type), klass->second->generic_params, receiver_args);
         signature.return_type =
             substitute_receiver_template_type(std::move(signature.return_type), receiver_args);
         return true;
@@ -515,20 +555,17 @@ std::vector<FunctionSignature> method_signatures_for_type(const Symbols& symbols
         for (size_t i = first_param; i < method.params.size(); ++i) {
             std::string param_type = substitute_method_template_type(
                 method.params[i].type, method.generic_params, method_args);
-            param_type = substitute_class_template_type(std::move(param_type),
-                                                        klass->second->generic_params,
-                                                        receiver_args);
+            param_type = substitute_class_template_type(
+                std::move(param_type), klass->second->generic_params, receiver_args);
             signature.params.push_back(
                 substitute_receiver_template_type(std::move(param_type), receiver_args));
         }
-        signature.return_type =
-            method.return_type.empty()
-                ? "void"
-                : substitute_method_template_type(method.return_type, method.generic_params,
-                                                  method_args);
-        signature.return_type = substitute_class_template_type(std::move(signature.return_type),
-                                                               klass->second->generic_params,
-                                                               receiver_args);
+        signature.return_type = method.return_type.empty()
+                                    ? "void"
+                                    : substitute_method_template_type(
+                                          method.return_type, method.generic_params, method_args);
+        signature.return_type = substitute_class_template_type(
+            std::move(signature.return_type), klass->second->generic_params, receiver_args);
         signature.return_type =
             substitute_receiver_template_type(std::move(signature.return_type), receiver_args);
         out.push_back(std::move(signature));

@@ -45,6 +45,15 @@ std::string lower_member_expr(std::string receiver, const std::string& member,
     if (receiver.empty()) {
         return member;
     }
+    if (receiver == "build") {
+        return "build::" + member;
+    }
+    if (receiver == "shader") {
+        return "shader::" + member;
+    }
+    if (starts_with(receiver, "shader::")) {
+        return receiver + "." + member;
+    }
     const std::string dotted = receiver + "." + member;
     const std::string qualified = qualify_namespace_aliases(dotted, aliases);
     if (qualified != dotted) {
@@ -172,6 +181,11 @@ bool is_builtin_cast_call(std::string_view name) {
     static const std::vector<std::string_view> types = {"bool", "i8",  "i16", "i32", "i64",
                                                         "u8",   "u16", "u32", "u64", "usize",
                                                         "f32",  "f64", "str", "cstr"};
+    return std::find(types.begin(), types.end(), name) != types.end();
+}
+
+bool is_builtin_template_constructor(std::string_view name) {
+    static const std::vector<std::string_view> types = {"list", "dict", "set", "atomic", "span"};
     return std::find(types.begin(), types.end(), name) != types.end();
 }
 
@@ -681,12 +695,12 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
             return "offsetof(" + lowered_template_args + ", " +
                    lower_offsetof_field(expr.children.front(), aliases, locals) + ")";
         }
-        if ((expr.name == "list" || expr.name == "dict" || expr.name == "set") &&
-            expr.children.empty()) {
+        if (is_builtin_template_constructor(expr.name)) {
             const std::string type_args = !expr.template_type_args.empty()
                                               ? join_type_arg_texts(expr.template_type_args)
                                               : join_template_arg_texts(expr.template_args);
-            return lower_cpp_type(expr.name + "[" + type_args + "]", aliases) + "{}";
+            const std::string type = lower_cpp_type(expr.name + "[" + type_args + "]", aliases);
+            return expr.children.empty() ? type + "{}" : type + "(" + lowered_call_args + ")";
         }
         return lower_callee_expr(expr, aliases, locals) + "<" + lowered_template_args + ">(" +
                lowered_call_args + ")";

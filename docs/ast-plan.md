@@ -182,9 +182,9 @@ Already structured:
   so `value = make_values()[0]` and chained fixed-array row indexes can infer
   types without raw expression parsing
 - generated local C++ type inference handles parsed literals, unary
-  address/deref/not/minus expressions, binary expressions, conditionals, and
-  parsed template callees conservatively, so common `value = count + 1` style
-  locals do not need raw expression inference
+  address/deref/not/minus/bitwise-not expressions, binary expressions,
+  conditionals, and parsed template callees conservatively, so common
+  `value = count + 1` style locals do not need raw expression inference
 - C++ `if constexpr` detection for build-only conditions uses parsed condition
   expressions and no longer has an unknown-expression raw text fallback
 - C++ expression emission writes string, integer, and float literal expression
@@ -690,9 +690,10 @@ Common dict initializer C++ emission lowers those parsed entries instead of
 splitting literal text again.
 
 Built-in calls such as `len(...)`, `range(...)`, `min(...)`, `max(...)`,
-`align_up(...)`, `print(...)`, `delete(...)`, and `free(...)` now have an AST
-semantic inference path, including arity/type diagnostics for the checked
-built-ins.
+`print(...)`, `delete(...)`, and `free(...)` now have an AST semantic inference
+path, including arity/type diagnostics for the checked built-ins. Project
+helpers such as `align_up(...)` should be ordinary Dudu functions or imported
+native functions, not hidden language builtins.
 
 Ordinary C++ call emission now lowers parsed callee and argument nodes directly
 instead of rebuilding a raw call string. Built-in primitive casts such as

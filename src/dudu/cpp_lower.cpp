@@ -698,7 +698,6 @@ std::string lower_raw_cpp_escape_expr(std::string expr,
     expr = lower_builtin_cast_calls(std::move(expr));
     expr = lower_len_calls(std::move(expr));
     expr = lower_numeric_separators(std::move(expr));
-    expr = lower_str_from_cstr(std::move(expr));
     expr = lower_str_calls(std::move(expr));
     expr = lower_named_argument_calls(std::move(expr));
     expr = lower_enum_access(std::move(expr));

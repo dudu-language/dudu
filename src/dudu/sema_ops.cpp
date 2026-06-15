@@ -5,7 +5,7 @@
 #include <set>
 
 namespace dudu {
-namespace {
+namespace {} // namespace
 
 bool is_integer_type(std::string type) {
     type = trim(std::move(type));
@@ -13,6 +13,8 @@ bool is_integer_type(std::string type) {
                                                    "u16", "u32", "u64", "usize", "isize"};
     return integers.contains(type);
 }
+
+namespace {
 
 bool is_numeric_type(std::string type) {
     type = trim(std::move(type));
@@ -59,8 +61,7 @@ bool numeric_operand_allowed(const std::string& expected, const Expr& expr,
 }
 
 bool same_or_assignable(const std::string& left, const Expr& right_expr, const std::string& right) {
-    return assignment_type_allowed(left, right_expr, right) ||
-           type_assignment_allowed(right, left);
+    return assignment_type_allowed(left, right_expr, right) || type_assignment_allowed(right, left);
 }
 
 bool is_supported_dudu_operator(const std::string& op) {

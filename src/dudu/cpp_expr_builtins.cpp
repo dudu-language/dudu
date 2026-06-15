@@ -206,9 +206,8 @@ std::string lower_pointer_cast_calls(std::string expr) {
             continue;
         }
         const std::string arg = expr.substr(name_end + 1, cursor - name_end - 2);
-        const std::string replacement =
-            "reinterpret_cast<" + lower_cpp_type("*" + type) + ">(" +
-            lower_raw_cpp_escape_expr(arg) + ")";
+        const std::string replacement = "reinterpret_cast<" + lower_cpp_type("*" + type) + ">(" +
+                                        lower_raw_cpp_escape_expr(arg) + ")";
         expr.replace(pos, cursor - pos, replacement);
         pos = expr.find('*', pos + replacement.size());
     }
@@ -246,34 +245,6 @@ std::string lower_str_calls(std::string expr) {
         } else {
             pos = expr.find(marker, pos + marker.size());
         }
-    }
-    return expr;
-}
-
-std::string lower_str_from_cstr(std::string expr) {
-    const std::string marker = "str.from_cstr(";
-    size_t pos = expr.find(marker);
-    while (pos != std::string::npos) {
-        const size_t args_start = pos + marker.size();
-        int depth = 1;
-        size_t cursor = args_start;
-        while (cursor < expr.size() && depth > 0) {
-            if (expr[cursor] == '(') {
-                ++depth;
-            } else if (expr[cursor] == ')') {
-                --depth;
-            }
-            ++cursor;
-        }
-        if (depth != 0) {
-            break;
-        }
-        const std::string arg = expr.substr(args_start, cursor - args_start - 1);
-        const std::string replacement =
-            "std::string(reinterpret_cast<const char*>(" + lower_raw_cpp_escape_expr(arg) +
-            "))";
-        expr.replace(pos, cursor - pos, replacement);
-        pos = expr.find(marker, pos + replacement.size());
     }
     return expr;
 }

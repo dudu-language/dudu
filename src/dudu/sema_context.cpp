@@ -616,6 +616,7 @@ Symbols collect_symbols(const ModuleAst& module) {
     }
     for (const NativeTypeDecl& type : module.native_types) {
         symbols.types.insert(type.name);
+        symbols.native_types.insert(type.name);
         if (!type.type.empty()) {
             symbols.aliases[type.name] = type.type;
             symbols.alias_type_refs[type.name] = parse_type_text(type.type, type.location);
@@ -707,8 +708,7 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
         for (const std::string& base : klass.base_classes) {
             const TypeRef base_ref = parse_type_text(base, klass.location);
             check_supported_type_shape(klass.location, base_ref);
-            check_known_type_ref(class_symbols, klass.location, base_ref,
-                                 "unknown base class: ");
+            check_known_type_ref(class_symbols, klass.location, base_ref, "unknown base class: ");
             if (!bases.insert(base).second) {
                 fail(klass.location, "duplicate base class: " + base);
             }
@@ -826,9 +826,8 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                                               klass.name + "." + method.name);
                 }
                 if (!is_virtual_like(*base_method)) {
-                    fail(method.location,
-                         "@override target must be @virtual or @abstract: " + klass.name + "." +
-                             method.name);
+                    fail(method.location, "@override target must be @virtual or @abstract: " +
+                                              klass.name + "." + method.name);
                 }
             }
             for (const Decorator& decorator : method.decorators) {

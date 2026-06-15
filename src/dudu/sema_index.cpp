@@ -159,6 +159,7 @@ std::string indexed_type_from_type_with_count(const Symbols& symbols,
                                               const bool is_slice, const bool has_step,
                                               const std::string& label) {
     std::string type = resolve_alias(symbols, raw_type);
+    type = unwrap_reference_and_const(std::move(type));
     if (foreign_indexable_type(type)) {
         return "auto";
     }

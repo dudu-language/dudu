@@ -23,7 +23,6 @@ std::string lower_len_calls(std::string expr);
 std::string lower_numeric_separators(std::string expr);
 std::string lower_pointer_cast_calls(std::string expr);
 std::string lower_str_calls(std::string expr);
-std::string lower_str_from_cstr(std::string expr);
 std::string lower_template_call_arg(const std::string& arg,
                                     const std::vector<std::string>& namespace_aliases);
 std::string qualify_namespace_aliases(std::string expr,

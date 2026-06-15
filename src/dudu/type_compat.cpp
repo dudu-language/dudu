@@ -39,6 +39,11 @@ std::string compact_type(std::string type) {
     return out;
 }
 
+bool is_string_type(const std::string& type) {
+    const std::string compact = compact_type(type);
+    return compact == "str" || compact == "std.string" || compact == "std::string";
+}
+
 bool is_explicit_cast_to(const std::string& expected, const Expr& expr) {
     return (expr.kind == ExprKind::Call || expr.kind == ExprKind::TemplateCall) &&
            compact_type(call_callee_text(expr)) == compact_type(expected);
@@ -274,6 +279,7 @@ bool type_assignment_allowed(const std::string& expected, const std::string& got
     return expected == "auto" || got.empty() || got == "auto" || got == expected ||
            compact_type(expected) == compact_type(got) ||
            compact_type(normalize_c_tags(expected)) == compact_type(normalize_c_tags(got)) ||
+           (is_string_type(expected) && is_string_type(got)) ||
            is_void_pointer_target(expected, got) || is_const_pointer_binding(expected, got) ||
            is_pointer_to_reference_value(expected, got) || is_reference_binding(expected, got) ||
            is_value_from_reference(expected, got) || is_function_type_match(expected, got) ||
@@ -287,6 +293,7 @@ bool assignment_type_allowed(const std::string& expected, const Expr& expr,
            (!is_container_literal_expr(expr) && got.empty()) || got == "auto" || got == expected ||
            compact_type(expected) == compact_type(got) || is_option_value(expected, expr, got) ||
            compact_type(normalize_c_tags(expected)) == compact_type(normalize_c_tags(got)) ||
+           (is_string_type(expected) && is_string_type(got)) ||
            is_result_value(expected, expr, got) ||
            is_value_wrapper_assignment(expected, expr, got) ||
            is_null_pointer(expected, expr, got) || is_void_pointer_target(expected, got) ||

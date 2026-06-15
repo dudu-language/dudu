@@ -2,6 +2,7 @@
 
 import cpp "httplib.h" as http
 import cpp "sqlite3.h" as sqlite
+import cpp "string" as std
 import c "stdlib.h" as c
 
 
@@ -12,9 +13,9 @@ class Todo:
 
 
 enum DbError:
-    open_failed
-    query_failed
-    not_found
+    OpenFailed
+    QueryFailed
+    NotFound
 
 
 def todo_to_json(todo: Todo) -> str:
@@ -33,18 +34,18 @@ def find_todo(db: *sqlite.sqlite3, todo_id: i64) -> Result[Todo, DbError]:
     stmt: *sqlite.sqlite3_stmt = None
 
     if sqlite.prepare_v2(db, query.c_str(), -1, &stmt, None) != sqlite.OK:
-        return Err(DbError.query_failed)
+        return Err(DbError.QueryFailed)
 
     sqlite.bind_int64(stmt, 1, todo_id)
     step = sqlite.step(stmt)
 
     if step != sqlite.ROW:
         sqlite.finalize(stmt)
-        return Err(DbError.not_found)
+        return Err(DbError.NotFound)
 
     todo = Todo(
         id=sqlite.column_int64(stmt, 0),
-        title=str.from_cstr(sqlite.column_text(stmt, 1)),
+        title=std.string(cstr(sqlite.column_text(stmt, 1))),
         done=sqlite.column_int(stmt, 2) != 0,
     )
 
@@ -75,6 +76,7 @@ def main() -> i32:
 
     app = http.Server()
 
+    app.Get("/todos/(\\d+)", cpp("[&](auto&& req, auto&& res) { handle_get_todo(db, req, res); }"))
     app.Get("/health", handle_health)
     app.listen("0.0.0.0", 8080)
     sqlite.close(db)

@@ -1179,6 +1179,12 @@ Expr parse_expr_text(std::string_view text, SourceLocation location) {
         expr.children.push_back(parse_expr_text(text.substr(1), advance_columns(location, 1)));
         return expr;
     }
+    if (text.front() == '~') {
+        Expr expr = make_expr(ExprKind::Unary, text, location);
+        expr.op = "~";
+        expr.children.push_back(parse_expr_text(text.substr(1), advance_columns(location, 1)));
+        return expr;
+    }
 
     if (text.starts_with("cpp(") && text.ends_with(")")) {
         return make_expr(ExprKind::CppEscape, text, location);

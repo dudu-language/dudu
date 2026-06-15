@@ -1,3 +1,7 @@
+def align_up(value: usize, align: usize) -> usize:
+    return (value + align - 1) & ~(align - 1)
+
+
 def main() -> i32:
     value: usize = align_up(41, 1)
     return i32(value) + 1

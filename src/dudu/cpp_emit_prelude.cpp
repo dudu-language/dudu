@@ -4,7 +4,6 @@
 #include <cctype>
 #include <map>
 #include <sstream>
-#include <string_view>
 
 namespace dudu {
 namespace {
@@ -15,15 +14,6 @@ std::string include_path(const ImportDecl& import) {
         return import.module_path;
     }
     return '"' + import.module_path + '"';
-}
-
-bool has_function(const ModuleAst& module, std::string_view name) {
-    for (const FunctionDecl& fn : module.functions) {
-        if (fn.name == name) {
-            return true;
-        }
-    }
-    return false;
 }
 
 std::string build_literal(const std::string& value) {
@@ -172,12 +162,6 @@ void emit_result_prelude(std::ostringstream& out, const ModuleAst& module) {
         out << "template <typename T> void print(const T& value) { std::cout << value << '\\n'; "
                "}\n";
     }
-    if (!has_function(module, "align_up")) {
-        out << "constexpr size_t align_up(size_t value, size_t alignment) {\n"
-               "    return alignment == 0 ? value : ((value + alignment - 1) / alignment) * "
-               "alignment;\n"
-               "}\n";
-    }
     out << "template <typename T, typename E> struct Result {\n"
            "    bool ok{};\n"
            "    T value{};\n"
@@ -205,9 +189,6 @@ void emit_result_prelude(std::ostringstream& out, const ModuleAst& module) {
            "T5, typename T6, typename T7> struct Tuple8 { T0 _0{}; T1 _1{}; T2 _2{}; T3 _3{}; "
            "T4 _4{}; T5 _5{}; T6 _6{}; T7 _7{}; };\n"
            "} // namespace dudu\n";
-    if (!has_function(module, "align_up")) {
-        out << "using dudu::align_up;\n";
-    }
     if (!freestanding) {
         out << "using dudu::print;\n";
     }

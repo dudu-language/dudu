@@ -7,9 +7,9 @@ import c "unistd.h" as unistd
 
 
 enum FileError:
-    open_failed
-    stat_failed
-    map_failed
+    OpenFailed
+    StatFailed
+    MapFailed
 
 
 class MappedFile:
@@ -22,19 +22,19 @@ def map_file(path: cstr) -> Result[MappedFile, FileError]:
     fd = fcntl.open(path, fcntl.O_RDONLY)
 
     if fd < 0:
-        return Err(FileError.open_failed)
+        return Err(FileError.OpenFailed)
 
     info: struct stat
     if stat.fstat(fd, &info) != 0:
         unistd.close(fd)
-        return Err(FileError.stat_failed)
+        return Err(FileError.StatFailed)
 
     size = usize(info.st_size)
     raw = mmap.mmap(None, size, mmap.PROT_READ, mmap.MAP_PRIVATE, fd, 0)
 
     if raw == mmap.MAP_FAILED:
         unistd.close(fd)
-        return Err(FileError.map_failed)
+        return Err(FileError.MapFailed)
 
     return Ok(MappedFile(
         data=*u8(raw),

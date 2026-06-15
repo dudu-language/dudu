@@ -1,4 +1,5 @@
 import c "sqlite3.h" as sqlite
+import cpp "string" as std
 
 
 class Todo:
@@ -27,7 +28,7 @@ def fetch_todo(db: *struct sqlite3, todo_id: i64) -> Result[Todo, DbError]:
 
     todo = Todo(
         id=sqlite.sqlite3_column_int64(stmt, 0),
-        title=str.from_cstr(sqlite.sqlite3_column_text(stmt, 1)),
+        title=std.string(cstr(sqlite.sqlite3_column_text(stmt, 1))),
         done=sqlite.sqlite3_column_int(stmt, 2) != 0,
     )
     sqlite.sqlite3_finalize(stmt)

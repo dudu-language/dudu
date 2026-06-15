@@ -4,6 +4,10 @@ class Enemy:
     y: f32
 
 
+def align_up(value: usize, align: usize) -> usize:
+    return (value + align - 1) & ~(align - 1)
+
+
 class Arena:
     data: *u8
     capacity: usize

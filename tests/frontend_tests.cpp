@@ -742,6 +742,39 @@ void test_formatter() {
                    "    return 0\n");
 }
 
+void test_list_iterator_methods() {
+    const dudu::ModuleAst module = dudu::parse_source("def main() -> i32:\n"
+                                                      "    values: list[i32] = [1, 2]\n"
+                                                      "    values.begin()\n"
+                                                      "    values.end()\n"
+                                                      "    return 0\n",
+                                                      "list_iter.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+}
+
+void test_reference_list_indexing() {
+    const dudu::ModuleAst module = dudu::parse_source("def write(values: &list[i32]):\n"
+                                                      "    values[0] = 5\n"
+                                                      "\n"
+                                                      "def main() -> i32:\n"
+                                                      "    values: list[i32] = [1]\n"
+                                                      "    write(values)\n"
+                                                      "    return values[0]\n",
+                                                      "reference_list_indexing.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+}
+
+void test_bare_void_return() {
+    const dudu::ModuleAst module = dudu::parse_source("def done():\n"
+                                                      "    return\n"
+                                                      "\n"
+                                                      "def main() -> i32:\n"
+                                                      "    done()\n"
+                                                      "    return 0\n",
+                                                      "bare_void_return.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+}
+
 void test_typed_for_emission() {
     const dudu::ModuleAst module = dudu::parse_source("class Item:\n"
                                                       "    value: i32\n"
@@ -1133,6 +1166,9 @@ int main() {
         test_payload_enum_ast_shape();
         test_match_case_ast_shape();
         test_formatter();
+        test_list_iterator_methods();
+        test_reference_list_indexing();
+        test_bare_void_return();
         test_typed_for_emission();
         test_class_field_defaults_and_static_fields();
         test_native_type_declaration_emission();

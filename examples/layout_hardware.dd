@@ -11,7 +11,7 @@ class PacketHeader:
 
 @align(16)
 class Mat4Block:
-    matrix: f32[4][4]
+    matrix: array[f32][4, 4]
 
 
 class UartRegs:
