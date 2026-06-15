@@ -166,6 +166,9 @@ Already structured:
   from raw text
 - C++ assignment emission detects `Option` reset from `NoneLiteral` expression
   nodes instead of raw value text
+- C++ expression emission lowers simple names and member paths structurally;
+  the broad raw expression rewriter is only used at the explicit expression
+  `cpp(...)` escape boundary in statement emission
 - generated local C++ type inference uses parsed expression nodes and no longer
   has a raw-string helper for `Unknown` expression shapes
 - generated local C++ type inference also follows parsed index expressions for

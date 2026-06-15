@@ -22,13 +22,37 @@ std::string indent(int depth) {
     return std::string(static_cast<size_t>(depth) * 4, ' ');
 }
 
-std::string lower_expr(std::string expr, const std::vector<std::string>& aliases,
-                       const std::map<std::string, std::string>& locals) {
+std::string lower_cpp_escape_expr(std::string expr, const std::vector<std::string>& aliases,
+                                  const std::map<std::string, std::string>& locals) {
     return lower_cpp_expr(rewrite_pointer_members(std::move(expr), locals), aliases);
 }
 
 std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases,
                        const std::map<std::string, std::string>& locals);
+
+std::string lower_name_expr(const std::string& name) {
+    return name;
+}
+
+std::string lower_member_expr(std::string receiver, const std::string& member,
+                              const std::vector<std::string>& aliases) {
+    receiver = trim_copy(std::move(receiver));
+    if (receiver.empty()) {
+        return member;
+    }
+    const std::string dotted = receiver + "." + member;
+    const std::string qualified = qualify_namespace_aliases(dotted, aliases);
+    if (qualified != dotted) {
+        return qualified;
+    }
+    const size_t head_end = receiver.find_first_of(".:");
+    const std::string head =
+        head_end == std::string::npos ? receiver : receiver.substr(0, head_end);
+    const bool scoped_receiver =
+        receiver.find("::") != std::string::npos ||
+        (!head.empty() && std::isupper(static_cast<unsigned char>(head.front())) != 0);
+    return receiver + (scoped_receiver ? "::" : ".") + member;
+}
 
 std::string join_lowered_exprs(const std::vector<Expr>& exprs,
                                const std::vector<std::string>& aliases,
@@ -154,7 +178,7 @@ std::string lower_callee_expr(const Expr& expr, const std::vector<std::string>& 
     if (!expr.callee.empty()) {
         return lower_expr(expr.callee.front(), aliases, locals);
     }
-    return lower_expr(expr.name, aliases, locals);
+    return lower_name_expr(expr.name);
 }
 
 bool is_pointer_type(std::string type) {
@@ -384,9 +408,9 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
                 return current_class->second;
             }
         }
-        return lower_cpp_expr(expr.name, aliases);
+        return lower_name_expr(expr.name);
     case ExprKind::CppEscape:
-        return lower_expr(expr.text, aliases, locals);
+        return lower_cpp_escape_expr(expr.text, aliases, locals);
     case ExprKind::StringLiteral:
         return expr.text;
     case ExprKind::Unary:
@@ -467,8 +491,8 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
             if (is_pointer_receiver_expr(expr.children.front(), locals)) {
                 return lower_expr(expr.children.front(), aliases, locals) + "->" + expr.name;
             }
-            return lower_cpp_expr(
-                lower_expr(expr.children.front(), aliases, locals) + "." + expr.name, aliases);
+            return lower_member_expr(lower_expr(expr.children.front(), aliases, locals), expr.name,
+                                     aliases);
         }
         break;
     case ExprKind::DictEntry:
