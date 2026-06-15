@@ -280,7 +280,10 @@ push. They are not release packaging work.
    walks parsed member expressions inside `sema_native` before crossing into
    native metadata table spelling. Type compatibility exposes parsed `TypeRef`
    overloads, and annotated local initializers validate against the parsed
-   expected type node when available.
+   expected type node when available. `TypeRef` assignment compatibility keeps
+   `list`, `set`, `dict`, `Option`, and `Result` expected types on parsed
+   template-child nodes for local initializer checks instead of rendering those
+   shapes back to strings first.
 
 3. OOP Surface Cleanup
 

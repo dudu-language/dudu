@@ -13,6 +13,7 @@ namespace dudu {
 
 std::vector<std::string> template_type_arg_texts(const TypeRef& type, std::string_view name);
 std::vector<std::string> template_type_arg_texts(std::string_view type, std::string_view name);
+std::vector<TypeRef> template_type_arg_refs(const TypeRef& type, std::string_view name);
 std::optional<std::string> first_template_type_arg_text(const TypeRef& type);
 std::optional<std::string> first_template_type_arg_text(std::string_view type);
 std::optional<std::string> single_template_type_arg_text(const TypeRef& type,

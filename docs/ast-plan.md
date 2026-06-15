@@ -220,6 +220,9 @@ Already structured:
 - assignment compatibility for `list[T]`, `set[T]`, `dict[K, V]`,
   `Option[T]`, and `Result[T, E]` now reads parsed `TypeRef` template children
   instead of open-coding bracket slicing for those common type shapes
+- `TypeRef` assignment compatibility for annotated local initializers keeps
+  `list`, `set`, `dict`, `Option`, and `Result` expected types on parsed
+  template-child nodes instead of rendering them back to strings first
 - pointer/reference assignment compatibility uses parsed `TypeRef` pointer,
   reference, and const-wrapper nodes instead of testing `*`, `&`, and
   `*const[...]` spelling by hand

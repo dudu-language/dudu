@@ -4,6 +4,7 @@
 #include "dudu/ast_parse_utils.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
+#include "dudu/type_compat_literals.hpp"
 
 #include <cctype>
 #include <map>
@@ -424,7 +425,36 @@ bool assignment_type_allowed(const std::string& expected, const Expr& expr,
 }
 
 bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const std::string& got) {
-    return assignment_type_allowed(substitute_type_ref_text(expected, {}), expr, got);
+    const std::string expected_text = substitute_type_ref_text(expected, {});
+    const std::string normalized_expected = normalize_cpp_type_artifacts(expected_text);
+    const std::string normalized_got = normalize_cpp_type_artifacts(got);
+    if (normalized_expected != expected_text) {
+        return assignment_type_allowed(normalized_expected, expr, normalized_got);
+    }
+    if (parsed_expected_literal_assignment_allowed(expected, expr, normalized_got)) {
+        return true;
+    }
+    return normalized_expected == "auto" || is_explicit_cast_to(normalized_expected, expr) ||
+           (!is_container_literal_expr(expr) && normalized_got.empty()) ||
+           normalized_got == "auto" || normalized_got == normalized_expected ||
+           compact_type(normalized_expected) == compact_type(normalized_got) ||
+           compact_type(normalize_c_tags(normalized_expected)) ==
+               compact_type(normalize_c_tags(normalized_got)) ||
+           (is_string_type(normalized_expected) && is_string_type(normalized_got)) ||
+           is_value_wrapper_assignment(normalized_expected, expr, normalized_got) ||
+           is_null_pointer(normalized_expected, expr, normalized_got) ||
+           is_void_pointer_target(normalized_expected, normalized_got) ||
+           is_const_pointer_binding(normalized_expected, normalized_got) ||
+           is_pointer_to_reference_value(normalized_expected, normalized_got) ||
+           is_reference_binding(normalized_expected, normalized_got) ||
+           is_value_from_reference(normalized_expected, normalized_got) ||
+           is_function_type_match(normalized_expected, normalized_got) ||
+           is_native_function_pointer(normalized_expected, normalized_got) ||
+           is_cpp_associated_type_binding(normalized_expected, normalized_got) ||
+           (normalized_expected == "cstr" && normalized_got == "str" &&
+            expr.kind == ExprKind::StringLiteral) ||
+           (is_numeric_type(wrapped_type_arg(normalized_expected)) &&
+            simple_literal_type(expr) == "number");
 }
 
 std::string display_type(const Expr& expr, const std::string& got) {
