@@ -27,6 +27,7 @@ std::string lower_template_call_arg(const std::string& arg,
                                     const std::vector<std::string>& namespace_aliases);
 std::string qualify_namespace_aliases(std::string expr,
                                       const std::vector<std::string>& namespace_aliases);
+std::string replace_all(std::string text, std::string_view from, std::string_view to);
 std::string replace_dots(std::string text);
 std::string trim_copy(std::string text);
 bool starts_with(std::string_view text, std::string_view prefix);

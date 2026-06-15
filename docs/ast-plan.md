@@ -810,6 +810,11 @@ The C++ emitter has been split by AST responsibility:
 - `cpp_match_emit.cpp` owns match-specific C++ lowering helpers.
 - `cpp_stmt_helpers.cpp` owns indentation, escaped string literals, and
   build-time-condition detection.
+- `cpp_raw_escape.cpp` owns the explicit raw `cpp(...)` expression escape
+  transforms, keeping that compatibility boundary separate from AST lowering.
+- `cpp_lower.cpp` now keeps only shared low-level lowering utilities such as
+  namespace alias qualification, token-safe string helpers, and template
+  argument lowering.
 
 Semantic analysis has started the same cleanup:
 
