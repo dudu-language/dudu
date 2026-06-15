@@ -1,5 +1,5 @@
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
-
 #include "dudu/cpp_type_internal.hpp"
 
 #include <algorithm>
@@ -39,44 +39,12 @@ bool is_array_dimension(std::string_view text) {
     return is_decimal_number(text) || is_constant_name(text);
 }
 
-size_t find_matching_bracket(std::string_view text, const size_t open) {
-    int depth = 1;
-    size_t cursor = open + 1;
-    while (cursor < text.size() && depth > 0) {
-        if (text[cursor] == '[') {
-            ++depth;
-        } else if (text[cursor] == ']') {
-            --depth;
-        }
-        ++cursor;
-    }
-    return depth == 0 ? cursor - 1 : std::string::npos;
-}
-
-std::optional<std::string> lower_canonical_array_type(const std::string& type) {
-    if (!starts_with(type, "array[")) {
+std::optional<std::string> lower_parsed_fixed_array_type(const std::string& type) {
+    const TypeRef parsed = parse_type_text(type);
+    if (parsed.kind != TypeKind::FixedArray) {
         return std::nullopt;
     }
-    const size_t element_close = find_matching_bracket(type, 5);
-    if (element_close == std::string::npos || element_close + 1 >= type.size() ||
-        type[element_close + 1] != '[' || !ends_with(type, "]")) {
-        return std::nullopt;
-    }
-    const size_t shape_open = element_close + 1;
-    const size_t shape_close = find_matching_bracket(type, shape_open);
-    if (shape_close != type.size() - 1) {
-        return std::nullopt;
-    }
-    std::string out = lower_cpp_type(type.substr(6, element_close - 6));
-    const std::vector<std::string> dims =
-        split_top_level_args(type.substr(shape_open + 1, shape_close - shape_open - 1));
-    if (dims.empty()) {
-        return std::nullopt;
-    }
-    for (auto it = dims.rbegin(); it != dims.rend(); ++it) {
-        out = "std::array<" + out + ", " + *it + ">";
-    }
-    return out;
+    return lower_cpp_type(parsed);
 }
 
 std::string lower_function_signature_type(const std::string& type, bool pointer) {
@@ -281,7 +249,7 @@ std::string lower_cpp_type(const std::string& raw_type) {
         return lower_cpp_type(type.substr(1)) + "&";
     }
 
-    if (const auto array_type = lower_canonical_array_type(type)) {
+    if (const auto array_type = lower_parsed_fixed_array_type(type)) {
         return *array_type;
     }
 

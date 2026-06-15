@@ -146,6 +146,9 @@ Already structured:
 - array shape inference and explicit shape extraction also consume parsed
   `TypeRef` array forms, removing the separate bracket matcher from
   `array_shape.cpp`
+- raw-string C++ type lowering delegates Dudu fixed-array forms such as
+  `array[T][N]` to parsed `TypeRef::FixedArray`, leaving only C-style
+  `T[N]` fallback parsing in the string path
 - member field inference for `Result[T, E]` reads parsed `TypeRef` template
   children for `.value` and `.err` instead of re-splitting the result type text
 - shared AST type helpers own common parsed template-child and unary-wrapper
