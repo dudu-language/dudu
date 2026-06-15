@@ -881,29 +881,8 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
     if (parsed_expr.kind == ExprKind::Unary && parsed_expr.op == "not") {
         return infer_expr_ast(scope, parsed_expr, location);
     }
-    if (parsed_expr.kind == ExprKind::Binary &&
-        (parsed_expr.op == "and" || parsed_expr.op == "or" ||
-         is_comparison_op(parsed_expr.op))) {
+    if (parsed_expr.kind == ExprKind::Binary) {
         return infer_expr_ast(scope, parsed_expr, location);
-    }
-    const size_t op = find_top_level_operator(expr);
-    if (op != std::string::npos) {
-        const std::string left = infer_expr(scope, expr.substr(0, op), location);
-        const std::string op_text = top_level_operator_text(expr, op);
-        const std::string right_expr = expr.substr(op + op_text.size());
-        const std::string right = infer_expr(scope, right_expr, location);
-        if (const auto signature = dudu_operator_signature(scope.symbols, op_text, left)) {
-            if (location != nullptr) {
-                check_call_args_ast(scope, op_text, *signature,
-                                    {parse_expr_text(right_expr, *location)}, location);
-            }
-            return signature->return_type;
-        }
-        if (location != nullptr && !left.empty() && !right.empty() &&
-            !binary_rhs_allowed(scope.symbols, op_text, left, right_expr, right)) {
-            fail(*location, "operator " + op_text + " expects " + left + ", got " + right);
-        }
-        return left.empty() ? right : left;
     }
     if (std::isdigit(static_cast<unsigned char>(expr.front())) != 0) {
         return expr.find('.') == std::string::npos ? "i32" : "f64";

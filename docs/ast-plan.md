@@ -147,6 +147,9 @@ Already structured:
 - legacy string expression inference delegates bool/string literal,
   `not`/logical, and comparison expression shapes to parsed expression sema;
   the old string-splitting `sema_expr` helpers have been removed
+- legacy string expression inference delegates binary operator shapes to parsed
+  expression sema; the old top-level operator splitter fallback has been
+  removed
 - AST-backed statement checks route assignment compatibility through expression
   nodes instead of using raw statement value strings
 - compound-assignment target checks use the parsed target expression path

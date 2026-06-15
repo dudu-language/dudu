@@ -201,53 +201,6 @@ std::string top_level_comparison_text(const std::string& expr, size_t pos) {
     return pos < expr.size() ? expr.substr(pos, 1) : std::string{};
 }
 
-size_t find_top_level_operator(const std::string& expr) {
-    int depth = 0;
-    char quote = '\0';
-    bool escaped = false;
-    for (size_t i = 0; i < expr.size(); ++i) {
-        const char c = expr[i];
-        if (quote != '\0') {
-            if (escaped) {
-                escaped = false;
-            } else if (c == '\\') {
-                escaped = true;
-            } else if (c == quote) {
-                quote = '\0';
-            }
-            continue;
-        }
-        if (c == '"' || c == '\'') {
-            quote = c;
-            continue;
-        }
-        if (c == '(' || c == '[' || c == '{') {
-            ++depth;
-            continue;
-        }
-        if (c == ')' || c == ']' || c == '}') {
-            --depth;
-            continue;
-        }
-        if (depth == 0 && i > 0 &&
-            (c == '+' || c == '-' || c == '*' || c == '/' || c == '%' || c == '^' || c == '&' ||
-             c == '|' || c == '<' || c == '>')) {
-            return i;
-        }
-    }
-    return std::string::npos;
-}
-
-std::string top_level_operator_text(const std::string& expr, size_t pos) {
-    if (pos + 1 < expr.size()) {
-        const std::string two = expr.substr(pos, 2);
-        if (two == "<<" || two == ">>") {
-            return two;
-        }
-    }
-    return pos < expr.size() ? expr.substr(pos, 1) : std::string{};
-}
-
 bool is_plain_identifier(const std::string& expr) {
     if (expr.empty() ||
         (std::isalpha(static_cast<unsigned char>(expr.front())) == 0 && expr.front() != '_')) {
