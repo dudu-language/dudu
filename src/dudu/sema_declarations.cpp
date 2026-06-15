@@ -328,23 +328,23 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                 }
             }
             if (is_override) {
-                const FunctionDecl* base_method = nullptr;
+                std::optional<InheritedMethod> base_method;
                 for (const std::string& base : klass.base_classes) {
-                    base_method = find_method_decl(symbols, base, method.name);
-                    if (base_method != nullptr) {
+                    base_method = find_inherited_method(symbols, base, method.name);
+                    if (base_method) {
                         break;
                     }
                 }
-                if (base_method == nullptr) {
+                if (!base_method) {
                     fail(method.location, "@override method has no matching base method: " +
                                               klass.name + "." + method.name);
                 }
                 if (!same_signature(method_signature_without_self(method),
-                                    method_signature_without_self(*base_method))) {
+                                    base_method->signature)) {
                     fail(method.location, "@override signature does not match base method: " +
                                               klass.name + "." + method.name);
                 }
-                if (!is_virtual_like(*base_method)) {
+                if (!is_virtual_like(*base_method->method)) {
                     fail(method.location, "@override target must be @virtual or @abstract: " +
                                               klass.name + "." + method.name);
                 }

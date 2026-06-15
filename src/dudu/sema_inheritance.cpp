@@ -3,6 +3,7 @@
 #include "dudu/ast_parse_utils.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/decorators.hpp"
+#include "dudu/sema_method_templates.hpp"
 
 #include <algorithm>
 #include <map>
@@ -70,10 +71,23 @@ FunctionSignature inherited_method_signature_without_self(const FunctionDecl& me
     return signature;
 }
 
-std::string abstract_key(const FunctionDecl& method) {
-    const FunctionSignature signature = inherited_method_signature_without_self(method);
+FunctionSignature inherited_method_signature_for_class_type(const ClassDecl& owner,
+                                                            const std::string& receiver_type,
+                                                            const FunctionDecl& method) {
+    FunctionSignature signature = inherited_method_signature_without_self(method);
+    const std::vector<std::string> receiver_args = template_args_from_type(receiver_type);
+    for (std::string& param : signature.params) {
+        param = substitute_class_template_type(std::move(param), owner.generic_params,
+                                               receiver_args);
+    }
+    signature.return_type = substitute_class_template_type(
+        std::move(signature.return_type), owner.generic_params, receiver_args);
+    return signature;
+}
+
+std::string signature_key(std::string_view name, const FunctionSignature& signature) {
     std::ostringstream out;
-    out << method.name << '(';
+    out << name << '(';
     for (size_t i = 0; i < signature.params.size(); ++i) {
         if (i > 0) {
             out << ", ";
@@ -84,18 +98,20 @@ std::string abstract_key(const FunctionDecl& method) {
     return out.str();
 }
 
+std::string abstract_key(const ClassDecl& owner, const std::string& receiver_type,
+                         const FunctionDecl& method) {
+    return signature_key(method.name,
+                         inherited_method_signature_for_class_type(owner, receiver_type, method));
+}
+
+std::string method_key_without_self(const ClassDecl& owner, const std::string& receiver_type,
+                                    const FunctionDecl& method) {
+    return signature_key(method.name,
+                         inherited_method_signature_for_class_type(owner, receiver_type, method));
+}
+
 std::string method_key_without_self(const FunctionDecl& method) {
-    const FunctionSignature signature = inherited_method_signature_without_self(method);
-    std::ostringstream out;
-    out << method.name << '(';
-    for (size_t i = 0; i < signature.params.size(); ++i) {
-        if (i > 0) {
-            out << ", ";
-        }
-        out << signature.params[i];
-    }
-    out << ") -> " << signature.return_type;
-    return out.str();
+    return signature_key(method.name, inherited_method_signature_without_self(method));
 }
 
 const ClassDecl* dudu_class_for_base(const Symbols& symbols, const std::string& base) {
@@ -172,6 +188,7 @@ void collect_inherited_fields(const Symbols& symbols, const ClassDecl& klass,
 }
 
 void collect_concrete_methods(const Symbols& symbols, const ClassDecl& klass,
+                              const std::string& receiver_type,
                               std::map<std::string, std::string>& methods,
                               std::set<std::string>& seen) {
     if (!seen.insert(klass.name).second) {
@@ -180,12 +197,12 @@ void collect_concrete_methods(const Symbols& symbols, const ClassDecl& klass,
     for (const FunctionDecl& method : klass.methods) {
         const bool is_static = method.params.empty() || method.params.front().name != "self";
         if (!is_static && !has_decorator(method, "abstract")) {
-            methods.emplace(method_key_without_self(method), klass.name);
+            methods.emplace(method_key_without_self(klass, receiver_type, method), klass.name);
         }
     }
     for (const std::string& base : klass.base_classes) {
         if (const ClassDecl* parent = dudu_class_for_base(symbols, base)) {
-            collect_concrete_methods(symbols, *parent, methods, seen);
+            collect_concrete_methods(symbols, *parent, base, methods, seen);
         }
     }
 }
@@ -215,7 +232,7 @@ std::vector<std::string> unresolved_abstract_methods_impl(const Symbols& symbols
         if (method.params.empty() || method.params.front().name != "self") {
             continue;
         }
-        const std::string key = abstract_key(method);
+        const std::string key = abstract_key(*klass->second, type, method);
         if (has_decorator(method, "abstract")) {
             unresolved[key] = key;
         } else {
@@ -272,6 +289,36 @@ bool is_abstract_class_type(const Symbols& symbols, const std::string& type) {
 
 FunctionSignature method_signature_without_self(const FunctionDecl& method) {
     return inherited_method_signature_without_self(method);
+}
+
+FunctionSignature inherited_method_signature_for_type(const ClassDecl& owner,
+                                                      const std::string& receiver_type,
+                                                      const FunctionDecl& method) {
+    return inherited_method_signature_for_class_type(owner, receiver_type, method);
+}
+
+std::optional<InheritedMethod> find_inherited_method(const Symbols& symbols,
+                                                     const std::string& type,
+                                                     const std::string& name) {
+    const auto klass = symbols.classes.find(unwrap_type(symbols, type));
+    if (klass == symbols.classes.end()) {
+        return std::nullopt;
+    }
+    for (const FunctionDecl& method : klass->second->methods) {
+        if (method.name == name) {
+            return InheritedMethod{
+                .method = &method,
+                .signature = inherited_method_signature_for_class_type(*klass->second, type,
+                                                                       method),
+            };
+        }
+    }
+    for (const std::string& base : klass->second->base_classes) {
+        if (auto method = find_inherited_method(symbols, base, name)) {
+            return method;
+        }
+    }
+    return std::nullopt;
 }
 
 const FunctionDecl* find_method_decl(const Symbols& symbols, const std::string& type,
@@ -343,7 +390,7 @@ void check_multiple_inheritance_rules(const Symbols& symbols, const ClassDecl& k
 
         std::map<std::string, std::string> methods;
         std::set<std::string> method_seen;
-        collect_concrete_methods(symbols, *parent, methods, method_seen);
+        collect_concrete_methods(symbols, *parent, base, methods, method_seen);
         for (const auto& [key, owner] : methods) {
             if (const auto existing = inherited_concrete_methods.find(key);
                 existing != inherited_concrete_methods.end() && existing->second != owner &&

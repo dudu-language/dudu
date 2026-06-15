@@ -65,6 +65,7 @@ compile_and_expect generic_stack 42
 compile_and_expect generic_substitution_shapes 42
 compile_and_expect generic_vec2 42
 compile_and_expect inheritance_abstract 42
+compile_and_expect inheritance_generic_base 42
 compile_and_expect inheritance_super_method 42
 compile_and_expect inheritance_super_init 42
 compile_and_expect inheritance_virtual_override 42

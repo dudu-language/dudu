@@ -384,7 +384,8 @@ push. They are not release packaging work.
    lowers to a virtual destructor in those classes. An autograd-style graph
    fixture covers abstract base nodes, derived operation nodes, derived-to-base
    raw pointers, virtual dispatch through base pointers, and method calls
-   through pointer-typed member fields.
+   through pointer-typed member fields. Generic Dudu-native bases such as
+   `Repository[Player]` substitute type parameters during override checking.
 
 8. Macro Surface Prerequisites
 

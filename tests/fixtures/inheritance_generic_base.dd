@@ -1,0 +1,23 @@
+class Player:
+    hp: i32
+
+
+class Repository[T]:
+    @abstract
+    def get(self, id: u64) -> Option[T]:
+
+
+class PlayerRepository(Repository[Player]):
+    @override
+    def get(self, id: u64) -> Option[Player]:
+        return Player(i32(id))
+
+
+def main() -> i32:
+    repo: PlayerRepository = PlayerRepository()
+    value: Option[Player] = repo.get(42)
+    match value:
+        case Some(player):
+            return player.hp
+        case None:
+            return 1

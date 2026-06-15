@@ -410,6 +410,12 @@ class PlayerRepository(Repository[Player]):
 The generics plan owns template instantiation rules. The inheritance checker
 must see the instantiated base surface when validating overrides.
 
+Status: generic Dudu-native bases such as `Repository[Player]` are supported
+for override checking. The inherited base method signature is substituted
+through the base type arguments before comparing against the derived method, so
+`def get(...) -> Option[Player]` correctly overrides
+`def get(...) -> Option[T]` from `Repository[T]`.
+
 ## Pattern Matching
 
 Inheritance does not replace sum types. If the set of variants is known and
@@ -589,4 +595,6 @@ field declaration where possible.
 - Virtual destructor policy is handled for Dudu-native polymorphic classes.
 - Imported C++ inherited methods remain callable.
 - Imported C++ derived/base pointer and reference conversions work.
+- Generic Dudu-native base classes substitute type parameters during override
+  checks.
 - Static fields use `static[T]`, and `class.name` works inside class scope.
