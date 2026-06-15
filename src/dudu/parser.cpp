@@ -141,7 +141,11 @@ class Parser {
     Decorator parse_decorator(const Token& at_token) {
         std::string text = join_until({TokenKind::Newline});
         consume(TokenKind::Newline, "expected newline after decorator");
-        return {.text = std::move(text), .location = at_token.location};
+        Decorator decorator;
+        decorator.location = at_token.location;
+        decorator.expr = parse_expr_text(text, at_token.location);
+        decorator.text = std::move(text);
+        return decorator;
     }
 
     ImportDecl parse_import(const Token& start) {

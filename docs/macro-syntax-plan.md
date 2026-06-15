@@ -20,6 +20,10 @@ language.
   code when useful.
 - Macros should operate on AST nodes where possible.
 
+Status: decorators now keep a parsed expression node alongside their original
+text. Existing compiler-recognized decorators still use the stable text helpers
+where convenient, but future macro/decorator work has an AST-backed input shape.
+
 ## Decorator Macros
 
 Declaration macros use Python-style decorators.

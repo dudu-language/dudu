@@ -367,7 +367,10 @@ push. They are not release packaging work.
 
    Start with target syntax for derives, field attributes, serde-like codegen,
    tests, reflection metadata, binary serialization, and binding generation.
-   Prefer AST-backed declaration macros over raw string macros.
+   Prefer AST-backed declaration macros over raw string macros. Decorators now
+   preserve parsed expression nodes alongside their original text, giving this
+   work a structured entry point while existing compiler-recognized decorators
+   remain stable.
 
 9. Native Header Hardening
 

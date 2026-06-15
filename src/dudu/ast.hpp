@@ -30,11 +30,6 @@ struct ImportDecl {
     SourceLocation location;
 };
 
-struct Decorator {
-    std::string text;
-    SourceLocation location;
-};
-
 enum class TypeKind {
     Unknown,
     Named,
@@ -138,6 +133,12 @@ struct Expr {
     std::vector<Expr> children;
     SourceLocation location;
     SourceRange range;
+};
+
+struct Decorator {
+    std::string text;
+    Expr expr;
+    SourceLocation location;
 };
 
 struct FieldDecl {

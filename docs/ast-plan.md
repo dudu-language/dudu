@@ -708,6 +708,9 @@ nodes instead of raw initializer strings.
 Module constants, class constants, static fields, and `static_assert`
 declarations now store parsed expression nodes. C++ emission and semantic-token
 collection use those declaration expression nodes instead of raw strings.
+Decorators now keep parsed expression nodes alongside their original text,
+giving macro/decorator work an AST-backed entry point without breaking existing
+compiler-recognized decorator checks.
 Enum value initializers now store parsed expression nodes as well; enum C++
 emission and semantic-token collection use those nodes.
 Simple integer constant evaluation for `static_assert` failure diagnostics uses
