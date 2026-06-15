@@ -350,11 +350,13 @@ push. They are not release packaging work.
    generic type parameter, which supports target examples such as `Vec2[T]`.
    Dudu-native generic instantiation substitutes parsed type nodes for nested
    templates, fixed arrays, wrappers, and function types. Non-type parameters,
-   inferred method type arguments, and richer instantiated diagnostics remain.
+   return-context-only inferred method type arguments, and richer instantiated
+   diagnostics remain.
    Multi-parameter generic functions and classes such as `Pair[str, i32]`
    substitute receiver member types through the declared class generic
    parameter names. Target fixtures now cover `Stack[T]`, `Result[T, E]`
-   helpers, and generic span math.
+   helpers, generic span math, and inferred generic method calls such as
+   `box.id(42)`.
 
 6. Sum Types And Pattern Matching
 
@@ -492,6 +494,8 @@ push. They are not release packaging work.
    The implementation target is not "simple apps use `dudu build`, real apps
    leave for CMake." The target is "real apps still use `dudu build`, and Dudu
    chooses or is told which native backend to drive."
+   CMake is a first-class native ecosystem backend, not a fallback that users
+   must escape into when `dudu build` stops being serious.
 
    Status: `dudu build` and `dudu run` currently use the direct backend.
    Native inputs such as include paths, library paths, libraries, flags,

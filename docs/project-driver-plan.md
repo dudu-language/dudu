@@ -349,6 +349,13 @@ Current implementation reality:
 The next build-driver work should close that gap without changing the front
 door: users should still type `dudu build`, `dudu run`, and `dudu test`.
 
+This is not modeled after a language build tool that owns the whole world.
+Dudu sits directly on the C/C++ ecosystem, so CMake support is not a fallback
+for "serious" apps and it is not an admission that `dudu build` failed. It is
+one of the backends that lets the same front-door command drive projects with
+native package discovery, platform generators, vendored C/C++ dependencies,
+and user-owned CMake files.
+
 Backend selection rules should be boring:
 
 - If the manifest explicitly selects a backend, use it.

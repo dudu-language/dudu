@@ -117,6 +117,23 @@ std::string infer_call_ast(const FunctionScope& scope, const Expr& expr,
             const bool foreign_receiver =
                 foreign_cpp_type_name(scope.symbols, resolve_alias(scope.symbols, receiver_type));
             FunctionSignature signature;
+            if (!foreign_receiver) {
+                if (const auto inferred = inferred_generic_method_signature_for_type(
+                        scope, receiver_type, member.name, expr.children, use_location,
+                        {.infer_expr =
+                             [](const FunctionScope& nested, const Expr& arg,
+                                const SourceLocation* location) {
+                                 return infer_expr_ast(nested, arg, location);
+                             },
+                         .can_assign =
+                             [](const FunctionScope& nested, const std::string& expected,
+                                const Expr& value, const std::string& got) {
+                                 return can_assign_ast(nested, expected, value, got);
+                             }})) {
+                    check_call_args_ast(scope, callee, *inferred, expr.children, use_location);
+                    return inferred->return_type;
+                }
+            }
             if (method_signature_for_type(scope.symbols, receiver_type, member.name, signature,
                                           foreign_receiver ? nullptr : use_location)) {
                 const std::vector<FunctionSignature> signatures =

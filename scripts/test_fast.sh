@@ -61,6 +61,7 @@ compile_and_expect generic_identity 42
 compile_and_expect generic_inferred_calls 42
 compile_and_expect generic_inferred_structured 42
 compile_and_expect generic_method 42
+compile_and_expect generic_method_inferred 42
 compile_and_expect generic_method_multi 42
 compile_and_expect generic_method_receiver_ast 42
 compile_and_expect generic_pair 42

@@ -415,6 +415,42 @@ std::optional<std::string> swizzle_assignment_type_for_type(const Symbols& symbo
     return swizzle_type_for_type(symbols, receiver_type, swizzle);
 }
 
+FunctionSignature instantiate_method_signature(const ClassDecl& klass, const FunctionDecl& method,
+                                               const std::vector<std::string>& receiver_args,
+                                               const std::vector<std::string>& method_args) {
+    FunctionSignature signature;
+    const size_t first_param =
+        !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
+    for (size_t i = first_param; i < method.params.size(); ++i) {
+        std::string param_type = substitute_method_template_type(
+            method.params[i].type, method.generic_params, method_args);
+        param_type = substitute_class_template_type(std::move(param_type), klass.generic_params,
+                                                    receiver_args);
+        signature.params.push_back(
+            substitute_receiver_template_type(std::move(param_type), receiver_args));
+    }
+    signature.return_type =
+        method.return_type.empty()
+            ? "void"
+            : substitute_method_template_type(method.return_type, method.generic_params,
+                                              method_args);
+    signature.return_type =
+        substitute_class_template_type(std::move(signature.return_type), klass.generic_params,
+                                       receiver_args);
+    signature.return_type =
+        substitute_receiver_template_type(std::move(signature.return_type), receiver_args);
+    return signature;
+}
+
+std::vector<std::string> type_ref_texts(const std::vector<TypeRef>& types) {
+    std::vector<std::string> out;
+    out.reserve(types.size());
+    for (const TypeRef& type : types) {
+        out.push_back(type.text);
+    }
+    return out;
+}
+
 bool method_signature_for_type(const Symbols& symbols, std::string receiver_type,
                                const std::string& method_name, FunctionSignature& signature,
                                const SourceLocation* location) {
@@ -442,24 +478,8 @@ bool method_signature_for_type(const Symbols& symbols, std::string receiver_type
             }
             return false;
         }
-        const size_t first_param =
-            !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
-        for (size_t i = first_param; i < method.params.size(); ++i) {
-            std::string param_type = substitute_method_template_type(
-                method.params[i].type, method.generic_params, method_args);
-            param_type = substitute_class_template_type(
-                std::move(param_type), klass->second->generic_params, receiver_args);
-            signature.params.push_back(
-                substitute_receiver_template_type(std::move(param_type), receiver_args));
-        }
-        signature.return_type = method.return_type.empty()
-                                    ? "void"
-                                    : substitute_method_template_type(
-                                          method.return_type, method.generic_params, method_args);
-        signature.return_type = substitute_class_template_type(
-            std::move(signature.return_type), klass->second->generic_params, receiver_args);
-        signature.return_type =
-            substitute_receiver_template_type(std::move(signature.return_type), receiver_args);
+        signature =
+            instantiate_method_signature(*klass->second, method, receiver_args, method_args);
         return true;
     }
     for (const std::string& base : klass->second->base_classes) {
@@ -471,6 +491,40 @@ bool method_signature_for_type(const Symbols& symbols, std::string receiver_type
         fail(*location, "unknown method: " + type + "." + method_name);
     }
     return false;
+}
+
+std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
+    const FunctionScope& scope, std::string receiver_type, const std::string& method_name,
+    const std::vector<Expr>& args, const SourceLocation* location,
+    const GenericInferCallbacks& callbacks) {
+    const std::string templated_receiver = receiver_template_type(scope.symbols, receiver_type);
+    const std::vector<std::string> receiver_args = template_args_from_type(templated_receiver);
+    const std::string type = unwrap_receiver_type(scope.symbols, std::move(receiver_type));
+    const auto klass = scope.symbols.classes.find(type);
+    if (klass == scope.symbols.classes.end()) {
+        return std::nullopt;
+    }
+    for (const FunctionDecl& method : klass->second->methods) {
+        if (method.name != method_name || method.generic_params.empty()) {
+            continue;
+        }
+        const size_t first_param =
+            !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
+        const auto inferred = infer_generic_method_type_args(
+            scope, method, type + "." + method_name, args, first_param, location, callbacks);
+        if (!inferred) {
+            return std::nullopt;
+        }
+        return instantiate_method_signature(*klass->second, method, receiver_args,
+                                            type_ref_texts(*inferred));
+    }
+    for (const std::string& base : klass->second->base_classes) {
+        if (const auto signature = inferred_generic_method_signature_for_type(
+                scope, base, method_name, args, nullptr, callbacks)) {
+            return signature;
+        }
+    }
+    return std::nullopt;
 }
 
 std::vector<FunctionSignature> method_signatures_for_type(const Symbols& symbols,
@@ -497,26 +551,8 @@ std::vector<FunctionSignature> method_signatures_for_type(const Symbols& symbols
         if (method.generic_params.size() != method_args.size()) {
             continue;
         }
-        FunctionSignature signature;
-        const size_t first_param =
-            !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
-        for (size_t i = first_param; i < method.params.size(); ++i) {
-            std::string param_type = substitute_method_template_type(
-                method.params[i].type, method.generic_params, method_args);
-            param_type = substitute_class_template_type(
-                std::move(param_type), klass->second->generic_params, receiver_args);
-            signature.params.push_back(
-                substitute_receiver_template_type(std::move(param_type), receiver_args));
-        }
-        signature.return_type = method.return_type.empty()
-                                    ? "void"
-                                    : substitute_method_template_type(
-                                          method.return_type, method.generic_params, method_args);
-        signature.return_type = substitute_class_template_type(
-            std::move(signature.return_type), klass->second->generic_params, receiver_args);
-        signature.return_type =
-            substitute_receiver_template_type(std::move(signature.return_type), receiver_args);
-        out.push_back(std::move(signature));
+        out.push_back(
+            instantiate_method_signature(*klass->second, method, receiver_args, method_args));
     }
     for (const std::string& base : klass->second->base_classes) {
         std::vector<FunctionSignature> base_signatures =

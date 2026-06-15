@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dudu/sema_context.hpp"
+#include "dudu/sema_generics.hpp"
 
 #include <map>
 #include <optional>
@@ -34,6 +35,10 @@ std::optional<std::string> swizzle_assignment_type_for_type(const Symbols& symbo
 bool method_signature_for_type(const Symbols& symbols, std::string receiver_type,
                                const std::string& method_name, FunctionSignature& signature,
                                const SourceLocation* location);
+std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
+    const FunctionScope& scope, std::string receiver_type, const std::string& method_name,
+    const std::vector<Expr>& args, const SourceLocation* location,
+    const GenericInferCallbacks& callbacks);
 std::vector<FunctionSignature> method_signatures_for_type(const Symbols& symbols,
                                                           std::string receiver_type,
                                                           const std::string& method_name);

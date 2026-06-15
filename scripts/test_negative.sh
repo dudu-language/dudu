@@ -137,6 +137,7 @@ expect_fail bad_generic_inferred_conflict --check "conflicting inferred type arg
 expect_fail bad_generic_box_arg_type --check "constructor Box\\[i32\\] argument 1 expects i32, got bool"
 expect_fail bad_generic_method_arg_type --check "argument 1 for box.id\\[i32\\] expects i32, got bool"
 expect_fail bad_generic_method_arity --check "method Box.choose expects 2 type arguments, got 1"
+expect_fail bad_generic_method_infer_return --check "cannot infer type argument T for Box.make"
 expect_fail bad_generic_pair_arg_type --check "constructor Pair\\[str, i32\\] argument 1 expects str, got i32"
 expect_fail bad_empty_template_call --emit-cpp "template call expects at least 1 type argument"
 expect_fail bad_non_callable_template_call --emit-cpp "unsupported template call expression: (1)"

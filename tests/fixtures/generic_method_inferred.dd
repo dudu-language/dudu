@@ -1,0 +1,22 @@
+class Pair[A, B]:
+    first: A
+    second: B
+
+
+class Box[T]:
+    value: T
+
+    def id[U](self, value: U) -> U:
+        return value
+
+    def choose[U, V](self, left: U, right: V) -> V:
+        return right
+
+    def with_value[U](self, other: U) -> Pair[T, U]:
+        return Pair[T, U](self.value, other)
+
+
+def main() -> i32:
+    box: Box[i32] = Box[i32](10)
+    pair: Pair[i32, i32] = box.with_value(20)
+    return box.id(pair.first) + box.choose("ignored", pair.second + 12)

@@ -1,0 +1,10 @@
+class Box:
+    value: i32
+
+    def make[T](self) -> T:
+        return T()
+
+
+def main() -> i32:
+    box: Box = Box(1)
+    return box.make()

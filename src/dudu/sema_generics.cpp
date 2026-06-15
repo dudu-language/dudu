@@ -158,6 +158,52 @@ infer_generic_call_type_args(const FunctionScope& scope, const FunctionDecl& fn,
     return out;
 }
 
+std::optional<std::vector<TypeRef>>
+infer_generic_method_type_args(const FunctionScope& scope, const FunctionDecl& method,
+                               const std::string& callee, const std::vector<Expr>& args,
+                               size_t first_param, const SourceLocation* location,
+                               const GenericInferCallbacks& callbacks) {
+    if (method.generic_params.empty()) {
+        return std::nullopt;
+    }
+    const size_t expected_args =
+        method.params.size() >= first_param ? method.params.size() - first_param : 0;
+    if (location != nullptr && args.size() != expected_args) {
+        sema_fail(*location, "method " + callee + " expects " + std::to_string(expected_args) +
+                                 " arguments, got " + std::to_string(args.size()));
+    }
+    if (args.size() != expected_args) {
+        return std::nullopt;
+    }
+    std::map<std::string, std::string> bindings;
+    for (size_t i = 0; i < args.size(); ++i) {
+        const std::string got = callbacks.infer_expr(scope, args[i], location);
+        std::string error;
+        if (!infer_generic_binding(method.params[first_param + i].type_ref, parse_type_text(got),
+                                   method.generic_params, bindings, error)) {
+            if (location != nullptr) {
+                sema_fail(node_location(*location, args[i]), error + " for " + callee);
+            }
+            return std::nullopt;
+        }
+    }
+    std::vector<TypeRef> out;
+    out.reserve(method.generic_params.size());
+    for (const std::string& param : method.generic_params) {
+        const auto binding = bindings.find(param);
+        if (binding == bindings.end() || binding->second.empty() || binding->second == "auto" ||
+            binding->second == "list" || binding->second == "dict" || binding->second == "set") {
+            if (location != nullptr) {
+                sema_fail(*location, "cannot infer type argument " + param + " for " + callee);
+            }
+            return std::nullopt;
+        }
+        out.push_back(
+            parse_type_text(binding->second, location == nullptr ? method.location : *location));
+    }
+    return out;
+}
+
 FunctionSignature instantiate_generic_signature(const FunctionDecl& fn,
                                                 const std::vector<TypeRef>& args) {
     const std::map<std::string, std::string> substitutions =
