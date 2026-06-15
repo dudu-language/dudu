@@ -306,7 +306,10 @@ size_t find_top_level_member_dot(std::string_view text) {
         } else if (bracket_depth == 0 && paren_depth == 0 && brace_depth == 0 && c == '.') {
             const char prev = i == 0 ? '\0' : text[i - 1];
             const char next = i + 1 < text.size() ? text[i + 1] : '\0';
-            if (std::isdigit(static_cast<unsigned char>(prev)) == 0 && is_identifier_start(next)) {
+            const bool numeric_decimal =
+                std::isdigit(static_cast<unsigned char>(prev)) != 0 &&
+                std::isdigit(static_cast<unsigned char>(next)) != 0;
+            if (!numeric_decimal && is_identifier_start(next)) {
                 return i;
             }
         }

@@ -425,6 +425,9 @@ void test_project_driver_config(const std::filesystem::path& root) {
                "entry = \"tools/tool.dd\"\n"
                "kind = \"executable\"\n"
                "\n"
+               "[targets.tool.pkg]\n"
+               "libs = [\"sqlite3\"]\n"
+               "\n"
                "[targets.tests]\n"
                "entry = \"tests/main.dd\"\n"
                "kind = \"executable\"\n"
@@ -445,6 +448,7 @@ void test_project_driver_config(const std::filesystem::path& root) {
     assert(config.build_dir == "out");
     assert(config.targets.size() == 2);
     assert(config.targets.at("tool").main == "tools/tool.dd");
+    assert(config.targets.at("tool").pkg_config_packages.size() == 1);
     assert(config.targets.at("tests").target_mode == "hosted");
     const dudu::ProjectConfig tests_config = dudu::apply_project_target(config, "tests");
     assert(tests_config.name == "tests");

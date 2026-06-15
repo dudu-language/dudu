@@ -9,7 +9,8 @@ std::string native_function_key(const NativeFunctionDecl& fn) {
     for (const std::string& param : fn.params) {
         key += param + ",";
     }
-    return key + (fn.variadic ? "..." : "") + ")->" + fn.return_type;
+    return key + (fn.variadic ? "..." : "") + ")->" + fn.return_type + "/" +
+           std::to_string(fn.min_params);
 }
 
 void append_unique_native_functions(std::vector<NativeFunctionDecl>& target,

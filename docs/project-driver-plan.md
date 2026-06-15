@@ -183,6 +183,23 @@ entry = "tests/main.dd"
 kind = "executable"
 ```
 
+Targets can carry native build settings without leaking them into every other
+target:
+
+```toml
+[targets.app.pkg]
+libs = ["raylib"]
+
+[targets.tools.pkg]
+libs = ["sdl3"]
+
+[targets.tools.sources]
+cpp = ["third_party/imgui/imgui.cpp"]
+```
+
+When a command receives a file path that matches a target entry, the driver uses
+that target's settings.
+
 Expected commands:
 
 ```text

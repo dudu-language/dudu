@@ -76,6 +76,23 @@ void test_templated_pointer_cast_emission() {
            std::string::npos);
 }
 
+void test_pointer_to_const_binding_emission() {
+    const dudu::ModuleAst module =
+        dudu::parse_source("def read_value(value: * const[f32]) -> const[f32]:\n"
+                           "    return *value\n"
+                           "\n"
+                           "def main() -> i32:\n"
+                           "    values: list[f32] = [1.0]\n"
+                           "    out: const[f32] = read_value(&values[0])\n"
+                           "    return i32(f32(out))\n",
+                           "pointer_to_const_binding.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+    const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find("float const* value") != std::string::npos ||
+           cpp.find("const float* value") != std::string::npos);
+    assert(cpp.find("read_value((&values[0]))") != std::string::npos);
+}
+
 void test_offsetof_field_emission() {
     const dudu::ModuleAst module =
         dudu::parse_source("class Packet:\n"
@@ -109,6 +126,7 @@ int main() {
         test_pointer_member_emission(root);
         test_value_member_emission();
         test_templated_pointer_cast_emission();
+        test_pointer_to_const_binding_emission();
         test_offsetof_field_emission();
         test_array_literal_scalar_ast_emission();
     } catch (const std::exception& error) {

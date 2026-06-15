@@ -283,6 +283,7 @@ Symbols collect_symbols(const ModuleAst& module) {
         FunctionSignature signature;
         signature.params = fn.params;
         signature.return_type = fn.return_type.empty() ? "auto" : fn.return_type;
+        signature.min_params = fn.min_params;
         signature.variadic = fn.variadic;
         symbols.native_function_signatures[fn.name].push_back(std::move(signature));
     }

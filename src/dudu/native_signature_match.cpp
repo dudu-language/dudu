@@ -3,6 +3,7 @@
 #include "dudu/cpp_lower.hpp"
 #include "dudu/source.hpp"
 
+#include <algorithm>
 #include <cctype>
 #include <map>
 #include <optional>
@@ -20,8 +21,11 @@ using PackBindingMap = std::map<std::string, std::vector<std::string>>;
 }
 
 bool arity_matches(const FunctionSignature& signature, size_t arg_count) {
-    return signature.variadic ? arg_count >= signature.params.size()
-                              : arg_count == signature.params.size();
+    const size_t min_params = signature.min_params < 0
+                                  ? signature.params.size()
+                                  : static_cast<size_t>(signature.min_params);
+    return signature.variadic ? arg_count >= min_params
+                              : arg_count >= min_params && arg_count <= signature.params.size();
 }
 
 bool native_numeric_promotion(const std::string& expected, const std::string& got) {
@@ -267,6 +271,10 @@ std::string signature_text(const std::string& callee, const FunctionSignature& s
             out << ", ";
         out << "...";
     }
+    if (signature.min_params >= 0 &&
+        static_cast<size_t>(signature.min_params) < signature.params.size()) {
+        out << "; min " << signature.min_params;
+    }
     out << ") -> " << signature.return_type;
     return out.str();
 }
@@ -307,7 +315,8 @@ std::optional<FunctionSignature> match_signature_ast(const FunctionScope& scope,
                                 template_pack_placeholder(signature.params.back()).has_value();
     const size_t fixed_params =
         has_pack_param ? signature.params.size() - 1 : signature.params.size();
-    for (size_t i = 0; i < fixed_params; ++i) {
+    const size_t provided_fixed = std::min(fixed_params, args.size());
+    for (size_t i = 0; i < provided_fixed; ++i) {
         const std::string got = infer_expr(scope, args[i], location);
         if (!can_assign(signature.params[i], args[i], got) &&
             !native_numeric_promotion(signature.params[i], got) &&

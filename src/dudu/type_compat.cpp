@@ -5,6 +5,7 @@
 
 #include <cctype>
 #include <set>
+#include <string_view>
 
 namespace dudu {
 namespace {
@@ -114,7 +115,15 @@ std::string normalize_tuple_element(std::string type) {
 }
 
 std::string normalize_cpp_type_artifacts(std::string type) {
-    return normalize_tuple_element(normalize_type_traits(std::move(type)));
+    type = normalize_tuple_element(normalize_type_traits(std::move(type)));
+    for (const std::string_view marker : {"* const[", "& const[", "* volatile[", "& volatile["}) {
+        size_t pos = type.find(marker);
+        while (pos != std::string::npos) {
+            type.erase(pos + 1, 1);
+            pos = type.find(marker, pos + 1);
+        }
+    }
+    return type;
 }
 
 bool is_string_type(const std::string& type) {

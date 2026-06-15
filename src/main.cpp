@@ -240,6 +240,14 @@ Options resolve_project_input(Options options) {
             if (options.input.empty()) {
                 fail("target has no entry: " + input);
             }
+        } else if (std::filesystem::exists(options.input)) {
+            const std::filesystem::path normalized_input = options.input.lexically_normal();
+            for (const auto& [name, target] : project.targets) {
+                if (!target.main.empty() && target.main.lexically_normal() == normalized_input) {
+                    options.target_name = name;
+                    break;
+                }
+            }
         }
         return options;
     }

@@ -94,6 +94,37 @@ void test_native_header_type_scan(const std::filesystem::path& root) {
     assert(std::filesystem::exists(config.build_dir / "dudu-header-cache"));
 }
 
+void test_native_single_underscore_function_macros(const std::filesystem::path& root) {
+    const std::filesystem::path source_dir = root / "build" / "native-macro-scan";
+    const std::filesystem::path header_dir = root / "build" / "native-macro-include";
+    const std::filesystem::path header = header_dir / "single_underscore_macro.hpp";
+    std::filesystem::remove_all(source_dir);
+    std::filesystem::remove_all(header_dir);
+    std::filesystem::create_directories(source_dir);
+    std::filesystem::create_directories(header_dir);
+
+    {
+        std::ofstream out(header);
+        out << "#pragma once\n"
+               "#define _dudu_macro_call(a, b) ((a) + (b))\n"
+               "#define __dudu_private_call(a) (a)\n"
+               "#define _DUDU_PRIVATE_VALUE 3\n";
+    }
+    dudu::ModuleAst module =
+        dudu::parse_source("import cpp \"single_underscore_macro.hpp\"\n"
+                           "\n"
+                           "def main() -> i32:\n"
+                           "    return _dudu_macro_call(20, 22)\n",
+                           source_dir / "main.dd");
+    dudu::ProjectConfig config;
+    config.build_dir = source_dir / "build";
+    config.include_dirs = {"../native-macro-include", "build/native-macro-include"};
+    dudu::merge_native_header_types(module, {.config = config, .source_dir = source_dir});
+    dudu::analyze_module(module, {.check_bodies = true});
+    const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find("_dudu_macro_call(20, 22)") != std::string::npos);
+}
+
 void test_native_call_arity(const std::filesystem::path& root) {
     dudu::ModuleAst module = dudu::parse_source("import c \"native_headers/simple_c.h\"\n"
                                                 "\n"
@@ -197,6 +228,7 @@ int main() {
         const std::filesystem::path root = DUDU_REPO_ROOT;
         test_native_type_declaration_emission();
         test_native_header_type_scan(root);
+        test_native_single_underscore_function_macros(root);
         test_native_call_arity(root);
         test_native_header_collision(root);
         test_native_header_cache_invalidates_local_header(root);

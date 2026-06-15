@@ -134,6 +134,12 @@ kind = "executable"
 [targets.tests]
 entry = "tests/main.dd"
 kind = "executable"
+
+[targets.app.pkg]
+libs = ["raylib"]
+
+[targets.tests.sources]
+cpp = ["tests/support.cpp"]
 ```
 
 ```sh
@@ -141,6 +147,9 @@ kind = "executable"
 ../build/dudu build tests
 ../build/dudu test
 ```
+
+If an input file matches a target entry, Dudu applies that target's settings for
+direct file builds too.
 
 Generated headers are available for C and C++ integration:
 

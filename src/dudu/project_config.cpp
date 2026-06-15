@@ -119,6 +119,38 @@ bool starts_with(std::string_view text, std::string_view prefix) {
     return text.size() >= prefix.size() && text.substr(0, prefix.size()) == prefix;
 }
 
+void append_all(std::vector<std::string>& target, const std::vector<std::string>& source) {
+    target.insert(target.end(), source.begin(), source.end());
+}
+
+bool parse_target_dependency(ProjectTarget& target, const std::string& section,
+                             const std::filesystem::path& path, const std::string& line,
+                             const std::string& name, const std::string& value) {
+    if ((section == "cc" && name == "include_dirs") || (section == "include" && name == "paths")) {
+        target.include_dirs = parse_string_array(path, line, value);
+    } else if (section == "sources" && name == "cpp") {
+        target.cpp_sources = parse_string_array(path, line, value);
+    } else if (section == "sources" && name == "c") {
+        target.c_sources = parse_string_array(path, line, value);
+    } else if ((section == "cc" && name == "lib_dirs") || (section == "link" && name == "paths")) {
+        target.lib_dirs = parse_string_array(path, line, value);
+    } else if ((section == "cc" && name == "libs") || (section == "link" && name == "libs")) {
+        target.libs = parse_string_array(path, line, value);
+    } else if (section == "cc" && name == "defines") {
+        target.defines = parse_string_array(path, line, value);
+    } else if (section == "cc" && name == "flags") {
+        target.flags = parse_string_array(path, line, value);
+    } else if (section == "link" && name == "flags") {
+        target.link_flags = parse_string_array(path, line, value);
+    } else if ((section == "pkg_config" && name == "packages") ||
+               (section == "pkg" && name == "libs")) {
+        target.pkg_config_packages = parse_string_array(path, line, value);
+    } else {
+        return false;
+    }
+    return true;
+}
+
 bool array_is_closed(const std::string& value) {
     char quote = '\0';
     bool escaped = false;
@@ -149,17 +181,27 @@ ProjectConfig apply_project_target(ProjectConfig config, const std::string& targ
     if (found == config.targets.end()) {
         return config;
     }
+    const ProjectTarget& target = found->second;
     config.name = target_name;
-    if (!found->second.main.empty()) {
-        config.main = found->second.main;
+    if (!target.main.empty()) {
+        config.main = target.main;
     }
-    if (!found->second.target_kind.empty()) {
-        config.target_kind = found->second.target_kind;
+    if (!target.target_kind.empty()) {
+        config.target_kind = target.target_kind;
     }
-    if (!found->second.target_mode.empty()) {
-        config.target_mode = found->second.target_mode;
-        config.target_mode_explicit = found->second.target_mode_explicit;
+    if (!target.target_mode.empty()) {
+        config.target_mode = target.target_mode;
+        config.target_mode_explicit = target.target_mode_explicit;
     }
+    append_all(config.c_sources, target.c_sources);
+    append_all(config.cpp_sources, target.cpp_sources);
+    append_all(config.defines, target.defines);
+    append_all(config.flags, target.flags);
+    append_all(config.include_dirs, target.include_dirs);
+    append_all(config.lib_dirs, target.lib_dirs);
+    append_all(config.libs, target.libs);
+    append_all(config.link_flags, target.link_flags);
+    append_all(config.pkg_config_packages, target.pkg_config_packages);
     return config;
 }
 
@@ -200,12 +242,21 @@ ProjectConfig parse_project_config(const std::filesystem::path& path) {
             fail(path, section == "build" ? "invalid [build] entry" : "invalid entry", line);
         }
         if (starts_with(section, "targets.")) {
-            const std::string target_name = section.substr(8);
+            std::string target_name = section.substr(8);
+            std::string target_section;
+            if (const size_t dot = target_name.find('.'); dot != std::string::npos) {
+                target_section = target_name.substr(dot + 1);
+                target_name = target_name.substr(0, dot);
+            }
             if (target_name.empty()) {
                 fail(path, "invalid target section", line);
             }
             ProjectTarget& target = config.targets[target_name];
-            if (name == "entry" || name == "main") {
+            if (!target_section.empty()) {
+                if (!parse_target_dependency(target, target_section, path, line, name, value)) {
+                    fail(path, "unknown [" + section + "] entry", line);
+                }
+            } else if (name == "entry" || name == "main") {
                 target.main = unquote(value);
             } else if (name == "kind") {
                 target.target_kind = unquote(value);

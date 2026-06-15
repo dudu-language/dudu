@@ -105,8 +105,9 @@ void add_unique_class(std::vector<ClassDecl>& out, std::set<std::string>& seen, 
 
 void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                     std::vector<std::pair<int, std::string>>& namespaces,
-                    std::vector<std::pair<int, size_t>>& classes, const SourceLocation& location,
-                    std::string& current_file) {
+                    std::vector<std::pair<int, size_t>>& classes,
+                    std::vector<std::pair<int, size_t>>& functions,
+                    const SourceLocation& location, std::string& current_file) {
     const SourceLocation decl_location = ast_source_location(line, location, current_file);
     if (const std::string concrete_file = ast_concrete_source_file(line); !concrete_file.empty()) {
         current_file = concrete_file;
@@ -132,7 +133,17 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
     while (!classes.empty() && classes.back().first >= depth) {
         classes.pop_back();
     }
+    while (!functions.empty() && functions.back().first >= depth) {
+        functions.pop_back();
+    }
     std::smatch match;
+    if (!functions.empty() && line.find("ParmVarDecl") != std::string::npos &&
+        line.find(" cinit") != std::string::npos) {
+        NativeFunctionDecl& fn = scan.functions[functions.back().second];
+        if (fn.min_params > 0) {
+            --fn.min_params;
+        }
+    }
     if (line.find("NamespaceDecl") != std::string::npos &&
         std::regex_search(line, match, ns_decl)) {
         const std::string name = match[1].str();
@@ -180,12 +191,15 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
             return;
         }
         const std::string signature = match[2].str();
-        scan.functions.push_back(
-            {.name = name,
-             .params = qualify_scoped_types(scan, namespaces, signature_params(signature)),
-             .return_type = qualify_scoped_type(scan, namespaces, signature_return_type(signature)),
-             .variadic = signature.find("...") != std::string::npos,
-             .location = decl_location});
+        NativeFunctionDecl fn;
+        fn.name = name;
+        fn.params = qualify_scoped_types(scan, namespaces, signature_params(signature));
+        fn.return_type = qualify_scoped_type(scan, namespaces, signature_return_type(signature));
+        fn.min_params = static_cast<int>(fn.params.size());
+        fn.variadic = signature.find("...") != std::string::npos;
+        fn.location = decl_location;
+        scan.functions.push_back(std::move(fn));
+        functions.push_back({depth, scan.functions.size() - 1});
     } else if (!classes.empty() && line.find("CXXMethodDecl") != std::string::npos &&
                std::regex_search(line, match, method_decl)) {
         FunctionDecl method;
@@ -273,17 +287,26 @@ MacroParams macro_params(std::string args) {
     return out;
 }
 
+bool public_function_macro_name(const std::string& name) {
+    return !starts_with(name, "__");
+}
+
+bool public_object_macro_name(const std::string& name) {
+    return !starts_with(name, "_");
+}
+
 } // namespace
 
 void parse_ast_dump(NativeHeaderScan& scan, const std::string& dump,
                     const SourceLocation& location) {
     std::vector<std::pair<int, std::string>> namespaces;
     std::vector<std::pair<int, size_t>> classes;
+    std::vector<std::pair<int, size_t>> functions;
     std::string current_file;
     std::istringstream in(dump);
     std::string line;
     while (std::getline(in, line)) {
-        parse_ast_line(scan, line, namespaces, classes, location, current_file);
+        parse_ast_line(scan, line, namespaces, classes, functions, location, current_file);
     }
 }
 
@@ -297,7 +320,7 @@ void parse_macro_dump(NativeHeaderScan& scan, const std::string& dump,
         std::smatch match;
         if (std::regex_search(line, match, function_macro)) {
             const std::string name = match[1].str();
-            if (starts_with(name, "_")) {
+            if (!public_function_macro_name(name)) {
                 continue;
             }
             const MacroParams params = macro_params(match[2].str());
@@ -307,11 +330,12 @@ void parse_macro_dump(NativeHeaderScan& scan, const std::string& dump,
                 {.name = name,
                  .params = std::vector<std::string>(static_cast<size_t>(params.arity), "auto"),
                  .return_type = "auto",
+                 .min_params = params.arity,
                  .variadic = params.variadic,
                  .location = location});
         } else if (std::regex_search(line, match, object_macro)) {
             const std::string name = match[1].str();
-            if (starts_with(name, "_")) {
+            if (!public_object_macro_name(name)) {
                 continue;
             }
             scan.macros.push_back({.name = name, .function_like = false, .location = location});

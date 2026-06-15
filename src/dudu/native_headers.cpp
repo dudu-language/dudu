@@ -34,6 +34,9 @@ std::filesystem::path absolute_from(const std::filesystem::path& base,
                                     const std::filesystem::path& path) {
     return path.is_absolute() ? path : base / path;
 }
+void append_include_flag(std::string& flags, const std::filesystem::path& path) {
+    flags += " " + shell_quote_arg("-I" + path.lexically_normal().string());
+}
 std::string read_text(const std::filesystem::path& path) {
     std::ifstream in(path);
     if (!in) {
@@ -75,10 +78,16 @@ std::string capture_pkg_config_cflags(const std::vector<std::string>& packages) 
     return output;
 }
 std::string scanner_flags(const NativeHeaderOptions& options) {
-    std::string flags = " -I" + shell_quote_arg(options.source_dir.string());
+    std::string flags;
+    append_include_flag(flags, options.source_dir);
     for (const std::string& include_dir : options.config.include_dirs) {
-        flags +=
-            " " + shell_quote_arg("-I" + absolute_from(options.source_dir, include_dir).string());
+        const std::filesystem::path source_relative = absolute_from(options.source_dir, include_dir);
+        const std::filesystem::path cwd_relative =
+            absolute_from(std::filesystem::current_path(), include_dir);
+        append_include_flag(flags, source_relative);
+        if (source_relative.lexically_normal() != cwd_relative.lexically_normal()) {
+            append_include_flag(flags, cwd_relative);
+        }
     }
     for (const std::string& define : options.config.defines) {
         flags += " " + shell_quote_arg("-D" + define);
