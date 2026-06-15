@@ -1645,6 +1645,12 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
         if (is_builtin_call(callee)) {
             return infer_builtin_call_ast(scope, expr, callee, use_location);
         }
+        if (!expr.callee.empty() && expr.callee.front().kind == ExprKind::Lambda) {
+            for (const Expr& arg : expr.children) {
+                (void)infer_expr_ast(scope, arg, use_location);
+            }
+            return "auto";
+        }
         if (!expr.callee.empty() && expr.callee.front().kind == ExprKind::Member &&
             expr.callee.front().children.size() == 1) {
             const Expr& member = expr.callee.front();
@@ -1731,6 +1737,11 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
             if (use_location != nullptr) {
                 fail(*use_location, "unknown function: " + callee);
             }
+        } else if (!expr.callee.empty() && expr.callee.front().kind != ExprKind::Name) {
+            if (use_location != nullptr) {
+                fail(*use_location, "unsupported call expression: " + callee);
+            }
+            return {};
         }
         return infer_expr(scope, expr.text, use_location);
     }

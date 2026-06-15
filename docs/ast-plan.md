@@ -95,6 +95,9 @@ Already structured:
 - imported native namespace calls without scanner metadata, and method calls on
   local `auto` receivers from native APIs, stay on parsed call nodes and return
   `auto` explicitly instead of using raw expression fallback
+- direct parsed lambda calls such as `(lambda value: value + 1)(41)` stay on
+  parsed call nodes, while unsupported non-callable callees such as `(1)(2)`
+  are rejected instead of emitted through raw expression fallback
 - template-call semantic inference and template method lookup use the parsed
   callee expression when reconstructing lookup names
 - generated local type inference for call expressions derives callee lookup

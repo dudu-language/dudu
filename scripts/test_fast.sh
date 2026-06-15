@@ -24,6 +24,7 @@ compile_and_expect dudu_operator_overload 42
 compile_and_expect dudu_operator_bool 42
 compile_and_expect member_expr_receiver 42
 compile_and_expect method_expr_receiver 42
+compile_and_expect lambda_direct_call 42
 compile_and_expect fixed_arrays 42
 compile_and_expect array_explicit_initializer 42
 compile_and_expect array_shape_inference 42
