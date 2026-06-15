@@ -1,0 +1,30 @@
+class Color:
+    r: i32
+    g: i32
+    b: i32
+
+    def luma(self) -> i32:
+        return self.r * 3 + self.g * 6 + self.b
+
+
+def threshold(image: &array[Color][2, 3], cutoff: i32):
+    for y: i32 in range(2):
+        for x: i32 in range(3):
+            if image[y, x].luma() < cutoff:
+                image[y, x] = Color(0, 0, 0)
+
+
+def main() -> i32:
+    image: array[Color] = [
+        [Color(3, 3, 3), Color(1, 1, 1), Color(8, 8, 8)],
+        [Color(2, 2, 2), Color(6, 6, 6), Color(0, 0, 0)],
+    ]
+
+    threshold(image, 30)
+
+    total: i32 = 0
+    for y: i32 in range(2):
+        for x: i32 in range(3):
+            total += image[y, x].luma()
+
+    return total / 4
