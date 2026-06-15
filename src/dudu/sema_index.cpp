@@ -17,11 +17,11 @@ std::string unwrap_reference_and_const(std::string type) {
     type = trim(std::move(type));
     TypeRef parsed = parse_type_text(type);
     if (parsed.kind == TypeKind::Reference && parsed.children.size() == 1) {
-        type = trim(parsed.children.front().text);
+        type = substitute_type_ref_text(parsed.children.front(), {});
         parsed = parse_type_text(type);
     }
     if (parsed.kind == TypeKind::Const && parsed.children.size() == 1) {
-        type = trim(parsed.children.front().text);
+        type = substitute_type_ref_text(parsed.children.front(), {});
     }
     return type;
 }
@@ -38,9 +38,9 @@ std::optional<std::string> fixed_array_element_type(const TypeRef& type) {
     const TypeRef& storage = type.children.front();
     if (storage.kind == TypeKind::Template && storage.name == "array" &&
         !storage.children.empty()) {
-        return trim(storage.children.front().text);
+        return substitute_type_ref_text(storage.children.front(), {});
     }
-    return trim(storage.text);
+    return substitute_type_ref_text(storage, {});
 }
 
 std::optional<std::string> fixed_array_element_type(const std::string& type) {
@@ -139,7 +139,7 @@ std::string indexed_type_from_type_with_count(const Symbols& symbols,
     bool pointer_index = false;
     if (const TypeRef parsed = parse_type_text(type);
         parsed.kind == TypeKind::Pointer && parsed.children.size() == 1) {
-        type = trim(parsed.children.front().text);
+        type = substitute_type_ref_text(parsed.children.front(), {});
         pointer_index = true;
     }
     for (const TypeKind kind : {TypeKind::Storage, TypeKind::Shared, TypeKind::Device,
@@ -189,7 +189,7 @@ std::string indexed_type_from_type_with_count(const Symbols& symbols,
     }
     const TypeRef parsed = parse_type_text(type);
     if (parsed.kind == TypeKind::Template && parsed.children.size() == 1) {
-        return trim(parsed.children.front().text);
+        return substitute_type_ref_text(parsed.children.front(), {});
     }
     throw CompileError(location, "cannot index non-container: " + label);
 }
@@ -254,7 +254,7 @@ std::string iterable_value_type(const Symbols& symbols,
     }
     const TypeRef parsed = parse_type_text(type);
     if (parsed.kind == TypeKind::Template && parsed.children.size() == 1) {
-        return trim(parsed.children.front().text);
+        return substitute_type_ref_text(parsed.children.front(), {});
     }
     return {};
 }

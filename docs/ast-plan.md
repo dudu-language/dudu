@@ -145,6 +145,10 @@ Already structured:
 - indexed and iterable element inference reads parsed `TypeRef` wrappers and
   template children for `list[T]`, `dict[K, V]`, `span[T]`, and storage-like
   wrappers instead of slicing those type strings directly
+- indexed and iterable fallback element extraction for references, pointers,
+  fixed arrays, and single-argument template containers renders parsed
+  `TypeRef` children through the shared type helper instead of reading child
+  text directly
 - generated local C++ type inference also reads parsed `TypeRef` template
   children for local `list`, `span`, `set`, and `dict` index receivers instead
   of carrying a separate template-argument splitter
