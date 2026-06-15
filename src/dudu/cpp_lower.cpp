@@ -479,14 +479,14 @@ std::string lower_named_argument_calls(std::string expr) {
         for (size_t i = 0; i < parts.size(); ++i) {
             const size_t equal = top_level_equal(parts[i]);
             if (equal == std::string::npos) {
-                replacement << (i == 0 ? "" : ", ") << lower_cpp_expr(parts[i]);
+                replacement << (i == 0 ? "" : ", ") << lower_raw_cpp_escape_expr(parts[i]);
                 continue;
             }
             if (i > 0) {
                 replacement << ", ";
             }
             replacement << "." << trim_copy(parts[i].substr(0, equal)) << " = "
-                        << lower_cpp_expr(parts[i].substr(equal + 1));
+                        << lower_raw_cpp_escape_expr(parts[i].substr(equal + 1));
         }
         replacement << "}";
         const std::string text = replacement.str();
@@ -525,7 +525,7 @@ std::string lower_dotted_template_call(std::string expr,
         }
         const std::string arg = expr.substr(open + 1, close - open - 1);
         const std::string call_args = expr.substr(close + 2, args_close - close - 2);
-        const std::string lowered_args = lower_cpp_expr(call_args, namespace_aliases);
+        const std::string lowered_args = lower_raw_cpp_escape_expr(call_args, namespace_aliases);
         std::string lowered_template;
         {
             std::ostringstream lowered_template_args;
@@ -639,16 +639,17 @@ std::string lower_slice_indexing(std::string expr) {
             open = expr.find('[', close + 1);
             continue;
         }
-        const std::string replacement = "std::span(&(" + target + ")[" + lower_cpp_expr(start) +
-                                        "], (" + lower_cpp_expr(end) + ") - (" +
-                                        lower_cpp_expr(start) + "))";
+        const std::string replacement =
+            "std::span(&(" + target + ")[" + lower_raw_cpp_escape_expr(start) + "], (" +
+            lower_raw_cpp_escape_expr(end) + ") - (" + lower_raw_cpp_escape_expr(start) + "))";
         expr.replace(name_start, close + 1 - name_start, replacement);
         open = expr.find('[', name_start + replacement.size());
     }
     return expr;
 }
 
-std::string lower_cpp_expr(std::string expr, const std::vector<std::string>& namespace_aliases) {
+std::string lower_raw_cpp_escape_expr(std::string expr,
+                                      const std::vector<std::string>& namespace_aliases) {
     expr = lower_lambda_expr(std::move(expr));
     expr = lower_conditional_expr(std::move(expr));
     expr = lower_template_alloc_call(std::move(expr), "new");

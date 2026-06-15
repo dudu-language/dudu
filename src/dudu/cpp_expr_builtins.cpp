@@ -43,8 +43,8 @@ size_t find_top_level_word(const std::string& text, std::string_view word) {
 
 } // namespace
 
-std::string lower_cpp_expr(std::string expr) {
-    return lower_cpp_expr(expr, {});
+std::string lower_raw_cpp_escape_expr(std::string expr) {
+    return lower_raw_cpp_escape_expr(expr, {});
 }
 
 std::string lower_conditional_expr(std::string expr) {
@@ -60,8 +60,9 @@ std::string lower_conditional_expr(std::string expr) {
     const std::string when_true = trim_copy(expr.substr(0, if_pos));
     const std::string condition = trim_copy(expr.substr(if_pos + 4, absolute_else - if_pos - 4));
     const std::string when_false = trim_copy(expr.substr(absolute_else + 6));
-    return "(" + lower_cpp_expr(condition) + " ? " + lower_cpp_expr(when_true) + " : " +
-           lower_cpp_expr(when_false) + ")";
+    return "(" + lower_raw_cpp_escape_expr(condition) + " ? " +
+           lower_raw_cpp_escape_expr(when_true) + " : " +
+           lower_raw_cpp_escape_expr(when_false) + ")";
 }
 
 std::string lower_lambda_expr(std::string expr) {
@@ -96,7 +97,8 @@ std::string lower_lambda_expr(std::string expr) {
             replacement += (i == 0 ? "" : ", ") + std::string("auto&& ") + args[i];
         }
         replacement +=
-            ") { return " + lower_cpp_expr(expr.substr(colon + 1, body_end - colon - 1)) + "; }";
+            ") { return " +
+            lower_raw_cpp_escape_expr(expr.substr(colon + 1, body_end - colon - 1)) + "; }";
         expr.replace(pos, body_end - pos, replacement);
         pos = expr.find(marker, pos + replacement.size());
     }
@@ -156,7 +158,8 @@ std::string lower_generic_type_constructor(std::string expr) {
         }
         const std::string type = expr.substr(name_start, close - name_start + 1);
         const std::string args = expr.substr(close + 2, cursor - close - 3);
-        const std::string replacement = lower_cpp_type(type) + "(" + lower_cpp_expr(args) + ")";
+        const std::string replacement =
+            lower_cpp_type(type) + "(" + lower_raw_cpp_escape_expr(args) + ")";
         expr.replace(name_start, cursor - name_start, replacement);
         open = expr.find('[', name_start + replacement.size());
     }
@@ -188,7 +191,7 @@ std::string lower_len_calls(std::string expr) {
             break;
         }
         const std::string arg = expr.substr(pos + marker.size(), cursor - pos - marker.size() - 1);
-        const std::string replacement = "(" + lower_cpp_expr(arg) + ").size()";
+        const std::string replacement = "(" + lower_raw_cpp_escape_expr(arg) + ").size()";
         expr.replace(pos, cursor - pos, replacement);
         pos = expr.find(marker, pos + replacement.size());
     }
@@ -301,7 +304,8 @@ std::string lower_pointer_cast_calls(std::string expr) {
         }
         const std::string arg = expr.substr(name_end + 1, cursor - name_end - 2);
         const std::string replacement =
-            "reinterpret_cast<" + lower_cpp_type("*" + type) + ">(" + lower_cpp_expr(arg) + ")";
+            "reinterpret_cast<" + lower_cpp_type("*" + type) + ">(" +
+            lower_raw_cpp_escape_expr(arg) + ")";
         expr.replace(pos, cursor - pos, replacement);
         pos = expr.find('*', pos + replacement.size());
     }
@@ -363,7 +367,8 @@ std::string lower_str_from_cstr(std::string expr) {
         }
         const std::string arg = expr.substr(args_start, cursor - args_start - 1);
         const std::string replacement =
-            "std::string(reinterpret_cast<const char*>(" + lower_cpp_expr(arg) + "))";
+            "std::string(reinterpret_cast<const char*>(" + lower_raw_cpp_escape_expr(arg) +
+            "))";
         expr.replace(pos, cursor - pos, replacement);
         pos = expr.find(marker, pos + replacement.size());
     }

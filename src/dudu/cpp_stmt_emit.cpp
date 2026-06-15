@@ -24,7 +24,7 @@ std::string indent(int depth) {
 
 std::string lower_cpp_escape_expr(std::string expr, const std::vector<std::string>& aliases,
                                   const std::map<std::string, std::string>& locals) {
-    return lower_cpp_expr(rewrite_pointer_members(std::move(expr), locals), aliases);
+    return lower_raw_cpp_escape_expr(rewrite_pointer_members(std::move(expr), locals), aliases);
 }
 
 std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases,
