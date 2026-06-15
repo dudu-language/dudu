@@ -256,6 +256,12 @@ push. They are not release packaging work.
    expression, and type AST nodes. This unlocks better errors, fix-its, semantic
    highlighting, LSP quality, native Dudu generics, and structured macros.
 
+   Status: normal template-call emission lowers bracket arguments from parsed
+   `TypeRef` nodes, including non-type value arguments, instead of falling back
+   to raw expression text. Parsed method calls on pointer-typed member
+   receivers such as `self.left.backward(...)` lower through member-path type
+   information instead of raw pointer-member rewriting.
+
 3. OOP Surface Cleanup
 
    Primary plan: [OOP Plan](oop-plan.md).
@@ -314,10 +320,12 @@ push. They are not release packaging work.
    `box.choose[str, i32](name, value)` emit C++ method templates, substitute
    method and class type parameters positionally, and type-check parsed runtime
    arguments. Generic method type-argument arity is diagnosed in Dudu source.
-   Operator-constrained generic bodies, non-type parameters, inferred method
-   type arguments, and richer instantiated diagnostics remain. Multi-parameter
-   generic functions and classes such as `Pair[str, i32]` substitute receiver
-   member types through the declared class generic parameter names.
+   Generic bodies allow operators where both operands are the same visible
+   generic type parameter, which supports target examples such as `Vec2[T]`.
+   Non-type parameters, inferred method type arguments, and richer instantiated
+   diagnostics remain. Multi-parameter generic functions and classes such as
+   `Pair[str, i32]` substitute receiver member types through the declared class
+   generic parameter names.
 
 6. Sum Types And Pattern Matching
 
@@ -335,8 +343,9 @@ push. They are not release packaging work.
    are implemented and type-checked as `bool`; guarded cases do not count
    toward exhaustiveness. `Option[T]` and `Result[T, E]` wrapper matching is
    implemented with exhaustive `Some`/`None` and `Ok`/`Err` cases. Recursive
-   enum examples using pointer indirection compile and run. Anonymous
-   `variant[...]` remains.
+   enum examples using pointer indirection compile and run. A lexer-token
+   fixture covers tuple payloads, named payloads, guarded payload cases, named
+   destructuring, and exhaustive matching. Anonymous `variant[...]` remains.
 
 7. Native Inheritance
 
@@ -362,7 +371,10 @@ push. They are not release packaging work.
    interface-like abstract bases shape, including duplicate concrete-method
    diagnostics. Classes with virtual or abstract instance methods, and classes
    deriving from them, now emit virtual destructors automatically; `drop`
-   lowers to a virtual destructor in those classes.
+   lowers to a virtual destructor in those classes. An autograd-style graph
+   fixture covers abstract base nodes, derived operation nodes, derived-to-base
+   raw pointers, virtual dispatch through base pointers, and method calls
+   through pointer-typed member fields.
 
 8. Macro Surface Prerequisites
 
