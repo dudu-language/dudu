@@ -147,6 +147,8 @@ Already structured:
   versions of the same TypeRef logic
 - method, inheritance, and operator receiver/type unwrapping use parsed pointer,
   reference, and wrapper `TypeRef` nodes instead of local string-prefix loops
+- builtin method signatures for Dudu-native `list[T]` and `atomic[T]` receivers
+  use parsed `TypeRef` helpers for receiver stripping and element/value types
 - native C/C++ overload checks for ordinary and explicit-template parsed calls
   consume expression children directly instead of flattening arguments back to
   strings

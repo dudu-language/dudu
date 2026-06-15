@@ -1,5 +1,7 @@
 #include "dudu/sema_builtin_methods.hpp"
 
+#include "dudu/ast_parse_utils.hpp"
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/source.hpp"
 
@@ -7,6 +9,10 @@ namespace dudu {
 namespace {
 
 std::string first_type_arg(const std::string& type) {
+    const TypeRef parsed = parse_type_text(type);
+    if (parsed.kind == TypeKind::Template && !parsed.children.empty()) {
+        return trim(parsed.children.front().text);
+    }
     const size_t open = type.find('[');
     if (open == std::string::npos || type.back() != ']') {
         return {};
@@ -28,8 +34,14 @@ std::string first_type_arg(const std::string& type) {
 
 std::string receiver_template_type(const Symbols& symbols, std::string type) {
     type = resolve_alias(symbols, std::move(type));
-    while (!type.empty() && (type.front() == '*' || type.front() == '&')) {
-        type = trim(type.substr(1));
+    while (true) {
+        const TypeRef parsed = parse_type_text(type);
+        if (const auto inner =
+                unary_type_child_text(parsed, {TypeKind::Pointer, TypeKind::Reference})) {
+            type = *inner;
+            continue;
+        }
+        break;
     }
     return trim(std::move(type));
 }
@@ -53,7 +65,8 @@ bool builtin_cpp_method_signature(const Symbols& symbols, std::string receiver_t
             return true;
         }
     }
-    if (starts_with(templated, "list[") || templated.find("vector<") != std::string::npos) {
+    if (single_template_type_arg_text(templated, "list") ||
+        templated.find("vector<") != std::string::npos) {
         const std::string item = first_type_arg(templated);
         if (method_name == "push_back" || method_name == "append") {
             signature.params = {item.empty() ? "auto" : item};
@@ -78,7 +91,8 @@ bool builtin_cpp_method_signature(const Symbols& symbols, std::string receiver_t
             return true;
         }
     }
-    if (starts_with(templated, "atomic[") || templated.find("atomic<") != std::string::npos) {
+    if (unary_type_child_text(templated, TypeKind::Atomic) ||
+        templated.find("atomic<") != std::string::npos) {
         const std::string item = first_type_arg(templated);
         const std::string value_type = item.empty() ? "auto" : item;
         if (method_name == "load") {
