@@ -459,8 +459,11 @@ push. They are not release packaging work.
    prefixes whose scanner metadata is incomplete. Aliased native imports avoid
    double-prefixing names that already come from the imported namespace, native
    overload matching infers common C++ template placeholders and variadic packs,
-   and common libstdc++ dependent helper types normalize to the underlying Dudu
-   type. The standard-library algorithms fixture now validates representative
+   preserves scanned C++ template parameter order for explicit template calls,
+   handles nested `<...>` parameter splitting, preserves native enum constant
+   types, normalizes C tag spellings for native field lookup, and treats
+   internal C++ implementation template aliases as opaque compiler artifacts.
+   The standard-library algorithms fixture now validates representative
    containers, algorithms, pairs, tuples, and `std.get` without wrapper headers.
    Deeper overload diagnostics and broader template-heavy library behavior
    remain the main hardening areas.

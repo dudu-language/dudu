@@ -55,6 +55,8 @@ grep -Fq "[&](auto&& req, auto&& res)" "$repo_root/build/web_server.cpp"
 grep -Fq '#include "sqlite3.h"' "$repo_root/build/sqlite_crud.cpp"
 grep -Fq "sqlite3_prepare_v2" "$repo_root/build/sqlite_crud.cpp"
 grep -Fq "dudu::Result<Todo, DbError> fetch_todo" "$repo_root/build/sqlite_crud.cpp"
+grep -Fq "std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1)))" \
+    "$repo_root/build/sqlite_crud.cpp"
 
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/c_macro_constants.dd" \
     -o "$repo_root/build/c_macro_constants.cpp"

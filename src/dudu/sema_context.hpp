@@ -12,6 +12,7 @@
 namespace dudu {
 
 struct FunctionSignature {
+    std::vector<std::string> template_params;
     std::vector<std::string> params;
     std::string return_type;
     int min_params = -1;
@@ -31,6 +32,7 @@ struct Symbols {
     std::set<std::string> native_explicit_template_prefixes;
     std::set<std::string> native_types;
     std::map<std::string, std::string> native_values;
+    std::set<std::string> native_enum_values;
     std::map<std::string, const EnumDecl*> enums;
     std::map<std::string, ClassDecl> native_classes;
     std::map<std::string, const ClassDecl*> classes;

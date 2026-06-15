@@ -109,6 +109,7 @@ add_library(dudu_frontend
     src/dudu/token.cpp
     src/dudu/type_compat.cpp
     src/dudu/type_compat_literals.cpp
+    src/dudu/type_compat_native.cpp
     src/dudu/type_compat_structural.cpp
     src/dudu/unsupported.cpp
 )

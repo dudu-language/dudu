@@ -1,5 +1,6 @@
 #include "dudu/native_signature_match.hpp"
 
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/source.hpp"
 
@@ -21,9 +22,8 @@ using PackBindingMap = std::map<std::string, std::vector<std::string>>;
 }
 
 bool arity_matches(const FunctionSignature& signature, size_t arg_count) {
-    const size_t min_params = signature.min_params < 0
-                                  ? signature.params.size()
-                                  : static_cast<size_t>(signature.min_params);
+    const size_t min_params = signature.min_params < 0 ? signature.params.size()
+                                                       : static_cast<size_t>(signature.min_params);
     return signature.variadic ? arg_count >= min_params
                               : arg_count >= min_params && arg_count <= signature.params.size();
 }
@@ -100,10 +100,10 @@ std::vector<std::string> native_signature_placeholders(const FunctionSignature& 
     std::vector<std::string> out;
     std::set<std::string> seen;
     append_placeholders(out, seen, native_placeholders_in(signature.return_type), true);
+    append_placeholders(out, seen, native_placeholders_in(signature.return_type), false);
     for (const std::string& text : signature.params) {
         append_placeholders(out, seen, native_placeholders_in(text), false);
     }
-    append_placeholders(out, seen, native_placeholders_in(signature.return_type), false);
     return out;
 }
 
@@ -117,7 +117,9 @@ std::string replace_explicit_template_args(std::string type, const std::vector<s
 
 FunctionSignature substitute_template_signature(FunctionSignature signature,
                                                 const std::vector<std::string>& args) {
-    const std::vector<std::string> names = native_signature_placeholders(signature);
+    const std::vector<std::string> names = signature.template_params.empty()
+                                               ? native_signature_placeholders(signature)
+                                               : signature.template_params;
     for (std::string& param : signature.params) {
         param = replace_explicit_template_args(std::move(param), names, args);
     }
@@ -127,10 +129,12 @@ FunctionSignature substitute_template_signature(FunctionSignature signature,
 }
 
 bool native_template_placeholder(const std::string& type) {
-    static const std::set<std::string> simple = {"T",     "U",    "V",     "A",   "B",
-                                                 "Key",   "Value", "__i",   "__j", "_Int",
-                                                 "_Index", "_Nm"};
+    static const std::set<std::string> simple = {
+        "T", "U", "V", "A", "B", "L", "Q", "Key", "Value", "__i", "__j", "_Int", "_Index", "_Nm"};
     if (simple.contains(type)) {
+        return true;
+    }
+    if (type.size() == 1 && std::isupper(static_cast<unsigned char>(type.front())) != 0) {
         return true;
     }
     return type.size() > 1 && type.front() == '_' &&
@@ -205,6 +209,82 @@ bool bind_template_type(std::string expected, std::string got, BindingMap& bindi
     return false;
 }
 
+std::string type_ref_binding_text(const TypeRef& type) {
+    return substitute_type_ref_text(type, {});
+}
+
+bool bind_template_type_ref(const TypeRef& expected, const TypeRef& got, BindingMap& bindings);
+
+bool bind_same_shape_children(const TypeRef& expected, const TypeRef& got, BindingMap& bindings) {
+    if (expected.children.size() != got.children.size()) {
+        return false;
+    }
+    for (size_t i = 0; i < expected.children.size(); ++i) {
+        if (!bind_template_type_ref(expected.children[i], got.children[i], bindings)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool same_native_template_name(const std::string& expected, const std::string& got) {
+    return expected == got || expected.ends_with("." + got) || got.ends_with("." + expected);
+}
+
+bool bind_template_type_ref(const TypeRef& expected, const TypeRef& got, BindingMap& bindings) {
+    const std::string expected_name =
+        expected.name.empty() ? trim_copy(expected.text) : trim_copy(expected.name);
+    if ((expected.kind == TypeKind::Named || expected.kind == TypeKind::Qualified ||
+         expected.kind == TypeKind::Value) &&
+        native_template_placeholder(expected_name.empty() ? trim_copy(expected.value)
+                                                          : expected_name)) {
+        return bind_template_placeholder(expected_name.empty() ? trim_copy(expected.value)
+                                                               : expected_name,
+                                         type_ref_binding_text(got), bindings);
+    }
+    if (expected.kind == TypeKind::Pointer) {
+        return got.kind == TypeKind::Pointer && expected.children.size() == 1 &&
+               got.children.size() == 1 &&
+               bind_template_type_ref(expected.children.front(), got.children.front(), bindings);
+    }
+    if (expected.kind == TypeKind::Reference) {
+        if (expected.children.size() != 1) {
+            return false;
+        }
+        return got.kind == TypeKind::Reference && got.children.size() == 1
+                   ? bind_template_type_ref(expected.children.front(), got.children.front(),
+                                            bindings)
+                   : bind_template_type_ref(expected.children.front(), got, bindings);
+    }
+    if (expected.kind == TypeKind::Const || expected.kind == TypeKind::Volatile ||
+        expected.kind == TypeKind::Atomic || expected.kind == TypeKind::Storage ||
+        expected.kind == TypeKind::Shared || expected.kind == TypeKind::Device) {
+        if (expected.children.size() != 1) {
+            return false;
+        }
+        return got.kind == expected.kind && got.children.size() == 1
+                   ? bind_template_type_ref(expected.children.front(), got.children.front(),
+                                            bindings)
+                   : bind_template_type_ref(expected.children.front(), got, bindings);
+    }
+    if (expected.kind == TypeKind::Template && got.kind == TypeKind::Template &&
+        same_native_template_name(expected.name, got.name)) {
+        return bind_same_shape_children(expected, got, bindings);
+    }
+    if (expected.kind == TypeKind::FixedArray && got.kind == TypeKind::FixedArray &&
+        expected.value == got.value) {
+        return bind_same_shape_children(expected, got, bindings);
+    }
+    return false;
+}
+
+bool bind_template_type_ast(const Symbols& symbols, const std::string& expected,
+                            const std::string& got, BindingMap& bindings) {
+    const TypeRef expected_ref = parse_type_text(expected);
+    const TypeRef got_ref = parse_type_text(resolve_alias(symbols, got));
+    return bind_template_type_ref(expected_ref, got_ref, bindings);
+}
+
 std::string join_types(const std::vector<std::string>& types) {
     std::ostringstream out;
     for (size_t i = 0; i < types.size(); ++i) {
@@ -228,10 +308,10 @@ std::string replace_all(std::string text, const std::string& needle, const std::
 std::string replace_pack_binding(std::string type, const std::string& name,
                                  const std::vector<std::string>& args) {
     const std::string joined = join_types(args);
-    type = replace_all(std::move(type), "typename __decay_and_strip<" + name + ">::__type...",
-                       joined);
-    type = replace_all(std::move(type), "typename __decay_and_strip<" + name + ">.__type...",
-                       joined);
+    type =
+        replace_all(std::move(type), "typename __decay_and_strip<" + name + ">::__type...", joined);
+    type =
+        replace_all(std::move(type), "typename __decay_and_strip<" + name + ">.__type...", joined);
     type = replace_all(std::move(type), name + "...", joined);
     return type;
 }
@@ -306,13 +386,18 @@ std::optional<FunctionSignature> match_signature_ast(const FunctionScope& scope,
                                                      const SourceLocation* location,
                                                      const NativeInferExprAstFn& infer_expr,
                                                      const NativeCanAssignAstFn& can_assign) {
-    if (!arity_matches(signature, args.size())) {
-        return std::nullopt;
-    }
     BindingMap bindings;
     PackBindingMap pack_bindings;
     const bool has_pack_param = signature.variadic && !signature.params.empty() &&
                                 template_pack_placeholder(signature.params.back()).has_value();
+    FunctionSignature arity_signature = signature;
+    if (has_pack_param &&
+        arity_signature.min_params >= static_cast<int>(arity_signature.params.size())) {
+        --arity_signature.min_params;
+    }
+    if (!arity_matches(arity_signature, args.size())) {
+        return std::nullopt;
+    }
     const size_t fixed_params =
         has_pack_param ? signature.params.size() - 1 : signature.params.size();
     const size_t provided_fixed = std::min(fixed_params, args.size());
@@ -320,6 +405,7 @@ std::optional<FunctionSignature> match_signature_ast(const FunctionScope& scope,
         const std::string got = infer_expr(scope, args[i], location);
         if (!can_assign(signature.params[i], args[i], got) &&
             !native_numeric_promotion(signature.params[i], got) &&
+            !bind_template_type_ast(scope.symbols, signature.params[i], got, bindings) &&
             !bind_template_type(signature.params[i], got, bindings)) {
             return std::nullopt;
         }

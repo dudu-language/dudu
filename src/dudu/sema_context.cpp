@@ -282,6 +282,9 @@ Symbols collect_symbols(const ModuleAst& module) {
     for (const NativeValueDecl& value : module.native_values) {
         add_name(names, value.name, value.location);
         symbols.native_values[value.name] = value.type;
+        if (value.enum_constant) {
+            symbols.native_enum_values.insert(value.name);
+        }
         add_native_path_prefix(symbols, value.name);
     }
     for (const NativeNamespaceDecl& ns : module.native_namespaces) {
@@ -320,6 +323,7 @@ Symbols collect_symbols(const ModuleAst& module) {
     }
     for (const NativeFunctionDecl& fn : module.native_functions) {
         FunctionSignature signature;
+        signature.template_params = fn.template_params;
         signature.params = fn.params;
         signature.return_type = fn.return_type.empty() ? "auto" : fn.return_type;
         signature.min_params = fn.min_params;

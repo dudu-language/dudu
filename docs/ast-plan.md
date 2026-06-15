@@ -1102,6 +1102,26 @@ file-size guideline. Future AST/LSP work should keep new responsibilities in
 the existing focused language-server files rather than growing
 `language_server.cpp` again.
 
+Native interop keeps moving toward parsed metadata instead of raw spelling
+guesses:
+
+- C++ `<...>` signature parameter splitting now tracks nested template
+  arguments, so signatures such as `vec<L, T, Q>` are parsed as one type.
+- scanned C++ function templates preserve Clang's template parameter order, so
+  explicit calls bind `choose_second[T, U]` and `make_unique[T]` according to
+  the declaration instead of guessed return/parameter usage.
+- native overload matching uses parsed `TypeRef` binding for template-shaped
+  parameter matching before falling back to compatibility checks.
+- compiler-recognized decorators can read the full parsed argument list, which
+  keeps multi-argument attributes such as `@workgroup_size(8, 8, 1)` intact.
+- C struct/class/union/enum tags are normalized during member lookup, so
+  `struct stat` fields resolve through the scanned native class named `stat`.
+- internal C++ implementation template aliases such as `__detail.__foo[T]`
+  are treated as opaque native compiler artifacts at assignment boundaries
+  instead of forcing Dudu to model private standard-library alias machinery.
+- native enum constants now retain their scanned enum type, while calls into C
+  APIs still allow enum constants where an integer parameter is expected.
+
 ## Acceptance
 
 - Existing examples still compile and run.

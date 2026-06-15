@@ -195,11 +195,13 @@ struct NativeTypeDecl {
 struct NativeValueDecl {
     std::string name;
     std::string type;
+    bool enum_constant = false;
     SourceLocation location;
 };
 
 struct NativeFunctionDecl {
     std::string name;
+    std::vector<std::string> template_params;
     std::vector<std::string> params;
     std::string return_type;
     int min_params = -1;

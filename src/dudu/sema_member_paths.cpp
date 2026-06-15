@@ -1,11 +1,10 @@
-#include "dudu/sema_methods.hpp"
-
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/sema_common.hpp"
 #include "dudu/sema_index.hpp"
-#include "dudu/sema_methods_internal.hpp"
 #include "dudu/sema_method_templates.hpp"
+#include "dudu/sema_methods.hpp"
+#include "dudu/sema_methods_internal.hpp"
 #include "dudu/sema_native.hpp"
 #include "dudu/sema_scan.hpp"
 #include "dudu/source.hpp"
@@ -17,6 +16,16 @@ bool is_indexed_local_segment(const std::string& text) {
     const size_t index = text.find('[');
     return index != std::string::npos && text.back() == ']' &&
            is_plain_identifier(trim(text.substr(0, index)));
+}
+
+std::string strip_c_type_tag(std::string type) {
+    type = trim(std::move(type));
+    for (std::string_view tag : {"struct ", "class ", "union ", "enum "}) {
+        if (type.starts_with(tag)) {
+            return trim(type.substr(tag.size()));
+        }
+    }
+    return type;
 }
 
 std::string first_path_type(const Symbols& symbols,
@@ -87,7 +96,7 @@ std::string unwrap_receiver_type(const Symbols& symbols, std::string type) {
             type = *inner;
             continue;
         }
-        return base_type(type);
+        return strip_c_type_tag(base_type(type));
     }
 }
 
@@ -249,9 +258,9 @@ std::string member_expr_type(const Symbols& symbols,
             return "auto";
         }
         if (location != nullptr) {
-            sema_fail(
-                *location, "unknown field: " +
-                               (expr.text.empty() ? receiver_type + "." + expr.name : expr.text));
+            sema_fail(*location,
+                      "unknown field: " +
+                          (expr.text.empty() ? receiver_type + "." + expr.name : expr.text));
         }
     }
     return {};

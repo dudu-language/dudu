@@ -5,13 +5,14 @@
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/type_compat_literals.hpp"
+#include "dudu/type_compat_native.hpp"
 #include "dudu/type_compat_structural.hpp"
 
 #include <cctype>
 #include <map>
 #include <optional>
 #include <set>
-#include <string_view>
+#include <vector>
 
 namespace dudu {
 namespace {
@@ -53,87 +54,6 @@ std::string compact_type(std::string type) {
         }
     }
     return out;
-}
-
-size_t matching_angle(const std::string& text, const size_t open) {
-    int depth = 0;
-    for (size_t i = open; i < text.size(); ++i) {
-        if (text[i] == '<') {
-            ++depth;
-        } else if (text[i] == '>') {
-            --depth;
-            if (depth == 0) {
-                return i;
-            }
-        }
-    }
-    return std::string::npos;
-}
-
-std::string normalize_type_traits(std::string type) {
-    type = trim_copy(std::move(type));
-    const std::string prefix = "typename __decay_and_strip<";
-    size_t pos = type.find(prefix);
-    while (pos != std::string::npos) {
-        const size_t open = pos + prefix.size() - 1;
-        const size_t close = matching_angle(type, open);
-        if (close == std::string::npos) {
-            return type;
-        }
-        size_t suffix_end = close + 1;
-        std::string suffix;
-        if (type.compare(suffix_end, 7, ".__type") == 0) {
-            suffix = ".__type";
-        } else if (type.compare(suffix_end, 8, "::__type") == 0) {
-            suffix = "::__type";
-        } else {
-            pos = type.find(prefix, close + 1);
-            continue;
-        }
-        suffix_end += suffix.size();
-        const std::string inner = trim_copy(type.substr(pos + prefix.size(), close - open - 1));
-        type.replace(pos, suffix_end - pos, inner);
-        pos = type.find(prefix, pos + inner.size());
-    }
-    return trim_copy(type);
-}
-
-std::string normalize_tuple_element(std::string type) {
-    type = trim_copy(std::move(type));
-    const TypeRef parsed = parse_type_text(type);
-    if (parsed.kind == TypeKind::Reference && parsed.children.size() == 1) {
-        return "&" + normalize_tuple_element(parsed.children.front().text);
-    }
-    if (parsed.kind != TypeKind::Template || parsed.name != "__tuple_element_t" ||
-        parsed.children.size() != 2 || parsed.children[0].kind != TypeKind::Value) {
-        return type;
-    }
-    const TypeRef& tuple_type = parsed.children[1];
-    if (tuple_type.kind != TypeKind::Template ||
-        (tuple_type.name != "std.tuple" && tuple_type.name != "tuple")) {
-        return type;
-    }
-    const std::string index_text = trim_copy(parsed.children[0].value);
-    if (index_text.empty() || index_text.find_first_not_of("0123456789") != std::string::npos) {
-        return type;
-    }
-    const size_t index = static_cast<size_t>(std::stoull(index_text));
-    if (index >= tuple_type.children.size()) {
-        return type;
-    }
-    return trim_copy(tuple_type.children[index].text);
-}
-
-std::string normalize_cpp_type_artifacts(std::string type) {
-    type = normalize_tuple_element(normalize_type_traits(std::move(type)));
-    for (const std::string_view marker : {"* const[", "& const[", "* volatile[", "& volatile["}) {
-        size_t pos = type.find(marker);
-        while (pos != std::string::npos) {
-            type.erase(pos + 1, 1);
-            pos = type.find(marker, pos + 1);
-        }
-    }
-    return type;
 }
 
 bool is_string_type(const std::string& type) {
@@ -369,6 +289,43 @@ bool is_option_value(const std::string& expected, const Expr& expr, const std::s
            (is_numeric_type(wrapped_type_arg(inner)) && simple_literal_type(expr) == "number");
 }
 
+bool has_internal_cpp_identifier(std::string_view name) {
+    size_t pos = 0;
+    while (pos < name.size()) {
+        while (pos < name.size() &&
+               (std::isalnum(static_cast<unsigned char>(name[pos])) == 0 && name[pos] != '_')) {
+            ++pos;
+        }
+        const size_t start = pos;
+        while (pos < name.size() &&
+               (std::isalnum(static_cast<unsigned char>(name[pos])) != 0 || name[pos] == '_')) {
+            ++pos;
+        }
+        if (pos > start && name.substr(start, 2) == "__") {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool is_internal_cpp_template_artifact(const TypeRef& type) {
+    if ((type.kind == TypeKind::Const || type.kind == TypeKind::Reference ||
+         type.kind == TypeKind::Pointer) &&
+        type.children.size() == 1) {
+        return is_internal_cpp_template_artifact(type.children.front());
+    }
+    return type.kind == TypeKind::Template && !type.children.empty() &&
+           has_internal_cpp_identifier(type.name);
+}
+
+bool is_native_internal_template_result(std::string expected, std::string got) {
+    const TypeRef expected_ref = parse_type_text(std::move(expected));
+    if (expected_ref.kind != TypeKind::Template) {
+        return false;
+    }
+    return is_internal_cpp_template_artifact(parse_type_text(std::move(got)));
+}
+
 } // namespace
 
 bool type_assignment_allowed(const std::string& expected, const std::string& got) {
@@ -387,6 +344,7 @@ bool type_assignment_allowed(const std::string& expected, const std::string& got
            is_value_from_reference(normalized_expected, normalized_got) ||
            is_function_type_match(normalized_expected, normalized_got) ||
            is_native_function_pointer(normalized_expected, normalized_got) ||
+           is_native_internal_template_result(normalized_expected, normalized_got) ||
            is_cpp_associated_type_binding(normalized_expected, normalized_got);
 }
 
@@ -419,6 +377,7 @@ bool assignment_type_allowed(const std::string& expected, const Expr& expr,
            is_value_from_reference(normalized_expected, normalized_got) ||
            is_function_type_match(normalized_expected, normalized_got) ||
            is_native_function_pointer(normalized_expected, normalized_got) ||
+           is_native_internal_template_result(normalized_expected, normalized_got) ||
            is_cpp_associated_type_binding(normalized_expected, normalized_got) ||
            (normalized_expected == "cstr" && normalized_got == "str" &&
             expr.kind == ExprKind::StringLiteral) ||
@@ -458,6 +417,7 @@ bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const st
            is_value_from_reference(normalized_expected, normalized_got) ||
            is_function_type_match(normalized_expected, normalized_got) ||
            is_native_function_pointer(normalized_expected, normalized_got) ||
+           is_native_internal_template_result(normalized_expected, normalized_got) ||
            is_cpp_associated_type_binding(normalized_expected, normalized_got) ||
            (normalized_expected == "cstr" && normalized_got == "str" &&
             expr.kind == ExprKind::StringLiteral) ||

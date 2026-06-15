@@ -13,6 +13,11 @@
 namespace dudu {
 namespace {
 
+struct TemplateContext {
+    int depth = 0;
+    std::vector<std::string> params;
+};
+
 int ast_depth(const std::string& line) {
     const size_t branch = line.find("|-");
     const size_t last = line.find("`-");
@@ -106,8 +111,10 @@ void add_unique_class(std::vector<ClassDecl>& out, std::set<std::string>& seen, 
 void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                     std::vector<std::pair<int, std::string>>& namespaces,
                     std::vector<std::pair<int, size_t>>& classes,
-                    std::vector<std::pair<int, size_t>>& functions,
-                    const SourceLocation& location, std::string& current_file) {
+                    std::vector<std::pair<int, std::string>>& enums,
+                    std::vector<TemplateContext>& templates,
+                    std::vector<std::pair<int, size_t>>& functions, const SourceLocation& location,
+                    std::string& current_file) {
     const SourceLocation decl_location = ast_source_location(line, location, current_file);
     if (const std::string concrete_file = ast_concrete_source_file(line); !concrete_file.empty()) {
         current_file = concrete_file;
@@ -117,6 +124,8 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
     static const std::regex record_decl(
         R"((RecordDecl|CXXRecordDecl).*\b(struct|class|union) ([A-Za-z_][A-Za-z0-9_]*)\b)");
     static const std::regex enum_decl(R"(EnumDecl.*\b([A-Za-z_][A-Za-z0-9_]*)\b)");
+    static const std::regex template_type_param(
+        R"(TemplateTypeParmDecl.*\bindex [0-9]+ (?:\.\.\. )?([A-Za-z_][A-Za-z0-9_]*)$)");
     static const std::regex ns_decl(R"(NamespaceDecl.*\b([A-Za-z_][A-Za-z0-9_]*)$)");
     static const std::regex fn_decl(R"(FunctionDecl.*\b([A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
     static const std::regex method_decl(R"(CXXMethodDecl.*\b([A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
@@ -124,7 +133,8 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         R"(CXXConstructorDecl.*\b([A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
     static const std::regex field_decl(R"(FieldDecl.*\b([A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
     static const std::regex base_decl(R"(\b(public|protected|private) '([^']+)')");
-    static const std::regex enum_value_decl(R"(EnumConstantDecl.*\b([A-Za-z_][A-Za-z0-9_]*) ')");
+    static const std::regex enum_value_decl(
+        R"(EnumConstantDecl.*\b([A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
     static const std::regex var_decl(R"(VarDecl.*\b([A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
     const int depth = ast_depth(line);
     while (!namespaces.empty() && namespaces.back().first >= depth) {
@@ -133,10 +143,23 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
     while (!classes.empty() && classes.back().first >= depth) {
         classes.pop_back();
     }
+    while (!enums.empty() && enums.back().first >= depth) {
+        enums.pop_back();
+    }
+    while (!templates.empty() && templates.back().depth >= depth) {
+        templates.pop_back();
+    }
     while (!functions.empty() && functions.back().first >= depth) {
         functions.pop_back();
     }
     std::smatch match;
+    if (line.find("FunctionTemplateDecl") != std::string::npos) {
+        templates.push_back({.depth = depth, .params = {}});
+    }
+    if (!templates.empty() && line.find("TemplateTypeParmDecl") != std::string::npos &&
+        std::regex_search(line, match, template_type_param)) {
+        templates.back().params.push_back(match[1].str());
+    }
     if (!functions.empty() && line.find("ParmVarDecl") != std::string::npos &&
         line.find(" cinit") != std::string::npos) {
         NativeFunctionDecl& fn = scan.functions[functions.back().second];
@@ -183,6 +206,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         const std::string name = match[1].str();
         if (!starts_with(name, "__")) {
             scan.types.push_back({.name = name, .type = "", .location = decl_location});
+            enums.push_back({depth, name});
         }
     } else if (line.find("FunctionDecl") != std::string::npos &&
                std::regex_search(line, match, fn_decl)) {
@@ -193,6 +217,9 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         const std::string signature = match[2].str();
         NativeFunctionDecl fn;
         fn.name = name;
+        if (!templates.empty()) {
+            fn.template_params = templates.back().params;
+        }
         fn.params = qualify_scoped_types(scan, namespaces, signature_params(signature));
         fn.return_type = qualify_scoped_type(scan, namespaces, signature_return_type(signature));
         fn.min_params = static_cast<int>(fn.params.size());
@@ -236,13 +263,13 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
     } else if (!classes.empty() && line.find("FieldDecl") != std::string::npos &&
                std::regex_search(line, match, field_decl)) {
         const std::string type = qualify_scoped_type(scan, namespaces, dudu_type(match[2].str()));
-        scan.classes[classes.back().second].fields.push_back({.name = match[1].str(),
-                                                              .type = type,
-                                                              .value = "",
-                                                              .type_ref = parse_type_text(
-                                                                  type, decl_location),
-                                                              .value_expr = {},
-                                                              .location = decl_location});
+        scan.classes[classes.back().second].fields.push_back(
+            {.name = match[1].str(),
+             .type = type,
+             .value = "",
+             .type_ref = parse_type_text(type, decl_location),
+             .value_expr = {},
+             .location = decl_location});
     } else if (!classes.empty() &&
                (line.find("public '") != std::string::npos ||
                 line.find("protected '") != std::string::npos ||
@@ -254,7 +281,11 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                std::regex_search(line, match, enum_value_decl)) {
         const std::string name = match[1].str();
         if (!starts_with(name, "__")) {
-            scan.values.push_back({.name = name, .type = "i32", .location = decl_location});
+            const std::string type = match.size() > 2
+                                         ? dudu_type(match[2].str())
+                                         : (enums.empty() ? "i32" : enums.back().second);
+            scan.values.push_back(
+                {.name = name, .type = type, .enum_constant = true, .location = decl_location});
         }
     } else if (line.find("VarDecl") != std::string::npos &&
                line.find("ParmVarDecl") == std::string::npos &&
@@ -301,12 +332,15 @@ void parse_ast_dump(NativeHeaderScan& scan, const std::string& dump,
                     const SourceLocation& location) {
     std::vector<std::pair<int, std::string>> namespaces;
     std::vector<std::pair<int, size_t>> classes;
+    std::vector<std::pair<int, std::string>> enums;
+    std::vector<TemplateContext> templates;
     std::vector<std::pair<int, size_t>> functions;
     std::string current_file;
     std::istringstream in(dump);
     std::string line;
     while (std::getline(in, line)) {
-        parse_ast_line(scan, line, namespaces, classes, functions, location, current_file);
+        parse_ast_line(scan, line, namespaces, classes, enums, templates, functions, location,
+                       current_file);
     }
 }
 
@@ -328,6 +362,7 @@ void parse_macro_dump(NativeHeaderScan& scan, const std::string& dump,
                 {.name = name, .arity = params.arity, .function_like = true, .location = location});
             scan.functions.push_back(
                 {.name = name,
+                 .template_params = {},
                  .params = std::vector<std::string>(static_cast<size_t>(params.arity), "auto"),
                  .return_type = "auto",
                  .min_params = params.arity,

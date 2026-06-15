@@ -87,6 +87,49 @@ size_t matching_angle(std::string_view text, size_t open) {
     return std::string::npos;
 }
 
+std::vector<std::string> split_cpp_top_level_args(std::string_view args) {
+    std::vector<std::string> out;
+    int paren_depth = 0;
+    int angle_depth = 0;
+    char quote = '\0';
+    bool escaped = false;
+    size_t start = 0;
+    for (size_t i = 0; i < args.size(); ++i) {
+        const char c = args[i];
+        if (quote != '\0') {
+            if (escaped) {
+                escaped = false;
+            } else if (c == '\\') {
+                escaped = true;
+            } else if (c == quote) {
+                quote = '\0';
+            }
+            continue;
+        }
+        if (c == '"' || c == '\'') {
+            quote = c;
+            continue;
+        }
+        if (c == '<') {
+            ++angle_depth;
+        } else if (c == '>' && angle_depth > 0) {
+            --angle_depth;
+        } else if (c == '(' || c == '[' || c == '{') {
+            ++paren_depth;
+        } else if ((c == ')' || c == ']' || c == '}') && paren_depth > 0) {
+            --paren_depth;
+        } else if (c == ',' && paren_depth == 0 && angle_depth == 0) {
+            out.push_back(trim_copy(std::string(args.substr(start, i - start))));
+            start = i + 1;
+        }
+    }
+    const std::string last = trim_copy(std::string(args.substr(start)));
+    if (!last.empty()) {
+        out.push_back(last);
+    }
+    return out;
+}
+
 std::string lower_template_type(std::string type) {
     const size_t open = type.find('<');
     if (open == std::string::npos) {
@@ -99,7 +142,7 @@ std::string lower_template_type(std::string type) {
     std::string out = cpp_scope_to_dudu(scalar_dudu_type(trim_copy(type.substr(0, open))));
     out.push_back('[');
     bool first = true;
-    for (std::string arg : split_top_level_args(type.substr(open + 1, close - open - 1))) {
+    for (std::string arg : split_cpp_top_level_args(type.substr(open + 1, close - open - 1))) {
         if (!first) {
             out += ", ";
         }
@@ -166,7 +209,8 @@ std::vector<std::string> signature_params(const std::string& signature) {
     if (open == std::string::npos || close == std::string::npos || close <= open + 1)
         return {};
     std::vector<std::string> out;
-    for (std::string part : split_top_level_args(signature.substr(open + 1, close - open - 1))) {
+    for (std::string part :
+         split_cpp_top_level_args(signature.substr(open + 1, close - open - 1))) {
         if (part != "...")
             out.push_back(dudu_type(std::move(part)));
     }

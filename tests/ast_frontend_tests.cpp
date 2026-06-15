@@ -4,6 +4,7 @@
 #include "dudu/cpp_stmt_types.hpp"
 #include "dudu/language_server_semantic_tokens.hpp"
 #include "dudu/match_patterns.hpp"
+#include "dudu/native_header_types.hpp"
 #include "dudu/parser.hpp"
 #include "dudu/sema.hpp"
 #include "dudu/sema_builtin_methods.hpp"
@@ -91,8 +92,11 @@ void test_type_compat_uses_type_ast_for_pointers() {
     const dudu::Expr name_expr = dudu::parse_expr_text("value");
     assert(dudu::assignment_type_allowed(dudu::parse_type_text("array[list[i32]][4]"), name_expr,
                                          "array[list[i32]][4]"));
-    assert(!dudu::assignment_type_allowed(dudu::parse_type_text("array[list[i32]][4]"),
-                                          name_expr, "array[list[str]][4]"));
+    assert(!dudu::assignment_type_allowed(dudu::parse_type_text("array[list[i32]][4]"), name_expr,
+                                          "array[list[str]][4]"));
+    assert(dudu::assignment_type_allowed(dudu::parse_type_text("std.unique_ptr[Node]"), name_expr,
+                                         "__detail.__unique_ptr_t[Node]"));
+    assert(!dudu::assignment_type_allowed(dudu::parse_type_text("f32"), name_expr, "__m128"));
 }
 
 void test_core_type_helpers_use_type_ast() {
@@ -133,6 +137,12 @@ void test_builtin_method_signature_uses_type_ast() {
     assert(signature.return_type == "uint64_t");
 }
 
+void test_native_header_types_split_cpp_templates() {
+    assert(dudu::dudu_type("const vec<L, T, Q> &") == "&const[vec[L, T, Q]]");
+    assert(dudu::signature_params("T (const vec<L, T, Q> &, const vec<L, T, Q> &)") ==
+           std::vector<std::string>({"&const[vec[L, T, Q]]", "&const[vec[L, T, Q]]"}));
+}
+
 void test_receiver_template_substitution_uses_type_ast() {
     assert(dudu::substitute_receiver_template_type("list[value_type]", {"i32"}) == "list[i32]");
     assert(dudu::substitute_receiver_template_type("fn(value_type) -> element_type", {"f32"}) ==
@@ -157,6 +167,7 @@ void test_native_semantic_tokens() {
     native_symbols.native_values.push_back(
         {.name = "DUDU_NATIVE_MAGIC", .type = "i32", .location = {}});
     native_symbols.native_functions.push_back({.name = "dudu_native_add",
+                                               .template_params = {},
                                                .params = {"i32", "i32"},
                                                .return_type = "i32",
                                                .location = {}});
@@ -706,6 +717,7 @@ int main() {
         test_type_compat_uses_type_ast_for_pointers();
         test_core_type_helpers_use_type_ast();
         test_builtin_method_signature_uses_type_ast();
+        test_native_header_types_split_cpp_templates();
         test_receiver_template_substitution_uses_type_ast();
         test_native_semantic_tokens();
         test_ast_constructor_assignment_compatibility();

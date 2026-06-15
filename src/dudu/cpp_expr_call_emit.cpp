@@ -285,9 +285,10 @@ std::optional<std::string> lower_trailing_full_slice_expr(
     return "std::span(&(" + row + ")[0], (" + row + ").size())";
 }
 
-std::optional<std::string> lower_column_slice_expr(
-    const Expr& base, const Expr& index, const std::vector<std::string>& aliases,
-    const std::map<std::string, std::string>& locals, const Symbols* symbols) {
+std::optional<std::string> lower_column_slice_expr(const Expr& base, const Expr& index,
+                                                   const std::vector<std::string>& aliases,
+                                                   const std::map<std::string, std::string>& locals,
+                                                   const Symbols* symbols) {
     (void)symbols;
     if (base.kind != ExprKind::Name || index.kind != ExprKind::TupleLiteral ||
         index.children.size() != 2 || !is_full_slice_expr(index.children[0]) ||
@@ -349,9 +350,10 @@ std::string lower_offsetof_field(const Expr& expr, const std::vector<std::string
     return lower_expr(expr, aliases, locals, symbols);
 }
 
-std::optional<std::string>
-lower_pointer_cast_expr(const Expr& expr, const std::vector<std::string>& aliases,
-                        const std::map<std::string, std::string>& locals, const Symbols* symbols) {
+std::optional<std::string> lower_pointer_cast_expr(const Expr& expr,
+                                                   const std::vector<std::string>& aliases,
+                                                   const std::map<std::string, std::string>& locals,
+                                                   const Symbols* symbols) {
     if (expr.op != "*" || expr.children.size() != 1 ||
         expr.children.front().kind != ExprKind::Call) {
         return std::nullopt;
@@ -403,6 +405,10 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
     if ((expr.name == "Ok" || expr.name == "Err") && expr.children.size() == 1) {
         return "dudu::" + expr.name + "(" +
                join_lowered_exprs(expr.children, aliases, locals, ", ", symbols) + ")";
+    }
+    if (expr.name == "cstr" && expr.children.size() == 1) {
+        return "reinterpret_cast<const char*>(" +
+               lower_expr(expr.children.front(), aliases, locals, symbols) + ")";
     }
     if (is_builtin_cast_call(expr.name)) {
         return lower_cpp_type(expr.name, aliases) + "(" +

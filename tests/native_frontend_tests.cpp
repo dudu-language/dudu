@@ -68,7 +68,7 @@ void test_native_header_type_scan(const std::filesystem::path& root) {
                            "    dudu_native_format(\"%d %d\", event.type, "
                            "dudu_native_kind_ok)\n"
                            "    return event.type + widget.value + "
-                           "other.value + dudu_native_kind_ok\n",
+                           "other.value + i32(dudu_native_kind_ok)\n",
                            root / "tests/fixtures/native_scan.dd");
     dudu::ProjectConfig config;
     config.build_dir = root / "build" / "native-header-test-cache";
@@ -110,12 +110,11 @@ void test_native_single_underscore_function_macros(const std::filesystem::path& 
                "#define __dudu_private_call(a) (a)\n"
                "#define _DUDU_PRIVATE_VALUE 3\n";
     }
-    dudu::ModuleAst module =
-        dudu::parse_source("import cpp \"single_underscore_macro.hpp\"\n"
-                           "\n"
-                           "def main() -> i32:\n"
-                           "    return _dudu_macro_call(20, 22)\n",
-                           source_dir / "main.dd");
+    dudu::ModuleAst module = dudu::parse_source("import cpp \"single_underscore_macro.hpp\"\n"
+                                                "\n"
+                                                "def main() -> i32:\n"
+                                                "    return _dudu_macro_call(20, 22)\n",
+                                                source_dir / "main.dd");
     dudu::ProjectConfig config;
     config.project_dir = source_dir;
     config.build_dir = source_dir / "build";

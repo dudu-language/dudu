@@ -61,6 +61,15 @@ std::string function_decorator_arg(const FunctionDecl& fn, std::string_view name
     return {};
 }
 
+std::string function_decorator_args(const FunctionDecl& fn, std::string_view name) {
+    for (const Decorator& decorator : fn.decorators) {
+        if (const std::optional<std::string> args = decorator_arg_list_text(decorator, name)) {
+            return *args;
+        }
+    }
+    return {};
+}
+
 bool visible_in_header(Visibility visibility) {
     return visibility != Visibility::Private;
 }
@@ -152,7 +161,7 @@ void emit_function_signature(std::ostringstream& out, const FunctionDecl& fn,
     if (!section.empty()) {
         out << "__attribute__((section(" << section << "))) ";
     }
-    const std::string workgroup = function_decorator_arg(fn, "workgroup_size");
+    const std::string workgroup = function_decorator_args(fn, "workgroup_size");
     if (!workgroup.empty()) {
         out << "DUDU_WORKGROUP_SIZE(" << workgroup << ") ";
     }

@@ -3,6 +3,8 @@
 #include "dudu/ast_expr.hpp"
 #include "dudu/cpp_lower.hpp"
 
+#include <sstream>
+
 namespace dudu {
 namespace {
 
@@ -56,6 +58,21 @@ std::optional<std::string> decorator_first_arg_text(const Decorator& decorator,
         return std::nullopt;
     }
     return trim_copy(decorator.expr.children.front().text);
+}
+
+std::optional<std::string> decorator_arg_list_text(const Decorator& decorator,
+                                                   std::string_view name) {
+    if (!decorator_call_matches(decorator, name)) {
+        return std::nullopt;
+    }
+    std::ostringstream out;
+    for (size_t i = 0; i < decorator.expr.children.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << trim_copy(decorator.expr.children[i].text);
+    }
+    return out.str();
 }
 
 std::optional<std::string> decorator_first_string_arg(const Decorator& decorator,

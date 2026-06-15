@@ -372,7 +372,8 @@ Core tests:
 
 - C typedef struct
 - C typedef union
-- C enum and enum constants
+- C enum and enum constants, including preserving the enum constant type from
+  Clang metadata
 - opaque struct pointer
 - C++ namespace function
 - C++ class type
@@ -403,3 +404,11 @@ Current migration state:
   scan native header` diagnostic and an include/pkg hint
 - broken `CLANGXX` or missing Clang tooling fails with a native-header scanner
   diagnostic and a Clang setup hint
+- C++ signatures with nested `<...>` template arguments are split structurally
+  instead of with comma string splitting
+- scanned C++ function templates preserve template parameter order for explicit
+  calls such as `foo[T, U](...)`
+- native C struct tag spellings such as `struct stat` resolve to scanned class
+  fields
+- internal C++ implementation aliases remain compiler artifacts; Dudu should
+  not require wrapper headers just to name private libstdc++ helper aliases
