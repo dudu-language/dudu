@@ -209,7 +209,8 @@ bool is_supported_swizzle(const std::string& swizzle) {
     if (swizzle.size() < 2 || swizzle.size() > 4) {
         return false;
     }
-    for (const std::string_view set : {std::string_view("xyzw"), std::string_view("rgba")}) {
+    for (const std::string_view set :
+         {std::string_view("xyzw"), std::string_view("rgba"), std::string_view("stpq")}) {
         bool matches = true;
         for (const char ch : swizzle) {
             if (set.find(ch) == std::string_view::npos) {

@@ -1,0 +1,14 @@
+class TexCoord4:
+    s: i32
+    t: i32
+    p: i32
+    q: i32
+
+
+def main() -> i32:
+    coord: TexCoord4 = TexCoord4(5, 6, 7, 8)
+    rotated: TexCoord4 = coord.tspq
+    repeated: TexCoord4 = coord.qqqq
+    if rotated.s == 6 and rotated.t == 5 and rotated.p == 7 and rotated.q == 8 and repeated.s == 8:
+        return 42
+    return 1

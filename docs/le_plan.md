@@ -286,8 +286,8 @@ push. They are not release packaging work.
    assignment hooks work for library-style tensor wrappers, and indexed member
    paths such as `self.values[i]` type-check. Step slices, multidimensional
    slices, different-width swizzle result construction, swizzle assignment, and
-   imported vector swizzle metadata remain. Same-width Dudu-native `xyzw` read
-   swizzles are implemented for local class receivers.
+   imported vector swizzle metadata remain. Same-width Dudu-native `xyzw`,
+   `rgba`, and `stpq` read swizzles are implemented for local class receivers.
 
 5. Native Dudu Generics
 

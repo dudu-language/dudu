@@ -1,0 +1,11 @@
+class TexCoord4:
+    s: i32
+    t: i32
+    p: i32
+    q: i32
+
+
+def main() -> i32:
+    coord: TexCoord4 = TexCoord4(5, 6, 7, 8)
+    bad: TexCoord4 = coord.stxy
+    return bad.s

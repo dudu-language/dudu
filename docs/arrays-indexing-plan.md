@@ -233,10 +233,10 @@ The compiler should not special-case one imported library such as glm. Native
 Dudu vector types and imported vector wrappers should use the same generic
 swizzle mechanism.
 
-Status: same-width Dudu-native `xyzw` and `rgba` read swizzles are implemented
-for local class receivers with matching component fields. Repeated read
-components such as `v.xx` and `color.rrrr` are allowed. Write swizzles,
-different-width result construction, `stpq` aliases, imported vector metadata,
+Status: same-width Dudu-native `xyzw`, `rgba`, and `stpq` read swizzles are
+implemented for local class receivers with matching component fields. Repeated
+read components such as `v.xx`, `color.rrrr`, and `coord.qqqq` are allowed.
+Write swizzles, different-width result construction, imported vector metadata,
 and expression receivers remain compiler-architecture work.
 
 ## Library-Defined Indexing
