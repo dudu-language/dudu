@@ -176,6 +176,9 @@ Already structured:
 - assignment compatibility for `list[T]`, `set[T]`, `dict[K, V]`,
   `Option[T]`, and `Result[T, E]` now reads parsed `TypeRef` template children
   instead of open-coding bracket slicing for those common type shapes
+- C++ tuple-element artifact normalization now reads parsed `TypeRef` template
+  children for `__tuple_element_t[N, tuple[...]]` and qualified
+  `std.tuple[...]` forms instead of manually splitting nested bracket text
 - AST literal classification no longer reclassifies `Unknown` expression nodes
   from raw text
 - C++ assignment emission detects `Option` reset from `NoneLiteral` expression

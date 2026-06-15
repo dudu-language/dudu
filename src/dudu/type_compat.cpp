@@ -86,31 +86,28 @@ std::string normalize_type_traits(std::string type) {
 
 std::string normalize_tuple_element(std::string type) {
     type = trim_copy(std::move(type));
-    if (!type.empty() && type.front() == '&') {
-        return "&" + normalize_tuple_element(type.substr(1));
+    const TypeRef parsed = parse_type_text(type);
+    if (parsed.kind == TypeKind::Reference && parsed.children.size() == 1) {
+        return "&" + normalize_tuple_element(parsed.children.front().text);
     }
-    if (!starts_with(type, "__tuple_element_t[") || !type.ends_with("]")) {
+    if (parsed.kind != TypeKind::Template || parsed.name != "__tuple_element_t" ||
+        parsed.children.size() != 2 || parsed.children[0].kind != TypeKind::Value) {
         return type;
     }
-    std::vector<std::string> args = split_top_level_args(type.substr(18, type.size() - 19));
-    if (args.size() != 2) {
+    const TypeRef& tuple_type = parsed.children[1];
+    if (tuple_type.kind != TypeKind::Template ||
+        (tuple_type.name != "std.tuple" && tuple_type.name != "tuple")) {
         return type;
     }
-    args[0] = trim_copy(args[0]);
-    args[1] = trim_copy(args[1]);
-    if (args[0].empty() || args[0].find_first_not_of("0123456789") != std::string::npos ||
-        (!starts_with(args[1], "std.tuple[") && !starts_with(args[1], "tuple[")) ||
-        !args[1].ends_with("]")) {
+    const std::string index_text = trim_copy(parsed.children[0].value);
+    if (index_text.empty() || index_text.find_first_not_of("0123456789") != std::string::npos) {
         return type;
     }
-    const size_t open = args[1].find('[');
-    const std::vector<std::string> elements =
-        split_top_level_args(args[1].substr(open + 1, args[1].size() - open - 2));
-    const size_t index = static_cast<size_t>(std::stoull(args[0]));
-    if (index >= elements.size()) {
+    const size_t index = static_cast<size_t>(std::stoull(index_text));
+    if (index >= tuple_type.children.size()) {
         return type;
     }
-    return trim_copy(elements[index]);
+    return trim_copy(tuple_type.children[index].text);
 }
 
 std::string normalize_cpp_type_artifacts(std::string type) {
