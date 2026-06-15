@@ -1,0 +1,500 @@
+#include "dudu/sema_body.hpp"
+
+#include "dudu/array_shape.hpp"
+#include "dudu/ast_expr.hpp"
+#include "dudu/control_flow.hpp"
+#include "dudu/escapes.hpp"
+#include "dudu/naming.hpp"
+#include "dudu/sema_alloc.hpp"
+#include "dudu/sema_bindings.hpp"
+#include "dudu/sema_common.hpp"
+#include "dudu/sema_context.hpp"
+#include "dudu/sema_index.hpp"
+#include "dudu/sema_match.hpp"
+#include "dudu/sema_methods.hpp"
+#include "dudu/sema_ops.hpp"
+#include "dudu/sema_super.hpp"
+#include "dudu/type_compat.hpp"
+
+#include <optional>
+#include <set>
+#include <sstream>
+#include <utility>
+
+namespace dudu {
+
+namespace {
+
+bool freestanding_like(const FunctionScope& scope) {
+    return scope.target_mode == "freestanding" || scope.target_mode == "embedded";
+}
+
+bool is_array_literal(const Expr& expr) {
+    return expr.kind == ExprKind::ListLiteral;
+}
+
+bool function_has_decorator(const FunctionDecl& fn, std::string_view name) {
+    for (const Decorator& decorator : fn.decorators) {
+        if (trim(decorator.text) == name) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void check_type_match(FunctionScope& scope, const std::string& expected, const Expr& expr,
+    const SourceLocation& location, const BodyCheckCallbacks& callbacks) {
+    const std::string got = callbacks.infer_expr(scope, expr, &location);
+    if (!callbacks.can_assign(scope, expected, expr, got)) {
+        sema_fail(location, assignment_error(expected, expr, got));
+    }
+}
+
+void check_array_literal_elements(FunctionScope& scope, const std::string& element_type,
+                                  const Expr& expr, const SourceLocation& location,
+                                  const BodyCheckCallbacks& callbacks) {
+    if (expr.kind != ExprKind::ListLiteral) {
+        const std::string got = callbacks.infer_expr(scope, expr, &location);
+        if (!callbacks.can_assign(scope, element_type, expr, got)) {
+            sema_fail(location, "array literal element expects " + element_type + ", got " + got);
+        }
+        return;
+    }
+    for (const Expr& child : expr.children) {
+        check_array_literal_elements(scope, element_type, child, node_location(location, child),
+                                     callbacks);
+    }
+}
+
+std::string effective_var_type(const Stmt& stmt) {
+    const ArrayShapeInference inferred = infer_array_literal_shape_type(stmt.type, stmt.value_expr);
+    return inferred.status == ArrayShapeStatus::Inferred ? inferred.type : stmt.type;
+}
+
+std::string shape_text(const std::vector<size_t>& shape) {
+    std::ostringstream out;
+    out << "[";
+    for (size_t i = 0; i < shape.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << shape[i];
+    }
+    out << "]";
+    return out.str();
+}
+
+void check_condition_type(FunctionScope& scope, const Stmt& stmt,
+                          const BodyCheckCallbacks& callbacks) {
+    const SourceLocation& location = node_location(stmt.location, stmt.condition_expr);
+    const std::string got =
+        callbacks.infer_expr(scope, stmt.condition_expr, &location);
+    if (!got.empty() && got != "bool" && got != "auto") {
+        if (const auto signature = dudu_operator_signature(scope.symbols, "bool", got);
+            signature && signature->params.empty() && signature->return_type == "bool") {
+            return;
+        }
+        sema_fail(location, "condition must be bool, got " + got);
+    }
+}
+
+std::string assign_target_type(FunctionScope& scope, const Stmt& stmt,
+                               const BodyCheckCallbacks& callbacks) {
+    const SourceLocation& target_location = node_location(stmt.location, stmt.target_expr);
+    if (stmt.target_expr.kind == ExprKind::Unary && stmt.target_expr.op == "*" &&
+        stmt.target_expr.children.size() == 1 &&
+        stmt.target_expr.children.front().kind == ExprKind::Name) {
+        const std::string& name = stmt.target_expr.children.front().name;
+        const auto local = scope.locals.find(name);
+        if (local == scope.locals.end()) {
+            sema_fail(target_location, "assignment through unknown local: " + name);
+        }
+        std::string type = trim(local->second);
+        if (type.empty() || type.front() != '*') {
+            sema_fail(target_location, "cannot dereference non-pointer: " + name);
+        }
+        return trim(type.substr(1));
+    }
+    if (stmt.target_expr.kind == ExprKind::Index && stmt.target_expr.children.size() == 2 &&
+        stmt.target_expr.children[0].kind == ExprKind::Name) {
+        const std::string& name = stmt.target_expr.children[0].name;
+        if (const auto local = scope.locals.find(name); local != scope.locals.end()) {
+            if (const auto signature =
+                    dudu_operator_signature(scope.symbols, "[]=", local->second)) {
+                std::vector<Expr> args = index_arg_exprs(stmt.target_expr.children[1]);
+                args.push_back(stmt.value_expr);
+                callbacks.check_call_args(scope, name + "[]=", *signature, args, &target_location);
+                return {};
+            }
+        }
+        return indexed_value_type(scope.symbols, scope.locals, target_location, name,
+                                  stmt.target_expr.children[1],
+                                  "indexed assignment to unknown local: ");
+    }
+    if (stmt.target_expr.kind == ExprKind::Index && stmt.target_expr.children.size() == 2) {
+        const Expr& receiver = stmt.target_expr.children[0];
+        if (const std::optional<std::string> receiver_path = member_path_from_expr(receiver)) {
+            const std::string normalized_receiver =
+                normalize_current_class_path(scope, *receiver_path, &target_location);
+            const std::string receiver_type =
+                member_path_type(scope.symbols, scope.locals, &target_location, normalized_receiver,
+                                 "assignment through unknown local: ");
+            if (!receiver_type.empty()) {
+                return indexed_type_from_type(scope.symbols, target_location, receiver_type,
+                                              stmt.target_expr.children[1], normalized_receiver);
+            }
+        }
+    }
+    if (stmt.target_expr.kind == ExprKind::Name) {
+        const std::string& name = stmt.target_expr.name;
+        if (scope.constants.contains(name)) {
+            sema_fail(target_location, "cannot assign to constant: " + name);
+        }
+        const auto local = scope.locals.find(name);
+        if (local == scope.locals.end()) {
+            sema_fail(target_location, "assignment to unknown local: " + name);
+        }
+        return local->second;
+    }
+    if (stmt.target_expr.kind == ExprKind::Member) {
+        if (const std::optional<std::string> path = member_path_from_expr(stmt.target_expr)) {
+            return member_path_type(scope.symbols, scope.locals, &target_location,
+                                    normalize_current_class_path(scope, *path, &target_location),
+                                    "assignment through unknown local: ");
+        }
+        sema_fail(target_location, "unsupported assignment target: " + stmt.target_expr.text);
+    }
+    if (stmt.target_expr.kind == ExprKind::Call ||
+        stmt.target_expr.kind == ExprKind::TemplateCall) {
+        (void)callbacks.infer_expr(scope, stmt.target_expr, &target_location);
+        return {};
+    }
+    if (stmt.target_expr.kind != ExprKind::Unknown) {
+        sema_fail(target_location, "unsupported assignment target: " + stmt.target_expr.text);
+    }
+    sema_fail(target_location, "unsupported assignment target: " + trim(stmt.target_expr.text));
+}
+
+void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& return_type,
+                int loop_depth, const BodyCheckCallbacks& callbacks);
+
+void check_block(FunctionScope& scope, const std::vector<Stmt>& body,
+                 const std::string& return_type, int loop_depth,
+                 const BodyCheckCallbacks& callbacks) {
+    const bool allow_super_init_at_start = scope.allow_super_init;
+    for (size_t i = 0; i < body.size(); ++i) {
+        const Stmt& stmt = body[i];
+        scope.allow_super_init =
+            allow_super_init_at_start && i == 0 && loop_depth == 0 && is_super_init_stmt(stmt);
+        check_stmt(scope, stmt, return_type, loop_depth, callbacks);
+    }
+    scope.allow_super_init = false;
+}
+
+void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& return_type,
+                int loop_depth, const BodyCheckCallbacks& callbacks) {
+    check_local_address_escape(stmt, scope.locals);
+    if (stmt.kind == StmtKind::Return) {
+        const SourceLocation& value_location = node_location(stmt.location, stmt.value_expr);
+        if (missing_expr(stmt.value_expr)) {
+            if (return_type != "void") {
+                sema_fail(value_location,
+                          "return type mismatch: expected " + return_type + ", got void");
+            }
+            return;
+        }
+        const std::string got = callbacks.infer_expr(scope, stmt.value_expr, &value_location);
+        if (return_type == "void" && got != "void") {
+            sema_fail(value_location, "void function cannot return " + got);
+        }
+        if (return_type != "void" && !callbacks.can_assign(scope, return_type, stmt.value_expr, got)) {
+            sema_fail(value_location,
+                      "return type mismatch: expected " + return_type + ", got " + got);
+        }
+        return;
+    }
+    if (stmt.kind == StmtKind::Assert || stmt.kind == StmtKind::DebugAssert) {
+        const bool debug = stmt.kind == StmtKind::DebugAssert;
+        if (!debug && freestanding_like(scope)) {
+            sema_fail(stmt.location,
+                      "runtime assert is not available in " + scope.target_mode +
+                          " target mode; use debug_assert or a target-specific assert handler");
+        }
+        check_condition_type(scope, stmt, callbacks);
+        if (sema_has_expr(stmt.message_expr)) {
+            (void)callbacks.infer_expr(scope, stmt.message_expr,
+                                       &node_location(stmt.location, stmt.message_expr));
+        }
+        return;
+    }
+    if (stmt.kind == StmtKind::Raise) {
+        if (sema_has_expr(stmt.value_expr)) {
+            (void)callbacks.infer_expr(scope, stmt.value_expr,
+                                       &node_location(stmt.location, stmt.value_expr));
+        }
+        return;
+    }
+    if (stmt.kind == StmtKind::Match) {
+        check_match_stmt(scope, stmt, return_type, loop_depth,
+                         {.infer_expr = callbacks.infer_expr,
+                          .check_block =
+                              [&](FunctionScope& nested, const std::vector<Stmt>& body,
+                                  const std::string& nested_return_type, int nested_loop_depth) {
+                                  check_block(nested, body, nested_return_type, nested_loop_depth,
+                                              callbacks);
+                              }});
+        return;
+    }
+    if (stmt.kind == StmtKind::Case) {
+        sema_fail(stmt.location, "case outside match");
+    }
+    if (stmt.kind == StmtKind::Delete) {
+        std::vector<std::string> arg_types;
+        if (stmt.value_expr.kind == ExprKind::TupleLiteral) {
+            for (const Expr& child : stmt.value_expr.children) {
+                arg_types.push_back(
+                    callbacks.infer_expr(scope, child, &node_location(stmt.location, child)));
+            }
+        } else {
+            arg_types.push_back(callbacks.infer_expr(
+                scope, stmt.value_expr, &node_location(stmt.location, stmt.value_expr)));
+        }
+        check_deallocation_args(stmt.location, "delete", arg_types);
+        return;
+    }
+    if (stmt.kind == StmtKind::CppEscape || stmt.kind == StmtKind::Pass) {
+        return;
+    }
+    if ((stmt.kind == StmtKind::Break || stmt.kind == StmtKind::Continue) && loop_depth == 0) {
+        sema_fail(stmt.location, std::string(statement_kind_name(stmt.kind)) + " outside loop");
+    }
+    if (stmt.kind == StmtKind::Break || stmt.kind == StmtKind::Continue) {
+        return;
+    }
+    if (stmt.kind == StmtKind::If || stmt.kind == StmtKind::Elif) {
+        check_condition_type(scope, stmt, callbacks);
+        check_block(scope, stmt.children, return_type, loop_depth, callbacks);
+        return;
+    }
+    if (stmt.kind == StmtKind::Else || stmt.kind == StmtKind::Try) {
+        check_block(scope, stmt.children, return_type, loop_depth, callbacks);
+        return;
+    }
+    if (stmt.kind == StmtKind::Except) {
+        FunctionScope nested = scope;
+        if (sema_has_expr(stmt.condition_expr) ||
+            (stmt.name.empty() != !has_type_ref(stmt.type_ref))) {
+            sema_fail(stmt.location, "expected except binding as name: Type");
+        }
+        if (!stmt.name.empty()) {
+            check_local_binding_name(stmt.location, stmt.name);
+            check_known_type_ref(scope.symbols, node_location(stmt.location, stmt.type_ref),
+                                 stmt.type_ref, "unknown catch type: ");
+            bind_local(nested, stmt.name, "&const[" + stmt.type + "]",
+                       parse_type_text("&const[" + stmt.type + "]", stmt.location));
+        }
+        check_block(nested, stmt.children, return_type, loop_depth, callbacks);
+        return;
+    }
+    if (stmt.kind == StmtKind::While) {
+        check_condition_type(scope, stmt, callbacks);
+        check_block(scope, stmt.children, return_type, loop_depth + 1, callbacks);
+        return;
+    }
+    if (stmt.kind == StmtKind::For) {
+        FunctionScope nested = scope;
+        if (!stmt.name.empty() && !stmt.type.empty() && sema_has_expr(stmt.iterable_expr)) {
+            check_local_binding_name(stmt.location, stmt.name);
+            check_known_type_ref(scope.symbols, node_location(stmt.location, stmt.type_ref),
+                                 stmt.type_ref, "unknown loop binding type: ");
+            check_iterable_binding(scope.symbols, scope.locals,
+                                   node_location(stmt.location, stmt.iterable_expr), stmt.type,
+                                   stmt.iterable_expr);
+            bind_local(nested, stmt.name, stmt.type, stmt.type_ref);
+        }
+        check_block(nested, stmt.children, return_type, loop_depth + 1, callbacks);
+        return;
+    }
+    if (stmt.kind == StmtKind::CompoundAssign) {
+        const std::string target_type = assign_target_type(scope, stmt, callbacks);
+        if (!target_type.empty()) {
+            check_type_match(scope, target_type, stmt.value_expr,
+                             node_location(stmt.location, stmt.value_expr), callbacks);
+        }
+        return;
+    }
+    if (stmt.kind == StmtKind::VarDecl) {
+        check_local_binding_name(stmt.location, stmt.name);
+        const ArrayShapeInference inferred =
+            infer_array_literal_shape_type(stmt.type, stmt.value_expr);
+        if (inferred.status == ArrayShapeStatus::EmptyLiteral) {
+            sema_fail(node_location(stmt.location, stmt.value_expr),
+                      "array shape cannot be inferred from an empty literal");
+        }
+        if (inferred.status == ArrayShapeStatus::RaggedLiteral) {
+            sema_fail(node_location(stmt.location, stmt.value_expr), "ragged array literal");
+        }
+        const std::vector<size_t> explicit_shape = explicit_array_shape(stmt.type);
+        const std::string explicit_element = explicit_array_element_type(stmt.type);
+        if (!explicit_shape.empty() && stmt.value_expr.kind == ExprKind::ListLiteral) {
+            const ArrayShapeInference actual =
+                infer_array_literal_shape_type("array[" + explicit_element + "]", stmt.value_expr);
+            if (actual.status == ArrayShapeStatus::RaggedLiteral) {
+                sema_fail(node_location(stmt.location, stmt.value_expr), "ragged array literal");
+            }
+            if (actual.status == ArrayShapeStatus::EmptyLiteral &&
+                explicit_shape != std::vector<size_t>{0}) {
+                sema_fail(node_location(stmt.location, stmt.value_expr),
+                          "array literal shape mismatch: expected " + shape_text(explicit_shape) +
+                              ", got [0]");
+            }
+            if (actual.status == ArrayShapeStatus::Inferred && actual.shape != explicit_shape) {
+                sema_fail(node_location(stmt.location, stmt.value_expr),
+                          "array literal shape mismatch: expected " + shape_text(explicit_shape) +
+                              ", got " + shape_text(actual.shape));
+            }
+        }
+        const std::string type = effective_var_type(stmt);
+        if (stmt.type == type) {
+            check_known_type_ref(scope.symbols, node_location(stmt.location, stmt.type_ref),
+                                 stmt.type_ref, "unknown local type: ");
+        } else if (!known_type(scope.symbols, type)) {
+            sema_fail(node_location(stmt.location, stmt.type_ref), "unknown local type: " + type);
+        }
+        if (sema_has_expr(stmt.value_expr)) {
+            if (inferred.status == ArrayShapeStatus::Inferred &&
+                is_array_literal(stmt.value_expr)) {
+                check_array_literal_elements(scope, inferred.element_type, stmt.value_expr,
+                                             node_location(stmt.location, stmt.value_expr),
+                                             callbacks);
+            } else if (!explicit_element.empty() && is_array_literal(stmt.value_expr)) {
+                check_array_literal_elements(scope, explicit_element, stmt.value_expr,
+                                             node_location(stmt.location, stmt.value_expr),
+                                             callbacks);
+            } else {
+                check_type_match(scope, type, stmt.value_expr,
+                                 node_location(stmt.location, stmt.value_expr), callbacks);
+            }
+        }
+        bind_local(scope, stmt.name, type,
+                   stmt.type == type ? stmt.type_ref : parse_type_text(type));
+        if (is_dudu_all_caps(stmt.name)) {
+            scope.constants.insert(stmt.name);
+        }
+        return;
+    }
+    if (stmt.kind == StmtKind::Assign) {
+        if (const std::vector<std::string> names = tuple_binding_names(stmt.target_expr);
+            !names.empty()) {
+            const std::vector<std::string> types = tuple_types(
+                scope.symbols,
+                callbacks.infer_expr(scope, stmt.value_expr,
+                                     &node_location(stmt.location, stmt.value_expr)));
+            if (names.size() != types.size()) {
+                sema_fail(node_location(stmt.location, stmt.value_expr),
+                          "tuple destructuring count mismatch");
+            }
+            check_destructure_bindings(stmt.location, names, scope.locals);
+            for (size_t i = 0; i < names.size(); ++i) {
+                bind_local(scope, names[i], types[i]);
+            }
+            return;
+        }
+        if (stmt.target_expr.kind == ExprKind::TupleLiteral) {
+            sema_fail(node_location(stmt.location, stmt.target_expr),
+                      "tuple destructuring targets must be names");
+        }
+        if (stmt.target_expr.kind == ExprKind::Name &&
+            !scope.locals.contains(stmt.target_expr.name)) {
+            const std::string& name = stmt.target_expr.name;
+            check_local_binding_name(node_location(stmt.location, stmt.target_expr), name);
+            const std::string inferred = callbacks.infer_expr(
+                scope, stmt.value_expr, &node_location(stmt.location, stmt.value_expr));
+            bind_local(scope, name, inferred.empty() ? "auto" : inferred);
+            if (is_dudu_all_caps(name)) {
+                scope.constants.insert(name);
+            }
+            return;
+        }
+        const std::string target_type = assign_target_type(scope, stmt, callbacks);
+        if (!target_type.empty()) {
+            check_type_match(scope, target_type, stmt.value_expr,
+                             node_location(stmt.location, stmt.value_expr), callbacks);
+        }
+        return;
+    }
+    (void)callbacks.infer_expr(scope, stmt.expr, &stmt.location);
+}
+
+Symbols with_generic_params(Symbols symbols, const std::vector<std::string>& params) {
+    for (const std::string& param : params) {
+        symbols.types.insert(param);
+    }
+    return symbols;
+}
+
+void copy_base_scope_state(FunctionScope& dst, const FunctionScope& src) {
+    dst.locals = src.locals;
+    dst.constants = src.constants;
+    dst.target_mode = src.target_mode;
+    dst.current_class = src.current_class;
+    dst.allow_super_init = src.allow_super_init;
+    dst.local_type_refs = src.local_type_refs;
+}
+
+} // namespace
+
+void check_bodies(const ModuleAst& module, const Symbols& symbols,
+                  const BodyCheckCallbacks& callbacks) {
+    FunctionScope base{symbols};
+    const auto mode = module.build_values.find("TARGET_MODE");
+    if (mode != module.build_values.end()) {
+        base.target_mode = trim(mode->second);
+        if (base.target_mode.size() >= 2 && base.target_mode.front() == '"' &&
+            base.target_mode.back() == '"') {
+            base.target_mode = base.target_mode.substr(1, base.target_mode.size() - 2);
+        }
+    }
+    for (const ConstDecl& constant : module.constants) {
+        bind_local(base, constant.name, constant.type, constant.type_ref);
+        base.constants.insert(constant.name);
+    }
+    for (const ClassDecl& klass : module.classes) {
+        for (const FunctionDecl& method : klass.methods) {
+            if (function_has_decorator(method, "abstract")) {
+                continue;
+            }
+            Symbols method_symbols = with_generic_params(symbols, klass.generic_params);
+            method_symbols = with_generic_params(method_symbols, method.generic_params);
+            FunctionScope scope{method_symbols};
+            copy_base_scope_state(scope, base);
+            scope.current_class = klass.name;
+            scope.allow_super_init = method.name == "init";
+            for (const ParamDecl& param : method.params) {
+                bind_local(scope, param.name, param.type, param.type_ref);
+            }
+            check_block(scope, method.statements,
+                        method.return_type.empty() ? "void" : method.return_type, 0, callbacks);
+            if (!method.return_type.empty() && method.return_type != "void" &&
+                !block_guarantees_return(method.statements)) {
+                sema_fail(method.location, "missing return in function: " + method.name);
+            }
+        }
+    }
+    for (const FunctionDecl& fn : module.functions) {
+        Symbols function_symbols = with_generic_params(symbols, fn.generic_params);
+        FunctionScope scope{function_symbols};
+        copy_base_scope_state(scope, base);
+        for (const ParamDecl& param : fn.params) {
+            bind_local(scope, param.name, param.type, param.type_ref);
+        }
+        check_block(scope, fn.statements, fn.return_type.empty() ? "void" : fn.return_type, 0,
+                    callbacks);
+        if (!fn.return_type.empty() && fn.return_type != "void" &&
+            !block_guarantees_return(fn.statements)) {
+            sema_fail(fn.location, "missing return in function: " + fn.name);
+        }
+    }
+}
+
+} // namespace dudu

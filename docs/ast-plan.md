@@ -814,10 +814,12 @@ The C++ emitter has been split by AST responsibility:
 Semantic analysis has started the same cleanup:
 
 - `sema_enum.cpp` owns shared enum lookup helpers.
+- `sema_common.cpp` owns shared semantic utility helpers.
 - `sema_match.cpp` owns wrapper/enum match checking.
 - `sema_generics.cpp` owns generic type substitution and generic-call
   inference.
 - `sema_super.cpp` owns `super.method(...)` and `super.init(...)` rules.
+- `sema_body.cpp` owns function/method body traversal and statement checking.
 
 `sema.cpp`, `sema_context.cpp`, and `sema_methods.cpp` still exceed the repo
 file-size target and should keep being split by semantic responsibility before

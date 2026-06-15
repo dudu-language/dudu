@@ -52,6 +52,8 @@ add_library(dudu_frontend
     src/dudu/sema.cpp
     src/dudu/sema_alloc.cpp
     src/dudu/sema_bindings.cpp
+    src/dudu/sema_body.cpp
+    src/dudu/sema_common.cpp
     src/dudu/sema_context.cpp
     src/dudu/sema_constexpr.cpp
     src/dudu/sema_constructors.cpp
