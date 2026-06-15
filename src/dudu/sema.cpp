@@ -12,7 +12,6 @@
 #include "dudu/sema_constexpr.hpp"
 #include "dudu/sema_constructors.hpp"
 #include "dudu/sema_context.hpp"
-#include "dudu/sema_expr.hpp"
 #include "dudu/sema_function_type.hpp"
 #include "dudu/sema_index.hpp"
 #include "dudu/sema_inheritance.hpp"
@@ -690,9 +689,6 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
     }
     if (starts_with(expr, "lambda "))
         return "lambda";
-    if (const auto type = infer_not_expr(scope, expr, location, infer_expr)) {
-        return *type;
-    }
     const size_t pointer_cast_call = find_call_open(expr);
     if (expr.size() > 1 && expr.front() == '*' && pointer_cast_call != std::string::npos &&
         find_call_close(expr, pointer_cast_call) == expr.size() - 1) {
@@ -874,17 +870,21 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
         out << "]";
         return out.str();
     }
-    if (expr == "True" || expr == "False") {
+    const Expr parsed_expr =
+        parse_expr_text(expr, location == nullptr ? SourceLocation{} : *location);
+    if (parsed_expr.kind == ExprKind::BoolLiteral) {
         return "bool";
     }
-    if (is_string_literal_expr(expr)) {
+    if (parsed_expr.kind == ExprKind::StringLiteral) {
         return "str";
     }
-    if (const auto type = infer_logical_expr(scope, expr, location, infer_expr)) {
-        return *type;
+    if (parsed_expr.kind == ExprKind::Unary && parsed_expr.op == "not") {
+        return infer_expr_ast(scope, parsed_expr, location);
     }
-    if (const auto type = infer_comparison_expr(scope, expr, location, infer_expr)) {
-        return *type;
+    if (parsed_expr.kind == ExprKind::Binary &&
+        (parsed_expr.op == "and" || parsed_expr.op == "or" ||
+         is_comparison_op(parsed_expr.op))) {
+        return infer_expr_ast(scope, parsed_expr, location);
     }
     const size_t op = find_top_level_operator(expr);
     if (op != std::string::npos) {

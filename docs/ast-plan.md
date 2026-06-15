@@ -144,6 +144,9 @@ Already structured:
 - legacy string expression inference now parses pointer-cast, allocation,
   deallocation, and `Ok`/`Err` call arguments into expression nodes before
   checking them
+- legacy string expression inference delegates bool/string literal,
+  `not`/logical, and comparison expression shapes to parsed expression sema;
+  the old string-splitting `sema_expr` helpers have been removed
 - AST-backed statement checks route assignment compatibility through expression
   nodes instead of using raw statement value strings
 - compound-assignment target checks use the parsed target expression path
