@@ -101,6 +101,7 @@ void check_generic_params(const SourceLocation& location, const std::vector<std:
 Symbols with_generic_params(Symbols symbols, const std::vector<std::string>& params) {
     for (const std::string& param : params) {
         symbols.types.insert(param);
+        symbols.generic_params.insert(param);
     }
     return symbols;
 }

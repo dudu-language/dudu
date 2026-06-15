@@ -81,11 +81,13 @@ method and class type parameters positionally, and type-check parsed runtime
 arguments. Generic method type-argument arity is diagnosed in Dudu source.
 Simple free-function call-site type inference is implemented when every type
 parameter can be bound from argument types, including nested forms such as
-`list[T]`. Richer instantiated diagnostics, operator-constrained generic
-bodies, inferred method type arguments, and non-type template parameters remain.
-Multi-parameter generic functions and classes such as `Pair[str, i32]`
-substitute receiver member types through the declared class generic parameter
-names.
+`list[T]`. Generic bodies allow operators where both operands are the same
+visible generic type parameter, which supports target examples such as
+`Vec2[T].add` and `Vec2[T].dot` while leaving concrete operator validation to
+instantiation. Richer instantiated diagnostics, inferred method type
+arguments, and non-type template parameters remain. Multi-parameter generic
+functions and classes such as `Pair[str, i32]` substitute receiver member types
+through the declared class generic parameter names.
 
 Unsupported operations on `T` should produce useful diagnostics that mention:
 
@@ -199,6 +201,10 @@ class Vec2[T]:
 
 This should work for `i32`, `f32`, `f64`, and imported numeric wrapper types
 that support the operators.
+
+Status: an executable `Vec2[T]` fixture covers generic class methods,
+same-parameter generic operators, explicit construction, and instantiated
+method calls.
 
 ### Stack
 

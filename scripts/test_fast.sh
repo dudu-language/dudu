@@ -55,6 +55,7 @@ compile_and_expect generic_inferred_calls 42
 compile_and_expect generic_method 42
 compile_and_expect generic_method_multi 42
 compile_and_expect generic_pair 42
+compile_and_expect generic_vec2 42
 compile_and_expect inheritance_abstract 42
 compile_and_expect inheritance_super_method 42
 compile_and_expect inheritance_super_init 42

@@ -55,6 +55,12 @@ bool same_foreign_cpp_type(const std::string& left, const std::string& right) {
     return !lhs.empty() && lhs == trim(right) && lhs.find('.') != std::string::npos;
 }
 
+bool same_generic_param_type(const Symbols& symbols, const std::string& left,
+                             const std::string& right) {
+    const std::string lhs = trim(left);
+    return !lhs.empty() && lhs == trim(right) && symbols.generic_params.contains(lhs);
+}
+
 bool numeric_operand_allowed(const std::string& expected, const Expr& expr,
                              const std::string& got) {
     return is_numeric_type(expected) && assignment_type_allowed(expected, expr, got);
@@ -131,6 +137,9 @@ bool binary_rhs_allowed(const Symbols& symbols, const std::string& op, const std
     if (same_foreign_cpp_type(value_left, value_right)) {
         return true;
     }
+    if (same_generic_param_type(symbols, value_left, value_right)) {
+        return true;
+    }
     if (op == "+" && value_left == "str") {
         return assignment_type_allowed(value_left, right_expr, value_right);
     }
@@ -159,6 +168,9 @@ bool comparison_rhs_allowed(const Symbols& symbols, const std::string& op, const
         return true;
     }
     if (same_foreign_cpp_type(value_left, value_right)) {
+        return true;
+    }
+    if (same_generic_param_type(symbols, value_left, value_right)) {
         return true;
     }
     if (op == "==" || op == "!=") {

@@ -1,0 +1,16 @@
+class Vec2[T]:
+    x: T
+    y: T
+
+    def add(self, other: Vec2[T]) -> Vec2[T]:
+        return Vec2[T](self.x + other.x, self.y + other.y)
+
+    def dot(self, other: Vec2[T]) -> T:
+        return self.x * other.x + self.y * other.y
+
+
+def main() -> i32:
+    a: Vec2[i32] = Vec2[i32](2, 3)
+    b: Vec2[i32] = Vec2[i32](4, 5)
+    c: Vec2[i32] = a.add(b)
+    return c.dot(Vec2[i32](1, 2)) + 20
