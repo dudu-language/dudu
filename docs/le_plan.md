@@ -283,7 +283,9 @@ push. They are not release packaging work.
    expected type node when available. `TypeRef` assignment compatibility keeps
    `list`, `set`, `dict`, `Option`, and `Result` expected types on parsed
    template-child nodes for local initializer checks instead of rendering those
-   shapes back to strings first.
+   shapes back to strings first. Type-to-type compatibility now structurally
+   matches parsed pointer, reference, wrapper, template, and function type
+   nodes before falling back to native spelling compatibility.
 
 3. OOP Surface Cleanup
 

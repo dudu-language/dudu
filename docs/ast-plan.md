@@ -226,6 +226,9 @@ Already structured:
 - pointer/reference assignment compatibility uses parsed `TypeRef` pointer,
   reference, and const-wrapper nodes instead of testing `*`, `&`, and
   `*const[...]` spelling by hand
+- the `TypeRef` to `TypeRef` compatibility path now performs structural
+  matching for pointers, references, const/transparent wrappers, templates, and
+  function types before falling back to native spelling compatibility
 - function type normalization for compatibility checks parses `TypeRef`
   function nodes and renders through the shared AST type helper, including
   omitted-return `fn(...)` signatures

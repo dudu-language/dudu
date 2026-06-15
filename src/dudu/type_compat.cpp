@@ -5,6 +5,7 @@
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/type_compat_literals.hpp"
+#include "dudu/type_compat_structural.hpp"
 
 #include <cctype>
 #include <map>
@@ -390,7 +391,8 @@ bool type_assignment_allowed(const std::string& expected, const std::string& got
 }
 
 bool type_assignment_allowed(const TypeRef& expected, const TypeRef& got) {
-    return type_assignment_allowed(substitute_type_ref_text(expected, {}),
+    return structural_type_assignment_allowed(expected, got) ||
+           type_assignment_allowed(substitute_type_ref_text(expected, {}),
                                    substitute_type_ref_text(got, {}));
 }
 
