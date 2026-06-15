@@ -38,6 +38,10 @@ add_library(dudu_frontend
     src/dudu/format.cpp
     src/dudu/format_path.cpp
     src/dudu/language_server.cpp
+    src/dudu/language_server_diagnostics.cpp
+    src/dudu/language_server_json.cpp
+    src/dudu/language_server_semantic_tokens.cpp
+    src/dudu/language_server_support.cpp
     src/dudu/lexer.cpp
     src/dudu/module_loader.cpp
     src/dudu/native_build.cpp

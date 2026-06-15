@@ -1,0 +1,67 @@
+#include "dudu/language_server_support.hpp"
+
+#include <filesystem>
+
+namespace dudu {
+
+std::string file_uri_to_path(std::string uri) {
+    constexpr std::string_view prefix = "file://";
+    if (uri.rfind(prefix, 0) == 0) {
+        uri.erase(0, prefix.size());
+    }
+    std::string out;
+    for (size_t i = 0; i < uri.size(); ++i) {
+        if (uri[i] == '%' && i + 2 < uri.size()) {
+            const std::string hex = uri.substr(i + 1, 2);
+            out.push_back(static_cast<char>(std::stoi(hex, nullptr, 16)));
+            i += 2;
+        } else {
+            out.push_back(uri[i]);
+        }
+    }
+    return out;
+}
+
+std::filesystem::path project_config_path(const std::filesystem::path& file) {
+    std::filesystem::path dir = file.has_parent_path() ? file.parent_path() : ".";
+    while (true) {
+        const std::filesystem::path candidate = dir / "dudu.toml";
+        if (std::filesystem::exists(candidate)) {
+            return candidate;
+        }
+        if (!dir.has_parent_path() || dir == dir.parent_path()) {
+            return {};
+        }
+        dir = dir.parent_path();
+    }
+}
+
+ProjectConfig config_for_file(const std::filesystem::path& file) {
+    const std::filesystem::path config = project_config_path(file);
+    if (config.empty()) {
+        return {};
+    }
+    ProjectConfig parsed = parse_project_config(config);
+    const std::filesystem::path project_dir = config.parent_path();
+    auto absolutize = [&](std::vector<std::string>& paths) {
+        for (std::string& path_text : paths) {
+            const std::filesystem::path path = path_text;
+            if (!path.is_absolute()) {
+                path_text = (project_dir / path).lexically_normal().string();
+            }
+        }
+    };
+    absolutize(parsed.include_dirs);
+    absolutize(parsed.lib_dirs);
+    return parsed;
+}
+
+int leading_spaces(const std::string& line) {
+    int out = 0;
+    while (out < static_cast<int>(line.size()) && line[static_cast<size_t>(out)] == ' ') {
+        ++out;
+    }
+    return out;
+}
+
+} // namespace dudu

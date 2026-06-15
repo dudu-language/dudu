@@ -856,6 +856,17 @@ Native header awareness has been split by scanner responsibility:
 - `native_header_parse.cpp` owns clang AST dump parsing, macro dump parsing,
   and scan dedupe.
 
+Language-server internals have started the same split:
+
+- `language_server_json.cpp` owns the tiny JSON parser/emitter helpers used by
+  the LSP transport.
+- `language_server_semantic_tokens.cpp` owns AST-backed semantic token
+  collection and LSP delta encoding.
+- `language_server_diagnostics.cpp` owns compiler diagnostics, lint
+  diagnostics, and diagnostic JSON encoding.
+- `language_server_support.cpp` owns project config discovery, file URI
+  decoding, and shared source-text helpers.
+
 The remaining oversized frontend files are now outside the core semantic split:
 `language_server.cpp`.
 
