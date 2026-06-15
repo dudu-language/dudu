@@ -19,6 +19,9 @@ bool is_member_path(const std::string& path);
 std::optional<std::string> field_type_for_type(const Symbols& symbols,
                                                const std::string& receiver_type,
                                                const std::string& field);
+std::optional<std::string> swizzle_type_for_type(const Symbols& symbols,
+                                                 const std::string& receiver_type,
+                                                 const std::string& swizzle);
 
 bool method_signature_for_type(const Symbols& symbols, std::string receiver_type,
                                const std::string& method_name, FunctionSignature& signature,

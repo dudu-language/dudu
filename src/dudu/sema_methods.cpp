@@ -7,6 +7,7 @@
 
 #include <cctype>
 #include <optional>
+#include <string_view>
 
 namespace dudu {
 namespace {
@@ -365,6 +366,46 @@ std::optional<std::string> field_type_for_type(const Symbols& symbols,
         return std::nullopt;
     }
     return field_type_for_class(symbols, *klass->second, receiver_type, field);
+}
+
+bool is_xyzw_swizzle(const std::string& swizzle) {
+    if (swizzle.size() < 2 || swizzle.size() > 4) {
+        return false;
+    }
+    for (const char ch : swizzle) {
+        if (std::string_view("xyzw").find(ch) == std::string_view::npos) {
+            return false;
+        }
+    }
+    return true;
+}
+
+std::optional<std::string> swizzle_type_for_type(const Symbols& symbols,
+                                                 const std::string& receiver_type,
+                                                 const std::string& swizzle) {
+    if (!is_xyzw_swizzle(swizzle)) {
+        return std::nullopt;
+    }
+    const std::string class_name = unwrap_receiver_type(symbols, receiver_type);
+    const auto klass = symbols.classes.find(class_name);
+    if (klass == symbols.classes.end()) {
+        return std::nullopt;
+    }
+    size_t component_count = 0;
+    for (const char ch : std::string_view("xyzw")) {
+        if (field_type_for_class(symbols, *klass->second, receiver_type, std::string(1, ch))) {
+            ++component_count;
+        }
+    }
+    if (component_count != swizzle.size()) {
+        return std::nullopt;
+    }
+    for (const char ch : swizzle) {
+        if (!field_type_for_class(symbols, *klass->second, receiver_type, std::string(1, ch))) {
+            return std::nullopt;
+        }
+    }
+    return class_name;
 }
 
 bool method_signature_for_type(const Symbols& symbols, std::string receiver_type,

@@ -106,6 +106,7 @@ expect_fail bad_array_row_to_scalar --emit-cpp "cannot assign array\\[i32\\]\\[2
 expect_fail bad_array_too_many_indices --emit-cpp "too many indices for array: matrix"
 expect_fail bad_array_step_slice --emit-cpp "array slice step is not supported: values"
 expect_fail bad_array_matrix_slice --emit-cpp "array slicing requires one-dimensional fixed array: matrix"
+expect_fail bad_swizzle_width --emit-cpp "unknown field: value.xyx"
 expect_fail bad_tensor_index_type --emit-cpp "argument 1 for tensor\\[\\] expects i32, got bool"
 expect_fail bad_tensor_index_set_index_type --emit-cpp "argument 1 for tensor\\[\\]= expects i32, got bool"
 expect_fail bad_tensor_index_set_value_type --emit-cpp "argument 2 for tensor\\[\\]= expects i32, got bool"

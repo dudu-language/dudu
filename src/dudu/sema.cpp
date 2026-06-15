@@ -1469,13 +1469,25 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
         return left.empty() ? right : left;
     }
     case ExprKind::Member:
+        if (expr.children.size() == 1 && expr.children.front().kind == ExprKind::Name &&
+            scope.locals.contains(expr.children.front().name)) {
+            const Expr& receiver = expr.children.front();
+            const std::string receiver_type = infer_expr_ast(scope, receiver, use_location);
+            if (!receiver_type.empty() &&
+                !field_type_for_type(scope.symbols, receiver_type, expr.name)) {
+                if (const auto swizzle =
+                        swizzle_type_for_type(scope.symbols, receiver_type, expr.name)) {
+                    return *swizzle;
+                }
+            }
+        }
         if (const std::optional<std::string> path = member_path_from_expr(expr)) {
             return member_path_type(scope.symbols, scope.locals, use_location,
                                     normalize_current_class_path(scope, *path, use_location), "");
         }
         if (expr.children.size() == 1) {
-            const std::string receiver_type =
-                infer_expr_ast(scope, expr.children.front(), use_location);
+            const Expr& receiver = expr.children.front();
+            const std::string receiver_type = infer_expr_ast(scope, receiver, use_location);
             if (receiver_type.empty()) {
                 return {};
             }

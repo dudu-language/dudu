@@ -13,6 +13,7 @@
 #include <map>
 #include <optional>
 #include <sstream>
+#include <string_view>
 #include <vector>
 
 namespace dudu {
@@ -202,6 +203,42 @@ bool is_pointer_receiver_expr(const Expr& expr, const std::map<std::string, std:
         return local != locals.end() && is_pointer_list_type(local->second);
     }
     return false;
+}
+
+bool is_xyzw_swizzle(const std::string& swizzle) {
+    if (swizzle.size() < 2 || swizzle.size() > 4) {
+        return false;
+    }
+    for (const char ch : swizzle) {
+        if (std::string_view("xyzw").find(ch) == std::string_view::npos) {
+            return false;
+        }
+    }
+    return true;
+}
+
+std::optional<std::string> lower_local_swizzle_expr(
+    const Expr& expr, const std::vector<std::string>& aliases,
+    const std::map<std::string, std::string>& locals) {
+    if (expr.kind != ExprKind::Member || expr.children.size() != 1 ||
+        expr.children.front().kind != ExprKind::Name || !is_xyzw_swizzle(expr.name)) {
+        return std::nullopt;
+    }
+    const std::string& receiver = expr.children.front().name;
+    const auto local = locals.find(receiver);
+    if (local == locals.end()) {
+        return std::nullopt;
+    }
+    std::ostringstream out;
+    out << lower_cpp_type(local->second, aliases) << "{";
+    for (size_t i = 0; i < expr.name.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << receiver << "." << expr.name[i];
+    }
+    out << "}";
+    return out.str();
 }
 
 std::string unquoted_string_literal(std::string text) {
@@ -487,6 +524,9 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
     }
     case ExprKind::Member:
         if (expr.children.size() == 1) {
+            if (const auto swizzle = lower_local_swizzle_expr(expr, aliases, locals)) {
+                return *swizzle;
+            }
             if (is_pointer_receiver_expr(expr.children.front(), locals)) {
                 return lower_expr(expr.children.front(), aliases, locals) + "->" + expr.name;
             }
