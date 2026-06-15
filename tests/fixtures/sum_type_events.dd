@@ -1,0 +1,82 @@
+class Vec2:
+    x: i32
+    y: i32
+
+
+enum Event:
+    Quit
+
+    KeyDown:
+        key: i32
+
+    MouseMove:
+        x: i32
+        y: i32
+
+    MouseButton:
+        button: i32
+        down: bool
+
+
+enum Command:
+    Idle
+
+    Move:
+        dir: Vec2
+
+    Attack:
+        target: u64
+
+
+enum NetMessage:
+    Hello:
+        version: u32
+
+    Input:
+        frame: u64
+        buttons: u32
+
+    Disconnect:
+        reason: str
+
+
+def event_score(event: Event) -> i32:
+    match event:
+        case Event.Quit:
+            return 1
+        case Event.KeyDown(key):
+            return key
+        case Event.MouseMove(x=mx, y=my):
+            return mx + my
+        case Event.MouseButton(button, down) if down:
+            return button * 10
+        case Event.MouseButton(button, down):
+            return button
+
+
+def command_score(command: Command) -> i32:
+    match command:
+        case Command.Idle:
+            return 0
+        case Command.Move(dir):
+            return dir.x + dir.y
+        case Command.Attack(target):
+            return i32(target)
+
+
+def net_score(message: NetMessage) -> i32:
+    match message:
+        case NetMessage.Hello(version):
+            return i32(version)
+        case NetMessage.Input(frame, buttons):
+            return i32(frame) + i32(buttons)
+        case NetMessage.Disconnect(reason):
+            return i32(len(reason))
+
+
+def main() -> i32:
+    move = Event.MouseMove(x=10, y=20)
+    click = Event.MouseButton(button=4, down=True)
+    command = Command.Move(dir=Vec2(5, 7))
+    message = NetMessage.Input(frame=6, buttons=0)
+    return event_score(move) - event_score(click) + command_score(command) + net_score(message) + 34

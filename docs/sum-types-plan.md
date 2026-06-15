@@ -215,6 +215,11 @@ case or a wildcard case somewhere later in the match.
 Recursive enum examples are covered with pointer indirection, matching the
 planned ownership-neutral shape for recursive data.
 
+Payload enum C++ emission supports payload fields whose types are Dudu-native
+classes declared in the same module. The emitter forward-declares enums,
+emits classes, then emits full enum definitions so class payloads such as
+`Command.Move(dir: Vec2)` compile without wrapper ordering tricks.
+
 Still remaining: richer unreachable-pattern diagnostics and anonymous
 `variant[...]`.
 
@@ -296,6 +301,9 @@ enum Event:
         down: bool
 ```
 
+Status: an executable event/message fixture covers UI-style events with named
+payloads, guarded button cases, and exhaustive matching.
+
 ### Game Commands
 
 ```python
@@ -312,6 +320,9 @@ enum Command:
         spell: SpellId
         target: EntityId
 ```
+
+Status: the event/message fixture covers command-style enum payloads that carry
+a Dudu-native class value.
 
 ### Network Messages
 
@@ -331,6 +342,9 @@ enum NetMessage:
     Disconnect:
         reason: str
 ```
+
+Status: the event/message fixture covers network-style messages with integer
+and string payloads.
 
 ### Parse Errors
 

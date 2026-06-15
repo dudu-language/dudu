@@ -17,6 +17,7 @@ compile_and_expect enum_match 49
 compile_and_expect payload_enum_match 82
 compile_and_expect recursive_enum_expr 42
 compile_and_expect result_option 42
+compile_and_expect sum_type_events 42
 compile_and_expect sum_type_tokens 42
 "$repo_root/build/dudu" "$repo_root/tests/fixtures/freestanding_debug_assert.dd" \
     --emit-cpp "$repo_root/build/freestanding_debug_assert.cpp" -DTARGET_MODE=freestanding

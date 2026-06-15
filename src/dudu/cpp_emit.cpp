@@ -22,14 +22,37 @@ void emit_aliases(std::ostringstream& out, const ModuleAst& module) {
         out << '\n';
     }
 }
+
+bool enum_has_payload_fields(const EnumDecl& en) {
+    for (const EnumValueDecl& value : en.values) {
+        if (!value.payload_fields.empty()) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void emit_enum_forward_declarations(std::ostringstream& out, const ModuleAst& module) {
+    for (const EnumDecl& en : module.enums) {
+        if (enum_has_payload_fields(en)) {
+            out << "struct " << en.name << ";\n";
+            continue;
+        }
+        out << "enum class " << en.name;
+        if (!en.underlying_type.empty()) {
+            out << " : " << lower_cpp_type(en.underlying_type);
+        }
+        out << ";\n";
+    }
+    if (!module.enums.empty()) {
+        out << '\n';
+    }
+}
+
 void emit_enums(std::ostringstream& out, const ModuleAst& module,
                 const std::vector<std::string>& aliases) {
     for (const EnumDecl& en : module.enums) {
-        bool has_payloads = false;
-        for (const EnumValueDecl& value : en.values) {
-            has_payloads = has_payloads || !value.payload_fields.empty();
-        }
-        if (has_payloads) {
+        if (enum_has_payload_fields(en)) {
             out << "struct " << en.name << " {\n";
             for (const EnumValueDecl& value : en.values) {
                 out << "    struct " << value.name << " {\n";
@@ -371,8 +394,9 @@ std::string emit_cpp_header(const ModuleAst& module) {
     emit_result_prelude(out, module);
 
     emit_aliases(out, module);
-    emit_enums(out, module, aliases);
+    emit_enum_forward_declarations(out, module);
     emit_classes(out, module, aliases, function_returns, symbols, true);
+    emit_enums(out, module, aliases);
     emit_early_functions(out, module, aliases, function_returns, symbols, true);
     emit_constants(out, module, aliases);
 
@@ -431,8 +455,9 @@ std::string emit_cpp_source(const ModuleAst& module) {
     emit_result_prelude(out, module);
 
     emit_aliases(out, module);
-    emit_enums(out, module, aliases);
+    emit_enum_forward_declarations(out, module);
     emit_classes(out, module, aliases, function_returns, symbols);
+    emit_enums(out, module, aliases);
     emit_early_functions(out, module, aliases, function_returns, symbols, false);
     emit_constants(out, module, aliases);
 
@@ -456,8 +481,9 @@ std::string emit_cpp_test_source(const ModuleAst& module, const std::string& fil
     emit_result_prelude(out, module);
 
     emit_aliases(out, module);
-    emit_enums(out, module, aliases);
+    emit_enum_forward_declarations(out, module);
     emit_classes(out, module, aliases, function_returns, symbols);
+    emit_enums(out, module, aliases);
     emit_early_functions(out, module, aliases, function_returns, symbols, false, true);
     emit_constants(out, module, aliases);
 

@@ -352,7 +352,10 @@ push. They are not release packaging work.
    implemented with exhaustive `Some`/`None` and `Ok`/`Err` cases. Recursive
    enum examples using pointer indirection compile and run. A lexer-token
    fixture covers tuple payloads, named payloads, guarded payload cases, named
-   destructuring, and exhaustive matching. Anonymous `variant[...]` remains.
+   destructuring, and exhaustive matching. An event/message fixture covers
+   UI, command, and network-style payload enums, including enum payload fields
+   that carry Dudu-native classes declared in the same module. Anonymous
+   `variant[...]` remains.
 
 7. Native Inheritance
 
