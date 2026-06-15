@@ -143,6 +143,9 @@ Already structured:
 - fixed-array indexing and iteration recover `array[T][shape]` element types
   from parsed `TypeRef::FixedArray` nodes instead of hand-matching nested
   brackets in the type text
+- array shape inference and explicit shape extraction also consume parsed
+  `TypeRef` array forms, removing the separate bracket matcher from
+  `array_shape.cpp`
 - member field inference for `Result[T, E]` reads parsed `TypeRef` template
   children for `.value` and `.err` instead of re-splitting the result type text
 - shared AST type helpers own common parsed template-child and unary-wrapper

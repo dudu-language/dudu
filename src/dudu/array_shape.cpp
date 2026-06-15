@@ -1,5 +1,6 @@
 #include "dudu/array_shape.hpp"
 
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 
 #include <optional>
@@ -9,51 +10,27 @@
 namespace dudu {
 namespace {
 
-size_t find_matching_bracket(std::string_view text, const size_t open) {
-    int depth = 1;
-    size_t cursor = open + 1;
-    while (cursor < text.size() && depth > 0) {
-        if (text[cursor] == '[') {
-            ++depth;
-        } else if (text[cursor] == ']') {
-            --depth;
-        }
-        ++cursor;
-    }
-    return depth == 0 ? cursor - 1 : std::string::npos;
-}
-
 std::optional<std::string> inferred_array_element_type(const std::string& declared_type) {
-    const std::string type = trim_copy(declared_type);
-    if (!starts_with(type, "array[") || !ends_with(type, "]")) {
+    const TypeRef type = parse_type_text(declared_type);
+    if (type.kind != TypeKind::Template || type.name != "array" || type.children.size() != 1) {
         return std::nullopt;
     }
-    const size_t close = find_matching_bracket(type, 5);
-    if (close != type.size() - 1) {
-        return std::nullopt;
-    }
-    return trim_copy(type.substr(6, close - 6));
+    return trim_copy(type.children.front().text);
 }
 
 std::optional<std::pair<std::string, std::vector<size_t>>>
 explicit_array_type_info(const std::string& declared_type) {
-    const std::string type = trim_copy(declared_type);
-    if (!starts_with(type, "array[")) {
+    const TypeRef type = parse_type_text(declared_type);
+    if (type.kind != TypeKind::FixedArray || type.children.empty()) {
         return std::nullopt;
     }
-    const size_t element_close = find_matching_bracket(type, 5);
-    if (element_close == std::string::npos || element_close + 1 >= type.size() ||
-        type[element_close + 1] != '[' || !ends_with(type, "]")) {
-        return std::nullopt;
-    }
-    const size_t shape_open = element_close + 1;
-    const size_t shape_close = find_matching_bracket(type, shape_open);
-    if (shape_close != type.size() - 1) {
+    const TypeRef& storage = type.children.front();
+    if (storage.kind != TypeKind::Template || storage.name != "array" ||
+        storage.children.size() != 1) {
         return std::nullopt;
     }
     std::vector<size_t> shape;
-    const std::vector<std::string> dims =
-        split_top_level_args(type.substr(shape_open + 1, shape_close - shape_open - 1));
+    const std::vector<std::string> dims = split_top_level_args(type.value);
     for (const std::string& dim : dims) {
         if (dim.empty()) {
             return std::nullopt;
@@ -67,7 +44,7 @@ explicit_array_type_info(const std::string& declared_type) {
         }
         shape.push_back(value);
     }
-    return std::pair{trim_copy(type.substr(6, element_close - 6)), shape};
+    return std::pair{trim_copy(storage.children.front().text), shape};
 }
 
 std::optional<std::vector<size_t>> literal_shape(const Expr& expr) {
