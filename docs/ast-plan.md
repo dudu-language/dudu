@@ -155,6 +155,9 @@ Already structured:
 - generated local C++ type inference also reads parsed `TypeRef` template
   children for local `list`, `span`, `set`, and `dict` index receivers instead
   of carrying a separate template-argument splitter
+- generated local C++ type inference unwraps parsed receiver/pointer child
+  types through the shared `TypeRef` helper instead of reading child text
+  directly
 - generic call-site inference reads parsed `TypeRef` nodes for nested
   templates, fixed arrays, and pointer/reference wrappers instead of carrying
   local bracket-splitting logic

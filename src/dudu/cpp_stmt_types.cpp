@@ -29,7 +29,9 @@ std::string receiver_base_type(std::string type) {
     case TypeKind::Device:
     case TypeKind::Static:
     case TypeKind::FixedArray:
-        return parsed.children.empty() ? type : receiver_base_type(parsed.children.front().text);
+        return parsed.children.empty()
+                   ? type
+                   : receiver_base_type(substitute_type_ref_text(parsed.children.front(), {}));
     case TypeKind::Template:
         return trim_copy(parsed.name);
     case TypeKind::Named:
@@ -204,7 +206,7 @@ std::string infer_emitted_local_type(const Expr& expr,
                 infer_emitted_local_type(expr.children.front(), locals, function_returns));
             const TypeRef parsed = parse_type_text(child);
             if (parsed.kind == TypeKind::Pointer && parsed.children.size() == 1) {
-                return trim_copy(parsed.children.front().text);
+                return substitute_type_ref_text(parsed.children.front(), {});
             }
             return {};
         }
