@@ -313,7 +313,7 @@ std::string iterable_value_type(const Symbols& symbols,
 
 void check_iterable_binding(const Symbols& symbols,
                             const std::map<std::string, std::string>& locals,
-                            const SourceLocation& location, const std::string& binding_type,
+                            const SourceLocation& location, const TypeRef& binding_type,
                             const Expr& iterable) {
     if (iterable.kind == ExprKind::Call && iterable.name == "range") {
         return;
@@ -329,10 +329,12 @@ void check_iterable_binding(const Symbols& symbols,
     if (element.empty()) {
         throw CompileError(location, "cannot iterate non-container: " + name);
     }
-    if (!type_assignment_allowed(binding_type, element) &&
-        !type_assignment_allowed(resolve_alias(symbols, binding_type),
+    const TypeRef element_type = parse_type_text(element, location);
+    if (!type_assignment_allowed(binding_type, element_type) &&
+        !type_assignment_allowed(resolve_alias(symbols, binding_type.text),
                                  resolve_alias(symbols, element))) {
-        throw CompileError(location, "loop binding expects " + binding_type + ", got " + element);
+        throw CompileError(location,
+                           "loop binding expects " + binding_type.text + ", got " + element);
     }
 }
 

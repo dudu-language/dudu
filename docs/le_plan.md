@@ -285,7 +285,9 @@ push. They are not release packaging work.
    template-child nodes for local initializer checks instead of rendering those
    shapes back to strings first. Type-to-type compatibility now structurally
    matches parsed pointer, reference, wrapper, template, and function type
-   nodes before falling back to native spelling compatibility.
+   nodes before falling back to native spelling compatibility. Typed `for`
+   loop binding checks now compare against the parsed binding `TypeRef` before
+   using alias/native spelling fallback.
 
 3. OOP Surface Cleanup
 

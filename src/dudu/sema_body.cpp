@@ -278,7 +278,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
             check_known_type_ref(scope.symbols, node_location(stmt.location, stmt.type_ref),
                                  stmt.type_ref, "unknown loop binding type: ");
             check_iterable_binding(scope.symbols, scope.locals,
-                                   node_location(stmt.location, stmt.iterable_expr), stmt.type,
+                                   node_location(stmt.location, stmt.iterable_expr), stmt.type_ref,
                                    stmt.iterable_expr);
             bind_local(nested, stmt.name, stmt.type, stmt.type_ref);
         }

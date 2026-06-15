@@ -281,6 +281,9 @@ Already structured:
   presence instead of the raw iterable statement string
 - typed `for` loop iterable binding checks consume the parsed iterable
   expression rather than the raw iterable statement string
+- typed `for` loop binding compatibility now uses the parsed binding
+  `TypeRef`, with rendered strings kept only as the alias/native spelling
+  fallback
 - enum match wildcard and guard checks use parsed case pattern/guard
   expressions instead of raw case statement strings
 - wrapper match subject classification for `Option[T]` and `Result[T, E]`
