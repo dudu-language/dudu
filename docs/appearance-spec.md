@@ -1517,6 +1517,15 @@ paths = ["include"]
 libs = ["raylib"]
 ```
 
+All relative paths inside `dudu.toml` are manifest-root relative. Explicit local
+imports stay source-file relative:
+
+```python
+import "./math.dd"
+import cpp "./local.hpp"
+import cpp "raylib.h"
+```
+
 ## Systems Surface
 
 Dudu targets systems programming directly. The language surface includes:

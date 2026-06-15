@@ -42,13 +42,9 @@ ProjectConfig config_for_file(const std::filesystem::path& file) {
         return {};
     }
     ProjectConfig parsed = parse_project_config(config);
-    const std::filesystem::path project_dir = config.parent_path();
     auto absolutize = [&](std::vector<std::string>& paths) {
         for (std::string& path_text : paths) {
-            const std::filesystem::path path = path_text;
-            if (!path.is_absolute()) {
-                path_text = (project_dir / path).lexically_normal().string();
-            }
+            path_text = project_path(parsed, path_text).string();
         }
     };
     absolutize(parsed.include_dirs);

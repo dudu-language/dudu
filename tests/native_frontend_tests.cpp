@@ -117,8 +117,9 @@ void test_native_single_underscore_function_macros(const std::filesystem::path& 
                            "    return _dudu_macro_call(20, 22)\n",
                            source_dir / "main.dd");
     dudu::ProjectConfig config;
+    config.project_dir = source_dir;
     config.build_dir = source_dir / "build";
-    config.include_dirs = {"../native-macro-include", "build/native-macro-include"};
+    config.include_dirs = {"../native-macro-include"};
     dudu::merge_native_header_types(module, {.config = config, .source_dir = source_dir});
     dudu::analyze_module(module, {.check_bodies = true});
     const std::string cpp = dudu::emit_cpp_source(module);

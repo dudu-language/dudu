@@ -207,7 +207,11 @@ ProjectConfig apply_project_target(ProjectConfig config, const std::string& targ
 
 ProjectConfig parse_project_config(const std::filesystem::path& path) {
     ProjectConfig config;
-    std::ifstream file(path);
+    const std::filesystem::path config_path = path.empty() ? std::filesystem::path("dudu.toml") : path;
+    const std::filesystem::path parent =
+        config_path.has_parent_path() ? config_path.parent_path() : std::filesystem::path(".");
+    config.project_dir = std::filesystem::absolute(parent).lexically_normal();
+    std::ifstream file(config_path);
     if (!file) {
         return config;
     }
@@ -336,6 +340,39 @@ ProjectConfig parse_project_config(const std::filesystem::path& path) {
         }
     }
     return config;
+}
+
+std::filesystem::path find_project_config(const std::filesystem::path& input) {
+    std::filesystem::path dir;
+    if (input.empty()) {
+        dir = std::filesystem::current_path();
+    } else if (std::filesystem::is_directory(input)) {
+        dir = std::filesystem::absolute(input);
+    } else if (input.has_parent_path()) {
+        dir = std::filesystem::absolute(input.parent_path());
+    } else {
+        dir = std::filesystem::current_path();
+    }
+    while (true) {
+        const std::filesystem::path candidate = dir / "dudu.toml";
+        if (std::filesystem::exists(candidate)) {
+            return candidate;
+        }
+        if (!dir.has_parent_path() || dir == dir.parent_path()) {
+            break;
+        }
+        dir = dir.parent_path();
+    }
+    return "dudu.toml";
+}
+
+std::filesystem::path project_path(const ProjectConfig& config, const std::filesystem::path& path) {
+    if (path.empty() || path.is_absolute()) {
+        return path;
+    }
+    const std::filesystem::path root =
+        config.project_dir.empty() ? std::filesystem::current_path() : config.project_dir;
+    return (root / path).lexically_normal();
 }
 
 } // namespace dudu

@@ -447,6 +447,12 @@ push. They are not release packaging work.
    Keep using `dudu` on real projects and fix friction in native build inputs,
    target selection, diagnostics, generated build files, and examples.
 
+   Path handling is part of the project-driver contract. Manifest entries such
+   as `entry`, `build.dir`, include paths, library paths, and native source
+   lists are relative to the directory containing `dudu.toml`. Explicit local
+   imports remain source-file relative. Invoking `dudu` from a different working
+   directory must not change behavior when it finds the same manifest.
+
 14. Freestanding And Embedded Assert Policy
 
    Hosted `assert` and `debug_assert` are implemented. Freestanding and

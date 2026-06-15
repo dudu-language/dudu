@@ -24,6 +24,7 @@ struct ProjectTarget {
 };
 
 struct ProjectConfig {
+    std::filesystem::path project_dir;
     std::string name;
     std::filesystem::path main;
     std::filesystem::path build_dir;
@@ -49,6 +50,8 @@ struct ProjectConfig {
 };
 
 ProjectConfig apply_project_target(ProjectConfig config, const std::string& target_name);
+std::filesystem::path find_project_config(const std::filesystem::path& input);
 ProjectConfig parse_project_config(const std::filesystem::path& path);
+std::filesystem::path project_path(const ProjectConfig& config, const std::filesystem::path& path);
 
 } // namespace dudu

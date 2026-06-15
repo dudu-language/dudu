@@ -67,11 +67,7 @@ std::string cmake_cpp_standard(const std::string& cpp_std) {
 }
 
 std::filesystem::path project_dir_for_input(const std::filesystem::path& input) {
-    const std::filesystem::path beside_input = input.parent_path() / "dudu.toml";
-    if (!input.parent_path().empty() && std::filesystem::exists(beside_input)) {
-        return std::filesystem::absolute(input.parent_path());
-    }
-    return std::filesystem::current_path();
+    return parse_project_config(find_project_config(input)).project_dir;
 }
 
 std::string source_path_for_project(const std::filesystem::path& project_dir,

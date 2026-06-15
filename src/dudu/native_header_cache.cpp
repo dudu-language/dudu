@@ -1,5 +1,7 @@
 #include "dudu/native_header_cache.hpp"
 
+#include "dudu/project_config.hpp"
+
 #include <functional>
 #include <fstream>
 
@@ -23,7 +25,7 @@ void write_text(const std::filesystem::path& path, const std::string& text) {
 
 std::filesystem::path default_cache_dir(const NativeHeaderOptions& options) {
     if (!options.config.build_dir.empty()) {
-        return options.config.build_dir / "dudu-header-cache";
+        return project_path(options.config, options.config.build_dir) / "dudu-header-cache";
     }
     return std::filesystem::temp_directory_path() / "dudu-header-cache";
 }

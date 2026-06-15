@@ -25,10 +25,10 @@ std::string native_lib_flag(const std::string& lib) {
 
 void append_source_files(std::string& command, const ProjectConfig& config) {
     for (const std::string& source : config.cpp_sources) {
-        command += " " + shell_quote_arg(source);
+        command += " " + shell_quote_path(project_path(config, source));
     }
     for (const std::string& source : config.c_sources) {
-        command += " " + shell_quote_arg(source);
+        command += " " + shell_quote_path(project_path(config, source));
     }
 }
 
@@ -139,12 +139,12 @@ bool file_newer_or_same(const std::filesystem::path& newer, const std::filesyste
 
 bool native_sources_older_than(const std::filesystem::path& output, const ProjectConfig& config) {
     for (const std::string& source : config.cpp_sources) {
-        if (!file_newer_or_same(output, source)) {
+        if (!file_newer_or_same(output, project_path(config, source))) {
             return false;
         }
     }
     for (const std::string& source : config.c_sources) {
-        if (!file_newer_or_same(output, source)) {
+        if (!file_newer_or_same(output, project_path(config, source))) {
             return false;
         }
     }
@@ -162,16 +162,18 @@ bool build_is_up_to_date(const std::filesystem::path& output, const std::filesys
 }
 
 void write_compile_commands(const std::filesystem::path& output,
-                            const std::filesystem::path& cpp_path, const std::string& command) {
+                            const std::filesystem::path& cpp_path,
+                            const ProjectConfig& config, const std::string& command) {
     const std::filesystem::path dir = output.parent_path().empty() ? "." : output.parent_path();
     std::ofstream out(dir / "compile_commands.json");
     if (!out) {
         fail("could not write compile_commands.json");
     }
+    const std::filesystem::path command_dir =
+        config.project_dir.empty() ? std::filesystem::current_path() : config.project_dir;
     out << "[\n"
         << "  {\n"
-        << "    \"directory\": \"" << json_escape(std::filesystem::current_path().string())
-        << "\",\n"
+        << "    \"directory\": \"" << json_escape(command_dir.string()) << "\",\n"
         << "    \"command\": \"" << json_escape(command) << "\",\n"
         << "    \"file\": \"" << json_escape(cpp_path.string()) << "\"\n"
         << "  }\n"
@@ -317,13 +319,15 @@ std::filesystem::path build_executable(const NativeBuildOptions& options, const 
                                                             : options.config.compiler;
     std::string common_flags;
     for (const std::string& include_dir : options.config.include_dirs) {
-        common_flags += " " + shell_quote_arg("-I" + include_dir);
+        const std::filesystem::path path = project_path(options.config, include_dir);
+        common_flags += " " + shell_quote_arg("-I" + path.string());
     }
     for (const std::string& define : options.config.defines) {
         common_flags += " " + shell_quote_arg("-D" + define);
     }
     for (const std::string& lib_dir : options.config.lib_dirs) {
-        common_flags += " " + shell_quote_arg("-L" + lib_dir);
+        const std::filesystem::path path = project_path(options.config, lib_dir);
+        common_flags += " " + shell_quote_arg("-L" + path.string());
     }
     for (const std::string& flag : options.config.flags) {
         common_flags += " " + shell_quote_arg(flag);
@@ -355,7 +359,7 @@ std::filesystem::path build_executable(const NativeBuildOptions& options, const 
             command += " " + shell_quote_arg(flag);
         }
     }
-    write_compile_commands(output, cpp_path, command);
+    write_compile_commands(output, cpp_path, options.config, command);
     if (build_is_up_to_date(output, cpp_path, options.config, command, cpp_changed)) {
         if (options.verbose) {
             std::cerr << "up-to-date " << output.string() << '\n';

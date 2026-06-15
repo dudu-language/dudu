@@ -112,6 +112,11 @@ paths = ["include"]
 libs = ["raylib"]
 ```
 
+Manifest paths are resolved from the directory containing `dudu.toml`, not from
+the shell's current working directory. Explicit local imports such as
+`import "./math.dd"` or `import cpp "./local.hpp"` remain relative to the source
+file that contains the import.
+
 Then run project commands from the project directory:
 
 ```sh

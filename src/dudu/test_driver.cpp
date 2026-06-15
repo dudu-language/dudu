@@ -34,11 +34,7 @@ std::string read_text_file(const std::filesystem::path& path) {
 }
 
 std::filesystem::path build_config_path(const std::filesystem::path& input) {
-    const std::filesystem::path beside_input = input.parent_path() / "dudu.toml";
-    if (!input.parent_path().empty() && std::filesystem::exists(beside_input)) {
-        return beside_input;
-    }
-    return "dudu.toml";
+    return find_project_config(input);
 }
 
 ProjectConfig config_for_input(const std::filesystem::path& input) {
@@ -105,7 +101,7 @@ std::vector<std::filesystem::path> discover_test_files(const std::filesystem::pa
 }
 
 int run_delegated_project_tests() {
-    std::string command = parse_project_config("dudu.toml").test_command;
+    std::string command = parse_project_config(find_project_config({})).test_command;
     if (command.empty() && std::filesystem::exists("scripts/test.sh")) {
         command = "./scripts/test.sh";
     }
@@ -147,7 +143,7 @@ std::filesystem::path default_test_output(const TestDriverOptions& options,
                                           const ProjectConfig& config) {
     const std::filesystem::path root =
         config.build_dir.empty() ? std::filesystem::path("build/dudu-tests")
-                                 : config.build_dir / "dudu-tests";
+                                 : project_path(config, config.build_dir) / "dudu-tests";
     const std::string key = std::filesystem::absolute(options.input).string() + "|" +
                             options.target_name + "|" + options.test_filter + "|" +
                             config.target_kind + "|" + config.target_mode + "|" +
@@ -196,7 +192,7 @@ int run_project_tests(TestDriverOptions options) {
         (!options.input.empty() && std::filesystem::is_directory(options.input))) {
         return run_recursive_tests(std::move(options));
     }
-    const ProjectConfig project = parse_project_config("dudu.toml");
+    const ProjectConfig project = parse_project_config(build_config_path(options.input));
     if (!options.input.empty() && !looks_like_test_input(options.input)) {
         const std::string input = options.input.string();
         if (project.targets.contains(input)) {

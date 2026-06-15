@@ -67,11 +67,7 @@ void add_build_value(Options& options, const std::string& define) {
 }
 
 std::filesystem::path build_config_path(const std::filesystem::path& input) {
-    const std::filesystem::path beside_input = input.parent_path() / "dudu.toml";
-    if (!input.parent_path().empty() && std::filesystem::exists(beside_input)) {
-        return beside_input;
-    }
-    return "dudu.toml";
+    return dudu::find_project_config(input);
 }
 
 Options parse_options(int argc, char** argv, bool project_driver) {
@@ -230,7 +226,10 @@ Options resolve_project_input(Options options) {
         options.lsp || options.new_project || options.test) {
         return options;
     }
-    const dudu::ProjectConfig project = dudu::parse_project_config("dudu.toml");
+    const std::filesystem::path config_path =
+        options.input.empty() ? std::filesystem::path("dudu.toml")
+                              : build_config_path(options.input);
+    const dudu::ProjectConfig project = dudu::parse_project_config(config_path);
     if (!options.input.empty()) {
         const std::string input = options.input.string();
         if (!std::filesystem::exists(options.input) && options.input.extension() != ".dd" &&
@@ -243,7 +242,11 @@ Options resolve_project_input(Options options) {
         } else if (std::filesystem::exists(options.input)) {
             const std::filesystem::path normalized_input = options.input.lexically_normal();
             for (const auto& [name, target] : project.targets) {
-                if (!target.main.empty() && target.main.lexically_normal() == normalized_input) {
+                const std::filesystem::path target_input =
+                    dudu::project_path(project, target.main).lexically_normal();
+                const std::filesystem::path input_path =
+                    std::filesystem::absolute(normalized_input).lexically_normal();
+                if (!target.main.empty() && target_input == input_path) {
                     options.target_name = name;
                     break;
                 }
@@ -279,7 +282,8 @@ void write_text_output(const std::optional<std::filesystem::path>& path, const s
 }
 
 int run_project_benchmarks(const Options& options) {
-    std::string command = dudu::parse_project_config("dudu.toml").bench_command;
+    const dudu::ProjectConfig config = dudu::parse_project_config(build_config_path(options.input));
+    std::string command = config.bench_command;
     if (command.empty() && std::filesystem::exists("scripts/bench.sh")) {
         command = "./scripts/bench.sh";
     }
@@ -322,7 +326,7 @@ std::filesystem::path default_build_output(const dudu::ProjectConfig& config,
     } else if (config.target_kind == "shared_library") {
         filename = "lib" + name + ".so";
     }
-    return config.build_dir.empty() ? filename : config.build_dir / filename;
+    return config.build_dir.empty() ? filename : dudu::project_path(config, config.build_dir) / filename;
 }
 
 dudu::ModuleAst checked_module(const Options& options, const std::string& source,
