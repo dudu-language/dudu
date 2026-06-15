@@ -1,6 +1,7 @@
 #include "dudu/escapes.hpp"
 
 #include "dudu/ast_expr.hpp"
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/sema.hpp"
 
@@ -11,7 +12,8 @@ namespace {
 
 bool is_borrowed_or_pointer(std::string type) {
     type = trim_copy(std::move(type));
-    return !type.empty() && (type.front() == '&' || type.front() == '*');
+    const TypeRef parsed = parse_type_text(type);
+    return parsed.kind == TypeKind::Reference || parsed.kind == TypeKind::Pointer;
 }
 
 void fail_if_value_local_escapes(const SourceLocation& location,

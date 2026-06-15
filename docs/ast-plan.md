@@ -992,6 +992,9 @@ Pointer arithmetic and native base-class pointer/reference assignability now
 classify pointer/reference type shapes through parsed `TypeRef` nodes instead
 of leading-character string checks.
 
+Local-address escape analysis now identifies borrowed and pointer locals
+through parsed `TypeRef` nodes instead of leading-character type checks.
+
 Parser construction has been split by grammar responsibility:
 
 - `parser.cpp` owns module orchestration, token cursor helpers, imports,
