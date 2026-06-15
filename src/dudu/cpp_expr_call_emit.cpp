@@ -322,10 +322,6 @@ std::optional<std::string> lower_swizzle_expr(const Expr& expr,
         !is_supported_swizzle(expr.name)) {
         return std::nullopt;
     }
-    if (expr.children.front().kind == ExprKind::Name &&
-        locals.contains(expr.children.front().name)) {
-        return std::nullopt;
-    }
     std::optional<std::string> result_type;
     if (symbols != nullptr) {
         const std::string receiver_type =
@@ -333,6 +329,10 @@ std::optional<std::string> lower_swizzle_expr(const Expr& expr,
         if (!receiver_type.empty()) {
             result_type = swizzle_type_for_type(*symbols, receiver_type, expr.name);
         }
+    }
+    if (expr.children.front().kind == ExprKind::Name &&
+        locals.contains(expr.children.front().name) && !result_type) {
+        return std::nullopt;
     }
     const std::string receiver = lower_expr(expr.children.front(), aliases, locals, symbols);
     if (receiver.empty()) {

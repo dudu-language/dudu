@@ -1,0 +1,12 @@
+import cpp "cpp_swizzle.hpp" as swiz
+
+
+def main() -> i32:
+    value: swiz.Vec4 = swiz.make_vec4(10, 20, 30, 40)
+    xy: swiz.Vec2 = value.xy
+    zw: swiz.Vec2 = value.zw
+    xx: swiz.Vec2 = value.xx
+    value.yx = xy
+    if xy.x == 10 and xy.y == 20 and zw.x == 30 and zw.y == 40 and xx.y == 10 and value.x == 20:
+        return xy.x + xy.y + xx.x + xx.y - 8
+    return 1

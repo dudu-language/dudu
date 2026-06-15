@@ -245,8 +245,10 @@ Same-width write swizzles such as `v.yx = other` and `color.bgra = other`
 write component-by-component and reject repeated write components such as
 `v.xx = other`. Different-width local Dudu-native read swizzles construct a
 matching result class when one exists, such as `Vec4.xy -> Vec2`. Imported
-vector metadata, imported vector swizzle assignment, and different-width
-expression receiver swizzles remain compiler-architecture work.
+vector swizzles use scanned field metadata for read and assignment, including
+different-width results when a matching imported vector class exists. General
+column/multidimensional slices and richer tensor-library metadata remain
+compiler-architecture work.
 Same-width read swizzles also work on expression receivers such as
 `make_color().bgra`; emission uses a single-evaluation temporary for non-local
 receivers.

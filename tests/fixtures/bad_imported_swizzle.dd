@@ -1,7 +1,0 @@
-import cpp "cpp_operator_overload.hpp" as dudu_op
-
-
-def main() -> i32:
-    value: dudu_op.Vec2 = dudu_op.Vec2(10, 32)
-    swapped: dudu_op.Vec2 = value.yx
-    return swapped.x
