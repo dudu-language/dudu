@@ -205,6 +205,8 @@ Already structured:
   optional statement values/messages instead of raw statement value strings
 - `for` loop semantic checks and C++ emission use parsed iterable expression
   presence instead of the raw iterable statement string
+- enum match wildcard and guard checks use parsed case pattern/guard
+  expressions instead of raw case statement strings
 - semantic compatibility checks for parsed binary and comparison operators use
   the right-hand expression node instead of stringifying it for assignment rules
 - native overload matching and constructor semantic checks use parsed argument

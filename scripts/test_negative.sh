@@ -19,6 +19,7 @@ expect_fail bad_enum_value_name --check "enum values must be PascalCase: bad_val
 expect_fail bad_enum_match_missing --check "non-exhaustive match on Direction; missing cases: Direction.South"
 expect_fail bad_enum_match_duplicate --check "unreachable duplicate case: Direction.North"
 expect_fail bad_enum_match_unknown --check "unknown enum variant in pattern: Direction.East"
+expect_fail bad_enum_match_guard --check "match guards are not implemented"
 expect_fail bad_payload_enum_field_name --check "enum payload field names must be snake_case: BadField"
 expect_fail bad_payload_enum_field_type --check "unknown enum payload field type: MissingType"
 expect_fail bad_payload_enum_duplicate_field --check "duplicate enum payload field: Message.Move.value"

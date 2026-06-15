@@ -668,6 +668,10 @@ std::string if_keyword_for_condition(const Expr& condition) {
     return is_build_only_condition(condition) ? "if constexpr" : "if";
 }
 
+bool is_wildcard_pattern_expr(const Expr& expr) {
+    return expr.kind == ExprKind::Name && expr.name == "_";
+}
+
 std::string unescape_cpp_string(std::string text) {
     std::string out;
     out.reserve(text.size());
@@ -946,7 +950,7 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
             if (child.kind != StmtKind::Case) {
                 continue;
             }
-            if (child.pattern == "_") {
+            if (is_wildcard_pattern_expr(child.pattern_expr)) {
                 out << indent(depth) << "default:\n";
             } else {
                 out << indent(depth) << "case " << lower_expr(child.pattern_expr, aliases, locals)

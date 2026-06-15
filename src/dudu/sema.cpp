@@ -268,7 +268,7 @@ bool enum_has_payloads(const EnumDecl& en) {
 }
 
 std::optional<std::string> enum_case_variant(const EnumDecl& en, const Stmt& stmt) {
-    if (stmt.pattern == "_") {
+    if (stmt.pattern_expr.kind == ExprKind::Name && stmt.pattern_expr.name == "_") {
         return std::string{"_"};
     }
     const std::optional<std::string> path = member_path_from_expr(stmt.pattern_expr);
@@ -1989,7 +1989,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
             if (child.kind != StmtKind::Case) {
                 fail(child.location, "match body expects case statements");
             }
-            if (!child.guard.empty()) {
+            if (has_expr(child.guard_expr)) {
                 fail(child.location, "match guards are not implemented");
             }
             if (wildcard) {
