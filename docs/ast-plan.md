@@ -146,8 +146,8 @@ Already structured:
   string heuristics
 - C++ assignment emission detects `Option` reset from `NoneLiteral` expression
   nodes instead of raw value text
-- generated local C++ type inference has an AST path for names and calls,
-  leaving raw text as a fallback for unlifted expression shapes
+- generated local C++ type inference uses parsed expression nodes and no longer
+  has a raw-string helper for `Unknown` expression shapes
 - generated local C++ type inference also follows parsed index expressions for
   local `list`, `dict`, `set`, `span`, and shaped `array` receivers, so common
   `value = items[i]` assignments do not fall back to raw expression text
@@ -246,8 +246,9 @@ Already structured:
 
 Still too string-based:
 
-- raw string fallback overloads kept for legacy expression inference while AST
-  coverage is incomplete
+- some legacy string-based sema helper overloads remain for older constructor,
+  native-call, and explicit `cpp(...)` paths while their callers migrate to AST
+  callbacks
 - C++ escape hatches and raw macro shapes
 - user-facing macro/decorator forms still need deeper AST nodes
 - lambda parameter declarations and target-type-aware lambda checking remain
