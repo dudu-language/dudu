@@ -66,6 +66,9 @@ Already structured:
 - empty parsed template calls such as `identity[]()` are rejected during
   semantic checking instead of falling through raw expression inference and
   emitting invalid C++
+- unresolved parsed dotted template calls such as `missing.namespace[i32]()`
+  are rejected after native/header lookup misses, while declared native import
+  prefixes still return `auto` explicitly
 - template calls also keep parsed `TypeRef` nodes for bracketed arguments, so
   type-shaped builtins such as `new[T]`, `malloc[T]`, `sizeof[T]`,
   `alignof[T]`, `offsetof[T]`, and empty `list[T]`/`dict[T]`/`set[T]`

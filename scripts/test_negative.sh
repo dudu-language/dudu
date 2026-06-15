@@ -30,6 +30,7 @@ expect_fail bad_unknown_identifier --emit-cpp "unknown identifier: missing_value
 expect_fail bad_unknown_identifier --check "unknown identifier: missing_value"
 expect_fail bad_unknown_function --emit-cpp "unknown function: missing"
 expect_fail bad_unknown_dotted_call --emit-cpp "unknown function: missing.namespace"
+expect_fail bad_unknown_dotted_template_call --emit-cpp "unknown function: missing.namespace\\[i32\\]"
 expect_fail bad_unknown_base --check "unknown base class: MissingBase"
 expect_fail bad_duplicate_base --check "duplicate base class: Entity"
 expect_fail bad_override_missing --check "@override method has no matching base method: Player.draw"

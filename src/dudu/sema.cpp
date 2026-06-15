@@ -1193,6 +1193,18 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
         is_plain_identifier(callee_base) && !known_type(scope.symbols, callee_base)) {
         fail(*location, "unknown function: " + callee);
     }
+    if (method_dot != std::string::npos) {
+        const std::string prefix = trim(callee_base.substr(0, method_dot));
+        if (scope.symbols.native_import_prefixes.contains(prefix)) {
+            for (const Expr& arg : expr.children) {
+                (void)infer_expr_ast(scope, arg, location);
+            }
+            return "auto";
+        }
+        if (location != nullptr) {
+            fail(*location, "unknown function: " + callee);
+        }
+    }
     return infer_expr(scope, expr.text, location);
 }
 
