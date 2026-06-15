@@ -968,7 +968,10 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
 std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr,
                                     const SourceLocation* location) {
     if (expr.template_args.empty() && expr.template_type_args.empty()) {
-        return infer_expr(scope, expr.text, location);
+        if (location != nullptr) {
+            fail(*location, "template call expects at least 1 type argument");
+        }
+        return {};
     }
     const std::string callee = template_call_callee(expr);
     const std::string callee_base = call_callee_text(expr);
