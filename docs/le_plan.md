@@ -329,9 +329,11 @@ push. They are not release packaging work.
 
    Status: simple zero-payload enum `match` statements parse, type-check,
    enforce exhaustiveness, reject duplicate or unknown cases, and lower to
-   readable C++ `switch`. Payload variants still parse and are validated, but
-   payload enum lowering, destructuring, guards, `Option`, and `Result`
-   matching remain.
+   readable C++ `switch`. Payload variants parse, validate, lower to tagged
+   `std::variant` wrappers, construct through `Enum.Variant(...)`, and support
+   exhaustive `match` with positional payload bindings. Named pattern
+   destructuring, guards, payload `Option`/`Result` matching, recursive enum
+   examples, and anonymous `variant[...]` remain.
 
 7. Native Inheritance
 

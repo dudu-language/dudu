@@ -1,0 +1,23 @@
+enum Message:
+    Quit
+
+    Move:
+        x: i32
+        y: i32
+
+    Write(str)
+
+
+def handle(msg: Message) -> i32:
+    match msg:
+        case Message.Quit:
+            return 1
+        case Message.Move(x, y):
+            return x + y
+        case Message.Write(text):
+            return i32(len(text))
+
+
+def main() -> i32:
+    moved: Message = Message.Move(x=20, y=19)
+    return handle(Message.Quit) + handle(moved) + handle(Message.Write("xx"))

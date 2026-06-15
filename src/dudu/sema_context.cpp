@@ -695,11 +695,6 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                                              value.name + "." + field.name);
                 }
             }
-            if (!value.payload_fields.empty()) {
-                fail(value.location,
-                     "payload enum lowering requires match support: " + en.name + "." +
-                         value.name);
-            }
         }
     }
     for (const ClassDecl& klass : module.classes) {

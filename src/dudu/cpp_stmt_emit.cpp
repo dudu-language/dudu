@@ -15,6 +15,7 @@
 #include <optional>
 #include <sstream>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace dudu {
@@ -75,13 +76,14 @@ std::string join_lowered_exprs(const std::vector<Expr>& exprs,
 std::string lower_call_args_for_signature(const std::vector<Expr>& args,
                                           const FunctionSignature&,
                                           const std::vector<std::string>& aliases,
-                                          const std::map<std::string, std::string>& locals) {
+                                          const std::map<std::string, std::string>& locals,
+                                          const Symbols* symbols) {
     std::ostringstream out;
     for (size_t i = 0; i < args.size(); ++i) {
         if (i > 0) {
             out << ", ";
         }
-        out << lower_expr(args[i], aliases, locals, nullptr);
+        out << lower_expr(args[i], aliases, locals, symbols);
     }
     return out.str();
 }
@@ -357,6 +359,82 @@ std::optional<std::string> dudu_operator_method_name(const Symbols& symbols, std
     return std::nullopt;
 }
 
+bool enum_has_payloads(const EnumDecl& en) {
+    for (const EnumValueDecl& value : en.values) {
+        if (!value.payload_fields.empty()) {
+            return true;
+        }
+    }
+    return false;
+}
+
+const EnumDecl* enum_decl_for_type(const Symbols* symbols, const std::string& type) {
+    if (symbols == nullptr) {
+        return nullptr;
+    }
+    const auto found = symbols->enums.find(type);
+    return found == symbols->enums.end() ? nullptr : found->second;
+}
+
+const EnumValueDecl* enum_variant_decl(const EnumDecl& en, const std::string& variant) {
+    for (const EnumValueDecl& value : en.values) {
+        if (value.name == variant) {
+            return &value;
+        }
+    }
+    return nullptr;
+}
+
+std::optional<std::pair<const EnumDecl*, const EnumValueDecl*>>
+enum_variant_from_path(const Symbols* symbols, const std::string& path) {
+    if (symbols == nullptr) {
+        return std::nullopt;
+    }
+    const size_t dot = path.find('.');
+    if (dot == std::string::npos || path.find('.', dot + 1) != std::string::npos) {
+        return std::nullopt;
+    }
+    const auto en = symbols->enums.find(path.substr(0, dot));
+    if (en == symbols->enums.end()) {
+        return std::nullopt;
+    }
+    const EnumValueDecl* value = enum_variant_decl(*en->second, path.substr(dot + 1));
+    if (value == nullptr) {
+        return std::nullopt;
+    }
+    return std::make_pair(en->second, value);
+}
+
+std::optional<std::pair<const EnumDecl*, const EnumValueDecl*>>
+enum_variant_from_expr(const Symbols* symbols, const Expr& expr) {
+    if (const std::optional<std::string> path = member_path_from_expr(expr)) {
+        return enum_variant_from_path(symbols, *path);
+    }
+    return std::nullopt;
+}
+
+std::string lower_enum_variant_constructor(const EnumDecl& en, const EnumValueDecl& value,
+                                           const std::vector<Expr>& args,
+                                           const std::vector<std::string>& aliases,
+                                           const std::map<std::string, std::string>& locals,
+                                           const Symbols* symbols) {
+    std::ostringstream out;
+    out << en.name << "{" << en.name << "::" << value.name << "{";
+    for (size_t i = 0; i < args.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        if (args[i].kind == ExprKind::NamedArg && args[i].children.size() == 1) {
+            out << "." << args[i].name << " = "
+                << lower_expr(args[i].children.front(), aliases, locals, symbols);
+        } else {
+            out << lower_expr(args[i], aliases, locals, symbols);
+        }
+    }
+    out << "}}";
+    return out.str();
+}
+
 std::vector<Expr> index_arg_exprs(const Expr& index_expr) {
     if (index_expr.kind == ExprKind::TupleLiteral) {
         return index_expr.children;
@@ -465,6 +543,14 @@ std::string lower_named_argument_call(const Expr& expr, const std::vector<std::s
 std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& aliases,
                             const std::map<std::string, std::string>& locals,
                             const Symbols* symbols) {
+    if (!expr.callee.empty()) {
+        if (const auto variant = enum_variant_from_expr(symbols, expr.callee.front())) {
+            if (enum_has_payloads(*variant->first)) {
+                return lower_enum_variant_constructor(*variant->first, *variant->second,
+                                                      expr.children, aliases, locals, symbols);
+            }
+        }
+    }
     if (has_named_argument_shape(expr.children)) {
         return lower_named_argument_call(expr, aliases, locals);
     }
@@ -499,7 +585,8 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
         if (const auto signature = symbols->function_signatures.find(callee_name);
             signature != symbols->function_signatures.end()) {
             return callee + "(" +
-                   lower_call_args_for_signature(expr.children, signature->second, aliases, locals) +
+                   lower_call_args_for_signature(expr.children, signature->second, aliases, locals,
+                                                 symbols) +
                    ")";
         }
     }
@@ -599,6 +686,12 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
     }
     case ExprKind::Member:
         if (expr.children.size() == 1) {
+            if (const auto variant = enum_variant_from_expr(symbols, expr)) {
+                if (enum_has_payloads(*variant->first)) {
+                    return lower_enum_variant_constructor(*variant->first, *variant->second, {},
+                                                          aliases, locals, symbols);
+                }
+            }
             if (const auto swizzle = lower_swizzle_expr(expr, aliases, locals)) {
                 return *swizzle;
             }
@@ -740,6 +833,38 @@ std::string if_keyword_for_condition(const Expr& condition) {
 
 bool is_wildcard_pattern_expr(const Expr& expr) {
     return expr.kind == ExprKind::Name && expr.name == "_";
+}
+
+std::optional<std::string> enum_case_variant_name(const Stmt& stmt) {
+    if (is_wildcard_pattern_expr(stmt.pattern_expr)) {
+        return std::string{"_"};
+    }
+    const Expr* pattern = &stmt.pattern_expr;
+    if (stmt.pattern_expr.kind == ExprKind::Call && !stmt.pattern_expr.callee.empty()) {
+        pattern = &stmt.pattern_expr.callee.front();
+    }
+    const std::optional<std::string> path = member_path_from_expr(*pattern);
+    if (!path) {
+        return std::nullopt;
+    }
+    const size_t dot = path->find('.');
+    if (dot == std::string::npos || path->find('.', dot + 1) != std::string::npos) {
+        return std::nullopt;
+    }
+    return path->substr(dot + 1);
+}
+
+std::vector<std::string> enum_case_binding_names(const Stmt& stmt) {
+    std::vector<std::string> out;
+    if (stmt.pattern_expr.kind != ExprKind::Call) {
+        return out;
+    }
+    for (const Expr& child : stmt.pattern_expr.children) {
+        if (child.kind == ExprKind::Name && !child.name.empty()) {
+            out.push_back(child.name);
+        }
+    }
+    return out;
 }
 
 std::string cpp_string_literal(std::string text) {
@@ -988,6 +1113,58 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         return;
     }
     if (stmt.kind == StmtKind::Match) {
+        if (stmt.condition_expr.kind == ExprKind::Name) {
+            const auto subject_local = locals.find(stmt.condition_expr.name);
+            const EnumDecl* en =
+                subject_local == locals.end() ? nullptr
+                                              : enum_decl_for_type(symbols, subject_local->second);
+            if (en != nullptr && enum_has_payloads(*en)) {
+                const std::string subject = "__dudu_match_" +
+                                            std::to_string(stmt.location.line) + "_" +
+                                            std::to_string(stmt.location.column);
+                out << indent(depth) << "auto&& " << subject << " = "
+                    << lower_expr(stmt.condition_expr, aliases, locals, symbols) << ";\n";
+                bool first_case = true;
+                for (const Stmt& child : stmt.children) {
+                    if (child.kind != StmtKind::Case) {
+                        continue;
+                    }
+                    const std::optional<std::string> variant = enum_case_variant_name(child);
+                    if (!variant || *variant == "_") {
+                        out << indent(depth) << (first_case ? "if" : "else") << " (true) {\n";
+                    } else {
+                        out << indent(depth) << (first_case ? "if" : "else if") << " ("
+                            << "std::holds_alternative<" << en->name << "::" << *variant << ">("
+                            << subject << ".value)) {\n";
+                    }
+                    std::map<std::string, std::string> nested = locals;
+                    if (variant && *variant != "_") {
+                        if (const EnumValueDecl* value = enum_variant_decl(*en, *variant)) {
+                            const std::string payload = "__dudu_case_" +
+                                                        std::to_string(child.location.line) + "_" +
+                                                        std::to_string(child.location.column);
+                            out << indent(depth + 1) << "auto&& " << payload << " = std::get<"
+                                << en->name << "::" << *variant << ">(" << subject << ".value);\n";
+                            const std::vector<std::string> bindings = enum_case_binding_names(child);
+                            for (size_t i = 0; i < bindings.size() && i < value->payload_fields.size();
+                                 ++i) {
+                                nested[bindings[i]] = value->payload_fields[i].type;
+                                out << indent(depth + 1) << "auto&& " << bindings[i] << " = "
+                                    << payload << "." << value->payload_fields[i].name << ";\n";
+                            }
+                        }
+                    }
+                    emit_block(out, child.children, depth + 1, aliases, nested, return_type,
+                               function_returns, symbols);
+                    out << indent(depth) << "}\n";
+                    first_case = false;
+                }
+                if (match_cases_return(stmt)) {
+                    out << indent(depth) << "__builtin_unreachable();\n";
+                }
+                return;
+            }
+        }
         out << indent(depth) << "switch ("
             << lower_expr(stmt.condition_expr, aliases, locals, symbols) << ") {\n";
         for (const Stmt& child : stmt.children) {

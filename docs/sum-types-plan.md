@@ -177,6 +177,30 @@ The exact constructor names for `Option` need to stay consistent with existing
 Dudu `None` usage. Pattern matching should not make null pointers look like
 `Option`.
 
+## Current Status
+
+Simple zero-payload enums lower to C++ `enum class` and support exhaustive
+`match` through a generated `switch`.
+
+Payload enums now lower to a tagged `std::variant` wrapper with one nested
+struct per variant. Variant constructors such as `Message.Move(x=10, y=20)`,
+tuple-style constructors such as `Message.Write("hello")`, and zero-payload
+variants inside payload enums such as `Message.Quit` construct the enclosing
+enum value.
+
+Payload `match` lowers to `std::holds_alternative`/`std::get` checks and
+supports positional bindings:
+
+```python
+match msg:
+    case Message.Move(x, y):
+        return x + y
+```
+
+Still remaining: named pattern destructuring, guards, payload `Option`/`Result`
+matching, recursive enum examples, richer unreachable-pattern diagnostics, and
+anonymous `variant[...]`.
+
 ## Recursive Data
 
 Recursive enums should require an indirection, matching C++/Rust reality:

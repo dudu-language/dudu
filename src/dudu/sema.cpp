@@ -28,6 +28,7 @@
 #include <optional>
 #include <set>
 #include <sstream>
+#include <utility>
 namespace dudu {
 namespace {
 [[noreturn]] void fail(const SourceLocation& location, const std::string& message) {
@@ -258,20 +259,42 @@ const EnumDecl* enum_decl_for_type(const Symbols& symbols, const std::string& ty
     return found == symbols.enums.end() ? nullptr : found->second;
 }
 
-bool enum_has_payloads(const EnumDecl& en) {
+const EnumValueDecl* enum_variant_decl(const EnumDecl& en, const std::string& variant) {
     for (const EnumValueDecl& value : en.values) {
-        if (!value.payload_fields.empty()) {
-            return true;
+        if (value.name == variant) {
+            return &value;
         }
     }
-    return false;
+    return nullptr;
+}
+
+std::optional<std::pair<const EnumDecl*, const EnumValueDecl*>>
+enum_variant_from_path(const Symbols& symbols, const std::string& path) {
+    const size_t dot = path.find('.');
+    if (dot == std::string::npos || path.find('.', dot + 1) != std::string::npos) {
+        return std::nullopt;
+    }
+    const std::string enum_name = path.substr(0, dot);
+    const auto en = symbols.enums.find(enum_name);
+    if (en == symbols.enums.end()) {
+        return std::nullopt;
+    }
+    const EnumValueDecl* value = enum_variant_decl(*en->second, path.substr(dot + 1));
+    if (value == nullptr) {
+        return std::nullopt;
+    }
+    return std::make_pair(en->second, value);
 }
 
 std::optional<std::string> enum_case_variant(const EnumDecl& en, const Stmt& stmt) {
     if (stmt.pattern_expr.kind == ExprKind::Name && stmt.pattern_expr.name == "_") {
         return std::string{"_"};
     }
-    const std::optional<std::string> path = member_path_from_expr(stmt.pattern_expr);
+    const Expr* pattern = &stmt.pattern_expr;
+    if (stmt.pattern_expr.kind == ExprKind::Call && !stmt.pattern_expr.callee.empty()) {
+        pattern = &stmt.pattern_expr.callee.front();
+    }
+    const std::optional<std::string> path = member_path_from_expr(*pattern);
     if (!path) {
         return std::nullopt;
     }
@@ -284,6 +307,29 @@ std::optional<std::string> enum_case_variant(const EnumDecl& en, const Stmt& stm
         return std::nullopt;
     }
     return variant;
+}
+
+bool bind_payload_case(FunctionScope& nested, const EnumValueDecl& value, const Expr& pattern,
+                       const SourceLocation& location) {
+    if (pattern.kind != ExprKind::Call) {
+        if (!value.payload_fields.empty()) {
+            fail(location, "payload case requires destructuring: " + value.name);
+        }
+        return false;
+    }
+    if (pattern.children.size() != value.payload_fields.size()) {
+        fail(location, "case " + value.name + " expects " +
+                           std::to_string(value.payload_fields.size()) + " bindings, got " +
+                           std::to_string(pattern.children.size()));
+    }
+    for (size_t i = 0; i < pattern.children.size(); ++i) {
+        const Expr& binding = pattern.children[i];
+        if (binding.kind != ExprKind::Name || binding.name.empty()) {
+            fail(binding.location, "payload case bindings must be names");
+        }
+        nested.locals[binding.name] = value.payload_fields[i].type;
+    }
+    return true;
 }
 
 bool enum_contains_variant(const EnumDecl& en, const std::string& variant) {
@@ -382,6 +428,46 @@ void check_call_args_ast(const FunctionScope& scope, const std::string& callee,
         if (!can_assign_ast(scope, expected, args[i], got)) {
             fail(*location, "argument " + std::to_string(i + 1) + " for " + callee + " expects " +
                                 expected + ", got " + got);
+        }
+    }
+}
+
+void check_enum_variant_args_ast(const FunctionScope& scope, const EnumDecl& en,
+                                 const EnumValueDecl& value, const std::vector<Expr>& args,
+                                 const SourceLocation* location) {
+    if (location == nullptr) {
+        return;
+    }
+    if (args.size() != value.payload_fields.size()) {
+        fail(*location, "enum constructor " + en.name + "." + value.name + " expects " +
+                            std::to_string(value.payload_fields.size()) + " arguments, got " +
+                            std::to_string(args.size()));
+    }
+    std::set<std::string> seen_named;
+    for (size_t i = 0; i < args.size(); ++i) {
+        const EnumPayloadField* field = &value.payload_fields[i];
+        const Expr* arg = &args[i];
+        if (args[i].kind == ExprKind::NamedArg) {
+            const auto found =
+                std::find_if(value.payload_fields.begin(), value.payload_fields.end(),
+                             [&](const EnumPayloadField& candidate) {
+                                 return candidate.name == args[i].name;
+                             });
+            if (found == value.payload_fields.end()) {
+                fail(args[i].location, "unknown enum payload field: " + en.name + "." +
+                                         value.name + "." + args[i].name);
+            }
+            if (!seen_named.insert(args[i].name).second) {
+                fail(args[i].location, "duplicate enum payload field: " + en.name + "." +
+                                         value.name + "." + args[i].name);
+            }
+            field = &*found;
+            arg = &args[i].children.front();
+        }
+        const std::string got = infer_expr_ast(scope, *arg, location);
+        if (!can_assign_ast(scope, field->type, *arg, got)) {
+            fail(arg->location, "argument " + std::to_string(i + 1) + " for " + en.name + "." +
+                                    value.name + " expects " + field->type + ", got " + got);
         }
     }
 }
@@ -1474,6 +1560,14 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
         return left.empty() ? right : left;
     }
     case ExprKind::Member:
+        if (const std::optional<std::string> path = member_path_from_expr(expr)) {
+            if (const auto variant = enum_variant_from_path(scope.symbols, *path)) {
+                if (!variant->second->payload_fields.empty() && use_location != nullptr) {
+                    fail(*use_location, "payload enum variant requires construction: " + *path);
+                }
+                return variant->first->name;
+            }
+        }
         if (expr.children.size() == 1 && expr.children.front().kind == ExprKind::Name &&
             scope.locals.contains(expr.children.front().name)) {
             const Expr& receiver = expr.children.front();
@@ -1579,6 +1673,11 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
             normalize_current_class_path(scope, call_callee_text(expr), use_location);
         if (callee.empty()) {
             return {};
+        }
+        if (const auto variant = enum_variant_from_path(scope.symbols, callee)) {
+            check_enum_variant_args_ast(scope, *variant->first, *variant->second, expr.children,
+                                        use_location);
+            return variant->first->name;
         }
         if (is_super_call(callee)) {
             return infer_super_call_ast(scope, expr, callee, use_location);
@@ -1944,9 +2043,6 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
         if (en == nullptr) {
             fail(subject_location, "match subject must be an enum, got " + subject_type);
         }
-        if (enum_has_payloads(*en)) {
-            fail(stmt.location, "payload enum match lowering is not implemented: " + en->name);
-        }
         std::set<std::string> covered;
         bool wildcard = false;
         for (const Stmt& child : stmt.children) {
@@ -1975,7 +2071,14 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
                                              *variant);
                 }
             }
-            check_block(scope, child.children, return_type, loop_depth);
+            FunctionScope nested = scope;
+            if (*variant != "_") {
+                const EnumValueDecl* value = enum_variant_decl(*en, *variant);
+                if (value != nullptr) {
+                    bind_payload_case(nested, *value, child.pattern_expr, child.location);
+                }
+            }
+            check_block(nested, child.children, return_type, loop_depth);
         }
         if (!wildcard && covered.size() != en->values.size()) {
             fail(stmt.location,
