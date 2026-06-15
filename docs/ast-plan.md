@@ -833,8 +833,17 @@ Semantic analysis has started the same cleanup:
 - `sema_builtin_methods.cpp` and `sema_method_templates.cpp` own builtin C++
   method signatures and method generic substitution helpers.
 
+Parser construction has been split by grammar responsibility:
+
+- `parser.cpp` owns module orchestration, token cursor helpers, imports,
+  decorators, statement blocks, and token joining.
+- `parser_decls.cpp` owns declaration grammar for classes, fields, enums, type
+  declarations, functions, parameters, constants, and static asserts.
+- `parser_internal.hpp` keeps the private parser surface explicit so future
+  parser work does not grow one mixed implementation file again.
+
 The remaining oversized frontend files are now outside the core semantic split:
-`language_server.cpp`, `cpp_lower.cpp`, `native_headers.cpp`, `parser.cpp`, and
+`language_server.cpp`, `cpp_lower.cpp`, `native_headers.cpp`, and
 `cpp_type.cpp`.
 
 ## Acceptance

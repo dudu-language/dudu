@@ -46,6 +46,7 @@ add_library(dudu_frontend
     src/dudu/native_headers.cpp
     src/dudu/naming.cpp
     src/dudu/parser.cpp
+    src/dudu/parser_decls.cpp
     src/dudu/parser_utils.cpp
     src/dudu/project_config.cpp
     src/dudu/project_driver.cpp

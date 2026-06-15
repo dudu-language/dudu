@@ -1,0 +1,319 @@
+#include "dudu/parser_internal.hpp"
+
+#include "dudu/parser_utils.hpp"
+
+namespace dudu {
+
+ClassDecl Parser::parse_class(const Token& start, Visibility visibility,
+                              const std::vector<Decorator>& decorators) {
+    ClassDecl klass;
+    klass.visibility = visibility;
+    klass.decorators = decorators;
+    klass.location = start.location;
+    klass.name = consume_identifier("expected class name").text;
+    klass.generic_params = parse_generic_params();
+    if (match(TokenKind::LParen)) {
+        if (!at(TokenKind::RParen)) {
+            while (true) {
+                std::string base = join_until({TokenKind::Comma, TokenKind::RParen});
+                if (base.empty()) {
+                    fail_current("expected base class name");
+                }
+                klass.base_classes.push_back(std::move(base));
+                if (match(TokenKind::Comma)) {
+                    continue;
+                }
+                break;
+            }
+        }
+        consume(TokenKind::RParen, "expected ) after base classes");
+    }
+    consume(TokenKind::Colon, "expected : after class name");
+    consume(TokenKind::Newline, "expected newline after class header");
+    if (!match(TokenKind::Indent)) {
+        fail_current("expected indented class body");
+    }
+    std::vector<Decorator> member_decorators;
+    while (!at(TokenKind::Dedent) && !at(TokenKind::End)) {
+        if (at(TokenKind::Newline)) {
+            match(TokenKind::Newline);
+            continue;
+        }
+        if (match(TokenKind::At)) {
+            member_decorators.push_back(parse_decorator(previous()));
+            continue;
+        }
+        const Visibility member_visibility = parse_visibility();
+        if (match_identifier("def")) {
+            klass.methods.push_back(
+                parse_function(previous(), member_visibility, member_decorators, klass.name));
+            member_decorators.clear();
+            continue;
+        }
+        if (is_all_caps_identifier(current())) {
+            require_no_decorators(member_decorators, "class constant");
+            klass.constants.push_back(parse_constant());
+            continue;
+        }
+        if (member_visibility != Visibility::Default) {
+            fail_current("expected def after class member visibility");
+        }
+        require_no_decorators(member_decorators, "field");
+        FieldDecl field = parse_field();
+        if (field.type_ref.kind == TypeKind::Static) {
+            if (field.value.empty()) {
+                throw CompileError(field.location, "static field requires an initializer");
+            }
+            ConstDecl static_field;
+            static_field.name = field.name;
+            static_field.type =
+                field.type_ref.children.empty() ? field.type : field.type_ref.children[0].text;
+            static_field.type_ref = field.type_ref.children.empty()
+                                        ? parse_type_text(static_field.type, field.location)
+                                        : field.type_ref.children[0];
+            static_field.value = field.value;
+            static_field.value_expr = field.value_expr;
+            static_field.location = field.location;
+            klass.static_fields.push_back(std::move(static_field));
+        } else {
+            klass.fields.push_back(std::move(field));
+        }
+    }
+    require_no_decorators(member_decorators, "class body");
+    consume(TokenKind::Dedent, "expected dedent after class body");
+    return klass;
+}
+
+FieldDecl Parser::parse_field() {
+    FieldDecl field;
+    const Token& name = consume_identifier("expected field name");
+    field.name = name.text;
+    field.location = name.location;
+    consume(TokenKind::Colon, "expected : after field name");
+    field.type = join_until({TokenKind::Assign, TokenKind::Newline});
+    if (field.type.empty()) {
+        throw CompileError(name.location, "field requires a type");
+    }
+    field.type_ref = parse_type_text(field.type, name.location);
+    if (match(TokenKind::Assign)) {
+        field.value = join_until({TokenKind::Newline});
+        field.value_expr = parse_expr_text(field.value, name.location);
+    }
+    consume(TokenKind::Newline, "expected newline after field");
+    return field;
+}
+
+EnumDecl Parser::parse_enum(const Token& start) {
+    EnumDecl en;
+    en.location = start.location;
+    en.name = consume_identifier("expected enum name").text;
+    consume(TokenKind::Colon, "expected : after enum name");
+    if (!at(TokenKind::Newline)) {
+        en.underlying_type = join_until({TokenKind::Newline});
+        en.underlying_type_ref = parse_type_text(en.underlying_type, start.location);
+    }
+    consume(TokenKind::Newline, "expected newline after enum header");
+    if (!match(TokenKind::Indent)) {
+        fail_current("expected indented enum body");
+    }
+    while (!at(TokenKind::Dedent) && !at(TokenKind::End)) {
+        if (match(TokenKind::Newline)) {
+            continue;
+        }
+        EnumValueDecl value;
+        const Token& name = consume_identifier("expected enum value");
+        value.name = name.text;
+        value.location = name.location;
+        if (match(TokenKind::LParen)) {
+            value.tuple_payload = true;
+            if (!at(TokenKind::RParen)) {
+                size_t index = 0;
+                while (true) {
+                    EnumPayloadField field;
+                    field.name = "_" + std::to_string(index);
+                    field.location = current().location;
+                    field.type = join_until({TokenKind::Comma, TokenKind::RParen});
+                    if (field.type.empty()) {
+                        throw CompileError(field.location, "enum payload field requires a type");
+                    }
+                    field.type_ref = parse_type_text(field.type, field.location);
+                    value.payload_fields.push_back(std::move(field));
+                    ++index;
+                    if (match(TokenKind::Comma)) {
+                        continue;
+                    }
+                    break;
+                }
+            }
+            consume(TokenKind::RParen, "expected ) after enum payload fields");
+        } else if (match(TokenKind::Colon)) {
+            consume(TokenKind::Newline, "expected newline after enum payload header");
+            if (!match(TokenKind::Indent)) {
+                fail_current("expected indented enum payload fields");
+            }
+            while (!at(TokenKind::Dedent) && !at(TokenKind::End)) {
+                if (match(TokenKind::Newline)) {
+                    continue;
+                }
+                const FieldDecl field = parse_field();
+                value.payload_fields.push_back({.name = field.name,
+                                                .type = field.type,
+                                                .type_ref = field.type_ref,
+                                                .location = field.location});
+            }
+            consume(TokenKind::Dedent, "expected dedent after enum payload fields");
+            en.values.push_back(std::move(value));
+            continue;
+        } else if (match(TokenKind::Assign)) {
+            value.value = join_until({TokenKind::Newline});
+            value.value_expr = parse_expr_text(value.value, name.location);
+        }
+        consume(TokenKind::Newline, "expected newline after enum value");
+        en.values.push_back(std::move(value));
+    }
+    consume(TokenKind::Dedent, "expected dedent after enum body");
+    return en;
+}
+
+void Parser::parse_type_decl(const Token& start, ModuleAst& module) {
+    const Token& name = consume_identifier("expected type name");
+    if (match(TokenKind::Assign)) {
+        TypeAliasDecl alias;
+        alias.location = start.location;
+        alias.name = name.text;
+        alias.type = join_until({TokenKind::Newline});
+        alias.type_ref = parse_type_text(alias.type, start.location);
+        consume(TokenKind::Newline, "expected newline after type alias");
+        module.aliases.push_back(std::move(alias));
+        return;
+    }
+    NativeTypeDecl type;
+    type.location = name.location;
+    type.name = name.text;
+    consume(TokenKind::Newline, "expected = or newline after type name");
+    module.native_types.push_back(std::move(type));
+}
+
+FunctionDecl Parser::parse_function(const Token& start, Visibility visibility,
+                                    const std::vector<Decorator>& decorators,
+                                    std::string_view receiver_type) {
+    FunctionDecl fn;
+    fn.visibility = visibility;
+    fn.decorators = decorators;
+    fn.location = start.location;
+    fn.name = consume_identifier("expected function name").text;
+    fn.generic_params = parse_generic_params();
+    consume(TokenKind::LParen, "expected ( after function name");
+    skip_signature_separators();
+    if (!at(TokenKind::RParen)) {
+        parse_params(fn.params, receiver_type);
+    }
+    skip_signature_separators();
+    consume(TokenKind::RParen, "expected ) after parameters");
+    if (match(TokenKind::Arrow)) {
+        fn.return_type = join_until({TokenKind::Colon});
+        fn.return_type_ref = parse_type_text(fn.return_type, start.location);
+    }
+    consume(TokenKind::Colon, "expected : after function header");
+    consume(TokenKind::Newline, "expected newline after function header");
+    fn.statements = parse_statement_block();
+    return fn;
+}
+
+std::vector<std::string> Parser::parse_generic_params() {
+    std::vector<std::string> params;
+    if (!match(TokenKind::LBracket)) {
+        return params;
+    }
+    if (at(TokenKind::RBracket)) {
+        fail_current("generic parameter list cannot be empty");
+    }
+    while (true) {
+        params.push_back(consume_identifier("expected generic parameter name").text);
+        if (match(TokenKind::Comma)) {
+            continue;
+        }
+        break;
+    }
+    consume(TokenKind::RBracket, "expected ] after generic parameters");
+    return params;
+}
+
+void Parser::parse_params(std::vector<ParamDecl>& params, std::string_view receiver_type) {
+    while (true) {
+        skip_signature_separators();
+        if (at(TokenKind::RParen)) {
+            break;
+        }
+        ParamDecl param;
+        const Token& name = consume_identifier("expected parameter name");
+        param.name = name.text;
+        param.location = name.location;
+        if (!receiver_type.empty() && params.empty() && param.name == "self" &&
+            !at(TokenKind::Colon)) {
+            param.type = std::string(receiver_type);
+            param.type_ref = parse_type_text(param.type, name.location);
+            params.push_back(std::move(param));
+            if (match(TokenKind::Comma)) {
+                continue;
+            }
+            if (at(TokenKind::RParen)) {
+                break;
+            }
+            fail_current("expected comma after self");
+        }
+        consume(TokenKind::Colon, "expected : after parameter name");
+        param.type = join_until({TokenKind::Comma, TokenKind::RParen, TokenKind::Newline});
+        if (param.type.empty()) {
+            throw CompileError(name.location, "parameter requires a type");
+        }
+        param.type_ref = parse_type_text(param.type, name.location);
+        params.push_back(std::move(param));
+        if (match(TokenKind::Comma)) {
+            continue;
+        }
+        if (at(TokenKind::Newline)) {
+            continue;
+        }
+        if (at(TokenKind::RParen)) {
+            break;
+        }
+        fail_current("expected comma or ) after parameter");
+    }
+}
+
+void Parser::skip_signature_separators() {
+    while (at(TokenKind::Newline) || at(TokenKind::Indent) || at(TokenKind::Dedent)) {
+        match(current().kind);
+    }
+}
+
+ConstDecl Parser::parse_constant() {
+    ConstDecl constant;
+    const Token& name = consume_identifier("expected constant name");
+    constant.name = name.text;
+    constant.location = name.location;
+    consume(TokenKind::Colon, "expected : after constant name");
+    constant.type = join_until({TokenKind::Assign});
+    if (constant.type.empty()) {
+        throw CompileError(name.location, "constant requires a type");
+    }
+    constant.type_ref = parse_type_text(constant.type, name.location);
+    consume(TokenKind::Assign, "expected = after constant type");
+    constant.value = join_until({TokenKind::Newline});
+    constant.value_expr = parse_expr_text(constant.value, name.location);
+    consume(TokenKind::Newline, "expected newline after constant");
+    return constant;
+}
+
+StaticAssertDecl Parser::parse_static_assert() {
+    StaticAssertDecl assertion;
+    const Token& start = consume_identifier("expected static_assert");
+    assertion.location = start.location;
+    assertion.expression = join_until({TokenKind::Newline});
+    assertion.expression_expr = parse_expr_text(assertion.expression, start.location);
+    consume(TokenKind::Newline, "expected newline after static_assert");
+    return assertion;
+}
+
+} // namespace dudu
