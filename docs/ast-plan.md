@@ -673,6 +673,9 @@ declarations now store parsed expression nodes. C++ emission and semantic-token
 collection use those declaration expression nodes instead of raw strings.
 Enum value initializers now store parsed expression nodes as well; enum C++
 emission and semantic-token collection use those nodes.
+Simple integer constant evaluation for `static_assert` failure diagnostics uses
+parsed expression nodes for names, integer literals, unary minus, and binary
+arithmetic/comparisons instead of reparsing expression strings.
 
 Dudu-native `@operator("[]")` semantic checks now consume parsed index
 argument nodes, including tuple-shaped multi-index expressions, instead of

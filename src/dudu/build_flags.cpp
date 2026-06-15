@@ -2,6 +2,7 @@
 
 #include "dudu/sema.hpp"
 
+#include <algorithm>
 #include <cctype>
 #include <map>
 #include <optional>
@@ -14,89 +15,94 @@ bool is_ident(char c) {
     return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_';
 }
 
-std::string trim(std::string text) {
-    while (!text.empty() && std::isspace(static_cast<unsigned char>(text.front())) != 0) {
-        text.erase(text.begin());
-    }
-    while (!text.empty() && std::isspace(static_cast<unsigned char>(text.back())) != 0) {
-        text.pop_back();
-    }
-    return text;
-}
-
-std::string strip_parens(std::string expr) {
-    expr = trim(std::move(expr));
-    while (expr.size() >= 2 && expr.front() == '(' && expr.back() == ')') {
-        expr = trim(expr.substr(1, expr.size() - 2));
-    }
-    return expr;
-}
-
-std::optional<int64_t> eval_int(std::string expr, const std::map<std::string, int64_t>& constants) {
-    expr = strip_parens(std::move(expr));
-    if (expr.empty()) {
+std::optional<int64_t> parse_int_literal(std::string text) {
+    text.erase(std::remove(text.begin(), text.end(), '_'), text.end());
+    if (text.empty()) {
         return std::nullopt;
     }
-    for (const char op : {'+', '-', '*', '/'}) {
-        const size_t pos = expr.rfind(op);
-        if (pos != std::string::npos && pos > 0) {
-            const std::optional<int64_t> left = eval_int(expr.substr(0, pos), constants);
-            const std::optional<int64_t> right = eval_int(expr.substr(pos + 1), constants);
+    size_t parsed = 0;
+    const int64_t value = std::stoll(text, &parsed, 0);
+    return parsed == text.size() ? std::optional<int64_t>{value} : std::nullopt;
+}
+
+std::optional<int64_t> eval_int(const Expr& expr,
+                                const std::map<std::string, int64_t>& constants) {
+    switch (expr.kind) {
+    case ExprKind::IntLiteral:
+        return parse_int_literal(expr.text);
+    case ExprKind::Name:
+        if (const auto it = constants.find(expr.name); it != constants.end()) {
+            return it->second;
+        }
+        return std::nullopt;
+    case ExprKind::Unary:
+        if (expr.children.size() != 1) {
+            return std::nullopt;
+        }
+        if (expr.op == "-") {
+            if (const std::optional<int64_t> value = eval_int(expr.children.front(), constants)) {
+                return -*value;
+            }
+        }
+        return std::nullopt;
+    case ExprKind::Binary:
+        if (expr.children.size() != 2) {
+            return std::nullopt;
+        }
+        {
+            const std::optional<int64_t> left = eval_int(expr.children[0], constants);
+            const std::optional<int64_t> right = eval_int(expr.children[1], constants);
             if (!left.has_value() || !right.has_value()) {
                 return std::nullopt;
             }
-            if (op == '+') {
+            if (expr.op == "+") {
                 return *left + *right;
             }
-            if (op == '-') {
+            if (expr.op == "-") {
                 return *left - *right;
             }
-            if (op == '*') {
+            if (expr.op == "*") {
                 return *left * *right;
             }
-            return *right == 0 ? std::nullopt : std::optional<int64_t>{*left / *right};
+            if (expr.op == "/" && *right != 0) {
+                return *left / *right;
+            }
         }
+        return std::nullopt;
+    default:
+        return std::nullopt;
     }
-    if (std::isdigit(static_cast<unsigned char>(expr.front())) != 0) {
-        return std::stoll(expr);
-    }
-    if (const auto it = constants.find(expr); it != constants.end()) {
-        return it->second;
-    }
-    return std::nullopt;
 }
 
 void check_static_assert(const StaticAssertDecl& assertion,
                          const std::map<std::string, int64_t>& constants) {
-    const std::string expr = strip_parens(assertion.expression);
-    for (const std::string op : {"==", "!=", ">=", "<=", ">", "<"}) {
-        const size_t pos = expr.find(op);
-        if (pos == std::string::npos) {
-            continue;
-        }
-        const std::optional<int64_t> left = eval_int(expr.substr(0, pos), constants);
-        const std::optional<int64_t> right = eval_int(expr.substr(pos + op.size()), constants);
-        if (!left.has_value() || !right.has_value()) {
-            return;
-        }
-        bool passed = false;
-        if (op == "==") {
-            passed = *left == *right;
-        } else if (op == "!=") {
-            passed = *left != *right;
-        } else if (op == ">=") {
-            passed = *left >= *right;
-        } else if (op == "<=") {
-            passed = *left <= *right;
-        } else if (op == ">") {
-            passed = *left > *right;
-        } else {
-            passed = *left < *right;
-        }
-        if (!passed) {
-            throw CompileError(assertion.location, "static_assert failed: " + assertion.expression);
-        }
+    const Expr& expr = assertion.expression_expr;
+    if (expr.kind != ExprKind::Binary || expr.children.size() != 2) {
         return;
+    }
+    const std::optional<int64_t> left = eval_int(expr.children[0], constants);
+    const std::optional<int64_t> right = eval_int(expr.children[1], constants);
+    if (!left.has_value() || !right.has_value()) {
+        return;
+    }
+    bool passed = false;
+    if (expr.op == "==") {
+        passed = *left == *right;
+    } else if (expr.op == "!=") {
+        passed = *left != *right;
+    } else if (expr.op == ">=") {
+        passed = *left >= *right;
+    } else if (expr.op == "<=") {
+        passed = *left <= *right;
+    } else if (expr.op == ">") {
+        passed = *left > *right;
+    } else if (expr.op == "<") {
+        passed = *left < *right;
+    } else {
+        return;
+    }
+    if (!passed) {
+        throw CompileError(assertion.location, "static_assert failed: " + assertion.expression);
     }
 }
 
@@ -194,7 +200,7 @@ void check_build_flags(const ModuleAst& module) {
     }
     for (const ConstDecl& constant : module.constants) {
         check_expr(names, constant.value_expr);
-        if (const std::optional<int64_t> value = eval_int(constant.value, int_constants)) {
+        if (const std::optional<int64_t> value = eval_int(constant.value_expr, int_constants)) {
             int_constants[constant.name] = *value;
         }
     }
