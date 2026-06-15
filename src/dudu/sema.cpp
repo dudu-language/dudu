@@ -315,6 +315,10 @@ bool has_expr(const Expr& expr) {
     return !expr.text.empty();
 }
 
+bool has_type_ref(const TypeRef& type) {
+    return type.kind != TypeKind::Unknown || !type.text.empty();
+}
+
 bool is_comparison_op(const std::string& op) {
     return op == "==" || op == "!=" || op == "<" || op == "<=" || op == ">" || op == ">=";
 }
@@ -2038,8 +2042,9 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
     }
     if (stmt.kind == StmtKind::Except) {
         FunctionScope nested = scope;
-        if (!stmt.condition.empty())
+        if (stmt.name.empty() && has_type_ref(stmt.type_ref)) {
             fail(stmt.location, "expected except binding as name: Type");
+        }
         if (!stmt.name.empty()) {
             check_local_binding_name(stmt.location, stmt.name);
             check_known_type_ref(scope.symbols, node_location(stmt.location, stmt.type_ref),
