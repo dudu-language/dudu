@@ -337,6 +337,13 @@ Already structured:
 - member-path type checks for indexed local receivers such as `items[i].field`
   route the index through parsed expression typing instead of the raw index-text
   overload
+- member-path type checks for normal local value paths now walk parsed
+  `Name`/`Member`/`Index` expression nodes directly. The string path remains
+  for compatibility boundaries such as explicit C++ escapes and native import
+  spelling.
+- C++ member expression emission uses parsed receiver type information for
+  static-object-then-instance-field access such as `Palette.WHITE.y`, avoiding
+  capitalization guesses that would emit `Palette::WHITE::y`.
 - dereference assignment targets now type-check through the parsed operand
   expression, so normal Dudu code can assign through pointer fields such as
   `*self.out += 1` without using `cpp(...)`

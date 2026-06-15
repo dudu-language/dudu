@@ -5,6 +5,7 @@
 #include "dudu/sema_builtin_methods.hpp"
 #include "dudu/sema_index.hpp"
 #include "dudu/sema_method_templates.hpp"
+#include "dudu/sema_native.hpp"
 #include "dudu/sema_scan.hpp"
 #include "dudu/source.hpp"
 
@@ -113,6 +114,28 @@ std::string first_path_type(const Symbols& symbols,
     return local->second;
 }
 
+std::string static_member_type(const Symbols& symbols, const SourceLocation* location,
+                               const std::string& type_name, const std::string& member) {
+    const auto klass = symbols.classes.find(type_name);
+    if (klass == symbols.classes.end()) {
+        return {};
+    }
+    for (const ConstDecl& constant : klass->second->constants) {
+        if (constant.name == member) {
+            return constant.type;
+        }
+    }
+    for (const ConstDecl& field : klass->second->static_fields) {
+        if (field.name == member) {
+            return field.type;
+        }
+    }
+    if (location != nullptr) {
+        fail(*location, "unknown static member: " + type_name + "." + member);
+    }
+    return {};
+}
+
 } // namespace
 
 std::string member_path_type(const Symbols& symbols,
@@ -199,6 +222,61 @@ std::string member_path_type(const Symbols& symbols,
         start = next + 1;
     }
     return type;
+}
+
+std::string member_expr_type(const Symbols& symbols,
+                             const std::map<std::string, std::string>& locals,
+                             const SourceLocation* location, const Expr& expr,
+                             std::string_view unknown_local_prefix) {
+    if (expr.kind == ExprKind::Name && !expr.name.empty()) {
+        if (const auto local = locals.find(expr.name); local != locals.end()) {
+            return local->second;
+        }
+        if (symbols.classes.contains(expr.name)) {
+            return expr.name;
+        }
+        if (location != nullptr && !unknown_local_prefix.empty()) {
+            fail(*location, std::string(unknown_local_prefix) + expr.name);
+        }
+        return {};
+    }
+    if (expr.kind == ExprKind::Index && expr.children.size() == 2) {
+        const std::string receiver_type =
+            member_expr_type(symbols, locals, location, expr.children[0], unknown_local_prefix);
+        if (receiver_type.empty()) {
+            return {};
+        }
+        return indexed_type_from_type(symbols, location == nullptr ? SourceLocation{} : *location,
+                                      receiver_type, expr.children[1],
+                                      expr.text.empty() ? "indexed expression" : expr.text);
+    }
+    if (expr.kind == ExprKind::Member && expr.children.size() == 1 && !expr.name.empty()) {
+        const Expr& receiver = expr.children.front();
+        if (receiver.kind == ExprKind::Name && !locals.contains(receiver.name) &&
+            symbols.classes.contains(receiver.name)) {
+            return static_member_type(symbols, location, receiver.name, expr.name);
+        }
+        const std::string receiver_type =
+            member_expr_type(symbols, locals, location, receiver, unknown_local_prefix);
+        if (receiver_type.empty()) {
+            return {};
+        }
+        if (const auto field = field_type_for_type(symbols, receiver_type, expr.name)) {
+            return *field;
+        }
+        if (const auto swizzle = swizzle_type_for_type(symbols, receiver_type, expr.name)) {
+            return *swizzle;
+        }
+        if (receiver_type == "auto" ||
+            foreign_cpp_type_name(symbols, resolve_alias(symbols, receiver_type))) {
+            return "auto";
+        }
+        if (location != nullptr) {
+            fail(*location, "unknown field: " +
+                                (expr.text.empty() ? receiver_type + "." + expr.name : expr.text));
+        }
+    }
+    return {};
 }
 
 bool is_member_path(const std::string& path) {

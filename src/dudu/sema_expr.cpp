@@ -228,6 +228,11 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                 }
             }
         }
+        if (const std::string found =
+                member_expr_type(scope.symbols, scope.locals, use_location, expr);
+            !found.empty()) {
+            return found;
+        }
         if (const std::optional<std::string> path = member_path_from_expr(expr)) {
             const std::string found =
                 member_path_type(scope.symbols, scope.locals, use_location,
@@ -285,15 +290,12 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                                           receiver.name, expr.children[1],
                                           "indexed access to unknown local: ");
             }
-            if (const std::optional<std::string> receiver_path = member_path_from_expr(receiver)) {
-                const std::string receiver_type = member_path_type(
-                    scope.symbols, scope.locals, use_location,
-                    normalize_current_class_path(scope, *receiver_path, use_location), "");
-                if (!receiver_type.empty()) {
-                    return indexed_type_from_type(
-                        scope.symbols, index_location, receiver_type, expr.children[1],
-                        normalize_current_class_path(scope, *receiver_path, use_location));
-                }
+            if (const std::string receiver_type =
+                    member_expr_type(scope.symbols, scope.locals, use_location, receiver);
+                !receiver_type.empty()) {
+                return indexed_type_from_type(
+                    scope.symbols, index_location, receiver_type, expr.children[1],
+                    receiver.text.empty() ? "indexed expression" : receiver.text);
             }
             const std::string receiver_type = infer_expr_ast(scope, receiver, use_location);
             if (!receiver_type.empty()) {

@@ -8,6 +8,7 @@
 #include "dudu/cpp_stmt_types.hpp"
 #include "dudu/sema_context.hpp"
 #include "dudu/sema_function_type.hpp"
+#include "dudu/sema_methods.hpp"
 #include "dudu/source.hpp"
 
 #include <algorithm>
@@ -213,6 +214,15 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
             }
             if (is_pointer_receiver_expr(expr.children.front(), locals)) {
                 return lower_expr(expr.children.front(), aliases, locals) + "->" + expr.name;
+            }
+            if (symbols != nullptr) {
+                const std::string receiver_type =
+                    member_expr_type(*symbols, locals, nullptr, expr.children.front());
+                if (!receiver_type.empty() &&
+                    field_type_for_type(*symbols, receiver_type, expr.name)) {
+                    return lower_expr(expr.children.front(), aliases, locals, symbols) + "." +
+                           expr.name;
+                }
             }
             return lower_member_expr(lower_expr(expr.children.front(), aliases, locals), expr.name,
                                      aliases);

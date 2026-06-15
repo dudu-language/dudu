@@ -263,7 +263,10 @@ push. They are not release packaging work.
    information instead of raw pointer-member rewriting. Semantic token
    generation now merges native header metadata as a classification layer, so
    native C/C++ references in Dudu source can carry the LSP `native` modifier
-   while token ranges remain anchored to the open Dudu file.
+   while token ranges remain anchored to the open Dudu file. Member-path type
+   checks for normal local value paths now walk parsed expression nodes for
+   nested `Name`/`Member`/`Index` shapes, and member C++ emission uses receiver
+   type information for static-object-then-instance-field access.
 
 3. OOP Surface Cleanup
 
