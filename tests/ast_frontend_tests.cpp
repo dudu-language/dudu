@@ -1,0 +1,465 @@
+#include "dudu/cpp_emit.hpp"
+#include "dudu/cpp_lower.hpp"
+#include "dudu/cpp_stmt_types.hpp"
+#include "dudu/parser.hpp"
+#include "dudu/sema.hpp"
+#include "dudu/sema_function_type.hpp"
+#include "dudu/type_compat.hpp"
+
+#include <cassert>
+#include <exception>
+#include <iostream>
+#include <string>
+#include <vector>
+
+namespace {
+
+void test_ast_assignment_display_types() {
+    assert(dudu::assignment_error("bool", dudu::parse_expr_text("123"), "") ==
+           "cannot assign number to bool without an explicit cast");
+    assert(dudu::assignment_error("bool", dudu::parse_expr_text("\"hi\""), "") ==
+           "cannot assign str to bool without an explicit cast");
+    assert(dudu::assignment_error("bool", dudu::parse_expr_text("value"), "") ==
+           "cannot assign  to bool without an explicit cast");
+
+    dudu::Expr unknown;
+    unknown.kind = dudu::ExprKind::Unknown;
+    unknown.text = "123";
+    assert(dudu::assignment_error("bool", unknown, "") ==
+           "cannot assign  to bool without an explicit cast");
+}
+
+void test_ast_constructor_assignment_compatibility() {
+    const dudu::ModuleAst module = dudu::parse_source("class Bag:\n"
+                                                      "    names: dict[str, i32]\n"
+                                                      "    values: list[i32]\n"
+                                                      "\n"
+                                                      "def make_bag() -> Bag:\n"
+                                                      "    first: Bag = Bag({}, [])\n"
+                                                      "    second: Bag = Bag(names={}, values=[])\n"
+                                                      "    return first\n",
+                                                      "ast_constructor_assignment.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+}
+
+void test_ast_index_receiver_type_inference() {
+    const dudu::ModuleAst module = dudu::parse_source("def make_values() -> list[i32]:\n"
+                                                      "    return [1, 2]\n"
+                                                      "\n"
+                                                      "def make_matrix() -> array[i32][2, 2]:\n"
+                                                      "    matrix: array[i32] = [[1, 2], [3, 4]]\n"
+                                                      "    return matrix\n"
+                                                      "\n"
+                                                      "def main() -> i32:\n"
+                                                      "    first: i32 = make_values()[0]\n"
+                                                      "    second: i32 = make_matrix()[1][0]\n"
+                                                      "    return first + second\n",
+                                                      "ast_index_receiver.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+}
+
+void test_statement_ast_shape() {
+    const dudu::ModuleAst module = dudu::parse_source("def main() -> i32:\n"
+                                                      "    total: i32 = 0\n"
+                                                      "    for item: i32 in values:\n"
+                                                      "        total += item\n"
+                                                      "    if total == 0:\n"
+                                                      "        total += 42\n"
+                                                      "    else:\n"
+                                                      "        total = 1\n"
+                                                      "    return total\n",
+                                                      "statement_ast.dd");
+    assert(module.functions.size() == 1);
+    const dudu::FunctionDecl& main = module.functions.front();
+    assert(main.statements.size() == 5);
+    assert(main.statements[0].kind == dudu::StmtKind::VarDecl);
+    assert(main.statements[0].name == "total");
+    assert(main.statements[0].type == "i32");
+    assert(main.statements[0].value == "0");
+    assert(main.statements[1].kind == dudu::StmtKind::For);
+    assert(main.statements[1].name == "item");
+    assert(main.statements[1].type == "i32");
+    assert(main.statements[1].iterable == "values");
+    assert(main.statements[1].children.size() == 1);
+    assert(main.statements[1].children[0].kind == dudu::StmtKind::CompoundAssign);
+    assert(main.statements[1].children[0].target == "total");
+    assert(main.statements[1].children[0].op == "+");
+    assert(main.statements[1].children[0].value == "item");
+    assert(main.statements[2].kind == dudu::StmtKind::If);
+    assert(main.statements[2].condition == "total == 0");
+    assert(main.statements[2].children.size() == 1);
+    assert(main.statements[2].children[0].kind == dudu::StmtKind::CompoundAssign);
+    assert(main.statements[3].kind == dudu::StmtKind::Else);
+    assert(main.statements[3].children.size() == 1);
+    assert(main.statements[3].children[0].kind == dudu::StmtKind::Assign);
+    assert(main.statements[3].children[0].target == "total");
+    assert(main.statements[3].children[0].value == "1");
+    assert(main.statements[4].kind == dudu::StmtKind::Return);
+    assert(main.statements[4].value == "total");
+}
+
+void test_expression_ast_shape() {
+    const dudu::ModuleAst module =
+        dudu::parse_source("def main() -> i32:\n"
+                           "    answer: i32 = add(20, values[0] + 2)\n"
+                           "    if not ready or count < 3:\n"
+                           "        player.inventory[slot].name = Vec4[f32](1.0, 0.0, 0.0, 1.0)\n"
+                           "    values: list[i32] = [1, 2, 3]\n"
+                           "    flags: i32 = mask & (1 << bit)\n"
+                           "    *ptr = &values[0]\n"
+                           "    point: Point = Point(x=1, y=2)\n"
+                           "    hex_mask: i32 = 0x80\n"
+                           "    view: span[i32] = values[1:3]\n"
+                           "    pending = await fetch()\n"
+                           "    produced = yield answer\n"
+                           "    return answer\n",
+                           "expression_ast.dd");
+    assert(module.functions.size() == 1);
+    const dudu::FunctionDecl& main = module.functions.front();
+    assert(main.statements.size() == 11);
+
+    const dudu::Stmt& answer = main.statements[0];
+    assert(answer.kind == dudu::StmtKind::VarDecl);
+    assert(answer.value_expr.kind == dudu::ExprKind::Call);
+    assert(answer.value_expr.name == "add");
+    assert(answer.value_expr.callee.size() == 1);
+    assert(answer.value_expr.callee[0].kind == dudu::ExprKind::Name);
+    assert(answer.value_expr.callee[0].name == "add");
+    assert(answer.value_expr.range.start.line == 2);
+    assert(answer.value_expr.range.start.column > answer.location.column);
+    assert(answer.value_expr.children.size() == 2);
+    assert(answer.value_expr.children[0].kind == dudu::ExprKind::IntLiteral);
+    assert(answer.value_expr.children[0].range.start.line == 2);
+    assert(answer.value_expr.children[0].range.start.column > answer.value_expr.range.start.column);
+    assert(answer.value_expr.children[1].kind == dudu::ExprKind::Binary);
+    assert(answer.value_expr.children[1].range.start.line == 2);
+    assert(answer.value_expr.children[1].range.start.column >
+           answer.value_expr.children[0].range.start.column);
+    assert(answer.value_expr.children[1].op == "+");
+    assert(answer.value_expr.children[1].children[0].kind == dudu::ExprKind::Index);
+
+    const dudu::Stmt& branch = main.statements[1];
+    assert(branch.kind == dudu::StmtKind::If);
+    assert(branch.condition_expr.kind == dudu::ExprKind::Binary);
+    assert(branch.condition_expr.op == "or");
+    assert(branch.condition_expr.children[0].kind == dudu::ExprKind::Unary);
+    assert(branch.condition_expr.children[0].op == "not");
+    assert(branch.condition_expr.children[0].children[0].range.start.column >
+           branch.condition_expr.children[0].range.start.column);
+    assert(branch.condition_expr.children[1].kind == dudu::ExprKind::Binary);
+    assert(branch.condition_expr.children[1].op == "<");
+    assert(branch.condition_expr.children[1].children[1].range.start.column >
+           branch.condition_expr.children[1].children[0].range.start.column);
+    assert(branch.children.size() == 1);
+
+    const dudu::Stmt& assign = branch.children[0];
+    assert(assign.kind == dudu::StmtKind::Assign);
+    assert(assign.target_expr.kind == dudu::ExprKind::Member);
+    assert(assign.target_expr.name == "name");
+    assert(assign.target_expr.children[0].kind == dudu::ExprKind::Index);
+    assert(assign.value_expr.kind == dudu::ExprKind::TemplateCall);
+    assert(assign.value_expr.name == "Vec4");
+    assert(assign.value_expr.callee.size() == 1);
+    assert(assign.value_expr.callee[0].kind == dudu::ExprKind::Name);
+    assert(assign.value_expr.callee[0].name == "Vec4");
+    assert(assign.value_expr.template_args.size() == 1);
+    assert(assign.value_expr.template_args[0].kind == dudu::ExprKind::Name);
+    assert(assign.value_expr.template_args[0].name == "f32");
+    assert(assign.value_expr.template_args[0].range.start.column >
+           assign.value_expr.range.start.column);
+    assert(assign.value_expr.template_type_args.size() == 1);
+    assert(assign.value_expr.template_type_args[0].kind == dudu::TypeKind::Named);
+    assert(assign.value_expr.template_type_args[0].name == "f32");
+    assert(assign.value_expr.template_type_args[0].range.start.column >
+           assign.value_expr.range.start.column);
+    assert(assign.value_expr.children.size() == 4);
+    assert(assign.value_expr.children[0].range.start.column > assign.value_expr.range.start.column);
+
+    const dudu::Stmt& values = main.statements[2];
+    assert(values.kind == dudu::StmtKind::VarDecl);
+    assert(values.value_expr.kind == dudu::ExprKind::ListLiteral);
+    assert(values.value_expr.children.size() == 3);
+    assert(values.value_expr.children[0].range.start.column > values.value_expr.range.start.column);
+    assert(values.value_expr.children[1].range.start.column >
+           values.value_expr.children[0].range.start.column);
+    assert(values.value_expr.children[2].range.start.column >
+           values.value_expr.children[1].range.start.column);
+    assert(values.value_expr.range.start.line == 5);
+    assert(values.value_expr.range.start.column > values.location.column);
+
+    const dudu::Stmt& flags = main.statements[3];
+    assert(flags.kind == dudu::StmtKind::VarDecl);
+    assert(flags.value_expr.kind == dudu::ExprKind::Binary);
+    assert(flags.value_expr.op == "&");
+    assert(flags.value_expr.children[1].kind == dudu::ExprKind::Binary);
+    assert(flags.value_expr.children[1].op == "<<");
+    assert(flags.value_expr.children[1].range.start.column >
+           flags.value_expr.children[0].range.start.column);
+    assert(flags.value_expr.children[1].children[1].range.start.column >
+           flags.value_expr.children[1].children[0].range.start.column);
+
+    const dudu::Stmt& pointer_assign = main.statements[4];
+    assert(pointer_assign.kind == dudu::StmtKind::Assign);
+    assert(pointer_assign.target_expr.kind == dudu::ExprKind::Unary);
+    assert(pointer_assign.target_expr.op == "*");
+    assert(pointer_assign.target_expr.children[0].range.start.column >
+           pointer_assign.target_expr.range.start.column);
+    assert(pointer_assign.value_expr.kind == dudu::ExprKind::Unary);
+    assert(pointer_assign.value_expr.op == "&");
+    assert(pointer_assign.value_expr.children[0].kind == dudu::ExprKind::Index);
+    assert(pointer_assign.value_expr.children[0].range.start.column >
+           pointer_assign.value_expr.range.start.column);
+
+    const dudu::Stmt& point = main.statements[5];
+    assert(point.kind == dudu::StmtKind::VarDecl);
+    assert(point.value_expr.kind == dudu::ExprKind::Call);
+    assert(point.value_expr.callee.size() == 1);
+    assert(point.value_expr.callee[0].kind == dudu::ExprKind::Name);
+    assert(point.value_expr.callee[0].name == "Point");
+    assert(point.value_expr.children.size() == 2);
+    assert(point.value_expr.children[0].kind == dudu::ExprKind::NamedArg);
+    assert(point.value_expr.children[0].name == "x");
+    assert(point.value_expr.children[0].children.size() == 1);
+    assert(point.value_expr.children[0].children[0].kind == dudu::ExprKind::IntLiteral);
+    assert(point.value_expr.children[1].kind == dudu::ExprKind::NamedArg);
+    assert(point.value_expr.children[1].name == "y");
+
+    const dudu::Stmt& hex_mask = main.statements[6];
+    assert(hex_mask.kind == dudu::StmtKind::VarDecl);
+    assert(hex_mask.value_expr.kind == dudu::ExprKind::IntLiteral);
+    assert(hex_mask.value_expr.text == "0x80");
+
+    const dudu::Stmt& view = main.statements[7];
+    assert(view.kind == dudu::StmtKind::VarDecl);
+    assert(view.value_expr.kind == dudu::ExprKind::Index);
+    assert(view.value_expr.children.size() == 2);
+    assert(view.value_expr.children[1].kind == dudu::ExprKind::Slice);
+    assert(view.value_expr.children[1].range.start.column > view.value_expr.range.start.column);
+    assert(view.value_expr.children[1].children.size() == 2);
+    assert(view.value_expr.children[1].children[0].kind == dudu::ExprKind::IntLiteral);
+    assert(view.value_expr.children[1].children[1].kind == dudu::ExprKind::IntLiteral);
+    assert(view.value_expr.children[1].children[0].range.start.column ==
+           view.value_expr.children[1].range.start.column);
+    assert(view.value_expr.children[1].children[1].range.start.column >
+           view.value_expr.children[1].children[0].range.start.column);
+
+    const dudu::Stmt& pending = main.statements[8];
+    assert(pending.kind == dudu::StmtKind::Assign);
+    assert(pending.value_expr.kind == dudu::ExprKind::Await);
+    assert(pending.value_expr.children.size() == 1);
+    assert(pending.value_expr.children[0].kind == dudu::ExprKind::Call);
+    assert(pending.value_expr.children[0].name == "fetch");
+    assert(pending.value_expr.children[0].range.start.column >
+           pending.value_expr.range.start.column);
+
+    const dudu::Stmt& produced = main.statements[9];
+    assert(produced.kind == dudu::StmtKind::Assign);
+    assert(produced.value_expr.kind == dudu::ExprKind::Yield);
+    assert(produced.value_expr.children.size() == 1);
+    assert(produced.value_expr.children[0].kind == dudu::ExprKind::Name);
+    assert(produced.value_expr.children[0].name == "answer");
+    assert(produced.value_expr.children[0].range.start.column >
+           produced.value_expr.range.start.column);
+}
+
+void test_type_ast_shape() {
+    const dudu::ModuleAst module =
+        dudu::parse_source("type PlayerList = list[*Player]\n"
+                           "\n"
+                           "MAX_PLAYERS: i32 = 4 * 2\n"
+                           "static_assert(MAX_PLAYERS == 8)\n"
+                           "\n"
+                           "enum Mode: u8\n"
+                           "    Idle = 0\n"
+                           "    Running = 1 + 1\n"
+                           "\n"
+                           "class Player:\n"
+                           "    count: static[i32] = 0\n"
+                           "    DEFAULT_HP: i32 = MAX_PLAYERS + 34\n"
+                           "    transform: array[f32][4, 4]\n"
+                           "\n"
+                           "def update(player: &Player, names: list[str]) -> *Player:\n"
+                           "    local: const[list[i32]] = [1, 2]\n"
+                           "    return None\n",
+                           "type_ast.dd");
+    assert(module.aliases.size() == 1);
+    assert(module.aliases[0].type_ref.kind == dudu::TypeKind::Template);
+    assert(module.aliases[0].type_ref.name == "list");
+    assert(module.aliases[0].type_ref.children.size() == 1);
+    assert(module.aliases[0].type_ref.children[0].kind == dudu::TypeKind::Pointer);
+
+    assert(module.constants.size() == 1);
+    assert(module.constants[0].value_expr.kind == dudu::ExprKind::Binary);
+    assert(module.constants[0].value_expr.op == "*");
+    assert(module.static_asserts.size() == 1);
+    assert(module.static_asserts[0].expression_expr.kind == dudu::ExprKind::Binary);
+    assert(module.static_asserts[0].expression_expr.op == "==");
+
+    assert(module.enums.size() == 1);
+    assert(module.enums[0].underlying_type_ref.kind == dudu::TypeKind::Named);
+    assert(module.enums[0].underlying_type_ref.name == "u8");
+    assert(module.enums[0].values.size() == 2);
+    assert(module.enums[0].values[0].value_expr.kind == dudu::ExprKind::IntLiteral);
+    assert(module.enums[0].values[1].value_expr.kind == dudu::ExprKind::Binary);
+    assert(module.enums[0].values[1].value_expr.op == "+");
+
+    assert(module.classes.size() == 1);
+    const dudu::ClassDecl& player = module.classes[0];
+    assert(player.static_fields.size() == 1);
+    assert(player.static_fields[0].type == "i32");
+    assert(player.static_fields[0].type_ref.kind == dudu::TypeKind::Named);
+    assert(player.static_fields[0].value_expr.kind == dudu::ExprKind::IntLiteral);
+    assert(player.constants.size() == 1);
+    assert(player.constants[0].value_expr.kind == dudu::ExprKind::Binary);
+    assert(player.constants[0].value_expr.op == "+");
+    assert(player.fields.size() == 1);
+    assert(player.fields[0].type_ref.kind == dudu::TypeKind::FixedArray);
+    assert(player.fields[0].type_ref.value == "4, 4");
+    assert(player.fields[0].type_ref.children[0].kind == dudu::TypeKind::Template);
+    assert(player.fields[0].type_ref.children[0].name == "array");
+
+    assert(module.functions.size() == 1);
+    const dudu::FunctionDecl& update = module.functions[0];
+    assert(update.return_type_ref.kind == dudu::TypeKind::Pointer);
+    assert(update.params[0].type_ref.kind == dudu::TypeKind::Reference);
+    assert(update.params[1].type_ref.kind == dudu::TypeKind::Template);
+    assert(update.params[1].type_ref.children[0].name == "str");
+    assert(update.statements[0].type_ref.kind == dudu::TypeKind::Const);
+    assert(update.statements[0].type_ref.range.start.line == 16);
+    assert(update.statements[0].type_ref.range.start.column > update.statements[0].location.column);
+    assert(update.statements[0].type_ref.children[0].kind == dudu::TypeKind::Template);
+
+    assert(dudu::lower_cpp_type(dudu::parse_type_text("list[*Player]")) == "std::vector<Player*>");
+    assert(dudu::lower_cpp_type(dudu::parse_type_text("&const[Player]")) == "const Player&");
+    assert(dudu::lower_cpp_type(dudu::parse_type_text("fn(i32, f32) -> bool")) ==
+           "std::add_pointer_t<bool(int32_t, float)>");
+    assert(dudu::lower_cpp_type(dudu::parse_type_text("fn(i32)")) ==
+           "std::add_pointer_t<void(int32_t)>");
+    dudu::FunctionSignature signature;
+    assert(dudu::parse_function_type(dudu::parse_type_text("fn(i32, f32) -> bool"), signature));
+    assert(signature.params.size() == 2);
+    assert(signature.params[0] == "i32");
+    assert(signature.params[1] == "f32");
+    assert(signature.return_type == "bool");
+    assert(dudu::parse_function_type(dudu::parse_type_text("fn(i32)"), signature));
+    assert(signature.params.size() == 1);
+    assert(signature.params[0] == "i32");
+    assert(signature.return_type == "void");
+    assert(dudu::parse_function_type(dudu::parse_type_text("std.function[fn(i32) -> i32]"),
+                                     signature));
+    assert(signature.params.size() == 1);
+    assert(signature.params[0] == "i32");
+    assert(signature.return_type == "i32");
+    assert(dudu::lower_cpp_type(player.fields[0].type_ref) ==
+           "std::array<std::array<float, 4>, 4>");
+    assert(dudu::lower_cpp_type("array[i32][3]") == "std::array<int32_t, 3>");
+    assert(dudu::lower_cpp_type("array[f32][4, 4]") == "std::array<std::array<float, 4>, 4>");
+}
+
+void test_generic_decl_ast_shape() {
+    const dudu::ModuleAst module = dudu::parse_source("class Box[T]:\n"
+                                                      "    value: T\n"
+                                                      "\n"
+                                                      "    def get(self) -> T:\n"
+                                                      "        return self.value\n"
+                                                      "\n"
+                                                      "def id[T](value: T) -> T:\n"
+                                                      "    return value\n",
+                                                      "generic_decl_shape.dd");
+    assert(module.classes.size() == 1);
+    assert(module.classes[0].name == "Box");
+    assert(module.classes[0].generic_params == std::vector<std::string>{"T"});
+    assert(module.classes[0].methods.size() == 1);
+    assert(module.classes[0].methods[0].return_type == "T");
+    assert(module.functions.size() == 1);
+    assert(module.functions[0].name == "id");
+    assert(module.functions[0].generic_params == std::vector<std::string>{"T"});
+}
+
+void test_payload_enum_ast_shape() {
+    const dudu::ModuleAst module = dudu::parse_source("enum Message:\n"
+                                                      "    Quit\n"
+                                                      "\n"
+                                                      "    Move:\n"
+                                                      "        x: i32\n"
+                                                      "        y: i32\n"
+                                                      "\n"
+                                                      "    Write(str)\n",
+                                                      "payload_enum_shape.dd");
+    assert(module.enums.size() == 1);
+    const dudu::EnumDecl& message = module.enums[0];
+    assert(message.values.size() == 3);
+    assert(message.values[0].name == "Quit");
+    assert(message.values[0].payload_fields.empty());
+    assert(message.values[1].name == "Move");
+    assert(!message.values[1].tuple_payload);
+    assert(message.values[1].payload_fields.size() == 2);
+    assert(message.values[1].payload_fields[0].name == "x");
+    assert(message.values[1].payload_fields[0].type_ref.kind == dudu::TypeKind::Named);
+    assert(message.values[2].name == "Write");
+    assert(message.values[2].tuple_payload);
+    assert(message.values[2].payload_fields.size() == 1);
+    assert(message.values[2].payload_fields[0].name == "_0");
+    assert(message.values[2].payload_fields[0].type == "str");
+}
+
+void test_match_case_ast_shape() {
+    const dudu::ModuleAst module = dudu::parse_source("def handle(msg: Message) -> i32:\n"
+                                                      "    match msg:\n"
+                                                      "        case Message.Quit:\n"
+                                                      "            return 0\n"
+                                                      "        case Message.Move(x, y) if x > 0:\n"
+                                                      "            return y\n"
+                                                      "        case _:\n"
+                                                      "            return 1\n",
+                                                      "match_case_shape.dd");
+    assert(module.functions.size() == 1);
+    const dudu::FunctionDecl& handle = module.functions.front();
+    assert(handle.statements.size() == 1);
+    const dudu::Stmt& match = handle.statements[0];
+    assert(match.kind == dudu::StmtKind::Match);
+    assert(match.condition == "msg");
+    assert(match.condition_expr.kind == dudu::ExprKind::Name);
+    assert(match.children.size() == 3);
+
+    const dudu::Stmt& quit = match.children[0];
+    assert(quit.kind == dudu::StmtKind::Case);
+    assert(quit.pattern == "Message.Quit");
+    assert(quit.pattern_expr.kind == dudu::ExprKind::Member);
+    assert(quit.children.size() == 1);
+    assert(quit.children[0].kind == dudu::StmtKind::Return);
+
+    const dudu::Stmt& move = match.children[1];
+    assert(move.kind == dudu::StmtKind::Case);
+    assert(move.pattern == "Message.Move(x, y)");
+    assert(move.guard == "x > 0");
+    assert(move.pattern_expr.kind == dudu::ExprKind::Call);
+    assert(move.guard_expr.kind == dudu::ExprKind::Binary);
+    assert(move.guard_expr.op == ">");
+
+    const dudu::Stmt& wildcard = match.children[2];
+    assert(wildcard.kind == dudu::StmtKind::Case);
+    assert(wildcard.pattern == "_");
+    assert(wildcard.guard.empty());
+    assert(wildcard.pattern_expr.kind == dudu::ExprKind::Name);
+}
+
+} // namespace
+
+int main() {
+    try {
+        test_ast_assignment_display_types();
+        test_ast_constructor_assignment_compatibility();
+        test_ast_index_receiver_type_inference();
+        test_statement_ast_shape();
+        test_expression_ast_shape();
+        test_type_ast_shape();
+        test_generic_decl_ast_shape();
+        test_payload_enum_ast_shape();
+        test_match_case_ast_shape();
+    } catch (const std::exception& error) {
+        std::cerr << error.what() << '\n';
+        return 1;
+    }
+    return 0;
+}
