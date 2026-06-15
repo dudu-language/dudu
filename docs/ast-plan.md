@@ -152,6 +152,9 @@ Already structured:
   removed
 - operator compatibility checks now expose only parsed-expression overloads;
   the old raw right-hand-expression overloads have been removed
+- type compatibility now separates type-only assignment checks from
+  expression-aware assignment checks; raw expression-string assignment APIs and
+  their duplicate literal/container parsing helpers have been removed
 - AST-backed statement checks route assignment compatibility through expression
   nodes instead of using raw statement value strings
 - compound-assignment target checks use the parsed target expression path

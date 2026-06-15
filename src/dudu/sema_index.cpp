@@ -297,8 +297,8 @@ void check_iterable_binding(const Symbols& symbols,
     if (element.empty()) {
         throw CompileError(location, "cannot iterate non-container: " + iterable);
     }
-    if (!assignment_type_allowed(binding_type, "", element) &&
-        !assignment_type_allowed(resolve_alias(symbols, binding_type), "",
+    if (!type_assignment_allowed(binding_type, element) &&
+        !type_assignment_allowed(resolve_alias(symbols, binding_type),
                                  resolve_alias(symbols, element))) {
         throw CompileError(location, "loop binding expects " + binding_type + ", got " + element);
     }

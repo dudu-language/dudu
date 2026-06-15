@@ -60,7 +60,7 @@ bool numeric_operand_allowed(const std::string& expected, const Expr& expr,
 
 bool same_or_assignable(const std::string& left, const Expr& right_expr, const std::string& right) {
     return assignment_type_allowed(left, right_expr, right) ||
-           assignment_type_allowed(right, "", left);
+           type_assignment_allowed(right, left);
 }
 
 bool is_supported_dudu_operator(const std::string& op) {
