@@ -3,4 +3,4 @@ def apply(value: i32, callback: fn(i32) -> i32) -> i32:
 
 
 def main() -> i32:
-    return apply(41, lambda x: "wrong")
+    return apply(41, lambda x: x + 1)

@@ -365,6 +365,57 @@ bool foreign_cpp_type_name(const std::string& type) {
     return type.find('.') != std::string::npos || type.find("::") != std::string::npos;
 }
 
+bool lambda_matches_function_signature(const FunctionScope& scope, const Expr& lambda,
+                                       const FunctionSignature& expected,
+                                       const SourceLocation* location) {
+    if (lambda.kind != ExprKind::Lambda) {
+        return false;
+    }
+    if (location != nullptr && lambda.children.size() != 1) {
+        fail(*location, "lambda expression expects ':' body");
+    }
+    if (location != nullptr && lambda.params.size() != expected.params.size()) {
+        fail(*location, "lambda expects " + std::to_string(expected.params.size()) +
+                            " parameters, got " + std::to_string(lambda.params.size()));
+    }
+    if (lambda.children.size() != 1 || lambda.params.size() != expected.params.size()) {
+        return false;
+    }
+    FunctionScope lambda_scope = scope;
+    for (size_t i = 0; i < lambda.params.size(); ++i) {
+        if (lambda.params[i].kind != ExprKind::Name || lambda.params[i].name.empty()) {
+            if (location != nullptr) {
+                fail(lambda.params[i].location, "lambda parameter must be a name");
+            }
+            return false;
+        }
+        lambda_scope.locals[lambda.params[i].name] = expected.params[i];
+    }
+    if (expected.return_type.empty() || expected.return_type == "void") {
+        (void)infer_expr_ast(lambda_scope, lambda.children.front(), location);
+        return true;
+    }
+    const std::string got = infer_expr_ast(lambda_scope, lambda.children.front(), location);
+    if (!can_assign_ast(lambda_scope, expected.return_type, lambda.children.front(), got)) {
+        if (location != nullptr) {
+            fail(lambda.children.front().location,
+                 "lambda body expects " + expected.return_type + ", got " + got);
+        }
+        return false;
+    }
+    return true;
+}
+
+bool lambda_matches_function_type(const FunctionScope& scope, const Expr& lambda,
+                                  const std::string& expected,
+                                  const SourceLocation* location) {
+    FunctionSignature signature;
+    if (!parse_function_type(expected, signature)) {
+        return false;
+    }
+    return lambda_matches_function_signature(scope, lambda, signature, location);
+}
+
 void check_call_args_ast(const FunctionScope& scope, const std::string& callee,
                          const FunctionSignature& signature, const std::vector<Expr>& args,
                          const SourceLocation* location) {
@@ -377,8 +428,12 @@ void check_call_args_ast(const FunctionScope& scope, const std::string& callee,
                             std::to_string(args.size()));
     }
     for (size_t i = 0; i < signature.params.size(); ++i) {
-        const std::string got = infer_expr_ast(scope, args[i], location);
         const std::string& expected = signature.params[i];
+        if (args[i].kind == ExprKind::Lambda &&
+            lambda_matches_function_type(scope, args[i], expected, location)) {
+            continue;
+        }
+        const std::string got = infer_expr_ast(scope, args[i], location);
         if (!can_assign_ast(scope, expected, args[i], got)) {
             fail(*location, "argument " + std::to_string(i + 1) + " for " + callee + " expects " +
                                 expected + ", got " + got);
@@ -393,6 +448,10 @@ bool call_args_match_ast(const FunctionScope& scope, const FunctionSignature& si
         return false;
     }
     for (size_t i = 0; i < signature.params.size(); ++i) {
+        if (args[i].kind == ExprKind::Lambda &&
+            lambda_matches_function_type(scope, args[i], signature.params[i], nullptr)) {
+            continue;
+        }
         const std::string got = infer_expr_ast(scope, args[i], nullptr);
         if (!can_assign_ast(scope, signature.params[i], args[i], got)) {
             return false;

@@ -285,7 +285,9 @@ Still too string-based:
 - raw macro shapes
 - user-facing macro/decorator forms still need deeper AST nodes
 - lambda parameter declarations and target-type-aware lambda checking remain
-  shallow
+  shallow, but direct Dudu calls to `fn(...) -> T` parameters now type-check
+  simple lambda arguments against the target signature and emit typed
+  non-capturing C++ lambdas
 - some type compatibility and native-header checks still route through type
   strings after `TypeRef` parsing
 - exact original-token ranges inside function bodies; current body-node ranges
