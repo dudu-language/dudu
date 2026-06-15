@@ -13,6 +13,9 @@ duc build src/main.dd -o build/app
 
 `dudu` is the Python-friendly project driver. It reads `dudu.toml`, calls
 `duc`, and coordinates normal C/C++ build tools without replacing them.
+`dudu build`, `dudu run`, and `dudu test` are the stable user-facing commands;
+whether they drive the direct compiler path, generated CMake, or user-owned
+CMake is a backend choice.
 
 ## Goal
 
