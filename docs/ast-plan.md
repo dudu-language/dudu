@@ -347,6 +347,9 @@ Already structured:
 - assignment target checks for nested indexed member paths such as
   `items[0].pos.x = value` now use the same parsed expression member-path
   walker before falling back to compatibility spelling paths.
+- generic method calls on nested receivers such as `slots[0].box.id[i32](x)`
+  type-check through the parsed callee receiver expression before falling back
+  to compatibility spelling paths.
 - dereference assignment targets now type-check through the parsed operand
   expression, so normal Dudu code can assign through pointer fields such as
   `*self.out += 1` without using `cpp(...)`

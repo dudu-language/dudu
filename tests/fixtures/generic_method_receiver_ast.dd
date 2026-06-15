@@ -1,0 +1,16 @@
+class Box:
+    value: i32
+
+    def id[T](self, value: T) -> T:
+        return value
+
+
+class Slot:
+    box: Box
+
+
+def main() -> i32:
+    slots: list[Slot] = []
+    slots.append(Slot(box=Box(1)))
+
+    return slots[0].box.id[i32](42)

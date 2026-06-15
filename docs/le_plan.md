@@ -268,7 +268,8 @@ push. They are not release packaging work.
    nested `Name`/`Member`/`Index` shapes, and member C++ emission uses receiver
    type information for static-object-then-instance-field access. Nested
    indexed member assignment targets use the same parsed expression path before
-   compatibility fallbacks.
+   compatibility fallbacks. Generic method calls on nested receivers also
+   type-check through parsed callee receiver expressions.
 
 3. OOP Surface Cleanup
 

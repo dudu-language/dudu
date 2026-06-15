@@ -151,6 +151,51 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
             })) {
         return signature->return_type;
     }
+    if (!expr.callee.empty() && expr.callee.front().kind == ExprKind::Member &&
+        expr.callee.front().children.size() == 1) {
+        const Expr& member = expr.callee.front();
+        const Expr& receiver_expr = member.children.front();
+        const std::string method_name = member.name + "[" + template_args_lookup_text(expr) + "]";
+        FunctionSignature signature;
+        if (receiver_expr.kind == ExprKind::Name && !scope.locals.contains(receiver_expr.name) &&
+            scope.symbols.classes.contains(receiver_expr.name) &&
+            static_method_signature_for_type(scope.symbols, receiver_expr.name, method_name,
+                                             signature, location)) {
+            check_call_args_ast(scope, callee, signature, expr.children, location);
+            return signature.return_type;
+        }
+        const bool bare_nonlocal_receiver =
+            receiver_expr.kind == ExprKind::Name && !scope.locals.contains(receiver_expr.name);
+        if (!bare_nonlocal_receiver) {
+            const std::string receiver_type =
+                member_expr_type(scope.symbols, scope.locals, location, receiver_expr);
+            if (receiver_type.empty() || receiver_type == "auto") {
+                for (const Expr& arg : expr.children) {
+                    (void)infer_expr_ast(scope, arg, location);
+                }
+                return "auto";
+            }
+            const bool foreign_receiver =
+                foreign_cpp_type_name(scope.symbols, resolve_alias(scope.symbols, receiver_type));
+            if (method_signature_for_type(scope.symbols, receiver_type, method_name, signature,
+                                          foreign_receiver ? nullptr : location)) {
+                const std::vector<FunctionSignature> signatures =
+                    method_signatures_for_type(scope.symbols, receiver_type, method_name);
+                if (const auto match = matching_signature_ast(scope, signatures, expr.children)) {
+                    check_call_args_ast(scope, callee, *match, expr.children, location);
+                    return match->return_type;
+                }
+                check_call_args_ast(scope, callee, signature, expr.children, location);
+                return signature.return_type;
+            }
+            if (foreign_receiver) {
+                for (const Expr& arg : expr.children) {
+                    (void)infer_expr_ast(scope, arg, location);
+                }
+                return "auto";
+            }
+        }
+    }
     const size_t method_dot = callee_base.rfind('.');
     if (method_dot != std::string::npos && is_member_path(callee_base)) {
         const std::string receiver = trim(callee_base.substr(0, method_dot));
