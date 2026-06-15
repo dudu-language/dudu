@@ -6,6 +6,7 @@
 #include "dudu/cpp_lower.hpp"
 
 #include <cctype>
+#include <map>
 #include <optional>
 #include <set>
 #include <string_view>
@@ -312,17 +313,8 @@ bool is_cpp_associated_type_binding(std::string expected, std::string got) {
 
 std::string normalize_function_type(std::string type) {
     type = trim_copy(std::move(type));
-    if (!starts_with(type, "fn(")) {
-        return type;
-    }
-    const size_t close = type.find(')');
-    if (close == std::string::npos) {
-        return type;
-    }
-    if (type.find("->", close) != std::string::npos) {
-        return type;
-    }
-    return type + " -> void";
+    const TypeRef parsed = parse_type_text(type);
+    return parsed.kind == TypeKind::Function ? substitute_type_ref_text(parsed, {}) : type;
 }
 
 bool is_function_type_match(std::string expected, std::string got) {

@@ -67,6 +67,7 @@ void test_type_compat_uses_type_ast_for_pointers() {
     assert(dudu::type_assignment_allowed("*i32", "*&i32"));
     assert(dudu::type_assignment_allowed("&const[i32]", "i32"));
     assert(dudu::type_assignment_allowed("i32", "&const[i32]"));
+    assert(dudu::type_assignment_allowed("fn(i32) -> void", "fn(i32)"));
 }
 
 void test_core_type_helpers_use_type_ast() {

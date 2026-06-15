@@ -221,6 +221,9 @@ Already structured:
 - pointer/reference assignment compatibility uses parsed `TypeRef` pointer,
   reference, and const-wrapper nodes instead of testing `*`, `&`, and
   `*const[...]` spelling by hand
+- function type normalization for compatibility checks parses `TypeRef`
+  function nodes and renders through the shared AST type helper, including
+  omitted-return `fn(...)` signatures
 - C++ tuple-element artifact normalization now reads parsed `TypeRef` template
   children for `__tuple_element_t[N, tuple[...]]` and qualified
   `std.tuple[...]` forms instead of manually splitting nested bracket text
