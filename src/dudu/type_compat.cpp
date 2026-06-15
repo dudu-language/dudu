@@ -433,6 +433,12 @@ bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const st
     if (normalized_expected != expected_text) {
         return assignment_type_allowed(normalized_expected, expr, normalized_got);
     }
+    if (!normalized_got.empty() && normalized_got != "auto") {
+        const TypeRef got_ref = parse_type_text(normalized_got);
+        if (structural_type_assignment_allowed(expected, got_ref)) {
+            return true;
+        }
+    }
     if (parsed_expected_literal_assignment_allowed(expected, expr, normalized_got)) {
         return true;
     }

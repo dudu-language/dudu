@@ -225,6 +225,9 @@ Already structured:
 - `TypeRef` assignment compatibility for annotated local initializers keeps
   `list`, `set`, `dict`, `Option`, and `Result` expected types on parsed
   template-child nodes instead of rendering them back to strings first
+- annotated assignment compatibility now parses inferred Dudu-shaped `got`
+  types back into `TypeRef` nodes and tries structural compatibility before
+  falling back to native spelling compatibility
 - pointer/reference assignment compatibility uses parsed `TypeRef` pointer,
   reference, and const-wrapper nodes instead of testing `*`, `&`, and
   `*const[...]` spelling by hand

@@ -87,6 +87,12 @@ void test_type_compat_uses_type_ast_for_pointers() {
                                           dudu::parse_type_text("array[list[str]][4]")));
     assert(!dudu::type_assignment_allowed(dudu::parse_type_text("array[list[i32]][4]"),
                                           dudu::parse_type_text("array[list[i32]][8]")));
+
+    const dudu::Expr name_expr = dudu::parse_expr_text("value");
+    assert(dudu::assignment_type_allowed(dudu::parse_type_text("array[list[i32]][4]"), name_expr,
+                                         "array[list[i32]][4]"));
+    assert(!dudu::assignment_type_allowed(dudu::parse_type_text("array[list[i32]][4]"),
+                                          name_expr, "array[list[str]][4]"));
 }
 
 void test_core_type_helpers_use_type_ast() {
