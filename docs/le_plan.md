@@ -269,7 +269,9 @@ push. They are not release packaging work.
    type information for static-object-then-instance-field access. Nested
    indexed member assignment targets use the same parsed expression path before
    compatibility fallbacks. Generic method calls on nested receivers also
-   type-check through parsed callee receiver expressions.
+   type-check through parsed callee receiver expressions. Pointer receiver
+   emission now uses parsed member expression typing instead of reconstructing
+   a member path string first.
 
 3. OOP Surface Cleanup
 

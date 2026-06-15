@@ -105,11 +105,7 @@ bool expression_has_pointer_type(const Expr& expr, const std::map<std::string, s
     if (symbols == nullptr) {
         return false;
     }
-    const std::optional<std::string> path = member_path_from_expr(expr);
-    if (!path) {
-        return false;
-    }
-    const std::string type = member_path_type(*symbols, locals, nullptr, *path, "");
+    const std::string type = member_expr_type(*symbols, locals, nullptr, expr);
     return is_pointer_type(type);
 }
 

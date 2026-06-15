@@ -309,6 +309,9 @@ Already structured:
   receivers such as `self.left.backward(...)` as `self.left->backward(...)`,
   using the existing member-path type information instead of raw pointer-member
   rewriting
+- C++ call emission now decides pointer-typed expression receivers through the
+  parsed member expression type walker rather than reconstructing a member path
+  string first.
 - C++ pointer-cast emission lowers cast target types through parsed `TypeRef`
   nodes for both normal and templated call shapes instead of prefixing raw type
   strings and sending them through the legacy type lowerer
