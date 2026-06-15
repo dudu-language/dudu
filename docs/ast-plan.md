@@ -560,10 +560,12 @@ Statement semantic checks now enter expression inference through parsed `Expr`
 nodes for returns, assignments, local initializer inference, conditions, array
 literal element checks, and expression statements. Core AST expression kinds
 such as literals, names, unary/binary expressions, tuples, conditionals,
-member/index access, and collection literals are handled structurally. Complex
-calls still fall back to the old string inference path until the AST grows those
-nodes. Binary expression parsing covers logical, comparison, bitwise, shift,
-arithmetic, and modulo operators.
+member/index access, collection literals, ordinary calls, and template calls
+are handled structurally or rejected with Dudu diagnostics. Native import
+prefixes may still return `auto` when scanner metadata is incomplete, and
+`cpp(...)` remains the explicit raw C++ escape boundary. Binary expression
+parsing covers logical, comparison, bitwise, shift, arithmetic, and modulo
+operators.
 
 Comma-separated expression children now keep their own source columns for call
 arguments, list literals, tuple literals, set/dict entries, and template-call
