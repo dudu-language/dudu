@@ -108,6 +108,7 @@ expect_fail bad_array_too_many_indices --emit-cpp "too many indices for array: m
 expect_fail bad_array_step_slice --emit-cpp "array slice step is not supported: values"
 expect_fail bad_array_matrix_slice --emit-cpp "array slicing requires one-dimensional fixed array: matrix"
 expect_fail bad_swizzle_width --emit-cpp "unknown field: value.xyx"
+expect_fail bad_swizzle_mixed_sets --emit-cpp "unknown field: color.rgxy"
 "$repo_root/build/dudu" "$repo_root/tests/fixtures/bad_imported_swizzle.dd" \
     --emit-cpp "$repo_root/build/bad_imported_swizzle.cpp"
 if "${CXX:-c++}" -std=c++20 -I"$repo_root/tests/fixtures" \

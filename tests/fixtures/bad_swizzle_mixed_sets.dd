@@ -1,0 +1,11 @@
+class Color4:
+    r: i32
+    g: i32
+    b: i32
+    a: i32
+
+
+def main() -> i32:
+    color: Color4 = Color4(1, 2, 3, 4)
+    bad: Color4 = color.rgxy
+    return bad.r

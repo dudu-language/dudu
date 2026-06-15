@@ -205,16 +205,23 @@ bool is_pointer_receiver_expr(const Expr& expr, const std::map<std::string, std:
     return false;
 }
 
-bool is_xyzw_swizzle(const std::string& swizzle) {
+bool is_supported_swizzle(const std::string& swizzle) {
     if (swizzle.size() < 2 || swizzle.size() > 4) {
         return false;
     }
-    for (const char ch : swizzle) {
-        if (std::string_view("xyzw").find(ch) == std::string_view::npos) {
-            return false;
+    for (const std::string_view set : {std::string_view("xyzw"), std::string_view("rgba")}) {
+        bool matches = true;
+        for (const char ch : swizzle) {
+            if (set.find(ch) == std::string_view::npos) {
+                matches = false;
+                break;
+            }
+        }
+        if (matches) {
+            return true;
         }
     }
-    return true;
+    return false;
 }
 
 bool looks_like_local_dudu_class_type(const std::string& type) {
@@ -228,7 +235,7 @@ std::optional<std::string> lower_local_swizzle_expr(
     const Expr& expr, const std::vector<std::string>& aliases,
     const std::map<std::string, std::string>& locals) {
     if (expr.kind != ExprKind::Member || expr.children.size() != 1 ||
-        expr.children.front().kind != ExprKind::Name || !is_xyzw_swizzle(expr.name)) {
+        expr.children.front().kind != ExprKind::Name || !is_supported_swizzle(expr.name)) {
         return std::nullopt;
     }
     const std::string& receiver = expr.children.front().name;

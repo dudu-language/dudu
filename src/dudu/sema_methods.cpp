@@ -368,22 +368,30 @@ std::optional<std::string> field_type_for_type(const Symbols& symbols,
     return field_type_for_class(symbols, *klass->second, receiver_type, field);
 }
 
-bool is_xyzw_swizzle(const std::string& swizzle) {
+std::optional<std::string_view> swizzle_component_set(const std::string& swizzle) {
     if (swizzle.size() < 2 || swizzle.size() > 4) {
-        return false;
+        return std::nullopt;
     }
-    for (const char ch : swizzle) {
-        if (std::string_view("xyzw").find(ch) == std::string_view::npos) {
-            return false;
+    for (const std::string_view set : {std::string_view("xyzw"), std::string_view("rgba")}) {
+        bool matches = true;
+        for (const char ch : swizzle) {
+            if (set.find(ch) == std::string_view::npos) {
+                matches = false;
+                break;
+            }
+        }
+        if (matches) {
+            return set;
         }
     }
-    return true;
+    return std::nullopt;
 }
 
 std::optional<std::string> swizzle_type_for_type(const Symbols& symbols,
                                                  const std::string& receiver_type,
                                                  const std::string& swizzle) {
-    if (!is_xyzw_swizzle(swizzle)) {
+    const auto component_set = swizzle_component_set(swizzle);
+    if (!component_set) {
         return std::nullopt;
     }
     const std::string class_name = unwrap_receiver_type(symbols, receiver_type);
@@ -392,7 +400,7 @@ std::optional<std::string> swizzle_type_for_type(const Symbols& symbols,
         return std::nullopt;
     }
     size_t component_count = 0;
-    for (const char ch : std::string_view("xyzw")) {
+    for (const char ch : *component_set) {
         if (field_type_for_class(symbols, *klass->second, receiver_type, std::string(1, ch))) {
             ++component_count;
         }

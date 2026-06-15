@@ -1,0 +1,14 @@
+class Color4:
+    r: i32
+    g: i32
+    b: i32
+    a: i32
+
+
+def main() -> i32:
+    color: Color4 = Color4(1, 2, 3, 4)
+    swapped: Color4 = color.bgra
+    repeated: Color4 = color.rrrr
+    if swapped.r == 3 and swapped.g == 2 and swapped.b == 1 and swapped.a == 4 and repeated.a == 1:
+        return 42
+    return 1
