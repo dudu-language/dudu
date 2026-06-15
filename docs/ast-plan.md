@@ -947,8 +947,8 @@ The C++ emitter has been split by AST responsibility:
 - `cpp_expr_call_emit.cpp` owns call, template-call, index-hook, and
   enum-constructor expression lowering.
 - `cpp_expr_swizzles.cpp` owns swizzle read and assignment expression lowering.
-- `cpp_stmt_emit.cpp` owns statement dispatch.
-- `cpp_match_emit.cpp` owns match-specific C++ lowering helpers.
+- `cpp_stmt_emit.cpp` owns statement dispatch and non-match statement lowering.
+- `cpp_match_emit.cpp` owns match-specific C++ statement lowering and helpers.
 - `cpp_stmt_helpers.cpp` owns indentation, escaped string literals, and
   build-time-condition detection.
 - `cpp_raw_escape.cpp` owns the explicit raw `cpp(...)` expression escape
