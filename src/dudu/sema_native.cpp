@@ -1,9 +1,11 @@
 #include "dudu/sema_native.hpp"
 
+#include "dudu/cpp_lower.hpp"
 #include "dudu/source.hpp"
 
 #include <cctype>
 #include <sstream>
+#include <vector>
 
 namespace dudu {
 namespace {
@@ -21,36 +23,49 @@ bool native_numeric_promotion(const std::string& expected, const std::string& go
     return expected == "f64" && got == "f32";
 }
 
-std::string replace_template_type(std::string type, const std::string& arg) {
-    size_t pos = type.find('T');
+std::string replace_type_identifier(std::string type, const std::string& name,
+                                    const std::string& arg) {
+    if (name.empty() || arg.empty()) {
+        return type;
+    }
+    size_t pos = type.find(name);
     while (pos != std::string::npos) {
         const bool left_ok =
             pos == 0 ||
             (std::isalnum(static_cast<unsigned char>(type[pos - 1])) == 0 && type[pos - 1] != '_');
-        const size_t end = pos + 1;
+        const size_t end = pos + name.size();
         const bool right_ok =
             end >= type.size() ||
             (std::isalnum(static_cast<unsigned char>(type[end])) == 0 && type[end] != '_');
         if (left_ok && right_ok) {
-            type.replace(pos, 1, arg);
-            pos = type.find('T', pos + arg.size());
+            type.replace(pos, name.size(), arg);
+            pos = type.find(name, pos + arg.size());
         } else {
-            pos = type.find('T', pos + 1);
+            pos = type.find(name, pos + 1);
         }
     }
     return type;
 }
 
-FunctionSignature substitute_template_signature(FunctionSignature signature,
-                                                const std::string& arg) {
-    for (std::string& param : signature.params) {
-        param = replace_template_type(std::move(param), arg);
+std::string replace_template_types(std::string type, const std::vector<std::string>& args) {
+    static const std::vector<std::string> names = {"T", "U", "V", "A", "B", "Key", "Value"};
+    for (size_t i = 0; i < args.size() && i < names.size(); ++i) {
+        type = replace_type_identifier(std::move(type), names[i], args[i]);
     }
-    signature.return_type = replace_template_type(std::move(signature.return_type), arg);
+    return type;
+}
+
+FunctionSignature substitute_template_signature(FunctionSignature signature,
+                                                const std::vector<std::string>& args) {
+    for (std::string& param : signature.params) {
+        param = replace_template_types(std::move(param), args);
+    }
+    signature.return_type = replace_template_types(std::move(signature.return_type), args);
     return signature;
 }
 
-std::optional<std::pair<std::string, std::string>> template_call_base(const std::string& callee) {
+std::optional<std::pair<std::string, std::vector<std::string>>>
+template_call_base(const std::string& callee) {
     const size_t close = callee.rfind(']');
     if (close == std::string::npos || close + 1 != callee.size()) {
         return std::nullopt;
@@ -64,9 +79,13 @@ std::optional<std::pair<std::string, std::string>> template_call_base(const std:
             --depth;
             if (depth == 0) {
                 const std::string base = trim(callee.substr(0, pos));
-                const std::string arg = trim(callee.substr(pos + 1, close - pos - 1));
-                if (!base.empty() && !arg.empty()) {
-                    return std::make_pair(base, arg);
+                std::vector<std::string> args =
+                    split_top_level_args(callee.substr(pos + 1, close - pos - 1));
+                for (std::string& arg : args) {
+                    arg = trim(std::move(arg));
+                }
+                if (!base.empty() && !args.empty()) {
+                    return std::make_pair(base, std::move(args));
                 }
                 return std::nullopt;
             }

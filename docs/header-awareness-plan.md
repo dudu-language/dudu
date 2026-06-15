@@ -239,10 +239,11 @@ Richer constructs still need deeper modeling:
 - destructor semantics
 
 The scanner now preserves namespace and class scope for nested types such as
-`outer_namespace.Outer.Inner`. Simple imported C++ function templates with a
-single `T` parameter typecheck through explicit Dudu calls such as
-`native.identity[i32](value)`. Template-heavy libraries may still need wrapper
-headers.
+`outer_namespace.Outer.Inner`. Imported C++ function templates typecheck
+through explicit Dudu calls such as `native.identity[i32](value)` and
+`native.choose_second[str, i32](name, value)` when their scanner metadata uses
+ordinary positional template parameter names. Template-heavy libraries may
+still need wrapper headers.
 
 Native C++ template arguments can include compile-time values. Dudu parses
 integer non-type template arguments structurally, so forms such as
