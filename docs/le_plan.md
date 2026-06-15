@@ -289,7 +289,8 @@ push. They are not release packaging work.
    loop binding checks now compare against the parsed binding `TypeRef` before
    using alias/native spelling fallback. Delete/free checks now classify
    pointer arguments through parsed `TypeRef` nodes instead of raw leading `*`
-   spelling.
+   spelling. Normal local indexed-value inference now requires parsed index
+   expressions instead of accepting string index text.
 
 3. OOP Surface Cleanup
 
