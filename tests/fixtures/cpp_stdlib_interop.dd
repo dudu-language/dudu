@@ -21,6 +21,10 @@ def add_one(value: i32) -> i32:
     return value + 1
 
 
+def positive_i32(value: i32) -> bool:
+    return value > 0
+
+
 def sum_span(values: std.span[i32]) -> i32:
     total: i32 = 0
     for index: usize in range(values.size()):
@@ -71,7 +75,7 @@ def main() -> i32:
     found = std.find(values.begin(), values.end(), 3)
     if found == values.end():
         return 10
-    if not std.all_of(values.begin(), values.end(), lambda value: value > 0):
+    if not std.all_of(values.begin(), values.end(), positive_i32):
         return 14
     std.reverse(values.begin(), values.end())
     if values[0] != 3:

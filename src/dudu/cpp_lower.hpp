@@ -12,7 +12,6 @@ std::string lower_raw_cpp_escape_expr(std::string expr);
 std::string lower_raw_cpp_escape_expr(std::string expr,
                                       const std::vector<std::string>& namespace_aliases);
 std::string cpp_escape_body(std::string text);
-std::string lower_conditional_expr(std::string expr);
 std::string lower_cpp_type(const std::string& raw_type);
 std::string lower_cpp_type(const std::string& raw_type,
                            const std::vector<std::string>& namespace_aliases);
@@ -20,7 +19,6 @@ std::string lower_cpp_type(const TypeRef& type);
 std::string lower_cpp_type(const TypeRef& type, const std::vector<std::string>& namespace_aliases);
 std::string lower_enum_access(std::string expr);
 std::string lower_generic_type_constructor(std::string expr);
-std::string lower_lambda_expr(std::string expr);
 std::string lower_len_calls(std::string expr);
 std::string lower_numeric_separators(std::string expr);
 std::string lower_pointer_cast_calls(std::string expr);

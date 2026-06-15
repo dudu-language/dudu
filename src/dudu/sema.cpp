@@ -365,57 +365,6 @@ bool foreign_cpp_type_name(const std::string& type) {
     return type.find('.') != std::string::npos || type.find("::") != std::string::npos;
 }
 
-bool lambda_matches_function_signature(const FunctionScope& scope, const Expr& lambda,
-                                       const FunctionSignature& expected,
-                                       const SourceLocation* location) {
-    if (lambda.kind != ExprKind::Lambda) {
-        return false;
-    }
-    if (location != nullptr && lambda.children.size() != 1) {
-        fail(*location, "lambda expression expects ':' body");
-    }
-    if (location != nullptr && lambda.params.size() != expected.params.size()) {
-        fail(*location, "lambda expects " + std::to_string(expected.params.size()) +
-                            " parameters, got " + std::to_string(lambda.params.size()));
-    }
-    if (lambda.children.size() != 1 || lambda.params.size() != expected.params.size()) {
-        return false;
-    }
-    FunctionScope lambda_scope = scope;
-    for (size_t i = 0; i < lambda.params.size(); ++i) {
-        if (lambda.params[i].kind != ExprKind::Name || lambda.params[i].name.empty()) {
-            if (location != nullptr) {
-                fail(lambda.params[i].location, "lambda parameter must be a name");
-            }
-            return false;
-        }
-        lambda_scope.locals[lambda.params[i].name] = expected.params[i];
-    }
-    if (expected.return_type.empty() || expected.return_type == "void") {
-        (void)infer_expr_ast(lambda_scope, lambda.children.front(), location);
-        return true;
-    }
-    const std::string got = infer_expr_ast(lambda_scope, lambda.children.front(), location);
-    if (!can_assign_ast(lambda_scope, expected.return_type, lambda.children.front(), got)) {
-        if (location != nullptr) {
-            fail(lambda.children.front().location,
-                 "lambda body expects " + expected.return_type + ", got " + got);
-        }
-        return false;
-    }
-    return true;
-}
-
-bool lambda_matches_function_type(const FunctionScope& scope, const Expr& lambda,
-                                  const std::string& expected,
-                                  const SourceLocation* location) {
-    FunctionSignature signature;
-    if (!parse_function_type(expected, signature)) {
-        return false;
-    }
-    return lambda_matches_function_signature(scope, lambda, signature, location);
-}
-
 void check_call_args_ast(const FunctionScope& scope, const std::string& callee,
                          const FunctionSignature& signature, const std::vector<Expr>& args,
                          const SourceLocation* location) {
@@ -429,10 +378,6 @@ void check_call_args_ast(const FunctionScope& scope, const std::string& callee,
     }
     for (size_t i = 0; i < signature.params.size(); ++i) {
         const std::string& expected = signature.params[i];
-        if (args[i].kind == ExprKind::Lambda &&
-            lambda_matches_function_type(scope, args[i], expected, location)) {
-            continue;
-        }
         const std::string got = infer_expr_ast(scope, args[i], location);
         if (!can_assign_ast(scope, expected, args[i], got)) {
             fail(*location, "argument " + std::to_string(i + 1) + " for " + callee + " expects " +
@@ -448,10 +393,6 @@ bool call_args_match_ast(const FunctionScope& scope, const FunctionSignature& si
         return false;
     }
     for (size_t i = 0; i < signature.params.size(); ++i) {
-        if (args[i].kind == ExprKind::Lambda &&
-            lambda_matches_function_type(scope, args[i], signature.params[i], nullptr)) {
-            continue;
-        }
         const std::string got = infer_expr_ast(scope, args[i], nullptr);
         if (!can_assign_ast(scope, signature.params[i], args[i], got)) {
             return false;
@@ -750,8 +691,6 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
         }
         return "set";
     }
-    if (starts_with(expr, "lambda "))
-        return "lambda";
     const size_t pointer_cast_call = find_call_open(expr);
     if (expr.size() > 1 && expr.front() == '*' && pointer_cast_call != std::string::npos &&
         find_call_close(expr, pointer_cast_call) == expr.size() - 1) {
@@ -1378,10 +1317,12 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
     case ExprKind::NoneLiteral:
         return "None";
     case ExprKind::Lambda:
-        if (use_location != nullptr && expr.children.size() != 1) {
-            fail(*use_location, "lambda expression expects ':' body");
+        if (use_location != nullptr) {
+            fail(*use_location,
+                 "unsupported Python feature: lambda; declare a named function and pass the "
+                 "function name");
         }
-        return "lambda";
+        return {};
     case ExprKind::ListLiteral:
         return "list";
     case ExprKind::DictLiteral:
@@ -1623,23 +1564,12 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
         }
         return {};
     case ExprKind::Conditional:
-        if (expr.children.size() != 3 || missing_expr(expr.children[0]) ||
-            missing_expr(expr.children[1]) || missing_expr(expr.children[2])) {
-            if (use_location != nullptr) {
-                fail(*use_location,
-                     "conditional expression expects then, condition, and else values");
-            }
-            return {};
+        if (use_location != nullptr) {
+            fail(*use_location,
+                 "unsupported Python feature: conditional expressions; use an explicit if "
+                 "statement");
         }
-        {
-            const std::string condition = infer_expr_ast(scope, expr.children[1], use_location);
-            if (use_location != nullptr && !condition.empty() && condition != "bool") {
-                fail(*use_location, "condition must be bool, got " + condition);
-            }
-            const std::string then_type = infer_expr_ast(scope, expr.children[0], use_location);
-            const std::string else_type = infer_expr_ast(scope, expr.children[2], use_location);
-            return then_type.empty() ? else_type : then_type;
-        }
+        return {};
     case ExprKind::Await:
         return {};
     case ExprKind::Yield:
@@ -1704,12 +1634,6 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
         }
         if (is_builtin_call(callee)) {
             return infer_builtin_call_ast(scope, expr, callee, use_location);
-        }
-        if (!expr.callee.empty() && expr.callee.front().kind == ExprKind::Lambda) {
-            for (const Expr& arg : expr.children) {
-                (void)infer_expr_ast(scope, arg, use_location);
-            }
-            return "auto";
         }
         if (!expr.callee.empty() && expr.callee.front().kind == ExprKind::Member &&
             expr.callee.front().children.size() == 1) {

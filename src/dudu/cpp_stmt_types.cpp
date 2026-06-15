@@ -194,13 +194,6 @@ std::string infer_emitted_local_type(const Expr& expr,
     case ExprKind::Binary:
         return infer_binary_expr_type(expr, locals, function_returns);
     case ExprKind::Conditional:
-        if (expr.children.size() == 3) {
-            const std::string then_type =
-                infer_emitted_local_type(expr.children[0], locals, function_returns);
-            const std::string else_type =
-                infer_emitted_local_type(expr.children[2], locals, function_returns);
-            return then_type == else_type ? then_type : std::string{};
-        }
         return {};
     case ExprKind::Await:
         return {};

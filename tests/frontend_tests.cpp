@@ -270,8 +270,6 @@ void test_emitted_local_expression_type_inference() {
            "f32");
     assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("count < 4"), locals, functions) ==
            "bool");
-    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("1 if flag else 2"), locals,
-                                          functions) == "i32");
     assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("make_count()"), locals,
                                           functions) == "i32");
     assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("make_values()[0]"), locals,
@@ -376,15 +374,13 @@ void test_expression_ast_shape() {
                            "    point: Point = Point(x=1, y=2)\n"
                            "    hex_mask: i32 = 0x80\n"
                            "    view: span[i32] = values[1:3]\n"
-                           "    choice: i32 = 1 if ready else 2\n"
-                           "    callback = lambda left, right: left + right\n"
                            "    pending = await fetch()\n"
                            "    produced = yield answer\n"
                            "    return answer\n",
                            "expression_ast.dd");
     assert(module.functions.size() == 1);
     const dudu::FunctionDecl& main = module.functions.front();
-    assert(main.statements.size() == 13);
+    assert(main.statements.size() == 11);
 
     const dudu::Stmt& answer = main.statements[0];
     assert(answer.kind == dudu::StmtKind::VarDecl);
@@ -511,32 +507,7 @@ void test_expression_ast_shape() {
     assert(view.value_expr.children[1].children[1].range.start.column >
            view.value_expr.children[1].children[0].range.start.column);
 
-    const dudu::Stmt& choice = main.statements[8];
-    assert(choice.kind == dudu::StmtKind::VarDecl);
-    assert(choice.value_expr.kind == dudu::ExprKind::Conditional);
-    assert(choice.value_expr.children.size() == 3);
-    assert(choice.value_expr.children[0].kind == dudu::ExprKind::IntLiteral);
-    assert(choice.value_expr.children[1].kind == dudu::ExprKind::Name);
-    assert(choice.value_expr.children[2].kind == dudu::ExprKind::IntLiteral);
-    assert(choice.value_expr.children[1].range.start.column >
-           choice.value_expr.children[0].range.start.column);
-    assert(choice.value_expr.children[2].range.start.column >
-           choice.value_expr.children[1].range.start.column);
-
-    const dudu::Stmt& callback = main.statements[9];
-    assert(callback.kind == dudu::StmtKind::Assign);
-    assert(callback.value_expr.kind == dudu::ExprKind::Lambda);
-    assert(callback.value_expr.params.size() == 2);
-    assert(callback.value_expr.params[0].kind == dudu::ExprKind::Name);
-    assert(callback.value_expr.params[0].name == "left");
-    assert(callback.value_expr.params[1].kind == dudu::ExprKind::Name);
-    assert(callback.value_expr.params[1].name == "right");
-    assert(callback.value_expr.params[1].range.start.column >
-           callback.value_expr.params[0].range.start.column);
-    assert(callback.value_expr.children.size() == 1);
-    assert(callback.value_expr.children[0].kind == dudu::ExprKind::Binary);
-
-    const dudu::Stmt& pending = main.statements[10];
+    const dudu::Stmt& pending = main.statements[8];
     assert(pending.kind == dudu::StmtKind::Assign);
     assert(pending.value_expr.kind == dudu::ExprKind::Await);
     assert(pending.value_expr.children.size() == 1);
@@ -545,7 +516,7 @@ void test_expression_ast_shape() {
     assert(pending.value_expr.children[0].range.start.column >
            pending.value_expr.range.start.column);
 
-    const dudu::Stmt& produced = main.statements[11];
+    const dudu::Stmt& produced = main.statements[9];
     assert(produced.kind == dudu::StmtKind::Assign);
     assert(produced.value_expr.kind == dudu::ExprKind::Yield);
     assert(produced.value_expr.children.size() == 1);

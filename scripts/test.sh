@@ -595,7 +595,7 @@ compile_and_expect ref_field_inference 42
 compile_and_expect const_ref_field 42
 compile_and_expect conditional_str 42
 compile_and_expect comparison_call_args 42
-compile_and_expect lambda_callback 42
+compile_and_expect named_callback 42
 compile_and_expect multiline_literals 42
 compile_and_expect nested_containers 42
 compile_and_expect list_append_named 42

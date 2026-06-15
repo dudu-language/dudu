@@ -72,47 +72,14 @@ std::string join_lowered_exprs(const std::vector<Expr>& exprs,
     return out.str();
 }
 
-std::optional<std::string>
-lower_lambda_for_function_type(const Expr& expr, const std::string& expected_type,
-                               const std::vector<std::string>& aliases,
-                               const std::map<std::string, std::string>& locals) {
-    FunctionSignature signature;
-    if (expr.kind != ExprKind::Lambda || expr.children.size() != 1 ||
-        !parse_function_type(expected_type, signature) ||
-        expr.params.size() != signature.params.size()) {
-        return std::nullopt;
-    }
-    std::ostringstream out;
-    out << "[](";
-    for (size_t i = 0; i < expr.params.size(); ++i) {
-        if (expr.params[i].kind != ExprKind::Name || expr.params[i].name.empty()) {
-            return std::nullopt;
-        }
-        if (i > 0) {
-            out << ", ";
-        }
-        out << lower_cpp_type(signature.params[i], aliases) << ' ' << expr.params[i].name;
-    }
-    out << ") -> " << lower_cpp_type(signature.return_type, aliases) << " { return "
-        << lower_expr(expr.children.front(), aliases, locals, nullptr) << "; }";
-    return out.str();
-}
-
 std::string lower_call_args_for_signature(const std::vector<Expr>& args,
-                                          const FunctionSignature& signature,
+                                          const FunctionSignature&,
                                           const std::vector<std::string>& aliases,
                                           const std::map<std::string, std::string>& locals) {
     std::ostringstream out;
     for (size_t i = 0; i < args.size(); ++i) {
         if (i > 0) {
             out << ", ";
-        }
-        if (i < signature.params.size()) {
-            if (const auto lambda =
-                    lower_lambda_for_function_type(args[i], signature.params[i], aliases, locals)) {
-                out << *lambda;
-                continue;
-            }
         }
         out << lower_expr(args[i], aliases, locals, nullptr);
     }
@@ -515,28 +482,6 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
     return callee + "(" + join_lowered_exprs(expr.children, aliases, locals, ", ", symbols) + ")";
 }
 
-std::string lower_lambda_expr(const Expr& expr, const std::vector<std::string>& aliases,
-                              const std::map<std::string, std::string>& locals,
-                              const Symbols* symbols) {
-    if (expr.children.size() != 1) {
-        return {};
-    }
-    std::ostringstream out;
-    out << "[&](";
-    for (size_t i = 0; i < expr.params.size(); ++i) {
-        if (i > 0) {
-            out << ", ";
-        }
-        if (expr.params[i].kind == ExprKind::Name && !expr.params[i].name.empty()) {
-            out << "auto&& " << expr.params[i].name;
-        } else {
-            out << "auto&& " << lower_expr(expr.params[i], aliases, locals, symbols);
-        }
-    }
-    out << ") { return " << lower_expr(expr.children.front(), aliases, locals, symbols) << "; }";
-    return out.str();
-}
-
 std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases,
                        const std::map<std::string, std::string>& locals, const Symbols* symbols) {
     if (expr.text.empty() || expr.kind == ExprKind::Unknown) {
@@ -578,11 +523,6 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
         }
         break;
     case ExprKind::Conditional:
-        if (expr.children.size() == 3) {
-            return "(" + lower_expr(expr.children[1], aliases, locals, symbols) + " ? " +
-                   lower_expr(expr.children[0], aliases, locals, symbols) + " : " +
-                   lower_expr(expr.children[2], aliases, locals, symbols) + ")";
-        }
         break;
     case ExprKind::Await:
         break;
@@ -689,7 +629,7 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
     case ExprKind::TupleLiteral:
         return join_lowered_exprs(expr.children, aliases, locals);
     case ExprKind::Lambda:
-        return lower_lambda_expr(expr, aliases, locals, symbols);
+        break;
     case ExprKind::Unknown:
         break;
     }

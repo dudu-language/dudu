@@ -442,6 +442,9 @@ push. They are not release packaging work.
    user escape hatches such as `cpp(...)` can remain, but compiler-internal raw
    string fallbacks should disappear as AST coverage reaches the corresponding
    language forms. Prototype Python sugar such as `lambda`, ternary conditional
-   expressions, comprehensions, and generator expressions should be rejected or
-   removed from examples in favor of named `def` function values and explicit
-   statements.
+   expressions, comprehensions, generator expressions, and RHS `def`
+   expressions should be rejected or removed from examples in favor of
+   statement-only named `def` declarations and explicit statements. Function
+   names remain values after declaration, so callback tables and sort
+   predicates should be written with named declarations rather than inline
+   function literals.

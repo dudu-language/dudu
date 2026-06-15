@@ -747,29 +747,41 @@ Rules:
 
 - `fn(...) -> T` is a raw function pointer type.
 - `fn(...)` returns `void`.
-- `def name(...)` in expression position creates a named function value.
-- function values must have names; unnamed function values are not part of
-  Dudu.
+- `def name(...)` is a statement only. It can appear anywhere statements are
+  allowed, including nested blocks.
+- function names are values after declaration.
+- `def` expressions and anonymous function values are not part of Dudu.
 - non-capturing function values can coerce to `fn(...) -> T`.
 - capturing function values require a closure-capable target type such as an
   imported `std.function[...]` wrapper; they cannot coerce to raw `fn`.
 - owning/capturing callable wrappers use imported C++ types such as
   `std.function[...]`.
 
-Named function values replace Python `lambda`:
+Named function declarations replace Python `lambda`:
 
 ```python
-callback: fn(i32) -> i32 = def add_one(value: i32) -> i32:
+def add_one(value: i32) -> i32:
     return value + 1
+
+callback: fn(i32) -> i32 = add_one
+callback(41)  # valid
+add_one(41)  # valid
 ```
 
-The inner name is required and is used for diagnostics, generated symbols, and
-profiling. It does not create an extra local binding unless the expression is
-assigned to one.
+Nested callbacks stay statement-oriented:
 
 ```python
-callback(41)  # valid
-add_one(41)  # invalid unless separately declared
+def install_handlers(world: *World) -> map[str, std.function[fn(Event)]]:
+    def on_spawn(event: Event):
+        world.spawn_enemy(event.id)
+
+    def on_hit(event: Event):
+        world.damage_player(event.id, event.damage)
+
+    return {
+        "spawn": on_spawn,
+        "hit": on_hit,
+    }
 ```
 
 ## Allocation
@@ -996,11 +1008,13 @@ Dudu intentionally leaves out some compact Python expression forms:
 - ternary conditional expressions
 
 These forms hide control flow, allocation, capture, or lifetime behavior inside
-expressions. Prefer named `def` values and explicit loops:
+expressions. Prefer named `def` declarations and explicit loops:
 
 ```python
-handlers["spawn"] = def on_spawn(event: Event):
+def on_spawn(event: Event):
     spawn_enemy(event.id)
+
+handlers["spawn"] = on_spawn
 
 squares: list[i32] = []
 for value: i32 in values:

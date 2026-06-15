@@ -1,3 +1,5 @@
 def main() -> i32:
-    text = str(42) if True else str(0)
+    text = str(0)
+    if True:
+        text = str(42)
     return i32(text.size()) + 40

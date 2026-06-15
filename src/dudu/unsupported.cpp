@@ -82,6 +82,16 @@ void check_expr(const Expr& expr) {
     if (expr.kind == ExprKind::Await) {
         throw CompileError(expr.location, "unsupported Python feature: async");
     }
+    if (expr.kind == ExprKind::Lambda) {
+        throw CompileError(expr.location,
+                           "unsupported Python feature: lambda; declare a named function and "
+                           "pass the function name");
+    }
+    if (expr.kind == ExprKind::Conditional) {
+        throw CompileError(expr.location,
+                           "unsupported Python feature: conditional expressions; use an "
+                           "explicit if statement");
+    }
     if (expr.kind == ExprKind::Yield) {
         throw CompileError(expr.location, "unsupported Python feature: generators");
     }

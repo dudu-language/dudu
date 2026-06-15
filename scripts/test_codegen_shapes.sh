@@ -78,7 +78,7 @@ grep -Fq "assert(value == 42);" "$repo_root/build/c_lowercase_macro.cpp"
     -o "$repo_root/build/c_direct_lowercase_macro.cpp"
 grep -Fq "assert(value == 42);" "$repo_root/build/c_direct_lowercase_macro.cpp"
 
-"$repo_root/build/duc" emit "$repo_root/tests/fixtures/lambda_callback.dd" \
+"$repo_root/build/duc" emit "$repo_root/tests/fixtures/named_callback.dd" \
     -o "$repo_root/build/function_pointer.cpp"
 grep -Fq "std::add_pointer_t<int32_t(int32_t)> callback" \
     "$repo_root/build/function_pointer.cpp"

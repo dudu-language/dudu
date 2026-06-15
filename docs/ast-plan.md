@@ -109,10 +109,10 @@ Already structured:
 - final local-method lookup recognizes string-like native C++ types such as
   `std.string_view`/`std::basic_string_view` for common `size`, `length`, and
   `empty` calls instead of relying on raw fallback
-- prototype parsed lambda calls such as `(lambda value: value + 1)(41)` stay on
-  parsed call nodes, while unsupported non-callable callees such as `(1)(2)`
-  are rejected instead of emitted through raw expression fallback; the final
-  language surface should replace lambda with named `def` values
+- removed Python `lambda` expressions parse only far enough to produce Dudu
+  unsupported-feature diagnostics; the sema/codegen callback adapters and raw
+  lambda string rewriter have been removed in favor of statement-only named
+  `def` declarations
 - template-call semantic inference and template method lookup use the parsed
   callee expression when reconstructing lookup names
 - generated local type inference for call expressions derives callee lookup
@@ -223,9 +223,8 @@ Already structured:
 - assignment compatibility for parsed explicit casts, value-wrapper
   assignments, and `Ok(...)`/`Err(...)` result construction inspects call
   expression nodes instead of rediscovering those forms from raw text
-- parsed lambda expressions keep parameter expression nodes and body expression
-  nodes in the current prototype path; named `def` values are the intended
-  long-term function-value syntax
+- removed Python `lambda` expressions keep enough parsed shape for diagnostics
+  but no longer participate in normal type inference or emission
 - named-argument constructor emission relies on parsed `NamedArg` nodes only;
   the old raw `field=value` child-text fallback has been removed
 - parsed call emission lowers Dudu `list.append(...)` calls to C++
@@ -285,11 +284,9 @@ Still too string-based:
   expression rewriter/inference boundary
 - raw macro shapes
 - user-facing macro/decorator forms still need deeper AST nodes
-- prototype lambda parameter declarations and target-type-aware lambda checking
-  remain shallow, but direct Dudu calls to `fn(...) -> T` parameters now
-  type-check simple lambda arguments against the target signature and emit
-  typed non-capturing C++ lambdas. This path should migrate to named `def`
-  values before the language surface is called complete.
+- old lambda parameter checking and typed non-capturing C++ lambda
+  emission have been removed. Callback examples now use named function
+  declarations and pass function names as values.
 - some type compatibility and native-header checks still route through type
   strings after `TypeRef` parsing
 - exact original-token ranges inside function bodies; current body-node ranges

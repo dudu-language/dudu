@@ -18,7 +18,9 @@ enum DbError:
 
 
 def todo_to_json(todo: Todo) -> str:
-    done_text = "true" if todo.done else "false"
+    done_text = "false"
+    if todo.done:
+        done_text = "true"
     return "{\"id\":" + str(todo.id) + ",\"title\":\"" + todo.title + "\",\"done\":" + done_text + "}"
 
 
@@ -61,6 +63,10 @@ def handle_get_todo(db: *sqlite.sqlite3, req: http.Request, res: &http.Response)
         res.set_content("{\"error\":\"not found\"}", "application/json")
 
 
+def handle_health(req: http.Request, res: &http.Response):
+    res.set_content("{\"ok\":true}", "application/json")
+
+
 def main() -> i32:
     db: *sqlite.sqlite3 = None
 
@@ -69,7 +75,7 @@ def main() -> i32:
 
     app = http.Server()
 
-    app.Get("/todos/(\\d+)", lambda req, res: handle_get_todo(db, req, res))
+    app.Get("/health", handle_health)
     app.listen("0.0.0.0", 8080)
     sqlite.close(db)
     return 0

@@ -68,14 +68,16 @@ Implement this first:
   ```
 - no implicit casts across Dudu-native assignments and returns.
 
-Named function values replace Python `lambda`. A `def name(...)` declaration at
-statement start declares a function in the current scope; `def name(...)` in an
-expression position creates a named function value. Function values must be
-named.
+Named function declarations replace Python `lambda`. A `def name(...)`
+declaration is a statement only and can appear anywhere statements are allowed,
+including nested blocks. Function names are values after declaration, so
+callbacks and tables use ordinary named functions instead of inline function
+expressions.
 
 Rejected Python expression sugar:
 
 - `lambda`
+- `def` expressions
 - ternary conditional expressions
 - list, dict, and set comprehensions
 - generator expressions
