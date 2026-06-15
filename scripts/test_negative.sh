@@ -117,6 +117,7 @@ expect_fail bad_generic_box_arg_type --check "constructor Box\\[i32\\] argument 
 expect_fail bad_generic_method_arg_type --check "argument 1 for box.id\\[i32\\] expects i32, got bool"
 expect_fail bad_generic_pair_arg_type --check "constructor Pair\\[str, i32\\] argument 1 expects str, got i32"
 expect_fail bad_empty_template_call --emit-cpp "template call expects at least 1 type argument"
+expect_fail bad_non_callable_template_call --emit-cpp "unsupported template call expression: (1)"
 expect_fail bad_condition_type --emit-cpp "condition must be bool, got i32"
 expect_fail bad_debug_assert_condition --emit-cpp "condition must be bool, got i32"
 if "$repo_root/build/dudu" "$repo_root/tests/fixtures/bad_freestanding_assert.dd" \

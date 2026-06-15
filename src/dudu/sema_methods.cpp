@@ -66,6 +66,19 @@ std::string first_type_arg(const std::string& type) {
 bool builtin_cpp_method_signature(const Symbols& symbols, std::string receiver_type,
                                   const std::string& method_name, FunctionSignature& signature) {
     const std::string templated = receiver_template_type(symbols, std::move(receiver_type));
+    if (templated == "str" || templated == "string" || templated == "string_view" ||
+        templated == "std.string" || templated == "std.string_view" ||
+        templated == "std::string" || templated == "std::string_view" ||
+        templated.find("basic_string") != std::string::npos) {
+        if (method_name == "size" || method_name == "length") {
+            signature.return_type = "usize";
+            return true;
+        }
+        if (method_name == "empty") {
+            signature.return_type = "bool";
+            return true;
+        }
+    }
     if (starts_with(templated, "list[")) {
         const std::string item = first_type_arg(templated);
         if (method_name == "push_back" || method_name == "append") {

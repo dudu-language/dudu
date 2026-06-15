@@ -838,6 +838,13 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
             }
             const std::string receiver_type =
                 member_path_type(scope.symbols, scope.locals, nullptr, receiver, "");
+            if (scope.locals.contains(receiver) &&
+                foreign_cpp_type_name(resolve_alias(scope.symbols, receiver_type))) {
+                for (const std::string& arg : call_args(expr, call)) {
+                    (void)infer_expr(scope, arg, location);
+                }
+                return "auto";
+            }
             if (method_signature_for_type(scope.symbols, receiver_type, method_name, signature,
                                           location)) {
                 const std::vector<std::string> args = call_args(expr, call);
@@ -855,6 +862,32 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
                 }
                 check_call_args(scope, callee, signature, args, location);
                 return signature.return_type;
+            }
+        }
+        if (method_dot != std::string::npos) {
+            const std::string prefix = trim(callee.substr(0, method_dot));
+            const std::string method_name = trim(callee.substr(method_dot + 1));
+            if (const auto local = scope.locals.find(prefix); local != scope.locals.end()) {
+                FunctionSignature signature;
+                if (method_signature_for_type(scope.symbols, local->second, method_name,
+                                              signature, nullptr)) {
+                    check_call_args(scope, callee, signature, call_args(expr, call), location);
+                    return signature.return_type;
+                }
+            }
+            if (const auto local = scope.locals.find(prefix);
+                local != scope.locals.end() &&
+                foreign_cpp_type_name(resolve_alias(scope.symbols, local->second))) {
+                for (const std::string& arg : call_args(expr, call)) {
+                    (void)infer_expr(scope, arg, location);
+                }
+                return "auto";
+            }
+            if (scope.symbols.native_import_prefixes.contains(prefix)) {
+                for (const std::string& arg : call_args(expr, call)) {
+                    (void)infer_expr(scope, arg, location);
+                }
+                return "auto";
             }
         }
         if (location != nullptr && callee.find('.') == std::string::npos &&
@@ -1204,6 +1237,13 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
         if (location != nullptr) {
             fail(*location, "unknown function: " + callee);
         }
+    }
+    if (!expr.callee.empty() && expr.callee.front().kind != ExprKind::Name &&
+        expr.callee.front().kind != ExprKind::Member) {
+        if (location != nullptr) {
+            fail(*location, "unsupported template call expression: " + callee_base);
+        }
+        return {};
     }
     return infer_expr(scope, expr.text, location);
 }
@@ -1720,6 +1760,13 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
             }
             const std::string receiver_type =
                 member_path_type(scope.symbols, scope.locals, nullptr, receiver, "");
+            if (scope.locals.contains(receiver) &&
+                foreign_cpp_type_name(resolve_alias(scope.symbols, receiver_type))) {
+                for (const Expr& arg : expr.children) {
+                    (void)infer_expr_ast(scope, arg, use_location);
+                }
+                return "auto";
+            }
             if (method_signature_for_type(scope.symbols, receiver_type, method_name, signature,
                                           use_location)) {
                 const std::vector<FunctionSignature> signatures =
@@ -1740,6 +1787,23 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
         }
         if (method_dot != std::string::npos) {
             const std::string prefix = trim(callee.substr(0, method_dot));
+            const std::string method_name = trim(callee.substr(method_dot + 1));
+            if (const auto local = scope.locals.find(prefix); local != scope.locals.end()) {
+                FunctionSignature signature;
+                if (method_signature_for_type(scope.symbols, local->second, method_name,
+                                              signature, nullptr)) {
+                    check_call_args_ast(scope, callee, signature, expr.children, use_location);
+                    return signature.return_type;
+                }
+            }
+            if (const auto local = scope.locals.find(prefix);
+                local != scope.locals.end() &&
+                foreign_cpp_type_name(resolve_alias(scope.symbols, local->second))) {
+                for (const Expr& arg : expr.children) {
+                    (void)infer_expr_ast(scope, arg, use_location);
+                }
+                return "auto";
+            }
             if (scope.symbols.native_import_prefixes.contains(prefix)) {
                 for (const Expr& arg : expr.children) {
                     (void)infer_expr_ast(scope, arg, use_location);

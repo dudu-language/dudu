@@ -69,6 +69,8 @@ Already structured:
 - unresolved parsed dotted template calls such as `missing.namespace[i32]()`
   are rejected after native/header lookup misses, while declared native import
   prefixes still return `auto` explicitly
+- unsupported parsed template callees such as `(1)[i32]()` are rejected instead
+  of being emitted as raw C++
 - template calls also keep parsed `TypeRef` nodes for bracketed arguments, so
   type-shaped builtins such as `new[T]`, `malloc[T]`, `sizeof[T]`,
   `alignof[T]`, `offsetof[T]`, and empty `list[T]`/`dict[T]`/`set[T]`
@@ -98,6 +100,9 @@ Already structured:
 - imported native namespace calls without scanner metadata, and method calls on
   local `auto` receivers from native APIs, stay on parsed call nodes and return
   `auto` explicitly instead of using raw expression fallback
+- final local-method lookup recognizes string-like native C++ types such as
+  `std.string_view`/`std::basic_string_view` for common `size`, `length`, and
+  `empty` calls instead of relying on raw fallback
 - direct parsed lambda calls such as `(lambda value: value + 1)(41)` stay on
   parsed call nodes, while unsupported non-callable callees such as `(1)(2)`
   are rejected instead of emitted through raw expression fallback
