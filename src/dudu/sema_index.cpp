@@ -62,30 +62,20 @@ size_t top_level_colon(const std::string& text) {
     return std::string::npos;
 }
 
-size_t find_matching_bracket(std::string_view text, const size_t open) {
-    int depth = 1;
-    size_t cursor = open + 1;
-    while (cursor < text.size() && depth > 0) {
-        if (text[cursor] == '[') {
-            ++depth;
-        } else if (text[cursor] == ']') {
-            --depth;
-        }
-        ++cursor;
+std::optional<std::string> fixed_array_element_type(const TypeRef& type) {
+    if (type.kind != TypeKind::FixedArray || type.children.empty()) {
+        return std::nullopt;
     }
-    return depth == 0 ? cursor - 1 : std::string::npos;
+    const TypeRef& storage = type.children.front();
+    if (storage.kind == TypeKind::Template && storage.name == "array" &&
+        !storage.children.empty()) {
+        return trim(storage.children.front().text);
+    }
+    return trim(storage.text);
 }
 
-std::optional<std::string> canonical_array_element_type(const std::string& type) {
-    if (!starts_with(type, "array[")) {
-        return std::nullopt;
-    }
-    const size_t element_close = find_matching_bracket(type, 5);
-    if (element_close == std::string::npos || element_close + 1 >= type.size() ||
-        type[element_close + 1] != '[' || !ends_with(type, "]")) {
-        return std::nullopt;
-    }
-    return trim(type.substr(6, element_close - 6));
+std::optional<std::string> fixed_array_element_type(const std::string& type) {
+    return fixed_array_element_type(parse_type_text(type));
 }
 
 std::string shaped_array_type(const std::string& element_type, const std::vector<size_t>& shape) {
@@ -199,14 +189,15 @@ std::string indexed_type_from_type_with_count(const Symbols& symbols,
         if (index_count > shape.size()) {
             throw CompileError(location, "too many indices for array: " + label);
         }
-        const std::string element = explicit_array_element_type(type);
+        const std::string element =
+            fixed_array_element_type(type).value_or(explicit_array_element_type(type));
         if (index_count == shape.size()) {
             return element;
         }
         return shaped_array_type(element,
                                  std::vector<size_t>(shape.begin() + index_count, shape.end()));
     }
-    if (const auto element = canonical_array_element_type(type)) {
+    if (const auto element = fixed_array_element_type(type)) {
         return *element;
     }
     const std::vector<std::string> dict_args = template_type_arg_texts(type, "dict");
@@ -289,7 +280,7 @@ std::string iterable_value_type(const Symbols& symbols,
     if (const auto element = single_template_type_arg_text(type, "span")) {
         return *element;
     }
-    if (const auto element = canonical_array_element_type(type)) {
+    if (const auto element = fixed_array_element_type(type)) {
         return *element;
     }
     const size_t type_index = type.find('[');

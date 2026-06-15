@@ -140,6 +140,9 @@ Already structured:
 - indexed and iterable element inference reads parsed `TypeRef` wrappers and
   template children for `list[T]`, `dict[K, V]`, `span[T]`, and storage-like
   wrappers instead of slicing those type strings directly
+- fixed-array indexing and iteration recover `array[T][shape]` element types
+  from parsed `TypeRef::FixedArray` nodes instead of hand-matching nested
+  brackets in the type text
 - member field inference for `Result[T, E]` reads parsed `TypeRef` template
   children for `.value` and `.err` instead of re-splitting the result type text
 - shared AST type helpers own common parsed template-child and unary-wrapper
