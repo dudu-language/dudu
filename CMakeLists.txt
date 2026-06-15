@@ -33,6 +33,7 @@ add_library(dudu_frontend
     src/dudu/cpp_stmt_helpers.cpp
     src/dudu/cpp_stmt_types.cpp
     src/dudu/cpp_type.cpp
+    src/dudu/cpp_type_ref.cpp
     src/dudu/escapes.cpp
     src/dudu/format.cpp
     src/dudu/format_path.cpp

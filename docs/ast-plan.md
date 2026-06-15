@@ -815,6 +815,8 @@ The C++ emitter has been split by AST responsibility:
 - `cpp_lower.cpp` now keeps only shared low-level lowering utilities such as
   namespace alias qualification, token-safe string helpers, and template
   argument lowering.
+- `cpp_type.cpp` owns raw string type lowering and C/C++ alias cleanup.
+- `cpp_type_ref.cpp` owns structured `TypeRef` lowering for parsed type nodes.
 
 Semantic analysis has started the same cleanup:
 
@@ -855,7 +857,7 @@ Native header awareness has been split by scanner responsibility:
   and scan dedupe.
 
 The remaining oversized frontend files are now outside the core semantic split:
-`language_server.cpp` and `cpp_type.cpp`.
+`language_server.cpp`.
 
 ## Acceptance
 
