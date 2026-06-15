@@ -193,6 +193,8 @@ Already structured:
   from expression children instead of stringified call arguments
 - allocation semantic helpers expose AST argument APIs for call-shaped
   allocation checks; the old string-vector overload has been removed
+- delete/free semantic checks classify pointer arguments through parsed
+  `TypeRef` nodes instead of checking raw leading `*` spelling
 - legacy string expression inference now parses pointer-cast, allocation,
   deallocation, and `Ok`/`Err` call arguments into expression nodes before
   checking them

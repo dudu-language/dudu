@@ -105,7 +105,8 @@ void check_deallocation_args(const SourceLocation& location, std::string_view ca
                                          std::to_string(arg_types.size()));
     }
     const std::string type = trim_copy(arg_types.front());
-    if (type.empty() || type.front() != '*') {
+    const TypeRef parsed = parse_type_text(type, location);
+    if (parsed.kind != TypeKind::Pointer) {
         throw CompileError(location, std::string(callee) + " expects pointer, got " + type);
     }
 }

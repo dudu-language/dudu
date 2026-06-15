@@ -287,7 +287,9 @@ push. They are not release packaging work.
    matches parsed pointer, reference, wrapper, template, and function type
    nodes before falling back to native spelling compatibility. Typed `for`
    loop binding checks now compare against the parsed binding `TypeRef` before
-   using alias/native spelling fallback.
+   using alias/native spelling fallback. Delete/free checks now classify
+   pointer arguments through parsed `TypeRef` nodes instead of raw leading `*`
+   spelling.
 
 3. OOP Surface Cleanup
 
