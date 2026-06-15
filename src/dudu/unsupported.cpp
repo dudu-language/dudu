@@ -60,6 +60,10 @@ bool contains_word(std::string_view text, std::string_view name) {
 }
 
 void check_unsupported_text(const SourceLocation& location, const std::string& text) {
+    const std::string trimmed = trim_copy(text);
+    if (starts_statement(trimmed, "def")) {
+        throw CompileError(location, "unsupported Python feature: def expressions");
+    }
     if (contains_call(text, "eval") || contains_call(text, "exec")) {
         throw CompileError(location, "unsupported Python feature: dynamic execution");
     }
