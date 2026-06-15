@@ -1,0 +1,13 @@
+class Drawable:
+    def draw(self) -> i32:
+        return 1
+
+
+class Tickable:
+    def tick(self) -> i32:
+        return 2
+
+
+class Sprite(Drawable, Tickable):
+    def draw(self) -> i32:
+        return super.draw()

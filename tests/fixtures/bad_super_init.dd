@@ -1,0 +1,10 @@
+class Entity:
+    def init(self, id: i32):
+        self.id = id
+
+    id: i32
+
+
+class Player(Entity):
+    def init(self, id: i32):
+        super.init(id)

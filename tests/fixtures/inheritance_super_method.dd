@@ -1,0 +1,19 @@
+class Entity:
+    id: i32
+
+    def score(self, boost: i32) -> i32:
+        return self.id + boost
+
+
+class Player(Entity):
+    bonus: i32
+
+    def score(self, boost: i32) -> i32:
+        return super.score(boost) + self.bonus
+
+
+def main() -> i32:
+    player: Player = Player()
+    player.id = 30
+    player.bonus = 5
+    return player.score(7)

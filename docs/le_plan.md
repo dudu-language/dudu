@@ -339,10 +339,12 @@ push. They are not release packaging work.
    public inheritance with base classes ordered before derived classes, and
    inherited fields/methods are visible to member access. Method-level
    `@abstract`, `@virtual`, and `@override` are implemented with override
-   target/signature diagnostics and pure-virtual lowering. `super`,
-   constructors across bases, abstract-class construction checks, inherited
-   abstract implementation checks, virtual destructor policy, and strict
-   multiple inheritance rules remain.
+   target/signature diagnostics and pure-virtual lowering. `super.method(...)`
+   is implemented for single-base classes and lowers from the parsed call AST
+   to explicit base-method dispatch. `super.init(...)`, constructors across
+   bases, abstract-class construction checks, inherited abstract
+   implementation checks, virtual destructor policy, and strict multiple
+   inheritance rules remain.
 
 8. Macro Surface Prerequisites
 

@@ -234,6 +234,10 @@ void emit_method(std::ostringstream& out, const std::string& class_name, const F
     out << " {\n";
     std::map<std::string, std::string> locals;
     locals["class"] = class_name;
+    const auto klass = symbols.classes.find(class_name);
+    if (klass != symbols.classes.end() && klass->second->base_classes.size() == 1) {
+        locals["super"] = klass->second->base_classes.front();
+    }
     if (first_param == 1) {
         out << "        auto& self = *this;\n";
         locals[method.params.front().name] = method.params.front().type;

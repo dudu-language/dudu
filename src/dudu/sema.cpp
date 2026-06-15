@@ -38,6 +38,12 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
                        const SourceLocation* location = nullptr);
 std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                            const SourceLocation* location = nullptr);
+void check_call_args_ast(const FunctionScope& scope, const std::string& callee,
+                         const FunctionSignature& signature, const std::vector<Expr>& args,
+                         const SourceLocation* location);
+std::optional<FunctionSignature>
+matching_signature_ast(const FunctionScope& scope, const std::vector<FunctionSignature>& options,
+                       const std::vector<Expr>& args);
 std::vector<std::string> call_args(std::string expr, size_t open) {
     std::string args = trim(expr.substr(open + 1, expr.size() - open - 2));
     return args.empty() ? std::vector<std::string>{} : split_top_level_args(args);
@@ -87,6 +93,77 @@ bool function_has_decorator(const FunctionDecl& fn, std::string_view name) {
         }
     }
     return false;
+}
+
+std::string super_base_type(const FunctionScope& scope, const SourceLocation* location) {
+    if (scope.current_class.empty()) {
+        if (location != nullptr) {
+            fail(*location, "super access outside class method");
+        }
+        return {};
+    }
+    const auto klass = scope.symbols.classes.find(scope.current_class);
+    if (klass == scope.symbols.classes.end()) {
+        return {};
+    }
+    if (klass->second->base_classes.empty()) {
+        if (location != nullptr) {
+            fail(*location, "super access requires a base class");
+        }
+        return {};
+    }
+    if (klass->second->base_classes.size() > 1) {
+        if (location != nullptr) {
+            fail(*location, "super access is ambiguous with multiple base classes");
+        }
+        return {};
+    }
+    return klass->second->base_classes.front();
+}
+
+bool is_super_call(const std::string& callee) {
+    return callee == "super" || starts_with(callee, "super.");
+}
+
+std::string infer_super_call_ast(const FunctionScope& scope, const Expr& expr,
+                                 const std::string& callee,
+                                 const SourceLocation* location) {
+    const size_t dot = callee.find('.');
+    if (dot == std::string::npos) {
+        if (location != nullptr) {
+            fail(*location, "super call requires a method name");
+        }
+        return {};
+    }
+    const std::string method_name = trim(callee.substr(dot + 1));
+    if (method_name.empty()) {
+        if (location != nullptr) {
+            fail(*location, "super call requires a method name");
+        }
+        return {};
+    }
+    if (method_name == "init") {
+        if (location != nullptr) {
+            fail(*location, "super.init requires base constructor lowering");
+        }
+        return {};
+    }
+    const std::string base = super_base_type(scope, location);
+    if (base.empty()) {
+        return {};
+    }
+    FunctionSignature signature;
+    if (!method_signature_for_type(scope.symbols, base, method_name, signature, location)) {
+        return {};
+    }
+    const std::vector<FunctionSignature> signatures =
+        method_signatures_for_type(scope.symbols, base, method_name);
+    if (const auto match = matching_signature_ast(scope, signatures, expr.children)) {
+        check_call_args_ast(scope, callee, *match, expr.children, location);
+        return match->return_type;
+    }
+    check_call_args_ast(scope, callee, signature, expr.children, location);
+    return signature.return_type;
 }
 
 const EnumDecl* enum_decl_for_type(const Symbols& symbols, const std::string& type) {
@@ -1407,6 +1484,9 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
             normalize_current_class_path(scope, call_callee_text(expr), use_location);
         if (callee.empty()) {
             return {};
+        }
+        if (is_super_call(callee)) {
+            return infer_super_call_ast(scope, expr, callee, use_location);
         }
         if (const auto pointer_cast =
                 infer_pointer_cast_call_ast(scope, expr, callee, use_location)) {

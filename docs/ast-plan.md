@@ -663,6 +663,11 @@ expressions, parsed pattern expressions for simple forms, and parsed guard
 expressions. Pattern matching still stops in the unsupported-feature pass, so
 the compiler cannot lower a half-implemented match.
 
+`super.method(...)` semantic checks use the parsed call callee and argument
+nodes. Valid single-base calls lower to explicit C++ base dispatch such as
+`Base::method(args...)`; invalid `super` usage gets Dudu diagnostics instead of
+falling through to generated C++.
+
 ## Acceptance
 
 - Existing examples still compile and run.

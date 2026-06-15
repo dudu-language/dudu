@@ -357,7 +357,7 @@ Rules:
 - `self.name` means instance state or instance method
 - `class.name` means current class static member
 - `Type.name` means explicit type-qualified static/member access
-- `super.name` means base-class method/member access
+- `super.name(...)` means explicit base-class method dispatch
 
 Do not fall back from `self.name` to static members.
 
@@ -555,7 +555,7 @@ field declaration where possible.
 - Native single inheritance compiles and runs: initial base-list parsing,
   inherited fields, inherited methods, and C++ public-base lowering are done.
 - `super.init(...)` lowers correctly.
-- `super.method(...)` calls the base method.
+- `super.method(...)` calls the base method: done for single-base classes.
 - `@virtual`, method-only `@abstract`, and `@override` validate method
   relationships.
 - Interface-like abstract classes compile to abstract C++ bases.

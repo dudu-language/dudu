@@ -1,0 +1,3 @@
+class Entity:
+    def score(self) -> i32:
+        return super.score()

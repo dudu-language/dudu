@@ -40,6 +40,7 @@ compile_and_expect generic_inferred_calls 42
 compile_and_expect generic_method 42
 compile_and_expect generic_pair 42
 compile_and_expect inheritance_abstract 42
+compile_and_expect inheritance_super_method 42
 compile_and_expect inheritance_virtual_override 42
 compile_and_expect native_inheritance_basic 42
 compile_and_expect native_template_function 42

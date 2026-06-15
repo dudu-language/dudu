@@ -142,6 +142,16 @@ bool is_pointer_cast_type_like(const std::string& type) {
 std::string lower_callee_expr(const Expr& expr, const std::vector<std::string>& aliases,
                               const std::map<std::string, std::string>& locals) {
     if (!expr.callee.empty()) {
+        const Expr& callee = expr.callee.front();
+        if (callee.kind == ExprKind::Member && callee.children.size() == 1 &&
+            callee.children.front().kind == ExprKind::Name &&
+            callee.children.front().name == "super") {
+            if (const auto base = locals.find("super"); base != locals.end()) {
+                return base->second + "::" + callee.name;
+            }
+        }
+    }
+    if (!expr.callee.empty()) {
         return lower_expr(expr.callee.front(), aliases, locals);
     }
     return lower_expr(expr.name, aliases, locals);
