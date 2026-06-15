@@ -312,7 +312,7 @@ This is the serious model for native projects. Users should not have to leave
 driver may choose a direct compiler backend, a generated CMake backend, or a
 user-owned CMake backend, but the user-facing command remains the same.
 
-The serious long-term model is:
+The build-driver contract is:
 
 - The direct backend emits C++ and invokes the configured native compiler. It
   is real, fast, and intentionally narrow. It should handle the manifest-native
@@ -324,7 +324,7 @@ The serious long-term model is:
 - `dudu cmake` emits an inspectable CMake artifact. It is useful for debugging,
   bootstrapping, and handing control to users, but it is not a replacement for
   `dudu build`.
-- User-owned CMake projects should be supported as a backend mode. In that
+- User-owned CMake projects are a backend mode. In that
   mode, `dudu build` configures/builds the declared CMake target and `dudu run`
   launches the configured executable.
 
