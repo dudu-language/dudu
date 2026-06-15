@@ -16,7 +16,7 @@ std::map<std::string, std::string> generic_substitutions(const std::vector<std::
                                                          const std::vector<TypeRef>& args) {
     std::map<std::string, std::string> out;
     for (size_t i = 0; i < params.size() && i < args.size(); ++i) {
-        out.emplace(params[i], trim(args[i].text));
+        out.emplace(params[i], substitute_type_ref_text(args[i], {}));
     }
     return out;
 }
@@ -31,7 +31,7 @@ bool infer_generic_binding(const TypeRef& param_type, const TypeRef& arg_type,
     const std::string param = trim(param_type.name.empty() ? param_type.text : param_type.name);
     const std::string arg = trim(arg_type.name.empty() ? arg_type.text : arg_type.name);
     if (generic_param_named(params, param)) {
-        const std::string arg_text = trim(arg_type.text);
+        const std::string arg_text = substitute_type_ref_text(arg_type, {});
         const auto [it, inserted] = bindings.emplace(param, arg_text);
         if (!inserted && it->second != arg_text) {
             error = "conflicting inferred type argument " + param + ": " + it->second + " vs " +
@@ -96,8 +96,9 @@ std::string template_args_lookup_text(const Expr& expr) {
         if (i > 0) {
             out << ", ";
         }
-        out << (!expr.template_type_args.empty() ? expr.template_type_args[i].text
-                                                 : expr.template_args[i].text);
+        out << (!expr.template_type_args.empty()
+                    ? substitute_type_ref_text(expr.template_type_args[i], {})
+                    : expr.template_args[i].text);
     }
     return out.str();
 }
@@ -181,13 +182,13 @@ infer_generic_method_type_args(const FunctionScope& scope, const FunctionDecl& m
         arg_types.push_back(callbacks.infer_expr(scope, args[i], location));
     }
     return infer_generic_method_type_args_from_types(method, callee, arg_types, first_param,
-                                                    std::nullopt, location);
+                                                     std::nullopt, location);
 }
 
 std::optional<std::vector<TypeRef>> infer_generic_method_type_args_from_types(
-    const FunctionDecl& method, const std::string& callee, const std::vector<std::string>& arg_types,
-    size_t first_param, const std::optional<std::string>& expected_return,
-    const SourceLocation* location) {
+    const FunctionDecl& method, const std::string& callee,
+    const std::vector<std::string>& arg_types, size_t first_param,
+    const std::optional<std::string>& expected_return, const SourceLocation* location) {
     if (method.generic_params.empty()) {
         return std::nullopt;
     }
@@ -212,7 +213,8 @@ std::optional<std::vector<TypeRef>> infer_generic_method_type_args_from_types(
             return std::nullopt;
         }
     }
-    if (expected_return && !expected_return->empty() && method.return_type_ref.kind != TypeKind::Unknown) {
+    if (expected_return && !expected_return->empty() &&
+        method.return_type_ref.kind != TypeKind::Unknown) {
         std::string error;
         if (!infer_generic_binding(method.return_type_ref, parse_type_text(*expected_return),
                                    method.generic_params, bindings, error)) {
@@ -289,7 +291,7 @@ std::string join_type_ref_texts(const std::vector<TypeRef>& types) {
         if (i > 0) {
             out << ", ";
         }
-        out << types[i].text;
+        out << substitute_type_ref_text(types[i], {});
     }
     return out.str();
 }

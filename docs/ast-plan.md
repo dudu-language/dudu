@@ -157,6 +157,10 @@ Already structured:
   parameters through parsed `TypeRef` node reconstruction, covering nested
   templates, fixed arrays, wrappers, and function types instead of replacing
   identifiers inside raw type strings
+- generic argument binding, explicit template lookup text for parsed type
+  arguments, and generic method receiver argument extraction render parsed
+  `TypeRef` nodes through the shared type helper instead of reading child text
+  directly
 - a shared AST type helper owns `TypeRef` substitution rendering, so generic
   functions, generic classes, and Dudu-native method/class template
   substitutions use the same structured path

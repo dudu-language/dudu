@@ -82,7 +82,7 @@ std::vector<std::string> template_args_from_type(const std::string& type) {
     std::vector<std::string> out;
     out.reserve(parsed.children.size());
     for (const TypeRef& child : parsed.children) {
-        out.push_back(trim_copy(child.text));
+        out.push_back(substitute_type_ref_text(child, {}));
     }
     return out;
 }
