@@ -882,6 +882,10 @@ Language-server internals have started the same split:
   response construction.
 - `language_server_hover.cpp` owns hover response construction and doc-comment
   extraction.
+- `language_server_local_context.cpp` owns cursor-local type inference, member
+  completion target detection, and alias-expanded member candidate types.
+- `language_server_completion.cpp` owns completion lists, completion resolve,
+  member completion, module completion, and signature help.
 - `language_server_references.cpp` owns find-references and rename edit
   construction.
 - `language_server_navigation.cpp` owns LSP source ranges, locations, symbol
