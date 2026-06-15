@@ -1,5 +1,6 @@
 #include "dudu/sema_alloc.hpp"
 
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/sema_inheritance.hpp"
 
@@ -25,7 +26,7 @@ std::optional<std::string> infer_allocation_call_with_count(const Symbols& symbo
     }
     const TypeRef type_ref =
         parse_type_text(callee.substr(open + 1, callee.size() - open - 2), type_location);
-    const std::string type = trim_copy(type_ref.text);
+    const std::string type = substitute_type_ref_text(type_ref, {});
     if (location != nullptr) {
         if (const auto unknown = unknown_type_ref(symbols, type_ref)) {
             const SourceLocation error_location =
@@ -56,7 +57,8 @@ std::optional<std::string> infer_allocation_call_from_type_args(
         throw CompileError(*location, callee + " expects 1 type argument, got " +
                                           std::to_string(type_args.size()));
     }
-    const std::string type = type_args.size() == 1 ? trim_copy(type_args.front().text) : "";
+    const std::string type =
+        type_args.size() == 1 ? substitute_type_ref_text(type_args.front(), {}) : "";
     if (location != nullptr && type_args.size() == 1) {
         if (const auto unknown = unknown_type_ref(symbols, type_args.front())) {
             const SourceLocation error_location =

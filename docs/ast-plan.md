@@ -49,6 +49,9 @@ Already structured:
 - type-shaped builtins such as `new[T]`, `malloc[T]`, `sizeof[T]`,
   `alignof[T]`, and `offsetof[T]` validate parsed `TypeRef` arguments
   recursively, so nested unknown types get precise diagnostics
+- allocation inference for parsed `new[T]` and `malloc[T]` renders the
+  allocation type through the shared `TypeRef` helper instead of reading raw
+  type-argument text
 - explicit `cpp(...)` allocation inference names its raw-callee boundary
   separately, while parsed `new[T]` and `malloc[T]` calls use parsed `TypeRef`
   arguments
