@@ -984,6 +984,10 @@ Semantic expression inference and assignment-target checking now validate
 pointer dereference through parsed `TypeRef` nodes instead of raw leading `*`
 string checks.
 
+`@extern_c` C ABI signature checks now classify pointers and references through
+the parsed type tree while preserving the existing primitive and
+pointer-to-`struct ...` ABI rules.
+
 Parser construction has been split by grammar responsibility:
 
 - `parser.cpp` owns module orchestration, token cursor helpers, imports,

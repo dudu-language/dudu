@@ -368,6 +368,29 @@ void test_pointer_dereference_uses_type_ast() {
     dudu::analyze_module(module, {.check_bodies = true});
 }
 
+void test_extern_c_signature_uses_type_ast() {
+    const dudu::ModuleAst ok =
+        dudu::parse_source("@extern_c\n"
+                           "def take_struct(value: *struct NativeThing) -> void:\n"
+                           "    return\n",
+                           "extern_c_struct_pointer.dd");
+    dudu::analyze_module(ok, {.check_bodies = true});
+
+    bool rejected = false;
+    try {
+        const dudu::ModuleAst bad = dudu::parse_source("@extern_c\n"
+                                                       "def bad_ref(value: &i32) -> void:\n"
+                                                       "    return\n",
+                                                       "extern_c_ref.dd");
+        dudu::analyze_module(bad, {.check_bodies = true});
+    } catch (const dudu::CompileError& error) {
+        rejected =
+            std::string(error.what()).find("@extern_c parameter type is not C ABI safe: &") !=
+            std::string::npos;
+    }
+    assert(rejected);
+}
+
 void test_bare_void_return() {
     const dudu::ModuleAst module = dudu::parse_source("def done():\n"
                                                       "    return\n"
@@ -509,6 +532,7 @@ int main() {
         test_list_iterator_methods();
         test_reference_list_indexing();
         test_pointer_dereference_uses_type_ast();
+        test_extern_c_signature_uses_type_ast();
         test_bare_void_return();
         test_typed_for_emission();
         test_class_field_defaults_and_static_fields();

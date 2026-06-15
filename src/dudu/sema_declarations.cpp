@@ -106,25 +106,30 @@ bool is_c_abi_primitive(const std::string& type, bool allow_void) {
     return primitives.contains(type);
 }
 
-bool is_c_abi_type(std::string type, bool allow_void) {
-    type = trim(std::move(type));
-    if (type.empty() || type.front() == '&' || type == "str" ||
-        type.find('.') != std::string::npos) {
+bool is_c_abi_type_ref(const TypeRef& type, bool allow_void) {
+    const std::string text = trim(type.text);
+    if (text.empty() || text == "str" || text.find('.') != std::string::npos) {
         return false;
     }
-    if (type.front() == '*') {
-        return is_c_abi_type(type.substr(1), false) || starts_with(trim(type.substr(1)), "struct ");
+    if (type.kind == TypeKind::Reference) {
+        return false;
     }
-    return is_c_abi_primitive(type, allow_void);
+    if (type.kind == TypeKind::Pointer && type.children.size() == 1) {
+        const TypeRef& child = type.children.front();
+        return is_c_abi_type_ref(child, false) || starts_with(trim(child.text), "struct ");
+    }
+    return is_c_abi_primitive(text, allow_void);
 }
 
 void check_extern_c_signature(const FunctionDecl& fn) {
     const std::string return_type = fn.return_type.empty() ? "void" : fn.return_type;
-    if (!is_c_abi_type(return_type, true)) {
+    const TypeRef return_type_ref =
+        fn.return_type.empty() ? parse_type_text("void", fn.location) : fn.return_type_ref;
+    if (!is_c_abi_type_ref(return_type_ref, true)) {
         fail(fn.location, "@extern_c return type is not C ABI safe: " + return_type);
     }
     for (const ParamDecl& param : fn.params) {
-        if (!is_c_abi_type(param.type, false)) {
+        if (!is_c_abi_type_ref(param.type_ref, false)) {
             fail(param.location, "@extern_c parameter type is not C ABI safe: " + param.type);
         }
     }
@@ -373,9 +378,8 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
         check_generic_params(fn.location, fn.generic_params);
         const Symbols function_symbols = with_generic_params(symbols, fn.generic_params);
         if (is_reserved_dunder_name(fn.name)) {
-            fail(fn.location,
-                 "reserved Python-style dunder function name: " + fn.name +
-                     "; use normal Dudu names and decorators such as @operator(...)");
+            fail(fn.location, "reserved Python-style dunder function name: " + fn.name +
+                                  "; use normal Dudu names and decorators such as @operator(...)");
         }
         for (const Decorator& decorator : fn.decorators) {
             check_function_decorator(module, decorator);
