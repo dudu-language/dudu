@@ -69,6 +69,15 @@ bool structural_function_assignment_allowed(const TypeRef& expected, const TypeR
     return true;
 }
 
+bool structural_fixed_array_assignment_allowed(const TypeRef& expected, const TypeRef& got) {
+    if (expected.kind != TypeKind::FixedArray || got.kind != TypeKind::FixedArray ||
+        expected.children.size() != 1 || got.children.size() != 1 ||
+        trim_copy(expected.value) != trim_copy(got.value)) {
+        return false;
+    }
+    return structural_type_assignment_allowed(expected.children.front(), got.children.front());
+}
+
 bool structural_pointer_assignment_allowed(const TypeRef& expected, const TypeRef& got) {
     if (expected.kind != TypeKind::Pointer || got.kind != TypeKind::Pointer ||
         expected.children.size() != 1 || got.children.size() != 1) {
@@ -135,6 +144,9 @@ bool structural_type_assignment_allowed(const TypeRef& expected, const TypeRef& 
     }
     if (expected.kind == TypeKind::Template || got.kind == TypeKind::Template) {
         return structural_template_assignment_allowed(expected, got);
+    }
+    if (expected.kind == TypeKind::FixedArray || got.kind == TypeKind::FixedArray) {
+        return structural_fixed_array_assignment_allowed(expected, got);
     }
     if (expected.kind == got.kind && expected.children.size() == 1 && got.children.size() == 1 &&
         (expected.kind == TypeKind::Const || is_transparent_wrapper(expected.kind))) {

@@ -81,6 +81,12 @@ void test_type_compat_uses_type_ast_for_pointers() {
                                          dudu::parse_type_text("list[fn(i32) -> void]")));
     assert(!dudu::type_assignment_allowed(dudu::parse_type_text("list[i32]"),
                                           dudu::parse_type_text("list[str]")));
+    assert(dudu::type_assignment_allowed(dudu::parse_type_text("array[list[i32]][4]"),
+                                         dudu::parse_type_text("array[list[i32]][4]")));
+    assert(!dudu::type_assignment_allowed(dudu::parse_type_text("array[list[i32]][4]"),
+                                          dudu::parse_type_text("array[list[str]][4]")));
+    assert(!dudu::type_assignment_allowed(dudu::parse_type_text("array[list[i32]][4]"),
+                                          dudu::parse_type_text("array[list[i32]][8]")));
 }
 
 void test_core_type_helpers_use_type_ast() {
