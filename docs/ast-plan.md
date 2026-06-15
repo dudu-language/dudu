@@ -713,6 +713,17 @@ iterable expression instead of parsing them back out of lowered C++ text.
 Simple indexed assignment semantic checks now use parsed `Index` target
 expressions when the indexed base is a local name.
 
+Alias-aware C++ type lowering now keeps parsed `TypeRef` structure for
+templates, pointers, references, fixed arrays, function types, and wrapper
+types instead of immediately falling back to the raw type string when native
+namespace aliases are in scope.
+
+`sizeof[...]`, `alignof[...]`, and `offsetof[...]` semantic checks now use
+parsed template `TypeRef` arguments for arity and unknown-type diagnostics.
+
+Binary expression emission now checks parsed child-expression presence instead
+of inspecting child source text before lowering.
+
 Index expression C++ emission now lowers parsed base and index child
 expressions directly.
 
