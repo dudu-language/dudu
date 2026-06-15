@@ -271,7 +271,9 @@ push. They are not release packaging work.
    compatibility fallbacks. Generic method calls on nested receivers also
    type-check through parsed callee receiver expressions. Pointer receiver
    emission now uses parsed member expression typing instead of reconstructing
-   a member path string first.
+   a member path string first. Nested expression emission preserves symbol
+   context through callee, member, dict-entry, named-argument, and index
+   children.
 
 3. OOP Surface Cleanup
 

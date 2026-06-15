@@ -305,7 +305,7 @@ std::string lower_callee_expr(const Expr& expr, const std::vector<std::string>& 
         }
     }
     if (!expr.callee.empty()) {
-        return lower_expr(expr.callee.front(), aliases, locals);
+        return lower_expr(expr.callee.front(), aliases, locals, symbols);
     }
     return expr.name;
 }

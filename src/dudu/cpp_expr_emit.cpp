@@ -213,7 +213,8 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
                 return *swizzle;
             }
             if (is_pointer_receiver_expr(expr.children.front(), locals)) {
-                return lower_expr(expr.children.front(), aliases, locals) + "->" + expr.name;
+                return lower_expr(expr.children.front(), aliases, locals, symbols) + "->" +
+                       expr.name;
             }
             if (symbols != nullptr) {
                 const std::string receiver_type =
@@ -224,19 +225,20 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
                            expr.name;
                 }
             }
-            return lower_member_expr(lower_expr(expr.children.front(), aliases, locals), expr.name,
-                                     aliases);
+            return lower_member_expr(lower_expr(expr.children.front(), aliases, locals, symbols),
+                                     expr.name, aliases);
         }
         break;
     case ExprKind::DictEntry:
         if (expr.children.size() == 2) {
-            return "{" + lower_expr(expr.children[0], aliases, locals) + ", " +
-                   lower_expr(expr.children[1], aliases, locals) + "}";
+            return "{" + lower_expr(expr.children[0], aliases, locals, symbols) + ", " +
+                   lower_expr(expr.children[1], aliases, locals, symbols) + "}";
         }
         break;
     case ExprKind::NamedArg:
         if (expr.children.size() == 1) {
-            return "." + expr.name + " = " + lower_expr(expr.children.front(), aliases, locals);
+            return "." + expr.name + " = " +
+                   lower_expr(expr.children.front(), aliases, locals, symbols);
         }
         break;
     case ExprKind::Slice:
@@ -245,15 +247,16 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
         return "{" + join_lowered_exprs(expr.children, aliases, locals) + "}";
     case ExprKind::Index:
         if (expr.children.size() == 2) {
-            std::string out = lower_expr(expr.children[0], aliases, locals);
+            std::string out = lower_expr(expr.children[0], aliases, locals, symbols);
             if (expr.children[1].kind == ExprKind::Slice && expr.children[1].children.size() == 2) {
                 const Expr& start_expr = expr.children[1].children[0];
                 const Expr& end_expr = expr.children[1].children[1];
-                const std::string start =
-                    start_expr.text.empty() ? "0" : lower_expr(start_expr, aliases, locals);
+                const std::string start = start_expr.text.empty()
+                                              ? "0"
+                                              : lower_expr(start_expr, aliases, locals, symbols);
                 const std::string end = end_expr.text.empty()
                                             ? "(" + out + ").size()"
-                                            : lower_expr(end_expr, aliases, locals);
+                                            : lower_expr(end_expr, aliases, locals, symbols);
                 return "std::span(&(" + out + ")[" + start + "], (" + end + ") - (" + start + "))";
             }
             if (expr.children[1].kind == ExprKind::TupleLiteral) {
@@ -262,11 +265,11 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
                     return *slice;
                 }
                 for (const Expr& index : expr.children[1].children) {
-                    out += "[" + lower_expr(index, aliases, locals) + "]";
+                    out += "[" + lower_expr(index, aliases, locals, symbols) + "]";
                 }
                 return out;
             }
-            return out + "[" + lower_expr(expr.children[1], aliases, locals) + "]";
+            return out + "[" + lower_expr(expr.children[1], aliases, locals, symbols) + "]";
         }
         break;
     case ExprKind::ListLiteral:

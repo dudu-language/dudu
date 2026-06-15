@@ -312,6 +312,9 @@ Already structured:
 - C++ call emission now decides pointer-typed expression receivers through the
   parsed member expression type walker rather than reconstructing a member path
   string first.
+- C++ expression emission now preserves symbol context while lowering nested
+  callee, member, dict-entry, named-argument, and index child expressions
+  instead of dropping to symbol-less child lowering.
 - C++ pointer-cast emission lowers cast target types through parsed `TypeRef`
   nodes for both normal and templated call shapes instead of prefixing raw type
   strings and sending them through the legacy type lowerer
