@@ -1,0 +1,7 @@
+enum Message:
+    Move:
+        BadField: i32
+
+
+def main() -> i32:
+    return 0

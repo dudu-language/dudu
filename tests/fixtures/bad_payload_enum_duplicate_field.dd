@@ -1,0 +1,8 @@
+enum Message:
+    Move:
+        value: i32
+        value: i32
+
+
+def main() -> i32:
+    return 0

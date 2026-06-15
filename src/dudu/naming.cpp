@@ -79,6 +79,14 @@ void check_naming(const ModuleAst& module) {
             if (!is_pascal_case(value.name)) {
                 fail_naming(value.location, "enum values must be PascalCase", value.name);
             }
+            if (!value.tuple_payload) {
+                for (const EnumPayloadField& field : value.payload_fields) {
+                    if (!is_dudu_snake_case(field.name)) {
+                        fail_naming(field.location, "enum payload field names must be snake_case",
+                                    field.name);
+                    }
+                }
+            }
         }
     }
     for (const ClassDecl& klass : module.classes) {

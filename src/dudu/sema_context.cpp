@@ -472,6 +472,16 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
             if (!values.insert(value.name).second) {
                 fail(value.location, "duplicate enum value: " + value.name);
             }
+            std::set<std::string> payload_fields;
+            for (const EnumPayloadField& field : value.payload_fields) {
+                check_supported_type_shape(field.location, field.type_ref);
+                check_known_type_ref(symbols, field.location, field.type_ref,
+                                     "unknown enum payload field type: ");
+                if (!value.tuple_payload && !payload_fields.insert(field.name).second) {
+                    fail(field.location, "duplicate enum payload field: " + en.name + "." +
+                                             value.name + "." + field.name);
+                }
+            }
             if (!value.payload_fields.empty()) {
                 fail(value.location,
                      "payload enum lowering requires match support: " + en.name + "." +

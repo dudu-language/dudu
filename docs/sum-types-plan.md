@@ -407,4 +407,6 @@ spelling.
 Status: payload variant syntax parses into the AST for both named field blocks
 and tuple-style payloads. Semantic checking rejects payload enums until
 lowering and exhaustive `match` support are implemented, so the compiler does
-not silently emit an integer enum that drops payload data.
+not silently emit an integer enum that drops payload data. Payload fields are
+validated for known types, duplicate named fields, and snake_case names before
+that lowering gate.
