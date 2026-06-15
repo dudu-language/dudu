@@ -33,8 +33,8 @@ namespace {
 [[noreturn]] void fail(const SourceLocation& location, const std::string& message) {
     throw CompileError(location, message);
 }
-std::string infer_expr(const FunctionScope& scope, std::string expr,
-                       const SourceLocation* location = nullptr);
+std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
+                                  const SourceLocation* location = nullptr);
 std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                            const SourceLocation* location = nullptr);
 void check_call_args_ast(const FunctionScope& scope, const std::string& callee,
@@ -675,8 +675,8 @@ std::string normalize_current_class_path(const FunctionScope& scope, const std::
     return path;
 }
 
-std::string infer_expr(const FunctionScope& scope, std::string expr,
-                       const SourceLocation* location) {
+std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
+                                  const SourceLocation* location) {
     expr = trim(std::move(expr));
     if (expr.empty())
         return "void";
@@ -726,7 +726,7 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
         if (const auto local = scope.locals.find(name); local != scope.locals.end()) {
             return "*" + trim(local->second);
         }
-        const std::string value_type = infer_expr(scope, name, location);
+        const std::string value_type = infer_cpp_escape_expr(scope, name, location);
         if (!value_type.empty() && value_type != "void") {
             return "*" + value_type;
         }
@@ -865,7 +865,7 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
             if (i > 0) {
                 out << ", ";
             }
-            out << infer_expr(scope, tuple_parts[i], location);
+            out << infer_cpp_escape_expr(scope, tuple_parts[i], location);
         }
         out << "]";
         return out.str();
@@ -1785,7 +1785,7 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
     case ExprKind::TemplateCall:
         return infer_template_call_ast(scope, expr, use_location);
     case ExprKind::CppEscape:
-        return infer_expr(scope, expr.text, use_location);
+        return infer_cpp_escape_expr(scope, expr.text, use_location);
     }
     return {};
 }

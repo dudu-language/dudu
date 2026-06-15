@@ -262,10 +262,9 @@ Already structured:
 
 Still too string-based:
 
-- some legacy string-based sema helper overloads remain for older constructor,
-  native-call, and explicit `cpp(...)` paths while their callers migrate to AST
-  callbacks
-- C++ escape hatches and raw macro shapes
+- expression-level explicit `cpp(...)` escape hatches still use the old C++
+  expression rewriter/inference boundary
+- raw macro shapes
 - user-facing macro/decorator forms still need deeper AST nodes
 - lambda parameter declarations and target-type-aware lambda checking remain
   shallow
