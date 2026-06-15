@@ -878,6 +878,14 @@ Language-server internals have started the same split:
 - `language_server_symbols.cpp` owns source/native symbol collection and symbol
   detail strings shared by document symbols, definition, hover, completion, and
   signature help.
+- `language_server_references.cpp` owns find-references and rename edit
+  construction.
+- `language_server_navigation.cpp` owns LSP source ranges, locations, symbol
+  lookup, and reference scanning helpers.
+- `language_server_workspace.cpp` owns workspace and imported-module document
+  discovery.
+- `language_server_code_actions.cpp` owns format, organize-import, missing
+  import, and lint quick fixes.
 
 The remaining oversized frontend files are now outside the core semantic split:
 `language_server.cpp`.
