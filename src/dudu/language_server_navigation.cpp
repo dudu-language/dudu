@@ -1,0 +1,171 @@
+#include "dudu/language_server_navigation.hpp"
+
+#include "dudu/language_server_json.hpp"
+
+#include <algorithm>
+#include <cctype>
+#include <filesystem>
+#include <sstream>
+
+namespace dudu {
+
+std::string range_json(const SourceLocation& location) {
+    const int line = std::max(0, location.line - 1);
+    const int column = std::max(0, location.column - 1);
+    return range_json(line, column, column + 1);
+}
+
+std::string range_json(int line, int start_character, int end_character) {
+    return range_json(line, start_character, line, end_character);
+}
+
+std::string range_json(int start_line, int start_character, int end_line, int end_character) {
+    std::ostringstream out;
+    out << "{\"start\":{\"line\":" << start_line << ",\"character\":" << start_character
+        << "},\"end\":{\"line\":" << end_line << ",\"character\":" << end_character << "}}";
+    return out.str();
+}
+
+std::string location_json(const std::string& uri, const std::string& range) {
+    return "{\"uri\":\"" + json_escape(uri) + "\",\"range\":" + range + "}";
+}
+
+std::string uri_for_location(const SourceLocation& location, const Document& doc) {
+    if (location.file.empty() || std::filesystem::path(location.file) == doc.path) {
+        return doc.uri;
+    }
+    std::filesystem::path path = location.file;
+    if (path.is_relative()) {
+        path = std::filesystem::absolute(path);
+    }
+    return "file://" + path.lexically_normal().string();
+}
+
+std::string file_uri(const std::filesystem::path& path) {
+    std::filesystem::path absolute = path;
+    if (absolute.is_relative()) {
+        absolute = std::filesystem::absolute(absolute);
+    }
+    return "file://" + absolute.lexically_normal().string();
+}
+
+std::string symbol_at(const Document& doc, const Json* params) {
+    const Json* position = params == nullptr ? nullptr : params->get("position");
+    const int target_line = int_value(position == nullptr ? nullptr : position->get("line"));
+    const int target_character =
+        int_value(position == nullptr ? nullptr : position->get("character"));
+    std::istringstream in(doc.text);
+    std::string line;
+    for (int row = 0; std::getline(in, line); ++row) {
+        if (row != target_line) {
+            continue;
+        }
+        int start = std::min(target_character, static_cast<int>(line.size()));
+        while (start > 0 && symbol_char(line[static_cast<size_t>(start - 1)])) {
+            --start;
+        }
+        int end = std::min(target_character, static_cast<int>(line.size()));
+        while (end < static_cast<int>(line.size()) &&
+               symbol_char(line[static_cast<size_t>(end)])) {
+            ++end;
+        }
+        return start < end ? line.substr(static_cast<size_t>(start),
+                                         static_cast<size_t>(end - start))
+                           : std::string{};
+    }
+    return {};
+}
+
+bool symbol_matches(const std::string& symbol, const std::string& query) {
+    if (symbol == query) {
+        return true;
+    }
+    const size_t dot = symbol.rfind('.');
+    return dot != std::string::npos && symbol.substr(dot + 1) == query;
+}
+
+bool symbol_char(char c) {
+    return identifier_char(c) || c == '.';
+}
+
+bool identifier_char(char c) {
+    return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_';
+}
+
+bool valid_identifier(const std::string& value) {
+    if (value.empty() ||
+        (std::isalpha(static_cast<unsigned char>(value.front())) == 0 && value.front() != '_')) {
+        return false;
+    }
+    return std::all_of(value.begin() + 1, value.end(), identifier_char);
+}
+
+std::vector<ReferenceLocation> references_in(const Document& doc, const std::string& query) {
+    std::vector<ReferenceLocation> out;
+    std::istringstream in(doc.text);
+    std::string line;
+    for (int row = 0; std::getline(in, line); ++row) {
+        for (int start = 0; start < static_cast<int>(line.size());) {
+            if (!symbol_char(line[static_cast<size_t>(start)])) {
+                ++start;
+                continue;
+            }
+            int end = start + 1;
+            while (end < static_cast<int>(line.size()) &&
+                   symbol_char(line[static_cast<size_t>(end)])) {
+                ++end;
+            }
+            if (line.substr(static_cast<size_t>(start), static_cast<size_t>(end - start)) ==
+                query) {
+                out.push_back({doc.uri, range_json(row, start, end)});
+            }
+            start = end;
+        }
+    }
+    return out;
+}
+
+bool same_path(const std::filesystem::path& lhs, const std::filesystem::path& rhs) {
+    std::error_code error;
+    const std::filesystem::path left = std::filesystem::weakly_canonical(lhs, error);
+    if (error) {
+        error.clear();
+        return lhs.lexically_normal() == rhs.lexically_normal();
+    }
+    const std::filesystem::path right = std::filesystem::weakly_canonical(rhs, error);
+    if (error) {
+        error.clear();
+        return lhs.lexically_normal() == rhs.lexically_normal();
+    }
+    return left == right;
+}
+
+bool skip_workspace_dir(const std::string& name) {
+    return name == ".git" || name == "build" || name == ".dudu" || name == "node_modules" ||
+           name == "vendor" || name == "third_party";
+}
+
+std::filesystem::path module_path_to_file(const std::filesystem::path& base,
+                                          const std::string& module_path) {
+    std::filesystem::path out = base;
+    size_t start = 0;
+    while (start < module_path.size()) {
+        const size_t dot = module_path.find('.', start);
+        const size_t end = dot == std::string::npos ? module_path.size() : dot;
+        out /= module_path.substr(start, end - start);
+        if (dot == std::string::npos) {
+            break;
+        }
+        start = dot + 1;
+    }
+    out += ".dd";
+    return out;
+}
+
+std::string lower_copy(std::string value) {
+    std::transform(value.begin(), value.end(), value.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return value;
+}
+
+} // namespace dudu
