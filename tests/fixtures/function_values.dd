@@ -1,0 +1,21 @@
+def add_one(value: i32) -> i32:
+    return value + 1
+
+
+def add_two(value: i32) -> i32:
+    return value + 2
+
+
+def choose(add_extra: bool) -> fn(i32) -> i32:
+    if add_extra:
+        return add_two
+    return add_one
+
+
+def main() -> i32:
+    callback = add_one
+    if callback(41) != 42:
+        return 1
+
+    chosen = choose(True)
+    return chosen(40)
