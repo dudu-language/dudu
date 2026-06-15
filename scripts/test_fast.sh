@@ -27,6 +27,7 @@ compile_and_expect array_shape_inference 42
 compile_and_expect array_row_index 7
 compile_and_expect array_c_handoff 42
 compile_and_expect array_slice_view 42
+compile_and_expect array_open_slice 42
 compile_and_expect matrix_math 26
 compile_and_expect tensor_index_hook 42
 compile_and_expect tensor_index_set_hook 42

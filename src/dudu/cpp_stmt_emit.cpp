@@ -478,11 +478,15 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
     case ExprKind::Index:
         if (expr.children.size() == 2) {
             std::string out = lower_expr(expr.children[0], aliases, locals);
-            if (expr.children[1].kind == ExprKind::Slice && expr.children[1].children.size() == 2 &&
-                !expr.children[1].children[0].text.empty() &&
-                !expr.children[1].children[1].text.empty()) {
-                const std::string start = lower_expr(expr.children[1].children[0], aliases, locals);
-                const std::string end = lower_expr(expr.children[1].children[1], aliases, locals);
+            if (expr.children[1].kind == ExprKind::Slice &&
+                expr.children[1].children.size() == 2) {
+                const Expr& start_expr = expr.children[1].children[0];
+                const Expr& end_expr = expr.children[1].children[1];
+                const std::string start =
+                    start_expr.text.empty() ? "0" : lower_expr(start_expr, aliases, locals);
+                const std::string end =
+                    end_expr.text.empty() ? "(" + out + ").size()"
+                                          : lower_expr(end_expr, aliases, locals);
                 return "std::span(&(" + out + ")[" + start + "], (" + end + ") - (" + start + "))";
             }
             if (expr.children[1].kind == ExprKind::TupleLiteral) {

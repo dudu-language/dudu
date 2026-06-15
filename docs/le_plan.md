@@ -280,11 +280,12 @@ push. They are not release packaging work.
    `mat[row, col]` lowers for Dudu-native fixed arrays. Partial array indexing
    is type-aware and over-indexing is diagnosed. Fixed arrays work with
    `len(values)` and `&values[0]` for native pointer/count handoff.
-   One-dimensional fixed-array `start:end` slices produce `span[T]` views.
+   One-dimensional fixed-array `start:end`, `:end`, `start:`, and `:` slices
+   produce `span[T]` views.
    Dudu-native `@operator("[]")` read hooks and `@operator("[]=")` indexed
    assignment hooks work for library-style tensor wrappers, and indexed member
-   paths such as `self.values[i]` type-check. Multidimensional slices and
-   swizzling remain.
+   paths such as `self.values[i]` type-check. Step slices, multidimensional
+   slices, and swizzling remain.
 
 5. Native Dudu Generics
 

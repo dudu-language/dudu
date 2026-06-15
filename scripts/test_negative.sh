@@ -76,7 +76,7 @@ expect_fail bad_array_empty_shape_mismatch --emit-cpp "array literal shape misma
 expect_fail bad_array_element_type --emit-cpp "array literal element expects i32, got bool"
 expect_fail bad_array_row_to_scalar --emit-cpp "cannot assign array\\[i32\\]\\[2\\] to i32 without an explicit cast"
 expect_fail bad_array_too_many_indices --emit-cpp "too many indices for array: matrix"
-expect_fail bad_array_open_slice --emit-cpp "array slice requires explicit start and end: values"
+expect_fail bad_array_step_slice --emit-cpp "array slice step is not supported: values"
 expect_fail bad_array_matrix_slice --emit-cpp "array slicing requires one-dimensional fixed array: matrix"
 expect_fail bad_tensor_index_type --emit-cpp "argument 1 for tensor\\[\\] expects i32, got bool"
 expect_fail bad_tensor_index_set_index_type --emit-cpp "argument 1 for tensor\\[\\]= expects i32, got bool"

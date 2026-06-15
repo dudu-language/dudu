@@ -132,14 +132,17 @@ bool is_slice_expr(const Expr& expr) {
     return false;
 }
 
-bool has_open_slice_bound(const Expr& expr) {
+bool has_step_slice(const Expr& expr) {
     if (expr.kind == ExprKind::Slice) {
-        return expr.children.size() != 2 || expr.children[0].text.empty() ||
-               expr.children[1].text.empty();
+        for (const Expr& child : expr.children) {
+            if (child.kind == ExprKind::Slice || has_step_slice(child)) {
+                return true;
+            }
+        }
     }
     if (expr.kind == ExprKind::TupleLiteral) {
         for (const Expr& child : expr.children) {
-            if (has_open_slice_bound(child)) {
+            if (has_step_slice(child)) {
                 return true;
             }
         }
@@ -150,7 +153,7 @@ bool has_open_slice_bound(const Expr& expr) {
 std::string indexed_type_from_type_with_count(const Symbols& symbols,
                                               const SourceLocation& location,
                                               const std::string& raw_type, const size_t index_count,
-                                              const bool is_slice, const bool has_open_slice,
+                                              const bool is_slice, const bool has_step,
                                               const std::string& label) {
     std::string type = resolve_alias(symbols, raw_type);
     if (foreign_indexable_type(type)) {
@@ -180,9 +183,8 @@ std::string indexed_type_from_type_with_count(const Symbols& symbols,
                 throw CompileError(location,
                                    "array slicing requires one-dimensional fixed array: " + label);
             }
-            if (has_open_slice) {
-                throw CompileError(location,
-                                   "array slice requires explicit start and end: " + label);
+            if (has_step) {
+                throw CompileError(location, "array slice step is not supported: " + label);
             }
             return "span[" + explicit_array_element_type(type) + "]";
         }
@@ -245,10 +247,8 @@ std::string indexed_type_from_type(const Symbols& symbols, const SourceLocation&
     const size_t index_count = index_expr.empty() ? 1 : split_top_level_args(index_expr).size();
     const size_t colon = top_level_colon(index_expr);
     const bool has_slice = colon != std::string::npos;
-    const bool open_slice = has_slice && (trim(index_expr.substr(0, colon)).empty() ||
-                                          trim(index_expr.substr(colon + 1)).empty());
     return indexed_type_from_type_with_count(symbols, location, raw_type, index_count, has_slice,
-                                             open_slice, label);
+                                             false, label);
 }
 
 std::string indexed_type_from_type(const Symbols& symbols, const SourceLocation& location,
@@ -256,7 +256,7 @@ std::string indexed_type_from_type(const Symbols& symbols, const SourceLocation&
                                    const std::string& label) {
     return indexed_type_from_type_with_count(
         symbols, location, raw_type, index_count_from_expr(index_expr), is_slice_expr(index_expr),
-        has_open_slice_bound(index_expr), label);
+        has_step_slice(index_expr), label);
 }
 
 std::string iterable_value_type(const Symbols& symbols,
