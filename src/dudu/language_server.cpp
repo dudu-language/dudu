@@ -10,6 +10,7 @@
 #include "dudu/language_server_semantic_tokens.hpp"
 #include "dudu/language_server_support.hpp"
 #include "dudu/language_server_symbols.hpp"
+#include "dudu/language_server_symbol_results.hpp"
 #include "dudu/language_server_types.hpp"
 #include "dudu/language_server_workspace.hpp"
 #include "dudu/native_build.hpp"
@@ -330,51 +331,13 @@ class LanguageServer {
         if (doc == nullptr) {
             return "[]";
         }
-        std::ostringstream out;
-        out << "[";
-        const std::vector<Symbol> symbols = symbols_for_document(*doc);
-        for (size_t i = 0; i < symbols.size(); ++i) {
-            if (i > 0) {
-                out << ",";
-            }
-            out << symbol_json(symbols[i], *doc);
-        }
-        out << "]";
-        return out.str();
-    }
-
-    static std::string symbol_json(const Symbol& symbol, const Document& doc) {
-        std::ostringstream out;
-        out << "{\"name\":\"" << json_escape(symbol.name) << "\",\"kind\":" << symbol.kind
-            << ",\"detail\":\"" << json_escape(symbol.detail) << "\",\"location\":{\"uri\":\""
-            << json_escape(uri_for_location(symbol.location, doc))
-            << "\",\"range\":" << range_json(symbol.location) << "}}";
-        return out.str();
+        return document_symbols_json(*doc);
     }
 
     std::string workspace_symbol_result(const Json* params) const {
         const std::string query =
-            lower_copy(params == nullptr ? std::string{} : string_value(params->get("query")));
-        std::ostringstream out;
-        out << "[";
-        bool first = true;
-        const std::map<std::string, Document> workspace = workspace_documents(documents_);
-        for (const auto& [uri, doc] : workspace) {
-            (void)uri;
-            const bool include_native = documents_.contains(uri);
-            for (const Symbol& symbol : symbols_for_document(doc, include_native)) {
-                if (!query.empty() && lower_copy(symbol.name).find(query) == std::string::npos) {
-                    continue;
-                }
-                if (!first) {
-                    out << ",";
-                }
-                first = false;
-                out << symbol_json(symbol, doc);
-            }
-        }
-        out << "]";
-        return out.str();
+            params == nullptr ? std::string{} : string_value(params->get("query"));
+        return workspace_symbols_json(query, workspace_documents(documents_), documents_);
     }
 
     std::string definition_result(const Json* params) const {

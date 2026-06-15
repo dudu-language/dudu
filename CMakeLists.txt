@@ -45,6 +45,7 @@ add_library(dudu_frontend
     src/dudu/language_server_references.cpp
     src/dudu/language_server_semantic_tokens.cpp
     src/dudu/language_server_symbols.cpp
+    src/dudu/language_server_symbol_results.cpp
     src/dudu/language_server_support.cpp
     src/dudu/language_server_workspace.cpp
     src/dudu/lexer.cpp

@@ -878,6 +878,8 @@ Language-server internals have started the same split:
 - `language_server_symbols.cpp` owns source/native symbol collection and symbol
   detail strings shared by document symbols, definition, hover, completion, and
   signature help.
+- `language_server_symbol_results.cpp` owns document and workspace symbol LSP
+  response construction.
 - `language_server_references.cpp` owns find-references and rename edit
   construction.
 - `language_server_navigation.cpp` owns LSP source ranges, locations, symbol
