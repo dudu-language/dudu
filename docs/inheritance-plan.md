@@ -448,6 +448,11 @@ class AddNode(GradNode):
 The concrete representation may use intrusive refs, arenas, or library-owned
 handles instead of raw pointers, but the language should support the shape.
 
+Status: an executable autograd-style graph fixture covers an abstract base
+node, derived operation nodes, explicit base construction, derived-to-base raw
+pointers, virtual dispatch through base pointers, and method calls through
+pointer-typed member fields.
+
 ## Target Examples
 
 These examples are the suite we should make compile and run as the feature

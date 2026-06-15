@@ -5,6 +5,7 @@
 #include "dudu/cpp_lower.hpp"
 #include "dudu/sema_enum.hpp"
 #include "dudu/sema_function_type.hpp"
+#include "dudu/sema_methods.hpp"
 #include "dudu/source.hpp"
 
 #include <algorithm>
@@ -65,6 +66,22 @@ bool is_pointer_type(std::string type) {
 bool is_pointer_list_type(std::string type) {
     type = trim_copy(std::move(type));
     return starts_with(type, "list[*") && ends_with(type, "]");
+}
+
+bool expression_has_pointer_type(const Expr& expr, const std::map<std::string, std::string>& locals,
+                                 const Symbols* symbols) {
+    if (is_pointer_receiver_expr(expr, locals)) {
+        return true;
+    }
+    if (symbols == nullptr) {
+        return false;
+    }
+    const std::optional<std::string> path = member_path_from_expr(expr);
+    if (!path) {
+        return false;
+    }
+    const std::string type = member_path_type(*symbols, locals, nullptr, *path, "");
+    return is_pointer_type(type);
 }
 
 bool is_supported_swizzle(const std::string& swizzle) {
@@ -204,9 +221,10 @@ bool is_full_slice_expr(const Expr& expr) {
 }
 
 std::string lower_named_argument_call(const Expr& expr, const std::vector<std::string>& aliases,
-                                      const std::map<std::string, std::string>& locals) {
+                                      const std::map<std::string, std::string>& locals,
+                                      const Symbols* symbols) {
     std::ostringstream out;
-    out << lower_callee_expr(expr, aliases, locals) << "{";
+    out << lower_callee_expr(expr, aliases, locals, symbols) << "{";
     for (size_t i = 0; i < expr.children.size(); ++i) {
         if (i > 0) {
             out << ", ";
@@ -230,7 +248,8 @@ bool is_builtin_template_constructor(std::string_view name) {
 }
 
 std::string lower_callee_expr(const Expr& expr, const std::vector<std::string>& aliases,
-                              const std::map<std::string, std::string>& locals) {
+                              const std::map<std::string, std::string>& locals,
+                              const Symbols* symbols) {
     if (!expr.callee.empty()) {
         const Expr& callee = expr.callee.front();
         if (callee.kind == ExprKind::Member && callee.children.size() == 1 &&
@@ -239,6 +258,11 @@ std::string lower_callee_expr(const Expr& expr, const std::vector<std::string>& 
             if (const auto base = locals.find("super"); base != locals.end()) {
                 return base->second + "::" + callee.name;
             }
+        }
+        if (callee.kind == ExprKind::Member && callee.children.size() == 1 &&
+            expression_has_pointer_type(callee.children.front(), locals, symbols)) {
+            return lower_expr(callee.children.front(), aliases, locals, symbols) + "->" +
+                   callee.name;
         }
     }
     if (!expr.callee.empty()) {
@@ -422,7 +446,7 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
         }
     }
     if (has_named_argument_shape(expr.children)) {
-        return lower_named_argument_call(expr, aliases, locals);
+        return lower_named_argument_call(expr, aliases, locals, symbols);
     }
     const std::string callee_name = call_callee_text(expr);
     if (starts_with(callee_name, "*")) {
@@ -451,7 +475,7 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
         return lower_cpp_type(expr.name, aliases) + "(" +
                join_lowered_exprs(expr.children, aliases, locals, ", ", symbols) + ")";
     }
-    std::string callee = lower_callee_expr(expr, aliases, locals);
+    std::string callee = lower_callee_expr(expr, aliases, locals, symbols);
     if (ends_with(callee, ".append")) {
         callee.replace(callee.size() - 7, 7, ".push_back");
     }

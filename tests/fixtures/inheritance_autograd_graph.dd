@@ -1,0 +1,46 @@
+class GradNode:
+    out: *i32
+
+    def init(self, out: *i32):
+        self.out = out
+
+    @abstract
+    def backward(self, grad: i32):
+
+
+class LeafNode(GradNode):
+    def init(self, out: *i32):
+        super.init(out)
+
+    @override
+    def backward(self, grad: i32):
+        *self.out += grad
+
+
+class AddNode(GradNode):
+    left: *GradNode
+    right: *GradNode
+
+    def init(self, out: *i32, left: *GradNode, right: *GradNode):
+        super.init(out)
+        self.left = left
+        self.right = right
+
+    @override
+    def backward(self, grad: i32):
+        self.left.backward(grad)
+        self.right.backward(grad)
+
+
+def main() -> i32:
+    total: i32 = 0
+    left: *GradNode = new[LeafNode](&total)
+    right: *GradNode = new[LeafNode](&total)
+    root: *GradNode = new[AddNode](&total, left, right)
+
+    root.backward(21)
+
+    delete root
+    delete left
+    delete right
+    return total

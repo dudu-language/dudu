@@ -13,7 +13,8 @@ namespace dudu {
 
 bool is_builtin_template_constructor(std::string_view name);
 std::string lower_callee_expr(const Expr& expr, const std::vector<std::string>& aliases,
-                              const std::map<std::string, std::string>& locals);
+                              const std::map<std::string, std::string>& locals,
+                              const Symbols* symbols = nullptr);
 bool is_pointer_receiver_expr(const Expr& expr, const std::map<std::string, std::string>& locals);
 std::optional<std::string> lower_swizzle_expr(const Expr& expr,
                                               const std::vector<std::string>& aliases,

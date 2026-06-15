@@ -198,8 +198,8 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
             const std::string type = lower_cpp_type(expr.name + "[" + type_args + "]", aliases);
             return expr.children.empty() ? type + "{}" : type + "(" + lowered_call_args + ")";
         }
-        return lower_callee_expr(expr, aliases, locals) + "<" + lowered_template_args + ">(" +
-               lowered_call_args + ")";
+        return lower_callee_expr(expr, aliases, locals, symbols) + "<" + lowered_template_args +
+               ">(" + lowered_call_args + ")";
     }
     case ExprKind::Member:
         if (expr.children.size() == 1) {

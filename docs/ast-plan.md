@@ -239,6 +239,10 @@ Already structured:
 - C++ member expression emission lowers normal value receivers from parsed
   receiver nodes and applies namespace alias qualification directly, avoiding
   the full raw expression rewrite path for `player.field` and `std.sin` shapes
+- C++ call emission lowers parsed method calls on pointer-typed member
+  receivers such as `self.left.backward(...)` as `self.left->backward(...)`,
+  using the existing member-path type information instead of raw pointer-member
+  rewriting
 - integer and float literal parsing recognizes underscore separators, and
   integer literals recognize `0x`, `0b`, and `0o` prefixes so systems-style
   constants stay on the literal AST path
