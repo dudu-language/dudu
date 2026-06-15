@@ -1,0 +1,16 @@
+class Color:
+    r: i32
+    g: i32
+    b: i32
+    a: i32
+
+
+def make_color() -> Color:
+    return Color(10, 20, 30, 40)
+
+
+def main() -> i32:
+    value: Color = make_color().bgra
+    if value.r == 30 and value.g == 20 and value.b == 10 and value.a == 40:
+        return 42
+    return 1

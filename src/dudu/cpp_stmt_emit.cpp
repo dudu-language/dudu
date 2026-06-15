@@ -259,6 +259,37 @@ std::optional<std::string> lower_local_swizzle_expr(
     return out.str();
 }
 
+std::optional<std::string>
+lower_swizzle_expr(const Expr& expr, const std::vector<std::string>& aliases,
+                   const std::map<std::string, std::string>& locals) {
+    if (const auto local = lower_local_swizzle_expr(expr, aliases, locals)) {
+        return local;
+    }
+    if (expr.kind != ExprKind::Member || expr.children.size() != 1 ||
+        !is_supported_swizzle(expr.name)) {
+        return std::nullopt;
+    }
+    if (expr.children.front().kind == ExprKind::Name &&
+        locals.contains(expr.children.front().name)) {
+        return std::nullopt;
+    }
+    const std::string receiver = lower_expr(expr.children.front(), aliases, locals);
+    if (receiver.empty()) {
+        return std::nullopt;
+    }
+    std::ostringstream out;
+    out << "([&]() { auto&& __dudu_swizzle_value = " << receiver
+        << "; return std::remove_cvref_t<decltype(__dudu_swizzle_value)>{";
+    for (size_t i = 0; i < expr.name.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << "__dudu_swizzle_value." << expr.name[i];
+    }
+    out << "}; }())";
+    return out.str();
+}
+
 std::string unquoted_string_literal(std::string text) {
     text = trim_copy(std::move(text));
     if (text.size() >= 2 && ((text.front() == '"' && text.back() == '"') ||
@@ -542,7 +573,7 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
     }
     case ExprKind::Member:
         if (expr.children.size() == 1) {
-            if (const auto swizzle = lower_local_swizzle_expr(expr, aliases, locals)) {
+            if (const auto swizzle = lower_swizzle_expr(expr, aliases, locals)) {
                 return *swizzle;
             }
             if (is_pointer_receiver_expr(expr.children.front(), locals)) {

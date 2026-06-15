@@ -1499,6 +1499,9 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
             if (const auto field = field_type_for_type(scope.symbols, receiver_type, expr.name)) {
                 return *field;
             }
+            if (const auto swizzle = swizzle_type_for_type(scope.symbols, receiver_type, expr.name)) {
+                return *swizzle;
+            }
             if (foreign_cpp_type_name(resolve_alias(scope.symbols, receiver_type))) {
                 return "auto";
             }
