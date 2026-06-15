@@ -1006,6 +1006,7 @@ Dudu intentionally leaves out some compact Python expression forms:
 - set comprehensions
 - generator expressions
 - ternary conditional expressions
+- `with` context-manager statements
 
 These forms hide control flow, allocation, capture, or lifetime behavior inside
 expressions. Prefer named `def` declarations and explicit loops:

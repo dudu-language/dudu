@@ -80,6 +80,7 @@ Rejected Python expression sugar:
 - ternary conditional expressions
 - list, dict, and set comprehensions
 - generator expressions
+- `with` context-manager statements
 
 Use explicit statements and loops instead. This keeps allocation, capture,
 lifetime, and control flow visible in systems code.
