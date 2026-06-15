@@ -834,6 +834,9 @@ of letting them masquerade as normal function calls.
 The `CppEscape` expression node stores the extracted C++ body, so sema and C++
 expression emission consume the explicit escape payload instead of repeatedly
 reparsing the `cpp(...)` spelling.
+Statement-level `cpp(...)` nodes also store the extracted C++ body, so C++
+statement emission and build-flag validation consume the escape payload rather
+than rediscovering it from the statement text.
 
 Index expression C++ emission now lowers parsed base and index child
 expressions directly.

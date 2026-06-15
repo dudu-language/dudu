@@ -1,4 +1,5 @@
 #include "dudu/ast_parse_utils.hpp"
+#include "dudu/cpp_lower.hpp"
 
 #include <cctype>
 #include <string>
@@ -237,6 +238,9 @@ Stmt statement_from_text(std::string raw_text, std::string source_text, SourceLo
     switch (stmt.kind) {
     case StmtKind::Unsupported:
         stmt.unsupported_feature = std::string(unsupported_statement_feature(text));
+        break;
+    case StmtKind::CppEscape:
+        stmt.value = cpp_escape_body(std::string(text));
         break;
     case StmtKind::VarDecl:
         fill_var_decl(stmt, text);

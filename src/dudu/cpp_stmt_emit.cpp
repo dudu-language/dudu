@@ -9,8 +9,8 @@
 #include "dudu/cpp_pointer_members.hpp"
 #include "dudu/cpp_stmt_helpers.hpp"
 #include "dudu/cpp_stmt_types.hpp"
-#include "dudu/sema_enum.hpp"
 #include "dudu/sema_context.hpp"
+#include "dudu/sema_enum.hpp"
 #include "dudu/sema_function_type.hpp"
 #include "dudu/source.hpp"
 
@@ -43,8 +43,8 @@ std::string lower_declared_stmt_type(const Stmt& stmt, const std::string& effect
                                        : lower_cpp_type(effective_type, aliases);
 }
 
-void emit_cpp_escape(std::ostringstream& out, const std::string& text, int depth) {
-    std::istringstream body(cpp_escape_body(text));
+void emit_cpp_escape(std::ostringstream& out, const std::string& body_text, int depth) {
+    std::istringstream body(body_text);
     std::string line;
     while (std::getline(body, line)) {
         if (!trim_copy(line).empty()) {
@@ -63,11 +63,11 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                            const std::string& return_type,
                            const std::map<std::string, std::string>& function_returns,
                            const Symbols* symbols) {
-    const std::string text = trim_copy(stmt.text);
     if (stmt.kind == StmtKind::CppEscape) {
-        emit_cpp_escape(out, text, depth);
+        emit_cpp_escape(out, stmt.value, depth);
         return;
     }
+    const std::string text = trim_copy(stmt.text);
     if (stmt.kind == StmtKind::Pass) {
         out << indent(depth) << "(void)0;\n";
         return;
