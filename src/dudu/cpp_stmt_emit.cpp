@@ -1113,11 +1113,10 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         return;
     }
     if (stmt.kind == StmtKind::Match) {
-        if (stmt.condition_expr.kind == ExprKind::Name) {
-            const auto subject_local = locals.find(stmt.condition_expr.name);
-            const EnumDecl* en =
-                subject_local == locals.end() ? nullptr
-                                              : enum_decl_for_type(symbols, subject_local->second);
+        const std::string subject_type =
+            infer_emitted_local_type(stmt.condition_expr, locals, function_returns);
+        if (!subject_type.empty()) {
+            const EnumDecl* en = enum_decl_for_type(symbols, subject_type);
             if (en != nullptr && enum_has_payloads(*en)) {
                 const std::string subject = "__dudu_match_" +
                                             std::to_string(stmt.location.line) + "_" +
