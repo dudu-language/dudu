@@ -364,6 +364,30 @@ std::vector<Expr> index_arg_exprs(const Expr& index_expr) {
     return {index_expr};
 }
 
+bool is_full_slice_expr(const Expr& expr) {
+    return expr.kind == ExprKind::Slice && expr.children.size() == 2 &&
+           expr.children[0].text.empty() && expr.children[1].text.empty();
+}
+
+std::optional<std::string>
+lower_trailing_full_slice_expr(const Expr& base, const Expr& index,
+                               const std::vector<std::string>& aliases,
+                               const std::map<std::string, std::string>& locals,
+                               const Symbols* symbols) {
+    if (index.kind != ExprKind::TupleLiteral || index.children.empty() ||
+        !is_full_slice_expr(index.children.back())) {
+        return std::nullopt;
+    }
+    std::string row = lower_expr(base, aliases, locals, symbols);
+    for (size_t i = 0; i + 1 < index.children.size(); ++i) {
+        if (index.children[i].kind == ExprKind::Slice) {
+            return std::nullopt;
+        }
+        row += "[" + lower_expr(index.children[i], aliases, locals, symbols) + "]";
+    }
+    return "std::span(&(" + row + ")[0], (" + row + ").size())";
+}
+
 std::optional<std::string>
 lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& aliases,
                             const std::map<std::string, std::string>& locals,
@@ -615,6 +639,11 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
                 return "std::span(&(" + out + ")[" + start + "], (" + end + ") - (" + start + "))";
             }
             if (expr.children[1].kind == ExprKind::TupleLiteral) {
+                if (const auto slice =
+                        lower_trailing_full_slice_expr(expr.children[0], expr.children[1],
+                                                       aliases, locals, symbols)) {
+                    return *slice;
+                }
                 for (const Expr& index : expr.children[1].children) {
                     out += "[" + lower_expr(index, aliases, locals) + "]";
                 }

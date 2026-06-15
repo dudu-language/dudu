@@ -136,6 +136,23 @@ bool has_step_slice(const Expr& expr) {
     return false;
 }
 
+std::optional<size_t> trailing_full_slice_prefix_count(const Expr& expr) {
+    if (expr.kind != ExprKind::TupleLiteral || expr.children.empty()) {
+        return std::nullopt;
+    }
+    const Expr& tail = expr.children.back();
+    if (tail.kind != ExprKind::Slice || tail.children.size() != 2 ||
+        !tail.children[0].text.empty() || !tail.children[1].text.empty()) {
+        return std::nullopt;
+    }
+    for (size_t i = 0; i + 1 < expr.children.size(); ++i) {
+        if (is_slice_expr(expr.children[i])) {
+            return std::nullopt;
+        }
+    }
+    return expr.children.size() - 1;
+}
+
 std::string indexed_type_from_type_with_count(const Symbols& symbols,
                                               const SourceLocation& location,
                                               const std::string& raw_type, const size_t index_count,
@@ -240,6 +257,16 @@ std::string indexed_type_from_type(const Symbols& symbols, const SourceLocation&
 std::string indexed_type_from_type(const Symbols& symbols, const SourceLocation& location,
                                    const std::string& raw_type, const Expr& index_expr,
                                    const std::string& label) {
+    std::string type = resolve_alias(symbols, raw_type);
+    if (!has_step_slice(index_expr)) {
+        if (const std::vector<size_t> shape = explicit_array_shape(type); !shape.empty()) {
+            if (const auto prefix_count = trailing_full_slice_prefix_count(index_expr)) {
+                if (*prefix_count + 1 == shape.size()) {
+                    return "span[" + explicit_array_element_type(type) + "]";
+                }
+            }
+        }
+    }
     return indexed_type_from_type_with_count(
         symbols, location, raw_type, index_count_from_expr(index_expr), is_slice_expr(index_expr),
         has_step_slice(index_expr), label);

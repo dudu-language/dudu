@@ -107,6 +107,7 @@ expect_fail bad_array_row_to_scalar --emit-cpp "cannot assign array\\[i32\\]\\[2
 expect_fail bad_array_too_many_indices --emit-cpp "too many indices for array: matrix"
 expect_fail bad_array_step_slice --emit-cpp "array slice step is not supported: values"
 expect_fail bad_array_matrix_slice --emit-cpp "array slicing requires one-dimensional fixed array: matrix"
+expect_fail bad_array_column_slice --emit-cpp "array slicing requires one-dimensional fixed array: matrix"
 expect_fail bad_swizzle_width --emit-cpp "unknown field: value.xyx"
 expect_fail bad_swizzle_mixed_sets --emit-cpp "unknown field: color.rgxy"
 expect_fail bad_swizzle_stpq_mixed_sets --emit-cpp "unknown field: coord.stxy"
