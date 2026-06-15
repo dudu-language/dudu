@@ -1,6 +1,7 @@
 #include "dudu/sema_alloc.hpp"
 
 #include "dudu/cpp_lower.hpp"
+#include "dudu/sema_inheritance.hpp"
 
 namespace dudu {
 namespace {
@@ -36,6 +37,12 @@ std::optional<std::string> infer_allocation_call_with_count(const Symbols& symbo
         throw CompileError(*location,
                            "malloc expects 1 count argument, got " + std::to_string(arg_count));
     }
+    if (location != nullptr && name == "new") {
+        const std::vector<std::string> missing = unimplemented_abstract_methods(symbols, type);
+        if (!missing.empty()) {
+            throw CompileError(*location, "cannot allocate abstract class: " + type);
+        }
+    }
     return "*" + type;
 }
 
@@ -60,6 +67,12 @@ std::optional<std::string> infer_allocation_call_from_type_args(
     if (location != nullptr && callee == "malloc" && arg_count != 1) {
         throw CompileError(*location,
                            "malloc expects 1 count argument, got " + std::to_string(arg_count));
+    }
+    if (location != nullptr && callee == "new" && type_args.size() == 1) {
+        const std::vector<std::string> missing = unimplemented_abstract_methods(symbols, type);
+        if (!missing.empty()) {
+            throw CompileError(*location, "cannot allocate abstract class: " + type);
+        }
     }
     return "*" + type;
 }

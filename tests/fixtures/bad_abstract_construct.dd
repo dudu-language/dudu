@@ -1,0 +1,8 @@
+class Shape:
+    @abstract
+    def area(self) -> i32:
+
+
+def main() -> i32:
+    shape: Shape = Shape()
+    return shape.area()

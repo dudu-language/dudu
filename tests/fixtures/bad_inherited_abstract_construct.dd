@@ -1,0 +1,12 @@
+class Shape:
+    @abstract
+    def area(self) -> i32:
+
+
+class NamedShape(Shape):
+    name: str
+
+
+def main() -> i32:
+    shape: NamedShape = NamedShape("box")
+    return 0

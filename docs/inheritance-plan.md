@@ -211,8 +211,8 @@ class Sprite:
 Status: method-level `@abstract` is implemented for instance methods. It
 rejects method bodies, implies virtual dispatch, emits a C++ pure virtual
 method, and bodyless non-abstract methods are rejected. Explicit Dudu-source
-checks for constructing abstract classes and for missing inherited abstract
-implementations still remain.
+checks reject construction and `new[T]` allocation of classes with
+unimplemented abstract methods, including inherited abstract methods.
 
 ## Interface-Like Abstract Classes
 
@@ -558,6 +558,8 @@ field declaration where possible.
 - `super.method(...)` calls the base method: done for single-base classes.
 - `@virtual`, method-only `@abstract`, and `@override` validate method
   relationships.
+- Classes with unimplemented abstract methods cannot be constructed: done for
+  Dudu constructor calls and `new[T]` allocation.
 - Interface-like abstract classes compile to abstract C++ bases.
 - Classes may implement multiple interface-like bases.
 - target examples exist as fixtures or runnable examples.

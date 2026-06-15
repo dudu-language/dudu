@@ -1,6 +1,9 @@
 #include "dudu/sema_inheritance.hpp"
 
+#include <map>
+#include <sstream>
 #include <set>
+#include <string_view>
 
 namespace dudu {
 namespace {
@@ -42,6 +45,80 @@ bool derives_from_impl(const Symbols& symbols, const std::string& derived,
     return false;
 }
 
+bool has_decorator(const FunctionDecl& fn, std::string_view name) {
+    for (const Decorator& decorator : fn.decorators) {
+        if (trim(decorator.text) == name) {
+            return true;
+        }
+    }
+    return false;
+}
+
+FunctionSignature method_signature_without_self(const FunctionDecl& method) {
+    FunctionSignature signature;
+    const size_t first_param =
+        !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
+    for (size_t i = first_param; i < method.params.size(); ++i) {
+        signature.params.push_back(method.params[i].type);
+    }
+    signature.return_type = method.return_type.empty() ? "void" : method.return_type;
+    return signature;
+}
+
+std::string abstract_key(const FunctionDecl& method) {
+    const FunctionSignature signature = method_signature_without_self(method);
+    std::ostringstream out;
+    out << method.name << '(';
+    for (size_t i = 0; i < signature.params.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << signature.params[i];
+    }
+    out << ") -> " << signature.return_type;
+    return out.str();
+}
+
+std::vector<std::string> unresolved_abstract_methods_impl(const Symbols& symbols,
+                                                          const std::string& type,
+                                                          std::set<std::string>& seen) {
+    const std::string unwrapped = unwrap_type(symbols, type);
+    if (!seen.insert(unwrapped).second) {
+        return {};
+    }
+    const auto klass = symbols.classes.find(unwrapped);
+    if (klass == symbols.classes.end()) {
+        return {};
+    }
+
+    std::map<std::string, std::string> unresolved;
+    for (const std::string& base : klass->second->base_classes) {
+        std::set<std::string> branch_seen = seen;
+        for (const std::string& method : unresolved_abstract_methods_impl(symbols, base,
+                                                                          branch_seen)) {
+            unresolved[method] = method;
+        }
+    }
+
+    for (const FunctionDecl& method : klass->second->methods) {
+        if (method.params.empty() || method.params.front().name != "self") {
+            continue;
+        }
+        const std::string key = abstract_key(method);
+        if (has_decorator(method, "abstract")) {
+            unresolved[key] = key;
+        } else {
+            unresolved.erase(key);
+        }
+    }
+
+    std::vector<std::string> out;
+    for (const auto& [_, method] : unresolved) {
+        out.push_back(method);
+    }
+    return out;
+}
+
 } // namespace
 
 bool type_derives_from(const Symbols& symbols, const std::string& derived,
@@ -57,6 +134,16 @@ bool native_base_assignable(const Symbols& symbols, const std::string& expected,
     const std::string base = unwrap_type(symbols, expected);
     const std::string derived = unwrap_type(symbols, got);
     return base != derived && type_derives_from(symbols, derived, base);
+}
+
+std::vector<std::string> unimplemented_abstract_methods(const Symbols& symbols,
+                                                        const std::string& type) {
+    std::set<std::string> seen;
+    return unresolved_abstract_methods_impl(symbols, type, seen);
+}
+
+bool is_abstract_class_type(const Symbols& symbols, const std::string& type) {
+    return !unimplemented_abstract_methods(symbols, type).empty();
 }
 
 } // namespace dudu

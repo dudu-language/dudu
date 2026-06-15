@@ -166,6 +166,26 @@ std::string infer_super_call_ast(const FunctionScope& scope, const Expr& expr,
     return signature.return_type;
 }
 
+void reject_abstract_construction(const Symbols& symbols, const std::string& type,
+                                  const SourceLocation* location) {
+    if (location == nullptr) {
+        return;
+    }
+    const std::vector<std::string> missing = unimplemented_abstract_methods(symbols, type);
+    if (missing.empty()) {
+        return;
+    }
+    std::ostringstream out;
+    out << "cannot construct abstract class: " << type << "; missing ";
+    for (size_t i = 0; i < missing.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << missing[i];
+    }
+    fail(*location, out.str());
+}
+
 const EnumDecl* enum_decl_for_type(const Symbols& symbols, const std::string& type) {
     const std::string resolved = resolve_alias(symbols, type);
     const auto found = symbols.enums.find(resolved);
@@ -1042,6 +1062,7 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
         }
         const ClassDecl instantiated =
             instantiate_generic_class(*klass->second, type_args, callee);
+        reject_abstract_construction(scope.symbols, callee_base, location);
         check_constructor_args_ast(
             scope, instantiated, expr.children, location, infer_expr_ast,
             [&](const std::string& expected, const Expr& value, const std::string& got) {
@@ -1117,6 +1138,7 @@ std::string infer_constructor_call_ast(const FunctionScope& scope, const Expr& e
                                        const std::string& callee, const SourceLocation* location) {
     if (const auto klass = scope.symbols.classes.find(resolve_alias(scope.symbols, callee));
         klass != scope.symbols.classes.end()) {
+        reject_abstract_construction(scope.symbols, callee, location);
         check_constructor_args_ast(
             scope, *klass->second, expr.children, location, infer_expr_ast,
             [&](const std::string& expected, const Expr& value, const std::string& got) {
