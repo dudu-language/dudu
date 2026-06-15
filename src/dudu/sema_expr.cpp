@@ -212,10 +212,8 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
             }
             return variant->first->name;
         }
-        if (const std::optional<std::string> path = member_path_from_expr(expr)) {
-            if (const auto native = native_member_path_type(scope.symbols, *path)) {
-                return *native;
-            }
+        if (const auto native = native_member_expr_type(scope.symbols, expr)) {
+            return *native;
         }
         if (expr.children.size() == 1 && expr.children.front().kind == ExprKind::Name &&
             scope.locals.contains(expr.children.front().name)) {

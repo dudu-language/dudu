@@ -360,6 +360,9 @@ Already structured:
 - enum variant recognition for expression sema, codegen, and match patterns
   uses a shared structural `Name.Member` helper instead of duplicate dotted
   string reconstruction.
+- native import member type lookup walks parsed member expression nodes in
+  `sema_native` and converts to native table spelling only at the native
+  metadata boundary.
 - dereference assignment targets now type-check through the parsed operand
   expression, so normal Dudu code can assign through pointer fields such as
   `*self.out += 1` without using `cpp(...)`

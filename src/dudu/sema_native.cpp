@@ -1,11 +1,30 @@
 #include "dudu/sema_native.hpp"
 
+#include "dudu/ast_expr.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/native_signature_match.hpp"
 
 #include <optional>
 
 namespace dudu {
+
+namespace {
+
+std::optional<std::string> native_path_from_expr(const Expr& expr) {
+    if (expr.kind == ExprKind::Name && !expr.name.empty()) {
+        return expr.name;
+    }
+    if (expr.kind != ExprKind::Member || expr.children.size() != 1) {
+        return std::nullopt;
+    }
+    const std::optional<std::string> receiver = native_path_from_expr(expr.children.front());
+    if (!receiver) {
+        return std::nullopt;
+    }
+    return *receiver + "." + expr.name;
+}
+
+} // namespace
 
 bool foreign_cpp_type_name(const Symbols& symbols, const std::string& type) {
     return type.find('.') != std::string::npos || type.find("::") != std::string::npos ||
@@ -37,6 +56,14 @@ std::optional<std::string> native_member_path_type(const Symbols& symbols,
         return value->second;
     }
     return "auto";
+}
+
+std::optional<std::string> native_member_expr_type(const Symbols& symbols, const Expr& expr) {
+    const std::optional<std::string> path = native_path_from_expr(expr);
+    if (!path) {
+        return std::nullopt;
+    }
+    return native_member_path_type(symbols, *path);
 }
 
 std::optional<FunctionSignature> native_signature_for_call(const FunctionScope& scope,

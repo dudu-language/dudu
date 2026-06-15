@@ -276,7 +276,9 @@ push. They are not release packaging work.
    collection literal, tuple, template-call argument, swizzle, pointer-cast,
    and fixed-array literal children. Enum variant recognition now uses a shared
    structural expression helper in sema, codegen, and match patterns instead of
-   duplicate dotted-string reconstruction.
+   duplicate dotted-string reconstruction. Native import member type lookup now
+   walks parsed member expressions inside `sema_native` before crossing into
+   native metadata table spelling.
 
 3. OOP Surface Cleanup
 
