@@ -325,10 +325,12 @@ push. They are not release packaging work.
    arguments. Generic method type-argument arity is diagnosed in Dudu source.
    Generic bodies allow operators where both operands are the same visible
    generic type parameter, which supports target examples such as `Vec2[T]`.
-   Non-type parameters, inferred method type arguments, and richer instantiated
-   diagnostics remain. Multi-parameter generic functions and classes such as
-   `Pair[str, i32]` substitute receiver member types through the declared class
-   generic parameter names.
+   Dudu-native generic instantiation substitutes parsed type nodes for nested
+   templates, fixed arrays, wrappers, and function types. Non-type parameters,
+   inferred method type arguments, and richer instantiated diagnostics remain.
+   Multi-parameter generic functions and classes such as `Pair[str, i32]`
+   substitute receiver member types through the declared class generic
+   parameter names.
 
 6. Sum Types And Pattern Matching
 

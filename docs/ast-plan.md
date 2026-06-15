@@ -148,6 +148,10 @@ Already structured:
   local bracket-splitting logic
 - generic receiver template argument extraction reads parsed `TypeRef` template
   children instead of hand-slicing bracket text
+- Dudu-native generic class and function instantiation substitutes type
+  parameters through parsed `TypeRef` node reconstruction, covering nested
+  templates, fixed arrays, wrappers, and function types instead of replacing
+  identifiers inside raw type strings
 - fixed-array indexing and iteration recover `array[T][shape]` element types
   from parsed `TypeRef::FixedArray` nodes instead of hand-matching nested
   brackets in the type text

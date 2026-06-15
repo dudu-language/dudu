@@ -1,12 +1,11 @@
 #include "dudu/sema_generics.hpp"
 
 #include "dudu/ast_type.hpp"
-#include "dudu/cpp_lower.hpp"
 #include "dudu/sema_common.hpp"
 
 #include <algorithm>
-#include <cctype>
 #include <map>
+#include <optional>
 #include <sstream>
 #include <utility>
 
@@ -14,36 +13,98 @@ namespace dudu {
 
 namespace {
 
-bool is_identifier_char(char ch) {
-    return std::isalnum(static_cast<unsigned char>(ch)) != 0 || ch == '_';
-}
-
-std::string replace_type_parameter(std::string type, const std::string& from,
-                                   const std::string& to) {
-    if (from.empty() || to.empty()) {
-        return type;
-    }
-    size_t pos = type.find(from);
-    while (pos != std::string::npos) {
-        const bool left_ok = pos == 0 || !is_identifier_char(type[pos - 1]);
-        const size_t end = pos + from.size();
-        const bool right_ok = end == type.size() || !is_identifier_char(type[end]);
-        if (left_ok && right_ok) {
-            type.replace(pos, from.size(), to);
-            pos = type.find(from, pos + to.size());
-        } else {
-            pos = type.find(from, end);
+std::optional<size_t> generic_param_index(const std::vector<std::string>& params,
+                                          const std::string& name) {
+    for (size_t i = 0; i < params.size(); ++i) {
+        if (params[i] == name) {
+            return i;
         }
     }
-    return type;
+    return std::nullopt;
 }
 
-std::string substitute_generic_type(std::string type, const std::vector<std::string>& params,
-                                    const std::vector<TypeRef>& args) {
-    for (size_t i = 0; i < params.size() && i < args.size(); ++i) {
-        type = replace_type_parameter(std::move(type), params[i], args[i].text);
+std::string join_substituted_types(const std::vector<TypeRef>& types, size_t start,
+                                   const std::vector<std::string>& params,
+                                   const std::vector<TypeRef>& args);
+
+std::string substitute_generic_type_ref(const TypeRef& type, const std::vector<std::string>& params,
+                                        const std::vector<TypeRef>& args) {
+    const std::string name = trim(type.name.empty() ? type.text : type.name);
+    if (const auto index = generic_param_index(params, name); index && *index < args.size()) {
+        return trim(args[*index].text);
     }
-    return type;
+
+    switch (type.kind) {
+    case TypeKind::Pointer:
+        return type.children.empty()
+                   ? trim(type.text)
+                   : "*" + substitute_generic_type_ref(type.children[0], params, args);
+    case TypeKind::Reference:
+        return type.children.empty()
+                   ? trim(type.text)
+                   : "&" + substitute_generic_type_ref(type.children[0], params, args);
+    case TypeKind::Const:
+        return type.children.empty()
+                   ? trim(type.text)
+                   : "const[" + substitute_generic_type_ref(type.children[0], params, args) + "]";
+    case TypeKind::Volatile:
+        return type.children.empty()
+                   ? trim(type.text)
+                   : "volatile[" + substitute_generic_type_ref(type.children[0], params, args) +
+                         "]";
+    case TypeKind::Atomic:
+        return type.children.empty()
+                   ? trim(type.text)
+                   : "atomic[" + substitute_generic_type_ref(type.children[0], params, args) + "]";
+    case TypeKind::Device:
+        return type.children.empty()
+                   ? trim(type.text)
+                   : "device[" + substitute_generic_type_ref(type.children[0], params, args) + "]";
+    case TypeKind::Storage:
+        return type.children.empty()
+                   ? trim(type.text)
+                   : "storage[" + substitute_generic_type_ref(type.children[0], params, args) + "]";
+    case TypeKind::Shared:
+        return type.children.empty()
+                   ? trim(type.text)
+                   : "shared[" + substitute_generic_type_ref(type.children[0], params, args) + "]";
+    case TypeKind::Static:
+        return type.children.empty()
+                   ? trim(type.text)
+                   : "static[" + substitute_generic_type_ref(type.children[0], params, args) + "]";
+    case TypeKind::Template:
+        return trim(type.name) + "[" + join_substituted_types(type.children, 0, params, args) + "]";
+    case TypeKind::FixedArray:
+        return type.children.empty() ? trim(type.text)
+                                     : substitute_generic_type_ref(type.children[0], params, args) +
+                                           "[" + trim(type.value) + "]";
+    case TypeKind::Function: {
+        const std::string result =
+            type.children.empty() ? "void"
+                                  : substitute_generic_type_ref(type.children[0], params, args);
+        return "fn(" + join_substituted_types(type.children, 1, params, args) + ") -> " + result;
+    }
+    case TypeKind::Value:
+        return trim(type.value.empty() ? type.text : type.value);
+    case TypeKind::Named:
+    case TypeKind::Qualified:
+    case TypeKind::Unknown:
+        return trim(type.text);
+    }
+    return trim(type.text);
+}
+
+std::string join_substituted_types(const std::vector<TypeRef>& types, size_t start,
+                                   const std::vector<std::string>& params,
+                                   const std::vector<TypeRef>& args) {
+    std::ostringstream out;
+    for (size_t i = start; i < types.size(); ++i) {
+        if (i > start) {
+            out << ", ";
+        }
+        out << substitute_generic_type_ref(types[i], params, args);
+    }
+    return out.str();
 }
 
 bool generic_param_named(const std::vector<std::string>& params, const std::string& name) {
@@ -186,10 +247,13 @@ infer_generic_call_type_args(const FunctionScope& scope, const FunctionDecl& fn,
 FunctionSignature instantiate_generic_signature(const FunctionDecl& fn,
                                                 const std::vector<TypeRef>& args) {
     FunctionSignature signature;
-    signature.return_type = substitute_generic_type(
-        fn.return_type.empty() ? "void" : fn.return_type, fn.generic_params, args);
+    signature.return_type =
+        fn.return_type.empty()
+            ? "void"
+            : substitute_generic_type_ref(fn.return_type_ref, fn.generic_params, args);
     for (const ParamDecl& param : fn.params) {
-        signature.params.push_back(substitute_generic_type(param.type, fn.generic_params, args));
+        signature.params.push_back(
+            substitute_generic_type_ref(param.type_ref, fn.generic_params, args));
     }
     return signature;
 }
@@ -198,20 +262,26 @@ ClassDecl instantiate_generic_class(ClassDecl klass, const std::vector<TypeRef>&
                                     const std::string& instantiated_name) {
     klass.name = instantiated_name;
     for (FieldDecl& field : klass.fields) {
-        field.type = substitute_generic_type(std::move(field.type), klass.generic_params, args);
+        field.type = substitute_generic_type_ref(field.type_ref, klass.generic_params, args);
+        field.type_ref = parse_type_text(field.type, field.location);
     }
     for (ConstDecl& field : klass.static_fields) {
-        field.type = substitute_generic_type(std::move(field.type), klass.generic_params, args);
+        field.type = substitute_generic_type_ref(field.type_ref, klass.generic_params, args);
+        field.type_ref = parse_type_text(field.type, field.location);
     }
     for (ConstDecl& constant : klass.constants) {
-        constant.type =
-            substitute_generic_type(std::move(constant.type), klass.generic_params, args);
+        constant.type = substitute_generic_type_ref(constant.type_ref, klass.generic_params, args);
+        constant.type_ref = parse_type_text(constant.type, constant.location);
     }
     for (FunctionDecl& method : klass.methods) {
-        method.return_type =
-            substitute_generic_type(std::move(method.return_type), klass.generic_params, args);
+        if (!method.return_type.empty()) {
+            method.return_type =
+                substitute_generic_type_ref(method.return_type_ref, klass.generic_params, args);
+            method.return_type_ref = parse_type_text(method.return_type, method.location);
+        }
         for (ParamDecl& param : method.params) {
-            param.type = substitute_generic_type(std::move(param.type), klass.generic_params, args);
+            param.type = substitute_generic_type_ref(param.type_ref, klass.generic_params, args);
+            param.type_ref = parse_type_text(param.type, param.location);
         }
     }
     return klass;

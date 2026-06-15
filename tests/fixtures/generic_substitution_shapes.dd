@@ -1,0 +1,18 @@
+class Holder[T]:
+    values: array[T][2]
+
+    def first(self) -> T:
+        return self.values[0]
+
+    def apply(self, callback: fn(T) -> T) -> T:
+        return callback(self.values[1])
+
+
+def bump(value: i32) -> i32:
+    return value + 1
+
+
+def main() -> i32:
+    values: array[i32] = [20, 21]
+    holder: Holder[i32] = Holder[i32](values)
+    return holder.first() + holder.apply(bump)
