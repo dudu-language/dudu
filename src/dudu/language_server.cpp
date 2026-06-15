@@ -6,6 +6,7 @@
 #include "dudu/language_server_json.hpp"
 #include "dudu/language_server_semantic_tokens.hpp"
 #include "dudu/language_server_support.hpp"
+#include "dudu/language_server_symbols.hpp"
 #include "dudu/language_server_types.hpp"
 #include "dudu/native_build.hpp"
 #include "dudu/native_headers.hpp"
@@ -33,10 +34,6 @@
 
 namespace dudu {
 namespace {
-
-bool is_constructor_method_name(const std::string& name) {
-    return name == "init";
-}
 
 class LanguageServer {
   public:
@@ -324,147 +321,6 @@ class LanguageServer {
         return lines + 1;
     }
 
-    std::vector<Symbol> symbols_for(const Document& doc, bool include_native = true) const {
-        std::vector<Symbol> out;
-        try {
-            ModuleAst module = parse_source(doc.text, doc.path);
-            if (include_native) {
-                const ProjectConfig config = config_for_file(doc.path);
-                merge_native_header_types(module,
-                                          {.config = config, .source_dir = doc.path.parent_path()});
-            }
-            for (const ClassDecl& klass : module.classes) {
-                out.push_back({.name = klass.name,
-                               .detail = "class " + klass.name,
-                               .location = klass.location,
-                               .kind = 5});
-                for (const FieldDecl& field : klass.fields) {
-                    out.push_back({.name = field.name,
-                                   .detail = field.name + ": " + field.type,
-                                   .location = field.location,
-                                   .kind = 8});
-                }
-                for (const FunctionDecl& method : klass.methods) {
-                    out.push_back({.name = method.name,
-                                   .detail = function_detail(method),
-                                   .location = method.location,
-                                   .kind = is_constructor_method_name(method.name) ? 9 : 6});
-                }
-            }
-            for (const EnumDecl& en : module.enums) {
-                out.push_back({.name = en.name,
-                               .detail = "enum " + en.name,
-                               .location = en.location,
-                               .kind = 10});
-            }
-            for (const ConstDecl& constant : module.constants) {
-                out.push_back({.name = constant.name,
-                               .detail = constant.name + ": " + constant.type,
-                               .location = constant.location,
-                               .kind = 14});
-            }
-            for (const FunctionDecl& fn : module.functions) {
-                out.push_back({.name = fn.name,
-                               .detail = function_detail(fn),
-                               .location = fn.location,
-                               .kind = 12});
-            }
-            if (!include_native) {
-                return out;
-            }
-            for (const NativeTypeDecl& type : module.native_types) {
-                out.push_back(
-                    {.name = type.name,
-                     .detail = type.type.empty() ? "native type" : "native type = " + type.type,
-                     .location = type.location,
-                     .kind = 23});
-            }
-            for (const NativeValueDecl& value : module.native_values) {
-                out.push_back({.name = value.name,
-                               .detail = value.name + ": " + value.type,
-                               .location = value.location,
-                               .kind = 14});
-            }
-            for (const NativeMacroDecl& macro : module.native_macros) {
-                out.push_back({.name = macro.name,
-                               .detail = native_macro_detail(macro),
-                               .location = macro.location,
-                               .kind = macro.function_like ? 3 : 14});
-            }
-            for (const NativeFunctionDecl& fn : module.native_functions) {
-                out.push_back({.name = fn.name,
-                               .detail = native_function_detail(fn),
-                               .location = fn.location,
-                               .kind = 12});
-            }
-            for (const ClassDecl& klass : module.native_classes) {
-                out.push_back({.name = klass.name,
-                               .detail = "native class " + klass.name,
-                               .location = klass.location,
-                               .kind = 5});
-                for (const FunctionDecl& method : klass.methods) {
-                    out.push_back({.name = klass.name + "." + method.name,
-                                   .detail = function_detail(method),
-                                   .location = method.location,
-                                   .kind = is_constructor_method_name(method.name) ? 9 : 6});
-                }
-            }
-        } catch (const std::exception&) {
-        }
-        return out;
-    }
-
-    static std::string function_detail(const FunctionDecl& fn) {
-        std::ostringstream out;
-        out << "def " << fn.name << "(";
-        for (size_t i = 0; i < fn.params.size(); ++i) {
-            if (i > 0) {
-                out << ", ";
-            }
-            out << fn.params[i].name << ": " << fn.params[i].type;
-        }
-        out << ")";
-        if (!fn.return_type.empty()) {
-            out << " -> " << fn.return_type;
-        }
-        return out.str();
-    }
-
-    static std::string native_macro_detail(const NativeMacroDecl& macro) {
-        if (!macro.function_like) {
-            return "macro " + macro.name;
-        }
-        std::ostringstream out;
-        out << "macro " << macro.name << "(";
-        for (int i = 0; i < macro.arity; ++i) {
-            if (i > 0) {
-                out << ", ";
-            }
-            out << "arg" << i;
-        }
-        out << ")";
-        return out.str();
-    }
-
-    static std::string native_function_detail(const NativeFunctionDecl& fn) {
-        std::ostringstream out;
-        out << fn.name << "(";
-        for (size_t i = 0; i < fn.params.size(); ++i) {
-            if (i > 0) {
-                out << ", ";
-            }
-            out << fn.params[i];
-        }
-        if (fn.variadic) {
-            if (!fn.params.empty()) {
-                out << ", ";
-            }
-            out << "...";
-        }
-        out << ") -> " << fn.return_type;
-        return out.str();
-    }
-
     std::string document_symbol_result(const Json* params) const {
         const Document* doc = document_from_params(params);
         if (doc == nullptr) {
@@ -472,7 +328,7 @@ class LanguageServer {
         }
         std::ostringstream out;
         out << "[";
-        const std::vector<Symbol> symbols = symbols_for(*doc);
+        const std::vector<Symbol> symbols = symbols_for_document(*doc);
         for (size_t i = 0; i < symbols.size(); ++i) {
             if (i > 0) {
                 out << ",";
@@ -502,7 +358,7 @@ class LanguageServer {
         for (const auto& [uri, doc] : workspace) {
             (void)uri;
             const bool include_native = documents_.contains(uri);
-            for (const Symbol& symbol : symbols_for(doc, include_native)) {
+            for (const Symbol& symbol : symbols_for_document(doc, include_native)) {
                 if (!query.empty() && lower_copy(symbol.name).find(query) == std::string::npos) {
                     continue;
                 }
@@ -526,7 +382,7 @@ class LanguageServer {
             return *header;
         }
         const std::string word = symbol_at(*doc, params);
-        for (const Symbol& symbol : symbols_for(*doc)) {
+        for (const Symbol& symbol : symbols_for_document(*doc)) {
             if (symbol_matches(symbol.name, word)) {
                 std::ostringstream out;
                 out << "{\"uri\":\"" << json_escape(uri_for_location(symbol.location, *doc))
@@ -735,7 +591,7 @@ class LanguageServer {
                     .path = file,
                     .text = text,
                 };
-                for (const Symbol& symbol : symbols_for(imported, false)) {
+                for (const Symbol& symbol : symbols_for_document(imported, false)) {
                     if (symbol.name == import.imported_name) {
                         return location_json(uri_for_location(symbol.location, imported),
                                              range_json(symbol.location));
@@ -852,7 +708,7 @@ class LanguageServer {
             return "null";
         }
         const std::string word = symbol_at(*doc, params);
-        for (const Symbol& symbol : symbols_for(*doc)) {
+        for (const Symbol& symbol : symbols_for_document(*doc)) {
             if (symbol_matches(symbol.name, word)) {
                 std::string markdown = "`" + symbol.detail + "`";
                 if (uri_for_location(symbol.location, *doc) == doc->uri) {
@@ -953,7 +809,7 @@ class LanguageServer {
             for (const auto& [name, type] : local_types_before_cursor(*doc, params)) {
                 add(name, 6, name + ": " + type);
             }
-            for (const Symbol& symbol : symbols_for(*doc)) {
+            for (const Symbol& symbol : symbols_for_document(*doc)) {
                 add(symbol.name, completion_kind(symbol.kind), symbol.detail);
             }
         }
@@ -1078,7 +934,7 @@ class LanguageServer {
             std::ostringstream out;
             out << "[";
             bool first = true;
-            for (const Symbol& symbol : symbols_for(imported, false)) {
+            for (const Symbol& symbol : symbols_for_document(imported, false)) {
                 if (!first) {
                     out << ",";
                 }
@@ -1151,7 +1007,7 @@ class LanguageServer {
             return "{\"signatures\":[],\"activeSignature\":0,\"activeParameter\":0}";
         }
         std::vector<std::string> signatures;
-        for (const Symbol& symbol : symbols_for(*doc)) {
+        for (const Symbol& symbol : symbols_for_document(*doc)) {
             if (symbol_matches(symbol.name, call.name) && (symbol.kind == 12 || symbol.kind == 6)) {
                 signatures.push_back(symbol.detail);
             }
@@ -1622,7 +1478,7 @@ class LanguageServer {
             if (same_path(candidate.path, doc.path)) {
                 continue;
             }
-            for (const Symbol& symbol : symbols_for(candidate, false)) {
+            for (const Symbol& symbol : symbols_for_document(candidate, false)) {
                 if (symbol.name != name || !importable_symbol_kind(symbol.kind)) {
                     continue;
                 }
@@ -1771,7 +1627,7 @@ class LanguageServer {
         if (name.empty() || name.find('.') != std::string::npos) {
             return false;
         }
-        for (const Symbol& symbol : symbols_for(doc)) {
+        for (const Symbol& symbol : symbols_for_document(doc)) {
             if (symbol.name == name && std::filesystem::path(symbol.location.file) == doc.path &&
                 (symbol.kind == 5 || symbol.kind == 6 || symbol.kind == 8 || symbol.kind == 10 ||
                  symbol.kind == 12 || symbol.kind == 14)) {

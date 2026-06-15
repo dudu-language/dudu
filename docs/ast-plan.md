@@ -866,6 +866,9 @@ Language-server internals have started the same split:
   diagnostics, and diagnostic JSON encoding.
 - `language_server_support.cpp` owns project config discovery, file URI
   decoding, and shared source-text helpers.
+- `language_server_symbols.cpp` owns source/native symbol collection and symbol
+  detail strings shared by document symbols, definition, hover, completion, and
+  signature help.
 
 The remaining oversized frontend files are now outside the core semantic split:
 `language_server.cpp`.
