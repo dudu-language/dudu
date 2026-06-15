@@ -171,7 +171,7 @@ void check_expr(const std::set<std::string>& names, const Expr& expr) {
 }
 
 void check_stmt(const std::set<std::string>& names, const Stmt& stmt) {
-    if (stmt.kind == StmtKind::Unknown || stmt.kind == StmtKind::CppEscape) {
+    if (stmt.kind == StmtKind::CppEscape) {
         check_text(names, stmt.location, stmt.text);
         return;
     }
