@@ -826,7 +826,10 @@ The C++ emitter has been split by AST responsibility:
 - `cpp_stmt_helpers.cpp` owns indentation, escaped string literals, and
   build-time-condition detection.
 - `cpp_raw_escape.cpp` owns the explicit raw `cpp(...)` expression escape
-  transforms, keeping that compatibility boundary separate from AST lowering.
+  pipeline, keeping that compatibility boundary separate from AST lowering.
+- `cpp_raw_escape_templates.cpp` owns type/template-shaped rewrites inside
+  explicit `cpp(...)` expressions, such as `new[T]`, `sizeof[T]`,
+  `offsetof[T]`, dotted C++ template calls, and `list[T]()` construction.
 - `cpp_lower.cpp` now keeps only shared low-level lowering utilities such as
   namespace alias qualification, token-safe string helpers, and template
   argument lowering.

@@ -29,6 +29,7 @@ add_library(dudu_frontend
     src/dudu/cpp_match_emit.cpp
     src/dudu/cpp_pointer_members.cpp
     src/dudu/cpp_raw_escape.cpp
+    src/dudu/cpp_raw_escape_templates.cpp
     src/dudu/cpp_stmt_emit.cpp
     src/dudu/cpp_stmt_helpers.cpp
     src/dudu/cpp_stmt_types.cpp
