@@ -587,6 +587,10 @@ std::vector<std::string> tuple_types(const Symbols& symbols, std::string type) {
 Symbols collect_symbols(const ModuleAst& module) {
     Symbols symbols;
     for (const ImportDecl& import : module.imports) {
+        if ((import.kind == ImportKind::ForeignC || import.kind == ImportKind::ForeignCpp) &&
+            !import.alias.empty()) {
+            symbols.native_import_prefixes.insert(import.alias);
+        }
         if (import.kind == ImportKind::ForeignCpp && !import.alias.empty() &&
             import.module_path.find('/') == std::string::npos &&
             import.module_path.find('\\') == std::string::npos) {

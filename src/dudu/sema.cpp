@@ -1651,6 +1651,14 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
             if (!bare_nonlocal_receiver) {
                 const std::string receiver_type =
                     infer_expr_ast(scope, receiver_expr, use_location);
+                if ((receiver_type.empty() || receiver_type == "auto") &&
+                    receiver_expr.kind == ExprKind::Name &&
+                    scope.locals.contains(receiver_expr.name)) {
+                    for (const Expr& arg : expr.children) {
+                        (void)infer_expr_ast(scope, arg, use_location);
+                    }
+                    return "auto";
+                }
                 if (receiver_type.empty()) {
                     return {};
                 }
@@ -1707,6 +1715,18 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                 }
                 check_call_args_ast(scope, callee, signature, expr.children, use_location);
                 return signature.return_type;
+            }
+        }
+        if (method_dot != std::string::npos) {
+            const std::string prefix = trim(callee.substr(0, method_dot));
+            if (scope.symbols.native_import_prefixes.contains(prefix)) {
+                for (const Expr& arg : expr.children) {
+                    (void)infer_expr_ast(scope, arg, use_location);
+                }
+                return "auto";
+            }
+            if (use_location != nullptr) {
+                fail(*use_location, "unknown function: " + callee);
             }
         }
         return infer_expr(scope, expr.text, use_location);

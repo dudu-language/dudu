@@ -89,6 +89,12 @@ Already structured:
 - parsed method-call inference handles typed expression receivers such as
   `make_counter().get()`, including Dudu-source diagnostics for unknown
   methods, instead of falling back to raw expression inference
+- unresolved parsed dotted calls such as `missing.namespace()` are rejected
+  during semantic checking after native/header lookup misses instead of being
+  emitted as raw C++
+- imported native namespace calls without scanner metadata, and method calls on
+  local `auto` receivers from native APIs, stay on parsed call nodes and return
+  `auto` explicitly instead of using raw expression fallback
 - template-call semantic inference and template method lookup use the parsed
   callee expression when reconstructing lookup names
 - generated local type inference for call expressions derives callee lookup
