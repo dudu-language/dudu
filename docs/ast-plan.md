@@ -676,6 +676,9 @@ emission and semantic-token collection use those nodes.
 Simple integer constant evaluation for `static_assert` failure diagnostics uses
 parsed expression nodes for names, integer literals, unary minus, and binary
 arithmetic/comparisons instead of reparsing expression strings.
+Compile-time expression validation for calls to non-`@constexpr` Dudu functions
+walks parsed call/template-call nodes in constants and `static_assert`
+declarations instead of scanning raw expression strings.
 
 Dudu-native `@operator("[]")` semantic checks now consume parsed index
 argument nodes, including tuple-shaped multi-index expressions, instead of
