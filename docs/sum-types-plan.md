@@ -410,3 +410,9 @@ lowering and exhaustive `match` support are implemented, so the compiler does
 not silently emit an integer enum that drops payload data. Payload fields are
 validated for known types, duplicate named fields, and snake_case names before
 that lowering gate.
+
+Status: `match` and `case` statements parse into statement AST nodes instead of
+being recognized only by a raw unsupported-prefix check. The AST records the
+match subject, each case pattern, optional case guards, and parsed guard
+expressions. Semantic checking still rejects pattern matching before lowering
+and exhaustiveness analysis are complete.

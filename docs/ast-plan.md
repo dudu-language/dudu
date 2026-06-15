@@ -256,6 +256,8 @@ Required statement nodes:
 - `CompoundAssignStmt`
 - `ReturnStmt`
 - `IfStmt`
+- `MatchStmt`
+- `CaseStmt`
 - `WhileStmt`
 - `ForStmt`
 - `BreakStmt`
@@ -655,6 +657,12 @@ children instead of raw literal text.
 Bare comma expressions now parse as tuple literals, including Python-style
 multi-value returns. The shared AST comma splitter is quote-aware so commas
 inside string literals do not create phantom tuple elements.
+
+`match` and `case` statements now have explicit `StmtKind` values. The parser
+stores the match subject, case pattern text, optional guards, parsed subject
+expressions, parsed pattern expressions for simple forms, and parsed guard
+expressions. Pattern matching still stops in the unsupported-feature pass, so
+the compiler cannot lower a half-implemented match.
 
 ## Acceptance
 

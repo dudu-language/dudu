@@ -80,6 +80,8 @@ enum class StmtKind {
     If,
     Elif,
     Else,
+    Match,
+    Case,
     While,
     For,
     Break,
@@ -158,12 +160,16 @@ struct Stmt {
     std::string condition;
     std::string message;
     std::string iterable;
+    std::string pattern;
+    std::string guard;
     Expr expr;
     Expr value_expr;
     Expr target_expr;
     Expr condition_expr;
     Expr message_expr;
     Expr iterable_expr;
+    Expr pattern_expr;
+    Expr guard_expr;
     std::vector<Stmt> children;
     SourceLocation location;
     SourceRange range;

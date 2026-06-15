@@ -122,7 +122,6 @@ void check_statement_prefix(const Stmt& stmt) {
         UnsupportedPrefix{"del", "dynamic deletion"},
         UnsupportedPrefix{"import", "local imports"},
         UnsupportedPrefix{"from", "local imports"},
-        UnsupportedPrefix{"match", "pattern matching"},
     };
     for (const UnsupportedPrefix& prefix : prefixes) {
         if (starts_statement(text, prefix.prefix)) {
@@ -134,6 +133,9 @@ void check_statement_prefix(const Stmt& stmt) {
 
 void check_statement(const Stmt& stmt) {
     check_statement_prefix(stmt);
+    if (stmt.kind == StmtKind::Match || stmt.kind == StmtKind::Case) {
+        throw CompileError(stmt.location, "unsupported Python feature: pattern matching");
+    }
     if (stmt.kind == StmtKind::Unknown) {
         check_unsupported_text(stmt.location, trim_copy(stmt.text));
     } else {
@@ -143,6 +145,8 @@ void check_statement(const Stmt& stmt) {
         check_expr(stmt.condition_expr);
         check_expr(stmt.message_expr);
         check_expr(stmt.iterable_expr);
+        check_expr(stmt.pattern_expr);
+        check_expr(stmt.guard_expr);
     }
     for (const Stmt& child : stmt.children) {
         check_statement(child);

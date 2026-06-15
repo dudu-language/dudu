@@ -719,6 +719,17 @@ void fill_for(Stmt& stmt, std::string_view text) {
     stmt.iterable = strip_trailing_colon(header.substr(in_pos + 2));
 }
 
+void fill_case(Stmt& stmt, std::string_view text) {
+    std::string header = strip_trailing_colon(trim_view(text).substr(4));
+    const size_t guard_pos = find_top_level_word(header, "if");
+    if (guard_pos == std::string_view::npos) {
+        stmt.pattern = trim_string(header);
+        return;
+    }
+    stmt.pattern = trim_string(std::string_view(header).substr(0, guard_pos));
+    stmt.guard = trim_string(std::string_view(header).substr(guard_pos + 2));
+}
+
 void fill_except(Stmt& stmt, std::string_view text) {
     const std::string header = strip_trailing_colon(text.substr(6));
     if (header.empty()) {
@@ -800,6 +811,10 @@ std::string_view statement_kind_name(StmtKind kind) {
         return "elif";
     case StmtKind::Else:
         return "else";
+    case StmtKind::Match:
+        return "match";
+    case StmtKind::Case:
+        return "case";
     case StmtKind::While:
         return "while";
     case StmtKind::For:
@@ -1246,6 +1261,12 @@ StmtKind classify_statement_text(std::string_view text) {
     if (starts_keyword(text, "else")) {
         return StmtKind::Else;
     }
+    if (starts_keyword(text, "match")) {
+        return StmtKind::Match;
+    }
+    if (starts_keyword(text, "case")) {
+        return StmtKind::Case;
+    }
     if (starts_keyword(text, "while")) {
         return StmtKind::While;
     }
@@ -1339,6 +1360,18 @@ Stmt statement_from_text(std::string raw_text, SourceLocation location, SourceRa
         fill_condition(stmt, text, "elif");
         stmt.condition_expr = parse_expr_text(
             stmt.condition, location_for_piece(location, stmt.text, stmt.condition));
+        break;
+    case StmtKind::Match:
+        fill_condition(stmt, text, "match");
+        stmt.condition_expr = parse_expr_text(
+            stmt.condition, location_for_piece(location, stmt.text, stmt.condition));
+        break;
+    case StmtKind::Case:
+        fill_case(stmt, text);
+        stmt.pattern_expr =
+            parse_expr_text(stmt.pattern, location_for_piece(location, stmt.text, stmt.pattern));
+        stmt.guard_expr =
+            parse_expr_text(stmt.guard, location_for_piece(location, stmt.text, stmt.guard));
         break;
     case StmtKind::While:
         fill_condition(stmt, text, "while");

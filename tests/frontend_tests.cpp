@@ -670,16 +670,15 @@ void test_generic_decl_ast_shape() {
 }
 
 void test_payload_enum_ast_shape() {
-    const dudu::ModuleAst module =
-        dudu::parse_source("enum Message:\n"
-                           "    Quit\n"
-                           "\n"
-                           "    Move:\n"
-                           "        x: i32\n"
-                           "        y: i32\n"
-                           "\n"
-                           "    Write(str)\n",
-                           "payload_enum_shape.dd");
+    const dudu::ModuleAst module = dudu::parse_source("enum Message:\n"
+                                                      "    Quit\n"
+                                                      "\n"
+                                                      "    Move:\n"
+                                                      "        x: i32\n"
+                                                      "        y: i32\n"
+                                                      "\n"
+                                                      "    Write(str)\n",
+                                                      "payload_enum_shape.dd");
     assert(module.enums.size() == 1);
     const dudu::EnumDecl& message = module.enums[0];
     assert(message.values.size() == 3);
@@ -695,6 +694,47 @@ void test_payload_enum_ast_shape() {
     assert(message.values[2].payload_fields.size() == 1);
     assert(message.values[2].payload_fields[0].name == "_0");
     assert(message.values[2].payload_fields[0].type == "str");
+}
+
+void test_match_case_ast_shape() {
+    const dudu::ModuleAst module = dudu::parse_source("def handle(msg: Message) -> i32:\n"
+                                                      "    match msg:\n"
+                                                      "        case Message.Quit:\n"
+                                                      "            return 0\n"
+                                                      "        case Message.Move(x, y) if x > 0:\n"
+                                                      "            return y\n"
+                                                      "        case _:\n"
+                                                      "            return 1\n",
+                                                      "match_case_shape.dd");
+    assert(module.functions.size() == 1);
+    const dudu::FunctionDecl& handle = module.functions.front();
+    assert(handle.statements.size() == 1);
+    const dudu::Stmt& match = handle.statements[0];
+    assert(match.kind == dudu::StmtKind::Match);
+    assert(match.condition == "msg");
+    assert(match.condition_expr.kind == dudu::ExprKind::Name);
+    assert(match.children.size() == 3);
+
+    const dudu::Stmt& quit = match.children[0];
+    assert(quit.kind == dudu::StmtKind::Case);
+    assert(quit.pattern == "Message.Quit");
+    assert(quit.pattern_expr.kind == dudu::ExprKind::Member);
+    assert(quit.children.size() == 1);
+    assert(quit.children[0].kind == dudu::StmtKind::Return);
+
+    const dudu::Stmt& move = match.children[1];
+    assert(move.kind == dudu::StmtKind::Case);
+    assert(move.pattern == "Message.Move(x, y)");
+    assert(move.guard == "x > 0");
+    assert(move.pattern_expr.kind == dudu::ExprKind::Call);
+    assert(move.guard_expr.kind == dudu::ExprKind::Binary);
+    assert(move.guard_expr.op == ">");
+
+    const dudu::Stmt& wildcard = match.children[2];
+    assert(wildcard.kind == dudu::StmtKind::Case);
+    assert(wildcard.pattern == "_");
+    assert(wildcard.guard.empty());
+    assert(wildcard.pattern_expr.kind == dudu::ExprKind::Name);
 }
 
 void test_formatter() {
@@ -1113,6 +1153,7 @@ int main() {
         test_type_ast_shape();
         test_generic_decl_ast_shape();
         test_payload_enum_ast_shape();
+        test_match_case_ast_shape();
         test_formatter();
         test_typed_for_emission();
         test_class_field_defaults_and_static_fields();
