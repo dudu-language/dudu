@@ -79,7 +79,7 @@ Status: Dudu parses Python-style base lists, validates base type names and
 duplicate bases, emits native classes as C++ public inheritance, orders base
 classes before derived classes in generated C++, and resolves inherited fields
 and methods for normal member access. Base constructor calls, `super`, and
-override validation remain separate inheritance work.
+the deeper inheritance rules remain separate inheritance work.
 
 ## Constructors
 
@@ -139,6 +139,10 @@ matching base method, it is an error.
 
 For methods that intentionally introduce a new method, omit `@override`.
 
+Status: method-level `@override` is implemented for Dudu-native bases. It
+requires a matching base method, matching parameter and return types after
+`self`, and a base target marked `@virtual` or `@abstract`.
+
 ## Virtual Methods
 
 Use an explicit decorator when dynamic dispatch is wanted:
@@ -159,6 +163,9 @@ class Player(Entity):
 
 Static dispatch remains the default. This keeps value-type systems code cheap
 unless the author asks for a vtable.
+
+Status: method-level `@virtual` is implemented for instance methods and lowers
+to a C++ virtual method.
 
 ## Abstract Methods
 
@@ -200,6 +207,12 @@ A bodyless method without `@abstract` is an error:
 class Sprite:
     def draw(self, canvas: &Canvas)  # error: add @abstract or provide a body
 ```
+
+Status: method-level `@abstract` is implemented for instance methods. It
+rejects method bodies, implies virtual dispatch, emits a C++ pure virtual
+method, and bodyless non-abstract methods are rejected. Explicit Dudu-source
+checks for constructing abstract classes and for missing inherited abstract
+implementations still remain.
 
 ## Interface-Like Abstract Classes
 

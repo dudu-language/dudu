@@ -88,6 +88,15 @@ bool class_has_decorator(const ClassDecl& klass, std::string_view name) {
     return false;
 }
 
+bool method_has_decorator(const FunctionDecl& method, std::string_view name) {
+    for (const Decorator& decorator : method.decorators) {
+        if (trim_copy(decorator.text) == name) {
+            return true;
+        }
+    }
+    return false;
+}
+
 std::string function_decorator_arg(const FunctionDecl& fn, std::string_view name) {
     const std::string prefix = std::string(name) + "(";
     for (const Decorator& decorator : fn.decorators) {
@@ -197,6 +206,10 @@ void emit_method(std::ostringstream& out, const std::string& class_name, const F
         if (first_param == 0) {
             out << "static ";
         }
+        if (first_param == 1 &&
+            (method_has_decorator(method, "virtual") || method_has_decorator(method, "abstract"))) {
+            out << "virtual ";
+        }
         const std::string lowered_name = operator_name(method);
         if (lowered_name == "operator bool") {
             out << "explicit " << lowered_name << '(';
@@ -210,7 +223,15 @@ void emit_method(std::ostringstream& out, const std::string& class_name, const F
         }
         out << lower_cpp_type(method.params[i].type_ref, aliases) << ' ' << method.params[i].name;
     }
-    out << ") {\n";
+    out << ")";
+    if (method_has_decorator(method, "override")) {
+        out << " override";
+    }
+    if (method_has_decorator(method, "abstract")) {
+        out << " = 0;\n";
+        return;
+    }
+    out << " {\n";
     std::map<std::string, std::string> locals;
     locals["class"] = class_name;
     if (first_param == 1) {

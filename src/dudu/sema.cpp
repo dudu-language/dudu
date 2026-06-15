@@ -80,6 +80,15 @@ bool is_array_literal(const Expr& expr) {
     return expr.kind == ExprKind::ListLiteral;
 }
 
+bool function_has_decorator(const FunctionDecl& fn, std::string_view name) {
+    for (const Decorator& decorator : fn.decorators) {
+        if (trim(decorator.text) == name) {
+            return true;
+        }
+    }
+    return false;
+}
+
 const EnumDecl* enum_decl_for_type(const Symbols& symbols, const std::string& type) {
     const std::string resolved = resolve_alias(symbols, type);
     const auto found = symbols.enums.find(resolved);
@@ -1939,6 +1948,9 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols) {
     }
     for (const ClassDecl& klass : module.classes) {
         for (const FunctionDecl& method : klass.methods) {
+            if (function_has_decorator(method, "abstract")) {
+                continue;
+            }
             Symbols method_symbols = with_generic_params(symbols, klass.generic_params);
             method_symbols = with_generic_params(method_symbols, method.generic_params);
             FunctionScope scope{method_symbols};

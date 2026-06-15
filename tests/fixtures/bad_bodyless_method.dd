@@ -1,0 +1,2 @@
+class Shape:
+    def area(self) -> i32:

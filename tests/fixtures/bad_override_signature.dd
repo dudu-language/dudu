@@ -1,0 +1,10 @@
+class Shape:
+    @virtual
+    def area(self) -> i32:
+        return 0
+
+
+class Square(Shape):
+    @override
+    def area(self) -> bool:
+        return True

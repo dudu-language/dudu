@@ -1,0 +1,9 @@
+class Shape:
+    def area(self) -> i32:
+        return 0
+
+
+class Square(Shape):
+    @override
+    def area(self) -> i32:
+        return 1

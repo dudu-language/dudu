@@ -337,9 +337,12 @@ push. They are not release packaging work.
 
    Status: native Dudu base lists parse and validate, generated C++ emits
    public inheritance with base classes ordered before derived classes, and
-   inherited fields/methods are visible to member access. `super`, constructors
-   across bases, `@abstract`, `@virtual`, `@override`, and strict multiple
-   inheritance rules remain.
+   inherited fields/methods are visible to member access. Method-level
+   `@abstract`, `@virtual`, and `@override` are implemented with override
+   target/signature diagnostics and pure-virtual lowering. `super`,
+   constructors across bases, abstract-class construction checks, inherited
+   abstract implementation checks, virtual destructor policy, and strict
+   multiple inheritance rules remain.
 
 8. Macro Surface Prerequisites
 
@@ -421,4 +424,7 @@ push. They are not release packaging work.
 
    Specific examples to audit include old dunder-style operator spellings,
    wrapper workarounds that were replaced by header awareness, and any hidden
-   string-lowering shortcuts that bypass the real AST/sema model.
+   string-lowering shortcuts that bypass the real AST/sema model. Explicit
+   user escape hatches such as `cpp(...)` can remain, but compiler-internal raw
+   string fallbacks should disappear as AST coverage reaches the corresponding
+   language forms.

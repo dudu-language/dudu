@@ -1,0 +1,10 @@
+class Entity:
+    @virtual
+    def update(self):
+        pass
+
+
+class Player(Entity):
+    @override
+    def draw(self):
+        pass

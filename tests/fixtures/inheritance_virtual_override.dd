@@ -1,0 +1,18 @@
+class Shape:
+    @virtual
+    def area(self) -> i32:
+        return 0
+
+
+class Square(Shape):
+    side: i32
+
+    @override
+    def area(self) -> i32:
+        return self.side * self.side
+
+
+def main() -> i32:
+    square: Square = Square()
+    square.side = 6
+    return square.area() + 6

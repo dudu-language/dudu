@@ -64,6 +64,44 @@ bool is_test_decorator(const FunctionDecl& fn) {
     return false;
 }
 
+bool is_virtual_like(const FunctionDecl& fn) {
+    return has_decorator(fn, "virtual") || has_decorator(fn, "abstract");
+}
+
+FunctionSignature method_signature_without_self(const FunctionDecl& method) {
+    FunctionSignature signature;
+    const size_t first_param =
+        !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
+    for (size_t i = first_param; i < method.params.size(); ++i) {
+        signature.params.push_back(method.params[i].type);
+    }
+    signature.return_type = method.return_type.empty() ? "void" : method.return_type;
+    return signature;
+}
+
+const FunctionDecl* find_method_decl(const Symbols& symbols, const std::string& type,
+                                     const std::string& name) {
+    const auto klass = symbols.classes.find(base_type(type));
+    if (klass == symbols.classes.end()) {
+        return nullptr;
+    }
+    for (const FunctionDecl& method : klass->second->methods) {
+        if (method.name == name) {
+            return &method;
+        }
+    }
+    for (const std::string& base : klass->second->base_classes) {
+        if (const FunctionDecl* method = find_method_decl(symbols, base, name)) {
+            return method;
+        }
+    }
+    return nullptr;
+}
+
+bool same_signature(const FunctionSignature& a, const FunctionSignature& b) {
+    return a.return_type == b.return_type && a.params == b.params;
+}
+
 std::string decorator_arg(const Decorator& decorator, std::string_view name) {
     const std::string text = trim(decorator.text);
     const std::string prefix = std::string(name) + "(";
@@ -197,6 +235,7 @@ void check_function_decorator(const ModuleAst& module, const Decorator& decorato
     const std::string text = trim(decorator.text);
     if (text == "inline" || text == "constexpr" || text == "extern_c" || text == "cuda.global" ||
         text == "cuda.device" || text == "cuda.host" || text == "shader.compute" ||
+        text == "virtual" || text == "override" || text == "abstract" ||
         decorator_is_call(text, "operator") || text == "test" || text == "test.ignore" ||
         text == "test.should_panic" || decorator_is_call(text, "test.should_panic") ||
         decorator_is_call(text, "workgroup_size") || decorator_is_call(text, "section")) {
@@ -544,6 +583,18 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                 fail(method.location, "duplicate class member: " + method.name);
             }
             const bool is_static = method.params.empty() || method.params.front().name != "self";
+            const bool is_abstract = has_decorator(method, "abstract");
+            const bool is_virtual = has_decorator(method, "virtual");
+            const bool is_override = has_decorator(method, "override");
+            if ((is_abstract || is_virtual || is_override) && is_static) {
+                fail(method.location, "inheritance method decorators require self");
+            }
+            if (is_abstract && !method.statements.empty()) {
+                fail(method.location, "@abstract methods cannot have a body");
+            }
+            if (!is_abstract && method.statements.empty()) {
+                fail(method.location, "bodyless method requires @abstract: " + method.name);
+            }
             if ((is_constructor_method(method) || is_destructor_method(method)) &&
                 (method.params.empty() || method.params.front().name != "self")) {
                 fail(method.location, method.name + " requires self parameter");
@@ -588,6 +639,29 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                     fail(method.location, method.name + " cannot declare a return type");
                 }
             }
+            if (is_override) {
+                const FunctionDecl* base_method = nullptr;
+                for (const std::string& base : klass.base_classes) {
+                    base_method = find_method_decl(symbols, base, method.name);
+                    if (base_method != nullptr) {
+                        break;
+                    }
+                }
+                if (base_method == nullptr) {
+                    fail(method.location, "@override method has no matching base method: " +
+                                              klass.name + "." + method.name);
+                }
+                if (!same_signature(method_signature_without_self(method),
+                                    method_signature_without_self(*base_method))) {
+                    fail(method.location, "@override signature does not match base method: " +
+                                              klass.name + "." + method.name);
+                }
+                if (!is_virtual_like(*base_method)) {
+                    fail(method.location,
+                         "@override target must be @virtual or @abstract: " + klass.name + "." +
+                             method.name);
+                }
+            }
             for (const Decorator& decorator : method.decorators) {
                 check_function_decorator(module, decorator);
             }
@@ -618,6 +692,10 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
         const Symbols function_symbols = with_generic_params(symbols, fn.generic_params);
         for (const Decorator& decorator : fn.decorators) {
             check_function_decorator(module, decorator);
+        }
+        if (has_decorator(fn, "virtual") || has_decorator(fn, "override") ||
+            has_decorator(fn, "abstract")) {
+            fail(fn.location, "inheritance method decorators are only valid on methods");
         }
         if (has_decorator(fn, "extern_c")) {
             check_extern_c_signature(fn);
