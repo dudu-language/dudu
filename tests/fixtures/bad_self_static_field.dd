@@ -1,0 +1,10 @@
+class Counter:
+    count: static[i32] = 0
+
+    def value(self) -> i32:
+        return self.count
+
+
+def main() -> i32:
+    counter: Counter = Counter()
+    return counter.value()
