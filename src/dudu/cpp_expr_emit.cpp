@@ -140,7 +140,7 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
     case ExprKind::StringLiteral:
         return expr.text;
     case ExprKind::Unary:
-        if (const auto pointer_cast = lower_pointer_cast_expr(expr, aliases, locals)) {
+        if (const auto pointer_cast = lower_pointer_cast_expr(expr, aliases, locals, symbols)) {
             return *pointer_cast;
         }
         if (expr.children.size() == 1) {
@@ -171,7 +171,8 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
         }
         const std::string lowered_template_args =
             join_lowered_type_args(expr.template_type_args, aliases);
-        const std::string lowered_call_args = join_lowered_exprs(expr.children, aliases, locals);
+        const std::string lowered_call_args =
+            join_lowered_exprs(expr.children, aliases, locals, ", ", symbols);
         if (expr.name == "new") {
             return "new " + lowered_template_args + "(" + lowered_call_args + ")";
         }
@@ -191,7 +192,7 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
         }
         if (expr.name == "offsetof" && expr.children.size() == 1) {
             return "offsetof(" + lowered_template_args + ", " +
-                   lower_offsetof_field(expr.children.front(), aliases, locals) + ")";
+                   lower_offsetof_field(expr.children.front(), aliases, locals, symbols) + ")";
         }
         if (is_builtin_template_constructor(expr.name)) {
             const std::string type_args = join_type_arg_texts(expr.template_type_args);
@@ -209,7 +210,7 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
                                                           aliases, locals, symbols);
                 }
             }
-            if (const auto swizzle = lower_swizzle_expr(expr, aliases, locals)) {
+            if (const auto swizzle = lower_swizzle_expr(expr, aliases, locals, symbols)) {
                 return *swizzle;
             }
             if (is_pointer_receiver_expr(expr.children.front(), locals)) {
@@ -244,7 +245,7 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
     case ExprKind::Slice:
         throw CompileError(expr.location, "slice expression must be used inside an index");
     case ExprKind::DictLiteral:
-        return "{" + join_lowered_exprs(expr.children, aliases, locals) + "}";
+        return "{" + join_lowered_exprs(expr.children, aliases, locals, ", ", symbols) + "}";
     case ExprKind::Index:
         if (expr.children.size() == 2) {
             std::string out = lower_expr(expr.children[0], aliases, locals, symbols);
@@ -274,9 +275,9 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
         break;
     case ExprKind::ListLiteral:
     case ExprKind::SetLiteral:
-        return "{" + join_lowered_exprs(expr.children, aliases, locals) + "}";
+        return "{" + join_lowered_exprs(expr.children, aliases, locals, ", ", symbols) + "}";
     case ExprKind::TupleLiteral:
-        return join_lowered_exprs(expr.children, aliases, locals);
+        return join_lowered_exprs(expr.children, aliases, locals, ", ", symbols);
     case ExprKind::Lambda:
         throw CompileError(expr.location,
                            "unsupported Python feature: lambda; declare a named function and "
@@ -288,9 +289,10 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
 }
 
 std::string lower_array_literal(const Expr& expr, const std::vector<std::string>& aliases,
-                                const std::map<std::string, std::string>& locals) {
+                                const std::map<std::string, std::string>& locals,
+                                const Symbols* symbols) {
     if (expr.kind != ExprKind::ListLiteral) {
-        return lower_expr(expr, aliases, locals);
+        return lower_expr(expr, aliases, locals, symbols);
     }
     std::ostringstream out;
     out << "{";
@@ -298,7 +300,7 @@ std::string lower_array_literal(const Expr& expr, const std::vector<std::string>
         if (i > 0) {
             out << ", ";
         }
-        out << lower_array_literal(expr.children[i], aliases, locals);
+        out << lower_array_literal(expr.children[i], aliases, locals, symbols);
     }
     out << "}";
     return out.str();

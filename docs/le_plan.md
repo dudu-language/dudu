@@ -272,8 +272,9 @@ push. They are not release packaging work.
    type-check through parsed callee receiver expressions. Pointer receiver
    emission now uses parsed member expression typing instead of reconstructing
    a member path string first. Nested expression emission preserves symbol
-   context through callee, member, dict-entry, named-argument, and index
-   children.
+   context through callee, member, dict-entry, named-argument, index,
+   collection literal, tuple, template-call argument, swizzle, pointer-cast,
+   and fixed-array literal children.
 
 3. OOP Surface Cleanup
 

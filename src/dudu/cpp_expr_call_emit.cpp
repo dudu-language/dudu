@@ -270,10 +270,10 @@ std::string lower_named_argument_call(const Expr& expr, const std::vector<std::s
         }
         if (expr.children[i].kind == ExprKind::NamedArg && expr.children[i].children.size() == 1) {
             out << "." << expr.children[i].name << " = "
-                << lower_expr(expr.children[i].children.front(), aliases, locals);
+                << lower_expr(expr.children[i].children.front(), aliases, locals, symbols);
             continue;
         }
-        out << lower_expr(expr.children[i], aliases, locals);
+        out << lower_expr(expr.children[i], aliases, locals, symbols);
     }
     out << "}";
     return out.str();
@@ -325,7 +325,8 @@ bool is_pointer_receiver_expr(const Expr& expr, const std::map<std::string, std:
 
 std::optional<std::string> lower_swizzle_expr(const Expr& expr,
                                               const std::vector<std::string>& aliases,
-                                              const std::map<std::string, std::string>& locals) {
+                                              const std::map<std::string, std::string>& locals,
+                                              const Symbols* symbols) {
     if (const auto local = lower_local_swizzle_expr(expr, aliases, locals)) {
         return local;
     }
@@ -337,7 +338,7 @@ std::optional<std::string> lower_swizzle_expr(const Expr& expr,
         locals.contains(expr.children.front().name)) {
         return std::nullopt;
     }
-    const std::string receiver = lower_expr(expr.children.front(), aliases, locals);
+    const std::string receiver = lower_expr(expr.children.front(), aliases, locals, symbols);
     if (receiver.empty()) {
         return std::nullopt;
     }
@@ -467,11 +468,13 @@ lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& al
     }
     std::vector<Expr> args = index_arg_exprs(stmt.target_expr.children[1]);
     args.push_back(stmt.value_expr);
-    return receiver + "." + *method + "(" + join_lowered_exprs(args, aliases, locals) + ")";
+    return receiver + "." + *method + "(" +
+           join_lowered_exprs(args, aliases, locals, ", ", symbols) + ")";
 }
 
 std::string lower_offsetof_field(const Expr& expr, const std::vector<std::string>& aliases,
-                                 const std::map<std::string, std::string>& locals) {
+                                 const std::map<std::string, std::string>& locals,
+                                 const Symbols* symbols) {
     if (expr.kind == ExprKind::Name && !expr.name.empty()) {
         return expr.name;
     }
@@ -483,12 +486,12 @@ std::string lower_offsetof_field(const Expr& expr, const std::vector<std::string
             return *path;
         }
     }
-    return lower_expr(expr, aliases, locals);
+    return lower_expr(expr, aliases, locals, symbols);
 }
 
 std::optional<std::string>
 lower_pointer_cast_expr(const Expr& expr, const std::vector<std::string>& aliases,
-                        const std::map<std::string, std::string>& locals) {
+                        const std::map<std::string, std::string>& locals, const Symbols* symbols) {
     if (expr.op != "*" || expr.children.size() != 1 ||
         expr.children.front().kind != ExprKind::Call) {
         return std::nullopt;
@@ -499,7 +502,7 @@ lower_pointer_cast_expr(const Expr& expr, const std::vector<std::string>& aliase
         return std::nullopt;
     }
     return "reinterpret_cast<" + lower_cpp_pointer_type(type_name, aliases) + ">(" +
-           join_lowered_exprs(call.children, aliases, locals) + ")";
+           join_lowered_exprs(call.children, aliases, locals, ", ", symbols) + ")";
 }
 
 std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& aliases,

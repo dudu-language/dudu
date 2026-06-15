@@ -313,8 +313,9 @@ Already structured:
   parsed member expression type walker rather than reconstructing a member path
   string first.
 - C++ expression emission now preserves symbol context while lowering nested
-  callee, member, dict-entry, named-argument, and index child expressions
-  instead of dropping to symbol-less child lowering.
+  callee, member, dict-entry, named-argument, index, collection literal,
+  tuple, template-call argument, swizzle, pointer-cast, and fixed-array literal
+  child expressions instead of dropping to symbol-less child lowering.
 - C++ pointer-cast emission lowers cast target types through parsed `TypeRef`
   nodes for both normal and templated call shapes instead of prefixing raw type
   strings and sending them through the legacy type lowerer

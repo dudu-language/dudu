@@ -158,7 +158,8 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
             if (is_template_type(type, "Option") && stmt.value_expr.kind == ExprKind::NoneLiteral) {
                 out << " = std::nullopt";
             } else if (is_fixed_array_type(type) && stmt.value_expr.kind == ExprKind::ListLiteral) {
-                out << " = {" << lower_array_literal(stmt.value_expr, aliases, locals) << "}";
+                out << " = {" << lower_array_literal(stmt.value_expr, aliases, locals, symbols)
+                    << "}";
             } else if (is_template_type(type, "list") &&
                        stmt.value_expr.kind == ExprKind::ListLiteral &&
                        stmt.value_expr.children.empty()) {

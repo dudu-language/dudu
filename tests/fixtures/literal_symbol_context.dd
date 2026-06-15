@@ -1,0 +1,15 @@
+class Vec2:
+    x: i32
+    y: i32
+
+
+class Palette:
+    white: static[Vec2] = Vec2(20, 22)
+
+
+def main() -> i32:
+    pairs: array[Vec2][2] = [Palette.white.xy, Palette.white.yx]
+    values: list[i32] = [Palette.white.x, Palette.white.y, pairs[1].x]
+    if pairs[0].x == 20 and pairs[1].y == 20:
+        return values[0]
+    return 1

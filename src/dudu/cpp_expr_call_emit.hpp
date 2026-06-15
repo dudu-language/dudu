@@ -18,7 +18,8 @@ std::string lower_callee_expr(const Expr& expr, const std::vector<std::string>& 
 bool is_pointer_receiver_expr(const Expr& expr, const std::map<std::string, std::string>& locals);
 std::optional<std::string> lower_swizzle_expr(const Expr& expr,
                                               const std::vector<std::string>& aliases,
-                                              const std::map<std::string, std::string>& locals);
+                                              const std::map<std::string, std::string>& locals,
+                                              const Symbols* symbols = nullptr);
 std::optional<std::string>
 lower_swizzle_assignment(const Stmt& stmt, const std::vector<std::string>& aliases,
                          const std::map<std::string, std::string>& locals, const Symbols* symbols);
@@ -37,10 +38,12 @@ lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& al
                             const std::map<std::string, std::string>& locals,
                             const Symbols* symbols);
 std::string lower_offsetof_field(const Expr& expr, const std::vector<std::string>& aliases,
-                                 const std::map<std::string, std::string>& locals);
+                                 const std::map<std::string, std::string>& locals,
+                                 const Symbols* symbols = nullptr);
 std::optional<std::string>
 lower_pointer_cast_expr(const Expr& expr, const std::vector<std::string>& aliases,
-                        const std::map<std::string, std::string>& locals);
+                        const std::map<std::string, std::string>& locals,
+                        const Symbols* symbols = nullptr);
 std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& aliases,
                             const std::map<std::string, std::string>& locals,
                             const Symbols* symbols);
