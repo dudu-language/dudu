@@ -2,6 +2,7 @@
 
 #include "dudu/array_shape.hpp"
 #include "dudu/ast_expr.hpp"
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/sema_scan.hpp"
 
@@ -29,16 +30,6 @@ std::string receiver_base_type(std::string type) {
     return bracket == std::string::npos ? type : trim_copy(type.substr(0, bracket));
 }
 
-std::optional<std::vector<std::string>> template_args(std::string_view type,
-                                                      std::string_view name) {
-    const std::string prefix = std::string(name) + "[";
-    if (!starts_with(type, prefix) || type.empty() || type.back() != ']') {
-        return std::nullopt;
-    }
-    return split_top_level_args(
-        std::string(type.substr(prefix.size(), type.size() - prefix.size() - 1)));
-}
-
 size_t index_count(const Expr& expr) {
     if (expr.kind == ExprKind::TupleLiteral && !expr.children.empty()) {
         return expr.children.size();
@@ -61,17 +52,21 @@ std::string shaped_array_type(const std::string& element_type, const std::vector
 
 std::string indexed_local_type(const std::string& receiver_type, const Expr& index_expr) {
     const std::string type = trim_copy(receiver_type);
-    if (const auto args = template_args(type, "list"); args && args->size() == 1) {
-        return trim_copy(args->front());
+    if (const std::vector<std::string> args = template_type_arg_texts(type, "list");
+        args.size() == 1) {
+        return trim_copy(args.front());
     }
-    if (const auto args = template_args(type, "span"); args && args->size() == 1) {
-        return trim_copy(args->front());
+    if (const std::vector<std::string> args = template_type_arg_texts(type, "span");
+        args.size() == 1) {
+        return trim_copy(args.front());
     }
-    if (const auto args = template_args(type, "set"); args && args->size() == 1) {
-        return trim_copy(args->front());
+    if (const std::vector<std::string> args = template_type_arg_texts(type, "set");
+        args.size() == 1) {
+        return trim_copy(args.front());
     }
-    if (const auto args = template_args(type, "dict"); args && args->size() == 2) {
-        return trim_copy((*args)[1]);
+    if (const std::vector<std::string> args = template_type_arg_texts(type, "dict");
+        args.size() == 2) {
+        return trim_copy(args[1]);
     }
     if (starts_with(type, "array[")) {
         const std::string element_type = explicit_array_element_type(type);

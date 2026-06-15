@@ -140,6 +140,9 @@ Already structured:
 - indexed and iterable element inference reads parsed `TypeRef` wrappers and
   template children for `list[T]`, `dict[K, V]`, `span[T]`, and storage-like
   wrappers instead of slicing those type strings directly
+- generated local C++ type inference also reads parsed `TypeRef` template
+  children for local `list`, `span`, `set`, and `dict` index receivers instead
+  of carrying a separate template-argument splitter
 - fixed-array indexing and iteration recover `array[T][shape]` element types
   from parsed `TypeRef::FixedArray` nodes instead of hand-matching nested
   brackets in the type text
