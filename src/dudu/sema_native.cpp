@@ -132,7 +132,9 @@ bool args_match_signature_ast(const FunctionScope& scope, const FunctionSignatur
 
 bool template_fallback_allowed(const FunctionScope& scope, const std::string& lookup,
                                bool explicit_template_call) {
-    (void)explicit_template_call;
+    if (!explicit_template_call) {
+        return false;
+    }
     const size_t dot = lookup.find('.');
     if (dot == std::string::npos) {
         return false;
