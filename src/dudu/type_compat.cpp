@@ -388,6 +388,11 @@ bool type_assignment_allowed(const std::string& expected, const std::string& got
            is_cpp_associated_type_binding(normalized_expected, normalized_got);
 }
 
+bool type_assignment_allowed(const TypeRef& expected, const TypeRef& got) {
+    return type_assignment_allowed(substitute_type_ref_text(expected, {}),
+                                   substitute_type_ref_text(got, {}));
+}
+
 bool assignment_type_allowed(const std::string& expected, const Expr& expr,
                              const std::string& got) {
     const std::string normalized_expected = normalize_cpp_type_artifacts(expected);
@@ -418,6 +423,10 @@ bool assignment_type_allowed(const std::string& expected, const Expr& expr,
             simple_literal_type(expr) == "number");
 }
 
+bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const std::string& got) {
+    return assignment_type_allowed(substitute_type_ref_text(expected, {}), expr, got);
+}
+
 std::string display_type(const Expr& expr, const std::string& got) {
     return got.empty() ? simple_literal_type(expr) : got;
 }
@@ -426,6 +435,10 @@ std::string assignment_error(const std::string& expected, const Expr& expr,
                              const std::string& got) {
     return "cannot assign " + display_type(expr, got) + " to " + expected +
            " without an explicit cast";
+}
+
+std::string assignment_error(const TypeRef& expected, const Expr& expr, const std::string& got) {
+    return assignment_error(substitute_type_ref_text(expected, {}), expr, got);
 }
 
 } // namespace dudu

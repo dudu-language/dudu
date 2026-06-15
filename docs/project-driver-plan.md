@@ -361,6 +361,13 @@ one of the backends that lets the same front-door command drive projects with
 native package discovery, platform generators, vendored C/C++ dependencies,
 and user-owned CMake files.
 
+This is also not a Zig-style claim that Dudu's build system should replace the
+project's native build system. Zig can describe and build C/C++ inputs through
+its own build graph. Dudu's interop goal is broader in a different direction:
+existing CMake projects, generated CMake projects, direct compiler builds, and
+plain native flags should all be valid ways for the same Dudu command surface
+to reach the C/C++ ecosystem.
+
 The practical target is:
 
 - Simple native projects can use the direct backend with no generated build
@@ -382,6 +389,9 @@ Backend selection rules should be boring:
   names the missing capability and the backend that can support it.
 - Do not silently ignore include paths, link inputs, generated files, native
   sources, package discovery, or user-owned build-system settings.
+
+The backend is allowed to be visible in logs and artifacts. It is not allowed to
+change the user's main workflow from `dudu build`, `dudu run`, and `dudu test`.
 
 Planned manifest shape:
 

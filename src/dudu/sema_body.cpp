@@ -2,6 +2,7 @@
 
 #include "dudu/array_shape.hpp"
 #include "dudu/ast_expr.hpp"
+#include "dudu/ast_type.hpp"
 #include "dudu/control_flow.hpp"
 #include "dudu/decorators.hpp"
 #include "dudu/escapes.hpp"
@@ -77,6 +78,20 @@ void check_type_match(FunctionScope& scope, const std::string& expected, const E
             sema_fail(location, std::string(mismatch_label) + ": expected " + expected +
                                    ", got " + got);
         }
+        sema_fail(location, assignment_error(expected, expr, got));
+    }
+}
+
+void check_type_ref_match(FunctionScope& scope, const TypeRef& expected, const Expr& expr,
+                          const SourceLocation& location, const BodyCheckCallbacks& callbacks) {
+    const std::string expected_text = substitute_type_ref_text(expected, {});
+    if (expr.kind == ExprKind::Call || expr.kind == ExprKind::TemplateCall) {
+        check_type_match(scope, expected_text, expr, location, callbacks);
+        return;
+    }
+    const std::string got = callbacks.infer_expr(scope, expr, &location);
+    if (!assignment_type_allowed(expected, expr, got) &&
+        !callbacks.can_assign(scope, expected_text, expr, got)) {
         sema_fail(location, assignment_error(expected, expr, got));
     }
 }
@@ -326,6 +341,9 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
                 check_array_literal_elements(scope, explicit_element, stmt.value_expr,
                                              node_location(stmt.location, stmt.value_expr),
                                              callbacks);
+            } else if (stmt.type == type) {
+                check_type_ref_match(scope, stmt.type_ref, stmt.value_expr,
+                                     node_location(stmt.location, stmt.value_expr), callbacks);
             } else {
                 check_type_match(scope, type, stmt.value_expr,
                                  node_location(stmt.location, stmt.value_expr), callbacks);

@@ -278,7 +278,9 @@ push. They are not release packaging work.
    structural expression helper in sema, codegen, and match patterns instead of
    duplicate dotted-string reconstruction. Native import member type lookup now
    walks parsed member expressions inside `sema_native` before crossing into
-   native metadata table spelling.
+   native metadata table spelling. Type compatibility exposes parsed `TypeRef`
+   overloads, and annotated local initializers validate against the parsed
+   expected type node when available.
 
 3. OOP Surface Cleanup
 
@@ -508,6 +510,12 @@ push. They are not release packaging work.
    command. Direct compilation is the small fast backend. CMake is the broad
    native ecosystem backend. `dudu cmake` is the inspectable artifact and escape
    hatch, not the replacement for the normal command surface.
+
+   This is not a Zig-style attempt to make the language build system own every
+   native project. Dudu can use a direct compiler backend for small native
+   graphs, generate CMake for inspectable native builds, or drive user-owned
+   CMake when the project already has one. Those are backend modes behind the
+   same command surface, not separate classes of Dudu project.
 
    Status: `dudu build` and `dudu run` currently use the direct backend.
    Native inputs such as include paths, library paths, libraries, flags,

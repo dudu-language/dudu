@@ -128,6 +128,8 @@ Already structured:
   helper instead of duplicated sema/emission utilities
 - AST type compatibility checks use parsed call callees for explicit casts and
   `Ok(...)`/`Err(...)` result construction
+- type compatibility exposes parsed `TypeRef` overloads, and annotated local
+  initializers validate against the parsed expected type node when available
 - semantic highlighting uses parsed call callees so method calls can color the
   receiver and called member separately instead of treating dotted callees as
   one raw span
