@@ -26,6 +26,7 @@ add_library(dudu_frontend
     src/dudu/cpp_expr_call_emit.cpp
     src/dudu/cpp_expr_emit.cpp
     src/dudu/cpp_expr_builtins.cpp
+    src/dudu/cpp_expr_swizzles.cpp
     src/dudu/cpp_lower.cpp
     src/dudu/cpp_match_emit.cpp
     src/dudu/cpp_pointer_members.cpp

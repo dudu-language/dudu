@@ -16,13 +16,6 @@ std::string lower_callee_expr(const Expr& expr, const std::vector<std::string>& 
                               const std::map<std::string, std::string>& locals,
                               const Symbols* symbols = nullptr);
 bool is_pointer_receiver_expr(const Expr& expr, const std::map<std::string, std::string>& locals);
-std::optional<std::string> lower_swizzle_expr(const Expr& expr,
-                                              const std::vector<std::string>& aliases,
-                                              const std::map<std::string, std::string>& locals,
-                                              const Symbols* symbols = nullptr);
-std::optional<std::string>
-lower_swizzle_assignment(const Stmt& stmt, const std::vector<std::string>& aliases,
-                         const std::map<std::string, std::string>& locals, const Symbols* symbols);
 std::string lower_enum_variant_constructor(const EnumDecl& en, const EnumValueDecl& value,
                                            const std::vector<Expr>& args,
                                            const std::vector<std::string>& aliases,

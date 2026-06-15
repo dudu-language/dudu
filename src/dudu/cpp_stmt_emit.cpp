@@ -6,6 +6,7 @@
 #include "dudu/control_flow.hpp"
 #include "dudu/cpp_expr_call_emit.hpp"
 #include "dudu/cpp_expr_emit.hpp"
+#include "dudu/cpp_expr_swizzles.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/cpp_match_emit.hpp"
 #include "dudu/cpp_pointer_members.hpp"

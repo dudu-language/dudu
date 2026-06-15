@@ -5,6 +5,7 @@
 #include "dudu/cpp_expr_call_emit.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/cpp_pointer_members.hpp"
+#include "dudu/cpp_expr_swizzles.hpp"
 #include "dudu/cpp_stmt_types.hpp"
 #include "dudu/sema_context.hpp"
 #include "dudu/sema_enum.hpp"
