@@ -20,11 +20,10 @@ bool is_numeric_type(const std::string& type) {
 
 std::string wrapped_type_arg(std::string type) {
     type = trim_copy(std::move(type));
-    for (const TypeKind kind : {TypeKind::Const, TypeKind::Atomic, TypeKind::Volatile,
-                                TypeKind::Device, TypeKind::Storage, TypeKind::Shared}) {
-        if (const auto inner = unary_type_child_text(type, kind)) {
-            return *inner;
-        }
+    if (const auto inner =
+            unary_type_child_text(type, {TypeKind::Const, TypeKind::Atomic, TypeKind::Volatile,
+                                         TypeKind::Device, TypeKind::Storage, TypeKind::Shared})) {
+        return *inner;
     }
     return type;
 }

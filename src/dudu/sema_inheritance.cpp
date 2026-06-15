@@ -1,5 +1,7 @@
 #include "dudu/sema_inheritance.hpp"
 
+#include "dudu/ast_parse_utils.hpp"
+#include "dudu/ast_type.hpp"
 #include "dudu/decorators.hpp"
 
 #include <algorithm>
@@ -15,20 +17,19 @@ std::string unwrap_type(const Symbols& symbols, std::string type) {
     type = resolve_alias(symbols, std::move(type));
     while (true) {
         type = trim(std::move(type));
-        while (!type.empty() && (type.front() == '*' || type.front() == '&')) {
-            type = trim(type.substr(1));
+        const TypeRef parsed = parse_type_text(type);
+        if (const auto inner =
+                unary_type_child_text(parsed, {TypeKind::Pointer, TypeKind::Reference})) {
+            type = *inner;
+            continue;
         }
-        bool changed = false;
-        for (const char* wrapper : {"const", "volatile", "atomic", "storage", "shared", "device"}) {
-            const std::string prefix = std::string(wrapper) + "[";
-            if (type.rfind(prefix, 0) == 0 && type.back() == ']') {
-                type = trim(type.substr(prefix.size(), type.size() - prefix.size() - 1));
-                changed = true;
-                break;
-            }
+        if (const auto inner = unary_type_child_text(
+                parsed, {TypeKind::Const, TypeKind::Volatile, TypeKind::Atomic, TypeKind::Storage,
+                         TypeKind::Shared, TypeKind::Device})) {
+            type = *inner;
+            continue;
         }
-        if (!changed)
-            return base_type(type);
+        return base_type(type);
     }
 }
 

@@ -1,5 +1,7 @@
 #include "dudu/sema_ops.hpp"
 
+#include "dudu/ast_parse_utils.hpp"
+#include "dudu/ast_type.hpp"
 #include "dudu/decorators.hpp"
 #include "dudu/type_compat.hpp"
 
@@ -28,18 +30,14 @@ std::string unwrap_value_type(const Symbols& symbols, std::string type) {
     type = resolve_alias(symbols, std::move(type));
     while (true) {
         type = trim(std::move(type));
-        bool unwrapped = false;
-        for (const char* wrapper : {"const", "volatile", "storage", "shared", "device"}) {
-            const std::string prefix = std::string(wrapper) + "[";
-            if (type.rfind(prefix, 0) == 0 && type.back() == ']') {
-                type = trim(type.substr(prefix.size(), type.size() - prefix.size() - 1));
-                unwrapped = true;
-                break;
-            }
+        const TypeRef parsed = parse_type_text(type);
+        if (const auto inner = unary_type_child_text(parsed, {TypeKind::Const, TypeKind::Volatile,
+                                                              TypeKind::Storage, TypeKind::Shared,
+                                                              TypeKind::Device})) {
+            type = *inner;
+            continue;
         }
-        if (!unwrapped) {
-            return type;
-        }
+        return type;
     }
 }
 

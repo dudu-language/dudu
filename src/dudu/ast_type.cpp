@@ -46,4 +46,22 @@ std::optional<std::string> unary_type_child_text(std::string_view type, TypeKind
     return unary_type_child_text(parse_type_text(type), kind);
 }
 
+std::optional<std::string> unary_type_child_text(const TypeRef& type,
+                                                 std::initializer_list<TypeKind> kinds) {
+    if (type.children.size() != 1) {
+        return std::nullopt;
+    }
+    for (const TypeKind kind : kinds) {
+        if (type.kind == kind) {
+            return trim_copy(type.children.front().text);
+        }
+    }
+    return std::nullopt;
+}
+
+std::optional<std::string> unary_type_child_text(std::string_view type,
+                                                 std::initializer_list<TypeKind> kinds) {
+    return unary_type_child_text(parse_type_text(type), kinds);
+}
+
 } // namespace dudu
