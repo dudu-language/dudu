@@ -72,7 +72,7 @@ void test_templated_pointer_cast_emission() {
                            "templated_pointer_cast.dd");
     dudu::analyze_module(module, {.check_bodies = true});
     const std::string cpp = dudu::emit_cpp_source(module);
-    assert(cpp.find("const int32_t* value = reinterpret_cast<int32_t const*>(left);") !=
+    assert(cpp.find("const int32_t* value = reinterpret_cast<const int32_t*>(left);") !=
            std::string::npos);
 }
 

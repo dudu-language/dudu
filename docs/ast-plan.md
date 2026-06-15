@@ -265,6 +265,9 @@ Already structured:
   receivers such as `self.left.backward(...)` as `self.left->backward(...)`,
   using the existing member-path type information instead of raw pointer-member
   rewriting
+- C++ pointer-cast emission lowers cast target types through parsed `TypeRef`
+  nodes for both normal and templated call shapes instead of prefixing raw type
+  strings and sending them through the legacy type lowerer
 - integer and float literal parsing recognizes underscore separators, and
   integer literals recognize `0x`, `0b`, and `0o` prefixes so systems-style
   constants stay on the literal AST path

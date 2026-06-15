@@ -429,7 +429,7 @@ lower_pointer_cast_expr(const Expr& expr, const std::vector<std::string>& aliase
     if (!is_pointer_cast_type_like(type_name)) {
         return std::nullopt;
     }
-    return "reinterpret_cast<" + lower_cpp_type("*" + type_name, aliases) + ">(" +
+    return "reinterpret_cast<" + lower_cpp_pointer_type(type_name, aliases) + ">(" +
            join_lowered_exprs(call.children, aliases, locals) + ")";
 }
 
@@ -451,7 +451,7 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
     if (starts_with(callee_name, "*")) {
         const std::string type = trim_copy(callee_name.substr(1));
         if (is_pointer_cast_type_like(type)) {
-            return "reinterpret_cast<" + lower_cpp_type("*" + type, aliases) + ">(" +
+            return "reinterpret_cast<" + lower_cpp_pointer_type(type, aliases) + ">(" +
                    join_lowered_exprs(expr.children, aliases, locals, ", ", symbols) + ")";
         }
     }

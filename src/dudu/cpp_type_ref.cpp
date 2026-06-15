@@ -1,5 +1,5 @@
+#include "dudu/ast_parse_utils.hpp"
 #include "dudu/cpp_lower.hpp"
-
 #include "dudu/cpp_type_internal.hpp"
 
 #include <sstream>
@@ -233,13 +233,13 @@ std::string lower_cpp_type(const TypeRef& type, const std::vector<std::string>& 
         return type.children.empty() ? lower_cpp_type(type.text, namespace_aliases)
                                      : lower_cpp_type(type.children[0], namespace_aliases) + "&";
     case TypeKind::Const:
-        return type.children.empty() ? lower_cpp_type(type.text, namespace_aliases)
-                                     : "const " +
-                                           lower_cpp_type(type.children[0], namespace_aliases);
+        return type.children.empty()
+                   ? lower_cpp_type(type.text, namespace_aliases)
+                   : "const " + lower_cpp_type(type.children[0], namespace_aliases);
     case TypeKind::Volatile:
-        return type.children.empty() ? lower_cpp_type(type.text, namespace_aliases)
-                                     : "volatile " +
-                                           lower_cpp_type(type.children[0], namespace_aliases);
+        return type.children.empty()
+                   ? lower_cpp_type(type.text, namespace_aliases)
+                   : "volatile " + lower_cpp_type(type.children[0], namespace_aliases);
     case TypeKind::Atomic:
         return type.children.empty()
                    ? lower_cpp_type(type.text, namespace_aliases)
@@ -260,6 +260,15 @@ std::string lower_cpp_type(const TypeRef& type, const std::vector<std::string>& 
         return lower_cpp_type(type.text, namespace_aliases);
     }
     return lower_cpp_type(type.text, namespace_aliases);
+}
+
+std::string lower_cpp_pointer_type(const std::string& pointee) {
+    return lower_cpp_type(parse_type_text("*" + trim_copy(pointee)));
+}
+
+std::string lower_cpp_pointer_type(const std::string& pointee,
+                                   const std::vector<std::string>& namespace_aliases) {
+    return lower_cpp_type(parse_type_text("*" + trim_copy(pointee)), namespace_aliases);
 }
 
 } // namespace dudu

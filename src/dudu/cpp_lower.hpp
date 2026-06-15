@@ -17,6 +17,9 @@ std::string lower_cpp_type(const std::string& raw_type,
                            const std::vector<std::string>& namespace_aliases);
 std::string lower_cpp_type(const TypeRef& type);
 std::string lower_cpp_type(const TypeRef& type, const std::vector<std::string>& namespace_aliases);
+std::string lower_cpp_pointer_type(const std::string& pointee);
+std::string lower_cpp_pointer_type(const std::string& pointee,
+                                   const std::vector<std::string>& namespace_aliases);
 std::string lower_enum_access(std::string expr);
 std::string lower_generic_type_constructor(std::string expr);
 std::string lower_len_calls(std::string expr);
