@@ -175,7 +175,7 @@ Already structured:
   parsed template callees conservatively, so common `value = count + 1` style
   locals do not need raw expression inference
 - C++ `if constexpr` detection for build-only conditions uses parsed condition
-  expressions, with raw text scanning only as an unknown-expression fallback
+  expressions and no longer has an unknown-expression raw text fallback
 - C++ expression emission writes string, integer, and float literal expression
   nodes directly, and lowers `str(value)` calls through an explicit AST path
   instead of sending them through raw expression lowering

@@ -522,10 +522,6 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
     return {};
 }
 
-bool is_identifier_char(char c) {
-    return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_';
-}
-
 std::string lower_array_literal(const Expr& expr, const std::vector<std::string>& aliases,
                                 const std::map<std::string, std::string>& locals) {
     if (expr.kind != ExprKind::ListLiteral) {
@@ -541,54 +537,6 @@ std::string lower_array_literal(const Expr& expr, const std::vector<std::string>
     }
     out << "}";
     return out.str();
-}
-
-bool is_build_only_condition(const std::string& text) {
-    char quote = '\0';
-    bool escaped = false;
-    for (size_t i = 0; i < text.size();) {
-        const char c = text[i];
-        if (quote != '\0') {
-            if (escaped) {
-                escaped = false;
-            } else if (c == '\\') {
-                escaped = true;
-            } else if (c == quote) {
-                quote = '\0';
-            }
-            ++i;
-            continue;
-        }
-        if (c == '"' || c == '\'') {
-            quote = c;
-            ++i;
-            continue;
-        }
-        if (!is_identifier_char(c)) {
-            ++i;
-            continue;
-        }
-        const size_t start = i;
-        while (i < text.size() && is_identifier_char(text[i])) {
-            ++i;
-        }
-        const std::string word = text.substr(start, i - start);
-        if (word == "True" || word == "False" || word == "and" || word == "or" || word == "not") {
-            continue;
-        }
-        if (word == "build" && i < text.size() && text[i] == '.') {
-            ++i;
-            if (i >= text.size() || !is_identifier_char(text[i])) {
-                return false;
-            }
-            while (i < text.size() && is_identifier_char(text[i])) {
-                ++i;
-            }
-            continue;
-        }
-        return false;
-    }
-    return text.find("build.") != std::string::npos;
 }
 
 bool is_build_value_expr(const Expr& expr);
@@ -619,8 +567,6 @@ bool is_build_only_condition(const Expr& expr) {
             return is_build_value_expr(expr.children[0]) && is_build_value_expr(expr.children[1]);
         }
         return false;
-    case ExprKind::Unknown:
-        return is_build_only_condition(expr.text);
     default:
         return false;
     }
@@ -640,8 +586,6 @@ bool is_build_value_expr(const Expr& expr) {
                is_build_value_expr(expr.children.front());
     case ExprKind::Binary:
         return is_build_only_condition(expr);
-    case ExprKind::Unknown:
-        return is_build_only_condition(expr.text);
     default:
         return false;
     }
