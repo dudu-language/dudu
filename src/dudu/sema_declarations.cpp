@@ -372,6 +372,11 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
     for (const FunctionDecl& fn : module.functions) {
         check_generic_params(fn.location, fn.generic_params);
         const Symbols function_symbols = with_generic_params(symbols, fn.generic_params);
+        if (is_reserved_dunder_name(fn.name)) {
+            fail(fn.location,
+                 "reserved Python-style dunder function name: " + fn.name +
+                     "; use normal Dudu names and decorators such as @operator(...)");
+        }
         for (const Decorator& decorator : fn.decorators) {
             check_function_decorator(module, decorator);
         }

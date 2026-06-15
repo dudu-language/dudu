@@ -90,3 +90,4 @@
 - Fixed `size_t` native type mapping to `usize`.
 - Fixed language-server semantic highlighting so native-header scan failures do
   not blank ordinary Dudu tokens.
+- Rejected Python-style dunder names on free functions as well as methods.

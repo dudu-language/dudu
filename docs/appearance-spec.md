@@ -767,6 +767,13 @@ callback(41)  # valid
 add_one(41)  # valid
 ```
 
+Python-style dunder protocol names are reserved, not translated:
+
+```python
+def __add__(left: i32, right: i32) -> i32:  # error
+    return left + right
+```
+
 Callback tables stay statement-oriented:
 
 ```python

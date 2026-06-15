@@ -304,9 +304,10 @@ class Player:
 ## Operator Overloads
 
 Dudu-native operator overloads use explicit operator decorators. Dudu reserves
-Python-style `__name__` protocol methods instead of translating them, which
-keeps the native surface small and gives Dudu room for operators Python does
-not spell cleanly:
+Python-style `__name__` protocol names instead of translating them. Dunder
+names are rejected on Dudu-defined methods and free functions. This keeps the
+native surface small and gives Dudu room for operators Python does not spell
+cleanly:
 
 ```python
 class Vec2:
