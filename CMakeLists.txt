@@ -22,10 +22,14 @@ add_library(dudu_frontend
     src/dudu/cpp_emit.cpp
     src/dudu/cpp_emit_classes.cpp
     src/dudu/cpp_emit_prelude.cpp
+    src/dudu/cpp_expr_call_emit.cpp
+    src/dudu/cpp_expr_emit.cpp
     src/dudu/cpp_expr_builtins.cpp
     src/dudu/cpp_lower.cpp
+    src/dudu/cpp_match_emit.cpp
     src/dudu/cpp_pointer_members.cpp
     src/dudu/cpp_stmt_emit.cpp
+    src/dudu/cpp_stmt_helpers.cpp
     src/dudu/cpp_stmt_types.cpp
     src/dudu/cpp_type.cpp
     src/dudu/escapes.cpp
@@ -51,13 +55,17 @@ add_library(dudu_frontend
     src/dudu/sema_context.cpp
     src/dudu/sema_constexpr.cpp
     src/dudu/sema_constructors.cpp
+    src/dudu/sema_enum.cpp
     src/dudu/sema_function_type.cpp
+    src/dudu/sema_generics.cpp
     src/dudu/sema_index.cpp
     src/dudu/sema_inheritance.cpp
+    src/dudu/sema_match.cpp
     src/dudu/sema_methods.cpp
     src/dudu/sema_native.cpp
     src/dudu/sema_ops.cpp
     src/dudu/sema_scan.cpp
+    src/dudu/sema_super.cpp
     src/dudu/source.cpp
     src/dudu/test_driver.cpp
     src/dudu/token.cpp

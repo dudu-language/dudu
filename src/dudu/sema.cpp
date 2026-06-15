@@ -12,13 +12,17 @@
 #include "dudu/sema_constexpr.hpp"
 #include "dudu/sema_constructors.hpp"
 #include "dudu/sema_context.hpp"
+#include "dudu/sema_enum.hpp"
 #include "dudu/sema_function_type.hpp"
+#include "dudu/sema_generics.hpp"
 #include "dudu/sema_index.hpp"
 #include "dudu/sema_inheritance.hpp"
+#include "dudu/sema_match.hpp"
 #include "dudu/sema_methods.hpp"
 #include "dudu/sema_native.hpp"
 #include "dudu/sema_ops.hpp"
 #include "dudu/sema_scan.hpp"
+#include "dudu/sema_super.hpp"
 #include "dudu/type_compat.hpp"
 #include "dudu/unsupported.hpp"
 
@@ -51,17 +55,6 @@ matching_signature_ast(const FunctionScope& scope, const std::vector<FunctionSig
 std::vector<std::string> call_args(std::string expr, size_t open) {
     std::string args = trim(expr.substr(open + 1, expr.size() - open - 2));
     return args.empty() ? std::vector<std::string>{} : split_top_level_args(args);
-}
-
-std::string join_strings(const std::vector<std::string>& values, std::string_view separator) {
-    std::ostringstream out;
-    for (size_t i = 0; i < values.size(); ++i) {
-        if (i > 0) {
-            out << separator;
-        }
-        out << values[i];
-    }
-    return out.str();
 }
 
 std::vector<Expr> call_arg_exprs(std::string expr, size_t open, SourceLocation location) {
@@ -118,135 +111,6 @@ bool function_has_decorator(const FunctionDecl& fn, std::string_view name) {
     return false;
 }
 
-std::string super_base_type(const FunctionScope& scope, const SourceLocation* location) {
-    if (scope.current_class.empty()) {
-        if (location != nullptr) {
-            fail(*location, "super access outside class method");
-        }
-        return {};
-    }
-    const auto klass = scope.symbols.classes.find(scope.current_class);
-    if (klass == scope.symbols.classes.end()) {
-        return {};
-    }
-    if (klass->second->base_classes.empty()) {
-        if (location != nullptr) {
-            fail(*location, "super access requires a base class");
-        }
-        return {};
-    }
-    if (klass->second->base_classes.size() > 1) {
-        if (location != nullptr) {
-            fail(*location, "super access is ambiguous with multiple base classes");
-        }
-        return {};
-    }
-    return klass->second->base_classes.front();
-}
-
-std::string super_init_base_type(const FunctionScope& scope, const SourceLocation* location) {
-    if (scope.current_class.empty()) {
-        if (location != nullptr) {
-            fail(*location, "super access outside class method");
-        }
-        return {};
-    }
-    const auto klass = scope.symbols.classes.find(scope.current_class);
-    if (klass == scope.symbols.classes.end()) {
-        return {};
-    }
-    if (klass->second->base_classes.empty()) {
-        if (location != nullptr) {
-            fail(*location, "super access requires a base class");
-        }
-        return {};
-    }
-    if (klass->second->base_classes.size() == 1) {
-        return klass->second->base_classes.front();
-    }
-    std::vector<std::string> storage_bases;
-    for (const std::string& base : klass->second->base_classes) {
-        if (class_type_has_instance_storage(scope.symbols, base)) {
-            storage_bases.push_back(base);
-        }
-    }
-    if (storage_bases.size() == 1) {
-        return storage_bases.front();
-    }
-    if (location != nullptr) {
-        fail(*location, "super.init requires exactly one storage-bearing base class");
-    }
-    return {};
-}
-
-bool is_super_call(const std::string& callee) {
-    return callee == "super" || starts_with(callee, "super.");
-}
-
-bool is_super_init_stmt(const Stmt& stmt) {
-    return stmt.kind == StmtKind::Expr && stmt.expr.kind == ExprKind::Call &&
-           call_callee_text(stmt.expr) == "super.init";
-}
-
-std::string infer_super_call_ast(const FunctionScope& scope, const Expr& expr,
-                                 const std::string& callee, const SourceLocation* location) {
-    const size_t dot = callee.find('.');
-    if (dot == std::string::npos) {
-        if (location != nullptr) {
-            fail(*location, "super call requires a method name");
-        }
-        return {};
-    }
-    const std::string method_name = trim(callee.substr(dot + 1));
-    if (method_name.empty()) {
-        if (location != nullptr) {
-            fail(*location, "super call requires a method name");
-        }
-        return {};
-    }
-    if (method_name == "init") {
-        if (!scope.allow_super_init) {
-            if (location != nullptr) {
-                fail(*location, "super.init must be the first statement in init");
-            }
-            return {};
-        }
-        const std::string base = super_init_base_type(scope, location);
-        if (base.empty()) {
-            return {};
-        }
-        const auto base_class = scope.symbols.classes.find(base_type(base));
-        if (base_class == scope.symbols.classes.end()) {
-            if (location != nullptr) {
-                fail(*location, "unknown base constructor type: " + base);
-            }
-            return {};
-        }
-        check_constructor_args_ast(
-            scope, *base_class->second, expr.children, location, infer_expr_ast,
-            [&](const std::string& expected, const Expr& value, const std::string& got) {
-                return can_assign_ast(scope, expected, value, got);
-            });
-        return "void";
-    }
-    const std::string base = super_base_type(scope, location);
-    if (base.empty()) {
-        return {};
-    }
-    FunctionSignature signature;
-    if (!method_signature_for_type(scope.symbols, base, method_name, signature, location)) {
-        return {};
-    }
-    const std::vector<FunctionSignature> signatures =
-        method_signatures_for_type(scope.symbols, base, method_name);
-    if (const auto match = matching_signature_ast(scope, signatures, expr.children)) {
-        check_call_args_ast(scope, callee, *match, expr.children, location);
-        return match->return_type;
-    }
-    check_call_args_ast(scope, callee, signature, expr.children, location);
-    return signature.return_type;
-}
-
 void reject_abstract_construction(const Symbols& symbols, const std::string& type,
                                   const SourceLocation* location) {
     if (location == nullptr) {
@@ -265,246 +129,6 @@ void reject_abstract_construction(const Symbols& symbols, const std::string& typ
         out << missing[i];
     }
     fail(*location, out.str());
-}
-
-const EnumDecl* enum_decl_for_type(const Symbols& symbols, const std::string& type) {
-    const std::string resolved = resolve_alias(symbols, type);
-    const auto found = symbols.enums.find(resolved);
-    return found == symbols.enums.end() ? nullptr : found->second;
-}
-
-const EnumValueDecl* enum_variant_decl(const EnumDecl& en, const std::string& variant) {
-    for (const EnumValueDecl& value : en.values) {
-        if (value.name == variant) {
-            return &value;
-        }
-    }
-    return nullptr;
-}
-
-std::optional<std::pair<const EnumDecl*, const EnumValueDecl*>>
-enum_variant_from_path(const Symbols& symbols, const std::string& path) {
-    const size_t dot = path.find('.');
-    if (dot == std::string::npos || path.find('.', dot + 1) != std::string::npos) {
-        return std::nullopt;
-    }
-    const std::string enum_name = path.substr(0, dot);
-    const auto en = symbols.enums.find(enum_name);
-    if (en == symbols.enums.end()) {
-        return std::nullopt;
-    }
-    const EnumValueDecl* value = enum_variant_decl(*en->second, path.substr(dot + 1));
-    if (value == nullptr) {
-        return std::nullopt;
-    }
-    return std::make_pair(en->second, value);
-}
-
-std::optional<std::string> enum_case_variant(const EnumDecl& en, const Stmt& stmt) {
-    if (stmt.pattern_expr.kind == ExprKind::Name && stmt.pattern_expr.name == "_") {
-        return std::string{"_"};
-    }
-    const Expr* pattern = &stmt.pattern_expr;
-    if (stmt.pattern_expr.kind == ExprKind::Call && !stmt.pattern_expr.callee.empty()) {
-        pattern = &stmt.pattern_expr.callee.front();
-    }
-    const std::optional<std::string> path = member_path_from_expr(*pattern);
-    if (!path) {
-        return std::nullopt;
-    }
-    const std::string prefix = en.name + ".";
-    if (!starts_with(*path, prefix)) {
-        return std::nullopt;
-    }
-    const std::string variant = path->substr(prefix.size());
-    if (variant.find('.') != std::string::npos) {
-        return std::nullopt;
-    }
-    return variant;
-}
-
-bool bind_payload_case(FunctionScope& nested, const EnumValueDecl& value, const Expr& pattern,
-                       const SourceLocation& location) {
-    if (pattern.kind != ExprKind::Call) {
-        if (!value.payload_fields.empty()) {
-            fail(location, "payload case requires destructuring: " + value.name);
-        }
-        return false;
-    }
-    if (pattern.children.size() != value.payload_fields.size()) {
-        fail(location, "case " + value.name + " expects " +
-                           std::to_string(value.payload_fields.size()) + " bindings, got " +
-                           std::to_string(pattern.children.size()));
-    }
-    std::set<std::string> seen_named_fields;
-    for (size_t i = 0; i < pattern.children.size(); ++i) {
-        const Expr& binding = pattern.children[i];
-        const EnumPayloadField* field = &value.payload_fields[i];
-        const Expr* binding_name = &binding;
-        if (binding.kind == ExprKind::NamedArg && binding.children.size() == 1) {
-            if (!seen_named_fields.insert(binding.name).second) {
-                fail(binding.location,
-                     "duplicate enum payload field in pattern: " + value.name + "." + binding.name);
-            }
-            const auto found =
-                std::find_if(value.payload_fields.begin(), value.payload_fields.end(),
-                             [&](const EnumPayloadField& payload_field) {
-                                 return payload_field.name == binding.name;
-                             });
-            if (found == value.payload_fields.end()) {
-                fail(binding.location,
-                     "unknown enum payload field in pattern: " + value.name + "." + binding.name);
-            }
-            field = &*found;
-            binding_name = &binding.children.front();
-        }
-        if (binding_name->kind != ExprKind::Name || binding_name->name.empty()) {
-            fail(binding.location, "payload case bindings must be names");
-        }
-        nested.locals[binding_name->name] = field->type;
-    }
-    return true;
-}
-
-enum class WrapperMatchKind {
-    None,
-    Option,
-    Result,
-};
-
-struct WrapperMatchType {
-    WrapperMatchKind kind = WrapperMatchKind::None;
-    std::vector<std::string> args;
-};
-
-WrapperMatchType wrapper_match_type(const std::string& type) {
-    const std::string trimmed = trim(type);
-    if (starts_with(trimmed, "Option[") && trimmed.back() == ']') {
-        return {.kind = WrapperMatchKind::Option,
-                .args = split_top_level_args(trimmed.substr(7, trimmed.size() - 8))};
-    }
-    if (starts_with(trimmed, "Result[") && trimmed.back() == ']') {
-        return {.kind = WrapperMatchKind::Result,
-                .args = split_top_level_args(trimmed.substr(7, trimmed.size() - 8))};
-    }
-    return {};
-}
-
-std::optional<std::string> wrapper_case_name(const Expr& pattern) {
-    if (pattern.kind == ExprKind::Name && pattern.name == "_") {
-        return std::string{"_"};
-    }
-    if (pattern.kind == ExprKind::NoneLiteral) {
-        return std::string{"None"};
-    }
-    if (pattern.kind == ExprKind::Call && !pattern.callee.empty() &&
-        pattern.callee.front().kind == ExprKind::Name) {
-        return pattern.callee.front().name;
-    }
-    return std::nullopt;
-}
-
-void bind_wrapper_case(FunctionScope& nested, const WrapperMatchType& wrapper, const Expr& pattern,
-                       const SourceLocation& location) {
-    const std::optional<std::string> name = wrapper_case_name(pattern);
-    if (!name || *name == "_" || *name == "None") {
-        return;
-    }
-    if (pattern.kind != ExprKind::Call || pattern.children.size() != 1 ||
-        pattern.children.front().kind != ExprKind::Name || pattern.children.front().name.empty()) {
-        fail(location, "wrapper payload case expects one binding name");
-    }
-    if (wrapper.kind == WrapperMatchKind::Option && *name == "Some" && wrapper.args.size() == 1) {
-        nested.locals[pattern.children.front().name] = trim(wrapper.args[0]);
-        return;
-    }
-    if (wrapper.kind == WrapperMatchKind::Result && wrapper.args.size() == 2) {
-        if (*name == "Ok") {
-            nested.locals[pattern.children.front().name] = trim(wrapper.args[0]);
-            return;
-        }
-        if (*name == "Err") {
-            nested.locals[pattern.children.front().name] = trim(wrapper.args[1]);
-            return;
-        }
-    }
-}
-
-bool check_wrapper_match(FunctionScope& scope, const Stmt& stmt, const std::string& return_type,
-                         int loop_depth, const WrapperMatchType& wrapper) {
-    const std::set<std::string> expected = wrapper.kind == WrapperMatchKind::Option
-                                               ? std::set<std::string>{"Some", "None"}
-                                               : std::set<std::string>{"Ok", "Err"};
-    std::set<std::string> covered;
-    bool wildcard = false;
-    for (const Stmt& child : stmt.children) {
-        if (child.kind != StmtKind::Case) {
-            fail(child.location, "match body expects case statements");
-        }
-        if (wildcard) {
-            fail(child.location, "unreachable case after wildcard");
-        }
-        const std::optional<std::string> name = wrapper_case_name(child.pattern_expr);
-        if (!name || (!expected.contains(*name) && *name != "_")) {
-            fail(child.location, wrapper.kind == WrapperMatchKind::Option
-                                     ? "case pattern must be Some(...), None, or _"
-                                     : "case pattern must be Ok(...), Err(...), or _");
-        }
-        if (*name == "_") {
-            if (!has_expr(child.guard_expr)) {
-                wildcard = true;
-            }
-        } else if (!has_expr(child.guard_expr) && !covered.insert(*name).second) {
-            fail(child.location, "unreachable duplicate case: " + *name);
-        }
-        FunctionScope nested = scope;
-        bind_wrapper_case(nested, wrapper, child.pattern_expr, child.location);
-        if (has_expr(child.guard_expr)) {
-            const std::string guard_type = infer_expr_ast(
-                nested, child.guard_expr, &node_location(child.location, child.guard_expr));
-            if (guard_type != "bool") {
-                fail(node_location(child.location, child.guard_expr),
-                     "match guard must be bool, got " + guard_type);
-            }
-        }
-        check_block(nested, child.children, return_type, loop_depth);
-    }
-    if (!wildcard && covered != expected) {
-        std::vector<std::string> missing;
-        for (const std::string& name : expected) {
-            if (!covered.contains(name)) {
-                missing.push_back(name);
-            }
-        }
-        fail(stmt.location,
-             "non-exhaustive match on wrapper; missing cases: " + join_strings(missing, ", "));
-    }
-    return true;
-}
-
-bool enum_contains_variant(const EnumDecl& en, const std::string& variant) {
-    for (const EnumValueDecl& value : en.values) {
-        if (value.name == variant) {
-            return true;
-        }
-    }
-    return false;
-}
-
-std::string missing_enum_cases(const EnumDecl& en, const std::set<std::string>& covered) {
-    std::ostringstream out;
-    bool first = true;
-    for (const EnumValueDecl& value : en.values) {
-        if (covered.contains(value.name)) {
-            continue;
-        }
-        if (!first) {
-            out << ", ";
-        }
-        first = false;
-        out << en.name << "." << value.name;
-    }
-    return out.str();
 }
 
 bool has_expr(const Expr& expr) {
@@ -664,207 +288,6 @@ std::string template_call_callee(const Expr& expr) {
     return out.str();
 }
 
-std::string template_args_lookup_text(const Expr& expr) {
-    std::ostringstream out;
-    const size_t count = !expr.template_type_args.empty() ? expr.template_type_args.size()
-                                                          : expr.template_args.size();
-    for (size_t i = 0; i < count; ++i) {
-        if (i > 0) {
-            out << ", ";
-        }
-        out << (!expr.template_type_args.empty() ? expr.template_type_args[i].text
-                                                 : expr.template_args[i].text);
-    }
-    return out.str();
-}
-
-std::vector<TypeRef> template_type_refs(const Expr& expr) {
-    if (!expr.template_type_args.empty()) {
-        return expr.template_type_args;
-    }
-    std::vector<TypeRef> out;
-    out.reserve(expr.template_args.size());
-    for (const Expr& arg : expr.template_args) {
-        out.push_back(parse_type_text(arg.text, arg.location));
-    }
-    return out;
-}
-
-bool is_identifier_char(char ch) {
-    return std::isalnum(static_cast<unsigned char>(ch)) != 0 || ch == '_';
-}
-
-std::string replace_type_parameter(std::string type, const std::string& from,
-                                   const std::string& to) {
-    if (from.empty() || to.empty()) {
-        return type;
-    }
-    size_t pos = type.find(from);
-    while (pos != std::string::npos) {
-        const bool left_ok = pos == 0 || !is_identifier_char(type[pos - 1]);
-        const size_t end = pos + from.size();
-        const bool right_ok = end == type.size() || !is_identifier_char(type[end]);
-        if (left_ok && right_ok) {
-            type.replace(pos, from.size(), to);
-            pos = type.find(from, pos + to.size());
-        } else {
-            pos = type.find(from, end);
-        }
-    }
-    return type;
-}
-
-std::string substitute_generic_type(std::string type, const std::vector<std::string>& params,
-                                    const std::vector<TypeRef>& args) {
-    for (size_t i = 0; i < params.size() && i < args.size(); ++i) {
-        type = replace_type_parameter(std::move(type), params[i], args[i].text);
-    }
-    return type;
-}
-
-bool generic_param_named(const std::vector<std::string>& params, const std::string& name) {
-    return std::find(params.begin(), params.end(), name) != params.end();
-}
-
-std::string generic_base_name(const std::string& type) {
-    const size_t open = type.find('[');
-    return open == std::string::npos ? trim(type) : trim(type.substr(0, open));
-}
-
-std::vector<std::string> generic_type_args(const std::string& type) {
-    const size_t open = type.find('[');
-    if (open == std::string::npos || type.empty() || type.back() != ']') {
-        return {};
-    }
-    return split_top_level_args(type.substr(open + 1, type.size() - open - 2));
-}
-
-bool infer_generic_binding(const std::string& param_type, const std::string& arg_type,
-                           const std::vector<std::string>& params,
-                           std::map<std::string, std::string>& bindings, std::string& error) {
-    const std::string param = trim(param_type);
-    const std::string arg = trim(arg_type);
-    if (generic_param_named(params, param)) {
-        const auto [it, inserted] = bindings.emplace(param, arg);
-        if (!inserted && it->second != arg) {
-            error =
-                "conflicting inferred type argument " + param + ": " + it->second + " vs " + arg;
-            return false;
-        }
-        return true;
-    }
-    if (param.empty() || arg.empty()) {
-        return true;
-    }
-    if ((param.front() == '*' || param.front() == '&') && param.front() == arg.front()) {
-        return infer_generic_binding(param.substr(1), arg.substr(1), params, bindings, error);
-    }
-    const std::string param_base = generic_base_name(param);
-    const std::string arg_base = generic_base_name(arg);
-    if (param_base != arg_base) {
-        return true;
-    }
-    const std::vector<std::string> param_args = generic_type_args(param);
-    const std::vector<std::string> arg_args = generic_type_args(arg);
-    if (param_args.empty() || param_args.size() != arg_args.size()) {
-        return true;
-    }
-    for (size_t i = 0; i < param_args.size(); ++i) {
-        if (!infer_generic_binding(param_args[i], arg_args[i], params, bindings, error)) {
-            return false;
-        }
-    }
-    return true;
-}
-
-std::optional<std::vector<TypeRef>> infer_generic_call_type_args(const FunctionScope& scope,
-                                                                 const FunctionDecl& fn,
-                                                                 const std::string& callee,
-                                                                 const std::vector<Expr>& args,
-                                                                 const SourceLocation* location) {
-    if (fn.generic_params.empty()) {
-        return std::nullopt;
-    }
-    if (location != nullptr && args.size() != fn.params.size()) {
-        fail(*location, "function " + callee + " expects " + std::to_string(fn.params.size()) +
-                            " arguments, got " + std::to_string(args.size()));
-    }
-    if (args.size() != fn.params.size()) {
-        return std::nullopt;
-    }
-    std::map<std::string, std::string> bindings;
-    for (size_t i = 0; i < fn.params.size(); ++i) {
-        const std::string got = infer_expr_ast(scope, args[i], location);
-        std::string error;
-        if (!infer_generic_binding(fn.params[i].type, got, fn.generic_params, bindings, error)) {
-            if (location != nullptr) {
-                fail(node_location(*location, args[i]), error + " for " + callee);
-            }
-            return std::nullopt;
-        }
-    }
-    std::vector<TypeRef> out;
-    out.reserve(fn.generic_params.size());
-    for (const std::string& param : fn.generic_params) {
-        const auto binding = bindings.find(param);
-        if (binding == bindings.end() || binding->second.empty() || binding->second == "auto" ||
-            binding->second == "list" || binding->second == "dict" || binding->second == "set") {
-            if (location != nullptr) {
-                fail(*location, "cannot infer type argument " + param + " for " + callee);
-            }
-            return std::nullopt;
-        }
-        out.push_back(
-            parse_type_text(binding->second, location == nullptr ? fn.location : *location));
-    }
-    return out;
-}
-
-FunctionSignature instantiate_generic_signature(const FunctionDecl& fn,
-                                                const std::vector<TypeRef>& args) {
-    FunctionSignature signature;
-    signature.return_type = substitute_generic_type(
-        fn.return_type.empty() ? "void" : fn.return_type, fn.generic_params, args);
-    for (const ParamDecl& param : fn.params) {
-        signature.params.push_back(substitute_generic_type(param.type, fn.generic_params, args));
-    }
-    return signature;
-}
-
-ClassDecl instantiate_generic_class(ClassDecl klass, const std::vector<TypeRef>& args,
-                                    const std::string& instantiated_name) {
-    klass.name = instantiated_name;
-    for (FieldDecl& field : klass.fields) {
-        field.type = substitute_generic_type(std::move(field.type), klass.generic_params, args);
-    }
-    for (ConstDecl& field : klass.static_fields) {
-        field.type = substitute_generic_type(std::move(field.type), klass.generic_params, args);
-    }
-    for (ConstDecl& constant : klass.constants) {
-        constant.type =
-            substitute_generic_type(std::move(constant.type), klass.generic_params, args);
-    }
-    for (FunctionDecl& method : klass.methods) {
-        method.return_type =
-            substitute_generic_type(std::move(method.return_type), klass.generic_params, args);
-        for (ParamDecl& param : method.params) {
-            param.type = substitute_generic_type(std::move(param.type), klass.generic_params, args);
-        }
-    }
-    return klass;
-}
-
-std::string join_type_ref_texts(const std::vector<TypeRef>& types) {
-    std::ostringstream out;
-    for (size_t i = 0; i < types.size(); ++i) {
-        if (i > 0) {
-            out << ", ";
-        }
-        out << types[i].text;
-    }
-    return out.str();
-}
-
 bool is_offsetof_field_expr(const Expr& expr) {
     if (expr.kind == ExprKind::Name || expr.kind == ExprKind::StringLiteral) {
         return true;
@@ -873,24 +296,6 @@ bool is_offsetof_field_expr(const Expr& expr) {
         return member_path_from_expr(expr).has_value();
     }
     return false;
-}
-
-std::string template_method_name(const Expr& expr, const std::string& callee_base,
-                                 size_t method_dot) {
-    std::ostringstream out;
-    out << trim(callee_base.substr(method_dot + 1)) << "[" << template_args_lookup_text(expr)
-        << "]";
-    return out.str();
-}
-
-bool known_template_constructor_type(const FunctionScope& scope, const std::string& callee) {
-    const std::string base = base_type(callee);
-    if (base.find('.') != std::string::npos || base.find("::") != std::string::npos) {
-        return scope.symbols.types.contains(base) || scope.symbols.native_classes.contains(base) ||
-               scope.symbols.classes.contains(resolve_alias(scope.symbols, callee));
-    }
-    return known_type(scope.symbols, callee) ||
-           scope.symbols.classes.contains(resolve_alias(scope.symbols, callee));
 }
 
 std::string normalize_current_class_path(const FunctionScope& scope, const std::string& path,
@@ -1825,7 +1230,29 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
             return variant->first->name;
         }
         if (is_super_call(callee)) {
-            return infer_super_call_ast(scope, expr, callee, use_location);
+            return infer_super_call_ast(
+                scope, expr, callee, use_location,
+                {.infer_expr =
+                     [](const FunctionScope& nested, const Expr& arg,
+                        const SourceLocation* location) {
+                         return infer_expr_ast(nested, arg, location);
+                     },
+                 .can_assign =
+                     [](const FunctionScope& nested, const std::string& expected, const Expr& value,
+                        const std::string& got) {
+                         return can_assign_ast(nested, expected, value, got);
+                     },
+                 .matching_signature =
+                     [](const FunctionScope& nested, const std::vector<FunctionSignature>& options,
+                        const std::vector<Expr>& args) {
+                         return matching_signature_ast(nested, options, args);
+                     },
+                 .check_call_args =
+                     [](const FunctionScope& nested, const std::string& nested_callee,
+                        const FunctionSignature& signature, const std::vector<Expr>& args,
+                        const SourceLocation* location) {
+                         check_call_args_ast(nested, nested_callee, signature, args, location);
+                     }});
         }
         if (const auto pointer_cast =
                 infer_pointer_cast_call_ast(scope, expr, callee, use_location)) {
@@ -1846,7 +1273,17 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
             generic_fn != scope.symbols.function_decls.end() &&
             !generic_fn->second->generic_params.empty()) {
             if (const auto type_args = infer_generic_call_type_args(
-                    scope, *generic_fn->second, callee, expr.children, use_location)) {
+                    scope, *generic_fn->second, callee, expr.children, use_location,
+                    {.infer_expr =
+                         [](const FunctionScope& nested, const Expr& arg,
+                            const SourceLocation* location) {
+                             return infer_expr_ast(nested, arg, location);
+                         },
+                     .can_assign =
+                         [](const FunctionScope& nested, const std::string& expected,
+                            const Expr& value, const std::string& got) {
+                             return can_assign_ast(nested, expected, value, got);
+                         }})) {
                 const FunctionSignature signature =
                     instantiate_generic_signature(*generic_fn->second, *type_args);
                 check_call_args_ast(scope, callee, signature, expr.children, use_location);
@@ -2186,66 +1623,17 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
         return;
     }
     if (stmt.kind == StmtKind::Match) {
-        const SourceLocation& subject_location = node_location(stmt.location, stmt.condition_expr);
-        const std::string subject_type =
-            infer_expr_ast(scope, stmt.condition_expr, &subject_location);
-        const EnumDecl* en = enum_decl_for_type(scope.symbols, subject_type);
-        const WrapperMatchType wrapper = wrapper_match_type(subject_type);
-        if (wrapper.kind != WrapperMatchKind::None) {
-            check_wrapper_match(scope, stmt, return_type, loop_depth, wrapper);
-            return;
-        }
-        if (en == nullptr) {
-            fail(subject_location, "match subject must be an enum, got " + subject_type);
-        }
-        std::set<std::string> covered;
-        bool wildcard = false;
-        for (const Stmt& child : stmt.children) {
-            if (child.kind != StmtKind::Case) {
-                fail(child.location, "match body expects case statements");
-            }
-            if (wildcard) {
-                fail(child.location, "unreachable case after wildcard");
-            }
-            const std::optional<std::string> variant = enum_case_variant(*en, child);
-            if (!variant) {
-                fail(child.location, "case pattern must be " + en->name + ".Variant or _");
-            }
-            if (*variant == "_") {
-                if (!has_expr(child.guard_expr)) {
-                    wildcard = true;
-                }
-            } else {
-                if (!enum_contains_variant(*en, *variant)) {
-                    fail(child.location,
-                         "unknown enum variant in pattern: " + en->name + "." + *variant);
-                }
-                if (!has_expr(child.guard_expr) && !covered.insert(*variant).second) {
-                    fail(child.location,
-                         "unreachable duplicate case: " + en->name + "." + *variant);
-                }
-            }
-            FunctionScope nested = scope;
-            if (*variant != "_") {
-                const EnumValueDecl* value = enum_variant_decl(*en, *variant);
-                if (value != nullptr) {
-                    bind_payload_case(nested, *value, child.pattern_expr, child.location);
-                }
-            }
-            if (has_expr(child.guard_expr)) {
-                const std::string guard_type = infer_expr_ast(
-                    nested, child.guard_expr, &node_location(child.location, child.guard_expr));
-                if (guard_type != "bool") {
-                    fail(node_location(child.location, child.guard_expr),
-                         "match guard must be bool, got " + guard_type);
-                }
-            }
-            check_block(nested, child.children, return_type, loop_depth);
-        }
-        if (!wildcard && covered.size() != en->values.size()) {
-            fail(stmt.location, "non-exhaustive match on " + en->name +
-                                    "; missing cases: " + missing_enum_cases(*en, covered));
-        }
+        check_match_stmt(scope, stmt, return_type, loop_depth,
+                         {.infer_expr =
+                              [](FunctionScope& nested, const Expr& expr,
+                                 const SourceLocation* location) {
+                                  return infer_expr_ast(nested, expr, location);
+                              },
+                          .check_block =
+                              [](FunctionScope& nested, const std::vector<Stmt>& body,
+                                 const std::string& nested_return_type, int nested_loop_depth) {
+                                  check_block(nested, body, nested_return_type, nested_loop_depth);
+                              }});
         return;
     }
     if (stmt.kind == StmtKind::Case) {

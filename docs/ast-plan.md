@@ -799,6 +799,30 @@ single-base constructor call must be the first statement in `init`; it validates
 against the base constructor and emits through the C++ constructor initializer
 list instead of lowering as a normal statement.
 
+## Compiler File Shape
+
+The C++ emitter has been split by AST responsibility:
+
+- `cpp_expr_emit.cpp` keeps expression dispatch.
+- `cpp_expr_call_emit.cpp` owns call, template-call, index-hook, swizzle, and
+  enum-constructor expression lowering.
+- `cpp_stmt_emit.cpp` owns statement dispatch.
+- `cpp_match_emit.cpp` owns match-specific C++ lowering helpers.
+- `cpp_stmt_helpers.cpp` owns indentation, escaped string literals, and
+  build-time-condition detection.
+
+Semantic analysis has started the same cleanup:
+
+- `sema_enum.cpp` owns shared enum lookup helpers.
+- `sema_match.cpp` owns wrapper/enum match checking.
+- `sema_generics.cpp` owns generic type substitution and generic-call
+  inference.
+- `sema_super.cpp` owns `super.method(...)` and `super.init(...)` rules.
+
+`sema.cpp`, `sema_context.cpp`, and `sema_methods.cpp` still exceed the repo
+file-size target and should keep being split by semantic responsibility before
+large new language features are layered on top.
+
 ## Acceptance
 
 - Existing examples still compile and run.
