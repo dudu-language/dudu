@@ -1438,7 +1438,10 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
             const std::string got = infer_expr_ast(scope, expr.children.front(), use_location);
             return got.empty() ? std::string{} : "*" + got;
         }
-        return infer_expr(scope, expr.text, use_location);
+        if (use_location != nullptr) {
+            fail(*use_location, "unsupported unary operator: " + expr.op);
+        }
+        return {};
     case ExprKind::Binary: {
         if (expr.children.size() != 2 || missing_expr(expr.children[0]) ||
             missing_expr(expr.children[1])) {
