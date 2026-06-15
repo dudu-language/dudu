@@ -81,6 +81,8 @@ std::string_view statement_kind_name(StmtKind kind) {
         return "cpp_escape";
     case StmtKind::Pass:
         return "pass";
+    case StmtKind::Unsupported:
+        return "unsupported";
     }
     return "unknown";
 }

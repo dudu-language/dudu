@@ -47,8 +47,14 @@ bool starts_keyword_exact(std::string_view text, std::string_view keyword) {
 
 bool starts_statement_keyword(std::string_view text, std::string_view keyword) {
     text = trim_view(text);
-    return text.starts_with(keyword) && text.size() > keyword.size() &&
-           std::isspace(static_cast<unsigned char>(text[keyword.size()])) != 0;
+    if (!text.starts_with(keyword)) {
+        return false;
+    }
+    if (text.size() == keyword.size()) {
+        return true;
+    }
+    const char next = text[keyword.size()];
+    return next == ':' || std::isspace(static_cast<unsigned char>(next)) != 0;
 }
 
 std::string trim_string(std::string_view text) {

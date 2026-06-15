@@ -307,6 +307,10 @@ Already structured:
 - unsupported `await` and expression-level `yield` forms parse into AST nodes
   and are rejected by the unsupported-feature pass without relying on raw text
   scanning
+- unsupported Python-only statement forms such as `with`, `finally`, local
+  `def`, local imports, and rebinding declarations classify as structured
+  unsupported statement nodes with feature labels instead of masquerading as
+  expression statements and being rediscovered by a prefix scan
 - malformed lambda expressions are rejected during semantic checking instead of
   being emitted through the raw expression fallback and left to the C++ compiler
 - standalone slice expressions are rejected during semantic checking, and parsed

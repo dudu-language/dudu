@@ -90,6 +90,7 @@ enum class StmtKind {
     DebugAssert,
     CppEscape,
     Pass,
+    Unsupported,
 };
 
 enum class ExprKind {
@@ -165,6 +166,7 @@ struct Stmt {
     std::string iterable;
     std::string pattern;
     std::string guard;
+    std::string unsupported_feature;
     Expr expr;
     Expr value_expr;
     Expr target_expr;

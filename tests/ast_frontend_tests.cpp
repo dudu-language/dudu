@@ -72,11 +72,10 @@ void test_native_semantic_tokens() {
         {.name = "DuduNativeEvent", .type = "DuduNativeEvent", .location = {}});
     native_symbols.native_values.push_back(
         {.name = "DUDU_NATIVE_MAGIC", .type = "i32", .location = {}});
-    native_symbols.native_functions.push_back(
-        {.name = "dudu_native_add",
-         .params = {"i32", "i32"},
-         .return_type = "i32",
-         .location = {}});
+    native_symbols.native_functions.push_back({.name = "dudu_native_add",
+                                               .params = {"i32", "i32"},
+                                               .return_type = "i32",
+                                               .location = {}});
     native_symbols.native_macros.push_back(
         {.name = "DUDU_NATIVE_CHECK", .arity = 0, .function_like = true, .location = {}});
 
@@ -156,6 +155,18 @@ void test_statement_ast_shape() {
     assert(main.statements[3].children[0].value == "1");
     assert(main.statements[4].kind == dudu::StmtKind::Return);
     assert(main.statements[4].value == "total");
+}
+
+void test_unsupported_statement_ast_shape() {
+    const dudu::ModuleAst module = dudu::parse_source("def main() -> i32:\n"
+                                                      "    with open(\"data\"):\n"
+                                                      "        return 0\n",
+                                                      "unsupported_statement_shape.dd");
+    assert(module.functions.size() == 1);
+    const dudu::FunctionDecl& main = module.functions.front();
+    assert(main.statements.size() == 1);
+    assert(main.statements[0].kind == dudu::StmtKind::Unsupported);
+    assert(main.statements[0].unsupported_feature == "context managers");
 }
 
 void test_expression_ast_shape() {
@@ -575,6 +586,7 @@ int main() {
         test_ast_constructor_assignment_compatibility();
         test_ast_index_receiver_type_inference();
         test_statement_ast_shape();
+        test_unsupported_statement_ast_shape();
         test_expression_ast_shape();
         test_dereference_postfix_expression_shape();
         test_decorator_expression_ast_shape();

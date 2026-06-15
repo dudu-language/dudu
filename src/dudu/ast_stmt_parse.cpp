@@ -7,6 +7,25 @@
 
 namespace dudu {
 namespace {
+struct UnsupportedStatement {
+    std::string_view keyword;
+    std::string_view feature;
+};
+
+constexpr UnsupportedStatement unsupported_statements[] = {
+    {"finally", "exceptions"},
+    {"yield", "generators"},
+    {"async", "async"},
+    {"await", "async"},
+    {"with", "context managers"},
+    {"global", "global rebinding"},
+    {"nonlocal", "nonlocal rebinding"},
+    {"del", "dynamic deletion"},
+    {"def", "local function declarations"},
+    {"import", "local imports"},
+    {"from", "local imports"},
+};
+
 void fill_var_decl(Stmt& stmt, std::string_view text) {
     const size_t colon = find_top_level_colon_before_assign(text);
     if (colon == std::string_view::npos) {
@@ -119,12 +138,25 @@ SourceLocation statement_piece_location(const Stmt& stmt, std::string_view piece
     return location_for_piece(stmt.location, stmt.text, piece);
 }
 
+std::string_view unsupported_statement_feature(std::string_view text) {
+    text = trim_view(text);
+    for (const UnsupportedStatement& unsupported : unsupported_statements) {
+        if (starts_statement_keyword(text, unsupported.keyword)) {
+            return unsupported.feature;
+        }
+    }
+    return {};
+}
+
 } // namespace
 
 StmtKind classify_statement_text(std::string_view text) {
     text = trim_view(text);
     if (text.empty()) {
         return StmtKind::Unknown;
+    }
+    if (!unsupported_statement_feature(text).empty()) {
+        return StmtKind::Unsupported;
     }
     if (starts_keyword(text, "return")) {
         return StmtKind::Return;
@@ -203,6 +235,9 @@ Stmt statement_from_text(std::string raw_text, std::string source_text, SourceLo
         range.end.column <= range.start.column ? range_for_text(location, stmt.text) : range;
     const std::string_view text = trim_view(stmt.text);
     switch (stmt.kind) {
+    case StmtKind::Unsupported:
+        stmt.unsupported_feature = std::string(unsupported_statement_feature(text));
+        break;
     case StmtKind::VarDecl:
         fill_var_decl(stmt, text);
         stmt.type_ref = parse_type_text(stmt.type, statement_piece_location(stmt, stmt.type));

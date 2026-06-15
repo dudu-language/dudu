@@ -4,27 +4,10 @@
 #include "dudu/cpp_lower.hpp"
 #include "dudu/sema.hpp"
 
-#include <array>
 #include <cctype>
 
 namespace dudu {
 namespace {
-
-struct UnsupportedPrefix {
-    std::string_view prefix;
-    std::string_view feature;
-};
-
-bool starts_statement(std::string_view text, std::string_view prefix) {
-    if (text == prefix) {
-        return true;
-    }
-    if (text.size() <= prefix.size() || text.substr(0, prefix.size()) != prefix) {
-        return false;
-    }
-    const char next = text[prefix.size()];
-    return next == ' ' || next == ':';
-}
 
 bool contains_call(std::string_view text, std::string_view name) {
     size_t pos = text.find(name);
@@ -61,7 +44,7 @@ bool contains_word(std::string_view text, std::string_view name) {
 
 void check_unsupported_text(const SourceLocation& location, const std::string& text) {
     const std::string trimmed = trim_copy(text);
-    if (starts_statement(trimmed, "def")) {
+    if (trimmed == "def" || starts_with(trimmed, "def ") || starts_with(trimmed, "def:")) {
         throw CompileError(location, "unsupported Python feature: def expressions");
     }
     if (contains_call(text, "eval") || contains_call(text, "exec")) {
@@ -126,31 +109,11 @@ void check_expr(const Expr& expr) {
     }
 }
 
-void check_statement_prefix(const Stmt& stmt) {
-    const std::string text = trim_copy(stmt.text);
-    constexpr std::array prefixes = {
-        UnsupportedPrefix{"finally", "exceptions"},
-        UnsupportedPrefix{"yield", "generators"},
-        UnsupportedPrefix{"async", "async"},
-        UnsupportedPrefix{"await", "async"},
-        UnsupportedPrefix{"with", "context managers"},
-        UnsupportedPrefix{"global", "global rebinding"},
-        UnsupportedPrefix{"nonlocal", "nonlocal rebinding"},
-        UnsupportedPrefix{"del", "dynamic deletion"},
-        UnsupportedPrefix{"def", "local function declarations"},
-        UnsupportedPrefix{"import", "local imports"},
-        UnsupportedPrefix{"from", "local imports"},
-    };
-    for (const UnsupportedPrefix& prefix : prefixes) {
-        if (starts_statement(text, prefix.prefix)) {
-            throw CompileError(stmt.location,
-                               "unsupported Python feature: " + std::string(prefix.feature));
-        }
-    }
-}
-
 void check_statement(const Stmt& stmt) {
-    check_statement_prefix(stmt);
+    if (stmt.kind == StmtKind::Unsupported) {
+        throw CompileError(stmt.location,
+                           "unsupported Python feature: " + stmt.unsupported_feature);
+    }
     if (stmt.kind == StmtKind::Unknown) {
         if (!trim_copy(stmt.text).empty()) {
             throw CompileError(stmt.location, "unsupported statement: " + trim_copy(stmt.text));
