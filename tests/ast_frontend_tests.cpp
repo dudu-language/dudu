@@ -358,6 +358,28 @@ void test_expression_ast_shape() {
            produced.value_expr.range.start.column);
 }
 
+void test_cpp_escape_ast_payloads() {
+    const dudu::ModuleAst module = dudu::parse_source("def main() -> i32:\n"
+                                                      "    value: i32 = cpp(\"19\")\n"
+                                                      "    cpp(\"value += 23;\")\n"
+                                                      "    return value\n",
+                                                      "cpp_escape_ast.dd");
+    assert(module.functions.size() == 1);
+    const dudu::FunctionDecl& main = module.functions.front();
+    assert(main.statements.size() == 3);
+
+    const dudu::Stmt& value = main.statements[0];
+    assert(value.kind == dudu::StmtKind::VarDecl);
+    assert(value.value_expr.kind == dudu::ExprKind::CppEscape);
+    assert(value.value_expr.text == "cpp(\"19\")");
+    assert(value.value_expr.value == "19");
+
+    const dudu::Stmt& statement_escape = main.statements[1];
+    assert(statement_escape.kind == dudu::StmtKind::CppEscape);
+    assert(statement_escape.text == "cpp(\"value += 23;\")");
+    assert(statement_escape.value == "value += 23;");
+}
+
 void test_dereference_postfix_expression_shape() {
     const dudu::Expr deref = dudu::parse_expr_text("*self.out");
     assert(deref.kind == dudu::ExprKind::Unary);
@@ -630,6 +652,7 @@ int main() {
         test_statement_ast_shape();
         test_unsupported_statement_ast_shape();
         test_expression_ast_shape();
+        test_cpp_escape_ast_payloads();
         test_dereference_postfix_expression_shape();
         test_decorator_expression_ast_shape();
         test_type_ast_shape();
