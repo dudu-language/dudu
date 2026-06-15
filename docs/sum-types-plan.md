@@ -271,6 +271,10 @@ enum Token:
         ch: u8
 ```
 
+Status: an executable lexer-token fixture covers tuple-style payloads, named
+payload blocks, guarded payload cases, named destructuring, and exhaustive
+matching.
+
 ### UI Events
 
 ```python
@@ -441,16 +445,13 @@ Required diagnostics:
 - Mixed containers require explicit `variant[...]` or a named enum.
 
 Status: simple C-like enum variants are PascalCase in fixtures and compiler
-naming checks. Snake-case enum variants are rejected before payload sum types
-land, so the existing enum surface matches the planned `EnumName.VariantName`
-spelling.
+naming checks. Snake-case enum variants are rejected, so the enum surface
+matches the planned `EnumName.VariantName` spelling.
 
 Status: payload variant syntax parses into the AST for both named field blocks
-and tuple-style payloads. Semantic checking rejects payload enums until
-lowering and exhaustive `match` support are implemented, so the compiler does
-not silently emit an integer enum that drops payload data. Payload fields are
-validated for known types, duplicate named fields, and snake_case names before
-that lowering gate.
+and tuple-style payloads. Payload fields are validated for known types,
+duplicate named fields, and snake_case names. Payload enums lower to tagged
+`std::variant` wrappers and support exhaustive `match`.
 
 Status: `match` and `case` statements parse into statement AST nodes instead of
 being recognized only by a raw unsupported-prefix check. The AST records the
@@ -458,4 +459,4 @@ match subject, each case pattern, optional case guards, and parsed guard
 expressions. Simple zero-payload enum matches lower to C++ `switch`, require
 `EnumName.VariantName` or `_` cases, reject unknown and duplicate cases, and
 enforce exhaustiveness. Payload destructuring, guards, `Option`, and `Result`
-matching remain.
+matching are implemented.

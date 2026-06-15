@@ -1,0 +1,25 @@
+enum Token:
+    Eof
+    Ident(str)
+    IntLit(i64)
+
+    Punct:
+        ch: u8
+
+
+def score(token: Token) -> i32:
+    match token:
+        case Token.Eof:
+            return 0
+        case Token.Ident(text):
+            return i32(len(text))
+        case Token.IntLit(value) if value > 40:
+            return i32(value)
+        case Token.IntLit(value):
+            return i32(value) + 1
+        case Token.Punct(ch=value):
+            return i32(value)
+
+
+def main() -> i32:
+    return score(Token.Ident("dudu")) + score(Token.IntLit(37))
