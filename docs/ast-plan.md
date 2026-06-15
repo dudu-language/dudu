@@ -820,14 +820,18 @@ Semantic analysis has started the same cleanup:
   inference.
 - `sema_super.cpp` owns `super.method(...)` and `super.init(...)` rules.
 - `sema_body.cpp` owns function/method body traversal and statement checking.
+- `sema_declarations.cpp` owns declaration validation, decorator validation,
+  and type-shape checks.
+- `sema_inheritance.cpp` owns inheritance relationships, abstract-method
+  resolution, and multiple-inheritance declaration rules.
 - `sema_expr.cpp` owns core expression inference dispatch.
 - `sema_expr_call.cpp`, `sema_expr_template.cpp`, `sema_expr_cpp_escape.cpp`,
   and `sema_expr_support.cpp` own call resolution, template-call inference,
   `cpp(...)` escape inference, and expression-checking support helpers.
 
-`sema_context.cpp` and `sema_methods.cpp` still exceed the repo file-size
-target and should keep being split by semantic responsibility before large new
-language features are layered on top.
+`sema_methods.cpp` still exceeds the repo file-size target and should keep
+being split by semantic responsibility before large new language features are
+layered on top.
 
 ## Acceptance
 

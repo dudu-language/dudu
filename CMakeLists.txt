@@ -57,6 +57,7 @@ add_library(dudu_frontend
     src/dudu/sema_context.cpp
     src/dudu/sema_constexpr.cpp
     src/dudu/sema_constructors.cpp
+    src/dudu/sema_declarations.cpp
     src/dudu/sema_enum.cpp
     src/dudu/sema_expr.cpp
     src/dudu/sema_expr_call.cpp
