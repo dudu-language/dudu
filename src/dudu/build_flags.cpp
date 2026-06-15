@@ -1,6 +1,7 @@
 #include "dudu/build_flags.hpp"
 
 #include "dudu/sema.hpp"
+#include "dudu/sema_common.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -25,8 +26,7 @@ std::optional<int64_t> parse_int_literal(std::string text) {
     return parsed == text.size() ? std::optional<int64_t>{value} : std::nullopt;
 }
 
-std::optional<int64_t> eval_int(const Expr& expr,
-                                const std::map<std::string, int64_t>& constants) {
+std::optional<int64_t> eval_int(const Expr& expr, const std::map<std::string, int64_t>& constants) {
     switch (expr.kind) {
     case ExprKind::IntLiteral:
         return parse_int_literal(expr.text);
@@ -142,12 +142,8 @@ void check_text(const std::set<std::string>& names, const SourceLocation& locati
     }
 }
 
-bool has_expr(const Expr& expr) {
-    return !expr.text.empty();
-}
-
 void check_expr(const std::set<std::string>& names, const Expr& expr) {
-    if (!has_expr(expr)) {
+    if (!sema_has_expr(expr)) {
         return;
     }
     if (expr.kind == ExprKind::Member && expr.children.size() == 1 &&
