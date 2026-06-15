@@ -2,6 +2,7 @@
 
 #include "dudu/ast_expr.hpp"
 #include "dudu/ast_parse_utils.hpp"
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 
 #include <cctype>
@@ -19,16 +20,13 @@ bool is_numeric_type(const std::string& type) {
 
 std::string wrapped_type_arg(std::string type) {
     type = trim_copy(std::move(type));
-    const size_t open = type.find('[');
-    if (open == std::string::npos || type.back() != ']') {
-        return type;
+    for (const TypeKind kind : {TypeKind::Const, TypeKind::Atomic, TypeKind::Volatile,
+                                TypeKind::Device, TypeKind::Storage, TypeKind::Shared}) {
+        if (const auto inner = unary_type_child_text(type, kind)) {
+            return *inner;
+        }
     }
-    const std::string wrapper = type.substr(0, open);
-    if (wrapper != "const" && wrapper != "atomic" && wrapper != "volatile" && wrapper != "device" &&
-        wrapper != "storage" && wrapper != "shared") {
-        return type;
-    }
-    return trim_copy(type.substr(open + 1, type.size() - open - 2));
+    return type;
 }
 
 std::string compact_type(std::string type) {
@@ -158,19 +156,6 @@ bool literal_assignable_to(const std::string& expected, const Expr& expr) {
     const std::string got = simple_literal_type(expr);
     return got == "number" ? is_numeric_type(wrapped_type_arg(expected))
                            : assignment_type_allowed(expected, expr, got);
-}
-
-std::vector<std::string> template_type_arg_texts(const std::string& type, std::string_view name) {
-    const TypeRef parsed = parse_type_text(type);
-    if (parsed.kind != TypeKind::Template || parsed.name != name) {
-        return {};
-    }
-    std::vector<std::string> out;
-    out.reserve(parsed.children.size());
-    for (const TypeRef& child : parsed.children) {
-        out.push_back(trim_copy(child.text));
-    }
-    return out;
 }
 
 bool is_container_literal(const std::string& expected, const Expr& expr) {

@@ -14,6 +14,7 @@ add_library(dudu_frontend
     src/dudu/ast_parse_scan.cpp
     src/dudu/ast_parse_utils.cpp
     src/dudu/ast_stmt_parse.cpp
+    src/dudu/ast_type.cpp
     src/dudu/ast_type_parse.cpp
     src/dudu/build_flags.cpp
     src/dudu/cli_usage.cpp

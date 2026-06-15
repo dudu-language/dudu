@@ -2,6 +2,7 @@
 
 #include "dudu/array_shape.hpp"
 #include "dudu/ast_parse_utils.hpp"
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/sema_ops.hpp"
 #include "dudu/type_compat.hpp"
@@ -23,46 +24,6 @@ std::string unwrap_reference_and_const(std::string type) {
         type = trim(parsed.children.front().text);
     }
     return type;
-}
-
-std::vector<std::string> template_type_arg_texts(const std::string& type, std::string_view name) {
-    const TypeRef parsed = parse_type_text(type);
-    if (parsed.kind != TypeKind::Template || parsed.name != name) {
-        return {};
-    }
-    std::vector<std::string> out;
-    out.reserve(parsed.children.size());
-    for (const TypeRef& child : parsed.children) {
-        out.push_back(trim(child.text));
-    }
-    return out;
-}
-
-std::optional<std::string> single_template_type_arg(const std::string& type,
-                                                    std::string_view name) {
-    const std::vector<std::string> args = template_type_arg_texts(type, name);
-    if (args.size() != 1) {
-        return std::nullopt;
-    }
-    return args.front();
-}
-
-std::optional<std::string> unwrap_storage_wrapper(const std::string& type) {
-    const TypeRef parsed = parse_type_text(type);
-    switch (parsed.kind) {
-    case TypeKind::Storage:
-    case TypeKind::Shared:
-    case TypeKind::Device:
-    case TypeKind::Volatile:
-    case TypeKind::Atomic:
-        if (parsed.children.size() == 1) {
-            return trim(parsed.children.front().text);
-        }
-        break;
-    default:
-        break;
-    }
-    return std::nullopt;
 }
 
 bool foreign_indexable_type(const std::string& type) {
@@ -211,13 +172,17 @@ std::string indexed_type_from_type_with_count(const Symbols& symbols,
         type = trim(type.substr(1));
         pointer_index = true;
     }
-    if (const auto inner = unwrap_storage_wrapper(type)) {
-        type = *inner;
+    for (const TypeKind kind : {TypeKind::Storage, TypeKind::Shared, TypeKind::Device,
+                                TypeKind::Volatile, TypeKind::Atomic}) {
+        if (const auto inner = unary_type_child_text(type, kind)) {
+            type = *inner;
+            break;
+        }
     }
     if (pointer_index) {
         return unwrap_reference_and_const(type);
     }
-    if (const auto element = single_template_type_arg(type, "list")) {
+    if (const auto element = single_template_type_arg_text(type, "list")) {
         return *element;
     }
     if (const std::vector<size_t> shape = explicit_array_shape(type); !shape.empty()) {
@@ -318,10 +283,10 @@ std::string iterable_value_type(const Symbols& symbols,
         return {};
     }
     const std::string type = unwrap_reference_and_const(resolve_alias(symbols, local->second));
-    if (const auto element = single_template_type_arg(type, "list")) {
+    if (const auto element = single_template_type_arg_text(type, "list")) {
         return *element;
     }
-    if (const auto element = single_template_type_arg(type, "span")) {
+    if (const auto element = single_template_type_arg_text(type, "span")) {
         return *element;
     }
     if (const auto element = canonical_array_element_type(type)) {

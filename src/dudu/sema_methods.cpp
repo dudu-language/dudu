@@ -1,6 +1,6 @@
 #include "dudu/sema_methods.hpp"
 
-#include "dudu/ast_parse_utils.hpp"
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/sema_builtin_methods.hpp"
 #include "dudu/sema_index.hpp"
@@ -61,19 +61,6 @@ std::vector<std::string> template_method_args(const std::string& method_name) {
         return {};
     }
     return split_top_level_args(method_name.substr(open + 1, method_name.size() - open - 2));
-}
-
-std::vector<std::string> template_type_arg_texts(const std::string& type, std::string_view name) {
-    const TypeRef parsed = parse_type_text(type);
-    if (parsed.kind != TypeKind::Template || parsed.name != name) {
-        return {};
-    }
-    std::vector<std::string> out;
-    out.reserve(parsed.children.size());
-    for (const TypeRef& child : parsed.children) {
-        out.push_back(trim(child.text));
-    }
-    return out;
 }
 
 std::optional<std::string> field_type_for_class(const Symbols& symbols, const ClassDecl& klass,

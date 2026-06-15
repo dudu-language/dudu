@@ -142,6 +142,9 @@ Already structured:
   wrappers instead of slicing those type strings directly
 - member field inference for `Result[T, E]` reads parsed `TypeRef` template
   children for `.value` and `.err` instead of re-splitting the result type text
+- shared AST type helpers own common parsed template-child and unary-wrapper
+  extraction, so semantic modules do not each carry local bracket-parsing
+  versions of the same TypeRef logic
 - native C/C++ overload checks for ordinary and explicit-template parsed calls
   consume expression children directly instead of flattening arguments back to
   strings
