@@ -38,6 +38,37 @@ std::vector<Expr> parse_dict_entries(std::string_view text, SourceLocation locat
     return out;
 }
 
+bool is_builtin_pointer_cast_type(std::string_view type) {
+    type = trim_view(type);
+    return type == "bool" || type == "i8" || type == "i16" || type == "i32" || type == "i64" ||
+           type == "u8" || type == "u16" || type == "u32" || type == "u64" ||
+           type == "isize" || type == "usize" || type == "f32" || type == "f64" ||
+           type == "void" || type == "cstr";
+}
+
+bool is_pointer_cast_call(std::string_view text) {
+    if (!text.starts_with("*") || !text.ends_with(")")) {
+        return false;
+    }
+    const size_t open = find_matching_open(text, text.size() - 1, '(', ')');
+    if (open == std::string_view::npos || open <= 1) {
+        return false;
+    }
+    std::string_view type = trim_view(text.substr(1, open - 1));
+    if (type.empty() || type.front() == '(') {
+        return false;
+    }
+    if (type.starts_with("struct ") || type.starts_with("const[") || type.starts_with("volatile[") ||
+        type.starts_with("atomic[")) {
+        return true;
+    }
+    if (type.ends_with("]") && type.find('[') != std::string_view::npos) {
+        return true;
+    }
+    return is_builtin_pointer_cast_type(type) ||
+           std::isupper(static_cast<unsigned char>(type.front())) != 0;
+}
+
 } // namespace
 
 Expr parse_expr_text(std::string_view text, SourceLocation location) {
@@ -186,6 +217,12 @@ Expr parse_expr_text(std::string_view text, SourceLocation location) {
         expr.children.push_back(parse_expr_text(text.substr(5), advance_columns(location, 5)));
         return expr;
     }
+    if (text.front() == '*' && !is_pointer_cast_call(text)) {
+        Expr expr = make_expr(ExprKind::Unary, text, location);
+        expr.op = "*";
+        expr.children.push_back(parse_expr_text(text.substr(1), advance_columns(location, 1)));
+        return expr;
+    }
     if (text.front() == '-' && !is_integer_literal(text) && !is_float_literal(text)) {
         Expr expr = make_expr(ExprKind::Unary, text, location);
         expr.op = "-";
@@ -251,12 +288,6 @@ Expr parse_expr_text(std::string_view text, SourceLocation location) {
         Expr expr = make_expr(ExprKind::Member, text, location);
         expr.name = trim_string(text.substr(dot + 1));
         expr.children.push_back(parse_expr_text(text.substr(0, dot), location));
-        return expr;
-    }
-    if (text.front() == '*') {
-        Expr expr = make_expr(ExprKind::Unary, text, location);
-        expr.op = "*";
-        expr.children.push_back(parse_expr_text(text.substr(1), advance_columns(location, 1)));
         return expr;
     }
     if (is_float_literal(text)) {

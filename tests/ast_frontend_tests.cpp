@@ -262,6 +262,24 @@ void test_expression_ast_shape() {
            produced.value_expr.range.start.column);
 }
 
+void test_dereference_postfix_expression_shape() {
+    const dudu::Expr deref = dudu::parse_expr_text("*self.out");
+    assert(deref.kind == dudu::ExprKind::Unary);
+    assert(deref.op == "*");
+    assert(deref.children.size() == 1);
+    assert(deref.children[0].kind == dudu::ExprKind::Member);
+    assert(deref.children[0].name == "out");
+
+    const dudu::Expr cast = dudu::parse_expr_text("*struct State(user_data)");
+    assert(cast.kind == dudu::ExprKind::Call);
+    assert(cast.name == "*struct State");
+
+    const dudu::Expr template_cast = dudu::parse_expr_text("*list[MissingType](ptr)");
+    assert(template_cast.kind == dudu::ExprKind::TemplateCall);
+    assert(template_cast.name == "*list");
+    assert(template_cast.template_type_args.size() == 1);
+}
+
 void test_type_ast_shape() {
     const dudu::ModuleAst module =
         dudu::parse_source("type PlayerList = list[*Player]\n"
@@ -453,6 +471,7 @@ int main() {
         test_ast_index_receiver_type_inference();
         test_statement_ast_shape();
         test_expression_ast_shape();
+        test_dereference_postfix_expression_shape();
         test_type_ast_shape();
         test_generic_decl_ast_shape();
         test_payload_enum_ast_shape();

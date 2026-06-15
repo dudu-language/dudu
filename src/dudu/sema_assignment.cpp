@@ -17,16 +17,14 @@ std::string assignment_target_type(FunctionScope& scope, const Stmt& stmt,
                                    const BodyCheckCallbacks& callbacks) {
     const SourceLocation& target_location = node_location(stmt.location, stmt.target_expr);
     if (stmt.target_expr.kind == ExprKind::Unary && stmt.target_expr.op == "*" &&
-        stmt.target_expr.children.size() == 1 &&
-        stmt.target_expr.children.front().kind == ExprKind::Name) {
-        const std::string& name = stmt.target_expr.children.front().name;
-        const auto local = scope.locals.find(name);
-        if (local == scope.locals.end()) {
-            sema_fail(target_location, "assignment through unknown local: " + name);
+        stmt.target_expr.children.size() == 1) {
+        const Expr& pointee = stmt.target_expr.children.front();
+        std::string type = trim(callbacks.infer_expr(scope, pointee, &target_location));
+        if (type.empty() || type == "auto") {
+            return {};
         }
-        std::string type = trim(local->second);
-        if (type.empty() || type.front() != '*') {
-            sema_fail(target_location, "cannot dereference non-pointer: " + name);
+        if (type.front() != '*') {
+            sema_fail(target_location, "cannot dereference non-pointer: " + type);
         }
         return trim(type.substr(1));
     }

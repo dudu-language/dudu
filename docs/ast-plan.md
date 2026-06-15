@@ -258,6 +258,12 @@ Already structured:
 - parsed index expression type inference handles expression receivers such as
   `make_values()[0]` and chained array rows without falling back to raw
   expression inference
+- dereference assignment targets now type-check through the parsed operand
+  expression, so normal Dudu code can assign through pointer fields such as
+  `*self.out += 1` without using `cpp(...)`
+- prefix dereference parsing now binds over postfix member/index/call shapes
+  such as `*self.out`, while type-shaped calls such as `*struct State(ptr)`,
+  `*i32(ptr)`, and `*list[T](ptr)` stay on the pointer-cast AST path
 - malformed parsed index expressions such as `values[]` are rejected during
   semantic checking instead of being emitted through raw expression fallback
 - build flag validation walks parsed expression nodes for constants,

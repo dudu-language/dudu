@@ -9,7 +9,7 @@ class Tracker:
     out: *i32
 
     def drop(self):
-        cpp("*self.out += 1;")
+        *self.out += 1
 
 
 def main() -> i32:
