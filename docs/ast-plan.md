@@ -290,6 +290,9 @@ Already structured:
 - parsed index expression type inference handles expression receivers such as
   `make_values()[0]` and chained array rows without falling back to raw
   expression inference
+- member-path type checks for indexed local receivers such as `items[i].field`
+  route the index through parsed expression typing instead of the raw index-text
+  overload
 - dereference assignment targets now type-check through the parsed operand
   expression, so normal Dudu code can assign through pointer fields such as
   `*self.out += 1` without using `cpp(...)`

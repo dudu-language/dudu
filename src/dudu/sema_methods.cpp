@@ -92,11 +92,13 @@ std::string first_path_type(const Symbols& symbols,
         const size_t index = first.find('[');
         const std::string name = trim(first.substr(0, index));
         const std::string index_expr = first.substr(index + 1, first.size() - index - 2);
+        const Expr parsed_index =
+            parse_expr_text(index_expr, location == nullptr ? SourceLocation{} : *location);
         if (location == nullptr && !locals.contains(name)) {
             return {};
         }
         return indexed_value_type(
-            symbols, locals, location == nullptr ? SourceLocation{} : *location, name, index_expr,
+            symbols, locals, location == nullptr ? SourceLocation{} : *location, name, parsed_index,
             unknown_local_prefix.empty() ? "indexed access to unknown local: "
                                          : unknown_local_prefix);
     }
