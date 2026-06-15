@@ -1,0 +1,13 @@
+enum Direction:
+    North
+    South
+
+
+def value(direction: Direction) -> i32:
+    match direction:
+        case Direction.North:
+            return 1
+        case Direction.North:
+            return 2
+        case Direction.South:
+            return 3

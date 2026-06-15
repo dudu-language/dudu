@@ -1,0 +1,21 @@
+enum Direction:
+    North
+    South
+    East
+    West
+
+
+def value(direction: Direction) -> i32:
+    match direction:
+        case Direction.North:
+            return 10
+        case Direction.South:
+            return 20
+        case Direction.East:
+            return 30
+        case Direction.West:
+            return 40
+
+
+def main() -> i32:
+    return value(Direction.West) + 2

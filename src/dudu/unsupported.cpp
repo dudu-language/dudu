@@ -133,9 +133,6 @@ void check_statement_prefix(const Stmt& stmt) {
 
 void check_statement(const Stmt& stmt) {
     check_statement_prefix(stmt);
-    if (stmt.kind == StmtKind::Match || stmt.kind == StmtKind::Case) {
-        throw CompileError(stmt.location, "unsupported Python feature: pattern matching");
-    }
     if (stmt.kind == StmtKind::Unknown) {
         if (!trim_copy(stmt.text).empty()) {
             throw CompileError(stmt.location, "unsupported statement: " + trim_copy(stmt.text));

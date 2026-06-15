@@ -321,6 +321,12 @@ push. They are not release packaging work.
    and exhaustive `match`. This gives Dudu static heterogeneous data without
    `Any` or silent dynamic containers.
 
+   Status: simple zero-payload enum `match` statements parse, type-check,
+   enforce exhaustiveness, reject duplicate or unknown cases, and lower to
+   readable C++ `switch`. Payload variants still parse and are validated, but
+   payload enum lowering, destructuring, guards, `Option`, and `Result`
+   matching remain.
+
 7. Native Inheritance
 
    Primary plan: [Inheritance Plan](inheritance-plan.md).

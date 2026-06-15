@@ -2,6 +2,7 @@
 
 #include "dudu/array_shape.hpp"
 #include "dudu/ast_expr.hpp"
+#include "dudu/control_flow.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/cpp_pointer_members.hpp"
 #include "dudu/cpp_stmt_types.hpp"
@@ -690,6 +691,18 @@ std::string cpp_string_literal(std::string text) {
     return out;
 }
 
+bool match_cases_return(const Stmt& stmt) {
+    if (stmt.children.empty()) {
+        return false;
+    }
+    for (const Stmt& child : stmt.children) {
+        if (child.kind != StmtKind::Case || !block_guarantees_return(child.children)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 std::string lower_declared_stmt_type(const Stmt& stmt, const std::string& effective_type,
                                      const std::vector<std::string>& aliases) {
     return effective_type == stmt.type ? lower_cpp_type(stmt.type_ref, aliases)
@@ -897,6 +910,31 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         emit_block(out, stmt.children, depth + 1, aliases, locals, return_type, function_returns,
                    symbols);
         out << indent(depth) << "}\n";
+        return;
+    }
+    if (stmt.kind == StmtKind::Match) {
+        out << indent(depth) << "switch (" << lower_expr(stmt.condition_expr, aliases, locals)
+            << ") {\n";
+        for (const Stmt& child : stmt.children) {
+            if (child.kind != StmtKind::Case) {
+                continue;
+            }
+            if (child.pattern == "_") {
+                out << indent(depth) << "default:\n";
+            } else {
+                out << indent(depth) << "case " << lower_expr(child.pattern_expr, aliases, locals)
+                    << ":\n";
+            }
+            out << indent(depth + 1) << "{\n";
+            emit_block(out, child.children, depth + 2, aliases, locals, return_type,
+                       function_returns, symbols);
+            out << indent(depth + 2) << "break;\n";
+            out << indent(depth + 1) << "}\n";
+        }
+        out << indent(depth) << "}\n";
+        if (match_cases_return(stmt)) {
+            out << indent(depth) << "__builtin_unreachable();\n";
+        }
         return;
     }
     if (stmt.kind == StmtKind::Try) {

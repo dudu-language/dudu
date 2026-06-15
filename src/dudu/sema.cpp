@@ -80,6 +80,65 @@ bool is_array_literal(const Expr& expr) {
     return expr.kind == ExprKind::ListLiteral;
 }
 
+const EnumDecl* enum_decl_for_type(const Symbols& symbols, const std::string& type) {
+    const std::string resolved = resolve_alias(symbols, type);
+    const auto found = symbols.enums.find(resolved);
+    return found == symbols.enums.end() ? nullptr : found->second;
+}
+
+bool enum_has_payloads(const EnumDecl& en) {
+    for (const EnumValueDecl& value : en.values) {
+        if (!value.payload_fields.empty()) {
+            return true;
+        }
+    }
+    return false;
+}
+
+std::optional<std::string> enum_case_variant(const EnumDecl& en, const Stmt& stmt) {
+    if (stmt.pattern == "_") {
+        return std::string{"_"};
+    }
+    const std::optional<std::string> path = member_path_from_expr(stmt.pattern_expr);
+    if (!path) {
+        return std::nullopt;
+    }
+    const std::string prefix = en.name + ".";
+    if (!starts_with(*path, prefix)) {
+        return std::nullopt;
+    }
+    const std::string variant = path->substr(prefix.size());
+    if (variant.find('.') != std::string::npos) {
+        return std::nullopt;
+    }
+    return variant;
+}
+
+bool enum_contains_variant(const EnumDecl& en, const std::string& variant) {
+    for (const EnumValueDecl& value : en.values) {
+        if (value.name == variant) {
+            return true;
+        }
+    }
+    return false;
+}
+
+std::string missing_enum_cases(const EnumDecl& en, const std::set<std::string>& covered) {
+    std::ostringstream out;
+    bool first = true;
+    for (const EnumValueDecl& value : en.values) {
+        if (covered.contains(value.name)) {
+            continue;
+        }
+        if (!first) {
+            out << ", ";
+        }
+        first = false;
+        out << en.name << "." << value.name;
+    }
+    return out.str();
+}
+
 bool has_expr(const Expr& expr) {
     return !expr.text.empty();
 }
@@ -1615,6 +1674,57 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
                                  &node_location(stmt.location, stmt.value_expr));
         }
         return;
+    }
+    if (stmt.kind == StmtKind::Match) {
+        const SourceLocation& subject_location = node_location(stmt.location, stmt.condition_expr);
+        const std::string subject_type =
+            infer_expr_ast(scope, stmt.condition_expr, &subject_location);
+        const EnumDecl* en = enum_decl_for_type(scope.symbols, subject_type);
+        if (en == nullptr) {
+            fail(subject_location, "match subject must be an enum, got " + subject_type);
+        }
+        if (enum_has_payloads(*en)) {
+            fail(stmt.location, "payload enum match lowering is not implemented: " + en->name);
+        }
+        std::set<std::string> covered;
+        bool wildcard = false;
+        for (const Stmt& child : stmt.children) {
+            if (child.kind != StmtKind::Case) {
+                fail(child.location, "match body expects case statements");
+            }
+            if (!child.guard.empty()) {
+                fail(child.location, "match guards are not implemented");
+            }
+            if (wildcard) {
+                fail(child.location, "unreachable case after wildcard");
+            }
+            const std::optional<std::string> variant = enum_case_variant(*en, child);
+            if (!variant) {
+                fail(child.location, "case pattern must be " + en->name + ".Variant or _");
+            }
+            if (*variant == "_") {
+                wildcard = true;
+            } else {
+                if (!enum_contains_variant(*en, *variant)) {
+                    fail(child.location, "unknown enum variant in pattern: " + en->name + "." +
+                                             *variant);
+                }
+                if (!covered.insert(*variant).second) {
+                    fail(child.location, "unreachable duplicate case: " + en->name + "." +
+                                             *variant);
+                }
+            }
+            check_block(scope, child.children, return_type, loop_depth);
+        }
+        if (!wildcard && covered.size() != en->values.size()) {
+            fail(stmt.location,
+                 "non-exhaustive match on " + en->name + "; missing cases: " +
+                     missing_enum_cases(*en, covered));
+        }
+        return;
+    }
+    if (stmt.kind == StmtKind::Case) {
+        fail(stmt.location, "case outside match");
     }
     if (stmt.kind == StmtKind::Delete) {
         std::vector<std::string> arg_types;

@@ -416,6 +416,7 @@ Symbols collect_symbols(const ModuleAst& module) {
     for (const EnumDecl& en : module.enums) {
         add_name(names, en.name, en.location);
         symbols.types.insert(en.name);
+        symbols.enums[en.name] = &en;
     }
     for (const ClassDecl& klass : module.classes) {
         add_name(names, klass.name, klass.location);

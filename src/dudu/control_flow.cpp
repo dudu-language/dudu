@@ -21,6 +21,18 @@ bool branch_chain_guarantees_return(const std::vector<Stmt>& body, size_t& index
     return has_else && all_branches_return;
 }
 
+bool match_guarantees_return(const Stmt& stmt) {
+    if (stmt.children.empty()) {
+        return false;
+    }
+    for (const Stmt& child : stmt.children) {
+        if (child.kind != StmtKind::Case || !block_guarantees_return(child.children)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 } // namespace
 
 bool block_guarantees_return(const std::vector<Stmt>& body) {
@@ -29,6 +41,9 @@ bool block_guarantees_return(const std::vector<Stmt>& body) {
             return true;
         }
         if (body[i].kind == StmtKind::If && branch_chain_guarantees_return(body, i)) {
+            return true;
+        }
+        if (body[i].kind == StmtKind::Match && match_guarantees_return(body[i])) {
             return true;
         }
     }

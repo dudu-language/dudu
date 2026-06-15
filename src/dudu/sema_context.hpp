@@ -27,6 +27,7 @@ struct Symbols {
     std::map<std::string, std::vector<FunctionSignature>> native_function_signatures;
     std::set<std::string> native_template_fallback_prefixes;
     std::map<std::string, std::string> native_values;
+    std::map<std::string, const EnumDecl*> enums;
     std::map<std::string, ClassDecl> native_classes;
     std::map<std::string, const ClassDecl*> classes;
 };
