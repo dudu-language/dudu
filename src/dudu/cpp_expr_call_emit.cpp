@@ -1,5 +1,6 @@
 #include "dudu/cpp_expr_call_emit.hpp"
 
+#include "dudu/array_shape.hpp"
 #include "dudu/ast_expr.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_expr_emit.hpp"
@@ -282,6 +283,29 @@ std::optional<std::string> lower_trailing_full_slice_expr(
         row += "[" + lower_expr(index.children[i], aliases, locals, symbols) + "]";
     }
     return "std::span(&(" + row + ")[0], (" + row + ").size())";
+}
+
+std::optional<std::string> lower_column_slice_expr(
+    const Expr& base, const Expr& index, const std::vector<std::string>& aliases,
+    const std::map<std::string, std::string>& locals, const Symbols* symbols) {
+    (void)symbols;
+    if (base.kind != ExprKind::Name || index.kind != ExprKind::TupleLiteral ||
+        index.children.size() != 2 || !is_full_slice_expr(index.children[0]) ||
+        index.children[1].kind == ExprKind::Slice) {
+        return std::nullopt;
+    }
+    const auto local = locals.find(base.name);
+    if (local == locals.end()) {
+        return std::nullopt;
+    }
+    const std::vector<size_t> shape = explicit_array_shape(local->second);
+    if (shape.size() != 2) {
+        return std::nullopt;
+    }
+    const std::string lowered_base = lower_expr(base, aliases, locals, symbols);
+    const std::string column = lower_expr(index.children[1], aliases, locals, symbols);
+    return "dudu::StridedSpan{" + lowered_base + ".data()->data() + (" + column + "), " +
+           std::to_string(shape[0]) + ", " + std::to_string(shape[1]) + "}";
 }
 
 std::optional<std::string>

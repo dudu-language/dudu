@@ -318,10 +318,11 @@ push. They are not release packaging work.
    `len(values)` and `&values[0]` for native pointer/count handoff.
    One-dimensional fixed-array `start:end`, `:end`, `start:`, and `:` slices
    produce `span[T]` views. Fixed multidimensional arrays support trailing row
-   views such as `mat[row, :]`.
+   views such as `mat[row, :]`. Matrix column slices such as `mat[:, col]`
+   produce `strided_span[T]` views so non-contiguous views are explicit.
    Dudu-native `@operator("[]")` read hooks and `@operator("[]=")` indexed
    assignment hooks work for library-style tensor wrappers, and indexed member
-   paths such as `self.values[i]` type-check. Step slices, column/general
+   paths such as `self.values[i]` type-check. Step slices, general
    multidimensional slices, and richer tensor-library metadata remain.
    Same-width Dudu-native `xyzw`, `rgba`, and `stpq` read swizzles are
    implemented for local class receivers and expression receivers. Same-width

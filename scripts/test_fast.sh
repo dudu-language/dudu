@@ -44,6 +44,7 @@ compile_and_expect array_c_handoff 42
 compile_and_expect array_slice_view 42
 compile_and_expect array_open_slice 42
 compile_and_expect array_row_slice 42
+compile_and_expect array_column_slice 42
 compile_and_expect array_image_kernel 42
 compile_and_expect swizzle_vec2 42
 compile_and_expect swizzle_rgba 42

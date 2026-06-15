@@ -147,6 +147,16 @@ std::optional<size_t> trailing_full_slice_prefix_count(const Expr& expr) {
     return expr.children.size() - 1;
 }
 
+bool is_full_slice_expr(const Expr& expr) {
+    return expr.kind == ExprKind::Slice && expr.children.size() == 2 &&
+           expr.children[0].text.empty() && expr.children[1].text.empty();
+}
+
+bool is_column_slice_expr(const Expr& expr) {
+    return expr.kind == ExprKind::TupleLiteral && expr.children.size() == 2 &&
+           is_full_slice_expr(expr.children[0]) && !is_slice_expr(expr.children[1]);
+}
+
 std::string indexed_type_from_type_with_count(const Symbols& symbols,
                                               const SourceLocation& location,
                                               const std::string& raw_type, const size_t index_count,
@@ -253,6 +263,13 @@ std::string indexed_type_from_type(const Symbols& symbols, const SourceLocation&
                                    const std::string& raw_type, const Expr& index_expr,
                                    const std::string& label) {
     std::string type = resolve_alias(symbols, raw_type);
+    const std::string unwrapped_input_type = unwrap_reference_and_const(type);
+    if (is_column_slice_expr(index_expr)) {
+        const std::vector<size_t> shape = explicit_array_shape(unwrapped_input_type);
+        if (shape.size() == 2) {
+            return "strided_span[" + explicit_array_element_type(unwrapped_input_type) + "]";
+        }
+    }
     if (!has_step_slice(index_expr)) {
         if (const std::vector<size_t> shape = explicit_array_shape(type); !shape.empty()) {
             if (const auto prefix_count = trailing_full_slice_prefix_count(index_expr)) {
@@ -279,6 +296,9 @@ std::string iterable_value_type(const Symbols& symbols,
         return *element;
     }
     if (const auto element = single_template_type_arg_text(type, "span")) {
+        return *element;
+    }
+    if (const auto element = single_template_type_arg_text(type, "strided_span")) {
         return *element;
     }
     if (const auto element = fixed_array_element_type(type)) {

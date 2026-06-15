@@ -88,6 +88,9 @@ std::string lower_template_type(std::string_view name, const std::string& args) 
     if (name == "span") {
         return "std::span<" + lower_template_arg_type(args) + ">";
     }
+    if (name == "strided_span") {
+        return "dudu::StridedSpan<" + lower_template_arg_type(args) + ">";
+    }
     if (name == "dict") {
         std::ostringstream out;
         out << "std::unordered_map<";

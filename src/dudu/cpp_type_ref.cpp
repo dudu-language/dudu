@@ -39,6 +39,9 @@ std::string lower_template_type(const TypeRef& type) {
     if (name == "span") {
         return "std::span<" + join_lowered_type_args(type.children) + ">";
     }
+    if (name == "strided_span") {
+        return "dudu::StridedSpan<" + join_lowered_type_args(type.children) + ">";
+    }
     if (name == "dict") {
         return "std::unordered_map<" + join_lowered_type_args(type.children) + ">";
     }
@@ -70,6 +73,10 @@ std::string lower_template_type(const TypeRef& type,
     }
     if (name == "span") {
         return "std::span<" + join_lowered_type_args(type.children, namespace_aliases) + ">";
+    }
+    if (name == "strided_span") {
+        return "dudu::StridedSpan<" + join_lowered_type_args(type.children, namespace_aliases) +
+               ">";
     }
     if (name == "dict") {
         return "std::unordered_map<" + join_lowered_type_args(type.children, namespace_aliases) +

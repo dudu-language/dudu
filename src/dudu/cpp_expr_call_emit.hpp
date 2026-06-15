@@ -24,6 +24,10 @@ std::string lower_enum_variant_constructor(const EnumDecl& en, const EnumValueDe
 std::optional<std::string> lower_trailing_full_slice_expr(
     const Expr& base, const Expr& index, const std::vector<std::string>& aliases,
     const std::map<std::string, std::string>& locals, const Symbols* symbols);
+std::optional<std::string> lower_column_slice_expr(const Expr& base, const Expr& index,
+                                                   const std::vector<std::string>& aliases,
+                                                   const std::map<std::string, std::string>& locals,
+                                                   const Symbols* symbols);
 std::optional<std::string>
 lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& aliases,
                             const std::map<std::string, std::string>& locals,

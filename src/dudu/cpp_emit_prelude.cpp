@@ -188,6 +188,22 @@ void emit_result_prelude(std::ostringstream& out, const ModuleAst& module) {
            "template <typename T0, typename T1, typename T2, typename T3, typename T4, typename "
            "T5, typename T6, typename T7> struct Tuple8 { T0 _0{}; T1 _1{}; T2 _2{}; T3 _3{}; "
            "T4 _4{}; T5 _5{}; T6 _6{}; T7 _7{}; };\n"
+           "template <typename T> struct StridedSpan {\n"
+           "    T* data{};\n"
+           "    std::size_t count{};\n"
+           "    std::size_t stride{};\n"
+           "    T& operator[](std::size_t index) const { return data[index * stride]; }\n"
+           "    std::size_t size() const { return count; }\n"
+           "    struct Iterator {\n"
+           "        T* current{};\n"
+           "        std::size_t stride{};\n"
+           "        T& operator*() const { return *current; }\n"
+           "        Iterator& operator++() { current += stride; return *this; }\n"
+           "        bool operator!=(const Iterator& other) const { return current != other.current; }\n"
+           "    };\n"
+           "    Iterator begin() const { return {data, stride}; }\n"
+           "    Iterator end() const { return {data + count * stride, stride}; }\n"
+           "};\n"
            "} // namespace dudu\n";
     if (!freestanding) {
         out << "using dudu::print;\n";

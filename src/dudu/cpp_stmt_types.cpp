@@ -76,6 +76,10 @@ std::string indexed_local_type(const std::string& receiver_type, const Expr& ind
         args.size() == 1) {
         return trim_copy(args.front());
     }
+    if (const std::vector<std::string> args = template_type_arg_texts(type, "strided_span");
+        args.size() == 1) {
+        return trim_copy(args.front());
+    }
     if (const std::vector<std::string> args = template_type_arg_texts(type, "set");
         args.size() == 1) {
         return trim_copy(args.front());

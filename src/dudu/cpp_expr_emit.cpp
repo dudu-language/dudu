@@ -265,6 +265,10 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
                 return "std::span(&(" + out + ")[" + start + "], (" + end + ") - (" + start + "))";
             }
             if (expr.children[1].kind == ExprKind::TupleLiteral) {
+                if (const auto column_slice = lower_column_slice_expr(
+                        expr.children[0], expr.children[1], aliases, locals, symbols)) {
+                    return *column_slice;
+                }
                 if (const auto slice = lower_trailing_full_slice_expr(
                         expr.children[0], expr.children[1], aliases, locals, symbols)) {
                     return *slice;

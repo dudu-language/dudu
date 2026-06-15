@@ -3,5 +3,5 @@ def main() -> i32:
         [1, 2],
         [3, 4],
     ]
-    column: span[i32] = matrix[:, 0]
-    return len(column)
+    view: strided_span[i32] = matrix[0:1, 0]
+    return len(view)
