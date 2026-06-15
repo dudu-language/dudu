@@ -17,5 +17,19 @@ def value(direction: Direction) -> i32:
             return 40
 
 
+def guarded(direction: Direction, enabled: bool) -> i32:
+    match direction:
+        case Direction.North if enabled:
+            return 5
+        case Direction.North:
+            return 7
+        case Direction.South:
+            return 20
+        case Direction.East:
+            return 30
+        case Direction.West:
+            return 40
+
+
 def main() -> i32:
-    return value(Direction.West) + 2
+    return value(Direction.West) + guarded(Direction.North, False) + 2

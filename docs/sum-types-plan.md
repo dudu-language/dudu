@@ -203,8 +203,12 @@ match msg:
         return dx + dy
 ```
 
-Still remaining: guards, payload `Option`/`Result` matching, recursive enum
-examples, richer unreachable-pattern diagnostics, and anonymous `variant[...]`.
+Match guards are implemented and type-checked as `bool`. Guarded cases do not
+count toward exhaustiveness, so a guarded variant must still have an unguarded
+case or a wildcard case somewhere later in the match.
+
+Still remaining: payload `Option`/`Result` matching, recursive enum examples,
+richer unreachable-pattern diagnostics, and anonymous `variant[...]`.
 
 ## Recursive Data
 

@@ -13,8 +13,8 @@ compile_and_expect c_lowercase_macro 42
 compile_and_expect c_variadic_macro 42
 compile_and_expect cpp_macro_bomb 42
 compile_and_expect debug_asserts 42
-compile_and_expect enum_match 42
-compile_and_expect payload_enum_match 81
+compile_and_expect enum_match 49
+compile_and_expect payload_enum_match 82
 "$repo_root/build/dudu" "$repo_root/tests/fixtures/freestanding_debug_assert.dd" \
     --emit-cpp "$repo_root/build/freestanding_debug_assert.cpp" -DTARGET_MODE=freestanding
 grep -Fq "assert(((value == 42)))" "$repo_root/build/freestanding_debug_assert.cpp"

@@ -838,6 +838,15 @@ bool is_wildcard_pattern_expr(const Expr& expr) {
     return expr.kind == ExprKind::Name && expr.name == "_";
 }
 
+bool match_has_guards(const Stmt& stmt) {
+    for (const Stmt& child : stmt.children) {
+        if (child.kind == StmtKind::Case && has_expr(child.guard_expr)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 std::optional<std::string> enum_case_variant_name(const Stmt& stmt) {
     if (is_wildcard_pattern_expr(stmt.pattern_expr)) {
         return std::string{"_"};
@@ -1132,26 +1141,30 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
             infer_emitted_local_type(stmt.condition_expr, locals, function_returns);
         if (!subject_type.empty()) {
             const EnumDecl* en = enum_decl_for_type(symbols, subject_type);
-            if (en != nullptr && enum_has_payloads(*en)) {
+            if (en != nullptr && (enum_has_payloads(*en) || match_has_guards(stmt))) {
                 const std::string subject = "__dudu_match_" + std::to_string(stmt.location.line) +
                                             "_" + std::to_string(stmt.location.column);
+                const std::string matched = subject + "_matched";
                 out << indent(depth) << "auto&& " << subject << " = "
                     << lower_expr(stmt.condition_expr, aliases, locals, symbols) << ";\n";
-                bool first_case = true;
+                out << indent(depth) << "bool " << matched << " = false;\n";
                 for (const Stmt& child : stmt.children) {
                     if (child.kind != StmtKind::Case) {
                         continue;
                     }
                     const std::optional<std::string> variant = enum_case_variant_name(child);
+                    std::string condition = "true";
                     if (!variant || *variant == "_") {
-                        out << indent(depth) << (first_case ? "if" : "else") << " (true) {\n";
+                        condition = "true";
+                    } else if (enum_has_payloads(*en)) {
+                        condition = "std::holds_alternative<" + en->name + "::" + *variant + ">(" +
+                                    subject + ".value)";
                     } else {
-                        out << indent(depth) << (first_case ? "if" : "else if") << " ("
-                            << "std::holds_alternative<" << en->name << "::" << *variant << ">("
-                            << subject << ".value)) {\n";
+                        condition = subject + " == " + en->name + "::" + *variant;
                     }
+                    out << indent(depth) << "if (!" << matched << " && (" << condition << ")) {\n";
                     std::map<std::string, std::string> nested = locals;
-                    if (variant && *variant != "_") {
+                    if (enum_has_payloads(*en) && variant && *variant != "_") {
                         if (const EnumValueDecl* value = enum_variant_decl(*en, *variant)) {
                             const std::string payload = "__dudu_case_" +
                                                         std::to_string(child.location.line) + "_" +
@@ -1172,10 +1185,19 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                             }
                         }
                     }
-                    emit_block(out, child.children, depth + 1, aliases, nested, return_type,
-                               function_returns, symbols);
+                    if (has_expr(child.guard_expr)) {
+                        out << indent(depth + 1) << "if ("
+                            << lower_expr(child.guard_expr, aliases, nested, symbols) << ") {\n";
+                        out << indent(depth + 2) << matched << " = true;\n";
+                        emit_block(out, child.children, depth + 2, aliases, nested, return_type,
+                                   function_returns, symbols);
+                        out << indent(depth + 1) << "}\n";
+                    } else {
+                        out << indent(depth + 1) << matched << " = true;\n";
+                        emit_block(out, child.children, depth + 1, aliases, nested, return_type,
+                                   function_returns, symbols);
+                    }
                     out << indent(depth) << "}\n";
-                    first_case = false;
                 }
                 if (match_cases_return(stmt)) {
                     out << indent(depth) << "__builtin_unreachable();\n";

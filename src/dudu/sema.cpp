@@ -2058,9 +2058,6 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
             if (child.kind != StmtKind::Case) {
                 fail(child.location, "match body expects case statements");
             }
-            if (has_expr(child.guard_expr)) {
-                fail(child.location, "match guards are not implemented");
-            }
             if (wildcard) {
                 fail(child.location, "unreachable case after wildcard");
             }
@@ -2069,13 +2066,15 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
                 fail(child.location, "case pattern must be " + en->name + ".Variant or _");
             }
             if (*variant == "_") {
-                wildcard = true;
+                if (!has_expr(child.guard_expr)) {
+                    wildcard = true;
+                }
             } else {
                 if (!enum_contains_variant(*en, *variant)) {
                     fail(child.location,
                          "unknown enum variant in pattern: " + en->name + "." + *variant);
                 }
-                if (!covered.insert(*variant).second) {
+                if (!has_expr(child.guard_expr) && !covered.insert(*variant).second) {
                     fail(child.location,
                          "unreachable duplicate case: " + en->name + "." + *variant);
                 }
@@ -2085,6 +2084,14 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
                 const EnumValueDecl* value = enum_variant_decl(*en, *variant);
                 if (value != nullptr) {
                     bind_payload_case(nested, *value, child.pattern_expr, child.location);
+                }
+            }
+            if (has_expr(child.guard_expr)) {
+                const std::string guard_type = infer_expr_ast(
+                    nested, child.guard_expr, &node_location(child.location, child.guard_expr));
+                if (guard_type != "bool") {
+                    fail(node_location(child.location, child.guard_expr),
+                         "match guard must be bool, got " + guard_type);
                 }
             }
             check_block(nested, child.children, return_type, loop_depth);
