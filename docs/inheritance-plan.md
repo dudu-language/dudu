@@ -257,6 +257,12 @@ Interface-like abstract classes lower to C++ abstract classes with pure virtual
 methods. If multiple interface-like bases are used, they must not contribute
 storage.
 
+Status: strict native multiple inheritance is implemented for the common
+one-storage-base plus interface-like abstract bases shape. Non-storage bases in
+multi-base lists must be abstract/interface-like, multiple storage-bearing Dudu
+bases are rejected, and duplicate inherited concrete methods are rejected unless
+the derived class overrides the method.
+
 ## Default Methods On Interface-Like Bases
 
 Default methods are allowed when they do not require fields:
@@ -565,9 +571,11 @@ field declaration where possible.
 - Classes with unimplemented abstract methods cannot be constructed: done for
   Dudu constructor calls and `new[T]` allocation.
 - Interface-like abstract classes compile to abstract C++ bases.
-- Classes may implement multiple interface-like bases.
+- Classes may implement multiple interface-like bases: done for fieldless
+  abstract bases and one optional storage-bearing base.
 - target examples exist as fixtures or runnable examples.
-- Multiple concrete native bases are rejected.
+- Multiple concrete native bases are rejected: done for multiple
+  storage-bearing Dudu bases.
 - Imported C++ inherited methods remain callable.
 - Imported C++ derived/base pointer and reference conversions work.
 - Static fields use `static[T]`, and `class.name` works inside class scope.

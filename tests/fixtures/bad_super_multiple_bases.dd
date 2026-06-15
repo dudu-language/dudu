@@ -1,13 +1,20 @@
 class Drawable:
+    @abstract
     def draw(self) -> i32:
-        return 1
+
 
 
 class Tickable:
+    @abstract
     def tick(self) -> i32:
-        return 2
+
 
 
 class Sprite(Drawable, Tickable):
+    @override
     def draw(self) -> i32:
         return super.draw()
+
+    @override
+    def tick(self) -> i32:
+        return 2

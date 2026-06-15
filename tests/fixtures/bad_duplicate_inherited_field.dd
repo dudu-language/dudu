@@ -1,0 +1,15 @@
+class HasX:
+    x: i32
+
+
+class AlsoHasX:
+    x: i32
+
+    @abstract
+    def update(self) -> i32:
+
+
+class Sprite(HasX, AlsoHasX):
+    @override
+    def update(self) -> i32:
+        return 1

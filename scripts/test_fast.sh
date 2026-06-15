@@ -43,6 +43,7 @@ compile_and_expect inheritance_abstract 42
 compile_and_expect inheritance_super_method 42
 compile_and_expect inheritance_super_init 42
 compile_and_expect inheritance_virtual_override 42
+compile_and_expect inheritance_multiple_interfaces 42
 compile_and_expect native_inheritance_basic 42
 compile_and_expect native_template_function 42
 compile_and_expect native_scan_local 42

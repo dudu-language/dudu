@@ -4,6 +4,7 @@
 #include "dudu/cpp_lower.hpp"
 #include "dudu/cpp_stmt_emit.hpp"
 #include "dudu/sema_context.hpp"
+#include "dudu/sema_inheritance.hpp"
 
 #include <cctype>
 #include <set>
@@ -180,6 +181,26 @@ const Expr* super_init_expr(const FunctionDecl& method) {
     return nullptr;
 }
 
+std::string super_init_base(const Symbols& symbols, const std::string& class_name) {
+    const auto klass = symbols.classes.find(class_name);
+    if (klass == symbols.classes.end() || klass->second->base_classes.empty()) {
+        return {};
+    }
+    if (klass->second->base_classes.size() == 1) {
+        return klass->second->base_classes.front();
+    }
+    std::string storage_base;
+    for (const std::string& base : klass->second->base_classes) {
+        if (class_type_has_instance_storage(symbols, base)) {
+            if (!storage_base.empty()) {
+                return {};
+            }
+            storage_base = base;
+        }
+    }
+    return storage_base;
+}
+
 std::string join_lowered_args(const std::vector<Expr>& args, const std::vector<std::string>& aliases,
                               const std::map<std::string, std::string>& locals) {
     std::ostringstream out;
@@ -263,9 +284,9 @@ void emit_method(std::ostringstream& out, const std::string& class_name, const F
     out << ")";
     if (is_constructor_method(method)) {
         if (const Expr* super_init = super_init_expr(method)) {
-            if (const auto base = locals.find("super"); base != locals.end()) {
-                out << " : " << lower_cpp_type(parse_type_text(base->second, method.location),
-                                               aliases)
+            const std::string base = super_init_base(symbols, class_name);
+            if (!base.empty()) {
+                out << " : " << lower_cpp_type(parse_type_text(base, method.location), aliases)
                     << "(" << join_lowered_args(super_init->children, aliases, locals) << ")";
             }
         }

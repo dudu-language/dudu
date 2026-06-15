@@ -1,5 +1,6 @@
 #include "dudu/sema_inheritance.hpp"
 
+#include <algorithm>
 #include <map>
 #include <sstream>
 #include <set>
@@ -134,6 +135,18 @@ bool native_base_assignable(const Symbols& symbols, const std::string& expected,
     const std::string base = unwrap_type(symbols, expected);
     const std::string derived = unwrap_type(symbols, got);
     return base != derived && type_derives_from(symbols, derived, base);
+}
+
+bool class_type_has_instance_storage(const Symbols& symbols, const std::string& type) {
+    const auto klass = symbols.classes.find(unwrap_type(symbols, type));
+    if (klass == symbols.classes.end()) {
+        return false;
+    }
+    return !klass->second->fields.empty() ||
+           std::any_of(klass->second->base_classes.begin(), klass->second->base_classes.end(),
+                       [&](const std::string& base) {
+                           return class_type_has_instance_storage(symbols, base);
+                       });
 }
 
 std::vector<std::string> unimplemented_abstract_methods(const Symbols& symbols,

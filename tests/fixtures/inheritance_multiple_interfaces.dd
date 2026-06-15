@@ -1,0 +1,36 @@
+class Node:
+    id: i32
+
+    def init(self, id: i32):
+        self.id = id
+
+
+class Drawable:
+    @abstract
+    def draw(self) -> i32:
+
+
+class Tickable:
+    @abstract
+    def tick(self) -> i32:
+
+    def reset(self) -> i32:
+        return 1
+
+
+class Sprite(Node, Drawable, Tickable):
+    def init(self, id: i32):
+        super.init(id)
+
+    @override
+    def draw(self) -> i32:
+        return self.id
+
+    @override
+    def tick(self) -> i32:
+        return 2
+
+
+def main() -> i32:
+    sprite: Sprite = Sprite(39)
+    return sprite.draw() + sprite.tick() + sprite.reset()

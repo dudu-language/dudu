@@ -346,8 +346,10 @@ push. They are not release packaging work.
    diagnostics. `super.init(...)` is implemented for single-base constructors
    as the first statement in `init`, validates parsed arguments against the
    base constructor, and lowers to a C++ base initializer. Broader constructors
-   across multiple bases, virtual destructor policy, and strict multiple
-   inheritance rules remain.
+   across multiple storage bases remain rejected. Strict native multiple
+   inheritance rules are implemented for the common one-storage-base plus
+   interface-like abstract bases shape, including duplicate concrete-method
+   diagnostics. Virtual destructor policy remains.
 
 8. Macro Surface Prerequisites
 

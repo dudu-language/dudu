@@ -5,6 +5,7 @@
 
 #include <cctype>
 #include <optional>
+#include <sstream>
 #include <utility>
 
 namespace dudu {
@@ -100,6 +101,168 @@ const FunctionDecl* find_method_decl(const Symbols& symbols, const std::string& 
 
 bool same_signature(const FunctionSignature& a, const FunctionSignature& b) {
     return a.return_type == b.return_type && a.params == b.params;
+}
+
+std::string method_key_without_self(const FunctionDecl& method) {
+    const FunctionSignature signature = method_signature_without_self(method);
+    std::ostringstream out;
+    out << method.name << '(';
+    for (size_t i = 0; i < signature.params.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << signature.params[i];
+    }
+    out << ") -> " << signature.return_type;
+    return out.str();
+}
+
+const ClassDecl* dudu_class_for_base(const Symbols& symbols, const std::string& base) {
+    const auto found = symbols.classes.find(base_type(base));
+    return found == symbols.classes.end() ? nullptr : found->second;
+}
+
+bool class_has_instance_storage(const Symbols& symbols, const ClassDecl& klass,
+                                std::set<std::string>& seen) {
+    if (!seen.insert(klass.name).second) {
+        return false;
+    }
+    if (!klass.fields.empty()) {
+        return true;
+    }
+    for (const std::string& base : klass.base_classes) {
+        if (const ClassDecl* parent = dudu_class_for_base(symbols, base)) {
+            if (class_has_instance_storage(symbols, *parent, seen)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool class_has_instance_storage(const Symbols& symbols, const ClassDecl& klass) {
+    std::set<std::string> seen;
+    return class_has_instance_storage(symbols, klass, seen);
+}
+
+bool class_has_abstract_method(const Symbols& symbols, const ClassDecl& klass,
+                               std::set<std::string>& seen) {
+    if (!seen.insert(klass.name).second) {
+        return false;
+    }
+    for (const FunctionDecl& method : klass.methods) {
+        if (has_decorator(method, "abstract")) {
+            return true;
+        }
+    }
+    for (const std::string& base : klass.base_classes) {
+        if (const ClassDecl* parent = dudu_class_for_base(symbols, base)) {
+            if (class_has_abstract_method(symbols, *parent, seen)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool class_has_abstract_method(const Symbols& symbols, const ClassDecl& klass) {
+    std::set<std::string> seen;
+    return class_has_abstract_method(symbols, klass, seen);
+}
+
+bool interface_like_base(const Symbols& symbols, const ClassDecl& klass) {
+    return !class_has_instance_storage(symbols, klass) && class_has_abstract_method(symbols, klass);
+}
+
+void collect_inherited_fields(const Symbols& symbols, const ClassDecl& klass,
+                              std::map<std::string, std::string>& fields,
+                              std::set<std::string>& seen) {
+    if (!seen.insert(klass.name).second) {
+        return;
+    }
+    for (const FieldDecl& field : klass.fields) {
+        fields.emplace(field.name, klass.name);
+    }
+    for (const std::string& base : klass.base_classes) {
+        if (const ClassDecl* parent = dudu_class_for_base(symbols, base)) {
+            collect_inherited_fields(symbols, *parent, fields, seen);
+        }
+    }
+}
+
+void collect_concrete_methods(const Symbols& symbols, const ClassDecl& klass,
+                              std::map<std::string, std::string>& methods,
+                              std::set<std::string>& seen) {
+    if (!seen.insert(klass.name).second) {
+        return;
+    }
+    for (const FunctionDecl& method : klass.methods) {
+        const bool is_static = method.params.empty() || method.params.front().name != "self";
+        if (!is_static && !has_decorator(method, "abstract")) {
+            methods.emplace(method_key_without_self(method), klass.name);
+        }
+    }
+    for (const std::string& base : klass.base_classes) {
+        if (const ClassDecl* parent = dudu_class_for_base(symbols, base)) {
+            collect_concrete_methods(symbols, *parent, methods, seen);
+        }
+    }
+}
+
+void check_multiple_inheritance_rules(const Symbols& symbols, const ClassDecl& klass) {
+    if (klass.base_classes.size() <= 1) {
+        return;
+    }
+    size_t storage_bases = 0;
+    std::map<std::string, std::string> inherited_fields;
+    std::map<std::string, std::string> inherited_concrete_methods;
+    std::set<std::string> derived_overrides;
+    for (const FunctionDecl& method : klass.methods) {
+        if (has_decorator(method, "override")) {
+            derived_overrides.insert(method_key_without_self(method));
+        }
+    }
+
+    for (const std::string& base : klass.base_classes) {
+        const ClassDecl* parent = dudu_class_for_base(symbols, base);
+        if (parent == nullptr) {
+            continue;
+        }
+        const bool has_storage = class_has_instance_storage(symbols, *parent);
+        if (has_storage) {
+            ++storage_bases;
+            if (storage_bases > 1) {
+                fail(klass.location,
+                     "multiple inheritance allows at most one storage-bearing Dudu base");
+            }
+        } else if (!interface_like_base(symbols, *parent)) {
+            fail(klass.location,
+                 "multiple inheritance non-storage bases must be abstract interface-like classes");
+        }
+
+        std::map<std::string, std::string> fields;
+        std::set<std::string> field_seen;
+        collect_inherited_fields(symbols, *parent, fields, field_seen);
+        for (const auto& [name, owner] : fields) {
+            if (const auto existing = inherited_fields.find(name);
+                existing != inherited_fields.end() && existing->second != owner) {
+                fail(klass.location, "duplicate inherited field: " + name);
+            }
+            inherited_fields.emplace(name, owner);
+        }
+
+        std::map<std::string, std::string> methods;
+        std::set<std::string> method_seen;
+        collect_concrete_methods(symbols, *parent, methods, method_seen);
+        for (const auto& [key, owner] : methods) {
+            if (const auto existing = inherited_concrete_methods.find(key);
+                existing != inherited_concrete_methods.end() && existing->second != owner &&
+                !derived_overrides.contains(key)) {
+                fail(klass.location, "ambiguous inherited concrete method: " + key);
+            }
+            inherited_concrete_methods.emplace(key, owner);
+        }
+    }
 }
 
 std::string decorator_arg(const Decorator& decorator, std::string_view name) {
@@ -545,6 +708,7 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                 fail(klass.location, "duplicate base class: " + base);
             }
         }
+        check_multiple_inheritance_rules(symbols, klass);
         std::set<std::string> fields;
         for (const FieldDecl& field : klass.fields) {
             if (!fields.insert(field.name).second) {

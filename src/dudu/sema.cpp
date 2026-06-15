@@ -121,6 +121,41 @@ std::string super_base_type(const FunctionScope& scope, const SourceLocation* lo
     return klass->second->base_classes.front();
 }
 
+std::string super_init_base_type(const FunctionScope& scope, const SourceLocation* location) {
+    if (scope.current_class.empty()) {
+        if (location != nullptr) {
+            fail(*location, "super access outside class method");
+        }
+        return {};
+    }
+    const auto klass = scope.symbols.classes.find(scope.current_class);
+    if (klass == scope.symbols.classes.end()) {
+        return {};
+    }
+    if (klass->second->base_classes.empty()) {
+        if (location != nullptr) {
+            fail(*location, "super access requires a base class");
+        }
+        return {};
+    }
+    if (klass->second->base_classes.size() == 1) {
+        return klass->second->base_classes.front();
+    }
+    std::vector<std::string> storage_bases;
+    for (const std::string& base : klass->second->base_classes) {
+        if (class_type_has_instance_storage(scope.symbols, base)) {
+            storage_bases.push_back(base);
+        }
+    }
+    if (storage_bases.size() == 1) {
+        return storage_bases.front();
+    }
+    if (location != nullptr) {
+        fail(*location, "super.init requires exactly one storage-bearing base class");
+    }
+    return {};
+}
+
 bool is_super_call(const std::string& callee) {
     return callee == "super" || starts_with(callee, "super.");
 }
@@ -154,7 +189,7 @@ std::string infer_super_call_ast(const FunctionScope& scope, const Expr& expr,
             }
             return {};
         }
-        const std::string base = super_base_type(scope, location);
+        const std::string base = super_init_base_type(scope, location);
         if (base.empty()) {
             return {};
         }

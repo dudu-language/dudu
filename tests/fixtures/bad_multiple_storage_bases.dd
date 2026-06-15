@@ -1,0 +1,11 @@
+class Node:
+    id: i32
+
+
+class Transform:
+    x: f32
+
+
+class Sprite(Node, Transform):
+    def marker(self) -> i32:
+        return 0

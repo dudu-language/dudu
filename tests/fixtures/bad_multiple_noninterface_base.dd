@@ -1,0 +1,12 @@
+class Node:
+    id: i32
+
+
+class Utility:
+    def reset(self) -> i32:
+        return 0
+
+
+class Sprite(Node, Utility):
+    def marker(self) -> i32:
+        return 0

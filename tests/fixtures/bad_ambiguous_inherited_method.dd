@@ -1,0 +1,28 @@
+class Node:
+    id: i32
+
+
+class Named:
+    @abstract
+    def name(self) -> str:
+
+    def label(self) -> str:
+        return self.name()
+
+
+class Titled:
+    @abstract
+    def title(self) -> str:
+
+    def label(self) -> str:
+        return self.title()
+
+
+class Sprite(Node, Named, Titled):
+    @override
+    def name(self) -> str:
+        return "sprite"
+
+    @override
+    def title(self) -> str:
+        return "sprite"
