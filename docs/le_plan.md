@@ -320,6 +320,8 @@ push. They are not release packaging work.
    `rgba`, and `stpq` read swizzles are implemented for local class receivers
    and expression receivers. Same-width Dudu-native write swizzles are
    implemented for assignable receivers and reject repeated write components.
+   Different-width local Dudu-native read swizzles construct matching result
+   classes when available, such as `Vec4.xy -> Vec2`.
 
 5. Native Dudu Generics
 

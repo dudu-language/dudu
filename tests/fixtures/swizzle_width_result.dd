@@ -1,0 +1,20 @@
+class Vec2:
+    x: i32
+    y: i32
+
+
+class Vec4:
+    x: i32
+    y: i32
+    z: i32
+    w: i32
+
+
+def main() -> i32:
+    value: Vec4 = Vec4(10, 20, 30, 40)
+    xy: Vec2 = value.xy
+    zw: Vec2 = value.zw
+    xx: Vec2 = value.xx
+    if xy.x == 10 and xy.y == 20 and zw.x == 30 and zw.y == 40 and xx.y == 10:
+        return xy.x + xy.y + xx.x + xx.y - 8
+    return 1

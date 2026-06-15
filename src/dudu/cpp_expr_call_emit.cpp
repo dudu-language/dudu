@@ -151,7 +151,8 @@ bool looks_like_local_dudu_class_type(const std::string& type) {
 
 std::optional<std::string>
 lower_local_swizzle_expr(const Expr& expr, const std::vector<std::string>& aliases,
-                         const std::map<std::string, std::string>& locals) {
+                         const std::map<std::string, std::string>& locals,
+                         const Symbols* symbols) {
     if (expr.kind != ExprKind::Member || expr.children.size() != 1 ||
         expr.children.front().kind != ExprKind::Name || !is_supported_swizzle(expr.name)) {
         return std::nullopt;
@@ -164,8 +165,15 @@ lower_local_swizzle_expr(const Expr& expr, const std::vector<std::string>& alias
     if (!looks_like_local_dudu_class_type(local->second)) {
         return std::nullopt;
     }
+    if (symbols == nullptr) {
+        return std::nullopt;
+    }
+    const auto result_type = swizzle_type_for_type(*symbols, local->second, expr.name);
+    if (!result_type) {
+        return std::nullopt;
+    }
     std::ostringstream out;
-    out << lower_cpp_type(local->second, aliases) << "{";
+    out << lower_cpp_type(*result_type, aliases) << "{";
     for (size_t i = 0; i < expr.name.size(); ++i) {
         if (i > 0) {
             out << ", ";
@@ -307,7 +315,7 @@ std::optional<std::string> lower_swizzle_expr(const Expr& expr,
                                               const std::vector<std::string>& aliases,
                                               const std::map<std::string, std::string>& locals,
                                               const Symbols* symbols) {
-    if (const auto local = lower_local_swizzle_expr(expr, aliases, locals)) {
+    if (const auto local = lower_local_swizzle_expr(expr, aliases, locals, symbols)) {
         return local;
     }
     if (expr.kind != ExprKind::Member || expr.children.size() != 1 ||
@@ -318,13 +326,24 @@ std::optional<std::string> lower_swizzle_expr(const Expr& expr,
         locals.contains(expr.children.front().name)) {
         return std::nullopt;
     }
+    std::optional<std::string> result_type;
+    if (symbols != nullptr) {
+        const std::string receiver_type =
+            member_expr_type(*symbols, locals, nullptr, expr.children.front());
+        if (!receiver_type.empty()) {
+            result_type = swizzle_type_for_type(*symbols, receiver_type, expr.name);
+        }
+    }
     const std::string receiver = lower_expr(expr.children.front(), aliases, locals, symbols);
     if (receiver.empty()) {
         return std::nullopt;
     }
     std::ostringstream out;
     out << "([&]() { auto&& __dudu_swizzle_value = " << receiver
-        << "; return std::remove_cvref_t<decltype(__dudu_swizzle_value)>{";
+        << "; return "
+        << (result_type ? lower_cpp_type(*result_type, aliases)
+                        : "std::remove_cvref_t<decltype(__dudu_swizzle_value)>")
+        << "{";
     for (size_t i = 0; i < expr.name.size(); ++i) {
         if (i > 0) {
             out << ", ";

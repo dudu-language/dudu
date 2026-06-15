@@ -243,8 +243,10 @@ implemented for local class receivers with matching component fields. Repeated
 read components such as `v.xx`, `color.rrrr`, and `coord.qqqq` are allowed.
 Same-width write swizzles such as `v.yx = other` and `color.bgra = other`
 write component-by-component and reject repeated write components such as
-`v.xx = other`. Different-width result construction, imported vector metadata,
-and imported vector swizzle assignment remain compiler-architecture work.
+`v.xx = other`. Different-width local Dudu-native read swizzles construct a
+matching result class when one exists, such as `Vec4.xy -> Vec2`. Imported
+vector metadata, imported vector swizzle assignment, and different-width
+expression receiver swizzles remain compiler-architecture work.
 Same-width read swizzles also work on expression receivers such as
 `make_color().bgra`; emission uses a single-evaluation temporary for non-local
 receivers.

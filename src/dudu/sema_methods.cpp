@@ -365,15 +365,37 @@ std::optional<std::string> swizzle_type_for_type(const Symbols& symbols,
             ++component_count;
         }
     }
-    if (component_count != swizzle.size()) {
-        return std::nullopt;
-    }
     for (const char ch : swizzle) {
         if (!field_type_for_class(symbols, *klass->second, receiver_type, std::string(1, ch))) {
             return std::nullopt;
         }
     }
-    return class_name;
+    if (component_count == swizzle.size()) {
+        return class_name;
+    }
+    const std::string_view result_components = component_set->substr(0, swizzle.size());
+    for (const auto& [candidate_name, candidate] : symbols.classes) {
+        if (candidate_name == class_name || candidate->fields.size() != swizzle.size()) {
+            continue;
+        }
+        bool matches = true;
+        for (size_t i = 0; i < result_components.size(); ++i) {
+            const std::string result_field(1, result_components[i]);
+            const std::string source_field(1, swizzle[i]);
+            const auto result_type =
+                field_type_for_class(symbols, *candidate, candidate_name, result_field);
+            const auto source_type =
+                field_type_for_class(symbols, *klass->second, receiver_type, source_field);
+            if (!result_type || !source_type || *result_type != *source_type) {
+                matches = false;
+                break;
+            }
+        }
+        if (matches) {
+            return candidate_name;
+        }
+    }
+    return std::nullopt;
 }
 
 std::optional<std::string> swizzle_assignment_type_for_type(const Symbols& symbols,
