@@ -217,6 +217,13 @@ bool is_xyzw_swizzle(const std::string& swizzle) {
     return true;
 }
 
+bool looks_like_local_dudu_class_type(const std::string& type) {
+    const std::string trimmed = trim_copy(type);
+    return !trimmed.empty() && trimmed.find('.') == std::string::npos &&
+           trimmed.find("::") == std::string::npos &&
+           std::isupper(static_cast<unsigned char>(trimmed.front())) != 0;
+}
+
 std::optional<std::string> lower_local_swizzle_expr(
     const Expr& expr, const std::vector<std::string>& aliases,
     const std::map<std::string, std::string>& locals) {
@@ -227,6 +234,9 @@ std::optional<std::string> lower_local_swizzle_expr(
     const std::string& receiver = expr.children.front().name;
     const auto local = locals.find(receiver);
     if (local == locals.end()) {
+        return std::nullopt;
+    }
+    if (!looks_like_local_dudu_class_type(local->second)) {
         return std::nullopt;
     }
     std::ostringstream out;

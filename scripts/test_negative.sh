@@ -107,6 +107,15 @@ expect_fail bad_array_too_many_indices --emit-cpp "too many indices for array: m
 expect_fail bad_array_step_slice --emit-cpp "array slice step is not supported: values"
 expect_fail bad_array_matrix_slice --emit-cpp "array slicing requires one-dimensional fixed array: matrix"
 expect_fail bad_swizzle_width --emit-cpp "unknown field: value.xyx"
+"$repo_root/build/dudu" "$repo_root/tests/fixtures/bad_imported_swizzle.dd" \
+    --emit-cpp "$repo_root/build/bad_imported_swizzle.cpp"
+if "${CXX:-c++}" -std=c++20 -I"$repo_root/tests/fixtures" \
+    "$repo_root/build/bad_imported_swizzle.cpp" -o "$repo_root/build/bad_imported_swizzle" \
+    2>"$repo_root/build/bad_imported_swizzle.err"; then
+    echo "bad_imported_swizzle unexpectedly compiled" >&2
+    exit 1
+fi
+grep -q "no member named" "$repo_root/build/bad_imported_swizzle.err"
 expect_fail bad_tensor_index_type --emit-cpp "argument 1 for tensor\\[\\] expects i32, got bool"
 expect_fail bad_tensor_index_set_index_type --emit-cpp "argument 1 for tensor\\[\\]= expects i32, got bool"
 expect_fail bad_tensor_index_set_value_type --emit-cpp "argument 2 for tensor\\[\\]= expects i32, got bool"

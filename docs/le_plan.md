@@ -285,7 +285,9 @@ push. They are not release packaging work.
    Dudu-native `@operator("[]")` read hooks and `@operator("[]=")` indexed
    assignment hooks work for library-style tensor wrappers, and indexed member
    paths such as `self.values[i]` type-check. Step slices, multidimensional
-   slices, and swizzling remain.
+   slices, different-width swizzle result construction, swizzle assignment, and
+   imported vector swizzle metadata remain. Same-width Dudu-native `xyzw` read
+   swizzles are implemented for local class receivers.
 
 5. Native Dudu Generics
 
