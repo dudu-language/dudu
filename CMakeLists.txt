@@ -53,6 +53,7 @@ add_library(dudu_frontend
     src/dudu/sema_alloc.cpp
     src/dudu/sema_bindings.cpp
     src/dudu/sema_body.cpp
+    src/dudu/sema_builtin_methods.cpp
     src/dudu/sema_common.cpp
     src/dudu/sema_context.cpp
     src/dudu/sema_constexpr.cpp
@@ -69,6 +70,7 @@ add_library(dudu_frontend
     src/dudu/sema_index.cpp
     src/dudu/sema_inheritance.cpp
     src/dudu/sema_match.cpp
+    src/dudu/sema_method_templates.cpp
     src/dudu/sema_methods.cpp
     src/dudu/sema_native.cpp
     src/dudu/sema_ops.cpp

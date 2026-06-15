@@ -1,0 +1,107 @@
+#include "dudu/sema_builtin_methods.hpp"
+
+#include "dudu/cpp_lower.hpp"
+#include "dudu/source.hpp"
+
+namespace dudu {
+namespace {
+
+std::string first_type_arg(const std::string& type) {
+    const size_t open = type.find('[');
+    if (open == std::string::npos || type.back() != ']') {
+        return {};
+    }
+    int depth = 0;
+    const size_t close = type.size() - 1;
+    for (size_t i = open + 1; i < close; ++i) {
+        if (type[i] == '[')
+            ++depth;
+        if (type[i] == ']')
+            --depth;
+        if (type[i] == ',' && depth == 0)
+            return trim(type.substr(open + 1, i - open - 1));
+    }
+    return trim(type.substr(open + 1, close - open - 1));
+}
+
+} // namespace
+
+std::string receiver_template_type(const Symbols& symbols, std::string type) {
+    type = resolve_alias(symbols, std::move(type));
+    while (!type.empty() && (type.front() == '*' || type.front() == '&')) {
+        type = trim(type.substr(1));
+    }
+    return trim(std::move(type));
+}
+
+bool builtin_cpp_method_signature(const Symbols& symbols, std::string receiver_type,
+                                  const std::string& method_name, FunctionSignature& signature) {
+    const std::string templated = receiver_template_type(symbols, std::move(receiver_type));
+    if (templated == "str" || templated == "string" || templated == "string_view" ||
+        templated == "std.string" || templated == "std.string_view" || templated == "std::string" ||
+        templated == "std::string_view" || templated.find("basic_string") != std::string::npos) {
+        if (method_name == "size" || method_name == "length") {
+            signature.return_type = "usize";
+            return true;
+        }
+        if (method_name == "empty") {
+            signature.return_type = "bool";
+            return true;
+        }
+        if (method_name == "c_str") {
+            signature.return_type = "cstr";
+            return true;
+        }
+    }
+    if (starts_with(templated, "list[") || templated.find("vector<") != std::string::npos) {
+        const std::string item = first_type_arg(templated);
+        if (method_name == "push_back" || method_name == "append") {
+            signature.params = {item.empty() ? "auto" : item};
+            signature.return_type = "void";
+            return true;
+        }
+        if (method_name == "resize" || method_name == "reserve") {
+            signature.params = {"auto"};
+            signature.return_type = "void";
+            return true;
+        }
+        if (method_name == "size" || method_name == "capacity") {
+            signature.return_type = "usize";
+            return true;
+        }
+        if (method_name == "empty") {
+            signature.return_type = "bool";
+            return true;
+        }
+        if (method_name == "begin" || method_name == "end") {
+            signature.return_type = "auto";
+            return true;
+        }
+    }
+    if (starts_with(templated, "atomic[") || templated.find("atomic<") != std::string::npos) {
+        const std::string item = first_type_arg(templated);
+        const std::string value_type = item.empty() ? "auto" : item;
+        if (method_name == "load") {
+            signature.return_type = value_type;
+            return true;
+        }
+        if (method_name == "store") {
+            signature.params = {value_type};
+            signature.return_type = "void";
+            return true;
+        }
+        if (method_name == "exchange" || method_name == "fetch_add" || method_name == "fetch_sub" ||
+            method_name == "fetch_and" || method_name == "fetch_or" || method_name == "fetch_xor") {
+            signature.params = {value_type};
+            signature.return_type = value_type;
+            return true;
+        }
+        if (method_name == "is_lock_free") {
+            signature.return_type = "bool";
+            return true;
+        }
+    }
+    return false;
+}
+
+} // namespace dudu

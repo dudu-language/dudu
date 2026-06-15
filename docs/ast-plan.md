@@ -828,10 +828,14 @@ Semantic analysis has started the same cleanup:
 - `sema_expr_call.cpp`, `sema_expr_template.cpp`, `sema_expr_cpp_escape.cpp`,
   and `sema_expr_support.cpp` own call resolution, template-call inference,
   `cpp(...)` escape inference, and expression-checking support helpers.
+- `sema_methods.cpp` owns member paths, field lookup, swizzle lookup, and Dudu
+  method lookup.
+- `sema_builtin_methods.cpp` and `sema_method_templates.cpp` own builtin C++
+  method signatures and method generic substitution helpers.
 
-`sema_methods.cpp` still exceeds the repo file-size target and should keep
-being split by semantic responsibility before large new language features are
-layered on top.
+The remaining oversized frontend files are now outside the core semantic split:
+`language_server.cpp`, `cpp_lower.cpp`, `native_headers.cpp`, `parser.cpp`, and
+`cpp_type.cpp`.
 
 ## Acceptance
 
