@@ -68,6 +68,21 @@ Implement this first:
   ```
 - no implicit casts across Dudu-native assignments and returns.
 
+Named function values replace Python `lambda`. A `def name(...)` declaration at
+statement start declares a function in the current scope; `def name(...)` in an
+expression position creates a named function value. Function values must be
+named.
+
+Rejected Python expression sugar:
+
+- `lambda`
+- ternary conditional expressions
+- list, dict, and set comprehensions
+- generator expressions
+
+Use explicit statements and loops instead. This keeps allocation, capture,
+lifetime, and control flow visible in systems code.
+
 ## Type Surface
 
 Built-ins:
@@ -1082,7 +1097,8 @@ or compiles against the actual target library.
    - `fn(A, B) -> R`
    - comparator callback
    - void callback
-   - non-capturing lambda coercion where supported
+   - named `def` function values coercing to raw function pointers when they do
+     not capture
 
 8. **value_vs_pointer_containers**
    - `list[Thing]` owns values

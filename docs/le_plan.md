@@ -441,4 +441,7 @@ push. They are not release packaging work.
    string-lowering shortcuts that bypass the real AST/sema model. Explicit
    user escape hatches such as `cpp(...)` can remain, but compiler-internal raw
    string fallbacks should disappear as AST coverage reaches the corresponding
-   language forms.
+   language forms. Prototype Python sugar such as `lambda`, ternary conditional
+   expressions, comprehensions, and generator expressions should be rejected or
+   removed from examples in favor of named `def` function values and explicit
+   statements.

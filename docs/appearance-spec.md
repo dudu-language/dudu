@@ -747,10 +747,30 @@ Rules:
 
 - `fn(...) -> T` is a raw function pointer type.
 - `fn(...)` returns `void`.
-- capturing lambdas do not fit in `fn`.
-- non-capturing lambdas may coerce if the generated C++ supports it.
+- `def name(...)` in expression position creates a named function value.
+- function values must have names; unnamed function values are not part of
+  Dudu.
+- non-capturing function values can coerce to `fn(...) -> T`.
+- capturing function values require a closure-capable target type such as an
+  imported `std.function[...]` wrapper; they cannot coerce to raw `fn`.
 - owning/capturing callable wrappers use imported C++ types such as
   `std.function[...]`.
+
+Named function values replace Python `lambda`:
+
+```python
+callback: fn(i32) -> i32 = def add_one(value: i32) -> i32:
+    return value + 1
+```
+
+The inner name is required and is used for diagnostics, generated symbols, and
+profiling. It does not create an extra local binding unless the expression is
+assigned to one.
+
+```python
+callback(41)  # valid
+add_one(41)  # invalid unless separately declared
+```
 
 ## Allocation
 
@@ -950,10 +970,41 @@ else:
     hp -= 1
 ```
 
-Conditional expressions can use Python spelling:
+Conditional expressions are not part of the core language. Use an explicit
+local and ordinary control flow instead:
 
 ```python
-status = "dead" if hp <= 0 else "alive"
+status: str
+if hp <= 0:
+    status = "dead"
+else:
+    status = "alive"
+```
+
+This keeps control flow statement-oriented and avoids expression-only special
+cases that do not materially improve systems code.
+
+## Rejected Python Sugar
+
+Dudu intentionally leaves out some compact Python expression forms:
+
+- `lambda`
+- list comprehensions
+- dict comprehensions
+- set comprehensions
+- generator expressions
+- ternary conditional expressions
+
+These forms hide control flow, allocation, capture, or lifetime behavior inside
+expressions. Prefer named `def` values and explicit loops:
+
+```python
+handlers["spawn"] = def on_spawn(event: Event):
+    spawn_enemy(event.id)
+
+squares: list[i32] = []
+for value: i32 in values:
+    squares.append(value * value)
 ```
 
 ## Async And Concurrency
