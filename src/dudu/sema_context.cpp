@@ -1,5 +1,6 @@
 #include "dudu/sema_context.hpp"
 
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/sema_inheritance.hpp"
 #include "dudu/source.hpp"
@@ -31,6 +32,42 @@ void add_name(std::map<std::string, SourceLocation>& names, const std::string& n
     }
 }
 
+std::string base_type_ref(const TypeRef& type) {
+    switch (type.kind) {
+    case TypeKind::Named:
+    case TypeKind::Qualified:
+        return trim(type.name.empty() ? type.text : type.name);
+    case TypeKind::Template:
+        return trim(type.name);
+    case TypeKind::Pointer:
+    case TypeKind::Reference:
+        return type.children.empty() ? trim(type.text) : base_type_ref(type.children.front());
+    case TypeKind::Const:
+        return "const";
+    case TypeKind::Volatile:
+        return "volatile";
+    case TypeKind::Atomic:
+        return "atomic";
+    case TypeKind::Device:
+        return "device";
+    case TypeKind::Storage:
+        return "storage";
+    case TypeKind::Shared:
+        return "shared";
+    case TypeKind::Static:
+        return "static";
+    case TypeKind::FixedArray:
+        return type.children.empty() ? trim(type.text) : base_type_ref(type.children.front());
+    case TypeKind::Function:
+        return "fn";
+    case TypeKind::Value:
+        return trim(type.value.empty() ? type.text : type.value);
+    case TypeKind::Unknown:
+        return trim(type.text);
+    }
+    return trim(type.text);
+}
+
 } // namespace
 
 std::string trim(std::string text) {
@@ -44,15 +81,7 @@ std::string trim(std::string text) {
 }
 
 std::string base_type(std::string type) {
-    type = trim(std::move(type));
-    while (!type.empty() && (type.front() == '*' || type.front() == '&')) {
-        type = trim(type.substr(1));
-    }
-    const size_t bracket = type.find('[');
-    if (bracket != std::string::npos) {
-        return trim(type.substr(0, bracket));
-    }
-    return type;
+    return base_type_ref(parse_type_text(type));
 }
 
 bool known_type(const Symbols& symbols, const std::string& type) {
@@ -203,10 +232,7 @@ size_t find_top_level_char(const std::string& text, char wanted) {
 
 std::vector<std::string> tuple_types(const Symbols& symbols, std::string type) {
     type = resolve_alias(symbols, std::move(type));
-    if (!starts_with(type, "tuple[") || type.back() != ']') {
-        return {};
-    }
-    return split_top_level(type.substr(6, type.size() - 7));
+    return template_type_arg_texts(parse_type_text(type), "tuple");
 }
 
 Symbols collect_symbols(const ModuleAst& module) {

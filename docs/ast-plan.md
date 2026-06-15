@@ -145,6 +145,9 @@ Already structured:
 - shared AST type helpers own common parsed template-child and unary-wrapper
   extraction, so semantic modules do not each carry local bracket-parsing
   versions of the same TypeRef logic
+- core semantic helpers such as `base_type` and tuple member extraction read
+  parsed `TypeRef` node shapes instead of stripping pointer/reference prefixes
+  and tuple brackets by hand
 - method, inheritance, and operator receiver/type unwrapping use parsed pointer,
   reference, and wrapper `TypeRef` nodes instead of local string-prefix loops
 - builtin method signatures for Dudu-native `list[T]` and `atomic[T]` receivers

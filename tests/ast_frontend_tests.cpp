@@ -5,6 +5,7 @@
 #include "dudu/match_patterns.hpp"
 #include "dudu/parser.hpp"
 #include "dudu/sema.hpp"
+#include "dudu/sema_context.hpp"
 #include "dudu/sema_function_type.hpp"
 #include "dudu/type_compat.hpp"
 
@@ -65,6 +66,20 @@ void test_type_compat_uses_type_ast_for_pointers() {
     assert(dudu::type_assignment_allowed("*i32", "*&i32"));
     assert(dudu::type_assignment_allowed("&const[i32]", "i32"));
     assert(dudu::type_assignment_allowed("i32", "&const[i32]"));
+}
+
+void test_core_type_helpers_use_type_ast() {
+    assert(dudu::base_type("*const[i32]") == "const");
+    assert(dudu::base_type("&Player") == "Player");
+    assert(dudu::base_type("array[f32][4, 4]") == "array");
+    assert(dudu::base_type("fn(i32) -> bool") == "fn");
+    assert(dudu::base_type("struct sqlite3") == "struct sqlite3");
+
+    dudu::Symbols symbols;
+    const std::vector<std::string> tuple = dudu::tuple_types(symbols, "tuple[i32, list[str]]");
+    assert(tuple.size() == 2);
+    assert(tuple[0] == "i32");
+    assert(tuple[1] == "list[str]");
 }
 
 void test_native_semantic_tokens() {
@@ -608,6 +623,7 @@ int main() {
     try {
         test_ast_assignment_display_types();
         test_type_compat_uses_type_ast_for_pointers();
+        test_core_type_helpers_use_type_ast();
         test_native_semantic_tokens();
         test_ast_constructor_assignment_compatibility();
         test_ast_index_receiver_type_inference();
