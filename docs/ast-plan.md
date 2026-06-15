@@ -363,8 +363,8 @@ Already structured:
   `make_values()[0]` and chained array rows without falling back to raw
   expression inference
 - member-path type checks for indexed local receivers such as `items[i].field`
-  route the index through parsed expression typing instead of the raw index-text
-  overload
+  parse the indexed segment into an `Expr::Index` and route the index through
+  parsed expression typing instead of slicing raw index text
 - member-path type checks for normal local value paths now walk parsed
   `Name`/`Member`/`Index` expression nodes directly. The string path remains
   for compatibility boundaries such as explicit C++ escapes and native import
