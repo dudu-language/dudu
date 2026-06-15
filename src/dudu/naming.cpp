@@ -76,8 +76,8 @@ void check_naming(const ModuleAst& module) {
             fail_naming(en.location, "type names must be PascalCase", en.name);
         }
         for (const EnumValueDecl& value : en.values) {
-            if (!is_dudu_snake_case(value.name)) {
-                fail_naming(value.location, "enum values must be snake_case", value.name);
+            if (!is_pascal_case(value.name)) {
+                fail_naming(value.location, "enum values must be PascalCase", value.name);
             }
         }
     }

@@ -1,6 +1,6 @@
 enum BadEnum:
-    value
-    value
+    Value
+    Value
 
 
 def main() -> i32:

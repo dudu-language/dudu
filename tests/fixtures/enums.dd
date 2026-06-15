@@ -1,17 +1,17 @@
 enum Color: u8
-    red = 1
-    green = 2
-    blue = 3
+    Red = 1
+    Green = 2
+    Blue = 3
 
 
 enum Direction:
-    north
-    south
+    North
+    South
 
 
 def main() -> i32:
-    color: Color = Color.green
-    direction: Direction = Direction.south
-    if color == Color.green and direction == Direction.south:
+    color: Color = Color.Green
+    direction: Direction = Direction.South
+    if color == Color.Green and direction == Direction.South:
         return 42
     return 1

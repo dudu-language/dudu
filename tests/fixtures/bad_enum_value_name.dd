@@ -1,5 +1,5 @@
 enum BadEnum:
-    BadValue
+    bad_value
 
 
 def main() -> i32:

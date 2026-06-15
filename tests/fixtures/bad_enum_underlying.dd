@@ -1,5 +1,5 @@
 enum Bad: MissingType
-    value
+    Value
 
 
 def main() -> i32:

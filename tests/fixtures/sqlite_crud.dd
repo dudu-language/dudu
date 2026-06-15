@@ -8,9 +8,9 @@ class Todo:
 
 
 enum DbError:
-    open_failed
-    query_failed
-    not_found
+    OpenFailed
+    QueryFailed
+    NotFound
 
 
 def fetch_todo(db: *struct sqlite3, todo_id: i64) -> Result[Todo, DbError]:
@@ -18,12 +18,12 @@ def fetch_todo(db: *struct sqlite3, todo_id: i64) -> Result[Todo, DbError]:
     stmt: *struct sqlite3_stmt = None
 
     if sqlite.sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, None) != sqlite.SQLITE_OK:
-        return Err(DbError.query_failed)
+        return Err(DbError.QueryFailed)
 
     sqlite.sqlite3_bind_int64(stmt, 1, todo_id)
     if sqlite.sqlite3_step(stmt) != sqlite.SQLITE_ROW:
         sqlite.sqlite3_finalize(stmt)
-        return Err(DbError.not_found)
+        return Err(DbError.NotFound)
 
     todo = Todo(
         id=sqlite.sqlite3_column_int64(stmt, 0),

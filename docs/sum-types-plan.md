@@ -398,3 +398,8 @@ Required diagnostics:
 - Generated C++ is readable.
 - Errors point at Dudu source.
 - Mixed containers require explicit `variant[...]` or a named enum.
+
+Status: simple C-like enum variants are PascalCase in fixtures and compiler
+naming checks. Snake-case enum variants are rejected before payload sum types
+land, so the existing enum surface matches the planned `EnumName.VariantName`
+spelling.

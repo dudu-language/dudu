@@ -522,7 +522,7 @@ enum ReadError:
 
 def read_text(path: str) -> Result[str, ReadError]:
     if not fs.exists(path):
-        return Err(ReadError.not_found)
+        return Err(ReadError.NotFound)
 
     return Ok(fs.read_all(path))
 ```
