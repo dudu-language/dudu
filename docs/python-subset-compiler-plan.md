@@ -1388,7 +1388,7 @@ Systems examples live in `examples/` and drive the long-range capability set:
 - `shader_compute.dd`: shader-style compute attributes and storage address
   spaces
 - `native_escape.dd`: inline C++ escape hatches
-- `modules_visibility.dd`: public/private generated header surface
+- `modules_visibility.dd`: generated header surface with underscore-private helpers
 
 The core gate parses and emits these examples. Optional probes compile and run
 library-backed fixtures when local dependencies are installed.

@@ -11,7 +11,6 @@ namespace dudu {
 
 enum class Visibility {
     Default,
-    Public,
     Private,
 };
 

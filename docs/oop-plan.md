@@ -261,6 +261,9 @@ Use Python naming convention:
 - `_` alone is an ignored binding.
 
 No `public` or `private` keyword for normal Dudu-native code.
+PascalCase type names are ordinary C++ API types. Explicit type export controls
+belong with the C ABI/shared-library visibility policy, not the normal class
+syntax.
 
 ```python
 class Player:
@@ -274,8 +277,9 @@ def _tick_invuln(player: &Player):
     ...
 ```
 
-Visibility affects generated headers, imports, LSP completion, and diagnostics.
-It is not a runtime access-control system.
+For functions and methods, leading underscore privacy affects generated headers,
+imports, LSP completion, and diagnostics. It is not a runtime access-control
+system.
 
 ## Properties
 

@@ -288,6 +288,11 @@ push. They are not release packaging work.
    `static[T]`, no `@staticmethod`, no properties, `@operator(...)`, and static
    access through `Type.name` or `class.name`.
 
+   Status: explicit `public`/`private` visibility keywords are rejected for
+   normal Dudu syntax. Function and method privacy follows Python naming:
+   leading-underscore names stay out of generated public headers while normal
+   names remain public.
+
 4. Arrays, Matrices, Tensors, And Slicing
 
    Primary plan: [Arrays, Matrix, Tensor, And Slicing Plan](arrays-indexing-plan.md).

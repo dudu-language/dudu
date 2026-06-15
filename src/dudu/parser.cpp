@@ -158,10 +158,14 @@ void Parser::require_no_decorators(const std::vector<Decorator>& decorators,
 
 Visibility Parser::parse_visibility() {
     if (match_identifier("public")) {
-        return Visibility::Public;
+        throw CompileError(previous().location,
+                           "explicit visibility keywords are not supported; use normal public "
+                           "names or leading underscore private names");
     }
     if (match_identifier("private")) {
-        return Visibility::Private;
+        throw CompileError(previous().location,
+                           "explicit visibility keywords are not supported; use normal public "
+                           "names or leading underscore private names");
     }
     return Visibility::Default;
 }

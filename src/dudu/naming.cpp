@@ -4,6 +4,7 @@
 #include "dudu/sema.hpp"
 
 #include <cctype>
+#include <string_view>
 
 namespace dudu {
 namespace {
@@ -36,10 +37,14 @@ bool has_decorator(const FunctionDecl& fn, std::string_view name) {
 } // namespace
 
 bool is_dudu_snake_case(const std::string& name) {
-    if (name.empty() || std::islower(static_cast<unsigned char>(name.front())) == 0) {
+    std::string_view text = name;
+    if (text.size() > 1 && text.front() == '_' && text[1] != '_') {
+        text.remove_prefix(1);
+    }
+    if (text.empty() || std::islower(static_cast<unsigned char>(text.front())) == 0) {
         return name.size() > 4 && starts_with(name, "__") && name.substr(name.size() - 2) == "__";
     }
-    for (const char c : name) {
+    for (const char c : text) {
         if (std::islower(static_cast<unsigned char>(c)) == 0 &&
             std::isdigit(static_cast<unsigned char>(c)) == 0 && c != '_') {
             return false;

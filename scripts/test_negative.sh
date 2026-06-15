@@ -232,7 +232,7 @@ expect_fail bad_cpp_std_function_call --emit-cpp "argument 1 for callback expect
 expect_fail bad_tuple_arity --check "tuple supports 1 to 8 elements, got 9"
 expect_fail bad_function_decorator --check "unknown function decorator: @cuda.glboal"
 expect_fail bad_class_decorator --check "unknown class decorator: @packd"
-expect_fail bad_class_member_visibility --check "expected def after class member visibility"
+expect_fail bad_class_member_visibility --check "explicit visibility keywords are not supported"
 expect_fail bad_extern_c_str --check "@extern_c return type is not C ABI safe: str"
 
 if (

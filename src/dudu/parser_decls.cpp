@@ -4,6 +4,17 @@
 
 namespace dudu {
 
+namespace {
+
+Visibility visibility_from_name(Visibility explicit_visibility, const std::string& name) {
+    if (explicit_visibility != Visibility::Default) {
+        return explicit_visibility;
+    }
+    return name.size() > 1 && name.front() == '_' ? Visibility::Private : Visibility::Default;
+}
+
+} // namespace
+
 ClassDecl Parser::parse_class(const Token& start, Visibility visibility,
                               const std::vector<Decorator>& decorators) {
     ClassDecl klass;
@@ -54,9 +65,6 @@ ClassDecl Parser::parse_class(const Token& start, Visibility visibility,
             require_no_decorators(member_decorators, "class constant");
             klass.constants.push_back(parse_constant());
             continue;
-        }
-        if (member_visibility != Visibility::Default) {
-            fail_current("expected def after class member visibility");
         }
         require_no_decorators(member_decorators, "field");
         FieldDecl field = parse_field();
@@ -202,6 +210,7 @@ FunctionDecl Parser::parse_function(const Token& start, Visibility visibility,
     fn.decorators = decorators;
     fn.location = start.location;
     fn.name = consume_identifier("expected function name").text;
+    fn.visibility = visibility_from_name(fn.visibility, fn.name);
     fn.generic_params = parse_generic_params();
     consume(TokenKind::LParen, "expected ( after function name");
     skip_signature_separators();
