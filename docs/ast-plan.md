@@ -980,6 +980,10 @@ Emitted-local type inference now recognizes array indexing and pointer
 dereference through parsed `TypeRef` nodes, keeping raw native receiver fallback
 only in the existing native-spelling boundary.
 
+Semantic expression inference and assignment-target checking now validate
+pointer dereference through parsed `TypeRef` nodes instead of raw leading `*`
+string checks.
+
 Parser construction has been split by grammar responsibility:
 
 - `parser.cpp` owns module orchestration, token cursor helpers, imports,

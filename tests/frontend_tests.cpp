@@ -358,6 +358,16 @@ void test_reference_list_indexing() {
     dudu::analyze_module(module, {.check_bodies = true});
 }
 
+void test_pointer_dereference_uses_type_ast() {
+    const dudu::ModuleAst module = dudu::parse_source("def read(ptr: *const[i32]) -> const[i32]:\n"
+                                                      "    return *ptr\n"
+                                                      "\n"
+                                                      "def write(ptr: *i32):\n"
+                                                      "    *ptr = 5\n",
+                                                      "pointer_dereference_type_ast.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+}
+
 void test_bare_void_return() {
     const dudu::ModuleAst module = dudu::parse_source("def done():\n"
                                                       "    return\n"
@@ -498,6 +508,7 @@ int main() {
         test_formatter();
         test_list_iterator_methods();
         test_reference_list_indexing();
+        test_pointer_dereference_uses_type_ast();
         test_bare_void_return();
         test_typed_for_emission();
         test_class_field_defaults_and_static_fields();

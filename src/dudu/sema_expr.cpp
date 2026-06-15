@@ -1,5 +1,6 @@
 #include "dudu/sema_expr.hpp"
 
+#include "dudu/ast_type.hpp"
 #include "dudu/sema_expr_internal.hpp"
 
 namespace dudu {
@@ -125,8 +126,8 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
         if (expr.op == "*") {
             const std::string got = infer_expr_ast(scope, expr.children.front(), use_location);
             const std::string type = trim(got);
-            if (!type.empty() && type.front() == '*') {
-                return trim(type.substr(1));
+            if (const auto inner = unary_type_child_text(type, TypeKind::Pointer)) {
+                return *inner;
             }
             if (use_location != nullptr && !type.empty() && type != "auto") {
                 sema_expr_fail(*use_location, "cannot dereference non-pointer: " + type);

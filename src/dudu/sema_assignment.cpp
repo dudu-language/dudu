@@ -1,6 +1,7 @@
 #include "dudu/sema_assignment.hpp"
 
 #include "dudu/ast_expr.hpp"
+#include "dudu/ast_type.hpp"
 #include "dudu/sema_bindings.hpp"
 #include "dudu/sema_common.hpp"
 #include "dudu/sema_context.hpp"
@@ -23,10 +24,11 @@ std::string assignment_target_type(FunctionScope& scope, const Stmt& stmt,
         if (type.empty() || type == "auto") {
             return {};
         }
-        if (type.front() != '*') {
+        const auto pointee_type = unary_type_child_text(type, TypeKind::Pointer);
+        if (!pointee_type) {
             sema_fail(target_location, "cannot dereference non-pointer: " + type);
         }
-        return trim(type.substr(1));
+        return *pointee_type;
     }
     if (stmt.target_expr.kind == ExprKind::Index && stmt.target_expr.children.size() == 2 &&
         stmt.target_expr.children[0].kind == ExprKind::Name) {
