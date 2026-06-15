@@ -159,9 +159,8 @@ Already structured:
 - type compatibility has AST overloads for simple literals and list/set/dict
   literals, including expected-type disambiguation for empty `{}` dict
   initializers, reducing reliance on string parsing for assignment checks
-- AST literal classification now falls back to raw-text literal parsing only for
-  `Unknown` expression nodes; parsed non-literal nodes are not reclassified by
-  string heuristics
+- AST literal classification no longer reclassifies `Unknown` expression nodes
+  from raw text
 - C++ assignment emission detects `Option` reset from `NoneLiteral` expression
   nodes instead of raw value text
 - generated local C++ type inference uses parsed expression nodes and no longer

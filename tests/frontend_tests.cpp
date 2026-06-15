@@ -292,7 +292,7 @@ void test_ast_assignment_display_types() {
     unknown.kind = dudu::ExprKind::Unknown;
     unknown.text = "123";
     assert(dudu::assignment_error("bool", unknown, "") ==
-           "cannot assign number to bool without an explicit cast");
+           "cannot assign  to bool without an explicit cast");
 }
 
 void test_ast_constructor_assignment_compatibility() {
