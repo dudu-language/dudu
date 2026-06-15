@@ -571,6 +571,10 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
         return "std::to_string(" + lower_expr(expr.children.front(), aliases, locals, symbols) +
                ")";
     }
+    if ((expr.name == "Ok" || expr.name == "Err") && expr.children.size() == 1) {
+        return "dudu::" + expr.name + "(" +
+               join_lowered_exprs(expr.children, aliases, locals, ", ", symbols) + ")";
+    }
     if (is_builtin_cast_call(expr.name)) {
         return lower_cpp_type(expr.name, aliases) + "(" +
                join_lowered_exprs(expr.children, aliases, locals, ", ", symbols) + ")";
@@ -896,6 +900,52 @@ std::vector<EnumCaseBinding> enum_case_bindings(const Stmt& stmt, const EnumValu
     return out;
 }
 
+enum class WrapperMatchKind {
+    None,
+    Option,
+    Result,
+};
+
+struct WrapperMatchType {
+    WrapperMatchKind kind = WrapperMatchKind::None;
+    std::vector<std::string> args;
+};
+
+WrapperMatchType wrapper_match_type(const std::string& type) {
+    const std::string trimmed = trim_copy(type);
+    if (starts_with(trimmed, "Option[") && trimmed.back() == ']') {
+        return {.kind = WrapperMatchKind::Option,
+                .args = split_top_level_args(trimmed.substr(7, trimmed.size() - 8))};
+    }
+    if (starts_with(trimmed, "Result[") && trimmed.back() == ']') {
+        return {.kind = WrapperMatchKind::Result,
+                .args = split_top_level_args(trimmed.substr(7, trimmed.size() - 8))};
+    }
+    return {};
+}
+
+std::optional<std::string> wrapper_case_name(const Expr& pattern) {
+    if (pattern.kind == ExprKind::Name && pattern.name == "_") {
+        return std::string{"_"};
+    }
+    if (pattern.kind == ExprKind::NoneLiteral) {
+        return std::string{"None"};
+    }
+    if (pattern.kind == ExprKind::Call && !pattern.callee.empty() &&
+        pattern.callee.front().kind == ExprKind::Name) {
+        return pattern.callee.front().name;
+    }
+    return std::nullopt;
+}
+
+std::optional<std::string> wrapper_case_binding_name(const Expr& pattern) {
+    if (pattern.kind == ExprKind::Call && pattern.children.size() == 1 &&
+        pattern.children.front().kind == ExprKind::Name && !pattern.children.front().name.empty()) {
+        return pattern.children.front().name;
+    }
+    return std::nullopt;
+}
+
 std::string cpp_string_literal(std::string text) {
     std::string out = "\"";
     for (const char c : text) {
@@ -1140,6 +1190,69 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         const std::string subject_type =
             infer_emitted_local_type(stmt.condition_expr, locals, function_returns);
         if (!subject_type.empty()) {
+            const WrapperMatchType wrapper = wrapper_match_type(subject_type);
+            if (wrapper.kind != WrapperMatchKind::None) {
+                const std::string subject = "__dudu_match_" + std::to_string(stmt.location.line) +
+                                            "_" + std::to_string(stmt.location.column);
+                const std::string matched = subject + "_matched";
+                out << indent(depth) << "auto&& " << subject << " = "
+                    << lower_expr(stmt.condition_expr, aliases, locals, symbols) << ";\n";
+                out << indent(depth) << "bool " << matched << " = false;\n";
+                for (const Stmt& child : stmt.children) {
+                    if (child.kind != StmtKind::Case) {
+                        continue;
+                    }
+                    const std::optional<std::string> case_name =
+                        wrapper_case_name(child.pattern_expr);
+                    std::string condition = "true";
+                    if (case_name && *case_name != "_") {
+                        if (wrapper.kind == WrapperMatchKind::Option) {
+                            condition = *case_name == "Some" ? subject + ".has_value()"
+                                                             : "!" + subject + ".has_value()";
+                        } else {
+                            condition =
+                                *case_name == "Ok" ? subject + ".ok" : "!" + subject + ".ok";
+                        }
+                    }
+                    out << indent(depth) << "if (!" << matched << " && (" << condition << ")) {\n";
+                    std::map<std::string, std::string> nested = locals;
+                    if (case_name &&
+                        (*case_name == "Some" || *case_name == "Ok" || *case_name == "Err")) {
+                        if (const auto binding = wrapper_case_binding_name(child.pattern_expr)) {
+                            if (*case_name == "Some" && wrapper.args.size() == 1) {
+                                nested[*binding] = trim_copy(wrapper.args[0]);
+                                out << indent(depth + 1) << "auto&& " << *binding << " = "
+                                    << subject << ".value();\n";
+                            } else if (*case_name == "Ok" && wrapper.args.size() == 2) {
+                                nested[*binding] = trim_copy(wrapper.args[0]);
+                                out << indent(depth + 1) << "auto&& " << *binding << " = "
+                                    << subject << ".value;\n";
+                            } else if (*case_name == "Err" && wrapper.args.size() == 2) {
+                                nested[*binding] = trim_copy(wrapper.args[1]);
+                                out << indent(depth + 1) << "auto&& " << *binding << " = "
+                                    << subject << ".err;\n";
+                            }
+                        }
+                    }
+                    if (has_expr(child.guard_expr)) {
+                        out << indent(depth + 1) << "if ("
+                            << lower_expr(child.guard_expr, aliases, nested, symbols) << ") {\n";
+                        out << indent(depth + 2) << matched << " = true;\n";
+                        emit_block(out, child.children, depth + 2, aliases, nested, return_type,
+                                   function_returns, symbols);
+                        out << indent(depth + 1) << "}\n";
+                    } else {
+                        out << indent(depth + 1) << matched << " = true;\n";
+                        emit_block(out, child.children, depth + 1, aliases, nested, return_type,
+                                   function_returns, symbols);
+                    }
+                    out << indent(depth) << "}\n";
+                }
+                if (match_cases_return(stmt)) {
+                    out << indent(depth) << "__builtin_unreachable();\n";
+                }
+                return;
+            }
             const EnumDecl* en = enum_decl_for_type(symbols, subject_type);
             if (en != nullptr && (enum_has_payloads(*en) || match_has_guards(stmt))) {
                 const std::string subject = "__dudu_match_" + std::to_string(stmt.location.line) +

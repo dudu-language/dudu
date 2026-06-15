@@ -1,0 +1,12 @@
+def choose(flag: bool) -> Result[i32, i32]:
+    if flag:
+        return Ok(1)
+    return Err(2)
+
+
+def main() -> i32:
+    match choose(True):
+        case Some(value):
+            return value
+        case Err(error):
+            return error

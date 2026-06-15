@@ -698,6 +698,9 @@ Ordinary C++ call emission now lowers parsed callee and argument nodes directly
 instead of rebuilding a raw call string. Built-in primitive casts such as
 `i32(value)`, `len(value)`, and pointer cast calls such as
 `*struct Native(user_data)` have explicit AST emission paths.
+`Ok(value)` and `Err(error)` calls also lower through the parsed call path to
+the `dudu::Ok`/`dudu::Err` prelude helpers instead of relying on raw C++ text
+rewrites.
 Pointer cast calls also have an AST semantic inference path, so native callback
 patterns such as `*struct State(user_data)` no longer depend on the raw
 expression inference fallback.

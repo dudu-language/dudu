@@ -154,7 +154,7 @@ is unreachable because a previous pattern already covers it.
 
 ## Option And Result
 
-`Option[T]` and `Result[T, E]` should be matchable:
+`Option[T]` and `Result[T, E]` are matchable:
 
 ```python
 match maybe_player:
@@ -176,6 +176,11 @@ match result:
 The exact constructor names for `Option` need to stay consistent with existing
 Dudu `None` usage. Pattern matching should not make null pointers look like
 `Option`.
+
+Status: implemented. `Option[T]` supports `Some(value)`, `None`, and `_`.
+`Result[T, E]` supports `Ok(value)`, `Err(error)`, and `_`. Wrapper match
+cases are exhaustive, and guarded wrapper cases follow the same rule as enum
+guards: they do not count toward exhaustiveness.
 
 ## Current Status
 
@@ -207,8 +212,8 @@ Match guards are implemented and type-checked as `bool`. Guarded cases do not
 count toward exhaustiveness, so a guarded variant must still have an unguarded
 case or a wildcard case somewhere later in the match.
 
-Still remaining: payload `Option`/`Result` matching, recursive enum examples,
-richer unreachable-pattern diagnostics, and anonymous `variant[...]`.
+Still remaining: recursive enum examples, richer unreachable-pattern
+diagnostics, and anonymous `variant[...]`.
 
 ## Recursive Data
 

@@ -27,6 +27,8 @@ expect_fail bad_payload_enum_case_arity --check "case Move expects 2 bindings, g
 expect_fail bad_payload_enum_named_case_field --check "unknown enum payload field in pattern: Move.z"
 expect_fail bad_payload_enum_named_case_duplicate --check "duplicate enum payload field in pattern: Move.x"
 expect_fail bad_payload_enum_guard_type --check "match guard must be bool, got i32"
+expect_fail bad_option_match_missing --check "non-exhaustive match on wrapper; missing cases: None"
+expect_fail bad_result_match_case --check "case pattern must be Ok(...), Err(...), or _"
 expect_fail bad_return --emit-cpp "return type mismatch: expected i32, got bool"
 expect_fail bad_return --check "return type mismatch: expected i32, got bool"
 expect_fail bad_return_implicit_cast --emit-cpp "return type mismatch: expected i64, got i32"

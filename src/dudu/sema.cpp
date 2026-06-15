@@ -38,6 +38,10 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
                                   const SourceLocation* location = nullptr);
 std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                            const SourceLocation* location = nullptr);
+bool has_expr(const Expr& expr);
+const SourceLocation& node_location(const SourceLocation& fallback, const Expr& expr);
+void check_block(FunctionScope& scope, const std::vector<Stmt>& body,
+                 const std::string& return_type, int loop_depth);
 void check_call_args_ast(const FunctionScope& scope, const std::string& callee,
                          const FunctionSignature& signature, const std::vector<Expr>& args,
                          const SourceLocation* location);
@@ -47,6 +51,17 @@ matching_signature_ast(const FunctionScope& scope, const std::vector<FunctionSig
 std::vector<std::string> call_args(std::string expr, size_t open) {
     std::string args = trim(expr.substr(open + 1, expr.size() - open - 2));
     return args.empty() ? std::vector<std::string>{} : split_top_level_args(args);
+}
+
+std::string join_strings(const std::vector<std::string>& values, std::string_view separator) {
+    std::ostringstream out;
+    for (size_t i = 0; i < values.size(); ++i) {
+        if (i > 0) {
+            out << separator;
+        }
+        out << values[i];
+    }
+    return out.str();
 }
 
 std::vector<Expr> call_arg_exprs(std::string expr, size_t open, SourceLocation location) {
@@ -347,6 +362,122 @@ bool bind_payload_case(FunctionScope& nested, const EnumValueDecl& value, const 
             fail(binding.location, "payload case bindings must be names");
         }
         nested.locals[binding_name->name] = field->type;
+    }
+    return true;
+}
+
+enum class WrapperMatchKind {
+    None,
+    Option,
+    Result,
+};
+
+struct WrapperMatchType {
+    WrapperMatchKind kind = WrapperMatchKind::None;
+    std::vector<std::string> args;
+};
+
+WrapperMatchType wrapper_match_type(const std::string& type) {
+    const std::string trimmed = trim(type);
+    if (starts_with(trimmed, "Option[") && trimmed.back() == ']') {
+        return {.kind = WrapperMatchKind::Option,
+                .args = split_top_level_args(trimmed.substr(7, trimmed.size() - 8))};
+    }
+    if (starts_with(trimmed, "Result[") && trimmed.back() == ']') {
+        return {.kind = WrapperMatchKind::Result,
+                .args = split_top_level_args(trimmed.substr(7, trimmed.size() - 8))};
+    }
+    return {};
+}
+
+std::optional<std::string> wrapper_case_name(const Expr& pattern) {
+    if (pattern.kind == ExprKind::Name && pattern.name == "_") {
+        return std::string{"_"};
+    }
+    if (pattern.kind == ExprKind::NoneLiteral) {
+        return std::string{"None"};
+    }
+    if (pattern.kind == ExprKind::Call && !pattern.callee.empty() &&
+        pattern.callee.front().kind == ExprKind::Name) {
+        return pattern.callee.front().name;
+    }
+    return std::nullopt;
+}
+
+void bind_wrapper_case(FunctionScope& nested, const WrapperMatchType& wrapper, const Expr& pattern,
+                       const SourceLocation& location) {
+    const std::optional<std::string> name = wrapper_case_name(pattern);
+    if (!name || *name == "_" || *name == "None") {
+        return;
+    }
+    if (pattern.kind != ExprKind::Call || pattern.children.size() != 1 ||
+        pattern.children.front().kind != ExprKind::Name || pattern.children.front().name.empty()) {
+        fail(location, "wrapper payload case expects one binding name");
+    }
+    if (wrapper.kind == WrapperMatchKind::Option && *name == "Some" && wrapper.args.size() == 1) {
+        nested.locals[pattern.children.front().name] = trim(wrapper.args[0]);
+        return;
+    }
+    if (wrapper.kind == WrapperMatchKind::Result && wrapper.args.size() == 2) {
+        if (*name == "Ok") {
+            nested.locals[pattern.children.front().name] = trim(wrapper.args[0]);
+            return;
+        }
+        if (*name == "Err") {
+            nested.locals[pattern.children.front().name] = trim(wrapper.args[1]);
+            return;
+        }
+    }
+}
+
+bool check_wrapper_match(FunctionScope& scope, const Stmt& stmt, const std::string& return_type,
+                         int loop_depth, const WrapperMatchType& wrapper) {
+    const std::set<std::string> expected = wrapper.kind == WrapperMatchKind::Option
+                                               ? std::set<std::string>{"Some", "None"}
+                                               : std::set<std::string>{"Ok", "Err"};
+    std::set<std::string> covered;
+    bool wildcard = false;
+    for (const Stmt& child : stmt.children) {
+        if (child.kind != StmtKind::Case) {
+            fail(child.location, "match body expects case statements");
+        }
+        if (wildcard) {
+            fail(child.location, "unreachable case after wildcard");
+        }
+        const std::optional<std::string> name = wrapper_case_name(child.pattern_expr);
+        if (!name || (!expected.contains(*name) && *name != "_")) {
+            fail(child.location, wrapper.kind == WrapperMatchKind::Option
+                                     ? "case pattern must be Some(...), None, or _"
+                                     : "case pattern must be Ok(...), Err(...), or _");
+        }
+        if (*name == "_") {
+            if (!has_expr(child.guard_expr)) {
+                wildcard = true;
+            }
+        } else if (!has_expr(child.guard_expr) && !covered.insert(*name).second) {
+            fail(child.location, "unreachable duplicate case: " + *name);
+        }
+        FunctionScope nested = scope;
+        bind_wrapper_case(nested, wrapper, child.pattern_expr, child.location);
+        if (has_expr(child.guard_expr)) {
+            const std::string guard_type = infer_expr_ast(
+                nested, child.guard_expr, &node_location(child.location, child.guard_expr));
+            if (guard_type != "bool") {
+                fail(node_location(child.location, child.guard_expr),
+                     "match guard must be bool, got " + guard_type);
+            }
+        }
+        check_block(nested, child.children, return_type, loop_depth);
+    }
+    if (!wildcard && covered != expected) {
+        std::vector<std::string> missing;
+        for (const std::string& name : expected) {
+            if (!covered.contains(name)) {
+                missing.push_back(name);
+            }
+        }
+        fail(stmt.location,
+             "non-exhaustive match on wrapper; missing cases: " + join_strings(missing, ", "));
     }
     return true;
 }
@@ -2049,6 +2180,11 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
         const std::string subject_type =
             infer_expr_ast(scope, stmt.condition_expr, &subject_location);
         const EnumDecl* en = enum_decl_for_type(scope.symbols, subject_type);
+        const WrapperMatchType wrapper = wrapper_match_type(subject_type);
+        if (wrapper.kind != WrapperMatchKind::None) {
+            check_wrapper_match(scope, stmt, return_type, loop_depth, wrapper);
+            return;
+        }
         if (en == nullptr) {
             fail(subject_location, "match subject must be an enum, got " + subject_type);
         }

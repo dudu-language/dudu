@@ -333,8 +333,9 @@ push. They are not release packaging work.
    `std::variant` wrappers, construct through `Enum.Variant(...)`, and support
    exhaustive `match` with positional and named payload bindings. Match guards
    are implemented and type-checked as `bool`; guarded cases do not count
-   toward exhaustiveness. Payload `Option`/`Result` matching, recursive enum
-   examples, and anonymous `variant[...]` remain.
+   toward exhaustiveness. `Option[T]` and `Result[T, E]` wrapper matching is
+   implemented with exhaustive `Some`/`None` and `Ok`/`Err` cases. Recursive
+   enum examples and anonymous `variant[...]` remain.
 
 7. Native Inheritance
 
