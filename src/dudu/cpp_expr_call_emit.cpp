@@ -1,6 +1,7 @@
 #include "dudu/cpp_expr_call_emit.hpp"
 
 #include "dudu/ast_expr.hpp"
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_expr_emit.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/decorators.hpp"
@@ -61,12 +62,16 @@ std::string lower_call_args_for_signature(const std::vector<Expr>& args, const F
 
 bool is_pointer_type(std::string type) {
     type = trim_copy(std::move(type));
-    return !type.empty() && type.front() == '*';
+    return parse_type_text(type).kind == TypeKind::Pointer;
 }
 
 bool is_pointer_list_type(std::string type) {
     type = trim_copy(std::move(type));
-    return starts_with(type, "list[*") && ends_with(type, "]");
+    const TypeRef parsed = parse_type_text(type);
+    if (parsed.kind != TypeKind::Template || parsed.name != "list" || parsed.children.size() != 1) {
+        return false;
+    }
+    return parsed.children.front().kind == TypeKind::Pointer;
 }
 
 bool expression_has_pointer_type(const Expr& expr, const std::map<std::string, std::string>& locals,
@@ -169,11 +174,14 @@ std::string unquoted(std::string text) {
 std::optional<std::string> dudu_operator_method_name(const Symbols& symbols, std::string type,
                                                      std::string_view op) {
     type = trim_copy(resolve_alias(symbols, std::move(type)));
-    if (starts_with(type, "const[") && ends_with(type, "]")) {
-        type = trim_copy(type.substr(6, type.size() - 7));
-    }
-    if (!type.empty() && (type.front() == '&' || type.front() == '*')) {
-        type = trim_copy(type.substr(1));
+    while (true) {
+        const TypeRef parsed = parse_type_text(type);
+        if (const auto inner = unary_type_child_text(
+                parsed, {TypeKind::Const, TypeKind::Pointer, TypeKind::Reference})) {
+            type = *inner;
+            continue;
+        }
+        break;
     }
     const auto klass = symbols.classes.find(type);
     if (klass == symbols.classes.end()) {

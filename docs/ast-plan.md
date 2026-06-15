@@ -967,6 +967,10 @@ Statement emission for typed literal initialization now uses parsed `TypeRef`
 predicates for `Option`, `array`, `list`, `dict`, and `set` declarations
 instead of prefix checks over the rendered type string.
 
+Expression-call emission now classifies pointer receivers, pointer-list
+receivers, and wrapped Dudu operator receivers through parsed `TypeRef` nodes
+instead of raw leading-character or `list[*...]` checks.
+
 Parser construction has been split by grammar responsibility:
 
 - `parser.cpp` owns module orchestration, token cursor helpers, imports,
