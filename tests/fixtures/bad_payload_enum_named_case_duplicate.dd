@@ -1,0 +1,11 @@
+enum Message:
+    Move:
+        x: i32
+        y: i32
+
+
+def main() -> i32:
+    msg: Message = Message.Move(x=1, y=2)
+    match msg:
+        case Message.Move(x=left, x=right):
+            return left + right

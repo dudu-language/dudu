@@ -18,6 +18,16 @@ def handle(msg: Message) -> i32:
             return i32(len(text))
 
 
+def handle_named(msg: Message) -> i32:
+    match msg:
+        case Message.Quit:
+            return 0
+        case Message.Move(y=dy, x=dx):
+            return dx + dy
+        case Message.Write(text):
+            return i32(len(text))
+
+
 def make_write() -> Message:
     return Message.Write("xx")
 
@@ -34,4 +44,4 @@ def handle_direct() -> i32:
 
 def main() -> i32:
     moved: Message = Message.Move(x=20, y=19)
-    return handle(Message.Quit) + handle(moved) + handle_direct()
+    return handle(Message.Quit) + handle(moved) + handle_direct() + handle_named(moved)

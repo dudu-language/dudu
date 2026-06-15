@@ -74,8 +74,7 @@ std::string join_lowered_exprs(const std::vector<Expr>& exprs,
     return out.str();
 }
 
-std::string lower_call_args_for_signature(const std::vector<Expr>& args,
-                                          const FunctionSignature&,
+std::string lower_call_args_for_signature(const std::vector<Expr>& args, const FunctionSignature&,
                                           const std::vector<std::string>& aliases,
                                           const std::map<std::string, std::string>& locals,
                                           const Symbols* symbols) {
@@ -252,9 +251,9 @@ bool looks_like_local_dudu_class_type(const std::string& type) {
            std::isupper(static_cast<unsigned char>(trimmed.front())) != 0;
 }
 
-std::optional<std::string> lower_local_swizzle_expr(
-    const Expr& expr, const std::vector<std::string>& aliases,
-    const std::map<std::string, std::string>& locals) {
+std::optional<std::string>
+lower_local_swizzle_expr(const Expr& expr, const std::vector<std::string>& aliases,
+                         const std::map<std::string, std::string>& locals) {
     if (expr.kind != ExprKind::Member || expr.children.size() != 1 ||
         expr.children.front().kind != ExprKind::Name || !is_supported_swizzle(expr.name)) {
         return std::nullopt;
@@ -279,9 +278,9 @@ std::optional<std::string> lower_local_swizzle_expr(
     return out.str();
 }
 
-std::optional<std::string>
-lower_swizzle_expr(const Expr& expr, const std::vector<std::string>& aliases,
-                   const std::map<std::string, std::string>& locals) {
+std::optional<std::string> lower_swizzle_expr(const Expr& expr,
+                                              const std::vector<std::string>& aliases,
+                                              const std::map<std::string, std::string>& locals) {
     if (const auto local = lower_local_swizzle_expr(expr, aliases, locals)) {
         return local;
     }
@@ -448,11 +447,9 @@ bool is_full_slice_expr(const Expr& expr) {
            expr.children[0].text.empty() && expr.children[1].text.empty();
 }
 
-std::optional<std::string>
-lower_trailing_full_slice_expr(const Expr& base, const Expr& index,
-                               const std::vector<std::string>& aliases,
-                               const std::map<std::string, std::string>& locals,
-                               const Symbols* symbols) {
+std::optional<std::string> lower_trailing_full_slice_expr(
+    const Expr& base, const Expr& index, const std::vector<std::string>& aliases,
+    const std::map<std::string, std::string>& locals, const Symbols* symbols) {
     if (index.kind != ExprKind::TupleLiteral || index.children.empty() ||
         !is_full_slice_expr(index.children.back())) {
         return std::nullopt;
@@ -726,21 +723,19 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
     case ExprKind::Index:
         if (expr.children.size() == 2) {
             std::string out = lower_expr(expr.children[0], aliases, locals);
-            if (expr.children[1].kind == ExprKind::Slice &&
-                expr.children[1].children.size() == 2) {
+            if (expr.children[1].kind == ExprKind::Slice && expr.children[1].children.size() == 2) {
                 const Expr& start_expr = expr.children[1].children[0];
                 const Expr& end_expr = expr.children[1].children[1];
                 const std::string start =
                     start_expr.text.empty() ? "0" : lower_expr(start_expr, aliases, locals);
-                const std::string end =
-                    end_expr.text.empty() ? "(" + out + ").size()"
-                                          : lower_expr(end_expr, aliases, locals);
+                const std::string end = end_expr.text.empty()
+                                            ? "(" + out + ").size()"
+                                            : lower_expr(end_expr, aliases, locals);
                 return "std::span(&(" + out + ")[" + start + "], (" + end + ") - (" + start + "))";
             }
             if (expr.children[1].kind == ExprKind::TupleLiteral) {
-                if (const auto slice =
-                        lower_trailing_full_slice_expr(expr.children[0], expr.children[1],
-                                                       aliases, locals, symbols)) {
+                if (const auto slice = lower_trailing_full_slice_expr(
+                        expr.children[0], expr.children[1], aliases, locals, symbols)) {
                     return *slice;
                 }
                 for (const Expr& index : expr.children[1].children) {
@@ -862,14 +857,31 @@ std::optional<std::string> enum_case_variant_name(const Stmt& stmt) {
     return path->substr(dot + 1);
 }
 
-std::vector<std::string> enum_case_binding_names(const Stmt& stmt) {
-    std::vector<std::string> out;
+struct EnumCaseBinding {
+    size_t field_index = 0;
+    std::string name;
+};
+
+std::vector<EnumCaseBinding> enum_case_bindings(const Stmt& stmt, const EnumValueDecl& value) {
+    std::vector<EnumCaseBinding> out;
     if (stmt.pattern_expr.kind != ExprKind::Call) {
         return out;
     }
-    for (const Expr& child : stmt.pattern_expr.children) {
+    for (size_t i = 0; i < stmt.pattern_expr.children.size(); ++i) {
+        const Expr& child = stmt.pattern_expr.children[i];
         if (child.kind == ExprKind::Name && !child.name.empty()) {
-            out.push_back(child.name);
+            out.push_back({.field_index = i, .name = child.name});
+        } else if (child.kind == ExprKind::NamedArg && child.children.size() == 1 &&
+                   child.children.front().kind == ExprKind::Name &&
+                   !child.children.front().name.empty()) {
+            const auto found = std::find_if(
+                value.payload_fields.begin(), value.payload_fields.end(),
+                [&](const EnumPayloadField& field) { return field.name == child.name; });
+            if (found != value.payload_fields.end()) {
+                out.push_back({.field_index = static_cast<size_t>(
+                                   std::distance(value.payload_fields.begin(), found)),
+                               .name = child.children.front().name});
+            }
         }
     }
     return out;
@@ -968,8 +980,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
     }
     if (stmt.kind == StmtKind::DebugAssert) {
         out << indent(depth) << "assert(("
-            << lower_expr(stmt.condition_expr, aliases, locals, symbols)
-            << ")";
+            << lower_expr(stmt.condition_expr, aliases, locals, symbols) << ")";
         if (has_expr(stmt.message_expr))
             out << " && (" << lower_expr(stmt.message_expr, aliases, locals, symbols) << ")";
         out << ");\n";
@@ -1011,24 +1022,20 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
             } else if (starts_with(type, "list[") &&
                        stmt.value_expr.kind == ExprKind::ListLiteral) {
                 out << " = {"
-                    << join_lowered_exprs(stmt.value_expr.children, aliases, locals, ", ",
-                                          symbols)
+                    << join_lowered_exprs(stmt.value_expr.children, aliases, locals, ", ", symbols)
                     << "}";
             } else if (starts_with(type, "dict[") &&
                        stmt.value_expr.kind == ExprKind::DictLiteral) {
                 out << " = {"
-                    << join_lowered_exprs(stmt.value_expr.children, aliases, locals, ", ",
-                                          symbols)
+                    << join_lowered_exprs(stmt.value_expr.children, aliases, locals, ", ", symbols)
                     << "}";
             } else if (starts_with(type, "set[") && stmt.value_expr.kind == ExprKind::SetLiteral) {
                 out << " = {"
-                    << join_lowered_exprs(stmt.value_expr.children, aliases, locals, ", ",
-                                          symbols)
+                    << join_lowered_exprs(stmt.value_expr.children, aliases, locals, ", ", symbols)
                     << "}";
             } else if (stmt.value_expr.kind == ExprKind::TupleLiteral) {
                 out << " = " << lower_declared_stmt_type(stmt, type, aliases) << "{"
-                    << join_lowered_exprs(stmt.value_expr.children, aliases, locals, ", ",
-                                          symbols)
+                    << join_lowered_exprs(stmt.value_expr.children, aliases, locals, ", ", symbols)
                     << '}';
             } else {
                 out << " = " << lower_expr(stmt.value_expr, aliases, locals, symbols);
@@ -1126,9 +1133,8 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         if (!subject_type.empty()) {
             const EnumDecl* en = enum_decl_for_type(symbols, subject_type);
             if (en != nullptr && enum_has_payloads(*en)) {
-                const std::string subject = "__dudu_match_" +
-                                            std::to_string(stmt.location.line) + "_" +
-                                            std::to_string(stmt.location.column);
+                const std::string subject = "__dudu_match_" + std::to_string(stmt.location.line) +
+                                            "_" + std::to_string(stmt.location.column);
                 out << indent(depth) << "auto&& " << subject << " = "
                     << lower_expr(stmt.condition_expr, aliases, locals, symbols) << ";\n";
                 bool first_case = true;
@@ -1152,12 +1158,17 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                                                         std::to_string(child.location.column);
                             out << indent(depth + 1) << "auto&& " << payload << " = std::get<"
                                 << en->name << "::" << *variant << ">(" << subject << ".value);\n";
-                            const std::vector<std::string> bindings = enum_case_binding_names(child);
-                            for (size_t i = 0; i < bindings.size() && i < value->payload_fields.size();
-                                 ++i) {
-                                nested[bindings[i]] = value->payload_fields[i].type;
-                                out << indent(depth + 1) << "auto&& " << bindings[i] << " = "
-                                    << payload << "." << value->payload_fields[i].name << ";\n";
+                            const std::vector<EnumCaseBinding> bindings =
+                                enum_case_bindings(child, *value);
+                            for (const EnumCaseBinding& binding : bindings) {
+                                if (binding.field_index >= value->payload_fields.size()) {
+                                    continue;
+                                }
+                                const EnumPayloadField& field =
+                                    value->payload_fields[binding.field_index];
+                                nested[binding.name] = field.type;
+                                out << indent(depth + 1) << "auto&& " << binding.name << " = "
+                                    << payload << "." << field.name << ";\n";
                             }
                         }
                     }
@@ -1237,9 +1248,9 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
             const std::vector<Expr>& args = stmt.iterable_expr.children;
             const std::string start =
                 args.size() == 1 ? "0" : lower_expr(args.at(0), aliases, locals, symbols);
-            const std::string end =
-                args.size() == 1 ? lower_expr(args.at(0), aliases, locals, symbols)
-                                 : lower_expr(args.at(1), aliases, locals, symbols);
+            const std::string end = args.size() == 1
+                                        ? lower_expr(args.at(0), aliases, locals, symbols)
+                                        : lower_expr(args.at(1), aliases, locals, symbols);
             const std::string step =
                 args.size() >= 3 ? lower_expr(args.at(2), aliases, locals, symbols) : "1";
             out << indent(depth) << "for (" << binding_type << ' ' << binding << " = " << start
@@ -1256,7 +1267,8 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         out << indent(depth) << "}\n";
         return;
     }
-    emit_simple_statement(out, stmt, depth, aliases, locals, return_type, function_returns, symbols);
+    emit_simple_statement(out, stmt, depth, aliases, locals, return_type, function_returns,
+                          symbols);
 }
 
 } // namespace

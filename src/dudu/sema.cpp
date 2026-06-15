@@ -174,8 +174,7 @@ bool is_super_init_stmt(const Stmt& stmt) {
 }
 
 std::string infer_super_call_ast(const FunctionScope& scope, const Expr& expr,
-                                 const std::string& callee,
-                                 const SourceLocation* location) {
+                                 const std::string& callee, const SourceLocation* location) {
     const size_t dot = callee.find('.');
     if (dot == std::string::npos) {
         if (location != nullptr) {
@@ -322,12 +321,32 @@ bool bind_payload_case(FunctionScope& nested, const EnumValueDecl& value, const 
                            std::to_string(value.payload_fields.size()) + " bindings, got " +
                            std::to_string(pattern.children.size()));
     }
+    std::set<std::string> seen_named_fields;
     for (size_t i = 0; i < pattern.children.size(); ++i) {
         const Expr& binding = pattern.children[i];
-        if (binding.kind != ExprKind::Name || binding.name.empty()) {
+        const EnumPayloadField* field = &value.payload_fields[i];
+        const Expr* binding_name = &binding;
+        if (binding.kind == ExprKind::NamedArg && binding.children.size() == 1) {
+            if (!seen_named_fields.insert(binding.name).second) {
+                fail(binding.location,
+                     "duplicate enum payload field in pattern: " + value.name + "." + binding.name);
+            }
+            const auto found =
+                std::find_if(value.payload_fields.begin(), value.payload_fields.end(),
+                             [&](const EnumPayloadField& payload_field) {
+                                 return payload_field.name == binding.name;
+                             });
+            if (found == value.payload_fields.end()) {
+                fail(binding.location,
+                     "unknown enum payload field in pattern: " + value.name + "." + binding.name);
+            }
+            field = &*found;
+            binding_name = &binding.children.front();
+        }
+        if (binding_name->kind != ExprKind::Name || binding_name->name.empty()) {
             fail(binding.location, "payload case bindings must be names");
         }
-        nested.locals[binding.name] = value.payload_fields[i].type;
+        nested.locals[binding_name->name] = field->type;
     }
     return true;
 }
@@ -448,18 +467,16 @@ void check_enum_variant_args_ast(const FunctionScope& scope, const EnumDecl& en,
         const EnumPayloadField* field = &value.payload_fields[i];
         const Expr* arg = &args[i];
         if (args[i].kind == ExprKind::NamedArg) {
-            const auto found =
-                std::find_if(value.payload_fields.begin(), value.payload_fields.end(),
-                             [&](const EnumPayloadField& candidate) {
-                                 return candidate.name == args[i].name;
-                             });
+            const auto found = std::find_if(
+                value.payload_fields.begin(), value.payload_fields.end(),
+                [&](const EnumPayloadField& candidate) { return candidate.name == args[i].name; });
             if (found == value.payload_fields.end()) {
-                fail(args[i].location, "unknown enum payload field: " + en.name + "." +
-                                         value.name + "." + args[i].name);
+                fail(args[i].location, "unknown enum payload field: " + en.name + "." + value.name +
+                                           "." + args[i].name);
             }
             if (!seen_named.insert(args[i].name).second) {
                 fail(args[i].location, "duplicate enum payload field: " + en.name + "." +
-                                         value.name + "." + args[i].name);
+                                           value.name + "." + args[i].name);
             }
             field = &*found;
             arg = &args[i].children.front();
@@ -597,15 +614,14 @@ std::vector<std::string> generic_type_args(const std::string& type) {
 
 bool infer_generic_binding(const std::string& param_type, const std::string& arg_type,
                            const std::vector<std::string>& params,
-                           std::map<std::string, std::string>& bindings,
-                           std::string& error) {
+                           std::map<std::string, std::string>& bindings, std::string& error) {
     const std::string param = trim(param_type);
     const std::string arg = trim(arg_type);
     if (generic_param_named(params, param)) {
         const auto [it, inserted] = bindings.emplace(param, arg);
         if (!inserted && it->second != arg) {
-            error = "conflicting inferred type argument " + param + ": " + it->second + " vs " +
-                    arg;
+            error =
+                "conflicting inferred type argument " + param + ": " + it->second + " vs " + arg;
             return false;
         }
         return true;
@@ -634,10 +650,11 @@ bool infer_generic_binding(const std::string& param_type, const std::string& arg
     return true;
 }
 
-std::optional<std::vector<TypeRef>>
-infer_generic_call_type_args(const FunctionScope& scope, const FunctionDecl& fn,
-                             const std::string& callee, const std::vector<Expr>& args,
-                             const SourceLocation* location) {
+std::optional<std::vector<TypeRef>> infer_generic_call_type_args(const FunctionScope& scope,
+                                                                 const FunctionDecl& fn,
+                                                                 const std::string& callee,
+                                                                 const std::vector<Expr>& args,
+                                                                 const SourceLocation* location) {
     if (fn.generic_params.empty()) {
         return std::nullopt;
     }
@@ -670,8 +687,8 @@ infer_generic_call_type_args(const FunctionScope& scope, const FunctionDecl& fn,
             }
             return std::nullopt;
         }
-        out.push_back(parse_type_text(binding->second, location == nullptr ? fn.location
-                                                                           : *location));
+        out.push_back(
+            parse_type_text(binding->second, location == nullptr ? fn.location : *location));
     }
     return out;
 }
@@ -679,12 +696,10 @@ infer_generic_call_type_args(const FunctionScope& scope, const FunctionDecl& fn,
 FunctionSignature instantiate_generic_signature(const FunctionDecl& fn,
                                                 const std::vector<TypeRef>& args) {
     FunctionSignature signature;
-    signature.return_type =
-        substitute_generic_type(fn.return_type.empty() ? "void" : fn.return_type,
-                                fn.generic_params, args);
+    signature.return_type = substitute_generic_type(
+        fn.return_type.empty() ? "void" : fn.return_type, fn.generic_params, args);
     for (const ParamDecl& param : fn.params) {
-        signature.params.push_back(
-            substitute_generic_type(param.type, fn.generic_params, args));
+        signature.params.push_back(substitute_generic_type(param.type, fn.generic_params, args));
     }
     return signature;
 }
@@ -699,12 +714,12 @@ ClassDecl instantiate_generic_class(ClassDecl klass, const std::vector<TypeRef>&
         field.type = substitute_generic_type(std::move(field.type), klass.generic_params, args);
     }
     for (ConstDecl& constant : klass.constants) {
-        constant.type = substitute_generic_type(std::move(constant.type), klass.generic_params,
-                                                args);
+        constant.type =
+            substitute_generic_type(std::move(constant.type), klass.generic_params, args);
     }
     for (FunctionDecl& method : klass.methods) {
-        method.return_type = substitute_generic_type(std::move(method.return_type),
-                                                     klass.generic_params, args);
+        method.return_type =
+            substitute_generic_type(std::move(method.return_type), klass.generic_params, args);
         for (ParamDecl& param : method.params) {
             param.type = substitute_generic_type(std::move(param.type), klass.generic_params, args);
         }
@@ -791,9 +806,8 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
                 fail(error_location, "unknown pointer cast type: " + unknown->first);
             }
         } else {
-            const std::vector<Expr> args =
-                call_arg_exprs(expr, pointer_cast_call,
-                               location == nullptr ? SourceLocation{} : *location);
+            const std::vector<Expr> args = call_arg_exprs(
+                expr, pointer_cast_call, location == nullptr ? SourceLocation{} : *location);
             for (const Expr& arg : args) {
                 (void)infer_expr_ast(scope, arg, location);
             }
@@ -917,8 +931,8 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
             const std::string method_name = trim(callee.substr(method_dot + 1));
             if (const auto local = scope.locals.find(prefix); local != scope.locals.end()) {
                 FunctionSignature signature;
-                if (method_signature_for_type(scope.symbols, local->second, method_name,
-                                              signature, nullptr)) {
+                if (method_signature_for_type(scope.symbols, local->second, method_name, signature,
+                                              nullptr)) {
                     check_call_args_ast(scope, callee, signature, args, location);
                     return signature.return_type;
                 }
@@ -1072,7 +1086,7 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
     }
 
     const auto allocation = infer_allocation_call(scope.symbols, location, expr.name,
-                                                 template_type_refs(expr), expr.children.size());
+                                                  template_type_refs(expr), expr.children.size());
     if (allocation) {
         for (const Expr& arg : expr.children) {
             (void)infer_expr_ast(scope, arg, location);
@@ -1159,8 +1173,7 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
                 }
             }
         }
-        const ClassDecl instantiated =
-            instantiate_generic_class(*klass->second, type_args, callee);
+        const ClassDecl instantiated = instantiate_generic_class(*klass->second, type_args, callee);
         reject_abstract_construction(scope.symbols, callee_base, location);
         check_constructor_args_ast(
             scope, instantiated, expr.children, location, infer_expr_ast,
@@ -1593,7 +1606,8 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
             if (const auto field = field_type_for_type(scope.symbols, receiver_type, expr.name)) {
                 return *field;
             }
-            if (const auto swizzle = swizzle_type_for_type(scope.symbols, receiver_type, expr.name)) {
+            if (const auto swizzle =
+                    swizzle_type_for_type(scope.symbols, receiver_type, expr.name)) {
                 return *swizzle;
             }
             if (foreign_cpp_type_name(resolve_alias(scope.symbols, receiver_type))) {
@@ -1633,17 +1647,13 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                                           "indexed access to unknown local: ");
             }
             if (const std::optional<std::string> receiver_path = member_path_from_expr(receiver)) {
-                const std::string receiver_type =
-                    member_path_type(scope.symbols, scope.locals, use_location,
-                                     normalize_current_class_path(scope, *receiver_path,
-                                                                  use_location),
-                                     "");
+                const std::string receiver_type = member_path_type(
+                    scope.symbols, scope.locals, use_location,
+                    normalize_current_class_path(scope, *receiver_path, use_location), "");
                 if (!receiver_type.empty()) {
-                    return indexed_type_from_type(scope.symbols, index_location, receiver_type,
-                                                  expr.children[1],
-                                                  normalize_current_class_path(scope,
-                                                                               *receiver_path,
-                                                                               use_location));
+                    return indexed_type_from_type(
+                        scope.symbols, index_location, receiver_type, expr.children[1],
+                        normalize_current_class_path(scope, *receiver_path, use_location));
                 }
             }
             const std::string receiver_type = infer_expr_ast(scope, receiver, use_location);
@@ -1692,17 +1702,16 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                      callee + " expects 1 argument, got " + std::to_string(expr.children.size()));
             }
             return callee + "[" +
-                   (expr.children.size() == 1 ? infer_expr_ast(scope, expr.children.front(),
-                                                               use_location)
-                                              : "") +
+                   (expr.children.size() == 1
+                        ? infer_expr_ast(scope, expr.children.front(), use_location)
+                        : "") +
                    "]";
         }
         if (const auto generic_fn = scope.symbols.function_decls.find(callee);
             generic_fn != scope.symbols.function_decls.end() &&
             !generic_fn->second->generic_params.empty()) {
-            if (const auto type_args =
-                    infer_generic_call_type_args(scope, *generic_fn->second, callee,
-                                                 expr.children, use_location)) {
+            if (const auto type_args = infer_generic_call_type_args(
+                    scope, *generic_fn->second, callee, expr.children, use_location)) {
                 const FunctionSignature signature =
                     instantiate_generic_signature(*generic_fn->second, *type_args);
                 check_call_args_ast(scope, callee, signature, expr.children, use_location);
@@ -1757,8 +1766,7 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                 const bool foreign_receiver =
                     foreign_cpp_type_name(resolve_alias(scope.symbols, receiver_type));
                 FunctionSignature signature;
-                if (method_signature_for_type(scope.symbols, receiver_type, member.name,
-                                              signature,
+                if (method_signature_for_type(scope.symbols, receiver_type, member.name, signature,
                                               foreign_receiver ? nullptr : use_location)) {
                     const std::vector<FunctionSignature> signatures =
                         method_signatures_for_type(scope.symbols, receiver_type, member.name);
@@ -1821,8 +1829,8 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
             const std::string method_name = trim(callee.substr(method_dot + 1));
             if (const auto local = scope.locals.find(prefix); local != scope.locals.end()) {
                 FunctionSignature signature;
-                if (method_signature_for_type(scope.symbols, local->second, method_name,
-                                              signature, nullptr)) {
+                if (method_signature_for_type(scope.symbols, local->second, method_name, signature,
+                                              nullptr)) {
                     check_call_args_ast(scope, callee, signature, expr.children, use_location);
                     return signature.return_type;
                 }
@@ -1980,7 +1988,8 @@ std::string assign_target_type(const FunctionScope& scope, const Stmt& stmt) {
         }
         fail(target_location, "unsupported assignment target: " + stmt.target_expr.text);
     }
-    if (stmt.target_expr.kind == ExprKind::Call || stmt.target_expr.kind == ExprKind::TemplateCall) {
+    if (stmt.target_expr.kind == ExprKind::Call ||
+        stmt.target_expr.kind == ExprKind::TemplateCall) {
         (void)infer_expr_ast(scope, stmt.target_expr, &target_location);
         return {};
     }
@@ -1996,8 +2005,8 @@ void check_block(FunctionScope& scope, const std::vector<Stmt>& body,
     const bool allow_super_init_at_start = scope.allow_super_init;
     for (size_t i = 0; i < body.size(); ++i) {
         const Stmt& stmt = body[i];
-        scope.allow_super_init = allow_super_init_at_start && i == 0 && loop_depth == 0 &&
-                                 is_super_init_stmt(stmt);
+        scope.allow_super_init =
+            allow_super_init_at_start && i == 0 && loop_depth == 0 && is_super_init_stmt(stmt);
         check_stmt(scope, stmt, return_type, loop_depth);
     }
     scope.allow_super_init = false;
@@ -2063,12 +2072,12 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
                 wildcard = true;
             } else {
                 if (!enum_contains_variant(*en, *variant)) {
-                    fail(child.location, "unknown enum variant in pattern: " + en->name + "." +
-                                             *variant);
+                    fail(child.location,
+                         "unknown enum variant in pattern: " + en->name + "." + *variant);
                 }
                 if (!covered.insert(*variant).second) {
-                    fail(child.location, "unreachable duplicate case: " + en->name + "." +
-                                             *variant);
+                    fail(child.location,
+                         "unreachable duplicate case: " + en->name + "." + *variant);
                 }
             }
             FunctionScope nested = scope;
@@ -2081,9 +2090,8 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
             check_block(nested, child.children, return_type, loop_depth);
         }
         if (!wildcard && covered.size() != en->values.size()) {
-            fail(stmt.location,
-                 "non-exhaustive match on " + en->name + "; missing cases: " +
-                     missing_enum_cases(*en, covered));
+            fail(stmt.location, "non-exhaustive match on " + en->name +
+                                    "; missing cases: " + missing_enum_cases(*en, covered));
         }
         return;
     }

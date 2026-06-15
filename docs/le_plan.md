@@ -331,9 +331,9 @@ push. They are not release packaging work.
    enforce exhaustiveness, reject duplicate or unknown cases, and lower to
    readable C++ `switch`. Payload variants parse, validate, lower to tagged
    `std::variant` wrappers, construct through `Enum.Variant(...)`, and support
-   exhaustive `match` with positional payload bindings. Named pattern
-   destructuring, guards, payload `Option`/`Result` matching, recursive enum
-   examples, and anonymous `variant[...]` remain.
+   exhaustive `match` with positional and named payload bindings. Guards,
+   payload `Option`/`Result` matching, recursive enum examples, and anonymous
+   `variant[...]` remain.
 
 7. Native Inheritance
 

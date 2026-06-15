@@ -24,6 +24,8 @@ expect_fail bad_payload_enum_field_name --check "enum payload field names must b
 expect_fail bad_payload_enum_field_type --check "unknown enum payload field type: MissingType"
 expect_fail bad_payload_enum_duplicate_field --check "duplicate enum payload field: Message.Move.value"
 expect_fail bad_payload_enum_case_arity --check "case Move expects 2 bindings, got 1"
+expect_fail bad_payload_enum_named_case_field --check "unknown enum payload field in pattern: Move.z"
+expect_fail bad_payload_enum_named_case_duplicate --check "duplicate enum payload field in pattern: Move.x"
 expect_fail bad_return --emit-cpp "return type mismatch: expected i32, got bool"
 expect_fail bad_return --check "return type mismatch: expected i32, got bool"
 expect_fail bad_return_implicit_cast --emit-cpp "return type mismatch: expected i64, got i32"

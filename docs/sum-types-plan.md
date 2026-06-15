@@ -189,7 +189,7 @@ variants inside payload enums such as `Message.Quit` construct the enclosing
 enum value.
 
 Payload `match` lowers to `std::holds_alternative`/`std::get` checks and
-supports positional bindings:
+supports positional and named bindings:
 
 ```python
 match msg:
@@ -197,9 +197,14 @@ match msg:
         return x + y
 ```
 
-Still remaining: named pattern destructuring, guards, payload `Option`/`Result`
-matching, recursive enum examples, richer unreachable-pattern diagnostics, and
-anonymous `variant[...]`.
+```python
+match msg:
+    case Message.Move(y=dy, x=dx):
+        return dx + dy
+```
+
+Still remaining: guards, payload `Option`/`Result` matching, recursive enum
+examples, richer unreachable-pattern diagnostics, and anonymous `variant[...]`.
 
 ## Recursive Data
 
