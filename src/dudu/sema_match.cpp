@@ -117,6 +117,9 @@ bool check_wrapper_match(FunctionScope& scope, const Stmt& stmt, const std::stri
                                           : "case pattern must be Ok(...), Err(...), or _");
         }
         if (*name == "_") {
+            if (!sema_has_expr(child.guard_expr) && covered == expected) {
+                sema_fail(child.location, "unreachable wildcard case after exhaustive cases");
+            }
             if (!sema_has_expr(child.guard_expr)) {
                 wildcard = true;
             }
@@ -189,6 +192,9 @@ void check_enum_match(FunctionScope& scope, const Stmt& stmt, const std::string&
             sema_fail(child.location, "case pattern must be " + en.name + ".Variant or _");
         }
         if (*variant == "_") {
+            if (!sema_has_expr(child.guard_expr) && covered.size() == en.values.size()) {
+                sema_fail(child.location, "unreachable wildcard case after exhaustive cases");
+            }
             if (!sema_has_expr(child.guard_expr)) {
                 wildcard = true;
             }

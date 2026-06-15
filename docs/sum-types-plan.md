@@ -220,7 +220,10 @@ classes declared in the same module. The emitter forward-declares enums,
 emits classes, then emits full enum definitions so class payloads such as
 `Command.Move(dir: Vec2)` compile without wrapper ordering tricks.
 
-Still remaining: richer unreachable-pattern diagnostics and anonymous
+Unreachable wildcard diagnostics reject an unguarded `_` case after all enum or
+wrapper cases are already covered.
+
+Still remaining: broader unreachable-pattern diagnostics and anonymous
 `variant[...]`.
 
 ## Recursive Data
