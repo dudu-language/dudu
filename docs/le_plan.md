@@ -527,12 +527,13 @@ push. They are not release packaging work.
 
    This is not a Zig-style attempt to make the language build system own every
    native project. Zig's normal model is a `build.zig` graph that owns the
-   build and can compile/link C and C++ inputs through that graph. Dudu's
-   native interop goal is broader in a different direction: direct compiler
-   builds, generated CMake builds, and user-owned CMake builds are backend
-   modes behind the same command surface, not separate classes of Dudu project.
-   CMake-backed builds should still be launched through `dudu build`,
-   `dudu run`, and `dudu test`.
+   build and can compile/link C and C++ inputs through that graph. Zig build
+   scripts can run external tools when users write that integration, but Zig
+   does not have a built-in "revert to CMake" backend. Dudu's native interop
+   goal is broader in a different direction: direct compiler builds, generated
+   CMake builds, and user-owned CMake builds are backend modes behind the same
+   command surface, not separate classes of Dudu project. CMake-backed builds
+   should still be launched through `dudu build`, `dudu run`, and `dudu test`.
 
    Status: `dudu build` and `dudu run` currently use the direct backend.
    Native inputs such as include paths, library paths, libraries, flags,
