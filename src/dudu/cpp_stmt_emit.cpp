@@ -423,8 +423,7 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
         }
         break;
     case ExprKind::Binary:
-        if (expr.children.size() == 2 && !trim_copy(expr.children[0].text).empty() &&
-            !trim_copy(expr.children[1].text).empty()) {
+        if (expr.children.size() == 2 && has_expr(expr.children[0]) && has_expr(expr.children[1])) {
             return "(" + lower_expr(expr.children[0], aliases, locals) + " " +
                    cpp_binary_operator(expr.op) + " " +
                    lower_expr(expr.children[1], aliases, locals) + ")";
