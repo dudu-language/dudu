@@ -277,6 +277,10 @@ Already structured:
 - malformed unary, binary, and conditional expression nodes are rejected during
   semantic checking with Dudu diagnostics instead of falling through legacy
   expression inference
+- AST parser implementation is split by responsibility: common parse utilities,
+  top-level scanners, type parsing, expression parsing, statement parsing, and
+  public AST helpers now live in separate files instead of one oversized mixed
+  parser file
 
 Still too string-based:
 

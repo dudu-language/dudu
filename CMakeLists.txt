@@ -10,6 +10,11 @@ add_library(dudu_frontend
     src/dudu/array_shape.cpp
     src/dudu/ast.cpp
     src/dudu/ast_expr.cpp
+    src/dudu/ast_expr_parse.cpp
+    src/dudu/ast_parse_scan.cpp
+    src/dudu/ast_parse_utils.cpp
+    src/dudu/ast_stmt_parse.cpp
+    src/dudu/ast_type_parse.cpp
     src/dudu/build_flags.cpp
     src/dudu/cli_usage.cpp
     src/dudu/cmake_emit.cpp
