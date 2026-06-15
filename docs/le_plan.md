@@ -370,9 +370,10 @@ push. They are not release packaging work.
    Status: overload diagnostics, single-`T` explicit template function calls,
    local-header cache invalidation, cache cleanup, broken-Clang diagnostics,
    missing-header diagnostics, and common const pointer/reference lowering are
-   implemented. Native template fallback is limited to explicit template calls.
-   Template-heavy library behavior and deeper overload behavior remain the main
-   hardening areas.
+   implemented. Explicit native template allowance is limited to explicit
+   template-call syntax on imported native prefixes whose scanner metadata is
+   incomplete. Template-heavy library behavior and deeper overload behavior
+   remain the main hardening areas.
 
 10. Real Library Stress Tests
 

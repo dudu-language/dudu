@@ -130,8 +130,8 @@ bool args_match_signature_ast(const FunctionScope& scope, const FunctionSignatur
     return true;
 }
 
-bool template_fallback_allowed(const FunctionScope& scope, const std::string& lookup,
-                               bool explicit_template_call) {
+bool explicit_native_template_allowed(const FunctionScope& scope, const std::string& lookup,
+                                      bool explicit_template_call) {
     if (!explicit_template_call) {
         return false;
     }
@@ -139,7 +139,7 @@ bool template_fallback_allowed(const FunctionScope& scope, const std::string& lo
     if (dot == std::string::npos) {
         return false;
     }
-    return scope.symbols.native_template_fallback_prefixes.contains(lookup.substr(0, dot));
+    return scope.symbols.native_explicit_template_prefixes.contains(lookup.substr(0, dot));
 }
 
 } // namespace
@@ -172,7 +172,7 @@ std::optional<FunctionSignature> native_signature_for_call(const FunctionScope& 
         has_variadic_candidate = has_variadic_candidate || signature.variadic;
     }
     if (!has_variadic_candidate &&
-        template_fallback_allowed(scope, lookup, template_call.has_value())) {
+        explicit_native_template_allowed(scope, lookup, template_call.has_value())) {
         for (const Expr& arg : args) {
             (void)infer_expr(scope, arg, location);
         }

@@ -596,7 +596,11 @@ Symbols collect_symbols(const ModuleAst& module) {
         if (import.kind == ImportKind::ForeignCpp && !import.alias.empty() &&
             import.module_path.find('/') == std::string::npos &&
             import.module_path.find('\\') == std::string::npos) {
-            symbols.native_template_fallback_prefixes.insert(import.alias);
+            // Standard and system headers often expose callable templates that
+            // Clang reports incompletely through the scanner. Keep this limited
+            // to explicit template-call syntax so ordinary calls still require
+            // scanner metadata.
+            symbols.native_explicit_template_prefixes.insert(import.alias);
         }
     }
     std::map<std::string, SourceLocation> names;

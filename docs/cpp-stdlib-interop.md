@@ -51,8 +51,10 @@ header scanning or from a generic C++ interop rule.
 
 Current generic C++ interop rules include template type lowering, namespace
 qualification for templated return types, dependent receiver-template return
-substitution, callable `fn(...)` template arguments, and positional native
-constructor fallback when scanner metadata is incomplete.
+substitution, callable `fn(...)` template arguments, positional native
+construction when scanner metadata is incomplete, and explicit native template
+calls for imported prefixes whose scanner metadata cannot describe every
+callable template.
 
 ## Executed Fixtures
 
