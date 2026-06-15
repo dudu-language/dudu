@@ -152,6 +152,9 @@ Already structured:
   parameters through parsed `TypeRef` node reconstruction, covering nested
   templates, fixed arrays, wrappers, and function types instead of replacing
   identifiers inside raw type strings
+- a shared AST type helper owns `TypeRef` substitution rendering, so generic
+  functions, generic classes, and Dudu-native method/class template
+  substitutions use the same structured path
 - fixed-array indexing and iteration recover `array[T][shape]` element types
   from parsed `TypeRef::FixedArray` nodes instead of hand-matching nested
   brackets in the type text

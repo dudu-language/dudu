@@ -5,7 +5,6 @@
 
 #include <algorithm>
 #include <map>
-#include <optional>
 #include <sstream>
 #include <utility>
 
@@ -13,98 +12,13 @@ namespace dudu {
 
 namespace {
 
-std::optional<size_t> generic_param_index(const std::vector<std::string>& params,
-                                          const std::string& name) {
-    for (size_t i = 0; i < params.size(); ++i) {
-        if (params[i] == name) {
-            return i;
-        }
+std::map<std::string, std::string> generic_substitutions(const std::vector<std::string>& params,
+                                                         const std::vector<TypeRef>& args) {
+    std::map<std::string, std::string> out;
+    for (size_t i = 0; i < params.size() && i < args.size(); ++i) {
+        out.emplace(params[i], trim(args[i].text));
     }
-    return std::nullopt;
-}
-
-std::string join_substituted_types(const std::vector<TypeRef>& types, size_t start,
-                                   const std::vector<std::string>& params,
-                                   const std::vector<TypeRef>& args);
-
-std::string substitute_generic_type_ref(const TypeRef& type, const std::vector<std::string>& params,
-                                        const std::vector<TypeRef>& args) {
-    const std::string name = trim(type.name.empty() ? type.text : type.name);
-    if (const auto index = generic_param_index(params, name); index && *index < args.size()) {
-        return trim(args[*index].text);
-    }
-
-    switch (type.kind) {
-    case TypeKind::Pointer:
-        return type.children.empty()
-                   ? trim(type.text)
-                   : "*" + substitute_generic_type_ref(type.children[0], params, args);
-    case TypeKind::Reference:
-        return type.children.empty()
-                   ? trim(type.text)
-                   : "&" + substitute_generic_type_ref(type.children[0], params, args);
-    case TypeKind::Const:
-        return type.children.empty()
-                   ? trim(type.text)
-                   : "const[" + substitute_generic_type_ref(type.children[0], params, args) + "]";
-    case TypeKind::Volatile:
-        return type.children.empty()
-                   ? trim(type.text)
-                   : "volatile[" + substitute_generic_type_ref(type.children[0], params, args) +
-                         "]";
-    case TypeKind::Atomic:
-        return type.children.empty()
-                   ? trim(type.text)
-                   : "atomic[" + substitute_generic_type_ref(type.children[0], params, args) + "]";
-    case TypeKind::Device:
-        return type.children.empty()
-                   ? trim(type.text)
-                   : "device[" + substitute_generic_type_ref(type.children[0], params, args) + "]";
-    case TypeKind::Storage:
-        return type.children.empty()
-                   ? trim(type.text)
-                   : "storage[" + substitute_generic_type_ref(type.children[0], params, args) + "]";
-    case TypeKind::Shared:
-        return type.children.empty()
-                   ? trim(type.text)
-                   : "shared[" + substitute_generic_type_ref(type.children[0], params, args) + "]";
-    case TypeKind::Static:
-        return type.children.empty()
-                   ? trim(type.text)
-                   : "static[" + substitute_generic_type_ref(type.children[0], params, args) + "]";
-    case TypeKind::Template:
-        return trim(type.name) + "[" + join_substituted_types(type.children, 0, params, args) + "]";
-    case TypeKind::FixedArray:
-        return type.children.empty() ? trim(type.text)
-                                     : substitute_generic_type_ref(type.children[0], params, args) +
-                                           "[" + trim(type.value) + "]";
-    case TypeKind::Function: {
-        const std::string result =
-            type.children.empty() ? "void"
-                                  : substitute_generic_type_ref(type.children[0], params, args);
-        return "fn(" + join_substituted_types(type.children, 1, params, args) + ") -> " + result;
-    }
-    case TypeKind::Value:
-        return trim(type.value.empty() ? type.text : type.value);
-    case TypeKind::Named:
-    case TypeKind::Qualified:
-    case TypeKind::Unknown:
-        return trim(type.text);
-    }
-    return trim(type.text);
-}
-
-std::string join_substituted_types(const std::vector<TypeRef>& types, size_t start,
-                                   const std::vector<std::string>& params,
-                                   const std::vector<TypeRef>& args) {
-    std::ostringstream out;
-    for (size_t i = start; i < types.size(); ++i) {
-        if (i > start) {
-            out << ", ";
-        }
-        out << substitute_generic_type_ref(types[i], params, args);
-    }
-    return out.str();
+    return out;
 }
 
 bool generic_param_named(const std::vector<std::string>& params, const std::string& name) {
@@ -246,41 +160,42 @@ infer_generic_call_type_args(const FunctionScope& scope, const FunctionDecl& fn,
 
 FunctionSignature instantiate_generic_signature(const FunctionDecl& fn,
                                                 const std::vector<TypeRef>& args) {
+    const std::map<std::string, std::string> substitutions =
+        generic_substitutions(fn.generic_params, args);
     FunctionSignature signature;
-    signature.return_type =
-        fn.return_type.empty()
-            ? "void"
-            : substitute_generic_type_ref(fn.return_type_ref, fn.generic_params, args);
+    signature.return_type = fn.return_type.empty()
+                                ? "void"
+                                : substitute_type_ref_text(fn.return_type_ref, substitutions);
     for (const ParamDecl& param : fn.params) {
-        signature.params.push_back(
-            substitute_generic_type_ref(param.type_ref, fn.generic_params, args));
+        signature.params.push_back(substitute_type_ref_text(param.type_ref, substitutions));
     }
     return signature;
 }
 
 ClassDecl instantiate_generic_class(ClassDecl klass, const std::vector<TypeRef>& args,
                                     const std::string& instantiated_name) {
+    const std::map<std::string, std::string> substitutions =
+        generic_substitutions(klass.generic_params, args);
     klass.name = instantiated_name;
     for (FieldDecl& field : klass.fields) {
-        field.type = substitute_generic_type_ref(field.type_ref, klass.generic_params, args);
+        field.type = substitute_type_ref_text(field.type_ref, substitutions);
         field.type_ref = parse_type_text(field.type, field.location);
     }
     for (ConstDecl& field : klass.static_fields) {
-        field.type = substitute_generic_type_ref(field.type_ref, klass.generic_params, args);
+        field.type = substitute_type_ref_text(field.type_ref, substitutions);
         field.type_ref = parse_type_text(field.type, field.location);
     }
     for (ConstDecl& constant : klass.constants) {
-        constant.type = substitute_generic_type_ref(constant.type_ref, klass.generic_params, args);
+        constant.type = substitute_type_ref_text(constant.type_ref, substitutions);
         constant.type_ref = parse_type_text(constant.type, constant.location);
     }
     for (FunctionDecl& method : klass.methods) {
         if (!method.return_type.empty()) {
-            method.return_type =
-                substitute_generic_type_ref(method.return_type_ref, klass.generic_params, args);
+            method.return_type = substitute_type_ref_text(method.return_type_ref, substitutions);
             method.return_type_ref = parse_type_text(method.return_type, method.location);
         }
         for (ParamDecl& param : method.params) {
-            param.type = substitute_generic_type_ref(param.type_ref, klass.generic_params, args);
+            param.type = substitute_type_ref_text(param.type_ref, substitutions);
             param.type_ref = parse_type_text(param.type, param.location);
         }
     }
