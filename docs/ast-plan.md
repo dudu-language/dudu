@@ -314,11 +314,11 @@ Already structured:
   `push_back(...)` at the callee node instead of relying on raw expression
   replacement
 - C++ member expression emission lowers proven pointer receivers from parsed
-  receiver nodes (`item->field`, `items[i]->field`) before falling back to raw
-  member rewriting for unresolved cases
-- the remaining raw pointer-member rewrite fallback classifies pointer locals
-  and lists of pointer elements from parsed `TypeRef` nodes instead of string
-  prefixes
+  receiver nodes (`item->field`, `items[i]->field`) without falling through a
+  normal-expression raw member rewrite path
+- the remaining pointer-member text rewriter is confined to the explicit
+  `cpp(...)` escape boundary and classifies pointer locals and lists of pointer
+  elements from parsed `TypeRef` nodes instead of string prefixes
 - C++ member expression emission lowers normal value receivers from parsed
   receiver nodes and applies namespace alias qualification directly, avoiding
   the full raw expression rewrite path for `player.field` and `std.sin` shapes
