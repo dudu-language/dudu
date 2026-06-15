@@ -378,6 +378,20 @@ bool known_template_constructor_type(const FunctionScope& scope, const std::stri
            scope.symbols.classes.contains(resolve_alias(scope.symbols, callee));
 }
 
+std::string normalize_current_class_path(const FunctionScope& scope, const std::string& path,
+                                         const SourceLocation* location) {
+    if (path == "class" || starts_with(path, "class.")) {
+        if (scope.current_class.empty()) {
+            if (location != nullptr) {
+                fail(*location, "class static access outside class");
+            }
+            return {};
+        }
+        return path == "class" ? scope.current_class : scope.current_class + path.substr(5);
+    }
+    return path;
+}
+
 std::string infer_expr(const FunctionScope& scope, std::string expr,
                        const SourceLocation* location) {
     expr = trim(std::move(expr));
@@ -1155,7 +1169,8 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
     }
     case ExprKind::Member:
         if (const std::optional<std::string> path = member_path_from_expr(expr)) {
-            return member_path_type(scope.symbols, scope.locals, use_location, *path, "");
+            return member_path_type(scope.symbols, scope.locals, use_location,
+                                    normalize_current_class_path(scope, *path, use_location), "");
         }
         return infer_expr(scope, expr.text, use_location);
     case ExprKind::Index:
@@ -1178,10 +1193,16 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
             }
             if (const std::optional<std::string> receiver_path = member_path_from_expr(receiver)) {
                 const std::string receiver_type =
-                    member_path_type(scope.symbols, scope.locals, use_location, *receiver_path, "");
+                    member_path_type(scope.symbols, scope.locals, use_location,
+                                     normalize_current_class_path(scope, *receiver_path,
+                                                                  use_location),
+                                     "");
                 if (!receiver_type.empty()) {
                     return indexed_type_from_type(scope.symbols, index_location, receiver_type,
-                                                  expr.children[1], *receiver_path);
+                                                  expr.children[1],
+                                                  normalize_current_class_path(scope,
+                                                                               *receiver_path,
+                                                                               use_location));
                 }
             }
             const std::string receiver_type = infer_expr_ast(scope, receiver, use_location);
@@ -1215,7 +1236,11 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
     case ExprKind::Yield:
         return {};
     case ExprKind::Call: {
-        const std::string callee = call_callee_text(expr);
+        const std::string callee =
+            normalize_current_class_path(scope, call_callee_text(expr), use_location);
+        if (callee.empty()) {
+            return {};
+        }
         if (const auto pointer_cast =
                 infer_pointer_cast_call_ast(scope, expr, callee, use_location)) {
             return *pointer_cast;
@@ -1374,12 +1399,14 @@ std::string assign_target_type(const FunctionScope& scope, const Stmt& stmt,
     if (stmt.target_expr.kind == ExprKind::Index && stmt.target_expr.children.size() == 2) {
         const Expr& receiver = stmt.target_expr.children[0];
         if (const std::optional<std::string> receiver_path = member_path_from_expr(receiver)) {
+            const std::string normalized_receiver =
+                normalize_current_class_path(scope, *receiver_path, &target_location);
             const std::string receiver_type =
-                member_path_type(scope.symbols, scope.locals, &target_location, *receiver_path,
+                member_path_type(scope.symbols, scope.locals, &target_location, normalized_receiver,
                                  "assignment through unknown local: ");
             if (!receiver_type.empty()) {
                 return indexed_type_from_type(scope.symbols, target_location, receiver_type,
-                                              stmt.target_expr.children[1], *receiver_path);
+                                              stmt.target_expr.children[1], normalized_receiver);
             }
         }
     }
@@ -1396,7 +1423,8 @@ std::string assign_target_type(const FunctionScope& scope, const Stmt& stmt,
     }
     if (stmt.target_expr.kind == ExprKind::Member) {
         if (const std::optional<std::string> path = member_path_from_expr(stmt.target_expr)) {
-            return member_path_type(scope.symbols, scope.locals, &target_location, *path,
+            return member_path_type(scope.symbols, scope.locals, &target_location,
+                                    normalize_current_class_path(scope, *path, &target_location),
                                     "assignment through unknown local: ");
         }
         fail(target_location, "unsupported assignment target: " + stmt.target_expr.text);
@@ -1670,6 +1698,7 @@ void copy_base_scope_state(FunctionScope& dst, const FunctionScope& src) {
     dst.locals = src.locals;
     dst.constants = src.constants;
     dst.target_mode = src.target_mode;
+    dst.current_class = src.current_class;
     dst.local_type_refs = src.local_type_refs;
 }
 
@@ -1693,6 +1722,7 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols) {
             method_symbols = with_generic_params(method_symbols, method.generic_params);
             FunctionScope scope{method_symbols};
             copy_base_scope_state(scope, base);
+            scope.current_class = klass.name;
             for (const ParamDecl& param : method.params) {
                 bind_local(scope, param.name, param.type, param.type_ref);
             }

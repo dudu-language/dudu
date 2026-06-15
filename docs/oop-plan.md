@@ -220,6 +220,17 @@ Static fields must be accessed with the type-qualified name:
 Counter.count += 1
 ```
 
+Inside class methods, `class.name` is accepted as a current-class shorthand:
+
+```python
+class Counter:
+    count: static[i32] = 0
+
+    def bump() -> i32:
+        class.count += 1
+        return class.count
+```
+
 Do not access static fields through `self`. `self.count` always means an
 instance field named `count`.
 

@@ -188,6 +188,7 @@ void emit_method(std::ostringstream& out, const std::string& class_name, const F
     }
     out << ") {\n";
     std::map<std::string, std::string> locals;
+    locals["class"] = class_name;
     if (first_param == 1) {
         out << "        auto& self = *this;\n";
         locals[method.params.front().name] = method.params.front().type;

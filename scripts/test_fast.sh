@@ -31,6 +31,7 @@ compile_and_expect matrix_math 26
 compile_and_expect tensor_index_hook 42
 compile_and_expect tensor_index_set_hook 42
 compile_and_expect static_fields 42
+compile_and_expect static_class_alias 42
 compile_and_expect generic_box 42
 compile_and_expect generic_identity 42
 compile_and_expect generic_method 42

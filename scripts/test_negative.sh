@@ -157,6 +157,7 @@ expect_fail bad_staticmethod_free --check "unknown function decorator: @staticme
 expect_fail bad_classmethod --check "unknown function decorator: @classmethod"
 expect_fail bad_property --check "unknown function decorator: @property"
 expect_fail bad_static_member --check "unknown static member: Color.MISSING"
+expect_fail bad_class_static_outside_class --emit-cpp "class static access outside class"
 expect_fail bad_call_arity --emit-cpp "function add expects 2 arguments, got 1"
 expect_fail bad_call_type --emit-cpp "argument 1 for negate expects i32, got bool"
 expect_fail bad_callback_lambda --emit-cpp "argument 2 for apply expects fn(i32) -> i32, got lambda"

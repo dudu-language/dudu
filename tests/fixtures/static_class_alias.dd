@@ -1,0 +1,15 @@
+class Counter:
+    count: static[i32] = 0
+    scale: static[i32] = 2
+
+    def bump() -> i32:
+        class.count += 1
+        return class.count * class.scale
+
+
+def main() -> i32:
+    first: i32 = Counter.bump()
+    second: i32 = Counter.bump()
+    if first == 2 and second == 4 and Counter.count == 2:
+        return 42
+    return 1
