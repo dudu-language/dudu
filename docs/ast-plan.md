@@ -159,6 +159,9 @@ Already structured:
   nodes instead of using raw statement value strings
 - compound-assignment target checks use the parsed target expression path
   instead of feeding the target text back into legacy target analysis
+- assignment target checks use parsed target expressions only, including
+  call/template-call lvalue targets such as native reference-returning accessors;
+  the legacy raw target-string fallback has been removed
 - type compatibility has AST overloads for simple literals and list/set/dict
   literals, including expected-type disambiguation for empty `{}` dict
   initializers, reducing reliance on string parsing for assignment checks

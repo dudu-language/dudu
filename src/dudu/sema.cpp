@@ -1825,8 +1825,7 @@ void check_condition_type(const FunctionScope& scope, const Stmt& stmt) {
         fail(location, "condition must be bool, got " + got);
     }
 }
-std::string assign_target_type(const FunctionScope& scope, const Stmt& stmt,
-                               const std::string& lhs) {
+std::string assign_target_type(const FunctionScope& scope, const Stmt& stmt) {
     const SourceLocation& target_location = node_location(stmt.location, stmt.target_expr);
     if (stmt.target_expr.kind == ExprKind::Unary && stmt.target_expr.op == "*" &&
         stmt.target_expr.children.size() == 1 &&
@@ -1891,40 +1890,14 @@ std::string assign_target_type(const FunctionScope& scope, const Stmt& stmt,
         }
         fail(target_location, "unsupported assignment target: " + stmt.target_expr.text);
     }
-    if (stmt.target_expr.kind != ExprKind::Unknown && lhs.empty()) {
+    if (stmt.target_expr.kind == ExprKind::Call || stmt.target_expr.kind == ExprKind::TemplateCall) {
+        (void)infer_expr_ast(scope, stmt.target_expr, &target_location);
+        return {};
+    }
+    if (stmt.target_expr.kind != ExprKind::Unknown) {
         fail(target_location, "unsupported assignment target: " + stmt.target_expr.text);
     }
-    if (lhs.size() > 1 && lhs.front() == '*') {
-        const std::string name = trim(lhs.substr(1));
-        const auto local = scope.locals.find(name);
-        if (local == scope.locals.end()) {
-            fail(target_location, "assignment through unknown local: " + name);
-        }
-        std::string type = trim(local->second);
-        if (type.empty() || type.front() != '*') {
-            fail(target_location, "cannot dereference non-pointer: " + name);
-        }
-        return trim(type.substr(1));
-    }
-    if (lhs.find('.') == std::string::npos) {
-        const size_t index = lhs.find('[');
-        if (index != std::string::npos) {
-            const std::string name = trim(lhs.substr(0, index));
-            const std::string index_expr = lhs.substr(index + 1, lhs.size() - index - 2);
-            return indexed_value_type(scope.symbols, scope.locals, target_location, name,
-                                      index_expr, "indexed assignment to unknown local: ");
-        }
-        if (scope.constants.contains(lhs)) {
-            fail(target_location, "cannot assign to constant: " + lhs);
-        }
-        const auto local = scope.locals.find(lhs);
-        if (local == scope.locals.end()) {
-            fail(target_location, "assignment to unknown local: " + lhs);
-        }
-        return local->second;
-    }
-    return member_path_type(scope.symbols, scope.locals, &target_location, lhs,
-                            "assignment through unknown local: ");
+    fail(target_location, "unsupported assignment target: " + trim(stmt.target_expr.text));
 }
 void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& return_type,
                 int loop_depth);
@@ -2097,7 +2070,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
         return;
     }
     if (stmt.kind == StmtKind::CompoundAssign) {
-        const std::string target_type = assign_target_type(scope, stmt, "");
+        const std::string target_type = assign_target_type(scope, stmt);
         if (!target_type.empty()) {
             check_type_match(scope, target_type, stmt.value_expr,
                              node_location(stmt.location, stmt.value_expr));
@@ -2163,7 +2136,6 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
         return;
     }
     if (stmt.kind == StmtKind::Assign) {
-        const std::string lhs = stmt.target;
         if (const std::vector<std::string> names = tuple_binding_names(stmt.target_expr);
             !names.empty()) {
             const std::vector<std::string> types = tuple_types(
@@ -2195,7 +2167,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
             }
             return;
         }
-        const std::string target_type = assign_target_type(scope, stmt, lhs);
+        const std::string target_type = assign_target_type(scope, stmt);
         if (!target_type.empty()) {
             check_type_match(scope, target_type, stmt.value_expr,
                              node_location(stmt.location, stmt.value_expr));
