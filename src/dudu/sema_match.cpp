@@ -39,29 +39,6 @@ std::string join_strings(const std::vector<std::string>& values, std::string_vie
     return out.str();
 }
 
-std::optional<std::string> enum_case_variant(const EnumDecl& en, const Stmt& stmt) {
-    if (stmt.pattern_expr.kind == ExprKind::Name && stmt.pattern_expr.name == "_") {
-        return std::string{"_"};
-    }
-    const Expr* pattern = &stmt.pattern_expr;
-    if (stmt.pattern_expr.kind == ExprKind::Call && !stmt.pattern_expr.callee.empty()) {
-        pattern = &stmt.pattern_expr.callee.front();
-    }
-    const std::optional<std::string> path = member_path_from_expr(*pattern);
-    if (!path) {
-        return std::nullopt;
-    }
-    const std::string prefix = en.name + ".";
-    if (!starts_with(*path, prefix)) {
-        return std::nullopt;
-    }
-    const std::string variant = path->substr(prefix.size());
-    if (variant.find('.') != std::string::npos) {
-        return std::nullopt;
-    }
-    return variant;
-}
-
 bool bind_payload_case(FunctionScope& nested, const EnumValueDecl& value, const Expr& pattern,
                        const SourceLocation& location) {
     if (pattern.kind != ExprKind::Call) {
@@ -220,7 +197,7 @@ void check_enum_match(FunctionScope& scope, const Stmt& stmt, const std::string&
         if (wildcard) {
             fail(child.location, "unreachable case after wildcard");
         }
-        const std::optional<std::string> variant = enum_case_variant(en, child);
+        const std::optional<std::string> variant = enum_case_variant_name_for(en, child);
         if (!variant) {
             fail(child.location, "case pattern must be " + en.name + ".Variant or _");
         }

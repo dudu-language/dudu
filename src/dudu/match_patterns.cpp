@@ -1,8 +1,82 @@
 #include "dudu/match_patterns.hpp"
 
+#include "dudu/ast_expr.hpp"
 #include "dudu/cpp_lower.hpp"
 
+#include <algorithm>
+
 namespace dudu {
+
+bool is_wildcard_pattern_expr(const Expr& expr) {
+    return expr.kind == ExprKind::Name && expr.name == "_";
+}
+
+std::optional<std::string> enum_case_variant_name(const Stmt& stmt) {
+    if (is_wildcard_pattern_expr(stmt.pattern_expr)) {
+        return std::string{"_"};
+    }
+    const Expr* pattern = &stmt.pattern_expr;
+    if (stmt.pattern_expr.kind == ExprKind::Call && !stmt.pattern_expr.callee.empty()) {
+        pattern = &stmt.pattern_expr.callee.front();
+    }
+    const std::optional<std::string> path = member_path_from_expr(*pattern);
+    if (!path) {
+        return std::nullopt;
+    }
+    const size_t dot = path->find('.');
+    if (dot == std::string::npos || path->find('.', dot + 1) != std::string::npos) {
+        return std::nullopt;
+    }
+    return path->substr(dot + 1);
+}
+
+std::optional<std::string> enum_case_variant_name_for(const EnumDecl& en, const Stmt& stmt) {
+    if (is_wildcard_pattern_expr(stmt.pattern_expr)) {
+        return std::string{"_"};
+    }
+    const Expr* pattern = &stmt.pattern_expr;
+    if (stmt.pattern_expr.kind == ExprKind::Call && !stmt.pattern_expr.callee.empty()) {
+        pattern = &stmt.pattern_expr.callee.front();
+    }
+    const std::optional<std::string> path = member_path_from_expr(*pattern);
+    if (!path) {
+        return std::nullopt;
+    }
+    const std::string prefix = en.name + ".";
+    if (!starts_with(*path, prefix)) {
+        return std::nullopt;
+    }
+    const std::string variant = path->substr(prefix.size());
+    if (variant.find('.') != std::string::npos) {
+        return std::nullopt;
+    }
+    return variant;
+}
+
+std::vector<EnumCaseBinding> enum_case_bindings(const Stmt& stmt, const EnumValueDecl& value) {
+    std::vector<EnumCaseBinding> out;
+    if (stmt.pattern_expr.kind != ExprKind::Call) {
+        return out;
+    }
+    for (size_t i = 0; i < stmt.pattern_expr.children.size(); ++i) {
+        const Expr& child = stmt.pattern_expr.children[i];
+        if (child.kind == ExprKind::Name && !child.name.empty()) {
+            out.push_back({.field_index = i, .name = child.name});
+        } else if (child.kind == ExprKind::NamedArg && child.children.size() == 1 &&
+                   child.children.front().kind == ExprKind::Name &&
+                   !child.children.front().name.empty()) {
+            const auto found = std::find_if(
+                value.payload_fields.begin(), value.payload_fields.end(),
+                [&](const EnumPayloadField& field) { return field.name == child.name; });
+            if (found != value.payload_fields.end()) {
+                out.push_back({.field_index = static_cast<size_t>(
+                                   std::distance(value.payload_fields.begin(), found)),
+                               .name = child.children.front().name});
+            }
+        }
+    }
+    return out;
+}
 
 WrapperMatchType wrapper_match_type(const std::string& type) {
     const std::string trimmed = trim_copy(type);

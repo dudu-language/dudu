@@ -810,9 +810,9 @@ stores the match subject, case pattern text, optional guards, parsed subject
 expressions, parsed pattern expressions for simple forms, and parsed guard
 expressions. Pattern matching still stops in the unsupported-feature pass, so
 the compiler cannot lower a half-implemented match.
-Option/Result wrapper match pattern helpers are shared by semantic checking and
-C++ emission, so wrapper case names and binding extraction are interpreted from
-the same parsed pattern expression shape in both phases.
+Option/Result wrapper and enum case match pattern helpers are shared by semantic
+checking and C++ emission, so case names and binding extraction are interpreted
+from the same parsed pattern expression shape in both phases.
 
 `super.method(...)` semantic checks use the parsed call callee and argument
 nodes. Valid single-base calls lower to explicit C++ base dispatch such as
