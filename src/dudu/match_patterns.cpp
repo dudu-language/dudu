@@ -1,6 +1,7 @@
 #include "dudu/match_patterns.hpp"
 
 #include "dudu/ast_expr.hpp"
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 
 #include <algorithm>
@@ -78,17 +79,19 @@ std::vector<EnumCaseBinding> enum_case_bindings(const Stmt& stmt, const EnumValu
     return out;
 }
 
-WrapperMatchType wrapper_match_type(const std::string& type) {
-    const std::string trimmed = trim_copy(type);
-    if (starts_with(trimmed, "Option[") && trimmed.back() == ']') {
-        return {.kind = WrapperMatchKind::Option,
-                .args = split_top_level_args(trimmed.substr(7, trimmed.size() - 8))};
+WrapperMatchType wrapper_match_type(const TypeRef& type) {
+    if (const auto arg = single_template_type_arg_text(type, "Option")) {
+        return {.kind = WrapperMatchKind::Option, .args = {*arg}};
     }
-    if (starts_with(trimmed, "Result[") && trimmed.back() == ']') {
-        return {.kind = WrapperMatchKind::Result,
-                .args = split_top_level_args(trimmed.substr(7, trimmed.size() - 8))};
+    if (const std::vector<std::string> args = template_type_arg_texts(type, "Result");
+        !args.empty()) {
+        return {.kind = WrapperMatchKind::Result, .args = args};
     }
     return {};
+}
+
+WrapperMatchType wrapper_match_type(const std::string& type) {
+    return wrapper_match_type(parse_type_text(type));
 }
 
 std::optional<std::string> wrapper_case_name(const Expr& pattern) {

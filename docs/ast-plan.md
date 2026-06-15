@@ -237,6 +237,9 @@ Already structured:
   expression rather than the raw iterable statement string
 - enum match wildcard and guard checks use parsed case pattern/guard
   expressions instead of raw case statement strings
+- wrapper match subject classification for `Option[T]` and `Result[T, E]`
+  reads parsed `TypeRef` template children instead of manually slicing wrapper
+  type strings
 - `except` binding validation parses malformed bare headers into
   `condition_expr` and uses parsed binding/type fields instead of the raw
   except-header condition string

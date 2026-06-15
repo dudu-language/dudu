@@ -2,6 +2,7 @@
 #include "dudu/cpp_lower.hpp"
 #include "dudu/cpp_stmt_types.hpp"
 #include "dudu/language_server_semantic_tokens.hpp"
+#include "dudu/match_patterns.hpp"
 #include "dudu/parser.hpp"
 #include "dudu/sema.hpp"
 #include "dudu/sema_function_type.hpp"
@@ -577,6 +578,21 @@ void test_match_case_ast_shape() {
     assert(wildcard.pattern_expr.kind == dudu::ExprKind::Name);
 }
 
+void test_wrapper_match_type_uses_type_ast() {
+    const dudu::WrapperMatchType result =
+        dudu::wrapper_match_type(dudu::parse_type_text("Result[list[i32], Option[str]]"));
+    assert(result.kind == dudu::WrapperMatchKind::Result);
+    assert(result.args.size() == 2);
+    assert(result.args[0] == "list[i32]");
+    assert(result.args[1] == "Option[str]");
+
+    const dudu::WrapperMatchType option =
+        dudu::wrapper_match_type(dudu::parse_type_text("Option[Result[i32, str]]"));
+    assert(option.kind == dudu::WrapperMatchKind::Option);
+    assert(option.args.size() == 1);
+    assert(option.args[0] == "Result[i32, str]");
+}
+
 } // namespace
 
 int main() {
@@ -594,6 +610,7 @@ int main() {
         test_generic_decl_ast_shape();
         test_payload_enum_ast_shape();
         test_match_case_ast_shape();
+        test_wrapper_match_type_uses_type_ast();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;
