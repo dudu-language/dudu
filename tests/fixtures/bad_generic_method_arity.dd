@@ -1,0 +1,10 @@
+class Box:
+    value: i32
+
+    def choose[T, U](self, left: T, right: U) -> U:
+        return right
+
+
+def main() -> i32:
+    box: Box = Box(1)
+    return box.choose[i32](1, 2)
