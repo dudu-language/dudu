@@ -129,6 +129,27 @@ void test_array_literal_scalar_ast_emission() {
     assert(cpp.find("std::array<int32_t, 2> xs = {{1000, 2}};") != std::string::npos);
 }
 
+void test_typed_literal_initializers_use_type_ast() {
+    const dudu::ModuleAst module = dudu::parse_source("def values() -> i32:\n"
+                                                      "    maybe: Option[i32] = None\n"
+                                                      "    xs: list[i32] = [1, 2]\n"
+                                                      "    empty: list[str] = []\n"
+                                                      "    counts: dict[str, i32] = {\"a\": 1}\n"
+                                                      "    seen: set[i32] = {1, 2}\n"
+                                                      "    maybe = None\n"
+                                                      "    return xs[0]\n",
+                                                      "typed_literal_initializers.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+    const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find("std::optional<int32_t> maybe = std::nullopt;") != std::string::npos);
+    assert(cpp.find("std::vector<int32_t> xs = {1, 2};") != std::string::npos);
+    assert(cpp.find("std::vector<std::string> empty = {};") != std::string::npos);
+    assert(cpp.find("std::unordered_map<std::string, int32_t> counts = {{\"a\", 1}};") !=
+           std::string::npos);
+    assert(cpp.find("std::unordered_set<int32_t> seen = {1, 2};") != std::string::npos);
+    assert(cpp.find("maybe = std::nullopt;") != std::string::npos);
+}
+
 } // namespace
 
 int main() {
@@ -141,6 +162,7 @@ int main() {
         test_pointer_to_const_binding_emission();
         test_offsetof_field_emission();
         test_array_literal_scalar_ast_emission();
+        test_typed_literal_initializers_use_type_ast();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;

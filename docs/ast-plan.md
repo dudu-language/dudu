@@ -963,6 +963,10 @@ structural path for Dudu types and keep native `<...>` template extraction in a
 small native-spelling fallback for imported C++ types such as
 `std::vector<T>` and `std::atomic<T>`.
 
+Statement emission for typed literal initialization now uses parsed `TypeRef`
+predicates for `Option`, `array`, `list`, `dict`, and `set` declarations
+instead of prefix checks over the rendered type string.
+
 Parser construction has been split by grammar responsibility:
 
 - `parser.cpp` owns module orchestration, token cursor helpers, imports,

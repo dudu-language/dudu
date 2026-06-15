@@ -2,6 +2,7 @@
 
 #include "dudu/array_shape.hpp"
 #include "dudu/ast_expr.hpp"
+#include "dudu/ast_type.hpp"
 #include "dudu/control_flow.hpp"
 #include "dudu/cpp_expr_emit.hpp"
 #include "dudu/cpp_lower.hpp"
@@ -41,6 +42,23 @@ std::string lower_declared_stmt_type(const Stmt& stmt, const std::string& effect
                                      const std::vector<std::string>& aliases) {
     return effective_type == stmt.type ? lower_cpp_type(stmt.type_ref, aliases)
                                        : lower_cpp_type(effective_type, aliases);
+}
+
+bool is_template_type(std::string_view type, std::string_view name) {
+    const TypeRef parsed = parse_type_text(type);
+    return parsed.kind == TypeKind::Template && parsed.name == name;
+}
+
+bool is_fixed_array_type(std::string_view type) {
+    const TypeRef parsed = parse_type_text(type);
+    if (parsed.kind == TypeKind::Template && parsed.name == "array") {
+        return true;
+    }
+    if (parsed.kind != TypeKind::FixedArray || parsed.children.empty()) {
+        return false;
+    }
+    const TypeRef& storage = parsed.children.front();
+    return storage.kind == TypeKind::Template && storage.name == "array";
 }
 
 void emit_cpp_escape(std::ostringstream& out, const std::string& body_text, int depth) {
@@ -115,7 +133,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
     if (stmt.kind == StmtKind::Return) {
         out << indent(depth) << "return";
         if (has_expr(stmt.value_expr)) {
-            if (starts_with(return_type, "Option[") &&
+            if (is_template_type(return_type, "Option") &&
                 stmt.value_expr.kind == ExprKind::NoneLiteral) {
                 out << " std::nullopt";
             } else if (stmt.value_expr.kind == ExprKind::TupleLiteral) {
@@ -136,26 +154,26 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         locals[name] = type;
         out << indent(depth) << lower_declared_stmt_type(stmt, type, aliases) << ' ' << name;
         if (has_expr(stmt.value_expr)) {
-            if (starts_with(type, "Option[") && stmt.value_expr.kind == ExprKind::NoneLiteral) {
+            if (is_template_type(type, "Option") && stmt.value_expr.kind == ExprKind::NoneLiteral) {
                 out << " = std::nullopt";
-            } else if (starts_with(type, "array[") &&
-                       stmt.value_expr.kind == ExprKind::ListLiteral) {
+            } else if (is_fixed_array_type(type) && stmt.value_expr.kind == ExprKind::ListLiteral) {
                 out << " = {" << lower_array_literal(stmt.value_expr, aliases, locals) << "}";
-            } else if (starts_with(type, "list[") &&
+            } else if (is_template_type(type, "list") &&
                        stmt.value_expr.kind == ExprKind::ListLiteral &&
                        stmt.value_expr.children.empty()) {
                 out << " = {}";
-            } else if (starts_with(type, "list[") &&
+            } else if (is_template_type(type, "list") &&
                        stmt.value_expr.kind == ExprKind::ListLiteral) {
                 out << " = {"
                     << join_lowered_exprs(stmt.value_expr.children, aliases, locals, ", ", symbols)
                     << "}";
-            } else if (starts_with(type, "dict[") &&
+            } else if (is_template_type(type, "dict") &&
                        stmt.value_expr.kind == ExprKind::DictLiteral) {
                 out << " = {"
                     << join_lowered_exprs(stmt.value_expr.children, aliases, locals, ", ", symbols)
                     << "}";
-            } else if (starts_with(type, "set[") && stmt.value_expr.kind == ExprKind::SetLiteral) {
+            } else if (is_template_type(type, "set") &&
+                       stmt.value_expr.kind == ExprKind::SetLiteral) {
                 out << " = {"
                     << join_lowered_exprs(stmt.value_expr.children, aliases, locals, ", ", symbols)
                     << "}";
@@ -184,7 +202,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
             const std::string value = lower_expr(stmt.value_expr, aliases, locals, symbols);
             if (locals.contains(lhs)) {
                 out << indent(depth) << lhs << " = ";
-                if (starts_with(locals.at(lhs), "Option[") &&
+                if (is_template_type(locals.at(lhs), "Option") &&
                     stmt.value_expr.kind == ExprKind::NoneLiteral) {
                     out << "std::nullopt";
                 } else {
