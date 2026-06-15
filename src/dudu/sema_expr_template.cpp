@@ -9,8 +9,8 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
         }
         return {};
     }
-    const std::string callee = template_call_callee(expr);
-    const std::string callee_base = call_callee_text(expr);
+    const std::string callee = template_call_callee(scope, expr, location);
+    const std::string callee_base = scoped_call_callee_text(scope, expr, location);
 
     if (starts_with(expr.name, "*")) {
         const size_t arg_count = !expr.template_type_args.empty() ? expr.template_type_args.size()

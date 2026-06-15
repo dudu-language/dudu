@@ -17,7 +17,5 @@ const SourceLocation& node_location(const SourceLocation& fallback, const TypeRe
 void bind_local(FunctionScope& scope, const std::string& name, const std::string& type,
                 const TypeRef& type_ref = {});
 std::vector<Expr> index_arg_exprs(const Expr& index_expr);
-std::string normalize_current_class_path(const FunctionScope& scope, const std::string& path,
-                                         const SourceLocation* location);
 
 } // namespace dudu

@@ -47,18 +47,4 @@ std::vector<Expr> index_arg_exprs(const Expr& index_expr) {
     return {index_expr};
 }
 
-std::string normalize_current_class_path(const FunctionScope& scope, const std::string& path,
-                                         const SourceLocation* location) {
-    if (path == "class" || starts_with(path, "class.")) {
-        if (scope.current_class.empty()) {
-            if (location != nullptr) {
-                sema_fail(*location, "class static access outside class");
-            }
-            return {};
-        }
-        return path == "class" ? scope.current_class : scope.current_class + path.substr(5);
-    }
-    return path;
-}
-
 } // namespace dudu

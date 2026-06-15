@@ -280,7 +280,9 @@ push. They are not release packaging work.
    walks parsed member expressions inside `sema_native` before crossing into
    native metadata table spelling. `class.name` static access in expression and
    assignment sema now carries the current class through parsed member
-   expressions instead of normalizing reconstructed member-path strings. Type
+   expressions instead of normalizing reconstructed member-path strings.
+   Ordinary and templated call sema now resolve `class.method(...)` from parsed
+   callee expressions, removing the old current-class string normalizer. Type
    compatibility exposes parsed `TypeRef`
    overloads, and annotated local initializers validate against the parsed
    expected type node when available. `TypeRef` assignment compatibility keeps

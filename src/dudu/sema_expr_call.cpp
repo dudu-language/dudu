@@ -3,8 +3,7 @@
 namespace dudu {
 std::string infer_call_ast(const FunctionScope& scope, const Expr& expr,
                            const SourceLocation* use_location) {
-    const std::string callee =
-        normalize_current_class_path(scope, call_callee_text(expr), use_location);
+    const std::string callee = scoped_call_callee_text(scope, expr, use_location);
     if (callee.empty()) {
         return {};
     }
