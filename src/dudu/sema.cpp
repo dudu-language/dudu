@@ -736,7 +736,7 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
         const std::string callee = trim(expr.substr(0, call));
         const std::vector<Expr> args =
             call_arg_exprs(expr, call, location == nullptr ? SourceLocation{} : *location);
-        if (const auto type = infer_allocation_call(scope.symbols, location, callee, args))
+        if (const auto type = infer_raw_allocation_call(scope.symbols, location, callee, args))
             return *type;
         if (is_deallocation_call(callee)) {
             std::vector<std::string> types;
@@ -982,11 +982,8 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
         return "*" + pointee_ref.text;
     }
 
-    const auto allocation =
-        !expr.template_type_args.empty()
-            ? infer_allocation_call(scope.symbols, location, expr.name, expr.template_type_args,
-                                    expr.children.size())
-            : infer_allocation_call(scope.symbols, location, callee, expr.children);
+    const auto allocation = infer_allocation_call(scope.symbols, location, expr.name,
+                                                 template_type_refs(expr), expr.children.size());
     if (allocation) {
         for (const Expr& arg : expr.children) {
             (void)infer_expr_ast(scope, arg, location);

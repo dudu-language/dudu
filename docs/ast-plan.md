@@ -45,9 +45,9 @@ Already structured:
 - type-shaped builtins such as `new[T]`, `malloc[T]`, `sizeof[T]`,
   `alignof[T]`, and `offsetof[T]` validate parsed `TypeRef` arguments
   recursively, so nested unknown types get precise diagnostics
-- the legacy raw-callee allocation fallback reparses bracketed allocation types
-  into `TypeRef` before validation, keeping nested diagnostics consistent while
-  callers migrate to parsed template calls
+- explicit `cpp(...)` allocation inference names its raw-callee boundary
+  separately, while parsed `new[T]` and `malloc[T]` calls use parsed `TypeRef`
+  arguments
 - source range fields on statement, expression, and type nodes
 - semantic diagnostics for return values, local initializer values, local type
   names, conditions, and assignment targets use expression/type node locations
@@ -727,6 +727,10 @@ of inspecting child source text before lowering.
 The remaining raw C++ expression rewriter is named as an explicit
 `cpp(...)` escape lowering helper. Normal AST expression emission keeps the
 `lower_cpp_expr_ast` path.
+
+Allocation semantic inference now separates the explicit `cpp(...)` raw-callee
+path from parsed `new[T]` and `malloc[T]` template-call semantics, which use
+parsed `TypeRef` arguments directly.
 
 Index expression C++ emission now lowers parsed base and index child
 expressions directly.

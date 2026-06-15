@@ -201,12 +201,12 @@ void test_semantic_diagnostics() {
 
 void test_allocation_type_ref_diagnostics() {
     dudu::Symbols symbols;
-    const dudu::SourceLocation location{.file = "legacy_alloc.dd", .line = 7, .column = 12};
+    const dudu::SourceLocation location{.file = "cpp_escape_alloc.dd", .line = 7, .column = 12};
 
     bool rejected = false;
     try {
-        (void)dudu::infer_allocation_call(symbols, &location, "new[list[MissingType]]",
-                                          std::vector<dudu::Expr>{});
+        (void)dudu::infer_raw_allocation_call(symbols, &location, "new[list[MissingType]]",
+                                              std::vector<dudu::Expr>{});
     } catch (const dudu::CompileError& error) {
         assert(error.location().line == 7);
         assert(error.location().column > location.column);

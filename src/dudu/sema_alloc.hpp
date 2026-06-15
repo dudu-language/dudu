@@ -10,10 +10,10 @@
 
 namespace dudu {
 
-std::optional<std::string> infer_allocation_call(const Symbols& symbols,
-                                                 const SourceLocation* location,
-                                                 const std::string& callee,
-                                                 const std::vector<Expr>& args);
+std::optional<std::string> infer_raw_allocation_call(const Symbols& symbols,
+                                                     const SourceLocation* location,
+                                                     const std::string& callee,
+                                                     const std::vector<Expr>& args);
 std::optional<std::string> infer_allocation_call(const Symbols& symbols,
                                                  const SourceLocation* location,
                                                  const std::string& callee,
