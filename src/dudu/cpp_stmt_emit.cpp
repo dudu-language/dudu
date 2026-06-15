@@ -465,7 +465,7 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
         }
         return lower_name_expr(expr.name);
     case ExprKind::CppEscape:
-        return lower_cpp_escape_expr(expr.text, aliases, locals);
+        return lower_cpp_escape_expr(cpp_escape_body(expr.text), aliases, locals);
     case ExprKind::StringLiteral:
         return expr.text;
     case ExprKind::Unary:
@@ -678,44 +678,6 @@ std::string if_keyword_for_condition(const Expr& condition) {
 
 bool is_wildcard_pattern_expr(const Expr& expr) {
     return expr.kind == ExprKind::Name && expr.name == "_";
-}
-
-std::string unescape_cpp_string(std::string text) {
-    std::string out;
-    out.reserve(text.size());
-    bool escaped = false;
-    for (const char c : text) {
-        if (!escaped && c == '\\') {
-            escaped = true;
-            continue;
-        }
-        if (escaped) {
-            out.push_back(c == 'n' ? '\n' : c == 't' ? '\t' : c);
-            escaped = false;
-            continue;
-        }
-        out.push_back(c);
-    }
-    if (escaped) {
-        out.push_back('\\');
-    }
-    return out;
-}
-
-std::string cpp_escape_body(std::string text) {
-    text = trim_copy(std::move(text));
-    if (!starts_with(text, "cpp(") || text.back() != ')') {
-        return {};
-    }
-    text = trim_copy(text.substr(4, text.size() - 5));
-    if (starts_with(text, "\"\"\"") && ends_with(text, "\"\"\"")) {
-        return text.substr(3, text.size() - 6);
-    }
-    if (text.size() >= 2 && ((text.front() == '"' && text.back() == '"') ||
-                             (text.front() == '\'' && text.back() == '\''))) {
-        return unescape_cpp_string(text.substr(1, text.size() - 2));
-    }
-    return {};
 }
 
 std::string cpp_string_literal(std::string text) {

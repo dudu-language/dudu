@@ -205,8 +205,8 @@ void test_allocation_type_ref_diagnostics() {
 
     bool rejected = false;
     try {
-        (void)dudu::infer_raw_allocation_call(symbols, &location, "new[list[MissingType]]",
-                                              std::vector<dudu::Expr>{});
+        (void)dudu::infer_cpp_escape_allocation_call(symbols, &location, "new[list[MissingType]]",
+                                                     std::vector<dudu::Expr>{});
     } catch (const dudu::CompileError& error) {
         assert(error.location().line == 7);
         assert(error.location().column > location.column);

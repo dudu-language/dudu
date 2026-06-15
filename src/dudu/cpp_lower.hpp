@@ -11,6 +11,7 @@ namespace dudu {
 std::string lower_raw_cpp_escape_expr(std::string expr);
 std::string lower_raw_cpp_escape_expr(std::string expr,
                                       const std::vector<std::string>& namespace_aliases);
+std::string cpp_escape_body(std::string text);
 std::string lower_conditional_expr(std::string expr);
 std::string lower_cpp_type(const std::string& raw_type);
 std::string lower_cpp_type(const std::string& raw_type,

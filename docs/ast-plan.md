@@ -745,6 +745,11 @@ Allocation semantic inference now separates the explicit `cpp(...)` raw-callee
 path from parsed `new[T]` and `malloc[T]` template-call semantics, which use
 parsed `TypeRef` arguments directly.
 
+Expression-level `cpp(...)` now parses as an explicit `CppEscape` expression
+node before ordinary call parsing, and sema/emission strip the escape wrapper at
+that node boundary. This keeps native escape hatches visible in the AST instead
+of letting them masquerade as normal function calls.
+
 Index expression C++ emission now lowers parsed base and index child
 expressions directly.
 

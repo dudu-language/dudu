@@ -740,7 +740,8 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
         const std::string callee = trim(expr.substr(0, call));
         const std::vector<Expr> args =
             call_arg_exprs(expr, call, location == nullptr ? SourceLocation{} : *location);
-        if (const auto type = infer_raw_allocation_call(scope.symbols, location, callee, args))
+        if (const auto type =
+                infer_cpp_escape_allocation_call(scope.symbols, location, callee, args))
             return *type;
         if (is_deallocation_call(callee)) {
             std::vector<std::string> types;
@@ -1772,7 +1773,7 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
     case ExprKind::TemplateCall:
         return infer_template_call_ast(scope, expr, use_location);
     case ExprKind::CppEscape:
-        return infer_cpp_escape_expr(scope, expr.text, use_location);
+        return infer_cpp_escape_expr(scope, cpp_escape_body(expr.text), use_location);
     }
     return {};
 }

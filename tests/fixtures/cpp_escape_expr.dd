@@ -1,0 +1,4 @@
+def main() -> i32:
+    value: i32 = cpp("19")
+    value += cpp("23")
+    return value

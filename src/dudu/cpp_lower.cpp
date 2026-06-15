@@ -50,6 +50,44 @@ bool is_non_type_template_arg(const std::string& text) {
     return true;
 }
 
+std::string unescape_cpp_string(std::string text) {
+    std::string out;
+    out.reserve(text.size());
+    bool escaped = false;
+    for (const char c : text) {
+        if (!escaped && c == '\\') {
+            escaped = true;
+            continue;
+        }
+        if (escaped) {
+            out.push_back(c == 'n' ? '\n' : c == 't' ? '\t' : c);
+            escaped = false;
+            continue;
+        }
+        out.push_back(c);
+    }
+    if (escaped) {
+        out.push_back('\\');
+    }
+    return out;
+}
+
+std::string cpp_escape_body(std::string text) {
+    text = trim_copy(std::move(text));
+    if (!starts_with(text, "cpp(") || text.back() != ')') {
+        return {};
+    }
+    text = trim_copy(text.substr(4, text.size() - 5));
+    if (starts_with(text, "\"\"\"") && ends_with(text, "\"\"\"")) {
+        return text.substr(3, text.size() - 6);
+    }
+    if (text.size() >= 2 && ((text.front() == '"' && text.back() == '"') ||
+                             (text.front() == '\'' && text.back() == '\''))) {
+        return unescape_cpp_string(text.substr(1, text.size() - 2));
+    }
+    return {};
+}
+
 std::string lower_function_template_arg(const std::string& type,
                                         const std::vector<std::string>& namespace_aliases) {
     const size_t open = type.find('(');
