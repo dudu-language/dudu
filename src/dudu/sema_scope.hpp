@@ -17,6 +17,7 @@ struct FunctionScope {
     std::set<std::string> constants;
     std::string target_mode = "hosted";
     std::string current_class;
+    bool allow_super_init = false;
     std::map<std::string, TypeRef> local_type_refs;
 };
 

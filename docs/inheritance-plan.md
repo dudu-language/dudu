@@ -104,6 +104,10 @@ class Player(Entity):
 The compiler lowers `super.init(...)` to a C++ base constructor call where C++
 requires one.
 
+Status: `super.init(...)` is implemented for single-base constructors when it
+is the first statement in `init`. It validates parsed arguments against the base
+constructor and lowers to a C++ base initializer list entry.
+
 ## Destructors
 
 Destructors use `drop`. Base cleanup follows C++ destruction order. User code
@@ -554,7 +558,7 @@ field declaration where possible.
 
 - Native single inheritance compiles and runs: initial base-list parsing,
   inherited fields, inherited methods, and C++ public-base lowering are done.
-- `super.init(...)` lowers correctly.
+- `super.init(...)` lowers correctly: done for single-base constructors.
 - `super.method(...)` calls the base method: done for single-base classes.
 - `@virtual`, method-only `@abstract`, and `@override` validate method
   relationships.

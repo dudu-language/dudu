@@ -668,6 +668,11 @@ nodes. Valid single-base calls lower to explicit C++ base dispatch such as
 `Base::method(args...)`; invalid `super` usage gets Dudu diagnostics instead of
 falling through to generated C++.
 
+`super.init(...)` semantic checks also use parsed call arguments. A valid
+single-base constructor call must be the first statement in `init`; it validates
+against the base constructor and emits through the C++ constructor initializer
+list instead of lowering as a normal statement.
+
 ## Acceptance
 
 - Existing examples still compile and run.

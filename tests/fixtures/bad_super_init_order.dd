@@ -1,10 +1,13 @@
 class Entity:
+    id: i32
+
     def init(self, id: i32):
         self.id = id
 
-    id: i32
-
 
 class Player(Entity):
-    def init(self, id: i32):
+    bonus: i32
+
+    def init(self, id: i32, bonus: i32):
+        self.bonus = bonus
         super.init(id)

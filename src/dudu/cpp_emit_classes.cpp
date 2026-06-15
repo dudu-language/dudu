@@ -1,5 +1,6 @@
 #include "dudu/cpp_emit_classes.hpp"
 
+#include "dudu/ast_expr.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/cpp_stmt_emit.hpp"
 #include "dudu/sema_context.hpp"
@@ -167,6 +168,30 @@ std::string class_opening(const ClassDecl& klass, const std::vector<std::string>
     return with_bases("struct " + klass.name);
 }
 
+const Expr* super_init_expr(const FunctionDecl& method) {
+    if (!is_constructor_method(method) || method.statements.empty()) {
+        return nullptr;
+    }
+    const Stmt& first = method.statements.front();
+    if (first.kind == StmtKind::Expr && first.expr.kind == ExprKind::Call &&
+        call_callee_text(first.expr) == "super.init") {
+        return &first.expr;
+    }
+    return nullptr;
+}
+
+std::string join_lowered_args(const std::vector<Expr>& args, const std::vector<std::string>& aliases,
+                              const std::map<std::string, std::string>& locals) {
+    std::ostringstream out;
+    for (size_t i = 0; i < args.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << lower_cpp_expr_ast(args[i], aliases, locals);
+    }
+    return out.str();
+}
+
 bool visible_in_header(Visibility visibility) {
     return visibility != Visibility::Private;
 }
@@ -223,7 +248,28 @@ void emit_method(std::ostringstream& out, const std::string& class_name, const F
         }
         out << lower_cpp_type(method.params[i].type_ref, aliases) << ' ' << method.params[i].name;
     }
+    std::map<std::string, std::string> locals;
+    locals["class"] = class_name;
+    const auto klass = symbols.classes.find(class_name);
+    if (klass != symbols.classes.end() && klass->second->base_classes.size() == 1) {
+        locals["super"] = klass->second->base_classes.front();
+    }
+    if (first_param == 1) {
+        locals[method.params.front().name] = method.params.front().type;
+    }
+    for (size_t i = first_param; i < method.params.size(); ++i) {
+        locals[method.params[i].name] = method.params[i].type;
+    }
     out << ")";
+    if (is_constructor_method(method)) {
+        if (const Expr* super_init = super_init_expr(method)) {
+            if (const auto base = locals.find("super"); base != locals.end()) {
+                out << " : " << lower_cpp_type(parse_type_text(base->second, method.location),
+                                               aliases)
+                    << "(" << join_lowered_args(super_init->children, aliases, locals) << ")";
+            }
+        }
+    }
     if (method_has_decorator(method, "override")) {
         out << " override";
     }
@@ -232,21 +278,16 @@ void emit_method(std::ostringstream& out, const std::string& class_name, const F
         return;
     }
     out << " {\n";
-    std::map<std::string, std::string> locals;
-    locals["class"] = class_name;
-    const auto klass = symbols.classes.find(class_name);
-    if (klass != symbols.classes.end() && klass->second->base_classes.size() == 1) {
-        locals["super"] = klass->second->base_classes.front();
-    }
     if (first_param == 1) {
         out << "        auto& self = *this;\n";
-        locals[method.params.front().name] = method.params.front().type;
     }
-    for (size_t i = first_param; i < method.params.size(); ++i) {
-        locals[method.params[i].name] = method.params[i].type;
+    if (is_constructor_method(method) && super_init_expr(method) != nullptr) {
+        std::vector<Stmt> body(method.statements.begin() + 1, method.statements.end());
+        emit_block(out, body, 2, aliases, locals, method.return_type, function_returns, &symbols);
+    } else {
+        emit_block(out, method.statements, 2, aliases, locals, method.return_type,
+                   function_returns, &symbols);
     }
-    emit_block(out, method.statements, 2, aliases, locals, method.return_type, function_returns,
-               &symbols);
     out << "    }\n";
 }
 

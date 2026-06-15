@@ -125,6 +125,11 @@ bool is_super_call(const std::string& callee) {
     return callee == "super" || starts_with(callee, "super.");
 }
 
+bool is_super_init_stmt(const Stmt& stmt) {
+    return stmt.kind == StmtKind::Expr && stmt.expr.kind == ExprKind::Call &&
+           call_callee_text(stmt.expr) == "super.init";
+}
+
 std::string infer_super_call_ast(const FunctionScope& scope, const Expr& expr,
                                  const std::string& callee,
                                  const SourceLocation* location) {
@@ -143,10 +148,29 @@ std::string infer_super_call_ast(const FunctionScope& scope, const Expr& expr,
         return {};
     }
     if (method_name == "init") {
-        if (location != nullptr) {
-            fail(*location, "super.init requires base constructor lowering");
+        if (!scope.allow_super_init) {
+            if (location != nullptr) {
+                fail(*location, "super.init must be the first statement in init");
+            }
+            return {};
         }
-        return {};
+        const std::string base = super_base_type(scope, location);
+        if (base.empty()) {
+            return {};
+        }
+        const auto base_class = scope.symbols.classes.find(base_type(base));
+        if (base_class == scope.symbols.classes.end()) {
+            if (location != nullptr) {
+                fail(*location, "unknown base constructor type: " + base);
+            }
+            return {};
+        }
+        check_constructor_args_ast(
+            scope, *base_class->second, expr.children, location, infer_expr_ast,
+            [&](const std::string& expected, const Expr& value, const std::string& got) {
+                return can_assign_ast(scope, expected, value, got);
+            });
+        return "void";
     }
     const std::string base = super_base_type(scope, location);
     if (base.empty()) {
@@ -1749,9 +1773,14 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
                 int loop_depth);
 void check_block(FunctionScope& scope, const std::vector<Stmt>& body,
                  const std::string& return_type, int loop_depth) {
-    for (const Stmt& stmt : body) {
+    const bool allow_super_init_at_start = scope.allow_super_init;
+    for (size_t i = 0; i < body.size(); ++i) {
+        const Stmt& stmt = body[i];
+        scope.allow_super_init = allow_super_init_at_start && i == 0 && loop_depth == 0 &&
+                                 is_super_init_stmt(stmt);
         check_stmt(scope, stmt, return_type, loop_depth);
     }
+    scope.allow_super_init = false;
 }
 void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& return_type,
                 int loop_depth) {
@@ -2031,6 +2060,7 @@ void copy_base_scope_state(FunctionScope& dst, const FunctionScope& src) {
     dst.constants = src.constants;
     dst.target_mode = src.target_mode;
     dst.current_class = src.current_class;
+    dst.allow_super_init = src.allow_super_init;
     dst.local_type_refs = src.local_type_refs;
 }
 
@@ -2058,6 +2088,7 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols) {
             FunctionScope scope{method_symbols};
             copy_base_scope_state(scope, base);
             scope.current_class = klass.name;
+            scope.allow_super_init = method.name == "init";
             for (const ParamDecl& param : method.params) {
                 bind_local(scope, param.name, param.type, param.type_ref);
             }

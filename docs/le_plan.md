@@ -343,8 +343,11 @@ push. They are not release packaging work.
    is implemented for single-base classes and lowers from the parsed call AST
    to explicit base-method dispatch. Construction and `new[T]` allocation of
    Dudu classes with unimplemented abstract methods are rejected with Dudu
-   diagnostics. `super.init(...)`, constructors across bases, virtual
-   destructor policy, and strict multiple inheritance rules remain.
+   diagnostics. `super.init(...)` is implemented for single-base constructors
+   as the first statement in `init`, validates parsed arguments against the
+   base constructor, and lowers to a C++ base initializer. Broader constructors
+   across multiple bases, virtual destructor policy, and strict multiple
+   inheritance rules remain.
 
 8. Macro Surface Prerequisites
 
