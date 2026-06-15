@@ -1,0 +1,10 @@
+class Counter:
+    value: i32
+
+
+def make_counter() -> Counter:
+    return Counter(value=42)
+
+
+def main() -> i32:
+    return make_counter().missing()

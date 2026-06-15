@@ -1639,6 +1639,42 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
         if (is_builtin_call(callee)) {
             return infer_builtin_call_ast(scope, expr, callee, use_location);
         }
+        if (!expr.callee.empty() && expr.callee.front().kind == ExprKind::Member &&
+            expr.callee.front().children.size() == 1) {
+            const Expr& member = expr.callee.front();
+            const Expr& receiver_expr = member.children.front();
+            const bool bare_nonlocal_receiver =
+                receiver_expr.kind == ExprKind::Name && !scope.locals.contains(receiver_expr.name);
+            if (!bare_nonlocal_receiver) {
+                const std::string receiver_type =
+                    infer_expr_ast(scope, receiver_expr, use_location);
+                if (receiver_type.empty()) {
+                    return {};
+                }
+                const bool foreign_receiver =
+                    foreign_cpp_type_name(resolve_alias(scope.symbols, receiver_type));
+                FunctionSignature signature;
+                if (method_signature_for_type(scope.symbols, receiver_type, member.name,
+                                              signature,
+                                              foreign_receiver ? nullptr : use_location)) {
+                    const std::vector<FunctionSignature> signatures =
+                        method_signatures_for_type(scope.symbols, receiver_type, member.name);
+                    if (const auto match =
+                            matching_signature_ast(scope, signatures, expr.children)) {
+                        check_call_args_ast(scope, callee, *match, expr.children, use_location);
+                        return match->return_type;
+                    }
+                    check_call_args_ast(scope, callee, signature, expr.children, use_location);
+                    return signature.return_type;
+                }
+                if (foreign_receiver) {
+                    for (const Expr& arg : expr.children) {
+                        (void)infer_expr_ast(scope, arg, use_location);
+                    }
+                    return "auto";
+                }
+            }
+        }
         const size_t method_dot = callee.rfind('.');
         if (method_dot != std::string::npos && is_member_path(callee)) {
             const std::string receiver = trim(callee.substr(0, method_dot));

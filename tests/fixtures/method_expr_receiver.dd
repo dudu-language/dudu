@@ -1,0 +1,13 @@
+class Counter:
+    value: i32
+
+    def get(self) -> i32:
+        return self.value
+
+
+def make_counter() -> Counter:
+    return Counter(value=42)
+
+
+def main() -> i32:
+    return make_counter().get()

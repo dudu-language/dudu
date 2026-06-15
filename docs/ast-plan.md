@@ -83,6 +83,9 @@ Already structured:
   instead of emitting raw child expression text
 - ordinary call semantic inference uses a callee lookup string reconstructed
   from the parsed callee expression where possible
+- parsed method-call inference handles typed expression receivers such as
+  `make_counter().get()`, including Dudu-source diagnostics for unknown
+  methods, instead of falling back to raw expression inference
 - template-call semantic inference and template method lookup use the parsed
   callee expression when reconstructing lookup names
 - generated local type inference for call expressions derives callee lookup

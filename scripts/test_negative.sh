@@ -53,6 +53,7 @@ expect_fail bad_variadic_macro_arity --emit-cpp "no native overload of wrap.DUDU
 expect_fail bad_native_overload_type --emit-cpp "candidate: dudu_native.overloaded(i32) -> i32"
 expect_fail bad_native_template_function --emit-cpp "candidate: dudu_template.identity\\[i32\\](i32) -> i32"
 expect_fail bad_unknown_method --emit-cpp "unknown method: Counter.add"
+expect_fail bad_method_expr_receiver --emit-cpp "unknown method: Counter.missing"
 expect_fail bad_method_arity --emit-cpp "function counter.add expects 1 arguments, got 0"
 expect_fail bad_method_type --emit-cpp "argument 1 for counter.add expects i32, got bool"
 expect_fail bad_init_return --emit-cpp "init cannot declare a return type"
