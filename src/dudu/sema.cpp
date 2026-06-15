@@ -48,14 +48,22 @@ std::vector<std::string> call_args(std::string expr, size_t open) {
     std::string args = trim(expr.substr(open + 1, expr.size() - open - 2));
     return args.empty() ? std::vector<std::string>{} : split_top_level_args(args);
 }
-bool can_assign_expr(const FunctionScope& scope, const std::string& expected,
-                     const std::string& expr, const std::string& got) {
-    return assignment_type_allowed(expected, expr, got) ||
-           assignment_type_allowed(resolve_alias(scope.symbols, expected), expr,
-                                   resolve_alias(scope.symbols, got)) ||
-           native_base_assignable(scope.symbols, expected, got);
+
+std::vector<Expr> call_arg_exprs(std::string expr, size_t open, SourceLocation location) {
+    std::vector<Expr> out;
+    for (const std::string& arg : call_args(std::move(expr), open)) {
+        out.push_back(parse_expr_text(arg, location));
+    }
+    return out;
 }
 
+std::vector<Expr> parse_exprs(const std::vector<std::string>& exprs, SourceLocation location) {
+    std::vector<Expr> out;
+    for (const std::string& expr : exprs) {
+        out.push_back(parse_expr_text(expr, location));
+    }
+    return out;
+}
 bool can_assign_ast(const FunctionScope& scope, const std::string& expected, const Expr& expr,
                     const std::string& got) {
     return assignment_type_allowed(expected, expr, got) ||
@@ -354,27 +362,6 @@ bool foreign_cpp_type_name(const std::string& type) {
     return type.find('.') != std::string::npos || type.find("::") != std::string::npos;
 }
 
-void check_call_args(const FunctionScope& scope, const std::string& callee,
-                     const FunctionSignature& signature, const std::vector<std::string>& args,
-                     const SourceLocation* location) {
-    if (location == nullptr)
-        return;
-    if ((!signature.variadic && args.size() != signature.params.size()) ||
-        (signature.variadic && args.size() < signature.params.size())) {
-        fail(*location, "function " + callee + " expects " +
-                            std::to_string(signature.params.size()) + " arguments, got " +
-                            std::to_string(args.size()));
-    }
-    for (size_t i = 0; i < signature.params.size(); ++i) {
-        const std::string got = infer_expr(scope, args[i], location);
-        const std::string& expected = signature.params[i];
-        if (!can_assign_expr(scope, expected, args[i], got)) {
-            fail(*location, "argument " + std::to_string(i + 1) + " for " + callee + " expects " +
-                                expected + ", got " + got);
-        }
-    }
-}
-
 void check_call_args_ast(const FunctionScope& scope, const std::string& callee,
                          const FunctionSignature& signature, const std::vector<Expr>& args,
                          const SourceLocation* location) {
@@ -396,21 +383,6 @@ void check_call_args_ast(const FunctionScope& scope, const std::string& callee,
     }
 }
 
-bool call_args_match(const FunctionScope& scope, const FunctionSignature& signature,
-                     const std::vector<std::string>& args) {
-    if ((!signature.variadic && args.size() != signature.params.size()) ||
-        (signature.variadic && args.size() < signature.params.size())) {
-        return false;
-    }
-    for (size_t i = 0; i < signature.params.size(); ++i) {
-        const std::string got = infer_expr(scope, args[i], nullptr);
-        if (!can_assign_expr(scope, signature.params[i], args[i], got)) {
-            return false;
-        }
-    }
-    return true;
-}
-
 bool call_args_match_ast(const FunctionScope& scope, const FunctionSignature& signature,
                          const std::vector<Expr>& args) {
     if ((!signature.variadic && args.size() != signature.params.size()) ||
@@ -424,17 +396,6 @@ bool call_args_match_ast(const FunctionScope& scope, const FunctionSignature& si
         }
     }
     return true;
-}
-
-std::optional<FunctionSignature> matching_signature(const FunctionScope& scope,
-                                                    const std::vector<FunctionSignature>& options,
-                                                    const std::vector<std::string>& args) {
-    for (const FunctionSignature& signature : options) {
-        if (call_args_match(scope, signature, args)) {
-            return signature;
-        }
-    }
-    return std::nullopt;
 }
 
 std::optional<FunctionSignature>
@@ -774,6 +735,8 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
     const size_t call = find_call_open(expr);
     if (call != std::string::npos && find_call_close(expr, call) == expr.size() - 1) {
         const std::string callee = trim(expr.substr(0, call));
+        const std::vector<Expr> args =
+            call_arg_exprs(expr, call, location == nullptr ? SourceLocation{} : *location);
         if (const auto type =
                 infer_allocation_call(scope.symbols, location, callee, call_args(expr, call)))
             return *type;
@@ -795,22 +758,22 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
         }
         if (const auto klass = scope.symbols.classes.find(resolve_alias(scope.symbols, callee));
             klass != scope.symbols.classes.end()) {
-            check_constructor_args(
-                scope, *klass->second, call_args(expr, call), location, infer_expr,
-                [&](const std::string& expected, const std::string& value, const std::string& got) {
-                    return can_assign_expr(scope, expected, value, got);
+            check_constructor_args_ast(
+                scope, *klass->second, args, location, infer_expr_ast,
+                [&](const std::string& expected, const Expr& value, const std::string& got) {
+                    return can_assign_ast(scope, expected, value, got);
                 });
             return callee;
         }
         if (const auto fn = scope.symbols.function_signatures.find(callee);
             fn != scope.symbols.function_signatures.end()) {
-            check_call_args(scope, callee, fn->second, call_args(expr, call), location);
+            check_call_args_ast(scope, callee, fn->second, args, location);
             return fn->second.return_type;
         }
         if (const auto signature = native_signature_for_call(
-                scope, callee, call_args(expr, call), location, infer_expr,
-                [&](const std::string& expected, const std::string& value, const std::string& got) {
-                    return can_assign_expr(scope, expected, value, got);
+                scope, callee, args, location, infer_expr_ast,
+                [&](const std::string& expected, const Expr& value, const std::string& got) {
+                    return can_assign_ast(scope, expected, value, got);
                 })) {
             return signature->return_type;
         }
@@ -821,7 +784,7 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
         if (const auto local = scope.locals.find(callee); local != scope.locals.end()) {
             FunctionSignature signature;
             if (parse_local_function_type(scope, callee, local->second, signature)) {
-                check_call_args(scope, callee, signature, call_args(expr, call), location);
+                check_call_args_ast(scope, callee, signature, args, location);
                 return signature.return_type;
             }
         }
@@ -833,34 +796,33 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
             if (!scope.locals.contains(receiver) && scope.symbols.classes.contains(receiver) &&
                 static_method_signature_for_type(scope.symbols, receiver, method_name, signature,
                                                  location)) {
-                check_call_args(scope, callee, signature, call_args(expr, call), location);
+                check_call_args_ast(scope, callee, signature, args, location);
                 return signature.return_type;
             }
             const std::string receiver_type =
                 member_path_type(scope.symbols, scope.locals, nullptr, receiver, "");
             if (scope.locals.contains(receiver) &&
                 foreign_cpp_type_name(resolve_alias(scope.symbols, receiver_type))) {
-                for (const std::string& arg : call_args(expr, call)) {
-                    (void)infer_expr(scope, arg, location);
+                for (const Expr& arg : args) {
+                    (void)infer_expr_ast(scope, arg, location);
                 }
                 return "auto";
             }
             if (method_signature_for_type(scope.symbols, receiver_type, method_name, signature,
                                           location)) {
-                const std::vector<std::string> args = call_args(expr, call);
                 const std::vector<FunctionSignature> signatures =
                     method_signatures_for_type(scope.symbols, receiver_type, method_name);
-                if (const auto match = matching_signature(scope, signatures, args)) {
-                    check_call_args(scope, callee, *match, args, location);
+                if (const auto match = matching_signature_ast(scope, signatures, args)) {
+                    check_call_args_ast(scope, callee, *match, args, location);
                     return match->return_type;
                 }
                 if (foreign_cpp_type_name(resolve_alias(scope.symbols, receiver_type))) {
-                    for (const std::string& arg : args) {
-                        (void)infer_expr(scope, arg, location);
+                    for (const Expr& arg : args) {
+                        (void)infer_expr_ast(scope, arg, location);
                     }
                     return "auto";
                 }
-                check_call_args(scope, callee, signature, args, location);
+                check_call_args_ast(scope, callee, signature, args, location);
                 return signature.return_type;
             }
         }
@@ -871,21 +833,21 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
                 FunctionSignature signature;
                 if (method_signature_for_type(scope.symbols, local->second, method_name,
                                               signature, nullptr)) {
-                    check_call_args(scope, callee, signature, call_args(expr, call), location);
+                    check_call_args_ast(scope, callee, signature, args, location);
                     return signature.return_type;
                 }
             }
             if (const auto local = scope.locals.find(prefix);
                 local != scope.locals.end() &&
                 foreign_cpp_type_name(resolve_alias(scope.symbols, local->second))) {
-                for (const std::string& arg : call_args(expr, call)) {
-                    (void)infer_expr(scope, arg, location);
+                for (const Expr& arg : args) {
+                    (void)infer_expr_ast(scope, arg, location);
                 }
                 return "auto";
             }
             if (scope.symbols.native_import_prefixes.contains(prefix)) {
-                for (const std::string& arg : call_args(expr, call)) {
-                    (void)infer_expr(scope, arg, location);
+                for (const Expr& arg : args) {
+                    (void)infer_expr_ast(scope, arg, location);
                 }
                 return "auto";
             }
@@ -931,7 +893,8 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
         const std::string right = infer_expr(scope, right_expr, location);
         if (const auto signature = dudu_operator_signature(scope.symbols, op_text, left)) {
             if (location != nullptr) {
-                check_call_args(scope, op_text, *signature, {right_expr}, location);
+                check_call_args_ast(scope, op_text, *signature,
+                                    {parse_expr_text(right_expr, *location)}, location);
             }
             return signature->return_type;
         }
@@ -955,8 +918,9 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
             if (const auto local = scope.locals.find(name); local != scope.locals.end()) {
                 if (const auto signature =
                         dudu_operator_signature(scope.symbols, "[]", local->second)) {
-                    check_call_args(scope, name + "[]", *signature,
-                                    split_top_level_args(index_expr), location);
+                    check_call_args_ast(scope, name + "[]", *signature,
+                                        parse_exprs(split_top_level_args(index_expr), *location),
+                                        location);
                 }
             }
             return indexed_value_type(scope.symbols, scope.locals, *location, name, index_expr,

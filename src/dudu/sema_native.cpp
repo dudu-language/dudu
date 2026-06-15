@@ -92,27 +92,6 @@ std::string signature_text(const std::string& callee, const FunctionSignature& s
     return out.str();
 }
 
-std::string native_overload_message(const FunctionScope& scope, const std::string& callee,
-                                    const std::vector<std::string>& args,
-                                    const std::vector<FunctionSignature>& candidates,
-                                    const SourceLocation* location,
-                                    const NativeInferExprFn& infer_expr) {
-    std::ostringstream out;
-    out << "no native overload of " << callee << " accepts " << args.size() << " arguments";
-    if (!args.empty()) {
-        out << "\narguments: ";
-        for (size_t i = 0; i < args.size(); ++i) {
-            if (i > 0)
-                out << ", ";
-            out << infer_expr(scope, args[i], location);
-        }
-    }
-    for (const FunctionSignature& candidate : candidates) {
-        out << "\ncandidate: " << signature_text(callee, candidate);
-    }
-    return out.str();
-}
-
 std::string native_overload_message_ast(const FunctionScope& scope, const std::string& callee,
                                         const std::vector<Expr>& args,
                                         const std::vector<FunctionSignature>& candidates,
@@ -132,23 +111,6 @@ std::string native_overload_message_ast(const FunctionScope& scope, const std::s
         out << "\ncandidate: " << signature_text(callee, candidate);
     }
     return out.str();
-}
-
-bool args_match_signature(const FunctionScope& scope, const FunctionSignature& signature,
-                          const std::vector<std::string>& args, const SourceLocation* location,
-                          const NativeInferExprFn& infer_expr,
-                          const NativeCanAssignFn& can_assign) {
-    if (!arity_matches(signature, args.size())) {
-        return false;
-    }
-    for (size_t i = 0; i < signature.params.size(); ++i) {
-        const std::string got = infer_expr(scope, args[i], location);
-        if (!can_assign(signature.params[i], args[i], got) &&
-            !native_numeric_promotion(signature.params[i], got)) {
-            return false;
-        }
-    }
-    return true;
 }
 
 bool args_match_signature_ast(const FunctionScope& scope, const FunctionSignature& signature,
@@ -179,49 +141,6 @@ bool template_fallback_allowed(const FunctionScope& scope, const std::string& lo
 }
 
 } // namespace
-
-std::optional<FunctionSignature> native_signature_for_call(const FunctionScope& scope,
-                                                           const std::string& callee,
-                                                           const std::vector<std::string>& args,
-                                                           const SourceLocation* location,
-                                                           const NativeInferExprFn& infer_expr,
-                                                           const NativeCanAssignFn& can_assign) {
-    const auto template_call = template_call_base(callee);
-    const std::string lookup = template_call ? template_call->first : callee;
-    const auto found = scope.symbols.native_function_signatures.find(lookup);
-    if (found == scope.symbols.native_function_signatures.end()) {
-        return std::nullopt;
-    }
-    std::vector<FunctionSignature> candidates = found->second;
-    if (template_call) {
-        for (FunctionSignature& signature : candidates) {
-            signature = substitute_template_signature(std::move(signature), template_call->second);
-        }
-    }
-    for (const FunctionSignature& signature : candidates) {
-        if (args_match_signature(scope, signature, args, location, infer_expr, can_assign)) {
-            return signature;
-        }
-    }
-    bool has_variadic_candidate = false;
-    for (const FunctionSignature& signature : candidates) {
-        has_variadic_candidate = has_variadic_candidate || signature.variadic;
-    }
-    if (!has_variadic_candidate &&
-        template_fallback_allowed(scope, lookup, template_call.has_value())) {
-        for (const std::string& arg : args) {
-            (void)infer_expr(scope, arg, location);
-        }
-        FunctionSignature signature;
-        signature.return_type = "auto";
-        return signature;
-    }
-    if (location != nullptr) {
-        fail(*location,
-             native_overload_message(scope, callee, args, candidates, location, infer_expr));
-    }
-    return std::nullopt;
-}
 
 std::optional<FunctionSignature> native_signature_for_call(const FunctionScope& scope,
                                                            const std::string& callee,

@@ -132,6 +132,11 @@ Already structured:
 - native C/C++ overload checks for ordinary and explicit-template parsed calls
   consume expression children directly instead of flattening arguments back to
   strings
+- constructor and native overload validation expose only AST argument APIs; the
+  old string-vector overloads and string matching helpers have been removed
+- legacy string expression inference parses call, method, operator, and index
+  arguments into `Expr` nodes before using shared semantic checks; the old
+  string call-argument checker has been removed
 - parsed `new[T]` and `malloc[T]` allocation calls validate argument counts
   from expression children instead of stringified call arguments
 - AST-backed statement checks route assignment compatibility through expression
