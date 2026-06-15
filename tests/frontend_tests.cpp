@@ -242,12 +242,16 @@ void test_emitted_local_expression_type_inference() {
     const std::map<std::string, std::string> locals = {
         {"flag", "bool"},
         {"count", "i32"},
+        {"player", "*const[Player]"},
+        {"queue", "storage[Queue[i32]]"},
         {"scale", "f32"},
     };
     const std::map<std::string, std::string> functions = {
         {"make_matrix", "array[i32][2, 2]"},
         {"make_values", "list[i32]"},
         {"make_count", "i32"},
+        {"Player.hp", "i32"},
+        {"Queue.pop", "i32"},
     };
 
     assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("True"), locals, functions) ==
@@ -271,6 +275,10 @@ void test_emitted_local_expression_type_inference() {
     assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("count < 4"), locals, functions) ==
            "bool");
     assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("make_count()"), locals,
+                                          functions) == "i32");
+    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("player.hp()"), locals,
+                                          functions) == "i32");
+    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("queue.pop()"), locals,
                                           functions) == "i32");
     assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("make_values()[0]"), locals,
                                           functions) == "i32");

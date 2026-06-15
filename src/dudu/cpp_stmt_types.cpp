@@ -17,14 +17,30 @@ namespace {
 
 std::string receiver_base_type(std::string type) {
     type = trim_copy(std::move(type));
-    while (!type.empty() && (type.front() == '*' || type.front() == '&')) {
-        type = trim_copy(type.substr(1));
-    }
-    for (const char* wrapper : {"const", "volatile", "atomic", "storage", "shared", "device"}) {
-        const std::string prefix = std::string(wrapper) + "[";
-        if (type.rfind(prefix, 0) == 0 && type.back() == ']') {
-            return receiver_base_type(type.substr(prefix.size(), type.size() - prefix.size() - 1));
-        }
+    const TypeRef parsed = parse_type_text(type);
+    switch (parsed.kind) {
+    case TypeKind::Pointer:
+    case TypeKind::Reference:
+    case TypeKind::Const:
+    case TypeKind::Volatile:
+    case TypeKind::Atomic:
+    case TypeKind::Storage:
+    case TypeKind::Shared:
+    case TypeKind::Device:
+    case TypeKind::Static:
+    case TypeKind::FixedArray:
+        return parsed.children.empty() ? type : receiver_base_type(parsed.children.front().text);
+    case TypeKind::Template:
+        return trim_copy(parsed.name);
+    case TypeKind::Named:
+    case TypeKind::Qualified:
+        return trim_copy(parsed.name.empty() ? parsed.text : parsed.name);
+    case TypeKind::Function:
+        return "fn";
+    case TypeKind::Value:
+        return trim_copy(parsed.value.empty() ? parsed.text : parsed.value);
+    case TypeKind::Unknown:
+        break;
     }
     const size_t bracket = type.find('[');
     return bracket == std::string::npos ? type : trim_copy(type.substr(0, bracket));
