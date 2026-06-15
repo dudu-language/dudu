@@ -150,6 +150,8 @@ Already structured:
 - legacy string expression inference delegates binary operator shapes to parsed
   expression sema; the old top-level operator splitter fallback has been
   removed
+- operator compatibility checks now expose only parsed-expression overloads;
+  the old raw right-hand-expression overloads have been removed
 - AST-backed statement checks route assignment compatibility through expression
   nodes instead of using raw statement value strings
 - compound-assignment target checks use the parsed target expression path
