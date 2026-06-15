@@ -724,6 +724,10 @@ parsed template `TypeRef` arguments for arity and unknown-type diagnostics.
 Binary expression emission now checks parsed child-expression presence instead
 of inspecting child source text before lowering.
 
+The remaining raw C++ expression rewriter is named as an explicit
+`cpp(...)` escape lowering helper. Normal AST expression emission keeps the
+`lower_cpp_expr_ast` path.
+
 Index expression C++ emission now lowers parsed base and index child
 expressions directly.
 
