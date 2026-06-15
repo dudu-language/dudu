@@ -139,6 +139,11 @@ Already structured:
   string call-argument checker has been removed
 - parsed `new[T]` and `malloc[T]` allocation calls validate argument counts
   from expression children instead of stringified call arguments
+- allocation semantic helpers expose AST argument APIs for call-shaped
+  allocation checks; the old string-vector overload has been removed
+- legacy string expression inference now parses pointer-cast, allocation,
+  deallocation, and `Ok`/`Err` call arguments into expression nodes before
+  checking them
 - AST-backed statement checks route assignment compatibility through expression
   nodes instead of using raw statement value strings
 - compound-assignment target checks use the parsed target expression path

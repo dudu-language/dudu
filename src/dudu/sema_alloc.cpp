@@ -82,13 +82,6 @@ std::optional<std::string> infer_allocation_call_from_type_args(
 std::optional<std::string> infer_allocation_call(const Symbols& symbols,
                                                  const SourceLocation* location,
                                                  const std::string& callee,
-                                                 const std::vector<std::string>& args) {
-    return infer_allocation_call_with_count(symbols, location, callee, args.size());
-}
-
-std::optional<std::string> infer_allocation_call(const Symbols& symbols,
-                                                 const SourceLocation* location,
-                                                 const std::string& callee,
                                                  const std::vector<Expr>& args) {
     return infer_allocation_call_with_count(symbols, location, callee, args.size());
 }

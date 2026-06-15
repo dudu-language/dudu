@@ -707,8 +707,11 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
                 fail(error_location, "unknown pointer cast type: " + unknown->first);
             }
         } else {
-            for (const std::string& arg : call_args(expr, pointer_cast_call)) {
-                (void)infer_expr(scope, arg, location);
+            const std::vector<Expr> args =
+                call_arg_exprs(expr, pointer_cast_call,
+                               location == nullptr ? SourceLocation{} : *location);
+            for (const Expr& arg : args) {
+                (void)infer_expr_ast(scope, arg, location);
             }
             return "*" + type;
         }
@@ -737,24 +740,22 @@ std::string infer_expr(const FunctionScope& scope, std::string expr,
         const std::string callee = trim(expr.substr(0, call));
         const std::vector<Expr> args =
             call_arg_exprs(expr, call, location == nullptr ? SourceLocation{} : *location);
-        if (const auto type =
-                infer_allocation_call(scope.symbols, location, callee, call_args(expr, call)))
+        if (const auto type = infer_allocation_call(scope.symbols, location, callee, args))
             return *type;
         if (is_deallocation_call(callee)) {
             std::vector<std::string> types;
-            for (const std::string& arg : call_args(expr, call))
-                types.push_back(infer_expr(scope, arg, location));
+            for (const Expr& arg : args)
+                types.push_back(infer_expr_ast(scope, arg, location));
             if (location != nullptr)
                 check_deallocation_args(*location, callee, types);
             return "void";
         }
         if (callee == "Ok" || callee == "Err") {
-            const std::vector<std::string> args = call_args(expr, call);
             if (args.size() != 1 && location != nullptr) {
                 fail(*location, callee + " expects 1 argument, got " + std::to_string(args.size()));
             }
             return callee + "[" +
-                   (args.size() == 1 ? infer_expr(scope, args.front(), location) : "") + "]";
+                   (args.size() == 1 ? infer_expr_ast(scope, args.front(), location) : "") + "]";
         }
         if (const auto klass = scope.symbols.classes.find(resolve_alias(scope.symbols, callee));
             klass != scope.symbols.classes.end()) {
