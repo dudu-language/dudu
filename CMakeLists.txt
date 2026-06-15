@@ -40,6 +40,7 @@ add_library(dudu_frontend
     src/dudu/language_server.cpp
     src/dudu/language_server_code_actions.cpp
     src/dudu/language_server_completion.cpp
+    src/dudu/language_server_definition.cpp
     src/dudu/language_server_diagnostics.cpp
     src/dudu/language_server_hover.cpp
     src/dudu/language_server_json.cpp

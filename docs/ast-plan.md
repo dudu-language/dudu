@@ -886,6 +886,8 @@ Language-server internals have started the same split:
   completion target detection, and alias-expanded member candidate types.
 - `language_server_completion.cpp` owns completion lists, completion resolve,
   member completion, module completion, and signature help.
+- `language_server_definition.cpp` owns go-to-definition for Dudu symbols,
+  members, Dudu imports, and native C/C++ header imports.
 - `language_server_references.cpp` owns find-references and rename edit
   construction.
 - `language_server_navigation.cpp` owns LSP source ranges, locations, symbol
