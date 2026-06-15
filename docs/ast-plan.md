@@ -294,7 +294,8 @@ Still too string-based:
 - some type compatibility and native-header checks still route through type
   strings after `TypeRef` parsing
 - exact original-token ranges inside function bodies; current body-node ranges
-  are derived from normalized joined statement text
+  now use the first and last real statement tokens, but subexpression ranges are
+  still derived from normalized statement text
 
 ## Target Architecture
 
@@ -798,6 +799,11 @@ falling through to generated C++.
 single-base constructor call must be the first statement in `init`; it validates
 against the base constructor and emits through the C++ constructor initializer
 list instead of lowering as a normal statement.
+
+Statement source ranges now preserve the first and last real statement token
+span even when the parser keeps normalized compatibility text such as
+`value = call(...)`. This improves diagnostics and editor squiggles without
+waiting for every declaration/body field to stop carrying compatibility strings.
 
 ## Compiler File Shape
 

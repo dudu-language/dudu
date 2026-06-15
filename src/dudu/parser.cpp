@@ -15,6 +15,19 @@ SourceRange range_for_line_text(SourceLocation location, std::string_view text) 
                     .column = location.column + static_cast<int>(text.size())}};
 }
 
+SourceLocation token_end_location(const Token& token) {
+    SourceLocation end = token.location;
+    for (const char c : token.text) {
+        if (c == '\n') {
+            ++end.line;
+            end.column = 1;
+        } else {
+            ++end.column;
+        }
+    }
+    return end;
+}
+
 } // namespace
 
 Parser::Parser(std::span<const Token> tokens) : tokens_(tokens) {
@@ -215,8 +228,10 @@ std::vector<Stmt> Parser::parse_statement_block() {
             continue;
         }
         const SourceLocation location = current().location;
-        std::string text = join_until({TokenKind::Newline});
-        const SourceRange range = range_for_line_text(location, text);
+        JoinedTokens joined = join_until_with_range({TokenKind::Newline});
+        std::string text = std::move(joined.text);
+        const SourceRange range =
+            joined.has_tokens ? joined.range : range_for_line_text(location, text);
         consume(TokenKind::Newline, "expected newline after statement");
         std::vector<Stmt> children;
         if (at(TokenKind::Indent)) {
@@ -229,6 +244,11 @@ std::vector<Stmt> Parser::parse_statement_block() {
 }
 
 std::string Parser::join_until(std::initializer_list<TokenKind> stops) {
+    return join_until_with_range(stops).text;
+}
+
+Parser::JoinedTokens Parser::join_until_with_range(std::initializer_list<TokenKind> stops) {
+    JoinedTokens joined;
     std::ostringstream out;
     bool first = true;
     TokenKind previous_kind = TokenKind::End;
@@ -251,6 +271,12 @@ std::string Parser::join_until(std::initializer_list<TokenKind> stops) {
             ++cursor_;
             continue;
         }
+        const Token& token = current();
+        if (!joined.has_tokens) {
+            joined.range.start = token.location;
+            joined.has_tokens = true;
+        }
+        joined.range.end = token_end_location(token);
         if (!first && parser_needs_space_between(previous_kind, current().kind)) {
             out << ' ';
         }
@@ -272,7 +298,8 @@ std::string Parser::join_until(std::initializer_list<TokenKind> stops) {
         }
         ++cursor_;
     }
-    return out.str();
+    joined.text = out.str();
+    return joined;
 }
 
 ModuleAst parse_module(std::span<const Token> tokens) {

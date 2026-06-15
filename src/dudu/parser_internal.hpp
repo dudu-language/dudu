@@ -14,6 +14,12 @@ class Parser {
     ModuleAst parse();
 
   private:
+    struct JoinedTokens {
+        std::string text;
+        SourceRange range;
+        bool has_tokens = false;
+    };
+
     std::span<const Token> tokens_;
     size_t cursor_ = 0;
 
@@ -53,6 +59,7 @@ class Parser {
 
     std::vector<Stmt> parse_statement_block();
     std::string join_until(std::initializer_list<TokenKind> stops);
+    JoinedTokens join_until_with_range(std::initializer_list<TokenKind> stops);
 };
 
 } // namespace dudu
