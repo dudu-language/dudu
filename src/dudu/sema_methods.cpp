@@ -167,8 +167,8 @@ std::string substitute_receiver_template_type(std::string type,
         return type;
     }
     const std::string& first = receiver_args.front();
-    for (const char* name :
-         {"T", "_T", "_Tp", "_Tp1", "_Ty", "_Ty1", "value_type", "element_type"}) {
+    for (const char* name : {"T", "_T", "_Tp", "_Tp1", "_Ty", "_Ty1", "value_type",
+                             "element_type", "key_type"}) {
         type = replace_type_identifier(std::move(type), name, first);
     }
     if (receiver_args.size() >= 2) {

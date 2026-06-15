@@ -393,6 +393,8 @@ std::string lower_cpp_type(const TypeRef& type) {
     case TypeKind::Named:
     case TypeKind::Qualified:
         return lower_cpp_type(type.text);
+    case TypeKind::Value:
+        return type.value.empty() ? type.text : type.value;
     case TypeKind::Template:
         return lower_template_type(type);
     case TypeKind::Pointer:

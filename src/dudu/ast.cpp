@@ -907,6 +907,8 @@ std::string_view type_kind_name(TypeKind kind) {
         return "named";
     case TypeKind::Qualified:
         return "qualified";
+    case TypeKind::Value:
+        return "value";
     case TypeKind::Template:
         return "template";
     case TypeKind::Pointer:
@@ -975,6 +977,11 @@ TypeRef parse_type_text(std::string_view text, SourceLocation location) {
     if (text.front() == '&') {
         TypeRef type = make_type(TypeKind::Reference, text, location);
         type.children.push_back(parse_type_text(text.substr(1), advance_columns(location, 1)));
+        return type;
+    }
+    if (is_integer_literal(text)) {
+        TypeRef type = make_type(TypeKind::Value, text, location);
+        type.value = std::string(text);
         return type;
     }
     if (text.ends_with("]")) {

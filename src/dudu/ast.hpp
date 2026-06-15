@@ -39,6 +39,7 @@ enum class TypeKind {
     Unknown,
     Named,
     Qualified,
+    Value,
     Template,
     Pointer,
     Reference,

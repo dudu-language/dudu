@@ -20,6 +20,7 @@ grep -Fq "assert(((value == 42)))" "$repo_root/build/freestanding_debug_assert.c
 ! grep -Fq "runtime_error" "$repo_root/build/freestanding_debug_assert.cpp"
 compile_and_expect cpp_exceptions 42
 compile_and_expect cpp_nested_native 42
+compile_and_expect cpp_non_type_template_arg 3
 compile_and_expect dudu_operator_overload 42
 compile_and_expect dudu_operator_bool 42
 compile_and_expect member_expr_receiver 42

@@ -1467,7 +1467,7 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
         }
         if (expr.op == "not") {
             const std::string got = infer_expr_ast(scope, expr.children.front(), use_location);
-            if (use_location != nullptr && !got.empty() && got != "bool") {
+            if (use_location != nullptr && !got.empty() && got != "bool" && got != "auto") {
                 fail(*use_location, "not expects bool, got " + got);
             }
             return "bool";

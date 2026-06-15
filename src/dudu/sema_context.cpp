@@ -454,6 +454,8 @@ std::optional<std::pair<std::string, SourceLocation>> unknown_type_ref(const Sym
                    ? std::nullopt
                    : std::optional<std::pair<std::string, SourceLocation>>{
                          std::pair{type.text, type.location}};
+    case TypeKind::Value:
+        return std::nullopt;
     case TypeKind::Template:
         if (!known_type(symbols, type.name)) {
             return std::pair{type.name, type.location};

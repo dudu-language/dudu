@@ -76,6 +76,9 @@ Already structured:
   `alignof[T]`, `offsetof[T]`, and empty `list[T]`/`dict[T]`/`set[T]`
   construction can check and emit type arguments without reparsing them as
   expression text
+- `TypeRef` supports compile-time value template arguments such as the `3` in
+  `std.array[i32, 3]`, so native C++ templates with integer non-type
+  parameters do not masquerade as missing Dudu types
 - ordinary calls and template calls keep a parsed callee expression alongside
   the compatibility `name` field, so sema/emission/LSP can migrate away from
   raw callee strings incrementally

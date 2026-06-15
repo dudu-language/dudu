@@ -244,6 +244,11 @@ single `T` parameter typecheck through explicit Dudu calls such as
 `native.identity[i32](value)`. Template-heavy libraries may still need wrapper
 headers.
 
+Native C++ template arguments can include compile-time values. Dudu parses
+integer non-type template arguments structurally, so forms such as
+`std.array[i32, 3]` lower to `std::array<int32_t, 3>` and validate without
+treating `3` as a missing Dudu type.
+
 ## Cache
 
 Header scanning must be cached.

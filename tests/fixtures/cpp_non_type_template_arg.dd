@@ -1,0 +1,6 @@
+import cpp "array" as std
+
+
+def main() -> i32:
+    fixed: std.array[i32, 3] = std.array[i32, 3]({1, 2, 3})
+    return fixed[2]
