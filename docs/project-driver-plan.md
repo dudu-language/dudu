@@ -307,6 +307,11 @@ The driver can translate that to `pkg-config --cflags --libs ...`.
 projects. Backend choice is an implementation detail, not a split between
 toy and real workflows.
 
+This is the serious model for native projects. Users should not have to leave
+`dudu build` just because a project grows past the direct compiler path. The
+driver may choose a direct compiler backend, a generated CMake backend, or a
+user-owned CMake backend, but the user-facing command remains the same.
+
 The serious long-term model is:
 
 - The direct backend emits C++ and invokes the configured native compiler. It
@@ -340,6 +345,16 @@ Current implementation reality:
 
 The next build-driver work should close that gap without changing the front
 door: users should still type `dudu build`, `dudu run`, and `dudu test`.
+
+Backend selection rules should be boring:
+
+- If the manifest explicitly selects a backend, use it.
+- If no backend is selected, use the simplest backend that honestly supports
+  all requested native inputs.
+- If the selected backend cannot model the project, fail with a diagnostic that
+  names the missing capability and the backend that can support it.
+- Do not silently ignore include paths, link inputs, generated files, native
+  sources, package discovery, or user-owned build-system settings.
 
 Planned manifest shape:
 

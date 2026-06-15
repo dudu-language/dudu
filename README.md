@@ -127,6 +127,13 @@ Then run project commands from the project directory:
 ../build/dudu clean-cache
 ```
 
+`dudu build`, `dudu run`, and `dudu test` are intended to stay the normal
+front door even for serious native projects. The direct compiler path is the
+fast narrow backend. CMake is the broad native ecosystem backend for larger
+dependency graphs, package discovery, IDE generators, and user-owned native
+builds. `dudu cmake` is an inspectable escape hatch, not the replacement for
+`dudu build`.
+
 Project manifests can also define named targets:
 
 ```toml

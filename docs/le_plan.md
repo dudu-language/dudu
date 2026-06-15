@@ -461,6 +461,10 @@ push. They are not release packaging work.
    Backends must fail clearly when they cannot model a project rather than
    silently dropping C/C++ build-system details.
 
+   The implementation target is not "simple apps use `dudu build`, real apps
+   leave for CMake." The target is "real apps still use `dudu build`, and Dudu
+   chooses or is told which native backend to drive."
+
    Status: `dudu build` and `dudu run` currently use the direct backend.
    Native inputs such as include paths, library paths, libraries, flags,
    pkg-config packages, and extra C/C++ sources are partially implemented and
