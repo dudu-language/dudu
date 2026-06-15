@@ -344,6 +344,16 @@ bool is_member_path(const std::string& path) {
     return false;
 }
 
+std::optional<std::string> field_type_for_type(const Symbols& symbols,
+                                               const std::string& receiver_type,
+                                               const std::string& field) {
+    const auto klass = symbols.classes.find(unwrap_receiver_type(symbols, receiver_type));
+    if (klass == symbols.classes.end()) {
+        return std::nullopt;
+    }
+    return field_type_for_class(symbols, *klass->second, receiver_type, field);
+}
+
 bool method_signature_for_type(const Symbols& symbols, std::string receiver_type,
                                const std::string& method_name, FunctionSignature& signature,
                                const SourceLocation* location) {

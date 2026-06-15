@@ -1497,7 +1497,27 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
             return member_path_type(scope.symbols, scope.locals, use_location,
                                     normalize_current_class_path(scope, *path, use_location), "");
         }
-        return infer_expr(scope, expr.text, use_location);
+        if (expr.children.size() == 1) {
+            const std::string receiver_type =
+                infer_expr_ast(scope, expr.children.front(), use_location);
+            if (receiver_type.empty()) {
+                return {};
+            }
+            if (const auto field = field_type_for_type(scope.symbols, receiver_type, expr.name)) {
+                return *field;
+            }
+            if (foreign_cpp_type_name(resolve_alias(scope.symbols, receiver_type))) {
+                return "auto";
+            }
+            if (use_location != nullptr) {
+                fail(*use_location, "unknown field: " + receiver_type + "." + expr.name);
+            }
+            return {};
+        }
+        if (use_location != nullptr) {
+            fail(*use_location, "unsupported member expression: " + expr.text);
+        }
+        return {};
     case ExprKind::Index:
         if (expr.children.size() == 2) {
             const SourceLocation& index_location =

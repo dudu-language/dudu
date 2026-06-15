@@ -3,6 +3,7 @@
 #include "dudu/sema_context.hpp"
 
 #include <map>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -14,6 +15,10 @@ std::string member_path_type(const Symbols& symbols,
                              std::string unknown_local_prefix);
 
 bool is_member_path(const std::string& path);
+
+std::optional<std::string> field_type_for_type(const Symbols& symbols,
+                                               const std::string& receiver_type,
+                                               const std::string& field);
 
 bool method_signature_for_type(const Symbols& symbols, std::string receiver_type,
                                const std::string& method_name, FunctionSignature& signature,

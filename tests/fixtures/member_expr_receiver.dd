@@ -1,0 +1,11 @@
+class Point:
+    x: i32
+    y: i32
+
+
+def make_point() -> Point:
+    return Point(x=42, y=7)
+
+
+def main() -> i32:
+    return make_point().x

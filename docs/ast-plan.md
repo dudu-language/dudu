@@ -143,6 +143,9 @@ Already structured:
   target expressions before falling back to raw target text for complex shapes
 - member-path type checks reconstruct paths from parsed name/member/index
   expression nodes instead of directly trusting the original expression text
+- parsed member expression inference handles typed expression receivers such as
+  `make_point().x`, including Dudu-source diagnostics for unknown fields,
+  instead of falling back to raw expression inference
 - semantic checks and C++ statement emission use expression-node presence for
   optional statement values/messages instead of raw statement value strings
 - semantic compatibility checks for parsed binary and comparison operators use
