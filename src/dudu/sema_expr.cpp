@@ -206,9 +206,9 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
     case ExprKind::Member:
         if (const auto variant = enum_variant_from_expr(scope.symbols, expr)) {
             if (!variant->second->payload_fields.empty() && use_location != nullptr) {
-                sema_expr_fail(*use_location,
-                               "payload enum variant requires construction: " +
-                                   variant->first->name + "." + variant->second->name);
+                sema_expr_fail(*use_location, "payload enum variant requires construction: " +
+                                                  variant->first->name + "." +
+                                                  variant->second->name);
             }
             return variant->first->name;
         }
@@ -227,18 +227,10 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                 }
             }
         }
-        if (const std::string found =
-                member_expr_type(scope.symbols, scope.locals, use_location, expr);
+        if (const std::string found = member_expr_type(scope.symbols, scope.locals, use_location,
+                                                       expr, {}, scope.current_class);
             !found.empty()) {
             return found;
-        }
-        if (const std::optional<std::string> path = member_path_from_expr(expr)) {
-            const std::string found =
-                member_path_type(scope.symbols, scope.locals, use_location,
-                                 normalize_current_class_path(scope, *path, use_location), "");
-            if (!found.empty()) {
-                return found;
-            }
         }
         if (expr.children.size() == 1) {
             const Expr& receiver = expr.children.front();
@@ -289,8 +281,8 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                                           receiver.name, expr.children[1],
                                           "indexed access to unknown local: ");
             }
-            if (const std::string receiver_type =
-                    member_expr_type(scope.symbols, scope.locals, use_location, receiver);
+            if (const std::string receiver_type = member_expr_type(
+                    scope.symbols, scope.locals, use_location, receiver, {}, scope.current_class);
                 !receiver_type.empty()) {
                 return indexed_type_from_type(
                     scope.symbols, index_location, receiver_type, expr.children[1],

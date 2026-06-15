@@ -375,6 +375,9 @@ Already structured:
 - assignment target checks for nested indexed member paths such as
   `items[0].pos.x = value` now use the same parsed expression member-path
   walker before falling back to compatibility spelling paths.
+- expression and assignment sema for `class.name` static access now carry the
+  current class through parsed member expressions instead of normalizing a
+  reconstructed member-path string.
 - generic method calls on nested receivers such as `slots[0].box.id[i32](x)`
   type-check through the parsed callee receiver expression before falling back
   to compatibility spelling paths.

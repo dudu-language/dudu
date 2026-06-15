@@ -17,7 +17,8 @@ std::string member_path_type(const Symbols& symbols,
 std::string member_expr_type(const Symbols& symbols,
                              const std::map<std::string, std::string>& locals,
                              const SourceLocation* location, const Expr& expr,
-                             std::string_view unknown_local_prefix = {});
+                             std::string_view unknown_local_prefix = {},
+                             std::string_view current_class = {});
 
 bool is_member_path(const std::string& path);
 

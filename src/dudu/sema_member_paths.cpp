@@ -216,8 +216,18 @@ std::string member_path_type(const Symbols& symbols,
 std::string member_expr_type(const Symbols& symbols,
                              const std::map<std::string, std::string>& locals,
                              const SourceLocation* location, const Expr& expr,
-                             std::string_view unknown_local_prefix) {
+                             std::string_view unknown_local_prefix,
+                             std::string_view current_class) {
     if (expr.kind == ExprKind::Name && !expr.name.empty()) {
+        if (expr.name == "class") {
+            if (!current_class.empty()) {
+                return std::string(current_class);
+            }
+            if (location != nullptr) {
+                sema_fail(*location, "class static access outside class");
+            }
+            return {};
+        }
         if (const auto local = locals.find(expr.name); local != locals.end()) {
             return local->second;
         }
@@ -230,8 +240,8 @@ std::string member_expr_type(const Symbols& symbols,
         return {};
     }
     if (expr.kind == ExprKind::Index && expr.children.size() == 2) {
-        const std::string receiver_type =
-            member_expr_type(symbols, locals, location, expr.children[0], unknown_local_prefix);
+        const std::string receiver_type = member_expr_type(
+            symbols, locals, location, expr.children[0], unknown_local_prefix, current_class);
         if (receiver_type.empty()) {
             return {};
         }
@@ -241,12 +251,21 @@ std::string member_expr_type(const Symbols& symbols,
     }
     if (expr.kind == ExprKind::Member && expr.children.size() == 1 && !expr.name.empty()) {
         const Expr& receiver = expr.children.front();
+        if (receiver.kind == ExprKind::Name && receiver.name == "class") {
+            if (current_class.empty()) {
+                if (location != nullptr) {
+                    sema_fail(*location, "class static access outside class");
+                }
+                return {};
+            }
+            return static_member_type(symbols, location, std::string(current_class), expr.name);
+        }
         if (receiver.kind == ExprKind::Name && !locals.contains(receiver.name) &&
             symbols.classes.contains(receiver.name)) {
             return static_member_type(symbols, location, receiver.name, expr.name);
         }
-        const std::string receiver_type =
-            member_expr_type(symbols, locals, location, receiver, unknown_local_prefix);
+        const std::string receiver_type = member_expr_type(symbols, locals, location, receiver,
+                                                           unknown_local_prefix, current_class);
         if (receiver_type.empty()) {
             return {};
         }

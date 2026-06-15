@@ -72,24 +72,12 @@ std::string assignment_target_type(FunctionScope& scope, const Stmt& stmt,
     }
     if (stmt.target_expr.kind == ExprKind::Index && stmt.target_expr.children.size() == 2) {
         const Expr& receiver = stmt.target_expr.children[0];
-        const std::string receiver_type =
-            member_expr_type(scope.symbols, scope.locals, &target_location, receiver);
+        const std::string receiver_type = member_expr_type(
+            scope.symbols, scope.locals, &target_location, receiver, {}, scope.current_class);
         if (!receiver_type.empty()) {
             return indexed_type_from_type(
                 scope.symbols, target_location, receiver_type, stmt.target_expr.children[1],
                 receiver.text.empty() ? "indexed assignment" : receiver.text);
-        }
-        if (const std::optional<std::string> receiver_path = member_path_from_expr(receiver)) {
-            const std::string normalized_receiver =
-                normalize_current_class_path(scope, *receiver_path, &target_location);
-            const std::string fallback_receiver_type =
-                member_path_type(scope.symbols, scope.locals, &target_location, normalized_receiver,
-                                 "assignment through unknown local: ");
-            if (!fallback_receiver_type.empty()) {
-                return indexed_type_from_type(scope.symbols, target_location,
-                                              fallback_receiver_type, stmt.target_expr.children[1],
-                                              normalized_receiver);
-            }
         }
     }
     if (stmt.target_expr.kind == ExprKind::Name) {
@@ -113,15 +101,10 @@ std::string assignment_target_type(FunctionScope& scope, const Stmt& stmt,
                 return *swizzle;
             }
         }
-        if (const std::string type =
-                member_expr_type(scope.symbols, scope.locals, &target_location, stmt.target_expr);
+        if (const std::string type = member_expr_type(scope.symbols, scope.locals, &target_location,
+                                                      stmt.target_expr, {}, scope.current_class);
             !type.empty()) {
             return type;
-        }
-        if (const std::optional<std::string> path = member_path_from_expr(stmt.target_expr)) {
-            return member_path_type(scope.symbols, scope.locals, &target_location,
-                                    normalize_current_class_path(scope, *path, &target_location),
-                                    "assignment through unknown local: ");
         }
         sema_fail(target_location, "unsupported assignment target: " + stmt.target_expr.text);
     }
