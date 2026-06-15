@@ -55,6 +55,7 @@ add_library(dudu_frontend
     src/dudu/language_server_support.cpp
     src/dudu/language_server_workspace.cpp
     src/dudu/lexer.cpp
+    src/dudu/match_patterns.cpp
     src/dudu/module_loader.cpp
     src/dudu/native_build.cpp
     src/dudu/native_header_cache.cpp

@@ -2,6 +2,7 @@
 
 #include "dudu/ast_expr.hpp"
 #include "dudu/cpp_lower.hpp"
+#include "dudu/match_patterns.hpp"
 #include "dudu/sema_enum.hpp"
 #include "dudu/source.hpp"
 
@@ -102,44 +103,6 @@ bool bind_payload_case(FunctionScope& nested, const EnumValueDecl& value, const 
         nested.locals[binding_name->name] = field->type;
     }
     return true;
-}
-
-enum class WrapperMatchKind {
-    None,
-    Option,
-    Result,
-};
-
-struct WrapperMatchType {
-    WrapperMatchKind kind = WrapperMatchKind::None;
-    std::vector<std::string> args;
-};
-
-WrapperMatchType wrapper_match_type(const std::string& type) {
-    const std::string trimmed = trim(type);
-    if (starts_with(trimmed, "Option[") && trimmed.back() == ']') {
-        return {.kind = WrapperMatchKind::Option,
-                .args = split_top_level_args(trimmed.substr(7, trimmed.size() - 8))};
-    }
-    if (starts_with(trimmed, "Result[") && trimmed.back() == ']') {
-        return {.kind = WrapperMatchKind::Result,
-                .args = split_top_level_args(trimmed.substr(7, trimmed.size() - 8))};
-    }
-    return {};
-}
-
-std::optional<std::string> wrapper_case_name(const Expr& pattern) {
-    if (pattern.kind == ExprKind::Name && pattern.name == "_") {
-        return std::string{"_"};
-    }
-    if (pattern.kind == ExprKind::NoneLiteral) {
-        return std::string{"None"};
-    }
-    if (pattern.kind == ExprKind::Call && !pattern.callee.empty() &&
-        pattern.callee.front().kind == ExprKind::Name) {
-        return pattern.callee.front().name;
-    }
-    return std::nullopt;
 }
 
 void bind_wrapper_case(FunctionScope& nested, const WrapperMatchType& wrapper, const Expr& pattern,
