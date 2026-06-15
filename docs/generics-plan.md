@@ -284,8 +284,7 @@ This stresses default construction, imported span-like types, iteration, and
 operator use.
 
 Status: an executable fixture covers generic span iteration and same-parameter
-generic compound arithmetic. It passes an explicit zero value rather than
-depending on generic default construction.
+generic compound arithmetic with generic default construction through `T()`.
 
 ### Fixed Vector
 
