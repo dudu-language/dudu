@@ -303,13 +303,15 @@ push. They are not release packaging work.
    constructor arguments are checked against instantiated fields or `init`
    signatures. Explicit generic free-function calls such as
    `identity[i32](42)` instantiate Dudu signatures from parsed template-call
-   nodes and type-check parsed runtime arguments. Explicit single-parameter
-   generic methods such as `box.id[i32](42)` emit C++ method templates and
-   type-check parsed runtime arguments. Call-site inference, broader generic
-   methods, non-type parameters, and richer instantiated diagnostics remain.
-   Multi-parameter generic functions and classes such as `Pair[str, i32]`
-   substitute receiver member types through the declared class generic
-   parameter names.
+   nodes and type-check parsed runtime arguments. Simple free-function
+   call-site inference works when every type parameter can be bound from
+   argument types, including nested forms such as `list[T]`. Explicit
+   single-parameter generic methods such as `box.id[i32](42)` emit C++ method
+   templates and type-check parsed runtime arguments. Broader generic methods,
+   operator-constrained generic bodies, non-type parameters, and richer
+   instantiated diagnostics remain. Multi-parameter generic functions and
+   classes such as `Pair[str, i32]` substitute receiver member types through
+   the declared class generic parameter names.
 
 6. Sum Types And Pattern Matching
 

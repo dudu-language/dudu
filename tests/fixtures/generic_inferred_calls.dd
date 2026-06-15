@@ -1,0 +1,12 @@
+def choose[T](value: T, fallback: T) -> T:
+    return value
+
+
+def first[T](items: list[T]) -> T:
+    return items[0]
+
+
+def main() -> i32:
+    a: i32 = choose(10, 0)
+    values: list[i32] = [32]
+    return a + first(values)

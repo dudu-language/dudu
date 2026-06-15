@@ -35,6 +35,7 @@ compile_and_expect static_fields 42
 compile_and_expect static_class_alias 42
 compile_and_expect generic_box 42
 compile_and_expect generic_identity 42
+compile_and_expect generic_inferred_calls 42
 compile_and_expect generic_method 42
 compile_and_expect generic_pair 42
 compile_and_expect native_template_function 42

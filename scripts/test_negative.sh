@@ -84,6 +84,7 @@ expect_fail bad_tensor_index_set_value_type --emit-cpp "argument 2 for tensor\\[
 expect_fail bad_tensor_index_set_return --check "indexed assignment operator methods must return void"
 expect_fail bad_generic_duplicate_param --check "duplicate generic parameter: T"
 expect_fail bad_generic_function_arg_type --check "argument 1 for identity\\[i32\\] expects i32, got bool"
+expect_fail bad_generic_inferred_conflict --check "conflicting inferred type argument T: i32 vs f64 for choose"
 expect_fail bad_generic_box_arg_type --check "constructor Box\\[i32\\] argument 1 expects i32, got bool"
 expect_fail bad_generic_method_arg_type --check "argument 1 for box.id\\[i32\\] expects i32, got bool"
 expect_fail bad_generic_pair_arg_type --check "constructor Pair\\[str, i32\\] argument 1 expects str, got i32"

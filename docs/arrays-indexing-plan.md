@@ -233,6 +233,11 @@ The compiler should not special-case one imported library such as glm. Native
 Dudu vector types and imported vector wrappers should use the same generic
 swizzle mechanism.
 
+Status: swizzle syntax is still a compiler-architecture item. Type checking can
+recognize vector-like Dudu class fields, but clean lowering needs expression
+emission to carry semantic type context so `Vec4[T].xy` can construct the right
+`Vec2[T]` result without guessing from raw member text.
+
 ## Library-Defined Indexing
 
 The language should define indexing and slicing syntax, but libraries should be

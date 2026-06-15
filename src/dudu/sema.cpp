@@ -23,6 +23,7 @@
 #include "dudu/type_compat.hpp"
 #include "dudu/unsupported.hpp"
 
+#include <algorithm>
 #include <cctype>
 #include <functional>
 #include <optional>
@@ -301,6 +302,104 @@ std::string substitute_generic_type(std::string type, const std::vector<std::str
         type = replace_type_parameter(std::move(type), params[i], args[i].text);
     }
     return type;
+}
+
+bool generic_param_named(const std::vector<std::string>& params, const std::string& name) {
+    return std::find(params.begin(), params.end(), name) != params.end();
+}
+
+std::string generic_base_name(const std::string& type) {
+    const size_t open = type.find('[');
+    return open == std::string::npos ? trim(type) : trim(type.substr(0, open));
+}
+
+std::vector<std::string> generic_type_args(const std::string& type) {
+    const size_t open = type.find('[');
+    if (open == std::string::npos || type.empty() || type.back() != ']') {
+        return {};
+    }
+    return split_top_level_args(type.substr(open + 1, type.size() - open - 2));
+}
+
+bool infer_generic_binding(const std::string& param_type, const std::string& arg_type,
+                           const std::vector<std::string>& params,
+                           std::map<std::string, std::string>& bindings,
+                           std::string& error) {
+    const std::string param = trim(param_type);
+    const std::string arg = trim(arg_type);
+    if (generic_param_named(params, param)) {
+        const auto [it, inserted] = bindings.emplace(param, arg);
+        if (!inserted && it->second != arg) {
+            error = "conflicting inferred type argument " + param + ": " + it->second + " vs " +
+                    arg;
+            return false;
+        }
+        return true;
+    }
+    if (param.empty() || arg.empty()) {
+        return true;
+    }
+    if ((param.front() == '*' || param.front() == '&') && param.front() == arg.front()) {
+        return infer_generic_binding(param.substr(1), arg.substr(1), params, bindings, error);
+    }
+    const std::string param_base = generic_base_name(param);
+    const std::string arg_base = generic_base_name(arg);
+    if (param_base != arg_base) {
+        return true;
+    }
+    const std::vector<std::string> param_args = generic_type_args(param);
+    const std::vector<std::string> arg_args = generic_type_args(arg);
+    if (param_args.empty() || param_args.size() != arg_args.size()) {
+        return true;
+    }
+    for (size_t i = 0; i < param_args.size(); ++i) {
+        if (!infer_generic_binding(param_args[i], arg_args[i], params, bindings, error)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+std::optional<std::vector<TypeRef>>
+infer_generic_call_type_args(const FunctionScope& scope, const FunctionDecl& fn,
+                             const std::string& callee, const std::vector<Expr>& args,
+                             const SourceLocation* location) {
+    if (fn.generic_params.empty()) {
+        return std::nullopt;
+    }
+    if (location != nullptr && args.size() != fn.params.size()) {
+        fail(*location, "function " + callee + " expects " + std::to_string(fn.params.size()) +
+                            " arguments, got " + std::to_string(args.size()));
+    }
+    if (args.size() != fn.params.size()) {
+        return std::nullopt;
+    }
+    std::map<std::string, std::string> bindings;
+    for (size_t i = 0; i < fn.params.size(); ++i) {
+        const std::string got = infer_expr_ast(scope, args[i], location);
+        std::string error;
+        if (!infer_generic_binding(fn.params[i].type, got, fn.generic_params, bindings, error)) {
+            if (location != nullptr) {
+                fail(node_location(*location, args[i]), error + " for " + callee);
+            }
+            return std::nullopt;
+        }
+    }
+    std::vector<TypeRef> out;
+    out.reserve(fn.generic_params.size());
+    for (const std::string& param : fn.generic_params) {
+        const auto binding = bindings.find(param);
+        if (binding == bindings.end() || binding->second.empty() || binding->second == "auto" ||
+            binding->second == "list" || binding->second == "dict" || binding->second == "set") {
+            if (location != nullptr) {
+                fail(*location, "cannot infer type argument " + param + " for " + callee);
+            }
+            return std::nullopt;
+        }
+        out.push_back(parse_type_text(binding->second, location == nullptr ? fn.location
+                                                                           : *location));
+    }
+    return out;
 }
 
 FunctionSignature instantiate_generic_signature(const FunctionDecl& fn,
@@ -1244,6 +1343,18 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
         if (const auto pointer_cast =
                 infer_pointer_cast_call_ast(scope, expr, callee, use_location)) {
             return *pointer_cast;
+        }
+        if (const auto generic_fn = scope.symbols.function_decls.find(callee);
+            generic_fn != scope.symbols.function_decls.end() &&
+            !generic_fn->second->generic_params.empty()) {
+            if (const auto type_args =
+                    infer_generic_call_type_args(scope, *generic_fn->second, callee,
+                                                 expr.children, use_location)) {
+                const FunctionSignature signature =
+                    instantiate_generic_signature(*generic_fn->second, *type_args);
+                check_call_args_ast(scope, callee, signature, expr.children, use_location);
+                return signature.return_type;
+            }
         }
         if (const auto fn = scope.symbols.function_signatures.find(callee);
             fn != scope.symbols.function_signatures.end()) {

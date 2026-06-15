@@ -76,11 +76,13 @@ fields or `init` signature. Explicit generic free-function calls such as
 `identity[i32](42)` resolve through parsed template-call nodes, instantiate the
 declared Dudu signature, and type-check parsed runtime arguments. Explicit
 single-parameter generic methods such as `box.id[i32](42)` emit C++ method
-templates and type-check parsed runtime arguments. Call-site type inference,
-richer instantiated diagnostics, broader generic methods, and non-type template
-parameters remain. Multi-parameter generic functions and classes such as
-`Pair[str, i32]` substitute receiver member types through the declared class
-generic parameter names.
+templates and type-check parsed runtime arguments. Simple free-function
+call-site type inference is implemented when every type parameter can be bound
+from argument types, including nested forms such as `list[T]`. Richer
+instantiated diagnostics, operator-constrained generic bodies, broader generic
+methods, and non-type template parameters remain. Multi-parameter generic
+functions and classes such as `Pair[str, i32]` substitute receiver member types
+through the declared class generic parameter names.
 
 Unsupported operations on `T` should produce useful diagnostics that mention:
 
