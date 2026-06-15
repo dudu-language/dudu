@@ -1245,7 +1245,10 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
         }
         return {};
     }
-    return infer_expr(scope, expr.text, location);
+    if (location != nullptr) {
+        fail(*location, "unknown template call: " + callee);
+    }
+    return {};
 }
 
 std::string infer_constructor_call_ast(const FunctionScope& scope, const Expr& expr,
@@ -1660,6 +1663,17 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                 infer_pointer_cast_call_ast(scope, expr, callee, use_location)) {
             return *pointer_cast;
         }
+        if (callee == "Ok" || callee == "Err") {
+            if (use_location != nullptr && expr.children.size() != 1) {
+                fail(*use_location,
+                     callee + " expects 1 argument, got " + std::to_string(expr.children.size()));
+            }
+            return callee + "[" +
+                   (expr.children.size() == 1 ? infer_expr_ast(scope, expr.children.front(),
+                                                               use_location)
+                                              : "") +
+                   "]";
+        }
         if (const auto generic_fn = scope.symbols.function_decls.find(callee);
             generic_fn != scope.symbols.function_decls.end() &&
             !generic_fn->second->generic_params.empty()) {
@@ -1819,14 +1833,17 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
             }
             return {};
         }
-        return infer_expr(scope, expr.text, use_location);
+        if (use_location != nullptr) {
+            fail(*use_location, "unknown function: " + callee);
+        }
+        return {};
     }
     case ExprKind::TemplateCall:
         return infer_template_call_ast(scope, expr, use_location);
     case ExprKind::CppEscape:
         return infer_expr(scope, expr.text, use_location);
     }
-    return infer_expr(scope, expr.text, use_location);
+    return {};
 }
 
 void check_type_match(const FunctionScope& scope, const std::string& expected, const Expr& expr,

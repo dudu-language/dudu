@@ -100,6 +100,9 @@ Already structured:
 - unresolved parsed dotted calls such as `missing.namespace()` are rejected
   during semantic checking after native/header lookup misses instead of being
   emitted as raw C++
+- unrecognized parsed call and template-call expressions now produce Dudu
+  diagnostics after structured lookup misses instead of falling through to raw
+  expression inference; `cpp(...)` remains the explicit native escape hatch
 - imported native namespace calls without scanner metadata, and method calls on
   local `auto` receivers from native APIs, stay on parsed call nodes and return
   `auto` explicitly instead of using raw expression fallback
