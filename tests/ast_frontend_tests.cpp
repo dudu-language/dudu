@@ -58,6 +58,15 @@ void test_ast_assignment_display_types() {
            "cannot assign  to bool without an explicit cast");
 }
 
+void test_type_compat_uses_type_ast_for_pointers() {
+    assert(dudu::type_assignment_allowed("*const[void]", "*i32"));
+    assert(dudu::type_assignment_allowed("* const[void]", "*i32"));
+    assert(dudu::type_assignment_allowed("*const[i32]", "*i32"));
+    assert(dudu::type_assignment_allowed("*i32", "*&i32"));
+    assert(dudu::type_assignment_allowed("&const[i32]", "i32"));
+    assert(dudu::type_assignment_allowed("i32", "&const[i32]"));
+}
+
 void test_native_semantic_tokens() {
     dudu::ModuleAst module =
         dudu::parse_source("import c \"native.h\"\n"
@@ -598,6 +607,7 @@ void test_wrapper_match_type_uses_type_ast() {
 int main() {
     try {
         test_ast_assignment_display_types();
+        test_type_compat_uses_type_ast_for_pointers();
         test_native_semantic_tokens();
         test_ast_constructor_assignment_compatibility();
         test_ast_index_receiver_type_inference();

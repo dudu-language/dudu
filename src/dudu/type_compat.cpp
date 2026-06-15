@@ -6,6 +6,7 @@
 #include "dudu/cpp_lower.hpp"
 
 #include <cctype>
+#include <optional>
 #include <set>
 #include <string_view>
 
@@ -26,6 +27,19 @@ std::string wrapped_type_arg(std::string type) {
         return *inner;
     }
     return type;
+}
+
+std::optional<std::string> unary_child(std::string type, TypeKind kind) {
+    type = trim_copy(std::move(type));
+    return unary_type_child_text(parse_type_text(type), kind);
+}
+
+std::optional<std::string> pointer_pointee(std::string type) {
+    return unary_child(std::move(type), TypeKind::Pointer);
+}
+
+std::optional<std::string> reference_target(std::string type) {
+    return unary_child(std::move(type), TypeKind::Reference);
 }
 
 std::string compact_type(std::string type) {
@@ -216,21 +230,19 @@ bool is_container_literal_expr(const Expr& expr) {
 }
 
 bool is_reference_binding(std::string expected, std::string got) {
-    expected = trim_copy(std::move(expected));
     got = trim_copy(std::move(got));
-    if (expected.empty() || expected.front() != '&') {
-        return false;
+    if (const auto target = reference_target(std::move(expected))) {
+        return wrapped_type_arg(*target) == got;
     }
-    return wrapped_type_arg(trim_copy(expected.substr(1))) == got;
+    return false;
 }
 
 bool is_value_from_reference(std::string expected, std::string got) {
     expected = trim_copy(std::move(expected));
-    got = trim_copy(std::move(got));
-    if (got.empty() || got.front() != '&') {
-        return false;
+    if (const auto target = reference_target(std::move(got))) {
+        return expected == wrapped_type_arg(*target);
     }
-    return expected == wrapped_type_arg(trim_copy(got.substr(1)));
+    return false;
 }
 
 bool is_value_wrapper_assignment(std::string expected, const Expr& expr, std::string got) {
@@ -244,37 +256,40 @@ bool is_value_wrapper_assignment(std::string expected, const Expr& expr, std::st
 }
 
 bool is_null_pointer(std::string expected, const Expr& expr, std::string got) {
-    expected = trim_copy(std::move(expected));
     got = trim_copy(std::move(got));
-    return !expected.empty() && expected.front() == '*' && expr.kind == ExprKind::NoneLiteral &&
+    return pointer_pointee(std::move(expected)).has_value() && expr.kind == ExprKind::NoneLiteral &&
            got == "None";
 }
 
 bool is_void_pointer_target(std::string expected, std::string got) {
-    expected = trim_copy(std::move(expected));
-    got = trim_copy(std::move(got));
-    return !expected.empty() && !got.empty() && expected.front() == '*' && got.front() == '*' &&
-           (wrapped_type_arg(expected.substr(1)) == "void" ||
-            wrapped_type_arg(expected.substr(1)) == "const[void]");
+    const auto expected_pointee = pointer_pointee(std::move(expected));
+    const auto got_pointee = pointer_pointee(std::move(got));
+    if (!expected_pointee || !got_pointee) {
+        return false;
+    }
+    return wrapped_type_arg(*expected_pointee) == "void" ||
+           wrapped_type_arg(*expected_pointee) == "const[void]";
 }
 
 bool is_const_pointer_binding(std::string expected, std::string got) {
-    expected = trim_copy(std::move(expected));
-    got = trim_copy(std::move(got));
-    if (expected.size() < 9 || got.size() < 2 || expected.front() != '*' || got.front() != '*' ||
-        !starts_with(expected.substr(1), "const[") || expected.back() != ']') {
+    const auto expected_pointee = pointer_pointee(std::move(expected));
+    const auto got_pointee = pointer_pointee(std::move(got));
+    if (!expected_pointee || !got_pointee) {
         return false;
     }
-    const std::string inner = expected.substr(7, expected.size() - 8);
-    return wrapped_type_arg(got.substr(1)) == inner;
+    const auto expected_const_inner = unary_child(*expected_pointee, TypeKind::Const);
+    return expected_const_inner && wrapped_type_arg(*got_pointee) == *expected_const_inner;
 }
 
 bool is_pointer_to_reference_value(std::string expected, std::string got) {
-    expected = trim_copy(std::move(expected));
-    got = trim_copy(std::move(got));
-    return expected.size() > 1 && got.size() > 2 && expected.front() == '*' &&
-           got.rfind("*&", 0) == 0 &&
-           wrapped_type_arg(expected.substr(1)) == wrapped_type_arg(got.substr(2));
+    const auto expected_pointee = pointer_pointee(std::move(expected));
+    const auto got_pointee = pointer_pointee(std::move(got));
+    if (!expected_pointee || !got_pointee) {
+        return false;
+    }
+    const auto got_reference_target = reference_target(*got_pointee);
+    return got_reference_target &&
+           wrapped_type_arg(*expected_pointee) == wrapped_type_arg(*got_reference_target);
 }
 
 bool is_cpp_associated_type_binding(std::string expected, std::string got) {
