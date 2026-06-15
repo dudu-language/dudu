@@ -208,10 +208,19 @@ struct NativeNamespaceDecl {
     SourceLocation location;
 };
 
+struct EnumPayloadField {
+    std::string name;
+    std::string type;
+    TypeRef type_ref;
+    SourceLocation location;
+};
+
 struct EnumValueDecl {
     std::string name;
     std::string value;
     Expr value_expr;
+    std::vector<EnumPayloadField> payload_fields;
+    bool tuple_payload = false;
     SourceLocation location;
 };
 

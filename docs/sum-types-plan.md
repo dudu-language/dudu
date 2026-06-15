@@ -403,3 +403,8 @@ Status: simple C-like enum variants are PascalCase in fixtures and compiler
 naming checks. Snake-case enum variants are rejected before payload sum types
 land, so the existing enum surface matches the planned `EnumName.VariantName`
 spelling.
+
+Status: payload variant syntax parses into the AST for both named field blocks
+and tuple-style payloads. Semantic checking rejects payload enums until
+lowering and exhaustive `match` support are implemented, so the compiler does
+not silently emit an integer enum that drops payload data.

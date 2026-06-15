@@ -669,6 +669,34 @@ void test_generic_decl_ast_shape() {
     assert(module.functions[0].generic_params == std::vector<std::string>{"T"});
 }
 
+void test_payload_enum_ast_shape() {
+    const dudu::ModuleAst module =
+        dudu::parse_source("enum Message:\n"
+                           "    Quit\n"
+                           "\n"
+                           "    Move:\n"
+                           "        x: i32\n"
+                           "        y: i32\n"
+                           "\n"
+                           "    Write(str)\n",
+                           "payload_enum_shape.dd");
+    assert(module.enums.size() == 1);
+    const dudu::EnumDecl& message = module.enums[0];
+    assert(message.values.size() == 3);
+    assert(message.values[0].name == "Quit");
+    assert(message.values[0].payload_fields.empty());
+    assert(message.values[1].name == "Move");
+    assert(!message.values[1].tuple_payload);
+    assert(message.values[1].payload_fields.size() == 2);
+    assert(message.values[1].payload_fields[0].name == "x");
+    assert(message.values[1].payload_fields[0].type_ref.kind == dudu::TypeKind::Named);
+    assert(message.values[2].name == "Write");
+    assert(message.values[2].tuple_payload);
+    assert(message.values[2].payload_fields.size() == 1);
+    assert(message.values[2].payload_fields[0].name == "_0");
+    assert(message.values[2].payload_fields[0].type == "str");
+}
+
 void test_formatter() {
     const std::string formatted = dudu::format_source("def main() -> i32:   \n"
                                                       "    return 0\t\n"
@@ -1084,6 +1112,7 @@ int main() {
         test_expression_ast_shape();
         test_type_ast_shape();
         test_generic_decl_ast_shape();
+        test_payload_enum_ast_shape();
         test_formatter();
         test_typed_for_emission();
         test_class_field_defaults_and_static_fields();

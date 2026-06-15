@@ -304,7 +304,47 @@ class Parser {
             const Token& name = consume_identifier("expected enum value");
             value.name = name.text;
             value.location = name.location;
-            if (match(TokenKind::Assign)) {
+            if (match(TokenKind::LParen)) {
+                value.tuple_payload = true;
+                if (!at(TokenKind::RParen)) {
+                    size_t index = 0;
+                    while (true) {
+                        EnumPayloadField field;
+                        field.name = "_" + std::to_string(index);
+                        field.location = current().location;
+                        field.type = join_until({TokenKind::Comma, TokenKind::RParen});
+                        if (field.type.empty()) {
+                            throw CompileError(field.location, "enum payload field requires a type");
+                        }
+                        field.type_ref = parse_type_text(field.type, field.location);
+                        value.payload_fields.push_back(std::move(field));
+                        ++index;
+                        if (match(TokenKind::Comma)) {
+                            continue;
+                        }
+                        break;
+                    }
+                }
+                consume(TokenKind::RParen, "expected ) after enum payload fields");
+            } else if (match(TokenKind::Colon)) {
+                consume(TokenKind::Newline, "expected newline after enum payload header");
+                if (!match(TokenKind::Indent)) {
+                    fail_current("expected indented enum payload fields");
+                }
+                while (!at(TokenKind::Dedent) && !at(TokenKind::End)) {
+                    if (match(TokenKind::Newline)) {
+                        continue;
+                    }
+                    const FieldDecl field = parse_field();
+                    value.payload_fields.push_back({.name = field.name,
+                                                    .type = field.type,
+                                                    .type_ref = field.type_ref,
+                                                    .location = field.location});
+                }
+                consume(TokenKind::Dedent, "expected dedent after enum payload fields");
+                en.values.push_back(std::move(value));
+                continue;
+            } else if (match(TokenKind::Assign)) {
                 value.value = join_until({TokenKind::Newline});
                 value.value_expr = parse_expr_text(value.value, name.location);
             }

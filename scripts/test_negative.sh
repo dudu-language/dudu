@@ -16,6 +16,7 @@ expect_fail bad_dict_literal_value_type --emit-cpp "cannot assign dict to dict\\
 expect_fail bad_enum_underlying --check "unknown enum underlying type: MissingType"
 expect_fail bad_enum_duplicate --check "duplicate enum value: Value"
 expect_fail bad_enum_value_name --check "enum values must be PascalCase: bad_value"
+expect_fail bad_payload_enum_lowering --check "payload enum lowering requires match support: Message.Move"
 expect_fail bad_return --emit-cpp "return type mismatch: expected i32, got bool"
 expect_fail bad_return --check "return type mismatch: expected i32, got bool"
 expect_fail bad_return_implicit_cast --emit-cpp "return type mismatch: expected i64, got i32"
