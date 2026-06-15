@@ -307,7 +307,7 @@ The driver can translate that to `pkg-config --cflags --libs ...`.
 projects. Backend choice is an implementation detail, not a split between
 toy and real workflows.
 
-Supported backend model:
+The serious long-term model is:
 
 - The direct backend emits C++ and invokes the configured native compiler. It
   is real, fast, and intentionally narrow. It should handle the manifest-native
@@ -326,6 +326,20 @@ Supported backend model:
 If a backend cannot honestly model a project, it must fail clearly and point at
 the backend or manifest feature that can. It should not silently drop native
 inputs or guess through C/C++ build-system details.
+
+Current implementation reality:
+
+- `dudu build` and `dudu run` use the direct compiler backend.
+- The direct backend supports useful native inputs: include paths, library
+  paths, libraries, compile flags, link flags, pkg-config packages, and extra
+  C/C++ sources.
+- `dudu cmake` emits CMake for inspection or handoff.
+- `dudu build` does not yet select the CMake backend, configure CMake, run
+  `cmake --build`, or launch CMake-backed targets.
+- User-owned CMake project integration is not implemented yet.
+
+The next build-driver work should close that gap without changing the front
+door: users should still type `dudu build`, `dudu run`, and `dudu test`.
 
 Planned manifest shape:
 

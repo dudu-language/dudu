@@ -459,6 +459,15 @@ push. They are not release packaging work.
    Backends must fail clearly when they cannot model a project rather than
    silently dropping C/C++ build-system details.
 
+   Status: `dudu build` and `dudu run` currently use the direct backend.
+   Native inputs such as include paths, library paths, libraries, flags,
+   pkg-config packages, and extra C/C++ sources are partially implemented and
+   useful. `dudu cmake` emits CMake, but the CMake backend for `dudu build`,
+   `dudu run`, and `dudu test` is not implemented yet. User-owned CMake
+   projects are not implemented as a backend mode yet. The serious path is to
+   make those backend choices work behind the same front-door commands, not to
+   tell users that real projects must leave `dudu build`.
+
    Path handling is part of the project-driver contract. Manifest entries such
    as `entry`, `build.dir`, include paths, library paths, and native source
    lists are relative to the directory containing `dudu.toml`. Explicit local
