@@ -75,6 +75,12 @@ struct Player : Entity {
 
 Native single inheritance should require that the base layout is known.
 
+Status: Dudu parses Python-style base lists, validates base type names and
+duplicate bases, emits native classes as C++ public inheritance, orders base
+classes before derived classes in generated C++, and resolves inherited fields
+and methods for normal member access. Base constructor calls, `super`, and
+override validation remain separate inheritance work.
+
 ## Constructors
 
 Constructors use `init`. Base construction is explicit with `super.init(...)`:
@@ -533,7 +539,8 @@ field declaration where possible.
 
 ## Acceptance
 
-- Native single inheritance compiles and runs.
+- Native single inheritance compiles and runs: initial base-list parsing,
+  inherited fields, inherited methods, and C++ public-base lowering are done.
 - `super.init(...)` lowers correctly.
 - `super.method(...)` calls the base method.
 - `@virtual`, method-only `@abstract`, and `@override` validate method

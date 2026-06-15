@@ -1,0 +1,16 @@
+class Entity:
+    id: i32
+
+    def get_id(self) -> i32:
+        return self.id
+
+
+class Player(Entity):
+    hp: i32
+
+
+def main() -> i32:
+    player: Player = Player()
+    player.id = 20
+    player.hp = 22
+    return player.get_id() + player.hp

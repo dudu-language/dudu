@@ -29,6 +29,8 @@ expect_fail bad_return_implicit_cast --emit-cpp "return type mismatch: expected 
 expect_fail bad_unknown_identifier --emit-cpp "unknown identifier: missing_value"
 expect_fail bad_unknown_identifier --check "unknown identifier: missing_value"
 expect_fail bad_unknown_function --emit-cpp "unknown function: missing"
+expect_fail bad_unknown_base --check "unknown base class: MissingBase"
+expect_fail bad_duplicate_base --check "duplicate base class: Entity"
 expect_fail bad_variadic_macro_arity --emit-cpp "no native overload of wrap.DUDU_WRAP_COUNT accepts 1 arguments"
 expect_fail bad_native_overload_type --emit-cpp "candidate: dudu_native.overloaded(i32) -> i32"
 expect_fail bad_native_template_function --emit-cpp "candidate: dudu_template.identity\\[i32\\](i32) -> i32"

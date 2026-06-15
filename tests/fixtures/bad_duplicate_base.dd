@@ -1,0 +1,10 @@
+class Entity:
+    id: i32
+
+
+class Player(Entity, Entity):
+    hp: i32
+
+
+def main() -> i32:
+    return 0

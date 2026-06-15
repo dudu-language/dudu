@@ -6,6 +6,7 @@
 #include "dudu/source.hpp"
 
 #include <cctype>
+#include <optional>
 
 namespace dudu {
 namespace {
@@ -181,6 +182,29 @@ std::string substitute_class_template_type(std::string type,
     return type;
 }
 
+std::optional<std::string> field_type_for_class(const Symbols& symbols, const ClassDecl& klass,
+                                                const std::string& receiver_type,
+                                                const std::string& field) {
+    for (const FieldDecl& decl : klass.fields) {
+        if (decl.name == field) {
+            const std::vector<std::string> receiver_args = template_args_from_type(receiver_type);
+            std::string type =
+                substitute_class_template_type(decl.type, klass.generic_params, receiver_args);
+            return substitute_receiver_template_type(std::move(type), receiver_args);
+        }
+    }
+    for (const std::string& base : klass.base_classes) {
+        const auto base_class = symbols.classes.find(unwrap_receiver_type(symbols, base));
+        if (base_class == symbols.classes.end()) {
+            continue;
+        }
+        if (const auto found = field_type_for_class(symbols, *base_class->second, base, field)) {
+            return found;
+        }
+    }
+    return std::nullopt;
+}
+
 std::string first_path_type(const Symbols& symbols,
                             const std::map<std::string, std::string>& locals,
                             const SourceLocation* location, const std::string& first,
@@ -279,18 +303,9 @@ std::string member_path_type(const Symbols& symbols,
         if (klass == symbols.classes.end()) {
             return {};
         }
-        bool found = false;
-        for (const FieldDecl& decl : klass->second->fields) {
-            if (decl.name == field) {
-                const std::vector<std::string> receiver_args = template_args_from_type(type);
-                type = substitute_class_template_type(decl.type, klass->second->generic_params,
-                                                      receiver_args);
-                type = substitute_receiver_template_type(std::move(type), receiver_args);
-                found = true;
-                break;
-            }
-        }
-        if (!found) {
+        if (const auto found = field_type_for_class(symbols, *klass->second, type, field)) {
+            type = *found;
+        } else {
             if (location != nullptr) {
                 fail(*location, "unknown field: " + path);
             }

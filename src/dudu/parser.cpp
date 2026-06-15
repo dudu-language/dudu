@@ -208,6 +208,22 @@ class Parser {
         klass.location = start.location;
         klass.name = consume_identifier("expected class name").text;
         klass.generic_params = parse_generic_params();
+        if (match(TokenKind::LParen)) {
+            if (!at(TokenKind::RParen)) {
+                while (true) {
+                    std::string base = join_until({TokenKind::Comma, TokenKind::RParen});
+                    if (base.empty()) {
+                        fail_current("expected base class name");
+                    }
+                    klass.base_classes.push_back(std::move(base));
+                    if (match(TokenKind::Comma)) {
+                        continue;
+                    }
+                    break;
+                }
+            }
+            consume(TokenKind::RParen, "expected ) after base classes");
+        }
         consume(TokenKind::Colon, "expected : after class name");
         consume(TokenKind::Newline, "expected newline after class header");
         if (!match(TokenKind::Indent)) {

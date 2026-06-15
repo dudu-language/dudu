@@ -37,6 +37,14 @@ void visit_class(const std::vector<ClassDecl>& classes, size_t index, std::set<s
     }
     visiting.insert(index);
 
+    for (const std::string& base : classes[index].base_classes) {
+        for (size_t dep = 0; dep < classes.size(); ++dep) {
+            if (dep != index && base == classes[dep].name) {
+                visit_class(classes, dep, visiting, emitted, order);
+            }
+        }
+    }
+
     for (const FieldDecl& field : classes[index].fields) {
         for (size_t dep = 0; dep < classes.size(); ++dep) {
             if (dep != index && contains_type_name(field.type, classes[dep].name)) {
@@ -119,19 +127,35 @@ std::string operator_name(const FunctionDecl& method) {
     return method.name;
 }
 
-std::string class_opening(const ClassDecl& klass) {
+std::string class_opening(const ClassDecl& klass, const std::vector<std::string>& aliases) {
+    auto with_bases = [&](std::string opening) {
+        if (klass.base_classes.empty()) {
+            return opening;
+        }
+        opening += " : ";
+        for (size_t i = 0; i < klass.base_classes.size(); ++i) {
+            if (i > 0) {
+                opening += ", ";
+            }
+            opening += "public " + lower_cpp_type(parse_type_text(klass.base_classes[i],
+                                                                   klass.location),
+                                                  aliases);
+        }
+        return opening;
+    };
     const bool packed = class_has_decorator(klass, "packed");
     const std::string alignment = decorator_arg(klass, "align");
     if (packed && !alignment.empty()) {
-        return "struct __attribute__((packed, aligned(" + alignment + "))) " + klass.name;
+        return with_bases("struct __attribute__((packed, aligned(" + alignment + "))) " +
+                          klass.name);
     }
     if (packed) {
-        return "struct __attribute__((packed)) " + klass.name;
+        return with_bases("struct __attribute__((packed)) " + klass.name);
     }
     if (!alignment.empty()) {
-        return "struct alignas(" + alignment + ") " + klass.name;
+        return with_bases("struct alignas(" + alignment + ") " + klass.name);
     }
-    return "struct " + klass.name;
+    return with_bases("struct " + klass.name);
 }
 
 bool visible_in_header(Visibility visibility) {
@@ -238,7 +262,7 @@ void emit_classes(std::ostringstream& out, const ModuleAst& module,
             continue;
         }
         emit_template_params(out, klass.generic_params);
-        out << class_opening(klass) << " {\n";
+        out << class_opening(klass, aliases) << " {\n";
         for (const FieldDecl& field : klass.fields) {
             out << "    " << lower_cpp_type(field.type_ref, aliases) << ' ' << field.name;
             if (field.value.empty()) {

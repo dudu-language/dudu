@@ -335,6 +335,12 @@ push. They are not release packaging work.
    class static access, strict multiple inheritance, and interface-like abstract
    classes. Keep imported C++ inheritance behavior generic and header-driven.
 
+   Status: native Dudu base lists parse and validate, generated C++ emits
+   public inheritance with base classes ordered before derived classes, and
+   inherited fields/methods are visible to member access. `super`, constructors
+   across bases, `@abstract`, `@virtual`, `@override`, and strict multiple
+   inheritance rules remain.
+
 8. Macro Surface Prerequisites
 
    Primary plan: [Macro Syntax Plan](macro-syntax-plan.md).
