@@ -747,9 +747,12 @@ Rules:
 
 - `fn(...) -> T` is a raw function pointer type.
 - `fn(...)` returns `void`.
-- `def name(...)` is a statement-only declaration.
+- `def name(...)` is a statement-only declaration at module scope or class
+  scope.
 - function names are values after declaration.
 - `def` expressions and anonymous function values are not part of Dudu.
+- nested local `def` declarations are not part of the current function-body
+  grammar.
 - non-capturing function values can coerce to `fn(...) -> T`.
 - capturing function values require a closure-capable target type such as an
   imported `std.function[...]` wrapper; they cannot coerce to raw `fn`.
