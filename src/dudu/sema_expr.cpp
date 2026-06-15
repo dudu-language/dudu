@@ -322,7 +322,7 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
     case ExprKind::TemplateCall:
         return infer_template_call_ast(scope, expr, use_location);
     case ExprKind::CppEscape:
-        return infer_cpp_escape_expr(scope, cpp_escape_body(expr.text), use_location);
+        return infer_cpp_escape_expr(scope, expr.value, use_location);
     }
     return {};
 }

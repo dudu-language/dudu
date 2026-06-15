@@ -135,7 +135,7 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
         }
         return lower_name_expr(expr.name);
     case ExprKind::CppEscape:
-        return lower_cpp_escape_expr(cpp_escape_body(expr.text), aliases, locals);
+        return lower_cpp_escape_expr(expr.value, aliases, locals);
     case ExprKind::StringLiteral:
         return expr.text;
     case ExprKind::Unary:

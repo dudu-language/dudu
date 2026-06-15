@@ -1,4 +1,5 @@
 #include "dudu/ast_parse_utils.hpp"
+#include "dudu/cpp_lower.hpp"
 
 #include <cctype>
 #include <string>
@@ -41,9 +42,8 @@ std::vector<Expr> parse_dict_entries(std::string_view text, SourceLocation locat
 bool is_builtin_pointer_cast_type(std::string_view type) {
     type = trim_view(type);
     return type == "bool" || type == "i8" || type == "i16" || type == "i32" || type == "i64" ||
-           type == "u8" || type == "u16" || type == "u32" || type == "u64" ||
-           type == "isize" || type == "usize" || type == "f32" || type == "f64" ||
-           type == "void" || type == "cstr";
+           type == "u8" || type == "u16" || type == "u32" || type == "u64" || type == "isize" ||
+           type == "usize" || type == "f32" || type == "f64" || type == "void" || type == "cstr";
 }
 
 bool is_pointer_cast_call(std::string_view text) {
@@ -58,8 +58,8 @@ bool is_pointer_cast_call(std::string_view text) {
     if (type.empty() || type.front() == '(') {
         return false;
     }
-    if (type.starts_with("struct ") || type.starts_with("const[") || type.starts_with("volatile[") ||
-        type.starts_with("atomic[")) {
+    if (type.starts_with("struct ") || type.starts_with("const[") ||
+        type.starts_with("volatile[") || type.starts_with("atomic[")) {
         return true;
     }
     if (type.ends_with("]") && type.find('[') != std::string_view::npos) {
@@ -243,7 +243,9 @@ Expr parse_expr_text(std::string_view text, SourceLocation location) {
     }
 
     if (text.starts_with("cpp(") && text.ends_with(")")) {
-        return make_expr(ExprKind::CppEscape, text, location);
+        Expr expr = make_expr(ExprKind::CppEscape, text, location);
+        expr.value = cpp_escape_body(std::string(text));
+        return expr;
     }
 
     if (text.ends_with(")")) {
