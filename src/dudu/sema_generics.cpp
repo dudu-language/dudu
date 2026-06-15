@@ -1,8 +1,7 @@
 #include "dudu/sema_generics.hpp"
 
-#include "dudu/ast_expr.hpp"
 #include "dudu/cpp_lower.hpp"
-#include "dudu/source.hpp"
+#include "dudu/sema_common.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -13,14 +12,6 @@
 namespace dudu {
 
 namespace {
-
-[[noreturn]] void fail(const SourceLocation& location, const std::string& message) {
-    throw CompileError(location, message);
-}
-
-const SourceLocation& node_location(const SourceLocation& fallback, const Expr& expr) {
-    return expr.location.line == 0 ? fallback : expr.location;
-}
 
 bool is_identifier_char(char ch) {
     return std::isalnum(static_cast<unsigned char>(ch)) != 0 || ch == '_';
@@ -146,8 +137,8 @@ infer_generic_call_type_args(const FunctionScope& scope, const FunctionDecl& fn,
         return std::nullopt;
     }
     if (location != nullptr && args.size() != fn.params.size()) {
-        fail(*location, "function " + callee + " expects " + std::to_string(fn.params.size()) +
-                            " arguments, got " + std::to_string(args.size()));
+        sema_fail(*location, "function " + callee + " expects " + std::to_string(fn.params.size()) +
+                                 " arguments, got " + std::to_string(args.size()));
     }
     if (args.size() != fn.params.size()) {
         return std::nullopt;
@@ -158,7 +149,7 @@ infer_generic_call_type_args(const FunctionScope& scope, const FunctionDecl& fn,
         std::string error;
         if (!infer_generic_binding(fn.params[i].type, got, fn.generic_params, bindings, error)) {
             if (location != nullptr) {
-                fail(node_location(*location, args[i]), error + " for " + callee);
+                sema_fail(node_location(*location, args[i]), error + " for " + callee);
             }
             return std::nullopt;
         }
@@ -170,7 +161,7 @@ infer_generic_call_type_args(const FunctionScope& scope, const FunctionDecl& fn,
         if (binding == bindings.end() || binding->second.empty() || binding->second == "auto" ||
             binding->second == "list" || binding->second == "dict" || binding->second == "set") {
             if (location != nullptr) {
-                fail(*location, "cannot infer type argument " + param + " for " + callee);
+                sema_fail(*location, "cannot infer type argument " + param + " for " + callee);
             }
             return std::nullopt;
         }
@@ -201,7 +192,8 @@ ClassDecl instantiate_generic_class(ClassDecl klass, const std::vector<TypeRef>&
         field.type = substitute_generic_type(std::move(field.type), klass.generic_params, args);
     }
     for (ConstDecl& constant : klass.constants) {
-        constant.type = substitute_generic_type(std::move(constant.type), klass.generic_params, args);
+        constant.type =
+            substitute_generic_type(std::move(constant.type), klass.generic_params, args);
     }
     for (FunctionDecl& method : klass.methods) {
         method.return_type =

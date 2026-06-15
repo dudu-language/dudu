@@ -1,10 +1,9 @@
 #include "dudu/sema_match.hpp"
 
-#include "dudu/ast_expr.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/match_patterns.hpp"
+#include "dudu/sema_common.hpp"
 #include "dudu/sema_enum.hpp"
-#include "dudu/source.hpp"
 
 #include <algorithm>
 #include <optional>
@@ -15,18 +14,6 @@
 namespace dudu {
 
 namespace {
-
-[[noreturn]] void fail(const SourceLocation& location, const std::string& message) {
-    throw CompileError(location, message);
-}
-
-bool has_expr(const Expr& expr) {
-    return !expr.text.empty();
-}
-
-const SourceLocation& node_location(const SourceLocation& fallback, const Expr& expr) {
-    return expr.location.line == 0 ? fallback : expr.location;
-}
 
 std::string join_strings(const std::vector<std::string>& values, std::string_view separator) {
     std::ostringstream out;
@@ -43,14 +30,14 @@ bool bind_payload_case(FunctionScope& nested, const EnumValueDecl& value, const 
                        const SourceLocation& location) {
     if (pattern.kind != ExprKind::Call) {
         if (!value.payload_fields.empty()) {
-            fail(location, "payload case requires destructuring: " + value.name);
+            sema_fail(location, "payload case requires destructuring: " + value.name);
         }
         return false;
     }
     if (pattern.children.size() != value.payload_fields.size()) {
-        fail(location, "case " + value.name + " expects " +
-                           std::to_string(value.payload_fields.size()) + " bindings, got " +
-                           std::to_string(pattern.children.size()));
+        sema_fail(location, "case " + value.name + " expects " +
+                                std::to_string(value.payload_fields.size()) + " bindings, got " +
+                                std::to_string(pattern.children.size()));
     }
     std::set<std::string> seen_named_fields;
     for (size_t i = 0; i < pattern.children.size(); ++i) {
@@ -59,8 +46,8 @@ bool bind_payload_case(FunctionScope& nested, const EnumValueDecl& value, const 
         const Expr* binding_name = &binding;
         if (binding.kind == ExprKind::NamedArg && binding.children.size() == 1) {
             if (!seen_named_fields.insert(binding.name).second) {
-                fail(binding.location,
-                     "duplicate enum payload field in pattern: " + value.name + "." + binding.name);
+                sema_fail(binding.location, "duplicate enum payload field in pattern: " +
+                                                value.name + "." + binding.name);
             }
             const auto found =
                 std::find_if(value.payload_fields.begin(), value.payload_fields.end(),
@@ -68,14 +55,14 @@ bool bind_payload_case(FunctionScope& nested, const EnumValueDecl& value, const 
                                  return payload_field.name == binding.name;
                              });
             if (found == value.payload_fields.end()) {
-                fail(binding.location,
-                     "unknown enum payload field in pattern: " + value.name + "." + binding.name);
+                sema_fail(binding.location, "unknown enum payload field in pattern: " + value.name +
+                                                "." + binding.name);
             }
             field = &*found;
             binding_name = &binding.children.front();
         }
         if (binding_name->kind != ExprKind::Name || binding_name->name.empty()) {
-            fail(binding.location, "payload case bindings must be names");
+            sema_fail(binding.location, "payload case bindings must be names");
         }
         nested.locals[binding_name->name] = field->type;
     }
@@ -90,7 +77,7 @@ void bind_wrapper_case(FunctionScope& nested, const WrapperMatchType& wrapper, c
     }
     if (pattern.kind != ExprKind::Call || pattern.children.size() != 1 ||
         pattern.children.front().kind != ExprKind::Name || pattern.children.front().name.empty()) {
-        fail(location, "wrapper payload case expects one binding name");
+        sema_fail(location, "wrapper payload case expects one binding name");
     }
     if (wrapper.kind == WrapperMatchKind::Option && *name == "Some" && wrapper.args.size() == 1) {
         nested.locals[pattern.children.front().name] = trim(wrapper.args[0]);
@@ -118,32 +105,32 @@ bool check_wrapper_match(FunctionScope& scope, const Stmt& stmt, const std::stri
     bool wildcard = false;
     for (const Stmt& child : stmt.children) {
         if (child.kind != StmtKind::Case) {
-            fail(child.location, "match body expects case statements");
+            sema_fail(child.location, "match body expects case statements");
         }
         if (wildcard) {
-            fail(child.location, "unreachable case after wildcard");
+            sema_fail(child.location, "unreachable case after wildcard");
         }
         const std::optional<std::string> name = wrapper_case_name(child.pattern_expr);
         if (!name || (!expected.contains(*name) && *name != "_")) {
-            fail(child.location, wrapper.kind == WrapperMatchKind::Option
-                                     ? "case pattern must be Some(...), None, or _"
-                                     : "case pattern must be Ok(...), Err(...), or _");
+            sema_fail(child.location, wrapper.kind == WrapperMatchKind::Option
+                                          ? "case pattern must be Some(...), None, or _"
+                                          : "case pattern must be Ok(...), Err(...), or _");
         }
         if (*name == "_") {
-            if (!has_expr(child.guard_expr)) {
+            if (!sema_has_expr(child.guard_expr)) {
                 wildcard = true;
             }
-        } else if (!has_expr(child.guard_expr) && !covered.insert(*name).second) {
-            fail(child.location, "unreachable duplicate case: " + *name);
+        } else if (!sema_has_expr(child.guard_expr) && !covered.insert(*name).second) {
+            sema_fail(child.location, "unreachable duplicate case: " + *name);
         }
         FunctionScope nested = scope;
         bind_wrapper_case(nested, wrapper, child.pattern_expr, child.location);
-        if (has_expr(child.guard_expr)) {
+        if (sema_has_expr(child.guard_expr)) {
             const std::string guard_type = callbacks.infer_expr(
                 nested, child.guard_expr, &node_location(child.location, child.guard_expr));
             if (guard_type != "bool") {
-                fail(node_location(child.location, child.guard_expr),
-                     "match guard must be bool, got " + guard_type);
+                sema_fail(node_location(child.location, child.guard_expr),
+                          "match guard must be bool, got " + guard_type);
             }
         }
         callbacks.check_block(nested, child.children, return_type, loop_depth);
@@ -155,8 +142,8 @@ bool check_wrapper_match(FunctionScope& scope, const Stmt& stmt, const std::stri
                 missing.push_back(name);
             }
         }
-        fail(stmt.location,
-             "non-exhaustive match on wrapper; missing cases: " + join_strings(missing, ", "));
+        sema_fail(stmt.location,
+                  "non-exhaustive match on wrapper; missing cases: " + join_strings(missing, ", "));
     }
     return true;
 }
@@ -192,25 +179,27 @@ void check_enum_match(FunctionScope& scope, const Stmt& stmt, const std::string&
     bool wildcard = false;
     for (const Stmt& child : stmt.children) {
         if (child.kind != StmtKind::Case) {
-            fail(child.location, "match body expects case statements");
+            sema_fail(child.location, "match body expects case statements");
         }
         if (wildcard) {
-            fail(child.location, "unreachable case after wildcard");
+            sema_fail(child.location, "unreachable case after wildcard");
         }
         const std::optional<std::string> variant = enum_case_variant_name_for(en, child);
         if (!variant) {
-            fail(child.location, "case pattern must be " + en.name + ".Variant or _");
+            sema_fail(child.location, "case pattern must be " + en.name + ".Variant or _");
         }
         if (*variant == "_") {
-            if (!has_expr(child.guard_expr)) {
+            if (!sema_has_expr(child.guard_expr)) {
                 wildcard = true;
             }
         } else {
             if (!enum_contains_variant(en, *variant)) {
-                fail(child.location, "unknown enum variant in pattern: " + en.name + "." + *variant);
+                sema_fail(child.location,
+                          "unknown enum variant in pattern: " + en.name + "." + *variant);
             }
-            if (!has_expr(child.guard_expr) && !covered.insert(*variant).second) {
-                fail(child.location, "unreachable duplicate case: " + en.name + "." + *variant);
+            if (!sema_has_expr(child.guard_expr) && !covered.insert(*variant).second) {
+                sema_fail(child.location,
+                          "unreachable duplicate case: " + en.name + "." + *variant);
             }
         }
         FunctionScope nested = scope;
@@ -220,19 +209,19 @@ void check_enum_match(FunctionScope& scope, const Stmt& stmt, const std::string&
                 bind_payload_case(nested, *value, child.pattern_expr, child.location);
             }
         }
-        if (has_expr(child.guard_expr)) {
+        if (sema_has_expr(child.guard_expr)) {
             const std::string guard_type = callbacks.infer_expr(
                 nested, child.guard_expr, &node_location(child.location, child.guard_expr));
             if (guard_type != "bool") {
-                fail(node_location(child.location, child.guard_expr),
-                     "match guard must be bool, got " + guard_type);
+                sema_fail(node_location(child.location, child.guard_expr),
+                          "match guard must be bool, got " + guard_type);
             }
         }
         callbacks.check_block(nested, child.children, return_type, loop_depth);
     }
     if (!wildcard && covered.size() != en.values.size()) {
-        fail(stmt.location, "non-exhaustive match on " + en.name +
-                                "; missing cases: " + missing_enum_cases(en, covered));
+        sema_fail(stmt.location, "non-exhaustive match on " + en.name +
+                                     "; missing cases: " + missing_enum_cases(en, covered));
     }
 }
 
@@ -250,7 +239,7 @@ void check_match_stmt(FunctionScope& scope, const Stmt& stmt, const std::string&
     }
     const EnumDecl* en = enum_decl_for_type(scope.symbols, subject_type);
     if (en == nullptr) {
-        fail(subject_location, "match subject must be an enum, got " + subject_type);
+        sema_fail(subject_location, "match subject must be an enum, got " + subject_type);
     }
     check_enum_match(scope, stmt, return_type, loop_depth, callbacks, *en);
 }

@@ -813,6 +813,9 @@ the compiler cannot lower a half-implemented match.
 Option/Result wrapper and enum case match pattern helpers are shared by semantic
 checking and C++ emission, so case names and binding extraction are interpreted
 from the same parsed pattern expression shape in both phases.
+Match checking and generic type-argument inference now use the shared semantic
+failure and source-range helpers, keeping diagnostics anchored through the same
+AST node-location path as the rest of semantic analysis.
 
 `super.method(...)` semantic checks use the parsed call callee and argument
 nodes. Valid single-base calls lower to explicit C++ base dispatch such as
