@@ -69,6 +69,7 @@ add_library(dudu_frontend
     src/dudu/project_driver.cpp
     src/dudu/sema.cpp
     src/dudu/sema_alloc.cpp
+    src/dudu/sema_assignment.cpp
     src/dudu/sema_bindings.cpp
     src/dudu/sema_body.cpp
     src/dudu/sema_builtin_methods.cpp
