@@ -137,6 +137,9 @@ Already structured:
 - array/list/dict index type inference uses parsed index expressions where
   available, so tuple-shaped multi-index expressions no longer depend on raw
   comma splitting
+- indexed and iterable element inference reads parsed `TypeRef` wrappers and
+  template children for `list[T]`, `dict[K, V]`, `span[T]`, and storage-like
+  wrappers instead of slicing those type strings directly
 - native C/C++ overload checks for ordinary and explicit-template parsed calls
   consume expression children directly instead of flattening arguments back to
   strings
