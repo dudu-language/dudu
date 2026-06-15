@@ -1,18 +1,46 @@
 #include "dudu/cpp_emit.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/cpp_stmt_types.hpp"
+#include "dudu/language_server_semantic_tokens.hpp"
 #include "dudu/parser.hpp"
 #include "dudu/sema.hpp"
 #include "dudu/sema_function_type.hpp"
 #include "dudu/type_compat.hpp"
 
 #include <cassert>
+#include <cctype>
 #include <exception>
 #include <iostream>
 #include <string>
 #include <vector>
 
 namespace {
+
+std::vector<int> semantic_token_data(const std::string& json) {
+    std::vector<int> out;
+    for (size_t i = 0; i < json.size();) {
+        if (std::isdigit(static_cast<unsigned char>(json[i])) == 0) {
+            ++i;
+            continue;
+        }
+        int value = 0;
+        while (i < json.size() && std::isdigit(static_cast<unsigned char>(json[i])) != 0) {
+            value = value * 10 + json[i] - '0';
+            ++i;
+        }
+        out.push_back(value);
+    }
+    return out;
+}
+
+bool has_semantic_token(const std::vector<int>& data, int type, int modifier) {
+    for (size_t i = 0; i + 4 < data.size(); i += 5) {
+        if (data[i + 3] == type && (data[i + 4] & modifier) == modifier) {
+            return true;
+        }
+    }
+    return false;
+}
 
 void test_ast_assignment_display_types() {
     assert(dudu::assignment_error("bool", dudu::parse_expr_text("123"), "") ==
@@ -27,6 +55,38 @@ void test_ast_assignment_display_types() {
     unknown.text = "123";
     assert(dudu::assignment_error("bool", unknown, "") ==
            "cannot assign  to bool without an explicit cast");
+}
+
+void test_native_semantic_tokens() {
+    dudu::ModuleAst module =
+        dudu::parse_source("import c \"native.h\"\n"
+                           "\n"
+                           "def main() -> i32:\n"
+                           "    event: DuduNativeEvent\n"
+                           "    if DUDU_NATIVE_CHECK():\n"
+                           "        return dudu_native_add(DUDU_NATIVE_MAGIC, event.type)\n"
+                           "    return 0\n",
+                           "native_semantic_tokens.dd");
+    dudu::ModuleAst native_symbols = module;
+    native_symbols.native_types.push_back(
+        {.name = "DuduNativeEvent", .type = "DuduNativeEvent", .location = {}});
+    native_symbols.native_values.push_back(
+        {.name = "DUDU_NATIVE_MAGIC", .type = "i32", .location = {}});
+    native_symbols.native_functions.push_back(
+        {.name = "dudu_native_add",
+         .params = {"i32", "i32"},
+         .return_type = "i32",
+         .location = {}});
+    native_symbols.native_macros.push_back(
+        {.name = "DUDU_NATIVE_CHECK", .arity = 0, .function_like = true, .location = {}});
+
+    const std::vector<int> data =
+        semantic_token_data(dudu::semantic_tokens_json(module, native_symbols));
+    constexpr int native_modifier = 16;
+    assert(has_semantic_token(data, 1, native_modifier));
+    assert(has_semantic_token(data, 4, native_modifier));
+    assert(has_semantic_token(data, 6, native_modifier | 4));
+    assert(has_semantic_token(data, 10, native_modifier));
 }
 
 void test_ast_constructor_assignment_compatibility() {
@@ -511,6 +571,7 @@ void test_match_case_ast_shape() {
 int main() {
     try {
         test_ast_assignment_display_types();
+        test_native_semantic_tokens();
         test_ast_constructor_assignment_compatibility();
         test_ast_index_receiver_type_inference();
         test_statement_ast_shape();

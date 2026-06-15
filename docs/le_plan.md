@@ -260,7 +260,10 @@ push. They are not release packaging work.
    `TypeRef` nodes, including non-type value arguments, instead of falling back
    to raw expression text. Parsed method calls on pointer-typed member
    receivers such as `self.left.backward(...)` lower through member-path type
-   information instead of raw pointer-member rewriting.
+   information instead of raw pointer-member rewriting. Semantic token
+   generation now merges native header metadata as a classification layer, so
+   native C/C++ references in Dudu source can carry the LSP `native` modifier
+   while token ranges remain anchored to the open Dudu file.
 
 3. OOP Surface Cleanup
 
@@ -446,6 +449,15 @@ push. They are not release packaging work.
 
    Keep using `dudu` on real projects and fix friction in native build inputs,
    target selection, diagnostics, generated build files, and examples.
+
+   `dudu build`, `dudu run`, and `dudu test` are the serious user-facing
+   commands. Backend choice is an implementation detail. The direct backend is
+   real, fast, and intentionally narrow. The CMake backend is the broad native
+   ecosystem backend for CMake package discovery, IDE/project generators, and
+   larger native dependency graphs. `dudu cmake` remains an inspectable
+   artifact/debug/escape command, not the primary serious-project workflow.
+   Backends must fail clearly when they cannot model a project rather than
+   silently dropping C/C++ build-system details.
 
    Path handling is part of the project-driver contract. Manifest entries such
    as `entry`, `build.dir`, include paths, library paths, and native source

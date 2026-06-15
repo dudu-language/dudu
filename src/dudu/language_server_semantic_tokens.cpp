@@ -1,6 +1,7 @@
 #include "dudu/language_server_semantic_tokens.hpp"
 
 #include <algorithm>
+#include <set>
 #include <sstream>
 #include <string_view>
 #include <vector>
@@ -16,6 +17,36 @@ struct SemanticToken {
     int modifiers = 0;
 };
 
+constexpr int token_namespace = 0;
+constexpr int token_type = 1;
+constexpr int token_class = 2;
+constexpr int token_enum = 3;
+constexpr int token_function = 4;
+constexpr int token_method = 5;
+constexpr int token_variable = 6;
+constexpr int token_parameter = 7;
+constexpr int token_property = 8;
+constexpr int token_enum_member = 9;
+constexpr int token_macro = 10;
+constexpr int token_number = 12;
+constexpr int token_string = 13;
+
+constexpr int mod_declaration = 1;
+constexpr int mod_readonly = 4;
+constexpr int mod_static = 8;
+constexpr int mod_native = 16;
+
+struct NativeSemanticIndex {
+    std::set<std::string> types;
+    std::set<std::string> classes;
+    std::set<std::string> values;
+    std::set<std::string> functions;
+    std::set<std::string> macros;
+    std::set<std::string> namespaces;
+    std::set<std::string> enum_members;
+    std::set<std::string> methods;
+};
+
 void add_semantic_token(std::vector<SemanticToken>& tokens, const SourceLocation& loc,
                         std::string_view text, int type, int modifiers = 0) {
     if (text.empty() || loc.line <= 0 || loc.column <= 0) {
@@ -28,194 +59,322 @@ void add_semantic_token(std::vector<SemanticToken>& tokens, const SourceLocation
                       .modifiers = modifiers});
 }
 
+void add_native_semantic_token(std::vector<SemanticToken>& tokens, const SourceLocation& loc,
+                               std::string_view text, int type, int modifiers = 0) {
+    add_semantic_token(tokens, loc, text, type, modifiers | mod_native);
+}
+
 SourceLocation shifted_location(SourceLocation loc, int columns) {
     loc.column += columns;
     return loc;
 }
 
-void collect_type_tokens(const TypeRef& type, std::vector<SemanticToken>& tokens) {
+void add_native_name(std::set<std::string>& values, const std::string& name) {
+    values.insert(name);
+}
+
+NativeSemanticIndex native_semantic_index(const ModuleAst& module) {
+    NativeSemanticIndex out;
+    for (const NativeTypeDecl& type : module.native_types) {
+        add_native_name(out.types, type.name);
+    }
+    for (const NativeValueDecl& value : module.native_values) {
+        add_native_name(out.values, value.name);
+    }
+    for (const NativeFunctionDecl& fn : module.native_functions) {
+        add_native_name(out.functions, fn.name);
+    }
+    for (const NativeMacroDecl& macro : module.native_macros) {
+        add_native_name(out.macros, macro.name);
+    }
+    for (const NativeNamespaceDecl& ns : module.native_namespaces) {
+        add_native_name(out.namespaces, ns.name);
+    }
+    for (const ClassDecl& klass : module.native_classes) {
+        add_native_name(out.classes, klass.name);
+        for (const ConstDecl& constant : klass.constants) {
+            add_native_name(out.values, klass.name + "." + constant.name);
+        }
+        for (const FieldDecl& field : klass.fields) {
+            add_native_name(out.values, klass.name + "." + field.name);
+        }
+        for (const FunctionDecl& method : klass.methods) {
+            add_native_name(out.methods, klass.name + "." + method.name);
+        }
+    }
+    for (const EnumDecl& en : module.enums) {
+        for (const EnumValueDecl& value : en.values) {
+            add_native_name(out.enum_members, en.name + "." + value.name);
+        }
+    }
+    return out;
+}
+
+void collect_type_tokens(const TypeRef& type, std::vector<SemanticToken>& tokens,
+                         const NativeSemanticIndex* native_index) {
     if (type.kind == TypeKind::Named || type.kind == TypeKind::Qualified ||
         type.kind == TypeKind::Template) {
         const std::string_view label = type.name.empty() ? type.text : type.name;
-        add_semantic_token(tokens, type.location, label, 1);
+        const std::string label_text(label);
+        const std::string full = type.text.empty() ? std::string(label) : type.text;
+        const bool native_class = native_index != nullptr &&
+                                  (native_index->classes.contains(full) ||
+                                   native_index->classes.contains(label_text));
+        const bool native_type = native_index != nullptr &&
+                                 (native_index->types.contains(full) ||
+                                  native_index->types.contains(label_text));
+        if (native_class) {
+            add_native_semantic_token(tokens, type.location, label, token_class);
+        } else if (native_type) {
+            add_native_semantic_token(tokens, type.location, label, token_type);
+        } else {
+            add_semantic_token(tokens, type.location, label, token_type);
+        }
     }
     for (const TypeRef& child : type.children) {
-        collect_type_tokens(child, tokens);
+        collect_type_tokens(child, tokens, native_index);
     }
 }
 
-void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens);
+void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
+                         const NativeSemanticIndex* native_index);
 
-void collect_call_callee_tokens(const Expr& expr, std::vector<SemanticToken>& tokens) {
+void collect_call_callee_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
+                                const NativeSemanticIndex* native_index) {
     if (expr.kind == ExprKind::Name) {
-        add_semantic_token(tokens, expr.location, expr.name, 4);
+        if (native_index != nullptr && native_index->macros.contains(expr.name)) {
+            add_native_semantic_token(tokens, expr.location, expr.name, token_macro);
+        } else if (native_index != nullptr && native_index->functions.contains(expr.name)) {
+            add_native_semantic_token(tokens, expr.location, expr.name, token_function);
+        } else {
+            add_semantic_token(tokens, expr.location, expr.name, token_function);
+        }
         return;
     }
     if (expr.kind == ExprKind::Member) {
         for (const Expr& child : expr.children) {
-            collect_expr_tokens(child, tokens);
+            collect_expr_tokens(child, tokens, native_index);
         }
         const SourceLocation member_location{
             .file = expr.location.file,
             .line = expr.location.line,
             .column = expr.location.column + static_cast<int>(expr.text.size() - expr.name.size())};
-        add_semantic_token(tokens, member_location, expr.name, 4);
+        if (native_index != nullptr && native_index->macros.contains(expr.text)) {
+            add_native_semantic_token(tokens, member_location, expr.name, token_macro);
+        } else if (native_index != nullptr && native_index->functions.contains(expr.text)) {
+            add_native_semantic_token(tokens, member_location, expr.name, token_function);
+        } else if (native_index != nullptr && native_index->methods.contains(expr.text)) {
+            add_native_semantic_token(tokens, member_location, expr.name, token_method);
+        } else {
+            add_semantic_token(tokens, member_location, expr.name, token_function);
+        }
         return;
     }
-    collect_expr_tokens(expr, tokens);
+    collect_expr_tokens(expr, tokens, native_index);
 }
 
-void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens) {
+void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
+                         const NativeSemanticIndex* native_index) {
     switch (expr.kind) {
     case ExprKind::Name:
-        add_semantic_token(tokens, expr.location, expr.name, 6);
+        if (native_index != nullptr && native_index->classes.contains(expr.name)) {
+            add_native_semantic_token(tokens, expr.location, expr.name, token_class);
+        } else if (native_index != nullptr && native_index->types.contains(expr.name)) {
+            add_native_semantic_token(tokens, expr.location, expr.name, token_type);
+        } else if (native_index != nullptr && native_index->macros.contains(expr.name)) {
+            add_native_semantic_token(tokens, expr.location, expr.name, token_macro);
+        } else if (native_index != nullptr && native_index->functions.contains(expr.name)) {
+            add_native_semantic_token(tokens, expr.location, expr.name, token_function);
+        } else if (native_index != nullptr && native_index->values.contains(expr.name)) {
+            add_native_semantic_token(tokens, expr.location, expr.name, token_variable,
+                                      mod_readonly);
+        } else if (native_index != nullptr && native_index->enum_members.contains(expr.name)) {
+            add_native_semantic_token(tokens, expr.location, expr.name, token_enum_member,
+                                      mod_readonly);
+        } else if (native_index != nullptr && native_index->namespaces.contains(expr.name)) {
+            add_native_semantic_token(tokens, expr.location, expr.name, token_namespace);
+        } else {
+            add_semantic_token(tokens, expr.location, expr.name, token_variable);
+        }
         break;
     case ExprKind::Call:
     case ExprKind::TemplateCall:
         if (!expr.callee.empty()) {
-            collect_call_callee_tokens(expr.callee.front(), tokens);
+            collect_call_callee_tokens(expr.callee.front(), tokens, native_index);
         } else {
-            add_semantic_token(tokens, expr.location, expr.name, 4);
+            add_semantic_token(tokens, expr.location, expr.name, token_function);
         }
         break;
     case ExprKind::Member: {
+        for (const Expr& child : expr.children) {
+            collect_expr_tokens(child, tokens, native_index);
+        }
         const SourceLocation member_location{
             .file = expr.location.file,
             .line = expr.location.line,
             .column = expr.location.column + static_cast<int>(expr.text.size() - expr.name.size())};
-        add_semantic_token(tokens, member_location, expr.name, 8);
-        break;
+        if (native_index != nullptr && native_index->classes.contains(expr.text)) {
+            add_native_semantic_token(tokens, member_location, expr.name, token_class);
+        } else if (native_index != nullptr && native_index->types.contains(expr.text)) {
+            add_native_semantic_token(tokens, member_location, expr.name, token_type);
+        } else if (native_index != nullptr && native_index->values.contains(expr.text)) {
+            add_native_semantic_token(tokens, member_location, expr.name, token_variable,
+                                      mod_readonly);
+        } else if (native_index != nullptr && native_index->enum_members.contains(expr.text)) {
+            add_native_semantic_token(tokens, member_location, expr.name, token_enum_member,
+                                      mod_readonly);
+        } else {
+            add_semantic_token(tokens, member_location, expr.name, token_property);
+        }
+        return;
     }
     case ExprKind::NamedArg:
-        add_semantic_token(tokens, expr.location, expr.name, 9);
+        add_semantic_token(tokens, expr.location, expr.name, token_property);
         break;
     case ExprKind::IntLiteral:
     case ExprKind::FloatLiteral:
-        add_semantic_token(tokens, expr.location, expr.text, 12);
+        add_semantic_token(tokens, expr.location, expr.text, token_number);
         break;
     case ExprKind::StringLiteral:
-        add_semantic_token(tokens, expr.location, expr.text, 13);
+        add_semantic_token(tokens, expr.location, expr.text, token_string);
         break;
     default:
         break;
     }
     if (expr.kind != ExprKind::Call && expr.kind != ExprKind::TemplateCall) {
         for (const Expr& callee : expr.callee) {
-            collect_expr_tokens(callee, tokens);
+            collect_expr_tokens(callee, tokens, native_index);
         }
     }
     for (const Expr& param : expr.params) {
-        collect_expr_tokens(param, tokens);
+        collect_expr_tokens(param, tokens, native_index);
     }
     for (const Expr& child : expr.children) {
-        collect_expr_tokens(child, tokens);
+        collect_expr_tokens(child, tokens, native_index);
     }
     if (!expr.template_type_args.empty()) {
         for (const TypeRef& arg : expr.template_type_args) {
-            collect_type_tokens(arg, tokens);
+            collect_type_tokens(arg, tokens, native_index);
         }
     } else {
         for (const Expr& arg : expr.template_args) {
-            collect_expr_tokens(arg, tokens);
+            collect_expr_tokens(arg, tokens, native_index);
         }
     }
 }
 
-void collect_stmt_tokens(const std::vector<Stmt>& statements, std::vector<SemanticToken>& tokens) {
+void collect_stmt_tokens(const std::vector<Stmt>& statements, std::vector<SemanticToken>& tokens,
+                         const NativeSemanticIndex* native_index) {
     for (const Stmt& stmt : statements) {
         if (stmt.kind == StmtKind::VarDecl) {
-            add_semantic_token(tokens, stmt.location, stmt.name, 6, 1);
-            collect_type_tokens(stmt.type_ref, tokens);
-            collect_expr_tokens(stmt.value_expr, tokens);
+            add_semantic_token(tokens, stmt.location, stmt.name, token_variable, mod_declaration);
+            collect_type_tokens(stmt.type_ref, tokens, native_index);
+            collect_expr_tokens(stmt.value_expr, tokens, native_index);
         } else if (stmt.kind == StmtKind::Assign || stmt.kind == StmtKind::CompoundAssign) {
-            collect_expr_tokens(stmt.target_expr, tokens);
-            collect_expr_tokens(stmt.value_expr, tokens);
+            collect_expr_tokens(stmt.target_expr, tokens, native_index);
+            collect_expr_tokens(stmt.value_expr, tokens, native_index);
         } else if (stmt.kind == StmtKind::Return || stmt.kind == StmtKind::Raise ||
                    stmt.kind == StmtKind::Delete) {
-            collect_expr_tokens(stmt.value_expr, tokens);
+            collect_expr_tokens(stmt.value_expr, tokens, native_index);
         } else if (stmt.kind == StmtKind::If || stmt.kind == StmtKind::Elif ||
                    stmt.kind == StmtKind::While || stmt.kind == StmtKind::Assert ||
                    stmt.kind == StmtKind::DebugAssert) {
-            collect_expr_tokens(stmt.condition_expr, tokens);
+            collect_expr_tokens(stmt.condition_expr, tokens, native_index);
         } else if (stmt.kind == StmtKind::For) {
-            add_semantic_token(tokens, stmt.location, stmt.name, 6, 1);
-            collect_type_tokens(stmt.type_ref, tokens);
-            collect_expr_tokens(stmt.iterable_expr, tokens);
+            add_semantic_token(tokens, stmt.location, stmt.name, token_variable, mod_declaration);
+            collect_type_tokens(stmt.type_ref, tokens, native_index);
+            collect_expr_tokens(stmt.iterable_expr, tokens, native_index);
         } else if (stmt.kind == StmtKind::Expr) {
-            collect_expr_tokens(stmt.expr, tokens);
+            collect_expr_tokens(stmt.expr, tokens, native_index);
         }
-        collect_stmt_tokens(stmt.children, tokens);
+        collect_stmt_tokens(stmt.children, tokens, native_index);
     }
 }
 
-void collect_semantic_tokens(const ModuleAst& module, std::vector<SemanticToken>& tokens) {
+void collect_semantic_tokens(const ModuleAst& module, std::vector<SemanticToken>& tokens,
+                             const NativeSemanticIndex* native_index) {
     for (const ImportDecl& import : module.imports) {
+        const bool native_import =
+            import.kind == ImportKind::ForeignC || import.kind == ImportKind::ForeignCpp;
         add_semantic_token(tokens, shifted_location(import.location, 7), bound_import_name(import),
-                           0);
+                           token_namespace, native_import ? mod_native : 0);
     }
     for (const TypeAliasDecl& alias : module.aliases) {
-        add_semantic_token(tokens, shifted_location(alias.location, 5), alias.name, 1, 1);
-        collect_type_tokens(alias.type_ref, tokens);
+        add_semantic_token(tokens, shifted_location(alias.location, 5), alias.name, token_type,
+                           mod_declaration);
+        collect_type_tokens(alias.type_ref, tokens, native_index);
     }
     for (const EnumDecl& en : module.enums) {
-        add_semantic_token(tokens, shifted_location(en.location, 5), en.name, 3, 1);
-        collect_type_tokens(en.underlying_type_ref, tokens);
+        add_semantic_token(tokens, shifted_location(en.location, 5), en.name, token_enum,
+                           mod_declaration);
+        collect_type_tokens(en.underlying_type_ref, tokens, native_index);
         for (const EnumValueDecl& value : en.values) {
-            add_semantic_token(tokens, value.location, value.name, 9, 1);
-            collect_expr_tokens(value.value_expr, tokens);
+            add_semantic_token(tokens, value.location, value.name, token_enum_member,
+                               mod_declaration);
+            collect_expr_tokens(value.value_expr, tokens, native_index);
         }
     }
     for (const ClassDecl& klass : module.classes) {
-        add_semantic_token(tokens, shifted_location(klass.location, 6), klass.name, 2, 1);
+        add_semantic_token(tokens, shifted_location(klass.location, 6), klass.name, token_class,
+                           mod_declaration);
         for (const FieldDecl& field : klass.fields) {
-            add_semantic_token(tokens, field.location, field.name, 8, 1);
-            collect_type_tokens(field.type_ref, tokens);
-            collect_expr_tokens(field.value_expr, tokens);
+            add_semantic_token(tokens, field.location, field.name, token_property,
+                               mod_declaration);
+            collect_type_tokens(field.type_ref, tokens, native_index);
+            collect_expr_tokens(field.value_expr, tokens, native_index);
         }
         for (const ConstDecl& constant : klass.constants) {
-            add_semantic_token(tokens, constant.location, constant.name, 8, 1 | 4);
-            collect_type_tokens(constant.type_ref, tokens);
-            collect_expr_tokens(constant.value_expr, tokens);
+            add_semantic_token(tokens, constant.location, constant.name, token_property,
+                               mod_declaration | mod_readonly);
+            collect_type_tokens(constant.type_ref, tokens, native_index);
+            collect_expr_tokens(constant.value_expr, tokens, native_index);
         }
         for (const ConstDecl& field : klass.static_fields) {
-            add_semantic_token(tokens, field.location, field.name, 8, 1 | 8);
-            collect_type_tokens(field.type_ref, tokens);
-            collect_expr_tokens(field.value_expr, tokens);
+            add_semantic_token(tokens, field.location, field.name, token_property,
+                               mod_declaration | mod_static);
+            collect_type_tokens(field.type_ref, tokens, native_index);
+            collect_expr_tokens(field.value_expr, tokens, native_index);
         }
         for (const FunctionDecl& method : klass.methods) {
-            add_semantic_token(tokens, shifted_location(method.location, 4), method.name, 5, 1);
+            add_semantic_token(tokens, shifted_location(method.location, 4), method.name,
+                               token_method, mod_declaration);
             for (const ParamDecl& param : method.params) {
-                add_semantic_token(tokens, param.location, param.name, 7, 1);
-                collect_type_tokens(param.type_ref, tokens);
+                add_semantic_token(tokens, param.location, param.name, token_parameter,
+                                   mod_declaration);
+                collect_type_tokens(param.type_ref, tokens, native_index);
             }
-            collect_type_tokens(method.return_type_ref, tokens);
-            collect_stmt_tokens(method.statements, tokens);
+            collect_type_tokens(method.return_type_ref, tokens, native_index);
+            collect_stmt_tokens(method.statements, tokens, native_index);
         }
     }
     for (const ConstDecl& constant : module.constants) {
-        add_semantic_token(tokens, constant.location, constant.name, 6, 1 | 4);
-        collect_type_tokens(constant.type_ref, tokens);
-        collect_expr_tokens(constant.value_expr, tokens);
+        add_semantic_token(tokens, constant.location, constant.name, token_variable,
+                           mod_declaration | mod_readonly);
+        collect_type_tokens(constant.type_ref, tokens, native_index);
+        collect_expr_tokens(constant.value_expr, tokens, native_index);
     }
     for (const StaticAssertDecl& assertion : module.static_asserts) {
-        collect_expr_tokens(assertion.expression_expr, tokens);
+        collect_expr_tokens(assertion.expression_expr, tokens, native_index);
     }
     for (const FunctionDecl& fn : module.functions) {
-        add_semantic_token(tokens, shifted_location(fn.location, 4), fn.name, 4, 1);
+        add_semantic_token(tokens, shifted_location(fn.location, 4), fn.name, token_function,
+                           mod_declaration);
         for (const ParamDecl& param : fn.params) {
-            add_semantic_token(tokens, param.location, param.name, 7, 1);
-            collect_type_tokens(param.type_ref, tokens);
+            add_semantic_token(tokens, param.location, param.name, token_parameter,
+                               mod_declaration);
+            collect_type_tokens(param.type_ref, tokens, native_index);
         }
-        collect_type_tokens(fn.return_type_ref, tokens);
-        collect_stmt_tokens(fn.statements, tokens);
+        collect_type_tokens(fn.return_type_ref, tokens, native_index);
+        collect_stmt_tokens(fn.statements, tokens, native_index);
     }
 }
 
 } // namespace
 
-std::string semantic_tokens_json(const ModuleAst& module) {
+std::string semantic_tokens_json(const ModuleAst& module, const ModuleAst& native_symbols) {
     std::vector<SemanticToken> tokens;
-    collect_semantic_tokens(module, tokens);
+    const NativeSemanticIndex native_index = native_semantic_index(native_symbols);
+    collect_semantic_tokens(module, tokens, &native_index);
     std::sort(tokens.begin(), tokens.end(), [](const SemanticToken& left,
                                                const SemanticToken& right) {
         if (left.line != right.line) {
@@ -248,6 +407,10 @@ std::string semantic_tokens_json(const ModuleAst& module) {
     }
     out << "]}";
     return out.str();
+}
+
+std::string semantic_tokens_json(const ModuleAst& module) {
+    return semantic_tokens_json(module, {});
 }
 
 } // namespace dudu

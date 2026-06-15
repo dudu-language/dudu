@@ -194,7 +194,9 @@ immediately above the declaration.
 
 Initial full-document semantic tokens are also implemented for Dudu AST nodes,
 covering declarations, parameters, fields, locals, types, literals, calls, and
-member expressions.
+member expressions. Semantic tokens merge scanned native header symbols as a
+classification layer, so native C/C++ references in Dudu code can carry the
+`native` modifier without emitting header-file token ranges.
 
 ### Milestone 3: Completion And Signature Help
 

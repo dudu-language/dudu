@@ -301,6 +301,46 @@ libs = ["raylib", "sdl3"]
 
 The driver can translate that to `pkg-config --cflags --libs ...`.
 
+## Build Backends
+
+`dudu build`, `dudu run`, and `dudu test` are the stable front door for Dudu
+projects. Backend choice is an implementation detail, not a split between
+toy and real workflows.
+
+Supported backend model:
+
+- The direct backend emits C++ and invokes the configured native compiler. It
+  is real, fast, and intentionally narrow. It should handle the manifest-native
+  surface it claims to support: include paths, library paths, libraries,
+  compile flags, link flags, pkg-config packages, and extra C/C++ sources.
+- The CMake backend is the broad native-ecosystem backend. It should support
+  projects that need CMake package discovery, generated build files, IDE
+  integration, platform generators, and larger native dependency graphs.
+- `dudu cmake` emits an inspectable CMake artifact. It is useful for debugging,
+  bootstrapping, and handing control to users, but it is not a replacement for
+  `dudu build`.
+- User-owned CMake projects should be supported as a backend mode. In that
+  mode, `dudu build` configures/builds the declared CMake target and `dudu run`
+  launches the configured executable.
+
+If a backend cannot honestly model a project, it must fail clearly and point at
+the backend or manifest feature that can. It should not silently drop native
+inputs or guess through C/C++ build-system details.
+
+Planned manifest shape:
+
+```toml
+[build]
+backend = "direct" # or "cmake"
+dir = "build"
+
+[cmake]
+source = "."
+target = "game"
+config = "Debug"
+generator = "Ninja"
+```
+
 ## CMake Emission
 
 `dudu cmake` should emit a boring CMake project from `dudu.toml`.
@@ -328,9 +368,8 @@ target_include_directories(bunnymark PRIVATE
 )
 ```
 
-`dudu build` may either call the compiler directly for simple projects or use
-generated CMake for complex projects. If it uses CMake, it should say so in the
-printed steps.
+When `dudu build` uses CMake internally, it should say so in the printed steps
+and leave the generated/configured files inspectable.
 
 ## Changelog
 
@@ -375,6 +414,9 @@ docs. Generated Dudu projects do not get a changelog by default.
 13. Update examples to prefer `dudu run` where it improves usability.
 14. Keep `duc` workflows documented as the transparent fallback.
 15. Add `dudu clean`.
+16. Add explicit build backend selection.
+17. Add a CMake backend for `dudu build`, `dudu run`, and `dudu test`.
+18. Support user-owned CMake projects as a backend mode.
 
 ## Acceptance Tests
 
@@ -384,6 +426,11 @@ docs. Generated Dudu projects do not get a changelog by default.
 - `dudu build` can compile a project with a hand-written `.cpp` file.
 - `dudu build` can compile a project using a pkg-config package such as raylib.
 - `dudu cmake` emits a readable CMake project.
+- `dudu build` can use the direct backend explicitly.
+- `dudu build` can use the CMake backend explicitly.
+- `dudu run` can launch a CMake-backed executable target.
+- `dudu build` fails clearly when the selected backend cannot model the
+  manifest.
 - `duc emit` still works without a manifest.
 - `duc build` still works without a manifest.
 - Generated C++ remains inspectable.

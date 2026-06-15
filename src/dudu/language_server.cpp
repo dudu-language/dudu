@@ -301,7 +301,15 @@ class LanguageServer {
         } catch (const std::exception&) {
             return "{\"data\":[]}";
         }
-        return semantic_tokens_json(module);
+        ModuleAst native_symbols = module;
+        try {
+            const ProjectConfig config = config_for_file(found->second.path);
+            merge_native_header_types(native_symbols,
+                                      {.config = config,
+                                       .source_dir = found->second.path.parent_path()});
+        } catch (const std::exception&) {
+        }
+        return semantic_tokens_json(module, native_symbols);
     }
 
     std::string formatting_result(const Json* params) const {

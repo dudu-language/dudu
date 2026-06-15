@@ -131,6 +131,9 @@ Already structured:
 - semantic highlighting uses parsed call callees so method calls can color the
   receiver and called member separately instead of treating dotted callees as
   one raw span
+- semantic highlighting merges native header metadata before token collection,
+  so direct and aliased C/C++ types, functions, values, and macros can carry
+  the `native` modifier without emitting token ranges from header files
 - array/list/dict index type inference uses parsed index expressions where
   available, so tuple-shaped multi-index expressions no longer depend on raw
   comma splitting
@@ -513,8 +516,10 @@ native symbols.
 
 Status: initial full-document LSP semantic tokens are implemented from the
 parsed AST for Dudu declarations, parameters, fields, locals, types, literals,
-calls, and member expressions. Native-symbol semantic coloring still needs to
-come from the resolved native header metadata layer.
+calls, and member expressions. Native header metadata is merged as a symbol
+classification layer, so native types, functions, values, macros, namespaces,
+and enum members can carry the semantic-token `native` modifier while token
+ranges remain anchored to the open Dudu document.
 
 ## LSP Implications
 

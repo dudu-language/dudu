@@ -62,6 +62,8 @@
   under the ignored `third_party/` directory.
 - Split core repository validation from optional package-SDK native probes with
   `scripts/test_full.sh` for running both tiers.
+- Added native semantic-token classification for scanned C/C++ symbols in the
+  language server.
 
 ### Changed
 
@@ -74,6 +76,8 @@
   scaffolds.
 - Updated public docs to prefer `dudu` for project-driver workflows and keep
   `duc` focused on explicit compiler-driver workflows.
+- Documented `dudu build`, `dudu run`, and `dudu test` as the stable project
+  front door, with direct and CMake backends as implementation details.
 
 ### Fixed
 
@@ -84,3 +88,5 @@
 - Fixed native signature parsing for signatures with suffixes such as
   `noexcept(true)`.
 - Fixed `size_t` native type mapping to `usize`.
+- Fixed language-server semantic highlighting so native-header scan failures do
+  not blank ordinary Dudu tokens.
