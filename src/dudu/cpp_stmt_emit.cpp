@@ -8,6 +8,7 @@
 #include "dudu/cpp_stmt_types.hpp"
 #include "dudu/sema_context.hpp"
 #include "dudu/sema_function_type.hpp"
+#include "dudu/source.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -1079,7 +1080,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         return;
     }
     if (stmt.kind == StmtKind::Unknown) {
-        return;
+        throw CompileError(stmt.location, "unsupported statement: " + trim_copy(stmt.text));
     }
 }
 

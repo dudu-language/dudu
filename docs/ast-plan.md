@@ -738,6 +738,11 @@ namespace aliases are in scope.
 `sizeof[...]`, `alignof[...]`, and `offsetof[...]` semantic checks now use
 parsed template `TypeRef` arguments for arity and unknown-type diagnostics.
 
+Unknown statement nodes are rejected before codegen by the unsupported-feature
+pass, and the C++ statement emitter now also rejects them if that invariant is
+violated. Unsupported syntax must surface as a Dudu diagnostic, not as a
+silently dropped statement.
+
 Binary expression emission now checks parsed child-expression presence instead
 of inspecting child source text before lowering.
 
