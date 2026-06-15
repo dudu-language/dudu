@@ -143,6 +143,45 @@ std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
     return std::nullopt;
 }
 
+std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
+    const FunctionScope& scope, std::string receiver_type, const std::string& method_name,
+    const std::vector<Expr>& args, const std::string& expected_return,
+    const SourceLocation* location, const GenericInferCallbacks& callbacks) {
+    const std::string templated_receiver = receiver_template_type(scope.symbols, receiver_type);
+    const std::vector<std::string> receiver_args = template_args_from_type(templated_receiver);
+    const std::string type = unwrap_receiver_type(scope.symbols, std::move(receiver_type));
+    const auto klass = scope.symbols.classes.find(type);
+    if (klass == scope.symbols.classes.end()) {
+        return std::nullopt;
+    }
+    for (const FunctionDecl& method : klass->second->methods) {
+        if (method.name != method_name || method.generic_params.empty()) {
+            continue;
+        }
+        const size_t first_param =
+            !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
+        std::vector<std::string> arg_types;
+        arg_types.reserve(args.size());
+        for (const Expr& arg : args) {
+            arg_types.push_back(callbacks.infer_expr(scope, arg, location));
+        }
+        const auto inferred = infer_generic_method_type_args_from_types(
+            method, type + "." + method_name, arg_types, first_param, expected_return, location);
+        if (!inferred) {
+            return std::nullopt;
+        }
+        return instantiate_method_signature(*klass->second, method, receiver_args,
+                                            type_ref_texts(*inferred));
+    }
+    for (const std::string& base : klass->second->base_classes) {
+        if (const auto signature = inferred_generic_method_signature_for_type(
+                scope, base, method_name, args, expected_return, nullptr, callbacks)) {
+            return signature;
+        }
+    }
+    return std::nullopt;
+}
+
 std::vector<FunctionSignature> method_signatures_for_type(const Symbols& symbols,
                                                           std::string receiver_type,
                                                           const std::string& method_name) {

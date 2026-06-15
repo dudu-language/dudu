@@ -13,6 +13,7 @@
 #include "dudu/sema_context.hpp"
 #include "dudu/sema_index.hpp"
 #include "dudu/sema_match.hpp"
+#include "dudu/sema_methods.hpp"
 #include "dudu/sema_ops.hpp"
 #include "dudu/sema_super.hpp"
 #include "dudu/type_compat.hpp"
@@ -38,9 +39,44 @@ bool function_has_decorator(const FunctionDecl& fn, std::string_view name) {
 }
 
 void check_type_match(FunctionScope& scope, const std::string& expected, const Expr& expr,
-    const SourceLocation& location, const BodyCheckCallbacks& callbacks) {
+                      const SourceLocation& location, const BodyCheckCallbacks& callbacks,
+                      std::string_view mismatch_label = {}) {
+    if (expr.kind == ExprKind::Call && !expr.callee.empty() &&
+        expr.callee.front().kind == ExprKind::Member &&
+        expr.callee.front().children.size() == 1) {
+        const Expr& member = expr.callee.front();
+        const Expr& receiver = member.children.front();
+        const bool receiver_is_bare_path =
+            receiver.kind == ExprKind::Name && !scope.locals.contains(receiver.name);
+        if (!receiver_is_bare_path) {
+            const std::string receiver_type = callbacks.infer_expr(scope, receiver, &location);
+            if (const auto signature = inferred_generic_method_signature_for_type(
+                    scope, receiver_type, member.name, expr.children, expected, &location,
+                    {.infer_expr =
+                         [&](const FunctionScope& nested, const Expr& arg,
+                             const SourceLocation* arg_location) {
+                             FunctionScope copy = nested;
+                             return callbacks.infer_expr(copy, arg, arg_location);
+                         },
+                     .can_assign =
+                         [&](const FunctionScope& nested, const std::string& nested_expected,
+                             const Expr& value, const std::string& got) {
+                             return callbacks.can_assign(nested, nested_expected, value, got);
+                         }})) {
+                callbacks.check_call_args(scope, call_callee_text(expr), *signature, expr.children,
+                                          &location);
+                if (callbacks.can_assign(scope, expected, expr, signature->return_type)) {
+                    return;
+                }
+            }
+        }
+    }
     const std::string got = callbacks.infer_expr(scope, expr, &location);
     if (!callbacks.can_assign(scope, expected, expr, got)) {
+        if (!mismatch_label.empty()) {
+            sema_fail(location, std::string(mismatch_label) + ": expected " + expected +
+                                   ", got " + got);
+        }
         sema_fail(location, assignment_error(expected, expr, got));
     }
 }
@@ -121,13 +157,14 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
             }
             return;
         }
-        const std::string got = callbacks.infer_expr(scope, stmt.value_expr, &value_location);
-        if (return_type == "void" && got != "void") {
-            sema_fail(value_location, "void function cannot return " + got);
+        if (return_type != "void") {
+            check_type_match(scope, return_type, stmt.value_expr, value_location, callbacks,
+                             "return type mismatch");
+            return;
         }
-        if (return_type != "void" && !callbacks.can_assign(scope, return_type, stmt.value_expr, got)) {
-            sema_fail(value_location,
-                      "return type mismatch: expected " + return_type + ", got " + got);
+        const std::string got = callbacks.infer_expr(scope, stmt.value_expr, &value_location);
+        if (got != "void") {
+            sema_fail(value_location, "void function cannot return " + got);
         }
         return;
     }

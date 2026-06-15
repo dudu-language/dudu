@@ -88,11 +88,13 @@ operands are the same visible generic type parameter, which supports target
 examples such as `Vec2[T].add` and `Vec2[T].dot` while leaving concrete
 operator validation to instantiation. Executable fixtures now cover a generic
 `Stack[T]` over `list[T]`, a generic `unwrap_or[T, E]` helper over
-`Result[T, E]`, and generic span math over `span[T]`. Richer instantiated
-diagnostics, inferred method type arguments that depend only on return context,
-and non-type template parameters remain. Multi-parameter generic functions and
-classes such as `Pair[str, i32]` substitute receiver member types through the
-declared class generic parameter names.
+`Result[T, E]`, generic span math over `span[T]`, and generic method type
+arguments inferred from typed return/assignment context, such as
+`value: i32 = box.make()` and `return box.make()` from an `i32` function.
+Richer instantiated diagnostics and non-type template parameters remain.
+Multi-parameter generic functions and classes such as `Pair[str, i32]`
+substitute receiver member types through the declared class generic parameter
+names.
 
 Unsupported operations on `T` should produce useful diagnostics that mention:
 

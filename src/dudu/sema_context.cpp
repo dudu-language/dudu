@@ -235,6 +235,13 @@ std::vector<std::string> tuple_types(const Symbols& symbols, std::string type) {
     return template_type_arg_texts(parse_type_text(type), "tuple");
 }
 
+void add_native_path_prefix(Symbols& symbols, const std::string& name) {
+    const size_t dot = name.find('.');
+    if (dot != std::string::npos && dot > 0) {
+        symbols.native_import_prefixes.insert(name.substr(0, dot));
+    }
+}
+
 Symbols collect_symbols(const ModuleAst& module) {
     Symbols symbols;
     for (const ImportDecl& import : module.imports) {
@@ -266,6 +273,7 @@ Symbols collect_symbols(const ModuleAst& module) {
     for (const NativeTypeDecl& type : module.native_types) {
         symbols.types.insert(type.name);
         symbols.native_types.insert(type.name);
+        add_native_path_prefix(symbols, type.name);
         if (!type.type.empty()) {
             symbols.aliases[type.name] = type.type;
             symbols.alias_type_refs[type.name] = parse_type_text(type.type, type.location);
@@ -274,6 +282,10 @@ Symbols collect_symbols(const ModuleAst& module) {
     for (const NativeValueDecl& value : module.native_values) {
         add_name(names, value.name, value.location);
         symbols.native_values[value.name] = value.type;
+        add_native_path_prefix(symbols, value.name);
+    }
+    for (const NativeNamespaceDecl& ns : module.native_namespaces) {
+        symbols.native_import_prefixes.insert(ns.name);
     }
     for (const EnumDecl& en : module.enums) {
         add_name(names, en.name, en.location);
@@ -290,6 +302,7 @@ Symbols collect_symbols(const ModuleAst& module) {
     }
     for (const ClassDecl& klass : module.native_classes) {
         symbols.types.insert(klass.name);
+        add_native_path_prefix(symbols, klass.name);
         const auto [it, inserted] = symbols.native_classes.emplace(klass.name, klass);
         (void)inserted;
         symbols.classes[klass.name] = &it->second;
@@ -312,6 +325,7 @@ Symbols collect_symbols(const ModuleAst& module) {
         signature.min_params = fn.min_params;
         signature.variadic = fn.variadic;
         symbols.native_function_signatures[fn.name].push_back(std::move(signature));
+        add_native_path_prefix(symbols, fn.name);
     }
     for (const ConstDecl& constant : module.constants) {
         add_name(names, constant.name, constant.location);

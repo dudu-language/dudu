@@ -29,6 +29,10 @@ infer_generic_method_type_args(const FunctionScope& scope, const FunctionDecl& m
                                const std::string& callee, const std::vector<Expr>& args,
                                size_t first_param, const SourceLocation* location,
                                const GenericInferCallbacks& callbacks);
+std::optional<std::vector<TypeRef>> infer_generic_method_type_args_from_types(
+    const FunctionDecl& method, const std::string& callee, const std::vector<std::string>& arg_types,
+    size_t first_param, const std::optional<std::string>& expected_return,
+    const SourceLocation* location);
 FunctionSignature instantiate_generic_signature(const FunctionDecl& fn,
                                                 const std::vector<TypeRef>& args);
 ClassDecl instantiate_generic_class(ClassDecl klass, const std::vector<TypeRef>& args,

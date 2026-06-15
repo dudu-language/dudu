@@ -1,0 +1,32 @@
+class Pair[T]:
+    item: T
+    value: i32
+
+
+class Box:
+    value: i32
+
+    def make[T](self) -> T:
+        return T()
+
+    def pair[U](self, value: i32) -> Pair[U]:
+        return Pair[U](U(), value)
+
+
+def typed_local(box: Box) -> i32:
+    value: i32 = box.make()
+    return value
+
+
+def typed_return(box: Box) -> i32:
+    return box.make()
+
+
+def nested_return(box: Box) -> i32:
+    pair: Pair[i32] = box.pair(22)
+    return pair.item + pair.value
+
+
+def main() -> i32:
+    box: Box = Box(7)
+    return typed_local(box) + typed_return(box) + nested_return(box) + 20

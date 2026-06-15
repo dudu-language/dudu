@@ -175,14 +175,49 @@ infer_generic_method_type_args(const FunctionScope& scope, const FunctionDecl& m
     if (args.size() != expected_args) {
         return std::nullopt;
     }
-    std::map<std::string, std::string> bindings;
+    std::vector<std::string> arg_types;
+    arg_types.reserve(args.size());
     for (size_t i = 0; i < args.size(); ++i) {
-        const std::string got = callbacks.infer_expr(scope, args[i], location);
+        arg_types.push_back(callbacks.infer_expr(scope, args[i], location));
+    }
+    return infer_generic_method_type_args_from_types(method, callee, arg_types, first_param,
+                                                    std::nullopt, location);
+}
+
+std::optional<std::vector<TypeRef>> infer_generic_method_type_args_from_types(
+    const FunctionDecl& method, const std::string& callee, const std::vector<std::string>& arg_types,
+    size_t first_param, const std::optional<std::string>& expected_return,
+    const SourceLocation* location) {
+    if (method.generic_params.empty()) {
+        return std::nullopt;
+    }
+    const size_t expected_args =
+        method.params.size() >= first_param ? method.params.size() - first_param : 0;
+    if (location != nullptr && arg_types.size() != expected_args) {
+        sema_fail(*location, "method " + callee + " expects " + std::to_string(expected_args) +
+                                 " arguments, got " + std::to_string(arg_types.size()));
+    }
+    if (arg_types.size() != expected_args) {
+        return std::nullopt;
+    }
+    std::map<std::string, std::string> bindings;
+    for (size_t i = 0; i < arg_types.size(); ++i) {
         std::string error;
-        if (!infer_generic_binding(method.params[first_param + i].type_ref, parse_type_text(got),
+        if (!infer_generic_binding(method.params[first_param + i].type_ref,
+                                   parse_type_text(arg_types[i]), method.generic_params, bindings,
+                                   error)) {
+            if (location != nullptr) {
+                sema_fail(*location, error + " for " + callee);
+            }
+            return std::nullopt;
+        }
+    }
+    if (expected_return && !expected_return->empty() && method.return_type_ref.kind != TypeKind::Unknown) {
+        std::string error;
+        if (!infer_generic_binding(method.return_type_ref, parse_type_text(*expected_return),
                                    method.generic_params, bindings, error)) {
             if (location != nullptr) {
-                sema_fail(node_location(*location, args[i]), error + " for " + callee);
+                sema_fail(*location, error + " for " + callee);
             }
             return std::nullopt;
         }

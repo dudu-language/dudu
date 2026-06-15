@@ -15,6 +15,9 @@
 #include "dudu/sema_context.hpp"
 #include "dudu/sema_enum.hpp"
 #include "dudu/sema_function_type.hpp"
+#include "dudu/sema_generics.hpp"
+#include "dudu/sema_methods.hpp"
+#include "dudu/sema_methods_internal.hpp"
 #include "dudu/source.hpp"
 
 #include <algorithm>
@@ -44,6 +47,89 @@ std::string lower_declared_stmt_type(const Stmt& stmt, const std::string& effect
                                      const std::vector<std::string>& aliases) {
     return effective_type == stmt.type ? lower_cpp_type(stmt.type_ref, aliases)
                                        : lower_cpp_type(effective_type, aliases);
+}
+
+std::optional<std::vector<TypeRef>> infer_expected_method_type_args(
+    const Symbols& symbols, const std::string& receiver_type, const std::string& method_name,
+    const std::vector<std::string>& arg_types, const std::string& expected_type) {
+    const std::string type = unwrap_receiver_type(symbols, receiver_type);
+    const auto klass = symbols.classes.find(type);
+    if (klass == symbols.classes.end()) {
+        return std::nullopt;
+    }
+    for (const FunctionDecl& method : klass->second->methods) {
+        if (method.name != method_name || method.generic_params.empty()) {
+            continue;
+        }
+        const size_t first_param =
+            !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
+        return infer_generic_method_type_args_from_types(
+            method, type + "." + method_name, arg_types, first_param, expected_type, nullptr);
+    }
+    for (const std::string& base : klass->second->base_classes) {
+        if (const auto inferred =
+                infer_expected_method_type_args(symbols, base, method_name, arg_types,
+                                                expected_type)) {
+            return inferred;
+        }
+    }
+    return std::nullopt;
+}
+
+std::optional<std::string> lower_expected_generic_method_call(
+    const std::string& expected_type, const Expr& expr, const std::vector<std::string>& aliases,
+    const std::map<std::string, std::string>& locals,
+    const std::map<std::string, std::string>& function_returns, const Symbols* symbols) {
+    if (symbols == nullptr || expected_type.empty() || expr.kind != ExprKind::Call ||
+        expr.callee.empty() || expr.callee.front().kind != ExprKind::Member ||
+        expr.callee.front().children.size() != 1) {
+        return std::nullopt;
+    }
+    const Expr& member = expr.callee.front();
+    const Expr& receiver = member.children.front();
+    std::string receiver_type = infer_emitted_local_type(receiver, locals, function_returns);
+    if (receiver_type.empty()) {
+        receiver_type = member_expr_type(*symbols, locals, nullptr, receiver);
+    }
+    if (receiver_type.empty() || receiver_type == "auto") {
+        return std::nullopt;
+    }
+    std::vector<std::string> arg_types;
+    arg_types.reserve(expr.children.size());
+    for (const Expr& arg : expr.children) {
+        const std::string arg_type = infer_emitted_local_type(arg, locals, function_returns);
+        if (arg_type.empty() || arg_type == "auto") {
+            return std::nullopt;
+        }
+        arg_types.push_back(arg_type);
+    }
+    const auto type_args =
+        infer_expected_method_type_args(*symbols, receiver_type, member.name, arg_types,
+                                        expected_type);
+    if (!type_args) {
+        return std::nullopt;
+    }
+    std::ostringstream lowered_args;
+    for (size_t i = 0; i < type_args->size(); ++i) {
+        if (i > 0) {
+            lowered_args << ", ";
+        }
+        lowered_args << lower_cpp_type((*type_args)[i], aliases);
+    }
+    return lower_callee_expr(expr, aliases, locals, symbols) + "<" + lowered_args.str() + ">(" +
+           join_lowered_exprs(expr.children, aliases, locals, ", ", symbols) + ")";
+}
+
+std::string lower_expr_as_type(const std::string& expected_type, const Expr& expr,
+                               const std::vector<std::string>& aliases,
+                               const std::map<std::string, std::string>& locals,
+                               const std::map<std::string, std::string>& function_returns,
+                               const Symbols* symbols) {
+    if (const auto call = lower_expected_generic_method_call(
+            expected_type, expr, aliases, locals, function_returns, symbols)) {
+        return *call;
+    }
+    return lower_expr(expr, aliases, locals, symbols);
 }
 
 bool is_template_type(std::string_view type, std::string_view name) {
@@ -141,7 +227,8 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
             } else if (stmt.value_expr.kind == ExprKind::TupleLiteral) {
                 out << " {" << lower_expr(stmt.value_expr, aliases, locals, symbols) << '}';
             } else {
-                out << ' ' << lower_expr(stmt.value_expr, aliases, locals, symbols);
+                out << ' ' << lower_expr_as_type(return_type, stmt.value_expr, aliases, locals,
+                                                 function_returns, symbols);
             }
         }
         out << ";\n";
@@ -185,7 +272,8 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                     << join_lowered_exprs(stmt.value_expr.children, aliases, locals, ", ", symbols)
                     << '}';
             } else {
-                out << " = " << lower_expr(stmt.value_expr, aliases, locals, symbols);
+                out << " = " << lower_expr_as_type(type, stmt.value_expr, aliases, locals,
+                                                   function_returns, symbols);
             }
         } else {
             out << "{}";
@@ -202,8 +290,9 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         }
         if (stmt.target_expr.kind == ExprKind::Name && !stmt.target_expr.name.empty()) {
             const std::string& lhs = stmt.target_expr.name;
-            const std::string value = lower_expr(stmt.value_expr, aliases, locals, symbols);
             if (locals.contains(lhs)) {
+                const std::string value = lower_expr_as_type(
+                    locals.at(lhs), stmt.value_expr, aliases, locals, function_returns, symbols);
                 out << indent(depth) << lhs << " = ";
                 if (is_template_type(locals.at(lhs), "Option") &&
                     stmt.value_expr.kind == ExprKind::NoneLiteral) {
@@ -213,6 +302,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                 }
                 out << ";\n";
             } else {
+                const std::string value = lower_expr(stmt.value_expr, aliases, locals, symbols);
                 const std::string inferred =
                     infer_emitted_local_type(stmt.value_expr, locals, function_returns);
                 locals.emplace(lhs, inferred.empty() ? "auto" : inferred);
@@ -229,8 +319,14 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                 out << indent(depth) << *call << ";\n";
                 return;
             }
+            const std::string target_type =
+                symbols == nullptr
+                    ? std::string{}
+                    : member_expr_type(*symbols, locals, nullptr, stmt.target_expr);
             out << indent(depth) << lower_expr(stmt.target_expr, aliases, locals, symbols) << " = "
-                << lower_expr(stmt.value_expr, aliases, locals, symbols) << ";\n";
+                << lower_expr_as_type(target_type, stmt.value_expr, aliases, locals,
+                                      function_returns, symbols)
+                << ";\n";
             return;
         }
     }

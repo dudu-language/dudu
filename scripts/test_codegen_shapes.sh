@@ -135,3 +135,8 @@ grep -Fq "dudu::Tuple2<int32_t, int32_t> divmod_i32" "$repo_root/build/tuple_ret
 grep -Fq "return {(value / divisor), (value % divisor)};" "$repo_root/build/tuple_return.cpp"
 ! grep -q "std::tuple" "$repo_root/build/tuple_return.cpp"
 ! grep -q "#include <tuple>" "$repo_root/build/tuple_return.cpp"
+
+"$repo_root/build/duc" emit "$repo_root/tests/fixtures/generic_method_return_context.dd" \
+    -o "$repo_root/build/generic_method_return_context.cpp"
+grep -Fq "box.make<int32_t>()" "$repo_root/build/generic_method_return_context.cpp"
+grep -Fq "box.pair<int32_t>(22)" "$repo_root/build/generic_method_return_context.cpp"

@@ -315,6 +315,11 @@ This is the serious model for native projects. Users should not have to leave
 driver may choose a direct compiler backend, a generated CMake backend, or a
 user-owned CMake backend, but the user-facing command remains the same.
 
+This is not Dudu trying to replace CMake or clone another language's build
+tool. Dudu's native interop promise means it must cooperate with existing C and
+C++ build systems. The stable contract is the Dudu command surface; the backend
+is how that command gets honest native build work done.
+
 The build-driver contract is:
 
 - The direct backend emits C++ and invokes the configured native compiler. It
@@ -355,6 +360,18 @@ for "serious" apps and it is not an admission that `dudu build` failed. It is
 one of the backends that lets the same front-door command drive projects with
 native package discovery, platform generators, vendored C/C++ dependencies,
 and user-owned CMake files.
+
+The practical target is:
+
+- Simple native projects can use the direct backend with no generated build
+  system in the way.
+- Larger native projects can use the CMake backend without changing from
+  `dudu build` to a different workflow.
+- Existing CMake projects can remain user-owned; Dudu should drive the declared
+  CMake target instead of pretending to understand every project-specific build
+  rule itself.
+- `dudu cmake` remains useful because users can inspect, edit, or hand off the
+  generated CMake when that is the right native workflow.
 
 Backend selection rules should be boring:
 

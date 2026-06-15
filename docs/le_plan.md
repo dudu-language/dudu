@@ -351,14 +351,17 @@ push. They are not release packaging work.
    Generic bodies allow operators where both operands are the same visible
    generic type parameter, which supports target examples such as `Vec2[T]`.
    Dudu-native generic instantiation substitutes parsed type nodes for nested
-   templates, fixed arrays, wrappers, and function types. Non-type parameters,
-   return-context-only inferred method type arguments, and richer instantiated
-   diagnostics remain.
+   templates, fixed arrays, wrappers, and function types. Generic method type
+   arguments can also be inferred from typed return/assignment context for
+   calls such as `value: i32 = box.make()` and `return box.make()` from an
+   `i32` function. Non-type parameters and richer instantiated diagnostics
+   remain.
    Multi-parameter generic functions and classes such as `Pair[str, i32]`
    substitute receiver member types through the declared class generic
    parameter names. Target fixtures now cover `Stack[T]`, `Result[T, E]`
-   helpers, generic span math, and inferred generic method calls such as
-   `box.id(42)`.
+   helpers, generic span math, argument-inferred generic method calls such as
+   `box.id(42)`, and return-context inferred method calls such as
+   `box.make()`.
 
 6. Sum Types And Pattern Matching
 
@@ -498,6 +501,13 @@ push. They are not release packaging work.
    chooses or is told which native backend to drive."
    CMake is a first-class native ecosystem backend, not a fallback that users
    must escape into when `dudu build` stops being serious.
+
+   This is part of the language's C/C++ interop promise. Dudu should cooperate
+   with CMake, pkg-config, native compiler flags, vendored C/C++ sources, and
+   user-owned native build files without turning `dudu build` into a toy-only
+   command. Direct compilation is the small fast backend. CMake is the broad
+   native ecosystem backend. `dudu cmake` is the inspectable artifact and escape
+   hatch, not the replacement for the normal command surface.
 
    Status: `dudu build` and `dudu run` currently use the direct backend.
    Native inputs such as include paths, library paths, libraries, flags,
