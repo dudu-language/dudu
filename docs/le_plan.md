@@ -266,7 +266,9 @@ push. They are not release packaging work.
    while token ranges remain anchored to the open Dudu file. Member-path type
    checks for normal local value paths now walk parsed expression nodes for
    nested `Name`/`Member`/`Index` shapes, and member C++ emission uses receiver
-   type information for static-object-then-instance-field access.
+   type information for static-object-then-instance-field access. Nested
+   indexed member assignment targets use the same parsed expression path before
+   compatibility fallbacks.
 
 3. OOP Surface Cleanup
 

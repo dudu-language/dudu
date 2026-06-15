@@ -344,6 +344,9 @@ Already structured:
 - C++ member expression emission uses parsed receiver type information for
   static-object-then-instance-field access such as `Palette.WHITE.y`, avoiding
   capitalization guesses that would emit `Palette::WHITE::y`.
+- assignment target checks for nested indexed member paths such as
+  `items[0].pos.x = value` now use the same parsed expression member-path
+  walker before falling back to compatibility spelling paths.
 - dereference assignment targets now type-check through the parsed operand
   expression, so normal Dudu code can assign through pointer fields such as
   `*self.out += 1` without using `cpp(...)`
