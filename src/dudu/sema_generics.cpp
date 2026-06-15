@@ -1,5 +1,6 @@
 #include "dudu/sema_generics.hpp"
 
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/sema_common.hpp"
 
@@ -49,29 +50,17 @@ bool generic_param_named(const std::vector<std::string>& params, const std::stri
     return std::find(params.begin(), params.end(), name) != params.end();
 }
 
-std::string generic_base_name(const std::string& type) {
-    const size_t open = type.find('[');
-    return open == std::string::npos ? trim(type) : trim(type.substr(0, open));
-}
-
-std::vector<std::string> generic_type_args(const std::string& type) {
-    const size_t open = type.find('[');
-    if (open == std::string::npos || type.empty() || type.back() != ']') {
-        return {};
-    }
-    return split_top_level_args(type.substr(open + 1, type.size() - open - 2));
-}
-
-bool infer_generic_binding(const std::string& param_type, const std::string& arg_type,
+bool infer_generic_binding(const TypeRef& param_type, const TypeRef& arg_type,
                            const std::vector<std::string>& params,
                            std::map<std::string, std::string>& bindings, std::string& error) {
-    const std::string param = trim(param_type);
-    const std::string arg = trim(arg_type);
+    const std::string param = trim(param_type.name.empty() ? param_type.text : param_type.name);
+    const std::string arg = trim(arg_type.name.empty() ? arg_type.text : arg_type.name);
     if (generic_param_named(params, param)) {
-        const auto [it, inserted] = bindings.emplace(param, arg);
-        if (!inserted && it->second != arg) {
-            error =
-                "conflicting inferred type argument " + param + ": " + it->second + " vs " + arg;
+        const std::string arg_text = trim(arg_type.text);
+        const auto [it, inserted] = bindings.emplace(param, arg_text);
+        if (!inserted && it->second != arg_text) {
+            error = "conflicting inferred type argument " + param + ": " + it->second + " vs " +
+                    arg_text;
             return false;
         }
         return true;
@@ -79,21 +68,43 @@ bool infer_generic_binding(const std::string& param_type, const std::string& arg
     if (param.empty() || arg.empty()) {
         return true;
     }
-    if ((param.front() == '*' || param.front() == '&') && param.front() == arg.front()) {
-        return infer_generic_binding(param.substr(1), arg.substr(1), params, bindings, error);
+    if ((param_type.kind == TypeKind::Pointer || param_type.kind == TypeKind::Reference) &&
+        param_type.kind == arg_type.kind && param_type.children.size() == 1 &&
+        arg_type.children.size() == 1) {
+        return infer_generic_binding(param_type.children.front(), arg_type.children.front(), params,
+                                     bindings, error);
     }
-    const std::string param_base = generic_base_name(param);
-    const std::string arg_base = generic_base_name(arg);
-    if (param_base != arg_base) {
+    if (param_type.kind != arg_type.kind) {
         return true;
     }
-    const std::vector<std::string> param_args = generic_type_args(param);
-    const std::vector<std::string> arg_args = generic_type_args(arg);
-    if (param_args.empty() || param_args.size() != arg_args.size()) {
+    if (param_type.kind == TypeKind::Template) {
+        if (trim(param_type.name) != trim(arg_type.name) ||
+            param_type.children.size() != arg_type.children.size()) {
+            return true;
+        }
+        for (size_t i = 0; i < param_type.children.size(); ++i) {
+            if (!infer_generic_binding(param_type.children[i], arg_type.children[i], params,
+                                       bindings, error)) {
+                return false;
+            }
+        }
         return true;
     }
-    for (size_t i = 0; i < param_args.size(); ++i) {
-        if (!infer_generic_binding(param_args[i], arg_args[i], params, bindings, error)) {
+
+    if (param_type.kind == TypeKind::FixedArray) {
+        if (param_type.children.size() != 1 || arg_type.children.size() != 1) {
+            return true;
+        }
+        return infer_generic_binding(param_type.children.front(), arg_type.children.front(), params,
+                                     bindings, error);
+    }
+
+    if (param_type.children.empty() || param_type.children.size() != arg_type.children.size()) {
+        return true;
+    }
+    for (size_t i = 0; i < param_type.children.size(); ++i) {
+        if (!infer_generic_binding(param_type.children[i], arg_type.children[i], params, bindings,
+                                   error)) {
             return false;
         }
     }
@@ -147,7 +158,8 @@ infer_generic_call_type_args(const FunctionScope& scope, const FunctionDecl& fn,
     for (size_t i = 0; i < fn.params.size(); ++i) {
         const std::string got = callbacks.infer_expr(scope, args[i], location);
         std::string error;
-        if (!infer_generic_binding(fn.params[i].type, got, fn.generic_params, bindings, error)) {
+        if (!infer_generic_binding(fn.params[i].type_ref, parse_type_text(got), fn.generic_params,
+                                   bindings, error)) {
             if (location != nullptr) {
                 sema_fail(node_location(*location, args[i]), error + " for " + callee);
             }

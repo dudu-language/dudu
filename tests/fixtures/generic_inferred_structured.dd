@@ -1,0 +1,19 @@
+def nested_first[T](items: list[list[T]]) -> T:
+    return items[0][0]
+
+
+def array_first[T](items: array[T][2]) -> T:
+    return items[0]
+
+
+def ptr_value[T](ptr: *T) -> T:
+    return *ptr
+
+
+def main() -> i32:
+    rows: list[list[i32]] = [[12]]
+    values: array[i32] = [20, 2]
+    extra: *i32 = new[i32](8)
+    total = nested_first(rows) + array_first(values) + ptr_value(extra) + 2
+    delete extra
+    return total

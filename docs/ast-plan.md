@@ -143,6 +143,11 @@ Already structured:
 - generated local C++ type inference also reads parsed `TypeRef` template
   children for local `list`, `span`, `set`, and `dict` index receivers instead
   of carrying a separate template-argument splitter
+- generic call-site inference reads parsed `TypeRef` nodes for nested
+  templates, fixed arrays, and pointer/reference wrappers instead of carrying
+  local bracket-splitting logic
+- generic receiver template argument extraction reads parsed `TypeRef` template
+  children instead of hand-slicing bracket text
 - fixed-array indexing and iteration recover `array[T][shape]` element types
   from parsed `TypeRef::FixedArray` nodes instead of hand-matching nested
   brackets in the type text

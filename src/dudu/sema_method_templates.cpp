@@ -1,5 +1,6 @@
 #include "dudu/sema_method_templates.hpp"
 
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/sema_context.hpp"
 #include "dudu/source.hpp"
@@ -36,11 +37,16 @@ std::string replace_type_identifier(std::string type, const std::string& from,
 } // namespace
 
 std::vector<std::string> template_args_from_type(const std::string& type) {
-    const size_t open = type.find('[');
-    if (open == std::string::npos || type.empty() || type.back() != ']') {
+    const TypeRef parsed = parse_type_text(type);
+    if (parsed.kind != TypeKind::Template) {
         return {};
     }
-    return split_top_level_args(type.substr(open + 1, type.size() - open - 2));
+    std::vector<std::string> out;
+    out.reserve(parsed.children.size());
+    for (const TypeRef& child : parsed.children) {
+        out.push_back(trim_copy(child.text));
+    }
+    return out;
 }
 
 std::string substitute_method_template_type(std::string type,
