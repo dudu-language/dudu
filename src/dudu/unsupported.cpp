@@ -130,6 +130,7 @@ void check_statement_prefix(const Stmt& stmt) {
         UnsupportedPrefix{"global", "global rebinding"},
         UnsupportedPrefix{"nonlocal", "nonlocal rebinding"},
         UnsupportedPrefix{"del", "dynamic deletion"},
+        UnsupportedPrefix{"def", "local function declarations"},
         UnsupportedPrefix{"import", "local imports"},
         UnsupportedPrefix{"from", "local imports"},
     };

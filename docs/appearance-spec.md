@@ -747,8 +747,7 @@ Rules:
 
 - `fn(...) -> T` is a raw function pointer type.
 - `fn(...)` returns `void`.
-- `def name(...)` is a statement only. It can appear anywhere statements are
-  allowed, including nested blocks.
+- `def name(...)` is a statement-only declaration.
 - function names are values after declaration.
 - `def` expressions and anonymous function values are not part of Dudu.
 - non-capturing function values can coerce to `fn(...) -> T`.
@@ -768,20 +767,21 @@ callback(41)  # valid
 add_one(41)  # valid
 ```
 
-Nested callbacks stay statement-oriented:
+Callback tables stay statement-oriented:
 
 ```python
-def install_handlers(world: *World) -> map[str, std.function[fn(Event)]]:
-    def on_spawn(event: Event):
-        world.spawn_enemy(event.id)
+def on_spawn(event: Event):
+    spawn_enemy(event.id)
 
-    def on_hit(event: Event):
-        world.damage_player(event.id, event.damage)
 
-    return {
-        "spawn": on_spawn,
-        "hit": on_hit,
-    }
+def on_hit(event: Event):
+    damage_player(event.id, event.damage)
+
+
+handlers: map[str, fn(Event)] = {
+    "spawn": on_spawn,
+    "hit": on_hit,
+}
 ```
 
 ## Allocation

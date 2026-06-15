@@ -69,8 +69,7 @@ Implement this first:
 - no implicit casts across Dudu-native assignments and returns.
 
 Named function declarations replace Python `lambda`. A `def name(...)`
-declaration is a statement only and can appear anywhere statements are allowed,
-including nested blocks. Function names are values after declaration, so
+declaration is statement-only. Function names are values after declaration, so
 callbacks and tables use ordinary named functions instead of inline function
 expressions.
 

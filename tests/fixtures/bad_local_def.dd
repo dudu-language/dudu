@@ -1,0 +1,5 @@
+def main() -> i32:
+    def add_one(value: i32) -> i32:
+        return value + 1
+
+    return add_one(41)
