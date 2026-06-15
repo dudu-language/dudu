@@ -158,8 +158,9 @@ std::string indexed_type_from_type_with_count(const Symbols& symbols,
         return "auto";
     }
     bool pointer_index = false;
-    if (starts_with(type, "*")) {
-        type = trim(type.substr(1));
+    if (const TypeRef parsed = parse_type_text(type);
+        parsed.kind == TypeKind::Pointer && parsed.children.size() == 1) {
+        type = trim(parsed.children.front().text);
         pointer_index = true;
     }
     for (const TypeKind kind : {TypeKind::Storage, TypeKind::Shared, TypeKind::Device,
@@ -207,9 +208,9 @@ std::string indexed_type_from_type_with_count(const Symbols& symbols,
     if (const auto signature = dudu_operator_signature(symbols, "[]", type)) {
         return signature->return_type;
     }
-    const size_t type_index = type.find('[');
-    if (type_index != std::string::npos && type.back() == ']') {
-        return trim(type.substr(0, type_index));
+    const TypeRef parsed = parse_type_text(type);
+    if (parsed.kind == TypeKind::Template && parsed.children.size() == 1) {
+        return trim(parsed.children.front().text);
     }
     throw CompileError(location, "cannot index non-container: " + label);
 }
@@ -283,9 +284,9 @@ std::string iterable_value_type(const Symbols& symbols,
     if (const auto element = fixed_array_element_type(type)) {
         return *element;
     }
-    const size_t type_index = type.find('[');
-    if (type_index != std::string::npos && type.back() == ']') {
-        return trim(type.substr(0, type_index));
+    const TypeRef parsed = parse_type_text(type);
+    if (parsed.kind == TypeKind::Template && parsed.children.size() == 1) {
+        return trim(parsed.children.front().text);
     }
     return {};
 }

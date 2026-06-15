@@ -971,6 +971,11 @@ Expression-call emission now classifies pointer receivers, pointer-list
 receivers, and wrapped Dudu operator receivers through parsed `TypeRef` nodes
 instead of raw leading-character or `list[*...]` checks.
 
+Index and iterable type inference now unwrap pointer types and generic
+single-argument containers through parsed `TypeRef` nodes instead of
+`*`/`[...]` string slicing. Native/foreign indexable types still return `auto`
+at the explicit native boundary.
+
 Parser construction has been split by grammar responsibility:
 
 - `parser.cpp` owns module orchestration, token cursor helpers, imports,

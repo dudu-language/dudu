@@ -9,6 +9,7 @@
 #include "dudu/sema.hpp"
 #include "dudu/sema_alloc.hpp"
 #include "dudu/sema_function_type.hpp"
+#include "dudu/sema_index.hpp"
 #include "dudu/type_compat.hpp"
 
 #include <cassert>
@@ -236,6 +237,18 @@ void test_emitted_local_index_type_inference() {
            "array[f32][4]");
     assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("matrix[1, 2]"), locals,
                                           functions) == "f32");
+}
+
+void test_index_type_inference_uses_type_ast() {
+    dudu::Symbols symbols;
+    const dudu::SourceLocation location{.file = "index_types.dd", .line = 1, .column = 1};
+    assert(dudu::indexed_type_from_type(symbols, location, "*const[Item]", "0", "items") == "Item");
+    assert(dudu::indexed_type_from_type(symbols, location, "Bag[Item]", "0", "bag") == "Item");
+
+    const std::map<std::string, std::string> locals = {
+        {"bag", "Bag[Item]"},
+    };
+    assert(dudu::iterable_value_type(symbols, locals, "bag") == "Item");
 }
 
 void test_emitted_local_expression_type_inference() {
@@ -477,6 +490,7 @@ int main() {
         test_semantic_diagnostics();
         test_allocation_type_ref_diagnostics();
         test_emitted_local_index_type_inference();
+        test_index_type_inference_uses_type_ast();
         test_emitted_local_expression_type_inference();
         test_formatter();
         test_list_iterator_methods();
