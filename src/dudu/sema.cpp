@@ -2084,7 +2084,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
     }
     if (stmt.kind == StmtKind::For) {
         FunctionScope nested = scope;
-        if (!stmt.name.empty() && !stmt.type.empty() && !stmt.iterable.empty()) {
+        if (!stmt.name.empty() && !stmt.type.empty() && has_expr(stmt.iterable_expr)) {
             check_local_binding_name(stmt.location, stmt.name);
             check_known_type_ref(scope.symbols, node_location(stmt.location, stmt.type_ref),
                                  stmt.type_ref, "unknown loop binding type: ");

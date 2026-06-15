@@ -993,7 +993,7 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         out << indent(depth) << "}\n";
         return;
     }
-    if (stmt.kind == StmtKind::For && !stmt.iterable.empty()) {
+    if (stmt.kind == StmtKind::For && has_expr(stmt.iterable_expr)) {
         std::string binding = stmt.name;
         const std::string range = lower_expr(stmt.iterable_expr, aliases, locals);
         std::string binding_type = "auto";

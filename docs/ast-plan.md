@@ -203,6 +203,8 @@ Already structured:
   instead of falling back to raw expression inference
 - semantic checks and C++ statement emission use expression-node presence for
   optional statement values/messages instead of raw statement value strings
+- `for` loop semantic checks and C++ emission use parsed iterable expression
+  presence instead of the raw iterable statement string
 - semantic compatibility checks for parsed binary and comparison operators use
   the right-hand expression node instead of stringifying it for assignment rules
 - native overload matching and constructor semantic checks use parsed argument
