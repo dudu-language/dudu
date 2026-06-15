@@ -1,0 +1,3 @@
+def main(values: list[i32]) -> i32:
+    by_value = {value: value * 2 for value in values}
+    return by_value[0]

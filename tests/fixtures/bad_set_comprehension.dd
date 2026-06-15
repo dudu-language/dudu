@@ -1,0 +1,3 @@
+def main(values: list[i32]) -> i32:
+    unique = {value for value in values}
+    return i32(unique.size())

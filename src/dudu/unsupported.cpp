@@ -69,6 +69,9 @@ void check_unsupported_text(const SourceLocation& location, const std::string& t
     if (contains_word(text, "await")) {
         throw CompileError(location, "unsupported Python feature: async");
     }
+    if (contains_word(text, "for") && contains_word(text, "in")) {
+        throw CompileError(location, "unsupported Python feature: comprehensions");
+    }
 }
 
 void check_expr(const Expr& expr) {
