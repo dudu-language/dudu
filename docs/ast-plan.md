@@ -743,6 +743,12 @@ pass, and the C++ statement emitter now also rejects them if that invariant is
 violated. Unsupported syntax must surface as a Dudu diagnostic, not as a
 silently dropped statement.
 
+Unknown and deliberately unsupported expression nodes follow the same rule in
+the C++ expression emitter. If the unsupported-feature and semantic passes are
+bypassed, lambda, conditional-expression, async, generator, invalid slice, and
+unknown expression forms still fail as Dudu diagnostics instead of emitting
+empty C++ fragments.
+
 Binary expression emission now checks parsed child-expression presence instead
 of inspecting child source text before lowering.
 

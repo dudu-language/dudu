@@ -596,8 +596,11 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
 
 std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases,
                        const std::map<std::string, std::string>& locals, const Symbols* symbols) {
-    if (expr.text.empty() || expr.kind == ExprKind::Unknown) {
+    if (expr.text.empty()) {
         return {};
+    }
+    if (expr.kind == ExprKind::Unknown) {
+        throw CompileError(expr.location, "unsupported expression: " + trim_copy(expr.text));
     }
     switch (expr.kind) {
     case ExprKind::BoolLiteral:
@@ -635,11 +638,13 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
         }
         break;
     case ExprKind::Conditional:
-        break;
+        throw CompileError(expr.location,
+                           "unsupported Python feature: conditional expressions; use an "
+                           "explicit if statement");
     case ExprKind::Await:
-        break;
+        throw CompileError(expr.location, "unsupported Python feature: async");
     case ExprKind::Yield:
-        break;
+        throw CompileError(expr.location, "unsupported Python feature: generators");
     case ExprKind::Call:
         return lower_call_expr(expr, aliases, locals, symbols);
     case ExprKind::TemplateCall: {
@@ -715,7 +720,7 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
         }
         break;
     case ExprKind::Slice:
-        break;
+        throw CompileError(expr.location, "slice expression must be used inside an index");
     case ExprKind::DictLiteral:
         return "{" + join_lowered_exprs(expr.children, aliases, locals) + "}";
     case ExprKind::Index:
@@ -752,9 +757,11 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
     case ExprKind::TupleLiteral:
         return join_lowered_exprs(expr.children, aliases, locals);
     case ExprKind::Lambda:
-        break;
+        throw CompileError(expr.location,
+                           "unsupported Python feature: lambda; declare a named function and "
+                           "pass the function name");
     case ExprKind::Unknown:
-        break;
+        throw CompileError(expr.location, "unsupported expression: " + trim_copy(expr.text));
     }
     return {};
 }
