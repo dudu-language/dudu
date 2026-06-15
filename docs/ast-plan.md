@@ -982,6 +982,8 @@ Semantic analysis has started the same cleanup:
   method lookup.
 - `sema_builtin_methods.cpp` and `sema_method_templates.cpp` own builtin C++
   method signatures and method generic substitution helpers.
+- `sema_swizzles.cpp` owns Dudu-native swizzle component validation and
+  swizzle result type lookup.
 
 Shared `ast_type` helpers now expose first-template-argument extraction for
 parsed Dudu `TypeRef` templates. Builtin C++ receiver signatures use that
@@ -1073,8 +1075,10 @@ Language-server internals have started the same split:
 - `language_server_code_actions.cpp` owns format, organize-import, missing
   import, and lint quick fixes.
 
-The remaining oversized frontend files are now outside the core semantic split:
-`language_server.cpp`.
+The previous oversized frontend files have been split below the project
+file-size guideline. Future AST/LSP work should keep new responsibilities in
+the existing focused language-server files rather than growing
+`language_server.cpp` again.
 
 ## Acceptance
 

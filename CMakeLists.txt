@@ -100,6 +100,7 @@ add_library(dudu_frontend
     src/dudu/sema_ops.cpp
     src/dudu/sema_scan.cpp
     src/dudu/sema_super.cpp
+    src/dudu/sema_swizzles.cpp
     src/dudu/source.cpp
     src/dudu/test_driver.cpp
     src/dudu/token.cpp

@@ -3,42 +3,18 @@
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/sema_builtin_methods.hpp"
+#include "dudu/sema_common.hpp"
 #include "dudu/sema_index.hpp"
+#include "dudu/sema_methods_internal.hpp"
 #include "dudu/sema_method_templates.hpp"
 #include "dudu/sema_native.hpp"
 #include "dudu/sema_scan.hpp"
 #include "dudu/source.hpp"
 
 #include <optional>
-#include <set>
-#include <string_view>
 
 namespace dudu {
 namespace {
-
-[[noreturn]] void fail(const SourceLocation& location, const std::string& message) {
-    throw CompileError(location, message);
-}
-
-std::string unwrap_receiver_type(const Symbols& symbols, std::string type) {
-    type = resolve_alias(symbols, std::move(type));
-    while (true) {
-        type = trim(std::move(type));
-        const TypeRef parsed = parse_type_text(type);
-        if (const auto inner =
-                unary_type_child_text(parsed, {TypeKind::Pointer, TypeKind::Reference})) {
-            type = *inner;
-            continue;
-        }
-        if (const auto inner = unary_type_child_text(
-                parsed, {TypeKind::Const, TypeKind::Volatile, TypeKind::Atomic, TypeKind::Storage,
-                         TypeKind::Shared, TypeKind::Device})) {
-            type = *inner;
-            continue;
-        }
-        return base_type(type);
-    }
-}
 
 bool is_indexed_local_segment(const std::string& text) {
     const size_t index = text.find('[');
@@ -63,29 +39,6 @@ std::vector<std::string> template_method_args(const std::string& method_name) {
     return split_top_level_args(method_name.substr(open + 1, method_name.size() - open - 2));
 }
 
-std::optional<std::string> field_type_for_class(const Symbols& symbols, const ClassDecl& klass,
-                                                const std::string& receiver_type,
-                                                const std::string& field) {
-    for (const FieldDecl& decl : klass.fields) {
-        if (decl.name == field) {
-            const std::vector<std::string> receiver_args = template_args_from_type(receiver_type);
-            std::string type =
-                substitute_class_template_type(decl.type, klass.generic_params, receiver_args);
-            return substitute_receiver_template_type(std::move(type), receiver_args);
-        }
-    }
-    for (const std::string& base : klass.base_classes) {
-        const auto base_class = symbols.classes.find(unwrap_receiver_type(symbols, base));
-        if (base_class == symbols.classes.end()) {
-            continue;
-        }
-        if (const auto found = field_type_for_class(symbols, *base_class->second, base, field)) {
-            return found;
-        }
-    }
-    return std::nullopt;
-}
-
 std::string first_path_type(const Symbols& symbols,
                             const std::map<std::string, std::string>& locals,
                             const SourceLocation* location, const std::string& first,
@@ -107,7 +60,7 @@ std::string first_path_type(const Symbols& symbols,
     const auto local = locals.find(first);
     if (local == locals.end()) {
         if (location != nullptr && !unknown_local_prefix.empty()) {
-            fail(*location, unknown_local_prefix + first);
+            sema_fail(*location, unknown_local_prefix + first);
         }
         return {};
     }
@@ -131,12 +84,55 @@ std::string static_member_type(const Symbols& symbols, const SourceLocation* loc
         }
     }
     if (location != nullptr) {
-        fail(*location, "unknown static member: " + type_name + "." + member);
+        sema_fail(*location, "unknown static member: " + type_name + "." + member);
     }
     return {};
 }
 
 } // namespace
+
+std::string unwrap_receiver_type(const Symbols& symbols, std::string type) {
+    type = resolve_alias(symbols, std::move(type));
+    while (true) {
+        type = trim(std::move(type));
+        const TypeRef parsed = parse_type_text(type);
+        if (const auto inner =
+                unary_type_child_text(parsed, {TypeKind::Pointer, TypeKind::Reference})) {
+            type = *inner;
+            continue;
+        }
+        if (const auto inner = unary_type_child_text(
+                parsed, {TypeKind::Const, TypeKind::Volatile, TypeKind::Atomic, TypeKind::Storage,
+                         TypeKind::Shared, TypeKind::Device})) {
+            type = *inner;
+            continue;
+        }
+        return base_type(type);
+    }
+}
+
+std::optional<std::string> field_type_for_class(const Symbols& symbols, const ClassDecl& klass,
+                                                const std::string& receiver_type,
+                                                const std::string& field) {
+    for (const FieldDecl& decl : klass.fields) {
+        if (decl.name == field) {
+            const std::vector<std::string> receiver_args = template_args_from_type(receiver_type);
+            std::string type =
+                substitute_class_template_type(decl.type, klass.generic_params, receiver_args);
+            return substitute_receiver_template_type(std::move(type), receiver_args);
+        }
+    }
+    for (const std::string& base : klass.base_classes) {
+        const auto base_class = symbols.classes.find(unwrap_receiver_type(symbols, base));
+        if (base_class == symbols.classes.end()) {
+            continue;
+        }
+        if (const auto found = field_type_for_class(symbols, *base_class->second, base, field)) {
+            return found;
+        }
+    }
+    return std::nullopt;
+}
 
 std::string member_path_type(const Symbols& symbols,
                              const std::map<std::string, std::string>& locals,
@@ -188,7 +184,7 @@ std::string member_path_type(const Symbols& symbols,
             }
             if (!found) {
                 if (location != nullptr) {
-                    fail(*location, "unknown static member: " + path);
+                    sema_fail(*location, "unknown static member: " + path);
                 }
                 return {};
             }
@@ -212,7 +208,7 @@ std::string member_path_type(const Symbols& symbols,
             type = *found;
         } else {
             if (location != nullptr) {
-                fail(*location, "unknown field: " + path);
+                sema_fail(*location, "unknown field: " + path);
             }
             return {};
         }
@@ -236,7 +232,7 @@ std::string member_expr_type(const Symbols& symbols,
             return expr.name;
         }
         if (location != nullptr && !unknown_local_prefix.empty()) {
-            fail(*location, std::string(unknown_local_prefix) + expr.name);
+            sema_fail(*location, std::string(unknown_local_prefix) + expr.name);
         }
         return {};
     }
@@ -272,8 +268,9 @@ std::string member_expr_type(const Symbols& symbols,
             return "auto";
         }
         if (location != nullptr) {
-            fail(*location, "unknown field: " +
-                                (expr.text.empty() ? receiver_type + "." + expr.name : expr.text));
+            sema_fail(
+                *location, "unknown field: " +
+                               (expr.text.empty() ? receiver_type + "." + expr.name : expr.text));
         }
     }
     return {};
@@ -325,94 +322,6 @@ std::optional<std::string> field_type_for_type(const Symbols& symbols,
         return std::nullopt;
     }
     return field_type_for_class(symbols, *klass->second, receiver_type, field);
-}
-
-std::optional<std::string_view> swizzle_component_set(const std::string& swizzle) {
-    if (swizzle.size() < 2 || swizzle.size() > 4) {
-        return std::nullopt;
-    }
-    for (const std::string_view set :
-         {std::string_view("xyzw"), std::string_view("rgba"), std::string_view("stpq")}) {
-        bool matches = true;
-        for (const char ch : swizzle) {
-            if (set.find(ch) == std::string_view::npos) {
-                matches = false;
-                break;
-            }
-        }
-        if (matches) {
-            return set;
-        }
-    }
-    return std::nullopt;
-}
-
-std::optional<std::string> swizzle_type_for_type(const Symbols& symbols,
-                                                 const std::string& receiver_type,
-                                                 const std::string& swizzle) {
-    const auto component_set = swizzle_component_set(swizzle);
-    if (!component_set) {
-        return std::nullopt;
-    }
-    const std::string class_name = unwrap_receiver_type(symbols, receiver_type);
-    const auto klass = symbols.classes.find(class_name);
-    if (klass == symbols.classes.end()) {
-        return std::nullopt;
-    }
-    size_t component_count = 0;
-    for (const char ch : *component_set) {
-        if (field_type_for_class(symbols, *klass->second, receiver_type, std::string(1, ch))) {
-            ++component_count;
-        }
-    }
-    for (const char ch : swizzle) {
-        if (!field_type_for_class(symbols, *klass->second, receiver_type, std::string(1, ch))) {
-            return std::nullopt;
-        }
-    }
-    if (component_count == swizzle.size()) {
-        return class_name;
-    }
-    const std::string_view result_components = component_set->substr(0, swizzle.size());
-    for (const auto& [candidate_name, candidate] : symbols.classes) {
-        if (candidate_name == class_name || candidate->fields.size() != swizzle.size()) {
-            continue;
-        }
-        bool matches = true;
-        for (size_t i = 0; i < result_components.size(); ++i) {
-            const std::string result_field(1, result_components[i]);
-            const std::string source_field(1, swizzle[i]);
-            const auto result_type =
-                field_type_for_class(symbols, *candidate, candidate_name, result_field);
-            const auto source_type =
-                field_type_for_class(symbols, *klass->second, receiver_type, source_field);
-            if (!result_type || !source_type || *result_type != *source_type) {
-                matches = false;
-                break;
-            }
-        }
-        if (matches) {
-            return candidate_name;
-        }
-    }
-    return std::nullopt;
-}
-
-std::optional<std::string> swizzle_assignment_type_for_type(const Symbols& symbols,
-                                                            const SourceLocation& location,
-                                                            const std::string& receiver_type,
-                                                            const std::string& swizzle) {
-    const auto component_set = swizzle_component_set(swizzle);
-    if (!component_set) {
-        return std::nullopt;
-    }
-    std::set<char> seen;
-    for (const char ch : swizzle) {
-        if (!seen.insert(ch).second) {
-            fail(location, "swizzle assignment cannot repeat component: " + swizzle);
-        }
-    }
-    return swizzle_type_for_type(symbols, receiver_type, swizzle);
 }
 
 FunctionSignature instantiate_method_signature(const ClassDecl& klass, const FunctionDecl& method,
@@ -472,9 +381,10 @@ bool method_signature_for_type(const Symbols& symbols, std::string receiver_type
         }
         if (method.generic_params.size() != method_args.size()) {
             if (location != nullptr) {
-                fail(*location, "method " + type + "." + lookup_name + " expects " +
-                                    std::to_string(method.generic_params.size()) +
-                                    " type arguments, got " + std::to_string(method_args.size()));
+                sema_fail(*location, "method " + type + "." + lookup_name + " expects " +
+                                         std::to_string(method.generic_params.size()) +
+                                         " type arguments, got " +
+                                         std::to_string(method_args.size()));
             }
             return false;
         }
@@ -488,7 +398,7 @@ bool method_signature_for_type(const Symbols& symbols, std::string receiver_type
         }
     }
     if (location != nullptr) {
-        fail(*location, "unknown method: " + type + "." + method_name);
+        sema_fail(*location, "unknown method: " + type + "." + method_name);
     }
     return false;
 }
@@ -580,7 +490,7 @@ bool static_method_signature_for_type(const Symbols& symbols, const std::string&
         return true;
     }
     if (location != nullptr) {
-        fail(*location, "unknown static method: " + type_name + "." + method_name);
+        sema_fail(*location, "unknown static method: " + type_name + "." + method_name);
     }
     return false;
 }
