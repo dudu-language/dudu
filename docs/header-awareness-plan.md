@@ -242,13 +242,31 @@ The scanner now preserves namespace and class scope for nested types such as
 `outer_namespace.Outer.Inner`. Imported C++ function templates typecheck
 through explicit Dudu calls such as `native.identity[i32](value)` and
 `native.choose_second[str, i32](name, value)` when their scanner metadata uses
-ordinary positional template parameter names. Template-heavy libraries may
-still need wrapper headers.
+ordinary positional template parameter names.
 
 Native C++ template arguments can include compile-time values. Dudu parses
 integer non-type template arguments structurally, so forms such as
 `std.array[i32, 3]` lower to `std::array<int32_t, 3>` and validate without
 treating `3` as a missing Dudu type.
+
+Aliased native imports preserve names that are already under the imported
+namespace instead of double-prefixing them. For example, `import cpp
+"algorithm" as std` exposes scanner names such as `std.remove` as `std.remove`,
+not `std.std.remove`, while global C names remain separate.
+
+Native overload matching now infers common C++ scanner template placeholders
+from parsed Dudu argument types. This covers regular placeholder names such as
+`T`, `U`, `_T1`, and `_T2`, plus variadic pack forms such as `_Elements...`.
+Common libstdc++ dependent helper types are normalized when they are only
+wrapping the real type, such as `typename __decay_and_strip<T>::__type` and
+`__tuple_element_t<I, tuple<...>>`.
+
+The standard-library algorithm fixture validates real `std::vector`,
+`std::sort`, `std::lower_bound`, `std::remove`, `std::set`, `std::deque`,
+`std::priority_queue`, `std::make_pair`, `std::make_tuple`, and `std::get`
+interop without wrapper headers. It remains outside the fast test suite because
+scanning standard-library headers is deliberately slower than ordinary compiler
+fixtures.
 
 ## Cache
 

@@ -63,6 +63,7 @@ add_library(dudu_frontend
     src/dudu/native_header_scope.cpp
     src/dudu/native_header_types.cpp
     src/dudu/native_headers.cpp
+    src/dudu/native_signature_match.cpp
     src/dudu/naming.cpp
     src/dudu/parser.cpp
     src/dudu/parser_decls.cpp

@@ -235,7 +235,9 @@ std::vector<T> prefixed_names(const std::vector<T>& source, const std::string& p
     std::vector<T> out;
     out.reserve(source.size());
     for (T item : source) {
-        item.name = prefix + "." + item.name;
+        if (!starts_with(item.name, prefix + ".")) {
+            item.name = prefix + "." + item.name;
+        }
         out.push_back(std::move(item));
     }
     return out;
@@ -246,7 +248,9 @@ std::vector<NativeTypeDecl> prefixed_type_names(const std::vector<NativeTypeDecl
     out.reserve(source.size());
     for (NativeTypeDecl item : source) {
         const std::string original = item.name;
-        item.name = prefix + "." + item.name;
+        if (!starts_with(item.name, prefix + ".")) {
+            item.name = prefix + "." + item.name;
+        }
         if (item.type.empty())
             item.type = original;
         out.push_back(std::move(item));

@@ -39,8 +39,86 @@ std::string compact_type(std::string type) {
     return out;
 }
 
+size_t matching_angle(const std::string& text, const size_t open) {
+    int depth = 0;
+    for (size_t i = open; i < text.size(); ++i) {
+        if (text[i] == '<') {
+            ++depth;
+        } else if (text[i] == '>') {
+            --depth;
+            if (depth == 0) {
+                return i;
+            }
+        }
+    }
+    return std::string::npos;
+}
+
+std::string normalize_type_traits(std::string type) {
+    type = trim_copy(std::move(type));
+    const std::string prefix = "typename __decay_and_strip<";
+    size_t pos = type.find(prefix);
+    while (pos != std::string::npos) {
+        const size_t open = pos + prefix.size() - 1;
+        const size_t close = matching_angle(type, open);
+        if (close == std::string::npos) {
+            return type;
+        }
+        size_t suffix_end = close + 1;
+        std::string suffix;
+        if (type.compare(suffix_end, 7, ".__type") == 0) {
+            suffix = ".__type";
+        } else if (type.compare(suffix_end, 8, "::__type") == 0) {
+            suffix = "::__type";
+        } else {
+            pos = type.find(prefix, close + 1);
+            continue;
+        }
+        suffix_end += suffix.size();
+        const std::string inner = trim_copy(type.substr(pos + prefix.size(), close - open - 1));
+        type.replace(pos, suffix_end - pos, inner);
+        pos = type.find(prefix, pos + inner.size());
+    }
+    return trim_copy(type);
+}
+
+std::string normalize_tuple_element(std::string type) {
+    type = trim_copy(std::move(type));
+    if (!type.empty() && type.front() == '&') {
+        return "&" + normalize_tuple_element(type.substr(1));
+    }
+    if (!starts_with(type, "__tuple_element_t[") || !type.ends_with("]")) {
+        return type;
+    }
+    std::vector<std::string> args =
+        split_top_level_args(type.substr(18, type.size() - 19));
+    if (args.size() != 2) {
+        return type;
+    }
+    args[0] = trim_copy(args[0]);
+    args[1] = trim_copy(args[1]);
+    if (args[0].empty() ||
+        args[0].find_first_not_of("0123456789") != std::string::npos ||
+        (!starts_with(args[1], "std.tuple[") && !starts_with(args[1], "tuple[")) ||
+        !args[1].ends_with("]")) {
+        return type;
+    }
+    const size_t open = args[1].find('[');
+    const std::vector<std::string> elements =
+        split_top_level_args(args[1].substr(open + 1, args[1].size() - open - 2));
+    const size_t index = static_cast<size_t>(std::stoull(args[0]));
+    if (index >= elements.size()) {
+        return type;
+    }
+    return trim_copy(elements[index]);
+}
+
+std::string normalize_cpp_type_artifacts(std::string type) {
+    return normalize_tuple_element(normalize_type_traits(std::move(type)));
+}
+
 bool is_string_type(const std::string& type) {
-    const std::string compact = compact_type(type);
+    const std::string compact = compact_type(normalize_cpp_type_artifacts(type));
     return compact == "str" || compact == "std.string" || compact == "std::string";
 }
 
@@ -205,6 +283,25 @@ bool is_pointer_to_reference_value(std::string expected, std::string got) {
            wrapped_type_arg(expected.substr(1)) == wrapped_type_arg(got.substr(2));
 }
 
+bool is_cpp_associated_type_binding(std::string expected, std::string got) {
+    expected = trim_copy(std::move(expected));
+    got = trim_copy(std::move(got));
+    if (expected == got) {
+        return true;
+    }
+    static const std::set<std::string> associated = {
+        "iterator",       "const_iterator", "reference",     "const_reference",
+        "value_type",     "pointer",        "const_pointer", "size_type",
+        "difference_type"};
+    if (!associated.contains(expected)) {
+        return false;
+    }
+    if (got == expected || got.ends_with("." + expected)) {
+        return true;
+    }
+    return expected == "const_iterator" && (got == "iterator" || got.ends_with(".iterator"));
+}
+
 std::string normalize_function_type(std::string type) {
     type = trim_copy(std::move(type));
     if (!starts_with(type, "fn(")) {
@@ -276,33 +373,52 @@ bool is_option_value(const std::string& expected, const Expr& expr, const std::s
 } // namespace
 
 bool type_assignment_allowed(const std::string& expected, const std::string& got) {
-    return expected == "auto" || got.empty() || got == "auto" || got == expected ||
-           compact_type(expected) == compact_type(got) ||
-           compact_type(normalize_c_tags(expected)) == compact_type(normalize_c_tags(got)) ||
-           (is_string_type(expected) && is_string_type(got)) ||
-           is_void_pointer_target(expected, got) || is_const_pointer_binding(expected, got) ||
-           is_pointer_to_reference_value(expected, got) || is_reference_binding(expected, got) ||
-           is_value_from_reference(expected, got) || is_function_type_match(expected, got) ||
-           is_native_function_pointer(expected, got);
+    const std::string normalized_expected = normalize_cpp_type_artifacts(expected);
+    const std::string normalized_got = normalize_cpp_type_artifacts(got);
+    return normalized_expected == "auto" || normalized_got.empty() || normalized_got == "auto" ||
+           normalized_got == normalized_expected ||
+           compact_type(normalized_expected) == compact_type(normalized_got) ||
+           compact_type(normalize_c_tags(normalized_expected)) ==
+               compact_type(normalize_c_tags(normalized_got)) ||
+           (is_string_type(normalized_expected) && is_string_type(normalized_got)) ||
+           is_void_pointer_target(normalized_expected, normalized_got) ||
+           is_const_pointer_binding(normalized_expected, normalized_got) ||
+           is_pointer_to_reference_value(normalized_expected, normalized_got) ||
+           is_reference_binding(normalized_expected, normalized_got) ||
+           is_value_from_reference(normalized_expected, normalized_got) ||
+           is_function_type_match(normalized_expected, normalized_got) ||
+           is_native_function_pointer(normalized_expected, normalized_got) ||
+           is_cpp_associated_type_binding(normalized_expected, normalized_got);
 }
 
 bool assignment_type_allowed(const std::string& expected, const Expr& expr,
                              const std::string& got) {
-    return expected == "auto" || is_explicit_cast_to(expected, expr) ||
-           is_container_literal(expected, expr) ||
-           (!is_container_literal_expr(expr) && got.empty()) || got == "auto" || got == expected ||
-           compact_type(expected) == compact_type(got) || is_option_value(expected, expr, got) ||
-           compact_type(normalize_c_tags(expected)) == compact_type(normalize_c_tags(got)) ||
-           (is_string_type(expected) && is_string_type(got)) ||
-           is_result_value(expected, expr, got) ||
-           is_value_wrapper_assignment(expected, expr, got) ||
-           is_null_pointer(expected, expr, got) || is_void_pointer_target(expected, got) ||
-           is_const_pointer_binding(expected, got) ||
-           is_pointer_to_reference_value(expected, got) || is_reference_binding(expected, got) ||
-           is_value_from_reference(expected, got) || is_function_type_match(expected, got) ||
-           is_native_function_pointer(expected, got) ||
-           (expected == "cstr" && got == "str" && expr.kind == ExprKind::StringLiteral) ||
-           (is_numeric_type(wrapped_type_arg(expected)) && simple_literal_type(expr) == "number");
+    const std::string normalized_expected = normalize_cpp_type_artifacts(expected);
+    const std::string normalized_got = normalize_cpp_type_artifacts(got);
+    return normalized_expected == "auto" || is_explicit_cast_to(normalized_expected, expr) ||
+           is_container_literal(normalized_expected, expr) ||
+           (!is_container_literal_expr(expr) && normalized_got.empty()) ||
+           normalized_got == "auto" || normalized_got == normalized_expected ||
+           compact_type(normalized_expected) == compact_type(normalized_got) ||
+           is_option_value(normalized_expected, expr, normalized_got) ||
+           compact_type(normalize_c_tags(normalized_expected)) ==
+               compact_type(normalize_c_tags(normalized_got)) ||
+           (is_string_type(normalized_expected) && is_string_type(normalized_got)) ||
+           is_result_value(normalized_expected, expr, normalized_got) ||
+           is_value_wrapper_assignment(normalized_expected, expr, normalized_got) ||
+           is_null_pointer(normalized_expected, expr, normalized_got) ||
+           is_void_pointer_target(normalized_expected, normalized_got) ||
+           is_const_pointer_binding(normalized_expected, normalized_got) ||
+           is_pointer_to_reference_value(normalized_expected, normalized_got) ||
+           is_reference_binding(normalized_expected, normalized_got) ||
+           is_value_from_reference(normalized_expected, normalized_got) ||
+           is_function_type_match(normalized_expected, normalized_got) ||
+           is_native_function_pointer(normalized_expected, normalized_got) ||
+           is_cpp_associated_type_binding(normalized_expected, normalized_got) ||
+           (normalized_expected == "cstr" && normalized_got == "str" &&
+            expr.kind == ExprKind::StringLiteral) ||
+           (is_numeric_type(wrapped_type_arg(normalized_expected)) &&
+            simple_literal_type(expr) == "number");
 }
 
 std::string display_type(const Expr& expr, const std::string& got) {

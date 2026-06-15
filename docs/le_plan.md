@@ -400,8 +400,14 @@ push. They are not release packaging work.
    cleanup, broken-Clang diagnostics, missing-header diagnostics, and common
    const pointer/reference lowering are implemented. Explicit native template
    allowance is limited to explicit template-call syntax on imported native
-   prefixes whose scanner metadata is incomplete. Template-heavy library
-   behavior and deeper overload behavior remain the main hardening areas.
+   prefixes whose scanner metadata is incomplete. Aliased native imports avoid
+   double-prefixing names that already come from the imported namespace, native
+   overload matching infers common C++ template placeholders and variadic packs,
+   and common libstdc++ dependent helper types normalize to the underlying Dudu
+   type. The standard-library algorithms fixture now validates representative
+   containers, algorithms, pairs, tuples, and `std.get` without wrapper headers.
+   Deeper overload diagnostics and broader template-heavy library behavior
+   remain the main hardening areas.
 
 10. Real Library Stress Tests
 
