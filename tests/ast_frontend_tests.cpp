@@ -1,3 +1,4 @@
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_emit.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/cpp_stmt_types.hpp"
@@ -5,6 +6,7 @@
 #include "dudu/match_patterns.hpp"
 #include "dudu/parser.hpp"
 #include "dudu/sema.hpp"
+#include "dudu/sema_builtin_methods.hpp"
 #include "dudu/sema_context.hpp"
 #include "dudu/sema_function_type.hpp"
 #include "dudu/sema_method_templates.hpp"
@@ -82,6 +84,30 @@ void test_core_type_helpers_use_type_ast() {
     assert(tuple.size() == 2);
     assert(tuple[0] == "i32");
     assert(tuple[1] == "list[str]");
+
+    assert(dudu::first_template_type_arg_text("list[*Player]") == "*Player");
+    assert(dudu::first_template_type_arg_text("dict[str, list[i32]]") == "str");
+    assert(!dudu::first_template_type_arg_text("*Player"));
+}
+
+void test_builtin_method_signature_uses_type_ast() {
+    dudu::Symbols symbols;
+    dudu::FunctionSignature signature;
+    assert(dudu::builtin_cpp_method_signature(symbols, "list[*Player]", "append", signature));
+    assert(signature.params.size() == 1);
+    assert(signature.params[0] == "*Player");
+    assert(signature.return_type == "void");
+
+    signature = {};
+    assert(dudu::builtin_cpp_method_signature(symbols, "std::vector<std::string>", "push_back",
+                                              signature));
+    assert(signature.params.size() == 1);
+    assert(signature.params[0] == "std::string");
+    assert(signature.return_type == "void");
+
+    signature = {};
+    assert(dudu::builtin_cpp_method_signature(symbols, "std::atomic<uint64_t>", "load", signature));
+    assert(signature.return_type == "uint64_t");
 }
 
 void test_receiver_template_substitution_uses_type_ast() {
@@ -656,6 +682,7 @@ int main() {
         test_ast_assignment_display_types();
         test_type_compat_uses_type_ast_for_pointers();
         test_core_type_helpers_use_type_ast();
+        test_builtin_method_signature_uses_type_ast();
         test_receiver_template_substitution_uses_type_ast();
         test_native_semantic_tokens();
         test_ast_constructor_assignment_compatibility();

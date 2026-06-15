@@ -47,6 +47,17 @@ std::vector<std::string> template_type_arg_texts(std::string_view type, std::str
     return template_type_arg_texts(parse_type_text(type), name);
 }
 
+std::optional<std::string> first_template_type_arg_text(const TypeRef& type) {
+    if (type.kind != TypeKind::Template || type.children.empty()) {
+        return std::nullopt;
+    }
+    return trim_copy(type.children.front().text);
+}
+
+std::optional<std::string> first_template_type_arg_text(std::string_view type) {
+    return first_template_type_arg_text(parse_type_text(type));
+}
+
 std::optional<std::string> single_template_type_arg_text(const TypeRef& type,
                                                          std::string_view name) {
     const std::vector<std::string> args = template_type_arg_texts(type, name);

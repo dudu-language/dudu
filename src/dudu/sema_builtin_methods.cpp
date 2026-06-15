@@ -8,26 +8,42 @@
 namespace dudu {
 namespace {
 
-std::string first_type_arg(const std::string& type) {
-    const TypeRef parsed = parse_type_text(type);
-    if (parsed.kind == TypeKind::Template && !parsed.children.empty()) {
-        return trim(parsed.children.front().text);
+std::optional<std::string> first_native_template_arg_text(const std::string& type) {
+    const size_t open = type.find('<');
+    if (open == std::string::npos || type.empty() || type.back() != '>') {
+        return std::nullopt;
     }
-    const size_t open = type.find('[');
-    if (open == std::string::npos || type.back() != ']') {
-        return {};
-    }
-    int depth = 0;
+
+    int angle_depth = 0;
+    int bracket_depth = 0;
+    int paren_depth = 0;
     const size_t close = type.size() - 1;
     for (size_t i = open + 1; i < close; ++i) {
-        if (type[i] == '[')
-            ++depth;
-        if (type[i] == ']')
-            --depth;
-        if (type[i] == ',' && depth == 0)
-            return trim(type.substr(open + 1, i - open - 1));
+        const char c = type[i];
+        if (c == '<') {
+            ++angle_depth;
+        } else if (c == '>') {
+            --angle_depth;
+        } else if (c == '[') {
+            ++bracket_depth;
+        } else if (c == ']') {
+            --bracket_depth;
+        } else if (c == '(') {
+            ++paren_depth;
+        } else if (c == ')') {
+            --paren_depth;
+        } else if (c == ',' && angle_depth == 0 && bracket_depth == 0 && paren_depth == 0) {
+            return trim_copy(type.substr(open + 1, i - open - 1));
+        }
     }
-    return trim(type.substr(open + 1, close - open - 1));
+    return trim_copy(type.substr(open + 1, close - open - 1));
+}
+
+std::string first_type_arg(const std::string& type) {
+    if (const auto arg = first_template_type_arg_text(type)) {
+        return *arg;
+    }
+    return first_native_template_arg_text(type).value_or("");
 }
 
 } // namespace

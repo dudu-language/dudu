@@ -957,6 +957,12 @@ Semantic analysis has started the same cleanup:
 - `sema_builtin_methods.cpp` and `sema_method_templates.cpp` own builtin C++
   method signatures and method generic substitution helpers.
 
+Shared `ast_type` helpers now expose first-template-argument extraction for
+parsed Dudu `TypeRef` templates. Builtin C++ receiver signatures use that
+structural path for Dudu types and keep native `<...>` template extraction in a
+small native-spelling fallback for imported C++ types such as
+`std::vector<T>` and `std::atomic<T>`.
+
 Parser construction has been split by grammar responsibility:
 
 - `parser.cpp` owns module orchestration, token cursor helpers, imports,
