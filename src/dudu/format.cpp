@@ -14,6 +14,22 @@ void rtrim(std::string& line) {
     }
 }
 
+void normalize_leading_indent(std::string& line) {
+    std::string indent;
+    size_t pos = 0;
+    while (pos < line.size() && (line[pos] == ' ' || line[pos] == '\t')) {
+        if (line[pos] == '\t') {
+            indent += "    ";
+        } else {
+            indent += ' ';
+        }
+        ++pos;
+    }
+    if (pos > 0) {
+        line = indent + line.substr(pos);
+    }
+}
+
 bool starts_with_import(const std::string& line) {
     return line.rfind("import ", 0) == 0 || line.rfind("from ", 0) == 0;
 }
@@ -42,6 +58,7 @@ std::string format_source(std::string_view source) {
     std::string line;
     while (std::getline(in, line)) {
         rtrim(line);
+        normalize_leading_indent(line);
         lines.push_back(std::move(line));
     }
     sort_leading_imports(lines);

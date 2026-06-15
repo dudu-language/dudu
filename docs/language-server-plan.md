@@ -166,6 +166,8 @@ and build-configuration diagnostics, including invalid project config and
 missing `pkg-config` package diagnostics, and returns full-document formatting edits.
 The implementation uses the existing parser, semantic checker, formatter, and
 native-header scanner in-process.
+The formatter trims trailing whitespace, caps repeated blank lines, sorts the
+leading import block, and normalizes leading tab indentation to four spaces.
 
 ### Milestone 2: Dudu Navigation
 

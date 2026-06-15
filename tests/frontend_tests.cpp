@@ -733,6 +733,13 @@ void test_formatter() {
                      "\n"
                      "def main() -> i32:\n"
                      "    return 0\n");
+
+    const std::string tabs = dudu::format_source("def main() -> i32:\n"
+                                                 "\tvalue: str = \"\\tkept\"\n"
+                                                 "\treturn 0\n");
+    assert(tabs == "def main() -> i32:\n"
+                   "    value: str = \"\\tkept\"\n"
+                   "    return 0\n");
 }
 
 void test_typed_for_emission() {
