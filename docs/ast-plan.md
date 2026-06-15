@@ -357,6 +357,9 @@ Already structured:
 - generic method calls on nested receivers such as `slots[0].box.id[i32](x)`
   type-check through the parsed callee receiver expression before falling back
   to compatibility spelling paths.
+- enum variant recognition for expression sema, codegen, and match patterns
+  uses a shared structural `Name.Member` helper instead of duplicate dotted
+  string reconstruction.
 - dereference assignment targets now type-check through the parsed operand
   expression, so normal Dudu code can assign through pointer fields such as
   `*self.out += 1` without using `cpp(...)`

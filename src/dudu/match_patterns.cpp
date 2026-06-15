@@ -8,6 +8,25 @@
 
 namespace dudu {
 
+namespace {
+
+const Expr* enum_pattern_head(const Stmt& stmt) {
+    if (stmt.pattern_expr.kind == ExprKind::Call && !stmt.pattern_expr.callee.empty()) {
+        return &stmt.pattern_expr.callee.front();
+    }
+    return &stmt.pattern_expr;
+}
+
+std::optional<std::pair<std::string, std::string>> enum_variant_path_expr(const Expr& expr) {
+    if (expr.kind != ExprKind::Member || expr.children.size() != 1 ||
+        expr.children.front().kind != ExprKind::Name) {
+        return std::nullopt;
+    }
+    return std::make_pair(expr.children.front().name, expr.name);
+}
+
+} // namespace
+
 bool is_wildcard_pattern_expr(const Expr& expr) {
     return expr.kind == ExprKind::Name && expr.name == "_";
 }
@@ -16,42 +35,22 @@ std::optional<std::string> enum_case_variant_name(const Stmt& stmt) {
     if (is_wildcard_pattern_expr(stmt.pattern_expr)) {
         return std::string{"_"};
     }
-    const Expr* pattern = &stmt.pattern_expr;
-    if (stmt.pattern_expr.kind == ExprKind::Call && !stmt.pattern_expr.callee.empty()) {
-        pattern = &stmt.pattern_expr.callee.front();
-    }
-    const std::optional<std::string> path = member_path_from_expr(*pattern);
+    const auto path = enum_variant_path_expr(*enum_pattern_head(stmt));
     if (!path) {
         return std::nullopt;
     }
-    const size_t dot = path->find('.');
-    if (dot == std::string::npos || path->find('.', dot + 1) != std::string::npos) {
-        return std::nullopt;
-    }
-    return path->substr(dot + 1);
+    return path->second;
 }
 
 std::optional<std::string> enum_case_variant_name_for(const EnumDecl& en, const Stmt& stmt) {
     if (is_wildcard_pattern_expr(stmt.pattern_expr)) {
         return std::string{"_"};
     }
-    const Expr* pattern = &stmt.pattern_expr;
-    if (stmt.pattern_expr.kind == ExprKind::Call && !stmt.pattern_expr.callee.empty()) {
-        pattern = &stmt.pattern_expr.callee.front();
-    }
-    const std::optional<std::string> path = member_path_from_expr(*pattern);
-    if (!path) {
+    const auto path = enum_variant_path_expr(*enum_pattern_head(stmt));
+    if (!path || path->first != en.name) {
         return std::nullopt;
     }
-    const std::string prefix = en.name + ".";
-    if (!starts_with(*path, prefix)) {
-        return std::nullopt;
-    }
-    const std::string variant = path->substr(prefix.size());
-    if (variant.find('.') != std::string::npos) {
-        return std::nullopt;
-    }
-    return variant;
+    return path->second;
 }
 
 std::vector<EnumCaseBinding> enum_case_bindings(const Stmt& stmt, const EnumValueDecl& value) {

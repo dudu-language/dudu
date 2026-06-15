@@ -23,8 +23,6 @@ std::optional<std::string> lower_swizzle_expr(const Expr& expr,
 std::optional<std::string>
 lower_swizzle_assignment(const Stmt& stmt, const std::vector<std::string>& aliases,
                          const std::map<std::string, std::string>& locals, const Symbols* symbols);
-std::optional<std::pair<const EnumDecl*, const EnumValueDecl*>>
-enum_variant_from_expr(const Symbols* symbols, const Expr& expr);
 std::string lower_enum_variant_constructor(const EnumDecl& en, const EnumValueDecl& value,
                                            const std::vector<Expr>& args,
                                            const std::vector<std::string>& aliases,

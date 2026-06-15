@@ -227,26 +227,6 @@ std::optional<std::string> dudu_operator_method_name(const Symbols& symbols, std
     return std::nullopt;
 }
 
-std::optional<std::pair<const EnumDecl*, const EnumValueDecl*>>
-enum_variant_from_path(const Symbols* symbols, const std::string& path) {
-    if (symbols == nullptr) {
-        return std::nullopt;
-    }
-    const size_t dot = path.find('.');
-    if (dot == std::string::npos || path.find('.', dot + 1) != std::string::npos) {
-        return std::nullopt;
-    }
-    const auto en = symbols->enums.find(path.substr(0, dot));
-    if (en == symbols->enums.end()) {
-        return std::nullopt;
-    }
-    const EnumValueDecl* value = enum_variant_decl(*en->second, path.substr(dot + 1));
-    if (value == nullptr) {
-        return std::nullopt;
-    }
-    return std::make_pair(en->second, value);
-}
-
 std::vector<Expr> index_arg_exprs(const Expr& index_expr) {
     if (index_expr.kind == ExprKind::TupleLiteral) {
         return index_expr.children;
@@ -393,22 +373,6 @@ bool enum_has_payloads(const EnumDecl& en) {
     return false;
 }
 
-const EnumDecl* enum_decl_for_type(const Symbols* symbols, const std::string& type) {
-    if (symbols == nullptr) {
-        return nullptr;
-    }
-    const auto found = symbols->enums.find(type);
-    return found == symbols->enums.end() ? nullptr : found->second;
-}
-
-std::optional<std::pair<const EnumDecl*, const EnumValueDecl*>>
-enum_variant_from_expr(const Symbols* symbols, const Expr& expr) {
-    if (const std::optional<std::string> path = member_path_from_expr(expr)) {
-        return enum_variant_from_path(symbols, *path);
-    }
-    return std::nullopt;
-}
-
 std::string lower_enum_variant_constructor(const EnumDecl& en, const EnumValueDecl& value,
                                            const std::vector<Expr>& args,
                                            const std::vector<std::string>& aliases,
@@ -509,10 +473,12 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
                             const std::map<std::string, std::string>& locals,
                             const Symbols* symbols) {
     if (!expr.callee.empty()) {
-        if (const auto variant = enum_variant_from_expr(symbols, expr.callee.front())) {
-            if (enum_has_payloads(*variant->first)) {
-                return lower_enum_variant_constructor(*variant->first, *variant->second,
-                                                      expr.children, aliases, locals, symbols);
+        if (symbols != nullptr) {
+            if (const auto variant = enum_variant_from_expr(*symbols, expr.callee.front())) {
+                if (enum_has_payloads(*variant->first)) {
+                    return lower_enum_variant_constructor(*variant->first, *variant->second,
+                                                          expr.children, aliases, locals, symbols);
+                }
             }
         }
     }

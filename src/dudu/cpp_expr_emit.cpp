@@ -7,6 +7,7 @@
 #include "dudu/cpp_pointer_members.hpp"
 #include "dudu/cpp_stmt_types.hpp"
 #include "dudu/sema_context.hpp"
+#include "dudu/sema_enum.hpp"
 #include "dudu/sema_function_type.hpp"
 #include "dudu/sema_methods.hpp"
 #include "dudu/source.hpp"
@@ -204,10 +205,12 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
     }
     case ExprKind::Member:
         if (expr.children.size() == 1) {
-            if (const auto variant = enum_variant_from_expr(symbols, expr)) {
-                if (enum_has_payloads(*variant->first)) {
-                    return lower_enum_variant_constructor(*variant->first, *variant->second, {},
-                                                          aliases, locals, symbols);
+            if (symbols != nullptr) {
+                if (const auto variant = enum_variant_from_expr(*symbols, expr)) {
+                    if (enum_has_payloads(*variant->first)) {
+                        return lower_enum_variant_constructor(*variant->first, *variant->second, {},
+                                                              aliases, locals, symbols);
+                    }
                 }
             }
             if (const auto swizzle = lower_swizzle_expr(expr, aliases, locals, symbols)) {

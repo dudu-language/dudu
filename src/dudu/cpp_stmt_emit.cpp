@@ -344,7 +344,8 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                 }
                 return;
             }
-            const EnumDecl* en = enum_decl_for_type(symbols, subject_type);
+            const EnumDecl* en =
+                symbols == nullptr ? nullptr : enum_decl_for_type(*symbols, subject_type);
             if (en != nullptr && (enum_has_payloads(*en) || match_has_guards(stmt))) {
                 const std::string subject = "__dudu_match_" + std::to_string(stmt.location.line) +
                                             "_" + std::to_string(stmt.location.column);

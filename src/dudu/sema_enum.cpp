@@ -35,4 +35,21 @@ enum_variant_from_path(const Symbols& symbols, const std::string& path) {
     return std::make_pair(en->second, value);
 }
 
+std::optional<std::pair<const EnumDecl*, const EnumValueDecl*>>
+enum_variant_from_expr(const Symbols& symbols, const Expr& expr) {
+    if (expr.kind != ExprKind::Member || expr.children.size() != 1 ||
+        expr.children.front().kind != ExprKind::Name) {
+        return std::nullopt;
+    }
+    const auto en = symbols.enums.find(expr.children.front().name);
+    if (en == symbols.enums.end()) {
+        return std::nullopt;
+    }
+    const EnumValueDecl* value = enum_variant_decl(*en->second, expr.name);
+    if (value == nullptr) {
+        return std::nullopt;
+    }
+    return std::make_pair(en->second, value);
+}
+
 } // namespace dudu

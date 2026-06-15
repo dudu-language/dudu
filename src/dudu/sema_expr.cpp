@@ -204,14 +204,15 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
         return left.empty() ? right : left;
     }
     case ExprKind::Member:
-        if (const std::optional<std::string> path = member_path_from_expr(expr)) {
-            if (const auto variant = enum_variant_from_path(scope.symbols, *path)) {
-                if (!variant->second->payload_fields.empty() && use_location != nullptr) {
-                    sema_expr_fail(*use_location,
-                                   "payload enum variant requires construction: " + *path);
-                }
-                return variant->first->name;
+        if (const auto variant = enum_variant_from_expr(scope.symbols, expr)) {
+            if (!variant->second->payload_fields.empty() && use_location != nullptr) {
+                sema_expr_fail(*use_location,
+                               "payload enum variant requires construction: " +
+                                   variant->first->name + "." + variant->second->name);
             }
+            return variant->first->name;
+        }
+        if (const std::optional<std::string> path = member_path_from_expr(expr)) {
             if (const auto native = native_member_path_type(scope.symbols, *path)) {
                 return *native;
             }

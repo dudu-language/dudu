@@ -27,6 +27,5 @@ lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& al
                             const std::map<std::string, std::string>& locals,
                             const Symbols* symbols);
 bool enum_has_payloads(const EnumDecl& en);
-const EnumDecl* enum_decl_for_type(const Symbols* symbols, const std::string& type);
 
 } // namespace dudu

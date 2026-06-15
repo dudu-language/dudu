@@ -274,7 +274,9 @@ push. They are not release packaging work.
    a member path string first. Nested expression emission preserves symbol
    context through callee, member, dict-entry, named-argument, index,
    collection literal, tuple, template-call argument, swizzle, pointer-cast,
-   and fixed-array literal children.
+   and fixed-array literal children. Enum variant recognition now uses a shared
+   structural expression helper in sema, codegen, and match patterns instead of
+   duplicate dotted-string reconstruction.
 
 3. OOP Surface Cleanup
 
