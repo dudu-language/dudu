@@ -39,11 +39,34 @@ bool is_builtin_cast_call(std::string_view name) {
 }
 
 bool is_pointer_cast_type_like(const std::string& type) {
-    const std::string base =
-        type.find('[') == std::string::npos ? type : type.substr(0, type.find('['));
-    return is_builtin_cast_call(type) || starts_with(type, "struct ") ||
-           type.find('[') != std::string::npos || type.find('.') != std::string::npos ||
-           (!base.empty() && std::isupper(static_cast<unsigned char>(base.front())) != 0);
+    const std::string trimmed = trim_copy(type);
+    if (is_builtin_cast_call(trimmed) || starts_with(trimmed, "struct ")) {
+        return true;
+    }
+    const TypeRef parsed = parse_type_text(trimmed);
+    switch (parsed.kind) {
+    case TypeKind::Template:
+    case TypeKind::Qualified:
+    case TypeKind::FixedArray:
+    case TypeKind::Const:
+    case TypeKind::Volatile:
+    case TypeKind::Atomic:
+    case TypeKind::Storage:
+    case TypeKind::Shared:
+    case TypeKind::Device:
+    case TypeKind::Static:
+    case TypeKind::Function:
+        return true;
+    case TypeKind::Named:
+        return !parsed.name.empty() &&
+               std::isupper(static_cast<unsigned char>(parsed.name.front())) != 0;
+    case TypeKind::Pointer:
+    case TypeKind::Reference:
+    case TypeKind::Value:
+    case TypeKind::Unknown:
+        return false;
+    }
+    return false;
 }
 
 std::string lower_call_args_for_signature(const std::vector<Expr>& args, const FunctionSignature&,

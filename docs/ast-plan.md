@@ -995,6 +995,10 @@ of leading-character string checks.
 Local-address escape analysis now identifies borrowed and pointer locals
 through parsed `TypeRef` nodes instead of leading-character type checks.
 
+Parsed pointer-cast expression emission now decides whether a callee is
+type-like from the parsed `TypeRef` kind instead of accepting any bracketed raw
+string as a type.
+
 Parser construction has been split by grammar responsibility:
 
 - `parser.cpp` owns module orchestration, token cursor helpers, imports,

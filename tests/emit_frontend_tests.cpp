@@ -88,6 +88,16 @@ void test_templated_pointer_cast_emission() {
            std::string::npos);
 }
 
+void test_template_pointer_cast_type_detection_uses_type_ast() {
+    const dudu::ModuleAst module =
+        dudu::parse_source("def cast_list(raw: *const[void]) -> *list[i32]:\n"
+                           "    return *list[i32](raw)\n",
+                           "template_pointer_cast_type_ast.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+    const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find("reinterpret_cast<std::vector<int32_t>*>(raw)") != std::string::npos);
+}
+
 void test_pointer_to_const_binding_emission() {
     const dudu::ModuleAst module =
         dudu::parse_source("def read_value(value: * const[f32]) -> const[f32]:\n"
@@ -159,6 +169,7 @@ int main() {
         test_pointer_member_emission(root);
         test_value_member_emission();
         test_templated_pointer_cast_emission();
+        test_template_pointer_cast_type_detection_uses_type_ast();
         test_pointer_to_const_binding_emission();
         test_offsetof_field_emission();
         test_array_literal_scalar_ast_emission();
