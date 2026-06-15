@@ -994,37 +994,24 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
         return *allocation;
     }
     if (expr.name == "sizeof" || expr.name == "alignof") {
-        const size_t arg_count = !expr.template_type_args.empty() ? expr.template_type_args.size()
-                                                                  : expr.template_args.size();
+        const std::vector<TypeRef> type_args = template_type_refs(expr);
+        const size_t arg_count = type_args.size();
         if (location != nullptr && arg_count != 1) {
             fail(*location,
                  expr.name + " expects 1 type argument, got " + std::to_string(arg_count));
         }
         if (arg_count == 1 && location != nullptr) {
-            if (!expr.template_type_args.empty()) {
-                if (const auto unknown =
-                        unknown_type_ref(scope.symbols, expr.template_type_args.front())) {
-                    const SourceLocation type_location =
-                        unknown->second.line > 0 ? unknown->second
-                                                 : expr.template_type_args.front().location;
-                    fail(type_location, "unknown " + expr.name + " type: " + unknown->first);
-                }
-            } else {
-                const std::string type =
-                    expr.template_args.empty() ? std::string{} : expr.template_args.front().text;
-                const SourceLocation type_location = expr.template_args.empty()
-                                                         ? expr.location
-                                                         : expr.template_args.front().location;
-                if (!known_type(scope.symbols, type)) {
-                    fail(type_location, "unknown " + expr.name + " type: " + type);
-                }
+            if (const auto unknown = unknown_type_ref(scope.symbols, type_args.front())) {
+                const SourceLocation type_location =
+                    unknown->second.line > 0 ? unknown->second : type_args.front().location;
+                fail(type_location, "unknown " + expr.name + " type: " + unknown->first);
             }
         }
         return "usize";
     }
     if (expr.name == "offsetof") {
-        const size_t arg_count = !expr.template_type_args.empty() ? expr.template_type_args.size()
-                                                                  : expr.template_args.size();
+        const std::vector<TypeRef> type_args = template_type_refs(expr);
+        const size_t arg_count = type_args.size();
         if (location != nullptr && arg_count != 1) {
             fail(*location, "offsetof expects 1 type argument, got " + std::to_string(arg_count));
         }
@@ -1038,23 +1025,10 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
                  "offsetof field argument must be a field name");
         }
         if (arg_count == 1 && location != nullptr) {
-            if (!expr.template_type_args.empty()) {
-                if (const auto unknown =
-                        unknown_type_ref(scope.symbols, expr.template_type_args.front())) {
-                    const SourceLocation type_location =
-                        unknown->second.line > 0 ? unknown->second
-                                                 : expr.template_type_args.front().location;
-                    fail(type_location, "unknown offsetof type: " + unknown->first);
-                }
-            } else {
-                const std::string type =
-                    expr.template_args.empty() ? std::string{} : expr.template_args.front().text;
-                const SourceLocation type_location = expr.template_args.empty()
-                                                         ? expr.location
-                                                         : expr.template_args.front().location;
-                if (!known_type(scope.symbols, type)) {
-                    fail(type_location, "unknown offsetof type: " + type);
-                }
+            if (const auto unknown = unknown_type_ref(scope.symbols, type_args.front())) {
+                const SourceLocation type_location =
+                    unknown->second.line > 0 ? unknown->second : type_args.front().location;
+                fail(type_location, "unknown offsetof type: " + unknown->first);
             }
         }
         return "usize";
