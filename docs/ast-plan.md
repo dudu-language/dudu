@@ -195,10 +195,9 @@ Already structured:
 - nested fixed-array literal scalar emission uses parsed expression nodes, so
   Dudu numeric literal normalization and other scalar expression lowering stays
   consistent inside array initializers
-- semantic checks for assignment through `*ptr` use parsed unary target
-  expressions before falling back to raw target text
-- semantic checks for plain-name and member assignment targets use parsed
-  target expressions before falling back to raw target text for complex shapes
+- semantic checks for assignment through `*ptr`, plain names, members, indexes,
+  and native reference-returning calls use parsed target expressions instead of
+  raw target text
 - member-path type checks reconstruct paths from parsed name/member/index
   expression nodes instead of directly trusting the original expression text
 - parsed member expression inference handles typed expression receivers such as
