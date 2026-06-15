@@ -980,8 +980,8 @@ Semantic analysis has started the same cleanup:
 - `sema_expr_call.cpp`, `sema_expr_template.cpp`, `sema_expr_cpp_escape.cpp`,
   and `sema_expr_support.cpp` own call resolution, template-call inference,
   `cpp(...)` escape inference, and expression-checking support helpers.
-- `sema_methods.cpp` owns member paths, field lookup, swizzle lookup, and Dudu
-  method lookup.
+- `sema_member_paths.cpp` owns member path walking and field lookup.
+- `sema_methods.cpp` owns Dudu method signature lookup.
 - `sema_builtin_methods.cpp` and `sema_method_templates.cpp` own builtin C++
   method signatures and method generic substitution helpers.
 - `sema_swizzles.cpp` owns Dudu-native swizzle component validation and
