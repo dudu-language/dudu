@@ -84,7 +84,12 @@ std::string indexed_local_type(const std::string& receiver_type, const Expr& ind
         args.size() == 2) {
         return trim_copy(args[1]);
     }
-    if (starts_with(type, "array[")) {
+    const TypeRef parsed = parse_type_text(type);
+    const bool array_type = (parsed.kind == TypeKind::Template && parsed.name == "array") ||
+                            (parsed.kind == TypeKind::FixedArray && !parsed.children.empty() &&
+                             parsed.children.front().kind == TypeKind::Template &&
+                             parsed.children.front().name == "array");
+    if (array_type) {
         const std::string element_type = explicit_array_element_type(type);
         const std::vector<size_t> shape = explicit_array_shape(type);
         const size_t used_indices = index_count(index_expr);
@@ -193,8 +198,9 @@ std::string infer_emitted_local_type(const Expr& expr,
         if (expr.op == "*") {
             std::string child = trim_copy(
                 infer_emitted_local_type(expr.children.front(), locals, function_returns));
-            if (!child.empty() && child.front() == '*') {
-                return trim_copy(child.substr(1));
+            const TypeRef parsed = parse_type_text(child);
+            if (parsed.kind == TypeKind::Pointer && parsed.children.size() == 1) {
+                return trim_copy(parsed.children.front().text);
             }
             return {};
         }

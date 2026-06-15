@@ -976,6 +976,10 @@ single-argument containers through parsed `TypeRef` nodes instead of
 `*`/`[...]` string slicing. Native/foreign indexable types still return `auto`
 at the explicit native boundary.
 
+Emitted-local type inference now recognizes array indexing and pointer
+dereference through parsed `TypeRef` nodes, keeping raw native receiver fallback
+only in the existing native-spelling boundary.
+
 Parser construction has been split by grammar responsibility:
 
 - `parser.cpp` owns module orchestration, token cursor helpers, imports,

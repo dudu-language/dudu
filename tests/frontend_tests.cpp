@@ -256,6 +256,7 @@ void test_emitted_local_expression_type_inference() {
         {"flag", "bool"},
         {"count", "i32"},
         {"player", "*const[Player]"},
+        {"item_ptr", "*Item"},
         {"queue", "storage[Queue[i32]]"},
         {"scale", "f32"},
     };
@@ -279,6 +280,8 @@ void test_emitted_local_expression_type_inference() {
            "*i32");
     assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("*&count"), locals, functions) ==
            "i32");
+    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("*item_ptr"), locals, functions) ==
+           "Item");
     assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("not flag"), locals, functions) ==
            "bool");
     assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("count + 2"), locals, functions) ==
