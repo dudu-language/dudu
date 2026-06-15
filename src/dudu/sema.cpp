@@ -984,7 +984,13 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
             : (expr.range.end.column > expr.range.start.column ? &expr.location : nullptr);
     switch (expr.kind) {
     case ExprKind::Unknown:
-        return infer_expr(scope, expr.text, use_location);
+        if (trim(expr.text).empty()) {
+            return {};
+        }
+        if (use_location != nullptr) {
+            fail(*use_location, "unsupported expression: " + trim(expr.text));
+        }
+        return {};
     case ExprKind::BoolLiteral:
         return "bool";
     case ExprKind::IntLiteral:

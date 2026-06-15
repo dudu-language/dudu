@@ -137,6 +137,9 @@ void check_statement(const Stmt& stmt) {
         throw CompileError(stmt.location, "unsupported Python feature: pattern matching");
     }
     if (stmt.kind == StmtKind::Unknown) {
+        if (!trim_copy(stmt.text).empty()) {
+            throw CompileError(stmt.location, "unsupported statement: " + trim_copy(stmt.text));
+        }
         check_unsupported_text(stmt.location, trim_copy(stmt.text));
     } else {
         check_expr(stmt.expr);

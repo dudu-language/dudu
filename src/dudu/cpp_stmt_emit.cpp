@@ -357,7 +357,7 @@ std::string lower_lambda_expr(const Expr& expr, const std::vector<std::string>& 
 std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases,
                        const std::map<std::string, std::string>& locals) {
     if (expr.text.empty() || expr.kind == ExprKind::Unknown) {
-        return lower_expr(expr.text, aliases, locals);
+        return {};
     }
     switch (expr.kind) {
     case ExprKind::BoolLiteral:
@@ -857,7 +857,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         return;
     }
     if (stmt.kind == StmtKind::Unknown) {
-        out << indent(depth) << lower_expr(text, aliases, locals) << ";\n";
+        return;
     }
 }
 

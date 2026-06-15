@@ -209,12 +209,9 @@ Already structured:
 
 Still too string-based:
 
-- remaining semantic fallback paths for expression shapes still parsed as
-  `Unknown`
 - raw string fallback overloads kept for legacy expression inference while AST
   coverage is incomplete
-- C++ emission fallback paths for unknown expressions, C++ escapes, and raw
-  macro shapes
+- C++ escape hatches and raw macro shapes
 - user-facing macro/decorator forms still need deeper AST nodes
 - lambda parameter declarations and target-type-aware lambda checking remain
   shallow
@@ -514,16 +511,12 @@ arguments parsed through expression lists.
 
 Dudu-defined function calls, function-pointer calls, static class functions,
 Dudu-visible method calls, native calls, constructor calls, and template calls
-now type-check parsed argument `Expr` nodes directly. Remaining call-related
-string fallback is limited to unsupported expression shapes and the old raw
-inference path.
+now type-check parsed argument `Expr` nodes directly.
 
 C++ statement emission now lowers return values, assert/debug_assert
 conditions, raise values, if/elif/while conditions, for iterables, and bare
 expression statements from parsed `Expr` nodes where those nodes are
-structurally reliable. Complex collection literals, lambdas, template calls,
-native calls, and unsupported expression shapes still fall back to the existing
-string lowering path.
+structurally reliable.
 
 Assert and debug_assert statements now store separate condition and message
 expression nodes. Semantic checks and C++ emission no longer split their
@@ -591,9 +584,15 @@ rewrite.
 `break` and `continue` statements now emit directly from their `StmtKind`
 instead of falling through the unknown-statement raw text path.
 
+Nonempty `Unknown` expressions are rejected during semantic checking instead of
+calling the old raw expression inference path. Unknown expressions also no
+longer lower as raw C++ text during C++ emission. Use `cpp(...)` for explicit
+native escape hatches.
+
 The old raw-text compound-assignment normalization fallback has been removed.
 Compound assignment is emitted only through the parsed `CompoundAssign` node;
-the statement catch-all is now limited to `Unknown` statements.
+the statement catch-all no longer emits raw statement text for `Unknown`
+statements.
 
 Template-call semantic inference now has an AST path that uses parsed template
 arguments and parsed runtime arguments. Native/header interop overload checks
