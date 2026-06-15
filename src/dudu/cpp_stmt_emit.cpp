@@ -4,6 +4,7 @@
 #include "dudu/ast_expr.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/control_flow.hpp"
+#include "dudu/cpp_expr_call_emit.hpp"
 #include "dudu/cpp_expr_emit.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/cpp_match_emit.hpp"
@@ -218,6 +219,10 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
             return;
         }
         if (stmt.target_expr.kind != ExprKind::Unknown) {
+            if (const auto swizzle = lower_swizzle_assignment(stmt, aliases, locals, symbols)) {
+                out << indent(depth) << *swizzle << ";\n";
+                return;
+            }
             if (const auto call = lower_index_assignment_hook(stmt, aliases, locals, symbols)) {
                 out << indent(depth) << *call << ";\n";
                 return;

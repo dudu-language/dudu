@@ -9,6 +9,7 @@
 #include "dudu/source.hpp"
 
 #include <optional>
+#include <set>
 #include <string_view>
 
 namespace dudu {
@@ -295,6 +296,23 @@ std::optional<std::string> swizzle_type_for_type(const Symbols& symbols,
         }
     }
     return class_name;
+}
+
+std::optional<std::string> swizzle_assignment_type_for_type(const Symbols& symbols,
+                                                            const SourceLocation& location,
+                                                            const std::string& receiver_type,
+                                                            const std::string& swizzle) {
+    const auto component_set = swizzle_component_set(swizzle);
+    if (!component_set) {
+        return std::nullopt;
+    }
+    std::set<char> seen;
+    for (const char ch : swizzle) {
+        if (!seen.insert(ch).second) {
+            fail(location, "swizzle assignment cannot repeat component: " + swizzle);
+        }
+    }
+    return swizzle_type_for_type(symbols, receiver_type, swizzle);
 }
 
 bool method_signature_for_type(const Symbols& symbols, std::string receiver_type,

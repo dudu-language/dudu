@@ -1,0 +1,22 @@
+class Vec2:
+    x: i32
+    y: i32
+
+
+class Color4:
+    r: i32
+    g: i32
+    b: i32
+    a: i32
+
+
+def main() -> i32:
+    pos: Vec2 = Vec2(1, 2)
+    pos.yx = Vec2(10, 20)
+
+    color: Color4 = Color4(1, 2, 3, 4)
+    color.bgra = Color4(30, 20, 10, 40)
+
+    if pos.x == 20 and pos.y == 10 and color.r == 10 and color.g == 20 and color.b == 30 and color.a == 40:
+        return 42
+    return 1

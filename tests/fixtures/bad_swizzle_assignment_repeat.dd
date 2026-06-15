@@ -1,0 +1,9 @@
+class Vec2:
+    x: i32
+    y: i32
+
+
+def main() -> i32:
+    pos: Vec2 = Vec2(1, 2)
+    pos.xx = Vec2(10, 20)
+    return pos.x

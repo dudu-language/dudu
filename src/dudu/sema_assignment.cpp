@@ -10,9 +10,33 @@
 #include "dudu/sema_ops.hpp"
 
 #include <optional>
+#include <string_view>
 #include <vector>
 
 namespace dudu {
+namespace {
+
+bool is_swizzle_name(std::string_view name) {
+    if (name.size() < 2 || name.size() > 4) {
+        return false;
+    }
+    for (const std::string_view set :
+         {std::string_view("xyzw"), std::string_view("rgba"), std::string_view("stpq")}) {
+        bool matches = true;
+        for (const char ch : name) {
+            if (set.find(ch) == std::string_view::npos) {
+                matches = false;
+                break;
+            }
+        }
+        if (matches) {
+            return true;
+        }
+    }
+    return false;
+}
+
+} // namespace
 
 std::string assignment_target_type(FunctionScope& scope, const Stmt& stmt,
                                    const BodyCheckCallbacks& callbacks) {
@@ -72,6 +96,15 @@ std::string assignment_target_type(FunctionScope& scope, const Stmt& stmt,
         return local->second;
     }
     if (stmt.target_expr.kind == ExprKind::Member) {
+        if (stmt.target_expr.children.size() == 1 && is_swizzle_name(stmt.target_expr.name)) {
+            const Expr& receiver = stmt.target_expr.children.front();
+            const std::string receiver_type =
+                callbacks.infer_expr(scope, receiver, &target_location);
+            if (const auto swizzle = swizzle_assignment_type_for_type(
+                    scope.symbols, target_location, receiver_type, stmt.target_expr.name)) {
+                return *swizzle;
+            }
+        }
         if (const std::optional<std::string> path = member_path_from_expr(stmt.target_expr)) {
             return member_path_type(scope.symbols, scope.locals, &target_location,
                                     normalize_current_class_path(scope, *path, &target_location),

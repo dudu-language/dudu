@@ -241,10 +241,13 @@ swizzle mechanism.
 Status: same-width Dudu-native `xyzw`, `rgba`, and `stpq` read swizzles are
 implemented for local class receivers with matching component fields. Repeated
 read components such as `v.xx`, `color.rrrr`, and `coord.qqqq` are allowed.
-Write swizzles, different-width result construction, imported vector metadata,
-and swizzle assignment remain compiler-architecture work. Same-width swizzles
-also work on expression receivers such as `make_color().bgra`; emission uses a
-single-evaluation temporary for non-local receivers.
+Same-width write swizzles such as `v.yx = other` and `color.bgra = other`
+write component-by-component and reject repeated write components such as
+`v.xx = other`. Different-width result construction, imported vector metadata,
+and imported vector swizzle assignment remain compiler-architecture work.
+Same-width read swizzles also work on expression receivers such as
+`make_color().bgra`; emission uses a single-evaluation temporary for non-local
+receivers.
 
 ## Library-Defined Indexing
 

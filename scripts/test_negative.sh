@@ -117,6 +117,7 @@ expect_fail bad_array_column_slice --emit-cpp "array slicing requires one-dimens
 expect_fail bad_swizzle_width --emit-cpp "unknown field: value.xyx"
 expect_fail bad_swizzle_mixed_sets --emit-cpp "unknown field: color.rgxy"
 expect_fail bad_swizzle_stpq_mixed_sets --emit-cpp "unknown field: coord.stxy"
+expect_fail bad_swizzle_assignment_repeat --emit-cpp "swizzle assignment cannot repeat component: xx"
 "$repo_root/build/dudu" "$repo_root/tests/fixtures/bad_imported_swizzle.dd" \
     --emit-cpp "$repo_root/build/bad_imported_swizzle.cpp"
 if "${CXX:-c++}" -std=c++20 -I"$repo_root/tests/fixtures" \

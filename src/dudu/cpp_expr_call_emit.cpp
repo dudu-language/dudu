@@ -133,6 +133,19 @@ bool is_supported_swizzle(const std::string& swizzle) {
     return false;
 }
 
+std::optional<std::string_view> swizzle_component_order(const std::string& swizzle) {
+    if (!is_supported_swizzle(swizzle)) {
+        return std::nullopt;
+    }
+    for (const std::string_view set :
+         {std::string_view("xyzw"), std::string_view("rgba"), std::string_view("stpq")}) {
+        if (set.find(swizzle.front()) != std::string_view::npos) {
+            return set.substr(0, swizzle.size());
+        }
+    }
+    return std::nullopt;
+}
+
 bool looks_like_local_dudu_class_type(const std::string& type) {
     const std::string trimmed = trim_copy(type);
     return !trimmed.empty() && trimmed.find('.') == std::string::npos &&
@@ -342,6 +355,35 @@ std::optional<std::string> lower_swizzle_expr(const Expr& expr,
         out << "__dudu_swizzle_value." << expr.name[i];
     }
     out << "}; }())";
+    return out.str();
+}
+
+std::optional<std::string>
+lower_swizzle_assignment(const Stmt& stmt, const std::vector<std::string>& aliases,
+                         const std::map<std::string, std::string>& locals, const Symbols* symbols) {
+    if (stmt.target_expr.kind != ExprKind::Member || stmt.target_expr.children.size() != 1) {
+        return std::nullopt;
+    }
+    const Expr& receiver_expr = stmt.target_expr.children.front();
+    if (!is_supported_swizzle(stmt.target_expr.name)) {
+        return std::nullopt;
+    }
+    const auto rhs_order = swizzle_component_order(stmt.target_expr.name);
+    if (!rhs_order) {
+        return std::nullopt;
+    }
+    std::string receiver = lower_expr(receiver_expr, aliases, locals, symbols);
+    if (receiver.empty()) {
+        return std::nullopt;
+    }
+    std::ostringstream out;
+    out << "([&]() { auto&& __dudu_swizzle_rhs = "
+        << lower_expr(stmt.value_expr, aliases, locals, symbols) << "; ";
+    for (size_t i = 0; i < stmt.target_expr.name.size(); ++i) {
+        out << receiver << "." << stmt.target_expr.name[i] << " = __dudu_swizzle_rhs."
+            << (*rhs_order)[i] << "; ";
+    }
+    out << "}())";
     return out.str();
 }
 

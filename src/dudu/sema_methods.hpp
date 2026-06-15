@@ -22,6 +22,10 @@ std::optional<std::string> field_type_for_type(const Symbols& symbols,
 std::optional<std::string> swizzle_type_for_type(const Symbols& symbols,
                                                  const std::string& receiver_type,
                                                  const std::string& swizzle);
+std::optional<std::string> swizzle_assignment_type_for_type(const Symbols& symbols,
+                                                            const SourceLocation& location,
+                                                            const std::string& receiver_type,
+                                                            const std::string& swizzle);
 
 bool method_signature_for_type(const Symbols& symbols, std::string receiver_type,
                                const std::string& method_name, FunctionSignature& signature,
