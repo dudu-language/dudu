@@ -58,6 +58,11 @@ add_library(dudu_frontend
     src/dudu/sema_constexpr.cpp
     src/dudu/sema_constructors.cpp
     src/dudu/sema_enum.cpp
+    src/dudu/sema_expr.cpp
+    src/dudu/sema_expr_call.cpp
+    src/dudu/sema_expr_cpp_escape.cpp
+    src/dudu/sema_expr_support.cpp
+    src/dudu/sema_expr_template.cpp
     src/dudu/sema_function_type.cpp
     src/dudu/sema_generics.cpp
     src/dudu/sema_index.cpp

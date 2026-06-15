@@ -1,0 +1,336 @@
+#include "dudu/sema_expr_internal.hpp"
+
+namespace dudu {
+std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr,
+                                    const SourceLocation* location) {
+    if (expr.template_args.empty() && expr.template_type_args.empty()) {
+        if (location != nullptr) {
+            sema_expr_fail(*location, "template call expects at least 1 type argument");
+        }
+        return {};
+    }
+    const std::string callee = template_call_callee(expr);
+    const std::string callee_base = call_callee_text(expr);
+
+    if (starts_with(expr.name, "*")) {
+        const size_t arg_count = !expr.template_type_args.empty() ? expr.template_type_args.size()
+                                                                  : expr.template_args.size();
+        if (location != nullptr && arg_count == 0) {
+            sema_expr_fail(*location, "pointer casts expect at least 1 type argument");
+        }
+        if (location != nullptr && expr.children.size() != 1) {
+            sema_expr_fail(*location, "pointer casts expect 1 argument, got " +
+                                          std::to_string(expr.children.size()));
+        }
+        const std::string pointee = !expr.template_type_args.empty()
+                                        ? trim(expr.name.substr(1)) + "[" +
+                                              join_type_ref_texts(expr.template_type_args) + "]"
+                                        : trim(callee.substr(1));
+        const TypeRef pointee_ref = parse_type_text(pointee, expr.location);
+        if (const auto unknown = unknown_type_ref(scope.symbols, pointee_ref)) {
+            if (location != nullptr) {
+                const SourceLocation type_location =
+                    unknown->second.line > 0 ? unknown->second : expr.location;
+                sema_expr_fail(type_location, "unknown pointer cast type: " + unknown->first);
+            }
+            return {};
+        }
+        for (const Expr& arg : expr.children) {
+            (void)infer_expr_ast(scope, arg, location);
+        }
+        return "*" + pointee_ref.text;
+    }
+
+    const auto allocation = infer_allocation_call(scope.symbols, location, expr.name,
+                                                  template_type_refs(expr), expr.children.size());
+    if (allocation) {
+        for (const Expr& arg : expr.children) {
+            (void)infer_expr_ast(scope, arg, location);
+        }
+        return *allocation;
+    }
+    if (expr.name == "sizeof" || expr.name == "alignof") {
+        const std::vector<TypeRef> type_args = template_type_refs(expr);
+        const size_t arg_count = type_args.size();
+        if (location != nullptr && arg_count != 1) {
+            sema_expr_fail(*location, expr.name + " expects 1 type argument, got " +
+                                          std::to_string(arg_count));
+        }
+        if (arg_count == 1 && location != nullptr) {
+            if (const auto unknown = unknown_type_ref(scope.symbols, type_args.front())) {
+                const SourceLocation type_location =
+                    unknown->second.line > 0 ? unknown->second : type_args.front().location;
+                sema_expr_fail(type_location, "unknown " + expr.name + " type: " + unknown->first);
+            }
+        }
+        return "usize";
+    }
+    if (expr.name == "offsetof") {
+        const std::vector<TypeRef> type_args = template_type_refs(expr);
+        const size_t arg_count = type_args.size();
+        if (location != nullptr && arg_count != 1) {
+            sema_expr_fail(*location,
+                           "offsetof expects 1 type argument, got " + std::to_string(arg_count));
+        }
+        if (location != nullptr && expr.children.size() != 1) {
+            sema_expr_fail(*location, "offsetof expects 1 field argument, got " +
+                                          std::to_string(expr.children.size()));
+        }
+        if (location != nullptr && expr.children.size() == 1 &&
+            !is_offsetof_field_expr(expr.children.front())) {
+            sema_expr_fail(node_location(*location, expr.children.front()),
+                           "offsetof field argument must be a field name");
+        }
+        if (arg_count == 1 && location != nullptr) {
+            if (const auto unknown = unknown_type_ref(scope.symbols, type_args.front())) {
+                const SourceLocation type_location =
+                    unknown->second.line > 0 ? unknown->second : type_args.front().location;
+                sema_expr_fail(type_location, "unknown offsetof type: " + unknown->first);
+            }
+        }
+        return "usize";
+    }
+
+    if (const auto fn = scope.symbols.function_decls.find(callee_base);
+        fn != scope.symbols.function_decls.end() && !fn->second->generic_params.empty()) {
+        const std::vector<TypeRef> type_args = template_type_refs(expr);
+        if (location != nullptr && type_args.size() != fn->second->generic_params.size()) {
+            sema_expr_fail(*location, "function " + callee_base + " expects " +
+                                          std::to_string(fn->second->generic_params.size()) +
+                                          " type arguments, got " +
+                                          std::to_string(type_args.size()));
+        }
+        if (location != nullptr) {
+            for (const TypeRef& type_arg : type_args) {
+                if (const auto unknown = unknown_type_ref(scope.symbols, type_arg)) {
+                    const SourceLocation type_location =
+                        unknown->second.line > 0 ? unknown->second : type_arg.location;
+                    sema_expr_fail(type_location,
+                                   "unknown generic argument type: " + unknown->first);
+                }
+            }
+        }
+        const FunctionSignature signature = instantiate_generic_signature(*fn->second, type_args);
+        check_call_args_ast(scope, callee, signature, expr.children, location);
+        return signature.return_type;
+    }
+
+    if (const auto klass = scope.symbols.classes.find(resolve_alias(scope.symbols, callee_base));
+        klass != scope.symbols.classes.end() && !klass->second->generic_params.empty()) {
+        const std::vector<TypeRef> type_args = template_type_refs(expr);
+        if (location != nullptr && type_args.size() != klass->second->generic_params.size()) {
+            sema_expr_fail(*location, "type " + callee_base + " expects " +
+                                          std::to_string(klass->second->generic_params.size()) +
+                                          " type arguments, got " +
+                                          std::to_string(type_args.size()));
+        }
+        if (location != nullptr) {
+            for (const TypeRef& type_arg : type_args) {
+                if (const auto unknown = unknown_type_ref(scope.symbols, type_arg)) {
+                    const SourceLocation type_location =
+                        unknown->second.line > 0 ? unknown->second : type_arg.location;
+                    sema_expr_fail(type_location,
+                                   "unknown generic argument type: " + unknown->first);
+                }
+            }
+        }
+        const ClassDecl instantiated = instantiate_generic_class(*klass->second, type_args, callee);
+        reject_abstract_construction(scope.symbols, callee_base, location);
+        check_constructor_args_ast(
+            scope, instantiated, expr.children, location, infer_expr_ast,
+            [&](const std::string& expected, const Expr& value, const std::string& got) {
+                return can_assign_ast(scope, expected, value, got);
+            });
+        return callee;
+    }
+
+    if (const auto signature = native_signature_for_call(
+            scope, callee, expr.children, location, infer_expr_ast,
+            [&](const std::string& expected, const Expr& value, const std::string& got) {
+                return can_assign_ast(scope, expected, value, got);
+            })) {
+        return signature->return_type;
+    }
+    const size_t method_dot = callee_base.rfind('.');
+    if (method_dot != std::string::npos && is_member_path(callee_base)) {
+        const std::string receiver = trim(callee_base.substr(0, method_dot));
+        const std::string method_name = template_method_name(expr, callee_base, method_dot);
+        FunctionSignature signature;
+        if (!scope.locals.contains(receiver) && scope.symbols.classes.contains(receiver) &&
+            static_method_signature_for_type(scope.symbols, receiver, method_name, signature,
+                                             location)) {
+            check_call_args_ast(scope, callee, signature, expr.children, location);
+            return signature.return_type;
+        }
+        const std::string receiver_type =
+            member_path_type(scope.symbols, scope.locals, nullptr, receiver, "");
+        if (scope.locals.contains(receiver) && (receiver_type.empty() || receiver_type == "auto")) {
+            for (const Expr& arg : expr.children) {
+                (void)infer_expr_ast(scope, arg, location);
+            }
+            return "auto";
+        }
+        if (method_signature_for_type(scope.symbols, receiver_type, method_name, signature,
+                                      location)) {
+            const std::vector<FunctionSignature> signatures =
+                method_signatures_for_type(scope.symbols, receiver_type, method_name);
+            if (const auto match = matching_signature_ast(scope, signatures, expr.children)) {
+                check_call_args_ast(scope, callee, *match, expr.children, location);
+                return match->return_type;
+            }
+            if (foreign_cpp_type_name(scope.symbols, resolve_alias(scope.symbols, receiver_type))) {
+                for (const Expr& arg : expr.children) {
+                    (void)infer_expr_ast(scope, arg, location);
+                }
+                return "auto";
+            }
+            check_call_args_ast(scope, callee, signature, expr.children, location);
+            return signature.return_type;
+        }
+        if (foreign_cpp_type_name(scope.symbols, resolve_alias(scope.symbols, receiver_type))) {
+            for (const Expr& arg : expr.children) {
+                (void)infer_expr_ast(scope, arg, location);
+            }
+            return "auto";
+        }
+    }
+    if (known_template_constructor_type(scope, callee)) {
+        for (const Expr& arg : expr.children) {
+            (void)infer_expr_ast(scope, arg, location);
+        }
+        return callee;
+    }
+    if (location != nullptr && callee_base.find('.') == std::string::npos &&
+        is_plain_identifier(callee_base) && !known_type(scope.symbols, callee_base)) {
+        sema_expr_fail(*location, "unknown function: " + callee);
+    }
+    if (method_dot != std::string::npos) {
+        const std::string prefix = trim(callee_base.substr(0, method_dot));
+        if (native_import_path_prefix(scope.symbols, callee_base)) {
+            for (const Expr& arg : expr.children) {
+                (void)infer_expr_ast(scope, arg, location);
+            }
+            return "auto";
+        }
+        if (location != nullptr) {
+            sema_expr_fail(*location, "unknown function: " + callee);
+        }
+    }
+    if (!expr.callee.empty() && expr.callee.front().kind != ExprKind::Name &&
+        expr.callee.front().kind != ExprKind::Member) {
+        if (location != nullptr) {
+            sema_expr_fail(*location, "unsupported template call expression: " + callee_base);
+        }
+        return {};
+    }
+    if (location != nullptr) {
+        sema_expr_fail(*location, "unknown template call: " + callee);
+    }
+    return {};
+}
+
+std::string infer_constructor_call_ast(const FunctionScope& scope, const Expr& expr,
+                                       const std::string& callee, const SourceLocation* location) {
+    if (const auto klass = scope.symbols.classes.find(resolve_alias(scope.symbols, callee));
+        klass != scope.symbols.classes.end()) {
+        reject_abstract_construction(scope.symbols, callee, location);
+        check_constructor_args_ast(
+            scope, *klass->second, expr.children, location, infer_expr_ast,
+            [&](const std::string& expected, const Expr& value, const std::string& got) {
+                return can_assign_ast(scope, expected, value, got);
+            });
+        return callee;
+    }
+    for (const Expr& arg : expr.children) {
+        (void)infer_expr_ast(scope, arg, location);
+    }
+    return callee;
+}
+
+std::string infer_builtin_call_ast(const FunctionScope& scope, const Expr& expr,
+                                   const std::string& callee, const SourceLocation* location) {
+    auto check_arity = [&](size_t min, size_t max) {
+        if (location != nullptr && (expr.children.size() < min || expr.children.size() > max)) {
+            std::ostringstream message;
+            message << callee << " expects ";
+            if (min == max) {
+                message << min;
+            } else {
+                message << min << " to " << max;
+            }
+            message << " arguments, got " << expr.children.size();
+            sema_expr_fail(*location, message.str());
+        }
+    };
+
+    if (callee == "len") {
+        check_arity(1, 1);
+        for (const Expr& arg : expr.children) {
+            (void)infer_expr_ast(scope, arg, location);
+        }
+        return "usize";
+    }
+    if (callee == "range") {
+        check_arity(1, 3);
+        for (const Expr& arg : expr.children) {
+            (void)infer_expr_ast(scope, arg, location);
+        }
+        return "range";
+    }
+    if (callee == "min" || callee == "max") {
+        check_arity(2, 2);
+        std::string first;
+        for (size_t i = 0; i < expr.children.size(); ++i) {
+            const std::string got = infer_expr_ast(scope, expr.children[i], location);
+            if (i == 0) {
+                first = got;
+                continue;
+            }
+            if (location != nullptr && !can_assign_ast(scope, first, expr.children[i], got)) {
+                sema_expr_fail(*location, callee + " argument 2 expects " + first + ", got " + got);
+            }
+        }
+        return first.empty() ? "auto" : first;
+    }
+    if (callee == "print") {
+        for (const Expr& arg : expr.children) {
+            (void)infer_expr_ast(scope, arg, location);
+        }
+        return "void";
+    }
+    if (is_deallocation_call(callee)) {
+        std::vector<std::string> types;
+        for (const Expr& arg : expr.children) {
+            types.push_back(infer_expr_ast(scope, arg, location));
+        }
+        if (location != nullptr) {
+            check_deallocation_args(*location, callee, types);
+        }
+        return "void";
+    }
+    return {};
+}
+
+std::optional<std::string> infer_pointer_cast_call_ast(const FunctionScope& scope, const Expr& expr,
+                                                       const std::string& callee,
+                                                       const SourceLocation* location) {
+    if (!starts_with(callee, "*")) {
+        return std::nullopt;
+    }
+    const TypeRef type_ref = parse_type_text(callee.substr(1), expr.location);
+    const std::string type = trim(type_ref.text);
+    if (const auto unknown = unknown_type_ref(scope.symbols, type_ref)) {
+        if (location != nullptr) {
+            const SourceLocation error_location =
+                unknown->second.line > 0 ? unknown->second : expr.location;
+            sema_expr_fail(error_location, "unknown pointer cast type: " + unknown->first);
+        }
+        return std::nullopt;
+    }
+    for (const Expr& arg : expr.children) {
+        (void)infer_expr_ast(scope, arg, location);
+    }
+    return "*" + type;
+}
+
+} // namespace dudu
