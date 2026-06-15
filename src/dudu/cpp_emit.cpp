@@ -4,6 +4,7 @@
 #include "dudu/cpp_emit_prelude.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/cpp_stmt_emit.hpp"
+#include "dudu/decorators.hpp"
 #include "dudu/sema_context.hpp"
 
 #include <map>
@@ -66,19 +67,14 @@ void emit_enums(std::ostringstream& out, const ModuleAst& module,
 }
 
 bool function_has_decorator(const FunctionDecl& fn, std::string_view name) {
-    for (const Decorator& decorator : fn.decorators) {
-        if (trim_copy(decorator.text) == name) {
-            return true;
-        }
-    }
-    return false;
+    return has_decorator(fn.decorators, name);
 }
 
 bool function_is_test(const FunctionDecl& fn) {
     for (const Decorator& decorator : fn.decorators) {
-        const std::string text = trim_copy(decorator.text);
-        if (text == "test" || text == "test.ignore" || text == "test.should_panic" ||
-            starts_with(text, "test.should_panic(")) {
+        if (decorator_matches(decorator, "test") || decorator_matches(decorator, "test.ignore") ||
+            decorator_matches(decorator, "test.should_panic") ||
+            decorator_call_matches(decorator, "test.should_panic")) {
             return true;
         }
     }
@@ -98,11 +94,9 @@ std::string cpp_string_literal(std::string text) {
 }
 
 std::string function_decorator_arg(const FunctionDecl& fn, std::string_view name) {
-    const std::string prefix = std::string(name) + "(";
     for (const Decorator& decorator : fn.decorators) {
-        const std::string text = trim_copy(decorator.text);
-        if (starts_with(text, prefix) && ends_with(text, ")")) {
-            return trim_copy(text.substr(prefix.size(), text.size() - prefix.size() - 1));
+        if (const std::optional<std::string> arg = decorator_first_arg_text(decorator, name)) {
+            return *arg;
         }
     }
     return {};

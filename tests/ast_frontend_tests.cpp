@@ -280,6 +280,50 @@ void test_dereference_postfix_expression_shape() {
     assert(template_cast.template_type_args.size() == 1);
 }
 
+void test_decorator_expression_ast_shape() {
+    const dudu::ModuleAst module = dudu::parse_source("@section(\".boot+fast\")\n"
+                                                      "def boot() -> void:\n"
+                                                      "    pass\n"
+                                                      "\n"
+                                                      "class Vec2:\n"
+                                                      "    x: i32\n"
+                                                      "\n"
+                                                      "    @operator(\"+\")\n"
+                                                      "    def add(self, other: Vec2) -> Vec2:\n"
+                                                      "        return self\n"
+                                                      "\n"
+                                                      "@test.should_panic(\"bad + input\")\n"
+                                                      "def panics():\n"
+                                                      "    raise \"bad + input\"\n",
+                                                      "decorator_ast.dd");
+
+    assert(module.functions.size() == 2);
+    assert(module.functions[0].decorators.size() == 1);
+    const dudu::Expr& section = module.functions[0].decorators[0].expr;
+    assert(section.kind == dudu::ExprKind::Call);
+    assert(section.name == "section");
+    assert(section.children.size() == 1);
+    assert(section.children[0].kind == dudu::ExprKind::StringLiteral);
+    assert(section.children[0].value == ".boot+fast");
+
+    assert(module.classes.size() == 1);
+    assert(module.classes[0].methods.size() == 1);
+    assert(module.classes[0].methods[0].decorators.size() == 1);
+    const dudu::Expr& op = module.classes[0].methods[0].decorators[0].expr;
+    assert(op.kind == dudu::ExprKind::Call);
+    assert(op.name == "operator");
+    assert(op.children.size() == 1);
+    assert(op.children[0].kind == dudu::ExprKind::StringLiteral);
+    assert(op.children[0].value == "+");
+
+    assert(module.functions[1].decorators.size() == 1);
+    const dudu::Expr& panic = module.functions[1].decorators[0].expr;
+    assert(panic.kind == dudu::ExprKind::Call);
+    assert(panic.children.size() == 1);
+    assert(panic.children[0].kind == dudu::ExprKind::StringLiteral);
+    assert(panic.children[0].value == "bad + input");
+}
+
 void test_type_ast_shape() {
     const dudu::ModuleAst module =
         dudu::parse_source("type PlayerList = list[*Player]\n"
@@ -472,6 +516,7 @@ int main() {
         test_statement_ast_shape();
         test_expression_ast_shape();
         test_dereference_postfix_expression_shape();
+        test_decorator_expression_ast_shape();
         test_type_ast_shape();
         test_generic_decl_ast_shape();
         test_payload_enum_ast_shape();

@@ -22,7 +22,8 @@ Already structured:
 - parameters
 - enums
 - constants
-- decorators
+- decorators, including AST-backed helper lookup for recognized decorator names
+  and first arguments
 - native header metadata
 - direct parser construction of statement nodes for function and method bodies
 - parsed `Stmt` bodies stored on functions and methods
@@ -730,9 +731,11 @@ nodes instead of raw initializer strings.
 Module constants, class constants, static fields, and `static_assert`
 declarations now store parsed expression nodes. C++ emission and semantic-token
 collection use those declaration expression nodes instead of raw strings.
-Decorators now keep parsed expression nodes alongside their original text,
-giving macro/decorator work an AST-backed entry point without breaking existing
-compiler-recognized decorator checks.
+Decorators now keep parsed expression nodes alongside their original text, and
+compiler-recognized decorators use a shared helper over those parsed expression
+nodes for name matching and first-argument extraction. Decorator parsing has
+regression coverage for string arguments containing operator characters, such as
+`@operator("+")`.
 Enum value initializers now store parsed expression nodes as well; enum C++
 emission and semantic-token collection use those nodes.
 Simple integer constant evaluation for `static_assert` failure diagnostics uses

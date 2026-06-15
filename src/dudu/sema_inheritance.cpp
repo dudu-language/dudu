@@ -1,5 +1,7 @@
 #include "dudu/sema_inheritance.hpp"
 
+#include "dudu/decorators.hpp"
+
 #include <algorithm>
 #include <map>
 #include <set>
@@ -52,12 +54,7 @@ bool derives_from_impl(const Symbols& symbols, const std::string& derived, const
 }
 
 bool has_decorator(const FunctionDecl& fn, std::string_view name) {
-    for (const Decorator& decorator : fn.decorators) {
-        if (trim(decorator.text) == name) {
-            return true;
-        }
-    }
-    return false;
+    return dudu::has_decorator(fn.decorators, name);
 }
 
 FunctionSignature inherited_method_signature_without_self(const FunctionDecl& method) {

@@ -1,5 +1,6 @@
 #include "dudu/sema_ops.hpp"
 
+#include "dudu/decorators.hpp"
 #include "dudu/type_compat.hpp"
 
 #include <set>
@@ -77,21 +78,9 @@ bool is_supported_dudu_operator(const std::string& op) {
     return operators.contains(op);
 }
 
-std::string unquoted(std::string text) {
-    text = trim(std::move(text));
-    if (text.size() >= 2 && ((text.front() == '"' && text.back() == '"') ||
-                             (text.front() == '\'' && text.back() == '\''))) {
-        return text.substr(1, text.size() - 2);
-    }
-    return text;
-}
-
 bool method_has_operator(const FunctionDecl& method, const std::string& op) {
     for (const Decorator& decorator : method.decorators) {
-        const std::string text = trim(decorator.text);
-        const std::string prefix = "operator(";
-        if (text.starts_with(prefix) && text.ends_with(")") &&
-            unquoted(text.substr(prefix.size(), text.size() - prefix.size() - 1)) == op) {
+        if (decorator_first_string_arg(decorator, "operator") == op) {
             return true;
         }
     }

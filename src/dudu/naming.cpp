@@ -1,5 +1,6 @@
 #include "dudu/naming.hpp"
 
+#include "dudu/decorators.hpp"
 #include "dudu/sema.hpp"
 
 #include <cctype>
@@ -29,12 +30,7 @@ bool is_pascal_case(const std::string& name) {
 }
 
 bool has_decorator(const FunctionDecl& fn, std::string_view name) {
-    for (const Decorator& decorator : fn.decorators) {
-        if (decorator.text == name) {
-            return true;
-        }
-    }
-    return false;
+    return dudu::has_decorator(fn.decorators, name);
 }
 
 } // namespace

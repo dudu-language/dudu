@@ -1,4 +1,5 @@
 #include "dudu/cpp_lower.hpp"
+#include "dudu/decorators.hpp"
 #include "dudu/sema_context.hpp"
 #include "dudu/sema_inheritance.hpp"
 #include "dudu/source.hpp"
@@ -26,24 +27,15 @@ void check_supported_type_shape(const SourceLocation& location, const TypeRef& t
     }
 }
 
-bool decorator_is_call(std::string_view text, std::string_view name) {
-    return !text.empty() && starts_with(text, std::string(name) + "(") && text.back() == ')';
-}
-
 bool has_decorator(const FunctionDecl& fn, std::string_view name) {
-    for (const Decorator& decorator : fn.decorators) {
-        if (trim(decorator.text) == name) {
-            return true;
-        }
-    }
-    return false;
+    return dudu::has_decorator(fn.decorators, name);
 }
 
 bool is_test_decorator(const FunctionDecl& fn) {
     for (const Decorator& decorator : fn.decorators) {
-        const std::string text = trim(decorator.text);
-        if (text == "test" || text == "test.ignore" || text == "test.should_panic" ||
-            decorator_is_call(text, "test.should_panic"))
+        if (decorator_matches(decorator, "test") || decorator_matches(decorator, "test.ignore") ||
+            decorator_matches(decorator, "test.should_panic") ||
+            decorator_call_matches(decorator, "test.should_panic"))
             return true;
     }
     return false;
@@ -54,17 +46,7 @@ bool is_virtual_like(const FunctionDecl& fn) {
 }
 
 std::string decorator_arg(const Decorator& decorator, std::string_view name) {
-    const std::string text = trim(decorator.text);
-    const std::string prefix = std::string(name) + "(";
-    if (text.empty() || !starts_with(text, prefix) || text.back() != ')') {
-        return {};
-    }
-    std::string value = trim(text.substr(prefix.size(), text.size() - prefix.size() - 1));
-    if (value.size() >= 2 && ((value.front() == '"' && value.back() == '"') ||
-                              (value.front() == '\'' && value.back() == '\''))) {
-        value = value.substr(1, value.size() - 2);
-    }
-    return value;
+    return decorator_first_string_arg(decorator, name).value_or("");
 }
 
 std::string operator_decorator_arg(const FunctionDecl& fn) {
@@ -169,28 +151,30 @@ void check_target_decorator_mode(const ModuleAst& module, const Decorator& decor
     if ((text == "cuda.global" || text == "cuda.device" || text == "cuda.host") && mode != "cuda") {
         fail(decorator.location, "@" + text + " requires [target] mode = \"cuda\"");
     }
-    if ((text == "shader.compute" || decorator_is_call(text, "workgroup_size")) &&
+    if ((text == "shader.compute" || decorator_call_matches(decorator, "workgroup_size")) &&
         mode != "shader") {
         fail(decorator.location, "@" + text + " requires [target] mode = \"shader\"");
     }
 }
 
 void check_class_decorator(const Decorator& decorator) {
-    const std::string text = trim(decorator.text);
-    if (text == "packed" || decorator_is_call(text, "align")) {
+    const std::string text = decorator_name(decorator);
+    if (text == "packed" || decorator_call_matches(decorator, "align")) {
         return;
     }
     fail(decorator.location, "unknown class decorator: @" + text);
 }
 
 void check_function_decorator(const ModuleAst& module, const Decorator& decorator) {
-    const std::string text = trim(decorator.text);
+    const std::string text = decorator_name(decorator);
     if (text == "inline" || text == "constexpr" || text == "extern_c" || text == "cuda.global" ||
         text == "cuda.device" || text == "cuda.host" || text == "shader.compute" ||
-        text == "virtual" || text == "override" || text == "abstract" ||
-        decorator_is_call(text, "operator") || text == "test" || text == "test.ignore" ||
-        text == "test.should_panic" || decorator_is_call(text, "test.should_panic") ||
-        decorator_is_call(text, "workgroup_size") || decorator_is_call(text, "section")) {
+        text == "virtual" || text == "override" || text == "abstract" || text == "test" ||
+        text == "test.ignore" || text == "test.should_panic" ||
+        decorator_call_matches(decorator, "operator") ||
+        decorator_call_matches(decorator, "test.should_panic") ||
+        decorator_call_matches(decorator, "workgroup_size") ||
+        decorator_call_matches(decorator, "section")) {
         check_target_decorator_mode(module, decorator, text);
         return;
     }

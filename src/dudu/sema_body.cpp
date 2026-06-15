@@ -3,6 +3,7 @@
 #include "dudu/array_shape.hpp"
 #include "dudu/ast_expr.hpp"
 #include "dudu/control_flow.hpp"
+#include "dudu/decorators.hpp"
 #include "dudu/escapes.hpp"
 #include "dudu/naming.hpp"
 #include "dudu/sema_alloc.hpp"
@@ -33,12 +34,7 @@ bool is_array_literal(const Expr& expr) {
 }
 
 bool function_has_decorator(const FunctionDecl& fn, std::string_view name) {
-    for (const Decorator& decorator : fn.decorators) {
-        if (trim(decorator.text) == name) {
-            return true;
-        }
-    }
-    return false;
+    return dudu::has_decorator(fn.decorators, name);
 }
 
 void check_type_match(FunctionScope& scope, const std::string& expected, const Expr& expr,

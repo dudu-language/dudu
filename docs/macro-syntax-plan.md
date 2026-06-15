@@ -20,9 +20,12 @@ language.
   code when useful.
 - Macros should operate on AST nodes where possible.
 
-Status: decorators now keep a parsed expression node alongside their original
-text. Existing compiler-recognized decorators still use the stable text helpers
-where convenient, but future macro/decorator work has an AST-backed input shape.
+Status: decorators keep a parsed expression node alongside their original text.
+Compiler-recognized decorators use a shared helper over that parsed expression
+for name matching and first-argument extraction. The parser also has regression
+coverage for decorator string arguments containing operator characters, such as
+`@operator("+")`, so macro/decorator work has a structured input shape instead
+of relying on raw decorator text slicing.
 
 ## Decorator Macros
 

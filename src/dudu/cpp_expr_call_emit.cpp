@@ -3,6 +3,7 @@
 #include "dudu/ast_expr.hpp"
 #include "dudu/cpp_expr_emit.hpp"
 #include "dudu/cpp_lower.hpp"
+#include "dudu/decorators.hpp"
 #include "dudu/sema_enum.hpp"
 #include "dudu/sema_function_type.hpp"
 #include "dudu/sema_methods.hpp"
@@ -148,11 +149,9 @@ std::string unquoted_string_literal(std::string text) {
 }
 
 std::string decorator_arg(const FunctionDecl& fn, std::string_view name) {
-    const std::string prefix = std::string(name) + "(";
     for (const Decorator& decorator : fn.decorators) {
-        const std::string text = trim_copy(decorator.text);
-        if (starts_with(text, prefix) && ends_with(text, ")")) {
-            return trim_copy(text.substr(prefix.size(), text.size() - prefix.size() - 1));
+        if (const std::optional<std::string> arg = decorator_first_arg_text(decorator, name)) {
+            return *arg;
         }
     }
     return {};

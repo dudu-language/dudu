@@ -2,6 +2,7 @@
 
 #include "dudu/ast_expr.hpp"
 #include "dudu/cpp_lower.hpp"
+#include "dudu/decorators.hpp"
 
 #include <set>
 
@@ -9,16 +10,10 @@ namespace dudu {
 namespace {
 
 bool has_constexpr_decorator(const FunctionDecl& fn) {
-    for (const Decorator& decorator : fn.decorators) {
-        if (trim_copy(decorator.text) == "constexpr") {
-            return true;
-        }
-    }
-    return false;
+    return has_decorator(fn.decorators, "constexpr");
 }
 
-void check_expr_calls(const Expr& expr,
-                      const std::set<std::string>& constexpr_functions,
+void check_expr_calls(const Expr& expr, const std::set<std::string>& constexpr_functions,
                       const std::set<std::string>& dudu_functions) {
     if (expr.kind == ExprKind::Call || expr.kind == ExprKind::TemplateCall) {
         const std::string callee = call_callee_text(expr);

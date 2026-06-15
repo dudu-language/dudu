@@ -5,6 +5,35 @@
 #include <vector>
 
 namespace dudu {
+namespace {
+
+std::vector<bool> quoted_positions(std::string_view text) {
+    std::vector<bool> quoted(text.size(), false);
+    char quote = '\0';
+    bool escaped = false;
+    for (size_t i = 0; i < text.size(); ++i) {
+        const char c = text[i];
+        if (quote == '\0') {
+            if (c == '"' || c == '\'') {
+                quote = c;
+                quoted[i] = true;
+            }
+            continue;
+        }
+        quoted[i] = true;
+        if (escaped) {
+            escaped = false;
+        } else if (c == '\\') {
+            escaped = true;
+        } else if (c == quote) {
+            quote = '\0';
+        }
+    }
+    return quoted;
+}
+
+} // namespace
+
 size_t find_top_level_colon_before_assign(std::string_view text) {
     int bracket_depth = 0;
     int paren_depth = 0;
@@ -255,8 +284,12 @@ size_t find_top_level_member_dot(std::string_view text) {
     int bracket_depth = 0;
     int paren_depth = 0;
     int brace_depth = 0;
+    const std::vector<bool> quoted = quoted_positions(text);
     for (size_t pos = text.size(); pos > 0; --pos) {
         const size_t i = pos - 1;
+        if (quoted[i]) {
+            continue;
+        }
         const char c = text[i];
         if (c == ']') {
             ++bracket_depth;
@@ -286,8 +319,12 @@ size_t find_top_level_binary_operator(std::string_view text,
     int bracket_depth = 0;
     int paren_depth = 0;
     int brace_depth = 0;
+    const std::vector<bool> quoted = quoted_positions(text);
     for (size_t pos = text.size(); pos > 0; --pos) {
         const size_t i = pos - 1;
+        if (quoted[i]) {
+            continue;
+        }
         const char c = text[i];
         if (c == ']') {
             ++bracket_depth;

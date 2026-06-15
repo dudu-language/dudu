@@ -3,6 +3,7 @@
 #include "dudu/ast_expr.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/cpp_stmt_emit.hpp"
+#include "dudu/decorators.hpp"
 #include "dudu/sema_context.hpp"
 #include "dudu/sema_inheritance.hpp"
 
@@ -71,40 +72,26 @@ std::vector<size_t> class_emit_order(const std::vector<ClassDecl>& classes) {
 }
 
 std::string decorator_arg(const ClassDecl& klass, std::string_view name) {
-    const std::string prefix = std::string(name) + "(";
     for (const Decorator& decorator : klass.decorators) {
-        const std::string text = trim_copy(decorator.text);
-        if (starts_with(text, prefix) && ends_with(text, ")")) {
-            return trim_copy(text.substr(prefix.size(), text.size() - prefix.size() - 1));
+        if (const std::optional<std::string> arg = decorator_first_arg_text(decorator, name)) {
+            return *arg;
         }
     }
     return {};
 }
 
 bool class_has_decorator(const ClassDecl& klass, std::string_view name) {
-    for (const Decorator& decorator : klass.decorators) {
-        if (trim_copy(decorator.text) == name) {
-            return true;
-        }
-    }
-    return false;
+    return has_decorator(klass.decorators, name);
 }
 
 bool method_has_decorator(const FunctionDecl& method, std::string_view name) {
-    for (const Decorator& decorator : method.decorators) {
-        if (trim_copy(decorator.text) == name) {
-            return true;
-        }
-    }
-    return false;
+    return has_decorator(method.decorators, name);
 }
 
 std::string function_decorator_arg(const FunctionDecl& fn, std::string_view name) {
-    const std::string prefix = std::string(name) + "(";
     for (const Decorator& decorator : fn.decorators) {
-        const std::string text = trim_copy(decorator.text);
-        if (starts_with(text, prefix) && ends_with(text, ")")) {
-            return trim_copy(text.substr(prefix.size(), text.size() - prefix.size() - 1));
+        if (const std::optional<std::string> arg = decorator_first_arg_text(decorator, name)) {
+            return *arg;
         }
     }
     return {};
