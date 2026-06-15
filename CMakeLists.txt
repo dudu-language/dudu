@@ -22,6 +22,7 @@ add_library(dudu_frontend
     src/dudu/control_flow.cpp
     src/dudu/cpp_emit.cpp
     src/dudu/cpp_emit_classes.cpp
+    src/dudu/cpp_emit_enums.cpp
     src/dudu/cpp_emit_prelude.cpp
     src/dudu/cpp_expr_call_emit.cpp
     src/dudu/cpp_expr_emit.cpp

@@ -1,6 +1,7 @@
 #include "dudu/cpp_emit_classes.hpp"
 
 #include "dudu/ast_expr.hpp"
+#include "dudu/cpp_expr_emit.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/cpp_stmt_emit.hpp"
 #include "dudu/decorators.hpp"

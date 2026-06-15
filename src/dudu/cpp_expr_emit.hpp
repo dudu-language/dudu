@@ -22,6 +22,8 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
 std::string lower_array_literal(const Expr& expr, const std::vector<std::string>& aliases,
                                 const std::map<std::string, std::string>& locals,
                                 const Symbols* symbols = nullptr);
+std::string lower_cpp_expr_ast(const Expr& expr, const std::vector<std::string>& aliases,
+                               const std::map<std::string, std::string>& locals = {});
 std::optional<std::string>
 lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& aliases,
                             const std::map<std::string, std::string>& locals,
