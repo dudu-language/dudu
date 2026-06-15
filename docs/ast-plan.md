@@ -35,6 +35,9 @@ Already structured:
 - function pointer/callback signature parsing can consume parsed `TypeRef`
   nodes directly, including omitted-return `fn(...)` as `void` and wrapper
   templates such as `std.function[fn(...)]`
+- function pointer/callback signature parsing renders return and parameter
+  children through the shared `TypeRef` helper instead of reading raw child
+  text directly
 - local scopes preserve parsed `TypeRef` nodes for declared parameters,
   constants, locals, catch bindings, and typed loop bindings, so function
   pointer calls can check signatures without reparsing declared type text
