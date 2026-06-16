@@ -112,26 +112,53 @@ std::string join_lowered_type_args(const std::vector<TypeRef>& types,
     return out.str();
 }
 
-std::string join_type_arg_texts(const std::vector<TypeRef>& types) {
-    std::ostringstream out;
-    for (size_t i = 0; i < types.size(); ++i) {
-        if (i > 0) {
-            out << ", ";
-        }
-        out << substitute_type_ref_text(types[i], {});
+TypeKind wrapper_template_kind(std::string_view name) {
+    if (name == "const") {
+        return TypeKind::Const;
     }
-    return out.str();
+    if (name == "volatile") {
+        return TypeKind::Volatile;
+    }
+    if (name == "atomic") {
+        return TypeKind::Atomic;
+    }
+    if (name == "device") {
+        return TypeKind::Device;
+    }
+    if (name == "storage") {
+        return TypeKind::Storage;
+    }
+    if (name == "shared") {
+        return TypeKind::Shared;
+    }
+    if (name == "static") {
+        return TypeKind::Static;
+    }
+    return TypeKind::Template;
 }
 
-TypeRef template_type_ref_from_expr(const Expr& expr) {
+TypeRef template_type_ref_from_expr(const Expr& expr, std::string name) {
     TypeRef type;
-    type.kind = TypeKind::Template;
+    type.kind = expr.template_type_args.size() == 1 ? wrapper_template_kind(name)
+                                                    : TypeKind::Template;
     type.text = expr.text;
-    type.name = expr.name;
+    type.name = std::move(name);
     type.children = expr.template_type_args;
     type.location = expr.location;
     type.range = expr.range;
     return type;
+}
+
+TypeRef pointer_template_type_ref_from_expr(const Expr& expr) {
+    TypeRef pointee = template_type_ref_from_expr(expr, trim_copy(expr.name.substr(1)));
+
+    TypeRef pointer;
+    pointer.kind = TypeKind::Pointer;
+    pointer.text = expr.text;
+    pointer.children.push_back(std::move(pointee));
+    pointer.location = expr.location;
+    pointer.range = expr.range;
+    return pointer;
 }
 
 std::string cpp_binary_operator(const std::string& op) {
@@ -214,9 +241,8 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
                    lowered_call_args + ")))";
         }
         if (starts_with(expr.name, "*")) {
-            const std::string pointee = trim_copy(expr.name.substr(1)) + "[" +
-                                        join_type_arg_texts(expr.template_type_args) + "]";
-            return "reinterpret_cast<" + lower_cpp_pointer_type(pointee, aliases) + ">(" +
+            return "reinterpret_cast<" +
+                   lower_cpp_type(pointer_template_type_ref_from_expr(expr), aliases) + ">(" +
                    lowered_call_args + ")";
         }
         if (expr.name == "sizeof" || expr.name == "alignof") {
@@ -228,11 +254,13 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
         }
         if ((expr.name == "std.function" || expr.name == "std::function") &&
             expr.template_type_args.size() == 1) {
-            const std::string type = lower_cpp_type(template_type_ref_from_expr(expr), aliases);
+            const std::string type = lower_cpp_type(template_type_ref_from_expr(expr, expr.name),
+                                                    aliases);
             return expr.children.empty() ? type + "{}" : type + "(" + lowered_call_args + ")";
         }
         if (is_builtin_template_constructor(expr.name)) {
-            const std::string type = lower_cpp_type(template_type_ref_from_expr(expr), aliases);
+            const std::string type = lower_cpp_type(template_type_ref_from_expr(expr, expr.name),
+                                                    aliases);
             return expr.children.empty() ? type + "{}" : type + "(" + lowered_call_args + ")";
         }
         return lower_callee_expr(expr, aliases, locals, symbols) + "<" + lowered_template_args +
