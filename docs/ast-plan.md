@@ -105,6 +105,8 @@ Already structured:
 - bare-call and member-call name helpers let semantic checks reject dynamic
   Python builtins and local-address escape calls from parsed callee shape
   instead of reconstructed dotted strings
+- slice endpoint checks in expression and index sema use the shared parsed
+  expression-presence helper instead of raw child text emptiness
 - ordinary call C++ emission lowers parsed callee expressions instead of
   lowering the callee name string directly
 - `super.init(...)` recognition in sema and class emission checks parsed

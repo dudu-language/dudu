@@ -4,6 +4,7 @@
 #include "dudu/ast_parse_utils.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
+#include "dudu/sema_common.hpp"
 #include "dudu/sema_ops.hpp"
 #include "dudu/type_compat.hpp"
 
@@ -105,7 +106,7 @@ std::optional<size_t> trailing_full_slice_prefix_count(const Expr& expr) {
     }
     const Expr& tail = expr.children.back();
     if (tail.kind != ExprKind::Slice || tail.children.size() != 2 ||
-        !tail.children[0].text.empty() || !tail.children[1].text.empty()) {
+        !missing_expr(tail.children[0]) || !missing_expr(tail.children[1])) {
         return std::nullopt;
     }
     for (size_t i = 0; i + 1 < expr.children.size(); ++i) {
@@ -118,7 +119,7 @@ std::optional<size_t> trailing_full_slice_prefix_count(const Expr& expr) {
 
 bool is_full_slice_expr(const Expr& expr) {
     return expr.kind == ExprKind::Slice && expr.children.size() == 2 &&
-           expr.children[0].text.empty() && expr.children[1].text.empty();
+           missing_expr(expr.children[0]) && missing_expr(expr.children[1]);
 }
 
 bool is_column_slice_expr(const Expr& expr) {

@@ -57,7 +57,7 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
             sema_expr_fail(*use_location, "slice expression must be used inside an index");
         }
         for (const Expr& child : expr.children) {
-            if (!child.text.empty()) {
+            if (!missing_expr(child)) {
                 (void)infer_expr_ast(scope, child, use_location);
             }
         }
