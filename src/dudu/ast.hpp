@@ -318,6 +318,7 @@ struct ModuleAst {
     std::vector<FunctionDecl> functions;
     std::vector<ConstDecl> constants;
     std::vector<StaticAssertDecl> static_asserts;
+    std::vector<ModuleAst> module_units;
 };
 
 std::string bound_import_name(const ImportDecl& import);

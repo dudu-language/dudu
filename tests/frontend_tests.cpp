@@ -108,6 +108,10 @@ void test_module_loader_canonicalizes_physical_modules() {
                                 "    return i32(camera_origin(camera).x)\n");
 
     const dudu::ModuleAst module = dudu::load_source_tree(dir / "main.dd");
+    assert(module.module_units.size() == 3);
+    assert(module.module_units[0].module_path == "vec3");
+    assert(module.module_units[1].module_path == "camera");
+    assert(module.module_units[2].module_path == "main");
     int vec3_count = 0;
     int camera_count = 0;
     int view_camera_alias_count = 0;
@@ -220,6 +224,7 @@ void test_module_loader_preserves_declaration_origins() {
                                 "    return 0\n");
 
     const dudu::ModuleAst module = dudu::load_source_tree(dir / "main.dd");
+    assert(module.module_units.size() == 3);
     int root_camera_count = 0;
     int renderer_camera_count = 0;
     int root_make_count = 0;

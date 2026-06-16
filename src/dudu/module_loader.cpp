@@ -367,7 +367,9 @@ ModuleAst load_source_tree(const std::filesystem::path& entry) {
     merged.source_path = canonical_entry;
     merged.module_path = module_name_from_file(root, canonical_entry);
     for (const std::filesystem::path& path : ordered) {
-        append_module(merged, loaded.at(path));
+        const ModuleAst& unit = loaded.at(path);
+        merged.module_units.push_back(unit);
+        append_module(merged, unit);
     }
     add_module_import_aliases(merged, loaded);
     add_from_import_aliases(merged);
