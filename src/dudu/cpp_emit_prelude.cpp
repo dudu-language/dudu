@@ -83,6 +83,9 @@ std::vector<std::string> namespace_aliases(const ModuleAst& module) {
             aliases.push_back("!" + import.alias);
         }
     }
+    for (const std::string& prefix : module.module_strip_prefixes) {
+        aliases.push_back("!" + prefix);
+    }
     for (const NativeNamespaceDecl& ns : module.native_namespaces) {
         aliases.push_back(ns.name);
     }
@@ -199,7 +202,8 @@ void emit_result_prelude(std::ostringstream& out, const ModuleAst& module) {
            "        std::size_t stride{};\n"
            "        T& operator*() const { return *current; }\n"
            "        Iterator& operator++() { current += stride; return *this; }\n"
-           "        bool operator!=(const Iterator& other) const { return current != other.current; }\n"
+           "        bool operator!=(const Iterator& other) const { return current != "
+           "other.current; }\n"
            "    };\n"
            "    Iterator begin() const { return {data, stride}; }\n"
            "    Iterator end() const { return {data + count * stride, stride}; }\n"

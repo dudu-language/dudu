@@ -164,6 +164,40 @@ void test_module_loader_rejects_duplicate_from_aliases() {
     assert(failed);
 }
 
+void test_module_loader_qualified_module_imports() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_module_qualified_import_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir / "renderer");
+    write_file(dir / "camera.dd", "class Camera:\n"
+                                  "    x: i32\n"
+                                  "\n"
+                                  "ORIGIN: i32 = 7\n"
+                                  "\n"
+                                  "def make_camera(x: i32) -> Camera:\n"
+                                  "    return Camera(x=x)\n");
+    write_file(dir / "renderer" / "camera.dd", "class RenderCamera:\n"
+                                               "    x: i32\n"
+                                               "\n"
+                                               "def make_render_camera(x: i32) -> RenderCamera:\n"
+                                               "    return RenderCamera(x=x)\n");
+    write_file(dir / "main.dd",
+               "import camera as cam\n"
+               "import renderer.camera\n"
+               "\n"
+               "def main() -> i32:\n"
+               "    first: cam.Camera = cam.make_camera(cam.ORIGIN)\n"
+               "    second: renderer.camera.RenderCamera = renderer.camera.make_render_camera(35)\n"
+               "    return first.x + second.x\n");
+
+    const dudu::ModuleAst module = dudu::load_source_tree(dir / "main.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+    const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find("cam::") == std::string::npos);
+    assert(cpp.find("renderer::camera") == std::string::npos);
+    assert(cpp.find("make_camera(ORIGIN)") != std::string::npos);
+}
+
 void test_canonical_examples_parse(const std::filesystem::path& root) {
     const std::vector<std::string> examples = {
         "allocators.dd",           "audio_synth.dd",     "compile_time.dd",
@@ -653,6 +687,7 @@ int main() {
         test_import_bindings();
         test_module_loader_canonicalizes_physical_modules();
         test_module_loader_rejects_duplicate_from_aliases();
+        test_module_loader_qualified_module_imports();
         test_canonical_examples_parse(root);
         test_header_emission();
         test_semantic_diagnostics();

@@ -63,7 +63,13 @@ through multiple import routes no longer duplicates declarations. `from ...
 import Name as Alias` also materializes Dudu-native aliases for types,
 constants, and functions. Stricter Python-shaped namespace boundaries and
 intentional re-export semantics remain unfinished; the current backend still
-uses a merged module model rather than per-module symbol namespaces.
+uses a merged module model rather than per-module symbol namespaces. Qualified
+Dudu module imports such as `import camera as cam` and
+`import renderer.camera` now bind `cam.Type`, `cam.function`,
+`renderer.camera.Type`, and `renderer.camera.function` through non-emitted
+module metadata. Distinct modules that declare the same unqualified Dudu type
+or function name still require real per-module C++ namespaces before they can
+coexist.
 
 ## Feature Validation Bar
 

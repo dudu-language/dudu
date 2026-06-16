@@ -210,7 +210,7 @@ std::string strip_c_import_type_aliases(std::string type,
             continue;
         }
         const std::string name = alias.substr(1);
-        if (name.empty() || name.find('.') != std::string::npos) {
+        if (name.empty()) {
             continue;
         }
         const std::string marker = name + ".";
@@ -225,6 +225,26 @@ std::string strip_c_import_type_aliases(std::string type,
                 pos += marker.size();
             }
             pos = type.find(marker, pos);
+        }
+        if (name.find('.') != std::string::npos) {
+            pos = type.find(name);
+            while (pos != std::string::npos) {
+                const bool left_ok =
+                    pos == 0 || (std::isalnum(static_cast<unsigned char>(type[pos - 1])) == 0 &&
+                                 type[pos - 1] != '_');
+                const size_t after = pos + name.size();
+                const bool right_ok = after >= type.size() ||
+                                      (std::isalnum(static_cast<unsigned char>(type[after])) == 0 &&
+                                       type[after] != '_' && type[after] != '.');
+                if (left_ok && right_ok) {
+                    const size_t dot = name.rfind('.');
+                    const std::string replacement = name.substr(dot + 1);
+                    type.replace(pos, name.size(), replacement);
+                    pos = type.find(name, pos + replacement.size());
+                } else {
+                    pos = type.find(name, pos + name.size());
+                }
+            }
         }
     }
     return type;

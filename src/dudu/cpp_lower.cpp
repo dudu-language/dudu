@@ -179,6 +179,20 @@ std::string qualify_namespace_aliases(std::string expr,
         const bool strip_alias = !alias.empty() && alias.front() == '!';
         const std::string name = strip_alias ? alias.substr(1) : alias;
         if (strip_alias && name.find('.') != std::string::npos) {
+            const std::string marker = name + ".";
+            size_t prefix_pos = expr.find(marker);
+            while (prefix_pos != std::string::npos) {
+                const bool left_ok =
+                    prefix_pos == 0 ||
+                    (std::isalnum(static_cast<unsigned char>(expr[prefix_pos - 1])) == 0 &&
+                     expr[prefix_pos - 1] != '_');
+                if (left_ok) {
+                    expr.erase(prefix_pos, marker.size());
+                    prefix_pos = expr.find(marker, prefix_pos);
+                } else {
+                    prefix_pos = expr.find(marker, prefix_pos + marker.size());
+                }
+            }
             size_t pos = expr.find(name);
             while (pos != std::string::npos) {
                 const bool left_ok =

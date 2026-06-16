@@ -304,6 +304,7 @@ struct ModuleAst {
     std::vector<NativeMacroDecl> native_macros;
     std::vector<NativeNamespaceDecl> native_namespaces;
     std::vector<ClassDecl> native_classes;
+    std::vector<std::string> module_strip_prefixes;
     std::vector<EnumDecl> enums;
     std::vector<ClassDecl> classes;
     std::vector<FunctionDecl> functions;
