@@ -257,6 +257,14 @@ ClassDecl instantiate_generic_class(ClassDecl klass, const std::vector<TypeRef>&
     const std::map<std::string, std::string> substitutions =
         generic_substitutions(klass.generic_params, args);
     klass.name = instantiated_name;
+    for (BaseClassDecl& base : klass.base_class_refs) {
+        base.type = substitute_type_ref_text(base.type_ref, substitutions);
+        base.type_ref = parse_type_text(base.type, base.location);
+    }
+    klass.base_classes.clear();
+    for (const BaseClassDecl& base : klass.base_class_refs) {
+        klass.base_classes.push_back(base.type);
+    }
     for (FieldDecl& field : klass.fields) {
         field.type = substitute_type_ref_text(field.type_ref, substitutions);
         field.type_ref = parse_type_text(field.type, field.location);

@@ -132,13 +132,11 @@ std::string class_opening(const ClassDecl& klass, const std::vector<std::string>
             return opening;
         }
         opening += " : ";
-        for (size_t i = 0; i < klass.base_classes.size(); ++i) {
+        for (size_t i = 0; i < klass.base_class_refs.size(); ++i) {
             if (i > 0) {
                 opening += ", ";
             }
-            opening +=
-                "public " +
-                lower_cpp_type(parse_type_text(klass.base_classes[i], klass.location), aliases);
+            opening += "public " + lower_cpp_type(klass.base_class_refs[i].type_ref, aliases);
         }
         return opening;
     };
@@ -168,21 +166,21 @@ const Expr* super_init_expr(const FunctionDecl& method) {
     return nullptr;
 }
 
-std::string super_init_base(const Symbols& symbols, const std::string& class_name) {
+const BaseClassDecl* super_init_base_decl(const Symbols& symbols, const std::string& class_name) {
     const auto klass = symbols.classes.find(class_name);
-    if (klass == symbols.classes.end() || klass->second->base_classes.empty()) {
-        return {};
+    if (klass == symbols.classes.end() || klass->second->base_class_refs.empty()) {
+        return nullptr;
     }
-    if (klass->second->base_classes.size() == 1) {
-        return klass->second->base_classes.front();
+    if (klass->second->base_class_refs.size() == 1) {
+        return &klass->second->base_class_refs.front();
     }
-    std::string storage_base;
-    for (const std::string& base : klass->second->base_classes) {
-        if (class_type_has_instance_storage(symbols, base)) {
-            if (!storage_base.empty()) {
-                return {};
+    const BaseClassDecl* storage_base = nullptr;
+    for (const BaseClassDecl& base : klass->second->base_class_refs) {
+        if (class_type_has_instance_storage(symbols, base.type)) {
+            if (storage_base != nullptr) {
+                return nullptr;
             }
-            storage_base = base;
+            storage_base = &base;
         }
     }
     return storage_base;
@@ -317,10 +315,9 @@ void emit_method(std::ostringstream& out, const std::string& class_name, const F
     out << ")";
     if (is_constructor_method(method)) {
         if (const Expr* super_init = super_init_expr(method)) {
-            const std::string base = super_init_base(symbols, class_name);
-            if (!base.empty()) {
-                out << " : " << lower_cpp_type(parse_type_text(base, method.location), aliases)
-                    << "(" << join_lowered_args(super_init->children, aliases, locals) << ")";
+            if (const BaseClassDecl* base = super_init_base_decl(symbols, class_name)) {
+                out << " : " << lower_cpp_type(base->type_ref, aliases) << "("
+                    << join_lowered_args(super_init->children, aliases, locals) << ")";
             }
         }
     }

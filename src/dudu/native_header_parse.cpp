@@ -1,5 +1,6 @@
 #include "dudu/native_header_parse.hpp"
 
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/native_header_merge.hpp"
 #include "dudu/native_header_scope.hpp"
@@ -79,11 +80,22 @@ std::string method_key(const FunctionDecl& fn) {
     return key + ")->" + fn.return_type;
 }
 
+void add_base_class(ClassDecl& klass, std::string base, const SourceLocation& location) {
+    BaseClassDecl decl;
+    decl.type = std::move(base);
+    decl.type_ref = parse_type_text(decl.type, location);
+    decl.location = location;
+    klass.base_classes.push_back(decl.type);
+    klass.base_class_refs.push_back(std::move(decl));
+}
+
 void merge_class(ClassDecl& target, const ClassDecl& source) {
     std::set<std::string> bases(target.base_classes.begin(), target.base_classes.end());
-    for (const std::string& base : source.base_classes)
-        if (bases.insert(base).second)
-            target.base_classes.push_back(base);
+    for (const BaseClassDecl& base : source.base_class_refs)
+        if (bases.insert(base.type).second) {
+            target.base_classes.push_back(base.type);
+            target.base_class_refs.push_back(base);
+        }
     std::set<std::string> fields;
     for (const FieldDecl& field : target.fields)
         fields.insert(field.name);
@@ -275,8 +287,9 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                 line.find("protected '") != std::string::npos ||
                 line.find("private '") != std::string::npos) &&
                std::regex_search(line, match, base_decl)) {
-        scan.classes[classes.back().second].base_classes.push_back(
-            qualify_scoped_type(scan, namespaces, dudu_type(match[2].str())));
+        add_base_class(scan.classes[classes.back().second],
+                       qualify_scoped_type(scan, namespaces, dudu_type(match[2].str())),
+                       decl_location);
     } else if (line.find("EnumConstantDecl") != std::string::npos &&
                std::regex_search(line, match, enum_value_decl)) {
         const std::string name = match[1].str();

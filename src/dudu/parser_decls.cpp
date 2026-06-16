@@ -26,11 +26,17 @@ ClassDecl Parser::parse_class(const Token& start, Visibility visibility,
     if (match(TokenKind::LParen)) {
         if (!at(TokenKind::RParen)) {
             while (true) {
+                const SourceLocation base_location = current().location;
                 std::string base = join_until({TokenKind::Comma, TokenKind::RParen});
                 if (base.empty()) {
                     fail_current("expected base class name");
                 }
-                klass.base_classes.push_back(std::move(base));
+                BaseClassDecl base_decl;
+                base_decl.type = std::move(base);
+                base_decl.type_ref = parse_type_text(base_decl.type, base_location);
+                base_decl.location = base_location;
+                klass.base_classes.push_back(base_decl.type);
+                klass.base_class_refs.push_back(std::move(base_decl));
                 if (match(TokenKind::Comma)) {
                     continue;
                 }

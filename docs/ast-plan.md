@@ -88,6 +88,9 @@ Already structured:
 - initial `TypeRef` C++ lowering is implemented and used for type aliases
 - enum forward declarations and enum definitions emit underlying types from
   parsed `TypeRef` nodes instead of the compatibility raw type string
+- class base declarations preserve parsed `TypeRef` nodes, so base validation,
+  duplicate diagnostics, generic base substitution, and C++ inheritance
+  emission do not reparse the compatibility base string
 - declaration validation walks parsed `TypeRef` nodes recursively for aliases,
   enum underlying types, fields, parameters, returns, constants, and static
   fields, so nested unknown types in containers/callbacks are diagnosed at the

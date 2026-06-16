@@ -236,12 +236,12 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
             check_class_decorator(decorator);
         }
         std::set<std::string> bases;
-        for (const std::string& base : klass.base_classes) {
-            const TypeRef base_ref = parse_type_text(base, klass.location);
-            check_supported_type_shape(klass.location, base_ref);
-            check_known_type_ref(class_symbols, klass.location, base_ref, "unknown base class: ");
-            if (!bases.insert(base).second) {
-                fail(klass.location, "duplicate base class: " + base);
+        for (const BaseClassDecl& base : klass.base_class_refs) {
+            check_supported_type_shape(base.location, base.type_ref);
+            check_known_type_ref(class_symbols, base.location, base.type_ref,
+                                 "unknown base class: ");
+            if (!bases.insert(base.type).second) {
+                fail(base.location, "duplicate base class: " + base.type);
             }
         }
         check_multiple_inheritance_rules(symbols, klass);
