@@ -199,11 +199,47 @@ std::string signature_text(const std::string& callee, const FunctionSignature& s
     return out.str();
 }
 
+std::string mismatch_reason_ast(const FunctionScope& scope, const FunctionSignature& signature,
+                                const std::vector<Expr>& args, const SourceLocation* location,
+                                const NativeInferExprAstFn& infer_expr,
+                                const NativeCanAssignAstFn& can_assign) {
+    if (!arity_matches(signature, args.size())) {
+        std::ostringstream out;
+        out << "arity expects ";
+        if (signature.variadic) {
+            const size_t min_params = signature.min_params < 0
+                                          ? signature.params.size()
+                                          : static_cast<size_t>(signature.min_params);
+            out << "at least " << min_params;
+        } else if (signature.min_params >= 0 &&
+                   static_cast<size_t>(signature.min_params) < signature.params.size()) {
+            out << signature.min_params << " to " << signature.params.size();
+        } else {
+            out << signature.params.size();
+        }
+        out << " arguments, got " << args.size();
+        return out.str();
+    }
+
+    const size_t fixed_params = std::min(signature.params.size(), args.size());
+    for (size_t i = 0; i < fixed_params; ++i) {
+        const std::string got = infer_expr(scope, args[i], location);
+        if (!can_assign(signature.params[i], args[i], got) &&
+            !native_numeric_promotion(signature.params[i], got)) {
+            std::ostringstream out;
+            out << "parameter " << (i + 1) << " expects " << signature.params[i] << ", got " << got;
+            return out.str();
+        }
+    }
+    return {};
+}
+
 std::string native_overload_message_ast(const FunctionScope& scope, const std::string& callee,
                                         const std::vector<Expr>& args,
                                         const std::vector<FunctionSignature>& candidates,
                                         const SourceLocation* location,
-                                        const NativeInferExprAstFn& infer_expr) {
+                                        const NativeInferExprAstFn& infer_expr,
+                                        const NativeCanAssignAstFn& can_assign) {
     std::ostringstream out;
     out << "no native overload of " << callee << " accepts " << args.size() << " arguments";
     if (!args.empty()) {
@@ -216,6 +252,11 @@ std::string native_overload_message_ast(const FunctionScope& scope, const std::s
     }
     for (const FunctionSignature& candidate : candidates) {
         out << "\ncandidate: " << signature_text(callee, candidate);
+        if (const std::string reason =
+                mismatch_reason_ast(scope, candidate, args, location, infer_expr, can_assign);
+            !reason.empty()) {
+            out << "\n  reason: " << reason;
+        }
     }
     return out.str();
 }
@@ -345,8 +386,8 @@ std::optional<FunctionSignature> match_native_signature(const FunctionScope& sco
         return signature;
     }
     if (location != nullptr) {
-        fail(*location,
-             native_overload_message_ast(scope, callee, args, candidates, location, infer_expr));
+        fail(*location, native_overload_message_ast(scope, callee, args, candidates, location,
+                                                    infer_expr, can_assign));
     }
     return std::nullopt;
 }

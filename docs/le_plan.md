@@ -481,8 +481,9 @@ push. They are not release packaging work.
    internal C++ implementation template aliases as opaque compiler artifacts.
    The standard-library algorithms fixture now validates representative
    containers, algorithms, pairs, tuples, and `std.get` without wrapper headers.
-   Deeper overload diagnostics and broader template-heavy library behavior
-   remain the main hardening areas.
+   Native overload failure diagnostics list argument types, candidate
+   signatures, and per-candidate arity or first-mismatched-parameter reasons.
+   Broader template-heavy library behavior remains the main hardening area.
 
 10. Real Library Stress Tests
 
