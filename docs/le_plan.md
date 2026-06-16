@@ -519,7 +519,7 @@ push. They are not release packaging work.
    real, fast, and intentionally narrow. The CMake backend is the broad native
    ecosystem backend for CMake package discovery, IDE/project generators, and
    larger native dependency graphs. `dudu cmake` remains an inspectable
-   artifact/debug/escape command, not the primary serious-project workflow.
+   artifact/debug/handoff command, not the primary serious-project workflow.
    Backends must fail clearly when they cannot model a project rather than
    silently dropping C/C++ build-system details.
 
@@ -533,8 +533,8 @@ push. They are not release packaging work.
    with CMake, pkg-config, native compiler flags, vendored C/C++ sources, and
    user-owned native build files without turning `dudu build` into a toy-only
    command. Direct compilation is the small fast backend. CMake is the broad
-   native ecosystem backend. `dudu cmake` is the inspectable artifact and escape
-   hatch, not the replacement for the normal command surface.
+   native ecosystem backend. `dudu cmake` is the inspectable artifact and
+   native handoff path, not the replacement for the normal command surface.
 
    This is not a Zig-style attempt to make the language build system own every
    native project. Zig's normal model is a `build.zig` graph that owns the

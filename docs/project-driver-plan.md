@@ -330,8 +330,8 @@ The build-driver contract is:
   projects that need CMake package discovery, generated build files, IDE
   integration, platform generators, and larger native dependency graphs.
 - `dudu cmake` emits an inspectable CMake artifact. It is useful for debugging,
-  bootstrapping, and handing control to users, but it is not a replacement for
-  `dudu build`.
+  bootstrapping, and native handoff, but it is not a replacement for
+  `dudu build`, `dudu run`, or `dudu test`.
 - User-owned CMake projects are a backend mode. In that
   mode, `dudu build` configures/builds the declared CMake target and `dudu run`
   launches the configured executable.
@@ -386,7 +386,8 @@ The practical target is:
   CMake target instead of pretending to understand every project-specific build
   rule itself.
 - `dudu cmake` remains useful because users can inspect, edit, or hand off the
-  generated CMake when that is the right native workflow.
+  generated CMake artifact when that is the right native workflow. It does not
+  change the normal Dudu command surface.
 
 Backend selection rules should be boring:
 
