@@ -85,6 +85,8 @@ Already structured:
   names, conditions, and assignment targets use expression/type node locations
   where available
 - initial `TypeRef` C++ lowering is implemented and used for type aliases
+- enum forward declarations and enum definitions emit underlying types from
+  parsed `TypeRef` nodes instead of the compatibility raw type string
 - declaration validation walks parsed `TypeRef` nodes recursively for aliases,
   enum underlying types, fields, parameters, returns, constants, and static
   fields, so nested unknown types in containers/callbacks are diagnosed at the

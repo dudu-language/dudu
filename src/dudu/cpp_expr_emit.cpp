@@ -123,6 +123,17 @@ std::string join_type_arg_texts(const std::vector<TypeRef>& types) {
     return out.str();
 }
 
+TypeRef template_type_ref_from_expr(const Expr& expr) {
+    TypeRef type;
+    type.kind = TypeKind::Template;
+    type.text = expr.text;
+    type.name = expr.name;
+    type.children = expr.template_type_args;
+    type.location = expr.location;
+    type.range = expr.range;
+    return type;
+}
+
 std::string cpp_binary_operator(const std::string& op) {
     if (op == "and") {
         return "&&";
@@ -217,13 +228,11 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
         }
         if ((expr.name == "std.function" || expr.name == "std::function") &&
             expr.template_type_args.size() == 1) {
-            const std::string type_args = join_type_arg_texts(expr.template_type_args);
-            const std::string type = lower_cpp_type(expr.name + "[" + type_args + "]", aliases);
+            const std::string type = lower_cpp_type(template_type_ref_from_expr(expr), aliases);
             return expr.children.empty() ? type + "{}" : type + "(" + lowered_call_args + ")";
         }
         if (is_builtin_template_constructor(expr.name)) {
-            const std::string type_args = join_type_arg_texts(expr.template_type_args);
-            const std::string type = lower_cpp_type(expr.name + "[" + type_args + "]", aliases);
+            const std::string type = lower_cpp_type(template_type_ref_from_expr(expr), aliases);
             return expr.children.empty() ? type + "{}" : type + "(" + lowered_call_args + ")";
         }
         return lower_callee_expr(expr, aliases, locals, symbols) + "<" + lowered_template_args +

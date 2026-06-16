@@ -27,7 +27,7 @@ void emit_enum_forward_declarations(std::ostringstream& out, const ModuleAst& mo
         }
         out << "enum class " << en.name;
         if (!en.underlying_type.empty()) {
-            out << " : " << lower_cpp_type(en.underlying_type);
+            out << " : " << lower_cpp_type(en.underlying_type_ref);
         }
         out << ";\n";
     }
@@ -62,7 +62,7 @@ void emit_enums(std::ostringstream& out, const ModuleAst& module,
         }
         out << "enum class " << en.name;
         if (!en.underlying_type.empty()) {
-            out << " : " << lower_cpp_type(en.underlying_type);
+            out << " : " << lower_cpp_type(en.underlying_type_ref, aliases);
         }
         out << " {\n";
         for (const EnumValueDecl& value : en.values) {
