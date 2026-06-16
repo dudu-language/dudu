@@ -36,9 +36,9 @@ std::string base_type_ref(const TypeRef& type) {
     switch (type.kind) {
     case TypeKind::Named:
     case TypeKind::Qualified:
-        return trim(type.name.empty() ? type.text : type.name);
+        return type_ref_head_name(type);
     case TypeKind::Template:
-        return trim(type.name);
+        return type_ref_head_name(type);
     case TypeKind::Pointer:
     case TypeKind::Reference:
         return type.children.empty() ? trim(type.text) : base_type_ref(type.children.front());
@@ -59,9 +59,9 @@ std::string base_type_ref(const TypeRef& type) {
     case TypeKind::FixedArray:
         return type.children.empty() ? trim(type.text) : base_type_ref(type.children.front());
     case TypeKind::Function:
-        return "fn";
+        return type_ref_head_name(type);
     case TypeKind::Value:
-        return trim(type.value.empty() ? type.text : type.value);
+        return type_ref_head_name(type);
     case TypeKind::Unknown:
         return trim(type.text);
     }
