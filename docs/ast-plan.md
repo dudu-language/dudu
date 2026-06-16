@@ -109,8 +109,8 @@ Already structured:
 - bare-call and member-call name helpers let semantic checks reject dynamic
   Python builtins and local-address escape calls from parsed callee shape
   instead of reconstructed dotted strings
-- slice endpoint checks in expression and index sema use the shared parsed
-  expression-presence helper instead of raw child text emptiness
+- slice endpoint checks in expression/index sema and C++ emission use the
+  shared parsed expression-presence helper instead of raw child text emptiness
 - sema and C++ emission share AST-level expression presence helpers, so
   whitespace-only unknown expressions are handled consistently without
   duplicating raw-text checks

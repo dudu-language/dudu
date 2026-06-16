@@ -170,7 +170,7 @@ std::vector<Expr> index_arg_exprs(const Expr& index_expr) {
 
 bool is_full_slice_expr(const Expr& expr) {
     return expr.kind == ExprKind::Slice && expr.children.size() == 2 &&
-           expr.children[0].text.empty() && expr.children[1].text.empty();
+           expr_missing(expr.children[0]) && expr_missing(expr.children[1]);
 }
 
 std::string lower_named_argument_call(const Expr& expr, const std::vector<std::string>& aliases,

@@ -256,10 +256,10 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
             if (expr.children[1].kind == ExprKind::Slice && expr.children[1].children.size() == 2) {
                 const Expr& start_expr = expr.children[1].children[0];
                 const Expr& end_expr = expr.children[1].children[1];
-                const std::string start = start_expr.text.empty()
+                const std::string start = expr_missing(start_expr)
                                               ? "0"
                                               : lower_expr(start_expr, aliases, locals, symbols);
-                const std::string end = end_expr.text.empty()
+                const std::string end = expr_missing(end_expr)
                                             ? "(" + out + ").size()"
                                             : lower_expr(end_expr, aliases, locals, symbols);
                 return "std::span(&(" + out + ")[" + start + "], (" + end + ") - (" + start + "))";
