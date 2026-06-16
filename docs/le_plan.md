@@ -552,7 +552,11 @@ push. They are not release packaging work.
    C++ compile/link step when the generated C++, native build command, and
    native source inputs are unchanged. True per-module generated C++ remains
    the larger architecture step and is a major requirement for a serious C/C++
-   ecosystem-facing toolchain.
+   ecosystem-facing toolchain. Current `duc emit` and direct `dudu build`
+   output one generated C++ translation unit for the whole Dudu source tree;
+   source-tree module units are now preserved in the AST so that future
+   per-module `.hpp/.cpp` output has authoritative module boundaries to emit
+   from.
 
 12. Language Server And Formatter
 
