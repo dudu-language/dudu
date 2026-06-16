@@ -23,6 +23,14 @@ std::optional<std::string> member_path_from_expr(const Expr& expr) {
     return std::nullopt;
 }
 
+bool expr_missing(const Expr& expr) {
+    return expr.text.empty() || (expr.kind == ExprKind::Unknown && trim_copy(expr.text).empty());
+}
+
+bool expr_present(const Expr& expr) {
+    return !expr_missing(expr);
+}
+
 std::optional<std::string> bare_callee_name(const Expr& expr) {
     if (!expr.callee.empty() && expr.callee.front().kind == ExprKind::Name &&
         !expr.callee.front().name.empty()) {

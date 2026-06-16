@@ -111,6 +111,9 @@ Already structured:
   instead of reconstructed dotted strings
 - slice endpoint checks in expression and index sema use the shared parsed
   expression-presence helper instead of raw child text emptiness
+- sema and C++ emission share AST-level expression presence helpers, so
+  whitespace-only unknown expressions are handled consistently without
+  duplicating raw-text checks
 - ordinary call C++ emission lowers parsed callee expressions instead of
   lowering the callee name string directly
 - `super.init(...)` recognition in sema and class emission checks parsed

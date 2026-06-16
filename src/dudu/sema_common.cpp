@@ -15,11 +15,11 @@ bool has_type_ref(const TypeRef& type) {
 }
 
 bool missing_expr(const Expr& expr) {
-    return expr.text.empty() || (expr.kind == ExprKind::Unknown && trim(expr.text).empty());
+    return expr_missing(expr);
 }
 
 bool sema_has_expr(const Expr& expr) {
-    return !missing_expr(expr);
+    return expr_present(expr);
 }
 
 const SourceLocation& node_location(const SourceLocation& fallback, const Expr& expr) {

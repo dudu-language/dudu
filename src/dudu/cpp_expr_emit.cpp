@@ -78,7 +78,7 @@ std::string join_lowered_exprs(const std::vector<Expr>& exprs,
 }
 
 bool has_expr(const Expr& expr) {
-    return !expr.text.empty() && (expr.kind != ExprKind::Unknown || !trim_copy(expr.text).empty());
+    return expr_present(expr);
 }
 
 std::string join_lowered_type_args(const std::vector<TypeRef>& types,
