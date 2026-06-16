@@ -53,6 +53,8 @@ Already structured:
 - semantic template-call callee construction also renders bracket arguments
   through normalized `TypeRef` lookup text instead of reading raw compatibility
   expression text
+- template-call C++ emission renders helper type/value argument text through
+  parsed `TypeRef` nodes for pointer casts and builtin template constructors
 - emitted-local receiver base type inference reuses the shared parsed
   `TypeRef` head-name helper for named, templated, function, and value types
 - inferred generic method instantiation renders inferred `TypeRef` arguments

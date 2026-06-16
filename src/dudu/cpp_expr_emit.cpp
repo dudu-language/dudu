@@ -2,6 +2,7 @@
 
 #include "dudu/array_shape.hpp"
 #include "dudu/ast_expr.hpp"
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_expr_call_emit.hpp"
 #include "dudu/cpp_expr_swizzles.hpp"
 #include "dudu/cpp_lower.hpp"
@@ -99,7 +100,7 @@ std::string join_type_arg_texts(const std::vector<TypeRef>& types) {
         if (i > 0) {
             out << ", ";
         }
-        out << types[i].text;
+        out << substitute_type_ref_text(types[i], {});
     }
     return out.str();
 }
