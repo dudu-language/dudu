@@ -43,6 +43,10 @@ Already structured:
 - generic argument inference gets candidate parameter and argument names through
   a shared parsed `TypeRef` head-name helper instead of open-coding
   `name`/`text` fallback logic
+- shared template and unary type child helpers render parsed `TypeRef` children
+  structurally instead of returning raw child text
+- array shape inference and static field type extraction render parsed
+  `TypeRef` children structurally instead of carrying raw child text
 - generic method/template lookup text now renders through normalized
   `TypeRef` arguments for both parsed and compatibility template argument
   paths

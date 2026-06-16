@@ -15,7 +15,7 @@ std::optional<std::string> inferred_array_element_type(const std::string& declar
     if (type.kind != TypeKind::Template || type.name != "array" || type.children.size() != 1) {
         return std::nullopt;
     }
-    return trim_copy(type.children.front().text);
+    return substitute_type_ref_text(type.children.front(), {});
 }
 
 std::optional<std::pair<std::string, std::vector<size_t>>>
@@ -44,7 +44,7 @@ explicit_array_type_info(const std::string& declared_type) {
         }
         shape.push_back(value);
     }
-    return std::pair{trim_copy(storage.children.front().text), shape};
+    return std::pair{substitute_type_ref_text(storage.children.front(), {}), shape};
 }
 
 std::optional<std::vector<size_t>> literal_shape(const Expr& expr) {

@@ -1,5 +1,5 @@
+#include "dudu/ast_type.hpp"
 #include "dudu/parser_internal.hpp"
-
 #include "dudu/parser_utils.hpp"
 
 namespace dudu {
@@ -74,8 +74,9 @@ ClassDecl Parser::parse_class(const Token& start, Visibility visibility,
             }
             ConstDecl static_field;
             static_field.name = field.name;
-            static_field.type =
-                field.type_ref.children.empty() ? field.type : field.type_ref.children[0].text;
+            static_field.type = field.type_ref.children.empty()
+                                    ? field.type
+                                    : substitute_type_ref_text(field.type_ref.children[0], {});
             static_field.type_ref = field.type_ref.children.empty()
                                         ? parse_type_text(static_field.type, field.location)
                                         : field.type_ref.children[0];

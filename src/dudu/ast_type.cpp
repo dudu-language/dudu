@@ -38,7 +38,7 @@ std::vector<std::string> template_type_arg_texts(const TypeRef& type, std::strin
     std::vector<std::string> out;
     out.reserve(type.children.size());
     for (const TypeRef& child : type.children) {
-        out.push_back(trim_copy(child.text));
+        out.push_back(substitute_type_ref_text(child, {}));
     }
     return out;
 }
@@ -58,7 +58,7 @@ std::optional<std::string> first_template_type_arg_text(const TypeRef& type) {
     if (type.kind != TypeKind::Template || type.children.empty()) {
         return std::nullopt;
     }
-    return trim_copy(type.children.front().text);
+    return substitute_type_ref_text(type.children.front(), {});
 }
 
 std::optional<std::string> first_template_type_arg_text(std::string_view type) {
@@ -83,7 +83,7 @@ std::optional<std::string> unary_type_child_text(const TypeRef& type, TypeKind k
     if (type.kind != kind || type.children.size() != 1) {
         return std::nullopt;
     }
-    return trim_copy(type.children.front().text);
+    return substitute_type_ref_text(type.children.front(), {});
 }
 
 std::optional<std::string> unary_type_child_text(std::string_view type, TypeKind kind) {
@@ -97,7 +97,7 @@ std::optional<std::string> unary_type_child_text(const TypeRef& type,
     }
     for (const TypeKind kind : kinds) {
         if (type.kind == kind) {
-            return trim_copy(type.children.front().text);
+            return substitute_type_ref_text(type.children.front(), {});
         }
     }
     return std::nullopt;
