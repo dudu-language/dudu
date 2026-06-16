@@ -43,8 +43,7 @@ void check_type_match(FunctionScope& scope, const std::string& expected, const E
                       const SourceLocation& location, const BodyCheckCallbacks& callbacks,
                       std::string_view mismatch_label = {}) {
     if (expr.kind == ExprKind::Call && !expr.callee.empty() &&
-        expr.callee.front().kind == ExprKind::Member &&
-        expr.callee.front().children.size() == 1) {
+        expr.callee.front().kind == ExprKind::Member && expr.callee.front().children.size() == 1) {
         const Expr& member = expr.callee.front();
         const Expr& receiver = member.children.front();
         const bool receiver_is_bare_path =
@@ -64,8 +63,8 @@ void check_type_match(FunctionScope& scope, const std::string& expected, const E
                              const Expr& value, const std::string& got) {
                              return callbacks.can_assign(nested, nested_expected, value, got);
                          }})) {
-                callbacks.check_call_args(scope, call_callee_text(expr), *signature, expr.children,
-                                          &location);
+                callbacks.check_call_args(scope, scoped_call_callee_text(scope, expr, &location),
+                                          *signature, expr.children, &location);
                 if (callbacks.can_assign(scope, expected, expr, signature->return_type)) {
                     return;
                 }
@@ -75,8 +74,8 @@ void check_type_match(FunctionScope& scope, const std::string& expected, const E
     const std::string got = callbacks.infer_expr(scope, expr, &location);
     if (!callbacks.can_assign(scope, expected, expr, got)) {
         if (!mismatch_label.empty()) {
-            sema_fail(location, std::string(mismatch_label) + ": expected " + expected +
-                                   ", got " + got);
+            sema_fail(location,
+                      std::string(mismatch_label) + ": expected " + expected + ", got " + got);
         }
         sema_fail(location, assignment_error(expected, expr, got));
     }
@@ -133,8 +132,7 @@ std::string shape_text(const std::vector<size_t>& shape) {
 void check_condition_type(FunctionScope& scope, const Stmt& stmt,
                           const BodyCheckCallbacks& callbacks) {
     const SourceLocation& location = node_location(stmt.location, stmt.condition_expr);
-    const std::string got =
-        callbacks.infer_expr(scope, stmt.condition_expr, &location);
+    const std::string got = callbacks.infer_expr(scope, stmt.condition_expr, &location);
     if (!got.empty() && got != "bool" && got != "auto") {
         if (const auto signature = dudu_operator_signature(scope.symbols, "bool", got);
             signature && signature->params.empty() && signature->return_type == "bool") {
@@ -205,14 +203,13 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
         return;
     }
     if (stmt.kind == StmtKind::Match) {
-        check_match_stmt(scope, stmt, return_type, loop_depth,
-                         {.infer_expr = callbacks.infer_expr,
-                          .check_block =
-                              [&](FunctionScope& nested, const std::vector<Stmt>& body,
-                                  const std::string& nested_return_type, int nested_loop_depth) {
-                                  check_block(nested, body, nested_return_type, nested_loop_depth,
-                                              callbacks);
-                              }});
+        check_match_stmt(
+            scope, stmt, return_type, loop_depth,
+            {.infer_expr = callbacks.infer_expr,
+             .check_block = [&](FunctionScope& nested, const std::vector<Stmt>& body,
+                                const std::string& nested_return_type, int nested_loop_depth) {
+                 check_block(nested, body, nested_return_type, nested_loop_depth, callbacks);
+             }});
         return;
     }
     if (stmt.kind == StmtKind::Case) {
@@ -359,10 +356,10 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
     if (stmt.kind == StmtKind::Assign) {
         if (const std::vector<std::string> names = tuple_binding_names(stmt.target_expr);
             !names.empty()) {
-            const std::vector<std::string> types = tuple_types(
-                scope.symbols,
-                callbacks.infer_expr(scope, stmt.value_expr,
-                                     &node_location(stmt.location, stmt.value_expr)));
+            const std::vector<std::string> types =
+                tuple_types(scope.symbols,
+                            callbacks.infer_expr(scope, stmt.value_expr,
+                                                 &node_location(stmt.location, stmt.value_expr)));
             if (names.size() != types.size()) {
                 sema_fail(node_location(stmt.location, stmt.value_expr),
                           "tuple destructuring count mismatch");

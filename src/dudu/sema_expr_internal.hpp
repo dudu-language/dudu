@@ -65,8 +65,6 @@ bool parse_local_function_type(const FunctionScope& scope, const std::string& na
 void check_enum_variant_args_ast(const FunctionScope& scope, const EnumDecl& en,
                                  const EnumValueDecl& value, const std::vector<Expr>& args,
                                  const SourceLocation* location);
-std::string scoped_call_callee_text(const FunctionScope& scope, const Expr& expr,
-                                    const SourceLocation* location);
 std::string template_call_callee(const FunctionScope& scope, const Expr& expr,
                                  const SourceLocation* location);
 bool is_offsetof_field_expr(const Expr& expr);

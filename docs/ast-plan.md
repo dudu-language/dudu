@@ -398,6 +398,9 @@ Already structured:
 - ordinary and templated call sema resolve `class.method(...)` from the parsed
   callee expression, so the old current-class string normalizer has been
   removed.
+- current-class-aware member/callee path reconstruction now lives in shared
+  sema helpers and is used by body-level generic method call argument checks,
+  not only expression sema.
 - generic method calls on nested receivers such as `slots[0].box.id[i32](x)`
   type-check through the parsed callee receiver expression before falling back
   to compatibility spelling paths.

@@ -3,6 +3,7 @@
 #include "dudu/ast.hpp"
 #include "dudu/sema_scope.hpp"
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -17,5 +18,10 @@ const SourceLocation& node_location(const SourceLocation& fallback, const TypeRe
 void bind_local(FunctionScope& scope, const std::string& name, const std::string& type,
                 const TypeRef& type_ref = {});
 std::vector<Expr> index_arg_exprs(const Expr& index_expr);
+std::optional<std::string> scoped_member_path_from_expr(const FunctionScope& scope,
+                                                        const Expr& expr,
+                                                        const SourceLocation* location);
+std::string scoped_call_callee_text(const FunctionScope& scope, const Expr& expr,
+                                    const SourceLocation* location);
 
 } // namespace dudu

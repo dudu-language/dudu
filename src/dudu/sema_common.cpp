@@ -47,4 +47,47 @@ std::vector<Expr> index_arg_exprs(const Expr& index_expr) {
     return {index_expr};
 }
 
+std::optional<std::string> scoped_member_path_from_expr(const FunctionScope& scope,
+                                                        const Expr& expr,
+                                                        const SourceLocation* location) {
+    if (expr.kind == ExprKind::Name && !expr.name.empty()) {
+        if (expr.name == "class") {
+            if (!scope.current_class.empty()) {
+                return scope.current_class;
+            }
+            if (location != nullptr) {
+                sema_fail(*location, "class static access outside class");
+            }
+            return std::nullopt;
+        }
+        return expr.name;
+    }
+    if (expr.kind == ExprKind::Member && expr.children.size() == 1 && !expr.name.empty()) {
+        const std::optional<std::string> receiver =
+            scoped_member_path_from_expr(scope, expr.children.front(), location);
+        if (receiver.has_value()) {
+            return *receiver + "." + expr.name;
+        }
+    }
+    if (expr.kind == ExprKind::Index && expr.children.size() == 2) {
+        const std::optional<std::string> receiver =
+            scoped_member_path_from_expr(scope, expr.children.front(), location);
+        if (receiver.has_value() && !expr.children[1].text.empty()) {
+            return *receiver + "[" + expr.children[1].text + "]";
+        }
+    }
+    return std::nullopt;
+}
+
+std::string scoped_call_callee_text(const FunctionScope& scope, const Expr& expr,
+                                    const SourceLocation* location) {
+    if (!expr.callee.empty()) {
+        if (const std::optional<std::string> path =
+                scoped_member_path_from_expr(scope, expr.callee.front(), location)) {
+            return *path;
+        }
+    }
+    return trim_copy(expr.name);
+}
+
 } // namespace dudu

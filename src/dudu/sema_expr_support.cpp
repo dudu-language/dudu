@@ -8,38 +8,6 @@ std::vector<std::string> call_args(std::string expr, size_t open) {
     return args.empty() ? std::vector<std::string>{} : split_top_level_args(args);
 }
 
-std::optional<std::string> scoped_member_path_from_expr(const FunctionScope& scope,
-                                                        const Expr& expr,
-                                                        const SourceLocation* location) {
-    if (expr.kind == ExprKind::Name && !expr.name.empty()) {
-        if (expr.name == "class") {
-            if (!scope.current_class.empty()) {
-                return scope.current_class;
-            }
-            if (location != nullptr) {
-                sema_expr_fail(*location, "class static access outside class");
-            }
-            return std::nullopt;
-        }
-        return expr.name;
-    }
-    if (expr.kind == ExprKind::Member && expr.children.size() == 1 && !expr.name.empty()) {
-        const std::optional<std::string> receiver =
-            scoped_member_path_from_expr(scope, expr.children.front(), location);
-        if (receiver.has_value()) {
-            return *receiver + "." + expr.name;
-        }
-    }
-    if (expr.kind == ExprKind::Index && expr.children.size() == 2) {
-        const std::optional<std::string> receiver =
-            scoped_member_path_from_expr(scope, expr.children.front(), location);
-        if (receiver.has_value() && !expr.children[1].text.empty()) {
-            return *receiver + "[" + expr.children[1].text + "]";
-        }
-    }
-    return std::nullopt;
-}
-
 } // namespace
 
 std::vector<Expr> call_arg_exprs(std::string expr, size_t open, SourceLocation location) {
@@ -208,17 +176,6 @@ matching_signature_ast(const FunctionScope& scope, const std::vector<FunctionSig
         }
     }
     return std::nullopt;
-}
-
-std::string scoped_call_callee_text(const FunctionScope& scope, const Expr& expr,
-                                    const SourceLocation* location) {
-    if (!expr.callee.empty()) {
-        if (const std::optional<std::string> path =
-                scoped_member_path_from_expr(scope, expr.callee.front(), location)) {
-            return *path;
-        }
-    }
-    return trim_copy(expr.name);
 }
 
 std::string template_call_callee(const FunctionScope& scope, const Expr& expr,
