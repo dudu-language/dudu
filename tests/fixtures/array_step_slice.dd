@@ -1,0 +1,15 @@
+def sum_view(values: strided_span[i32]) -> i32:
+    total: i32 = 0
+    for value: i32 in values:
+        total += value
+    return total
+
+
+def main() -> i32:
+    values: array[i32] = [3, 10, 5, 20, 7, 30, 11]
+    evens: strided_span[i32] = values[0:6:2]
+    odds: strided_span[i32] = values[1::2]
+    thirds: strided_span[i32] = values[::3]
+    if sum_view(evens) == 15 and sum_view(odds) == 60 and sum_view(thirds) == 34:
+        return 42
+    return 1

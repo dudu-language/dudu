@@ -187,12 +187,14 @@ copy = list(items[a:b])
 ```
 
 Status: one-dimensional fixed arrays support `start:end`, `:end`, `start:`,
-and `:` slices as `span[T]` views. Fixed multidimensional arrays also support a
+and `:` slices as `span[T]` views. One-dimensional stepped fixed-array slices
+such as `values[start:end:step]`, `values[start::step]`, and `values[::step]`
+produce `strided_span[T]` views. Fixed multidimensional arrays also support a
 trailing full row slice such as `mat[row, :]`, which produces `span[T]` over the
 selected row. Matrix column slices such as `mat[:, col]` produce
 `strided_span[T]` views so non-contiguous views are not misrepresented as
-contiguous spans. Step slices and general multidimensional slice rectangles are
-rejected until the compiler has explicit view types for those shapes.
+contiguous spans. General multidimensional slice rectangles are rejected until
+the compiler has explicit view types for those shapes.
 
 ## Advanced Indexing
 

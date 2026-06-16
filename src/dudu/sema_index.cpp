@@ -163,7 +163,7 @@ std::string indexed_type_from_type_with_count(const Symbols& symbols,
                                    "array slicing requires one-dimensional fixed array: " + label);
             }
             if (has_step) {
-                throw CompileError(location, "array slice step is not supported: " + label);
+                return "strided_span[" + explicit_array_element_type(type) + "]";
             }
             return "span[" + explicit_array_element_type(type) + "]";
         }

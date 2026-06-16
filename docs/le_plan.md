@@ -338,8 +338,9 @@ push. They are not release packaging work.
    produce `strided_span[T]` views so non-contiguous views are explicit.
    Dudu-native `@operator("[]")` read hooks and `@operator("[]=")` indexed
    assignment hooks work for library-style tensor wrappers, and indexed member
-   paths such as `self.values[i]` type-check. Step slices, general
-   multidimensional slices, and richer tensor-library metadata remain.
+   paths such as `self.values[i]` type-check. One-dimensional fixed-array step
+   slices such as `values[start:end:step]` produce `strided_span[T]` views.
+   General multidimensional slices and richer tensor-library metadata remain.
    Same-width Dudu-native `xyzw`, `rgba`, and `stpq` read swizzles are
    implemented for local class receivers and expression receivers. Same-width
    Dudu-native write swizzles are implemented for assignable receivers and

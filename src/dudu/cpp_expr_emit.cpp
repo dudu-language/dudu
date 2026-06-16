@@ -82,6 +82,24 @@ bool has_expr(const Expr& expr) {
     return expr_present(expr);
 }
 
+struct SliceParts {
+    const Expr* start = nullptr;
+    const Expr* end = nullptr;
+    const Expr* step = nullptr;
+};
+
+std::optional<SliceParts> slice_parts(const Expr& expr) {
+    if (expr.kind != ExprKind::Slice || expr.children.size() != 2) {
+        return std::nullopt;
+    }
+    SliceParts parts{.start = &expr.children[0], .end = &expr.children[1], .step = nullptr};
+    if (expr.children[1].kind == ExprKind::Slice && expr.children[1].children.size() == 2) {
+        parts.end = &expr.children[1].children[0];
+        parts.step = &expr.children[1].children[1];
+    }
+    return parts;
+}
+
 std::string join_lowered_type_args(const std::vector<TypeRef>& types,
                                    const std::vector<std::string>& aliases) {
     std::ostringstream out;
@@ -254,15 +272,21 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
     case ExprKind::Index:
         if (expr.children.size() == 2) {
             std::string out = lower_expr(expr.children[0], aliases, locals, symbols);
-            if (expr.children[1].kind == ExprKind::Slice && expr.children[1].children.size() == 2) {
-                const Expr& start_expr = expr.children[1].children[0];
-                const Expr& end_expr = expr.children[1].children[1];
-                const std::string start = expr_missing(start_expr)
+            if (const std::optional<SliceParts> slice = slice_parts(expr.children[1])) {
+                const std::string start = expr_missing(*slice->start)
                                               ? "0"
-                                              : lower_expr(start_expr, aliases, locals, symbols);
-                const std::string end = expr_missing(end_expr)
+                                              : lower_expr(*slice->start, aliases, locals, symbols);
+                const std::string end = expr_missing(*slice->end)
                                             ? "(" + out + ").size()"
-                                            : lower_expr(end_expr, aliases, locals, symbols);
+                                            : lower_expr(*slice->end, aliases, locals, symbols);
+                if (slice->step != nullptr) {
+                    const std::string step =
+                        expr_missing(*slice->step)
+                            ? "1"
+                            : lower_expr(*slice->step, aliases, locals, symbols);
+                    return "dudu::StridedSpan{&(" + out + ")[" + start + "], ((" + end + ") - (" +
+                           start + ") + (" + step + ") - 1) / (" + step + "), " + step + "}";
+                }
                 return "std::span(&(" + out + ")[" + start + "], (" + end + ") - (" + start + "))";
             }
             if (expr.children[1].kind == ExprKind::TupleLiteral) {
