@@ -488,9 +488,13 @@ docs. Generated Dudu projects do not get a changelog by default.
 13. Update examples to prefer `dudu run` where it improves usability.
 14. Keep `duc` workflows documented as the transparent fallback.
 15. Add `dudu clean`.
-16. Add explicit build backend selection.
-17. Add a CMake backend for `dudu build`, `dudu run`, and `dudu test`.
-18. Support user-owned CMake projects as a backend mode.
+16. Add explicit build backend selection in `dudu.toml`.
+17. Add a generated-CMake backend behind `dudu build`, `dudu run`, and
+    `dudu test`.
+18. Support user-owned CMake projects as another backend mode behind the same
+    commands.
+19. Keep `dudu cmake` as artifact emission for inspection and handoff, not as
+    the required workflow for serious native projects.
 
 ## Acceptance Tests
 
@@ -503,6 +507,8 @@ docs. Generated Dudu projects do not get a changelog by default.
 - `dudu build` can use the direct backend explicitly.
 - `dudu build` can use the CMake backend explicitly.
 - `dudu run` can launch a CMake-backed executable target.
+- `dudu build` can drive a declared target from a user-owned CMake project.
+- `dudu run` can launch a declared executable from a user-owned CMake project.
 - `dudu build` fails clearly when the selected backend cannot model the
   manifest.
 - `duc emit` still works without a manifest.

@@ -553,6 +553,11 @@ push. They are not release packaging work.
    make those backend choices work behind the same front-door commands, not to
    tell users that real projects must leave `dudu build`.
 
+   Required backend milestones: explicit backend selection in `dudu.toml`,
+   generated-CMake builds behind `dudu build`, `dudu run`, and `dudu test`,
+   user-owned CMake projects as a backend mode, and diagnostics that reject a
+   backend when it cannot honestly model the manifest.
+
    Path handling is part of the project-driver contract. Manifest entries such
    as `entry`, `build.dir`, include paths, library paths, and native source
    lists are relative to the directory containing `dudu.toml`. Explicit local
