@@ -1,3 +1,4 @@
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/decorators.hpp"
 #include "dudu/sema_context.hpp"
@@ -103,8 +104,7 @@ bool is_c_abi_primitive(const std::string& type, bool allow_void) {
 }
 
 bool is_c_abi_type_ref(const TypeRef& type, bool allow_void) {
-    const std::string text = trim(type.text);
-    if (text.empty() || text == "str" || text.find('.') != std::string::npos) {
+    if (type.kind == TypeKind::Unknown && trim(type.text).empty()) {
         return false;
     }
     if (type.kind == TypeKind::Reference) {
@@ -114,7 +114,11 @@ bool is_c_abi_type_ref(const TypeRef& type, bool allow_void) {
         const TypeRef& child = type.children.front();
         return is_c_abi_type_ref(child, false) || starts_with(trim(child.text), "struct ");
     }
-    return is_c_abi_primitive(text, allow_void);
+    const std::string name = type_ref_head_name(type);
+    if (name == "str" || name.find('.') != std::string::npos) {
+        return false;
+    }
+    return is_c_abi_primitive(name, allow_void);
 }
 
 void check_extern_c_signature(const FunctionDecl& fn) {

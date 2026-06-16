@@ -387,6 +387,23 @@ void test_extern_c_signature_uses_type_ast() {
             std::string::npos;
     }
     assert(rejected);
+
+    rejected = false;
+    try {
+        const dudu::ModuleAst bad = dudu::parse_source("class Player:\n"
+                                                       "    hp: i32\n"
+                                                       "\n"
+                                                       "@extern_c\n"
+                                                       "def bad_class(value: Player) -> void:\n"
+                                                       "    return\n",
+                                                       "extern_c_class.dd");
+        dudu::analyze_module(bad, {.check_bodies = true});
+    } catch (const dudu::CompileError& error) {
+        rejected =
+            std::string(error.what()).find("@extern_c parameter type is not C ABI safe: Player") !=
+            std::string::npos;
+    }
+    assert(rejected);
 }
 
 void test_pointer_arithmetic_uses_type_ast() {

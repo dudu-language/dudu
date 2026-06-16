@@ -1082,9 +1082,9 @@ Semantic expression inference and assignment-target checking now validate
 pointer dereference through parsed `TypeRef` nodes instead of raw leading `*`
 string checks.
 
-`@extern_c` C ABI signature checks now classify pointers and references through
-the parsed type tree while preserving the existing primitive and
-pointer-to-`struct ...` ABI rules.
+`@extern_c` C ABI signature checks now classify pointers, references, and
+primitive type names through the parsed type tree while preserving the existing
+pointer-to-`struct ...` ABI rule.
 
 Pointer arithmetic and native base-class pointer/reference assignability now
 classify pointer/reference type shapes through parsed `TypeRef` nodes instead
