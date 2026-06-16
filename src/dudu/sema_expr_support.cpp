@@ -1,3 +1,4 @@
+#include "dudu/ast_type.hpp"
 #include "dudu/sema_expr_internal.hpp"
 
 namespace dudu {
@@ -187,7 +188,7 @@ std::string template_call_callee(const FunctionScope& scope, const Expr& expr,
             if (i > 0) {
                 out << ", ";
             }
-            out << expr.template_type_args[i].text;
+            out << substitute_type_ref_text(expr.template_type_args[i], {});
         }
     } else {
         for (size_t i = 0; i < expr.template_args.size(); ++i) {

@@ -1,3 +1,4 @@
+#include "dudu/ast_type.hpp"
 #include "dudu/sema_expr_internal.hpp"
 
 namespace dudu {
@@ -38,7 +39,7 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
         for (const Expr& arg : expr.children) {
             (void)infer_expr_ast(scope, arg, location);
         }
-        return "*" + pointee_ref.text;
+        return "*" + substitute_type_ref_text(pointee_ref, {});
     }
 
     const auto allocation = infer_allocation_call(scope.symbols, location, expr.name,
@@ -363,7 +364,7 @@ std::optional<std::string> infer_pointer_cast_call_ast(const FunctionScope& scop
         return std::nullopt;
     }
     const TypeRef type_ref = parse_type_text(callee.substr(1), expr.location);
-    const std::string type = trim(type_ref.text);
+    const std::string type = substitute_type_ref_text(type_ref, {});
     if (const auto unknown = unknown_type_ref(scope.symbols, type_ref)) {
         if (location != nullptr) {
             const SourceLocation error_location =

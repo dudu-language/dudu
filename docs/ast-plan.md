@@ -73,6 +73,9 @@ Already structured:
 - normal template-call emission lowers bracket arguments from parsed `TypeRef`
   nodes, including non-type value arguments, instead of falling back to raw
   expression text
+- template-call lookup names for parsed type arguments and pointer-cast
+  inference results render `TypeRef` nodes through the shared type helper
+  instead of reading raw type text
 - empty parsed template calls such as `identity[]()` are rejected during
   semantic checking instead of falling through raw expression inference and
   emitting invalid C++
