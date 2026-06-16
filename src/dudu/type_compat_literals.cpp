@@ -104,12 +104,11 @@ bool result_value_allowed(const TypeRef& expected, const Expr& expr, const std::
     if (parts.size() != 2 || expr.kind != ExprKind::Call || expr.children.size() != 1) {
         return false;
     }
-    const std::string callee = call_callee_text(expr);
-    if (starts_with(got, "Ok[") && got.back() == ']' && callee == "Ok") {
+    if (starts_with(got, "Ok[") && got.back() == ']' && expr.name == "Ok") {
         return assignment_type_allowed(parts[0], expr.children.front(),
                                        got.substr(3, got.size() - 4));
     }
-    if (starts_with(got, "Err[") && got.back() == ']' && callee == "Err") {
+    if (starts_with(got, "Err[") && got.back() == ']' && expr.name == "Err") {
         return assignment_type_allowed(parts[1], expr.children.front(),
                                        got.substr(4, got.size() - 5));
     }

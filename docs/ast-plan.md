@@ -137,6 +137,8 @@ Already structured:
   helper instead of duplicated sema/emission utilities
 - AST type compatibility checks use parsed call callees for explicit casts and
   `Ok(...)`/`Err(...)` result construction
+- Result compatibility checks for direct `Ok(...)` and `Err(...)` construction
+  read the parsed call name instead of reconstructing callee text
 - type compatibility exposes parsed `TypeRef` overloads, and annotated local
   initializers validate against the parsed expected type node when available
 - semantic highlighting uses parsed call callees so method calls can color the
