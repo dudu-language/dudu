@@ -67,8 +67,8 @@ void check_local_address_escape(const Stmt& stmt,
         return;
     }
     if (stmt.kind == StmtKind::Expr && stmt.expr.kind == ExprKind::Call) {
-        const std::string callee = call_callee_text(stmt.expr);
-        if (ends_with(callee, ".append") || ends_with(callee, ".push_back")) {
+        const std::optional<std::string> member = member_callee_name(stmt.expr);
+        if (member == "append" || member == "push_back") {
             for (const Expr& arg : stmt.expr.children) {
                 fail_if_address_of_value_local_escapes(arg.location, locals, arg);
             }

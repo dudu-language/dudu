@@ -86,7 +86,7 @@ void check_expr(const Expr& expr) {
         throw CompileError(expr.location, "unsupported Python feature: generators");
     }
     if (expr.kind == ExprKind::Call) {
-        const std::string callee = call_callee_text(expr);
+        const std::optional<std::string> callee = bare_callee_name(expr);
         if (callee == "eval" || callee == "exec") {
             throw CompileError(expr.location, "unsupported Python feature: dynamic execution");
         }

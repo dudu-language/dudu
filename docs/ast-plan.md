@@ -97,6 +97,9 @@ Already structured:
   raw callee strings incrementally
 - direct callee-name extraction is shared in the AST expression helper layer
   instead of being reimplemented by individual semantic passes
+- bare-call and member-call name helpers let semantic checks reject dynamic
+  Python builtins and local-address escape calls from parsed callee shape
+  instead of reconstructed dotted strings
 - ordinary call C++ emission lowers parsed callee expressions instead of
   lowering the callee name string directly
 - `super.init(...)` recognition in sema and class emission checks parsed

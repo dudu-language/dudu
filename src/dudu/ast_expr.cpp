@@ -23,12 +23,30 @@ std::optional<std::string> member_path_from_expr(const Expr& expr) {
     return std::nullopt;
 }
 
-std::string direct_callee_name(const Expr& expr) {
+std::optional<std::string> bare_callee_name(const Expr& expr) {
     if (!expr.callee.empty() && expr.callee.front().kind == ExprKind::Name &&
         !expr.callee.front().name.empty()) {
         return expr.callee.front().name;
     }
+    return std::nullopt;
+}
+
+std::string direct_callee_name(const Expr& expr) {
+    if (const std::optional<std::string> callee = bare_callee_name(expr)) {
+        return *callee;
+    }
     return trim_copy(expr.name);
+}
+
+std::optional<std::string> member_callee_name(const Expr& expr) {
+    if (expr.kind != ExprKind::Call || expr.callee.size() != 1) {
+        return std::nullopt;
+    }
+    const Expr& callee = expr.callee.front();
+    if (callee.kind != ExprKind::Member || callee.name.empty()) {
+        return std::nullopt;
+    }
+    return callee.name;
 }
 
 bool is_member_callee(const Expr& expr, std::string_view receiver, std::string_view member) {
