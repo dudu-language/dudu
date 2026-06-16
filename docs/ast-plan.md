@@ -43,6 +43,8 @@ Already structured:
 - generic argument inference gets candidate parameter and argument names through
   a shared parsed `TypeRef` head-name helper instead of open-coding
   `name`/`text` fallback logic
+- emitted-local receiver base type inference reuses the shared parsed
+  `TypeRef` head-name helper for named, templated, function, and value types
 - inferred generic method instantiation renders inferred `TypeRef` arguments
   through the shared type helper instead of reading raw type text
 - local scopes preserve parsed `TypeRef` nodes for declared parameters,

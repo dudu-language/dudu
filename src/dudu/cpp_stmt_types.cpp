@@ -33,14 +33,11 @@ std::string receiver_base_type(std::string type) {
                    ? type
                    : receiver_base_type(substitute_type_ref_text(parsed.children.front(), {}));
     case TypeKind::Template:
-        return trim_copy(parsed.name);
     case TypeKind::Named:
     case TypeKind::Qualified:
-        return trim_copy(parsed.name.empty() ? parsed.text : parsed.name);
     case TypeKind::Function:
-        return "fn";
     case TypeKind::Value:
-        return trim_copy(parsed.value.empty() ? parsed.text : parsed.value);
+        return type_ref_head_name(parsed);
     case TypeKind::Unknown:
         break;
     }
