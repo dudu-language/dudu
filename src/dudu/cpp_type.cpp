@@ -136,6 +136,19 @@ std::string lower_template_type(std::string_view name, const std::string& args) 
         out << ">";
         return out.str();
     }
+    if (name == "variant") {
+        std::ostringstream out;
+        out << "std::variant<";
+        const std::vector<std::string> parts = split_top_level_args(args);
+        for (size_t i = 0; i < parts.size(); ++i) {
+            if (i > 0) {
+                out << ", ";
+            }
+            out << lower_template_arg_type(parts[i]);
+        }
+        out << ">";
+        return out.str();
+    }
     if (name == "const") {
         return "const " + lower_template_arg_type(args);
     }
@@ -269,8 +282,8 @@ std::string lower_cpp_type(const std::string& raw_type) {
         const std::string name = type.substr(0, open);
         const std::string args = type.substr(open + 1, type.size() - open - 2);
         if (is_decimal_number(args) && name != "list" && name != "dict" && name != "set" &&
-            name != "Option" && name != "Result" && name != "tuple" && name != "const" &&
-            name != "atomic" && name != "volatile") {
+            name != "Option" && name != "Result" && name != "tuple" && name != "variant" &&
+            name != "const" && name != "atomic" && name != "volatile") {
             return lower_cpp_type(name) + "[" + args + "]";
         }
         return lower_template_type(name, args);

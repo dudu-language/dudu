@@ -411,9 +411,12 @@ push. They are not release packaging work.
    destructuring, and exhaustive matching. An event/message fixture covers
    UI, command, and network-style payload enums, including enum payload fields
    that carry Dudu-native classes declared in the same module. Anonymous
-   `variant[...]` remains. Unreachable diagnostics reject duplicate unguarded
-   cases, wildcard cases after exhaustive coverage, and later cases after an
-   unguarded wildcard. Broader pattern-subsumption diagnostics remain.
+   `variant[...]` parses, validates alternatives, lowers to `std::variant`,
+   and supports assignment from exactly one matching alternative, which covers
+   explicit mixed containers such as `list[variant[i32, str]]`. Unreachable
+   diagnostics reject duplicate unguarded cases, wildcard cases after
+   exhaustive coverage, and later cases after an unguarded wildcard. Broader
+   pattern-subsumption diagnostics remain.
 
 7. Native Inheritance
 

@@ -196,7 +196,8 @@ std::string lower_named_argument_call(const Expr& expr, const std::vector<std::s
 } // namespace
 
 bool is_builtin_template_constructor(std::string_view name) {
-    static const std::vector<std::string_view> types = {"list", "dict", "set", "atomic", "span"};
+    static const std::vector<std::string_view> types = {"list",   "dict", "set",
+                                                        "atomic", "span", "variant"};
     return std::find(types.begin(), types.end(), name) != types.end();
 }
 

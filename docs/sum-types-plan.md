@@ -224,8 +224,12 @@ Unreachable wildcard diagnostics reject an unguarded `_` case after all enum or
 wrapper cases are already covered, and reject later cases after an unguarded
 wildcard has already covered the rest of the match.
 
-Still remaining: broader pattern-subsumption diagnostics and anonymous
-`variant[...]`.
+Anonymous `variant[...]` is implemented as a native Dudu type form that lowers
+to `std::variant<...>`. Assignment is allowed only when the value matches
+exactly one alternative. This supports explicit mixed containers such as
+`list[variant[i32, str]]` without adding dynamic `Any`.
+
+Still remaining: broader pattern-subsumption diagnostics.
 
 ## Recursive Data
 
@@ -478,3 +482,7 @@ expressions. Simple zero-payload enum matches lower to C++ `switch`, require
 `EnumName.VariantName` or `_` cases, reject unknown and duplicate cases, and
 enforce exhaustiveness. Payload destructuring, guards, `Option`, and `Result`
 matching are implemented.
+
+Status: anonymous `variant[...]` parses as a template type, validates its
+alternative types, lowers to `std::variant`, and supports direct assignment
+from exactly one matching alternative.

@@ -61,6 +61,9 @@ std::string lower_template_type(const TypeRef& type) {
             << ">";
         return out.str();
     }
+    if (name == "variant") {
+        return "std::variant<" + join_lowered_type_args(type.children) + ">";
+    }
     std::ostringstream out;
     out << replace_dots(name) << "<" << join_lowered_type_args(type.children) << ">";
     return out.str();
@@ -98,6 +101,9 @@ std::string lower_template_type(const TypeRef& type,
         out << "dudu::Tuple" << type.children.size() << "<"
             << join_lowered_type_args(type.children, namespace_aliases) << ">";
         return out.str();
+    }
+    if (name == "variant") {
+        return "std::variant<" + join_lowered_type_args(type.children, namespace_aliases) + ">";
     }
     std::ostringstream out;
     out << replace_dots(strip_c_import_type_aliases(name, namespace_aliases)) << "<"

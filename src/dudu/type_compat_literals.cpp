@@ -49,8 +49,14 @@ std::string simple_literal_type(const Expr& expr) {
 
 bool literal_assignable_to(const TypeRef& expected, const Expr& expr) {
     const std::string got = simple_literal_type(expr);
-    return got == "number" ? is_numeric_type(wrapped_type_arg(expected))
-                           : assignment_type_allowed(expected, expr, got);
+    if (got == "number") {
+        if (expected.kind == TypeKind::Template && expected.name == "variant") {
+            return assignment_type_allowed(expected, expr,
+                                           expr.kind == ExprKind::FloatLiteral ? "f64" : "i32");
+        }
+        return is_numeric_type(wrapped_type_arg(expected));
+    }
+    return assignment_type_allowed(expected, expr, got);
 }
 
 bool container_literal_allowed(const TypeRef& expected, const Expr& expr) {

@@ -93,8 +93,15 @@ std::string simple_literal_type(const Expr& expr) {
 
 bool literal_assignable_to(const std::string& expected, const Expr& expr) {
     const std::string got = simple_literal_type(expr);
-    return got == "number" ? is_numeric_type(wrapped_type_arg(expected))
-                           : assignment_type_allowed(expected, expr, got);
+    if (got == "number") {
+        const TypeRef expected_ref = parse_type_text(expected);
+        if (expected_ref.kind == TypeKind::Template && expected_ref.name == "variant") {
+            return assignment_type_allowed(expected_ref, expr,
+                                           expr.kind == ExprKind::FloatLiteral ? "f64" : "i32");
+        }
+        return is_numeric_type(wrapped_type_arg(expected));
+    }
+    return assignment_type_allowed(expected, expr, got);
 }
 
 bool is_container_literal(const std::string& expected, const Expr& expr) {
@@ -291,6 +298,20 @@ bool is_option_value(const std::string& expected, const Expr& expr, const std::s
            (is_numeric_type(wrapped_type_arg(inner)) && simple_literal_type(expr) == "number");
 }
 
+bool is_variant_value(const TypeRef& expected, const Expr& expr, const std::string& got) {
+    if (expected.kind != TypeKind::Template || expected.name != "variant" ||
+        expected.children.empty()) {
+        return false;
+    }
+    size_t matches = 0;
+    for (const TypeRef& alternative : expected.children) {
+        if (assignment_type_allowed(alternative, expr, got)) {
+            ++matches;
+        }
+    }
+    return matches == 1;
+}
+
 bool has_internal_cpp_identifier(std::string_view name) {
     size_t pos = 0;
     while (pos < name.size()) {
@@ -365,6 +386,7 @@ bool assignment_type_allowed(const std::string& expected, const Expr& expr,
            (!is_container_literal_expr(expr) && normalized_got.empty()) ||
            normalized_got == "auto" || normalized_got == normalized_expected ||
            compact_type(normalized_expected) == compact_type(normalized_got) ||
+           is_variant_value(parse_type_text(normalized_expected), expr, normalized_got) ||
            is_option_value(normalized_expected, expr, normalized_got) ||
            compact_type(normalize_c_tags(normalized_expected)) ==
                compact_type(normalize_c_tags(normalized_got)) ||
@@ -401,6 +423,9 @@ bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const st
         }
     }
     if (parsed_expected_literal_assignment_allowed(expected, expr, normalized_got)) {
+        return true;
+    }
+    if (is_variant_value(expected, expr, normalized_got)) {
         return true;
     }
     return normalized_expected == "auto" || is_explicit_cast_to(normalized_expected, expr) ||

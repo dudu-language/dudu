@@ -33,6 +33,7 @@ expect_fail bad_option_match_missing --check "non-exhaustive match on wrapper; m
 expect_fail bad_option_match_unreachable_wildcard --check "unreachable wildcard case after exhaustive cases"
 expect_fail bad_option_match_after_wildcard --check "unreachable case after wildcard"
 expect_fail bad_result_match_case --check "case pattern must be Ok(...), Err(...), or _"
+expect_fail bad_anonymous_variant_value --emit-cpp "cannot assign bool to variant\\[i32, str\\] without an explicit cast"
 expect_fail bad_return --emit-cpp "return type mismatch: expected i32, got bool"
 expect_fail bad_return --check "return type mismatch: expected i32, got bool"
 expect_fail bad_return_implicit_cast --emit-cpp "return type mismatch: expected i64, got i32"

@@ -1,0 +1,22 @@
+import cpp "variant" as std
+
+
+def main() -> i32:
+    value: variant[i32, str, bool] = 12
+    if not std.holds_alternative[i32](value):
+        return 1
+
+    value = "hello"
+    if not std.holds_alternative[str](value):
+        return 2
+
+    values: list[variant[i32, str]] = [1, "two"]
+    values.append(3)
+
+    first: i32 = std.get[i32](values[0])
+    second: str = std.get[str](values[1])
+    third: i32 = std.get[i32](values[2])
+    if first == 1 and second == "two" and third == 3:
+        return 42
+    return 4
+
