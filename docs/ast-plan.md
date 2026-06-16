@@ -49,6 +49,8 @@ Already structured:
   `TypeRef` children structurally instead of carrying raw child text
 - C ABI pointer checks and structural type-name compatibility compare rendered
   `TypeRef` forms instead of raw parser text
+- member and scoped member path reconstruction render indexed path segments
+  from parsed expression shapes instead of splicing raw index text
 - generic method/template lookup text now renders through normalized
   `TypeRef` arguments for both parsed and compatibility template argument
   paths

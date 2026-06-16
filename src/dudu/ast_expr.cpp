@@ -4,6 +4,34 @@
 
 namespace dudu {
 
+std::optional<std::string> path_index_from_expr(const Expr& expr) {
+    switch (expr.kind) {
+    case ExprKind::Name:
+        return expr.name.empty() ? std::nullopt : std::optional<std::string>{expr.name};
+    case ExprKind::IntLiteral:
+    case ExprKind::StringLiteral:
+        return expr.text.empty() ? std::nullopt : std::optional<std::string>{expr.text};
+    case ExprKind::Member:
+        return member_path_from_expr(expr);
+    case ExprKind::TupleLiteral: {
+        std::string out;
+        for (const Expr& child : expr.children) {
+            const std::optional<std::string> part = path_index_from_expr(child);
+            if (!part.has_value()) {
+                return std::nullopt;
+            }
+            if (!out.empty()) {
+                out += ", ";
+            }
+            out += *part;
+        }
+        return out;
+    }
+    default:
+        return std::nullopt;
+    }
+}
+
 std::optional<std::string> member_path_from_expr(const Expr& expr) {
     if (expr.kind == ExprKind::Name && !expr.name.empty()) {
         return expr.name;
@@ -16,8 +44,9 @@ std::optional<std::string> member_path_from_expr(const Expr& expr) {
     }
     if (expr.kind == ExprKind::Index && expr.children.size() == 2) {
         const std::optional<std::string> receiver = member_path_from_expr(expr.children.front());
-        if (receiver.has_value() && !expr.children[1].text.empty()) {
-            return *receiver + "[" + expr.children[1].text + "]";
+        const std::optional<std::string> index = path_index_from_expr(expr.children[1]);
+        if (receiver.has_value() && index.has_value()) {
+            return *receiver + "[" + *index + "]";
         }
     }
     return std::nullopt;

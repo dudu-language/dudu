@@ -72,8 +72,9 @@ std::optional<std::string> scoped_member_path_from_expr(const FunctionScope& sco
     if (expr.kind == ExprKind::Index && expr.children.size() == 2) {
         const std::optional<std::string> receiver =
             scoped_member_path_from_expr(scope, expr.children.front(), location);
-        if (receiver.has_value() && !expr.children[1].text.empty()) {
-            return *receiver + "[" + expr.children[1].text + "]";
+        const std::optional<std::string> index = path_index_from_expr(expr.children[1]);
+        if (receiver.has_value() && index.has_value()) {
+            return *receiver + "[" + *index + "]";
         }
     }
     return std::nullopt;

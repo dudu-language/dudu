@@ -9,6 +9,7 @@
 namespace dudu {
 
 std::optional<std::string> member_path_from_expr(const Expr& expr);
+std::optional<std::string> path_index_from_expr(const Expr& expr);
 bool expr_missing(const Expr& expr);
 bool expr_present(const Expr& expr);
 std::optional<std::string> bare_callee_name(const Expr& expr);
