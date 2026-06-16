@@ -207,7 +207,8 @@ ProjectConfig apply_project_target(ProjectConfig config, const std::string& targ
 
 ProjectConfig parse_project_config(const std::filesystem::path& path) {
     ProjectConfig config;
-    const std::filesystem::path config_path = path.empty() ? std::filesystem::path("dudu.toml") : path;
+    const std::filesystem::path config_path =
+        path.empty() ? std::filesystem::path("dudu.toml") : path;
     const std::filesystem::path parent =
         config_path.has_parent_path() ? config_path.parent_path() : std::filesystem::path(".");
     config.project_dir = std::filesystem::absolute(parent).lexically_normal();
@@ -329,6 +330,9 @@ ProjectConfig parse_project_config(const std::filesystem::path& path) {
             config.pkg_config_packages = parse_string_array(path, line, value);
         } else if (section == "build" && name == "dir") {
             config.build_dir = unquote(value);
+        } else if (section == "build" && name == "backend") {
+            config.build_backend = unquote(value);
+            validate_one_of(path, line, "backend", config.build_backend, {"direct", "cmake"});
         } else if (section == "cmake" && name == "enabled") {
             config.cmake_enabled = parse_bool_value(path, line, value);
         } else if (section == "build") {

@@ -1,0 +1,7 @@
+name = "backend_cmake"
+entry = "main.dd"
+build_dir = "../../../build/project_backend_cmake"
+
+[build]
+backend = "cmake"
+

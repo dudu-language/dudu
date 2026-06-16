@@ -122,8 +122,8 @@ std::string read_text_file(const std::filesystem::path& path) {
 
 bool file_newer_or_same(const std::filesystem::path& newer, const std::filesystem::path& older) {
     std::error_code error;
-    if (!std::filesystem::exists(newer, error) || error ||
-        !std::filesystem::exists(older, error) || error) {
+    if (!std::filesystem::exists(newer, error) || error || !std::filesystem::exists(older, error) ||
+        error) {
         return false;
     }
     const auto newer_time = std::filesystem::last_write_time(newer, error);
@@ -162,8 +162,8 @@ bool build_is_up_to_date(const std::filesystem::path& output, const std::filesys
 }
 
 void write_compile_commands(const std::filesystem::path& output,
-                            const std::filesystem::path& cpp_path,
-                            const ProjectConfig& config, const std::string& command) {
+                            const std::filesystem::path& cpp_path, const ProjectConfig& config,
+                            const std::string& command) {
     const std::filesystem::path dir = output.parent_path().empty() ? "." : output.parent_path();
     std::ofstream out(dir / "compile_commands.json");
     if (!out) {
@@ -308,6 +308,11 @@ std::string native_failure_message(std::string label, const std::filesystem::pat
 }
 
 std::filesystem::path build_executable(const NativeBuildOptions& options, const std::string& cpp) {
+    if (options.config.build_backend != "direct") {
+        fail("build backend '" + options.config.build_backend +
+             "' cannot be driven by the direct native build path; use `dudu cmake` for CMake "
+             "artifact emission or select [build] backend = \"direct\"");
+    }
     const std::filesystem::path output = options.output.empty() ? "a.out" : options.output;
     std::filesystem::create_directories(output.parent_path().empty() ? "." : output.parent_path());
     const std::filesystem::path cpp_path = output.string() + ".cpp";

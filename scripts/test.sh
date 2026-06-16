@@ -353,6 +353,19 @@ if [[ "$project_default_output_status" -ne 42 ]]; then
     echo "project_default_output returned $project_default_output_status, expected 42" >&2
     exit 1
 fi
+set +e
+(
+    cd "$repo_root/tests/fixtures/project_backend_cmake"
+    "$repo_root/build/dudu" build --verbose 2>"$repo_root/build/project_backend_cmake.err"
+)
+project_backend_cmake_status=$?
+set -e
+if [[ "$project_backend_cmake_status" -eq 0 ]]; then
+    echo "project_backend_cmake unexpectedly built with direct backend" >&2
+    exit 1
+fi
+grep -q "build backend 'cmake' cannot be driven by the direct native build path" \
+    "$repo_root/build/project_backend_cmake.err"
 rm -f "$repo_root/build/project_linker_script_bin" "$repo_root/build/project_linker_script_bin.cpp"
 (
     cd "$repo_root/tests/fixtures/project_linker_script"

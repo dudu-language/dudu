@@ -343,12 +343,16 @@ inputs or guess through C/C++ build-system details.
 Current implementation reality:
 
 - `dudu build` and `dudu run` use the direct compiler backend.
+- `[build] backend = "direct"` and `[build] backend = "cmake"` parse from
+  `dudu.toml`. The direct backend is selectable explicitly. Selecting the
+  CMake backend for `dudu build`, `dudu run`, or `dudu test` fails clearly
+  instead of silently falling back to direct compilation.
 - The direct backend supports useful native inputs: include paths, library
   paths, libraries, compile flags, link flags, pkg-config packages, and extra
   C/C++ sources.
 - `dudu cmake` emits CMake for inspection or handoff.
-- `dudu build` does not yet select the CMake backend, configure CMake, run
-  `cmake --build`, or launch CMake-backed targets.
+- `dudu build` does not configure CMake, run `cmake --build`, or launch
+  CMake-backed targets.
 - User-owned CMake project integration is not implemented yet.
 
 The next build-driver work should close that gap without changing the front

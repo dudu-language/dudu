@@ -28,6 +28,7 @@ struct ProjectConfig {
     std::string name;
     std::filesystem::path main;
     std::filesystem::path build_dir;
+    std::string build_backend = "direct";
     std::string cpp_std = "c++20";
     std::string target_kind = "executable";
     std::string target_mode = "hosted";

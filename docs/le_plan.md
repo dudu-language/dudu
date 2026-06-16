@@ -556,13 +556,17 @@ push. They are not release packaging work.
    should still be launched through `dudu build`, `dudu run`, and `dudu test`.
 
    Status: `dudu build` and `dudu run` currently use the direct backend.
-   Native inputs such as include paths, library paths, libraries, flags,
-   pkg-config packages, and extra C/C++ sources are partially implemented and
-   useful. `dudu cmake` emits CMake, but the CMake backend for `dudu build`,
-   `dudu run`, and `dudu test` is not implemented yet. User-owned CMake
-   projects are not implemented as a backend mode yet. The serious path is to
-   make those backend choices work behind the same front-door commands, not to
-   tell users that real projects must leave `dudu build`.
+   `[build] backend = "direct"` and `[build] backend = "cmake"` parse from the
+   manifest. The direct backend is selectable explicitly. Selecting the CMake
+   backend for `dudu build`, `dudu run`, or `dudu test` fails clearly instead
+   of silently falling back to direct compilation. Native inputs such as include
+   paths, library paths, libraries, flags, pkg-config packages, and extra C/C++
+   sources are partially implemented and useful. `dudu cmake` emits CMake, but
+   the CMake backend for `dudu build`, `dudu run`, and `dudu test` is not
+   implemented. User-owned CMake projects are not implemented as a backend mode.
+   The serious path is to make those backend choices work behind the same
+   front-door commands, not to tell users that real projects must leave
+   `dudu build`.
 
    Required backend milestones: explicit backend selection in `dudu.toml`,
    generated-CMake builds behind `dudu build`, `dudu run`, and `dudu test`,
