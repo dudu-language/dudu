@@ -1,0 +1,25 @@
+class Handle[T]:
+    index: usize
+    generation: u32
+
+
+class Player:
+    hp: i32
+
+
+class Arena[T]:
+    items: list[T]
+
+    def add(self, value: T) -> Handle[T]:
+        self.items.append(value)
+        return Handle[T](len(self.items) - 1, 0)
+
+    def get(self, handle: Handle[T]) -> &T:
+        return self.items[handle.index]
+
+
+def main() -> i32:
+    arena: Arena[Player] = Arena[Player]()
+    handle: Handle[Player] = arena.add(Player(42))
+    player: &Player = arena.get(handle)
+    return player.hp

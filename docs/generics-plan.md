@@ -249,6 +249,10 @@ class Arena[T]:
 
 This is a real game/dev-tools pattern.
 
+Status: an executable fixture covers generic `Handle[T]` and `Arena[T]`
+classes, `list[T]` storage, generic handle construction, and returning `&T`
+from indexed arena storage.
+
 ### Result Helpers
 
 ```python
