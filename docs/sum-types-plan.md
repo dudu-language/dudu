@@ -221,9 +221,10 @@ emits classes, then emits full enum definitions so class payloads such as
 `Command.Move(dir: Vec2)` compile without wrapper ordering tricks.
 
 Unreachable wildcard diagnostics reject an unguarded `_` case after all enum or
-wrapper cases are already covered.
+wrapper cases are already covered, and reject later cases after an unguarded
+wildcard has already covered the rest of the match.
 
-Still remaining: broader unreachable-pattern diagnostics and anonymous
+Still remaining: broader pattern-subsumption diagnostics and anonymous
 `variant[...]`.
 
 ## Recursive Data
