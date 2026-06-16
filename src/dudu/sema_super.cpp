@@ -83,8 +83,7 @@ bool is_super_call(const std::string& callee) {
 }
 
 bool is_super_init_stmt(const Stmt& stmt) {
-    return stmt.kind == StmtKind::Expr && stmt.expr.kind == ExprKind::Call &&
-           call_callee_text(stmt.expr) == "super.init";
+    return stmt.kind == StmtKind::Expr && is_member_callee(stmt.expr, "super", "init");
 }
 
 std::string infer_super_call_ast(const FunctionScope& scope, const Expr& expr,

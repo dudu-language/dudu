@@ -136,9 +136,9 @@ std::string class_opening(const ClassDecl& klass, const std::vector<std::string>
             if (i > 0) {
                 opening += ", ";
             }
-            opening += "public " + lower_cpp_type(parse_type_text(klass.base_classes[i],
-                                                                   klass.location),
-                                                  aliases);
+            opening +=
+                "public " +
+                lower_cpp_type(parse_type_text(klass.base_classes[i], klass.location), aliases);
         }
         return opening;
     };
@@ -162,8 +162,7 @@ const Expr* super_init_expr(const FunctionDecl& method) {
         return nullptr;
     }
     const Stmt& first = method.statements.front();
-    if (first.kind == StmtKind::Expr && first.expr.kind == ExprKind::Call &&
-        call_callee_text(first.expr) == "super.init") {
+    if (first.kind == StmtKind::Expr && is_member_callee(first.expr, "super", "init")) {
         return &first.expr;
     }
     return nullptr;
@@ -189,7 +188,8 @@ std::string super_init_base(const Symbols& symbols, const std::string& class_nam
     return storage_base;
 }
 
-std::string join_lowered_args(const std::vector<Expr>& args, const std::vector<std::string>& aliases,
+std::string join_lowered_args(const std::vector<Expr>& args,
+                              const std::vector<std::string>& aliases,
                               const std::map<std::string, std::string>& locals) {
     std::ostringstream out;
     for (size_t i = 0; i < args.size(); ++i) {
@@ -227,8 +227,8 @@ bool class_is_polymorphic(const Symbols& symbols, const ClassDecl& klass,
     }
     for (const std::string& base : klass.base_classes) {
         const auto parent = symbols.classes.find(base_type(base));
-        if (parent != symbols.classes.end() && class_is_polymorphic(symbols, *parent->second,
-                                                                    seen)) {
+        if (parent != symbols.classes.end() &&
+            class_is_polymorphic(symbols, *parent->second, seen)) {
             return true;
         }
     }
@@ -339,8 +339,8 @@ void emit_method(std::ostringstream& out, const std::string& class_name, const F
         std::vector<Stmt> body(method.statements.begin() + 1, method.statements.end());
         emit_block(out, body, 2, aliases, locals, method.return_type, function_returns, &symbols);
     } else {
-        emit_block(out, method.statements, 2, aliases, locals, method.return_type,
-                   function_returns, &symbols);
+        emit_block(out, method.statements, 2, aliases, locals, method.return_type, function_returns,
+                   &symbols);
     }
     out << "    }\n";
 }

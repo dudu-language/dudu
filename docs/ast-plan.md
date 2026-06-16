@@ -97,6 +97,8 @@ Already structured:
   raw callee strings incrementally
 - ordinary call C++ emission lowers parsed callee expressions instead of
   lowering the callee name string directly
+- `super.init(...)` recognition in sema and class emission checks parsed
+  `super` member-call shape instead of comparing reconstructed callee text
 - template-call fallback emission and pointer-cast emission use parsed callee
   helper paths for non-keyword callees
 - templated pointer casts such as `*const[i32](ptr)` validate parsed
