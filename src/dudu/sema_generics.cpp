@@ -88,21 +88,6 @@ bool infer_generic_binding(const TypeRef& param_type, const TypeRef& arg_type,
 
 } // namespace
 
-std::string template_args_lookup_text(const Expr& expr) {
-    std::ostringstream out;
-    const size_t count = !expr.template_type_args.empty() ? expr.template_type_args.size()
-                                                          : expr.template_args.size();
-    for (size_t i = 0; i < count; ++i) {
-        if (i > 0) {
-            out << ", ";
-        }
-        out << (!expr.template_type_args.empty()
-                    ? substitute_type_ref_text(expr.template_type_args[i], {})
-                    : expr.template_args[i].text);
-    }
-    return out.str();
-}
-
 std::vector<TypeRef> template_type_refs(const Expr& expr) {
     if (!expr.template_type_args.empty()) {
         return expr.template_type_args;
@@ -113,6 +98,18 @@ std::vector<TypeRef> template_type_refs(const Expr& expr) {
         out.push_back(parse_type_text(arg.text, arg.location));
     }
     return out;
+}
+
+std::string template_args_lookup_text(const Expr& expr) {
+    std::ostringstream out;
+    const std::vector<TypeRef> args = template_type_refs(expr);
+    for (size_t i = 0; i < args.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << substitute_type_ref_text(args[i], {});
+    }
+    return out.str();
 }
 
 std::optional<std::vector<TypeRef>>
