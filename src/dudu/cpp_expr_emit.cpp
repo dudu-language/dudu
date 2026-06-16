@@ -3,9 +3,9 @@
 #include "dudu/array_shape.hpp"
 #include "dudu/ast_expr.hpp"
 #include "dudu/cpp_expr_call_emit.hpp"
+#include "dudu/cpp_expr_swizzles.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/cpp_pointer_members.hpp"
-#include "dudu/cpp_expr_swizzles.hpp"
 #include "dudu/cpp_stmt_types.hpp"
 #include "dudu/sema_context.hpp"
 #include "dudu/sema_enum.hpp"
@@ -78,7 +78,7 @@ std::string join_lowered_exprs(const std::vector<Expr>& exprs,
 }
 
 bool has_expr(const Expr& expr) {
-    return !expr.text.empty();
+    return !expr.text.empty() && (expr.kind != ExprKind::Unknown || !trim_copy(expr.text).empty());
 }
 
 std::string join_lowered_type_args(const std::vector<TypeRef>& types,
