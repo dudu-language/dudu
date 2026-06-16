@@ -6,6 +6,13 @@
 #include <sstream>
 
 namespace dudu {
+namespace {
+
+bool missing_type_ref(const TypeRef& type) {
+    return type.kind == TypeKind::Unknown && trim_copy(type.text).empty();
+}
+
+} // namespace
 
 std::string function_type(const FunctionSignature& signature) {
     std::ostringstream out;
@@ -34,7 +41,7 @@ bool parse_function_type(const TypeRef& type, FunctionSignature& out) {
         return false;
     }
     out.params.clear();
-    out.return_type = function->children.front().text.empty()
+    out.return_type = missing_type_ref(function->children.front())
                           ? "void"
                           : substitute_type_ref_text(function->children.front(), {});
     for (size_t i = 1; i < function->children.size(); ++i) {
