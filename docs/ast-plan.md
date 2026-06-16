@@ -95,6 +95,8 @@ Already structured:
 - ordinary calls and template calls keep a parsed callee expression alongside
   the compatibility `name` field, so sema/emission/LSP can migrate away from
   raw callee strings incrementally
+- direct callee-name extraction is shared in the AST expression helper layer
+  instead of being reimplemented by individual semantic passes
 - ordinary call C++ emission lowers parsed callee expressions instead of
   lowering the callee name string directly
 - `super.init(...)` recognition in sema and class emission checks parsed

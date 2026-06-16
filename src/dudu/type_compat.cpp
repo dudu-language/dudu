@@ -61,14 +61,6 @@ bool is_string_type(const std::string& type) {
     return compact == "str" || compact == "std.string" || compact == "std::string";
 }
 
-std::string direct_callee_name(const Expr& expr) {
-    if (!expr.callee.empty() && expr.callee.front().kind == ExprKind::Name &&
-        !expr.callee.front().name.empty()) {
-        return expr.callee.front().name;
-    }
-    return expr.name;
-}
-
 bool is_explicit_cast_to(const std::string& expected, const Expr& expr) {
     if (expr.kind != ExprKind::Call && expr.kind != ExprKind::TemplateCall) {
         return false;

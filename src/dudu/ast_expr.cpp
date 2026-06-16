@@ -23,6 +23,14 @@ std::optional<std::string> member_path_from_expr(const Expr& expr) {
     return std::nullopt;
 }
 
+std::string direct_callee_name(const Expr& expr) {
+    if (!expr.callee.empty() && expr.callee.front().kind == ExprKind::Name &&
+        !expr.callee.front().name.empty()) {
+        return expr.callee.front().name;
+    }
+    return trim_copy(expr.name);
+}
+
 bool is_member_callee(const Expr& expr, std::string_view receiver, std::string_view member) {
     if (expr.kind != ExprKind::Call || expr.callee.size() != 1) {
         return false;
