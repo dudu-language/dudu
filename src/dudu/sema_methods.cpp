@@ -1,10 +1,11 @@
 #include "dudu/sema_methods.hpp"
 
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/sema_builtin_methods.hpp"
 #include "dudu/sema_common.hpp"
-#include "dudu/sema_methods_internal.hpp"
 #include "dudu/sema_method_templates.hpp"
+#include "dudu/sema_methods_internal.hpp"
 
 #include <optional>
 
@@ -44,14 +45,12 @@ FunctionSignature instantiate_method_signature(const ClassDecl& klass, const Fun
         signature.params.push_back(
             substitute_receiver_template_type(std::move(param_type), receiver_args));
     }
-    signature.return_type =
-        method.return_type.empty()
-            ? "void"
-            : substitute_method_template_type(method.return_type, method.generic_params,
-                                              method_args);
-    signature.return_type =
-        substitute_class_template_type(std::move(signature.return_type), klass.generic_params,
-                                       receiver_args);
+    signature.return_type = method.return_type.empty()
+                                ? "void"
+                                : substitute_method_template_type(
+                                      method.return_type, method.generic_params, method_args);
+    signature.return_type = substitute_class_template_type(std::move(signature.return_type),
+                                                           klass.generic_params, receiver_args);
     signature.return_type =
         substitute_receiver_template_type(std::move(signature.return_type), receiver_args);
     return signature;
@@ -61,7 +60,7 @@ std::vector<std::string> type_ref_texts(const std::vector<TypeRef>& types) {
     std::vector<std::string> out;
     out.reserve(types.size());
     for (const TypeRef& type : types) {
-        out.push_back(type.text);
+        out.push_back(substitute_type_ref_text(type, {}));
     }
     return out;
 }

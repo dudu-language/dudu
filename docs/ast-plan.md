@@ -43,6 +43,8 @@ Already structured:
 - generic argument inference gets candidate parameter and argument names through
   a shared parsed `TypeRef` head-name helper instead of open-coding
   `name`/`text` fallback logic
+- inferred generic method instantiation renders inferred `TypeRef` arguments
+  through the shared type helper instead of reading raw type text
 - local scopes preserve parsed `TypeRef` nodes for declared parameters,
   constants, locals, catch bindings, and typed loop bindings, so function
   pointer calls can check signatures without reparsing declared type text
