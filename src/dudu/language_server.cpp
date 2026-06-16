@@ -13,8 +13,8 @@
 #include "dudu/language_server_references.hpp"
 #include "dudu/language_server_semantic_tokens.hpp"
 #include "dudu/language_server_support.hpp"
-#include "dudu/language_server_symbols.hpp"
 #include "dudu/language_server_symbol_results.hpp"
+#include "dudu/language_server_symbols.hpp"
 #include "dudu/language_server_types.hpp"
 #include "dudu/language_server_workspace.hpp"
 #include "dudu/native_build.hpp"
@@ -109,6 +109,13 @@ class LanguageServer {
         write_message(body.str());
     }
 
+    void respond_error(const Json& id, int code, const std::string& message) {
+        std::ostringstream body;
+        body << "{\"jsonrpc\":\"2.0\",\"id\":" << id_json(id) << ",\"error\":{\"code\":" << code
+             << ",\"message\":\"" << json_escape(message) << "\"}}";
+        write_message(body.str());
+    }
+
     void notify(std::string_view method, const std::string& params) {
         std::ostringstream body;
         body << "{\"jsonrpc\":\"2.0\",\"method\":\"" << method << "\",\"params\":" << params << "}";
@@ -140,73 +147,81 @@ class LanguageServer {
         const Json* id = message.get("id");
         const Json* params = message.get("params");
 
-        if (method == "initialize") {
-            if (id != nullptr) {
-                respond(*id, initialize_result());
-            }
-        } else if (method == "shutdown") {
-            shutdown_ = true;
-            if (id != nullptr) {
+        try {
+            if (method == "initialize") {
+                if (id != nullptr) {
+                    respond(*id, initialize_result());
+                }
+            } else if (method == "shutdown") {
+                shutdown_ = true;
+                if (id != nullptr) {
+                    respond(*id, "null");
+                }
+            } else if (method == "exit") {
+                exit_ = true;
+            } else if (method == "textDocument/didOpen") {
+                did_open(params);
+            } else if (method == "textDocument/didChange") {
+                did_change(params);
+            } else if (method == "textDocument/didSave") {
+                did_save(params);
+            } else if (method == "textDocument/formatting") {
+                if (id != nullptr) {
+                    respond(*id, formatting_result(params));
+                }
+            } else if (method == "textDocument/documentSymbol") {
+                if (id != nullptr) {
+                    respond(*id, document_symbol_result(params));
+                }
+            } else if (method == "textDocument/semanticTokens/full") {
+                if (id != nullptr) {
+                    respond(*id, semantic_tokens_result(params));
+                }
+            } else if (method == "textDocument/definition") {
+                if (id != nullptr) {
+                    respond(*id, definition_result(params));
+                }
+            } else if (method == "textDocument/references") {
+                if (id != nullptr) {
+                    respond(*id, references_result(params));
+                }
+            } else if (method == "textDocument/rename") {
+                if (id != nullptr) {
+                    respond(*id, rename_result(params));
+                }
+            } else if (method == "textDocument/codeAction") {
+                if (id != nullptr) {
+                    respond(*id, code_action_result(params));
+                }
+            } else if (method == "textDocument/hover") {
+                if (id != nullptr) {
+                    respond(*id, hover_result(params));
+                }
+            } else if (method == "textDocument/completion") {
+                if (id != nullptr) {
+                    respond(*id, completion_result(params));
+                }
+            } else if (method == "completionItem/resolve") {
+                if (id != nullptr) {
+                    respond(*id, completion_resolve_result(params));
+                }
+            } else if (method == "textDocument/signatureHelp") {
+                if (id != nullptr) {
+                    respond(*id, signature_help_result(params));
+                }
+            } else if (method == "workspace/symbol") {
+                if (id != nullptr) {
+                    respond(*id, workspace_symbol_result(params));
+                }
+            } else if (id != nullptr) {
                 respond(*id, "null");
             }
-        } else if (method == "exit") {
-            exit_ = true;
-        } else if (method == "textDocument/didOpen") {
-            did_open(params);
-        } else if (method == "textDocument/didChange") {
-            did_change(params);
-        } else if (method == "textDocument/didSave") {
-            did_save(params);
-        } else if (method == "textDocument/formatting") {
+        } catch (const std::exception& error) {
             if (id != nullptr) {
-                respond(*id, formatting_result(params));
+                respond_error(*id, -32603, error.what());
+            } else {
+                err_ << "dudu lsp: " << method << ": " << error.what() << '\n';
             }
-        } else if (method == "textDocument/documentSymbol") {
-            if (id != nullptr) {
-                respond(*id, document_symbol_result(params));
-            }
-        } else if (method == "textDocument/semanticTokens/full") {
-            if (id != nullptr) {
-                respond(*id, semantic_tokens_result(params));
-            }
-        } else if (method == "textDocument/definition") {
-            if (id != nullptr) {
-                respond(*id, definition_result(params));
-            }
-        } else if (method == "textDocument/references") {
-            if (id != nullptr) {
-                respond(*id, references_result(params));
-            }
-        } else if (method == "textDocument/rename") {
-            if (id != nullptr) {
-                respond(*id, rename_result(params));
-            }
-        } else if (method == "textDocument/codeAction") {
-            if (id != nullptr) {
-                respond(*id, code_action_result(params));
-            }
-        } else if (method == "textDocument/hover") {
-            if (id != nullptr) {
-                respond(*id, hover_result(params));
-            }
-        } else if (method == "textDocument/completion") {
-            if (id != nullptr) {
-                respond(*id, completion_result(params));
-            }
-        } else if (method == "completionItem/resolve") {
-            if (id != nullptr) {
-                respond(*id, completion_resolve_result(params));
-            }
-        } else if (method == "textDocument/signatureHelp") {
-            if (id != nullptr) {
-                respond(*id, signature_help_result(params));
-            }
-        } else if (method == "workspace/symbol") {
-            if (id != nullptr) {
-                respond(*id, workspace_symbol_result(params));
-            }
-        } else if (id != nullptr) {
-            respond(*id, "null");
         }
         if (shutdown_ && method == "exit") {
             exit_ = true;
@@ -304,9 +319,8 @@ class LanguageServer {
         ModuleAst native_symbols = module;
         try {
             const ProjectConfig config = config_for_file(found->second.path);
-            merge_native_header_types(native_symbols,
-                                      {.config = config,
-                                       .source_dir = found->second.path.parent_path()});
+            merge_native_header_types(
+                native_symbols, {.config = config, .source_dir = found->second.path.parent_path()});
         } catch (const std::exception&) {
         }
         return semantic_tokens_json(module, native_symbols);
@@ -412,7 +426,6 @@ class LanguageServer {
         const auto found = documents_.find(uri);
         return found == documents_.end() ? nullptr : &found->second;
     }
-
 };
 
 } // namespace

@@ -42,6 +42,10 @@ response, even when the symbol cannot be resolved. The server should log and
 surface project-index/native-scan failures instead of leaving the client
 waiting.
 
+Status: request handlers now return JSON-RPC error responses when a request
+throws after an ID is known. The LSP smoke suite covers a bad-project-config
+definition request that previously could leave the editor waiting.
+
 ## Native Header Navigation
 
 The language server should use the same Clang-backed native header awareness as

@@ -526,12 +526,25 @@ messages = [
                     "version": 1,
                     "text": "\n".join(
                         [
+                            'import c "stdio.h"',
+                            "",
                             "def main() -> i32:",
                             "    return 0",
                             "",
                         ]
                     ),
                 }
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 46,
+            "method": "textDocument/definition",
+            "params": {
+                "textDocument": {"uri": bad_config_uri},
+                "position": {"line": 0, "character": 11},
             },
         }
     ),
@@ -1059,8 +1072,13 @@ build_config_diagnostics = next(
     and item["params"]["uri"] == bad_config_uri
 )
 build_config_diag = build_config_diagnostics["params"]["diagnostics"][0]
-assert build_config_diag["source"] == "dudu/build-config"
-assert "invalid [target] kind" in build_config_diag["message"]
+assert build_config_diag["source"] == "dudu/build-config", build_config_diag
+assert "invalid [target] kind" in build_config_diag["message"], build_config_diag
+
+bad_config_definition = next(item for item in responses if item.get("id") == 46)
+assert "error" in bad_config_definition, bad_config_definition
+assert bad_config_definition["error"]["code"] == -32603, bad_config_definition
+assert "invalid [target] kind" in bad_config_definition["error"]["message"], bad_config_definition
 
 missing_pkg_diagnostics = next(
     item
