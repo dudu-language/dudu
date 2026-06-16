@@ -215,6 +215,12 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
             return "offsetof(" + lowered_template_args + ", " +
                    lower_offsetof_field(expr.children.front(), aliases, locals, symbols) + ")";
         }
+        if ((expr.name == "std.function" || expr.name == "std::function") &&
+            expr.template_type_args.size() == 1) {
+            const std::string type_args = join_type_arg_texts(expr.template_type_args);
+            const std::string type = lower_cpp_type(expr.name + "[" + type_args + "]", aliases);
+            return expr.children.empty() ? type + "{}" : type + "(" + lowered_call_args + ")";
+        }
         if (is_builtin_template_constructor(expr.name)) {
             const std::string type_args = join_type_arg_texts(expr.template_type_args);
             const std::string type = lower_cpp_type(expr.name + "[" + type_args + "]", aliases);

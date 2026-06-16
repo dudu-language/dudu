@@ -1,5 +1,6 @@
 #include "dudu/native_signature_match.hpp"
 
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/native_signature_templates.hpp"
 #include "dudu/source.hpp"
@@ -199,6 +200,31 @@ std::string signature_text(const std::string& callee, const FunctionSignature& s
     return out.str();
 }
 
+std::optional<std::string>
+indexed_tuple_return_type(std::string return_type, const std::vector<std::string>& template_args,
+                          const std::vector<Expr>& args, const FunctionScope& scope,
+                          const SourceLocation* location, const NativeInferExprAstFn& infer_expr) {
+    return_type = trim(std::move(return_type));
+    const bool reference = starts_with(return_type, "&");
+    const std::string index_text = reference ? trim(return_type.substr(1)) : return_type;
+    if (template_args.empty() || index_text != template_args.front() || args.empty() ||
+        index_text.empty() || index_text.find_first_not_of("0123456789") != std::string::npos) {
+        return std::nullopt;
+    }
+    const std::string arg_type = infer_expr(scope, args.front(), location);
+    const TypeRef tuple = parse_type_text(arg_type);
+    if (tuple.kind != TypeKind::Template ||
+        (tuple.name != "tuple" && tuple.name != "std.tuple" && tuple.name != "std::tuple")) {
+        return std::nullopt;
+    }
+    const size_t index = static_cast<size_t>(std::stoull(index_text));
+    if (index >= tuple.children.size()) {
+        return std::nullopt;
+    }
+    const std::string type = substitute_type_ref_text(tuple.children[index], {});
+    return reference ? "&" + type : type;
+}
+
 std::string mismatch_reason_ast(const FunctionScope& scope, const FunctionSignature& signature,
                                 const std::vector<Expr>& args, const SourceLocation* location,
                                 const NativeInferExprAstFn& infer_expr,
@@ -369,7 +395,15 @@ std::optional<FunctionSignature> match_native_signature(const FunctionScope& sco
     for (const FunctionSignature& signature : candidates) {
         if (const std::optional<FunctionSignature> matched =
                 match_signature_ast(scope, signature, args, location, infer_expr, can_assign)) {
-            return matched;
+            FunctionSignature resolved = *matched;
+            if (template_call) {
+                if (const auto indexed =
+                        indexed_tuple_return_type(resolved.return_type, template_call->second, args,
+                                                  scope, location, infer_expr)) {
+                    resolved.return_type = *indexed;
+                }
+            }
+            return resolved;
         }
     }
     bool has_variadic_candidate = false;

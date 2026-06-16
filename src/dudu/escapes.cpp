@@ -53,6 +53,9 @@ void check_return_address_escape(const std::map<std::string, std::string>& local
         fail_if_value_local_escapes(expr.location, locals, name);
         return;
     }
+    if (expr.kind == ExprKind::Call || expr.kind == ExprKind::TemplateCall) {
+        return;
+    }
     for (const Expr& child : expr.children) {
         check_return_address_escape(locals, child);
     }

@@ -1,4 +1,5 @@
 #include "dudu/cli_usage.hpp"
+#include "dudu/cmake_backend.hpp"
 #include "dudu/cmake_emit.hpp"
 #include "dudu/cpp_emit.hpp"
 #include "dudu/format_path.hpp"
@@ -281,71 +282,17 @@ void write_text_output(const std::optional<std::filesystem::path>& path, const s
     out << text;
 }
 
-void write_text_file(const std::filesystem::path& path, const std::string& text) {
-    std::filesystem::create_directories(path.parent_path().empty() ? "." : path.parent_path());
-    std::ofstream out(path);
-    if (!out) {
-        fail("could not open output " + path.string());
-    }
-    out << text;
-}
-
-std::string command_failure_message(const std::string& label, const std::string& command,
-                                    const std::filesystem::path& log_path) {
-    std::string message = label + " failed\ncommand: " + command;
-    if (std::filesystem::exists(log_path)) {
-        const std::string output = read_text_file(log_path);
-        if (!output.empty()) {
-            message += "\noutput:\n" + output;
-        }
-    }
-    return message;
-}
-
-std::filesystem::path cmake_backend_root(const dudu::ProjectConfig& config) {
-    const std::filesystem::path build_dir = config.build_dir.empty() ? "build" : config.build_dir;
-    return dudu::project_path(config, build_dir) / "cmake-backend";
-}
-
-std::string cmake_target_name(const dudu::ProjectConfig& config,
-                              const std::filesystem::path& input) {
-    return config.name.empty() ? input.stem().string() : config.name;
-}
-
 std::filesystem::path build_cmake_backend(const Options& options, const dudu::ProjectConfig& config,
                                           const std::filesystem::path& executable_path) {
     if (options.output.has_value()) {
         fail("CMake backend does not support -o; configure the target name in dudu.toml");
     }
-    const std::filesystem::path root = cmake_backend_root(config);
-    const std::filesystem::path source_dir = root / "source";
-    const std::filesystem::path build_dir = root / "build";
-    const std::filesystem::path cmake_lists = source_dir / "CMakeLists.txt";
-    write_text_file(cmake_lists, dudu::emit_cmake_project(config, options.input));
-
-    const std::string configure_command =
-        "cmake -S " + dudu::shell_quote_path(source_dir) + " -B " +
-        dudu::shell_quote_path(build_dir) +
-        " -DDUDU_EXECUTABLE=" + dudu::shell_quote_path(std::filesystem::absolute(executable_path));
-    const std::filesystem::path configure_log = root / "configure.log";
-    if (options.verbose) {
-        std::cerr << configure_command << '\n';
-    }
-    if (dudu::run_shell_command(configure_command, configure_log) != 0) {
-        fail(command_failure_message("CMake configure", configure_command, configure_log));
-    }
-
-    const std::string target = cmake_target_name(config, options.input);
-    const std::string build_command = "cmake --build " + dudu::shell_quote_path(build_dir) +
-                                      " --target " + dudu::shell_quote_arg(target);
-    const std::filesystem::path build_log = root / "build.log";
-    if (options.verbose) {
-        std::cerr << build_command << '\n';
-    }
-    if (dudu::run_shell_command(build_command, build_log) != 0) {
-        fail(command_failure_message("CMake build", build_command, build_log));
-    }
-    return build_dir / target;
+    return dudu::run_cmake_backend({.config = config,
+                                    .root = dudu::default_cmake_backend_root(config),
+                                    .cmake_lists = dudu::emit_cmake_project(config, options.input),
+                                    .target = dudu::cmake_target_name(config, options.input),
+                                    .dudu_executable = executable_path,
+                                    .verbose = options.verbose});
 }
 
 int run_project_benchmarks(const Options& options) {
@@ -365,12 +312,20 @@ dudu::ProjectConfig config_for_input(const std::filesystem::path& input) {
     return dudu::parse_project_config(build_config_path(input));
 }
 
+std::filesystem::path source_dir_for_input(const std::filesystem::path& input) {
+    if (input.empty()) {
+        return std::filesystem::current_path();
+    }
+    return input.has_parent_path() ? input.parent_path() : std::filesystem::current_path();
+}
+
 dudu::NativeHeaderOptions native_header_options_for_clean_cache(const Options& options) {
     if (options.input.empty() || std::filesystem::is_directory(options.input)) {
         const std::filesystem::path root = options.input.empty() ? "." : options.input;
         return {.config = dudu::parse_project_config(root / "dudu.toml"), .source_dir = root};
     }
-    return {.config = config_for_input(options.input), .source_dir = options.input.parent_path()};
+    return {.config = config_for_input(options.input),
+            .source_dir = source_dir_for_input(options.input)};
 }
 
 dudu::ProjectConfig config_for_options(const Options& options) {
@@ -409,8 +364,7 @@ dudu::ModuleAst checked_module(const Options& options, const std::string& source
     for (const auto& [name, value] : options.build_values) {
         module.build_values[name] = value;
     }
-    const std::filesystem::path source_dir =
-        options.input.empty() ? std::filesystem::current_path() : options.input.parent_path();
+    const std::filesystem::path source_dir = source_dir_for_input(options.input);
     dudu::merge_native_header_types(module, {.config = config, .source_dir = source_dir});
     dudu::analyze_module(module, {.check_bodies = check_bodies});
     return module;
@@ -477,6 +431,7 @@ int main(int argc, char** argv) {
             return dudu::run_project_tests({.input = options.input,
                                             .output = options.output,
                                             .build_values = options.build_values,
+                                            .dudu_executable = argv[0],
                                             .target_name = options.target_name,
                                             .test_filter = options.test_filter,
                                             .no_capture = options.no_capture,
@@ -505,7 +460,7 @@ int main(int argc, char** argv) {
         if (options.build) {
             const dudu::ProjectConfig config = config_for_options(options);
             if (config.build_backend == "cmake") {
-                const std::filesystem::path root = cmake_backend_root(config);
+                const std::filesystem::path root = dudu::default_cmake_backend_root(config);
                 dudu::print_project_step(options.project_driver, "cmake",
                                          root / "source" / "CMakeLists.txt");
                 dudu::print_project_step(options.project_driver, "build", root / "build");
@@ -527,7 +482,7 @@ int main(int argc, char** argv) {
                 fail("cannot run target kind: " + config.target_kind);
             }
             if (config.build_backend == "cmake") {
-                const std::filesystem::path root = cmake_backend_root(config);
+                const std::filesystem::path root = dudu::default_cmake_backend_root(config);
                 dudu::print_project_step(options.project_driver, "cmake",
                                          root / "source" / "CMakeLists.txt");
                 dudu::print_project_step(options.project_driver, "build", root / "build");

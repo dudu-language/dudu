@@ -200,6 +200,38 @@ bool should_emit_function(const FunctionDecl& fn, bool test_source) {
     return !test_source || fn.name != "main";
 }
 
+void emit_function_declarations(std::ostringstream& out, const ModuleAst& module,
+                                const std::vector<std::string>& aliases, bool header_only,
+                                bool test_source = false) {
+    bool emitted = false;
+    for (const FunctionDecl& fn : module.functions) {
+        if (!should_emit_function(fn, test_source)) {
+            continue;
+        }
+        if (header_only && !visible_function_in_header(fn)) {
+            continue;
+        }
+        emit_template_params(out, fn.generic_params);
+        emit_function_signature(out, fn, aliases);
+        out << ";\n";
+        emitted = true;
+    }
+    if (emitted) {
+        out << '\n';
+    }
+}
+
+void emit_class_forward_declarations(std::ostringstream& out, const ModuleAst& module) {
+    if (module.classes.empty()) {
+        return;
+    }
+    for (const ClassDecl& klass : module.classes) {
+        emit_template_params(out, klass.generic_params);
+        out << "struct " << klass.name << ";\n";
+    }
+    out << '\n';
+}
+
 void emit_early_functions(std::ostringstream& out, const ModuleAst& module,
                           const std::vector<std::string>& aliases,
                           const std::map<std::string, std::string>& function_returns,
@@ -401,6 +433,8 @@ std::string emit_cpp_source(const ModuleAst& module) {
 
     emit_aliases(out, module);
     emit_enum_forward_declarations(out, module);
+    emit_class_forward_declarations(out, module);
+    emit_function_declarations(out, module, aliases, false);
     emit_classes(out, module, aliases, function_returns, symbols);
     emit_enums(out, module, aliases);
     emit_early_functions(out, module, aliases, function_returns, symbols, false);
@@ -427,6 +461,8 @@ std::string emit_cpp_test_source(const ModuleAst& module, const std::string& fil
 
     emit_aliases(out, module);
     emit_enum_forward_declarations(out, module);
+    emit_class_forward_declarations(out, module);
+    emit_function_declarations(out, module, aliases, false, true);
     emit_classes(out, module, aliases, function_returns, symbols);
     emit_enums(out, module, aliases);
     emit_early_functions(out, module, aliases, function_returns, symbols, false, true);

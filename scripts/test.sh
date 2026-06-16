@@ -114,10 +114,10 @@ rm -rf "$clean_smoke"
     "$repo_root/build/dudu" clean 2>"$repo_root/build/dudu_clean.err"
     test ! -e build
 )
-grep -q "emit build/clean_smoke.cpp" "$repo_root/build/dudu_run_steps.err"
-grep -q "build build/clean_smoke" "$repo_root/build/dudu_run_steps.err"
-grep -q "run build/clean_smoke" "$repo_root/build/dudu_run_steps.err"
-grep -q "up-to-date build/clean_smoke" "$repo_root/build/dudu_build_cached.err"
+grep -Eq "emit .*clean_smoke/build/clean_smoke.cpp" "$repo_root/build/dudu_run_steps.err"
+grep -Eq "build .*clean_smoke/build/clean_smoke" "$repo_root/build/dudu_run_steps.err"
+grep -Eq "run .*clean_smoke/build/clean_smoke" "$repo_root/build/dudu_run_steps.err"
+grep -Eq "up-to-date .*clean_smoke/build/clean_smoke" "$repo_root/build/dudu_build_cached.err"
 grep -q "clean ./build" "$repo_root/build/dudu_clean.err"
 cache_smoke="$repo_root/build/clean_cache_smoke"
 rm -rf "$cache_smoke"
@@ -147,7 +147,8 @@ DD
     "$repo_root/build/dudu" clean-cache 2>"$repo_root/build/dudu_clean_cache.err"
     test ! -e build/dudu-header-cache
 )
-grep -q "clean-cache build/dudu-header-cache" "$repo_root/build/dudu_clean_cache.err"
+grep -Eq "clean-cache .*clean_cache_smoke/build/dudu-header-cache" \
+    "$repo_root/build/dudu_clean_cache.err"
 "$repo_root/build/dudu" test "$repo_root/tests/fixtures/dudu_tests.dd" \
     >"$repo_root/build/dudu_tests.out" 2>"$repo_root/build/dudu_test_steps.err"
 grep -q "3/3 tests passed" "$repo_root/build/dudu_tests.out"
@@ -288,8 +289,8 @@ grep -q "inline constexpr bool DEBUG = false;" "$repo_root/build/package_build_o
     "$repo_root/build/dudu" cmake tool -o "$repo_root/build/project_targets_cmake.txt" \
         2>"$repo_root/build/project_targets_cmake.err"
 )
-grep -q "build ../../../build/project_targets/tool" "$repo_root/build/project_targets_build.err"
-grep -q "run ../../../build/project_targets/tool" "$repo_root/build/project_targets_run.err"
+grep -Eq "build .*project_targets/tool" "$repo_root/build/project_targets_build.err"
+grep -Eq "run .*project_targets/tool" "$repo_root/build/project_targets_run.err"
 grep -q "tool target" "$repo_root/build/project_targets_run.out"
 grep -q "ok target_test" "$repo_root/build/project_targets_test.out"
 grep -q "1/1 tests passed" "$repo_root/build/project_targets_test.out"
@@ -320,15 +321,15 @@ rm -f "$repo_root/build/project_cc_bin" "$repo_root/build/project_cc_bin.cpp"
 )
 grep -q "^c++ -std=c++20" "$repo_root/build/project_cc_verbose.err"
 grep -q "project_cc_bin.cpp" "$repo_root/build/project_cc_verbose.err"
-grep -q -- "-Iinclude" "$repo_root/build/project_cc_verbose.err"
+grep -Eq -- "-I.*/project_cc/include" "$repo_root/build/project_cc_verbose.err"
 grep -q -- "-DDUDU_PROJECT_CC=40" "$repo_root/build/project_cc_verbose.err"
 grep -q -- "-DDUDU_PROJECT_CC_FLAG=2" "$repo_root/build/project_cc_verbose.err"
-grep -q -- "-Llib" "$repo_root/build/project_cc_verbose.err"
+grep -Eq -- "-L.*/project_cc/lib" "$repo_root/build/project_cc_verbose.err"
 grep -q "project_cc_bin.cpp" "$repo_root/build/compile_commands.json"
-grep -q -- "-Iinclude" "$repo_root/build/compile_commands.json"
+grep -Eq -- "-I.*/project_cc/include" "$repo_root/build/compile_commands.json"
 grep -q -- "-DDUDU_PROJECT_CC=40" "$repo_root/build/compile_commands.json"
 grep -q -- "-DDUDU_PROJECT_CC_FLAG=2" "$repo_root/build/compile_commands.json"
-grep -q -- "-Llib" "$repo_root/build/compile_commands.json"
+grep -Eq -- "-L.*/project_cc/lib" "$repo_root/build/compile_commands.json"
 set +e
 "$repo_root/build/project_cc_bin"
 project_cc_status=$?
@@ -358,14 +359,19 @@ fi
     "$repo_root/build/dudu" build --verbose 2>"$repo_root/build/project_backend_cmake_build.err"
     "$repo_root/build/dudu" run >"$repo_root/build/project_backend_cmake_run.out" \
         2>"$repo_root/build/project_backend_cmake_run.err"
+    "$repo_root/build/dudu" test >"$repo_root/build/project_backend_cmake_test.out" \
+        2>"$repo_root/build/project_backend_cmake_test.err"
 )
-grep -q "cmake ../../../build/project_backend_cmake/cmake-backend/source/CMakeLists.txt" \
+grep -Eq "cmake .*project_backend_cmake/cmake-backend/source/CMakeLists.txt" \
     "$repo_root/build/project_backend_cmake_build.err"
-grep -q "build ../../../build/project_backend_cmake/cmake-backend/build" \
+grep -Eq "build .*project_backend_cmake/cmake-backend/build" \
     "$repo_root/build/project_backend_cmake_build.err"
-grep -q "run ../../../build/project_backend_cmake/cmake-backend/build/backend_cmake" \
+grep -Eq "run .*project_backend_cmake/cmake-backend/build/backend_cmake" \
     "$repo_root/build/project_backend_cmake_run.err"
 grep -q "cmake backend" "$repo_root/build/project_backend_cmake_run.out"
+grep -Eq "cmake .*project_backend_cmake/dudu-tests/main-[0-9a-f]+-cmake/source/CMakeLists.txt" \
+    "$repo_root/build/project_backend_cmake_test.err"
+grep -q "1/1 tests passed" "$repo_root/build/project_backend_cmake_test.out"
 rm -f "$repo_root/build/project_linker_script_bin" "$repo_root/build/project_linker_script_bin.cpp"
 (
     cd "$repo_root/tests/fixtures/project_linker_script"

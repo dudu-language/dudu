@@ -98,10 +98,48 @@ std::string normalize_tuple_element(std::string type) {
     return substitute_type_ref_text(tuple_type.children[index], {});
 }
 
+bool nonarray_template_name(const std::string& name) {
+    return name == "_NonArray" || name.ends_with("._NonArray") || name.ends_with("::_NonArray");
+}
+
+std::string normalize_nonarray_templates(const TypeRef& type) {
+    if (type.kind != TypeKind::Template) {
+        return substitute_type_ref_text(type, {});
+    }
+    if ((type.name == "basic_string" || type.name == "std.basic_string" ||
+         type.name == "std::basic_string") &&
+        !type.children.empty() && substitute_type_ref_text(type.children.front(), {}) == "char") {
+        return "std.string";
+    }
+    if (nonarray_template_name(type.name) && type.children.size() == 1) {
+        return normalize_nonarray_templates(type.children.front());
+    }
+    std::string out = type.name + "[";
+    for (size_t i = 0; i < type.children.size(); ++i) {
+        if (i > 0) {
+            out += ", ";
+        }
+        out += normalize_nonarray_templates(type.children[i]);
+    }
+    out += "]";
+    return out;
+}
+
+std::string normalize_nonarray_templates(std::string type) {
+    type = trim_copy(std::move(type));
+    const TypeRef parsed = parse_type_text(type);
+    if (parsed.kind != TypeKind::Template) {
+        return type;
+    }
+    const std::string normalized = normalize_nonarray_templates(parsed);
+    return normalized.empty() ? type : normalized;
+}
+
 } // namespace
 
 std::string normalize_cpp_type_artifacts(std::string type) {
-    type = normalize_tuple_element(normalize_type_traits(std::move(type)));
+    type = normalize_nonarray_templates(
+        normalize_tuple_element(normalize_type_traits(std::move(type))));
     for (const std::string_view marker : {"* const[", "& const[", "* volatile[", "& volatile["}) {
         size_t pos = type.find(marker);
         while (pos != std::string::npos) {

@@ -8,6 +8,10 @@
 namespace dudu {
 namespace {
 
+std::string lower_function_type(const TypeRef& type, bool pointer);
+std::string lower_function_type(const TypeRef& type, bool pointer,
+                                const std::vector<std::string>& namespace_aliases);
+
 std::string join_lowered_type_args(const std::vector<TypeRef>& args, size_t start = 0) {
     std::ostringstream out;
     for (size_t i = start; i < args.size(); ++i) {
@@ -34,6 +38,10 @@ std::string join_lowered_type_args(const std::vector<TypeRef>& args,
 
 std::string lower_template_type(const TypeRef& type) {
     const std::string& name = type.name;
+    if ((name == "std.function" || name == "std::function") && type.children.size() == 1 &&
+        type.children.front().kind == TypeKind::Function) {
+        return "std::function<" + lower_function_type(type.children.front(), false) + ">";
+    }
     if (name == "list") {
         return "std::vector<" + join_lowered_type_args(type.children) + ">";
     }
@@ -72,6 +80,11 @@ std::string lower_template_type(const TypeRef& type) {
 std::string lower_template_type(const TypeRef& type,
                                 const std::vector<std::string>& namespace_aliases) {
     const std::string& name = type.name;
+    if ((name == "std.function" || name == "std::function") && type.children.size() == 1 &&
+        type.children.front().kind == TypeKind::Function) {
+        return "std::function<" +
+               lower_function_type(type.children.front(), false, namespace_aliases) + ">";
+    }
     if (name == "list") {
         return "std::vector<" + join_lowered_type_args(type.children, namespace_aliases) + ">";
     }

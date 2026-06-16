@@ -99,7 +99,7 @@ std::string unwrap_receiver_type(const Symbols& symbols, std::string type) {
             type = *inner;
             continue;
         }
-        return strip_c_type_tag(base_type(type));
+        return base_type(strip_c_type_tag(type));
     }
 }
 

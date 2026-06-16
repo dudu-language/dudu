@@ -45,15 +45,15 @@ std::optional<std::string> native_member_path_type(const Symbols& symbols,
     if (dot == std::string::npos) {
         return std::nullopt;
     }
+    if (const auto value = symbols.native_values.find(path); value != symbols.native_values.end()) {
+        return value->second;
+    }
     const std::string prefix = path.substr(0, dot);
     if (prefix == "build" || prefix == "shader") {
         return "auto";
     }
     if (!native_import_path_prefix(symbols, path)) {
         return std::nullopt;
-    }
-    if (const auto value = symbols.native_values.find(path); value != symbols.native_values.end()) {
-        return value->second;
     }
     return "auto";
 }

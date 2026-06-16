@@ -555,15 +555,19 @@ push. They are not release packaging work.
    command surface, not separate classes of Dudu project. CMake-backed builds
    should still be launched through `dudu build`, `dudu run`, and `dudu test`.
 
-   Status: `dudu build` and `dudu run` currently use the direct backend.
-   `[build] backend = "direct"` and `[build] backend = "cmake"` parse from the
-   manifest. The direct backend is selectable explicitly. The generated CMake
-   backend is implemented for `dudu build` and `dudu run`; it emits an internal
-   CMake project and drives `cmake -S/-B` plus `cmake --build`. Native inputs
-   such as include paths, library paths, libraries, flags, pkg-config packages,
-   and extra C/C++ sources are partially implemented and useful. `dudu cmake`
-   still emits CMake for inspection or handoff. `dudu test` does not drive the
-   CMake backend. User-owned CMake projects are not implemented as a backend mode.
+   Dudu is not copying Zig here. CMake is not a shameful fallback after
+   `dudu build` gives up. It is one of the serious native backends because
+   CMake is where a large part of the C/C++ ecosystem already lives.
+
+   Status: `dudu build`, `dudu run`, and `dudu test` use the direct backend by
+   default. `[build] backend = "direct"` and `[build] backend = "cmake"` parse
+   from the manifest. The direct backend is selectable explicitly. The
+   generated CMake backend is implemented for `dudu build`, `dudu run`, and
+   `dudu test`; it emits an internal CMake project and drives `cmake -S/-B`
+   plus `cmake --build`. Native inputs such as include paths, library paths,
+   libraries, flags, pkg-config packages, and extra C/C++ sources are partially
+   implemented and useful. `dudu cmake` still emits CMake for inspection or
+   handoff. User-owned CMake projects are not implemented as a backend mode.
    The serious path is to make those backend choices work behind the same
    front-door commands, not to tell users that real projects must leave
    `dudu build`.

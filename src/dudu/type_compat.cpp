@@ -234,13 +234,23 @@ bool is_cpp_associated_type_binding(std::string expected, std::string got) {
     static const std::set<std::string> associated = {
         "iterator", "const_iterator", "reference", "const_reference", "value_type",
         "pointer",  "const_pointer",  "size_type", "difference_type"};
-    if (!associated.contains(expected)) {
+    std::string expected_name = expected;
+    const size_t dot = expected_name.find_last_of(".:");
+    if (dot != std::string::npos) {
+        expected_name = expected_name.substr(dot + 1);
+    }
+    if (!associated.contains(expected_name)) {
         return false;
     }
-    if (got == expected || got.ends_with("." + expected)) {
+    if ((expected_name == "size_type" || expected_name == "difference_type") &&
+        is_numeric_type(wrapped_type_arg(got))) {
         return true;
     }
-    return expected == "const_iterator" && (got == "iterator" || got.ends_with(".iterator"));
+    if (got == expected || got.ends_with("." + expected_name) ||
+        got.ends_with("::" + expected_name)) {
+        return true;
+    }
+    return expected_name == "const_iterator" && (got == "iterator" || got.ends_with(".iterator"));
 }
 
 std::string normalize_function_type(std::string type) {
@@ -349,6 +359,11 @@ bool is_native_internal_template_result(std::string expected, std::string got) {
     return is_internal_cpp_template_artifact(parse_type_text(std::move(got)));
 }
 
+bool is_value_from_const(std::string expected, std::string got) {
+    const auto inner = unary_child(std::move(got), TypeKind::Const);
+    return inner.has_value() && compact_type(expected) == compact_type(*inner);
+}
+
 } // namespace
 
 bool type_assignment_allowed(const std::string& expected, const std::string& got) {
@@ -365,6 +380,7 @@ bool type_assignment_allowed(const std::string& expected, const std::string& got
            is_pointer_to_reference_value(normalized_expected, normalized_got) ||
            is_reference_binding(normalized_expected, normalized_got) ||
            is_value_from_reference(normalized_expected, normalized_got) ||
+           is_value_from_const(normalized_expected, normalized_got) ||
            is_function_type_match(normalized_expected, normalized_got) ||
            is_native_function_pointer(normalized_expected, normalized_got) ||
            is_native_internal_template_result(normalized_expected, normalized_got) ||
@@ -399,6 +415,7 @@ bool assignment_type_allowed(const std::string& expected, const Expr& expr,
            is_pointer_to_reference_value(normalized_expected, normalized_got) ||
            is_reference_binding(normalized_expected, normalized_got) ||
            is_value_from_reference(normalized_expected, normalized_got) ||
+           is_value_from_const(normalized_expected, normalized_got) ||
            is_function_type_match(normalized_expected, normalized_got) ||
            is_native_function_pointer(normalized_expected, normalized_got) ||
            is_native_internal_template_result(normalized_expected, normalized_got) ||
@@ -442,6 +459,7 @@ bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const st
            is_pointer_to_reference_value(normalized_expected, normalized_got) ||
            is_reference_binding(normalized_expected, normalized_got) ||
            is_value_from_reference(normalized_expected, normalized_got) ||
+           is_value_from_const(normalized_expected, normalized_got) ||
            is_function_type_match(normalized_expected, normalized_got) ||
            is_native_function_pointer(normalized_expected, normalized_got) ||
            is_native_internal_template_result(normalized_expected, normalized_got) ||

@@ -5,6 +5,7 @@
 #include "dudu/sema_inheritance.hpp"
 #include "dudu/source.hpp"
 
+#include <algorithm>
 #include <cctype>
 #include <optional>
 #include <sstream>
@@ -18,6 +19,42 @@ bool is_builtin_type(const std::string& type) {
                                                    "u16",  "u32",  "u64", "isize", "usize", "f32",
                                                    "f64",  "void", "str", "cstr"};
     return builtins.contains(type);
+}
+
+std::string build_literal(const std::string& value) {
+    if (value == "true" || value == "false") {
+        return value;
+    }
+    if (!value.empty() && std::all_of(value.begin(), value.end(), [](char c) {
+            return std::isdigit(static_cast<unsigned char>(c)) != 0;
+        })) {
+        return value;
+    }
+    if (value.size() >= 2 && value.front() == '"' && value.back() == '"') {
+        return value;
+    }
+    return '"' + value + '"';
+}
+
+std::string build_value_type(const std::string& value) {
+    const std::string literal = build_literal(value);
+    if (literal == "true" || literal == "false") {
+        return "bool";
+    }
+    if (!literal.empty() && literal.front() == '"') {
+        return "str";
+    }
+    return "i32";
+}
+
+std::string strip_c_type_tag(std::string type) {
+    type = trim(std::move(type));
+    for (std::string_view tag : {"struct ", "class ", "union ", "enum "}) {
+        if (type.starts_with(tag)) {
+            return trim(type.substr(tag.size()));
+        }
+    }
+    return type;
 }
 
 [[noreturn]] void fail(const SourceLocation& location, const std::string& message) {
@@ -287,6 +324,15 @@ Symbols collect_symbols(const ModuleAst& module) {
         }
         add_native_path_prefix(symbols, value.name);
     }
+    std::map<std::string, std::string> build_values = {{"DEBUG", "false"},
+                                                       {"RENDER_BACKEND", "\"vulkan\""}};
+    for (const auto& [name, value] : module.build_values) {
+        build_values[name] = value;
+    }
+    for (const auto& [name, value] : build_values) {
+        symbols.native_values["build." + name] = build_value_type(value);
+    }
+    symbols.native_import_prefixes.insert("build");
     for (const NativeNamespaceDecl& ns : module.native_namespaces) {
         symbols.native_import_prefixes.insert(ns.name);
     }
@@ -309,6 +355,11 @@ Symbols collect_symbols(const ModuleAst& module) {
         const auto [it, inserted] = symbols.native_classes.emplace(klass.name, klass);
         (void)inserted;
         symbols.classes[klass.name] = &it->second;
+        const std::string untagged = strip_c_type_tag(klass.name);
+        if (untagged != klass.name) {
+            symbols.types.insert(untagged);
+            symbols.classes[untagged] = &it->second;
+        }
     }
     for (const FunctionDecl& fn : module.functions) {
         add_name(names, fn.name, fn.location);

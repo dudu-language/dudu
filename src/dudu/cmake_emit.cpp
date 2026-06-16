@@ -142,4 +142,39 @@ std::string emit_cmake_project(const ProjectConfig& config, const std::filesyste
     return out.str();
 }
 
+std::string emit_cmake_cpp_project(const ProjectConfig& config, const std::string& target,
+                                   const std::filesystem::path& cpp_source) {
+    const std::filesystem::path project_dir =
+        config.project_dir.empty() ? std::filesystem::current_path() : config.project_dir;
+    std::ostringstream out;
+    out << "cmake_minimum_required(VERSION 3.20)\n\n"
+        << "project(" << target << " LANGUAGES C CXX)\n\n"
+        << "set(CMAKE_CXX_STANDARD " << cmake_cpp_standard(config.cpp_std) << ")\n"
+        << "set(CMAKE_CXX_STANDARD_REQUIRED ON)\n\n";
+    emit_pkg_config(out, config);
+    if (config.target_kind == "library") {
+        out << "add_library(" << target << " STATIC\n";
+    } else if (config.target_kind == "shared_library") {
+        out << "add_library(" << target << " SHARED\n";
+    } else {
+        out << "add_executable(" << target << "\n";
+    }
+    out << "    " << cmake_quote(cpp_source.string()) << "\n";
+    emit_cmake_sources(out, config, project_dir);
+    out << ")\n";
+    emit_cmake_list_values(out, "target_include_directories(" + target + " PRIVATE",
+                           config.include_dirs, &project_dir);
+    emit_cmake_list_values(out, "target_compile_definitions(" + target + " PRIVATE",
+                           config.defines);
+    emit_cmake_list_values(out, "target_compile_options(" + target + " PRIVATE", config.flags);
+    emit_cmake_list_values(out, "target_link_directories(" + target + " PRIVATE", config.lib_dirs,
+                           &project_dir);
+    emit_cmake_list_values(out, "target_link_libraries(" + target + " PRIVATE", config.libs);
+    if (!config.pkg_config_packages.empty()) {
+        out << "target_link_libraries(" << target << " PRIVATE PkgConfig::DUDU_PKG)\n";
+    }
+    emit_cmake_list_values(out, "target_link_options(" + target + " PRIVATE", config.link_flags);
+    return out.str();
+}
+
 } // namespace dudu

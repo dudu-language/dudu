@@ -342,16 +342,17 @@ inputs or guess through C/C++ build-system details.
 
 Current implementation reality:
 
-- `dudu build` and `dudu run` use the direct compiler backend.
+- `dudu build`, `dudu run`, and `dudu test` use the direct compiler backend
+  by default.
 - `[build] backend = "direct"` and `[build] backend = "cmake"` parse from
   `dudu.toml`. The direct backend is selectable explicitly. The generated
-  CMake backend is implemented for `dudu build` and `dudu run`; it emits an
-  internal CMake project and drives `cmake -S/-B` plus `cmake --build`.
+  CMake backend is implemented for `dudu build`, `dudu run`, and `dudu test`;
+  it emits an internal CMake project and drives `cmake -S/-B` plus
+  `cmake --build`.
 - The direct backend supports useful native inputs: include paths, library
   paths, libraries, compile flags, link flags, pkg-config packages, and extra
   C/C++ sources.
 - `dudu cmake` emits CMake for inspection or handoff.
-- `dudu test` does not drive the CMake backend yet.
 - User-owned CMake project integration is not implemented yet.
 
 The next build-driver work should close that gap without changing the front
@@ -372,6 +373,11 @@ Zig does not have a built-in "revert to CMake" backend. Dudu's interop goal is
 broader in a different direction: existing CMake projects, generated CMake
 projects, direct compiler builds, and plain native flags should all be valid
 ways for the same Dudu command surface to reach the C/C++ ecosystem.
+
+Put differently: Dudu is not copying Zig here. There is no plan where Dudu
+tries to make every project express its whole native build as Dudu code and
+then grudgingly "falls back" to CMake. CMake is one of the honest native
+backends because a huge amount of C and C++ code already speaks CMake.
 
 Dudu should not make CMake use feel like leaving the language tool. If a
 project already has a serious CMake build, `dudu build` should be able to drive
@@ -404,6 +410,16 @@ Backend selection rules should be boring:
 
 The backend is allowed to be visible in logs and artifacts. It is not allowed to
 change the user's main workflow from `dudu build`, `dudu run`, and `dudu test`.
+
+Implementation checklist:
+
+- direct backend: emit C++ and invoke the compiler directly
+- generated CMake backend: emit an internal CMake project and drive it from
+  `dudu build`, `dudu run`, and `dudu test`
+- user-owned CMake backend: configure/build/run declared targets from an
+  existing CMake project
+- diagnostics: reject unsupported backend/manifest combinations loudly
+- logs: show which backend ran and where generated artifacts landed
 
 Planned manifest shape:
 

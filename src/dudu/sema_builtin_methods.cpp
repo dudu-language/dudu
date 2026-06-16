@@ -115,6 +115,60 @@ bool builtin_cpp_method_signature(const Symbols& symbols, std::string receiver_t
             return true;
         }
     }
+    if (single_template_type_arg_text(templated, "set") ||
+        templated.find("unordered_set<") != std::string::npos ||
+        templated.find("std::set<") != std::string::npos || templated.find("set<") == 0) {
+        const std::string item = first_type_arg(templated);
+        const std::string value_type = item.empty() ? "auto" : item;
+        if (method_name == "contains") {
+            signature.params = {value_type};
+            signature.return_type = "bool";
+            return true;
+        }
+        if (method_name == "insert") {
+            signature.params = {value_type};
+            signature.return_type = "auto";
+            return true;
+        }
+        if (method_name == "size") {
+            signature.return_type = "usize";
+            return true;
+        }
+        if (method_name == "empty") {
+            signature.return_type = "bool";
+            return true;
+        }
+    }
+    if (starts_with(templated, "dict[") || templated.find("unordered_map<") != std::string::npos ||
+        templated.find("std::map<") != std::string::npos || templated.find("map<") == 0) {
+        const std::string key_type = first_type_arg(templated);
+        if (method_name == "contains") {
+            signature.params = {key_type.empty() ? "auto" : key_type};
+            signature.return_type = "bool";
+            return true;
+        }
+        if (method_name == "size") {
+            signature.return_type = "usize";
+            return true;
+        }
+        if (method_name == "empty") {
+            signature.return_type = "bool";
+            return true;
+        }
+    }
+    if (single_template_type_arg_text(templated, "Option") ||
+        single_template_type_arg_text(templated, "std.optional") ||
+        templated.find("optional<") != std::string::npos) {
+        const std::string item = first_type_arg(templated);
+        if (method_name == "has_value") {
+            signature.return_type = "bool";
+            return true;
+        }
+        if (method_name == "value") {
+            signature.return_type = item.empty() ? "auto" : item;
+            return true;
+        }
+    }
     if (unary_type_child_text(templated, TypeKind::Atomic) ||
         templated.find("atomic<") != std::string::npos) {
         const std::string item = first_type_arg(templated);

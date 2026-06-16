@@ -14,7 +14,7 @@ def main() -> i32:
     state.phase = 1.0
     state.step = 2.0
     state.calls = 0
-    samples: f32[4]
+    samples: array[f32][4]
 
     audio.dudu_audio_run(fill_samples, &state, &samples[0], 4)
 
