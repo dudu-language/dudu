@@ -1,5 +1,6 @@
 #include "dudu/type_compat_structural.hpp"
 
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 
 #include <cctype>
@@ -29,13 +30,13 @@ std::string normalize_c_tags(std::string type) {
 }
 
 bool same_type_name(const TypeRef& expected, const TypeRef& got) {
-    return compact_type(normalize_c_tags(trim_copy(expected.text))) ==
-           compact_type(normalize_c_tags(trim_copy(got.text)));
+    return compact_type(normalize_c_tags(substitute_type_ref_text(expected, {}))) ==
+           compact_type(normalize_c_tags(substitute_type_ref_text(got, {})));
 }
 
 bool same_type_name(std::string expected, const TypeRef& got) {
     return compact_type(normalize_c_tags(std::move(expected))) ==
-           compact_type(normalize_c_tags(trim_copy(got.text)));
+           compact_type(normalize_c_tags(substitute_type_ref_text(got, {})));
 }
 
 bool is_transparent_wrapper(const TypeKind kind) {

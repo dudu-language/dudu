@@ -112,7 +112,8 @@ bool is_c_abi_type_ref(const TypeRef& type, bool allow_void) {
     }
     if (type.kind == TypeKind::Pointer && type.children.size() == 1) {
         const TypeRef& child = type.children.front();
-        return is_c_abi_type_ref(child, false) || starts_with(trim(child.text), "struct ");
+        return is_c_abi_type_ref(child, false) ||
+               starts_with(trim(substitute_type_ref_text(child, {})), "struct ");
     }
     const std::string name = type_ref_head_name(type);
     if (name == "str" || name.find('.') != std::string::npos) {

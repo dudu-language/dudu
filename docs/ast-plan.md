@@ -47,6 +47,8 @@ Already structured:
   structurally instead of returning raw child text
 - array shape inference and static field type extraction render parsed
   `TypeRef` children structurally instead of carrying raw child text
+- C ABI pointer checks and structural type-name compatibility compare rendered
+  `TypeRef` forms instead of raw parser text
 - generic method/template lookup text now renders through normalized
   `TypeRef` arguments for both parsed and compatibility template argument
   paths
