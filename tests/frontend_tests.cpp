@@ -86,6 +86,7 @@ void write_file(const std::filesystem::path& path, const std::string& text) {
 void test_module_loader_canonicalizes_physical_modules() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_module_identity_test";
+    std::filesystem::remove_all(dir);
     std::filesystem::create_directories(dir);
     write_file(dir / "vec3.dd", "class Vec3:\n"
                                 "    x: f32\n"
@@ -133,7 +134,34 @@ void test_module_loader_canonicalizes_physical_modules() {
     assert(camera_count == 1);
     assert(view_camera_alias_count == 1);
     assert(camera_origin_count == 1);
+    const std::vector<std::filesystem::path> files = dudu::source_tree_files(dir / "main.dd");
+    assert(files.size() == 3);
     dudu::analyze_module(module, {.check_bodies = true});
+}
+
+void test_module_loader_rejects_duplicate_from_aliases() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_module_alias_collision_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "left.dd", "class Left:\n"
+                                "    value: i32\n");
+    write_file(dir / "right.dd", "class Right:\n"
+                                 "    value: i32\n");
+    write_file(dir / "main.dd", "from left import Left as Thing\n"
+                                "from right import Right as Thing\n"
+                                "\n"
+                                "def main() -> i32:\n"
+                                "    return 0\n");
+
+    bool failed = false;
+    try {
+        (void)dudu::load_source_tree(dir / "main.dd");
+    } catch (const dudu::CompileError& error) {
+        failed =
+            std::string(error.what()).find("import name 'Thing' collides") != std::string::npos;
+    }
+    assert(failed);
 }
 
 void test_canonical_examples_parse(const std::filesystem::path& root) {
@@ -624,6 +652,7 @@ int main() {
         test_lexer_indentation();
         test_import_bindings();
         test_module_loader_canonicalizes_physical_modules();
+        test_module_loader_rejects_duplicate_from_aliases();
         test_canonical_examples_parse(root);
         test_header_emission();
         test_semantic_diagnostics();
