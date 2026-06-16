@@ -37,7 +37,7 @@ std::filesystem::path module_path_to_file(const std::filesystem::path& base,
     return out;
 }
 
-void append_module(ModuleAst& target, ModuleAst source) {
+void append_module(ModuleAst& target, const ModuleAst& source) {
     target.imports.insert(target.imports.end(), source.imports.begin(), source.imports.end());
     target.aliases.insert(target.aliases.end(), source.aliases.begin(), source.aliases.end());
     target.native_types.insert(target.native_types.end(), source.native_types.begin(),
@@ -82,8 +82,113 @@ bool has_module_symbol(const ModuleAst& module, const std::string& name) {
     return false;
 }
 
-ModuleAst load_one(const std::filesystem::path& path, std::set<std::filesystem::path>& loading,
-                   std::map<std::filesystem::path, ModuleAst>& loaded) {
+bool has_merged_symbol(const ModuleAst& module, const std::string& name) {
+    return has_module_symbol(module, name);
+}
+
+void add_from_import_aliases(ModuleAst& module) {
+    std::vector<TypeAliasDecl> type_aliases;
+    std::vector<ConstDecl> const_aliases;
+    std::vector<FunctionDecl> function_aliases;
+    std::set<std::string> pending_aliases;
+
+    for (const ImportDecl& import : module.imports) {
+        if (import.kind != ImportKind::From || import.alias.empty() ||
+            import.alias == import.imported_name) {
+            continue;
+        }
+        if (has_merged_symbol(module, import.alias) || pending_aliases.contains(import.alias)) {
+            throw CompileError(import.location,
+                               "import alias '" + import.alias + "' collides with a declaration");
+        }
+        pending_aliases.insert(import.alias);
+
+        bool added = false;
+        for (const TypeAliasDecl& alias : module.aliases) {
+            if (alias.name == import.imported_name) {
+                TypeAliasDecl copy = alias;
+                copy.name = import.alias;
+                copy.location = import.location;
+                type_aliases.push_back(std::move(copy));
+                added = true;
+                break;
+            }
+        }
+        if (added) {
+            continue;
+        }
+        for (const EnumDecl& en : module.enums) {
+            if (en.name == import.imported_name) {
+                TypeAliasDecl alias;
+                alias.name = import.alias;
+                alias.type = import.imported_name;
+                alias.type_ref = parse_type_text(import.imported_name, import.location);
+                alias.location = import.location;
+                type_aliases.push_back(std::move(alias));
+                added = true;
+                break;
+            }
+        }
+        if (added) {
+            continue;
+        }
+        for (const ClassDecl& klass : module.classes) {
+            if (klass.name == import.imported_name) {
+                TypeAliasDecl alias;
+                alias.name = import.alias;
+                alias.type = import.imported_name;
+                alias.type_ref = parse_type_text(import.imported_name, import.location);
+                alias.location = import.location;
+                type_aliases.push_back(std::move(alias));
+                added = true;
+                break;
+            }
+        }
+        if (added) {
+            continue;
+        }
+        for (const ConstDecl& constant : module.constants) {
+            if (constant.name == import.imported_name) {
+                ConstDecl alias = constant;
+                alias.name = import.alias;
+                alias.value = import.imported_name;
+                alias.value_expr = parse_expr_text(import.imported_name, import.location);
+                alias.location = import.location;
+                const_aliases.push_back(std::move(alias));
+                added = true;
+                break;
+            }
+        }
+        if (added) {
+            continue;
+        }
+        for (const FunctionDecl& fn : module.functions) {
+            if (fn.name == import.imported_name) {
+                FunctionDecl alias = fn;
+                alias.name = import.alias;
+                alias.location = import.location;
+                function_aliases.push_back(std::move(alias));
+                added = true;
+                break;
+            }
+        }
+        if (!added) {
+            throw CompileError(import.location, "module '" + import.module_path +
+                                                    "' has no symbol '" + import.imported_name +
+                                                    "'");
+        }
+    }
+
+    module.aliases.insert(module.aliases.end(), type_aliases.begin(), type_aliases.end());
+    module.constants.insert(module.constants.end(), const_aliases.begin(), const_aliases.end());
+    module.functions.insert(module.functions.end(), function_aliases.begin(),
+                            function_aliases.end());
+}
+
+const ModuleAst& load_one(const std::filesystem::path& path,
+                          std::set<std::filesystem::path>& loading,
+                          std::map<std::filesystem::path, ModuleAst>& loaded,
+                          std::vector<std::filesystem::path>& ordered) {
     const std::filesystem::path canonical = std::filesystem::weakly_canonical(path);
     if (loaded.contains(canonical)) {
         return loaded.at(canonical);
@@ -94,32 +199,25 @@ ModuleAst load_one(const std::filesystem::path& path, std::set<std::filesystem::
     loading.insert(canonical);
 
     ModuleAst parsed = parse_source(read_text_file(path), path);
-    ModuleAst merged;
-    std::set<std::filesystem::path> appended_dependencies;
     for (const ImportDecl& import : parsed.imports) {
         if (import.kind != ImportKind::Module && import.kind != ImportKind::From) {
             continue;
         }
         const std::filesystem::path dependency =
             module_path_to_file(path.parent_path(), import.module_path);
-        const std::filesystem::path canonical_dependency =
-            std::filesystem::weakly_canonical(dependency);
-        ModuleAst dependency_module = load_one(dependency, loading, loaded);
+        const ModuleAst& dependency_module = load_one(dependency, loading, loaded, ordered);
         if (import.kind == ImportKind::From &&
             !has_module_symbol(dependency_module, import.imported_name)) {
             throw CompileError(import.location, "module '" + import.module_path +
                                                     "' has no symbol '" + import.imported_name +
                                                     "'");
         }
-        if (appended_dependencies.insert(canonical_dependency).second) {
-            append_module(merged, std::move(dependency_module));
-        }
     }
-    append_module(merged, std::move(parsed));
 
     loading.erase(canonical);
-    loaded[canonical] = merged;
-    return merged;
+    loaded.emplace(canonical, std::move(parsed));
+    ordered.push_back(canonical);
+    return loaded.at(canonical);
 }
 
 void collect_files(const std::filesystem::path& path, std::set<std::filesystem::path>& loading,
@@ -148,7 +246,15 @@ void collect_files(const std::filesystem::path& path, std::set<std::filesystem::
 ModuleAst load_source_tree(const std::filesystem::path& entry) {
     std::set<std::filesystem::path> loading;
     std::map<std::filesystem::path, ModuleAst> loaded;
-    return load_one(entry, loading, loaded);
+    std::vector<std::filesystem::path> ordered;
+    (void)load_one(entry, loading, loaded, ordered);
+
+    ModuleAst merged;
+    for (const std::filesystem::path& path : ordered) {
+        append_module(merged, loaded.at(path));
+    }
+    add_from_import_aliases(merged);
+    return merged;
 }
 
 std::vector<std::filesystem::path> source_tree_files(const std::filesystem::path& entry) {

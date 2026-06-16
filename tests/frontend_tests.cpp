@@ -3,6 +3,7 @@
 #include "dudu/cpp_stmt_types.hpp"
 #include "dudu/format.hpp"
 #include "dudu/lexer.hpp"
+#include "dudu/module_loader.hpp"
 #include "dudu/native_headers.hpp"
 #include "dudu/parser.hpp"
 #include "dudu/project_config.hpp"
@@ -72,6 +73,67 @@ void test_import_bindings() {
         dudu::parse_source("import cpp \"imgui.h\"\n", "direct_native.dd");
     assert(direct_native.imports.size() == 1);
     assert(direct_native.imports[0].alias.empty());
+}
+
+void write_file(const std::filesystem::path& path, const std::string& text) {
+    std::ofstream file(path);
+    if (!file) {
+        throw std::runtime_error("could not write " + path.string());
+    }
+    file << text;
+}
+
+void test_module_loader_canonicalizes_physical_modules() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_module_identity_test";
+    std::filesystem::create_directories(dir);
+    write_file(dir / "vec3.dd", "class Vec3:\n"
+                                "    x: f32\n"
+                                "    y: f32\n"
+                                "    z: f32\n");
+    write_file(dir / "camera.dd", "from vec3 import Vec3\n"
+                                  "\n"
+                                  "class Camera:\n"
+                                  "    origin: Vec3\n"
+                                  "\n"
+                                  "def origin(camera: Camera) -> Vec3:\n"
+                                  "    return camera.origin\n");
+    write_file(dir / "main.dd", "from vec3 import Vec3\n"
+                                "from camera import Camera as ViewCamera\n"
+                                "from camera import origin as camera_origin\n"
+                                "\n"
+                                "def main() -> i32:\n"
+                                "    camera = ViewCamera(origin=Vec3(1.0, 2.0, 3.0))\n"
+                                "    return i32(camera_origin(camera).x)\n");
+
+    const dudu::ModuleAst module = dudu::load_source_tree(dir / "main.dd");
+    int vec3_count = 0;
+    int camera_count = 0;
+    int view_camera_alias_count = 0;
+    int camera_origin_count = 0;
+    for (const dudu::ClassDecl& klass : module.classes) {
+        if (klass.name == "Vec3") {
+            ++vec3_count;
+        }
+        if (klass.name == "Camera") {
+            ++camera_count;
+        }
+    }
+    for (const dudu::TypeAliasDecl& alias : module.aliases) {
+        if (alias.name == "ViewCamera" && alias.type == "Camera") {
+            ++view_camera_alias_count;
+        }
+    }
+    for (const dudu::FunctionDecl& fn : module.functions) {
+        if (fn.name == "camera_origin") {
+            ++camera_origin_count;
+        }
+    }
+    assert(vec3_count == 1);
+    assert(camera_count == 1);
+    assert(view_camera_alias_count == 1);
+    assert(camera_origin_count == 1);
+    dudu::analyze_module(module, {.check_bodies = true});
 }
 
 void test_canonical_examples_parse(const std::filesystem::path& root) {
@@ -561,6 +623,7 @@ int main() {
         const std::filesystem::path root = DUDU_REPO_ROOT;
         test_lexer_indentation();
         test_import_bindings();
+        test_module_loader_canonicalizes_physical_modules();
         test_canonical_examples_parse(root);
         test_header_emission();
         test_semantic_diagnostics();

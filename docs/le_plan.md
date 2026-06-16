@@ -29,6 +29,42 @@ The standard is:
 If a planned feature cannot meet that bar yet, document the missing prerequisite
 and implement the prerequisite first.
 
+## Critical Module Import Blocker
+
+Dudu-native imports must be fixed before the language can be considered sound
+for normal multi-file programs.
+
+Required behavior:
+
+- importing the same physical Dudu module through multiple routes must create
+  one canonical module identity, not duplicate declarations
+- transitive imports must not leak into the importing module unless a facade
+  module intentionally reexports them
+- `import module.path`, `import module.path as alias`,
+  `from module.path import Name`, and `from module.path import Name as Alias`
+  must all work according to the documented Python-shaped import model
+- direct-name collisions from selective imports must produce clear diagnostics
+  with source locations and an aliasing suggestion
+- cycles must be diagnosed at the module graph level, not through duplicate
+  declaration fallout
+- codegen should mirror module identity with C++ namespaces or another stable
+  internal scheme so two import paths never emit two copies of the same Dudu
+  declaration
+
+Observed failure from the `raymarch-dd` sanity repo: importing `Vec3` directly
+from `vec3` while also reaching it transitively through `camera` produced a
+duplicate `Vec3` declaration. That is a fatal module-system bug, not acceptable
+user friction. The fix belongs in the module loader/symbol table/codegen
+architecture, not in examples that avoid normal import shapes.
+
+Status: the module loader now canonicalizes physical `.dd` files and appends
+each loaded module once in dependency-first order, so the same source reached
+through multiple import routes no longer duplicates declarations. `from ...
+import Name as Alias` also materializes Dudu-native aliases for types,
+constants, and functions. Stricter Python-shaped namespace boundaries and
+intentional re-export semantics remain unfinished; the current backend still
+uses a merged module model rather than per-module symbol namespaces.
+
 ## Feature Validation Bar
 
 Every major language feature should land with both small and realistic Dudu

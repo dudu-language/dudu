@@ -24,6 +24,24 @@ LSP-capable editors:
   the file
 - formatting via the existing formatter
 
+## Critical Editor Reliability Blocker
+
+Editor requests must always complete or fail with a visible diagnostic. They
+must not spin indefinitely.
+
+Observed failures from the `raymarch-dd` sanity workspace:
+
+- go-to-definition spins in VS Code
+- find-all-references spins in VS Code
+- hover over Dudu types stays at `Loading...`
+
+These are correctness bugs in the language-server request path, project root
+detection, module indexing, native-header scan scheduling, or VS Code adapter.
+They must be covered by LSP JSON-RPC tests that assert every request returns a
+response, even when the symbol cannot be resolved. The server should log and
+surface project-index/native-scan failures instead of leaving the client
+waiting.
+
 ## Native Header Navigation
 
 The language server should use the same Clang-backed native header awareness as
