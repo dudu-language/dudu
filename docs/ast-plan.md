@@ -40,6 +40,9 @@ Already structured:
   text directly
 - function pointer/callback omitted-return detection checks for a missing
   parsed return `TypeRef`, not an empty raw child string
+- generic argument inference gets candidate parameter and argument names through
+  a shared parsed `TypeRef` head-name helper instead of open-coding
+  `name`/`text` fallback logic
 - local scopes preserve parsed `TypeRef` nodes for declared parameters,
   constants, locals, catch bindings, and typed loop bindings, so function
   pointer calls can check signatures without reparsing declared type text

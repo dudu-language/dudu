@@ -28,8 +28,8 @@ bool generic_param_named(const std::vector<std::string>& params, const std::stri
 bool infer_generic_binding(const TypeRef& param_type, const TypeRef& arg_type,
                            const std::vector<std::string>& params,
                            std::map<std::string, std::string>& bindings, std::string& error) {
-    const std::string param = trim(param_type.name.empty() ? param_type.text : param_type.name);
-    const std::string arg = trim(arg_type.name.empty() ? arg_type.text : arg_type.name);
+    const std::string param = type_ref_head_name(param_type);
+    const std::string arg = type_ref_head_name(arg_type);
     if (generic_param_named(params, param)) {
         const std::string arg_text = substitute_type_ref_text(arg_type, {});
         const auto [it, inserted] = bindings.emplace(param, arg_text);

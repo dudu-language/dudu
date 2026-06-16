@@ -26,6 +26,7 @@ std::optional<std::string> unary_type_child_text(const TypeRef& type,
                                                  std::initializer_list<TypeKind> kinds);
 std::optional<std::string> unary_type_child_text(std::string_view type,
                                                  std::initializer_list<TypeKind> kinds);
+std::string type_ref_head_name(const TypeRef& type);
 std::string substitute_type_ref_text(const TypeRef& type,
                                      const std::map<std::string, std::string>& substitutions);
 

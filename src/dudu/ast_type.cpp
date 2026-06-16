@@ -108,6 +108,32 @@ std::optional<std::string> unary_type_child_text(std::string_view type,
     return unary_type_child_text(parse_type_text(type), kinds);
 }
 
+std::string type_ref_head_name(const TypeRef& type) {
+    switch (type.kind) {
+    case TypeKind::Named:
+    case TypeKind::Qualified:
+    case TypeKind::Template:
+        return trim_copy(type.name.empty() ? type.text : type.name);
+    case TypeKind::Value:
+        return trim_copy(type.value.empty() ? type.text : type.value);
+    case TypeKind::Function:
+        return "fn";
+    case TypeKind::Pointer:
+    case TypeKind::Reference:
+    case TypeKind::Const:
+    case TypeKind::Volatile:
+    case TypeKind::Atomic:
+    case TypeKind::Device:
+    case TypeKind::Storage:
+    case TypeKind::Shared:
+    case TypeKind::Static:
+    case TypeKind::FixedArray:
+    case TypeKind::Unknown:
+        return trim_copy(type.text);
+    }
+    return trim_copy(type.text);
+}
+
 std::string substitute_type_ref_text(const TypeRef& type,
                                      const std::map<std::string, std::string>& substitutions) {
     const std::string name = trim_copy(type.name.empty() ? type.text : type.name);
