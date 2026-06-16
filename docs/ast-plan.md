@@ -139,6 +139,8 @@ Already structured:
   `Ok(...)`/`Err(...)` result construction
 - Result compatibility checks for direct `Ok(...)` and `Err(...)` construction
   read the parsed call name instead of reconstructing callee text
+- explicit-cast compatibility checks read parsed direct call names before
+  falling back to reconstructed callee text for unusual callee shapes
 - type compatibility exposes parsed `TypeRef` overloads, and annotated local
   initializers validate against the parsed expected type node when available
 - semantic highlighting uses parsed call callees so method calls can color the
