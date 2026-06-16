@@ -10,16 +10,16 @@ namespace dudu {
     throw CompileError(location, message);
 }
 
-bool sema_has_expr(const Expr& expr) {
-    return !expr.text.empty();
-}
-
 bool has_type_ref(const TypeRef& type) {
     return type.kind != TypeKind::Unknown || !type.text.empty();
 }
 
 bool missing_expr(const Expr& expr) {
     return expr.text.empty() || (expr.kind == ExprKind::Unknown && trim(expr.text).empty());
+}
+
+bool sema_has_expr(const Expr& expr) {
+    return !missing_expr(expr);
 }
 
 const SourceLocation& node_location(const SourceLocation& fallback, const Expr& expr) {
