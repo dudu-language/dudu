@@ -2,6 +2,7 @@
 
 #include "dudu/array_shape.hpp"
 #include "dudu/ast_expr.hpp"
+#include "dudu/ast_parse_utils.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_expr_call_emit.hpp"
 #include "dudu/cpp_expr_swizzles.hpp"
@@ -113,28 +114,8 @@ std::string join_lowered_type_args(const std::vector<TypeRef>& types,
 }
 
 TypeKind wrapper_template_kind(std::string_view name) {
-    if (name == "const") {
-        return TypeKind::Const;
-    }
-    if (name == "volatile") {
-        return TypeKind::Volatile;
-    }
-    if (name == "atomic") {
-        return TypeKind::Atomic;
-    }
-    if (name == "device") {
-        return TypeKind::Device;
-    }
-    if (name == "storage") {
-        return TypeKind::Storage;
-    }
-    if (name == "shared") {
-        return TypeKind::Shared;
-    }
-    if (name == "static") {
-        return TypeKind::Static;
-    }
-    return TypeKind::Template;
+    const TypeKind wrapper = wrapper_type_kind(name);
+    return wrapper == TypeKind::Unknown ? TypeKind::Template : wrapper;
 }
 
 TypeRef template_type_ref_from_expr(const Expr& expr, std::string name) {
