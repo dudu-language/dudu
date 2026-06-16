@@ -198,6 +198,54 @@ void test_module_loader_qualified_module_imports() {
     assert(cpp.find("make_camera(ORIGIN)") != std::string::npos);
 }
 
+void test_module_loader_preserves_declaration_origins() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_module_origin_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir / "renderer");
+    write_file(dir / "camera.dd", "class Camera:\n"
+                                  "    x: i32\n"
+                                  "\n"
+                                  "def make_camera(x: i32) -> Camera:\n"
+                                  "    return Camera(x=x)\n");
+    write_file(dir / "renderer" / "camera.dd", "class Camera:\n"
+                                               "    x: i32\n"
+                                               "\n"
+                                               "def make_camera(x: i32) -> Camera:\n"
+                                               "    return Camera(x=x)\n");
+    write_file(dir / "main.dd", "import camera as cam\n"
+                                "import renderer.camera as render_camera\n"
+                                "\n"
+                                "def main() -> i32:\n"
+                                "    return 0\n");
+
+    const dudu::ModuleAst module = dudu::load_source_tree(dir / "main.dd");
+    int root_camera_count = 0;
+    int renderer_camera_count = 0;
+    int root_make_count = 0;
+    int renderer_make_count = 0;
+    for (const dudu::ClassDecl& klass : module.classes) {
+        if (klass.name == "Camera" && klass.origin_module == "camera") {
+            ++root_camera_count;
+        }
+        if (klass.name == "Camera" && klass.origin_module == "renderer.camera") {
+            ++renderer_camera_count;
+        }
+    }
+    for (const dudu::FunctionDecl& fn : module.functions) {
+        if (fn.name == "make_camera" && fn.origin_module == "camera") {
+            ++root_make_count;
+        }
+        if (fn.name == "make_camera" && fn.origin_module == "renderer.camera") {
+            ++renderer_make_count;
+        }
+    }
+    assert(root_camera_count == 1);
+    assert(renderer_camera_count == 1);
+    assert(root_make_count == 1);
+    assert(renderer_make_count == 1);
+}
+
 void test_canonical_examples_parse(const std::filesystem::path& root) {
     const std::vector<std::string> examples = {
         "allocators.dd",           "audio_synth.dd",     "compile_time.dd",
@@ -688,6 +736,7 @@ int main() {
         test_module_loader_canonicalizes_physical_modules();
         test_module_loader_rejects_duplicate_from_aliases();
         test_module_loader_qualified_module_imports();
+        test_module_loader_preserves_declaration_origins();
         test_canonical_examples_parse(root);
         test_header_emission();
         test_semantic_diagnostics();

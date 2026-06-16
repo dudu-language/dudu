@@ -7,6 +7,7 @@
 #include <fstream>
 #include <map>
 #include <set>
+#include <sstream>
 #include <vector>
 
 namespace dudu {
@@ -35,6 +36,50 @@ std::filesystem::path module_path_to_file(const std::filesystem::path& base,
     }
     out += ".dd";
     return out;
+}
+
+std::string module_name_from_file(const std::filesystem::path& root,
+                                  const std::filesystem::path& file) {
+    std::filesystem::path relative = std::filesystem::relative(file, root);
+    relative.replace_extension();
+    std::ostringstream out;
+    for (const std::filesystem::path& part : relative) {
+        if (!out.str().empty()) {
+            out << '.';
+        }
+        out << part.string();
+    }
+    return out.str();
+}
+
+void stamp_module_origin(ModuleAst& module, const std::filesystem::path& source_path,
+                         const std::string& module_path) {
+    module.source_path = source_path;
+    module.module_path = module_path;
+    for (TypeAliasDecl& alias : module.aliases) {
+        alias.origin_module = module_path;
+    }
+    for (EnumDecl& en : module.enums) {
+        en.origin_module = module_path;
+    }
+    for (ClassDecl& klass : module.classes) {
+        klass.origin_module = module_path;
+        for (ConstDecl& constant : klass.constants) {
+            constant.origin_module = module_path;
+        }
+        for (ConstDecl& field : klass.static_fields) {
+            field.origin_module = module_path;
+        }
+        for (FunctionDecl& method : klass.methods) {
+            method.origin_module = module_path;
+        }
+    }
+    for (ConstDecl& constant : module.constants) {
+        constant.origin_module = module_path;
+    }
+    for (FunctionDecl& fn : module.functions) {
+        fn.origin_module = module_path;
+    }
 }
 
 void append_module(ModuleAst& target, const ModuleAst& source) {
@@ -251,7 +296,7 @@ void add_module_import_aliases(ModuleAst& module,
     }
 }
 
-const ModuleAst& load_one(const std::filesystem::path& path,
+const ModuleAst& load_one(const std::filesystem::path& path, const std::filesystem::path& root,
                           std::set<std::filesystem::path>& loading,
                           std::map<std::filesystem::path, ModuleAst>& loaded,
                           std::vector<std::filesystem::path>& ordered) {
@@ -265,13 +310,14 @@ const ModuleAst& load_one(const std::filesystem::path& path,
     loading.insert(canonical);
 
     ModuleAst parsed = parse_source(read_text_file(path), path);
+    stamp_module_origin(parsed, canonical, module_name_from_file(root, canonical));
     for (const ImportDecl& import : parsed.imports) {
         if (import.kind != ImportKind::Module && import.kind != ImportKind::From) {
             continue;
         }
         const std::filesystem::path dependency =
             module_path_to_file(path.parent_path(), import.module_path);
-        const ModuleAst& dependency_module = load_one(dependency, loading, loaded, ordered);
+        const ModuleAst& dependency_module = load_one(dependency, root, loading, loaded, ordered);
         if (import.kind == ImportKind::From &&
             !has_module_symbol(dependency_module, import.imported_name)) {
             throw CompileError(import.location, "module '" + import.module_path +
@@ -310,12 +356,16 @@ void collect_files(const std::filesystem::path& path, std::set<std::filesystem::
 } // namespace
 
 ModuleAst load_source_tree(const std::filesystem::path& entry) {
+    const std::filesystem::path canonical_entry = std::filesystem::weakly_canonical(entry);
+    const std::filesystem::path root = canonical_entry.parent_path();
     std::set<std::filesystem::path> loading;
     std::map<std::filesystem::path, ModuleAst> loaded;
     std::vector<std::filesystem::path> ordered;
-    (void)load_one(entry, loading, loaded, ordered);
+    (void)load_one(canonical_entry, root, loading, loaded, ordered);
 
     ModuleAst merged;
+    merged.source_path = canonical_entry;
+    merged.module_path = module_name_from_file(root, canonical_entry);
     for (const std::filesystem::path& path : ordered) {
         append_module(merged, loaded.at(path));
     }

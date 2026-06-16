@@ -68,8 +68,10 @@ Dudu module imports such as `import camera as cam` and
 `import renderer.camera` now bind `cam.Type`, `cam.function`,
 `renderer.camera.Type`, and `renderer.camera.function` through non-emitted
 module metadata. Distinct modules that declare the same unqualified Dudu type
-or function name still require real per-module C++ namespaces before they can
-coexist.
+or function name now preserve their declaration origin in the AST, which gives
+the namespace backend the information it needs, but they still require real
+per-module C++ namespaces before they can coexist through semantic analysis and
+codegen.
 
 ## Feature Validation Bar
 

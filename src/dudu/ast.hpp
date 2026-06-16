@@ -2,6 +2,7 @@
 
 #include "dudu/source.hpp"
 
+#include <filesystem>
 #include <map>
 #include <string>
 #include <string_view>
@@ -183,6 +184,7 @@ struct TypeAliasDecl {
     std::string name;
     std::string type;
     TypeRef type_ref;
+    std::string origin_module;
     SourceLocation location;
 };
 
@@ -241,6 +243,7 @@ struct EnumDecl {
     std::string name;
     std::string underlying_type;
     TypeRef underlying_type_ref;
+    std::string origin_module;
     std::vector<EnumValueDecl> values;
     SourceLocation location;
 };
@@ -254,6 +257,7 @@ struct FunctionDecl {
     std::vector<ParamDecl> params;
     std::string return_type;
     TypeRef return_type_ref;
+    std::string origin_module;
     std::vector<Stmt> statements;
     SourceLocation location;
 };
@@ -264,6 +268,7 @@ struct ConstDecl {
     std::string value;
     TypeRef type_ref;
     Expr value_expr;
+    std::string origin_module;
     SourceLocation location;
 };
 
@@ -284,6 +289,7 @@ struct ClassDecl {
     std::vector<ConstDecl> constants;
     std::vector<ConstDecl> static_fields;
     std::vector<FunctionDecl> methods;
+    std::string origin_module;
     SourceLocation location;
 };
 
@@ -294,6 +300,8 @@ struct StaticAssertDecl {
 };
 
 struct ModuleAst {
+    std::filesystem::path source_path;
+    std::string module_path;
     std::map<std::string, std::string> build_values;
     bool target_mode_explicit = false;
     std::vector<ImportDecl> imports;
