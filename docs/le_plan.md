@@ -384,7 +384,8 @@ push. They are not release packaging work.
    Multi-parameter generic functions and classes such as `Pair[str, i32]`
    substitute receiver member types through the declared class generic
    parameter names. Target fixtures now cover `Stack[T]`, `Result[T, E]`
-   helpers, generic span math with `T()` default construction,
+   helpers, a generic `sort_by[T]` wrapper over `std.sort`, generic span math
+   with `T()` default construction,
    argument-inferred generic method calls such as `box.id(42)`, and
    return-context inferred method calls such as `box.make()`.
 

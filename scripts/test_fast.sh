@@ -71,6 +71,7 @@ compile_and_expect generic_method_return_context 42
 compile_and_expect generic_method_receiver_ast 42
 compile_and_expect generic_pair 42
 compile_and_expect generic_result_helpers 42
+compile_and_expect generic_sort_by 42
 compile_and_expect generic_span_sum 42
 compile_and_expect generic_stack 42
 compile_and_expect generic_substitution_shapes 42

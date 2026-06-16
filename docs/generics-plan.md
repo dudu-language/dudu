@@ -270,6 +270,10 @@ def sort_by[T](values: &list[T], cmp: fn(T, T) -> bool):
 
 This stresses imported C++ algorithm interop.
 
+Status: an executable fixture covers a generic `sort_by[T]` wrapper over
+`std.sort`, mutable `&list[T]` parameters, and typed function-pointer
+comparators.
+
 ### Generic Slice Math
 
 ```python
