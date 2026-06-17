@@ -723,3 +723,17 @@ declarations safely.
    names remain values after declaration, so callback tables and sort
    predicates should be written with named declarations rather than inline
    function literals.
+
+   Status: audited against the current implementation. Dunder protocol names
+   are not accepted as compatibility aliases; they are reserved and diagnosed
+   with guidance to use normal names and decorators such as `@operator(...)`.
+   `@staticmethod`, `@classmethod`, and `@property` are rejected instead of
+   being kept as alternate OOP spellings. Prototype Python expression sugar
+   such as `lambda`, ternary conditional expressions, comprehensions,
+   generator expressions, `yield`, `with`, and RHS `def` expressions has
+   negative fixture coverage and is rejected through the unsupported-feature
+   path. The remaining raw machinery is documented as either the explicit
+   `cpp(...)` escape boundary, native C/C++ spelling compatibility, or the
+   intentionally narrow direct-backend merged translation unit. No active
+   dunder/operator compatibility path or stale inline-function-literal path was
+   found in the implementation.
