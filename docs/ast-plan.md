@@ -352,6 +352,9 @@ Already structured:
 - member expression typing now enters through a direct `TypeRef` path for enum
   variants, native member values, Dudu fields, swizzles, and foreign-auto
   member lookups before falling back to legacy string expression inference
+- binary expression typing now infers child `TypeRef` nodes first and renders
+  them only for compatibility checks, so logical/comparison/contextual numeric
+  results no longer start by asking the string expression inferencer
 - LSP local variable/parameter type collection for hover, member completion,
   and member definition now walks parsed function/method bodies and reuses
   semantic expression inference instead of regexing source lines

@@ -115,8 +115,10 @@ std::optional<TypeRef> binary_expr_type_ref(const FunctionScope& scope, const Ex
     if (expr.kind != ExprKind::Binary || expr.children.size() != 2) {
         return std::nullopt;
     }
-    const std::string left = infer_expr_ast(scope, expr.children[0], location);
-    const std::string right = infer_expr_ast(scope, expr.children[1], location);
+    const TypeRef left_ref = infer_expr_type_ast(scope, expr.children[0], location);
+    const TypeRef right_ref = infer_expr_type_ast(scope, expr.children[1], location);
+    const std::string left = substitute_type_ref_text(left_ref, {});
+    const std::string right = substitute_type_ref_text(right_ref, {});
     if (expr.op == "and" || expr.op == "or") {
         if (location != nullptr && !left.empty() && left != "bool") {
             sema_expr_fail(*location, expr.op + " expects bool, got " + left);
@@ -124,12 +126,12 @@ std::optional<TypeRef> binary_expr_type_ref(const FunctionScope& scope, const Ex
         if (location != nullptr && !right.empty() && right != "bool") {
             sema_expr_fail(*location, expr.op + " expects bool, got " + right);
         }
-        return parse_type_text("bool", expr.location);
+        return named_type_ref("bool", expr.location);
     }
     if (is_comparison_op(expr.op)) {
         if (contextual_numeric_binary_type(scope, expr.children[0], left, expr.children[1],
                                            right)) {
-            return parse_type_text("bool", expr.location);
+            return named_type_ref("bool", expr.location);
         }
         if (const auto signature =
                 binary_operator_signature(scope.symbols, expr.op, left, expr.children[1], right)) {
@@ -147,7 +149,7 @@ std::optional<TypeRef> binary_expr_type_ref(const FunctionScope& scope, const Ex
                                    "comparison operator " + expr.op + " must return bool");
                 }
             }
-            return parse_type_text("bool", expr.location);
+            return named_type_ref("bool", expr.location);
         }
         if (location != nullptr && !left.empty() && !right.empty() &&
             !comparison_rhs_allowed(scope.symbols, expr.op, left, expr.children[1], right)) {
@@ -159,6 +161,12 @@ std::optional<TypeRef> binary_expr_type_ref(const FunctionScope& scope, const Ex
     if (is_arithmetic_op(expr.op)) {
         if (const auto contextual = contextual_numeric_binary_type(scope, expr.children[0], left,
                                                                    expr.children[1], right)) {
+            if (*contextual == left) {
+                return left_ref;
+            }
+            if (*contextual == right) {
+                return right_ref;
+            }
             return parse_type_text(*contextual, expr.location);
         }
     }
