@@ -1484,6 +1484,9 @@ LSP source edits are also moving to AST-owned ranges:
   parsed `TypeRef` values through emitted local type inference instead of a
   string return-type map; strings are rendered only at the C++ codegen
   boundary.
+- C++ block and match emission now carry the enclosing function return type as
+  a parsed `TypeRef` through nested statements, rendering text only when a
+  return expression needs generic-method coercion.
 
 Expression parsing has moved onto the lexer/token stream:
 

@@ -336,10 +336,10 @@ void emit_method(std::ostringstream& out, const std::string& class_name,
     }
     if (is_constructor_method(method) && super_init_expr(method) != nullptr) {
         std::vector<Stmt> body(method.statements.begin() + 1, method.statements.end());
-        emit_block(out, body, 2, aliases, locals, function_return_type_text(method),
+        emit_block(out, body, 2, aliases, locals, function_return_type_ref(method),
                    function_returns, &symbols, options);
     } else {
-        emit_block(out, method.statements, 2, aliases, locals, function_return_type_text(method),
+        emit_block(out, method.statements, 2, aliases, locals, function_return_type_ref(method),
                    function_returns, &symbols, options);
     }
     out << "    }\n";
@@ -377,8 +377,8 @@ void emit_class_constant_definition(std::ostringstream& out, const std::string& 
 
 void emit_classes(std::ostringstream& out, const ModuleAst& module,
                   const std::vector<std::string>& aliases,
-                  const std::map<std::string, TypeRef>& function_returns,
-                  const Symbols& symbols, bool header_only, const CppEmitOptions& options) {
+                  const std::map<std::string, TypeRef>& function_returns, const Symbols& symbols,
+                  bool header_only, const CppEmitOptions& options) {
     for (const size_t index : class_emit_order(module.classes)) {
         const ClassDecl& klass = module.classes[index];
         const std::string& class_name = emitted_name(klass, options);

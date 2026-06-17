@@ -196,7 +196,7 @@ void emit_function_body(std::ostringstream& out, const FunctionDecl& fn,
     for (const ParamDecl& param : fn.params) {
         locals[param.name] = type_ref_text(param.type_ref);
     }
-    emit_block(out, fn.statements, 1, aliases, locals, function_return_type_text(fn),
+    emit_block(out, fn.statements, 1, aliases, locals, function_return_type_ref(fn),
                function_returns, &symbols, options);
     out << "}\n\n";
 }

@@ -139,7 +139,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                            const std::vector<std::string>& aliases,
                            std::map<std::string, std::string>& locals,
                            std::map<std::string, TypeRef>& local_type_refs,
-                           const std::string& return_type,
+                           const TypeRef& return_type_ref,
                            const std::map<std::string, TypeRef>& function_returns,
                            const Symbols* symbols, const CppEmitOptions& options) {
     if (stmt.kind == StmtKind::CppEscape) {
@@ -194,7 +194,8 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
     if (stmt.kind == StmtKind::Return) {
         out << indent(depth) << "return";
         if (has_expr(stmt.value_expr)) {
-            if (is_template_type(return_type, "Option") &&
+            const std::string return_type = substitute_type_ref_text(return_type_ref, {});
+            if (is_template_type(return_type_ref, "Option") &&
                 stmt.value_expr.kind == ExprKind::NoneLiteral) {
                 out << " std::nullopt";
             } else if (stmt.value_expr.kind == ExprKind::TupleLiteral) {
@@ -340,14 +341,14 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
 void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                     const std::vector<std::string>& aliases,
                     std::map<std::string, std::string>& locals,
-                    std::map<std::string, TypeRef>& local_type_refs, const std::string& return_type,
-                    const std::map<std::string, TypeRef>& function_returns,
-                    const Symbols* symbols, const CppEmitOptions& options) {
+                    std::map<std::string, TypeRef>& local_type_refs, const TypeRef& return_type_ref,
+                    const std::map<std::string, TypeRef>& function_returns, const Symbols* symbols,
+                    const CppEmitOptions& options) {
     emit_source_comment(out, stmt, depth);
     if (stmt.kind == StmtKind::If) {
         out << indent(depth) << if_keyword_for_condition(stmt.condition_expr) << " ("
             << lower_expr(stmt.condition_expr, aliases, locals, symbols, options) << ") {\n";
-        emit_block(out, stmt.children, depth + 1, aliases, locals, local_type_refs, return_type,
+        emit_block(out, stmt.children, depth + 1, aliases, locals, local_type_refs, return_type_ref,
                    function_returns, symbols, options);
         out << indent(depth) << "}\n";
         return;
@@ -355,26 +356,26 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
     if (stmt.kind == StmtKind::Elif) {
         out << indent(depth) << "else " << if_keyword_for_condition(stmt.condition_expr) << " ("
             << lower_expr(stmt.condition_expr, aliases, locals, symbols, options) << ") {\n";
-        emit_block(out, stmt.children, depth + 1, aliases, locals, local_type_refs, return_type,
+        emit_block(out, stmt.children, depth + 1, aliases, locals, local_type_refs, return_type_ref,
                    function_returns, symbols, options);
         out << indent(depth) << "}\n";
         return;
     }
     if (stmt.kind == StmtKind::Else) {
         out << indent(depth) << "else {\n";
-        emit_block(out, stmt.children, depth + 1, aliases, locals, local_type_refs, return_type,
+        emit_block(out, stmt.children, depth + 1, aliases, locals, local_type_refs, return_type_ref,
                    function_returns, symbols, options);
         out << indent(depth) << "}\n";
         return;
     }
     if (stmt.kind == StmtKind::Match) {
-        emit_match_statement(out, stmt, depth, aliases, locals, local_type_refs, return_type,
+        emit_match_statement(out, stmt, depth, aliases, locals, local_type_refs, return_type_ref,
                              function_returns, symbols, options);
         return;
     }
     if (stmt.kind == StmtKind::Try) {
         out << indent(depth) << "try {\n";
-        emit_block(out, stmt.children, depth + 1, aliases, locals, local_type_refs, return_type,
+        emit_block(out, stmt.children, depth + 1, aliases, locals, local_type_refs, return_type_ref,
                    function_returns, symbols, options);
         out << indent(depth) << "}\n";
         return;
@@ -388,7 +389,7 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                 << stmt.name << ")";
         }
         out << " {\n";
-        emit_block(out, stmt.children, depth + 1, aliases, locals, local_type_refs, return_type,
+        emit_block(out, stmt.children, depth + 1, aliases, locals, local_type_refs, return_type_ref,
                    function_returns, symbols, options);
         out << indent(depth) << "}\n";
         return;
@@ -396,7 +397,7 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
     if (stmt.kind == StmtKind::While) {
         out << indent(depth) << "while ("
             << lower_expr(stmt.condition_expr, aliases, locals, symbols, options) << ") {\n";
-        emit_block(out, stmt.children, depth + 1, aliases, locals, local_type_refs, return_type,
+        emit_block(out, stmt.children, depth + 1, aliases, locals, local_type_refs, return_type_ref,
                    function_returns, symbols, options);
         out << indent(depth) << "}\n";
         return;
@@ -421,19 +422,19 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                 args.size() >= 3 ? lower_expr(args.at(2), aliases, locals, symbols, options) : "1";
             out << indent(depth) << "for (" << binding_type << ' ' << binding << " = " << start
                 << "; " << binding << " < " << end << "; " << binding << " += " << step << ") {\n";
-            emit_block(out, stmt.children, depth + 1, aliases, locals, local_type_refs, return_type,
-                       function_returns, symbols, options);
+            emit_block(out, stmt.children, depth + 1, aliases, locals, local_type_refs,
+                       return_type_ref, function_returns, symbols, options);
             out << indent(depth) << "}\n";
             return;
         }
         const std::string loop_type = has_type_ref(stmt.type_ref) ? binding_type : "auto&&";
         out << indent(depth) << "for (" << loop_type << ' ' << binding << " : " << range << ") {\n";
-        emit_block(out, stmt.children, depth + 1, aliases, locals, local_type_refs, return_type,
+        emit_block(out, stmt.children, depth + 1, aliases, locals, local_type_refs, return_type_ref,
                    function_returns, symbols, options);
         out << indent(depth) << "}\n";
         return;
     }
-    emit_simple_statement(out, stmt, depth, aliases, locals, local_type_refs, return_type,
+    emit_simple_statement(out, stmt, depth, aliases, locals, local_type_refs, return_type_ref,
                           function_returns, symbols, options);
 }
 
@@ -447,24 +448,23 @@ void emit_block(std::ostringstream& out, const std::vector<Stmt>& body, int dept
 void emit_block(std::ostringstream& out, const std::vector<Stmt>& body, int depth,
                 const std::vector<std::string>& aliases,
                 const std::map<std::string, std::string>& initial_locals,
-                const std::string& return_type,
-                const std::map<std::string, TypeRef>& function_returns,
-                const Symbols* symbols) {
-    emit_block(out, body, depth, aliases, initial_locals, return_type, function_returns, symbols,
-               {});
+                const TypeRef& return_type_ref,
+                const std::map<std::string, TypeRef>& function_returns, const Symbols* symbols) {
+    emit_block(out, body, depth, aliases, initial_locals, return_type_ref, function_returns,
+               symbols, {});
 }
 
 void emit_block(std::ostringstream& out, const std::vector<Stmt>& body, int depth,
                 const std::vector<std::string>& aliases,
                 const std::map<std::string, std::string>& initial_locals,
-                const std::string& return_type,
+                const TypeRef& return_type_ref,
                 const std::map<std::string, TypeRef>& function_returns, const Symbols* symbols,
                 const CppEmitOptions& options) {
     std::map<std::string, TypeRef> local_type_refs;
     for (const auto& [name, type] : initial_locals) {
         local_type_refs[name] = parse_type_text(type);
     }
-    emit_block(out, body, depth, aliases, initial_locals, local_type_refs, return_type,
+    emit_block(out, body, depth, aliases, initial_locals, local_type_refs, return_type_ref,
                function_returns, symbols, options);
 }
 
@@ -472,13 +472,13 @@ void emit_block(std::ostringstream& out, const std::vector<Stmt>& body, int dept
                 const std::vector<std::string>& aliases,
                 const std::map<std::string, std::string>& initial_locals,
                 const std::map<std::string, TypeRef>& initial_local_type_refs,
-                const std::string& return_type,
+                const TypeRef& return_type_ref,
                 const std::map<std::string, TypeRef>& function_returns, const Symbols* symbols,
                 const CppEmitOptions& options) {
     std::map<std::string, std::string> locals = initial_locals;
     std::map<std::string, TypeRef> local_type_refs = initial_local_type_refs;
     for (const Stmt& stmt : body) {
-        emit_statement(out, stmt, depth, aliases, locals, local_type_refs, return_type,
+        emit_statement(out, stmt, depth, aliases, locals, local_type_refs, return_type_ref,
                        function_returns, symbols, options);
     }
 }

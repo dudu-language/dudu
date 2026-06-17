@@ -36,11 +36,11 @@ bool match_cases_return(const Stmt& stmt) {
 void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                           const std::vector<std::string>& aliases,
                           const std::map<std::string, std::string>& locals,
-                          const std::string& return_type,
+                          const TypeRef& return_type_ref,
                           const std::map<std::string, TypeRef>& function_returns,
                           const Symbols* symbols, const CppEmitOptions& options) {
     static const std::map<std::string, TypeRef> no_type_refs;
-    emit_match_statement(out, stmt, depth, aliases, locals, no_type_refs, return_type,
+    emit_match_statement(out, stmt, depth, aliases, locals, no_type_refs, return_type_ref,
                          function_returns, symbols, options);
 }
 
@@ -48,7 +48,7 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                           const std::vector<std::string>& aliases,
                           const std::map<std::string, std::string>& locals,
                           const std::map<std::string, TypeRef>& local_type_refs,
-                          const std::string& return_type,
+                          const TypeRef& return_type_ref,
                           const std::map<std::string, TypeRef>& function_returns,
                           const Symbols* symbols, const CppEmitOptions& options) {
     const std::string subject_type =
@@ -109,12 +109,12 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                         << ") {\n";
                     out << indent(depth + 2) << matched << " = true;\n";
                     emit_block(out, child.children, depth + 2, aliases, nested, nested_type_refs,
-                               return_type, function_returns, symbols, options);
+                               return_type_ref, function_returns, symbols, options);
                     out << indent(depth + 1) << "}\n";
                 } else {
                     out << indent(depth + 1) << matched << " = true;\n";
                     emit_block(out, child.children, depth + 1, aliases, nested, nested_type_refs,
-                               return_type, function_returns, symbols, options);
+                               return_type_ref, function_returns, symbols, options);
                 }
                 out << indent(depth) << "}\n";
             }
@@ -180,12 +180,12 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                         << ") {\n";
                     out << indent(depth + 2) << matched << " = true;\n";
                     emit_block(out, child.children, depth + 2, aliases, nested, nested_type_refs,
-                               return_type, function_returns, symbols, options);
+                               return_type_ref, function_returns, symbols, options);
                     out << indent(depth + 1) << "}\n";
                 } else {
                     out << indent(depth + 1) << matched << " = true;\n";
                     emit_block(out, child.children, depth + 1, aliases, nested, nested_type_refs,
-                               return_type, function_returns, symbols, options);
+                               return_type_ref, function_returns, symbols, options);
                 }
                 out << indent(depth) << "}\n";
             }
@@ -208,8 +208,8 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                 << lower_expr(child.pattern_expr, aliases, locals, symbols, options) << ":\n";
         }
         out << indent(depth + 1) << "{\n";
-        emit_block(out, child.children, depth + 2, aliases, locals, local_type_refs, return_type,
-                   function_returns, symbols, options);
+        emit_block(out, child.children, depth + 2, aliases, locals, local_type_refs,
+                   return_type_ref, function_returns, symbols, options);
         out << indent(depth + 2) << "break;\n";
         out << indent(depth + 1) << "}\n";
     }
@@ -222,11 +222,11 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
 void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                           const std::vector<std::string>& aliases,
                           const std::map<std::string, std::string>& locals,
-                          const std::string& return_type,
+                          const TypeRef& return_type_ref,
                           const std::map<std::string, TypeRef>& function_returns,
                           const Symbols* symbols) {
-    emit_match_statement(out, stmt, depth, aliases, locals, return_type, function_returns, symbols,
-                         {});
+    emit_match_statement(out, stmt, depth, aliases, locals, return_type_ref, function_returns,
+                         symbols, {});
 }
 
 } // namespace dudu
