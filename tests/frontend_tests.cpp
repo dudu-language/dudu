@@ -1,4 +1,5 @@
 #include "dudu/cpp_emit.hpp"
+#include "dudu/cpp_emit_modules.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/cpp_stmt_types.hpp"
 #include "dudu/format.hpp"
@@ -17,6 +18,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -249,6 +251,38 @@ void test_module_loader_preserves_declaration_origins() {
     assert(renderer_camera_count == 1);
     assert(root_make_count == 1);
     assert(renderer_make_count == 1);
+}
+
+void test_cpp_module_artifacts_preserve_module_boundaries() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_module_artifact_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir / "renderer");
+    write_file(dir / "camera.dd", "class Camera:\n"
+                                  "    x: i32\n");
+    write_file(dir / "renderer" / "camera.dd", "class Camera:\n"
+                                               "    x: i32\n");
+    write_file(dir / "main.dd", "import camera as cam\n"
+                                "import renderer.camera as render_camera\n"
+                                "\n"
+                                "def main() -> i32:\n"
+                                "    return 0\n");
+
+    const dudu::ModuleAst module = dudu::load_source_tree(dir / "main.dd");
+    const std::vector<dudu::CppModuleArtifact> artifacts = dudu::emit_cpp_module_artifacts(module);
+    std::map<std::filesystem::path, std::string> by_path;
+    for (const dudu::CppModuleArtifact& artifact : artifacts) {
+        by_path[artifact.path] = artifact.content;
+    }
+    assert(by_path.contains("camera.hpp"));
+    assert(by_path.contains("camera.cpp"));
+    assert(by_path.contains(std::filesystem::path("renderer") / "camera.hpp"));
+    assert(by_path.contains(std::filesystem::path("renderer") / "camera.cpp"));
+    assert(by_path.contains("main.hpp"));
+    assert(by_path.contains("main.cpp"));
+    assert(by_path.at("camera.cpp").find("// dudu module: camera") != std::string::npos);
+    assert(by_path.at(std::filesystem::path("renderer") / "camera.cpp")
+               .find("// dudu module: renderer.camera") != std::string::npos);
 }
 
 void test_canonical_examples_parse(const std::filesystem::path& root) {
@@ -742,6 +776,7 @@ int main() {
         test_module_loader_rejects_duplicate_from_aliases();
         test_module_loader_qualified_module_imports();
         test_module_loader_preserves_declaration_origins();
+        test_cpp_module_artifacts_preserve_module_boundaries();
         test_canonical_examples_parse(root);
         test_header_emission();
         test_semantic_diagnostics();

@@ -348,6 +348,9 @@ Current implementation reality:
   Dudu source tree. Imported `.dd` files are parsed as modules, but their
   generated C++ is still merged into that one `.cpp` file before native
   compilation.
+- Internal emitter support exists for per-module inspection artifacts, but
+  `dudu build` does not compile those artifacts yet. Switching the build path
+  requires namespace-aware semantic analysis and generated C++ references.
 - `[build] backend = "direct"` and `[build] backend = "cmake"` parse from
   `dudu.toml`. The direct backend is selectable explicitly. The generated
   CMake backend is implemented for `dudu build`, `dudu run`, and `dudu test`;

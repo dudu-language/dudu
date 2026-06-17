@@ -556,7 +556,9 @@ push. They are not release packaging work.
    output one generated C++ translation unit for the whole Dudu source tree;
    source-tree module units are now preserved in the AST so that future
    per-module `.hpp/.cpp` output has authoritative module boundaries to emit
-   from.
+   from. The emitter can now produce inspection artifacts for each module unit,
+   but the direct native build still compiles the compatibility single-file
+   output until namespace-aware per-module sema/codegen is complete.
 
 12. Language Server And Formatter
 
