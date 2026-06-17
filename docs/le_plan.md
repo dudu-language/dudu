@@ -592,6 +592,10 @@ push. They are not release packaging work.
    Constructor argument validation now preserves field and `init` parameter
    `TypeRef` nodes, infers argument expressions as `TypeRef` first, and checks
    structural assignment before rendering types for compatibility diagnostics.
+   Native overload matching now accepts typed expression inference callbacks,
+   checks argument/parameter `TypeRef` compatibility before rendered fallback
+   paths, and binds native template placeholders from parsed argument types
+   when available.
 
 3. OOP Surface Cleanup
 

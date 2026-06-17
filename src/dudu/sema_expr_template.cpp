@@ -161,7 +161,7 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
     }
 
     if (const auto signature = native_signature_for_call(
-            scope, callee, expr.children, location, infer_expr_ast,
+            scope, callee, expr.children, location, infer_expr_ast, infer_expr_type_ast,
             [&](const std::string& expected, const Expr& value, const std::string& got) {
                 return can_assign_ast(scope, expected, value, got);
             })) {

@@ -165,6 +165,11 @@ bool bind_native_template_type(std::string expected, std::string got,
     return false;
 }
 
+bool bind_native_template_type_ast(const TypeRef& expected, const TypeRef& got,
+                                   NativeTemplateBindings& bindings) {
+    return bind_template_type_ref(expected, got, bindings);
+}
+
 bool bind_native_template_type_ast(const Symbols& symbols, const std::string& expected,
                                    const std::string& got, NativeTemplateBindings& bindings) {
     const TypeRef expected_ref = parse_type_text(expected);

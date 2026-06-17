@@ -93,7 +93,7 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
             return fn->second.return_type;
         }
         if (const auto signature = native_signature_for_call(
-                scope, callee, args, location, infer_expr_ast,
+                scope, callee, args, location, infer_expr_ast, infer_expr_type_ast,
                 [&](const std::string& expected, const Expr& value, const std::string& got) {
                     return can_assign_ast(scope, expected, value, got);
                 })) {

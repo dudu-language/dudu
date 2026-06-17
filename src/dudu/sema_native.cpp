@@ -66,13 +66,12 @@ std::optional<std::string> native_member_expr_type(const Symbols& symbols, const
     return native_member_path_type(symbols, *path);
 }
 
-std::optional<FunctionSignature> native_signature_for_call(const FunctionScope& scope,
-                                                           const std::string& callee,
-                                                           const std::vector<Expr>& args,
-                                                           const SourceLocation* location,
-                                                           const NativeInferExprAstFn& infer_expr,
-                                                           const NativeCanAssignAstFn& can_assign) {
-    return match_native_signature(scope, callee, args, location, infer_expr, can_assign);
+std::optional<FunctionSignature> native_signature_for_call(
+    const FunctionScope& scope, const std::string& callee, const std::vector<Expr>& args,
+    const SourceLocation* location, const NativeInferExprAstFn& infer_expr,
+    const NativeInferExprTypeAstFn& infer_expr_type, const NativeCanAssignAstFn& can_assign) {
+    return match_native_signature(scope, callee, args, location, infer_expr, infer_expr_type,
+                                  can_assign);
 }
 
 } // namespace dudu
