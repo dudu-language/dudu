@@ -80,8 +80,7 @@ std::optional<std::filesystem::path> resolve_header_path(const std::filesystem::
     } else {
         roots.push_back(source_dir);
         for (const std::string& include_dir : config.include_dirs) {
-            const std::filesystem::path path = include_dir;
-            roots.push_back(path.is_absolute() ? path : source_dir / path);
+            roots.push_back(project_path(config, include_dir));
         }
         for (const std::filesystem::path& include_dir : pkg_config_include_dirs(config)) {
             roots.push_back(include_dir);

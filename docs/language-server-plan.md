@@ -349,6 +349,8 @@ module file. Go-to-definition for `from module import symbol` aliases is
 covered with an unopened module file.
 Go-to-definition for native C++ member methods is covered with a local fixture
 header.
+Go-to-definition for imported C/C++ headers respects manifest-relative
+`[include] paths`, matching the project-driver path contract.
 Native overloaded function signature help is covered with a local fixture
 header.
 Local completion scope filtering is covered so deeper-block locals do not leak

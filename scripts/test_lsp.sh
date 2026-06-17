@@ -54,6 +54,7 @@ overload_uri = f"file://{repo_root}/tests/fixtures/dudu_lsp_overload.dd"
 scope_uri = "file:///tmp/dudu_lsp_scope.dd"
 direct_native_uri = f"file://{repo_root}/tests/fixtures/dudu_lsp_direct_native.dd"
 from_import_uri = f"file://{repo_root}/tests/fixtures/dudu_lsp_from_import.dd"
+lsp_include_uri = f"file://{repo_root}/tests/fixtures/lsp_include_project/src/main.dd"
 source = "\n".join(
     [
         "class Player:",
@@ -108,6 +109,39 @@ messages = [
                     "version": 1,
                     "text": source,
                 }
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "method": "textDocument/didOpen",
+            "params": {
+                "textDocument": {
+                    "uri": lsp_include_uri,
+                    "languageId": "dudu",
+                    "version": 1,
+                    "text": "\n".join(
+                        [
+                            'import c "lsp_project_header.h"',
+                            "",
+                            "def main() -> i32:",
+                            "    return project_header_value()",
+                            "",
+                        ]
+                    ),
+                }
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 47,
+            "method": "textDocument/definition",
+            "params": {
+                "textDocument": {"uri": lsp_include_uri},
+                "position": {"line": 0, "character": 14},
             },
         }
     ),
@@ -1238,6 +1272,12 @@ assert direct_native_definition["result"]["range"]["start"]["line"] == 20
 direct_native_header_definition = next(item for item in responses if item.get("id") == 43)
 assert direct_native_header_definition["result"]["uri"].endswith("/tests/fixtures/native_headers/simple_c.h")
 assert direct_native_header_definition["result"]["range"]["start"]["line"] == 0
+
+lsp_include_header_definition = next(item for item in responses if item.get("id") == 47)
+assert lsp_include_header_definition["result"]["uri"].endswith(
+    "/tests/fixtures/lsp_include_project/include/lsp_project_header.h"
+)
+assert lsp_include_header_definition["result"]["range"]["start"]["line"] == 0
 
 overload_signature = next(item for item in responses if item.get("id") == 32)
 overload_labels = [item["label"] for item in overload_signature["result"]["signatures"]]

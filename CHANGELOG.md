@@ -93,3 +93,5 @@
 - Fixed language-server semantic highlighting so native-header scan failures do
   not blank ordinary Dudu tokens.
 - Rejected Python-style dunder names on free functions as well as methods.
+- Fixed language-server go-to-definition for imported C/C++ headers found
+  through manifest-relative `[include] paths`.

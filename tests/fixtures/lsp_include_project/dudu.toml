@@ -1,0 +1,5 @@
+name = "lsp_include_project"
+entry = "src/main.dd"
+
+[include]
+paths = ["include"]
