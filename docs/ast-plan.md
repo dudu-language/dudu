@@ -80,6 +80,9 @@ Already structured:
 - template-call C++ emission lowers pointer-cast targets and builtin template
   constructors through parsed `TypeRef` nodes instead of rebuilding bracketed
   type strings
+- pointer type C++ emission helpers and pointer-cast call emission now wrap
+  parsed pointee types in explicit `TypeRef::Pointer` nodes instead of
+  concatenating `*` onto type text and reparsing it
 - emitted-local receiver base type inference reuses the shared parsed
   `TypeRef` head-name helper for named, templated, function, and value types
 - inferred generic method instantiation renders inferred `TypeRef` arguments

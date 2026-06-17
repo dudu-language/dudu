@@ -173,8 +173,6 @@ std::string infer_call_ast(const FunctionScope& scope, const Expr& expr,
     }
     const size_t method_dot = callee.rfind('.');
     if (method_dot != std::string::npos) {
-        const std::string prefix = trim(callee.substr(0, method_dot));
-        const std::string method_name = trim(callee.substr(method_dot + 1));
         if (native_import_path_prefix(scope.symbols, callee)) {
             for (const Expr& arg : expr.children) {
                 (void)infer_expr_ast(scope, arg, use_location);

@@ -527,7 +527,9 @@ push. They are not release packaging work.
    reparsing inside the token parser. Parser declaration and statement code now
    builds expression and type pieces through token spans directly, and the
    parser layer no longer calls the top-level text expression/type parsers as a
-   compatibility fallback.
+   compatibility fallback. Pointer type C++ emission helpers and pointer-cast
+   call emission now wrap parsed pointee types in explicit `TypeRef::Pointer`
+   nodes instead of concatenating `*` onto type text and reparsing it.
 
 3. OOP Surface Cleanup
 

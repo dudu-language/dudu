@@ -69,6 +69,15 @@ bool is_pointer_cast_type_like(const std::string& type) {
     return false;
 }
 
+TypeRef pointer_type_ref_from_pointee_text(std::string_view type, SourceLocation location) {
+    TypeRef pointer;
+    pointer.kind = TypeKind::Pointer;
+    pointer.location = location;
+    pointer.text = "*" + trim_copy(std::string(type));
+    pointer.children.push_back(parse_type_text(type, location));
+    return pointer;
+}
+
 std::string lower_call_args_for_signature(const std::vector<Expr>& args, const FunctionSignature&,
                                           const std::vector<std::string>& aliases,
                                           const std::map<std::string, std::string>& locals,
@@ -339,7 +348,9 @@ std::optional<std::string> lower_pointer_cast_expr(const Expr& expr,
         return std::nullopt;
     }
     return "reinterpret_cast<" +
-           lower_cpp_type(parse_type_text("*" + type_name), aliases, options) + ">(" +
+           lower_cpp_type(pointer_type_ref_from_pointee_text(type_name, expr.location), aliases,
+                          options) +
+           ">(" +
            join_lowered_exprs(call.children, aliases, locals, ", ", symbols, options) + ")";
 }
 
@@ -372,7 +383,9 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
         const std::string type = trim_copy(callee_name.substr(1));
         if (is_pointer_cast_type_like(type)) {
             return "reinterpret_cast<" +
-                   lower_cpp_type(parse_type_text("*" + type), aliases, options) + ">(" +
+                   lower_cpp_type(pointer_type_ref_from_pointee_text(type, expr.location), aliases,
+                                  options) +
+                   ">(" +
                    join_lowered_exprs(expr.children, aliases, locals, ", ", symbols, options) + ")";
         }
     }
