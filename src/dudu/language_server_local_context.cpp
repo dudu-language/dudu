@@ -288,7 +288,8 @@ std::set<std::string> member_candidate_types(const ModuleAst& module, const std:
             }
         }
         for (const TypeAliasDecl& alias : module.aliases) {
-            if (!alias.type.empty() && out.contains(alias.name) && out.insert(alias.type).second) {
+            const std::string alias_type = type_ref_text(alias.type_ref);
+            if (!alias_type.empty() && out.contains(alias.name) && out.insert(alias_type).second) {
                 changed = true;
             }
         }

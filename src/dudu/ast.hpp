@@ -203,7 +203,6 @@ struct Stmt {
 struct TypeAliasDecl {
     std::string name;
     std::string cpp_name;
-    std::string type;
     TypeRef type_ref;
     std::string origin_module;
     SourceLocation location;

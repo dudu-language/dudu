@@ -197,7 +197,6 @@ void Parser::parse_type_decl(const Token& start, ModuleAst& module) {
         alias.location = start.location;
         alias.name = name.text;
         const JoinedTokens type = join_until_with_range({TokenKind::Newline});
-        alias.type = type.text;
         alias.type_ref = parse_type_piece(type);
         consume(TokenKind::Newline, "expected newline after type alias");
         module.aliases.push_back(std::move(alias));

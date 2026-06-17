@@ -299,7 +299,7 @@ Symbols collect_symbols(const ModuleAst& module) {
     for (const TypeAliasDecl& alias : module.aliases) {
         add_name(names, alias.name, alias.location);
         symbols.types.insert(alias.name);
-        symbols.aliases[alias.name] = alias.type;
+        symbols.aliases[alias.name] = type_ref_text(alias.type_ref);
         symbols.alias_type_refs[alias.name] = alias.type_ref;
     }
     for (const NativeTypeDecl& type : module.native_types) {

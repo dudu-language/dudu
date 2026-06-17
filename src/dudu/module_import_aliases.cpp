@@ -118,7 +118,9 @@ void add_qualified_module_symbols(ModuleAst& module, const ModuleAst& dependency
         qualified_type_substitutions(dependency, prefix);
     module.module_strip_prefixes.push_back(prefix);
     for (const TypeAliasDecl& alias : dependency.aliases) {
-        add_module_type_alias(module, prefix, alias.name, alias.type, import.location);
+        add_module_type_alias(module, prefix, alias.name,
+                              substitute_type_ref_text(alias.type_ref, type_substitutions),
+                              import.location);
     }
     for (const EnumDecl& en : dependency.enums) {
         add_module_type_alias(module, prefix, en.name, prefix + "." + en.name, import.location);

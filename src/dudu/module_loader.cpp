@@ -260,7 +260,6 @@ void add_from_import_aliases(ModuleAst& module) {
             if (en.name == import.imported_name) {
                 TypeAliasDecl alias;
                 alias.name = import.alias;
-                alias.type = import.imported_name;
                 alias.type_ref = parse_type_text(import.imported_name, import.location);
                 alias.location = import.location;
                 type_aliases.push_back(std::move(alias));
@@ -275,7 +274,6 @@ void add_from_import_aliases(ModuleAst& module) {
             if (klass.name == import.imported_name) {
                 TypeAliasDecl alias;
                 alias.name = import.alias;
-                alias.type = import.imported_name;
                 alias.type_ref = parse_type_text(import.imported_name, import.location);
                 alias.location = import.location;
                 type_aliases.push_back(std::move(alias));

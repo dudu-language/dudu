@@ -1,4 +1,5 @@
 #include "dudu/ast_expr.hpp"
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_emit.hpp"
 #include "dudu/cpp_emit_modules.hpp"
 #include "dudu/cpp_lower.hpp"
@@ -132,7 +133,7 @@ void test_module_loader_canonicalizes_physical_modules() {
         }
     }
     for (const dudu::TypeAliasDecl& alias : module.aliases) {
-        if (alias.name == "ViewCamera" && alias.type == "Camera") {
+        if (alias.name == "ViewCamera" && dudu::type_ref_text(alias.type_ref) == "Camera") {
             ++view_camera_alias_count;
         }
     }
