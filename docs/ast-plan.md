@@ -267,6 +267,8 @@ Already structured:
 - LSP reference and rename requests now require the cursor to resolve to an AST
   symbol before scanning the workspace, so strings/comments cannot seed a rename
   or reference query
+- C/C++ header go-to-definition now uses parsed foreign import ranges from the
+  AST instead of regexing the active source line
 - array shape inference and explicit shape extraction also consume parsed
   `TypeRef` array forms, removing the separate bracket matcher from
   `array_shape.cpp`

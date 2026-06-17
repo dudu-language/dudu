@@ -15,7 +15,6 @@
 #include <filesystem>
 #include <fstream>
 #include <optional>
-#include <regex>
 #include <set>
 #include <sstream>
 #include <string>
@@ -24,16 +23,28 @@
 namespace dudu {
 namespace {
 
-std::optional<std::string> header_import_at(const std::string& line, int character) {
-    static const std::regex import_regex(R"DD(^\s*import\s+(?:c|cpp)\s+"([^"]+)")DD");
-    std::smatch match;
-    if (!std::regex_search(line, match, import_regex)) {
-        return std::nullopt;
+bool range_contains_position(const SourceRange& range, int line, int character) {
+    const int start_line = range.start.line - 1;
+    const int start_character = range.start.column - 1;
+    const int end_line = range.end.line - 1;
+    const int end_character = range.end.column - 1;
+    if (line < start_line || line > end_line) {
+        return false;
     }
-    const int start = static_cast<int>(match.position(1));
-    const int end = start + static_cast<int>(match.length(1));
-    return character >= start && character <= end ? std::optional<std::string>{match[1].str()}
-                                                  : std::nullopt;
+    if (line == start_line && character < start_character) {
+        return false;
+    }
+    if (line == end_line && character > end_character) {
+        return false;
+    }
+    return true;
+}
+
+std::string unquote_header(std::string value) {
+    if (value.size() >= 2 && value.front() == '"' && value.back() == '"') {
+        return value.substr(1, value.size() - 2);
+    }
+    return value;
 }
 
 std::vector<std::filesystem::path> pkg_config_include_dirs(const ProjectConfig& config) {
@@ -103,19 +114,22 @@ std::optional<std::string> header_definition_json(const Document& doc, const Jso
     const int target_line = int_value(position == nullptr ? nullptr : position->get("line"));
     const int target_character =
         int_value(position == nullptr ? nullptr : position->get("character"));
-    std::istringstream in(doc.text);
-    std::string line;
-    for (int row = 0; std::getline(in, line); ++row) {
-        if (row != target_line) {
+    ModuleAst module;
+    try {
+        module = parse_source(doc.text, doc.path);
+    } catch (const std::exception&) {
+        return std::nullopt;
+    }
+    for (const ImportDecl& import : module.imports) {
+        if (import.kind != ImportKind::ForeignC && import.kind != ImportKind::ForeignCpp) {
             continue;
         }
-        const std::optional<std::string> header = header_import_at(line, target_character);
-        if (!header) {
-            return std::nullopt;
+        if (!range_contains_position(import.module_range, target_line, target_character)) {
+            continue;
         }
         const ProjectConfig config = config_for_file(doc.path);
         const std::optional<std::filesystem::path> resolved =
-            resolve_header_path(doc.path.parent_path(), config, *header);
+            resolve_header_path(doc.path.parent_path(), config, unquote_header(import.module_path));
         if (!resolved) {
             return std::nullopt;
         }

@@ -28,6 +28,7 @@ struct ImportDecl {
     std::string imported_name;
     std::string alias;
     SourceLocation location;
+    SourceRange module_range;
 };
 
 enum class TypeKind {

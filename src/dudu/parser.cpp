@@ -1,6 +1,5 @@
-#include "dudu/parser_internal.hpp"
-
 #include "dudu/lexer.hpp"
+#include "dudu/parser_internal.hpp"
 #include "dudu/parser_utils.hpp"
 
 #include <sstream>
@@ -49,8 +48,8 @@ void attach_out_of_line_method(ModuleAst& module, FunctionDecl method) {
             return;
         }
     }
-    throw CompileError(method.location, "out-of-line method receiver is not a known class: " +
-                                            method.receiver_type);
+    throw CompileError(method.location,
+                       "out-of-line method receiver is not a known class: " + method.receiver_type);
 }
 
 } // namespace
@@ -219,7 +218,15 @@ ImportDecl Parser::parse_foreign_import(const Token& start, ImportKind kind) {
     ImportDecl import;
     import.kind = kind;
     import.location = start.location;
-    import.module_path = consume(TokenKind::String, "expected quoted foreign header").text;
+    const Token& header = consume(TokenKind::String, "expected quoted foreign header");
+    import.module_path = header.text;
+    import.module_range.start = header.location;
+    import.module_range.end = header.location;
+    import.module_range.end.column += static_cast<int>(header.text.size());
+    if (header.text.size() >= 2) {
+        ++import.module_range.start.column;
+        --import.module_range.end.column;
+    }
     if (match_identifier("as")) {
         import.alias = consume_identifier("expected alias after as").text;
     }
