@@ -70,20 +70,18 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt,
                 return {};
             }
         }
-        const std::string type = indexed_value_type(
-            scope.symbols, scope.locals, scope.local_type_refs, target_location, name,
-            stmt.target_expr.children[1], "indexed assignment to unknown local: ");
-        return type.empty() ? TypeRef{} : parse_type_text(type, target_location);
+        return indexed_value_type_ref(scope.symbols, scope.locals, scope.local_type_refs,
+                                      target_location, name, stmt.target_expr.children[1],
+                                      "indexed assignment to unknown local: ");
     }
     if (stmt.target_expr.kind == ExprKind::Index && stmt.target_expr.children.size() == 2) {
         const Expr& receiver = stmt.target_expr.children[0];
         const std::string receiver_type = member_expr_type(
             scope.symbols, scope.locals, &target_location, receiver, {}, scope.current_class);
         if (!receiver_type.empty()) {
-            const std::string type = indexed_type_from_type(
+            return indexed_type_ref_from_type(
                 scope.symbols, target_location, receiver_type, stmt.target_expr.children[1],
                 display_expr(receiver).empty() ? "indexed assignment" : display_expr(receiver));
-            return type.empty() ? TypeRef{} : parse_type_text(type, target_location);
         }
     }
     if (stmt.target_expr.kind == ExprKind::Name) {

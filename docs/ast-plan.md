@@ -1571,6 +1571,9 @@ LSP source edits are also moving to AST-owned ranges:
 - Assignment target checking now exposes a parsed `TypeRef` result path and
   sema body checks use it for normal and compound assignments, deleting the
   older string-only `check_type_match` wrapper.
+- Index result inference now exposes parsed `TypeRef` APIs, and typed
+  expression inference plus indexed assignment target checks use them instead
+  of owning their own indexed-type text parsing.
 
 Expression parsing has moved onto the lexer/token stream:
 

@@ -345,6 +345,21 @@ std::string indexed_value_type(const Symbols& symbols,
     return indexed_type_from_type(symbols, location, local->second, index_expr, name);
 }
 
+TypeRef indexed_value_type_ref(const Symbols& symbols,
+                               const std::map<std::string, std::string>& locals,
+                               const std::map<std::string, TypeRef>& local_type_refs,
+                               const SourceLocation& location, const std::string& name,
+                               const Expr& index_expr, std::string_view unknown_message) {
+    const auto local = locals.find(name);
+    if (local == locals.end()) {
+        throw CompileError(location, std::string(unknown_message) + name);
+    }
+    if (const auto type_ref = local_type_refs.find(name); type_ref != local_type_refs.end()) {
+        return indexed_type_ref_from_type(symbols, location, type_ref->second, index_expr, name);
+    }
+    return indexed_type_ref_from_type(symbols, location, local->second, index_expr, name);
+}
+
 std::string indexed_type_from_type(const Symbols& symbols, const SourceLocation& location,
                                    const std::string& raw_type, const Expr& index_expr,
                                    const std::string& label) {
@@ -380,6 +395,50 @@ std::string indexed_type_from_type(const Symbols& symbols, const SourceLocation&
     return indexed_type_from_type_with_count(
         symbols, location, raw_type, index_count_from_expr(index_expr), is_slice_expr(index_expr),
         has_step_slice(index_expr), label);
+}
+
+TypeRef indexed_type_ref_from_type(const Symbols& symbols, const SourceLocation& location,
+                                   const TypeRef& raw_type, const Expr& index_expr,
+                                   const std::string& label) {
+    const TypeRef unwrapped_type_ref = unwrap_reference_and_const(raw_type);
+    if (is_channel_slice_expr(index_expr)) {
+        const std::vector<size_t> shape = explicit_array_shape(unwrapped_type_ref);
+        if (shape.size() == 3) {
+            return parse_type_text(
+                "strided_span[" + explicit_array_element_type(unwrapped_type_ref) + "]", location);
+        }
+    }
+    if (is_column_slice_expr(index_expr)) {
+        const std::vector<size_t> shape = explicit_array_shape(unwrapped_type_ref);
+        if (shape.size() == 2) {
+            return parse_type_text(
+                "strided_span[" + explicit_array_element_type(unwrapped_type_ref) + "]", location);
+        }
+    }
+    if (!has_step_slice(index_expr)) {
+        if (const std::vector<size_t> shape = explicit_array_shape(raw_type); !shape.empty()) {
+            if (const auto prefix_count = trailing_full_slice_prefix_count(index_expr)) {
+                if (*prefix_count + 1 == shape.size()) {
+                    return parse_type_text("span[" + explicit_array_element_type(raw_type) + "]",
+                                           location);
+                }
+            }
+        }
+    }
+    if (const auto indexed = indexed_type_from_type_ref_with_count(
+            location, raw_type, index_count_from_expr(index_expr), is_slice_expr(index_expr),
+            has_step_slice(index_expr), label)) {
+        return parse_type_text(*indexed, location);
+    }
+    return indexed_type_ref_from_type(symbols, location, substitute_type_ref_text(raw_type, {}),
+                                      index_expr, label);
+}
+
+TypeRef indexed_type_ref_from_type(const Symbols& symbols, const SourceLocation& location,
+                                   const std::string& raw_type, const Expr& index_expr,
+                                   const std::string& label) {
+    const std::string type = indexed_type_from_type(symbols, location, raw_type, index_expr, label);
+    return type.empty() ? TypeRef{} : parse_type_text(type, location);
 }
 
 std::string iterable_value_type(const Symbols& symbols,

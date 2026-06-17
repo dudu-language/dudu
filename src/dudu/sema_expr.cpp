@@ -80,6 +80,39 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
             return *binary_type;
         }
         break;
+    case ExprKind::Index:
+        if (expr.children.size() == 2 && !missing_expr(expr.children[0]) &&
+            !missing_expr(expr.children[1])) {
+            const SourceLocation& index_location = location != nullptr ? *location : expr.location;
+            const Expr& receiver = expr.children[0];
+            if (receiver.kind == ExprKind::Name) {
+                if (const auto local = scope.locals.find(receiver.name);
+                    local != scope.locals.end()) {
+                    if (const auto signature =
+                            dudu_operator_signature(scope.symbols, "[]", local->second)) {
+                        check_call_args_ast(scope, receiver.name + "[]", *signature,
+                                            index_arg_exprs(expr.children[1]), location);
+                    }
+                }
+                return indexed_value_type_ref(scope.symbols, scope.locals, scope.local_type_refs,
+                                              index_location, receiver.name, expr.children[1],
+                                              "indexed access to unknown local: ");
+            }
+            if (const std::string receiver_type = member_expr_type(
+                    scope.symbols, scope.locals, location, receiver, {}, scope.current_class);
+                !receiver_type.empty()) {
+                return indexed_type_ref_from_type(
+                    scope.symbols, index_location, receiver_type, expr.children[1],
+                    display_expr(receiver).empty() ? "indexed expression" : display_expr(receiver));
+            }
+            const TypeRef receiver_type = infer_expr_type_ast(scope, receiver, location);
+            if (has_type_ref(receiver_type)) {
+                return indexed_type_ref_from_type(
+                    scope.symbols, index_location, receiver_type, expr.children[1],
+                    display_expr(receiver).empty() ? "indexed expression" : display_expr(receiver));
+            }
+        }
+        break;
     default:
         break;
     }
