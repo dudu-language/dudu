@@ -28,9 +28,7 @@ std::filesystem::path module_artifact_base(const ModuleAst& module) {
     return module_artifact_base_for_path(module.module_path);
 }
 
-CppEmitOptions module_emit_options(const ModuleAst& unit) {
-    CppEmitOptions options;
-    options.use_generated_names = true;
+void add_local_generated_names(CppEmitOptions& options, const ModuleAst& unit) {
     for (const TypeAliasDecl& alias : unit.aliases) {
         if (!alias.cpp_name.empty()) {
             options.generated_type_names[alias.name] = alias.cpp_name;
@@ -63,6 +61,59 @@ CppEmitOptions module_emit_options(const ModuleAst& unit) {
             options.generated_value_names[fn.name] = fn.cpp_name;
         }
     }
+}
+
+void add_imported_generated_names(CppEmitOptions& options, const ModuleAst& dependency,
+                                  const ImportDecl& import) {
+    const std::string prefix = import.alias.empty() ? import.module_path : import.alias;
+    const bool selective = import.kind == ImportKind::From;
+    const std::string selective_name = import.alias.empty() ? import.imported_name : import.alias;
+    auto expose = [&](const std::string& name) {
+        return selective ? selective_name : prefix + "." + name;
+    };
+    for (const TypeAliasDecl& alias : dependency.aliases) {
+        if ((!selective || alias.name == import.imported_name) && !alias.cpp_name.empty()) {
+            options.generated_type_names[expose(alias.name)] = alias.cpp_name;
+        }
+    }
+    for (const EnumDecl& en : dependency.enums) {
+        if ((!selective || en.name == import.imported_name) && !en.cpp_name.empty()) {
+            options.generated_type_names[expose(en.name)] = en.cpp_name;
+            options.generated_value_names[expose(en.name)] = en.cpp_name;
+        }
+    }
+    for (const ClassDecl& klass : dependency.classes) {
+        if ((!selective || klass.name == import.imported_name) && !klass.cpp_name.empty()) {
+            options.generated_type_names[expose(klass.name)] = klass.cpp_name;
+            options.generated_value_names[expose(klass.name)] = klass.cpp_name;
+        }
+    }
+    for (const ConstDecl& constant : dependency.constants) {
+        if ((!selective || constant.name == import.imported_name) && !constant.cpp_name.empty()) {
+            options.generated_value_names[expose(constant.name)] = constant.cpp_name;
+        }
+    }
+    for (const FunctionDecl& fn : dependency.functions) {
+        if ((!selective || fn.name == import.imported_name) && !fn.cpp_name.empty()) {
+            options.generated_value_names[expose(fn.name)] = fn.cpp_name;
+        }
+    }
+}
+
+CppEmitOptions module_emit_options(const ModuleAst& unit,
+                                   const std::map<std::string, const ModuleAst*>& modules) {
+    CppEmitOptions options;
+    options.use_generated_names = true;
+    add_local_generated_names(options, unit);
+    for (const ImportDecl& import : unit.imports) {
+        if (import.kind != ImportKind::Module && import.kind != ImportKind::From) {
+            continue;
+        }
+        const auto dependency = modules.find(import.module_path);
+        if (dependency != modules.end()) {
+            add_imported_generated_names(options, *dependency->second, import);
+        }
+    }
     return options;
 }
 
@@ -90,32 +141,43 @@ void emit_module_includes(std::ostringstream& out, const ModuleAst& unit) {
     }
 }
 
-std::string header_with_module_includes(const ModuleAst& unit) {
+std::string header_with_module_includes(const ModuleAst& unit,
+                                        const std::map<std::string, const ModuleAst*>& modules) {
     std::ostringstream out;
     emit_module_includes(out, unit);
-    out << emit_cpp_header(unit, module_emit_options(unit));
+    out << emit_cpp_header(unit, module_emit_options(unit, modules));
     return out.str();
 }
 
-std::string source_with_boundary_comment(const ModuleAst& unit) {
+std::string source_with_boundary_comment(const ModuleAst& unit,
+                                         const std::map<std::string, const ModuleAst*>& modules) {
     std::ostringstream out;
-    const CppEmitOptions options = module_emit_options(unit);
+    const CppEmitOptions options = module_emit_options(unit, modules);
     out << "// dudu module: " << (unit.module_path.empty() ? "main" : unit.module_path) << "\n";
     emit_module_includes(out, unit);
     out << emit_cpp_source(unit, options);
     return out.str();
 }
 
-void append_artifacts(std::vector<CppModuleArtifact>& out, const ModuleAst& unit) {
+void append_artifacts(std::vector<CppModuleArtifact>& out, const ModuleAst& unit,
+                      const std::map<std::string, const ModuleAst*>& modules) {
     const std::filesystem::path base = module_artifact_base(unit);
     out.push_back({.path = base.string() + ".hpp",
                    .module_path = unit.module_path,
                    .kind = CppModuleArtifactKind::Header,
-                   .content = header_with_module_includes(unit)});
+                   .content = header_with_module_includes(unit, modules)});
     out.push_back({.path = base.string() + ".cpp",
                    .module_path = unit.module_path,
                    .kind = CppModuleArtifactKind::Source,
-                   .content = source_with_boundary_comment(unit)});
+                   .content = source_with_boundary_comment(unit, modules)});
+}
+
+std::map<std::string, const ModuleAst*> module_map(const std::vector<ModuleAst>& units) {
+    std::map<std::string, const ModuleAst*> out;
+    for (const ModuleAst& unit : units) {
+        out[unit.module_path] = &unit;
+    }
+    return out;
 }
 
 } // namespace
@@ -123,11 +185,12 @@ void append_artifacts(std::vector<CppModuleArtifact>& out, const ModuleAst& unit
 std::vector<CppModuleArtifact> emit_cpp_module_artifacts(const ModuleAst& module) {
     std::vector<CppModuleArtifact> out;
     if (module.module_units.empty()) {
-        append_artifacts(out, module);
+        append_artifacts(out, module, {{module.module_path, &module}});
         return out;
     }
+    const std::map<std::string, const ModuleAst*> modules = module_map(module.module_units);
     for (const ModuleAst& unit : module.module_units) {
-        append_artifacts(out, unit);
+        append_artifacts(out, unit, modules);
     }
     return out;
 }

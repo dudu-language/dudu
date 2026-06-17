@@ -223,7 +223,9 @@ void test_module_loader_preserves_declaration_origins() {
                                 "import renderer.camera as render_camera\n"
                                 "\n"
                                 "def main() -> i32:\n"
-                                "    return 0\n");
+                                "    first: cam.Camera = cam.make_camera(1)\n"
+                                "    second: render_camera.Camera = render_camera.make_camera(2)\n"
+                                "    return first.x + second.x\n");
 
     const dudu::ModuleAst module = dudu::load_source_tree(dir / "main.dd");
     assert(module.module_units.size() == 3);
@@ -284,7 +286,9 @@ void test_cpp_module_artifacts_preserve_module_boundaries() {
                                 "import renderer.camera as render_camera\n"
                                 "\n"
                                 "def main() -> i32:\n"
-                                "    return 0\n");
+                                "    first: cam.Camera = cam.make_camera(1)\n"
+                                "    second: render_camera.Camera = render_camera.make_camera(2)\n"
+                                "    return first.x + second.x\n");
 
     const dudu::ModuleAst module = dudu::load_source_tree(dir / "main.dd");
     const std::vector<dudu::CppModuleArtifact> artifacts = dudu::emit_cpp_module_artifacts(module);
@@ -320,6 +324,13 @@ void test_cpp_module_artifacts_preserve_module_boundaries() {
            std::string::npos);
     assert(by_path.at(std::filesystem::path("renderer") / "camera.cpp")
                .find("return DuduRendererCameraCamera{.x = x};") != std::string::npos);
+    assert(by_path.at("main.cpp").find("DuduCameraCamera first = dudu_camera_make_camera(1);") !=
+           std::string::npos);
+    assert(by_path.at("main.cpp")
+               .find("DuduRendererCameraCamera second = dudu_renderer_camera_make_camera(2);") !=
+           std::string::npos);
+    assert(by_path.at("main.cpp").find("cam.make_camera") == std::string::npos);
+    assert(by_path.at("main.cpp").find("render_camera.make_camera") == std::string::npos);
 }
 
 void test_canonical_examples_parse(const std::filesystem::path& root) {

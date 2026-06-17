@@ -43,7 +43,8 @@ std::string lower_name_expr(const std::string& name,
 }
 
 std::string lower_member_expr(std::string receiver, const std::string& member,
-                              const std::vector<std::string>& aliases) {
+                              const std::vector<std::string>& aliases,
+                              const CppEmitOptions& options) {
     receiver = trim_copy(std::move(receiver));
     if (receiver.empty()) {
         return member;
@@ -58,6 +59,10 @@ std::string lower_member_expr(std::string receiver, const std::string& member,
         return receiver + "." + member;
     }
     const std::string dotted = receiver + "." + member;
+    const std::string generated = emitted_value_name(dotted, options);
+    if (generated != dotted) {
+        return generated;
+    }
     const std::string qualified = qualify_namespace_aliases(dotted, aliases);
     if (qualified != dotted) {
         return qualified;
@@ -294,7 +299,7 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
             }
             return lower_member_expr(
                 lower_expr(expr.children.front(), aliases, locals, symbols, options), expr.name,
-                aliases);
+                aliases, options);
         }
         break;
     case ExprKind::DictEntry:
