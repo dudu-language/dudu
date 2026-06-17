@@ -91,8 +91,15 @@ std::string shaped_array_type(const std::string& element_type, const std::vector
     return out.str();
 }
 
+std::string indexed_local_type(const TypeRef& receiver_type, const Expr& index_expr);
+
 std::string indexed_local_type(const std::string& receiver_type, const Expr& index_expr) {
     const std::string type = trim_copy(receiver_type);
+    const TypeRef parsed = parse_type_text(type);
+    if (const std::string indexed_type = indexed_local_type(parsed, index_expr);
+        !indexed_type.empty()) {
+        return indexed_type;
+    }
     if (const std::vector<std::string> args = template_type_arg_texts(type, "list");
         args.size() == 1) {
         return trim_copy(args.front());
@@ -112,22 +119,6 @@ std::string indexed_local_type(const std::string& receiver_type, const Expr& ind
     if (const std::vector<std::string> args = template_type_arg_texts(type, "dict");
         args.size() == 2) {
         return trim_copy(args[1]);
-    }
-    const TypeRef parsed = parse_type_text(type);
-    const bool array_type = (parsed.kind == TypeKind::Template && parsed.name == "array") ||
-                            (parsed.kind == TypeKind::FixedArray && !parsed.children.empty() &&
-                             parsed.children.front().kind == TypeKind::Template &&
-                             parsed.children.front().name == "array");
-    if (array_type) {
-        const std::string element_type = explicit_array_element_type(parsed);
-        const std::vector<size_t> shape = explicit_array_shape(parsed);
-        const size_t used_indices = index_count(index_expr);
-        if (element_type.empty() || shape.empty() || used_indices >= shape.size()) {
-            return element_type;
-        }
-        const std::vector<size_t> remaining_shape{
-            shape.begin() + static_cast<std::ptrdiff_t>(used_indices), shape.end()};
-        return shaped_array_type(element_type, remaining_shape);
     }
     return {};
 }

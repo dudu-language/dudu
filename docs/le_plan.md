@@ -367,10 +367,12 @@ push. They are not release packaging work.
    instead of accepting public string index text, including the explicit
    `cpp(...)` escape inference path. Fixed-array index and slice metadata now
    reads parsed `TypeRef` shape/element nodes in the remaining compatibility
-   index helpers before crossing native/operator fallback boundaries. Template
-   call sema and codegen now consume parser-produced `template_type_args`
-   directly and reject malformed internal template-call ASTs instead of
-   reparsing expression argument text as types.
+   index helpers before crossing native/operator fallback boundaries. Emitted
+   local index type inference now tries parsed `TypeRef` handling before
+   falling back to native-spelling string template extraction. Template call
+   sema and codegen now consume parser-produced `template_type_args` directly
+   and reject malformed internal template-call ASTs instead of reparsing
+   expression argument text as types.
 
 3. OOP Surface Cleanup
 
