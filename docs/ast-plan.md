@@ -97,6 +97,9 @@ Already structured:
 - template-call C++ emission lowers pointer-cast targets and builtin template
   constructors through parsed `TypeRef` nodes instead of rebuilding bracketed
   type strings
+- template-call C++ emission now synthesizes compatibility text for temporary
+  `TypeRef` nodes from the parsed type shape instead of copying the template
+  call expression text span
 - pointer type C++ emission helpers and pointer-cast call emission now wrap
   parsed pointee types in explicit `TypeRef::Pointer` nodes instead of
   concatenating `*` onto type text and reparsing it

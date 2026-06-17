@@ -143,11 +143,11 @@ TypeRef template_type_ref_from_expr(const Expr& expr, std::string name) {
     TypeRef type;
     type.kind =
         expr.template_type_args.size() == 1 ? wrapper_template_kind(name) : TypeKind::Template;
-    type.text = expr.text;
     type.name = std::move(name);
     type.children = expr.template_type_args;
     type.location = expr.location;
     type.range = expr.range;
+    type.text = substitute_type_ref_text(type, {});
     return type;
 }
 
@@ -156,10 +156,10 @@ TypeRef pointer_template_type_ref_from_expr(const Expr& expr) {
 
     TypeRef pointer;
     pointer.kind = TypeKind::Pointer;
-    pointer.text = expr.text;
     pointer.children.push_back(std::move(pointee));
     pointer.location = expr.location;
     pointer.range = expr.range;
+    pointer.text = substitute_type_ref_text(pointer, {});
     return pointer;
 }
 

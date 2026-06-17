@@ -471,9 +471,12 @@ push. They are not release packaging work.
    `struct stat`.
    Normal template-call emission lowers bracket arguments from parsed
    `TypeRef` nodes, including non-type value arguments, instead of falling back
-   to raw expression text. Parsed method calls on pointer-typed member
-   receivers such as `self.left.backward(...)` lower through member-path type
-   information instead of raw pointer-member rewriting. Semantic token
+   to raw expression text. Template-call C++ emission now synthesizes
+   compatibility text for temporary `TypeRef` nodes from the parsed type shape
+   instead of copying the template-call expression span. Parsed method calls
+   on pointer-typed member receivers such as `self.left.backward(...)` lower
+   through member-path type information instead of raw pointer-member rewriting.
+   Semantic token
    generation now merges native header metadata as a classification layer, so
    native C/C++ references in Dudu source can carry the LSP `native` modifier
    while token ranges remain anchored to the open Dudu file. Member-path type
