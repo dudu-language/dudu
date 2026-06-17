@@ -37,6 +37,17 @@ TypeRef shaped_array_type_ref(const TypeRef& element_type, const std::vector<siz
 
 } // namespace
 
+TypeRef array_element_template_type_ref(const SourceLocation& location, const TypeRef& array_type,
+                                        std::string_view template_name) {
+    TypeRef type;
+    type.kind = TypeKind::Template;
+    type.name = std::string(template_name);
+    type.children.push_back(explicit_array_element_type_ref(array_type));
+    type.location = location;
+    type.text = substitute_type_ref_text(type, {});
+    return type;
+}
+
 std::optional<TypeRef>
 indexed_type_ref_from_type_ref_with_count(const SourceLocation& location, const TypeRef& raw_type,
                                           const size_t index_count, const bool is_slice,

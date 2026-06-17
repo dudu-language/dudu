@@ -405,23 +405,20 @@ TypeRef indexed_type_ref_from_type(const Symbols& symbols, const SourceLocation&
     if (is_channel_slice_expr(index_expr)) {
         const std::vector<size_t> shape = explicit_array_shape(unwrapped_type_ref);
         if (shape.size() == 3) {
-            return parse_type_text(
-                "strided_span[" + explicit_array_element_type(unwrapped_type_ref) + "]", location);
+            return array_element_template_type_ref(location, unwrapped_type_ref, "strided_span");
         }
     }
     if (is_column_slice_expr(index_expr)) {
         const std::vector<size_t> shape = explicit_array_shape(unwrapped_type_ref);
         if (shape.size() == 2) {
-            return parse_type_text(
-                "strided_span[" + explicit_array_element_type(unwrapped_type_ref) + "]", location);
+            return array_element_template_type_ref(location, unwrapped_type_ref, "strided_span");
         }
     }
     if (!has_step_slice(index_expr)) {
         if (const std::vector<size_t> shape = explicit_array_shape(raw_type); !shape.empty()) {
             if (const auto prefix_count = trailing_full_slice_prefix_count(index_expr)) {
                 if (*prefix_count + 1 == shape.size()) {
-                    return parse_type_text("span[" + explicit_array_element_type(raw_type) + "]",
-                                           location);
+                    return array_element_template_type_ref(location, raw_type, "span");
                 }
             }
         }
