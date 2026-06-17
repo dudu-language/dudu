@@ -112,7 +112,8 @@ void check_array_literal_elements(FunctionScope& scope, const std::string& eleme
 }
 
 std::string effective_var_type(const Stmt& stmt) {
-    const ArrayShapeInference inferred = infer_array_literal_shape_type(stmt.type, stmt.value_expr);
+    const ArrayShapeInference inferred =
+        infer_array_literal_shape_type(stmt.type_ref, stmt.value_expr);
     return inferred.status == ArrayShapeStatus::Inferred ? inferred.type : stmt.type;
 }
 
@@ -293,7 +294,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
     if (stmt.kind == StmtKind::VarDecl) {
         check_local_binding_name(stmt.location, stmt.name);
         const ArrayShapeInference inferred =
-            infer_array_literal_shape_type(stmt.type, stmt.value_expr);
+            infer_array_literal_shape_type(stmt.type_ref, stmt.value_expr);
         if (inferred.status == ArrayShapeStatus::EmptyLiteral) {
             sema_fail(node_location(stmt.location, stmt.value_expr),
                       "array shape cannot be inferred from an empty literal");
@@ -301,8 +302,8 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
         if (inferred.status == ArrayShapeStatus::RaggedLiteral) {
             sema_fail(node_location(stmt.location, stmt.value_expr), "ragged array literal");
         }
-        const std::vector<size_t> explicit_shape = explicit_array_shape(stmt.type);
-        const std::string explicit_element = explicit_array_element_type(stmt.type);
+        const std::vector<size_t> explicit_shape = explicit_array_shape(stmt.type_ref);
+        const std::string explicit_element = explicit_array_element_type(stmt.type_ref);
         if (!explicit_shape.empty() && stmt.value_expr.kind == ExprKind::ListLiteral) {
             const ArrayShapeInference actual =
                 infer_array_literal_shape_type("array[" + explicit_element + "]", stmt.value_expr);

@@ -241,7 +241,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
     if (stmt.kind == StmtKind::VarDecl) {
         const std::string& name = stmt.name;
         const ArrayShapeInference inferred =
-            infer_array_literal_shape_type(stmt.type, stmt.value_expr);
+            infer_array_literal_shape_type(stmt.type_ref, stmt.value_expr);
         const std::string type =
             inferred.status == ArrayShapeStatus::Inferred ? inferred.type : stmt.type;
         locals[name] = type;

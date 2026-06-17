@@ -10,8 +10,7 @@
 namespace dudu {
 namespace {
 
-std::optional<std::string> inferred_array_element_type(const std::string& declared_type) {
-    const TypeRef type = parse_type_text(declared_type);
+std::optional<std::string> inferred_array_element_type(const TypeRef& type) {
     if (type.kind != TypeKind::Template || type.name != "array" || type.children.size() != 1) {
         return std::nullopt;
     }
@@ -19,8 +18,7 @@ std::optional<std::string> inferred_array_element_type(const std::string& declar
 }
 
 std::optional<std::pair<std::string, std::vector<size_t>>>
-explicit_array_type_info(const std::string& declared_type) {
-    const TypeRef type = parse_type_text(declared_type);
+explicit_array_type_info(const TypeRef& type) {
     if (type.kind != TypeKind::FixedArray || type.children.empty()) {
         return std::nullopt;
     }
@@ -88,7 +86,7 @@ std::string shaped_array_type(const std::string& element_type, const std::vector
 
 } // namespace
 
-ArrayShapeInference infer_array_literal_shape_type(const std::string& declared_type,
+ArrayShapeInference infer_array_literal_shape_type(const TypeRef& declared_type,
                                                    const Expr& value) {
     const auto element_type = inferred_array_element_type(declared_type);
     if (!element_type) {
@@ -116,14 +114,27 @@ ArrayShapeInference infer_array_literal_shape_type(const std::string& declared_t
             .shape = *shape};
 }
 
-std::vector<size_t> explicit_array_shape(const std::string& declared_type) {
+ArrayShapeInference infer_array_literal_shape_type(const std::string& declared_type,
+                                                   const Expr& value) {
+    return infer_array_literal_shape_type(parse_type_text(declared_type), value);
+}
+
+std::vector<size_t> explicit_array_shape(const TypeRef& declared_type) {
     const auto info = explicit_array_type_info(declared_type);
     return info ? info->second : std::vector<size_t>{};
 }
 
-std::string explicit_array_element_type(const std::string& declared_type) {
+std::vector<size_t> explicit_array_shape(const std::string& declared_type) {
+    return explicit_array_shape(parse_type_text(declared_type));
+}
+
+std::string explicit_array_element_type(const TypeRef& declared_type) {
     const auto info = explicit_array_type_info(declared_type);
     return info ? info->first : std::string{};
+}
+
+std::string explicit_array_element_type(const std::string& declared_type) {
+    return explicit_array_element_type(parse_type_text(declared_type));
 }
 
 } // namespace dudu

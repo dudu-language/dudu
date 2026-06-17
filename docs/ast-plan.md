@@ -239,6 +239,9 @@ Already structured:
 - array shape inference and explicit shape extraction also consume parsed
   `TypeRef` array forms, removing the separate bracket matcher from
   `array_shape.cpp`
+- local declaration array shape inference and explicit-shape checks now use
+  the parsed statement `TypeRef` directly instead of reparsing the annotated
+  type string
 - raw-string C++ type lowering delegates Dudu fixed-array forms such as
   `array[T][N]` to parsed `TypeRef::FixedArray`, leaving only C-style
   `T[N]` fallback parsing in the string path
