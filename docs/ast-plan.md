@@ -1534,6 +1534,8 @@ LSP source edits are also moving to AST-owned ranges:
 - Explicit native type-template calls whose imported C++ return type remains a
   dependent helper alias now derive the semantic return from the explicit type
   argument while preserving parsed reference/const wrappers.
+- Explicit native template fallback signatures now synthesize parsed `auto`
+  return metadata instead of text-only return signatures.
 
 Expression parsing has moved onto the lexer/token stream:
 
