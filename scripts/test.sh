@@ -179,6 +179,24 @@ grep -Eq "test build/dudu-tests/dudu_tests-[0-9a-f]+$" "$repo_root/build/dudu_te
 grep -q "running 0 tests" "$repo_root/build/dudu_tests_zero.out"
 grep -q "test result: ok. 0 passed; 0 failed; 0 filtered out" \
     "$repo_root/build/dudu_tests_zero.out"
+test_discovery_dir="$repo_root/build/dudu_test_discovery"
+rm -rf "$test_discovery_dir"
+mkdir -p "$test_discovery_dir"
+cat >"$test_discovery_dir/not_a_test.dd" <<'DD'
+def main() -> i32:
+    text = "@test should not count inside a string"
+    # @test should not count inside a comment
+    return 0
+DD
+cat >"$test_discovery_dir/real_test.dd" <<'DD'
+@test
+def discovered():
+    assert 40 + 2 == 42
+DD
+"$repo_root/build/dudu" test "$test_discovery_dir" \
+    >"$repo_root/build/dudu_test_discovery.out"
+grep -q "1/1 tests passed" "$repo_root/build/dudu_test_discovery.out"
+grep -q "ok discovered" "$repo_root/build/dudu_test_discovery.out"
 "$repo_root/build/dudu" test "$repo_root/tests/fixtures/dudu_tests.dd" --filter bool \
     >"$repo_root/build/dudu_tests_filter.out" 2>"$repo_root/build/dudu_test_filter_steps.err"
 grep -q "1/1 tests passed" "$repo_root/build/dudu_tests_filter.out"

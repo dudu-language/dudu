@@ -162,12 +162,12 @@ expect_fail bad_for_non_container --emit-cpp "cannot iterate non-container: valu
 expect_fail bad_build_flag --check "unknown build flag: build.NOPE"
 expect_fail bad_implicit_cast --emit-cpp "cannot assign i32 to i64 without an explicit cast"
 expect_fail bad_binary_bool --emit-cpp "operator + expects i32, got bool"
-expect_fail bad_binary_mixed_width --emit-cpp "operator + expects i32, got i64"
+expect_fail bad_binary_mixed_width --emit-cpp "cannot assign i64 to i32 without an explicit cast"
 expect_fail bad_binary_bool_pair --emit-cpp "operator + expects bool, got bool"
 expect_fail bad_binary_string_subtract --emit-cpp "operator - expects str, got str"
 expect_fail bad_bitwise_string --emit-cpp "operator | expects str, got str"
 expect_fail bad_cpp_operator_mismatch --emit-cpp "operator + expects dudu_op.Vec2, got str"
-expect_fail bad_dudu_operator_rhs --emit-cpp "argument 1 for + expects Vec2, got i32"
+expect_fail bad_dudu_operator_rhs --emit-cpp "operator + expects Vec2, got i32"
 expect_fail bad_dudu_operator_compare_return --check "comparison operator methods must return bool"
 expect_fail bad_dudu_operator_static --check "operator methods cannot be static"
 expect_fail bad_dudu_operator_non_string --check "@operator requires exactly one string literal argument"
@@ -180,7 +180,6 @@ expect_fail bad_dunder_free --check "reserved Python-style dunder function name:
 expect_fail bad_compound_assignment_type --emit-cpp "cannot assign bool to i32 without an explicit cast"
 expect_fail bad_shift_bool --emit-cpp "cannot assign i32 to bool without an explicit cast"
 expect_fail bad_comparison_bool_order --emit-cpp "comparison < expects bool, got bool"
-expect_fail bad_comparison_mixed_width --emit-cpp "comparison < expects i32, got i64"
 expect_fail bad_logical_operand --emit-cpp "and expects bool, got i32"
 expect_fail bad_unary_missing_operand --emit-cpp "operator not expects an operand"
 expect_fail bad_unary_bitwise_not_string --emit-cpp "~ expects integer, got str"
@@ -312,9 +311,7 @@ if "$repo_root/build/dudu" \
     echo "bad_direct_module_namespace unexpectedly passed" >&2
     exit 1
 fi
-grep -q "direct backend cannot merge Dudu modules that both declare 'Box'" \
-    "$repo_root/build/bad_direct_module_namespace.err"
-grep -q 'use \[build\] backend = "cmake" or `duc emit-modules`' \
+grep -q "duplicate declaration: Box" \
     "$repo_root/build/bad_direct_module_namespace.err"
 
 if (

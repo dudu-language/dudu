@@ -3,6 +3,7 @@
 #include "dudu/cmake_backend.hpp"
 #include "dudu/cmake_emit.hpp"
 #include "dudu/cpp_emit.hpp"
+#include "dudu/decorators.hpp"
 #include "dudu/module_loader.hpp"
 #include "dudu/native_build.hpp"
 #include "dudu/native_headers.hpp"
@@ -100,6 +101,25 @@ bool ignored_test_dir(const std::filesystem::path& path) {
     return name == ".git" || name == "build";
 }
 
+bool function_is_test(const FunctionDecl& fn) {
+    for (const Decorator& decorator : fn.decorators) {
+        if (decorator_matches(decorator, "test") || decorator_matches(decorator, "test.ignore") ||
+            decorator_matches(decorator, "test.should_panic") ||
+            decorator_call_matches(decorator, "test.should_panic")) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool module_has_tests(const ModuleAst& module) {
+    return std::any_of(module.functions.begin(), module.functions.end(), function_is_test);
+}
+
+bool file_has_tests(const std::filesystem::path& path) {
+    return module_has_tests(parse_source(read_text_file(path), path));
+}
+
 std::vector<std::filesystem::path> discover_test_files(const std::filesystem::path& root) {
     std::vector<std::filesystem::path> files;
     std::filesystem::recursive_directory_iterator it(root);
@@ -112,7 +132,7 @@ std::vector<std::filesystem::path> discover_test_files(const std::filesystem::pa
         if (!it->is_regular_file() || it->path().extension() != ".dd") {
             continue;
         }
-        if (read_text_file(it->path()).find("@test") != std::string::npos) {
+        if (file_has_tests(it->path())) {
             files.push_back(it->path());
         }
     }
