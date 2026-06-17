@@ -272,6 +272,8 @@ Already structured:
 - LSP go-to-definition now resolves its symbol/path from the AST before looking
   up Dudu, imported, native, or member definitions, so comments and strings do
   not act like definitions
+- LSP hover now uses the same AST cursor path lookup before resolving Dudu,
+  imported, native, member, or local hover text
 - array shape inference and explicit shape extraction also consume parsed
   `TypeRef` array forms, removing the separate bracket matcher from
   `array_shape.cpp`

@@ -403,7 +403,7 @@ class LanguageServer {
         if (doc == nullptr) {
             return "null";
         }
-        const std::string word = symbol_at(*doc, params);
+        const std::string word = ast_symbol_path_at(*doc, params).value_or("");
         return hover_json(*doc, word, local_type_before_cursor(*doc, word, params));
     }
 

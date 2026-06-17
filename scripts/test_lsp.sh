@@ -84,8 +84,8 @@ native_source = "\n".join(
         "    widget: native_cpp.Widget = native_cpp.Widget(3)",
         "    widget.scaled(2)",
         "    helper.workspace_helper()",
-        "    return dudu_native.dudu_native_add(20, 22)",
-        "# dudu_native.DUDU_NATIVE_SCALE",
+        "    scaled: i32 = dudu_native.DUDU_NATIVE_SCALE(1)",
+        "    return scaled + dudu_native.dudu_native_add(20, 22)",
         "# workspace_helper",
         "",
     ]
@@ -1009,7 +1009,7 @@ messages = [
             "method": "textDocument/hover",
             "params": {
                 "textDocument": {"uri": native_uri},
-                "position": {"line": 8, "character": 30},
+                "position": {"line": 9, "character": 45},
             },
         }
     ),
@@ -1020,7 +1020,7 @@ messages = [
             "method": "textDocument/definition",
             "params": {
                 "textDocument": {"uri": native_uri},
-                "position": {"line": 8, "character": 30},
+                "position": {"line": 9, "character": 45},
             },
         }
     ),
@@ -1031,7 +1031,7 @@ messages = [
             "method": "textDocument/completion",
             "params": {
                 "textDocument": {"uri": native_uri},
-                "position": {"line": 8, "character": 11},
+                "position": {"line": 9, "character": 11},
             },
         }
     ),
@@ -1042,7 +1042,7 @@ messages = [
             "method": "textDocument/signatureHelp",
             "params": {
                 "textDocument": {"uri": native_uri},
-                "position": {"line": 8, "character": 44},
+                "position": {"line": 9, "character": 53},
             },
         }
     ),
@@ -1053,7 +1053,7 @@ messages = [
             "method": "textDocument/hover",
             "params": {
                 "textDocument": {"uri": native_uri},
-                "position": {"line": 9, "character": 17},
+                "position": {"line": 8, "character": 35},
             },
         }
     ),
