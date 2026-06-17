@@ -40,9 +40,9 @@ std::optional<std::string> first_native_template_arg_text(const std::string& typ
 }
 
 std::string first_type_arg(const TypeRef& type) {
-    if (const auto arg = unary_type_child_text(
-            type, {TypeKind::Atomic, TypeKind::Const, TypeKind::Volatile, TypeKind::Device,
-                   TypeKind::Storage, TypeKind::Shared})) {
+    if (const auto arg =
+            unary_type_child_text(type, {TypeKind::Atomic, TypeKind::Const, TypeKind::Volatile,
+                                         TypeKind::Device, TypeKind::Storage, TypeKind::Shared})) {
         return *arg;
     }
     if (const auto arg = first_template_type_arg_text(type)) {
@@ -53,6 +53,11 @@ std::string first_type_arg(const TypeRef& type) {
 
 bool single_template_type_arg(const TypeRef& type, std::string_view name) {
     return single_template_type_arg_text(type, name).has_value();
+}
+
+void set_return_type(FunctionSignature& signature, const std::string& type) {
+    signature.return_type = type;
+    signature.return_type_ref = parse_type_text(type);
 }
 
 } // namespace
@@ -79,15 +84,15 @@ bool builtin_cpp_method_signature(const Symbols& symbols, std::string receiver_t
         templated == "std.string" || templated == "std.string_view" || templated == "std::string" ||
         templated == "std::string_view" || templated.find("basic_string") != std::string::npos) {
         if (method_name == "size" || method_name == "length") {
-            signature.return_type = "usize";
+            set_return_type(signature, "usize");
             return true;
         }
         if (method_name == "empty") {
-            signature.return_type = "bool";
+            set_return_type(signature, "bool");
             return true;
         }
         if (method_name == "c_str") {
-            signature.return_type = "cstr";
+            set_return_type(signature, "cstr");
             return true;
         }
     }
@@ -96,32 +101,32 @@ bool builtin_cpp_method_signature(const Symbols& symbols, std::string receiver_t
         const std::string item = first_type_arg(templated_ref);
         if (method_name == "push_back" || method_name == "append") {
             signature.params = {item.empty() ? "auto" : item};
-            signature.return_type = "void";
+            set_return_type(signature, "void");
             return true;
         }
         if (method_name == "resize" || method_name == "reserve") {
             signature.params = {"auto"};
-            signature.return_type = "void";
+            set_return_type(signature, "void");
             return true;
         }
         if (method_name == "size" || method_name == "capacity") {
-            signature.return_type = "usize";
+            set_return_type(signature, "usize");
             return true;
         }
         if (method_name == "back" || method_name == "front") {
-            signature.return_type = item.empty() ? "auto" : item;
+            set_return_type(signature, item.empty() ? "auto" : item);
             return true;
         }
         if (method_name == "pop_back") {
-            signature.return_type = "void";
+            set_return_type(signature, "void");
             return true;
         }
         if (method_name == "empty") {
-            signature.return_type = "bool";
+            set_return_type(signature, "bool");
             return true;
         }
         if (method_name == "begin" || method_name == "end") {
-            signature.return_type = "auto";
+            set_return_type(signature, "auto");
             return true;
         }
     }
@@ -132,20 +137,20 @@ bool builtin_cpp_method_signature(const Symbols& symbols, std::string receiver_t
         const std::string value_type = item.empty() ? "auto" : item;
         if (method_name == "contains") {
             signature.params = {value_type};
-            signature.return_type = "bool";
+            set_return_type(signature, "bool");
             return true;
         }
         if (method_name == "insert") {
             signature.params = {value_type};
-            signature.return_type = "auto";
+            set_return_type(signature, "auto");
             return true;
         }
         if (method_name == "size") {
-            signature.return_type = "usize";
+            set_return_type(signature, "usize");
             return true;
         }
         if (method_name == "empty") {
-            signature.return_type = "bool";
+            set_return_type(signature, "bool");
             return true;
         }
     }
@@ -155,15 +160,15 @@ bool builtin_cpp_method_signature(const Symbols& symbols, std::string receiver_t
         const std::string key_type = first_type_arg(templated_ref);
         if (method_name == "contains") {
             signature.params = {key_type.empty() ? "auto" : key_type};
-            signature.return_type = "bool";
+            set_return_type(signature, "bool");
             return true;
         }
         if (method_name == "size") {
-            signature.return_type = "usize";
+            set_return_type(signature, "usize");
             return true;
         }
         if (method_name == "empty") {
-            signature.return_type = "bool";
+            set_return_type(signature, "bool");
             return true;
         }
     }
@@ -172,11 +177,11 @@ bool builtin_cpp_method_signature(const Symbols& symbols, std::string receiver_t
         templated.find("optional<") != std::string::npos) {
         const std::string item = first_type_arg(templated_ref);
         if (method_name == "has_value") {
-            signature.return_type = "bool";
+            set_return_type(signature, "bool");
             return true;
         }
         if (method_name == "value") {
-            signature.return_type = item.empty() ? "auto" : item;
+            set_return_type(signature, item.empty() ? "auto" : item);
             return true;
         }
     }
@@ -185,22 +190,22 @@ bool builtin_cpp_method_signature(const Symbols& symbols, std::string receiver_t
         const std::string item = first_type_arg(templated_ref);
         const std::string value_type = item.empty() ? "auto" : item;
         if (method_name == "load") {
-            signature.return_type = value_type;
+            set_return_type(signature, value_type);
             return true;
         }
         if (method_name == "store") {
             signature.params = {value_type};
-            signature.return_type = "void";
+            set_return_type(signature, "void");
             return true;
         }
         if (method_name == "exchange" || method_name == "fetch_add" || method_name == "fetch_sub" ||
             method_name == "fetch_and" || method_name == "fetch_or" || method_name == "fetch_xor") {
             signature.params = {value_type};
-            signature.return_type = value_type;
+            set_return_type(signature, value_type);
             return true;
         }
         if (method_name == "is_lock_free") {
-            signature.return_type = "bool";
+            set_return_type(signature, "bool");
             return true;
         }
     }
