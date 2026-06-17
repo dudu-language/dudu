@@ -1477,6 +1477,9 @@ LSP source edits are also moving to AST-owned ranges:
 - Function and method body checking now carries the parsed return `TypeRef`
   through nested blocks and match cases instead of threading a raw return-type
   string through statement sema.
+- The symbol table no longer keeps a separate function-name to return-type
+  string map; Dudu functions are represented by `FunctionSignature` metadata
+  with parsed parameter and return `TypeRef` fields.
 
 Expression parsing has moved onto the lexer/token stream:
 

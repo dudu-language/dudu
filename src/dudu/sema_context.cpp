@@ -366,7 +366,6 @@ Symbols collect_symbols(const ModuleAst& module) {
         }
         signature.return_type = function_return_type_text(fn);
         signature.return_type_ref = function_return_type_ref(fn);
-        symbols.functions[fn.name] = signature.return_type;
         symbols.function_signatures[fn.name] = std::move(signature);
         symbols.function_decls[fn.name] = &fn;
     }
