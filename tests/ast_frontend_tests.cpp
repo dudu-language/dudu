@@ -238,11 +238,11 @@ void test_statement_ast_shape() {
     assert(main.statements.size() == 5);
     assert(main.statements[0].kind == dudu::StmtKind::VarDecl);
     assert(main.statements[0].name == "total");
-    assert(main.statements[0].type == "i32");
+    assert(dudu::substitute_type_ref_text(main.statements[0].type_ref, {}) == "i32");
     assert(main.statements[0].value_expr.text == "0");
     assert(main.statements[1].kind == dudu::StmtKind::For);
     assert(main.statements[1].name == "item");
-    assert(main.statements[1].type == "i32");
+    assert(dudu::substitute_type_ref_text(main.statements[1].type_ref, {}) == "i32");
     assert(main.statements[1].iterable_expr.text == "values");
     assert(main.statements[1].children.size() == 1);
     assert(main.statements[1].children[0].kind == dudu::StmtKind::CompoundAssign);

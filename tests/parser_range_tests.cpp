@@ -1,3 +1,4 @@
+#include "dudu/ast_type.hpp"
 #include "dudu/parser.hpp"
 
 #include <cassert>
@@ -60,7 +61,7 @@ void test_keyword_statements_keep_token_ranges() {
     const dudu::Stmt& loop = main.statements[1];
     assert(loop.kind == dudu::StmtKind::For);
     assert(loop.name == "item");
-    assert(loop.type == "i32");
+    assert(dudu::substitute_type_ref_text(loop.type_ref, {}) == "i32");
     assert(loop.iterable_expr.text == "values");
     assert(loop.iterable_expr.range.start.column == 22);
     assert(loop.children.front().kind == dudu::StmtKind::DebugAssert);

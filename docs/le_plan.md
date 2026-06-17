@@ -468,6 +468,12 @@ push. They are not release packaging work.
    brackets. Existing type node shapes are preserved, including pointers,
    references, wrappers, templates, fixed arrays, function pointer types,
    non-type template value arguments, and C tag spellings such as
+   `struct Foo`. Wrapper match payload bindings now carry structured `TypeRef`
+   metadata through sema/codegen instead of reparsing rendered payload strings,
+   and compound assignment statements now carry a structured operator enum
+   instead of a raw operator string. Statement typed declarations, typed loops,
+   and typed catches now rely on `Stmt::type_ref`; the statement-level raw type
+   mirror has been removed.
    `struct stat`.
    Normal template-call emission lowers bracket arguments from parsed
    `TypeRef` nodes, including non-type value arguments, instead of falling back

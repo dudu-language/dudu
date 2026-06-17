@@ -172,7 +172,6 @@ struct Stmt {
     StmtKind kind = StmtKind::Unknown;
     std::string source_text;
     std::string name;
-    std::string type;
     std::string cpp_body;
     TypeRef type_ref;
     CompoundAssignOp compound_op = CompoundAssignOp::None;
