@@ -303,16 +303,21 @@ void emit_method(std::ostringstream& out, const std::string& class_name,
             << method.params[i].name;
     }
     std::map<std::string, std::string> locals;
+    std::map<std::string, TypeRef> local_type_refs;
     locals["class"] = class_name;
+    local_type_refs["class"] = parse_type_text(class_name, method.location);
     const auto klass = symbols.classes.find(source_class_name);
     if (klass != symbols.classes.end() && klass->second->base_class_refs.size() == 1) {
         locals["super"] = type_ref_text(klass->second->base_class_refs.front().type_ref);
+        local_type_refs["super"] = klass->second->base_class_refs.front().type_ref;
     }
     if (first_param == 1) {
         locals[method.params.front().name] = type_ref_text(method.params.front().type_ref);
+        local_type_refs[method.params.front().name] = method.params.front().type_ref;
     }
     for (size_t i = first_param; i < method.params.size(); ++i) {
         locals[method.params[i].name] = type_ref_text(method.params[i].type_ref);
+        local_type_refs[method.params[i].name] = method.params[i].type_ref;
     }
     out << ")";
     if (is_constructor_method(method)) {
@@ -336,11 +341,11 @@ void emit_method(std::ostringstream& out, const std::string& class_name,
     }
     if (is_constructor_method(method) && super_init_expr(method) != nullptr) {
         std::vector<Stmt> body(method.statements.begin() + 1, method.statements.end());
-        emit_block(out, body, 2, aliases, locals, function_return_type_ref(method),
+        emit_block(out, body, 2, aliases, locals, local_type_refs, function_return_type_ref(method),
                    function_returns, &symbols, options);
     } else {
-        emit_block(out, method.statements, 2, aliases, locals, function_return_type_ref(method),
-                   function_returns, &symbols, options);
+        emit_block(out, method.statements, 2, aliases, locals, local_type_refs,
+                   function_return_type_ref(method), function_returns, &symbols, options);
     }
     out << "    }\n";
 }

@@ -193,11 +193,13 @@ void emit_function_body(std::ostringstream& out, const FunctionDecl& fn,
     emit_function_signature(out, fn, aliases, options);
     out << " {\n";
     std::map<std::string, std::string> locals;
+    std::map<std::string, TypeRef> local_type_refs;
     for (const ParamDecl& param : fn.params) {
         locals[param.name] = type_ref_text(param.type_ref);
+        local_type_refs[param.name] = param.type_ref;
     }
-    emit_block(out, fn.statements, 1, aliases, locals, function_return_type_ref(fn),
-               function_returns, &symbols, options);
+    emit_block(out, fn.statements, 1, aliases, locals, local_type_refs,
+               function_return_type_ref(fn), function_returns, &symbols, options);
     out << "}\n\n";
 }
 

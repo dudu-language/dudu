@@ -1527,6 +1527,10 @@ LSP source edits are also moving to AST-owned ranges:
 - `NativeFunctionDecl` now carries parsed parameter and return `TypeRef`
   metadata directly, and native header scans plus module-imported function
   aliases populate those refs at the AST boundary.
+- Function and method C++ emission now seeds statement blocks with parameter
+  `TypeRef` maps directly from `ParamDecl` metadata, instead of forcing the
+  statement emitter to reconstruct initial locals by reparsing parameter type
+  strings.
 - Explicit native template return rewriting now refreshes return `TypeRef`
   metadata at the same time as return text, avoiding stale semantic facts after
   helpers such as indexed tuple/variant returns refine the type.
