@@ -1,3 +1,4 @@
+#include "dudu/ast_expr.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/sema_common.hpp"
@@ -256,9 +257,10 @@ std::string member_expr_type(const Symbols& symbols,
         if (receiver_type.empty()) {
             return {};
         }
+        const std::string label = display_expr(expr);
         return indexed_type_from_type(symbols, location == nullptr ? SourceLocation{} : *location,
                                       receiver_type, expr.children[1],
-                                      expr.text.empty() ? "indexed expression" : expr.text);
+                                      label.empty() ? "indexed expression" : label);
     }
     if (expr.kind == ExprKind::Member && expr.children.size() == 1 && !expr.name.empty()) {
         const Expr& receiver = expr.children.front();
@@ -291,9 +293,9 @@ std::string member_expr_type(const Symbols& symbols,
             return "auto";
         }
         if (location != nullptr) {
-            sema_fail(*location,
-                      "unknown field: " +
-                          (expr.text.empty() ? receiver_type + "." + expr.name : expr.text));
+            const std::string label = display_expr(expr);
+            sema_fail(*location, "unknown field: " +
+                                     (label.empty() ? receiver_type + "." + expr.name : label));
         }
     }
     return {};

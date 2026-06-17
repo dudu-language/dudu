@@ -612,7 +612,10 @@ push. They are not release packaging work.
    Diagnostics and generated default assert messages now use an AST expression
    display helper for structured nodes instead of reading raw expression text
    directly. Member/index expression diagnostics and indexed-assignment labels
-   use the same structured display path.
+   use the same structured display path. Member-path semantic diagnostics now
+   use structured expression display for parsed member/index labels, while the
+   remaining string member-path API is still an explicit compatibility boundary
+   to replace.
 
 3. OOP Surface Cleanup
 

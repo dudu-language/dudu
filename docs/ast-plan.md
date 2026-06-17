@@ -531,6 +531,10 @@ Already structured:
   display helper for structured nodes instead of reading raw expression text
   directly; member/index expression diagnostics and indexed-assignment labels
   use the same structured display path
+- member-path semantic diagnostics for parsed member/index expressions now use
+  the AST display helper for labels; the remaining string member-path API is a
+  compatibility boundary that still needs replacement with structured path
+  nodes
 - assignment compatibility for parsed explicit casts, value-wrapper
   assignments, and `Ok(...)`/`Err(...)` result construction inspects call
   expression nodes instead of rediscovering those forms from raw text
