@@ -119,6 +119,11 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
             }
         }
         break;
+    case ExprKind::Member:
+        if (const auto member_type = member_expr_direct_type_ref(scope, expr, location)) {
+            return *member_type;
+        }
+        break;
     case ExprKind::DefExpression:
         if (location != nullptr) {
             sema_expr_fail(*location, "unsupported Python feature: def expressions");

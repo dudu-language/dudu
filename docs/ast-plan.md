@@ -349,6 +349,9 @@ Already structured:
 - unary expression typing for `not`, numeric negation, bitwise-not,
   dereference, and address-of now returns `TypeRef` nodes directly instead of
   rendering operand types and reparsing pointer/dereference results
+- member expression typing now enters through a direct `TypeRef` path for enum
+  variants, native member values, Dudu fields, swizzles, and foreign-auto
+  member lookups before falling back to legacy string expression inference
 - LSP local variable/parameter type collection for hover, member completion,
   and member definition now walks parsed function/method bodies and reuses
   semantic expression inference instead of regexing source lines

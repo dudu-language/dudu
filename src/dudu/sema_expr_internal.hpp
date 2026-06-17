@@ -58,6 +58,8 @@ std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Ex
                                             const SourceLocation* location);
 std::optional<TypeRef> direct_template_call_type_ref(const FunctionScope& scope, const Expr& expr,
                                                      const SourceLocation* location);
+std::optional<TypeRef> member_expr_direct_type_ref(const FunctionScope& scope, const Expr& expr,
+                                                   const SourceLocation* location);
 std::optional<TypeRef> unary_expr_type_ref(const FunctionScope& scope, const Expr& expr,
                                            const SourceLocation* location);
 std::optional<TypeRef> binary_expr_type_ref(const FunctionScope& scope, const Expr& expr,
