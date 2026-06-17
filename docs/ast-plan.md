@@ -1513,6 +1513,9 @@ LSP source edits are also moving to AST-owned ranges:
 - Condition and comparison-operator semantic checks now validate operator
   return types through parsed `signature_return_type_ref` metadata instead of
   comparing rendered signature return strings.
+- Function body assignment checks now expose a typed assignment callback, so
+  declared-value checks and inferred generic method return checks can compare
+  expected `TypeRef` metadata before falling back to compatibility text.
 
 Expression parsing has moved onto the lexer/token stream:
 

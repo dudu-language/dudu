@@ -64,6 +64,8 @@ std::vector<Expr> call_arg_exprs(std::string expr, size_t open, SourceLocation l
 std::vector<Expr> parse_exprs(const std::vector<std::string>& exprs, SourceLocation location);
 bool can_assign_ast(const FunctionScope& scope, const std::string& expected, const Expr& expr,
                     const std::string& got);
+bool can_assign_ast(const FunctionScope& scope, const TypeRef& expected, const Expr& expr,
+                    const std::string& got);
 bool is_builtin_call(const std::string& callee);
 bool is_local_member_call(const FunctionScope& scope, const std::string& callee);
 void reject_abstract_construction(const Symbols& symbols, const std::string& type,

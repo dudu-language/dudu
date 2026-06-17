@@ -478,6 +478,9 @@ BodyCheckCallbacks expression_body_check_callbacks() {
             .can_assign =
                 [](const FunctionScope& scope, const std::string& expected, const Expr& expr,
                    const std::string& got) { return can_assign_ast(scope, expected, expr, got); },
+            .can_assign_type =
+                [](const FunctionScope& scope, const TypeRef& expected, const Expr& expr,
+                   const std::string& got) { return can_assign_ast(scope, expected, expr, got); },
             .check_call_args =
                 [](const FunctionScope& scope, const std::string& callee,
                    const FunctionSignature& signature, const std::vector<Expr>& args,
