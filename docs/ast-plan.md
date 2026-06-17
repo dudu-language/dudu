@@ -358,6 +358,9 @@ Already structured:
 - function and enum argument checking now infers actual argument `TypeRef` nodes
   first and renders them only at the compatibility/error boundary, removing
   another legacy string expression inference pass from ordinary call validation
+- legacy string expression inference now delegates unary and binary expressions
+  to the structured `TypeRef` helpers instead of duplicating operator semantics
+  with a separate recursive string path
 - LSP local variable/parameter type collection for hover, member completion,
   and member definition now walks parsed function/method bodies and reuses
   semantic expression inference instead of regexing source lines

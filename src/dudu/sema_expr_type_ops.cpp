@@ -115,6 +115,12 @@ std::optional<TypeRef> binary_expr_type_ref(const FunctionScope& scope, const Ex
     if (expr.kind != ExprKind::Binary || expr.children.size() != 2) {
         return std::nullopt;
     }
+    if (missing_expr(expr.children[0]) || missing_expr(expr.children[1])) {
+        if (location != nullptr) {
+            sema_expr_fail(*location, "operator " + expr.op + " expects left and right operands");
+        }
+        return std::nullopt;
+    }
     const TypeRef left_ref = infer_expr_type_ast(scope, expr.children[0], location);
     const TypeRef right_ref = infer_expr_type_ast(scope, expr.children[1], location);
     const std::string left = substitute_type_ref_text(left_ref, {});
@@ -156,7 +162,7 @@ std::optional<TypeRef> binary_expr_type_ref(const FunctionScope& scope, const Ex
             sema_expr_fail(*location,
                            "comparison " + expr.op + " expects " + left + ", got " + right);
         }
-        return parse_type_text("bool", expr.location);
+        return named_type_ref("bool", expr.location);
     }
     if (is_arithmetic_op(expr.op)) {
         if (const auto contextual = contextual_numeric_binary_type(scope, expr.children[0], left,
@@ -178,7 +184,14 @@ std::optional<TypeRef> binary_expr_type_ref(const FunctionScope& scope, const Ex
         }
         return signature_return_type_ref(*signature);
     }
-    return std::nullopt;
+    if (location != nullptr && !left.empty() && !right.empty() &&
+        !binary_rhs_allowed(scope.symbols, expr.op, left, expr.children[1], right)) {
+        sema_expr_fail(*location, "operator " + expr.op + " expects " + left + ", got " + right);
+    }
+    if (has_type_ref(left_ref)) {
+        return left_ref;
+    }
+    return has_type_ref(right_ref) ? std::optional<TypeRef>{right_ref} : std::nullopt;
 }
 
 } // namespace dudu
