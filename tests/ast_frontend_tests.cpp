@@ -277,6 +277,17 @@ void test_unsupported_statement_ast_shape() {
     assert(main.statements[0].unsupported_feature == dudu::UnsupportedFeature::ContextManagers);
 }
 
+void test_unsupported_def_expression_ast_shape() {
+    const dudu::ModuleAst module = dudu::parse_source("def main() -> i32:\n"
+                                                      "    return def local(): 1\n",
+                                                      "unsupported_def_expression_shape.dd");
+    assert(module.functions.size() == 1);
+    const dudu::FunctionDecl& main = module.functions.front();
+    assert(main.statements.size() == 1);
+    assert(main.statements[0].kind == dudu::StmtKind::Return);
+    assert(main.statements[0].value_expr.kind == dudu::ExprKind::DefExpression);
+}
+
 void test_expression_ast_shape() {
     const dudu::ModuleAst module =
         dudu::parse_source("def main() -> i32:\n"
@@ -792,6 +803,7 @@ int main() {
         test_ast_index_receiver_type_inference();
         test_statement_ast_shape();
         test_unsupported_statement_ast_shape();
+        test_unsupported_def_expression_ast_shape();
         test_expression_ast_shape();
         test_cpp_escape_ast_payloads();
         test_dereference_postfix_expression_shape();

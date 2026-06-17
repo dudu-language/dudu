@@ -1137,6 +1137,10 @@ Member expression typing now has a parsed `TypeRef` wrapper, and typed
 expression/index inference plus assignment target checks use it instead of
 parsing member type text at each call site.
 
+Unsupported `def` expressions now parse as a dedicated `DefExpression` AST node
+instead of falling through to `Unknown` and being recognized later by raw text
+scanning.
+
 Nonempty `Unknown` expressions are rejected during semantic checking instead of
 calling the old raw expression inference path. Unknown expressions also no
 longer lower as raw C++ text during C++ emission. Use `cpp(...)` for explicit

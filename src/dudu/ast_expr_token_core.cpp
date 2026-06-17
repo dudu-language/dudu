@@ -130,8 +130,8 @@ Expr ExprTokenParser::make_node(ExprKind kind, size_t begin, size_t end) const {
 
 Expr ExprTokenParser::parse_expr_span(size_t begin, size_t end) const {
     if (begin >= end || begin >= tokens_.size()) {
-        const SourceLocation location = begin < tokens_.size() ? tokens_[begin].location
-                                                              : SourceLocation{};
+        const SourceLocation location =
+            begin < tokens_.size() ? tokens_[begin].location : SourceLocation{};
         return make_expr(ExprKind::Unknown, "", location);
     }
     ExprTokenParser parser(tokens_.subspan(begin, end - begin));
@@ -272,7 +272,7 @@ Expr ExprTokenParser::parse_binary(int min_precedence, std::initializer_list<Tok
 Expr ExprTokenParser::parse_prefix(std::initializer_list<TokenKind> stops) {
     const size_t begin = cursor_;
     if (at_identifier("def")) {
-        return parse_unknown_until_stops(begin, stops);
+        return parse_unsupported_expr(ExprKind::DefExpression, begin, stops);
     }
     if (match_identifier("lambda")) {
         Expr expr = make_node(ExprKind::Lambda, begin, cursor_);
@@ -327,6 +327,11 @@ Expr ExprTokenParser::parse_prefix(std::initializer_list<TokenKind> stops) {
 
 Expr ExprTokenParser::parse_unknown_until_stops(size_t begin,
                                                 std::initializer_list<TokenKind> stops) {
+    return parse_unsupported_expr(ExprKind::Unknown, begin, stops);
+}
+
+Expr ExprTokenParser::parse_unsupported_expr(ExprKind kind, size_t begin,
+                                             std::initializer_list<TokenKind> stops) {
     int depth = 0;
     while (!at_end()) {
         if (depth == 0) {
@@ -351,7 +356,7 @@ Expr ExprTokenParser::parse_unknown_until_stops(size_t begin,
         }
         ++cursor_;
     }
-    return make_node(ExprKind::Unknown, begin, cursor_);
+    return make_node(kind, begin, cursor_);
 }
 
 Expr ExprTokenParser::parse_unary(std::string op, size_t begin,

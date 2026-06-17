@@ -45,6 +45,8 @@ class ExprTokenParser {
     static int binary_precedence(const Token& token);
     Expr parse_binary(int min_precedence, std::initializer_list<TokenKind> stops);
     Expr parse_prefix(std::initializer_list<TokenKind> stops);
+    Expr parse_unsupported_expr(ExprKind kind, size_t begin,
+                                std::initializer_list<TokenKind> stops);
     Expr parse_unknown_until_stops(size_t begin, std::initializer_list<TokenKind> stops);
     Expr parse_unary(std::string op, size_t begin, std::initializer_list<TokenKind> stops);
 

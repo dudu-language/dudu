@@ -43,10 +43,6 @@ bool contains_word(std::string_view text, std::string_view name) {
 }
 
 void check_unsupported_text(const SourceLocation& location, const std::string& text) {
-    const std::string trimmed = trim_copy(text);
-    if (trimmed == "def" || starts_with(trimmed, "def ") || starts_with(trimmed, "def:")) {
-        throw CompileError(location, "unsupported Python feature: def expressions");
-    }
     if (contains_call(text, "eval") || contains_call(text, "exec")) {
         throw CompileError(location, "unsupported Python feature: dynamic execution");
     }
@@ -68,6 +64,9 @@ void check_expr(const Expr& expr) {
     if (expr.kind == ExprKind::Unknown) {
         check_unsupported_text(expr.location, expr.text);
         return;
+    }
+    if (expr.kind == ExprKind::DefExpression) {
+        throw CompileError(expr.location, "unsupported Python feature: def expressions");
     }
     if (expr.kind == ExprKind::Await) {
         throw CompileError(expr.location, "unsupported Python feature: async");

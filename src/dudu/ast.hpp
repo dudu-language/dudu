@@ -143,6 +143,7 @@ enum class ExprKind {
     Slice,
     SetLiteral,
     TupleLiteral,
+    DefExpression,
     Lambda,
     Conditional,
     Await,
