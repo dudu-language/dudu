@@ -92,12 +92,10 @@ std::vector<TypeRef> template_type_refs(const Expr& expr) {
     if (!expr.template_type_args.empty()) {
         return expr.template_type_args;
     }
-    std::vector<TypeRef> out;
-    out.reserve(expr.template_args.size());
-    for (const Expr& arg : expr.template_args) {
-        out.push_back(parse_type_text(arg.text, arg.location));
+    if (!expr.template_args.empty()) {
+        sema_fail(expr.location, "malformed template call: missing parsed type arguments");
     }
-    return out;
+    return {};
 }
 
 std::string template_args_lookup_text(const Expr& expr) {

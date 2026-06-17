@@ -14,8 +14,8 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
     const std::string callee_base = scoped_call_callee_text(scope, expr, location);
 
     if (starts_with(expr.name, "*")) {
-        const size_t arg_count = !expr.template_type_args.empty() ? expr.template_type_args.size()
-                                                                  : expr.template_args.size();
+        const std::vector<TypeRef> type_args = template_type_refs(expr);
+        const size_t arg_count = type_args.size();
         if (location != nullptr && arg_count == 0) {
             sema_expr_fail(*location, "pointer casts expect at least 1 type argument");
         }
@@ -23,10 +23,8 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
             sema_expr_fail(*location, "pointer casts expect 1 argument, got " +
                                           std::to_string(expr.children.size()));
         }
-        const std::string pointee = !expr.template_type_args.empty()
-                                        ? trim(expr.name.substr(1)) + "[" +
-                                              join_type_ref_texts(expr.template_type_args) + "]"
-                                        : trim(callee.substr(1));
+        const std::string pointee =
+            trim(expr.name.substr(1)) + "[" + join_type_ref_texts(type_args) + "]";
         const TypeRef pointee_ref = parse_type_text(pointee, expr.location);
         if (const auto unknown = unknown_type_ref(scope.symbols, pointee_ref)) {
             if (location != nullptr) {
