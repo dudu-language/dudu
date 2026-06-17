@@ -82,15 +82,21 @@ void check_type_match(FunctionScope& scope, const std::string& expected, const E
 }
 
 void check_type_ref_match(FunctionScope& scope, const TypeRef& expected, const Expr& expr,
-                          const SourceLocation& location, const BodyCheckCallbacks& callbacks) {
+                          const SourceLocation& location, const BodyCheckCallbacks& callbacks,
+                          std::string_view mismatch_label = {}) {
     const std::string expected_text = substitute_type_ref_text(expected, {});
     if (expr.kind == ExprKind::Call || expr.kind == ExprKind::TemplateCall) {
-        check_type_match(scope, expected_text, expr, location, callbacks);
+        check_type_match(scope, expected_text, expr, location, callbacks, mismatch_label);
         return;
     }
     const std::string got = callbacks.infer_expr(scope, expr, &location);
     if (!assignment_type_allowed(expected, expr, got) &&
         !callbacks.can_assign(scope, expected_text, expr, got)) {
+        if (!mismatch_label.empty()) {
+            sema_fail(location,
+                      std::string(mismatch_label) + ": expected " + expected_text + ", got " +
+                          got);
+        }
         sema_fail(location, assignment_error(expected, expr, got));
     }
 }
@@ -186,8 +192,13 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
             return;
         }
         if (return_type != "void") {
-            check_type_match(scope, return_type, stmt.value_expr, value_location, callbacks,
-                             "return type mismatch");
+            if (has_type_ref(scope.return_type_ref)) {
+                check_type_ref_match(scope, scope.return_type_ref, stmt.value_expr, value_location,
+                                     callbacks, "return type mismatch");
+            } else {
+                check_type_match(scope, return_type, stmt.value_expr, value_location, callbacks,
+                                 "return type mismatch");
+            }
             return;
         }
         const std::string got = callbacks.infer_expr(scope, stmt.value_expr, &value_location);
@@ -425,6 +436,7 @@ void copy_base_scope_state(FunctionScope& dst, const FunctionScope& src) {
     dst.target_mode = src.target_mode;
     dst.current_class = src.current_class;
     dst.allow_super_init = src.allow_super_init;
+    dst.return_type_ref = src.return_type_ref;
     dst.local_type_refs = src.local_type_refs;
 }
 
@@ -456,6 +468,9 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols,
             copy_base_scope_state(scope, base);
             scope.current_class = klass.name;
             scope.allow_super_init = method.name == "init";
+            scope.return_type_ref =
+                method.return_type.empty() ? parse_type_text("void", method.location)
+                                           : method.return_type_ref;
             for (const ParamDecl& param : method.params) {
                 bind_local(scope, param.name, param.type, param.type_ref);
             }
@@ -471,6 +486,8 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols,
         Symbols function_symbols = with_generic_params(symbols, fn.generic_params);
         FunctionScope scope{function_symbols};
         copy_base_scope_state(scope, base);
+        scope.return_type_ref =
+            fn.return_type.empty() ? parse_type_text("void", fn.location) : fn.return_type_ref;
         for (const ParamDecl& param : fn.params) {
             bind_local(scope, param.name, param.type, param.type_ref);
         }

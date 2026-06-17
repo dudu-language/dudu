@@ -196,6 +196,9 @@ Already structured:
   falling back to reconstructed callee text for unusual callee shapes
 - type compatibility exposes parsed `TypeRef` overloads, and annotated local
   initializers validate against the parsed expected type node when available
+- return statement compatibility now carries the function or method return
+  `TypeRef` in `FunctionScope` and checks returned expressions against that
+  parsed type node while preserving the existing return-mismatch diagnostics
 - semantic highlighting uses parsed call callees so method calls can color the
   receiver and called member separately instead of treating dotted callees as
   one raw span
