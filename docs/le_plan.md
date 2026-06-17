@@ -524,7 +524,10 @@ push. They are not release packaging work.
    expression argument text as types. Expression template-call parsing now
    builds expression and type template arguments from existing token spans for
    direct bracket calls and templated pointer casts instead of substring
-   reparsing inside the token parser.
+   reparsing inside the token parser. Parser declaration and statement code now
+   builds expression and type pieces through token spans directly, and the
+   parser layer no longer calls the top-level text expression/type parsers as a
+   compatibility fallback.
 
 3. OOP Surface Cleanup
 

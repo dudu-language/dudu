@@ -1,5 +1,6 @@
 #include "dudu/lexer.hpp"
 #include "dudu/ast_expr_token_parser.hpp"
+#include "dudu/ast_parse_utils.hpp"
 #include "dudu/ast_type_token_parser.hpp"
 #include "dudu/parser_internal.hpp"
 #include "dudu/parser_utils.hpp"
@@ -380,7 +381,7 @@ Parser::JoinedTokens Parser::join_tokens(size_t begin, size_t end) const {
 
 Expr Parser::parse_expr_piece(const JoinedTokens& piece) const {
     if (!piece.has_tokens) {
-        return parse_expr_text(piece.text, piece.range.start);
+        return make_expr(ExprKind::Unknown, piece.text, piece.range.start);
     }
     std::vector<Token> tokens =
         syntax_piece_tokens(tokens_.subspan(piece.begin, piece.end - piece.begin));
@@ -390,7 +391,7 @@ Expr Parser::parse_expr_piece(const JoinedTokens& piece) const {
 
 TypeRef Parser::parse_type_piece(const JoinedTokens& piece) const {
     if (!piece.has_tokens) {
-        return parse_type_text(piece.text, piece.range.start);
+        return make_type(TypeKind::Unknown, piece.text, piece.range.start);
     }
     std::vector<Token> tokens =
         syntax_piece_tokens(tokens_.subspan(piece.begin, piece.end - piece.begin));

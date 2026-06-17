@@ -1,4 +1,5 @@
 #include "dudu/ast_type.hpp"
+#include "dudu/ast_parse_utils.hpp"
 #include "dudu/parser_internal.hpp"
 #include "dudu/parser_utils.hpp"
 
@@ -84,7 +85,8 @@ ClassDecl Parser::parse_class(const Token& start, Visibility visibility,
                                     ? field.type
                                     : substitute_type_ref_text(field.type_ref.children[0], {});
             static_field.type_ref = field.type_ref.children.empty()
-                                        ? parse_type_text(static_field.type, field.location)
+                                        ? make_type(TypeKind::Unknown, static_field.type,
+                                                    field.location)
                                         : field.type_ref.children[0];
             static_field.value = field.value;
             static_field.value_expr = field.value_expr;
@@ -287,7 +289,8 @@ void Parser::parse_params(std::vector<ParamDecl>& params, std::string_view recei
         if (!receiver_type.empty() && params.empty() && param.name == "self" &&
             !at(TokenKind::Colon)) {
             param.type = std::string(receiver_type);
-            param.type_ref = parse_type_text(param.type, name.location);
+            param.type_ref = make_type(TypeKind::Named, param.type, name.location);
+            param.type_ref.name = param.type;
             params.push_back(std::move(param));
             if (match(TokenKind::Comma)) {
                 continue;

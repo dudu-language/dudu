@@ -35,6 +35,9 @@ Already structured:
 - type parsing now enters through the lexer/token stream instead of the old
   top-level arrow/bracket substring parser, preserving existing `TypeRef`
   shapes while making C tag spellings such as `struct stat` structured names
+- parser declaration and statement code now builds expression and type pieces
+  through token spans directly; the parser layer no longer calls the top-level
+  text expression/type parsers as a compatibility fallback
 - expression template-call bracket contents are parsed from existing token
   spans for both expression and type template arguments, including templated
   pointer casts, instead of reconstructing substring arguments and sending
