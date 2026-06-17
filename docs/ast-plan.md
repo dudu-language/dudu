@@ -1167,6 +1167,11 @@ Semantic expression inference and assignment-target checking now validate
 pointer dereference through parsed `TypeRef` nodes instead of raw leading `*`
 string checks.
 
+Normal and templated call sema now resolve Dudu-owned static and member calls
+from parsed callee/member receiver expressions. The older fallback that split
+reconstructed dotted callee strings for method lookup has been removed; dotted
+callee spelling is still used only for the native import prefix boundary.
+
 `@extern_c` C ABI signature checks now classify pointers, references, and
 primitive type names through the parsed type tree while preserving the existing
 pointer-to-`struct ...` ABI rule.

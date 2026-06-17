@@ -349,7 +349,10 @@ push. They are not release packaging work.
    assignment sema now carries the current class through parsed member
    expressions instead of normalizing reconstructed member-path strings.
    Ordinary and templated call sema now resolve `class.method(...)` from parsed
-   callee expressions, removing the old current-class string normalizer.
+   callee expressions, removing the old current-class string normalizer, and
+   normal/static member call sema no longer falls back to splitting
+   reconstructed dotted callee strings for Dudu-owned calls. Reconstructed
+   dotted callees remain only at native import prefix boundaries.
    `super.init(...)` recognition in sema and class emission now checks parsed
    member-callee shape instead of reconstructed callee text. Type
    compatibility exposes parsed `TypeRef`

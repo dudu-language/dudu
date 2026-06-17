@@ -156,7 +156,15 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
         const Expr& receiver_expr = member.children.front();
         const std::string method_name = member.name + "[" + template_args_lookup_text(expr) + "]";
         FunctionSignature signature;
-        if (receiver_expr.kind == ExprKind::Name && !scope.locals.contains(receiver_expr.name) &&
+        if (receiver_expr.kind == ExprKind::Name && receiver_expr.name == "class" &&
+            !scope.current_class.empty() &&
+            static_method_signature_for_type(scope.symbols, scope.current_class, method_name,
+                                             signature, location)) {
+            check_call_args_ast(scope, callee, signature, expr.children, location);
+            return signature.return_type;
+        }
+        if (receiver_expr.kind == ExprKind::Name && receiver_expr.name != "class" &&
+            !scope.locals.contains(receiver_expr.name) &&
             scope.symbols.classes.contains(receiver_expr.name) &&
             static_method_signature_for_type(scope.symbols, receiver_expr.name, method_name,
                                              signature, location)) {
@@ -196,48 +204,6 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
         }
     }
     const size_t method_dot = callee_base.rfind('.');
-    if (method_dot != std::string::npos && is_member_path(callee_base)) {
-        const std::string receiver = trim(callee_base.substr(0, method_dot));
-        const std::string method_name = template_method_name(expr, callee_base, method_dot);
-        FunctionSignature signature;
-        if (!scope.locals.contains(receiver) && scope.symbols.classes.contains(receiver) &&
-            static_method_signature_for_type(scope.symbols, receiver, method_name, signature,
-                                             location)) {
-            check_call_args_ast(scope, callee, signature, expr.children, location);
-            return signature.return_type;
-        }
-        const std::string receiver_type =
-            member_path_type(scope.symbols, scope.locals, nullptr, receiver, "");
-        if (scope.locals.contains(receiver) && (receiver_type.empty() || receiver_type == "auto")) {
-            for (const Expr& arg : expr.children) {
-                (void)infer_expr_ast(scope, arg, location);
-            }
-            return "auto";
-        }
-        if (method_signature_for_type(scope.symbols, receiver_type, method_name, signature,
-                                      location)) {
-            const std::vector<FunctionSignature> signatures =
-                method_signatures_for_type(scope.symbols, receiver_type, method_name);
-            if (const auto match = matching_signature_ast(scope, signatures, expr.children)) {
-                check_call_args_ast(scope, callee, *match, expr.children, location);
-                return match->return_type;
-            }
-            if (foreign_cpp_type_name(scope.symbols, resolve_alias(scope.symbols, receiver_type))) {
-                for (const Expr& arg : expr.children) {
-                    (void)infer_expr_ast(scope, arg, location);
-                }
-                return "auto";
-            }
-            check_call_args_ast(scope, callee, signature, expr.children, location);
-            return signature.return_type;
-        }
-        if (foreign_cpp_type_name(scope.symbols, resolve_alias(scope.symbols, receiver_type))) {
-            for (const Expr& arg : expr.children) {
-                (void)infer_expr_ast(scope, arg, location);
-            }
-            return "auto";
-        }
-    }
     if (known_template_constructor_type(scope, callee)) {
         for (const Expr& arg : expr.children) {
             (void)infer_expr_ast(scope, arg, location);
