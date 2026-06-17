@@ -38,7 +38,7 @@ bool is_swizzle_name(std::string_view name) {
 
 } // namespace
 
-std::string assignment_target_type(FunctionScope& scope, const Stmt& stmt,
+TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt,
                                    const BodyCheckCallbacks& callbacks) {
     const SourceLocation& target_location = node_location(stmt.location, stmt.target_expr);
     if (stmt.target_expr.kind == ExprKind::Unary && stmt.target_expr.op == "*" &&
@@ -53,7 +53,10 @@ std::string assignment_target_type(FunctionScope& scope, const Stmt& stmt,
         if (!pointee_type) {
             sema_fail(target_location, "cannot dereference non-pointer: " + type_text);
         }
-        return *pointee_type;
+        if (type.kind == TypeKind::Pointer && type.children.size() == 1) {
+            return type.children.front();
+        }
+        return parse_type_text(*pointee_type, target_location);
     }
     if (stmt.target_expr.kind == ExprKind::Index && stmt.target_expr.children.size() == 2 &&
         stmt.target_expr.children[0].kind == ExprKind::Name) {
@@ -67,18 +70,20 @@ std::string assignment_target_type(FunctionScope& scope, const Stmt& stmt,
                 return {};
             }
         }
-        return indexed_value_type(scope.symbols, scope.locals, scope.local_type_refs,
-                                  target_location, name, stmt.target_expr.children[1],
-                                  "indexed assignment to unknown local: ");
+        const std::string type = indexed_value_type(
+            scope.symbols, scope.locals, scope.local_type_refs, target_location, name,
+            stmt.target_expr.children[1], "indexed assignment to unknown local: ");
+        return type.empty() ? TypeRef{} : parse_type_text(type, target_location);
     }
     if (stmt.target_expr.kind == ExprKind::Index && stmt.target_expr.children.size() == 2) {
         const Expr& receiver = stmt.target_expr.children[0];
         const std::string receiver_type = member_expr_type(
             scope.symbols, scope.locals, &target_location, receiver, {}, scope.current_class);
         if (!receiver_type.empty()) {
-            return indexed_type_from_type(
+            const std::string type = indexed_type_from_type(
                 scope.symbols, target_location, receiver_type, stmt.target_expr.children[1],
                 display_expr(receiver).empty() ? "indexed assignment" : display_expr(receiver));
+            return type.empty() ? TypeRef{} : parse_type_text(type, target_location);
         }
     }
     if (stmt.target_expr.kind == ExprKind::Name) {
@@ -90,7 +95,11 @@ std::string assignment_target_type(FunctionScope& scope, const Stmt& stmt,
         if (local == scope.locals.end()) {
             sema_fail(target_location, "assignment to unknown local: " + name);
         }
-        return local->second;
+        if (const auto type_ref = scope.local_type_refs.find(name);
+            type_ref != scope.local_type_refs.end()) {
+            return type_ref->second;
+        }
+        return parse_type_text(local->second, target_location);
     }
     if (stmt.target_expr.kind == ExprKind::Member) {
         if (stmt.target_expr.children.size() == 1 && is_swizzle_name(stmt.target_expr.name)) {
@@ -100,13 +109,13 @@ std::string assignment_target_type(FunctionScope& scope, const Stmt& stmt,
             const std::string receiver_type = substitute_type_ref_text(receiver_type_ref, {});
             if (const auto swizzle = swizzle_assignment_type_for_type(
                     scope.symbols, target_location, receiver_type, stmt.target_expr.name)) {
-                return *swizzle;
+                return parse_type_text(*swizzle, target_location);
             }
         }
         if (const std::string type = member_expr_type(scope.symbols, scope.locals, &target_location,
                                                       stmt.target_expr, {}, scope.current_class);
             !type.empty()) {
-            return type;
+            return parse_type_text(type, target_location);
         }
         sema_fail(target_location,
                   "unsupported assignment target: " + display_expr(stmt.target_expr));
@@ -121,6 +130,11 @@ std::string assignment_target_type(FunctionScope& scope, const Stmt& stmt,
                   "unsupported assignment target: " + display_expr(stmt.target_expr));
     }
     sema_fail(target_location, "unsupported assignment target: " + display_expr(stmt.target_expr));
+}
+
+std::string assignment_target_type(FunctionScope& scope, const Stmt& stmt,
+                                   const BodyCheckCallbacks& callbacks) {
+    return substitute_type_ref_text(assignment_target_type_ref(scope, stmt, callbacks), {});
 }
 
 } // namespace dudu

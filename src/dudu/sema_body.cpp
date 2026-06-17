@@ -111,13 +111,6 @@ void check_type_match(FunctionScope& scope, const TypeRef& expected_ref, const E
     }
 }
 
-void check_type_match(FunctionScope& scope, const std::string& expected, const Expr& expr,
-                      const SourceLocation& location, const BodyCheckCallbacks& callbacks,
-                      std::string_view mismatch_label = {}) {
-    check_type_match(scope, parse_type_text(expected, location), expr, location, callbacks,
-                     mismatch_label);
-}
-
 void check_type_ref_match(FunctionScope& scope, const TypeRef& expected, const Expr& expr,
                           const SourceLocation& location, const BodyCheckCallbacks& callbacks,
                           std::string_view mismatch_label = {}) {
@@ -395,10 +388,10 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
         return;
     }
     if (stmt.kind == StmtKind::CompoundAssign) {
-        const std::string target_type = assignment_target_type(scope, stmt, callbacks);
-        if (!target_type.empty()) {
-            check_type_match(scope, target_type, stmt.value_expr,
-                             node_location(stmt.location, stmt.value_expr), callbacks);
+        const TypeRef target_type = assignment_target_type_ref(scope, stmt, callbacks);
+        if (has_type_ref(target_type)) {
+            check_type_ref_match(scope, target_type, stmt.value_expr,
+                                 node_location(stmt.location, stmt.value_expr), callbacks);
         }
         return;
     }
@@ -498,10 +491,10 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
             }
             return;
         }
-        const std::string target_type = assignment_target_type(scope, stmt, callbacks);
-        if (!target_type.empty()) {
-            check_type_match(scope, target_type, stmt.value_expr,
-                             node_location(stmt.location, stmt.value_expr), callbacks);
+        const TypeRef target_type = assignment_target_type_ref(scope, stmt, callbacks);
+        if (has_type_ref(target_type)) {
+            check_type_ref_match(scope, target_type, stmt.value_expr,
+                                 node_location(stmt.location, stmt.value_expr), callbacks);
         }
         return;
     }

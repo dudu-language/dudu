@@ -1568,6 +1568,9 @@ LSP source edits are also moving to AST-owned ranges:
   returns parsed `TypeRef` results for overloaded operators and contextual
   numeric literals, instead of forcing typed callers through rendered operator
   return strings.
+- Assignment target checking now exposes a parsed `TypeRef` result path and
+  sema body checks use it for normal and compound assignments, deleting the
+  older string-only `check_type_match` wrapper.
 
 Expression parsing has moved onto the lexer/token stream:
 
