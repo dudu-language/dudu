@@ -386,6 +386,9 @@ Already structured:
 - loop binding inference for non-name iterables uses inferred `TypeRef`
   iterable metadata directly instead of rendering and reparsing the iterable
   type string
+- compiler tuple destructuring now reads RHS tuple child `TypeRef` nodes and
+  binds destructured locals with structured type metadata; alias/native spelling
+  fallback remains at the compatibility boundary
 - type compatibility has AST overloads for simple literals and list/set/dict
   literals, including expected-type disambiguation for empty `{}` dict
   initializers, reducing reliance on string parsing for assignment checks

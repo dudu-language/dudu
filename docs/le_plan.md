@@ -561,6 +561,9 @@ push. They are not release packaging work.
    Loop binding inference for non-name iterables now uses inferred `TypeRef`
    iterable metadata directly instead of rendering and reparsing the iterable
    type string.
+   Compiler tuple destructuring now reads RHS tuple child `TypeRef` nodes and
+   binds destructured locals with structured type metadata; alias/native spelling
+   fallback remains at the compatibility boundary.
 
 3. OOP Surface Cleanup
 

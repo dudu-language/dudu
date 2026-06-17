@@ -142,6 +142,17 @@ std::string shape_text(const std::vector<size_t>& shape) {
     return out.str();
 }
 
+std::vector<TypeRef> tuple_type_refs_from_inferred(const Symbols& symbols, const TypeRef& type) {
+    std::vector<TypeRef> refs = template_type_arg_refs(type, "tuple");
+    if (!refs.empty()) {
+        return refs;
+    }
+
+    const std::string resolved = resolve_alias(symbols, substitute_type_ref_text(type, {}));
+    refs = template_type_arg_refs(parse_type_text(resolved), "tuple");
+    return refs;
+}
+
 TypeRef const_reference_type_ref(TypeRef type) {
     TypeRef const_type;
     const_type.kind = TypeKind::Const;
@@ -430,17 +441,16 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
     if (stmt.kind == StmtKind::Assign) {
         if (const std::vector<std::string> names = tuple_binding_names(stmt.target_expr);
             !names.empty()) {
-            const std::vector<std::string> types =
-                tuple_types(scope.symbols,
-                            callbacks.infer_expr(scope, stmt.value_expr,
-                                                 &node_location(stmt.location, stmt.value_expr)));
+            const SourceLocation& value_location =
+                node_location(stmt.location, stmt.value_expr);
+            const std::vector<TypeRef> types = tuple_type_refs_from_inferred(
+                scope.symbols, callbacks.infer_expr_type(scope, stmt.value_expr, &value_location));
             if (names.size() != types.size()) {
-                sema_fail(node_location(stmt.location, stmt.value_expr),
-                          "tuple destructuring count mismatch");
+                sema_fail(value_location, "tuple destructuring count mismatch");
             }
             check_destructure_bindings(stmt.location, names, scope.locals);
             for (size_t i = 0; i < names.size(); ++i) {
-                bind_local(scope, names[i], types[i]);
+                bind_local(scope, names[i], substitute_type_ref_text(types[i], {}), types[i]);
             }
             return;
         }
