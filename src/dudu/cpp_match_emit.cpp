@@ -38,8 +38,20 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                           const std::string& return_type,
                           const std::map<std::string, std::string>& function_returns,
                           const Symbols* symbols, const CppEmitOptions& options) {
+    static const std::map<std::string, TypeRef> no_type_refs;
+    emit_match_statement(out, stmt, depth, aliases, locals, no_type_refs, return_type,
+                         function_returns, symbols, options);
+}
+
+void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
+                          const std::vector<std::string>& aliases,
+                          const std::map<std::string, std::string>& locals,
+                          const std::map<std::string, TypeRef>& local_type_refs,
+                          const std::string& return_type,
+                          const std::map<std::string, std::string>& function_returns,
+                          const Symbols* symbols, const CppEmitOptions& options) {
     const std::string subject_type =
-        infer_emitted_local_type(stmt.condition_expr, locals, function_returns);
+        infer_emitted_local_type(stmt.condition_expr, locals, local_type_refs, function_returns);
     if (!subject_type.empty()) {
         const WrapperMatchType wrapper = wrapper_match_type(subject_type);
         if (wrapper.kind != WrapperMatchKind::None) {
@@ -65,19 +77,23 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                 }
                 out << indent(depth) << "if (!" << matched << " && (" << condition << ")) {\n";
                 std::map<std::string, std::string> nested = locals;
+                std::map<std::string, TypeRef> nested_type_refs = local_type_refs;
                 if (case_name && (*case_name == "Some" || *case_name == "Ok" ||
                                   *case_name == "Err")) {
                     if (const auto binding = wrapper_case_binding_name(child.pattern_expr)) {
                         if (*case_name == "Some" && wrapper.args.size() == 1) {
                             nested[*binding] = trim_copy(wrapper.args[0]);
+                            nested_type_refs[*binding] = parse_type_text(wrapper.args[0]);
                             out << indent(depth + 1) << "auto&& " << *binding << " = " << subject
                                 << ".value();\n";
                         } else if (*case_name == "Ok" && wrapper.args.size() == 2) {
                             nested[*binding] = trim_copy(wrapper.args[0]);
+                            nested_type_refs[*binding] = parse_type_text(wrapper.args[0]);
                             out << indent(depth + 1) << "auto&& " << *binding << " = " << subject
                                 << ".value;\n";
                         } else if (*case_name == "Err" && wrapper.args.size() == 2) {
                             nested[*binding] = trim_copy(wrapper.args[1]);
+                            nested_type_refs[*binding] = parse_type_text(wrapper.args[1]);
                             out << indent(depth + 1) << "auto&& " << *binding << " = " << subject
                                 << ".err;\n";
                         }
@@ -88,13 +104,13 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                         << lower_expr(child.guard_expr, aliases, nested, symbols, options)
                         << ") {\n";
                     out << indent(depth + 2) << matched << " = true;\n";
-                    emit_block(out, child.children, depth + 2, aliases, nested, return_type,
-                               function_returns, symbols, options);
+                    emit_block(out, child.children, depth + 2, aliases, nested, nested_type_refs,
+                               return_type, function_returns, symbols, options);
                     out << indent(depth + 1) << "}\n";
                 } else {
                     out << indent(depth + 1) << matched << " = true;\n";
-                    emit_block(out, child.children, depth + 1, aliases, nested, return_type,
-                               function_returns, symbols, options);
+                    emit_block(out, child.children, depth + 1, aliases, nested, nested_type_refs,
+                               return_type, function_returns, symbols, options);
                 }
                 out << indent(depth) << "}\n";
             }
@@ -129,6 +145,7 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                 }
                 out << indent(depth) << "if (!" << matched << " && (" << condition << ")) {\n";
                 std::map<std::string, std::string> nested = locals;
+                std::map<std::string, TypeRef> nested_type_refs = local_type_refs;
                 if (enum_has_payloads(*en) && variant && *variant != "_") {
                     if (const EnumValueDecl* value = enum_variant_decl(*en, *variant)) {
                         const std::string payload = "__dudu_case_" +
@@ -146,6 +163,7 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                             const EnumPayloadField& field =
                                 value->payload_fields[binding.field_index];
                             nested[binding.name] = field.type;
+                            nested_type_refs[binding.name] = field.type_ref;
                             out << indent(depth + 1) << "auto&& " << binding.name << " = "
                                 << payload << "." << field.name << ";\n";
                         }
@@ -156,13 +174,13 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                         << lower_expr(child.guard_expr, aliases, nested, symbols, options)
                         << ") {\n";
                     out << indent(depth + 2) << matched << " = true;\n";
-                    emit_block(out, child.children, depth + 2, aliases, nested, return_type,
-                               function_returns, symbols, options);
+                    emit_block(out, child.children, depth + 2, aliases, nested, nested_type_refs,
+                               return_type, function_returns, symbols, options);
                     out << indent(depth + 1) << "}\n";
                 } else {
                     out << indent(depth + 1) << matched << " = true;\n";
-                    emit_block(out, child.children, depth + 1, aliases, nested, return_type,
-                               function_returns, symbols, options);
+                    emit_block(out, child.children, depth + 1, aliases, nested, nested_type_refs,
+                               return_type, function_returns, symbols, options);
                 }
                 out << indent(depth) << "}\n";
             }
@@ -185,8 +203,8 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                 << lower_expr(child.pattern_expr, aliases, locals, symbols, options) << ":\n";
         }
         out << indent(depth + 1) << "{\n";
-        emit_block(out, child.children, depth + 2, aliases, locals, return_type, function_returns,
-                   symbols, options);
+        emit_block(out, child.children, depth + 2, aliases, locals, local_type_refs, return_type,
+                   function_returns, symbols, options);
         out << indent(depth + 2) << "break;\n";
         out << indent(depth + 1) << "}\n";
     }

@@ -211,6 +211,10 @@ Already structured:
 - generated local C++ type inference unwraps parsed receiver/pointer child
   types through the shared `TypeRef` helper instead of reading child text
   directly
+- generated C++ block emission now preserves parsed local `TypeRef` metadata
+  alongside emitted local type strings, so nested statements, match payload
+  bindings, local indexing, and expected generic method lowering can use the
+  structured local type path
 - generated local C++ type inference resolves method-call result types from
   parsed callee receiver expressions, so `make_counter().get()` does not
   depend on splitting a dotted callee string
