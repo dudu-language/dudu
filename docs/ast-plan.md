@@ -1501,6 +1501,9 @@ LSP source edits are also moving to AST-owned ranges:
 - Function-value typed inference now builds `TypeKind::Function` nodes from
   `FunctionSignature` metadata directly, instead of rendering `fn(...)` text
   and reparsing it.
+- Native overload matching now uses the shared structured signature parameter
+  helper, so missing parsed refs fall back consistently instead of open-coding
+  another params-string parse path.
 
 Expression parsing has moved onto the lexer/token stream:
 

@@ -4,6 +4,7 @@
 #include "dudu/cpp_lower.hpp"
 #include "dudu/native_signature_templates.hpp"
 #include "dudu/sema_common.hpp"
+#include "dudu/sema_function_type.hpp"
 #include "dudu/source.hpp"
 #include "dudu/type_compat.hpp"
 
@@ -156,8 +157,9 @@ std::string replace_explicit_template_args(std::string type, const std::vector<s
     return type;
 }
 
-std::map<std::string, std::string> explicit_template_bindings(const std::vector<std::string>& names,
-                                                              const std::vector<std::string>& args) {
+std::map<std::string, std::string>
+explicit_template_bindings(const std::vector<std::string>& names,
+                           const std::vector<std::string>& args) {
     std::map<std::string, std::string> out;
     for (size_t i = 0; i < args.size() && i < names.size(); ++i) {
         out.emplace(names[i], args[i]);
@@ -187,8 +189,8 @@ FunctionSignature substitute_template_signature(FunctionSignature signature,
                 substitute_type_ref(signature.param_type_refs[i], bindings);
             signature.params[i] = substitute_type_ref_text(signature.param_type_refs[i], {});
         } else {
-            signature.params[i] = replace_explicit_template_args(std::move(signature.params[i]),
-                                                                 names, args);
+            signature.params[i] =
+                replace_explicit_template_args(std::move(signature.params[i]), names, args);
         }
     }
     if (has_type_ref(signature.return_type_ref)) {
@@ -278,11 +280,7 @@ std::string signature_text(const std::string& callee, const FunctionSignature& s
 }
 
 TypeRef signature_param_ref(const FunctionSignature& signature, size_t index) {
-    if (index < signature.param_type_refs.size() &&
-        has_type_ref(signature.param_type_refs[index])) {
-        return signature.param_type_refs[index];
-    }
-    return index < signature.params.size() ? parse_type_text(signature.params[index]) : TypeRef{};
+    return signature_param_type_ref(signature, index);
 }
 
 std::string signature_param_text(const FunctionSignature& signature, size_t index) {

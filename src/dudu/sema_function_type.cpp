@@ -42,7 +42,8 @@ TypeRef function_type_ref(const FunctionSignature& signature, SourceLocation loc
 }
 
 TypeRef signature_param_type_ref(const FunctionSignature& signature, size_t index) {
-    if (index < signature.param_type_refs.size()) {
+    if (index < signature.param_type_refs.size() &&
+        has_type_ref(signature.param_type_refs[index])) {
         return signature.param_type_refs[index];
     }
     if (index < signature.params.size()) {
