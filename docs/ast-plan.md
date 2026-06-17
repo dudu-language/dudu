@@ -329,6 +329,10 @@ Already structured:
 - `TypeRef` assignment compatibility for annotated local initializers keeps
   `list`, `set`, `dict`, `Option`, and `Result` expected types on parsed
   template-child nodes instead of rendering them back to strings first
+- the string-facing assignment compatibility entry point now routes container,
+  `Option`, `Result`, and `variant` literal checks through the parsed
+  `TypeRef` helper, removing the duplicate manual template-text path for those
+  forms
 - annotated assignment compatibility now parses inferred Dudu-shaped `got`
   types back into `TypeRef` nodes and tries structural compatibility before
   falling back to native spelling compatibility

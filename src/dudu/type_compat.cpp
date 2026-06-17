@@ -91,72 +91,6 @@ std::string simple_literal_type(const Expr& expr) {
     }
 }
 
-bool literal_assignable_to(const std::string& expected, const Expr& expr) {
-    const std::string got = simple_literal_type(expr);
-    if (got == "number") {
-        const TypeRef expected_ref = parse_type_text(expected);
-        if (expected_ref.kind == TypeKind::Template && expected_ref.name == "variant") {
-            return assignment_type_allowed(expected_ref, expr,
-                                           expr.kind == ExprKind::FloatLiteral ? "f64" : "i32");
-        }
-        return is_numeric_type(wrapped_type_arg(expected));
-    }
-    return assignment_type_allowed(expected, expr, got);
-}
-
-bool is_container_literal(const std::string& expected, const Expr& expr) {
-    const std::vector<std::string> list_args = template_type_arg_texts(expected, "list");
-    if (!list_args.empty()) {
-        if (expr.kind != ExprKind::ListLiteral) {
-            return false;
-        }
-        if (list_args.size() != 1) {
-            return false;
-        }
-        for (const Expr& entry : expr.children) {
-            if (!literal_assignable_to(list_args[0], entry)) {
-                return false;
-            }
-        }
-        return true;
-    }
-    const std::vector<std::string> set_args = template_type_arg_texts(expected, "set");
-    if (!set_args.empty()) {
-        if (expr.kind != ExprKind::SetLiteral) {
-            return false;
-        }
-        if (set_args.size() != 1) {
-            return false;
-        }
-        for (const Expr& entry : expr.children) {
-            if (!literal_assignable_to(set_args[0], entry)) {
-                return false;
-            }
-        }
-        return true;
-    }
-    const std::vector<std::string> dict_args = template_type_arg_texts(expected, "dict");
-    if (dict_args.empty()) {
-        return false;
-    }
-    if (expr.kind == ExprKind::SetLiteral && expr.children.empty()) {
-        return true;
-    }
-    if (expr.kind != ExprKind::DictLiteral) {
-        return false;
-    }
-    if (dict_args.size() != 2) {
-        return false;
-    }
-    for (const Expr& entry : expr.children) {
-        if (entry.children.size() != 2 || !literal_assignable_to(dict_args[0], entry.children[0]) ||
-            !literal_assignable_to(dict_args[1], entry.children[1])) {
-            return false;
-        }
-    }
-    return true;
-}
-
 bool is_container_literal_expr(const Expr& expr) {
     return expr.kind == ExprKind::ListLiteral || expr.kind == ExprKind::SetLiteral ||
            expr.kind == ExprKind::DictLiteral;
@@ -282,32 +216,6 @@ std::string normalize_c_tags(std::string type) {
     return type;
 }
 
-bool is_result_value(const std::string& expected, const Expr& expr, const std::string& got) {
-    const std::vector<std::string> parts = template_type_arg_texts(expected, "Result");
-    if (parts.size() != 2 || expr.kind != ExprKind::Call || expr.children.size() != 1) {
-        return false;
-    }
-    if (starts_with(got, "Ok[") && got.back() == ']' && expr.name == "Ok") {
-        return assignment_type_allowed(parts[0], expr.children.front(),
-                                       got.substr(3, got.size() - 4));
-    }
-    if (starts_with(got, "Err[") && got.back() == ']' && expr.name == "Err") {
-        return assignment_type_allowed(parts[1], expr.children.front(),
-                                       got.substr(4, got.size() - 5));
-    }
-    return false;
-}
-
-bool is_option_value(const std::string& expected, const Expr& expr, const std::string& got) {
-    const std::vector<std::string> parts = template_type_arg_texts(expected, "Option");
-    if (parts.size() != 1) {
-        return false;
-    }
-    const std::string& inner = parts[0];
-    return expr.kind == ExprKind::NoneLiteral || got == inner ||
-           (is_numeric_type(wrapped_type_arg(inner)) && simple_literal_type(expr) == "number");
-}
-
 bool is_variant_value(const TypeRef& expected, const Expr& expr, const std::string& got) {
     if (expected.kind != TypeKind::Template || expected.name != "variant" ||
         expected.children.empty()) {
@@ -397,17 +305,16 @@ bool assignment_type_allowed(const std::string& expected, const Expr& expr,
                              const std::string& got) {
     const std::string normalized_expected = normalize_cpp_type_artifacts(expected);
     const std::string normalized_got = normalize_cpp_type_artifacts(got);
+    const TypeRef expected_ref = parse_type_text(normalized_expected);
     return normalized_expected == "auto" || is_explicit_cast_to(normalized_expected, expr) ||
-           is_container_literal(normalized_expected, expr) ||
+           parsed_expected_literal_assignment_allowed(expected_ref, expr, normalized_got) ||
            (!is_container_literal_expr(expr) && normalized_got.empty()) ||
            normalized_got == "auto" || normalized_got == normalized_expected ||
            compact_type(normalized_expected) == compact_type(normalized_got) ||
-           is_variant_value(parse_type_text(normalized_expected), expr, normalized_got) ||
-           is_option_value(normalized_expected, expr, normalized_got) ||
+           is_variant_value(expected_ref, expr, normalized_got) ||
            compact_type(normalize_c_tags(normalized_expected)) ==
                compact_type(normalize_c_tags(normalized_got)) ||
            (is_string_type(normalized_expected) && is_string_type(normalized_got)) ||
-           is_result_value(normalized_expected, expr, normalized_got) ||
            is_value_wrapper_assignment(normalized_expected, expr, normalized_got) ||
            is_null_pointer(normalized_expected, expr, normalized_got) ||
            is_void_pointer_target(normalized_expected, normalized_got) ||
