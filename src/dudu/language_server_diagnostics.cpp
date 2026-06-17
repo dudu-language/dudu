@@ -1,6 +1,7 @@
 #include "dudu/language_server_diagnostics.hpp"
 
 #include "dudu/cpp_lower.hpp"
+#include "dudu/language_server_ast_lints.hpp"
 #include "dudu/language_server_json.hpp"
 #include "dudu/language_server_support.hpp"
 #include "dudu/module_loader.hpp"
@@ -12,10 +13,8 @@
 #include <cctype>
 #include <cstdlib>
 #include <filesystem>
-#include <map>
 #include <optional>
 #include <regex>
-#include <set>
 #include <sstream>
 #include <string_view>
 
@@ -67,65 +66,6 @@ std::optional<std::string> missing_pkg_config_package(const ProjectConfig& confi
     return std::nullopt;
 }
 
-std::string visible_local_type(const std::vector<LintLocal>& active_decls,
-                               const std::string& name) {
-    for (auto it = active_decls.rbegin(); it != active_decls.rend(); ++it) {
-        if (it->name == name) {
-            return it->type;
-        }
-    }
-    return {};
-}
-
-bool is_suspicious_numeric_cast(const std::string& target, std::string source) {
-    source = trim_copy(std::move(source));
-    if (target == source) {
-        return false;
-    }
-    static const std::map<std::string, int> integer_bits = {
-        {"i8", 8},   {"u8", 8},   {"i16", 16}, {"u16", 16},   {"i32", 32},
-        {"u32", 32}, {"i64", 64}, {"u64", 64}, {"isize", 64}, {"usize", 64},
-    };
-    const bool source_float = source == "f32" || source == "f64";
-    const auto source_integer = integer_bits.find(source);
-    const auto target_integer = integer_bits.find(target);
-    if (source_float && target_integer != integer_bits.end()) {
-        return true;
-    }
-    if (source == "f64" && target == "f32") {
-        return true;
-    }
-    if (source_integer != integer_bits.end() && target_integer != integer_bits.end() &&
-        target_integer->second < source_integer->second) {
-        return true;
-    }
-    if (source_integer != integer_bits.end() && target == "f32" && source_integer->second > 24) {
-        return true;
-    }
-    return false;
-}
-
-void lint_suspicious_casts(const std::string& line, const std::vector<LintLocal>& active_decls,
-                           const Document& doc, int row, std::vector<Diagnostic>& out) {
-    static const std::regex cast_call(
-        R"(\b(i8|i16|i32|i64|u8|u16|u32|u64|isize|usize|f32|f64)\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*\))");
-    for (std::sregex_iterator it(line.begin(), line.end(), cast_call), end; it != end; ++it) {
-        const std::string target = (*it)[1].str();
-        const std::string source_name = (*it)[2].str();
-        const std::string source_type = visible_local_type(active_decls, source_name);
-        if (source_type.empty() || !is_suspicious_numeric_cast(target, source_type)) {
-            continue;
-        }
-        out.push_back({.location = {.file = doc.path,
-                                    .line = row,
-                                    .column = static_cast<int>(it->position(0)) + 1},
-                       .message = "suspicious narrowing cast: " + target + "(" + source_name +
-                                  ") from " + source_type,
-                       .source = "dudu/lint",
-                       .severity = 2});
-    }
-}
-
 bool contains_identifier(const std::string& line, const std::string& name) {
     for (size_t start = 0; start < line.size();) {
         if (!identifier_char(line[start])) {
@@ -172,125 +112,6 @@ int bracket_delta(const std::string& line) {
         }
     }
     return delta;
-}
-
-bool same_source_file(const std::filesystem::path& lhs, const std::filesystem::path& rhs) {
-    if (lhs.empty() || rhs.empty()) {
-        return lhs == rhs;
-    }
-    std::error_code error;
-    const std::filesystem::path lhs_canonical = std::filesystem::weakly_canonical(lhs, error);
-    if (error) {
-        return lhs.lexically_normal() == rhs.lexically_normal();
-    }
-    const std::filesystem::path rhs_canonical = std::filesystem::weakly_canonical(rhs, error);
-    if (error) {
-        return lhs.lexically_normal() == rhs.lexically_normal();
-    }
-    return lhs_canonical == rhs_canonical;
-}
-
-void lint_cpp_escape_expr(const Expr& expr, const Document& doc,
-                          std::set<std::pair<int, int>>& seen, std::vector<Diagnostic>& out);
-
-void lint_cpp_escape_stmt(const Stmt& stmt, const Document& doc,
-                          std::set<std::pair<int, int>>& seen, std::vector<Diagnostic>& out) {
-    if (!same_source_file(stmt.location.file, doc.path)) {
-        return;
-    }
-    if (stmt.kind == StmtKind::CppEscape &&
-        seen.insert({stmt.location.line, stmt.location.column}).second) {
-        out.push_back({.location = stmt.location,
-                       .message = "native interop hazard: raw cpp escape hatch",
-                       .source = "dudu/lint",
-                       .severity = 2});
-    }
-    lint_cpp_escape_expr(stmt.expr, doc, seen, out);
-    lint_cpp_escape_expr(stmt.value_expr, doc, seen, out);
-    lint_cpp_escape_expr(stmt.target_expr, doc, seen, out);
-    lint_cpp_escape_expr(stmt.condition_expr, doc, seen, out);
-    lint_cpp_escape_expr(stmt.message_expr, doc, seen, out);
-    lint_cpp_escape_expr(stmt.iterable_expr, doc, seen, out);
-    lint_cpp_escape_expr(stmt.pattern_expr, doc, seen, out);
-    lint_cpp_escape_expr(stmt.guard_expr, doc, seen, out);
-    for (const Stmt& child : stmt.children) {
-        lint_cpp_escape_stmt(child, doc, seen, out);
-    }
-}
-
-void lint_cpp_escape_expr(const Expr& expr, const Document& doc,
-                          std::set<std::pair<int, int>>& seen, std::vector<Diagnostic>& out) {
-    if (expr.kind == ExprKind::Unknown) {
-        return;
-    }
-    if (expr.kind == ExprKind::CppEscape && same_source_file(expr.location.file, doc.path) &&
-        seen.insert({expr.location.line, expr.location.column}).second) {
-        out.push_back({.location = expr.location,
-                       .message = "native interop hazard: raw cpp escape hatch",
-                       .source = "dudu/lint",
-                       .severity = 2});
-    }
-    for (const Expr& child : expr.callee) {
-        lint_cpp_escape_expr(child, doc, seen, out);
-    }
-    for (const Expr& child : expr.params) {
-        lint_cpp_escape_expr(child, doc, seen, out);
-    }
-    for (const Expr& child : expr.template_args) {
-        lint_cpp_escape_expr(child, doc, seen, out);
-    }
-    for (const Expr& child : expr.children) {
-        lint_cpp_escape_expr(child, doc, seen, out);
-    }
-}
-
-void lint_cpp_escape_function(const FunctionDecl& fn, const Document& doc,
-                              std::set<std::pair<int, int>>& seen, std::vector<Diagnostic>& out) {
-    for (const Stmt& stmt : fn.statements) {
-        lint_cpp_escape_stmt(stmt, doc, seen, out);
-    }
-}
-
-void lint_cpp_escape_class(const ClassDecl& klass, const Document& doc,
-                           std::set<std::pair<int, int>>& seen, std::vector<Diagnostic>& out) {
-    for (const FieldDecl& field : klass.fields) {
-        lint_cpp_escape_expr(field.value_expr, doc, seen, out);
-    }
-    for (const ConstDecl& constant : klass.constants) {
-        lint_cpp_escape_expr(constant.value_expr, doc, seen, out);
-    }
-    for (const ConstDecl& field : klass.static_fields) {
-        lint_cpp_escape_expr(field.value_expr, doc, seen, out);
-    }
-    for (const FunctionDecl& method : klass.methods) {
-        lint_cpp_escape_function(method, doc, seen, out);
-    }
-}
-
-void lint_cpp_escape_module(const ModuleAst& module, const Document& doc,
-                            std::set<std::pair<int, int>>& seen, std::vector<Diagnostic>& out) {
-    for (const ConstDecl& constant : module.constants) {
-        lint_cpp_escape_expr(constant.value_expr, doc, seen, out);
-    }
-    for (const StaticAssertDecl& assertion : module.static_asserts) {
-        lint_cpp_escape_expr(assertion.expression_expr, doc, seen, out);
-    }
-    for (const FunctionDecl& fn : module.functions) {
-        lint_cpp_escape_function(fn, doc, seen, out);
-    }
-    for (const ClassDecl& klass : module.classes) {
-        lint_cpp_escape_class(klass, doc, seen, out);
-    }
-    for (const ModuleAst& unit : module.module_units) {
-        lint_cpp_escape_module(unit, doc, seen, out);
-    }
-}
-
-std::vector<Diagnostic> ast_lint_diagnostics(const ModuleAst& module, const Document& doc) {
-    std::vector<Diagnostic> out;
-    std::set<std::pair<int, int>> seen_cpp_escapes;
-    lint_cpp_escape_module(module, doc, seen_cpp_escapes, out);
-    return out;
 }
 
 std::vector<Diagnostic> lint_diagnostics(const Document& doc) {
@@ -367,7 +188,6 @@ std::vector<Diagnostic> lint_diagnostics(const Document& doc) {
                 }
             }
         }
-        lint_suspicious_casts(line, active_decls, doc, row, out);
         if (std::regex_search(line, match, local_decl)) {
             const std::string name = match[2].str();
             const std::string type = trim_copy(match[3].str());

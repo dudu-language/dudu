@@ -49,6 +49,7 @@ add_library(dudu_frontend
     src/dudu/format.cpp
     src/dudu/format_path.cpp
     src/dudu/language_server.cpp
+    src/dudu/language_server_ast_lints.cpp
     src/dudu/language_server_code_actions.cpp
     src/dudu/language_server_completion.cpp
     src/dudu/language_server_definition.cpp
