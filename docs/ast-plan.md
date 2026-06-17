@@ -440,6 +440,10 @@ Already structured:
 - pointer/reference assignment compatibility uses parsed `TypeRef` pointer,
   reference, and const-wrapper nodes instead of testing `*`, `&`, and
   `*const[...]` spelling by hand
+- `TypeRef`-backed pointer/reference compatibility now also handles void
+  pointer targets, const pointer binding, pointer-to-reference values, value
+  from reference/const wrappers, and native function-pointer compatibility
+  before falling back to string-facing native spelling checks
 - the `TypeRef` to `TypeRef` compatibility path now performs structural
   matching for pointers, references, const/transparent wrappers, templates,
   fixed arrays, and function types before falling back to native spelling

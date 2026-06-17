@@ -33,17 +33,41 @@ std::string wrapped_type_arg(std::string type) {
     return type;
 }
 
+std::string wrapped_type_arg(const TypeRef& type) {
+    if (const auto inner =
+            unary_type_child_text(type, {TypeKind::Const, TypeKind::Atomic, TypeKind::Volatile,
+                                         TypeKind::Device, TypeKind::Storage, TypeKind::Shared})) {
+        return *inner;
+    }
+    return substitute_type_ref_text(type, {});
+}
+
 std::optional<std::string> unary_child(std::string type, TypeKind kind) {
     type = trim_copy(std::move(type));
     return unary_type_child_text(parse_type_text(type), kind);
+}
+
+std::optional<TypeRef> unary_child_ref(const TypeRef& type, TypeKind kind) {
+    if (type.kind != kind || type.children.size() != 1) {
+        return std::nullopt;
+    }
+    return type.children.front();
 }
 
 std::optional<std::string> pointer_pointee(std::string type) {
     return unary_child(std::move(type), TypeKind::Pointer);
 }
 
+std::optional<TypeRef> pointer_pointee_ref(const TypeRef& type) {
+    return unary_child_ref(type, TypeKind::Pointer);
+}
+
 std::optional<std::string> reference_target(std::string type) {
     return unary_child(std::move(type), TypeKind::Reference);
+}
+
+std::optional<TypeRef> reference_target_ref(const TypeRef& type) {
+    return unary_child_ref(type, TypeKind::Reference);
 }
 
 std::string compact_type(std::string type) {
@@ -104,10 +128,24 @@ bool is_reference_binding(std::string expected, std::string got) {
     return false;
 }
 
+bool is_reference_binding(const TypeRef& expected, const TypeRef& got) {
+    if (const auto target = reference_target_ref(expected)) {
+        return wrapped_type_arg(*target) == substitute_type_ref_text(got, {});
+    }
+    return false;
+}
+
 bool is_value_from_reference(std::string expected, std::string got) {
     expected = trim_copy(std::move(expected));
     if (const auto target = reference_target(std::move(got))) {
         return expected == wrapped_type_arg(*target);
+    }
+    return false;
+}
+
+bool is_value_from_reference(const TypeRef& expected, const TypeRef& got) {
+    if (const auto target = reference_target_ref(got)) {
+        return substitute_type_ref_text(expected, {}) == wrapped_type_arg(*target);
     }
     return false;
 }
@@ -138,6 +176,16 @@ bool is_void_pointer_target(std::string expected, std::string got) {
            wrapped_type_arg(*expected_pointee) == "const[void]";
 }
 
+bool is_void_pointer_target(const TypeRef& expected, const TypeRef& got) {
+    const auto expected_pointee = pointer_pointee_ref(expected);
+    const auto got_pointee = pointer_pointee_ref(got);
+    if (!expected_pointee || !got_pointee) {
+        return false;
+    }
+    return wrapped_type_arg(*expected_pointee) == "void" ||
+           wrapped_type_arg(*expected_pointee) == "const[void]";
+}
+
 bool is_const_pointer_binding(std::string expected, std::string got) {
     const auto expected_pointee = pointer_pointee(std::move(expected));
     const auto got_pointee = pointer_pointee(std::move(got));
@@ -148,6 +196,17 @@ bool is_const_pointer_binding(std::string expected, std::string got) {
     return expected_const_inner && wrapped_type_arg(*got_pointee) == *expected_const_inner;
 }
 
+bool is_const_pointer_binding(const TypeRef& expected, const TypeRef& got) {
+    const auto expected_pointee = pointer_pointee_ref(expected);
+    const auto got_pointee = pointer_pointee_ref(got);
+    if (!expected_pointee || !got_pointee) {
+        return false;
+    }
+    const auto expected_const_inner = unary_child_ref(*expected_pointee, TypeKind::Const);
+    return expected_const_inner &&
+           wrapped_type_arg(*got_pointee) == substitute_type_ref_text(*expected_const_inner, {});
+}
+
 bool is_pointer_to_reference_value(std::string expected, std::string got) {
     const auto expected_pointee = pointer_pointee(std::move(expected));
     const auto got_pointee = pointer_pointee(std::move(got));
@@ -155,6 +214,17 @@ bool is_pointer_to_reference_value(std::string expected, std::string got) {
         return false;
     }
     const auto got_reference_target = reference_target(*got_pointee);
+    return got_reference_target &&
+           wrapped_type_arg(*expected_pointee) == wrapped_type_arg(*got_reference_target);
+}
+
+bool is_pointer_to_reference_value(const TypeRef& expected, const TypeRef& got) {
+    const auto expected_pointee = pointer_pointee_ref(expected);
+    const auto got_pointee = pointer_pointee_ref(got);
+    if (!expected_pointee || !got_pointee) {
+        return false;
+    }
+    const auto got_reference_target = reference_target_ref(*got_pointee);
     return got_reference_target &&
            wrapped_type_arg(*expected_pointee) == wrapped_type_arg(*got_reference_target);
 }
@@ -203,6 +273,12 @@ bool is_native_function_pointer(std::string expected, std::string got) {
     expected = trim_copy(std::move(expected));
     got = trim_copy(std::move(got));
     return expected == "*void" && starts_with(normalize_function_type(std::move(got)), "fn(");
+}
+
+bool is_native_function_pointer(const TypeRef& expected, const TypeRef& got) {
+    const auto expected_pointee = pointer_pointee_ref(expected);
+    return expected_pointee && wrapped_type_arg(*expected_pointee) == "void" &&
+           got.kind == TypeKind::Function;
 }
 
 std::string normalize_c_tags(std::string type) {
@@ -272,6 +348,12 @@ bool is_value_from_const(std::string expected, std::string got) {
     return inner.has_value() && compact_type(expected) == compact_type(*inner);
 }
 
+bool is_value_from_const(const TypeRef& expected, const TypeRef& got) {
+    const auto inner = unary_child_ref(got, TypeKind::Const);
+    return inner.has_value() && compact_type(substitute_type_ref_text(expected, {})) ==
+                                    compact_type(substitute_type_ref_text(*inner, {}));
+}
+
 } // namespace
 
 bool type_assignment_allowed(const std::string& expected, const std::string& got) {
@@ -309,6 +391,10 @@ bool type_assignment_allowed(const TypeRef& expected, const TypeRef& got) {
         return true;
     }
     return structural_type_assignment_allowed(expected, got) ||
+           is_void_pointer_target(expected, got) || is_const_pointer_binding(expected, got) ||
+           is_pointer_to_reference_value(expected, got) || is_reference_binding(expected, got) ||
+           is_value_from_reference(expected, got) || is_value_from_const(expected, got) ||
+           is_native_function_pointer(expected, got) ||
            type_assignment_allowed(normalized_expected, normalized_got);
 }
 
@@ -366,6 +452,18 @@ bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const st
     }
     if (is_variant_value(normalized_expected_ref, expr, normalized_got)) {
         return true;
+    }
+    if (!normalized_got.empty() && normalized_got != "auto") {
+        const TypeRef got_ref = parse_type_text(normalized_got);
+        if (is_void_pointer_target(normalized_expected_ref, got_ref) ||
+            is_const_pointer_binding(normalized_expected_ref, got_ref) ||
+            is_pointer_to_reference_value(normalized_expected_ref, got_ref) ||
+            is_reference_binding(normalized_expected_ref, got_ref) ||
+            is_value_from_reference(normalized_expected_ref, got_ref) ||
+            is_value_from_const(normalized_expected_ref, got_ref) ||
+            is_native_function_pointer(normalized_expected_ref, got_ref)) {
+            return true;
+        }
     }
     return normalized_expected == "auto" || is_explicit_cast_to(normalized_expected, expr) ||
            (!is_container_literal_expr(expr) && normalized_got.empty()) ||

@@ -511,7 +511,11 @@ push. They are not release packaging work.
    template-child nodes for local initializer checks instead of rendering those
    shapes back to strings first. Type-to-type compatibility now structurally
    matches parsed pointer, reference, wrapper, template, and function type
-   nodes before falling back to native spelling compatibility. Typed `for`
+   nodes before falling back to native spelling compatibility.
+   Pointer/reference compatibility now handles void pointer targets, const
+   pointer binding, pointer-to-reference values, value from reference/const
+   wrappers, and native function-pointer compatibility through parsed
+   `TypeRef` nodes before native spelling fallback. Typed `for`
    loop binding checks now compare against the parsed binding `TypeRef` before
    using alias/native spelling fallback, and render fallback diagnostics from
    the parsed binding `TypeRef` instead of compatibility type text. Delete/free
