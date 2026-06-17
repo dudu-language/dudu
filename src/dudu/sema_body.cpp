@@ -331,7 +331,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
         const std::string explicit_element = explicit_array_element_type(stmt.type_ref);
         if (!explicit_shape.empty() && stmt.value_expr.kind == ExprKind::ListLiteral) {
             const ArrayShapeInference actual =
-                infer_array_literal_shape_type("array[" + explicit_element + "]", stmt.value_expr);
+                infer_array_literal_shape_type(stmt.type_ref.children.front(), stmt.value_expr);
             if (actual.status == ArrayShapeStatus::RaggedLiteral) {
                 sema_fail(node_location(stmt.location, stmt.value_expr), "ragged array literal");
             }

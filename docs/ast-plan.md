@@ -263,7 +263,9 @@ Already structured:
   `array_shape.cpp`
 - local declaration array shape inference and explicit-shape checks now use
   the parsed statement `TypeRef` directly instead of reparsing the annotated
-  type string
+  type string; explicit fixed-array literal checks infer the initializer shape
+  from the parsed `array[T]` storage child rather than synthesizing and
+  reparsing an `array[...]` type string
 - exception binding locals construct their `&const[T]` `TypeRef` directly
   from the parsed catch type instead of reparsing a synthesized type string
 - local declaration C++ emission checks `Option`, fixed arrays, and
