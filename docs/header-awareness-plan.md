@@ -181,6 +181,8 @@ Dudu currently discovers and registers:
 - C++ class fields, methods, and non-default constructor signatures
 - imported C++ base classes for inherited method lookup
 - derived-to-base pointer/reference assignment for imported C++ classes
+- C++ free-function operator overload signatures for binary operators in
+  imported namespaces
 
 Discovered type names enter the same symbol path used by manual `type Name`
 declarations. Direct imports also expose native values, macros, functions,
@@ -238,7 +240,6 @@ per-candidate reasons for arity or the first parameter mismatch, such as
 
 Richer constructs still need deeper modeling:
 
-- overloaded operators
 - deeper references and const correctness
 - destructor semantics
 
@@ -271,6 +272,11 @@ The standard-library algorithm fixture validates real `std::vector`,
 interop without wrapper headers. It remains outside the fast test suite because
 scanning standard-library headers is deliberately slower than ordinary compiler
 fixtures.
+
+Imported C++ free-function operators such as `namespace math { Vec2
+operator+(Vec2, int); }` are scanned as native overloads and binary-expression
+sema selects among them using both operands before falling back to ordinary
+same-type foreign C++ behavior.
 
 ## Cache
 

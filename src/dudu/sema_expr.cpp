@@ -163,7 +163,9 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
             return "bool";
         }
         if (is_comparison_op(expr.op)) {
-            if (const auto signature = dudu_operator_signature(scope.symbols, expr.op, left)) {
+            if (const auto signature =
+                    binary_operator_signature(scope.symbols, expr.op, left, expr.children[1],
+                                              right)) {
                 if (use_location != nullptr) {
                     if (signature->params.size() != 1) {
                         sema_expr_fail(*use_location, "operator " + expr.op +
@@ -189,7 +191,8 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
             }
             return "bool";
         }
-        if (const auto signature = dudu_operator_signature(scope.symbols, expr.op, left)) {
+        if (const auto signature =
+                binary_operator_signature(scope.symbols, expr.op, left, expr.children[1], right)) {
             if (use_location != nullptr) {
                 check_call_args_ast(scope, expr.op, *signature, std::vector<Expr>{expr.children[1]},
                                     use_location);

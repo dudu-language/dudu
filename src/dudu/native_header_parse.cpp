@@ -139,7 +139,8 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
     static const std::regex template_type_param(
         R"(TemplateTypeParmDecl.*\bindex [0-9]+ (?:\.\.\. )?([A-Za-z_][A-Za-z0-9_]*)$)");
     static const std::regex ns_decl(R"(NamespaceDecl.*\b([A-Za-z_][A-Za-z0-9_]*)$)");
-    static const std::regex fn_decl(R"(FunctionDecl.*\b([A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
+    static const std::regex fn_decl(
+        R"(FunctionDecl.*\b((?:operator[^\s']+)|[A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
     static const std::regex method_decl(R"(CXXMethodDecl.*\b([A-Za-z_][A-Za-z0-9_]*) '([^']*)')");
     static const std::regex ctor_decl(
         R"(CXXConstructorDecl.*\b([A-Za-z_][A-Za-z0-9_]*) '([^']*)')");

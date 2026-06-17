@@ -3,5 +3,5 @@ import cpp "cpp_operator_overload.hpp" as dudu_op
 
 def main() -> i32:
     value: dudu_op.Vec2 = dudu_op.Vec2(1, 2)
-    result = value + 1
+    result = value + "nope"
     return result.x

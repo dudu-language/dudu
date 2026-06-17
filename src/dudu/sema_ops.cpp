@@ -85,6 +85,50 @@ bool method_has_operator(const FunctionDecl& method, const std::string& op) {
     return false;
 }
 
+std::string operator_function_name(const std::string& op) {
+    return "operator" + op;
+}
+
+std::vector<std::string> native_operator_names_for_type(const std::string& type,
+                                                        const std::string& op) {
+    std::vector<std::string> names;
+    const std::string op_name = operator_function_name(op);
+    const size_t dot = type.rfind('.');
+    if (dot != std::string::npos) {
+        names.push_back(type.substr(0, dot) + "." + op_name);
+    }
+    names.push_back(op_name);
+    return names;
+}
+
+std::optional<FunctionSignature> native_operator_signature(const Symbols& symbols,
+                                                           const std::string& op,
+                                                           const std::string& left,
+                                                           const Expr* right_expr,
+                                                           const std::string& right) {
+    const std::string value_left = unwrap_value_type(symbols, left);
+    const std::string value_right = unwrap_value_type(symbols, right);
+    for (const std::string& name : native_operator_names_for_type(value_left, op)) {
+        const auto found = symbols.native_function_signatures.find(name);
+        if (found == symbols.native_function_signatures.end()) {
+            continue;
+        }
+        for (FunctionSignature signature : found->second) {
+            if (signature.params.size() < 2 ||
+                !type_assignment_allowed(signature.params.front(), value_left)) {
+                continue;
+            }
+            if (right_expr != nullptr &&
+                !assignment_type_allowed(signature.params[1], *right_expr, value_right)) {
+                continue;
+            }
+            signature.params.erase(signature.params.begin());
+            return signature;
+        }
+    }
+    return std::nullopt;
+}
+
 } // namespace
 
 std::optional<FunctionSignature>
@@ -110,6 +154,15 @@ dudu_operator_signature(const Symbols& symbols, const std::string& op, const std
         return signature;
     }
     return std::nullopt;
+}
+
+std::optional<FunctionSignature>
+binary_operator_signature(const Symbols& symbols, const std::string& op, const std::string& left,
+                          const Expr& right_expr, const std::string& right) {
+    if (const auto signature = dudu_operator_signature(symbols, op, left)) {
+        return signature;
+    }
+    return native_operator_signature(symbols, op, left, &right_expr, right);
 }
 
 bool binary_rhs_allowed(const Symbols& symbols, const std::string& op, const std::string& left,

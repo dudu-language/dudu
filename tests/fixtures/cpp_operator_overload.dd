@@ -5,7 +5,8 @@ def main() -> i32:
     left: dudu_op.Vec2 = dudu_op.Vec2(10, 20)
     right: dudu_op.Vec2 = dudu_op.Vec2(5, 7)
     total: dudu_op.Vec2 = left + right
+    shifted: dudu_op.Vec2 = total + 1
 
-    if total == dudu_op.Vec2(15, 27):
+    if shifted == dudu_op.Vec2(16, 28):
         return 42
     return 1
