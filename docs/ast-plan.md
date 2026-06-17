@@ -543,7 +543,8 @@ Already structured:
   text inside the module loader
 - semantic-token native lookups for member/callee expressions now derive the
   dotted path from parsed member nodes instead of reading the compatibility
-  expression text field first
+  expression text field first, and no longer fall back to compatibility text
+  when a parsed member path is unavailable
 - LSP symbol-at and reference collection locate member names from parsed
   receiver expression ranges instead of shifting by the compatibility
   expression text width
