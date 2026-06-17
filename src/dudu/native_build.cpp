@@ -60,15 +60,38 @@ std::string capture_command(const std::string& command) {
     return output;
 }
 
-std::string pkg_config_flags(const std::vector<std::string>& packages) {
-    if (packages.empty()) {
+std::string pkg_config_path_env(const ProjectConfig& config) {
+    std::string value;
+    for (const std::string& path : config.pkg_config_paths) {
+        if (!value.empty()) {
+            value += ":";
+        }
+        value += project_path(config, path).string();
+    }
+    const char* current = std::getenv("PKG_CONFIG_PATH");
+    if (current != nullptr && current[0] != '\0') {
+        if (!value.empty()) {
+            value += ":";
+        }
+        value += current;
+    }
+    return value;
+}
+
+std::string pkg_config_flags(const ProjectConfig& config) {
+    if (config.pkg_config_packages.empty()) {
         return {};
     }
     const char* env_pkg_config = std::getenv("PKG_CONFIG");
-    std::string command =
+    std::string command;
+    const std::string pkg_config_path = pkg_config_path_env(config);
+    if (!pkg_config_path.empty()) {
+        command += "PKG_CONFIG_PATH=" + shell_quote_arg(pkg_config_path) + " ";
+    }
+    command +=
         shell_quote_arg(env_pkg_config == nullptr ? "pkg-config" : std::string(env_pkg_config)) +
         " --cflags --libs";
-    for (const std::string& package : packages) {
+    for (const std::string& package : config.pkg_config_packages) {
         command += " " + shell_quote_arg(package);
     }
     return capture_command(command);
@@ -338,7 +361,7 @@ std::filesystem::path build_executable(const NativeBuildOptions& options, const 
         common_flags += " " + shell_quote_arg(flag);
     }
     append_target_mode_flags(common_flags, options.config.target_mode);
-    const std::string package_flags = pkg_config_flags(options.config.pkg_config_packages);
+    const std::string package_flags = pkg_config_flags(options.config);
     if (!package_flags.empty()) {
         common_flags += " " + package_flags;
     }

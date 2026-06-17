@@ -42,6 +42,46 @@ std::string read_text_file(const std::filesystem::path& path) {
     return {std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
 }
 
+std::optional<std::filesystem::path> find_executable_on_path(const std::filesystem::path& name) {
+    const char* env_path = std::getenv("PATH");
+    if (env_path == nullptr || name.empty() || name.has_parent_path()) {
+        return std::nullopt;
+    }
+    const std::string path = env_path;
+    size_t start = 0;
+    while (start <= path.size()) {
+        const size_t end = path.find(':', start);
+        const std::filesystem::path dir =
+            path.substr(start, end == std::string::npos ? std::string::npos : end - start);
+        const std::filesystem::path candidate = dir / name;
+        std::error_code error;
+        if (std::filesystem::exists(candidate, error) && !error) {
+            const std::filesystem::path canonical =
+                std::filesystem::weakly_canonical(candidate, error);
+            return error ? candidate : canonical;
+        }
+        if (end == std::string::npos) {
+            break;
+        }
+        start = end + 1;
+    }
+    return std::nullopt;
+}
+
+std::filesystem::path executable_path(char* executable) {
+    const std::filesystem::path raw = executable == nullptr ? "dudu" : executable;
+    if (const std::optional<std::filesystem::path> found = find_executable_on_path(raw)) {
+        return *found;
+    }
+    std::error_code error;
+    const std::filesystem::path absolute = std::filesystem::absolute(raw, error);
+    if (error) {
+        return raw;
+    }
+    const std::filesystem::path canonical = std::filesystem::weakly_canonical(absolute, error);
+    return error ? absolute : canonical;
+}
+
 void write_text_output(const std::optional<std::filesystem::path>& path, const std::string& text) {
     if (!path.has_value() || path->empty()) {
         std::cout << text;
@@ -130,7 +170,13 @@ ModuleAst checked_module(const CliOptions& options, const std::string& source, b
         module.build_values[name] = value;
     }
     const std::filesystem::path source_dir = source_dir_for_input(options.input);
-    merge_native_header_types(module, {.config = config, .source_dir = source_dir});
+    const NativeHeaderOptions native_header_options{.config = config, .source_dir = source_dir};
+    merge_native_header_types(module, native_header_options);
+    for (ModuleAst& unit : module.module_units) {
+        unit.build_values = module.build_values;
+        unit.target_mode_explicit = module.target_mode_explicit;
+        merge_native_header_types(unit, native_header_options);
+    }
     if (options.emit_modules) {
         analyze_module_tree(module, {.check_bodies = check_bodies});
     } else {
@@ -162,13 +208,16 @@ bool check_source_path(const CliOptions& options) {
 
 int run_build_command(const CliOptions& options, char* executable) {
     const ProjectConfig config = build_config_for_options(options);
+    const std::filesystem::path dudu_executable = executable_path(executable);
+    print_project_step(options.project_driver, "backend", config.build_backend);
+    print_project_step(options.project_driver, "entry", options.input);
     if (config.build_backend == "cmake") {
         print_project_step(options.project_driver, "cmake", cmake_backend_log_source(config));
         print_project_step(options.project_driver, "build", cmake_backend_log_build_dir(config));
         (void)build_cmake_project({.config = config,
                                    .input = options.input,
                                    .output = options.output,
-                                   .dudu_executable = executable,
+                                   .dudu_executable = dudu_executable,
                                    .verbose = options.verbose});
         return 0;
     }
@@ -184,16 +233,19 @@ int run_build_command(const CliOptions& options, char* executable) {
 
 int run_run_command(const CliOptions& options, char* executable) {
     const ProjectConfig config = build_config_for_options(options);
+    const std::filesystem::path dudu_executable = executable_path(executable);
     if (config.target_kind != "executable") {
         fail("cannot run target kind: " + config.target_kind);
     }
+    print_project_step(options.project_driver, "backend", config.build_backend);
+    print_project_step(options.project_driver, "entry", options.input);
     if (config.build_backend == "cmake") {
         print_project_step(options.project_driver, "cmake", cmake_backend_log_source(config));
         print_project_step(options.project_driver, "build", cmake_backend_log_build_dir(config));
         const std::filesystem::path bin = build_cmake_project({.config = config,
                                                                .input = options.input,
                                                                .output = options.output,
-                                                               .dudu_executable = executable,
+                                                               .dudu_executable = dudu_executable,
                                                                .verbose = options.verbose});
         print_project_step(options.project_driver, "run", bin);
         return std::system(shell_quote_path(bin).c_str()) == 0 ? 0 : 1;

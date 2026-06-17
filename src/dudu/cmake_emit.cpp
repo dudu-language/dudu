@@ -115,6 +115,21 @@ void emit_pkg_config(std::ostringstream& out, const ProjectConfig& config) {
     if (config.pkg_config_packages.empty()) {
         return;
     }
+    if (!config.pkg_config_paths.empty()) {
+        std::ostringstream paths;
+        for (size_t i = 0; i < config.pkg_config_paths.size(); ++i) {
+            if (i > 0) {
+                paths << ':';
+            }
+            paths << project_relative_path(config.project_dir, config.pkg_config_paths[i]).string();
+        }
+        out << "if(DEFINED ENV{PKG_CONFIG_PATH} AND NOT \"$ENV{PKG_CONFIG_PATH}\" STREQUAL \"\")\n"
+            << "    set(ENV{PKG_CONFIG_PATH} "
+            << cmake_quote(paths.str() + ":$ENV{PKG_CONFIG_PATH}") << ")\n"
+            << "else()\n"
+            << "    set(ENV{PKG_CONFIG_PATH} " << cmake_quote(paths.str()) << ")\n"
+            << "endif()\n";
+    }
     out << "find_package(PkgConfig REQUIRED)\n"
         << "pkg_check_modules(DUDU_PKG REQUIRED IMPORTED_TARGET";
     for (const std::string& package : config.pkg_config_packages) {
@@ -129,8 +144,8 @@ std::string emit_cmake_project(const ProjectConfig& config, const std::filesyste
     const std::string target = config.name.empty() ? input.stem().string() : config.name;
     const std::filesystem::path project_dir = project_dir_for_input(input);
     const std::string source_path = source_path_for_project(project_dir, input);
-    const std::filesystem::path generated_dir = std::filesystem::path("${CMAKE_CURRENT_BINARY_DIR}") /
-                                                "generated";
+    const std::filesystem::path generated_dir =
+        std::filesystem::path("${CMAKE_CURRENT_BINARY_DIR}") / "generated";
     const std::vector<std::filesystem::path> generated_sources = generated_module_sources(input);
     std::ostringstream out;
     out << "cmake_minimum_required(VERSION 3.20)\n\n"
@@ -142,8 +157,7 @@ std::string emit_cmake_project(const ProjectConfig& config, const std::filesyste
         << "set(DUDU_SOURCE " << cmake_quote(source_path) << ")\n"
         << "set(DUDU_GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)\n\n";
     emit_generated_module_list(out, "DUDU_GENERATED", "${DUDU_GENERATED_DIR}", generated_sources);
-    out
-        << "add_custom_command(\n"
+    out << "add_custom_command(\n"
         << "    OUTPUT ${DUDU_GENERATED}\n"
         << "    COMMAND ${CMAKE_COMMAND} -E make_directory ${DUDU_GENERATED_DIR}\n"
         << "    COMMAND ${DUDU_EXECUTABLE} emit-modules ${DUDU_PROJECT_DIR}/${DUDU_SOURCE} -o "

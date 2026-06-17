@@ -21,6 +21,7 @@ struct ProjectTarget {
     std::vector<std::string> libs;
     std::vector<std::string> link_flags;
     std::vector<std::string> pkg_config_packages;
+    std::vector<std::string> pkg_config_paths;
 };
 
 struct ProjectConfig {
@@ -48,6 +49,7 @@ struct ProjectConfig {
     std::vector<std::string> libs;
     std::vector<std::string> link_flags;
     std::vector<std::string> pkg_config_packages;
+    std::vector<std::string> pkg_config_paths;
     bool cmake_enabled = false;
     std::filesystem::path cmake_source;
     std::string cmake_target;

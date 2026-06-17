@@ -1,8 +1,8 @@
 #include "dudu/module_loader.hpp"
 
+#include "dudu/module_import_aliases.hpp"
 #include "dudu/parser.hpp"
 #include "dudu/source.hpp"
-#include "dudu/module_import_aliases.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -396,6 +396,7 @@ ModuleAst load_source_tree(const std::filesystem::path& entry) {
     for (const std::filesystem::path& path : ordered) {
         ModuleAst unit = loaded.at(path);
         add_import_aliases_for_unit(unit, path, loaded);
+        loaded[path] = unit;
         merged.module_units.push_back(unit);
         append_module(merged, unit);
     }

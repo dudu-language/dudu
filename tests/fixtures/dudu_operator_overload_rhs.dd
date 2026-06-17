@@ -1,0 +1,18 @@
+class Vec2:
+    x: i32
+    y: i32
+
+    @operator("*")
+    def mul_vec(self, other: Vec2) -> Vec2:
+        return Vec2(self.x * other.x, self.y * other.y)
+
+    @operator("*")
+    def mul_scalar(self, value: i32) -> Vec2:
+        return Vec2(self.x * value, self.y * value)
+
+
+def main() -> i32:
+    value = Vec2(4, 5)
+    scaled = value * 6
+    pairwise = value * Vec2(2, 3)
+    return scaled.x + scaled.y + pairwise.x + pairwise.y - 35

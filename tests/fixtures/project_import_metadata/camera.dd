@@ -1,0 +1,9 @@
+from vec3 import Vec3
+
+
+class Camera:
+    origin: Vec3
+
+
+def build_camera() -> Camera:
+    return Camera(origin=Vec3(4, 5))

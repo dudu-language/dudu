@@ -29,17 +29,27 @@ std::map<std::string, std::string> qualified_type_substitutions(const ModuleAst&
 }
 
 std::map<std::string, std::string> selective_type_substitutions(const ModuleAst& dependency,
-                                                               const ImportDecl& import) {
+                                                                const ImportDecl& import) {
     const std::string exposed_name = import.alias.empty() ? import.imported_name : import.alias;
     std::map<std::string, std::string> out;
     for (const TypeAliasDecl& alias : dependency.aliases) {
-        out[alias.name] = alias.name == import.imported_name ? exposed_name : alias.name;
+        out[alias.name] = alias.name == import.imported_name
+                              ? exposed_name
+                              : import.module_path + "." + alias.name;
     }
     for (const EnumDecl& en : dependency.enums) {
-        out[en.name] = en.name == import.imported_name ? exposed_name : en.name;
+        out[en.name] =
+            en.name == import.imported_name ? exposed_name : import.module_path + "." + en.name;
     }
     for (const ClassDecl& klass : dependency.classes) {
-        out[klass.name] = klass.name == import.imported_name ? exposed_name : klass.name;
+        out[klass.name] = klass.name == import.imported_name
+                              ? exposed_name
+                              : import.module_path + "." + klass.name;
+    }
+    for (const NativeTypeDecl& type : dependency.native_types) {
+        if (type.name.find('.') == std::string::npos && !type.type.empty()) {
+            out[type.name] = type.type;
+        }
     }
     return out;
 }
@@ -116,18 +126,17 @@ void add_qualified_module_symbols(ModuleAst& module, const ModuleAst& dependency
     for (const ClassDecl& klass : dependency.classes) {
         add_module_type_alias(module, prefix, klass.name, prefix + "." + klass.name,
                               import.location);
-        module.native_classes.push_back(imported_class_shape(
-            klass, prefix + "." + klass.name, type_substitutions, import.location));
+        module.native_classes.push_back(imported_class_shape(klass, prefix + "." + klass.name,
+                                                             type_substitutions, import.location));
     }
     for (const ConstDecl& constant : dependency.constants) {
-        module.native_values.push_back({.name = prefix + "." + constant.name,
-                                        .type = substitute_type_ref_text(constant.type_ref,
-                                                                         type_substitutions),
-                                        .location = import.location});
+        module.native_values.push_back(
+            {.name = prefix + "." + constant.name,
+             .type = substitute_type_ref_text(constant.type_ref, type_substitutions),
+             .location = import.location});
     }
     for (const FunctionDecl& fn : dependency.functions) {
-        add_function_alias(module, fn, prefix + "." + fn.name, type_substitutions,
-                           import.location);
+        add_function_alias(module, fn, prefix + "." + fn.name, type_substitutions, import.location);
     }
 }
 
@@ -136,37 +145,64 @@ void add_selective_module_symbol(ModuleAst& module, const ModuleAst& dependency,
     const std::string exposed_name = import.alias.empty() ? import.imported_name : import.alias;
     const std::map<std::string, std::string> type_substitutions =
         selective_type_substitutions(dependency, import);
+    module.module_strip_prefixes.push_back(import.module_path);
+    for (const EnumDecl& en : dependency.enums) {
+        if (en.name != import.imported_name) {
+            module.native_types.push_back({.name = import.module_path + "." + en.name,
+                                           .type = import.module_path + "." + en.name,
+                                           .location = import.location});
+        }
+    }
+    for (const ClassDecl& klass : dependency.classes) {
+        if (klass.name != import.imported_name) {
+            module.native_types.push_back({.name = import.module_path + "." + klass.name,
+                                           .type = import.module_path + "." + klass.name,
+                                           .location = import.location});
+            module.native_classes.push_back(imported_class_shape(
+                klass, import.module_path + "." + klass.name, type_substitutions, import.location));
+        }
+    }
     for (const TypeAliasDecl& alias : dependency.aliases) {
         if (alias.name == import.imported_name) {
-            module.native_types.push_back({.name = exposed_name,
-                                           .type = substitute_type_ref_text(alias.type_ref,
-                                                                            type_substitutions),
-                                           .location = import.location});
+            module.native_types.push_back(
+                {.name = exposed_name,
+                 .type = substitute_type_ref_text(alias.type_ref, type_substitutions),
+                 .location = import.location});
             return;
         }
     }
     for (const EnumDecl& en : dependency.enums) {
         if (en.name == import.imported_name) {
-            module.native_types.push_back(
-                {.name = exposed_name, .type = exposed_name, .location = import.location});
+            module.native_types.push_back({.name = exposed_name,
+                                           .type = import.module_path + "." + en.name,
+                                           .location = import.location});
+            module.native_types.push_back({.name = import.module_path + "." + en.name,
+                                           .type = import.module_path + "." + en.name,
+                                           .location = import.location});
             return;
         }
     }
     for (const ClassDecl& klass : dependency.classes) {
         if (klass.name == import.imported_name) {
-            module.native_types.push_back(
-                {.name = exposed_name, .type = exposed_name, .location = import.location});
+            module.native_types.push_back({.name = exposed_name,
+                                           .type = import.module_path + "." + klass.name,
+                                           .location = import.location});
+            module.native_types.push_back({.name = import.module_path + "." + klass.name,
+                                           .type = import.module_path + "." + klass.name,
+                                           .location = import.location});
             module.native_classes.push_back(
                 imported_class_shape(klass, exposed_name, type_substitutions, import.location));
+            module.native_classes.push_back(imported_class_shape(
+                klass, import.module_path + "." + klass.name, type_substitutions, import.location));
             return;
         }
     }
     for (const ConstDecl& constant : dependency.constants) {
         if (constant.name == import.imported_name) {
-            module.native_values.push_back({.name = exposed_name,
-                                            .type = substitute_type_ref_text(constant.type_ref,
-                                                                             type_substitutions),
-                                            .location = import.location});
+            module.native_values.push_back(
+                {.name = exposed_name,
+                 .type = substitute_type_ref_text(constant.type_ref, type_substitutions),
+                 .location = import.location});
             return;
         }
     }

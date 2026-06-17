@@ -1,0 +1,7 @@
+class WindowSize:
+    width: i32
+    height: i32
+
+
+def make_window_size() -> WindowSize:
+    return WindowSize(width=20, height=22)

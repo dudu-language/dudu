@@ -101,11 +101,9 @@ std::vector<std::string> native_operator_names_for_type(const std::string& type,
     return names;
 }
 
-std::optional<FunctionSignature> native_operator_signature(const Symbols& symbols,
-                                                           const std::string& op,
-                                                           const std::string& left,
-                                                           const Expr* right_expr,
-                                                           const std::string& right) {
+std::optional<FunctionSignature>
+native_operator_signature(const Symbols& symbols, const std::string& op, const std::string& left,
+                          const Expr* right_expr, const std::string& right) {
     const std::string value_left = unwrap_value_type(symbols, left);
     const std::string value_right = unwrap_value_type(symbols, right);
     for (const std::string& name : native_operator_names_for_type(value_left, op)) {
@@ -156,10 +154,46 @@ dudu_operator_signature(const Symbols& symbols, const std::string& op, const std
     return std::nullopt;
 }
 
+std::optional<FunctionSignature> dudu_binary_operator_signature(const Symbols& symbols,
+                                                                const std::string& op,
+                                                                const std::string& left,
+                                                                const Expr& right_expr,
+                                                                const std::string& right) {
+    if (!is_supported_dudu_operator(op)) {
+        return std::nullopt;
+    }
+    const auto klass = symbols.classes.find(unwrap_value_type(symbols, left));
+    if (klass == symbols.classes.end()) {
+        return std::nullopt;
+    }
+    for (const FunctionDecl& method : klass->second->methods) {
+        if (!method_has_operator(method, op)) {
+            continue;
+        }
+        FunctionSignature signature;
+        const size_t first_param =
+            !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
+        for (size_t i = first_param; i < method.params.size(); ++i) {
+            signature.params.push_back(method.params[i].type);
+            signature.param_type_refs.push_back(method.params[i].type_ref);
+        }
+        signature.return_type = method.return_type.empty() ? "void" : method.return_type;
+        signature.return_type_ref = method.return_type.empty()
+                                        ? parse_type_text("void", method.location)
+                                        : method.return_type_ref;
+        if (signature.params.empty() ||
+            assignment_type_allowed(signature.params.front(), right_expr, right)) {
+            return signature;
+        }
+    }
+    return std::nullopt;
+}
+
 std::optional<FunctionSignature>
 binary_operator_signature(const Symbols& symbols, const std::string& op, const std::string& left,
                           const Expr& right_expr, const std::string& right) {
-    if (const auto signature = dudu_operator_signature(symbols, op, left)) {
+    if (const auto signature =
+            dudu_binary_operator_signature(symbols, op, left, right_expr, right)) {
         return signature;
     }
     return native_operator_signature(symbols, op, left, &right_expr, right);

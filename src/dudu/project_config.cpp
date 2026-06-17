@@ -145,6 +145,8 @@ bool parse_target_dependency(ProjectTarget& target, const std::string& section,
     } else if ((section == "pkg_config" && name == "packages") ||
                (section == "pkg" && name == "libs")) {
         target.pkg_config_packages = parse_string_array(path, line, value);
+    } else if ((section == "pkg_config" || section == "pkg") && name == "paths") {
+        target.pkg_config_paths = parse_string_array(path, line, value);
     } else {
         return false;
     }
@@ -202,6 +204,7 @@ ProjectConfig apply_project_target(ProjectConfig config, const std::string& targ
     append_all(config.libs, target.libs);
     append_all(config.link_flags, target.link_flags);
     append_all(config.pkg_config_packages, target.pkg_config_packages);
+    append_all(config.pkg_config_paths, target.pkg_config_paths);
     return config;
 }
 
@@ -328,6 +331,8 @@ ProjectConfig parse_project_config(const std::filesystem::path& path) {
             config.pkg_config_packages = parse_string_array(path, line, value);
         } else if (section == "pkg" && name == "libs") {
             config.pkg_config_packages = parse_string_array(path, line, value);
+        } else if ((section == "pkg_config" || section == "pkg") && name == "paths") {
+            config.pkg_config_paths = parse_string_array(path, line, value);
         } else if (section == "build" && name == "dir") {
             config.build_dir = unquote(value);
         } else if (section == "build" && name == "backend") {

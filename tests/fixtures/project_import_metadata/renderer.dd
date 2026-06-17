@@ -1,0 +1,6 @@
+from camera import Camera
+
+
+def launch(camera: Camera) -> i32:
+    scaled = camera.origin * 6
+    return scaled.x + scaled.y

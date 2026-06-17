@@ -29,6 +29,7 @@ compile_and_expect cpp_escape_expr 42
 compile_and_expect cpp_nested_native 42
 compile_and_expect cpp_non_type_template_arg 3
 compile_and_expect dudu_operator_overload 42
+compile_and_expect dudu_operator_overload_rhs 42
 compile_and_expect dudu_operator_bool 42
 compile_and_expect member_index_assignment_ast 44
 compile_and_expect member_index_ast_path 42

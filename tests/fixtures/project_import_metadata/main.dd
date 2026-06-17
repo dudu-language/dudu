@@ -1,0 +1,10 @@
+from camera import build_camera
+from renderer import launch
+from windowing import make_window_size
+
+
+def main() -> i32:
+    window = make_window_size()
+    camera = build_camera()
+    print(window.width + window.height + launch(camera) - 54)
+    return 0

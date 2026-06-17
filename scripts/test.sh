@@ -391,6 +391,17 @@ grep -q "DuduRightBox" \
     "$repo_root/build/project_backend_cmake_namespaces/cmake-backend/build/generated/right.hpp"
 
 (
+    cd "$repo_root/tests/fixtures/project_import_metadata"
+    "$repo_root/build/dudu" run >"$repo_root/build/project_import_metadata_run.out" \
+        2>"$repo_root/build/project_import_metadata_run.err"
+)
+grep -Eq "run .*project_import_metadata/cmake-backend/build/project_import_metadata" \
+    "$repo_root/build/project_import_metadata_run.err"
+grep -q "42" "$repo_root/build/project_import_metadata_run.out"
+test -f "$repo_root/build/project_import_metadata/cmake-backend/build/generated/camera.cpp"
+test -f "$repo_root/build/project_import_metadata/cmake-backend/build/generated/renderer.cpp"
+
+(
     cd "$repo_root/tests/fixtures/project_backend_auto_modules"
     "$repo_root/build/dudu" run >"$repo_root/build/project_backend_auto_modules_run.out" \
         2>"$repo_root/build/project_backend_auto_modules_run.err"
@@ -624,6 +635,7 @@ compile_and_expect cpp_template_member 42
 compile_and_expect cpp_operator_overload 42
 compile_and_expect cpp_nested_native 42
 compile_and_expect dudu_operator_overload 42
+compile_and_expect dudu_operator_overload_rhs 42
 compile_and_expect cpp_overloaded_constructor 42
 compile_and_expect cpp_digit_underscore_name 42
 compile_and_expect debug_asserts 42
