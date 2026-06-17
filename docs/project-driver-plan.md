@@ -362,7 +362,10 @@ Current implementation reality:
   paths, libraries, compile flags, link flags, pkg-config packages, and extra
   C/C++ sources.
 - `dudu cmake` emits CMake for inspection or handoff.
-- User-owned CMake project integration is not implemented yet.
+- User-owned CMake project integration is implemented for `dudu build` and
+  `dudu run` when `[build] backend = "cmake"` and `[cmake] source` select an
+  existing CMake source tree. The driver configures/builds the declared
+  `[cmake] target` under the configured Dudu build directory.
 
 The next build-driver work should close that gap without changing the front
 door: users should still type `dudu build`, `dudu run`, and `dudu test`.
@@ -521,7 +524,7 @@ docs. Generated Dudu projects do not get a changelog by default.
 17. Add a generated-CMake backend behind `dudu build`, `dudu run`, and
     `dudu test`.
 18. Support user-owned CMake projects as another backend mode behind the same
-    commands.
+    commands. Build/run are implemented for declared executable targets.
 19. Keep `dudu cmake` as artifact emission for inspection and handoff, not as
     the required workflow for serious native projects.
 

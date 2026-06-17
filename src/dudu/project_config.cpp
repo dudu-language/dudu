@@ -335,6 +335,14 @@ ProjectConfig parse_project_config(const std::filesystem::path& path) {
             validate_one_of(path, line, "backend", config.build_backend, {"direct", "cmake"});
         } else if (section == "cmake" && name == "enabled") {
             config.cmake_enabled = parse_bool_value(path, line, value);
+        } else if (section == "cmake" && name == "source") {
+            config.cmake_source = unquote(value);
+        } else if (section == "cmake" && name == "target") {
+            config.cmake_target = unquote(value);
+        } else if (section == "cmake" && name == "config") {
+            config.cmake_config = unquote(value);
+        } else if (section == "cmake" && name == "generator") {
+            config.cmake_generator = unquote(value);
         } else if (section == "build") {
             config.build_values[name] = value;
         } else {

@@ -46,12 +46,22 @@ void test_build_backend_selection(const std::filesystem::path& root) {
                                       "\n"
                                       "[build]\n"
                                       "dir = \"build\"\n"
-                                      "backend = \"cmake\"\n");
+                                      "backend = \"cmake\"\n"
+                                      "\n"
+                                      "[cmake]\n"
+                                      "source = \".\"\n"
+                                      "target = \"backend_probe\"\n"
+                                      "config = \"Debug\"\n"
+                                      "generator = \"Ninja\"\n");
     write_text(project / "src" / "main.dd", "def main() -> i32:\n    return 0\n");
 
     const dudu::ProjectConfig config = dudu::parse_project_config(project / "dudu.toml");
     assert(config.build_dir == "build");
     assert(config.build_backend == "cmake");
+    assert(config.cmake_source == ".");
+    assert(config.cmake_target == "backend_probe");
+    assert(config.cmake_config == "Debug");
+    assert(config.cmake_generator == "Ninja");
 
     write_text(project / "dudu.toml", "name = \"backend_probe\"\n"
                                       "entry = \"src/main.dd\"\n"

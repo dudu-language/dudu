@@ -389,6 +389,21 @@ grep -q "DuduLeftBox" \
     "$repo_root/build/project_backend_cmake_namespaces/cmake-backend/build/generated/left.hpp"
 grep -q "DuduRightBox" \
     "$repo_root/build/project_backend_cmake_namespaces/cmake-backend/build/generated/right.hpp"
+
+rm -rf "$repo_root/build/project_user_cmake"
+(
+    cd "$repo_root/tests/fixtures/project_user_cmake"
+    "$repo_root/build/dudu" build --verbose 2>"$repo_root/build/project_user_cmake_build.err"
+    "$repo_root/build/dudu" run >"$repo_root/build/project_user_cmake_run.out" \
+        2>"$repo_root/build/project_user_cmake_run.err"
+)
+grep -Eq "cmake .*project_user_cmake/CMakeLists.txt" \
+    "$repo_root/build/project_user_cmake_build.err"
+grep -Eq "build .*project_user_cmake/cmake-user/build" \
+    "$repo_root/build/project_user_cmake_build.err"
+grep -Eq "run .*project_user_cmake/cmake-user/build/user_cmake_tool" \
+    "$repo_root/build/project_user_cmake_run.err"
+grep -q "user cmake backend" "$repo_root/build/project_user_cmake_run.out"
 rm -f "$repo_root/build/project_linker_script_bin" "$repo_root/build/project_linker_script_bin.cpp"
 (
     cd "$repo_root/tests/fixtures/project_linker_script"

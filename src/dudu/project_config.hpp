@@ -48,6 +48,10 @@ struct ProjectConfig {
     std::vector<std::string> link_flags;
     std::vector<std::string> pkg_config_packages;
     bool cmake_enabled = false;
+    std::filesystem::path cmake_source;
+    std::string cmake_target;
+    std::string cmake_config;
+    std::string cmake_generator;
 };
 
 ProjectConfig apply_project_target(ProjectConfig config, const std::string& target_name);

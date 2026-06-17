@@ -1,5 +1,6 @@
 #include "dudu/cmake_backend.hpp"
 
+#include "dudu/cmake_emit.hpp"
 #include "dudu/native_build.hpp"
 #include "dudu/source.hpp"
 
@@ -48,8 +49,41 @@ std::filesystem::path default_cmake_backend_root(const ProjectConfig& config) {
     return project_path(config, build_dir) / "cmake-backend";
 }
 
+std::filesystem::path default_user_cmake_backend_root(const ProjectConfig& config) {
+    const std::filesystem::path build_dir = config.build_dir.empty() ? "build" : config.build_dir;
+    return project_path(config, build_dir) / "cmake-user";
+}
+
+std::filesystem::path cmake_backend_log_source(const ProjectConfig& config) {
+    if (uses_user_cmake_backend(config)) {
+        return project_path(config, config.cmake_source) / "CMakeLists.txt";
+    }
+    return default_cmake_backend_root(config) / "source" / "CMakeLists.txt";
+}
+
+std::filesystem::path cmake_backend_log_build_dir(const ProjectConfig& config) {
+    if (uses_user_cmake_backend(config)) {
+        return default_user_cmake_backend_root(config) / "build";
+    }
+    return default_cmake_backend_root(config) / "build";
+}
+
 std::string cmake_target_name(const ProjectConfig& config, const std::filesystem::path& input) {
     return config.name.empty() ? input.stem().string() : config.name;
+}
+
+std::string user_cmake_target_name(const ProjectConfig& config) {
+    if (!config.cmake_target.empty()) {
+        return config.cmake_target;
+    }
+    if (!config.name.empty()) {
+        return config.name;
+    }
+    fail("user-owned CMake backend requires [cmake] target or top-level name");
+}
+
+bool uses_user_cmake_backend(const ProjectConfig& config) {
+    return config.build_backend == "cmake" && !config.cmake_source.empty();
 }
 
 std::filesystem::path run_cmake_backend(const CMakeBackendOptions& options) {
@@ -80,6 +114,64 @@ std::filesystem::path run_cmake_backend(const CMakeBackendOptions& options) {
         fail(command_failure_message("CMake build", build_command, build_log));
     }
     return build_dir / options.target;
+}
+
+std::filesystem::path run_user_cmake_backend(const UserCMakeBackendOptions& options) {
+    if (!uses_user_cmake_backend(options.config)) {
+        fail("user-owned CMake backend requires [build] backend = \"cmake\" and [cmake] source");
+    }
+    std::filesystem::create_directories(options.root);
+    const std::filesystem::path source_dir =
+        project_path(options.config, options.config.cmake_source);
+    const std::filesystem::path build_dir = options.root / "build";
+    const std::string target = user_cmake_target_name(options.config);
+
+    std::string configure_command =
+        "cmake -S " + shell_quote_path(source_dir) + " -B " + shell_quote_path(build_dir);
+    if (!options.config.cmake_generator.empty()) {
+        configure_command += " -G " + shell_quote_arg(options.config.cmake_generator);
+    }
+    if (!options.config.cmake_config.empty()) {
+        configure_command += " -DCMAKE_BUILD_TYPE=" + shell_quote_arg(options.config.cmake_config);
+    }
+    const std::filesystem::path configure_log = options.root / "configure.log";
+    if (options.verbose) {
+        std::cerr << configure_command << '\n';
+    }
+    if (run_shell_command(configure_command, configure_log) != 0) {
+        fail(command_failure_message("CMake configure", configure_command, configure_log));
+    }
+
+    std::string build_command =
+        "cmake --build " + shell_quote_path(build_dir) + " --target " + shell_quote_arg(target);
+    if (!options.config.cmake_config.empty()) {
+        build_command += " --config " + shell_quote_arg(options.config.cmake_config);
+    }
+    const std::filesystem::path build_log = options.root / "build.log";
+    if (options.verbose) {
+        std::cerr << build_command << '\n';
+    }
+    if (run_shell_command(build_command, build_log) != 0) {
+        fail(command_failure_message("CMake build", build_command, build_log));
+    }
+    return build_dir / target;
+}
+
+std::filesystem::path build_cmake_project(const BuildCMakeProjectOptions& options) {
+    if (options.output.has_value()) {
+        fail("CMake backend does not support -o; configure the target name in dudu.toml");
+    }
+    if (uses_user_cmake_backend(options.config)) {
+        return run_user_cmake_backend({.config = options.config,
+                                       .root = default_user_cmake_backend_root(options.config),
+                                       .verbose = options.verbose});
+    }
+    return run_cmake_backend({.config = options.config,
+                              .root = default_cmake_backend_root(options.config),
+                              .cmake_lists = emit_cmake_project(options.config, options.input),
+                              .target = cmake_target_name(options.config, options.input),
+                              .dudu_executable = options.dudu_executable,
+                              .verbose = options.verbose});
 }
 
 } // namespace dudu

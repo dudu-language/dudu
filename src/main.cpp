@@ -261,6 +261,9 @@ Options resolve_project_input(Options options) {
         return options;
     }
     if (project.main.empty()) {
+        if ((options.build || options.run) && dudu::uses_user_cmake_backend(project)) {
+            return options;
+        }
         fail("missing input file and dudu.toml main");
     }
     options.input = project.main;
@@ -285,19 +288,6 @@ void write_text_output(const std::optional<std::filesystem::path>& path, const s
         fail("could not open output " + path->string());
     }
     out << text;
-}
-
-std::filesystem::path build_cmake_backend(const Options& options, const dudu::ProjectConfig& config,
-                                          const std::filesystem::path& executable_path) {
-    if (options.output.has_value()) {
-        fail("CMake backend does not support -o; configure the target name in dudu.toml");
-    }
-    return dudu::run_cmake_backend({.config = config,
-                                    .root = dudu::default_cmake_backend_root(config),
-                                    .cmake_lists = dudu::emit_cmake_project(config, options.input),
-                                    .target = dudu::cmake_target_name(config, options.input),
-                                    .dudu_executable = executable_path,
-                                    .verbose = options.verbose});
 }
 
 int run_project_benchmarks(const Options& options) {
@@ -466,17 +456,21 @@ int main(int argc, char** argv) {
             write_text_output(options.output, dudu::emit_cmake_project(config, options.input));
             return 0;
         }
-        const std::string source = read_text_file(options.input);
         if (options.build) {
             const dudu::ProjectConfig config = config_for_options(options);
             if (config.build_backend == "cmake") {
-                const std::filesystem::path root = dudu::default_cmake_backend_root(config);
                 dudu::print_project_step(options.project_driver, "cmake",
-                                         root / "source" / "CMakeLists.txt");
-                dudu::print_project_step(options.project_driver, "build", root / "build");
-                (void)build_cmake_backend(options, config, argv[0]);
+                                         dudu::cmake_backend_log_source(config));
+                dudu::print_project_step(options.project_driver, "build",
+                                         dudu::cmake_backend_log_build_dir(config));
+                (void)dudu::build_cmake_project({.config = config,
+                                                 .input = options.input,
+                                                 .output = options.output,
+                                                 .dudu_executable = argv[0],
+                                                 .verbose = options.verbose});
                 return 0;
             }
+            const std::string source = read_text_file(options.input);
             const std::filesystem::path output =
                 options.output.value_or(default_build_output(config, options.input));
             dudu::print_project_step(options.project_driver, "emit", output.string() + ".cpp");
@@ -492,14 +486,20 @@ int main(int argc, char** argv) {
                 fail("cannot run target kind: " + config.target_kind);
             }
             if (config.build_backend == "cmake") {
-                const std::filesystem::path root = dudu::default_cmake_backend_root(config);
                 dudu::print_project_step(options.project_driver, "cmake",
-                                         root / "source" / "CMakeLists.txt");
-                dudu::print_project_step(options.project_driver, "build", root / "build");
-                const std::filesystem::path bin = build_cmake_backend(options, config, argv[0]);
+                                         dudu::cmake_backend_log_source(config));
+                dudu::print_project_step(options.project_driver, "build",
+                                         dudu::cmake_backend_log_build_dir(config));
+                const std::filesystem::path bin =
+                    dudu::build_cmake_project({.config = config,
+                                               .input = options.input,
+                                               .output = options.output,
+                                               .dudu_executable = argv[0],
+                                               .verbose = options.verbose});
                 dudu::print_project_step(options.project_driver, "run", bin);
                 return std::system(dudu::shell_quote_path(bin).c_str()) == 0 ? 0 : 1;
             }
+            const std::string source = read_text_file(options.input);
             const std::filesystem::path output =
                 options.output.value_or(default_build_output(config, options.input));
             dudu::print_project_step(options.project_driver, "emit", output.string() + ".cpp");
@@ -513,6 +513,7 @@ int main(int argc, char** argv) {
             dudu::print_project_step(options.project_driver, "run", command);
             return std::system(dudu::shell_quote_path(command).c_str()) == 0 ? 0 : 1;
         }
+        const std::string source = read_text_file(options.input);
         if (options.header_output.has_value()) {
             write_text_output(options.header_output,
                               dudu::emit_cpp_header(checked_module(options, source, false)));
@@ -527,7 +528,8 @@ int main(int argc, char** argv) {
             if (!options.output.has_value()) {
                 fail("emit-modules requires -o <directory>");
             }
-            dudu::write_cpp_module_artifacts(*options.output, checked_module(options, source, true));
+            dudu::write_cpp_module_artifacts(*options.output,
+                                             checked_module(options, source, true));
             return 0;
         }
         if (options.emit_cpp) {
