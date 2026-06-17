@@ -41,6 +41,10 @@ bool function_has_decorator(const FunctionDecl& fn, std::string_view name) {
     return dudu::has_decorator(fn.decorators, name);
 }
 
+bool type_ref_is_name(const TypeRef& type, std::string_view name) {
+    return type.kind == TypeKind::Named && type_ref_head_name(type) == name;
+}
+
 void check_type_match(FunctionScope& scope, const std::string& expected, const Expr& expr,
                       const SourceLocation& location, const BodyCheckCallbacks& callbacks,
                       std::string_view mismatch_label = {}) {
@@ -175,7 +179,7 @@ void check_condition_type(FunctionScope& scope, const Stmt& stmt,
     if (!got.empty() && got != "bool" && got != "auto") {
         if (const auto signature = dudu_operator_signature(scope.symbols, "bool", got);
             signature && signature->params.empty() &&
-            signature_return_type_text(*signature) == "bool") {
+            type_ref_is_name(signature_return_type_ref(*signature), "bool")) {
             return;
         }
         sema_fail(location, "condition must be bool, got " + got);

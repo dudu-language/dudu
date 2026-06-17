@@ -25,6 +25,10 @@ bool is_arithmetic_op(const std::string& op) {
     return ops.contains(op);
 }
 
+bool type_ref_is_name(const TypeRef& type, std::string_view name) {
+    return type.kind == TypeKind::Named && type_ref_head_name(type) == name;
+}
+
 std::optional<std::string> contextual_numeric_binary_type(const FunctionScope& scope,
                                                           const Expr& left_expr,
                                                           const std::string& left,
@@ -307,7 +311,7 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                                                           signature->params.front() + ", got " +
                                                           right);
                     }
-                    if (signature->return_type != "bool") {
+                    if (!type_ref_is_name(signature_return_type_ref(*signature), "bool")) {
                         sema_expr_fail(*use_location,
                                        "comparison operator " + expr.op + " must return bool");
                     }

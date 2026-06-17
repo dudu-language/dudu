@@ -1510,6 +1510,9 @@ LSP source edits are also moving to AST-owned ranges:
 - Typed expression inference for direct non-generic Dudu calls and matched
   native calls now returns `signature_return_type_ref` directly, avoiding the
   old path of rendering a call result type string and reparsing it.
+- Condition and comparison-operator semantic checks now validate operator
+  return types through parsed `signature_return_type_ref` metadata instead of
+  comparing rendered signature return strings.
 
 Expression parsing has moved onto the lexer/token stream:
 
