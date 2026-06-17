@@ -562,10 +562,11 @@ push. They are not release packaging work.
    same-named declarations from different Dudu modules no longer collide in
    artifact declarations. Same-module parsed type references in those artifacts
    also lower through the generated type-name map for fields, parameters,
-   returns, arrays, and templates. The direct native build still compiles the
-   compatibility single-file output until namespace-aware per-module sema/codegen
-   can rewrite expression references and cross-module type references
-   coherently.
+   returns, arrays, and templates. Same-module expression bodies now also lower
+   function calls, constructors, constants, and other mapped declaration names
+   through the generated value-name map. The direct native build still compiles
+   the compatibility single-file output until namespace-aware per-module
+   sema/codegen can rewrite cross-module references coherently.
 
 12. Language Server And Formatter
 

@@ -30,9 +30,15 @@ std::string lower_cpp_escape_expr(std::string expr, const std::vector<std::strin
 }
 
 std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases,
-                       const std::map<std::string, std::string>& locals, const Symbols* symbols);
+                       const std::map<std::string, std::string>& locals, const Symbols* symbols,
+                       const CppEmitOptions& options);
 
-std::string lower_name_expr(const std::string& name) {
+std::string lower_name_expr(const std::string& name,
+                            const std::map<std::string, std::string>& locals,
+                            const CppEmitOptions& options) {
+    if (!locals.contains(name)) {
+        return emitted_value_name(name, options);
+    }
     return name;
 }
 
@@ -68,15 +74,23 @@ std::string lower_member_expr(std::string receiver, const std::string& member,
 std::string join_lowered_exprs(const std::vector<Expr>& exprs,
                                const std::vector<std::string>& aliases,
                                const std::map<std::string, std::string>& locals,
-                               std::string_view separator, const Symbols* symbols) {
+                               std::string_view separator, const Symbols* symbols,
+                               const CppEmitOptions& options) {
     std::ostringstream out;
     for (size_t i = 0; i < exprs.size(); ++i) {
         if (i > 0) {
             out << separator;
         }
-        out << lower_expr(exprs[i], aliases, locals, symbols);
+        out << lower_expr(exprs[i], aliases, locals, symbols, options);
     }
     return out.str();
+}
+
+std::string join_lowered_exprs(const std::vector<Expr>& exprs,
+                               const std::vector<std::string>& aliases,
+                               const std::map<std::string, std::string>& locals,
+                               std::string_view separator, const Symbols* symbols) {
+    return join_lowered_exprs(exprs, aliases, locals, separator, symbols, {});
 }
 
 bool has_expr(const Expr& expr) {
@@ -102,13 +116,14 @@ std::optional<SliceParts> slice_parts(const Expr& expr) {
 }
 
 std::string join_lowered_type_args(const std::vector<TypeRef>& types,
-                                   const std::vector<std::string>& aliases) {
+                                   const std::vector<std::string>& aliases,
+                                   const CppEmitOptions& options) {
     std::ostringstream out;
     for (size_t i = 0; i < types.size(); ++i) {
         if (i > 0) {
             out << ", ";
         }
-        out << lower_cpp_type(types[i], aliases);
+        out << lower_cpp_type(types[i], aliases, options);
     }
     return out.str();
 }
@@ -120,8 +135,8 @@ TypeKind wrapper_template_kind(std::string_view name) {
 
 TypeRef template_type_ref_from_expr(const Expr& expr, std::string name) {
     TypeRef type;
-    type.kind = expr.template_type_args.size() == 1 ? wrapper_template_kind(name)
-                                                    : TypeKind::Template;
+    type.kind =
+        expr.template_type_args.size() == 1 ? wrapper_template_kind(name) : TypeKind::Template;
     type.text = expr.text;
     type.name = std::move(name);
     type.children = expr.template_type_args;
@@ -153,7 +168,8 @@ std::string cpp_binary_operator(const std::string& op) {
 }
 
 std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases,
-                       const std::map<std::string, std::string>& locals, const Symbols* symbols) {
+                       const std::map<std::string, std::string>& locals, const Symbols* symbols,
+                       const CppEmitOptions& options) {
     if (expr.text.empty()) {
         return {};
     }
@@ -174,25 +190,27 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
                 return current_class->second;
             }
         }
-        return lower_name_expr(expr.name);
+        return lower_name_expr(expr.name, locals, options);
     case ExprKind::CppEscape:
         return lower_cpp_escape_expr(expr.value, aliases, locals);
     case ExprKind::StringLiteral:
         return expr.text;
     case ExprKind::Unary:
-        if (const auto pointer_cast = lower_pointer_cast_expr(expr, aliases, locals, symbols)) {
+        if (const auto pointer_cast =
+                lower_pointer_cast_expr(expr, aliases, locals, symbols, options)) {
             return *pointer_cast;
         }
         if (expr.children.size() == 1) {
             const std::string op = expr.op == "not" ? "!" : expr.op;
-            return "(" + op + lower_expr(expr.children.front(), aliases, locals, symbols) + ")";
+            return "(" + op + lower_expr(expr.children.front(), aliases, locals, symbols, options) +
+                   ")";
         }
         break;
     case ExprKind::Binary:
         if (expr.children.size() == 2 && has_expr(expr.children[0]) && has_expr(expr.children[1])) {
-            return "(" + lower_expr(expr.children[0], aliases, locals, symbols) + " " +
+            return "(" + lower_expr(expr.children[0], aliases, locals, symbols, options) + " " +
                    cpp_binary_operator(expr.op) + " " +
-                   lower_expr(expr.children[1], aliases, locals, symbols) + ")";
+                   lower_expr(expr.children[1], aliases, locals, symbols, options) + ")";
         }
         break;
     case ExprKind::Conditional:
@@ -204,15 +222,15 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
     case ExprKind::Yield:
         throw CompileError(expr.location, "unsupported Python feature: generators");
     case ExprKind::Call:
-        return lower_call_expr(expr, aliases, locals, symbols);
+        return lower_call_expr(expr, aliases, locals, symbols, options);
     case ExprKind::TemplateCall: {
         if (expr.template_args.empty() && expr.template_type_args.empty()) {
             break;
         }
         const std::string lowered_template_args =
-            join_lowered_type_args(expr.template_type_args, aliases);
+            join_lowered_type_args(expr.template_type_args, aliases, options);
         const std::string lowered_call_args =
-            join_lowered_exprs(expr.children, aliases, locals, ", ", symbols);
+            join_lowered_exprs(expr.children, aliases, locals, ", ", symbols, options);
         if (expr.name == "new") {
             return "new " + lowered_template_args + "(" + lowered_call_args + ")";
         }
@@ -223,29 +241,30 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
         }
         if (starts_with(expr.name, "*")) {
             return "reinterpret_cast<" +
-                   lower_cpp_type(pointer_template_type_ref_from_expr(expr), aliases) + ">(" +
-                   lowered_call_args + ")";
+                   lower_cpp_type(pointer_template_type_ref_from_expr(expr), aliases, options) +
+                   ">(" + lowered_call_args + ")";
         }
         if (expr.name == "sizeof" || expr.name == "alignof") {
             return expr.name + "(" + lowered_template_args + ")";
         }
         if (expr.name == "offsetof" && expr.children.size() == 1) {
             return "offsetof(" + lowered_template_args + ", " +
-                   lower_offsetof_field(expr.children.front(), aliases, locals, symbols) + ")";
+                   lower_offsetof_field(expr.children.front(), aliases, locals, symbols, options) +
+                   ")";
         }
         if ((expr.name == "std.function" || expr.name == "std::function") &&
             expr.template_type_args.size() == 1) {
-            const std::string type = lower_cpp_type(template_type_ref_from_expr(expr, expr.name),
-                                                    aliases);
+            const std::string type =
+                lower_cpp_type(template_type_ref_from_expr(expr, expr.name), aliases, options);
             return expr.children.empty() ? type + "{}" : type + "(" + lowered_call_args + ")";
         }
         if (is_builtin_template_constructor(expr.name)) {
-            const std::string type = lower_cpp_type(template_type_ref_from_expr(expr, expr.name),
-                                                    aliases);
+            const std::string type =
+                lower_cpp_type(template_type_ref_from_expr(expr, expr.name), aliases, options);
             return expr.children.empty() ? type + "{}" : type + "(" + lowered_call_args + ")";
         }
-        return lower_callee_expr(expr, aliases, locals, symbols) + "<" + lowered_template_args +
-               ">(" + lowered_call_args + ")";
+        return lower_callee_expr(expr, aliases, locals, symbols, options) + "<" +
+               lowered_template_args + ">(" + lowered_call_args + ")";
     }
     case ExprKind::Member:
         if (expr.children.size() == 1) {
@@ -253,15 +272,15 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
                 if (const auto variant = enum_variant_from_expr(*symbols, expr)) {
                     if (enum_has_payloads(*variant->first)) {
                         return lower_enum_variant_constructor(*variant->first, *variant->second, {},
-                                                              aliases, locals, symbols);
+                                                              aliases, locals, symbols, options);
                     }
                 }
             }
-            if (const auto swizzle = lower_swizzle_expr(expr, aliases, locals, symbols)) {
+            if (const auto swizzle = lower_swizzle_expr(expr, aliases, locals, symbols, options)) {
                 return *swizzle;
             }
             if (is_pointer_receiver_expr(expr.children.front(), locals)) {
-                return lower_expr(expr.children.front(), aliases, locals, symbols) + "->" +
+                return lower_expr(expr.children.front(), aliases, locals, symbols, options) + "->" +
                        expr.name;
             }
             if (symbols != nullptr) {
@@ -269,45 +288,49 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
                     member_expr_type(*symbols, locals, nullptr, expr.children.front());
                 if (!receiver_type.empty() &&
                     field_type_for_type(*symbols, receiver_type, expr.name)) {
-                    return lower_expr(expr.children.front(), aliases, locals, symbols) + "." +
-                           expr.name;
+                    return lower_expr(expr.children.front(), aliases, locals, symbols, options) +
+                           "." + expr.name;
                 }
             }
-            return lower_member_expr(lower_expr(expr.children.front(), aliases, locals, symbols),
-                                     expr.name, aliases);
+            return lower_member_expr(
+                lower_expr(expr.children.front(), aliases, locals, symbols, options), expr.name,
+                aliases);
         }
         break;
     case ExprKind::DictEntry:
         if (expr.children.size() == 2) {
-            return "{" + lower_expr(expr.children[0], aliases, locals, symbols) + ", " +
-                   lower_expr(expr.children[1], aliases, locals, symbols) + "}";
+            return "{" + lower_expr(expr.children[0], aliases, locals, symbols, options) + ", " +
+                   lower_expr(expr.children[1], aliases, locals, symbols, options) + "}";
         }
         break;
     case ExprKind::NamedArg:
         if (expr.children.size() == 1) {
             return "." + expr.name + " = " +
-                   lower_expr(expr.children.front(), aliases, locals, symbols);
+                   lower_expr(expr.children.front(), aliases, locals, symbols, options);
         }
         break;
     case ExprKind::Slice:
         throw CompileError(expr.location, "slice expression must be used inside an index");
     case ExprKind::DictLiteral:
-        return "{" + join_lowered_exprs(expr.children, aliases, locals, ", ", symbols) + "}";
+        return "{" + join_lowered_exprs(expr.children, aliases, locals, ", ", symbols, options) +
+               "}";
     case ExprKind::Index:
         if (expr.children.size() == 2) {
-            std::string out = lower_expr(expr.children[0], aliases, locals, symbols);
+            std::string out = lower_expr(expr.children[0], aliases, locals, symbols, options);
             if (const std::optional<SliceParts> slice = slice_parts(expr.children[1])) {
-                const std::string start = expr_missing(*slice->start)
-                                              ? "0"
-                                              : lower_expr(*slice->start, aliases, locals, symbols);
-                const std::string end = expr_missing(*slice->end)
-                                            ? "(" + out + ").size()"
-                                            : lower_expr(*slice->end, aliases, locals, symbols);
+                const std::string start =
+                    expr_missing(*slice->start)
+                        ? "0"
+                        : lower_expr(*slice->start, aliases, locals, symbols, options);
+                const std::string end =
+                    expr_missing(*slice->end)
+                        ? "(" + out + ").size()"
+                        : lower_expr(*slice->end, aliases, locals, symbols, options);
                 if (slice->step != nullptr) {
                     const std::string step =
                         expr_missing(*slice->step)
                             ? "1"
-                            : lower_expr(*slice->step, aliases, locals, symbols);
+                            : lower_expr(*slice->step, aliases, locals, symbols, options);
                     return "dudu::StridedSpan{&(" + out + ")[" + start + "], ((" + end + ") - (" +
                            start + ") + (" + step + ") - 1) / (" + step + "), " + step + "}";
                 }
@@ -315,26 +338,28 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
             }
             if (expr.children[1].kind == ExprKind::TupleLiteral) {
                 if (const auto column_slice = lower_column_slice_expr(
-                        expr.children[0], expr.children[1], aliases, locals, symbols)) {
+                        expr.children[0], expr.children[1], aliases, locals, symbols, options)) {
                     return *column_slice;
                 }
                 if (const auto slice = lower_trailing_full_slice_expr(
-                        expr.children[0], expr.children[1], aliases, locals, symbols)) {
+                        expr.children[0], expr.children[1], aliases, locals, symbols, options)) {
                     return *slice;
                 }
                 for (const Expr& index : expr.children[1].children) {
-                    out += "[" + lower_expr(index, aliases, locals, symbols) + "]";
+                    out += "[" + lower_expr(index, aliases, locals, symbols, options) + "]";
                 }
                 return out;
             }
-            return out + "[" + lower_expr(expr.children[1], aliases, locals, symbols) + "]";
+            return out + "[" + lower_expr(expr.children[1], aliases, locals, symbols, options) +
+                   "]";
         }
         break;
     case ExprKind::ListLiteral:
     case ExprKind::SetLiteral:
-        return "{" + join_lowered_exprs(expr.children, aliases, locals, ", ", symbols) + "}";
+        return "{" + join_lowered_exprs(expr.children, aliases, locals, ", ", symbols, options) +
+               "}";
     case ExprKind::TupleLiteral:
-        return join_lowered_exprs(expr.children, aliases, locals, ", ", symbols);
+        return join_lowered_exprs(expr.children, aliases, locals, ", ", symbols, options);
     case ExprKind::Lambda:
         throw CompileError(expr.location,
                            "unsupported Python feature: lambda; declare a named function and "
@@ -347,9 +372,9 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
 
 std::string lower_array_literal(const Expr& expr, const std::vector<std::string>& aliases,
                                 const std::map<std::string, std::string>& locals,
-                                const Symbols* symbols) {
+                                const Symbols* symbols, const CppEmitOptions& options) {
     if (expr.kind != ExprKind::ListLiteral) {
-        return lower_expr(expr, aliases, locals, symbols);
+        return lower_expr(expr, aliases, locals, symbols, options);
     }
     std::ostringstream out;
     out << "{";
@@ -357,15 +382,32 @@ std::string lower_array_literal(const Expr& expr, const std::vector<std::string>
         if (i > 0) {
             out << ", ";
         }
-        out << lower_array_literal(expr.children[i], aliases, locals, symbols);
+        out << lower_array_literal(expr.children[i], aliases, locals, symbols, options);
     }
     out << "}";
     return out.str();
 }
 
+std::string lower_array_literal(const Expr& expr, const std::vector<std::string>& aliases,
+                                const std::map<std::string, std::string>& locals,
+                                const Symbols* symbols) {
+    return lower_array_literal(expr, aliases, locals, symbols, {});
+}
+
+std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases,
+                       const std::map<std::string, std::string>& locals, const Symbols* symbols) {
+    return lower_expr(expr, aliases, locals, symbols, {});
+}
+
 std::string lower_cpp_expr_ast(const Expr& expr, const std::vector<std::string>& aliases,
                                const std::map<std::string, std::string>& locals) {
     return lower_expr(expr, aliases, locals);
+}
+
+std::string lower_cpp_expr_ast(const Expr& expr, const std::vector<std::string>& aliases,
+                               const std::map<std::string, std::string>& locals,
+                               const CppEmitOptions& options) {
+    return lower_expr(expr, aliases, locals, nullptr, options);
 }
 
 } // namespace dudu

@@ -340,10 +340,11 @@ void emit_method(std::ostringstream& out, const std::string& class_name,
     }
     if (is_constructor_method(method) && super_init_expr(method) != nullptr) {
         std::vector<Stmt> body(method.statements.begin() + 1, method.statements.end());
-        emit_block(out, body, 2, aliases, locals, method.return_type, function_returns, &symbols);
+        emit_block(out, body, 2, aliases, locals, method.return_type, function_returns, &symbols,
+                   options);
     } else {
         emit_block(out, method.statements, 2, aliases, locals, method.return_type, function_returns,
-                   &symbols);
+                   &symbols, options);
     }
     out << "    }\n";
 }

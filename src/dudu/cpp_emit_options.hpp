@@ -10,6 +10,7 @@ namespace dudu {
 struct CppEmitOptions {
     bool use_generated_names = false;
     std::map<std::string, std::string> generated_type_names;
+    std::map<std::string, std::string> generated_value_names;
 };
 
 template <typename Decl>
@@ -26,6 +27,17 @@ inline std::string emitted_type_name(std::string name, const CppEmitOptions& opt
     }
     if (const auto found = options.generated_type_names.find(name);
         found != options.generated_type_names.end()) {
+        return found->second;
+    }
+    return name;
+}
+
+inline std::string emitted_value_name(std::string name, const CppEmitOptions& options) {
+    if (!options.use_generated_names) {
+        return name;
+    }
+    if (const auto found = options.generated_value_names.find(name);
+        found != options.generated_value_names.end()) {
         return found->second;
     }
     return name;

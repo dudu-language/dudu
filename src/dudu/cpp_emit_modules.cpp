@@ -34,11 +34,28 @@ CppEmitOptions module_emit_options(const ModuleAst& unit) {
     for (const EnumDecl& en : unit.enums) {
         if (!en.cpp_name.empty()) {
             options.generated_type_names[en.name] = en.cpp_name;
+            options.generated_value_names[en.name] = en.cpp_name;
         }
     }
     for (const ClassDecl& klass : unit.classes) {
         if (!klass.cpp_name.empty()) {
             options.generated_type_names[klass.name] = klass.cpp_name;
+            options.generated_value_names[klass.name] = klass.cpp_name;
+        }
+        for (const ConstDecl& constant : klass.constants) {
+            if (!constant.cpp_name.empty()) {
+                options.generated_value_names[klass.name + "." + constant.name] = constant.cpp_name;
+            }
+        }
+    }
+    for (const ConstDecl& constant : unit.constants) {
+        if (!constant.cpp_name.empty()) {
+            options.generated_value_names[constant.name] = constant.cpp_name;
+        }
+    }
+    for (const FunctionDecl& fn : unit.functions) {
+        if (!fn.cpp_name.empty()) {
+            options.generated_value_names[fn.name] = fn.cpp_name;
         }
     }
     return options;

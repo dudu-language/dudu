@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dudu/ast.hpp"
+#include "dudu/cpp_emit_options.hpp"
 
 #include <iosfwd>
 #include <map>
@@ -19,5 +20,10 @@ void emit_block(std::ostringstream& out, const std::vector<Stmt>& body, int dept
                 const std::string& return_type = {},
                 const std::map<std::string, std::string>& function_returns = {},
                 const Symbols* symbols = nullptr);
+void emit_block(std::ostringstream& out, const std::vector<Stmt>& body, int depth,
+                const std::vector<std::string>& aliases,
+                const std::map<std::string, std::string>& locals, const std::string& return_type,
+                const std::map<std::string, std::string>& function_returns, const Symbols* symbols,
+                const CppEmitOptions& options);
 
 } // namespace dudu

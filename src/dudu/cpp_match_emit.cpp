@@ -37,7 +37,7 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                           const std::map<std::string, std::string>& locals,
                           const std::string& return_type,
                           const std::map<std::string, std::string>& function_returns,
-                          const Symbols* symbols) {
+                          const Symbols* symbols, const CppEmitOptions& options) {
     const std::string subject_type =
         infer_emitted_local_type(stmt.condition_expr, locals, function_returns);
     if (!subject_type.empty()) {
@@ -47,7 +47,7 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                                         "_" + std::to_string(stmt.location.column);
             const std::string matched = subject + "_matched";
             out << indent(depth) << "auto&& " << subject << " = "
-                << lower_expr(stmt.condition_expr, aliases, locals, symbols) << ";\n";
+                << lower_expr(stmt.condition_expr, aliases, locals, symbols, options) << ";\n";
             out << indent(depth) << "bool " << matched << " = false;\n";
             for (const Stmt& child : stmt.children) {
                 if (child.kind != StmtKind::Case) {
@@ -85,15 +85,16 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                 }
                 if (has_expr(child.guard_expr)) {
                     out << indent(depth + 1) << "if ("
-                        << lower_expr(child.guard_expr, aliases, nested, symbols) << ") {\n";
+                        << lower_expr(child.guard_expr, aliases, nested, symbols, options)
+                        << ") {\n";
                     out << indent(depth + 2) << matched << " = true;\n";
                     emit_block(out, child.children, depth + 2, aliases, nested, return_type,
-                               function_returns, symbols);
+                               function_returns, symbols, options);
                     out << indent(depth + 1) << "}\n";
                 } else {
                     out << indent(depth + 1) << matched << " = true;\n";
                     emit_block(out, child.children, depth + 1, aliases, nested, return_type,
-                               function_returns, symbols);
+                               function_returns, symbols, options);
                 }
                 out << indent(depth) << "}\n";
             }
@@ -108,7 +109,7 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                                         "_" + std::to_string(stmt.location.column);
             const std::string matched = subject + "_matched";
             out << indent(depth) << "auto&& " << subject << " = "
-                << lower_expr(stmt.condition_expr, aliases, locals, symbols) << ";\n";
+                << lower_expr(stmt.condition_expr, aliases, locals, symbols, options) << ";\n";
             out << indent(depth) << "bool " << matched << " = false;\n";
             for (const Stmt& child : stmt.children) {
                 if (child.kind != StmtKind::Case) {
@@ -119,10 +120,12 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                 if (!variant || *variant == "_") {
                     condition = "true";
                 } else if (enum_has_payloads(*en)) {
-                    condition = "std::holds_alternative<" + en->name + "::" + *variant + ">(" +
+                    const std::string enum_name = emitted_type_name(en->name, options);
+                    condition = "std::holds_alternative<" + enum_name + "::" + *variant + ">(" +
                                 subject + ".value)";
                 } else {
-                    condition = subject + " == " + en->name + "::" + *variant;
+                    condition = subject + " == " + emitted_type_name(en->name, options) + "::" +
+                                *variant;
                 }
                 out << indent(depth) << "if (!" << matched << " && (" << condition << ")) {\n";
                 std::map<std::string, std::string> nested = locals;
@@ -131,8 +134,9 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                         const std::string payload = "__dudu_case_" +
                                                     std::to_string(child.location.line) + "_" +
                                                     std::to_string(child.location.column);
+                        const std::string enum_name = emitted_type_name(en->name, options);
                         out << indent(depth + 1) << "auto&& " << payload << " = std::get<"
-                            << en->name << "::" << *variant << ">(" << subject << ".value);\n";
+                            << enum_name << "::" << *variant << ">(" << subject << ".value);\n";
                         const std::vector<EnumCaseBinding> bindings =
                             enum_case_bindings(child, *value);
                         for (const EnumCaseBinding& binding : bindings) {
@@ -149,15 +153,16 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                 }
                 if (has_expr(child.guard_expr)) {
                     out << indent(depth + 1) << "if ("
-                        << lower_expr(child.guard_expr, aliases, nested, symbols) << ") {\n";
+                        << lower_expr(child.guard_expr, aliases, nested, symbols, options)
+                        << ") {\n";
                     out << indent(depth + 2) << matched << " = true;\n";
                     emit_block(out, child.children, depth + 2, aliases, nested, return_type,
-                               function_returns, symbols);
+                               function_returns, symbols, options);
                     out << indent(depth + 1) << "}\n";
                 } else {
                     out << indent(depth + 1) << matched << " = true;\n";
                     emit_block(out, child.children, depth + 1, aliases, nested, return_type,
-                               function_returns, symbols);
+                               function_returns, symbols, options);
                 }
                 out << indent(depth) << "}\n";
             }
@@ -168,7 +173,7 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         }
     }
     out << indent(depth) << "switch ("
-        << lower_expr(stmt.condition_expr, aliases, locals, symbols) << ") {\n";
+        << lower_expr(stmt.condition_expr, aliases, locals, symbols, options) << ") {\n";
     for (const Stmt& child : stmt.children) {
         if (child.kind != StmtKind::Case) {
             continue;
@@ -177,11 +182,11 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
             out << indent(depth) << "default:\n";
         } else {
             out << indent(depth) << "case "
-                << lower_expr(child.pattern_expr, aliases, locals, symbols) << ":\n";
+                << lower_expr(child.pattern_expr, aliases, locals, symbols, options) << ":\n";
         }
         out << indent(depth + 1) << "{\n";
         emit_block(out, child.children, depth + 2, aliases, locals, return_type, function_returns,
-                   symbols);
+                   symbols, options);
         out << indent(depth + 2) << "break;\n";
         out << indent(depth + 1) << "}\n";
     }
@@ -189,6 +194,16 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
     if (match_cases_return(stmt)) {
         out << indent(depth) << "__builtin_unreachable();\n";
     }
+}
+
+void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
+                          const std::vector<std::string>& aliases,
+                          const std::map<std::string, std::string>& locals,
+                          const std::string& return_type,
+                          const std::map<std::string, std::string>& function_returns,
+                          const Symbols* symbols) {
+    emit_match_statement(out, stmt, depth, aliases, locals, return_type, function_returns, symbols,
+                         {});
 }
 
 } // namespace dudu
