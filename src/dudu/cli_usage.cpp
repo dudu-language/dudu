@@ -14,7 +14,7 @@ void print_cli_usage(bool project_driver) {
                      "       dudu check [input.dd|dir]\n"
                      "       dudu clean [path]\n"
                      "       dudu clean-cache [path]\n"
-                     "       dudu fmt <input.dd|dir> [--check]\n"
+                     "       dudu fmt [input.dd|dir] [--check]\n"
                      "       dudu lsp\n"
                      "       dudu test [input.dd|target|filter] [--filter text] [--no-capture]\n"
                      "       dudu cmake [input.dd|target] [-o CMakeLists.txt]\n";

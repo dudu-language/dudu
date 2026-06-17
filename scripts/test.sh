@@ -101,6 +101,26 @@ cp "$repo_root/tests/fixtures/unformatted.dd" "$fmt_dir/sample.dd"
 "$repo_root/build/duc" fmt "$fmt_dir"
 "$repo_root/build/duc" fmt "$fmt_dir" --check
 "$repo_root/build/duc" fmt "$repo_root/examples" --check
+fmt_project="$repo_root/build/fmt_project"
+rm -rf "$fmt_project"
+mkdir -p "$fmt_project/src"
+cat >"$fmt_project/dudu.toml" <<'TOML'
+name = "fmt_project"
+entry = "src/main.dd"
+TOML
+printf 'def main() -> i32:   \n    return 0\n' >"$fmt_project/src/main.dd"
+printf 'def helper() -> i32:   \n    return 42\n' >"$fmt_project/src/helper.dd"
+(
+    cd "$fmt_project"
+    if "$repo_root/build/dudu" fmt --check 2>"$repo_root/build/dudu_fmt_project_check.err"; then
+        echo "unformatted dudu project unexpectedly passed format check" >&2
+        exit 1
+    fi
+    "$repo_root/build/dudu" fmt
+    "$repo_root/build/dudu" fmt --check
+)
+grep -q "./src/main.dd: would reformat" "$repo_root/build/dudu_fmt_project_check.err"
+grep -q "./src/helper.dd: would reformat" "$repo_root/build/dudu_fmt_project_check.err"
 "$repo_root/build/duc" run "$repo_root/tests/fixtures/run_zero.dd" \
     -o "$repo_root/build/duc_run_zero"
 clean_smoke="$repo_root/build/clean_smoke"

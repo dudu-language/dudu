@@ -173,10 +173,11 @@ CliOptions parse_cli_options(int argc, char** argv, bool project_driver) {
         }
         fail("unexpected argument: " + arg);
     }
-    if (options.input.empty() && !options.bench && !options.build && !options.check &&
-        !options.clean && !options.clean_cache && !options.cmake && !options.emit_cpp &&
-        !options.emit_modules && !options.init_project && !options.lsp && !options.new_project &&
-        !options.run && !options.test) {
+    const bool project_format_default = options.project_driver && options.format;
+    if (options.input.empty() && !project_format_default && !options.bench && !options.build &&
+        !options.check && !options.clean && !options.clean_cache && !options.cmake &&
+        !options.emit_cpp && !options.emit_modules && !options.init_project && !options.lsp &&
+        !options.new_project && !options.run && !options.test) {
         fail("missing input file");
     }
     return options;
@@ -185,6 +186,10 @@ CliOptions parse_cli_options(int argc, char** argv, bool project_driver) {
 CliOptions resolve_project_input(CliOptions options) {
     if (options.bench || options.clean || options.clean_cache || options.init_project ||
         options.lsp || options.new_project || options.test) {
+        return options;
+    }
+    if (options.project_driver && options.format && options.input.empty()) {
+        options.input = ".";
         return options;
     }
     const std::filesystem::path config_path = options.input.empty()
