@@ -18,6 +18,15 @@ bool is_indexed_local_segment(const std::string& text) {
            is_plain_identifier(trim(text.substr(0, index)));
 }
 
+std::map<std::string, std::string> type_substitutions(const std::vector<std::string>& params,
+                                                      const std::vector<std::string>& args) {
+    std::map<std::string, std::string> out;
+    for (size_t i = 0; i < params.size() && i < args.size(); ++i) {
+        out.emplace(params[i], trim(args[i]));
+    }
+    return out;
+}
+
 std::string strip_c_type_tag(std::string type) {
     type = trim(std::move(type));
     for (std::string_view tag : {"struct ", "class ", "union ", "enum "}) {
@@ -109,9 +118,11 @@ std::optional<std::string> field_type_for_class(const Symbols& symbols, const Cl
     for (const FieldDecl& decl : klass.fields) {
         if (decl.name == field) {
             const std::vector<std::string> receiver_args = template_args_from_type(receiver_type);
-            std::string type =
-                substitute_class_template_type(decl.type, klass.generic_params, receiver_args);
-            return substitute_receiver_template_type(std::move(type), receiver_args);
+            TypeRef type = substitute_type_ref(
+                decl.type_ref, type_substitutions(klass.generic_params, receiver_args));
+            const std::string receiver_substituted = substitute_receiver_template_type(
+                substitute_type_ref_text(type, {}), receiver_args);
+            return receiver_substituted;
         }
     }
     for (const std::string& base : klass.base_classes) {
@@ -317,8 +328,8 @@ std::optional<std::string> field_type_for_type(const Symbols& symbols,
                                                const std::string& receiver_type,
                                                const std::string& field) {
     const std::string resolved = resolve_alias(symbols, receiver_type);
-    const std::vector<TypeRef> result_args = template_type_arg_refs(parse_type_text(resolved),
-                                                                    "Result");
+    const std::vector<TypeRef> result_args =
+        template_type_arg_refs(parse_type_text(resolved), "Result");
     if (!result_args.empty()) {
         if (field == "ok") {
             return "bool";

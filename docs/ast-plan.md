@@ -46,6 +46,8 @@ Already structured:
   and return metadata for downstream call checks
 - inherited and abstract method signature matching now preserves parsed
   `TypeRef` metadata while substituting generic base-class receiver types
+- generic Dudu field lookup now substitutes class template parameters from
+  parsed field `TypeRef` nodes before rendering member-access result types
 - function pointer/callback omitted-return detection checks for a missing
   parsed return `TypeRef`, not an empty raw child string
 - generic argument inference gets candidate parameter and argument names through

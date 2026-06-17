@@ -74,6 +74,7 @@
   signatures.
 - Added parsed `TypeRef` preservation for inherited and abstract method
   signature matching.
+- Added parsed `TypeRef` substitution for generic Dudu field member lookup.
 
 ### Changed
 
