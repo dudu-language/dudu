@@ -194,6 +194,9 @@ Already structured:
   `def` declarations
 - template-call semantic inference and template method lookup use the parsed
   callee expression when reconstructing lookup names
+- templated pointer-cast semantic inference builds the pointee from parsed
+  template `TypeRef` arguments instead of reconstructing `Name[...]` text and
+  reparsing it
 - generated local type inference for call expressions derives callee lookup
   names from parsed callee nodes
 - generated local type inference no longer has a raw-string helper for

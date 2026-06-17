@@ -530,6 +530,9 @@ push. They are not release packaging work.
    compatibility fallback. Pointer type C++ emission helpers and pointer-cast
    call emission now wrap parsed pointee types in explicit `TypeRef::Pointer`
    nodes instead of concatenating `*` onto type text and reparsing it.
+   Templated pointer-cast semantic inference also builds the pointee from
+   parsed template `TypeRef` arguments instead of reconstructing `Name[...]`
+   text and reparsing it.
 
 3. OOP Surface Cleanup
 

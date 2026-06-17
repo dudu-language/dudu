@@ -1,7 +1,26 @@
 #include "dudu/ast_type.hpp"
+#include "dudu/ast_parse_utils.hpp"
 #include "dudu/sema_expr_internal.hpp"
 
 namespace dudu {
+namespace {
+
+TypeRef template_pointee_type_ref_from_expr(const Expr& expr, std::vector<TypeRef> type_args) {
+    const std::string name = trim(expr.name.substr(1));
+    const TypeKind wrapper = wrapper_type_kind(name);
+    TypeRef pointee;
+    pointee.kind = wrapper != TypeKind::Unknown && type_args.size() == 1 ? wrapper
+                                                                         : TypeKind::Template;
+    pointee.name = name;
+    pointee.text = name + "[" + join_type_ref_texts(type_args) + "]";
+    pointee.children = std::move(type_args);
+    pointee.location = expr.location;
+    pointee.range = expr.range;
+    return pointee;
+}
+
+} // namespace
+
 std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr,
                                     const SourceLocation* location) {
     if (expr.template_args.empty() && expr.template_type_args.empty()) {
@@ -23,9 +42,7 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
             sema_expr_fail(*location, "pointer casts expect 1 argument, got " +
                                           std::to_string(expr.children.size()));
         }
-        const std::string pointee =
-            trim(expr.name.substr(1)) + "[" + join_type_ref_texts(type_args) + "]";
-        const TypeRef pointee_ref = parse_type_text(pointee, expr.location);
+        const TypeRef pointee_ref = template_pointee_type_ref_from_expr(expr, type_args);
         if (const auto unknown = unknown_type_ref(scope.symbols, pointee_ref)) {
             if (location != nullptr) {
                 const SourceLocation type_location =
