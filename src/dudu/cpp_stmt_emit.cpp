@@ -133,20 +133,22 @@ std::string lower_expr_as_type(const std::string& expected_type, const Expr& exp
     return lower_expr(expr, aliases, locals, symbols, options);
 }
 
-bool is_template_type(std::string_view type, std::string_view name) {
-    const TypeRef parsed = parse_type_text(type);
-    return parsed.kind == TypeKind::Template && parsed.name == name;
+bool is_template_type(const TypeRef& type, std::string_view name) {
+    return type.kind == TypeKind::Template && type.name == name;
 }
 
-bool is_fixed_array_type(std::string_view type) {
-    const TypeRef parsed = parse_type_text(type);
-    if (parsed.kind == TypeKind::Template && parsed.name == "array") {
+bool is_template_type(std::string_view type, std::string_view name) {
+    return is_template_type(parse_type_text(type), name);
+}
+
+bool is_fixed_array_type(const TypeRef& type) {
+    if (type.kind == TypeKind::Template && type.name == "array") {
         return true;
     }
-    if (parsed.kind != TypeKind::FixedArray || parsed.children.empty()) {
+    if (type.kind != TypeKind::FixedArray || type.children.empty()) {
         return false;
     }
-    const TypeRef& storage = parsed.children.front();
+    const TypeRef& storage = type.children.front();
     return storage.kind == TypeKind::Template && storage.name == "array";
 }
 
@@ -244,33 +246,37 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
             infer_array_literal_shape_type(stmt.type_ref, stmt.value_expr);
         const std::string type =
             inferred.status == ArrayShapeStatus::Inferred ? inferred.type : stmt.type;
+        const TypeRef type_ref =
+            inferred.status == ArrayShapeStatus::Inferred ? parse_type_text(type) : stmt.type_ref;
         locals[name] = type;
         out << indent(depth) << lower_declared_stmt_type(stmt, type, aliases, options) << ' '
             << name;
         if (has_expr(stmt.value_expr)) {
-            if (is_template_type(type, "Option") && stmt.value_expr.kind == ExprKind::NoneLiteral) {
+            if (is_template_type(type_ref, "Option") &&
+                stmt.value_expr.kind == ExprKind::NoneLiteral) {
                 out << " = std::nullopt";
-            } else if (is_fixed_array_type(type) && stmt.value_expr.kind == ExprKind::ListLiteral) {
+            } else if (is_fixed_array_type(type_ref) &&
+                       stmt.value_expr.kind == ExprKind::ListLiteral) {
                 out << " = {"
                     << lower_array_literal(stmt.value_expr, aliases, locals, symbols, options)
                     << "}";
-            } else if (is_template_type(type, "list") &&
+            } else if (is_template_type(type_ref, "list") &&
                        stmt.value_expr.kind == ExprKind::ListLiteral &&
                        stmt.value_expr.children.empty()) {
                 out << " = {}";
-            } else if (is_template_type(type, "list") &&
+            } else if (is_template_type(type_ref, "list") &&
                        stmt.value_expr.kind == ExprKind::ListLiteral) {
                 out << " = {"
                     << join_lowered_exprs(stmt.value_expr.children, aliases, locals, ", ", symbols,
                                           options)
                     << "}";
-            } else if (is_template_type(type, "dict") &&
+            } else if (is_template_type(type_ref, "dict") &&
                        stmt.value_expr.kind == ExprKind::DictLiteral) {
                 out << " = {"
                     << join_lowered_exprs(stmt.value_expr.children, aliases, locals, ", ", symbols,
                                           options)
                     << "}";
-            } else if (is_template_type(type, "set") &&
+            } else if (is_template_type(type_ref, "set") &&
                        stmt.value_expr.kind == ExprKind::SetLiteral) {
                 out << " = {"
                     << join_lowered_exprs(stmt.value_expr.children, aliases, locals, ", ", symbols,
