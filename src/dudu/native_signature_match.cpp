@@ -39,6 +39,13 @@ bool native_numeric_promotion(const std::string& expected, const std::string& go
     return expected == "f64" && got == "f32";
 }
 
+bool native_numeric_promotion(const TypeRef& expected, const TypeRef& got) {
+    if (!has_type_ref(expected) || !has_type_ref(got)) {
+        return false;
+    }
+    return type_ref_head_name(expected) == "f64" && type_ref_head_name(got) == "f32";
+}
+
 std::string replace_type_identifier(std::string type, const std::string& name,
                                     const std::string& arg) {
     if (name.empty() || arg.empty()) {
@@ -306,7 +313,9 @@ std::string mismatch_reason_ast(const FunctionScope& scope, const FunctionSignat
     const size_t fixed_params = std::min(signature.params.size(), args.size());
     for (size_t i = 0; i < fixed_params; ++i) {
         const NativeArgType got = native_arg_type(scope, args[i], location, infer_expr_type);
+        const TypeRef expected_ref = signature_param_ref(signature, i);
         if (!native_arg_assignable(signature, i, args[i], got, can_assign) &&
+            !native_numeric_promotion(expected_ref, got.ref) &&
             !native_numeric_promotion(signature_param_text(signature, i), got.text)) {
             std::ostringstream out;
             out << "parameter " << (i + 1) << " expects " << signature_param_text(signature, i)
@@ -369,6 +378,7 @@ match_signature_ast(const FunctionScope& scope, const FunctionSignature& signatu
         const NativeArgType got = native_arg_type(scope, args[i], location, infer_expr_type);
         const TypeRef expected_ref = signature_param_ref(signature, i);
         if (!native_arg_assignable(signature, i, args[i], got, can_assign) &&
+            !native_numeric_promotion(expected_ref, got.ref) &&
             !native_numeric_promotion(signature_param_text(signature, i), got.text) &&
             !(has_type_ref(expected_ref) && has_type_ref(got.ref) &&
               bind_native_template_type_ast(expected_ref, got.ref, bindings)) &&

@@ -600,8 +600,9 @@ push. They are not release packaging work.
    Native overload matching now accepts typed expression inference callbacks,
    checks argument/parameter `TypeRef` compatibility before rendered fallback
    paths, and binds native template placeholders from parsed argument types
-   when available. The native signature matcher no longer accepts a string
-   expression inference callback.
+   when available. Numeric promotion now checks parsed parameter and argument
+   `TypeRef` nodes before falling back to rendered native spelling. The native
+   signature matcher no longer accepts a string expression inference callback.
    Generic function and method inference no longer accepts a string expression
    inference callback; all inference inputs cross that boundary as `TypeRef`
    nodes.
