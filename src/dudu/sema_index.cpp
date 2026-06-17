@@ -6,6 +6,7 @@
 #include "dudu/cpp_lower.hpp"
 #include "dudu/sema_common.hpp"
 #include "dudu/sema_function_type.hpp"
+#include "dudu/sema_index_type_ref.hpp"
 #include "dudu/sema_ops.hpp"
 #include "dudu/type_compat.hpp"
 
@@ -425,10 +426,10 @@ TypeRef indexed_type_ref_from_type(const Symbols& symbols, const SourceLocation&
             }
         }
     }
-    if (const auto indexed = indexed_type_from_type_ref_with_count(
+    if (const auto indexed_ref = indexed_type_ref_from_type_ref_with_count(
             location, raw_type, index_count_from_expr(index_expr), is_slice_expr(index_expr),
             has_step_slice(index_expr), label)) {
-        return parse_type_text(*indexed, location);
+        return *indexed_ref;
     }
     return indexed_type_ref_from_type(symbols, location, substitute_type_ref_text(raw_type, {}),
                                       index_expr, label);

@@ -108,6 +108,7 @@ add_library(dudu_frontend
     src/dudu/sema_function_type.cpp
     src/dudu/sema_generics.cpp
     src/dudu/sema_index.cpp
+    src/dudu/sema_index_type_ref.cpp
     src/dudu/sema_inheritance.cpp
     src/dudu/sema_match.cpp
     src/dudu/sema_member_paths.cpp

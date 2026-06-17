@@ -545,6 +545,18 @@ void test_index_type_inference_uses_type_ast() {
     assert(dudu::indexed_type_from_type(symbols, location, "Bag[Item]",
                                         dudu::parse_expr_text("0", location), "bag") == "Item");
 
+    const dudu::TypeRef matrix_type = dudu::parse_type_text("array[list[i32]][3, 4]");
+    const dudu::TypeRef row_type = dudu::indexed_type_ref_from_type(
+        symbols, location, matrix_type, dudu::parse_expr_text("1", location), "matrix");
+    assert(row_type.kind == dudu::TypeKind::FixedArray);
+    assert(dudu::substitute_type_ref_text(row_type, {}) == "array[list[i32]][4]");
+
+    const dudu::TypeRef cell_type = dudu::indexed_type_ref_from_type(
+        symbols, location, matrix_type, dudu::parse_expr_text("1, 2", location), "matrix");
+    assert(cell_type.kind == dudu::TypeKind::Template);
+    assert(cell_type.name == "list");
+    assert(dudu::substitute_type_ref_text(cell_type, {}) == "list[i32]");
+
     const std::map<std::string, std::string> locals = {
         {"bag", "Bag[Item]"},
     };
