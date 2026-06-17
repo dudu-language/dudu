@@ -160,13 +160,9 @@ struct Stmt {
     std::string type;
     std::string value;
     TypeRef type_ref;
-    std::string target;
     std::string op;
     std::string condition;
     std::string message;
-    std::string iterable;
-    std::string pattern;
-    std::string guard;
     std::string unsupported_feature;
     Expr expr;
     Expr value_expr;

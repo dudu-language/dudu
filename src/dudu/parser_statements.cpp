@@ -269,8 +269,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
             fail_current("expected in after for loop binding");
         }
         const JoinedTokens iterable = join_until_with_range({TokenKind::Colon, TokenKind::Newline});
-        stmt.iterable = iterable.text;
-        stmt.iterable_expr = parse_expr_text(stmt.iterable, iterable.range.start);
+        stmt.iterable_expr = parse_expr_text(iterable.text, iterable.range.start);
         consume(TokenKind::Colon, "expected : after for loop iterable");
         attach_statement_source(stmt, join_tokens(begin, cursor_));
         return stmt;
@@ -279,13 +278,11 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
     if (match_identifier("case")) {
         stmt.kind = StmtKind::Case;
         const JoinedTokens pattern = join_until_top_level_identifier("if", {TokenKind::Colon});
-        stmt.pattern = pattern.text;
-        stmt.pattern_expr = parse_expr_text(stmt.pattern, pattern.range.start);
+        stmt.pattern_expr = parse_expr_text(pattern.text, pattern.range.start);
         if (match_identifier("if")) {
             const JoinedTokens guard =
                 join_until_with_range({TokenKind::Colon, TokenKind::Newline});
-            stmt.guard = guard.text;
-            stmt.guard_expr = parse_expr_text(stmt.guard, guard.range.start);
+            stmt.guard_expr = parse_expr_text(guard.text, guard.range.start);
         }
         consume(TokenKind::Colon, "expected : after case pattern");
         attach_statement_source(stmt, join_tokens(begin, cursor_));
@@ -387,7 +384,6 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
             stmt.op = compound_assignment_op(assign.text);
         }
         const JoinedTokens target = join_tokens(line_begin, *assignment);
-        stmt.target = target.text;
         fill_expr_piece(stmt.target_expr, target);
         const JoinedTokens value = join_tokens(*assignment + 1, end);
         stmt.value = value.text;

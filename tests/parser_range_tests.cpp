@@ -59,7 +59,7 @@ void test_keyword_statements_keep_token_ranges() {
     assert(loop.kind == dudu::StmtKind::For);
     assert(loop.name == "item");
     assert(loop.type == "i32");
-    assert(loop.iterable == "values");
+    assert(loop.iterable_expr.text == "values");
     assert(loop.iterable_expr.range.start.column == 22);
     assert(loop.children.front().kind == dudu::StmtKind::DebugAssert);
     assert(loop.children.front().condition == "item > 0");
