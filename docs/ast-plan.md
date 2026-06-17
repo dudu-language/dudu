@@ -1163,6 +1163,10 @@ identifier tokens instead of copied from joined statement text, so malformed
 bindings such as `player.hp: i32` or `except err.value: Error:` fail in the
 parser rather than smuggling raw name strings into later semantic passes.
 
+Tuple literal expression inference now renders from the structured
+`infer_expr_type_ast` result instead of manually assembling `tuple[...]` text in
+the string compatibility path.
+
 Unsupported `def` expressions now parse as a dedicated `DefExpression` AST node
 instead of falling through to `Unknown` and being recognized later by raw text
 scanning.

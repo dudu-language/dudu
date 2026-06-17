@@ -600,6 +600,16 @@ void test_emitted_local_expression_type_inference() {
     assert(infer_emitted_local_type_text("make_matrix()[1][0]", locals, functions) == "i32");
 }
 
+void test_tuple_expression_inference_uses_type_ast() {
+    const dudu::ModuleAst module = dudu::parse_source("def main() -> i32:\n"
+                                                      "    count: i32 = 7\n"
+                                                      "    name: str = \"dudu\"\n"
+                                                      "    pair: tuple[i32, str] = (count, name)\n"
+                                                      "    return count\n",
+                                                      "tuple_inference.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+}
+
 void test_formatter() {
     const std::string formatted = dudu::format_source("def main() -> i32:   \n"
                                                       "    return 0\t\n"
@@ -880,6 +890,7 @@ int main() {
         test_index_type_inference_uses_type_ast();
         test_direct_call_return_type_inference_uses_type_ast();
         test_emitted_local_expression_type_inference();
+        test_tuple_expression_inference_uses_type_ast();
         test_formatter();
         test_list_iterator_methods();
         test_reference_list_indexing();

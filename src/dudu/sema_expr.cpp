@@ -198,18 +198,8 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
         return "slice";
     case ExprKind::SetLiteral:
         return "set";
-    case ExprKind::TupleLiteral: {
-        std::ostringstream out;
-        out << "tuple[";
-        for (size_t i = 0; i < expr.children.size(); ++i) {
-            if (i > 0) {
-                out << ", ";
-            }
-            out << infer_expr_ast(scope, expr.children[i], use_location);
-        }
-        out << "]";
-        return out.str();
-    }
+    case ExprKind::TupleLiteral:
+        return substitute_type_ref_text(infer_expr_type_ast(scope, expr, use_location), {});
     case ExprKind::Name:
         if (const auto local = scope.locals.find(expr.name); local != scope.locals.end()) {
             return local->second;
