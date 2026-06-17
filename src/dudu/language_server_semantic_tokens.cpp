@@ -125,12 +125,12 @@ void collect_type_tokens(const TypeRef& type, std::vector<SemanticToken>& tokens
         const std::string_view label = type.name.empty() ? type.text : type.name;
         const std::string label_text(label);
         const std::string full = type.text.empty() ? std::string(label) : type.text;
-        const bool native_class = native_index != nullptr &&
-                                  (native_index->classes.contains(full) ||
-                                   native_index->classes.contains(label_text));
-        const bool native_type = native_index != nullptr &&
-                                 (native_index->types.contains(full) ||
-                                  native_index->types.contains(label_text));
+        const bool native_class =
+            native_index != nullptr &&
+            (native_index->classes.contains(full) || native_index->classes.contains(label_text));
+        const bool native_type =
+            native_index != nullptr &&
+            (native_index->types.contains(full) || native_index->types.contains(label_text));
         if (native_class) {
             add_native_semantic_token(tokens, type.location, label, token_class);
         } else if (native_type) {
@@ -320,8 +320,7 @@ void collect_semantic_tokens(const ModuleAst& module, std::vector<SemanticToken>
         add_semantic_token(tokens, shifted_location(klass.location, 6), klass.name, token_class,
                            mod_declaration);
         for (const FieldDecl& field : klass.fields) {
-            add_semantic_token(tokens, field.location, field.name, token_property,
-                               mod_declaration);
+            add_semantic_token(tokens, field.location, field.name, token_property, mod_declaration);
             collect_type_tokens(field.type_ref, tokens, native_index);
             collect_expr_tokens(field.value_expr, tokens, native_index);
         }
@@ -338,8 +337,7 @@ void collect_semantic_tokens(const ModuleAst& module, std::vector<SemanticToken>
             collect_expr_tokens(field.value_expr, tokens, native_index);
         }
         for (const FunctionDecl& method : klass.methods) {
-            add_semantic_token(tokens, shifted_location(method.location, 4), method.name,
-                               token_method, mod_declaration);
+            add_semantic_token(tokens, method.location, method.name, token_method, mod_declaration);
             for (const ParamDecl& param : method.params) {
                 add_semantic_token(tokens, param.location, param.name, token_parameter,
                                    mod_declaration);
@@ -359,8 +357,7 @@ void collect_semantic_tokens(const ModuleAst& module, std::vector<SemanticToken>
         collect_expr_tokens(assertion.expression_expr, tokens, native_index);
     }
     for (const FunctionDecl& fn : module.functions) {
-        add_semantic_token(tokens, shifted_location(fn.location, 4), fn.name, token_function,
-                           mod_declaration);
+        add_semantic_token(tokens, fn.location, fn.name, token_function, mod_declaration);
         for (const ParamDecl& param : fn.params) {
             add_semantic_token(tokens, param.location, param.name, token_parameter,
                                mod_declaration);
@@ -377,19 +374,19 @@ std::string semantic_tokens_json(const ModuleAst& module, const ModuleAst& nativ
     std::vector<SemanticToken> tokens;
     const NativeSemanticIndex native_index = native_semantic_index(native_symbols);
     collect_semantic_tokens(module, tokens, &native_index);
-    std::sort(tokens.begin(), tokens.end(), [](const SemanticToken& left,
-                                               const SemanticToken& right) {
-        if (left.line != right.line) {
-            return left.line < right.line;
-        }
-        if (left.column != right.column) {
-            return left.column < right.column;
-        }
-        if (left.length != right.length) {
-            return left.length < right.length;
-        }
-        return left.type < right.type;
-    });
+    std::sort(tokens.begin(), tokens.end(),
+              [](const SemanticToken& left, const SemanticToken& right) {
+                  if (left.line != right.line) {
+                      return left.line < right.line;
+                  }
+                  if (left.column != right.column) {
+                      return left.column < right.column;
+                  }
+                  if (left.length != right.length) {
+                      return left.length < right.length;
+                  }
+                  return left.type < right.type;
+              });
 
     std::ostringstream out;
     out << "{\"data\":[";

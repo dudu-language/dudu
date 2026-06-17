@@ -261,6 +261,9 @@ Already structured:
 - LSP local variable/parameter type collection for hover, member completion,
   and member definition now walks parsed function/method bodies and reuses
   semantic expression inference instead of regexing source lines
+- same-document LSP reference and rename locations now come from parsed
+  declarations, statements, and expression nodes instead of raw token scans, so
+  comments and string literals are no longer treated as editable references
 - array shape inference and explicit shape extraction also consume parsed
   `TypeRef` array forms, removing the separate bracket matcher from
   `array_shape.cpp`

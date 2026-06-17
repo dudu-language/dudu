@@ -1,10 +1,14 @@
 #include "dudu/language_server_navigation.hpp"
 
+#include "dudu/ast_expr.hpp"
 #include "dudu/language_server_json.hpp"
+#include "dudu/parser.hpp"
 
 #include <algorithm>
 #include <cctype>
 #include <filesystem>
+#include <functional>
+#include <set>
 #include <sstream>
 
 namespace dudu {
@@ -65,13 +69,12 @@ std::string symbol_at(const Document& doc, const Json* params) {
             --start;
         }
         int end = std::min(target_character, static_cast<int>(line.size()));
-        while (end < static_cast<int>(line.size()) &&
-               symbol_char(line[static_cast<size_t>(end)])) {
+        while (end < static_cast<int>(line.size()) && symbol_char(line[static_cast<size_t>(end)])) {
             ++end;
         }
-        return start < end ? line.substr(static_cast<size_t>(start),
-                                         static_cast<size_t>(end - start))
-                           : std::string{};
+        return start < end
+                   ? line.substr(static_cast<size_t>(start), static_cast<size_t>(end - start))
+                   : std::string{};
     }
     return {};
 }
@@ -102,25 +105,110 @@ bool valid_identifier(const std::string& value) {
 
 std::vector<ReferenceLocation> references_in(const Document& doc, const std::string& query) {
     std::vector<ReferenceLocation> out;
-    std::istringstream in(doc.text);
-    std::string line;
-    for (int row = 0; std::getline(in, line); ++row) {
-        for (int start = 0; start < static_cast<int>(line.size());) {
-            if (!symbol_char(line[static_cast<size_t>(start)])) {
-                ++start;
-                continue;
-            }
-            int end = start + 1;
-            while (end < static_cast<int>(line.size()) &&
-                   symbol_char(line[static_cast<size_t>(end)])) {
-                ++end;
-            }
-            if (line.substr(static_cast<size_t>(start), static_cast<size_t>(end - start)) ==
-                query) {
-                out.push_back({doc.uri, range_json(row, start, end)});
-            }
-            start = end;
+    if (query.empty()) {
+        return out;
+    }
+    std::set<std::pair<int, int>> seen;
+    const auto add = [&](const std::string& name, const SourceLocation& location) {
+        if (name != query || location.line <= 0 || location.column <= 0) {
+            return;
         }
+        const auto key = std::pair{location.line, location.column};
+        if (!seen.insert(key).second) {
+            return;
+        }
+        const int line = location.line - 1;
+        const int start = location.column - 1;
+        out.push_back({uri_for_location(location, doc),
+                       range_json(line, start, start + static_cast<int>(name.size()))});
+    };
+    const std::function<void(const Expr&)> visit_expr = [&](const Expr& expr) {
+        if (expr.kind == ExprKind::Name || expr.kind == ExprKind::Member ||
+            expr.kind == ExprKind::Call || expr.kind == ExprKind::TemplateCall) {
+            add(expr.name, expr.location);
+        }
+        for (const Expr& callee : expr.callee) {
+            visit_expr(callee);
+        }
+        for (const Expr& param : expr.params) {
+            visit_expr(param);
+        }
+        for (const Expr& arg : expr.template_args) {
+            visit_expr(arg);
+        }
+        for (const Expr& child : expr.children) {
+            visit_expr(child);
+        }
+    };
+    const std::function<void(const std::vector<Stmt>&)> visit_stmts =
+        [&](const std::vector<Stmt>& statements) {
+            for (const Stmt& stmt : statements) {
+                if (stmt.kind == StmtKind::VarDecl || stmt.kind == StmtKind::For ||
+                    stmt.kind == StmtKind::Except) {
+                    add(stmt.name, stmt.location);
+                }
+                visit_expr(stmt.expr);
+                visit_expr(stmt.value_expr);
+                visit_expr(stmt.target_expr);
+                visit_expr(stmt.condition_expr);
+                visit_expr(stmt.message_expr);
+                visit_expr(stmt.iterable_expr);
+                visit_expr(stmt.pattern_expr);
+                visit_expr(stmt.guard_expr);
+                visit_stmts(stmt.children);
+            }
+        };
+    try {
+        const ModuleAst module = parse_source(doc.text, doc.path);
+        for (const ImportDecl& import : module.imports) {
+            add(bound_import_name(import), import.location);
+            add(import.imported_name, import.location);
+        }
+        for (const TypeAliasDecl& alias : module.aliases) {
+            add(alias.name, alias.location);
+        }
+        for (const ConstDecl& constant : module.constants) {
+            add(constant.name, constant.location);
+            visit_expr(constant.value_expr);
+        }
+        for (const EnumDecl& en : module.enums) {
+            add(en.name, en.location);
+            for (const EnumValueDecl& value : en.values) {
+                add(value.name, value.location);
+                visit_expr(value.value_expr);
+            }
+        }
+        for (const ClassDecl& klass : module.classes) {
+            add(klass.name, klass.location);
+            for (const FieldDecl& field : klass.fields) {
+                add(field.name, field.location);
+                visit_expr(field.value_expr);
+            }
+            for (const ConstDecl& constant : klass.constants) {
+                add(constant.name, constant.location);
+                visit_expr(constant.value_expr);
+            }
+            for (const ConstDecl& field : klass.static_fields) {
+                add(field.name, field.location);
+                visit_expr(field.value_expr);
+            }
+            for (const FunctionDecl& method : klass.methods) {
+                add(method.name, method.location);
+                for (const ParamDecl& param : method.params) {
+                    add(param.name, param.location);
+                }
+                visit_stmts(method.statements);
+            }
+        }
+        for (const FunctionDecl& fn : module.functions) {
+            add(fn.name, fn.location);
+            for (const ParamDecl& param : fn.params) {
+                add(param.name, param.location);
+            }
+            visit_stmts(fn.statements);
+        }
+    } catch (const std::exception&) {
+        return {};
     }
     return out;
 }

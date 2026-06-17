@@ -41,6 +41,7 @@ native_pkg_uri = f"file://{repo_root}/tests/fixtures/lsp_pkg_project/main.dd"
 native_pkg_config_uri = f"file://{repo_root}/tests/fixtures/lsp_pkg_project/dudu.toml"
 rename_uri = f"file://{repo_root}/tests/fixtures/lsp_rename_main.dd"
 rename_user_uri = f"file://{repo_root}/tests/fixtures/lsp_rename_user.dd"
+rename_ast_uri = "file:///tmp/dudu_lsp_rename_ast.dd"
 lint_uri = "file:///tmp/dudu_lsp_lint.dd"
 unused_uri = "file:///tmp/dudu_lsp_unused.dd"
 shadow_uri = "file:///tmp/dudu_lsp_shadow.dd"
@@ -111,6 +112,54 @@ messages = [
                     "version": 1,
                     "text": source,
                 }
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "method": "textDocument/didOpen",
+            "params": {
+                "textDocument": {
+                    "uri": rename_ast_uri,
+                    "languageId": "dudu",
+                    "version": 1,
+                    "text": "\n".join(
+                        [
+                            "def unique_ref_target() -> i32:",
+                            "    return 1",
+                            "",
+                            "def main() -> i32:",
+                            "    text = \"unique_ref_target\"",
+                            "    # unique_ref_target in a comment",
+                            "    return unique_ref_target()",
+                            "",
+                        ]
+                    ),
+                }
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 54,
+            "method": "textDocument/references",
+            "params": {
+                "textDocument": {"uri": rename_ast_uri},
+                "position": {"line": 6, "character": 15},
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 55,
+            "method": "textDocument/rename",
+            "params": {
+                "textDocument": {"uri": rename_ast_uri},
+                "position": {"line": 0, "character": 5},
+                "newName": "unique_ref_renamed",
             },
         }
     ),
@@ -1402,6 +1451,25 @@ rename_starts = {
 }
 assert (3, 4, "sum_values") in rename_starts
 assert (7, 17, "sum_values") in rename_starts
+
+ast_references = next(item for item in responses if item.get("id") == 54)
+ast_reference_starts = {
+    (item["range"]["start"]["line"], item["range"]["start"]["character"])
+    for item in ast_references["result"]
+    if item["uri"] == rename_ast_uri
+}
+assert ast_reference_starts == {(0, 4), (6, 11)}
+
+ast_rename = next(item for item in responses if item.get("id") == 55)
+ast_rename_edits = ast_rename["result"]["changes"][rename_ast_uri]
+ast_rename_starts = {
+    (item["range"]["start"]["line"], item["range"]["start"]["character"], item["newText"])
+    for item in ast_rename_edits
+}
+assert ast_rename_starts == {
+    (0, 4, "unique_ref_renamed"),
+    (6, 11, "unique_ref_renamed"),
+}
 
 code_actions = next(item for item in responses if item.get("id") == 17)
 assert code_actions["result"][0]["title"] == "Format document"

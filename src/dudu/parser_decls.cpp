@@ -215,15 +215,18 @@ FunctionDecl Parser::parse_function(const Token& start, Visibility visibility,
     FunctionDecl fn;
     fn.visibility = visibility;
     fn.decorators = decorators;
-    fn.location = start.location;
     const Token& name = consume_identifier("expected function name");
+    SourceLocation name_location = name.location;
     fn.name = name.text;
     if (receiver_type.empty() && match(TokenKind::Dot)) {
         fn.receiver_type = fn.name;
-        fn.name = consume_identifier("expected method name after .").text;
+        const Token& method_name = consume_identifier("expected method name after .");
+        name_location = method_name.location;
+        fn.name = method_name.text;
     } else {
         fn.receiver_type = std::string(receiver_type);
     }
+    fn.location = name_location;
     fn.visibility = visibility_from_name(fn.visibility, fn.name);
     fn.generic_params = parse_generic_params();
     consume(TokenKind::LParen, "expected ( after function name");
