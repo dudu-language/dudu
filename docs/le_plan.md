@@ -599,6 +599,9 @@ push. They are not release packaging work.
    paths, and binds native template placeholders from parsed argument types
    when available. The native signature matcher no longer accepts a string
    expression inference callback.
+   Generic function and method inference no longer accepts a string expression
+   inference callback; all inference inputs cross that boundary as `TypeRef`
+   nodes.
    Assignment target validation and side-effect-only statement checks now use
    typed expression inference for swizzle receivers, call targets, `range`
    arguments, assert/raise payloads, expression statements, and void-return

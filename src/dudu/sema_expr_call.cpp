@@ -55,12 +55,7 @@ std::string infer_call_ast(const FunctionScope& scope, const Expr& expr,
         !generic_fn->second->generic_params.empty()) {
         if (const auto type_args = infer_generic_call_type_args(
                 scope, *generic_fn->second, callee, expr.children, use_location,
-                {.infer_expr =
-                     [](const FunctionScope& nested, const Expr& arg,
-                        const SourceLocation* location) {
-                         return infer_expr_ast(nested, arg, location);
-                     },
-                 .infer_expr_type =
+                {.infer_expr_type =
                      [](const FunctionScope& nested, const Expr& arg,
                         const SourceLocation* location) {
                          return infer_expr_type_ast(nested, arg, location);
@@ -143,12 +138,7 @@ std::string infer_call_ast(const FunctionScope& scope, const Expr& expr,
             if (!foreign_receiver) {
                 if (const auto inferred = inferred_generic_method_signature_for_type(
                         scope, receiver_type, member.name, expr.children, use_location,
-                        {.infer_expr =
-                             [](const FunctionScope& nested, const Expr& arg,
-                                const SourceLocation* location) {
-                                 return infer_expr_ast(nested, arg, location);
-                             },
-                         .infer_expr_type =
+                        {.infer_expr_type =
                              [](const FunctionScope& nested, const Expr& arg,
                                 const SourceLocation* location) {
                                  return infer_expr_type_ast(nested, arg, location);

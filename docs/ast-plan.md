@@ -518,6 +518,8 @@ Already structured:
   compatibility fallback, and exposes a parsed `TypeRef` path for native
   template placeholder binding; native signature matching no longer accepts a
   string expression inference callback
+- generic function and method inference no longer accepts a string expression
+  inference callback; inferred inputs cross that API as `TypeRef` nodes
 - assignment target validation and side-effect-only statement checks now infer
   expression `TypeRef` nodes for swizzle receivers, call targets, `range`
   arguments, assert/raise payloads, expression statements, and void-return

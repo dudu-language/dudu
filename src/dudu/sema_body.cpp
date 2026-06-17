@@ -54,13 +54,7 @@ void check_type_match(FunctionScope& scope, const std::string& expected, const E
             const std::string receiver_type = substitute_type_ref_text(receiver_ref, {});
             if (const auto signature = inferred_generic_method_signature_for_type(
                     scope, receiver_type, member.name, expr.children, expected, &location,
-                    {.infer_expr =
-                         [&](const FunctionScope& nested, const Expr& arg,
-                             const SourceLocation* arg_location) {
-                             FunctionScope copy = nested;
-                             return callbacks.infer_expr(copy, arg, arg_location);
-                         },
-                     .infer_expr_type =
+                    {.infer_expr_type =
                          [&](const FunctionScope& nested, const Expr& arg,
                              const SourceLocation* arg_location) {
                              return callbacks.infer_expr_type(nested, arg, arg_location);
