@@ -44,7 +44,7 @@ std::optional<std::string> contextual_numeric_binary_type(const FunctionScope& s
 } // namespace
 
 [[noreturn]] void sema_expr_fail(const SourceLocation& location, const std::string& message) {
-    throw CompileError(location, message);
+    throw CompileError(location, message, "dudu.sema.expression");
 }
 
 TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,

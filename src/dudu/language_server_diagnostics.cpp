@@ -19,24 +19,17 @@
 namespace dudu {
 namespace {
 
-std::string diagnostic_source(std::string_view message, std::string_view code) {
+std::string diagnostic_source(std::string_view code) {
     if (code == "dudu.native_header.scan_failed") {
         return "dudu/native-header";
     }
-    if (message.find("return type mismatch") != std::string_view::npos ||
-        message.find("cannot assign") != std::string_view::npos ||
-        message.find("unknown identifier") != std::string_view::npos ||
-        message.find("unknown type") != std::string_view::npos ||
-        message.find("argument ") != std::string_view::npos) {
+    if (code.starts_with("dudu.sema.")) {
         return "dudu/sema";
     }
-    if (message.find("unexpected") != std::string_view::npos ||
-        message.find("expected newline") != std::string_view::npos ||
-        message.find("expected indent") != std::string_view::npos ||
-        message.find("expected identifier") != std::string_view::npos) {
+    if (code.starts_with("dudu.parser.") || code.starts_with("dudu.lexer.")) {
         return "dudu/parser";
     }
-    return "dudu/sema";
+    return "dudu/compiler";
 }
 
 std::optional<std::string> missing_pkg_config_package(const ProjectConfig& config) {
@@ -100,7 +93,7 @@ std::vector<Diagnostic> diagnostics_for_document(const Document& doc) {
     } catch (const CompileError& error) {
         return {{.location = error.location(),
                  .message = error.what(),
-                 .source = diagnostic_source(error.what(), error.code()),
+                 .source = diagnostic_source(error.code()),
                  .severity = 1,
                  .code = error.code(),
                  .data_name = error.data_name()}};

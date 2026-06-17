@@ -1467,6 +1467,9 @@ LSP source edits are also moving to AST-owned ranges:
 - the old raw document `symbol_at` navigation helper has been removed; editor
   definition, references, and rename entry points resolve cursor symbols through
   AST-backed symbol lookup.
+- LSP diagnostic source labels now route from structured error codes such as
+  `dudu.parser.*`, `dudu.lexer.*`, and `dudu.sema.*` instead of classifying
+  diagnostics by searching human-readable error text.
 
 Expression parsing has moved onto the lexer/token stream:
 

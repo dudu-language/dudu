@@ -6,6 +6,7 @@
 #include "dudu/cpp_stmt_types.hpp"
 #include "dudu/format.hpp"
 #include "dudu/lexer.hpp"
+#include "dudu/language_server_diagnostics.hpp"
 #include "dudu/module_loader.hpp"
 #include "dudu/native_headers.hpp"
 #include "dudu/parser.hpp"
@@ -470,6 +471,27 @@ void test_semantic_diagnostics() {
     }
 }
 
+void test_lsp_diagnostic_sources_are_structured() {
+    const dudu::Document parser_doc{.uri = "",
+                                    .path = "parser_diag.dd",
+                                    .text = "def main() -> i32\n"
+                                            "    return 0\n"};
+    const std::vector<dudu::Diagnostic> parser_diags =
+        dudu::diagnostics_for_document(parser_doc);
+    assert(parser_diags.size() == 1);
+    assert(parser_diags.front().source == "dudu/parser");
+    assert(parser_diags.front().code.starts_with("dudu.parser."));
+
+    const dudu::Document sema_doc{.uri = "",
+                                  .path = "sema_diag.dd",
+                                  .text = "def main() -> i32:\n"
+                                          "    return True\n"};
+    const std::vector<dudu::Diagnostic> sema_diags = dudu::diagnostics_for_document(sema_doc);
+    assert(sema_diags.size() == 1);
+    assert(sema_diags.front().source == "dudu/sema");
+    assert(sema_diags.front().code.starts_with("dudu.sema."));
+}
+
 void test_allocation_type_ref_diagnostics() {
     dudu::Symbols symbols;
     const dudu::SourceLocation location{.file = "cpp_escape_alloc.dd", .line = 7, .column = 12};
@@ -848,6 +870,7 @@ int main() {
         test_canonical_examples_parse(root);
         test_header_emission();
         test_semantic_diagnostics();
+        test_lsp_diagnostic_sources_are_structured();
         test_allocation_type_ref_diagnostics();
         test_emitted_local_index_type_inference();
         test_index_type_inference_uses_type_ast();

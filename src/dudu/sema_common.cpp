@@ -7,7 +7,7 @@
 namespace dudu {
 
 [[noreturn]] void sema_fail(const SourceLocation& location, const std::string& message) {
-    throw CompileError(location, message);
+    throw CompileError(location, message, "dudu.sema.error");
 }
 
 bool missing_expr(const Expr& expr) {

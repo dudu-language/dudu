@@ -48,7 +48,7 @@ class Lexer {
     }
 
     [[noreturn]] void error(int column, const std::string& message) const {
-        throw CompileError(loc(line_, column), message);
+        throw CompileError(loc(line_, column), message, "dudu.lexer.syntax");
     }
 
     void push(TokenKind kind, std::string text, int line, int column) {

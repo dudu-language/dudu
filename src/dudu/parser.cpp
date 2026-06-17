@@ -173,7 +173,7 @@ const Token& Parser::consume_identifier(std::string_view message) {
 }
 
 void Parser::fail_current(const std::string& message) const {
-    throw CompileError(current().location, message);
+    throw CompileError(current().location, message, "dudu.parser.syntax");
 }
 
 void Parser::skip_newlines() {
@@ -185,7 +185,8 @@ void Parser::require_no_decorators(const std::vector<Decorator>& decorators,
                                    std::string_view target) const {
     if (!decorators.empty()) {
         throw CompileError(decorators.front().location,
-                           "decorators are not valid before " + std::string(target));
+                           "decorators are not valid before " + std::string(target),
+                           "dudu.parser.decorator");
     }
 }
 
@@ -193,12 +194,14 @@ Visibility Parser::parse_visibility() {
     if (match_identifier("public")) {
         throw CompileError(previous().location,
                            "explicit visibility keywords are not supported; use normal public "
-                           "names or leading underscore private names");
+                           "names or leading underscore private names",
+                           "dudu.parser.visibility");
     }
     if (match_identifier("private")) {
         throw CompileError(previous().location,
                            "explicit visibility keywords are not supported; use normal public "
-                           "names or leading underscore private names");
+                           "names or leading underscore private names",
+                           "dudu.parser.visibility");
     }
     return Visibility::Default;
 }
