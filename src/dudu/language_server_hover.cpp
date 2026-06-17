@@ -4,8 +4,12 @@
 #include "dudu/language_server_json.hpp"
 #include "dudu/language_server_navigation.hpp"
 #include "dudu/language_server_symbols.hpp"
+#include "dudu/parser.hpp"
 
 #include <algorithm>
+#include <filesystem>
+#include <fstream>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -41,6 +45,68 @@ std::string doc_comment_before(const Document& doc, int one_based_line) {
     return out.str();
 }
 
+std::optional<Document> imported_document(const Document& doc, const ImportDecl& import) {
+    const std::filesystem::path file =
+        module_path_to_file(doc.path.parent_path(), import.module_path);
+    std::error_code error;
+    if (!std::filesystem::exists(file, error) || error) {
+        return std::nullopt;
+    }
+    std::ifstream input(file);
+    if (!input) {
+        return std::nullopt;
+    }
+    const std::string text{std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
+    return Document{.uri = file_uri(file), .path = file, .text = text};
+}
+
+std::optional<std::string> imported_symbol_hover_json(const Document& doc,
+                                                      const std::string& word) {
+    if (word.empty()) {
+        return std::nullopt;
+    }
+    try {
+        const ModuleAst module = parse_source(doc.text, doc.path);
+        for (const ImportDecl& import : module.imports) {
+            if (import.kind == ImportKind::Module) {
+                const std::string prefix = bound_import_name(import);
+                if (word.rfind(prefix + ".", 0) != 0) {
+                    continue;
+                }
+                const std::optional<Document> imported = imported_document(doc, import);
+                if (!imported) {
+                    continue;
+                }
+                const std::string imported_name = word.substr(prefix.size() + 1);
+                for (const Symbol& symbol : symbols_for_document(*imported, false)) {
+                    if (symbol.name != imported_name) {
+                        continue;
+                    }
+                    return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"`" +
+                           json_escape(symbol.detail) + "`\"}}";
+                }
+                continue;
+            }
+            if (import.kind != ImportKind::From || bound_import_name(import) != word) {
+                continue;
+            }
+            const std::optional<Document> imported = imported_document(doc, import);
+            if (!imported) {
+                continue;
+            }
+            for (const Symbol& symbol : symbols_for_document(*imported, false)) {
+                if (symbol.name != import.imported_name) {
+                    continue;
+                }
+                return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"`" +
+                       json_escape(symbol.detail) + "`\"}}";
+            }
+        }
+    } catch (const std::exception&) {
+    }
+    return std::nullopt;
+}
+
 } // namespace
 
 std::string hover_json(const Document& doc, const std::string& word,
@@ -57,6 +123,9 @@ std::string hover_json(const Document& doc, const std::string& word,
             return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"" + json_escape(markdown) +
                    "\"},\"range\":" + range_json(symbol.location) + "}";
         }
+    }
+    if (const std::optional<std::string> imported = imported_symbol_hover_json(doc, word)) {
+        return *imported;
     }
     if (!local_type.empty()) {
         return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"`" + json_escape(word) + ": " +

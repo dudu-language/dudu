@@ -212,7 +212,9 @@ Dudu modules before broad workspace scanning, so direct import dependencies are
 available even when they live under directories excluded from recursive scans.
 Hover includes Dudu declarations plus visible typed locals and simple inferred
 locals. Dudu declaration hover also includes contiguous source comments
-immediately above the declaration.
+immediately above the declaration. Hover now resolves Dudu symbols reached
+through imported module aliases, so `module.symbol` shows the imported
+declaration signature instead of falling back to an empty hover.
 
 Initial full-document semantic tokens are also implemented for Dudu AST nodes,
 covering declarations, parameters, fields, locals, types, literals, calls, and
@@ -327,6 +329,7 @@ Common-form snippets for functions, classes, control flow, imports, enums, and
 exception handlers are covered.
 Hover for typed locals and simple inferred locals is covered.
 Hover for Dudu declaration doc comments is covered.
+Hover for Dudu symbols imported through module aliases is covered.
 Format and organize-imports code actions are covered.
 Missing-import quick fixes are covered using an unopened workspace file.
 Native config quick fixes are covered with a fixture `dudu.toml` edit for a

@@ -67,6 +67,7 @@
 - Added user-owned CMake project build/run support through `[cmake] source`
   and `[cmake] target`.
 - Added CTest-backed `dudu test` support for user-owned CMake projects.
+- Added LSP hover for Dudu symbols reached through imported module aliases.
 
 ### Changed
 

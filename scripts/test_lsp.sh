@@ -178,6 +178,17 @@ messages = [
     packet(
         {
             "jsonrpc": "2.0",
+            "id": 48,
+            "method": "textDocument/hover",
+            "params": {
+                "textDocument": {"uri": import_graph_uri},
+                "position": {"line": 3, "character": 22},
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
             "method": "textDocument/didOpen",
             "params": {
                 "textDocument": {
@@ -1147,6 +1158,9 @@ doc_hover_value = doc_hover["result"]["contents"]["value"]
 assert "def documented_add" in doc_hover_value
 assert "Adds two numbers." in doc_hover_value
 assert "Used by hover docs." in doc_hover_value
+
+imported_hover = next(item for item in responses if item.get("id") == 48)
+assert "def vendored_helper" in imported_hover["result"]["contents"]["value"]
 
 definition = next(item for item in responses if item.get("id") == 4)
 assert definition["result"]["range"]["start"]["line"] == 3
