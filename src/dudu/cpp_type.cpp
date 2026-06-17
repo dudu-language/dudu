@@ -150,6 +150,13 @@ std::string lower_template_type(std::string_view name, const std::string& args) 
         return out.str();
     }
     if (name == "const") {
+        const TypeRef parsed = parse_type_text(args);
+        if (parsed.kind == TypeKind::Pointer && !parsed.children.empty()) {
+            return lower_cpp_type(parsed.children.front()) + "* const";
+        }
+        if (parsed.kind == TypeKind::Reference) {
+            return lower_cpp_type(parsed);
+        }
         return "const " + lower_template_arg_type(args);
     }
     if (name == "atomic") {
@@ -273,10 +280,10 @@ std::string lower_cpp_type(const std::string& raw_type) {
         return found->second;
     }
     if (starts_with(type, "*const[") && ends_with(type, "]")) {
-        return lower_cpp_type(type.substr(7, type.size() - 8)) + " const*";
+        return "const " + lower_cpp_type(type.substr(7, type.size() - 8)) + "*";
     }
     if (starts_with(type, "&const[") && ends_with(type, "]")) {
-        return lower_cpp_type(type.substr(7, type.size() - 8)) + " const&";
+        return "const " + lower_cpp_type(type.substr(7, type.size() - 8)) + "&";
     }
     if (starts_with(type, "*")) {
         return lower_cpp_type(type.substr(1)) + "*";

@@ -693,6 +693,22 @@ pc: *const[i32]
 rc: &const[PlayerState]
 ```
 
+Const binds to the type inside its brackets. Put it around the pointee for a
+pointer to const data, and around the pointer for a const pointer.
+
+```python
+mutable_ptr: *T              # T*
+ptr_to_const: *const[T]      # const T*
+const_ptr: const[*T]         # T* const
+const_ptr_to_const: const[*const[T]]  # const T* const
+ref_to_const: &const[T]      # const T&
+```
+
+Do not use `const[&T]`. C++ references are already bound after initialization,
+so top-level const on a reference is not a useful separate type. Use
+`&const[T]` when the referenced object must not be mutated through the
+reference.
+
 Address-of and dereference use C-family operators:
 
 ```python

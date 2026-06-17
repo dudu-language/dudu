@@ -580,7 +580,14 @@ void test_type_ast_shape() {
     assert(update.statements[0].type_ref.children[0].kind == dudu::TypeKind::Template);
 
     assert(dudu::lower_cpp_type(dudu::parse_type_text("list[*Player]")) == "std::vector<Player*>");
+    assert(dudu::lower_cpp_type(dudu::parse_type_text("*const[i32]")) == "const int32_t*");
+    assert(dudu::lower_cpp_type(dudu::parse_type_text("const[*i32]")) == "int32_t* const");
+    assert(dudu::lower_cpp_type(dudu::parse_type_text("const[*const[i32]]")) ==
+           "const int32_t* const");
     assert(dudu::lower_cpp_type(dudu::parse_type_text("&const[Player]")) == "const Player&");
+    assert(dudu::lower_cpp_type(dudu::parse_type_text("const[&Player]")) == "Player&");
+    assert(dudu::lower_cpp_type("*const[i32]") == "const int32_t*");
+    assert(dudu::lower_cpp_type("const[*i32]") == "int32_t* const");
     assert(dudu::lower_cpp_type(dudu::parse_type_text("fn(i32, f32) -> bool")) ==
            "std::add_pointer_t<bool(int32_t, float)>");
     assert(dudu::lower_cpp_type(dudu::parse_type_text("fn(i32)")) ==

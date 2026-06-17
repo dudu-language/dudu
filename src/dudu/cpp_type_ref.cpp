@@ -239,6 +239,39 @@ std::string lower_function_type(const TypeRef& type, bool pointer,
     return pointer ? "std::add_pointer_t<" + signature.str() + ">" : signature.str();
 }
 
+std::string lower_top_level_const_type(const TypeRef& type) {
+    if (type.kind == TypeKind::Pointer && !type.children.empty()) {
+        return lower_cpp_type(type.children.front()) + "* const";
+    }
+    if (type.kind == TypeKind::Reference) {
+        return lower_cpp_type(type);
+    }
+    return "const " + lower_cpp_type(type);
+}
+
+std::string lower_top_level_const_type(const TypeRef& type,
+                                       const std::vector<std::string>& namespace_aliases) {
+    if (type.kind == TypeKind::Pointer && !type.children.empty()) {
+        return lower_cpp_type(type.children.front(), namespace_aliases) + "* const";
+    }
+    if (type.kind == TypeKind::Reference) {
+        return lower_cpp_type(type, namespace_aliases);
+    }
+    return "const " + lower_cpp_type(type, namespace_aliases);
+}
+
+std::string lower_top_level_const_type(const TypeRef& type,
+                                       const std::vector<std::string>& namespace_aliases,
+                                       const CppEmitOptions& options) {
+    if (type.kind == TypeKind::Pointer && !type.children.empty()) {
+        return lower_cpp_type(type.children.front(), namespace_aliases, options) + "* const";
+    }
+    if (type.kind == TypeKind::Reference) {
+        return lower_cpp_type(type, namespace_aliases, options);
+    }
+    return "const " + lower_cpp_type(type, namespace_aliases, options);
+}
+
 std::string lower_fixed_array_type(const TypeRef& type) {
     if (type.children.empty()) {
         return lower_cpp_type(type.text);
@@ -321,7 +354,7 @@ std::string lower_cpp_type(const TypeRef& type) {
                                      : lower_cpp_type(type.children[0]) + "&";
     case TypeKind::Const:
         return type.children.empty() ? lower_cpp_type(type.text)
-                                     : "const " + lower_cpp_type(type.children[0]);
+                                     : lower_top_level_const_type(type.children[0]);
     case TypeKind::Volatile:
         return type.children.empty() ? lower_cpp_type(type.text)
                                      : "volatile " + lower_cpp_type(type.children[0]);
@@ -368,7 +401,7 @@ std::string lower_cpp_type(const TypeRef& type, const std::vector<std::string>& 
     case TypeKind::Const:
         return type.children.empty()
                    ? lower_cpp_type(type.text, namespace_aliases)
-                   : "const " + lower_cpp_type(type.children[0], namespace_aliases);
+                   : lower_top_level_const_type(type.children[0], namespace_aliases);
     case TypeKind::Volatile:
         return type.children.empty()
                    ? lower_cpp_type(type.text, namespace_aliases)
@@ -426,7 +459,7 @@ std::string lower_cpp_type(const TypeRef& type, const std::vector<std::string>& 
     case TypeKind::Const:
         return type.children.empty()
                    ? lower_cpp_type(type.text, namespace_aliases, options)
-                   : "const " + lower_cpp_type(type.children[0], namespace_aliases, options);
+                   : lower_top_level_const_type(type.children[0], namespace_aliases, options);
     case TypeKind::Volatile:
         return type.children.empty()
                    ? lower_cpp_type(type.text, namespace_aliases, options)
