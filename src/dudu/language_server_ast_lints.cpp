@@ -296,6 +296,51 @@ void lint_suspicious_cast_module(const ModuleAst& module, const Document& doc,
     }
 }
 
+void lint_unreachable_statement_sequence(const std::vector<Stmt>& statements, const Document& doc,
+                                         std::vector<Diagnostic>& out) {
+    bool after_return = false;
+    for (const Stmt& stmt : statements) {
+        const bool in_document = same_source_file(stmt.location.file, doc.path);
+        if (after_return && in_document) {
+            out.push_back({.location = stmt.location,
+                           .message = "unreachable statement after return",
+                           .source = "dudu/lint",
+                           .severity = 2});
+        }
+        if (!stmt.children.empty()) {
+            lint_unreachable_statement_sequence(stmt.children, doc, out);
+        }
+        if (stmt.kind == StmtKind::Return && in_document) {
+            after_return = true;
+        }
+    }
+}
+
+void lint_unreachable_function(const FunctionDecl& fn, const Document& doc,
+                               std::vector<Diagnostic>& out) {
+    lint_unreachable_statement_sequence(fn.statements, doc, out);
+}
+
+void lint_unreachable_class(const ClassDecl& klass, const Document& doc,
+                            std::vector<Diagnostic>& out) {
+    for (const FunctionDecl& method : klass.methods) {
+        lint_unreachable_function(method, doc, out);
+    }
+}
+
+void lint_unreachable_module(const ModuleAst& module, const Document& doc,
+                             std::vector<Diagnostic>& out) {
+    for (const FunctionDecl& fn : module.functions) {
+        lint_unreachable_function(fn, doc, out);
+    }
+    for (const ClassDecl& klass : module.classes) {
+        lint_unreachable_class(klass, doc, out);
+    }
+    for (const ModuleAst& unit : module.module_units) {
+        lint_unreachable_module(unit, doc, out);
+    }
+}
+
 } // namespace
 
 std::vector<Diagnostic> ast_lint_diagnostics(const ModuleAst& module, const Document& doc) {
@@ -303,6 +348,7 @@ std::vector<Diagnostic> ast_lint_diagnostics(const ModuleAst& module, const Docu
     std::set<std::pair<int, int>> seen_cpp_escapes;
     lint_cpp_escape_module(module, doc, seen_cpp_escapes, out);
     lint_suspicious_cast_module(module, doc, out);
+    lint_unreachable_module(module, doc, out);
     return out;
 }
 

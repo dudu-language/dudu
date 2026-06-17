@@ -1114,10 +1114,13 @@ lint_diagnostics = next(
     for item in responses
     if item.get("method") == "textDocument/publishDiagnostics" and item["params"]["uri"] == lint_uri
 )
-lint_diag = lint_diagnostics["params"]["diagnostics"][0]
+lint_diag = next(
+    item
+    for item in lint_diagnostics["params"]["diagnostics"]
+    if item["message"] == "unreachable statement after return"
+)
 assert lint_diag["source"] == "dudu/lint"
 assert lint_diag["severity"] == 2
-assert lint_diag["message"] == "unreachable statement after return"
 assert lint_diag["range"]["start"]["line"] == 2
 
 unused_diagnostics = next(
