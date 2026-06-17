@@ -13,11 +13,12 @@ namespace dudu {
 
 struct SuperCheckCallbacks {
     std::function<std::string(const FunctionScope&, const Expr&, const SourceLocation*)> infer_expr;
+    std::function<TypeRef(const FunctionScope&, const Expr&, const SourceLocation*)>
+        infer_expr_type;
     std::function<bool(const FunctionScope&, const std::string&, const Expr&, const std::string&)>
         can_assign;
-    std::function<std::optional<FunctionSignature>(const FunctionScope&,
-                                                   const std::vector<FunctionSignature>&,
-                                                   const std::vector<Expr>&)>
+    std::function<std::optional<FunctionSignature>(
+        const FunctionScope&, const std::vector<FunctionSignature>&, const std::vector<Expr>&)>
         matching_signature;
     std::function<void(const FunctionScope&, const std::string&, const FunctionSignature&,
                        const std::vector<Expr>&, const SourceLocation*)>

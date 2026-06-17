@@ -509,6 +509,9 @@ Already structured:
 - native overload matching and constructor semantic checks use parsed argument
   expression nodes for assignment compatibility instead of passing argument text
   back through string-based compatibility callbacks
+- constructor semantic checks now preserve parsed field and `init` parameter
+  `TypeRef` nodes and infer argument expressions as `TypeRef` before falling
+  back to rendered compatibility checks and diagnostics
 - assignment compatibility for parsed explicit casts, value-wrapper
   assignments, and `Ok(...)`/`Err(...)` result construction inspects call
   expression nodes instead of rediscovering those forms from raw text

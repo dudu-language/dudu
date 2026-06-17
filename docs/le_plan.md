@@ -589,6 +589,9 @@ push. They are not release packaging work.
    Text-expected body type checks now infer RHS and generic-method receivers as
    `TypeRef` first, using structured type assignment before legacy
    assignment/literal compatibility fallback.
+   Constructor argument validation now preserves field and `init` parameter
+   `TypeRef` nodes, infers argument expressions as `TypeRef` first, and checks
+   structural assignment before rendering types for compatibility diagnostics.
 
 3. OOP Surface Cleanup
 

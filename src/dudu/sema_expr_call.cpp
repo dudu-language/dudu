@@ -19,6 +19,10 @@ std::string infer_call_ast(const FunctionScope& scope, const Expr& expr,
                  [](const FunctionScope& nested, const Expr& arg, const SourceLocation* location) {
                      return infer_expr_ast(nested, arg, location);
                  },
+             .infer_expr_type =
+                 [](const FunctionScope& nested, const Expr& arg, const SourceLocation* location) {
+                     return infer_expr_type_ast(nested, arg, location);
+                 },
              .can_assign =
                  [](const FunctionScope& nested, const std::string& expected, const Expr& value,
                     const std::string& got) {

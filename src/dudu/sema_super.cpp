@@ -123,6 +123,7 @@ std::string infer_super_call_ast(const FunctionScope& scope, const Expr& expr,
         }
         check_constructor_args_ast(
             scope, *base_class->second, expr.children, location, callbacks.infer_expr,
+            callbacks.infer_expr_type,
             [&](const std::string& expected, const Expr& value, const std::string& got) {
                 return callbacks.can_assign(scope, expected, value, got);
             });

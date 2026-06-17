@@ -1,7 +1,10 @@
 #include "dudu/sema_constructors.hpp"
 
+#include "dudu/ast_type.hpp"
+#include "dudu/sema_common.hpp"
 #include "dudu/sema_context.hpp"
 #include "dudu/source.hpp"
+#include "dudu/type_compat.hpp"
 
 #include <set>
 
@@ -10,6 +13,21 @@ namespace {
 
 [[noreturn]] void fail(const SourceLocation& location, const std::string& message) {
     throw CompileError(location, message);
+}
+
+std::string constructor_param_type_text(const ConstructorParam& param) {
+    return has_type_ref(param.type_ref) ? substitute_type_ref_text(param.type_ref, {}) : param.type;
+}
+
+bool constructor_arg_assignable(
+    const ConstructorParam& expected, const Expr& value, const TypeRef& got_ref,
+    const std::string& got,
+    const std::function<bool(const std::string&, const Expr&, const std::string&)>& can_assign) {
+    if (has_type_ref(expected.type_ref) && has_type_ref(got_ref) &&
+        type_assignment_allowed(expected.type_ref, got_ref)) {
+        return true;
+    }
+    return can_assign(constructor_param_type_text(expected), value, got);
 }
 
 } // namespace
@@ -23,14 +41,16 @@ std::vector<ConstructorParam> constructor_params(const ClassDecl& klass) {
         const size_t first_param =
             !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
         for (size_t i = first_param; i < method.params.size(); ++i) {
-            out.push_back({.name = method.params[i].name, .type = method.params[i].type});
+            out.push_back({.name = method.params[i].name,
+                           .type = method.params[i].type,
+                           .type_ref = method.params[i].type_ref});
         }
         return out;
     }
 
     std::vector<ConstructorParam> out;
     for (const FieldDecl& field : klass.fields) {
-        out.push_back({.name = field.name, .type = field.type});
+        out.push_back({.name = field.name, .type = field.type, .type_ref = field.type_ref});
     }
     return out;
 }
@@ -40,7 +60,9 @@ std::vector<ConstructorParam> method_constructor_params(const FunctionDecl& meth
     const size_t first_param =
         !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
     for (size_t i = first_param; i < method.params.size(); ++i)
-        out.push_back({.name = method.params[i].name, .type = method.params[i].type});
+        out.push_back({.name = method.params[i].name,
+                       .type = method.params[i].type,
+                       .type_ref = method.params[i].type_ref});
     return out;
 }
 
@@ -49,6 +71,8 @@ bool positional_constructor_matches_ast(
     const std::vector<Expr>& args,
     const std::function<std::string(const FunctionScope&, const Expr&, const SourceLocation*)>&
         infer_expr,
+    const std::function<TypeRef(const FunctionScope&, const Expr&, const SourceLocation*)>&
+        infer_expr_type,
     const std::function<bool(const std::string&, const Expr&, const std::string&)>& can_assign,
     const SourceLocation* location) {
     if (args.size() != expected.size())
@@ -56,8 +80,10 @@ bool positional_constructor_matches_ast(
     for (size_t i = 0; i < args.size(); ++i) {
         if (args[i].kind == ExprKind::NamedArg)
             return false;
-        const std::string got = infer_expr(scope, args[i], location);
-        if (!can_assign(expected[i].type, args[i], got))
+        const TypeRef got_ref = infer_expr_type(scope, args[i], location);
+        const std::string got = has_type_ref(got_ref) ? substitute_type_ref_text(got_ref, {})
+                                                      : infer_expr(scope, args[i], location);
+        if (!constructor_arg_assignable(expected[i], args[i], got_ref, got, can_assign))
             return false;
     }
     return true;
@@ -68,6 +94,8 @@ void check_constructor_args_ast(
     const SourceLocation* location,
     const std::function<std::string(const FunctionScope&, const Expr&, const SourceLocation*)>&
         infer_expr,
+    const std::function<TypeRef(const FunctionScope&, const Expr&, const SourceLocation*)>&
+        infer_expr_type,
     const std::function<bool(const std::string&, const Expr&, const std::string&)>& can_assign) {
     if (location == nullptr)
         return;
@@ -81,13 +109,14 @@ void check_constructor_args_ast(
                 continue;
             ++ctor_count;
             if (positional_constructor_matches_ast(scope, method_constructor_params(method), args,
-                                                   infer_expr, can_assign, location)) {
+                                                   infer_expr, infer_expr_type, can_assign,
+                                                   location)) {
                 return;
             }
         }
         if (scope.symbols.native_classes.contains(base_type(klass.name))) {
             for (const Expr& arg : args) {
-                (void)infer_expr(scope, arg, location);
+                (void)infer_expr_type(scope, arg, location);
             }
             return;
         }
@@ -109,11 +138,13 @@ void check_constructor_args_ast(
                                     std::to_string(expected.size()) + " arguments, got " +
                                     std::to_string(args.size()));
             const ConstructorParam& param = expected[positional];
-            const std::string got = infer_expr(scope, arg, location);
-            if (!can_assign(param.type, arg, got))
+            const TypeRef got_ref = infer_expr_type(scope, arg, location);
+            const std::string got = has_type_ref(got_ref) ? substitute_type_ref_text(got_ref, {})
+                                                          : infer_expr(scope, arg, location);
+            if (!constructor_arg_assignable(param, arg, got_ref, got, can_assign))
                 fail(*location, "constructor " + klass.name + " argument " +
-                                    std::to_string(positional + 1) + " expects " + param.type +
-                                    ", got " + got);
+                                    std::to_string(positional + 1) + " expects " +
+                                    constructor_param_type_text(param) + ", got " + got);
             ++positional;
             continue;
         }
@@ -127,10 +158,12 @@ void check_constructor_args_ast(
         if (param == nullptr)
             fail(*location, "unknown constructor field: " + klass.name + "." + name);
         const Expr& value = arg.children.empty() ? arg : arg.children.front();
-        const std::string got = infer_expr(scope, value, location);
-        if (!can_assign(param->type, value, got))
+        const TypeRef got_ref = infer_expr_type(scope, value, location);
+        const std::string got = has_type_ref(got_ref) ? substitute_type_ref_text(got_ref, {})
+                                                      : infer_expr(scope, value, location);
+        if (!constructor_arg_assignable(*param, value, got_ref, got, can_assign))
             fail(*location, "constructor field " + klass.name + "." + name + " expects " +
-                                param->type + ", got " + got);
+                                constructor_param_type_text(*param) + ", got " + got);
     }
 }
 

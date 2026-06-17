@@ -1,5 +1,5 @@
-#include "dudu/ast_type.hpp"
 #include "dudu/ast_parse_utils.hpp"
+#include "dudu/ast_type.hpp"
 #include "dudu/sema_expr_internal.hpp"
 
 namespace dudu {
@@ -9,8 +9,8 @@ TypeRef template_pointee_type_ref_from_expr(const Expr& expr, std::vector<TypeRe
     const std::string name = trim(expr.name.substr(1));
     const TypeKind wrapper = wrapper_type_kind(name);
     TypeRef pointee;
-    pointee.kind = wrapper != TypeKind::Unknown && type_args.size() == 1 ? wrapper
-                                                                         : TypeKind::Template;
+    pointee.kind =
+        wrapper != TypeKind::Unknown && type_args.size() == 1 ? wrapper : TypeKind::Template;
     pointee.name = name;
     pointee.text = name + "[" + join_type_ref_texts(type_args) + "]";
     pointee.children = std::move(type_args);
@@ -153,7 +153,7 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
         const ClassDecl instantiated = instantiate_generic_class(*klass->second, type_args, callee);
         reject_abstract_construction(scope.symbols, callee_base, location);
         check_constructor_args_ast(
-            scope, instantiated, expr.children, location, infer_expr_ast,
+            scope, instantiated, expr.children, location, infer_expr_ast, infer_expr_type_ast,
             [&](const std::string& expected, const Expr& value, const std::string& got) {
                 return can_assign_ast(scope, expected, value, got);
             });
@@ -262,7 +262,7 @@ std::string infer_constructor_call_ast(const FunctionScope& scope, const Expr& e
         klass != scope.symbols.classes.end()) {
         reject_abstract_construction(scope.symbols, callee, location);
         check_constructor_args_ast(
-            scope, *klass->second, expr.children, location, infer_expr_ast,
+            scope, *klass->second, expr.children, location, infer_expr_ast, infer_expr_type_ast,
             [&](const std::string& expected, const Expr& value, const std::string& got) {
                 return can_assign_ast(scope, expected, value, got);
             });
