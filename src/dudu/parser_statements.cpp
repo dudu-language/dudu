@@ -150,20 +150,43 @@ void attach_statement_source(Stmt& stmt, const Parser::JoinedTokens& joined) {
     }
 }
 
-void parse_assert_parts(Stmt& stmt, const Parser::JoinedTokens& body) {
-    const std::vector<CommaPart> parts = split_top_level_comma_parts(body.text);
-    if (parts.empty()) {
-        return;
-    }
-    stmt.condition_expr = parse_expr_text(trim_string(parts.front().text),
-                                          advance_columns(body.range.start, parts.front().offset));
-    if (parts.size() >= 2) {
-        stmt.message_expr = parse_expr_text(trim_string(parts[1].text),
-                                            advance_columns(body.range.start, parts[1].offset));
-    }
-}
-
 } // namespace
+
+std::vector<Parser::JoinedTokens>
+Parser::split_top_level_comma_pieces(const JoinedTokens& piece) const {
+    std::vector<JoinedTokens> out;
+    if (!piece.has_tokens) {
+        return out;
+    }
+    size_t begin = piece.begin;
+    int bracket_depth = 0;
+    int paren_depth = 0;
+    int brace_depth = 0;
+    for (size_t index = piece.begin; index < piece.end && index < tokens_.size(); ++index) {
+        const Token& token = tokens_[index];
+        const bool inside_group = bracket_depth != 0 || paren_depth != 0 || brace_depth != 0;
+        if (!inside_group && token.kind == TokenKind::Comma) {
+            out.push_back(join_tokens(begin, index));
+            begin = index + 1;
+            continue;
+        }
+        if (token.kind == TokenKind::LBracket) {
+            ++bracket_depth;
+        } else if (token.kind == TokenKind::RBracket) {
+            --bracket_depth;
+        } else if (token.kind == TokenKind::LParen) {
+            ++paren_depth;
+        } else if (token.kind == TokenKind::RParen) {
+            --paren_depth;
+        } else if (token.kind == TokenKind::LBrace) {
+            ++brace_depth;
+        } else if (token.kind == TokenKind::RBrace) {
+            --brace_depth;
+        }
+    }
+    out.push_back(join_tokens(begin, piece.end));
+    return out;
+}
 
 Parser::JoinedTokens
 Parser::join_until_top_level_identifier(std::string_view identifier,
@@ -322,7 +345,14 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
     if (match_identifier("assert") || match_identifier("debug_assert")) {
         const std::string keyword = previous().text;
         stmt.kind = keyword == "assert" ? StmtKind::Assert : StmtKind::DebugAssert;
-        parse_assert_parts(stmt, join_until_with_range({TokenKind::Newline}));
+        const std::vector<JoinedTokens> parts =
+            split_top_level_comma_pieces(join_until_with_range({TokenKind::Newline}));
+        if (!parts.empty()) {
+            stmt.condition_expr = parse_expr_piece(parts.front());
+        }
+        if (parts.size() >= 2) {
+            stmt.message_expr = parse_expr_piece(parts[1]);
+        }
         attach_statement_source(stmt, join_tokens(begin, cursor_));
         return stmt;
     }

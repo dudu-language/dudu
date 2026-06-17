@@ -555,6 +555,9 @@ Already structured:
   bases, fields, enum underlying types and payloads, aliases, function returns,
   parameters, constants, and static assertions instead of reparsing joined
   declaration strings
+- assertion statement parsing splits the optional message with token-depth
+  awareness instead of string comma scanning, so commas inside calls or
+  collection literals stay inside the condition expression
 - unsupported Python call checks for `eval`, `exec`, `getattr`, and `setattr`
   walk parsed call expressions, with raw text scanning kept for unsupported or
   unknown expression shapes

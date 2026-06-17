@@ -67,6 +67,7 @@ class Parser {
     JoinedTokens join_tokens(size_t begin, size_t end) const;
     Expr parse_expr_piece(const JoinedTokens& piece) const;
     TypeRef parse_type_piece(const JoinedTokens& piece) const;
+    std::vector<JoinedTokens> split_top_level_comma_pieces(const JoinedTokens& piece) const;
     JoinedTokens join_until_top_level_identifier(std::string_view identifier,
                                                  std::initializer_list<TokenKind> stops);
 };

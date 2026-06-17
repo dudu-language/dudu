@@ -42,6 +42,7 @@ void test_keyword_statements_keep_token_ranges() {
                            "        return 1\n"
                            "    for item: i32 in values:\n"
                            "        debug_assert item > 0, \"positive\"\n"
+                           "        debug_assert between(item, 0, 10), \"in range\"\n"
                            "    return 0\n",
                            "keyword_statement_ranges.dd");
     const dudu::FunctionDecl& main = module.functions.front();
@@ -65,6 +66,11 @@ void test_keyword_statements_keep_token_ranges() {
     assert(loop.children.front().kind == dudu::StmtKind::DebugAssert);
     assert(loop.children.front().condition_expr.text == "item > 0");
     assert(loop.children.front().message_expr.text == "\"positive\"");
+    const dudu::Stmt& call_assert = loop.children[1];
+    assert(call_assert.kind == dudu::StmtKind::DebugAssert);
+    assert(call_assert.condition_expr.kind == dudu::ExprKind::Call);
+    assert(call_assert.condition_expr.children.size() == 3);
+    assert(call_assert.message_expr.text == "\"in range\"");
 }
 
 } // namespace
