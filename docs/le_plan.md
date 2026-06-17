@@ -572,6 +572,9 @@ push. They are not release packaging work.
    LSP local-context implicit bindings now use typed expression inference for
    untyped local declarations and first assignments, and the local string
    expression inference helper has been removed.
+   LSP local-context `for` bindings now infer element types from stored iterable
+   `TypeRef` metadata or typed iterable expression inference, and the local
+   text-to-`TypeRef` adapter has been removed.
 
 3. OOP Surface Cleanup
 

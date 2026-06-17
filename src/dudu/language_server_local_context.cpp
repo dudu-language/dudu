@@ -58,10 +58,6 @@ bool function_contains_line(const FunctionDecl& fn, int cursor_line) {
     return fn.location.line <= cursor_line && cursor_line <= std::max(fn.location.line, end);
 }
 
-TypeRef type_ref_from_text(const std::string& type) {
-    return type.empty() ? TypeRef{} : parse_type_text(type);
-}
-
 void lsp_bind_local(FunctionScope& scope, const std::string& name, const std::string& type,
                     const TypeRef& type_ref = {}) {
     if (name.empty() || type.empty()) {
@@ -120,6 +116,28 @@ void bind_statement(FunctionScope& scope, const Stmt& stmt) {
     }
 }
 
+std::optional<TypeRef> infer_lsp_for_binding_type(FunctionScope& scope, const Stmt& stmt) {
+    if (!sema_has_expr(stmt.iterable_expr)) {
+        return std::nullopt;
+    }
+    if (stmt.iterable_expr.kind == ExprKind::Call && stmt.iterable_expr.name == "range") {
+        return parse_type_text("i32", stmt.iterable_expr.location);
+    }
+    if (stmt.iterable_expr.kind == ExprKind::Name) {
+        const auto local_ref = scope.local_type_refs.find(stmt.iterable_expr.name);
+        if (local_ref != scope.local_type_refs.end()) {
+            if (const auto element = iterable_type_from_type(local_ref->second)) {
+                return parse_type_text(*element, stmt.iterable_expr.location);
+            }
+        }
+    }
+    const TypeRef iterable_type = infer_lsp_expr_type(scope, stmt.iterable_expr);
+    if (const auto element = iterable_type_from_type(iterable_type)) {
+        return parse_type_text(*element, stmt.iterable_expr.location);
+    }
+    return std::nullopt;
+}
+
 void collect_block_locals(FunctionScope& scope, const std::vector<Stmt>& statements,
                           int cursor_line);
 
@@ -128,10 +146,11 @@ void collect_for_body_locals(FunctionScope scope, const Stmt& stmt, int cursor_l
     if (!stmt.name.empty()) {
         TypeRef binding_type = stmt.type_ref;
         std::string type = stmt.type;
-        if (type.empty() && stmt.iterable_expr.kind == ExprKind::Name) {
-            type = iterable_value_type(scope.symbols, scope.locals, scope.local_type_refs,
-                                       stmt.iterable_expr.name);
-            binding_type = type_ref_from_text(type);
+        if (type.empty()) {
+            if (const auto inferred = infer_lsp_for_binding_type(scope, stmt)) {
+                binding_type = *inferred;
+                type = substitute_type_ref_text(binding_type, {});
+            }
         }
         lsp_bind_local(scope, stmt.name, type.empty() ? "auto" : type, binding_type);
     }
