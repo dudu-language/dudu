@@ -581,6 +581,8 @@ push. They are not release packaging work.
    Generic function/method inference now requires typed expression callbacks and
    no longer falls back to inferring rendered argument type strings and parsing
    them back into `TypeRef`.
+   Body semantic checking now requires a typed expression callback, so statement
+   checks cannot silently run without structured expression type inference.
 
 3. OOP Surface Cleanup
 

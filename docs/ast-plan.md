@@ -406,6 +406,8 @@ Already structured:
 - generic function/method inference now requires typed expression callbacks and
   no longer falls back to inferring rendered argument type strings and parsing
   them back into `TypeRef`
+- body semantic checking now requires a typed expression callback, so statement
+  checks cannot silently run without structured expression type inference
 - type compatibility has AST overloads for simple literals and list/set/dict
   literals, including expected-type disambiguation for empty `{}` dict
   initializers, reducing reliance on string parsing for assignment checks
