@@ -44,10 +44,6 @@ std::optional<std::string> fixed_array_element_type(const TypeRef& type) {
     return substitute_type_ref_text(storage, {});
 }
 
-std::optional<std::string> fixed_array_element_type(const std::string& type) {
-    return fixed_array_element_type(parse_type_text(type));
-}
-
 std::optional<std::string> single_template_child_type(const TypeRef& type, std::string_view name) {
     if (type.kind == TypeKind::Template && type.name == name && type.children.size() == 1) {
         return substitute_type_ref_text(type.children.front(), {});
@@ -169,29 +165,30 @@ std::string indexed_type_from_type_with_count(const Symbols& symbols,
     if (const auto element = single_template_type_arg_text(type, "list")) {
         return *element;
     }
-    if (const std::vector<size_t> shape = explicit_array_shape(type); !shape.empty()) {
+    const TypeRef type_ref = parse_type_text(type);
+    if (const std::vector<size_t> shape = explicit_array_shape(type_ref); !shape.empty()) {
+        const std::string array_element = explicit_array_element_type(type_ref);
         if (is_slice) {
             if (shape.size() != 1) {
                 throw CompileError(location,
                                    "array slicing requires one-dimensional fixed array: " + label);
             }
             if (has_step) {
-                return "strided_span[" + explicit_array_element_type(type) + "]";
+                return "strided_span[" + array_element + "]";
             }
-            return "span[" + explicit_array_element_type(type) + "]";
+            return "span[" + array_element + "]";
         }
         if (index_count > shape.size()) {
             throw CompileError(location, "too many indices for array: " + label);
         }
-        const std::string element =
-            fixed_array_element_type(type).value_or(explicit_array_element_type(type));
+        const std::string element = fixed_array_element_type(type_ref).value_or(array_element);
         if (index_count == shape.size()) {
             return element;
         }
         return shaped_array_type(element,
                                  std::vector<size_t>(shape.begin() + index_count, shape.end()));
     }
-    if (const auto element = fixed_array_element_type(type)) {
+    if (const auto element = fixed_array_element_type(type_ref)) {
         return *element;
     }
     const std::vector<std::string> dict_args = template_type_arg_texts(type, "dict");
@@ -201,9 +198,8 @@ std::string indexed_type_from_type_with_count(const Symbols& symbols,
     if (const auto signature = dudu_operator_signature(symbols, "[]", type)) {
         return signature->return_type;
     }
-    const TypeRef parsed = parse_type_text(type);
-    if (parsed.kind == TypeKind::Template && parsed.children.size() == 1) {
-        return substitute_type_ref_text(parsed.children.front(), {});
+    if (type_ref.kind == TypeKind::Template && type_ref.children.size() == 1) {
+        return substitute_type_ref_text(type_ref.children.front(), {});
     }
     throw CompileError(location, "cannot index non-container: " + label);
 }

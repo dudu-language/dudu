@@ -482,6 +482,9 @@ Already structured:
 - fixed-array row, column, channel, and trailing full-slice inference now reads
   shape and element metadata from parsed `TypeRef` nodes before native/operator
   fallback, keeping the public index typing path off raw bracket parsing
+- fixed-array index-count inference and emitted local index type inference also
+  use parsed `TypeRef` shape/element metadata instead of calling the
+  string-facing array-shape helpers
 - member-path type checks for indexed local receivers such as `items[i].field`
   parse the indexed segment into an `Expr::Index` and route the index through
   parsed expression typing instead of slicing raw index text

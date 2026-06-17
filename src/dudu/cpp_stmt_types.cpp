@@ -119,8 +119,8 @@ std::string indexed_local_type(const std::string& receiver_type, const Expr& ind
                              parsed.children.front().kind == TypeKind::Template &&
                              parsed.children.front().name == "array");
     if (array_type) {
-        const std::string element_type = explicit_array_element_type(type);
-        const std::vector<size_t> shape = explicit_array_shape(type);
+        const std::string element_type = explicit_array_element_type(parsed);
+        const std::vector<size_t> shape = explicit_array_shape(parsed);
         const size_t used_indices = index_count(index_expr);
         if (element_type.empty() || shape.empty() || used_indices >= shape.size()) {
             return element_type;
