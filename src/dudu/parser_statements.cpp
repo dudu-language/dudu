@@ -10,21 +10,21 @@ namespace {
 
 struct UnsupportedStatement {
     std::string_view keyword;
-    std::string_view feature;
+    UnsupportedFeature feature = UnsupportedFeature::None;
 };
 
 constexpr UnsupportedStatement unsupported_statements[] = {
-    {"finally", "exceptions"},
-    {"yield", "generators"},
-    {"async", "async"},
-    {"await", "async"},
-    {"with", "context managers"},
-    {"global", "global rebinding"},
-    {"nonlocal", "nonlocal rebinding"},
-    {"del", "dynamic deletion"},
-    {"def", "local function declarations"},
-    {"import", "local imports"},
-    {"from", "local imports"},
+    {"finally", UnsupportedFeature::Exceptions},
+    {"yield", UnsupportedFeature::Generators},
+    {"async", UnsupportedFeature::Async},
+    {"await", UnsupportedFeature::Async},
+    {"with", UnsupportedFeature::ContextManagers},
+    {"global", UnsupportedFeature::GlobalRebinding},
+    {"nonlocal", UnsupportedFeature::NonlocalRebinding},
+    {"del", UnsupportedFeature::DynamicDeletion},
+    {"def", UnsupportedFeature::LocalFunctionDeclarations},
+    {"import", UnsupportedFeature::LocalImports},
+    {"from", UnsupportedFeature::LocalImports},
 };
 
 bool token_is_identifier(const Token& token, std::string_view text) {
@@ -155,16 +155,16 @@ std::optional<CompoundAssignOp> compound_assignment_op(std::string_view token_te
     return std::nullopt;
 }
 
-std::string_view unsupported_feature_for_token(const Token& token) {
+UnsupportedFeature unsupported_feature_for_token(const Token& token) {
     if (token.kind != TokenKind::Identifier) {
-        return {};
+        return UnsupportedFeature::None;
     }
     for (const UnsupportedStatement& unsupported : unsupported_statements) {
         if (token.text == unsupported.keyword) {
             return unsupported.feature;
         }
     }
-    return {};
+    return UnsupportedFeature::None;
 }
 
 void attach_statement_source(Stmt& stmt, const Parser::JoinedTokens& joined) {
@@ -252,10 +252,10 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
     stmt.location = start.location;
     stmt.children = std::move(children);
 
-    if (const std::string_view unsupported = unsupported_feature_for_token(start);
-        !unsupported.empty()) {
+    if (const UnsupportedFeature unsupported = unsupported_feature_for_token(start);
+        unsupported != UnsupportedFeature::None) {
         stmt.kind = StmtKind::Unsupported;
-        stmt.unsupported_feature = std::string(unsupported);
+        stmt.unsupported_feature = unsupported;
         join_until_with_range({TokenKind::Newline});
         attach_statement_source(stmt, join_tokens(begin, cursor_));
         return stmt;

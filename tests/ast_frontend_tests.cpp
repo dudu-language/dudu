@@ -271,7 +271,7 @@ void test_unsupported_statement_ast_shape() {
     const dudu::FunctionDecl& main = module.functions.front();
     assert(main.statements.size() == 1);
     assert(main.statements[0].kind == dudu::StmtKind::Unsupported);
-    assert(main.statements[0].unsupported_feature == "context managers");
+    assert(main.statements[0].unsupported_feature == dudu::UnsupportedFeature::ContextManagers);
 }
 
 void test_expression_ast_shape() {

@@ -112,7 +112,8 @@ void check_expr(const Expr& expr) {
 void check_statement(const Stmt& stmt) {
     if (stmt.kind == StmtKind::Unsupported) {
         throw CompileError(stmt.location,
-                           "unsupported Python feature: " + stmt.unsupported_feature);
+                           "unsupported Python feature: " +
+                               std::string(unsupported_feature_name(stmt.unsupported_feature)));
     }
     if (stmt.kind == StmtKind::Unknown) {
         throw CompileError(stmt.location, "unsupported statement kind: " +

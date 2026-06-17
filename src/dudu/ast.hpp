@@ -110,6 +110,19 @@ enum class CompoundAssignOp {
     ShiftRight,
 };
 
+enum class UnsupportedFeature {
+    None,
+    Exceptions,
+    Generators,
+    Async,
+    ContextManagers,
+    GlobalRebinding,
+    NonlocalRebinding,
+    DynamicDeletion,
+    LocalFunctionDeclarations,
+    LocalImports,
+};
+
 enum class ExprKind {
     Unknown,
     Name,
@@ -175,7 +188,7 @@ struct Stmt {
     std::string cpp_body;
     TypeRef type_ref;
     CompoundAssignOp compound_op = CompoundAssignOp::None;
-    std::string unsupported_feature;
+    UnsupportedFeature unsupported_feature = UnsupportedFeature::None;
     Expr expr;
     Expr value_expr;
     Expr target_expr;
@@ -337,6 +350,7 @@ struct ModuleAst {
 
 std::string bound_import_name(const ImportDecl& import);
 std::string_view statement_kind_name(StmtKind kind);
+std::string_view unsupported_feature_name(UnsupportedFeature feature);
 std::string_view expression_kind_name(ExprKind kind);
 std::string_view type_kind_name(TypeKind kind);
 Expr parse_expr_text(std::string_view text, SourceLocation location = {});

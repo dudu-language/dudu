@@ -473,7 +473,8 @@ push. They are not release packaging work.
    and compound assignment statements now carry a structured operator enum
    instead of a raw operator string. Statement typed declarations, typed loops,
    and typed catches now rely on `Stmt::type_ref`; the statement-level raw type
-   mirror has been removed.
+   mirror has been removed. Unsupported statement forms now carry a structured
+   unsupported-feature enum instead of diagnostic text on the AST node.
    `struct stat`.
    Normal template-call emission lowers bracket arguments from parsed
    `TypeRef` nodes, including non-type value arguments, instead of falling back
