@@ -368,9 +368,9 @@ push. They are not release packaging work.
    `cpp(...)` escape inference path. Fixed-array index and slice metadata now
    reads parsed `TypeRef` shape/element nodes in the remaining compatibility
    index helpers before crossing native/operator fallback boundaries. Template
-   call sema now consumes parser-produced `template_type_args` directly and
-   rejects malformed internal template-call ASTs instead of reparsing
-   expression argument text as types.
+   call sema and codegen now consume parser-produced `template_type_args`
+   directly and reject malformed internal template-call ASTs instead of
+   reparsing expression argument text as types.
 
 3. OOP Surface Cleanup
 

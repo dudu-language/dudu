@@ -230,8 +230,9 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
     case ExprKind::Call:
         return lower_call_expr(expr, aliases, locals, symbols, options);
     case ExprKind::TemplateCall: {
-        if (expr.template_args.empty() && expr.template_type_args.empty()) {
-            break;
+        if (expr.template_type_args.empty()) {
+            throw CompileError(expr.location,
+                               "malformed template call: missing parsed type arguments");
         }
         const std::string lowered_template_args =
             join_lowered_type_args(expr.template_type_args, aliases, options);
