@@ -1149,6 +1149,10 @@ Expected-return generic method lowering now infers receiver types through
 `TypeRef` metadata first, including member-path fallback, and renders the
 receiver type only at the method lookup boundary.
 
+C++ match emission now infers the subject through `TypeRef` metadata and passes
+that structured type into wrapper-pattern matching, rendering text only for the
+enum lookup boundary.
+
 Unsupported `def` expressions now parse as a dedicated `DefExpression` AST node
 instead of falling through to `Unknown` and being recognized later by raw text
 scanning.
