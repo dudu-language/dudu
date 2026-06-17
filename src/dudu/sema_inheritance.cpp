@@ -60,14 +60,27 @@ bool has_decorator(const FunctionDecl& fn, std::string_view name) {
     return dudu::has_decorator(fn.decorators, name);
 }
 
+std::map<std::string, std::string> class_type_substitutions(const ClassDecl& owner,
+                                                            const std::vector<std::string>& args) {
+    std::map<std::string, std::string> substitutions;
+    for (size_t i = 0; i < owner.generic_params.size() && i < args.size(); ++i) {
+        substitutions.emplace(owner.generic_params[i], trim(args[i]));
+    }
+    return substitutions;
+}
+
 FunctionSignature inherited_method_signature_without_self(const FunctionDecl& method) {
     FunctionSignature signature;
     const size_t first_param =
         !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
     for (size_t i = first_param; i < method.params.size(); ++i) {
         signature.params.push_back(method.params[i].type);
+        signature.param_type_refs.push_back(method.params[i].type_ref);
     }
     signature.return_type = method.return_type.empty() ? "void" : method.return_type;
+    signature.return_type_ref = method.return_type.empty()
+                                    ? parse_type_text("void", method.location)
+                                    : method.return_type_ref;
     return signature;
 }
 
@@ -76,12 +89,22 @@ FunctionSignature inherited_method_signature_for_class_type(const ClassDecl& own
                                                             const FunctionDecl& method) {
     FunctionSignature signature = inherited_method_signature_without_self(method);
     const std::vector<std::string> receiver_args = template_args_from_type(receiver_type);
-    for (std::string& param : signature.params) {
-        param = substitute_class_template_type(std::move(param), owner.generic_params,
-                                               receiver_args);
+    const std::map<std::string, std::string> substitutions =
+        class_type_substitutions(owner, receiver_args);
+    for (size_t i = 0; i < signature.params.size(); ++i) {
+        TypeRef param_type = i < signature.param_type_refs.size()
+                                 ? signature.param_type_refs[i]
+                                 : parse_type_text(signature.params[i], method.location);
+        param_type = substitute_type_ref(param_type, substitutions);
+        signature.params[i] = substitute_type_ref_text(param_type, {});
+        if (i < signature.param_type_refs.size()) {
+            signature.param_type_refs[i] = std::move(param_type);
+        } else {
+            signature.param_type_refs.push_back(std::move(param_type));
+        }
     }
-    signature.return_type = substitute_class_template_type(
-        std::move(signature.return_type), owner.generic_params, receiver_args);
+    signature.return_type_ref = substitute_type_ref(signature.return_type_ref, substitutions);
+    signature.return_type = substitute_type_ref_text(signature.return_type_ref, {});
     return signature;
 }
 
@@ -297,9 +320,8 @@ FunctionSignature inherited_method_signature_for_type(const ClassDecl& owner,
     return inherited_method_signature_for_class_type(owner, receiver_type, method);
 }
 
-std::optional<InheritedMethod> find_inherited_method(const Symbols& symbols,
-                                                     const std::string& type,
-                                                     const std::string& name) {
+std::optional<InheritedMethod>
+find_inherited_method(const Symbols& symbols, const std::string& type, const std::string& name) {
     const auto klass = symbols.classes.find(unwrap_type(symbols, type));
     if (klass == symbols.classes.end()) {
         return std::nullopt;
@@ -308,8 +330,8 @@ std::optional<InheritedMethod> find_inherited_method(const Symbols& symbols,
         if (method.name == name) {
             return InheritedMethod{
                 .method = &method,
-                .signature = inherited_method_signature_for_class_type(*klass->second, type,
-                                                                       method),
+                .signature =
+                    inherited_method_signature_for_class_type(*klass->second, type, method),
             };
         }
     }

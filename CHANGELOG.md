@@ -72,6 +72,8 @@
   prefer structured expected argument and return types.
 - Added parsed `TypeRef` preservation for Dudu-native generic method
   signatures.
+- Added parsed `TypeRef` preservation for inherited and abstract method
+  signature matching.
 
 ### Changed
 
