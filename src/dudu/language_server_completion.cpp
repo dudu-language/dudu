@@ -3,8 +3,8 @@
 #include "dudu/language_server_json.hpp"
 #include "dudu/language_server_local_context.hpp"
 #include "dudu/language_server_navigation.hpp"
-#include "dudu/language_server_symbols.hpp"
 #include "dudu/language_server_support.hpp"
+#include "dudu/language_server_symbols.hpp"
 #include "dudu/native_headers.hpp"
 #include "dudu/parser.hpp"
 
@@ -71,8 +71,9 @@ std::optional<std::string> module_completion_json(const Document& doc, const std
             continue;
         }
         const std::string bound = bound_import_name(import);
-        const bool matches = import.alias.empty() ? (target == import.module_path || target == bound)
-                                                  : target == bound;
+        const bool matches = import.alias.empty()
+                                 ? (target == import.module_path || target == bound)
+                                 : target == bound;
         if (!matches) {
             continue;
         }
@@ -107,11 +108,12 @@ std::optional<std::string> module_completion_json(const Document& doc, const std
     return std::nullopt;
 }
 
-std::string member_completion_json(const Document& doc, const std::string& target) {
+std::string member_completion_json(const Document& doc, const std::string& target,
+                                   const Json* params) {
     if (const std::optional<std::string> module_result = module_completion_json(doc, target)) {
         return *module_result;
     }
-    const std::string type = local_type_before_cursor(doc, target);
+    const std::string type = local_type_before_cursor(doc, target, params);
     if (type.empty()) {
         return "[]";
     }
@@ -123,8 +125,8 @@ std::string member_completion_json(const Document& doc, const std::string& targe
             out << ",";
         }
         first = false;
-        out << "{\"label\":\"" << json_escape(label) << "\",\"kind\":" << kind
-            << ",\"detail\":\"" << json_escape(detail) << "\"}";
+        out << "{\"label\":\"" << json_escape(label) << "\",\"kind\":" << kind << ",\"detail\":\""
+            << json_escape(detail) << "\"}";
     };
     try {
         ModuleAst module = parse_source(doc.text, doc.path);
@@ -206,8 +208,7 @@ CallSite call_site_at(const Document& doc, const Json* params) {
                 while (start > 0 && symbol_char(line[static_cast<size_t>(start - 1)])) {
                     --start;
                 }
-                return {line.substr(static_cast<size_t>(start),
-                                    static_cast<size_t>(end - start)),
+                return {line.substr(static_cast<size_t>(start), static_cast<size_t>(end - start)),
                         parameter};
             } else if (c == ',' && depth == 0) {
                 ++parameter;
@@ -221,8 +222,9 @@ CallSite call_site_at(const Document& doc, const Json* params) {
 
 std::string completion_json(const Document* doc, const Json* params) {
     if (doc != nullptr) {
-        if (const std::optional<std::string> member_target = member_completion_target(*doc, params)) {
-            return member_completion_json(*doc, *member_target);
+        if (const std::optional<std::string> member_target =
+                member_completion_target(*doc, params)) {
+            return member_completion_json(*doc, *member_target, params);
         }
     }
     std::ostringstream out;
@@ -233,8 +235,8 @@ std::string completion_json(const Document* doc, const Json* params) {
             out << ",";
         }
         first = false;
-        out << "{\"label\":\"" << json_escape(label) << "\",\"kind\":" << kind
-            << ",\"detail\":\"" << json_escape(detail) << "\"}";
+        out << "{\"label\":\"" << json_escape(label) << "\",\"kind\":" << kind << ",\"detail\":\""
+            << json_escape(detail) << "\"}";
     };
     const auto add_snippet = [&](std::string_view label, std::string_view detail,
                                  std::string_view insert_text) {
@@ -247,8 +249,8 @@ std::string completion_json(const Document* doc, const Json* params) {
             << "\",\"insertTextFormat\":2}";
     };
     for (std::string_view keyword :
-         {"class", "def", "enum", "import", "return", "for", "if", "elif", "else", "while",
-          "try", "except", "True", "False", "None"}) {
+         {"class", "def", "enum", "import", "return", "for", "if", "elif", "else", "while", "try",
+          "except", "True", "False", "None"}) {
         add(keyword, 14, "keyword");
     }
     add_snippet("def", "snippet", "def ${1:name}(${2:args}) -> ${3:i32}:\n    ${0:return 0}");
@@ -279,7 +281,8 @@ std::string completion_json(const Document* doc, const Json* params) {
 }
 
 std::string completion_resolve_json(const Json* params) {
-    const std::string label = params == nullptr ? std::string{} : string_value(params->get("label"));
+    const std::string label =
+        params == nullptr ? std::string{} : string_value(params->get("label"));
     const int kind = int_value(params == nullptr ? nullptr : params->get("kind"));
     const std::string detail =
         params == nullptr ? std::string{} : string_value(params->get("detail"));

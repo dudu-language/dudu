@@ -258,6 +258,9 @@ Already structured:
 - public index and iterable inference now try the shared parsed `TypeRef`
   container path first, leaving the old string path as the native/operator
   boundary instead of duplicating list/dict/array logic
+- LSP local variable/parameter type collection for hover, member completion,
+  and member definition now walks parsed function/method bodies and reuses
+  semantic expression inference instead of regexing source lines
 - array shape inference and explicit shape extraction also consume parsed
   `TypeRef` array forms, removing the separate bracket matcher from
   `array_shape.cpp`

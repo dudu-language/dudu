@@ -90,7 +90,8 @@ std::optional<std::filesystem::path> resolve_header_path(const std::filesystem::
         std::filesystem::path candidate = root.empty() ? header_path : root / header_path;
         std::error_code error;
         if (std::filesystem::exists(candidate, error) && !error) {
-            const std::filesystem::path resolved = std::filesystem::weakly_canonical(candidate, error);
+            const std::filesystem::path resolved =
+                std::filesystem::weakly_canonical(candidate, error);
             return error ? candidate.lexically_normal() : resolved;
         }
     }
@@ -123,14 +124,15 @@ std::optional<std::string> header_definition_json(const Document& doc, const Jso
     return std::nullopt;
 }
 
-std::optional<std::string> member_definition_json(const Document& doc, const std::string& word) {
+std::optional<std::string> member_definition_json(const Document& doc, const std::string& word,
+                                                  const Json* params) {
     const size_t dot = word.find('.');
     if (dot == std::string::npos || dot == 0 || dot + 1 >= word.size()) {
         return std::nullopt;
     }
     const std::string receiver = word.substr(0, dot);
     const std::string member = word.substr(dot + 1);
-    const std::string type = local_type_before_cursor(doc, receiver);
+    const std::string type = local_type_before_cursor(doc, receiver, params);
     if (type.empty()) {
         return std::nullopt;
     }
@@ -253,7 +255,8 @@ std::string definition_json(const Document& doc, const Json* params) {
             return out.str();
         }
     }
-    if (const std::optional<std::string> member_definition = member_definition_json(doc, word)) {
+    if (const std::optional<std::string> member_definition =
+            member_definition_json(doc, word, params)) {
         return *member_definition;
     }
     if (const std::optional<std::string> import_definition = import_definition_json(doc, word)) {
