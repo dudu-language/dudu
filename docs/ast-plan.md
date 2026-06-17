@@ -1145,6 +1145,10 @@ expression results through the parsed `TypeRef` path first. The string-returning
 helper remains only as a compatibility wrapper for older tests and legacy call
 sites that have not yet been moved to structured type metadata.
 
+Expected-return generic method lowering now infers receiver types through
+`TypeRef` metadata first, including member-path fallback, and renders the
+receiver type only at the method lookup boundary.
+
 Unsupported `def` expressions now parse as a dedicated `DefExpression` AST node
 instead of falling through to `Unknown` and being recognized later by raw text
 scanning.
