@@ -302,6 +302,18 @@ if (
 fi
 grep -q "unknown \\[cc\\] entry" "$repo_root/build/bad_project_unknown_key.err"
 
+if "$repo_root/build/dudu" \
+    "$repo_root/tests/fixtures/project_backend_cmake_namespaces/main.dd" \
+    --emit-cpp "$repo_root/build/bad_direct_module_namespace.cpp" \
+    2>"$repo_root/build/bad_direct_module_namespace.err"; then
+    echo "bad_direct_module_namespace unexpectedly passed" >&2
+    exit 1
+fi
+grep -q "direct backend cannot merge Dudu modules that both declare 'Box'" \
+    "$repo_root/build/bad_direct_module_namespace.err"
+grep -q 'use \[build\] backend = "cmake" or `duc emit-modules`' \
+    "$repo_root/build/bad_direct_module_namespace.err"
+
 if (
     cd "$repo_root/tests/fixtures/bad_project_transitive_import_leak"
     "$repo_root/build/dudu" build

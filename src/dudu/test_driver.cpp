@@ -80,6 +80,9 @@ ModuleAst checked_module(const TestDriverOptions& options, const std::string& so
     }
     const std::filesystem::path source_dir = source_dir_for_input(options.input);
     merge_native_header_types(module, {.config = config, .source_dir = source_dir});
+    if (config.build_backend != "cmake") {
+        reject_direct_backend_module_conflicts(module);
+    }
     analyze_module(module, {.check_bodies = true});
     return module;
 }

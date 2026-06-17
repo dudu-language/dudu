@@ -374,6 +374,7 @@ dudu::ModuleAst checked_module(const Options& options, const std::string& source
     if (options.emit_modules) {
         dudu::analyze_module_tree(module, {.check_bodies = check_bodies});
     } else {
+        dudu::reject_direct_backend_module_conflicts(module);
         dudu::analyze_module(module, {.check_bodies = check_bodies});
     }
     return module;

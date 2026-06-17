@@ -87,7 +87,10 @@ artifacts with distinct generated names. A CMake-backend negative fixture now
 rejects transitive import leakage, so importing a facade module does not let the
 importer use the facade's private dependencies by accident. The direct backend
 still uses the compatibility merged output and remains intentionally narrower
-until semantic lookup and direct codegen fully move to module namespaces.
+until semantic lookup and direct codegen fully move to module namespaces, but it
+now rejects cross-module declaration-name collisions with a backend-aware
+diagnostic that points users at `[build] backend = "cmake"` or
+`duc emit-modules` instead of surfacing generic duplicate-declaration fallout.
 
 ## Feature Validation Bar
 
@@ -590,9 +593,11 @@ push. They are not release packaging work.
    in per-module artifacts also lower to the imported module's generated C++
    names, so artifact bodies no longer preserve source-level `module.symbol`
    calls. `duc emit-modules` writes those artifacts to disk with a shared
-   generated runtime header, and the generated CMake backend now compiles the
-   per-module `.cpp` files instead of a merged generated translation unit. The
-   direct native build still compiles the compatibility single-file output.
+generated runtime header, and the generated CMake backend now compiles the
+per-module `.cpp` files instead of a merged generated translation unit. The
+direct native build still compiles the compatibility single-file output and
+fails clearly when that merged output cannot represent distinct module
+declarations safely.
 
 12. Language Server And Formatter
 

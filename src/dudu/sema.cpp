@@ -6,9 +6,29 @@
 #include "dudu/sema_context.hpp"
 #include "dudu/sema_expr.hpp"
 #include "dudu/sema_scan.hpp"
+#include "dudu/source.hpp"
 #include "dudu/unsupported.hpp"
 
+#include <map>
+
 namespace dudu {
+namespace {
+
+void add_direct_name(std::map<std::string, std::pair<std::string, SourceLocation>>& names,
+                     const std::string& module_path, const std::string& name,
+                     const SourceLocation& location) {
+    if (const auto found = names.find(name); found != names.end()) {
+        if (found->second.first == module_path) {
+            return;
+        }
+        throw CompileError(location,
+                           "direct backend cannot merge Dudu modules that both declare '" + name +
+                               "'; use [build] backend = \"cmake\" or `duc emit-modules`");
+    }
+    names.emplace(name, std::pair{module_path, location});
+}
+
+} // namespace
 
 void analyze_module(const ModuleAst& module, SemanticOptions options) {
     const Symbols symbols = collect_symbols(module);
@@ -19,6 +39,30 @@ void analyze_module(const ModuleAst& module, SemanticOptions options) {
     check_constexpr_uses(module);
     if (options.check_bodies) {
         check_bodies(module, symbols, expression_body_check_callbacks());
+    }
+}
+
+void reject_direct_backend_module_conflicts(const ModuleAst& module) {
+    if (module.module_units.empty()) {
+        return;
+    }
+    std::map<std::string, std::pair<std::string, SourceLocation>> names;
+    for (const ModuleAst& unit : module.module_units) {
+        for (const TypeAliasDecl& alias : unit.aliases) {
+            add_direct_name(names, unit.module_path, alias.name, alias.location);
+        }
+        for (const EnumDecl& en : unit.enums) {
+            add_direct_name(names, unit.module_path, en.name, en.location);
+        }
+        for (const ClassDecl& klass : unit.classes) {
+            add_direct_name(names, unit.module_path, klass.name, klass.location);
+        }
+        for (const ConstDecl& constant : unit.constants) {
+            add_direct_name(names, unit.module_path, constant.name, constant.location);
+        }
+        for (const FunctionDecl& fn : unit.functions) {
+            add_direct_name(names, unit.module_path, fn.name, fn.location);
+        }
     }
 }
 
