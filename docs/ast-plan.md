@@ -1487,6 +1487,9 @@ LSP source edits are also moving to AST-owned ranges:
 - C++ block and match emission now carry the enclosing function return type as
   a parsed `TypeRef` through nested statements, rendering text only when a
   return expression needs generic-method coercion.
+- Dudu operator signatures synthesized from methods now preserve parsed
+  parameter and return `TypeRef` metadata instead of carrying only rendered
+  type strings.
 
 Expression parsing has moved onto the lexer/token stream:
 

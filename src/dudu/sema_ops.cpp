@@ -147,8 +147,10 @@ dudu_operator_signature(const Symbols& symbols, const std::string& op, const std
             !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
         for (size_t i = first_param; i < method.params.size(); ++i) {
             signature.params.push_back(type_ref_text(method.params[i].type_ref));
+            signature.param_type_refs.push_back(method.params[i].type_ref);
         }
         signature.return_type = function_return_type_text(method);
+        signature.return_type_ref = function_return_type_ref(method);
         return signature;
     }
     return std::nullopt;
