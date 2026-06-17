@@ -66,8 +66,8 @@ std::string assignment_target_type(FunctionScope& scope, const Stmt& stmt,
                 return {};
             }
         }
-        return indexed_value_type(scope.symbols, scope.locals, target_location, name,
-                                  stmt.target_expr.children[1],
+        return indexed_value_type(scope.symbols, scope.locals, scope.local_type_refs,
+                                  target_location, name, stmt.target_expr.children[1],
                                   "indexed assignment to unknown local: ");
     }
     if (stmt.target_expr.kind == ExprKind::Index && stmt.target_expr.children.size() == 2) {

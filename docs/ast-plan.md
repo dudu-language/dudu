@@ -236,6 +236,8 @@ Already structured:
 - fixed-array indexing and iteration recover `array[T][shape]` element types
   from parsed `TypeRef::FixedArray` nodes instead of hand-matching nested
   brackets in the type text
+- local indexed access, indexed assignment, and typed iteration consult parsed
+  local `TypeRef` metadata before falling back to compatibility type strings
 - array shape inference and explicit shape extraction also consume parsed
   `TypeRef` array forms, removing the separate bracket matcher from
   `array_shape.cpp`

@@ -280,8 +280,8 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                                             index_arg_exprs(expr.children[1]), use_location);
                     }
                 }
-                return indexed_value_type(scope.symbols, scope.locals, index_location,
-                                          receiver.name, expr.children[1],
+                return indexed_value_type(scope.symbols, scope.locals, scope.local_type_refs,
+                                          index_location, receiver.name, expr.children[1],
                                           "indexed access to unknown local: ");
             }
             if (const std::string receiver_type = member_expr_type(

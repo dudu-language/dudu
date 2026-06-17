@@ -48,6 +48,14 @@ std::optional<std::string> fixed_array_element_type(const std::string& type) {
     return fixed_array_element_type(parse_type_text(type));
 }
 
+std::optional<std::string> single_template_child_type(const TypeRef& type,
+                                                      std::string_view name) {
+    if (type.kind == TypeKind::Template && type.name == name && type.children.size() == 1) {
+        return substitute_type_ref_text(type.children.front(), {});
+    }
+    return std::nullopt;
+}
+
 std::string shaped_array_type(const std::string& element_type, const std::vector<size_t>& shape) {
     std::ostringstream out;
     out << "array[" << element_type << "][";
@@ -195,6 +203,66 @@ std::string indexed_type_from_type_with_count(const Symbols& symbols,
     throw CompileError(location, "cannot index non-container: " + label);
 }
 
+std::optional<std::string> indexed_type_from_type_ref_with_count(const SourceLocation& location,
+                                                                 const TypeRef& raw_type,
+                                                                 const size_t index_count,
+                                                                 const bool is_slice,
+                                                                 const bool has_step,
+                                                                 const std::string& label) {
+    const TypeRef* type = &raw_type;
+    while ((type->kind == TypeKind::Reference || type->kind == TypeKind::Const) &&
+           type->children.size() == 1) {
+        type = &type->children.front();
+    }
+    bool pointer_index = false;
+    if (type->kind == TypeKind::Pointer && type->children.size() == 1) {
+        type = &type->children.front();
+        pointer_index = true;
+    }
+    while ((type->kind == TypeKind::Storage || type->kind == TypeKind::Shared ||
+            type->kind == TypeKind::Device || type->kind == TypeKind::Volatile ||
+            type->kind == TypeKind::Atomic) &&
+           type->children.size() == 1) {
+        type = &type->children.front();
+    }
+    if (pointer_index) {
+        return substitute_type_ref_text(*type, {});
+    }
+    if (const auto element = single_template_child_type(*type, "list")) {
+        return *element;
+    }
+    if (const std::vector<size_t> shape = explicit_array_shape(*type); !shape.empty()) {
+        if (is_slice) {
+            if (shape.size() != 1) {
+                throw CompileError(location,
+                                   "array slicing requires one-dimensional fixed array: " + label);
+            }
+            const std::string element = explicit_array_element_type(*type);
+            return (has_step ? "strided_span[" : "span[") + element + "]";
+        }
+        if (index_count > shape.size()) {
+            throw CompileError(location, "too many indices for array: " + label);
+        }
+        const std::string element =
+            fixed_array_element_type(*type).value_or(explicit_array_element_type(*type));
+        if (index_count == shape.size()) {
+            return element;
+        }
+        return shaped_array_type(element,
+                                 std::vector<size_t>(shape.begin() + index_count, shape.end()));
+    }
+    if (const auto element = fixed_array_element_type(*type)) {
+        return *element;
+    }
+    if (type->kind == TypeKind::Template && type->name == "dict" && type->children.size() == 2) {
+        return substitute_type_ref_text(type->children[1], {});
+    }
+    if (type->kind == TypeKind::Template && type->children.size() == 1) {
+        return substitute_type_ref_text(type->children.front(), {});
+    }
+    return std::nullopt;
+}
+
 } // namespace
 
 std::string indexed_value_type(const Symbols& symbols,
@@ -204,6 +272,41 @@ std::string indexed_value_type(const Symbols& symbols,
     const auto local = locals.find(name);
     if (local == locals.end()) {
         throw CompileError(location, std::string(unknown_message) + name);
+    }
+    return indexed_type_from_type(symbols, location, local->second, index_expr, name);
+}
+
+std::string indexed_value_type(const Symbols& symbols,
+                               const std::map<std::string, std::string>& locals,
+                               const std::map<std::string, TypeRef>& local_type_refs,
+                               const SourceLocation& location, const std::string& name,
+                               const Expr& index_expr, std::string_view unknown_message) {
+    const auto local = locals.find(name);
+    if (local == locals.end()) {
+        throw CompileError(location, std::string(unknown_message) + name);
+    }
+    if (const auto type_ref = local_type_refs.find(name); type_ref != local_type_refs.end()) {
+        if (is_column_slice_expr(index_expr)) {
+            const std::vector<size_t> shape = explicit_array_shape(type_ref->second);
+            if (shape.size() == 2) {
+                return "strided_span[" + explicit_array_element_type(type_ref->second) + "]";
+            }
+        }
+        if (!has_step_slice(index_expr)) {
+            if (const std::vector<size_t> shape = explicit_array_shape(type_ref->second);
+                !shape.empty()) {
+                if (const auto prefix_count = trailing_full_slice_prefix_count(index_expr)) {
+                    if (*prefix_count + 1 == shape.size()) {
+                        return "span[" + explicit_array_element_type(type_ref->second) + "]";
+                    }
+                }
+            }
+        }
+        if (const auto indexed = indexed_type_from_type_ref_with_count(
+                location, type_ref->second, index_count_from_expr(index_expr),
+                is_slice_expr(index_expr), has_step_slice(index_expr), name)) {
+            return *indexed;
+        }
     }
     return indexed_type_from_type(symbols, location, local->second, index_expr, name);
 }
@@ -260,8 +363,38 @@ std::string iterable_value_type(const Symbols& symbols,
     return {};
 }
 
+std::string iterable_value_type(const Symbols& symbols,
+                                const std::map<std::string, std::string>& locals,
+                                const std::map<std::string, TypeRef>& local_type_refs,
+                                const std::string& name) {
+    if (const auto type_ref = local_type_refs.find(name); type_ref != local_type_refs.end()) {
+        TypeRef type = type_ref->second;
+        while ((type.kind == TypeKind::Reference || type.kind == TypeKind::Const) &&
+               type.children.size() == 1) {
+            type = type.children.front();
+        }
+        if (const auto element = single_template_child_type(type, "list")) {
+            return *element;
+        }
+        if (const auto element = single_template_child_type(type, "span")) {
+            return *element;
+        }
+        if (const auto element = single_template_child_type(type, "strided_span")) {
+            return *element;
+        }
+        if (const auto element = fixed_array_element_type(type)) {
+            return *element;
+        }
+        if (type.kind == TypeKind::Template && type.children.size() == 1) {
+            return substitute_type_ref_text(type.children.front(), {});
+        }
+    }
+    return iterable_value_type(symbols, locals, name);
+}
+
 void check_iterable_binding(const Symbols& symbols,
                             const std::map<std::string, std::string>& locals,
+                            const std::map<std::string, TypeRef>& local_type_refs,
                             const SourceLocation& location, const TypeRef& binding_type,
                             const Expr& iterable) {
     if (iterable.kind == ExprKind::Call && iterable.name == "range") {
@@ -274,7 +407,7 @@ void check_iterable_binding(const Symbols& symbols,
     if (!locals.contains(name)) {
         throw CompileError(location, "iteration over unknown local: " + name);
     }
-    const std::string element = iterable_value_type(symbols, locals, name);
+    const std::string element = iterable_value_type(symbols, locals, local_type_refs, name);
     if (element.empty()) {
         throw CompileError(location, "cannot iterate non-container: " + name);
     }
