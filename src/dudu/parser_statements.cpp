@@ -163,14 +163,6 @@ void parse_assert_parts(Stmt& stmt, const Parser::JoinedTokens& body) {
     }
 }
 
-void fill_expr_piece(Expr& expr, const Parser::JoinedTokens& piece) {
-    expr = parse_expr_text(piece.text, piece.range.start);
-}
-
-void fill_type_piece(TypeRef& type_ref, const Parser::JoinedTokens& piece) {
-    type_ref = parse_type_text(piece.text, piece.range.start);
-}
-
 } // namespace
 
 Parser::JoinedTokens
@@ -223,7 +215,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
     if (match_identifier("return")) {
         stmt.kind = StmtKind::Return;
         const JoinedTokens value = join_until_with_range({TokenKind::Newline});
-        stmt.value_expr = parse_expr_text(value.text, value.range.start);
+        stmt.value_expr = parse_expr_piece(value);
         attach_statement_source(stmt, join_tokens(begin, cursor_));
         return stmt;
     }
@@ -237,7 +229,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
                                          : StmtKind::Match;
         const JoinedTokens condition =
             join_until_with_range({TokenKind::Colon, TokenKind::Newline});
-        stmt.condition_expr = parse_expr_text(condition.text, condition.range.start);
+        stmt.condition_expr = parse_expr_piece(condition);
         consume(TokenKind::Colon, "expected : after " + keyword + " condition");
         attach_statement_source(stmt, join_tokens(begin, cursor_));
         return stmt;
@@ -258,13 +250,13 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
         if (match(TokenKind::Colon)) {
             const JoinedTokens type = join_until_top_level_identifier("in", {TokenKind::Newline});
             stmt.type = type.text;
-            stmt.type_ref = parse_type_text(stmt.type, type.range.start);
+            stmt.type_ref = parse_type_piece(type);
         }
         if (!match_identifier("in")) {
             fail_current("expected in after for loop binding");
         }
         const JoinedTokens iterable = join_until_with_range({TokenKind::Colon, TokenKind::Newline});
-        stmt.iterable_expr = parse_expr_text(iterable.text, iterable.range.start);
+        stmt.iterable_expr = parse_expr_piece(iterable);
         consume(TokenKind::Colon, "expected : after for loop iterable");
         attach_statement_source(stmt, join_tokens(begin, cursor_));
         return stmt;
@@ -273,11 +265,11 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
     if (match_identifier("case")) {
         stmt.kind = StmtKind::Case;
         const JoinedTokens pattern = join_until_top_level_identifier("if", {TokenKind::Colon});
-        stmt.pattern_expr = parse_expr_text(pattern.text, pattern.range.start);
+        stmt.pattern_expr = parse_expr_piece(pattern);
         if (match_identifier("if")) {
             const JoinedTokens guard =
                 join_until_with_range({TokenKind::Colon, TokenKind::Newline});
-            stmt.guard_expr = parse_expr_text(guard.text, guard.range.start);
+            stmt.guard_expr = parse_expr_piece(guard);
         }
         consume(TokenKind::Colon, "expected : after case pattern");
         attach_statement_source(stmt, join_tokens(begin, cursor_));
@@ -299,9 +291,9 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
             consume(TokenKind::Colon, "expected : after except binding");
             const JoinedTokens type = join_until_with_range({TokenKind::Colon, TokenKind::Newline});
             stmt.type = type.text;
-            stmt.type_ref = parse_type_text(stmt.type, type.range.start);
+            stmt.type_ref = parse_type_piece(type);
         } else {
-            stmt.condition_expr = parse_expr_text(header.text, header.range.start);
+            stmt.condition_expr = parse_expr_piece(header);
         }
         consume(TokenKind::Colon, "expected : after except");
         attach_statement_source(stmt, join_tokens(begin, cursor_));
@@ -322,7 +314,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
         const std::string keyword = previous().text;
         stmt.kind = keyword == "raise" ? StmtKind::Raise : StmtKind::Delete;
         const JoinedTokens value = join_until_with_range({TokenKind::Newline});
-        stmt.value_expr = parse_expr_text(value.text, value.range.start);
+        stmt.value_expr = parse_expr_piece(value);
         attach_statement_source(stmt, join_tokens(begin, cursor_));
         return stmt;
     }
@@ -361,10 +353,10 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
         const size_t type_end = assignment.value_or(end);
         const JoinedTokens type = join_tokens(*colon + 1, type_end);
         stmt.type = type.text;
-        fill_type_piece(stmt.type_ref, type);
+        stmt.type_ref = parse_type_piece(type);
         if (assignment.has_value()) {
             const JoinedTokens value = join_tokens(*assignment + 1, end);
-            fill_expr_piece(stmt.value_expr, value);
+            stmt.value_expr = parse_expr_piece(value);
         }
         return stmt;
     }
@@ -377,14 +369,14 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
             stmt.op = compound_assignment_op(assign.text);
         }
         const JoinedTokens target = join_tokens(line_begin, *assignment);
-        fill_expr_piece(stmt.target_expr, target);
+        stmt.target_expr = parse_expr_piece(target);
         const JoinedTokens value = join_tokens(*assignment + 1, end);
-        fill_expr_piece(stmt.value_expr, value);
+        stmt.value_expr = parse_expr_piece(value);
         return stmt;
     }
 
     stmt.kind = StmtKind::Expr;
-    fill_expr_piece(stmt.expr, whole);
+    stmt.expr = parse_expr_piece(whole);
     return stmt;
 }
 

@@ -1,8 +1,12 @@
 #include "dudu/lexer.hpp"
+#include "dudu/ast_expr_token_parser.hpp"
+#include "dudu/ast_type_token_parser.hpp"
 #include "dudu/parser_internal.hpp"
 #include "dudu/parser_utils.hpp"
 
+#include <algorithm>
 #include <sstream>
+#include <vector>
 
 namespace dudu {
 namespace {
@@ -43,6 +47,24 @@ void attach_out_of_line_method(ModuleAst& module, FunctionDecl method) {
     }
     throw CompileError(method.location,
                        "out-of-line method receiver is not a known class: " + method.receiver_type);
+}
+
+std::vector<Token> syntax_piece_tokens(std::span<const Token> tokens) {
+    std::vector<Token> out;
+    out.reserve(tokens.size());
+    for (const Token& token : tokens) {
+        if (token.kind == TokenKind::Newline || token.kind == TokenKind::Indent ||
+            token.kind == TokenKind::Dedent) {
+            continue;
+        }
+        out.push_back(token);
+    }
+    SourceLocation end_location;
+    if (!out.empty()) {
+        end_location = token_end_location(out.back());
+    }
+    out.push_back({.kind = TokenKind::End, .text = "", .location = end_location});
+    return out;
 }
 
 } // namespace
@@ -270,6 +292,7 @@ std::string Parser::join_until(std::initializer_list<TokenKind> stops) {
 
 Parser::JoinedTokens Parser::join_until_with_range(std::initializer_list<TokenKind> stops) {
     JoinedTokens joined;
+    joined.begin = cursor_;
     std::ostringstream out;
     std::ostringstream source_out;
     SourceLocation source_cursor;
@@ -323,6 +346,7 @@ Parser::JoinedTokens Parser::join_until_with_range(std::initializer_list<TokenKi
         }
         ++cursor_;
     }
+    joined.end = cursor_;
     joined.text = out.str();
     joined.source_text = source_out.str();
     return joined;
@@ -330,6 +354,8 @@ Parser::JoinedTokens Parser::join_until_with_range(std::initializer_list<TokenKi
 
 Parser::JoinedTokens Parser::join_tokens(size_t begin, size_t end) const {
     JoinedTokens joined;
+    joined.begin = begin;
+    joined.end = std::min(end, tokens_.size());
     std::ostringstream out;
     std::ostringstream source_out;
     SourceLocation source_cursor;
@@ -354,6 +380,26 @@ Parser::JoinedTokens Parser::join_tokens(size_t begin, size_t end) const {
     joined.text = out.str();
     joined.source_text = source_out.str();
     return joined;
+}
+
+Expr Parser::parse_expr_piece(const JoinedTokens& piece) const {
+    if (!piece.has_tokens) {
+        return parse_expr_text(piece.text, piece.range.start);
+    }
+    std::vector<Token> tokens =
+        syntax_piece_tokens(tokens_.subspan(piece.begin, piece.end - piece.begin));
+    ExprTokenParser parser(tokens);
+    return parser.parse();
+}
+
+TypeRef Parser::parse_type_piece(const JoinedTokens& piece) const {
+    if (!piece.has_tokens) {
+        return parse_type_text(piece.text, piece.range.start);
+    }
+    std::vector<Token> tokens =
+        syntax_piece_tokens(tokens_.subspan(piece.begin, piece.end - piece.begin));
+    TypeTokenParser parser(tokens);
+    return parser.parse();
 }
 
 ModuleAst parse_module(std::span<const Token> tokens) {

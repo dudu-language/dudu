@@ -17,6 +17,8 @@ class Parser {
         std::string text;
         std::string source_text;
         SourceRange range;
+        size_t begin = 0;
+        size_t end = 0;
         bool has_tokens = false;
     };
 
@@ -63,6 +65,8 @@ class Parser {
     std::string join_until(std::initializer_list<TokenKind> stops);
     JoinedTokens join_until_with_range(std::initializer_list<TokenKind> stops);
     JoinedTokens join_tokens(size_t begin, size_t end) const;
+    Expr parse_expr_piece(const JoinedTokens& piece) const;
+    TypeRef parse_type_piece(const JoinedTokens& piece) const;
     JoinedTokens join_until_top_level_identifier(std::string_view identifier,
                                                  std::initializer_list<TokenKind> stops);
 };

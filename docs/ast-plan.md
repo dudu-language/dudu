@@ -546,6 +546,11 @@ Already structured:
 - build flag validation walks parsed expression nodes for constants,
   `static_assert`, and normal statements; raw text scanning remains only for
   explicit C++ escape statements
+- parser statement pieces now retain their originating token spans and feed
+  expression/type spans directly into token-backed parsers, avoiding the old
+  stringify-then-relex path for returns, conditions, loop iterables, case
+  patterns and guards, exception bindings, declarations, assignments, and
+  expression statements
 - unsupported Python call checks for `eval`, `exec`, `getattr`, and `setattr`
   walk parsed call expressions, with raw text scanning kept for unsupported or
   unknown expression shapes
