@@ -524,15 +524,13 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols,
             copy_base_scope_state(scope, base);
             scope.current_class = klass.name;
             scope.allow_super_init = method.name == "init";
-            scope.return_type_ref = method.return_type.empty()
-                                        ? parse_type_text("void", method.location)
-                                        : method.return_type_ref;
+            scope.return_type_ref = function_return_type_ref(method);
             for (const ParamDecl& param : method.params) {
                 bind_local(scope, param.name, type_ref_text(param.type_ref), param.type_ref);
             }
-            check_block(scope, method.statements,
-                        method.return_type.empty() ? "void" : method.return_type, 0, callbacks);
-            if (!method.return_type.empty() && method.return_type != "void" &&
+            const std::string return_type = function_return_type_text(method);
+            check_block(scope, method.statements, return_type, 0, callbacks);
+            if (function_has_return_type(method) && return_type != "void" &&
                 !block_guarantees_return(method.statements)) {
                 sema_fail(method.location, "missing return in function: " + method.name);
             }
@@ -542,14 +540,13 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols,
         Symbols function_symbols = with_generic_params(symbols, fn.generic_params);
         FunctionScope scope{function_symbols};
         copy_base_scope_state(scope, base);
-        scope.return_type_ref =
-            fn.return_type.empty() ? parse_type_text("void", fn.location) : fn.return_type_ref;
+        scope.return_type_ref = function_return_type_ref(fn);
         for (const ParamDecl& param : fn.params) {
             bind_local(scope, param.name, type_ref_text(param.type_ref), param.type_ref);
         }
-        check_block(scope, fn.statements, fn.return_type.empty() ? "void" : fn.return_type, 0,
-                    callbacks);
-        if (!fn.return_type.empty() && fn.return_type != "void" &&
+        const std::string return_type = function_return_type_text(fn);
+        check_block(scope, fn.statements, return_type, 0, callbacks);
+        if (function_has_return_type(fn) && return_type != "void" &&
             !block_guarantees_return(fn.statements)) {
             sema_fail(fn.location, "missing return in function: " + fn.name);
         }

@@ -272,7 +272,6 @@ struct FunctionDecl {
     std::vector<std::string> generic_params;
     std::vector<Decorator> decorators;
     std::vector<ParamDecl> params;
-    std::string return_type;
     TypeRef return_type_ref;
     std::string origin_module;
     std::vector<Stmt> statements;

@@ -291,8 +291,8 @@ void emit_method(std::ostringstream& out, const std::string& class_name,
         if (lowered_name == "operator bool") {
             out << "explicit " << lowered_name << '(';
         } else {
-            out << lower_cpp_type(method.return_type_ref, aliases, options) << ' ' << lowered_name
-                << '(';
+            out << lower_cpp_type(function_return_type_ref(method), aliases, options) << ' '
+                << lowered_name << '(';
         }
     }
     for (size_t i = first_param; i < method.params.size(); ++i) {
@@ -336,11 +336,11 @@ void emit_method(std::ostringstream& out, const std::string& class_name,
     }
     if (is_constructor_method(method) && super_init_expr(method) != nullptr) {
         std::vector<Stmt> body(method.statements.begin() + 1, method.statements.end());
-        emit_block(out, body, 2, aliases, locals, method.return_type, function_returns, &symbols,
-                   options);
+        emit_block(out, body, 2, aliases, locals, function_return_type_text(method),
+                   function_returns, &symbols, options);
     } else {
-        emit_block(out, method.statements, 2, aliases, locals, method.return_type, function_returns,
-                   &symbols, options);
+        emit_block(out, method.statements, 2, aliases, locals, function_return_type_text(method),
+                   function_returns, &symbols, options);
     }
     out << "    }\n";
 }

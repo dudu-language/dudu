@@ -148,7 +148,7 @@ dudu_operator_signature(const Symbols& symbols, const std::string& op, const std
         for (size_t i = first_param; i < method.params.size(); ++i) {
             signature.params.push_back(type_ref_text(method.params[i].type_ref));
         }
-        signature.return_type = method.return_type.empty() ? "void" : method.return_type;
+        signature.return_type = function_return_type_text(method);
         return signature;
     }
     return std::nullopt;
@@ -177,10 +177,8 @@ std::optional<FunctionSignature> dudu_binary_operator_signature(const Symbols& s
             signature.params.push_back(type_ref_text(method.params[i].type_ref));
             signature.param_type_refs.push_back(method.params[i].type_ref);
         }
-        signature.return_type = method.return_type.empty() ? "void" : method.return_type;
-        signature.return_type_ref = method.return_type.empty()
-                                        ? parse_type_text("void", method.location)
-                                        : method.return_type_ref;
+        signature.return_type = function_return_type_text(method);
+        signature.return_type_ref = function_return_type_ref(method);
         if (signature.params.empty() ||
             assignment_type_allowed(signature.params.front(), right_expr, right)) {
             return signature;

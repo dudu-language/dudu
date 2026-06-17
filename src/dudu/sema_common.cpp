@@ -10,10 +10,6 @@ namespace dudu {
     throw CompileError(location, message);
 }
 
-bool has_type_ref(const TypeRef& type) {
-    return type.kind != TypeKind::Unknown || !type.text.empty();
-}
-
 bool missing_expr(const Expr& expr) {
     return expr_missing(expr);
 }

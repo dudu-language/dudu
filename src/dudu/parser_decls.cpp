@@ -235,7 +235,6 @@ FunctionDecl Parser::parse_function(const Token& start, Visibility visibility,
     consume(TokenKind::RParen, "expected ) after parameters");
     if (match(TokenKind::Arrow)) {
         const JoinedTokens type = join_until_with_range({TokenKind::Colon});
-        fn.return_type = type.text;
         fn.return_type_ref = parse_type_piece(type);
     }
     consume(TokenKind::Colon, "expected : after function header");

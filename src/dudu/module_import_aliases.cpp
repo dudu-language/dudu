@@ -60,9 +60,9 @@ void add_function_alias(ModuleAst& module, const FunctionDecl& fn, const std::st
     NativeFunctionDecl alias;
     alias.name = name;
     alias.template_params = fn.generic_params;
-    alias.return_type = fn.return_type.empty()
-                            ? "void"
-                            : substitute_type_ref_text(fn.return_type_ref, type_substitutions);
+    alias.return_type = function_has_return_type(fn)
+                            ? substitute_type_ref_text(fn.return_type_ref, type_substitutions)
+                            : "void";
     alias.location = location;
     for (const ParamDecl& param : fn.params) {
         alias.params.push_back(substitute_type_ref_text(param.type_ref, type_substitutions));
@@ -72,9 +72,8 @@ void add_function_alias(ModuleAst& module, const FunctionDecl& fn, const std::st
 
 FunctionDecl substituted_method(FunctionDecl method,
                                 const std::map<std::string, std::string>& type_substitutions) {
-    if (!method.return_type.empty()) {
-        method.return_type = substitute_type_ref_text(method.return_type_ref, type_substitutions);
-        method.return_type_ref = parse_type_text(method.return_type, method.location);
+    if (function_has_return_type(method)) {
+        method.return_type_ref = substitute_type_ref(method.return_type_ref, type_substitutions);
     }
     for (ParamDecl& param : method.params) {
         param.type_ref = substitute_type_ref(param.type_ref, type_substitutions);

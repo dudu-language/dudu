@@ -23,8 +23,8 @@ std::string function_detail(const FunctionDecl& fn) {
         out << fn.params[i].name << ": " << type_ref_text(fn.params[i].type_ref);
     }
     out << ")";
-    if (!fn.return_type.empty()) {
-        out << " -> " << fn.return_type;
+    if (function_has_return_type(fn)) {
+        out << " -> " << type_ref_text(fn.return_type_ref);
     }
     return out.str();
 }

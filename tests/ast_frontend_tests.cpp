@@ -678,7 +678,7 @@ void test_generic_decl_ast_shape() {
     assert(module.classes[0].name == "Box");
     assert(module.classes[0].generic_params == std::vector<std::string>{"T"});
     assert(module.classes[0].methods.size() == 1);
-    assert(module.classes[0].methods[0].return_type == "T");
+    assert(dudu::type_ref_text(module.classes[0].methods[0].return_type_ref) == "T");
     assert(module.functions.size() == 1);
     assert(module.functions[0].name == "id");
     assert(module.functions[0].generic_params == std::vector<std::string>{"T"});

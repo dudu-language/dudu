@@ -139,9 +139,8 @@ bool is_c_abi_type_ref(const TypeRef& type, bool allow_void) {
 }
 
 void check_extern_c_signature(const FunctionDecl& fn) {
-    const std::string return_type = fn.return_type.empty() ? "void" : fn.return_type;
-    const TypeRef return_type_ref =
-        fn.return_type.empty() ? parse_type_text("void", fn.location) : fn.return_type_ref;
+    const std::string return_type = function_return_type_text(fn);
+    const TypeRef return_type_ref = function_return_type_ref(fn);
     if (!is_c_abi_type_ref(return_type_ref, true)) {
         fail(fn.location, "@extern_c return type is not C ABI safe: " + return_type);
     }
@@ -333,7 +332,7 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                     if (method.params.size() != 1 || method.params.front().name != "self") {
                         fail(method.location, "bool operator methods require only self");
                     }
-                    if (method.return_type.empty() || method.return_type != "bool") {
+                    if (function_return_type_text(method) != "bool") {
                         fail(method.location, "bool operator methods must return bool");
                     }
                 } else if (op == "[]=") {
@@ -341,26 +340,28 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                         fail(method.location,
                              "indexed assignment operator methods require self, index, and value");
                     }
-                    if (!method.return_type.empty() && method.return_type != "void") {
+                    if (function_has_return_type(method) &&
+                        function_return_type_text(method) != "void") {
                         fail(method.location,
                              "indexed assignment operator methods must return void");
                     }
                 } else if (method.params.size() != 2 || method.params.front().name != "self") {
                     fail(method.location, "operator methods require self and one parameter");
                 } else if (is_comparison_operator_method(method) &&
-                           (method.return_type.empty() || method.return_type != "bool")) {
+                           function_return_type_text(method) != "bool") {
                     fail(method.location, "comparison operator methods must return bool");
                 }
             }
-            if (is_constructor_method(method) && !method.return_type.empty() &&
-                method.return_type != "void") {
+            if (is_constructor_method(method) && function_has_return_type(method) &&
+                function_return_type_text(method) != "void") {
                 fail(method.location, method.name + " cannot declare a return type");
             }
             if (is_destructor_method(method)) {
                 if (method.params.size() != 1) {
                     fail(method.location, method.name + " cannot take parameters");
                 }
-                if (!method.return_type.empty() && method.return_type != "void") {
+                if (function_has_return_type(method) &&
+                    function_return_type_text(method) != "void") {
                     fail(method.location, method.name + " cannot declare a return type");
                 }
             }
@@ -405,7 +406,7 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                 check_known_type_ref(method_symbols, param.location, param.type_ref,
                                      "unknown parameter type: ");
             }
-            if (!method.return_type.empty()) {
+            if (function_has_return_type(method)) {
                 check_supported_type_shape(method.location, method.return_type_ref);
             }
             check_known_type_ref(method_symbols, method.location, method.return_type_ref,
@@ -426,7 +427,7 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
             check_extern_c_signature(fn);
         }
         if (is_test_decorator(fn)) {
-            const std::string return_type = fn.return_type.empty() ? "void" : fn.return_type;
+            const std::string return_type = function_return_type_text(fn);
             if (!fn.params.empty()) {
                 fail(fn.location, "@test functions cannot take parameters");
             }
@@ -443,7 +444,7 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
             check_known_type_ref(function_symbols, param.location, param.type_ref,
                                  "unknown parameter type: ");
         }
-        if (!fn.return_type.empty()) {
+        if (function_has_return_type(fn)) {
             check_supported_type_shape(fn.location, fn.return_type_ref);
         }
         check_known_type_ref(function_symbols, fn.location, fn.return_type_ref,

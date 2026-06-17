@@ -65,10 +65,10 @@ FunctionSignature instantiate_method_signature(const ClassDecl& klass, const Fun
         signature.param_type_refs.push_back(std::move(param_type));
     }
     signature.return_type_ref =
-        method.return_type.empty()
-            ? parse_type_text("void", method.location)
-            : instantiate_method_type_ref(klass, method, method.return_type_ref, receiver_args,
-                                          method_args);
+        function_has_return_type(method)
+            ? instantiate_method_type_ref(klass, method, method.return_type_ref, receiver_args,
+                                          method_args)
+            : void_type_ref(method.location);
     signature.return_type = substitute_type_ref_text(signature.return_type_ref, {});
     return signature;
 }

@@ -77,7 +77,7 @@ std::string method_key(const FunctionDecl& fn) {
     std::string key = fn.name + "(";
     for (const ParamDecl& param : fn.params)
         key += type_ref_text(param.type_ref) + ",";
-    return key + ")->" + fn.return_type;
+    return key + ")->" + function_return_type_text(fn);
 }
 
 void add_base_class(ClassDecl& klass, std::string base, const SourceLocation& location) {
@@ -245,9 +245,10 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                std::regex_search(line, match, method_decl)) {
         FunctionDecl method;
         method.name = match[1].str();
-        method.return_type =
-            qualify_scoped_type(scan, namespaces, signature_return_type(match[2].str()));
-        method.return_type_ref = parse_type_text(method.return_type, decl_location);
+        method.return_type_ref =
+            parse_type_text(qualify_scoped_type(scan, namespaces,
+                                                signature_return_type(match[2].str())),
+                            decl_location);
         for (const std::string& param : signature_params(match[2].str())) {
             ParamDecl decl;
             decl.name = "arg" + std::to_string(method.params.size());

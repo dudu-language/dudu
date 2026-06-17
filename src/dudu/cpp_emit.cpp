@@ -101,12 +101,11 @@ void emit_template_params(std::ostringstream& out, const std::vector<std::string
 std::map<std::string, std::string> function_return_types(const ModuleAst& module) {
     std::map<std::string, std::string> out;
     for (const FunctionDecl& fn : module.functions) {
-        out[fn.name] = fn.return_type.empty() ? "void" : fn.return_type;
+        out[fn.name] = function_return_type_text(fn);
     }
     for (const ClassDecl& klass : module.classes) {
         for (const FunctionDecl& method : klass.methods) {
-            out[klass.name + "." + method.name] =
-                method.return_type.empty() ? "void" : method.return_type;
+            out[klass.name + "." + method.name] = function_return_type_text(method);
         }
     }
     return out;
@@ -175,8 +174,8 @@ void emit_function_signature(std::ostringstream& out, const FunctionDecl& fn,
     if (function_has_decorator(fn, "constexpr")) {
         out << "constexpr ";
     }
-    out << lower_cpp_type(fn.return_type_ref, aliases, options) << ' ' << emitted_name(fn, options)
-        << '(';
+    out << lower_cpp_type(function_return_type_ref(fn), aliases, options) << ' '
+        << emitted_name(fn, options) << '(';
     for (size_t i = 0; i < fn.params.size(); ++i) {
         if (i > 0) {
             out << ", ";
@@ -197,8 +196,8 @@ void emit_function_body(std::ostringstream& out, const FunctionDecl& fn,
     for (const ParamDecl& param : fn.params) {
         locals[param.name] = type_ref_text(param.type_ref);
     }
-    emit_block(out, fn.statements, 1, aliases, locals, fn.return_type, function_returns, &symbols,
-               options);
+    emit_block(out, fn.statements, 1, aliases, locals, function_return_type_text(fn),
+               function_returns, &symbols, options);
     out << "}\n\n";
 }
 
@@ -418,7 +417,7 @@ std::string emit_c_header(const ModuleAst& module) {
         if (!function_has_decorator(fn, "extern_c") || !visible_function_in_header(fn)) {
             continue;
         }
-        out << lower_cpp_type(fn.return_type_ref) << ' ' << fn.name << '(';
+        out << lower_cpp_type(function_return_type_ref(fn)) << ' ' << fn.name << '(';
         if (fn.params.empty()) {
             out << "void";
         }

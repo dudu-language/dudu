@@ -78,10 +78,8 @@ FunctionSignature inherited_method_signature_without_self(const FunctionDecl& me
         signature.params.push_back(type_ref_text(method.params[i].type_ref));
         signature.param_type_refs.push_back(method.params[i].type_ref);
     }
-    signature.return_type = method.return_type.empty() ? "void" : method.return_type;
-    signature.return_type_ref = method.return_type.empty()
-                                    ? parse_type_text("void", method.location)
-                                    : method.return_type_ref;
+    signature.return_type = function_return_type_text(method);
+    signature.return_type_ref = function_return_type_ref(method);
     return signature;
 }
 

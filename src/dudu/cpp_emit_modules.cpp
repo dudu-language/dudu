@@ -1,5 +1,6 @@
 #include "dudu/cpp_emit_modules.hpp"
 
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_emit.hpp"
 #include "dudu/cpp_emit_prelude.hpp"
 
@@ -160,7 +161,7 @@ void emit_entry_point(std::ostringstream& out, const ModuleAst& unit,
         }
         out << "int main() {\n";
         const std::string call = emitted_name(fn, options) + "()";
-        if (fn.return_type.empty() || fn.return_type == "void") {
+        if (function_return_type_text(fn) == "void") {
             out << "    " << call << ";\n"
                 << "    return 0;\n";
         } else {

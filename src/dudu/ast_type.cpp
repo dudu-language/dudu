@@ -218,6 +218,28 @@ std::string type_ref_text(const TypeRef& type) {
     return substitute_type_ref_text(type, {});
 }
 
+bool has_type_ref(const TypeRef& type) {
+    return type.kind != TypeKind::Unknown || !trim_copy(type.text).empty() ||
+           !trim_copy(type.name).empty() || !trim_copy(type.value).empty() ||
+           !type.children.empty();
+}
+
+TypeRef void_type_ref(SourceLocation location) {
+    return parse_type_text("void", location);
+}
+
+bool function_has_return_type(const FunctionDecl& fn) {
+    return has_type_ref(fn.return_type_ref);
+}
+
+TypeRef function_return_type_ref(const FunctionDecl& fn) {
+    return function_has_return_type(fn) ? fn.return_type_ref : void_type_ref(fn.location);
+}
+
+std::string function_return_type_text(const FunctionDecl& fn) {
+    return type_ref_text(function_return_type_ref(fn));
+}
+
 TypeRef substitute_type_ref(const TypeRef& type,
                             const std::map<std::string, std::string>& substitutions) {
     const std::string name = trim_copy(type.name.empty() ? type.text : type.name);

@@ -249,9 +249,9 @@ FunctionSignature instantiate_generic_signature(const FunctionDecl& fn,
     const std::map<std::string, std::string> substitutions =
         generic_substitutions(fn.generic_params, args);
     FunctionSignature signature;
-    signature.return_type_ref = fn.return_type.empty()
-                                    ? parse_type_text("void", fn.location)
-                                    : substitute_type_ref(fn.return_type_ref, substitutions);
+    signature.return_type_ref = function_has_return_type(fn)
+                                    ? substitute_type_ref(fn.return_type_ref, substitutions)
+                                    : void_type_ref(fn.location);
     signature.return_type = substitute_type_ref_text(signature.return_type_ref, {});
     for (const ParamDecl& param : fn.params) {
         TypeRef param_type = substitute_type_ref(param.type_ref, substitutions);
@@ -279,9 +279,8 @@ ClassDecl instantiate_generic_class(ClassDecl klass, const std::vector<TypeRef>&
         constant.type_ref = substitute_type_ref(constant.type_ref, substitutions);
     }
     for (FunctionDecl& method : klass.methods) {
-        if (!method.return_type.empty()) {
+        if (function_has_return_type(method)) {
             method.return_type_ref = substitute_type_ref(method.return_type_ref, substitutions);
-            method.return_type = substitute_type_ref_text(method.return_type_ref, {});
         }
         for (ParamDecl& param : method.params) {
             param.type_ref = substitute_type_ref(param.type_ref, substitutions);
