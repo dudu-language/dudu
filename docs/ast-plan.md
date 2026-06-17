@@ -551,6 +551,10 @@ Already structured:
   stringify-then-relex path for returns, conditions, loop iterables, case
   patterns and guards, exception bindings, declarations, assignments, and
   expression statements
+- declaration parser pieces now use those same token-span helpers for class
+  bases, fields, enum underlying types and payloads, aliases, function returns,
+  parameters, constants, and static assertions instead of reparsing joined
+  declaration strings
 - unsupported Python call checks for `eval`, `exec`, `getattr`, and `setattr`
   walk parsed call expressions, with raw text scanning kept for unsupported or
   unknown expression shapes

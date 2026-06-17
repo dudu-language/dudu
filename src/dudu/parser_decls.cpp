@@ -26,15 +26,15 @@ ClassDecl Parser::parse_class(const Token& start, Visibility visibility,
     if (match(TokenKind::LParen)) {
         if (!at(TokenKind::RParen)) {
             while (true) {
-                const SourceLocation base_location = current().location;
-                std::string base = join_until({TokenKind::Comma, TokenKind::RParen});
-                if (base.empty()) {
+                const JoinedTokens base =
+                    join_until_with_range({TokenKind::Comma, TokenKind::RParen});
+                if (base.text.empty()) {
                     fail_current("expected base class name");
                 }
                 BaseClassDecl base_decl;
-                base_decl.type = std::move(base);
-                base_decl.type_ref = parse_type_text(base_decl.type, base_location);
-                base_decl.location = base_location;
+                base_decl.type = base.text;
+                base_decl.type_ref = parse_type_piece(base);
+                base_decl.location = base.range.start;
                 klass.base_classes.push_back(base_decl.type);
                 klass.base_class_refs.push_back(std::move(base_decl));
                 if (match(TokenKind::Comma)) {
@@ -105,14 +105,16 @@ FieldDecl Parser::parse_field() {
     field.name = name.text;
     field.location = name.location;
     consume(TokenKind::Colon, "expected : after field name");
-    field.type = join_until({TokenKind::Assign, TokenKind::Newline});
+    const JoinedTokens type = join_until_with_range({TokenKind::Assign, TokenKind::Newline});
+    field.type = type.text;
     if (field.type.empty()) {
         throw CompileError(name.location, "field requires a type");
     }
-    field.type_ref = parse_type_text(field.type, name.location);
+    field.type_ref = parse_type_piece(type);
     if (match(TokenKind::Assign)) {
-        field.value = join_until({TokenKind::Newline});
-        field.value_expr = parse_expr_text(field.value, name.location);
+        const JoinedTokens value = join_until_with_range({TokenKind::Newline});
+        field.value = value.text;
+        field.value_expr = parse_expr_piece(value);
     }
     consume(TokenKind::Newline, "expected newline after field");
     return field;
@@ -124,8 +126,9 @@ EnumDecl Parser::parse_enum(const Token& start) {
     en.name = consume_identifier("expected enum name").text;
     consume(TokenKind::Colon, "expected : after enum name");
     if (!at(TokenKind::Newline)) {
-        en.underlying_type = join_until({TokenKind::Newline});
-        en.underlying_type_ref = parse_type_text(en.underlying_type, start.location);
+        const JoinedTokens type = join_until_with_range({TokenKind::Newline});
+        en.underlying_type = type.text;
+        en.underlying_type_ref = parse_type_piece(type);
     }
     consume(TokenKind::Newline, "expected newline after enum header");
     if (!match(TokenKind::Indent)) {
@@ -147,11 +150,13 @@ EnumDecl Parser::parse_enum(const Token& start) {
                     EnumPayloadField field;
                     field.name = "_" + std::to_string(index);
                     field.location = current().location;
-                    field.type = join_until({TokenKind::Comma, TokenKind::RParen});
+                    const JoinedTokens type =
+                        join_until_with_range({TokenKind::Comma, TokenKind::RParen});
+                    field.type = type.text;
                     if (field.type.empty()) {
                         throw CompileError(field.location, "enum payload field requires a type");
                     }
-                    field.type_ref = parse_type_text(field.type, field.location);
+                    field.type_ref = parse_type_piece(type);
                     value.payload_fields.push_back(std::move(field));
                     ++index;
                     if (match(TokenKind::Comma)) {
@@ -180,8 +185,9 @@ EnumDecl Parser::parse_enum(const Token& start) {
             en.values.push_back(std::move(value));
             continue;
         } else if (match(TokenKind::Assign)) {
-            value.value = join_until({TokenKind::Newline});
-            value.value_expr = parse_expr_text(value.value, name.location);
+            const JoinedTokens expr = join_until_with_range({TokenKind::Newline});
+            value.value = expr.text;
+            value.value_expr = parse_expr_piece(expr);
         }
         consume(TokenKind::Newline, "expected newline after enum value");
         en.values.push_back(std::move(value));
@@ -196,8 +202,9 @@ void Parser::parse_type_decl(const Token& start, ModuleAst& module) {
         TypeAliasDecl alias;
         alias.location = start.location;
         alias.name = name.text;
-        alias.type = join_until({TokenKind::Newline});
-        alias.type_ref = parse_type_text(alias.type, start.location);
+        const JoinedTokens type = join_until_with_range({TokenKind::Newline});
+        alias.type = type.text;
+        alias.type_ref = parse_type_piece(type);
         consume(TokenKind::Newline, "expected newline after type alias");
         module.aliases.push_back(std::move(alias));
         return;
@@ -212,6 +219,7 @@ void Parser::parse_type_decl(const Token& start, ModuleAst& module) {
 FunctionDecl Parser::parse_function(const Token& start, Visibility visibility,
                                     const std::vector<Decorator>& decorators,
                                     std::string_view receiver_type) {
+    (void)start;
     FunctionDecl fn;
     fn.visibility = visibility;
     fn.decorators = decorators;
@@ -237,8 +245,9 @@ FunctionDecl Parser::parse_function(const Token& start, Visibility visibility,
     skip_signature_separators();
     consume(TokenKind::RParen, "expected ) after parameters");
     if (match(TokenKind::Arrow)) {
-        fn.return_type = join_until({TokenKind::Colon});
-        fn.return_type_ref = parse_type_text(fn.return_type, start.location);
+        const JoinedTokens type = join_until_with_range({TokenKind::Colon});
+        fn.return_type = type.text;
+        fn.return_type_ref = parse_type_piece(type);
     }
     consume(TokenKind::Colon, "expected : after function header");
     consume(TokenKind::Newline, "expected newline after function header");
@@ -289,11 +298,13 @@ void Parser::parse_params(std::vector<ParamDecl>& params, std::string_view recei
             fail_current("expected comma after self");
         }
         consume(TokenKind::Colon, "expected : after parameter name");
-        param.type = join_until({TokenKind::Comma, TokenKind::RParen, TokenKind::Newline});
+        const JoinedTokens type =
+            join_until_with_range({TokenKind::Comma, TokenKind::RParen, TokenKind::Newline});
+        param.type = type.text;
         if (param.type.empty()) {
             throw CompileError(name.location, "parameter requires a type");
         }
-        param.type_ref = parse_type_text(param.type, name.location);
+        param.type_ref = parse_type_piece(type);
         params.push_back(std::move(param));
         if (match(TokenKind::Comma)) {
             continue;
@@ -320,14 +331,16 @@ ConstDecl Parser::parse_constant() {
     constant.name = name.text;
     constant.location = name.location;
     consume(TokenKind::Colon, "expected : after constant name");
-    constant.type = join_until({TokenKind::Assign});
+    const JoinedTokens type = join_until_with_range({TokenKind::Assign});
+    constant.type = type.text;
     if (constant.type.empty()) {
         throw CompileError(name.location, "constant requires a type");
     }
-    constant.type_ref = parse_type_text(constant.type, name.location);
+    constant.type_ref = parse_type_piece(type);
     consume(TokenKind::Assign, "expected = after constant type");
-    constant.value = join_until({TokenKind::Newline});
-    constant.value_expr = parse_expr_text(constant.value, name.location);
+    const JoinedTokens value = join_until_with_range({TokenKind::Newline});
+    constant.value = value.text;
+    constant.value_expr = parse_expr_piece(value);
     consume(TokenKind::Newline, "expected newline after constant");
     return constant;
 }
@@ -336,8 +349,9 @@ StaticAssertDecl Parser::parse_static_assert() {
     StaticAssertDecl assertion;
     const Token& start = consume_identifier("expected static_assert");
     assertion.location = start.location;
-    assertion.expression = join_until({TokenKind::Newline});
-    assertion.expression_expr = parse_expr_text(assertion.expression, start.location);
+    const JoinedTokens expression = join_until_with_range({TokenKind::Newline});
+    assertion.expression = expression.text;
+    assertion.expression_expr = parse_expr_piece(expression);
     consume(TokenKind::Newline, "expected newline after static_assert");
     return assertion;
 }
