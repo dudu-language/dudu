@@ -94,7 +94,13 @@ std::vector<std::string> native_placeholders_in(std::string_view text) {
 }
 
 bool native_index_placeholder(const std::string& name) {
-    return name == "__i" || name == "__j" || name == "_Int" || name == "_Index" || name == "_Nm";
+    return name == "__i" || name == "__j" || name == "_Int" || name == "_Index" || name == "_Nm" ||
+           name == "_Np";
+}
+
+bool numeric_template_arg(std::string_view arg) {
+    arg = trim_copy(std::string(arg));
+    return !arg.empty() && arg.find_first_not_of("0123456789") == std::string::npos;
 }
 
 void append_placeholders(std::vector<std::string>& out, std::set<std::string>& seen,
@@ -161,8 +167,16 @@ std::map<std::string, std::string>
 explicit_template_bindings(const std::vector<std::string>& names,
                            const std::vector<std::string>& args) {
     std::map<std::string, std::string> out;
-    for (size_t i = 0; i < args.size() && i < names.size(); ++i) {
-        out.emplace(names[i], args[i]);
+    size_t arg_index = 0;
+    for (const std::string& name : names) {
+        if (arg_index >= args.size()) {
+            break;
+        }
+        if (native_index_placeholder(name) && !numeric_template_arg(args[arg_index])) {
+            continue;
+        }
+        out.emplace(name, args[arg_index]);
+        ++arg_index;
     }
     return out;
 }
@@ -335,6 +349,39 @@ indexed_tuple_return_type(std::string return_type, const std::vector<std::string
     }
     const std::string type = substitute_type_ref_text(tuple.children[index], {});
     return reference ? "&" + type : type;
+}
+
+bool has_native_placeholder_ref(const TypeRef& type) {
+    const std::string head = type_ref_head_name(type);
+    if (native_template_placeholder(head) ||
+        (!type.value.empty() && native_template_placeholder(type.value))) {
+        return true;
+    }
+    for (const TypeRef& child : type.children) {
+        if (has_native_placeholder_ref(child)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+std::optional<TypeRef> explicit_type_return_ref(const TypeRef& return_type,
+                                                const std::vector<std::string>& template_args) {
+    auto type_arg = std::ranges::find_if_not(template_args, numeric_template_arg);
+    if (type_arg == template_args.end() || !has_native_placeholder_ref(return_type)) {
+        return std::nullopt;
+    }
+    if ((return_type.kind == TypeKind::Reference || return_type.kind == TypeKind::Const ||
+         return_type.kind == TypeKind::Pointer) &&
+        return_type.children.size() == 1) {
+        if (auto inner = explicit_type_return_ref(return_type.children.front(), template_args)) {
+            TypeRef wrapped = return_type;
+            wrapped.children = {*inner};
+            wrapped.text = substitute_type_ref_text(wrapped, {});
+            return wrapped;
+        }
+    }
+    return parse_type_text(*type_arg, return_type.location);
 }
 
 std::string mismatch_reason_ast(const FunctionScope& scope, const FunctionSignature& signature,
@@ -519,6 +566,11 @@ match_native_signature(const FunctionScope& scope, const std::string& callee,
                         indexed_tuple_return_type(resolved.return_type, template_call->second, args,
                                                   scope, location, infer_expr_type)) {
                     resolved.return_type = *indexed;
+                    resolved.return_type_ref = parse_type_text(resolved.return_type);
+                } else if (const auto explicit_return = explicit_type_return_ref(
+                               signature_return_type_ref(resolved), template_call->second)) {
+                    resolved.return_type_ref = *explicit_return;
+                    resolved.return_type = substitute_type_ref_text(resolved.return_type_ref, {});
                 }
             }
             return resolved;

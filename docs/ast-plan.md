@@ -1521,6 +1521,19 @@ LSP source edits are also moving to AST-owned ranges:
 - Compiler-owned built-in C++ method signatures now populate parsed parameter
   and return `TypeRef` metadata when created, instead of relying on later
   fallback parsing of signature strings.
+- Native function signatures now attach parsed parameter and return `TypeRef`
+  metadata during symbol collection, narrowing fallback parsing to the native
+  declaration AST boundary that still stores imported signatures as text.
+- Explicit native template return rewriting now refreshes return `TypeRef`
+  metadata at the same time as return text, avoiding stale semantic facts after
+  helpers such as indexed tuple/variant returns refine the type.
+- Explicit native template binding now treats native index placeholders as
+  numeric-only, so type-form calls such as `std.get[i32](variant_value)` do not
+  accidentally bind helper alias index placeholders before real type
+  placeholders.
+- Explicit native type-template calls whose imported C++ return type remains a
+  dependent helper alias now derive the semantic return from the explicit type
+  argument while preserving parsed reference/const wrappers.
 
 Expression parsing has moved onto the lexer/token stream:
 
