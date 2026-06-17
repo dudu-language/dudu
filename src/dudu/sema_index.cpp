@@ -349,23 +349,25 @@ std::string indexed_type_from_type(const Symbols& symbols, const SourceLocation&
                                    const std::string& label) {
     std::string type = resolve_alias(symbols, raw_type);
     const std::string unwrapped_input_type = unwrap_reference_and_const(type);
+    const TypeRef unwrapped_type_ref = parse_type_text(unwrapped_input_type);
     if (is_channel_slice_expr(index_expr)) {
-        const std::vector<size_t> shape = explicit_array_shape(unwrapped_input_type);
+        const std::vector<size_t> shape = explicit_array_shape(unwrapped_type_ref);
         if (shape.size() == 3) {
-            return "strided_span[" + explicit_array_element_type(unwrapped_input_type) + "]";
+            return "strided_span[" + explicit_array_element_type(unwrapped_type_ref) + "]";
         }
     }
     if (is_column_slice_expr(index_expr)) {
-        const std::vector<size_t> shape = explicit_array_shape(unwrapped_input_type);
+        const std::vector<size_t> shape = explicit_array_shape(unwrapped_type_ref);
         if (shape.size() == 2) {
-            return "strided_span[" + explicit_array_element_type(unwrapped_input_type) + "]";
+            return "strided_span[" + explicit_array_element_type(unwrapped_type_ref) + "]";
         }
     }
     if (!has_step_slice(index_expr)) {
-        if (const std::vector<size_t> shape = explicit_array_shape(type); !shape.empty()) {
+        const TypeRef type_ref = parse_type_text(type);
+        if (const std::vector<size_t> shape = explicit_array_shape(type_ref); !shape.empty()) {
             if (const auto prefix_count = trailing_full_slice_prefix_count(index_expr)) {
                 if (*prefix_count + 1 == shape.size()) {
-                    return "span[" + explicit_array_element_type(type) + "]";
+                    return "span[" + explicit_array_element_type(type_ref) + "]";
                 }
             }
         }

@@ -479,6 +479,9 @@ Already structured:
 - parsed index expression type inference handles expression receivers such as
   `make_values()[0]` and chained array rows without falling back to raw
   expression inference
+- fixed-array row, column, channel, and trailing full-slice inference now reads
+  shape and element metadata from parsed `TypeRef` nodes before native/operator
+  fallback, keeping the public index typing path off raw bracket parsing
 - member-path type checks for indexed local receivers such as `items[i].field`
   parse the indexed segment into an `Expr::Index` and route the index through
   parsed expression typing instead of slicing raw index text
