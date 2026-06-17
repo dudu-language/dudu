@@ -262,7 +262,6 @@ struct EnumValueDecl {
 struct EnumDecl {
     std::string name;
     std::string cpp_name;
-    std::string underlying_type;
     TypeRef underlying_type_ref;
     std::string origin_module;
     std::vector<EnumValueDecl> values;

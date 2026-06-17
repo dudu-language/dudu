@@ -128,7 +128,6 @@ EnumDecl Parser::parse_enum(const Token& start) {
     consume(TokenKind::Colon, "expected : after enum name");
     if (!at(TokenKind::Newline)) {
         const JoinedTokens type = join_until_with_range({TokenKind::Newline});
-        en.underlying_type = type.text;
         en.underlying_type_ref = parse_type_piece(type);
     }
     consume(TokenKind::Newline, "expected newline after enum header");

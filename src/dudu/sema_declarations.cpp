@@ -1,6 +1,7 @@
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/decorators.hpp"
+#include "dudu/sema_common.hpp"
 #include "dudu/sema_context.hpp"
 #include "dudu/sema_inheritance.hpp"
 #include "dudu/source.hpp"
@@ -204,9 +205,8 @@ void check_function_decorator(const ModuleAst& module, const Decorator& decorato
                                 "@operator requires exactly one string literal argument");
     }
     if (decorator_call_matches(decorator, "test.should_panic")) {
-        check_single_string_arg(
-            decorator, "test.should_panic",
-            "@test.should_panic requires exactly one string literal argument");
+        check_single_string_arg(decorator, "test.should_panic",
+                                "@test.should_panic requires exactly one string literal argument");
     }
     if (decorator_call_matches(decorator, "section")) {
         check_single_string_arg(decorator, "section",
@@ -235,7 +235,7 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                              "unknown type alias target: ");
     }
     for (const EnumDecl& en : module.enums) {
-        if (!en.underlying_type.empty()) {
+        if (has_type_ref(en.underlying_type_ref)) {
             check_supported_type_shape(en.location, en.underlying_type_ref);
             check_known_type_ref(symbols, en.location, en.underlying_type_ref,
                                  "unknown enum underlying type: ");

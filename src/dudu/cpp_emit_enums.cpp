@@ -17,6 +17,10 @@ bool enum_has_payload_fields(const EnumDecl& en) {
     return false;
 }
 
+bool enum_has_underlying_type(const EnumDecl& en) {
+    return en.underlying_type_ref.kind != TypeKind::Unknown || !en.underlying_type_ref.text.empty();
+}
+
 } // namespace
 
 void emit_enum_forward_declarations(std::ostringstream& out, const ModuleAst& module,
@@ -28,7 +32,7 @@ void emit_enum_forward_declarations(std::ostringstream& out, const ModuleAst& mo
             continue;
         }
         out << "enum class " << name;
-        if (!en.underlying_type.empty()) {
+        if (enum_has_underlying_type(en)) {
             out << " : " << lower_cpp_type(en.underlying_type_ref, options);
         }
         out << ";\n";
@@ -64,7 +68,7 @@ void emit_enums(std::ostringstream& out, const ModuleAst& module,
             continue;
         }
         out << "enum class " << name;
-        if (!en.underlying_type.empty()) {
+        if (enum_has_underlying_type(en)) {
             out << " : " << lower_cpp_type(en.underlying_type_ref, aliases, options);
         }
         out << " {\n";
