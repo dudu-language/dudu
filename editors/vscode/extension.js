@@ -164,6 +164,9 @@ class DuduLspClient {
       for (const { reject } of this.pending.values()) {
         reject(error);
       }
+      for (const { timer } of this.pending.values()) {
+        clearTimeout(timer);
+      }
       this.pending.clear();
       updateStatus();
     });
@@ -171,6 +174,9 @@ class DuduLspClient {
       this.process = undefined;
       for (const { reject } of this.pending.values()) {
         reject(new Error("duc lsp exited"));
+      }
+      for (const { timer } of this.pending.values()) {
+        clearTimeout(timer);
       }
       this.pending.clear();
       updateStatus();
@@ -213,7 +219,11 @@ class DuduLspClient {
   request(method, params) {
     const id = this.nextId++;
     const promise = new Promise((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
+      const timer = setTimeout(() => {
+        this.pending.delete(id);
+        reject(new Error(`Dudu LSP request timed out: ${method}`));
+      }, 10000);
+      this.pending.set(id, { resolve, reject, timer });
     });
     this.send({ jsonrpc: "2.0", id, method, params });
     return promise;
@@ -479,8 +489,20 @@ class DuduLspClient {
       }
       const body = this.buffer.slice(bodyStart, bodyEnd).toString();
       this.buffer = this.buffer.slice(bodyEnd);
-      this.handleMessage(JSON.parse(body));
+      try {
+        this.handleMessage(JSON.parse(body));
+      } catch (error) {
+        this.failPending(error);
+      }
     }
+  }
+
+  failPending(error) {
+    for (const { reject, timer } of this.pending.values()) {
+      clearTimeout(timer);
+      reject(error);
+    }
+    this.pending.clear();
   }
 
   handleMessage(message) {
@@ -488,6 +510,7 @@ class DuduLspClient {
       const pending = this.pending.get(message.id);
       if (pending) {
         this.pending.delete(message.id);
+        clearTimeout(pending.timer);
         if (message.error) {
           pending.reject(new Error(message.error.message ?? "Dudu LSP request failed"));
         } else {
