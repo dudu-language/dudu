@@ -60,6 +60,15 @@ void set_return_type(FunctionSignature& signature, const std::string& type) {
     signature.return_type_ref = parse_type_text(type);
 }
 
+void set_param_types(FunctionSignature& signature, std::initializer_list<std::string> types) {
+    signature.params.assign(types.begin(), types.end());
+    signature.param_type_refs.clear();
+    signature.param_type_refs.reserve(signature.params.size());
+    for (const std::string& type : signature.params) {
+        signature.param_type_refs.push_back(parse_type_text(type));
+    }
+}
+
 } // namespace
 
 std::string receiver_template_type(const Symbols& symbols, std::string type) {
@@ -100,12 +109,12 @@ bool builtin_cpp_method_signature(const Symbols& symbols, std::string receiver_t
         templated.find("vector<") != std::string::npos) {
         const std::string item = first_type_arg(templated_ref);
         if (method_name == "push_back" || method_name == "append") {
-            signature.params = {item.empty() ? "auto" : item};
+            set_param_types(signature, {item.empty() ? "auto" : item});
             set_return_type(signature, "void");
             return true;
         }
         if (method_name == "resize" || method_name == "reserve") {
-            signature.params = {"auto"};
+            set_param_types(signature, {"auto"});
             set_return_type(signature, "void");
             return true;
         }
@@ -136,12 +145,12 @@ bool builtin_cpp_method_signature(const Symbols& symbols, std::string receiver_t
         const std::string item = first_type_arg(templated_ref);
         const std::string value_type = item.empty() ? "auto" : item;
         if (method_name == "contains") {
-            signature.params = {value_type};
+            set_param_types(signature, {value_type});
             set_return_type(signature, "bool");
             return true;
         }
         if (method_name == "insert") {
-            signature.params = {value_type};
+            set_param_types(signature, {value_type});
             set_return_type(signature, "auto");
             return true;
         }
@@ -159,7 +168,7 @@ bool builtin_cpp_method_signature(const Symbols& symbols, std::string receiver_t
         templated.find("std::map<") != std::string::npos || templated.find("map<") == 0) {
         const std::string key_type = first_type_arg(templated_ref);
         if (method_name == "contains") {
-            signature.params = {key_type.empty() ? "auto" : key_type};
+            set_param_types(signature, {key_type.empty() ? "auto" : key_type});
             set_return_type(signature, "bool");
             return true;
         }
@@ -194,13 +203,13 @@ bool builtin_cpp_method_signature(const Symbols& symbols, std::string receiver_t
             return true;
         }
         if (method_name == "store") {
-            signature.params = {value_type};
+            set_param_types(signature, {value_type});
             set_return_type(signature, "void");
             return true;
         }
         if (method_name == "exchange" || method_name == "fetch_add" || method_name == "fetch_sub" ||
             method_name == "fetch_and" || method_name == "fetch_or" || method_name == "fetch_xor") {
-            signature.params = {value_type};
+            set_param_types(signature, {value_type});
             set_return_type(signature, value_type);
             return true;
         }

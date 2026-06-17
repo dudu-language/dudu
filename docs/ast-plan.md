@@ -1518,9 +1518,9 @@ LSP source edits are also moving to AST-owned ranges:
   expected `TypeRef` metadata before falling back to compatibility text.
 - Return statements and missing-return checks now decide `void` through parsed
   return `TypeRef` metadata, using rendered text only for diagnostics.
-- Compiler-owned built-in C++ method signatures now populate parsed return
-  `TypeRef` metadata when created, instead of relying on later fallback parsing
-  of return strings.
+- Compiler-owned built-in C++ method signatures now populate parsed parameter
+  and return `TypeRef` metadata when created, instead of relying on later
+  fallback parsing of signature strings.
 
 Expression parsing has moved onto the lexer/token stream:
 
