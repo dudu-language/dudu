@@ -1024,7 +1024,9 @@ declarations now store parsed expression nodes. C++ emission and semantic-token
 collection use those declaration expression nodes instead of raw strings.
 Decorators now keep parsed expression nodes alongside their original text, and
 compiler-recognized decorators use a shared helper over those parsed expression
-nodes for name matching and first-argument extraction. Decorator parsing has
+nodes for name matching and first-argument extraction. Decorator expression
+parsing now uses the same token-piece parser as statements and declarations
+instead of joining decorator text and reparsing it. Decorator parsing has
 regression coverage for string arguments containing operator characters, such as
 `@operator("+")`.
 Enum value initializers now store parsed expression nodes as well; enum C++

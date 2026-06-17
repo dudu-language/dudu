@@ -499,6 +499,8 @@ void test_decorator_expression_ast_shape() {
     const dudu::Expr& section = module.functions[0].decorators[0].expr;
     assert(section.kind == dudu::ExprKind::Call);
     assert(section.name == "section");
+    assert(section.range.start.line == 1);
+    assert(section.range.start.column == 2);
     assert(section.children.size() == 1);
     assert(section.children[0].kind == dudu::ExprKind::StringLiteral);
     assert(section.children[0].value == ".boot+fast");
@@ -516,6 +518,8 @@ void test_decorator_expression_ast_shape() {
     assert(module.functions[1].decorators.size() == 1);
     const dudu::Expr& panic = module.functions[1].decorators[0].expr;
     assert(panic.kind == dudu::ExprKind::Call);
+    assert(!panic.callee.empty());
+    assert(panic.callee.front().kind == dudu::ExprKind::Member);
     assert(panic.children.size() == 1);
     assert(panic.children[0].kind == dudu::ExprKind::StringLiteral);
     assert(panic.children[0].value == "bad + input");

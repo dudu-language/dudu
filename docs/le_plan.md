@@ -687,13 +687,14 @@ push. They are not release packaging work.
    Prefer AST-backed declaration macros over raw string macros. Decorators now
    preserve parsed expression nodes alongside their original text, and
    compiler-recognized decorators use a shared parsed-expression helper for
-   name matching and first-argument extraction. Decorator parsing has regression
-   coverage for string arguments containing operator characters, such as
-   `@operator("+")`. String-valued compiler decorators now require exactly one
-   parsed string literal argument, keeping `@operator(...)`, `@section(...)`,
-   and `@test.should_panic(...)` off raw argument text fallback while preserving
-   expression arguments for decorators such as `@align(...)` and
-   `@workgroup_size(...)`.
+   name matching and first-argument extraction. Decorator expression parsing
+   now uses token-piece parsing directly instead of joined-text reparsing.
+   Decorator parsing has regression coverage for string arguments containing
+   operator characters, such as `@operator("+")`. String-valued compiler
+   decorators now require exactly one parsed string literal argument, keeping
+   `@operator(...)`, `@section(...)`, and `@test.should_panic(...)` off raw
+   argument text fallback while preserving expression arguments for decorators
+   such as `@align(...)` and `@workgroup_size(...)`.
 
 9. Native Header Hardening
 

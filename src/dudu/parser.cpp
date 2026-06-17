@@ -201,12 +201,12 @@ Visibility Parser::parse_visibility() {
 }
 
 Decorator Parser::parse_decorator(const Token& at_token) {
-    std::string text = join_until({TokenKind::Newline});
+    JoinedTokens expression = join_until_with_range({TokenKind::Newline});
     consume(TokenKind::Newline, "expected newline after decorator");
     Decorator decorator;
     decorator.location = at_token.location;
-    decorator.expr = parse_expr_text(text, at_token.location);
-    decorator.text = std::move(text);
+    decorator.expr = parse_expr_piece(expression);
+    decorator.text = std::move(expression.text);
     return decorator;
 }
 
@@ -284,10 +284,6 @@ std::string Parser::parse_path() {
         out += consume_identifier("expected name after dot").text;
     }
     return out;
-}
-
-std::string Parser::join_until(std::initializer_list<TokenKind> stops) {
-    return join_until_with_range(stops).text;
 }
 
 Parser::JoinedTokens Parser::join_until_with_range(std::initializer_list<TokenKind> stops) {
