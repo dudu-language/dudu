@@ -1173,13 +1173,12 @@ nodes instead of raw initializer strings.
 Module constants, class constants, static fields, and `static_assert`
 declarations now store parsed expression nodes. C++ emission and semantic-token
 collection use those declaration expression nodes instead of raw strings.
-Decorators now keep parsed expression nodes alongside their original text, and
+Decorators now keep parsed expression nodes without a raw text mirror, and
 compiler-recognized decorators use a shared helper over those parsed expression
 nodes for name matching and first-argument extraction. Decorator expression
-parsing now uses the same token-piece parser as statements and declarations
-instead of joining decorator text and reparsing it. Decorator parsing has
-regression coverage for string arguments containing operator characters, such as
-`@operator("+")`.
+parsing uses the same token-piece parser as statements and declarations.
+Decorator parsing has regression coverage for string arguments containing
+operator characters, such as `@operator("+")`.
 Enum value initializers now store parsed expression nodes as well; enum C++
 emission and semantic-token collection use those nodes.
 Simple integer constant evaluation for `static_assert` failure diagnostics uses
@@ -1273,12 +1272,12 @@ against the base constructor and emits through the C++ constructor initializer
 list instead of lowering as a normal statement.
 
 Statement source ranges now preserve the first and last real statement token
-span even when the parser keeps normalized compatibility text such as
-`value = call(...)`. This improves diagnostics and editor squiggles without
-waiting for every declaration/body field to stop carrying compatibility strings.
-Statement nodes also retain reconstructed `source_text`, so child expression
-and type nodes can locate common subpieces against the original token spacing
-instead of only searching the normalized compatibility string.
+span. This improves diagnostics and editor squiggles without relying on
+substring classification. Statement nodes retain `source_text` only as
+source/trivia metadata for ranges, comments, import code actions, and explicit
+escape surfaces. Child expression and type nodes are parsed from token spans and
+carry their own source ranges rather than locating semantic subpieces by
+searching reconstructed statement text.
 
 ## Compiler File Shape
 

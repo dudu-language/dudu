@@ -167,7 +167,6 @@ struct Expr {
 };
 
 struct Decorator {
-    std::string text;
     Expr expr;
     SourceLocation location;
 };

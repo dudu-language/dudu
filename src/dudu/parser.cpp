@@ -1,7 +1,7 @@
-#include "dudu/lexer.hpp"
 #include "dudu/ast_expr_token_parser.hpp"
 #include "dudu/ast_parse_utils.hpp"
 #include "dudu/ast_type_token_parser.hpp"
+#include "dudu/lexer.hpp"
 #include "dudu/parser_internal.hpp"
 #include "dudu/parser_utils.hpp"
 
@@ -207,7 +207,6 @@ Decorator Parser::parse_decorator(const Token& at_token) {
     Decorator decorator;
     decorator.location = at_token.location;
     decorator.expr = parse_expr_piece(expression);
-    decorator.text = std::move(expression.text);
     return decorator;
 }
 

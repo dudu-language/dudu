@@ -829,10 +829,10 @@ push. They are not release packaging work.
    Start with target syntax for derives, field attributes, serde-like codegen,
    tests, reflection metadata, binary serialization, and binding generation.
    Prefer AST-backed declaration macros over raw string macros. Decorators now
-   preserve parsed expression nodes alongside their original text, and
+   preserve parsed expression nodes without a raw text mirror, and
    compiler-recognized decorators use a shared parsed-expression helper for
    name matching and first-argument extraction. Decorator expression parsing
-   now uses token-piece parsing directly instead of joined-text reparsing.
+   uses token-piece parsing directly.
    Decorator parsing has regression coverage for string arguments containing
    operator characters, such as `@operator("+")`. String-valued compiler
    decorators now require exactly one parsed string literal argument, keeping
