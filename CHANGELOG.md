@@ -78,6 +78,8 @@
 - Removed render-and-reparse churn from Dudu-native generic class
   instantiation.
 - Removed obsolete string-based Dudu method/class template substitution helpers.
+- Shared parsed `TypeRef` index and iterable inference for public string entry
+  points before falling back to native/operator boundaries.
 
 ### Changed
 

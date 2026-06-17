@@ -252,6 +252,9 @@ Already structured:
   brackets in the type text
 - local indexed access, indexed assignment, and typed iteration consult parsed
   local `TypeRef` metadata before falling back to compatibility type strings
+- public index and iterable inference now try the shared parsed `TypeRef`
+  container path first, leaving the old string path as the native/operator
+  boundary instead of duplicating list/dict/array logic
 - array shape inference and explicit shape extraction also consume parsed
   `TypeRef` array forms, removing the separate bracket matcher from
   `array_shape.cpp`

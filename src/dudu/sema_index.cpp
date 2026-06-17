@@ -48,8 +48,7 @@ std::optional<std::string> fixed_array_element_type(const std::string& type) {
     return fixed_array_element_type(parse_type_text(type));
 }
 
-std::optional<std::string> single_template_child_type(const TypeRef& type,
-                                                      std::string_view name) {
+std::optional<std::string> single_template_child_type(const TypeRef& type, std::string_view name) {
     if (type.kind == TypeKind::Template && type.name == name && type.children.size() == 1) {
         return substitute_type_ref_text(type.children.front(), {});
     }
@@ -209,12 +208,10 @@ std::string indexed_type_from_type_with_count(const Symbols& symbols,
     throw CompileError(location, "cannot index non-container: " + label);
 }
 
-std::optional<std::string> indexed_type_from_type_ref_with_count(const SourceLocation& location,
-                                                                 const TypeRef& raw_type,
-                                                                 const size_t index_count,
-                                                                 const bool is_slice,
-                                                                 const bool has_step,
-                                                                 const std::string& label) {
+std::optional<std::string>
+indexed_type_from_type_ref_with_count(const SourceLocation& location, const TypeRef& raw_type,
+                                      const size_t index_count, const bool is_slice,
+                                      const bool has_step, const std::string& label) {
     const TypeRef* type = &raw_type;
     while ((type->kind == TypeKind::Reference || type->kind == TypeKind::Const) &&
            type->children.size() == 1) {
@@ -225,7 +222,8 @@ std::optional<std::string> indexed_type_from_type_ref_with_count(const SourceLoc
         type = &type->children.front();
         pointer_index = true;
     }
-    while ((type->kind == TypeKind::Storage || type->kind == TypeKind::Shared ||
+    while ((type->kind == TypeKind::Reference || type->kind == TypeKind::Const ||
+            type->kind == TypeKind::Storage || type->kind == TypeKind::Shared ||
             type->kind == TypeKind::Device || type->kind == TypeKind::Volatile ||
             type->kind == TypeKind::Atomic) &&
            type->children.size() == 1) {
@@ -265,6 +263,29 @@ std::optional<std::string> indexed_type_from_type_ref_with_count(const SourceLoc
     }
     if (type->kind == TypeKind::Template && type->children.size() == 1) {
         return substitute_type_ref_text(type->children.front(), {});
+    }
+    return std::nullopt;
+}
+
+std::optional<std::string> iterable_type_from_type_ref(TypeRef type) {
+    while ((type.kind == TypeKind::Reference || type.kind == TypeKind::Const) &&
+           type.children.size() == 1) {
+        type = type.children.front();
+    }
+    if (const auto element = single_template_child_type(type, "list")) {
+        return *element;
+    }
+    if (const auto element = single_template_child_type(type, "span")) {
+        return *element;
+    }
+    if (const auto element = single_template_child_type(type, "strided_span")) {
+        return *element;
+    }
+    if (const auto element = fixed_array_element_type(type)) {
+        return *element;
+    }
+    if (type.kind == TypeKind::Template && type.children.size() == 1) {
+        return substitute_type_ref_text(type.children.front(), {});
     }
     return std::nullopt;
 }
@@ -349,6 +370,11 @@ std::string indexed_type_from_type(const Symbols& symbols, const SourceLocation&
             }
         }
     }
+    if (const auto indexed = indexed_type_from_type_ref_with_count(
+            location, parse_type_text(type), index_count_from_expr(index_expr),
+            is_slice_expr(index_expr), has_step_slice(index_expr), label)) {
+        return *indexed;
+    }
     return indexed_type_from_type_with_count(
         symbols, location, raw_type, index_count_from_expr(index_expr), is_slice_expr(index_expr),
         has_step_slice(index_expr), label);
@@ -362,21 +388,8 @@ std::string iterable_value_type(const Symbols& symbols,
         return {};
     }
     const std::string type = unwrap_reference_and_const(resolve_alias(symbols, local->second));
-    if (const auto element = single_template_type_arg_text(type, "list")) {
+    if (const auto element = iterable_type_from_type_ref(parse_type_text(type))) {
         return *element;
-    }
-    if (const auto element = single_template_type_arg_text(type, "span")) {
-        return *element;
-    }
-    if (const auto element = single_template_type_arg_text(type, "strided_span")) {
-        return *element;
-    }
-    if (const auto element = fixed_array_element_type(type)) {
-        return *element;
-    }
-    const TypeRef parsed = parse_type_text(type);
-    if (parsed.kind == TypeKind::Template && parsed.children.size() == 1) {
-        return substitute_type_ref_text(parsed.children.front(), {});
     }
     return {};
 }
@@ -386,25 +399,8 @@ std::string iterable_value_type(const Symbols& symbols,
                                 const std::map<std::string, TypeRef>& local_type_refs,
                                 const std::string& name) {
     if (const auto type_ref = local_type_refs.find(name); type_ref != local_type_refs.end()) {
-        TypeRef type = type_ref->second;
-        while ((type.kind == TypeKind::Reference || type.kind == TypeKind::Const) &&
-               type.children.size() == 1) {
-            type = type.children.front();
-        }
-        if (const auto element = single_template_child_type(type, "list")) {
+        if (const auto element = iterable_type_from_type_ref(type_ref->second)) {
             return *element;
-        }
-        if (const auto element = single_template_child_type(type, "span")) {
-            return *element;
-        }
-        if (const auto element = single_template_child_type(type, "strided_span")) {
-            return *element;
-        }
-        if (const auto element = fixed_array_element_type(type)) {
-            return *element;
-        }
-        if (type.kind == TypeKind::Template && type.children.size() == 1) {
-            return substitute_type_ref_text(type.children.front(), {});
         }
     }
     return iterable_value_type(symbols, locals, name);
