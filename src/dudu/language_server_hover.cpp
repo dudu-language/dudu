@@ -69,15 +69,24 @@ std::optional<std::string> imported_symbol_hover_json(const Document& doc,
         const ModuleAst module = parse_source(doc.text, doc.path);
         for (const ImportDecl& import : module.imports) {
             if (import.kind == ImportKind::Module) {
-                const std::string prefix = bound_import_name(import);
-                if (word.rfind(prefix + ".", 0) != 0) {
+                const std::string bound = bound_import_name(import);
+                const std::vector<std::string> prefixes =
+                    import.alias.empty() ? std::vector<std::string>{import.module_path, bound}
+                                         : std::vector<std::string>{bound};
+                std::string imported_name;
+                for (const std::string& prefix : prefixes) {
+                    if (word.rfind(prefix + ".", 0) == 0) {
+                        imported_name = word.substr(prefix.size() + 1);
+                        break;
+                    }
+                }
+                if (imported_name.empty()) {
                     continue;
                 }
                 const std::optional<Document> imported = imported_document(doc, import);
                 if (!imported) {
                     continue;
                 }
-                const std::string imported_name = word.substr(prefix.size() + 1);
                 for (const Symbol& symbol : symbols_for_document(*imported, false)) {
                     if (symbol.name != imported_name) {
                         continue;

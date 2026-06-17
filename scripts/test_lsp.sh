@@ -157,9 +157,11 @@ messages = [
                     "text": "\n".join(
                         [
                             "import vendor.lsp_import_graph_helper as vendored",
+                            "import vendor.lsp_import_graph_helper",
                             "",
                             "def main() -> i32:",
-                            "    return vendored.vendored_helper()",
+                            "    value: i32 = vendor.lsp_import_graph_helper.vendored_helper()",
+                            "    return vendored.vendored_helper() + value",
                             "",
                         ]
                     ),
@@ -182,7 +184,40 @@ messages = [
             "method": "textDocument/hover",
             "params": {
                 "textDocument": {"uri": import_graph_uri},
-                "position": {"line": 3, "character": 22},
+                "position": {"line": 5, "character": 22},
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 49,
+            "method": "textDocument/hover",
+            "params": {
+                "textDocument": {"uri": import_graph_uri},
+                "position": {"line": 4, "character": 52},
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 50,
+            "method": "textDocument/definition",
+            "params": {
+                "textDocument": {"uri": import_graph_uri},
+                "position": {"line": 4, "character": 52},
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 51,
+            "method": "textDocument/completion",
+            "params": {
+                "textDocument": {"uri": import_graph_uri},
+                "position": {"line": 4, "character": 48},
             },
         }
     ),
@@ -1161,6 +1196,19 @@ assert "Used by hover docs." in doc_hover_value
 
 imported_hover = next(item for item in responses if item.get("id") == 48)
 assert "def vendored_helper" in imported_hover["result"]["contents"]["value"]
+
+nested_import_hover = next(item for item in responses if item.get("id") == 49)
+assert "def vendored_helper" in nested_import_hover["result"]["contents"]["value"]
+
+nested_import_definition = next(item for item in responses if item.get("id") == 50)
+assert nested_import_definition["result"]["uri"].endswith(
+    "/tests/fixtures/vendor/lsp_import_graph_helper.dd"
+)
+assert nested_import_definition["result"]["range"]["start"]["line"] == 0
+
+nested_module_completion = next(item for item in responses if item.get("id") == 51)
+nested_module_completion_labels = [item["label"] for item in nested_module_completion["result"]]
+assert "vendored_helper" in nested_module_completion_labels
 
 definition = next(item for item in responses if item.get("id") == 4)
 assert definition["result"]["range"]["start"]["line"] == 3

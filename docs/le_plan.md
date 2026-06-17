@@ -612,6 +612,11 @@ declarations safely.
    Build LSP and formatter behavior from the same AST/sema model used by the
    compiler.
 
+   Status: unaliased nested Dudu module imports such as
+   `import vendor.helper` now resolve through their full dotted path for hover,
+   go-to-definition, and member completion, matching the compiler's
+   Python-shaped module binding behavior.
+
 13. Project Driver Polish
 
    Keep using `dudu` on real projects and fix friction in native build inputs,

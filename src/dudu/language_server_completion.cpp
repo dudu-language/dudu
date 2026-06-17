@@ -67,7 +67,13 @@ std::optional<std::string> module_completion_json(const Document& doc, const std
         return std::nullopt;
     }
     for (const ImportDecl& import : module.imports) {
-        if (import.kind != ImportKind::Module || bound_import_name(import) != target) {
+        if (import.kind != ImportKind::Module) {
+            continue;
+        }
+        const std::string bound = bound_import_name(import);
+        const bool matches = import.alias.empty() ? (target == import.module_path || target == bound)
+                                                  : target == bound;
+        if (!matches) {
             continue;
         }
         const std::filesystem::path file =

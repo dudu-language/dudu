@@ -137,7 +137,9 @@ std::optional<std::string> member_completion_target(const Document& doc, const J
             --end;
         }
         int start = end;
-        while (start > 0 && identifier_char(line[static_cast<size_t>(start - 1)])) {
+        while (start > 0 &&
+               (identifier_char(line[static_cast<size_t>(start - 1)]) ||
+                line[static_cast<size_t>(start - 1)] == '.')) {
             --start;
         }
         if (start == end) {

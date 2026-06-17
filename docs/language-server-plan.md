@@ -214,7 +214,9 @@ Hover includes Dudu declarations plus visible typed locals and simple inferred
 locals. Dudu declaration hover also includes contiguous source comments
 immediately above the declaration. Hover now resolves Dudu symbols reached
 through imported module aliases, so `module.symbol` shows the imported
-declaration signature instead of falling back to an empty hover.
+declaration signature instead of falling back to an empty hover. Unaliased
+nested module imports such as `import vendor.helper` now also resolve through
+the full dotted path for hover, go-to-definition, and member completion.
 
 Initial full-document semantic tokens are also implemented for Dudu AST nodes,
 covering declarations, parameters, fields, locals, types, literals, calls, and
@@ -349,7 +351,8 @@ Suspicious narrowing-cast and raw native escape-hatch lint diagnostics are
 covered.
 Go-to-definition for Dudu module import aliases is covered with an unopened
 module file. Go-to-definition for `from module import symbol` aliases is
-covered with an unopened module file.
+covered with an unopened module file. Hover, definition, and completion for
+unaliased nested module imports are covered with a vendored module fixture.
 Go-to-definition for native C++ member methods is covered with a local fixture
 header.
 Go-to-definition for imported C/C++ headers respects manifest-relative

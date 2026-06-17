@@ -173,19 +173,36 @@ std::optional<std::string> import_definition_json(const Document& doc, const std
     if (word.empty()) {
         return std::nullopt;
     }
-    const std::string root = word.substr(0, word.find('.'));
     try {
         const ModuleAst module = parse_source(doc.text, doc.path);
         for (const ImportDecl& import : module.imports) {
             if (import.kind != ImportKind::Module && import.kind != ImportKind::From) {
                 continue;
             }
-            if (import.kind == ImportKind::Module && bound_import_name(import) != root &&
-                import.module_path != root) {
-                continue;
-            }
             if (import.kind == ImportKind::From && bound_import_name(import) != word) {
                 continue;
+            }
+            std::string imported_symbol;
+            if (import.kind == ImportKind::Module) {
+                const std::string bound = bound_import_name(import);
+                const std::vector<std::string> prefixes =
+                    import.alias.empty() ? std::vector<std::string>{import.module_path, bound}
+                                         : std::vector<std::string>{bound};
+                bool matched = false;
+                for (const std::string& prefix : prefixes) {
+                    if (word == prefix) {
+                        matched = true;
+                        break;
+                    }
+                    if (word.rfind(prefix + ".", 0) == 0) {
+                        imported_symbol = word.substr(prefix.size() + 1);
+                        matched = true;
+                        break;
+                    }
+                }
+                if (!matched) {
+                    continue;
+                }
             }
             const std::filesystem::path file =
                 module_path_to_file(doc.path.parent_path(), import.module_path);
@@ -207,8 +224,10 @@ std::optional<std::string> import_definition_json(const Document& doc, const std
                 .path = file,
                 .text = text,
             };
+            const std::string target =
+                import.kind == ImportKind::Module ? imported_symbol : import.imported_name;
             for (const Symbol& symbol : symbols_for_document(imported, false)) {
-                if (symbol.name == import.imported_name) {
+                if (symbol.name == target) {
                     return location_json(uri_for_location(symbol.location, imported),
                                          range_json(symbol.location));
                 }
