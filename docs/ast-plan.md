@@ -1553,6 +1553,10 @@ LSP source edits are also moving to AST-owned ranges:
 - Typed expression inference now handles direct generic Dudu function calls by
   instantiating the generic signature and returning its parsed `TypeRef`,
   avoiding the older render-return-type-then-parse fallback for those calls.
+- Return statements and assignment to existing locals now pass parsed return
+  and local `TypeRef` metadata into expression coercion when available, leaving
+  the string coercion wrapper only for target types that still have no
+  structured metadata.
 
 Expression parsing has moved onto the lexer/token stream:
 
