@@ -117,7 +117,9 @@ void bind_statement(FunctionScope& scope, const Stmt& stmt) {
         }
     }
     if (stmt.kind == StmtKind::Except && !stmt.name.empty()) {
-        lsp_bind_local(scope, stmt.name, stmt.type.empty() ? "auto" : stmt.type, stmt.type_ref);
+        const std::string type =
+            has_type_ref(stmt.type_ref) ? substitute_type_ref_text(stmt.type_ref, {}) : "auto";
+        lsp_bind_local(scope, stmt.name, type, stmt.type_ref);
     }
 }
 
@@ -150,13 +152,13 @@ void collect_for_body_locals(FunctionScope scope, const Stmt& stmt, int cursor_l
                              std::map<std::string, std::string>& out) {
     if (!stmt.name.empty()) {
         TypeRef binding_type = stmt.type_ref;
-        std::string type = stmt.type;
-        if (type.empty()) {
+        if (!has_type_ref(binding_type)) {
             if (const auto inferred = infer_lsp_for_binding_type(scope, stmt)) {
                 binding_type = *inferred;
-                type = substitute_type_ref_text(binding_type, {});
             }
         }
+        const std::string type =
+            has_type_ref(binding_type) ? substitute_type_ref_text(binding_type, {}) : "auto";
         lsp_bind_local(scope, stmt.name, type.empty() ? "auto" : type, binding_type);
     }
     collect_block_locals(scope, stmt.children, cursor_line);

@@ -329,8 +329,8 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
             check_local_binding_name(stmt.location, stmt.name);
             check_known_type_ref(scope.symbols, node_location(stmt.location, stmt.type_ref),
                                  stmt.type_ref, "unknown catch type: ");
-            bind_local(nested, stmt.name, "&const[" + stmt.type + "]",
-                       const_reference_type_ref(stmt.type_ref));
+            TypeRef catch_type = const_reference_type_ref(stmt.type_ref);
+            bind_local(nested, stmt.name, substitute_type_ref_text(catch_type, {}), catch_type);
         }
         check_block(nested, stmt.children, return_type, loop_depth, callbacks);
         return;

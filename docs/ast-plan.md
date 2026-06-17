@@ -91,6 +91,9 @@ Already structured:
 - LSP local binding now uses the same shaped-array `TypeRef` inference for
   annotated locals, so hover/completion facts follow the compiler's effective
   declaration type instead of the raw annotation string
+- typed catch and loop bindings now store local types from parsed `TypeRef`
+  metadata in sema, codegen, and LSP local scopes instead of using raw
+  annotation strings as the semantic local type
 - C ABI pointer checks and structural type-name compatibility compare rendered
   `TypeRef` forms instead of raw parser text
 - member and scoped member path reconstruction render indexed path segments

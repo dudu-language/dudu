@@ -556,7 +556,10 @@ push. They are not release packaging work.
    for shaped-array inference, instead of deciding parsed metadata validity by
    comparing rendered type strings. LSP local binding uses the same
    shaped-array `TypeRef` inference for annotated locals, so editor facts
-   follow the compiler's effective declaration type. Generic
+   follow the compiler's effective declaration type. Typed catch and loop
+   bindings now store local types from parsed `TypeRef` metadata in sema,
+   codegen, and LSP local scopes instead of using raw annotation strings as
+   semantic local types. Generic
    argument inference now keeps inferred bindings as `TypeRef` nodes, so
    function and method generic inference returns structured type arguments
    instead of reparsing rendered binding text. Generic function and method

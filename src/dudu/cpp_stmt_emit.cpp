@@ -378,7 +378,7 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         std::string binding_type = "auto";
         if (!stmt.type.empty()) {
             binding_type = lower_cpp_type(stmt.type_ref, aliases, options);
-            locals[stmt.name] = stmt.type;
+            locals[stmt.name] = substitute_type_ref_text(stmt.type_ref, {});
             local_type_refs[stmt.name] = stmt.type_ref;
         }
         if (stmt.iterable_expr.kind == ExprKind::Call && stmt.iterable_expr.name == "range") {
