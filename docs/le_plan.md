@@ -677,6 +677,10 @@ declarations safely.
    declare `[cmake] source` and `[cmake] target`; the driver configures and
    builds the existing CMake project under the Dudu build directory, and runs
    CTest when no Dudu test entry or explicit delegated test command is present.
+   The generated CMake test backend still emits one generated harness
+   translation unit; true per-module tests need test-mode module artifacts that
+   expose test functions to the harness and suppress normal executable entry
+   points in generated module sources.
    The serious path is to make these backend choices work behind the same
    front-door commands, not to tell users that real projects must leave
    `dudu build`.
