@@ -4,6 +4,7 @@
 #include "dudu/language_server_json.hpp"
 #include "dudu/language_server_navigation.hpp"
 #include "dudu/language_server_symbols.hpp"
+#include "dudu/parser.hpp"
 
 #include <algorithm>
 #include <filesystem>
@@ -23,35 +24,62 @@ int line_count(const std::string& text) {
            (text.empty() || text.back() == '\n' ? 0 : 1);
 }
 
-std::optional<TextEdit> organize_imports_edit(const Document& doc) {
-    std::istringstream in(doc.text);
+std::optional<ModuleAst> parsed_document(const Document& doc) {
+    try {
+        return parse_source(doc.text, doc.path);
+    } catch (const std::exception&) {
+        return std::nullopt;
+    }
+}
+
+std::vector<std::string> document_lines(const std::string& text) {
+    std::istringstream in(text);
     std::vector<std::string> lines;
     std::string line;
     while (std::getline(in, line)) {
         lines.push_back(line);
     }
+    return lines;
+}
+
+std::optional<TextEdit> organize_imports_edit(const Document& doc, const ModuleAst& module) {
+    if (module.imports.size() < 2) {
+        return std::nullopt;
+    }
+    const std::vector<std::string> lines = document_lines(doc.text);
     size_t start = 0;
     while (start < lines.size() && trim_copy(lines[start]).empty()) {
         ++start;
     }
-    size_t end = start;
-    std::vector<std::string> imports;
-    while (end < lines.size()) {
-        const std::string trimmed = trim_copy(lines[end]);
-        if (!(starts_with(trimmed, "import ") || starts_with(trimmed, "from "))) {
-            break;
-        }
-        imports.push_back(lines[end]);
-        ++end;
-    }
-    if (imports.size() < 2) {
+    if (start >= lines.size()) {
         return std::nullopt;
     }
-    std::vector<std::string> sorted = imports;
+
+    std::vector<ImportDecl> imports = module.imports;
+    std::sort(imports.begin(), imports.end(), [](const ImportDecl& lhs, const ImportDecl& rhs) {
+        return lhs.location.line < rhs.location.line;
+    });
+    if (imports.front().location.line != static_cast<int>(start + 1)) {
+        return std::nullopt;
+    }
+
+    std::vector<std::string> import_lines;
+    size_t end = start;
+    for (const ImportDecl& import : imports) {
+        if (import.source_text.empty() || import.location.line != static_cast<int>(end + 1)) {
+            break;
+        }
+        import_lines.push_back(import.source_text);
+        ++end;
+    }
+    if (import_lines.size() < 2) {
+        return std::nullopt;
+    }
+    std::vector<std::string> sorted = import_lines;
     std::sort(sorted.begin(), sorted.end(), [](const std::string& lhs, const std::string& rhs) {
         return trim_copy(lhs) < trim_copy(rhs);
     });
-    if (sorted == imports) {
+    if (sorted == import_lines) {
         return std::nullopt;
     }
     std::ostringstream replacement;
@@ -88,38 +116,31 @@ bool importable_symbol_kind(int kind) {
     return kind == 5 || kind == 10 || kind == 12 || kind == 14 || kind == 23;
 }
 
-size_t import_insertion_line(const Document& doc) {
-    std::istringstream in(doc.text);
-    std::vector<std::string> lines;
-    std::string line;
-    while (std::getline(in, line)) {
-        lines.push_back(line);
+size_t import_insertion_line(const Document& doc, const ModuleAst& module) {
+    if (!module.imports.empty()) {
+        int line = 0;
+        for (const ImportDecl& import : module.imports) {
+            line = std::max(line, import.range.end.line);
+        }
+        return static_cast<size_t>(line);
     }
+    const std::vector<std::string> lines = document_lines(doc.text);
     size_t current = 0;
     while (current < lines.size() && trim_copy(lines[current]).empty()) {
-        ++current;
-    }
-    while (current < lines.size()) {
-        const std::string trimmed = trim_copy(lines[current]);
-        if (!(starts_with(trimmed, "import ") || starts_with(trimmed, "from "))) {
-            break;
-        }
         ++current;
     }
     return current;
 }
 
-bool import_already_present(const Document& doc, const std::string& module_path,
+bool import_already_present(const ModuleAst& module, const std::string& module_path,
                             const std::string& name) {
-    std::istringstream in(doc.text);
-    std::string line;
-    while (std::getline(in, line)) {
-        const std::string trimmed = trim_copy(line);
-        if (trimmed == "import " + module_path ||
-            starts_with(trimmed, "import " + module_path + " as ") ||
-            starts_with(trimmed, "from " + module_path + " import ")) {
-            return trimmed.find(name) != std::string::npos ||
-                   starts_with(trimmed, "import " + module_path);
+    for (const ImportDecl& import : module.imports) {
+        if (import.kind == ImportKind::From && import.module_path == module_path &&
+            bound_import_name(import) == name) {
+            return true;
+        }
+        if (import.kind == ImportKind::Module && bound_import_name(import) == name) {
+            return true;
         }
     }
     return false;
@@ -161,6 +182,7 @@ std::optional<std::string> module_path_for_import(const std::filesystem::path& b
 }
 
 std::optional<std::string> missing_import_action(const Document& doc, const std::string& name,
+                                                 const ModuleAst& module,
                                                  const std::map<std::string, Document>& workspace) {
     std::optional<Document> match_doc;
     std::optional<Symbol> match_symbol;
@@ -185,10 +207,10 @@ std::optional<std::string> missing_import_action(const Document& doc, const std:
     }
     const std::optional<std::string> module_path =
         module_path_for_import(doc.path.parent_path(), match_doc->path);
-    if (!module_path || import_already_present(doc, *module_path, name)) {
+    if (!module_path || import_already_present(module, *module_path, name)) {
         return std::nullopt;
     }
-    const int line = static_cast<int>(import_insertion_line(doc));
+    const int line = static_cast<int>(import_insertion_line(doc, module));
     const std::string edit_text = "from " + *module_path + " import " + name + "\n";
     return "{\"title\":\"Import " + json_escape(name) + " from " + json_escape(*module_path) +
            "\",\"kind\":\"quickfix\",\"edit\":{\"changes\":{\"" + json_escape(doc.uri) +
@@ -197,8 +219,12 @@ std::optional<std::string> missing_import_action(const Document& doc, const std:
 }
 
 std::vector<std::string> missing_import_actions(const Document& doc, const Json* params,
+                                                const ModuleAst* module,
                                                 const std::map<std::string, Document>& workspace) {
     std::vector<std::string> out;
+    if (module == nullptr) {
+        return out;
+    }
     const Json* context = params == nullptr ? nullptr : params->get("context");
     const Json* diagnostics = context == nullptr ? nullptr : context->get("diagnostics");
     const JsonArray* array = diagnostics == nullptr ? nullptr : diagnostics->array();
@@ -215,7 +241,8 @@ std::vector<std::string> missing_import_actions(const Document& doc, const Json*
         if (!valid_identifier(name) || !seen.insert(name).second) {
             continue;
         }
-        const std::optional<std::string> action = missing_import_action(doc, name, workspace);
+        const std::optional<std::string> action =
+            missing_import_action(doc, name, *module, workspace);
         if (action) {
             out.push_back(*action);
         }
@@ -262,16 +289,20 @@ std::vector<std::string> lint_actions(const Document& doc, const Json* params) {
 std::string code_actions_json(const Document& doc, const Json* params,
                               const std::map<std::string, Document>& workspace) {
     std::vector<std::string> actions;
+    const std::optional<ModuleAst> module = parsed_document(doc);
     actions.push_back("{\"title\":\"Format document\",\"kind\":\"source.format\","
                       "\"command\":{\"title\":\"Format document\","
                       "\"command\":\"editor.action.formatDocument\"}}");
-    if (const std::optional<TextEdit> edit = organize_imports_edit(doc)) {
-        actions.push_back("{\"title\":\"Organize imports\",\"kind\":\"source.organizeImports\","
-                          "\"edit\":{\"changes\":{\"" +
-                          json_escape(doc.uri) + "\":[{\"range\":" + edit->range +
-                          ",\"newText\":\"" + json_escape(edit->new_text) + "\"}]}}}");
+    if (module) {
+        if (const std::optional<TextEdit> edit = organize_imports_edit(doc, *module)) {
+            actions.push_back("{\"title\":\"Organize imports\",\"kind\":\"source.organizeImports\","
+                              "\"edit\":{\"changes\":{\"" +
+                              json_escape(doc.uri) + "\":[{\"range\":" + edit->range +
+                              ",\"newText\":\"" + json_escape(edit->new_text) + "\"}]}}}");
+        }
     }
-    for (const std::string& action : missing_import_actions(doc, params, workspace)) {
+    for (const std::string& action :
+         missing_import_actions(doc, params, module ? &*module : nullptr, workspace)) {
         actions.push_back(action);
     }
     for (const std::string& action : lint_actions(doc, params)) {

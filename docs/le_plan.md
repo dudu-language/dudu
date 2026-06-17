@@ -453,7 +453,11 @@ push. They are not release packaging work.
    patterns, guards, conditions, assert messages, and general values have also
    been removed; downstream code now uses the structured expression fields, with
    `source_text` retained only as source/trivia and explicit `cpp(...)` escape
-   bodies stored separately. The raw `Stmt::text` field has been removed. Normal template-call emission lowers bracket arguments from parsed
+   bodies stored separately. The raw `Stmt::text` field has been removed.
+   Import declarations now also carry whole-statement source ranges/trivia, and
+   LSP organize-import/missing-import actions use parsed import declarations for
+   import identity and block placement rather than prefix-scanning import lines.
+   Normal template-call emission lowers bracket arguments from parsed
    `TypeRef` nodes, including non-type value arguments, instead of falling back
    to raw expression text. Parsed method calls on pointer-typed member
    receivers such as `self.left.backward(...)` lower through member-path type

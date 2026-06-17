@@ -189,11 +189,12 @@ Decorator Parser::parse_decorator(const Token& at_token) {
 }
 
 ImportDecl Parser::parse_import(const Token& start) {
+    const size_t statement_begin = cursor_ - 1;
     if (match_identifier("c")) {
-        return parse_foreign_import(start, ImportKind::ForeignC);
+        return parse_foreign_import(start, ImportKind::ForeignC, statement_begin);
     }
     if (match_identifier("cpp")) {
-        return parse_foreign_import(start, ImportKind::ForeignCpp);
+        return parse_foreign_import(start, ImportKind::ForeignCpp, statement_begin);
     }
 
     ImportDecl import;
@@ -203,11 +204,15 @@ ImportDecl Parser::parse_import(const Token& start) {
     if (match_identifier("as")) {
         import.alias = consume_identifier("expected alias after as").text;
     }
+    const JoinedTokens source = join_tokens(statement_begin, cursor_);
+    import.source_text = source.source_text;
+    import.range = source.range;
     consume(TokenKind::Newline, "expected newline after import");
     return import;
 }
 
-ImportDecl Parser::parse_foreign_import(const Token& start, ImportKind kind) {
+ImportDecl Parser::parse_foreign_import(const Token& start, ImportKind kind,
+                                        size_t statement_begin) {
     ImportDecl import;
     import.kind = kind;
     import.location = start.location;
@@ -223,11 +228,15 @@ ImportDecl Parser::parse_foreign_import(const Token& start, ImportKind kind) {
     if (match_identifier("as")) {
         import.alias = consume_identifier("expected alias after as").text;
     }
+    const JoinedTokens source = join_tokens(statement_begin, cursor_);
+    import.source_text = source.source_text;
+    import.range = source.range;
     consume(TokenKind::Newline, "expected newline after foreign import");
     return import;
 }
 
 ImportDecl Parser::parse_from_import(const Token& start) {
+    const size_t statement_begin = cursor_ - 1;
     ImportDecl import;
     import.kind = ImportKind::From;
     import.location = start.location;
@@ -239,6 +248,9 @@ ImportDecl Parser::parse_from_import(const Token& start) {
     if (match_identifier("as")) {
         import.alias = consume_identifier("expected alias after as").text;
     }
+    const JoinedTokens source = join_tokens(statement_begin, cursor_);
+    import.source_text = source.source_text;
+    import.range = source.range;
     consume(TokenKind::Newline, "expected newline after from import");
     return import;
 }

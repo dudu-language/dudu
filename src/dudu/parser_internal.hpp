@@ -40,7 +40,7 @@ class Parser {
     Visibility parse_visibility();
     Decorator parse_decorator(const Token& at_token);
     ImportDecl parse_import(const Token& start);
-    ImportDecl parse_foreign_import(const Token& start, ImportKind kind);
+    ImportDecl parse_foreign_import(const Token& start, ImportKind kind, size_t statement_begin);
     ImportDecl parse_from_import(const Token& start);
     std::string parse_path();
 

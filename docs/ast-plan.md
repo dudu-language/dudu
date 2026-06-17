@@ -1281,6 +1281,13 @@ guesses:
 - native enum constants now retain their scanned enum type, while calls into C
   APIs still allow enum constants where an integer parameter is expected.
 
+LSP source edits are also moving to AST-owned ranges:
+
+- import declarations retain whole-statement source ranges and reconstructed
+  source text as trivia, so organize-import and missing-import actions can use
+  parsed import declarations for import identity, ordering, and insertion
+  placement instead of rediscovering imports from line prefixes.
+
 ## Acceptance
 
 - Existing examples still compile and run.
