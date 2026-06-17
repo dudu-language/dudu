@@ -544,6 +544,8 @@ push. They are not release packaging work.
    checking now exposes typed expression inference through
    `BodyCheckCallbacks`, so return-context generic method inference and
    statement-level `delete` checks can pass `TypeRef` values through body sema.
+   Implicit local bindings now preserve inferred `TypeRef` metadata when body
+   sema has typed expression results available.
    Deallocation argument checks now accept `TypeRef` nodes, so `delete` and
    `free` validation checks pointer shape structurally instead of parsing
    rendered argument type strings inside the allocator helper.

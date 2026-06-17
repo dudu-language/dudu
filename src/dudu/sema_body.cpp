@@ -450,9 +450,10 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
             !scope.locals.contains(stmt.target_expr.name)) {
             const std::string& name = stmt.target_expr.name;
             check_local_binding_name(node_location(stmt.location, stmt.target_expr), name);
-            const std::string inferred = callbacks.infer_expr(
+            const TypeRef inferred = callbacks.infer_expr_type(
                 scope, stmt.value_expr, &node_location(stmt.location, stmt.value_expr));
-            bind_local(scope, name, inferred.empty() ? "auto" : inferred);
+            const std::string inferred_text = substitute_type_ref_text(inferred, {});
+            bind_local(scope, name, inferred_text.empty() ? "auto" : inferred_text, inferred);
             if (is_dudu_all_caps(name)) {
                 scope.constants.insert(name);
             }

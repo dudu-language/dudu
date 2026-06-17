@@ -72,6 +72,8 @@ Already structured:
 - body semantic checking now exposes typed expression inference through
   `BodyCheckCallbacks`, so return-context generic method inference and
   statement-level `delete` checks can pass `TypeRef` values through body sema
+- implicit local bindings now preserve inferred `TypeRef` metadata when body
+  sema has typed expression results available
 - deallocation argument checks now accept `TypeRef` nodes, so `delete` and
   `free` validation checks pointer shape structurally instead of parsing
   rendered argument type strings inside the allocator helper
