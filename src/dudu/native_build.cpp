@@ -229,6 +229,25 @@ int run_shell_command(const std::string& command, const std::filesystem::path& l
     return std::system((command + " > " + shell_quote_path(log_path) + " 2>&1").c_str());
 }
 
+int run_shell_command_streaming(const std::string& command, const std::filesystem::path& log_path) {
+    std::filesystem::create_directories(log_path.parent_path().empty() ? "."
+                                                                       : log_path.parent_path());
+    std::ofstream log(log_path);
+    if (!log) {
+        fail("could not open log " + log_path.string());
+    }
+    FILE* pipe = popen((command + " 2>&1").c_str(), "r");
+    if (pipe == nullptr) {
+        fail("could not run command: " + command);
+    }
+    char buffer[4096];
+    while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+        std::cerr << buffer;
+        log << buffer;
+    }
+    return pclose(pipe);
+}
+
 std::optional<int> first_generated_error_line(const std::string& output,
                                               const std::filesystem::path& cpp_path) {
     std::istringstream lines(output);

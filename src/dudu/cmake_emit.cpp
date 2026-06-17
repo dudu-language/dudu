@@ -163,7 +163,8 @@ std::string emit_cmake_project(const ProjectConfig& config, const std::filesyste
         << "    COMMAND ${DUDU_EXECUTABLE} emit-modules ${DUDU_PROJECT_DIR}/${DUDU_SOURCE} -o "
            "${DUDU_GENERATED_DIR}\n";
     emit_cmake_depends(out, source_tree_files(input));
-    out << "    VERBATIM\n"
+    out << "    COMMENT \"Dudu emit modules\"\n"
+        << "    VERBATIM\n"
         << "    WORKING_DIRECTORY ${DUDU_PROJECT_DIR}\n"
         << ")\n\n";
     emit_pkg_config(out, config);

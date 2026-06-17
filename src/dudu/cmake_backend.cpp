@@ -24,6 +24,12 @@ void write_text_file(const std::filesystem::path& path, const std::string& text)
     out << text;
 }
 
+void print_stage(bool enabled, const std::string& label, const std::filesystem::path& path) {
+    if (enabled) {
+        std::cerr << label << " " << path.string() << '\n';
+    }
+}
+
 std::string read_text_file(const std::filesystem::path& path) {
     std::ifstream file(path);
     if (!file) {
@@ -58,7 +64,11 @@ void configure_user_cmake(const UserCMakeBackendOptions& options,
     if (options.verbose) {
         std::cerr << configure_command << '\n';
     }
-    if (run_shell_command(configure_command, configure_log) != 0) {
+    print_stage(options.stream_output, "configure", build_dir);
+    const int status = options.stream_output
+                           ? run_shell_command_streaming(configure_command, configure_log)
+                           : run_shell_command(configure_command, configure_log);
+    if (status != 0) {
         fail(command_failure_message("CMake configure", configure_command, configure_log));
     }
 }
@@ -77,7 +87,10 @@ void build_user_cmake(const UserCMakeBackendOptions& options,
     if (options.verbose) {
         std::cerr << build_command << '\n';
     }
-    if (run_shell_command(build_command, build_log) != 0) {
+    print_stage(options.stream_output, "compile", build_dir);
+    const int status = options.stream_output ? run_shell_command_streaming(build_command, build_log)
+                                             : run_shell_command(build_command, build_log);
+    if (status != 0) {
         fail(command_failure_message("CMake build", build_command, build_log));
     }
 }
@@ -130,6 +143,7 @@ std::filesystem::path run_cmake_backend(const CMakeBackendOptions& options) {
     const std::filesystem::path source_dir = options.root / "source";
     const std::filesystem::path build_dir = options.root / "build";
     const std::filesystem::path cmake_lists = source_dir / "CMakeLists.txt";
+    print_stage(options.stream_output, "generate", cmake_lists);
     write_text_file(cmake_lists, options.cmake_lists);
 
     const std::string configure_command =
@@ -140,7 +154,11 @@ std::filesystem::path run_cmake_backend(const CMakeBackendOptions& options) {
     if (options.verbose) {
         std::cerr << configure_command << '\n';
     }
-    if (run_shell_command(configure_command, configure_log) != 0) {
+    print_stage(options.stream_output, "configure", build_dir);
+    const int configure_status = options.stream_output
+                                     ? run_shell_command_streaming(configure_command, configure_log)
+                                     : run_shell_command(configure_command, configure_log);
+    if (configure_status != 0) {
         fail(command_failure_message("CMake configure", configure_command, configure_log));
     }
 
@@ -150,7 +168,11 @@ std::filesystem::path run_cmake_backend(const CMakeBackendOptions& options) {
     if (options.verbose) {
         std::cerr << build_command << '\n';
     }
-    if (run_shell_command(build_command, build_log) != 0) {
+    print_stage(options.stream_output, "compile", build_dir);
+    const int build_status = options.stream_output
+                                 ? run_shell_command_streaming(build_command, build_log)
+                                 : run_shell_command(build_command, build_log);
+    if (build_status != 0) {
         fail(command_failure_message("CMake build", build_command, build_log));
     }
     return build_dir / options.target;
@@ -200,6 +222,7 @@ std::filesystem::path build_cmake_project(const BuildCMakeProjectOptions& option
     if (uses_user_cmake_backend(options.config)) {
         return run_user_cmake_backend({.config = options.config,
                                        .root = default_user_cmake_backend_root(options.config),
+                                       .stream_output = options.stream_output,
                                        .verbose = options.verbose});
     }
     return run_cmake_backend({.config = options.config,
@@ -207,6 +230,7 @@ std::filesystem::path build_cmake_project(const BuildCMakeProjectOptions& option
                               .cmake_lists = emit_cmake_project(options.config, options.input),
                               .target = cmake_target_name(options.config, options.input),
                               .dudu_executable = options.dudu_executable,
+                              .stream_output = options.stream_output,
                               .verbose = options.verbose});
 }
 

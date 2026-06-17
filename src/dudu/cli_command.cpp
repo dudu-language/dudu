@@ -219,6 +219,7 @@ int run_build_command(const CliOptions& options, char* executable) {
                                    .input = options.input,
                                    .output = options.output,
                                    .dudu_executable = dudu_executable,
+                                   .stream_output = options.project_driver,
                                    .verbose = options.verbose});
         return 0;
     }
@@ -243,11 +244,13 @@ int run_run_command(const CliOptions& options, char* executable) {
     if (config.build_backend == "cmake") {
         print_project_step(options.project_driver, "cmake", cmake_backend_log_source(config));
         print_project_step(options.project_driver, "build", cmake_backend_log_build_dir(config));
-        const std::filesystem::path bin = build_cmake_project({.config = config,
-                                                               .input = options.input,
-                                                               .output = options.output,
-                                                               .dudu_executable = dudu_executable,
-                                                               .verbose = options.verbose});
+        const std::filesystem::path bin =
+            build_cmake_project({.config = config,
+                                 .input = options.input,
+                                 .output = options.output,
+                                 .dudu_executable = dudu_executable,
+                                 .stream_output = options.project_driver,
+                                 .verbose = options.verbose});
         print_project_step(options.project_driver, "run", bin);
         return std::system(shell_quote_path(bin).c_str()) == 0 ? 0 : 1;
     }
@@ -352,7 +355,10 @@ int run_cli(int argc, char** argv) {
         if (!options.output.has_value()) {
             fail("emit-modules requires -o <directory>");
         }
-        write_cpp_module_artifacts(*options.output, checked_module(options, source, true));
+        print_project_step(options.project_driver, "analyze", options.input);
+        const ModuleAst module = checked_module(options, source, true);
+        print_project_step(options.project_driver, "emit", *options.output);
+        write_cpp_module_artifacts(*options.output, module);
         return 0;
     }
     if (options.emit_cpp) {
