@@ -284,7 +284,6 @@ struct FunctionDecl {
 struct ConstDecl {
     std::string name;
     std::string cpp_name;
-    std::string type;
     TypeRef type_ref;
     Expr value_expr;
     std::string origin_module;

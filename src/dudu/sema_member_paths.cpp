@@ -77,12 +77,12 @@ std::string static_member_type(const Symbols& symbols, const SourceLocation* loc
     }
     for (const ConstDecl& constant : klass->second->constants) {
         if (constant.name == member) {
-            return constant.type;
+            return type_ref_text(constant.type_ref);
         }
     }
     for (const ConstDecl& field : klass->second->static_fields) {
         if (field.name == member) {
-            return field.type;
+            return type_ref_text(field.type_ref);
         }
     }
     if (location != nullptr) {
@@ -162,9 +162,10 @@ std::string member_path_type_from_string(const Symbols& symbols,
             for (const ConstDecl& constant : klass->constants) {
                 if (constant.name == member) {
                     if (next == std::string::npos) {
-                        return constant.type;
+                        return type_ref_text(constant.type_ref);
                     }
-                    const auto next_class = symbols.classes.find(base_type(constant.type));
+                    const auto next_class =
+                        symbols.classes.find(base_type(type_ref_text(constant.type_ref)));
                     if (next_class == symbols.classes.end()) {
                         return {};
                     }
@@ -176,9 +177,10 @@ std::string member_path_type_from_string(const Symbols& symbols,
             for (const ConstDecl& field : klass->static_fields) {
                 if (field.name == member) {
                     if (next == std::string::npos) {
-                        return field.type;
+                        return type_ref_text(field.type_ref);
                     }
-                    const auto next_class = symbols.classes.find(base_type(field.type));
+                    const auto next_class =
+                        symbols.classes.find(base_type(type_ref_text(field.type_ref)));
                     if (next_class == symbols.classes.end()) {
                         return {};
                     }

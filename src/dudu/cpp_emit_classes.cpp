@@ -348,7 +348,7 @@ void emit_class_constant_decl(std::ostringstream& out, const ConstDecl& constant
                               const std::vector<std::string>& aliases,
                               const CppEmitOptions& options) {
     const std::string lowered_type = lower_cpp_type(constant.type_ref, aliases, options);
-    const bool pointer = constant.type.find('*') != std::string::npos;
+    const bool pointer = type_ref_contains_kind(constant.type_ref, TypeKind::Pointer);
     out << "    static ";
     out << (pointer ? lowered_type + " const " : "const " + lowered_type + " ");
     out << constant.name << ";\n";
@@ -359,10 +359,11 @@ void emit_class_constant_definition(std::ostringstream& out, const std::string& 
                                     const std::vector<std::string>& aliases,
                                     const CppEmitOptions& options) {
     const std::string lowered_type = lower_cpp_type(constant.type_ref, aliases, options);
-    const bool runtime_address = constant.type.find('*') != std::string::npos ||
-                                 constant.type.find("volatile") != std::string::npos;
+    const bool pointer = type_ref_contains_kind(constant.type_ref, TypeKind::Pointer);
+    const bool runtime_address =
+        pointer || type_ref_contains_kind(constant.type_ref, TypeKind::Volatile);
     out << "inline ";
-    if (runtime_address && constant.type.find('*') != std::string::npos) {
+    if (runtime_address && pointer) {
         out << lowered_type << " const " << class_name << "::" << constant.name;
     } else {
         out << (runtime_address ? "const " : "constexpr ") << lowered_type << ' ' << class_name

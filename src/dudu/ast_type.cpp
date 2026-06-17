@@ -149,6 +149,18 @@ std::string type_ref_head_name(const TypeRef& type) {
     return trim_copy(type.text);
 }
 
+bool type_ref_contains_kind(const TypeRef& type, TypeKind kind) {
+    if (type.kind == kind) {
+        return true;
+    }
+    for (const TypeRef& child : type.children) {
+        if (type_ref_contains_kind(child, kind)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 std::string substitute_type_ref_text(const TypeRef& type,
                                      const std::map<std::string, std::string>& substitutions) {
     const std::string name = trim_copy(type.name.empty() ? type.text : type.name);

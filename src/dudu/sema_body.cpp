@@ -510,7 +510,7 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols,
         }
     }
     for (const ConstDecl& constant : module.constants) {
-        bind_local(base, constant.name, constant.type, constant.type_ref);
+        bind_local(base, constant.name, type_ref_text(constant.type_ref), constant.type_ref);
         base.constants.insert(constant.name);
     }
     for (const ClassDecl& klass : module.classes) {

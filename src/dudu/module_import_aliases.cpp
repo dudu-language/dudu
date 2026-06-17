@@ -93,12 +93,10 @@ ClassDecl imported_class_shape(ClassDecl klass, const std::string& name,
         field.type_ref = parse_type_text(field.type, field.location);
     }
     for (ConstDecl& constant : klass.constants) {
-        constant.type = substitute_type_ref_text(constant.type_ref, type_substitutions);
-        constant.type_ref = parse_type_text(constant.type, constant.location);
+        constant.type_ref = substitute_type_ref(constant.type_ref, type_substitutions);
     }
     for (ConstDecl& field : klass.static_fields) {
-        field.type = substitute_type_ref_text(field.type_ref, type_substitutions);
-        field.type_ref = parse_type_text(field.type, field.location);
+        field.type_ref = substitute_type_ref(field.type_ref, type_substitutions);
     }
     for (FunctionDecl& method : klass.methods) {
         method = substituted_method(std::move(method), type_substitutions);

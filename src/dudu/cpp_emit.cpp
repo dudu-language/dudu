@@ -1,5 +1,6 @@
 #include "dudu/cpp_emit.hpp"
 
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_emit_classes.hpp"
 #include "dudu/cpp_emit_enums.hpp"
 #include "dudu/cpp_emit_prelude.hpp"
@@ -116,10 +117,11 @@ void emit_constants(std::ostringstream& out, const ModuleAst& module,
     for (const ConstDecl& constant : module.constants) {
         const std::string& name = emitted_name(constant, options);
         const std::string lowered_type = lower_cpp_type(constant.type_ref, aliases, options);
-        const bool runtime_address = constant.type.find('*') != std::string::npos ||
-                                     constant.type.find("volatile") != std::string::npos;
+        const bool pointer = type_ref_contains_kind(constant.type_ref, TypeKind::Pointer);
+        const bool runtime_address =
+            pointer || type_ref_contains_kind(constant.type_ref, TypeKind::Volatile);
         out << "inline ";
-        if (runtime_address && constant.type.find('*') != std::string::npos) {
+        if (runtime_address && pointer) {
             out << lowered_type << " const " << name;
         } else {
             out << (runtime_address ? "const " : "constexpr ") << lowered_type << ' ' << name;
@@ -345,8 +347,7 @@ void emit_test_harness(std::ostringstream& out, const ModuleAst& module, const s
             const std::string expected = function_decorator_arg(fn, "test.should_panic");
             out << "    ++total;\n"
                 << "    if (dudu_test::run_should_panic(" << cpp_string_literal(fn.name) << ", "
-                << fn.name << ", " << cpp_string_literal(expected)
-                << ")) { ++passed; }\n";
+                << fn.name << ", " << cpp_string_literal(expected) << ")) { ++passed; }\n";
         } else {
             out << "    ++total;\n"
                 << "    if (dudu_test::run_one(" << cpp_string_literal(fn.name) << ", " << fn.name

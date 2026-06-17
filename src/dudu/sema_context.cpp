@@ -341,7 +341,8 @@ Symbols collect_symbols(const ModuleAst& module) {
         symbols.types.insert(klass.name);
         symbols.classes[klass.name] = &klass;
         for (const ConstDecl& constant : klass.constants) {
-            symbols.native_values[klass.name + "." + constant.name] = constant.type;
+            symbols.native_values[klass.name + "." + constant.name] =
+                type_ref_text(constant.type_ref);
         }
     }
     for (const ClassDecl& klass : module.native_classes) {

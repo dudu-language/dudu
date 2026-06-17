@@ -578,7 +578,7 @@ void test_type_ast_shape() {
     assert(module.classes.size() == 1);
     const dudu::ClassDecl& player = module.classes[0];
     assert(player.static_fields.size() == 1);
-    assert(player.static_fields[0].type == "i32");
+    assert(dudu::type_ref_text(player.static_fields[0].type_ref) == "i32");
     assert(player.static_fields[0].type_ref.kind == dudu::TypeKind::Named);
     assert(player.static_fields[0].value_expr.kind == dudu::ExprKind::IntLiteral);
     assert(player.constants.size() == 1);

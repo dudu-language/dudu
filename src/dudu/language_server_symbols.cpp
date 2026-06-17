@@ -1,5 +1,6 @@
 #include "dudu/language_server_symbols.hpp"
 
+#include "dudu/ast_type.hpp"
 #include "dudu/language_server_support.hpp"
 #include "dudu/native_headers.hpp"
 #include "dudu/parser.hpp"
@@ -91,18 +92,22 @@ std::vector<Symbol> symbols_for_document(const Document& doc, bool include_nativ
             }
         }
         for (const EnumDecl& en : module.enums) {
-            out.push_back(
-                {.name = en.name, .detail = "enum " + en.name, .location = en.location, .kind = 10});
+            out.push_back({.name = en.name,
+                           .detail = "enum " + en.name,
+                           .location = en.location,
+                           .kind = 10});
         }
         for (const ConstDecl& constant : module.constants) {
             out.push_back({.name = constant.name,
-                           .detail = constant.name + ": " + constant.type,
+                           .detail = constant.name + ": " + type_ref_text(constant.type_ref),
                            .location = constant.location,
                            .kind = 14});
         }
         for (const FunctionDecl& fn : module.functions) {
-            out.push_back(
-                {.name = fn.name, .detail = function_detail(fn), .location = fn.location, .kind = 12});
+            out.push_back({.name = fn.name,
+                           .detail = function_detail(fn),
+                           .location = fn.location,
+                           .kind = 12});
         }
         if (!include_native) {
             return out;

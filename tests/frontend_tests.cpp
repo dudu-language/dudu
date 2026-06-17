@@ -754,7 +754,7 @@ void test_class_field_defaults_and_static_fields() {
     assert(counter.fields[0].value_expr.value == "7");
     assert(counter.static_fields.size() == 1);
     assert(counter.static_fields[0].name == "count");
-    assert(counter.static_fields[0].type == "i32");
+    assert(dudu::type_ref_text(counter.static_fields[0].type_ref) == "i32");
     assert(counter.methods.size() == 1);
 
     const std::string cpp = dudu::emit_cpp_source(module);

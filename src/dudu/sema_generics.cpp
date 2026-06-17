@@ -275,11 +275,9 @@ ClassDecl instantiate_generic_class(ClassDecl klass, const std::vector<TypeRef>&
     }
     for (ConstDecl& field : klass.static_fields) {
         field.type_ref = substitute_type_ref(field.type_ref, substitutions);
-        field.type = substitute_type_ref_text(field.type_ref, {});
     }
     for (ConstDecl& constant : klass.constants) {
         constant.type_ref = substitute_type_ref(constant.type_ref, substitutions);
-        constant.type = substitute_type_ref_text(constant.type_ref, {});
     }
     for (FunctionDecl& method : klass.methods) {
         if (!method.return_type.empty()) {
