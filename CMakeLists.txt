@@ -11,6 +11,8 @@ add_library(dudu_frontend
     src/dudu/ast.cpp
     src/dudu/ast_expr.cpp
     src/dudu/ast_expr_parse.cpp
+    src/dudu/ast_expr_token_core.cpp
+    src/dudu/ast_expr_token_postfix.cpp
     src/dudu/ast_parse_scan.cpp
     src/dudu/ast_parse_utils.cpp
     src/dudu/ast_type.cpp

@@ -461,7 +461,8 @@ push. They are not release packaging work.
    old top-level substring classifier, preserving structured AST nodes for
    calls, template calls, indexes, slices, literals, unsupported lambdas/def
    expressions, and Python conditional expressions. The token expression parser
-   still needs a follow-up file split before more expression forms are added.
+   has been split into a small public entry point plus focused core and
+   postfix/primary parser files.
    Normal template-call emission lowers bracket arguments from parsed
    `TypeRef` nodes, including non-type value arguments, instead of falling back
    to raw expression text. Parsed method calls on pointer-typed member

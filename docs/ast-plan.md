@@ -1301,9 +1301,10 @@ Expression parsing has moved onto the lexer/token stream:
   Python expression forms that need precise diagnostics.
 - This is a compatibility migration point. The public `parse_expr_text` entry
   remains while statement/declaration parsing still passes expression spans
-  through it. Future parser work should pass token spans directly and split the
-  token expression parser into smaller files before adding more expression
-  features.
+  through it. Future parser work should pass token spans directly. The token
+  expression parser implementation has been split into a small public entry
+  file, core precedence/prefix parsing, and postfix/primary parsing so new
+  expression work does not grow another oversized compiler file.
 
 ## Acceptance
 

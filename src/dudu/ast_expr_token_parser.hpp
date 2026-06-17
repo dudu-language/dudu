@@ -1,0 +1,66 @@
+#pragma once
+
+#include "dudu/ast.hpp"
+#include "dudu/token.hpp"
+
+#include <initializer_list>
+#include <span>
+#include <string>
+#include <string_view>
+#include <vector>
+
+namespace dudu {
+
+SourceLocation expr_token_end_location(const Token& token);
+bool expression_token(const Token& token);
+
+class ExprTokenParser {
+  public:
+    explicit ExprTokenParser(std::span<const Token> tokens);
+
+    Expr parse();
+
+  private:
+    std::span<const Token> tokens_;
+    size_t cursor_ = 0;
+
+    bool at_end() const;
+    const Token& current() const;
+    bool at(TokenKind kind) const;
+    bool at_operator(std::string_view op) const;
+    bool at_identifier(std::string_view text) const;
+    bool stop_at(std::initializer_list<TokenKind> stops) const;
+    bool match(TokenKind kind);
+    bool match_operator(std::string_view op);
+    bool match_identifier(std::string_view text);
+
+    SourceRange range_between(size_t begin, size_t end) const;
+    std::string text_between(size_t begin, size_t end) const;
+    Expr make_node(ExprKind kind, size_t begin, size_t end) const;
+
+    Expr parse_comma_expr(std::initializer_list<TokenKind> stops);
+    Expr parse_named_or_binary(std::initializer_list<TokenKind> stops);
+    static int binary_precedence(const Token& token);
+    Expr parse_binary(int min_precedence, std::initializer_list<TokenKind> stops);
+    Expr parse_prefix(std::initializer_list<TokenKind> stops);
+    Expr parse_unknown_until_stops(size_t begin, std::initializer_list<TokenKind> stops);
+    Expr parse_unary(std::string op, size_t begin, std::initializer_list<TokenKind> stops);
+
+    Expr parse_postfix(std::initializer_list<TokenKind> stops);
+    size_t matching_close(size_t open, TokenKind open_kind, TokenKind close_kind) const;
+    size_t expr_token_begin(const Expr& expr) const;
+    Expr parse_call(Expr callee, std::initializer_list<TokenKind> stops);
+    Expr parse_template_call(Expr indexed_callee, std::initializer_list<TokenKind> stops);
+    Expr parse_template_call_from_brackets(Expr callee, size_t begin,
+                                           const std::string& template_text,
+                                           SourceLocation template_location,
+                                           std::initializer_list<TokenKind> stops);
+    std::vector<Expr> parse_arg_list(TokenKind close);
+    Expr parse_index_argument();
+    Expr parse_primary(std::initializer_list<TokenKind> stops);
+    Expr parse_brace_literal(size_t begin);
+    bool pointer_cast_call_ahead() const;
+    Expr parse_pointer_cast_call();
+};
+
+} // namespace dudu
