@@ -1,3 +1,4 @@
+#include "dudu/ast_type.hpp"
 #include "dudu/sema_expr_internal.hpp"
 
 namespace dudu {
@@ -40,15 +41,7 @@ std::string infer_call_ast(const FunctionScope& scope, const Expr& expr,
         return *pointer_cast;
     }
     if (callee == "Ok" || callee == "Err") {
-        if (use_location != nullptr && expr.children.size() != 1) {
-            sema_expr_fail(*use_location, callee + " expects 1 argument, got " +
-                                              std::to_string(expr.children.size()));
-        }
-        return callee + "[" +
-               (expr.children.size() == 1
-                    ? infer_expr_ast(scope, expr.children.front(), use_location)
-                    : "") +
-               "]";
+        return substitute_type_ref_text(infer_expr_type_ast(scope, expr, use_location), {});
     }
     if (const auto generic_fn = scope.symbols.function_decls.find(callee);
         generic_fn != scope.symbols.function_decls.end() &&

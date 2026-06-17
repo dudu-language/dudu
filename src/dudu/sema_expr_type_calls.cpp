@@ -1,3 +1,4 @@
+#include "dudu/ast_type.hpp"
 #include "dudu/sema_expr_internal.hpp"
 
 namespace dudu {
@@ -7,6 +8,22 @@ std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Ex
     const std::string callee = scoped_call_callee_text(scope, expr, location);
     if (callee.empty()) {
         return std::nullopt;
+    }
+    if (callee == "Ok" || callee == "Err") {
+        if (location != nullptr && expr.children.size() != 1) {
+            sema_expr_fail(*location, callee + " expects 1 argument, got " +
+                                          std::to_string(expr.children.size()));
+        }
+        TypeRef out;
+        out.kind = TypeKind::Template;
+        out.name = callee;
+        out.location = expr.location;
+        out.range = expr.range;
+        if (expr.children.size() == 1) {
+            out.children.push_back(infer_expr_type_ast(scope, expr.children.front(), location));
+        }
+        out.text = substitute_type_ref_text(out, {});
+        return out;
     }
     if (const auto decl = scope.symbols.function_decls.find(callee);
         decl != scope.symbols.function_decls.end() && !decl->second->generic_params.empty()) {

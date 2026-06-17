@@ -1167,6 +1167,11 @@ Tuple literal expression inference now renders from the structured
 `infer_expr_type_ast` result instead of manually assembling `tuple[...]` text in
 the string compatibility path.
 
+`Ok(...)` and `Err(...)` result-wrapper constructor inference now produces
+structured `TypeRef` template nodes in the direct call type path; the older
+string inference path renders from that result instead of manually assembling
+`Ok[T]`/`Err[T]` text.
+
 Unsupported `def` expressions now parse as a dedicated `DefExpression` AST node
 instead of falling through to `Unknown` and being recognized later by raw text
 scanning.

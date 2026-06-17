@@ -610,6 +610,16 @@ void test_tuple_expression_inference_uses_type_ast() {
     dudu::analyze_module(module, {.check_bodies = true});
 }
 
+void test_result_constructor_inference_uses_type_ast() {
+    const dudu::ModuleAst module = dudu::parse_source("def ok_value() -> Result[i32, str]:\n"
+                                                      "    return Ok(7)\n"
+                                                      "\n"
+                                                      "def err_value() -> Result[i32, str]:\n"
+                                                      "    return Err(\"bad\")\n",
+                                                      "result_constructor_inference.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+}
+
 void test_formatter() {
     const std::string formatted = dudu::format_source("def main() -> i32:   \n"
                                                       "    return 0\t\n"
@@ -891,6 +901,7 @@ int main() {
         test_direct_call_return_type_inference_uses_type_ast();
         test_emitted_local_expression_type_inference();
         test_tuple_expression_inference_uses_type_ast();
+        test_result_constructor_inference_uses_type_ast();
         test_formatter();
         test_list_iterator_methods();
         test_reference_list_indexing();
