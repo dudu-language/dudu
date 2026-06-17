@@ -41,6 +41,9 @@ Already structured:
 - function signatures now preserve parsed parameter and return `TypeRef` nodes
   beside the compatibility strings, and call-argument semantic checks prefer
   those structured expected types when they are available
+- Dudu-native method signature instantiation now substitutes class and method
+  generics through parsed `TypeRef` nodes and preserves structured parameter
+  and return metadata for downstream call checks
 - function pointer/callback omitted-return detection checks for a missing
   parsed return `TypeRef`, not an empty raw child string
 - generic argument inference gets candidate parameter and argument names through

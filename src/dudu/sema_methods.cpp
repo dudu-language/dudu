@@ -7,6 +7,7 @@
 #include "dudu/sema_method_templates.hpp"
 #include "dudu/sema_methods_internal.hpp"
 
+#include <map>
 #include <optional>
 
 namespace dudu {
@@ -29,6 +30,26 @@ std::vector<std::string> template_method_args(const std::string& method_name) {
     return split_top_level_args(method_name.substr(open + 1, method_name.size() - open - 2));
 }
 
+std::map<std::string, std::string> type_substitutions(const std::vector<std::string>& params,
+                                                      const std::vector<std::string>& args) {
+    std::map<std::string, std::string> out;
+    for (size_t i = 0; i < params.size() && i < args.size(); ++i) {
+        out.emplace(params[i], trim_copy(args[i]));
+    }
+    return out;
+}
+
+TypeRef instantiate_method_type_ref(const ClassDecl& klass, const FunctionDecl& method,
+                                    const TypeRef& type,
+                                    const std::vector<std::string>& receiver_args,
+                                    const std::vector<std::string>& method_args) {
+    TypeRef out = substitute_type_ref(type, type_substitutions(method.generic_params, method_args));
+    out = substitute_type_ref(out, type_substitutions(klass.generic_params, receiver_args));
+    const std::string receiver_substituted =
+        substitute_receiver_template_type(substitute_type_ref_text(out, {}), receiver_args);
+    return parse_type_text(receiver_substituted, type.location);
+}
+
 } // namespace
 
 FunctionSignature instantiate_method_signature(const ClassDecl& klass, const FunctionDecl& method,
@@ -38,21 +59,17 @@ FunctionSignature instantiate_method_signature(const ClassDecl& klass, const Fun
     const size_t first_param =
         !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
     for (size_t i = first_param; i < method.params.size(); ++i) {
-        std::string param_type = substitute_method_template_type(
-            method.params[i].type, method.generic_params, method_args);
-        param_type = substitute_class_template_type(std::move(param_type), klass.generic_params,
-                                                    receiver_args);
-        signature.params.push_back(
-            substitute_receiver_template_type(std::move(param_type), receiver_args));
+        TypeRef param_type = instantiate_method_type_ref(klass, method, method.params[i].type_ref,
+                                                         receiver_args, method_args);
+        signature.params.push_back(substitute_type_ref_text(param_type, {}));
+        signature.param_type_refs.push_back(std::move(param_type));
     }
-    signature.return_type = method.return_type.empty()
-                                ? "void"
-                                : substitute_method_template_type(
-                                      method.return_type, method.generic_params, method_args);
-    signature.return_type = substitute_class_template_type(std::move(signature.return_type),
-                                                           klass.generic_params, receiver_args);
-    signature.return_type =
-        substitute_receiver_template_type(std::move(signature.return_type), receiver_args);
+    signature.return_type_ref =
+        method.return_type.empty()
+            ? parse_type_text("void", method.location)
+            : instantiate_method_type_ref(klass, method, method.return_type_ref, receiver_args,
+                                          method_args);
+    signature.return_type = substitute_type_ref_text(signature.return_type_ref, {});
     return signature;
 }
 
@@ -229,8 +246,12 @@ bool static_method_signature_for_type(const Symbols& symbols, const std::string&
         }
         for (const ParamDecl& param : method.params) {
             signature.params.push_back(param.type);
+            signature.param_type_refs.push_back(param.type_ref);
         }
         signature.return_type = method.return_type.empty() ? "void" : method.return_type;
+        signature.return_type_ref = method.return_type.empty()
+                                        ? parse_type_text("void", method.location)
+                                        : method.return_type_ref;
         return true;
     }
     if (location != nullptr) {

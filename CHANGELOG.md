@@ -70,6 +70,8 @@
 - Added LSP hover for Dudu symbols reached through imported module aliases.
 - Added parsed `TypeRef` storage to function signatures so call checking can
   prefer structured expected argument and return types.
+- Added parsed `TypeRef` preservation for Dudu-native generic method
+  signatures.
 
 ### Changed
 
