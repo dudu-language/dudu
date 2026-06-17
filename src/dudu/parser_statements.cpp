@@ -347,7 +347,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
         const bool binding_header =
             at(TokenKind::Colon) && has_statement_tokens_after(tokens_, cursor_ + 1);
         if (binding_header) {
-            stmt.name = header.text;
+            stmt.name = declaration_name_from_piece(tokens_, header.begin, header.end);
             consume(TokenKind::Colon, "expected : after except binding");
             const JoinedTokens type = join_until_with_range({TokenKind::Colon, TokenKind::Newline});
             stmt.type_ref = parse_type_piece(type);

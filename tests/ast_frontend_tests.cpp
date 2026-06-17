@@ -281,6 +281,35 @@ void test_var_decl_name_must_be_identifier() {
     assert(rejected);
 }
 
+void test_except_binding_name_must_be_identifier() {
+    const dudu::ModuleAst module = dudu::parse_source("def main() -> i32:\n"
+                                                      "    try:\n"
+                                                      "        return 1\n"
+                                                      "    except err: Error:\n"
+                                                      "        return 0\n",
+                                                      "except_binding.dd");
+    const dudu::Stmt& except = module.functions.front().statements[1];
+    assert(except.kind == dudu::StmtKind::Except);
+    assert(except.name == "err");
+    assert(dudu::type_ref_text(except.type_ref) == "Error");
+
+    bool rejected = false;
+    try {
+        (void)dudu::parse_source("def main() -> i32:\n"
+                                 "    try:\n"
+                                 "        return 1\n"
+                                 "    except err.value: Error:\n"
+                                 "        return 0\n",
+                                 "invalid_except_binding.dd");
+    } catch (const dudu::CompileError& error) {
+        assert(error.location().line == 4);
+        assert(std::string(error.what()).find("expected : after declaration name") !=
+               std::string::npos);
+        rejected = true;
+    }
+    assert(rejected);
+}
+
 void test_unsupported_statement_ast_shape() {
     const dudu::ModuleAst module = dudu::parse_source("def main() -> i32:\n"
                                                       "    with open(\"data\"):\n"
@@ -851,6 +880,7 @@ int main() {
         test_ast_index_receiver_type_inference();
         test_statement_ast_shape();
         test_var_decl_name_must_be_identifier();
+        test_except_binding_name_must_be_identifier();
         test_unsupported_statement_ast_shape();
         test_unsupported_def_expression_ast_shape();
         test_unsupported_comprehension_ast_shape();
