@@ -275,9 +275,8 @@ void Parser::parse_params(std::vector<ParamDecl>& params, std::string_view recei
         param.location = name.location;
         if (!receiver_type.empty() && params.empty() && param.name == "self" &&
             !at(TokenKind::Colon)) {
-            param.type = std::string(receiver_type);
-            param.type_ref = make_type(TypeKind::Named, param.type, name.location);
-            param.type_ref.name = param.type;
+            param.type_ref = make_type(TypeKind::Named, std::string(receiver_type), name.location);
+            param.type_ref.name = std::string(receiver_type);
             params.push_back(std::move(param));
             if (match(TokenKind::Comma)) {
                 continue;
@@ -290,8 +289,7 @@ void Parser::parse_params(std::vector<ParamDecl>& params, std::string_view recei
         consume(TokenKind::Colon, "expected : after parameter name");
         const JoinedTokens type =
             join_until_with_range({TokenKind::Comma, TokenKind::RParen, TokenKind::Newline});
-        param.type = type.text;
-        if (param.type.empty()) {
+        if (type.text.empty()) {
             throw CompileError(name.location, "parameter requires a type");
         }
         param.type_ref = parse_type_piece(type);

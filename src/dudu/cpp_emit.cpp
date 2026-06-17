@@ -195,7 +195,7 @@ void emit_function_body(std::ostringstream& out, const FunctionDecl& fn,
     out << " {\n";
     std::map<std::string, std::string> locals;
     for (const ParamDecl& param : fn.params) {
-        locals[param.name] = param.type;
+        locals[param.name] = type_ref_text(param.type_ref);
     }
     emit_block(out, fn.statements, 1, aliases, locals, fn.return_type, function_returns, &symbols,
                options);

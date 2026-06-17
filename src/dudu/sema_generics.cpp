@@ -286,7 +286,6 @@ ClassDecl instantiate_generic_class(ClassDecl klass, const std::vector<TypeRef>&
         }
         for (ParamDecl& param : method.params) {
             param.type_ref = substitute_type_ref(param.type_ref, substitutions);
-            param.type = substitute_type_ref_text(param.type_ref, {});
         }
     }
     return klass;

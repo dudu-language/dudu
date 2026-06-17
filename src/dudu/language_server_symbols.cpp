@@ -20,7 +20,7 @@ std::string function_detail(const FunctionDecl& fn) {
         if (i > 0) {
             out << ", ";
         }
-        out << fn.params[i].name << ": " << fn.params[i].type;
+        out << fn.params[i].name << ": " << type_ref_text(fn.params[i].type_ref);
     }
     out << ")";
     if (!fn.return_type.empty()) {

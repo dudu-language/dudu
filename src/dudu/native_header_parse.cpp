@@ -76,7 +76,7 @@ void add_unique_function(std::vector<NativeFunctionDecl>& out, std::set<std::str
 std::string method_key(const FunctionDecl& fn) {
     std::string key = fn.name + "(";
     for (const ParamDecl& param : fn.params)
-        key += param.type + ",";
+        key += type_ref_text(param.type_ref) + ",";
     return key + ")->" + fn.return_type;
 }
 
@@ -251,8 +251,8 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         for (const std::string& param : signature_params(match[2].str())) {
             ParamDecl decl;
             decl.name = "arg" + std::to_string(method.params.size());
-            decl.type = qualify_scoped_type(scan, namespaces, param);
-            decl.type_ref = parse_type_text(decl.type, decl_location);
+            decl.type_ref =
+                parse_type_text(qualify_scoped_type(scan, namespaces, param), decl_location);
             decl.location = decl_location;
             method.params.push_back(std::move(decl));
         }
@@ -267,8 +267,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         for (const std::string& param : params) {
             ParamDecl decl;
             decl.name = "arg" + std::to_string(ctor.params.size());
-            decl.type = param;
-            decl.type_ref = parse_type_text(decl.type, decl_location);
+            decl.type_ref = parse_type_text(param, decl_location);
             decl.location = decl_location;
             ctor.params.push_back(std::move(decl));
         }

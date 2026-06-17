@@ -77,8 +77,7 @@ FunctionDecl substituted_method(FunctionDecl method,
         method.return_type_ref = parse_type_text(method.return_type, method.location);
     }
     for (ParamDecl& param : method.params) {
-        param.type = substitute_type_ref_text(param.type_ref, type_substitutions);
-        param.type_ref = parse_type_text(param.type, param.location);
+        param.type_ref = substitute_type_ref(param.type_ref, type_substitutions);
     }
     return method;
 }

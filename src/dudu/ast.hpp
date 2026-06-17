@@ -64,7 +64,6 @@ struct TypeRef {
 
 struct ParamDecl {
     std::string name;
-    std::string type;
     TypeRef type_ref;
     SourceLocation location;
 };

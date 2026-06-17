@@ -191,7 +191,7 @@ void collect_block_locals(FunctionScope& scope, const std::vector<Stmt>& stateme
 
 void collect_function_locals(FunctionScope& scope, const FunctionDecl& fn, int cursor_line) {
     for (const ParamDecl& param : fn.params) {
-        lsp_bind_local(scope, param.name, param.type, param.type_ref);
+        lsp_bind_local(scope, param.name, type_ref_text(param.type_ref), param.type_ref);
     }
     collect_block_locals(scope, fn.statements, cursor_line);
 }

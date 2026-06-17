@@ -75,7 +75,7 @@ FunctionSignature inherited_method_signature_without_self(const FunctionDecl& me
     const size_t first_param =
         !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
     for (size_t i = first_param; i < method.params.size(); ++i) {
-        signature.params.push_back(method.params[i].type);
+        signature.params.push_back(type_ref_text(method.params[i].type_ref));
         signature.param_type_refs.push_back(method.params[i].type_ref);
     }
     signature.return_type = method.return_type.empty() ? "void" : method.return_type;

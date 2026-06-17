@@ -361,7 +361,7 @@ Symbols collect_symbols(const ModuleAst& module) {
         add_name(names, fn.name, fn.location);
         FunctionSignature signature;
         for (const ParamDecl& param : fn.params) {
-            signature.params.push_back(param.type);
+            signature.params.push_back(type_ref_text(param.type_ref));
             signature.param_type_refs.push_back(param.type_ref);
         }
         signature.return_type = fn.return_type.empty() ? "void" : fn.return_type;

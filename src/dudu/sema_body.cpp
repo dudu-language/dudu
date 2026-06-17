@@ -528,7 +528,7 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols,
                                         ? parse_type_text("void", method.location)
                                         : method.return_type_ref;
             for (const ParamDecl& param : method.params) {
-                bind_local(scope, param.name, param.type, param.type_ref);
+                bind_local(scope, param.name, type_ref_text(param.type_ref), param.type_ref);
             }
             check_block(scope, method.statements,
                         method.return_type.empty() ? "void" : method.return_type, 0, callbacks);
@@ -545,7 +545,7 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols,
         scope.return_type_ref =
             fn.return_type.empty() ? parse_type_text("void", fn.location) : fn.return_type_ref;
         for (const ParamDecl& param : fn.params) {
-            bind_local(scope, param.name, param.type, param.type_ref);
+            bind_local(scope, param.name, type_ref_text(param.type_ref), param.type_ref);
         }
         check_block(scope, fn.statements, fn.return_type.empty() ? "void" : fn.return_type, 0,
                     callbacks);

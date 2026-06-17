@@ -147,7 +147,8 @@ void check_extern_c_signature(const FunctionDecl& fn) {
     }
     for (const ParamDecl& param : fn.params) {
         if (!is_c_abi_type_ref(param.type_ref, false)) {
-            fail(param.location, "@extern_c parameter type is not C ABI safe: " + param.type);
+            fail(param.location,
+                 "@extern_c parameter type is not C ABI safe: " + type_ref_text(param.type_ref));
         }
     }
 }
