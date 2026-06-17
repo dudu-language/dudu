@@ -538,6 +538,9 @@ Already structured:
 - the string member-path type resolver is explicitly named
   `member_path_type_from_string`, and current callers are confined to the
   C++ escape inference boundary rather than normal Dudu member sema
+- the string member-path helpers are declared only through the expression
+  internal boundary used by explicit C++ escape inference; the public sema
+  methods surface exposes the parsed `member_expr_type` path for normal callers
 - Dudu-native constant aliases created by selective imports now build a parsed
   `Name` expression directly instead of reparsing the imported identifier from
   text inside the module loader
