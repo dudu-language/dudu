@@ -383,6 +383,9 @@ Already structured:
 - condition checks for `if`, `while`, and assert-like statements use typed
   expression inference before rendering only for diagnostics and bool-operator
   lookup
+- loop binding inference for non-name iterables uses inferred `TypeRef`
+  iterable metadata directly instead of rendering and reparsing the iterable
+  type string
 - type compatibility has AST overloads for simple literals and list/set/dict
   literals, including expected-type disambiguation for empty `{}` dict
   initializers, reducing reliance on string parsing for assignment checks

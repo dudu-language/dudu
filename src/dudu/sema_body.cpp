@@ -190,11 +190,11 @@ std::optional<TypeRef> infer_for_binding_type(FunctionScope& scope, const Stmt& 
             return parse_type_text(element, location);
         }
     }
-    const std::string iterable_type = callbacks.infer_expr(scope, stmt.iterable_expr, &location);
-    if (iterable_type.empty()) {
+    const TypeRef iterable_type = callbacks.infer_expr_type(scope, stmt.iterable_expr, &location);
+    if (!has_type_ref(iterable_type)) {
         return std::nullopt;
     }
-    if (const auto element = iterable_type_from_type(parse_type_text(iterable_type, location))) {
+    if (const auto element = iterable_type_from_type(iterable_type)) {
         return parse_type_text(*element, location);
     }
     return std::nullopt;

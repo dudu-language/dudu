@@ -558,6 +558,9 @@ push. They are not release packaging work.
    Condition checks for `if`, `while`, and assert-like statements now use typed
    expression inference before rendering only for diagnostics and bool-operator
    lookup.
+   Loop binding inference for non-name iterables now uses inferred `TypeRef`
+   iterable metadata directly instead of rendering and reparsing the iterable
+   type string.
 
 3. OOP Surface Cleanup
 
