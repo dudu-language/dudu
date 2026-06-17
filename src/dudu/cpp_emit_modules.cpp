@@ -2,14 +2,15 @@
 
 #include "dudu/cpp_emit.hpp"
 
+#include <set>
 #include <sstream>
 
 namespace dudu {
 namespace {
 
-std::filesystem::path module_artifact_base(const ModuleAst& module) {
+std::filesystem::path module_artifact_base_for_path(const std::string& module_path) {
     std::filesystem::path out;
-    const std::string path = module.module_path.empty() ? "main" : module.module_path;
+    const std::string path = module_path.empty() ? "main" : module_path;
     size_t start = 0;
     while (start < path.size()) {
         const size_t dot = path.find('.', start);
@@ -21,6 +22,10 @@ std::filesystem::path module_artifact_base(const ModuleAst& module) {
         start = dot + 1;
     }
     return out;
+}
+
+std::filesystem::path module_artifact_base(const ModuleAst& module) {
+    return module_artifact_base_for_path(module.module_path);
 }
 
 CppEmitOptions module_emit_options(const ModuleAst& unit) {
@@ -61,21 +66,52 @@ CppEmitOptions module_emit_options(const ModuleAst& unit) {
     return options;
 }
 
+std::vector<std::string> module_include_paths(const ModuleAst& unit) {
+    std::set<std::string> paths;
+    for (const ImportDecl& import : unit.imports) {
+        if (import.kind != ImportKind::Module && import.kind != ImportKind::From) {
+            continue;
+        }
+        if (import.module_path.empty() || import.module_path == unit.module_path) {
+            continue;
+        }
+        paths.insert(module_artifact_base_for_path(import.module_path).string() + ".hpp");
+    }
+    return {paths.begin(), paths.end()};
+}
+
+void emit_module_includes(std::ostringstream& out, const ModuleAst& unit) {
+    const std::vector<std::string> includes = module_include_paths(unit);
+    for (const std::string& path : includes) {
+        out << "#include \"" << path << "\"\n";
+    }
+    if (!includes.empty()) {
+        out << '\n';
+    }
+}
+
+std::string header_with_module_includes(const ModuleAst& unit) {
+    std::ostringstream out;
+    emit_module_includes(out, unit);
+    out << emit_cpp_header(unit, module_emit_options(unit));
+    return out.str();
+}
+
 std::string source_with_boundary_comment(const ModuleAst& unit) {
     std::ostringstream out;
     const CppEmitOptions options = module_emit_options(unit);
     out << "// dudu module: " << (unit.module_path.empty() ? "main" : unit.module_path) << "\n";
+    emit_module_includes(out, unit);
     out << emit_cpp_source(unit, options);
     return out.str();
 }
 
 void append_artifacts(std::vector<CppModuleArtifact>& out, const ModuleAst& unit) {
     const std::filesystem::path base = module_artifact_base(unit);
-    const CppEmitOptions options = module_emit_options(unit);
     out.push_back({.path = base.string() + ".hpp",
                    .module_path = unit.module_path,
                    .kind = CppModuleArtifactKind::Header,
-                   .content = emit_cpp_header(unit, options)});
+                   .content = header_with_module_includes(unit)});
     out.push_back({.path = base.string() + ".cpp",
                    .module_path = unit.module_path,
                    .kind = CppModuleArtifactKind::Source,

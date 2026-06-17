@@ -301,6 +301,10 @@ void test_cpp_module_artifacts_preserve_module_boundaries() {
     assert(by_path.at("camera.cpp").find("// dudu module: camera") != std::string::npos);
     assert(by_path.at(std::filesystem::path("renderer") / "camera.cpp")
                .find("// dudu module: renderer.camera") != std::string::npos);
+    assert(by_path.at("main.hpp").find("#include \"camera.hpp\"") != std::string::npos);
+    assert(by_path.at("main.hpp").find("#include \"renderer/camera.hpp\"") != std::string::npos);
+    assert(by_path.at("main.cpp").find("#include \"camera.hpp\"") != std::string::npos);
+    assert(by_path.at("main.cpp").find("#include \"renderer/camera.hpp\"") != std::string::npos);
     assert(by_path.at("camera.cpp").find("struct DuduCameraCamera") != std::string::npos);
     assert(by_path.at(std::filesystem::path("renderer") / "camera.cpp")
                .find("struct DuduRendererCameraCamera") != std::string::npos);
