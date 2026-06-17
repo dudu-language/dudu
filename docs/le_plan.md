@@ -569,6 +569,9 @@ push. They are not release packaging work.
    Tuple child extraction with alias fallback now lives in a shared `TypeRef`
    helper, so compiler sema and LSP do not carry duplicate rendered-string tuple
    parsing logic.
+   LSP local-context implicit bindings now use typed expression inference for
+   untyped local declarations and first assignments, and the local string
+   expression inference helper has been removed.
 
 3. OOP Surface Cleanup
 

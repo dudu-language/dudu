@@ -394,6 +394,9 @@ Already structured:
 - tuple child extraction with alias fallback now lives in a shared `TypeRef`
   helper, so compiler sema and LSP do not carry duplicate rendered-string tuple
   parsing logic
+- LSP local-context implicit bindings now use typed expression inference for
+  untyped local declarations and first assignments, and the local string
+  expression inference helper has been removed
 - type compatibility has AST overloads for simple literals and list/set/dict
   literals, including expected-type disambiguation for empty `{}` dict
   initializers, reducing reliance on string parsing for assignment checks

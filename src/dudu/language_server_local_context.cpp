@@ -70,14 +70,15 @@ void lsp_bind_local(FunctionScope& scope, const std::string& name, const std::st
     bind_local(scope, name, type, type_ref);
 }
 
-std::string infer_lsp_expr(FunctionScope& scope, const Expr& expr) {
-    BodyCheckCallbacks callbacks = expression_body_check_callbacks();
-    return callbacks.infer_expr(scope, expr, &node_location(expr.location, expr));
-}
-
 TypeRef infer_lsp_expr_type(FunctionScope& scope, const Expr& expr) {
     BodyCheckCallbacks callbacks = expression_body_check_callbacks();
     return callbacks.infer_expr_type(scope, expr, &node_location(expr.location, expr));
+}
+
+void lsp_bind_inferred_local(FunctionScope& scope, const std::string& name, const Expr& expr) {
+    const TypeRef inferred = infer_lsp_expr_type(scope, expr);
+    const std::string inferred_text = substitute_type_ref_text(inferred, {});
+    lsp_bind_local(scope, name, inferred_text.empty() ? "auto" : inferred_text, inferred);
 }
 
 void bind_tuple_names(FunctionScope& scope, const Stmt& stmt) {
@@ -101,9 +102,7 @@ void bind_statement(FunctionScope& scope, const Stmt& stmt) {
             lsp_bind_local(scope, stmt.name, stmt.type, stmt.type_ref);
             return;
         }
-        const std::string inferred = infer_lsp_expr(scope, stmt.value_expr);
-        lsp_bind_local(scope, stmt.name, inferred.empty() ? "auto" : inferred,
-                       type_ref_from_text(inferred));
+        lsp_bind_inferred_local(scope, stmt.name, stmt.value_expr);
         return;
     }
     if (stmt.kind == StmtKind::Assign) {
@@ -113,9 +112,7 @@ void bind_statement(FunctionScope& scope, const Stmt& stmt) {
         }
         if (stmt.target_expr.kind == ExprKind::Name &&
             !scope.locals.contains(stmt.target_expr.name)) {
-            const std::string inferred = infer_lsp_expr(scope, stmt.value_expr);
-            lsp_bind_local(scope, stmt.target_expr.name, inferred.empty() ? "auto" : inferred,
-                           type_ref_from_text(inferred));
+            lsp_bind_inferred_local(scope, stmt.target_expr.name, stmt.value_expr);
         }
     }
     if (stmt.kind == StmtKind::Except && !stmt.name.empty()) {
