@@ -125,10 +125,17 @@ void check_array_literal_elements(FunctionScope& scope, const TypeRef& element_t
     }
 }
 
-std::string effective_var_type(const Stmt& stmt) {
-    const ArrayShapeInference inferred =
-        infer_array_literal_shape_type(stmt.type_ref, stmt.value_expr);
-    return inferred.status == ArrayShapeStatus::Inferred ? inferred.type : stmt.type;
+struct EffectiveVarType {
+    std::string text;
+    TypeRef ref;
+    bool inferred = false;
+};
+
+EffectiveVarType effective_var_type(const Stmt& stmt, const ArrayShapeInference& inferred) {
+    if (inferred.status == ArrayShapeStatus::Inferred) {
+        return {.text = inferred.type, .ref = inferred.type_ref, .inferred = true};
+    }
+    return {.text = substitute_type_ref_text(stmt.type_ref, {}), .ref = stmt.type_ref};
 }
 
 std::string shape_text(const std::vector<size_t>& shape) {
@@ -396,12 +403,13 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
                               ", got " + shape_text(actual.shape));
             }
         }
-        const std::string type = effective_var_type(stmt);
-        if (stmt.type == type) {
+        const EffectiveVarType type = effective_var_type(stmt, inferred);
+        if (!type.inferred) {
             check_known_type_ref(scope.symbols, node_location(stmt.location, stmt.type_ref),
                                  stmt.type_ref, "unknown local type: ");
-        } else if (!known_type(scope.symbols, type)) {
-            sema_fail(node_location(stmt.location, stmt.type_ref), "unknown local type: " + type);
+        } else if (!known_type(scope.symbols, type.text)) {
+            sema_fail(node_location(stmt.location, stmt.type_ref),
+                      "unknown local type: " + type.text);
         }
         if (sema_has_expr(stmt.value_expr)) {
             if (inferred.status == ArrayShapeStatus::Inferred &&
@@ -413,15 +421,15 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
                 check_array_literal_elements(scope, explicit_element, stmt.value_expr,
                                              node_location(stmt.location, stmt.value_expr),
                                              callbacks);
-            } else if (stmt.type == type) {
-                check_type_ref_match(scope, stmt.type_ref, stmt.value_expr,
+            } else if (!type.inferred) {
+                check_type_ref_match(scope, type.ref, stmt.value_expr,
                                      node_location(stmt.location, stmt.value_expr), callbacks);
             } else {
-                check_type_match(scope, type, stmt.value_expr,
-                                 node_location(stmt.location, stmt.value_expr), callbacks);
+                check_type_ref_match(scope, type.ref, stmt.value_expr,
+                                     node_location(stmt.location, stmt.value_expr), callbacks);
             }
         }
-        bind_local(scope, stmt.name, type, stmt.type == type ? stmt.type_ref : inferred.type_ref);
+        bind_local(scope, stmt.name, type.text, type.ref);
         if (is_dudu_all_caps(stmt.name)) {
             scope.constants.insert(stmt.name);
         }

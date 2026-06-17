@@ -42,11 +42,21 @@ std::string join_names(const std::vector<std::string>& names) {
     return out.str();
 }
 
-std::string lower_declared_stmt_type(const Stmt& stmt, const std::string& effective_type,
-                                     const std::vector<std::string>& aliases,
+struct EffectiveStmtType {
+    std::string text;
+    TypeRef ref;
+};
+
+EffectiveStmtType effective_stmt_type(const Stmt& stmt, const ArrayShapeInference& inferred) {
+    if (inferred.status == ArrayShapeStatus::Inferred) {
+        return {.text = inferred.type, .ref = inferred.type_ref};
+    }
+    return {.text = substitute_type_ref_text(stmt.type_ref, {}), .ref = stmt.type_ref};
+}
+
+std::string lower_declared_stmt_type(const TypeRef& type, const std::vector<std::string>& aliases,
                                      const CppEmitOptions& options) {
-    return effective_type == stmt.type ? lower_cpp_type(stmt.type_ref, aliases, options)
-                                       : lower_cpp_type(effective_type, aliases, options);
+    return lower_cpp_type(type, aliases, options);
 }
 
 std::string lower_expr_as_type(const std::string& expected_type, const Expr& expr,
@@ -174,54 +184,50 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         const std::string& name = stmt.name;
         const ArrayShapeInference inferred =
             infer_array_literal_shape_type(stmt.type_ref, stmt.value_expr);
-        const std::string type =
-            inferred.status == ArrayShapeStatus::Inferred ? inferred.type : stmt.type;
-        const TypeRef type_ref =
-            inferred.status == ArrayShapeStatus::Inferred ? inferred.type_ref : stmt.type_ref;
-        locals[name] = type;
-        local_type_refs[name] = type_ref;
-        out << indent(depth) << lower_declared_stmt_type(stmt, type, aliases, options) << ' '
-            << name;
+        const EffectiveStmtType type = effective_stmt_type(stmt, inferred);
+        locals[name] = type.text;
+        local_type_refs[name] = type.ref;
+        out << indent(depth) << lower_declared_stmt_type(type.ref, aliases, options) << ' ' << name;
         if (has_expr(stmt.value_expr)) {
-            if (is_template_type(type_ref, "Option") &&
+            if (is_template_type(type.ref, "Option") &&
                 stmt.value_expr.kind == ExprKind::NoneLiteral) {
                 out << " = std::nullopt";
-            } else if (is_fixed_array_type(type_ref) &&
+            } else if (is_fixed_array_type(type.ref) &&
                        stmt.value_expr.kind == ExprKind::ListLiteral) {
                 out << " = {"
                     << lower_array_literal(stmt.value_expr, aliases, locals, symbols, options)
                     << "}";
-            } else if (is_template_type(type_ref, "list") &&
+            } else if (is_template_type(type.ref, "list") &&
                        stmt.value_expr.kind == ExprKind::ListLiteral &&
                        stmt.value_expr.children.empty()) {
                 out << " = {}";
-            } else if (is_template_type(type_ref, "list") &&
+            } else if (is_template_type(type.ref, "list") &&
                        stmt.value_expr.kind == ExprKind::ListLiteral) {
                 out << " = {"
                     << join_lowered_exprs(stmt.value_expr.children, aliases, locals, ", ", symbols,
                                           options)
                     << "}";
-            } else if (is_template_type(type_ref, "dict") &&
+            } else if (is_template_type(type.ref, "dict") &&
                        stmt.value_expr.kind == ExprKind::DictLiteral) {
                 out << " = {"
                     << join_lowered_exprs(stmt.value_expr.children, aliases, locals, ", ", symbols,
                                           options)
                     << "}";
-            } else if (is_template_type(type_ref, "set") &&
+            } else if (is_template_type(type.ref, "set") &&
                        stmt.value_expr.kind == ExprKind::SetLiteral) {
                 out << " = {"
                     << join_lowered_exprs(stmt.value_expr.children, aliases, locals, ", ", symbols,
                                           options)
                     << "}";
             } else if (stmt.value_expr.kind == ExprKind::TupleLiteral) {
-                out << " = " << lower_declared_stmt_type(stmt, type, aliases, options) << "{"
+                out << " = " << lower_declared_stmt_type(type.ref, aliases, options) << "{"
                     << join_lowered_exprs(stmt.value_expr.children, aliases, locals, ", ", symbols,
                                           options)
                     << '}';
             } else {
                 out << " = "
-                    << lower_expr_as_type(type, stmt.value_expr, aliases, locals, local_type_refs,
-                                          function_returns, symbols, options);
+                    << lower_expr_as_type(type.text, stmt.value_expr, aliases, locals,
+                                          local_type_refs, function_returns, symbols, options);
             }
         } else {
             out << "{}";

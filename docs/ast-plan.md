@@ -84,6 +84,10 @@ Already structured:
 - inferred array literal shapes now carry a fixed-array `TypeRef`, so sema and
   C++ emission bind inferred array locals without regenerating `array[T][...]`
   text and reparsing it
+- local declaration sema and C++ emission now carry an effective declared
+  `TypeRef` for shaped-array inference, so the declaration path no longer
+  decides whether parsed type metadata is valid by comparing rendered type
+  strings
 - C ABI pointer checks and structural type-name compatibility compare rendered
   `TypeRef` forms instead of raw parser text
 - member and scoped member path reconstruction render indexed path segments

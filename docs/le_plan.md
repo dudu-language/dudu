@@ -551,7 +551,10 @@ push. They are not release packaging work.
    parsed template `TypeRef` arguments instead of reconstructing `Name[...]`
    text and reparsing it. Inferred array literal shapes now carry a
    fixed-array `TypeRef`, so sema and C++ emission bind inferred array locals
-   without regenerating `array[T][...]` text and reparsing it. Generic
+   without regenerating `array[T][...]` text and reparsing it. Local
+   declaration sema and C++ emission now carry an effective declared `TypeRef`
+   for shaped-array inference, instead of deciding parsed metadata validity by
+   comparing rendered type strings. Generic
    argument inference now keeps inferred bindings as `TypeRef` nodes, so
    function and method generic inference returns structured type arguments
    instead of reparsing rendered binding text. Generic function and method
