@@ -1273,7 +1273,7 @@ assert from_import_definition["result"]["range"]["start"]["line"] == 0
 
 native_member_definition = next(item for item in responses if item.get("id") == 31)
 assert native_member_definition["result"]["uri"].endswith("/tests/fixtures/native_headers/simple_cpp.hpp")
-assert native_member_definition["result"]["range"]["start"]["line"] == 8
+assert native_member_definition["result"]["range"]["start"]["line"] == 9
 
 native_code_actions = next(item for item in responses if item.get("id") == 25)
 organize_imports = next(

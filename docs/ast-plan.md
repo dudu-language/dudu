@@ -192,6 +192,9 @@ Already structured:
 - semantic highlighting merges native header metadata before token collection,
   so direct and aliased C/C++ types, functions, values, and macros can carry
   the `native` modifier without emitting token ranges from header files
+- semantic highlighting computes member-token locations from parsed receiver
+  expression ranges instead of deriving the member column from raw expression
+  text length
 - array/list/dict index type inference uses parsed index expressions where
   available, so tuple-shaped multi-index expressions no longer depend on raw
   comma splitting

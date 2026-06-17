@@ -69,6 +69,14 @@ SourceLocation shifted_location(SourceLocation loc, int columns) {
     return loc;
 }
 
+SourceLocation member_name_location(const Expr& expr) {
+    if (expr.kind == ExprKind::Member && !expr.children.empty() &&
+        expr.children.front().range.end.column > 0) {
+        return shifted_location(expr.children.front().range.end, 1);
+    }
+    return expr.location;
+}
+
 void add_native_name(std::set<std::string>& values, const std::string& name) {
     values.insert(name);
 }
@@ -155,10 +163,7 @@ void collect_call_callee_tokens(const Expr& expr, std::vector<SemanticToken>& to
         for (const Expr& child : expr.children) {
             collect_expr_tokens(child, tokens, native_index);
         }
-        const SourceLocation member_location{
-            .file = expr.location.file,
-            .line = expr.location.line,
-            .column = expr.location.column + static_cast<int>(expr.text.size() - expr.name.size())};
+        const SourceLocation member_location = member_name_location(expr);
         if (native_index != nullptr && native_index->macros.contains(expr.text)) {
             add_native_semantic_token(tokens, member_location, expr.name, token_macro);
         } else if (native_index != nullptr && native_index->functions.contains(expr.text)) {
@@ -209,10 +214,7 @@ void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
         for (const Expr& child : expr.children) {
             collect_expr_tokens(child, tokens, native_index);
         }
-        const SourceLocation member_location{
-            .file = expr.location.file,
-            .line = expr.location.line,
-            .column = expr.location.column + static_cast<int>(expr.text.size() - expr.name.size())};
+        const SourceLocation member_location = member_name_location(expr);
         if (native_index != nullptr && native_index->classes.contains(expr.text)) {
             add_native_semantic_token(tokens, member_location, expr.name, token_class);
         } else if (native_index != nullptr && native_index->types.contains(expr.text)) {
