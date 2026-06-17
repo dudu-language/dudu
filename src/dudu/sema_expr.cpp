@@ -238,58 +238,8 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
         return {};
     }
     case ExprKind::Member:
-        if (const auto variant = enum_variant_from_expr(scope.symbols, expr)) {
-            if (!variant->second->payload_fields.empty() && use_location != nullptr) {
-                sema_expr_fail(*use_location, "payload enum variant requires construction: " +
-                                                  variant->first->name + "." +
-                                                  variant->second->name);
-            }
-            return variant->first->name;
-        }
-        if (const auto native = native_member_expr_type(scope.symbols, expr)) {
-            return *native;
-        }
-        if (expr.children.size() == 1 && expr.children.front().kind == ExprKind::Name &&
-            scope.locals.contains(expr.children.front().name)) {
-            const Expr& receiver = expr.children.front();
-            const std::string receiver_type = infer_expr_ast(scope, receiver, use_location);
-            if (!receiver_type.empty() &&
-                !field_type_for_type(scope.symbols, receiver_type, expr.name)) {
-                if (const auto swizzle =
-                        swizzle_type_for_type(scope.symbols, receiver_type, expr.name)) {
-                    return *swizzle;
-                }
-            }
-        }
-        if (const TypeRef found =
-                member_expr_type_ref(scope.symbols, scope.locals, scope.local_type_refs,
-                                     use_location, expr, {}, scope.current_class);
-            has_type_ref(found)) {
-            return substitute_type_ref_text(found, {});
-        }
-        if (expr.children.size() == 1) {
-            const Expr& receiver = expr.children.front();
-            const std::string receiver_type = infer_expr_ast(scope, receiver, use_location);
-            if (receiver_type.empty()) {
-                return {};
-            }
-            if (const auto field = field_type_for_type(scope.symbols, receiver_type, expr.name)) {
-                return *field;
-            }
-            if (const auto swizzle =
-                    swizzle_type_for_type(scope.symbols, receiver_type, expr.name)) {
-                return *swizzle;
-            }
-            if (foreign_cpp_type_name(scope.symbols, resolve_alias(scope.symbols, receiver_type))) {
-                return "auto";
-            }
-            if (use_location != nullptr) {
-                sema_expr_fail(*use_location, "unknown field: " + receiver_type + "." + expr.name);
-            }
-            return {};
-        }
-        if (use_location != nullptr) {
-            sema_expr_fail(*use_location, "unsupported member expression: " + display_expr(expr));
+        if (const auto type = member_expr_direct_type_ref(scope, expr, use_location)) {
+            return substitute_type_ref_text(*type, {});
         }
         return {};
     case ExprKind::Index:

@@ -361,6 +361,9 @@ Already structured:
 - legacy string expression inference now delegates unary and binary expressions
   to the structured `TypeRef` helpers instead of duplicating operator semantics
   with a separate recursive string path
+- legacy string expression inference now delegates member expressions to the
+  structured member `TypeRef` helper instead of duplicating enum, native,
+  field, swizzle, and foreign-member checks
 - LSP local variable/parameter type collection for hover, member completion,
   and member definition now walks parsed function/method bodies and reuses
   semantic expression inference instead of regexing source lines
