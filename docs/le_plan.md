@@ -78,7 +78,14 @@ coherently before they can coexist through normal semantic analysis and
 codegen. The per-module artifact emitter now uses those generated names for
 same-module declarations and qualified imported module references, including
 `import module as alias`, `import module.path`, and selective `from module
-import Name` forms.
+import Name` forms. `duc emit-modules` now analyzes each module unit in its
+own semantic scope, and per-unit imports materialize qualified/selective
+symbols without pulling dependency declarations into the current module. The
+generated CMake backend has a regression fixture with two modules that both
+declare `Box`, `make`, and `score`; those compile as separate generated C++
+artifacts with distinct generated names. The direct backend still uses the
+compatibility merged output and remains intentionally narrower until semantic
+lookup and direct codegen fully move to module namespaces.
 
 ## Feature Validation Bar
 
@@ -296,8 +303,12 @@ push. They are not release packaging work.
    repeatedly running heavyweight tests while iterating on parser/sema changes.
 
    Status: the `std_vector_map_string` codegen-shape hang is fixed and the fast
-   suite is reliable again. Keep new validation targeted and guarded so one slow
-   fixture does not stall the development loop.
+   suite is reliable again. The dense `cpp_stdlib_algorithms` scanner fixture is
+   intentionally outside the default broad script and lives in
+   `scripts/probe_cpp_stdlib_algorithms.sh` with a timeout, because system STL
+   header scanning is useful coverage but too slow for every dev-loop pass.
+   Keep new validation targeted and guarded so one slow fixture does not stall
+   the development loop.
 
 2. Real AST Architecture
 
@@ -564,9 +575,9 @@ push. They are not release packaging work.
    the larger architecture step and is a major requirement for a serious C/C++
    ecosystem-facing toolchain. Current `duc emit` and direct-backend
    `dudu build` output one generated C++ translation unit for the whole Dudu source tree;
-   source-tree module units are now preserved in the AST so that future
-   per-module `.hpp/.cpp` output has authoritative module boundaries to emit
-   from. The emitter can now produce inspection artifacts for each module unit.
+   source-tree module units are now preserved in the AST, and per-module
+   semantic analysis validates those units without merged-name duplicate
+   fallout. The emitter can produce `.hpp/.cpp` artifacts for each module unit.
    Those per-module artifacts opt into stable generated declaration names, so
    same-named declarations from different Dudu modules no longer collide in
    artifact declarations. Same-module parsed type references in those artifacts

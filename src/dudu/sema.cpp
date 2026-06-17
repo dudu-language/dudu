@@ -22,4 +22,14 @@ void analyze_module(const ModuleAst& module, SemanticOptions options) {
     }
 }
 
+void analyze_module_tree(const ModuleAst& module, SemanticOptions options) {
+    if (module.module_units.empty()) {
+        analyze_module(module, options);
+        return;
+    }
+    for (const ModuleAst& unit : module.module_units) {
+        analyze_module(unit, options);
+    }
+}
+
 } // namespace dudu

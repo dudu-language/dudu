@@ -375,6 +375,20 @@ test -f "$repo_root/build/project_backend_cmake/cmake-backend/build/generated/he
 grep -Eq "cmake .*project_backend_cmake/dudu-tests/main-[0-9a-f]+-cmake/source/CMakeLists.txt" \
     "$repo_root/build/project_backend_cmake_test.err"
 grep -q "1/1 tests passed" "$repo_root/build/project_backend_cmake_test.out"
+
+(
+    cd "$repo_root/tests/fixtures/project_backend_cmake_namespaces"
+    "$repo_root/build/dudu" run >"$repo_root/build/project_backend_cmake_namespaces_run.out" \
+        2>"$repo_root/build/project_backend_cmake_namespaces_run.err"
+)
+grep -Eq "run .*project_backend_cmake_namespaces/cmake-backend/build/backend_cmake_namespaces" \
+    "$repo_root/build/project_backend_cmake_namespaces_run.err"
+test -f "$repo_root/build/project_backend_cmake_namespaces/cmake-backend/build/generated/left.cpp"
+test -f "$repo_root/build/project_backend_cmake_namespaces/cmake-backend/build/generated/right.cpp"
+grep -q "DuduLeftBox" \
+    "$repo_root/build/project_backend_cmake_namespaces/cmake-backend/build/generated/left.hpp"
+grep -q "DuduRightBox" \
+    "$repo_root/build/project_backend_cmake_namespaces/cmake-backend/build/generated/right.hpp"
 rm -f "$repo_root/build/project_linker_script_bin" "$repo_root/build/project_linker_script_bin.cpp"
 (
     cd "$repo_root/tests/fixtures/project_linker_script"
@@ -590,7 +604,6 @@ grep -Fq "assert(((value == 42)))" "$repo_root/build/freestanding_debug_assert.c
 compile_and_expect cpp_exceptions 42
 compile_and_expect std_vector_map_string 42
 compile_and_expect cpp_stdlib_interop 42
-compile_and_expect cpp_stdlib_algorithms 42
 compile_and_expect cpp_std_variant 42
 compile_and_expect anonymous_variant 42
 compile_and_expect native_dependent_template_return 42

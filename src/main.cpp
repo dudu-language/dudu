@@ -371,7 +371,11 @@ dudu::ModuleAst checked_module(const Options& options, const std::string& source
     }
     const std::filesystem::path source_dir = source_dir_for_input(options.input);
     dudu::merge_native_header_types(module, {.config = config, .source_dir = source_dir});
-    dudu::analyze_module(module, {.check_bodies = check_bodies});
+    if (options.emit_modules) {
+        dudu::analyze_module_tree(module, {.check_bodies = check_bodies});
+    } else {
+        dudu::analyze_module(module, {.check_bodies = check_bodies});
+    }
     return module;
 }
 

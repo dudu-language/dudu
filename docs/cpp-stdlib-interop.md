@@ -63,7 +63,10 @@ callable template.
 - `tests/fixtures/cpp_std_variant.dd`
 - `tests/fixtures/bad_cpp_std_function_call.dd`
 
-These fixtures are wired into `scripts/test.sh` and `scripts/test_negative.sh`.
+The normal stdlib fixtures are wired into `scripts/test.sh` and
+`scripts/test_negative.sh`. The dense algorithms fixture is intentionally run
+through `scripts/probe_cpp_stdlib_algorithms.sh` instead of the default broad
+script, because scanner-heavy STL headers can take many seconds on a cold run.
 
 ## Future Hardening
 

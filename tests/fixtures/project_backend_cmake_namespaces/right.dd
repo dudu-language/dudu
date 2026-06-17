@@ -1,0 +1,11 @@
+class Box:
+    value: i32
+
+
+def make(value: i32) -> Box:
+    return Box(value)
+
+
+def score(box: Box) -> i32:
+    return box.value + 20
+

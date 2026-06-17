@@ -2,6 +2,7 @@
 
 #include "dudu/parser.hpp"
 #include "dudu/source.hpp"
+#include "dudu/module_import_aliases.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -203,43 +204,23 @@ bool has_merged_symbol(const ModuleAst& module, const std::string& name) {
     return has_module_symbol(module, name);
 }
 
-void add_module_type_alias(ModuleAst& module, const std::string& prefix, const std::string& name,
-                           const std::string& type, const SourceLocation& location) {
-    module.native_types.push_back(
-        {.name = prefix + "." + name, .type = type, .location = location});
-}
-
-void add_qualified_module_symbols(ModuleAst& module, const ModuleAst& dependency,
-                                  const ImportDecl& import) {
-    const std::string prefix = import.alias.empty() ? import.module_path : import.alias;
-    if (prefix.empty()) {
-        return;
-    }
-    module.module_strip_prefixes.push_back(prefix);
-    for (const TypeAliasDecl& alias : dependency.aliases) {
-        add_module_type_alias(module, prefix, alias.name, alias.type, import.location);
-    }
-    for (const EnumDecl& en : dependency.enums) {
-        add_module_type_alias(module, prefix, en.name, en.name, import.location);
-    }
-    for (const ClassDecl& klass : dependency.classes) {
-        add_module_type_alias(module, prefix, klass.name, klass.name, import.location);
-    }
-    for (const ConstDecl& constant : dependency.constants) {
-        module.native_values.push_back({.name = prefix + "." + constant.name,
-                                        .type = constant.type,
-                                        .location = import.location});
-    }
-    for (const FunctionDecl& fn : dependency.functions) {
-        NativeFunctionDecl alias;
-        alias.name = prefix + "." + fn.name;
-        alias.template_params = fn.generic_params;
-        alias.return_type = fn.return_type.empty() ? "void" : fn.return_type;
-        alias.location = import.location;
-        for (const ParamDecl& param : fn.params) {
-            alias.params.push_back(param.type);
+void add_import_aliases_for_unit(ModuleAst& module, const std::filesystem::path& module_path,
+                                 const std::map<std::filesystem::path, ModuleAst>& loaded) {
+    for (const ImportDecl& import : module.imports) {
+        if (import.kind != ImportKind::Module && import.kind != ImportKind::From) {
+            continue;
         }
-        module.native_functions.push_back(std::move(alias));
+        const std::filesystem::path dependency_path = std::filesystem::weakly_canonical(
+            module_path_to_file(module_path.parent_path(), import.module_path));
+        const auto dependency = loaded.find(dependency_path);
+        if (dependency == loaded.end()) {
+            continue;
+        }
+        if (import.kind == ImportKind::Module) {
+            add_qualified_module_symbols(module, dependency->second, import);
+        } else {
+            add_selective_module_symbol(module, dependency->second, import);
+        }
     }
 }
 
@@ -342,29 +323,6 @@ void add_from_import_aliases(ModuleAst& module) {
                             function_aliases.end());
 }
 
-void add_module_import_aliases(ModuleAst& module,
-                               const std::map<std::filesystem::path, ModuleAst>& loaded) {
-    std::set<std::string> seen_prefixes;
-    for (const auto& [path, parsed] : loaded) {
-        for (const ImportDecl& import : parsed.imports) {
-            if (import.kind != ImportKind::Module) {
-                continue;
-            }
-            const std::filesystem::path dependency_path = std::filesystem::weakly_canonical(
-                module_path_to_file(path.parent_path(), import.module_path));
-            const auto dependency = loaded.find(dependency_path);
-            if (dependency == loaded.end()) {
-                continue;
-            }
-            const std::string prefix = import.alias.empty() ? import.module_path : import.alias;
-            if (!seen_prefixes.insert(prefix).second) {
-                continue;
-            }
-            add_qualified_module_symbols(module, dependency->second, import);
-        }
-    }
-}
-
 const ModuleAst& load_one(const std::filesystem::path& path, const std::filesystem::path& root,
                           std::set<std::filesystem::path>& loading,
                           std::map<std::filesystem::path, ModuleAst>& loaded,
@@ -436,11 +394,11 @@ ModuleAst load_source_tree(const std::filesystem::path& entry) {
     merged.source_path = canonical_entry;
     merged.module_path = module_name_from_file(root, canonical_entry);
     for (const std::filesystem::path& path : ordered) {
-        const ModuleAst& unit = loaded.at(path);
+        ModuleAst unit = loaded.at(path);
+        add_import_aliases_for_unit(unit, path, loaded);
         merged.module_units.push_back(unit);
         append_module(merged, unit);
     }
-    add_module_import_aliases(merged, loaded);
     add_from_import_aliases(merged);
     return merged;
 }

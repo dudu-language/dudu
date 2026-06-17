@@ -311,7 +311,7 @@ Symbols collect_symbols(const ModuleAst& module) {
         symbols.types.insert(type.name);
         symbols.native_types.insert(type.name);
         add_native_path_prefix(symbols, type.name);
-        if (!type.type.empty()) {
+        if (!type.type.empty() && !symbols.aliases.contains(type.name)) {
             symbols.aliases[type.name] = type.type;
             symbols.alias_type_refs[type.name] = parse_type_text(type.type, type.location);
         }
