@@ -1153,6 +1153,11 @@ C++ match emission now infers the subject through `TypeRef` metadata and passes
 that structured type into wrapper-pattern matching, rendering text only for the
 enum lookup boundary.
 
+The remaining `parse_expr_text` callers in sema are confined to the explicit
+`cpp(...)` escape inference boundary and its member-path string adapter. Normal
+Dudu statements and expressions should not route through those helpers; new
+compiler work should pass parsed `Expr` nodes instead.
+
 Unsupported `def` expressions now parse as a dedicated `DefExpression` AST node
 instead of falling through to `Unknown` and being recognized later by raw text
 scanning.
