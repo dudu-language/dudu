@@ -109,6 +109,14 @@ bool is_destructor_method(const FunctionDecl& method) {
     return method.name == "drop";
 }
 
+bool type_ref_is_name(const TypeRef& type, std::string_view name) {
+    return type.kind == TypeKind::Named && type_ref_head_name(type) == name;
+}
+
+bool function_returns(const FunctionDecl& fn, std::string_view name) {
+    return type_ref_is_name(function_return_type_ref(fn), name);
+}
+
 bool is_c_abi_primitive(const std::string& type, bool allow_void) {
     if (type == "void") {
         return allow_void;
@@ -139,10 +147,10 @@ bool is_c_abi_type_ref(const TypeRef& type, bool allow_void) {
 }
 
 void check_extern_c_signature(const FunctionDecl& fn) {
-    const std::string return_type = function_return_type_text(fn);
     const TypeRef return_type_ref = function_return_type_ref(fn);
     if (!is_c_abi_type_ref(return_type_ref, true)) {
-        fail(fn.location, "@extern_c return type is not C ABI safe: " + return_type);
+        fail(fn.location,
+             "@extern_c return type is not C ABI safe: " + type_ref_text(return_type_ref));
     }
     for (const ParamDecl& param : fn.params) {
         if (!is_c_abi_type_ref(param.type_ref, false)) {
@@ -332,7 +340,7 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                     if (method.params.size() != 1 || method.params.front().name != "self") {
                         fail(method.location, "bool operator methods require only self");
                     }
-                    if (function_return_type_text(method) != "bool") {
+                    if (!function_returns(method, "bool")) {
                         fail(method.location, "bool operator methods must return bool");
                     }
                 } else if (op == "[]=") {
@@ -340,28 +348,26 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                         fail(method.location,
                              "indexed assignment operator methods require self, index, and value");
                     }
-                    if (function_has_return_type(method) &&
-                        function_return_type_text(method) != "void") {
+                    if (function_has_return_type(method) && !function_returns(method, "void")) {
                         fail(method.location,
                              "indexed assignment operator methods must return void");
                     }
                 } else if (method.params.size() != 2 || method.params.front().name != "self") {
                     fail(method.location, "operator methods require self and one parameter");
                 } else if (is_comparison_operator_method(method) &&
-                           function_return_type_text(method) != "bool") {
+                           !function_returns(method, "bool")) {
                     fail(method.location, "comparison operator methods must return bool");
                 }
             }
             if (is_constructor_method(method) && function_has_return_type(method) &&
-                function_return_type_text(method) != "void") {
+                !function_returns(method, "void")) {
                 fail(method.location, method.name + " cannot declare a return type");
             }
             if (is_destructor_method(method)) {
                 if (method.params.size() != 1) {
                     fail(method.location, method.name + " cannot take parameters");
                 }
-                if (function_has_return_type(method) &&
-                    function_return_type_text(method) != "void") {
+                if (function_has_return_type(method) && !function_returns(method, "void")) {
                     fail(method.location, method.name + " cannot declare a return type");
                 }
             }
@@ -427,11 +433,12 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
             check_extern_c_signature(fn);
         }
         if (is_test_decorator(fn)) {
-            const std::string return_type = function_return_type_text(fn);
+            const TypeRef return_type = function_return_type_ref(fn);
             if (!fn.params.empty()) {
                 fail(fn.location, "@test functions cannot take parameters");
             }
-            if (return_type != "void" && return_type != "bool" && return_type != "i32") {
+            if (!type_ref_is_name(return_type, "void") && !type_ref_is_name(return_type, "bool") &&
+                !type_ref_is_name(return_type, "i32")) {
                 fail(fn.location, "@test return type must be void, bool, or i32");
             }
         }

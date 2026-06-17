@@ -1504,6 +1504,9 @@ LSP source edits are also moving to AST-owned ranges:
 - Native overload matching now uses the shared structured signature parameter
   helper, so missing parsed refs fall back consistently instead of open-coding
   another params-string parse path.
+- Declaration checks for `@test`, operators, constructors, destructors, and
+  `@extern_c` now inspect parsed function return `TypeRef` metadata instead of
+  comparing rendered return-type strings.
 
 Expression parsing has moved onto the lexer/token stream:
 
