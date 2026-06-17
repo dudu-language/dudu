@@ -461,8 +461,9 @@ push. They are not release packaging work.
    removed. Statement mirror fields for parsed targets, iterables, match
    patterns, guards, conditions, assert messages, and general values have also
    been removed; downstream code now uses the structured expression fields, with
-   `source_text` retained only as source/trivia and explicit `cpp(...)` escape
-   bodies stored separately. The raw `Stmt::text` field has been removed.
+   statement source ranges retained as token spans and explicit `cpp(...)`
+   escape bodies stored separately. The raw `Stmt::text` and `Stmt::source_text`
+   fields have been removed.
    Import declarations now also carry whole-statement source ranges/trivia, and
    LSP organize-import/missing-import actions use parsed import declarations for
    import identity and block placement rather than prefix-scanning import lines.

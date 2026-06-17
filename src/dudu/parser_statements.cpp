@@ -168,11 +168,11 @@ UnsupportedFeature unsupported_feature_for_token(const Token& token) {
 }
 
 void attach_statement_source(Stmt& stmt, const Parser::JoinedTokens& joined) {
-    stmt.source_text = joined.source_text.empty() ? joined.text : joined.source_text;
     if (joined.has_tokens) {
         stmt.range = joined.range;
     } else {
-        stmt.range = range_for_text(stmt.location, stmt.source_text);
+        const std::string text = joined.source_text.empty() ? joined.text : joined.source_text;
+        stmt.range = range_for_text(stmt.location, text);
     }
 }
 

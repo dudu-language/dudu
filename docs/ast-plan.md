@@ -1298,11 +1298,12 @@ list instead of lowering as a normal statement.
 
 Statement source ranges now preserve the first and last real statement token
 span. This improves diagnostics and editor squiggles without relying on
-substring classification. Statement nodes retain `source_text` only as
-source/trivia metadata for ranges, comments, import code actions, and explicit
-escape surfaces. Child expression and type nodes are parsed from token spans and
-carry their own source ranges rather than locating semantic subpieces by
-searching reconstructed statement text.
+substring classification. Statement nodes no longer retain whole-statement
+source text; explicit statement-level `cpp(...)` escapes store only their
+extracted C++ body, and import declarations retain source text for import code
+actions. Child expression and type nodes are parsed from token spans and carry
+their own source ranges rather than locating semantic subpieces by searching
+reconstructed statement text.
 
 ## Compiler File Shape
 

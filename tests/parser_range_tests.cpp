@@ -14,7 +14,6 @@ void test_statement_source_range_uses_token_span() {
                                                       "statement_range.dd");
     const dudu::FunctionDecl& main = module.functions.front();
     const dudu::Stmt& assign = main.statements.front();
-    assert(assign.source_text == "value   =    add(1, 2)");
     assert(assign.target_expr.text == "value");
     assert(assign.value_expr.text == "add(1, 2)");
     assert(assign.range.start.line == 2);
@@ -52,7 +51,8 @@ void test_keyword_statements_keep_token_ranges() {
     const dudu::Stmt& branch = main.statements[0];
     assert(branch.kind == dudu::StmtKind::If);
     assert(branch.condition_expr.text == "ready(value)");
-    assert(branch.source_text == "if   ready(value):");
+    assert(branch.range.start.column == 5);
+    assert(branch.range.end.column == 23);
     assert(branch.condition_expr.kind == dudu::ExprKind::Call);
     assert(branch.condition_expr.range.start.column == 10);
     assert(branch.children.front().kind == dudu::StmtKind::Return);
