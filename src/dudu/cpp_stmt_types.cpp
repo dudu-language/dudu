@@ -174,17 +174,6 @@ bool looks_like_dudu_type(const std::string& name) {
            std::isupper(static_cast<unsigned char>(name.front())) != 0;
 }
 
-std::string infer_call_type(const std::string& callee,
-                            const std::map<std::string, TypeRef>& function_returns) {
-    if (const auto fn = function_returns.find(callee); fn != function_returns.end()) {
-        return substitute_type_ref_text(fn->second, {});
-    }
-    if (looks_like_dudu_type(callee)) {
-        return callee;
-    }
-    return {};
-}
-
 TypeRef infer_call_type_ref(const std::string& callee,
                             const std::map<std::string, TypeRef>& function_returns,
                             const SourceLocation& location) {
@@ -193,36 +182,6 @@ TypeRef infer_call_type_ref(const std::string& callee,
     }
     if (looks_like_dudu_type(callee)) {
         return parse_type_text(callee, location);
-    }
-    return {};
-}
-
-std::string infer_call_type(const Expr& expr, const std::map<std::string, std::string>& locals,
-                            const std::map<std::string, TypeRef>& local_type_refs,
-                            const std::map<std::string, TypeRef>& function_returns) {
-    if (expr.callee.empty()) {
-        return infer_call_type(expr.name, function_returns);
-    }
-    const Expr& callee = expr.callee.front();
-    if (callee.kind == ExprKind::Name) {
-        return infer_call_type(callee.name, function_returns);
-    }
-    if (callee.kind == ExprKind::Member && callee.children.size() == 1) {
-        const std::string receiver_type = infer_emitted_local_type(
-            callee.children.front(), locals, local_type_refs, function_returns);
-        if (!receiver_type.empty()) {
-            std::string base_type = receiver_base_type(receiver_type);
-            if (callee.children.front().kind == ExprKind::Name) {
-                if (const auto parsed = local_type_refs.find(callee.children.front().name);
-                    parsed != local_type_refs.end()) {
-                    base_type = receiver_base_type(parsed->second);
-                }
-            }
-            const std::string key = base_type + "." + callee.name;
-            if (const auto method = function_returns.find(key); method != function_returns.end()) {
-                return substitute_type_ref_text(method->second, {});
-            }
-        }
     }
     return {};
 }
@@ -250,7 +209,11 @@ TypeRef infer_call_type_ref(const Expr& expr, const std::map<std::string, std::s
     return {};
 }
 
-std::string infer_binary_expr_type(const Expr& expr,
+bool is_numeric_type(std::string_view type) {
+    return type == "i32" || type == "f32" || type == "f64";
+}
+
+TypeRef infer_binary_expr_type_ref(const Expr& expr,
                                    const std::map<std::string, std::string>& locals,
                                    const std::map<std::string, TypeRef>& local_type_refs,
                                    const std::map<std::string, TypeRef>& function_returns) {
@@ -259,25 +222,27 @@ std::string infer_binary_expr_type(const Expr& expr,
     }
     if (expr.op == "and" || expr.op == "or" || expr.op == "==" || expr.op == "!=" ||
         expr.op == "<" || expr.op == "<=" || expr.op == ">" || expr.op == ">=") {
-        return "bool";
+        return parse_type_text("bool", expr.location);
     }
-    const std::string left =
-        infer_emitted_local_type(expr.children[0], locals, local_type_refs, function_returns);
+    const TypeRef left_ref =
+        infer_emitted_local_type_ref(expr.children[0], locals, local_type_refs, function_returns);
+    const TypeRef right_ref =
+        infer_emitted_local_type_ref(expr.children[1], locals, local_type_refs, function_returns);
+    const std::string left = has_type_ref(left_ref) ? substitute_type_ref_text(left_ref, {}) : "";
     const std::string right =
-        infer_emitted_local_type(expr.children[1], locals, local_type_refs, function_returns);
-    if (left.empty()) {
-        return right;
+        has_type_ref(right_ref) ? substitute_type_ref_text(right_ref, {}) : "";
+    if (left.empty() && !right.empty()) {
+        return right_ref;
     }
     if (right.empty() || right == left) {
-        return left;
+        return left_ref;
     }
-    if ((left == "f64" || right == "f64") && (left == "f64" || left == "f32" || left == "i32") &&
-        (right == "f64" || right == "f32" || right == "i32")) {
-        return "f64";
+    if ((left == "f64" || right == "f64") && is_numeric_type(left) && is_numeric_type(right)) {
+        return parse_type_text("f64", expr.location);
     }
     if ((left == "f32" || right == "f32") && (left == "f32" || left == "i32") &&
         (right == "f32" || right == "i32")) {
-        return "f32";
+        return parse_type_text("f32", expr.location);
     }
     return {};
 }
@@ -366,11 +331,8 @@ TypeRef infer_emitted_local_type_ref(const Expr& expr,
             }
         }
         return {};
-    case ExprKind::Binary: {
-        const std::string inferred =
-            infer_binary_expr_type(expr, locals, local_type_refs, function_returns);
-        return inferred.empty() ? TypeRef{} : parse_type_text(inferred, expr.location);
-    }
+    case ExprKind::Binary:
+        return infer_binary_expr_type_ref(expr, locals, local_type_refs, function_returns);
     case ExprKind::Conditional:
     case ExprKind::Await:
     case ExprKind::Yield:
@@ -409,105 +371,21 @@ std::string infer_emitted_local_type(const Expr& expr,
         return substitute_type_ref_text(inferred, {});
     }
     switch (expr.kind) {
-    case ExprKind::BoolLiteral:
-        return "bool";
-    case ExprKind::IntLiteral:
-        return "i32";
-    case ExprKind::FloatLiteral:
-        return "f64";
-    case ExprKind::StringLiteral:
-        return "str";
-    case ExprKind::NoneLiteral:
-        return "None";
     case ExprKind::Name:
-        if (const auto local = local_type_refs.find(expr.name); local != local_type_refs.end()) {
-            return substitute_type_ref_text(local->second, {});
-        }
         if (const auto local = locals.find(expr.name); local != locals.end()) {
             return local->second;
         }
         return {};
-    case ExprKind::Unary:
-        if (expr.children.size() != 1) {
-            return {};
-        }
-        if (expr.op == "not") {
-            return "bool";
-        }
-        if (expr.op == "&") {
-            const std::string child = infer_emitted_local_type(expr.children.front(), locals,
-                                                               local_type_refs, function_returns);
-            return child.empty() ? std::string{} : "*" + child;
-        }
-        if (expr.op == "*") {
-            std::string child = trim_copy(infer_emitted_local_type(
-                expr.children.front(), locals, local_type_refs, function_returns));
-            const TypeRef parsed = parse_type_text(child);
-            if (parsed.kind == TypeKind::Pointer && parsed.children.size() == 1) {
-                return substitute_type_ref_text(parsed.children.front(), {});
-            }
-            return {};
-        }
-        if (expr.op == "-") {
-            return infer_emitted_local_type(expr.children.front(), locals, local_type_refs,
-                                            function_returns);
-        }
-        return {};
-    case ExprKind::Binary:
-        return infer_binary_expr_type(expr, locals, local_type_refs, function_returns);
-    case ExprKind::Conditional:
-        return {};
-    case ExprKind::Await:
-        return {};
-    case ExprKind::Yield:
-        return {};
-    case ExprKind::Call:
-        return infer_call_type(expr, locals, local_type_refs, function_returns);
     case ExprKind::Index:
-        if (expr.children.size() == 2) {
-            if (expr.children[0].kind == ExprKind::Name) {
-                if (const auto local = local_type_refs.find(expr.children[0].name);
-                    local != local_type_refs.end()) {
-                    if (const std::string indexed_type =
-                            indexed_local_type(local->second, expr.children[1]);
-                        !indexed_type.empty()) {
-                        return indexed_type;
-                    }
-                }
-                if (const auto local = locals.find(expr.children[0].name); local != locals.end()) {
-                    if (const std::string indexed_type =
-                            indexed_local_type(local->second, expr.children[1]);
-                        !indexed_type.empty()) {
-                        return indexed_type;
-                    }
-                }
-            }
-            const std::string receiver_type = infer_emitted_local_type(
-                expr.children[0], locals, local_type_refs, function_returns);
-            if (!receiver_type.empty()) {
-                return indexed_local_type(receiver_type, expr.children[1]);
+        if (expr.children.size() == 2 && expr.children[0].kind == ExprKind::Name) {
+            if (const auto local = locals.find(expr.children[0].name); local != locals.end()) {
+                return indexed_local_type(local->second, expr.children[1]);
             }
         }
         return {};
-    case ExprKind::TemplateCall:
-        return infer_call_type(expr, locals, local_type_refs, function_returns);
-    case ExprKind::Unknown:
-        return {};
-    case ExprKind::CppEscape:
-    case ExprKind::DictEntry:
-    case ExprKind::DictLiteral:
-    case ExprKind::DefExpression:
-    case ExprKind::Comprehension:
-    case ExprKind::Lambda:
-    case ExprKind::ListLiteral:
-    case ExprKind::Member:
-    case ExprKind::NamedArg:
-    case ExprKind::SetLiteral:
-    case ExprKind::Slice:
-    case ExprKind::TupleLiteral:
+    default:
         return {};
     }
-    return {};
 }
 
 } // namespace dudu

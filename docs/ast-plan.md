@@ -1140,6 +1140,11 @@ Assignment C++ emission now uses that parsed `TypeRef` member target path when
 coercing non-name assignment values, avoiding another render-type-then-reparse
 round trip in normal statement codegen.
 
+Local C++ emission type inference now routes call, template-call, and binary
+expression results through the parsed `TypeRef` path first. The string-returning
+helper remains only as a compatibility wrapper for older tests and legacy call
+sites that have not yet been moved to structured type metadata.
+
 Unsupported `def` expressions now parse as a dedicated `DefExpression` AST node
 instead of falling through to `Unknown` and being recognized later by raw text
 scanning.
