@@ -566,6 +566,9 @@ push. They are not release packaging work.
    fallback remains at the compatibility boundary.
    LSP local-context tuple destructuring mirrors the structured compiler path,
    and the old public `tuple_types` string helper has been removed.
+   Tuple child extraction with alias fallback now lives in a shared `TypeRef`
+   helper, so compiler sema and LSP do not carry duplicate rendered-string tuple
+   parsing logic.
 
 3. OOP Surface Cleanup
 

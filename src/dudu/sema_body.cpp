@@ -100,8 +100,7 @@ void check_type_ref_match(FunctionScope& scope, const TypeRef& expected, const E
         !callbacks.can_assign(scope, expected_text, expr, got)) {
         if (!mismatch_label.empty()) {
             sema_fail(location,
-                      std::string(mismatch_label) + ": expected " + expected_text + ", got " +
-                          got);
+                      std::string(mismatch_label) + ": expected " + expected_text + ", got " + got);
         }
         sema_fail(location, assignment_error(expected, expr, got));
     }
@@ -140,17 +139,6 @@ std::string shape_text(const std::vector<size_t>& shape) {
     }
     out << "]";
     return out.str();
-}
-
-std::vector<TypeRef> tuple_type_refs_from_inferred(const Symbols& symbols, const TypeRef& type) {
-    std::vector<TypeRef> refs = template_type_arg_refs(type, "tuple");
-    if (!refs.empty()) {
-        return refs;
-    }
-
-    const std::string resolved = resolve_alias(symbols, substitute_type_ref_text(type, {}));
-    refs = template_type_arg_refs(parse_type_text(resolved), "tuple");
-    return refs;
 }
 
 TypeRef const_reference_type_ref(TypeRef type) {
@@ -194,9 +182,8 @@ std::optional<TypeRef> infer_for_binding_type(FunctionScope& scope, const Stmt& 
         return parse_type_text("i32", location);
     }
     if (stmt.iterable_expr.kind == ExprKind::Name) {
-        const std::string element = iterable_value_type(scope.symbols, scope.locals,
-                                                        scope.local_type_refs,
-                                                        stmt.iterable_expr.name);
+        const std::string element = iterable_value_type(
+            scope.symbols, scope.locals, scope.local_type_refs, stmt.iterable_expr.name);
         if (!element.empty()) {
             return parse_type_text(element, location);
         }
@@ -431,8 +418,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
                                  node_location(stmt.location, stmt.value_expr), callbacks);
             }
         }
-        bind_local(scope, stmt.name, type,
-                   stmt.type == type ? stmt.type_ref : inferred.type_ref);
+        bind_local(scope, stmt.name, type, stmt.type == type ? stmt.type_ref : inferred.type_ref);
         if (is_dudu_all_caps(stmt.name)) {
             scope.constants.insert(stmt.name);
         }
@@ -441,10 +427,10 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
     if (stmt.kind == StmtKind::Assign) {
         if (const std::vector<std::string> names = tuple_binding_names(stmt.target_expr);
             !names.empty()) {
-            const SourceLocation& value_location =
-                node_location(stmt.location, stmt.value_expr);
-            const std::vector<TypeRef> types = tuple_type_refs_from_inferred(
-                scope.symbols, callbacks.infer_expr_type(scope, stmt.value_expr, &value_location));
+            const SourceLocation& value_location = node_location(stmt.location, stmt.value_expr);
+            const std::vector<TypeRef> types = template_type_arg_refs_resolved(
+                callbacks.infer_expr_type(scope, stmt.value_expr, &value_location), "tuple",
+                scope.symbols.aliases);
             if (names.size() != types.size()) {
                 sema_fail(value_location, "tuple destructuring count mismatch");
             }
@@ -527,9 +513,9 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols,
             copy_base_scope_state(scope, base);
             scope.current_class = klass.name;
             scope.allow_super_init = method.name == "init";
-            scope.return_type_ref =
-                method.return_type.empty() ? parse_type_text("void", method.location)
-                                           : method.return_type_ref;
+            scope.return_type_ref = method.return_type.empty()
+                                        ? parse_type_text("void", method.location)
+                                        : method.return_type_ref;
             for (const ParamDecl& param : method.params) {
                 bind_local(scope, param.name, param.type, param.type_ref);
             }

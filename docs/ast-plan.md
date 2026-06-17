@@ -391,6 +391,9 @@ Already structured:
   fallback remains at the compatibility boundary
 - LSP local-context tuple destructuring mirrors the structured compiler path,
   and the old public `tuple_types` string helper has been removed
+- tuple child extraction with alias fallback now lives in a shared `TypeRef`
+  helper, so compiler sema and LSP do not carry duplicate rendered-string tuple
+  parsing logic
 - type compatibility has AST overloads for simple literals and list/set/dict
   literals, including expected-type disambiguation for empty `{}` dict
   initializers, reducing reliance on string parsing for assignment checks

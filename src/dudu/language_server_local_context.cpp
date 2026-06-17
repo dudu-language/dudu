@@ -80,22 +80,13 @@ TypeRef infer_lsp_expr_type(FunctionScope& scope, const Expr& expr) {
     return callbacks.infer_expr_type(scope, expr, &node_location(expr.location, expr));
 }
 
-std::vector<TypeRef> tuple_type_refs_from_inferred(const Symbols& symbols, const TypeRef& type) {
-    std::vector<TypeRef> refs = template_type_arg_refs(type, "tuple");
-    if (!refs.empty()) {
-        return refs;
-    }
-    const std::string resolved = resolve_alias(symbols, substitute_type_ref_text(type, {}));
-    return template_type_arg_refs(parse_type_text(resolved), "tuple");
-}
-
 void bind_tuple_names(FunctionScope& scope, const Stmt& stmt) {
     const std::vector<std::string> names = tuple_binding_names(stmt.target_expr);
     if (names.empty()) {
         return;
     }
-    const std::vector<TypeRef> types =
-        tuple_type_refs_from_inferred(scope.symbols, infer_lsp_expr_type(scope, stmt.value_expr));
+    const std::vector<TypeRef> types = template_type_arg_refs_resolved(
+        infer_lsp_expr_type(scope, stmt.value_expr), "tuple", scope.symbols.aliases);
     if (names.size() != types.size()) {
         return;
     }
