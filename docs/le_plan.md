@@ -591,11 +591,14 @@ push. They are not release packaging work.
    assignment/literal compatibility fallback.
    Constructor argument validation now preserves field and `init` parameter
    `TypeRef` nodes, infers argument expressions as `TypeRef` first, and checks
-   structural assignment before rendering types for compatibility diagnostics.
+   structural assignment before rendering types for compatibility diagnostics;
+   constructor and `super.init` checking no longer accept a string expression
+   inference callback.
    Native overload matching now accepts typed expression inference callbacks,
    checks argument/parameter `TypeRef` compatibility before rendered fallback
    paths, and binds native template placeholders from parsed argument types
-   when available.
+   when available. The native signature matcher no longer accepts a string
+   expression inference callback.
    Assignment target validation and side-effect-only statement checks now use
    typed expression inference for swizzle receivers, call targets, `range`
    arguments, assert/raise payloads, expression statements, and void-return

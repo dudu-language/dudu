@@ -19,8 +19,6 @@ std::vector<ConstructorParam> constructor_params(const ClassDecl& klass);
 void check_constructor_args_ast(
     const FunctionScope& scope, const ClassDecl& klass, const std::vector<Expr>& args,
     const SourceLocation* location,
-    const std::function<std::string(const FunctionScope&, const Expr&, const SourceLocation*)>&
-        infer_expr,
     const std::function<TypeRef(const FunctionScope&, const Expr&, const SourceLocation*)>&
         infer_expr_type,
     const std::function<bool(const std::string&, const Expr&, const std::string&)>& can_assign);

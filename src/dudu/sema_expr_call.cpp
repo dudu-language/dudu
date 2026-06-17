@@ -15,11 +15,7 @@ std::string infer_call_ast(const FunctionScope& scope, const Expr& expr,
     if (is_super_call(callee)) {
         return infer_super_call_ast(
             scope, expr, callee, use_location,
-            {.infer_expr =
-                 [](const FunctionScope& nested, const Expr& arg, const SourceLocation* location) {
-                     return infer_expr_ast(nested, arg, location);
-                 },
-             .infer_expr_type =
+            {.infer_expr_type =
                  [](const FunctionScope& nested, const Expr& arg, const SourceLocation* location) {
                      return infer_expr_type_ast(nested, arg, location);
                  },
@@ -86,7 +82,7 @@ std::string infer_call_ast(const FunctionScope& scope, const Expr& expr,
         return fn->second.return_type;
     }
     if (const auto signature = native_signature_for_call(
-            scope, callee, expr.children, use_location, infer_expr_ast, infer_expr_type_ast,
+            scope, callee, expr.children, use_location, infer_expr_type_ast,
             [&](const std::string& expected, const Expr& value, const std::string& got) {
                 return can_assign_ast(scope, expected, value, got);
             })) {

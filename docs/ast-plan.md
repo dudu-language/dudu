@@ -511,11 +511,13 @@ Already structured:
   back through string-based compatibility callbacks
 - constructor semantic checks now preserve parsed field and `init` parameter
   `TypeRef` nodes and infer argument expressions as `TypeRef` before falling
-  back to rendered compatibility checks and diagnostics
+  back to rendered compatibility checks and diagnostics; constructor and
+  `super.init` checking no longer accept a string expression inference callback
 - native overload matching now receives typed expression inference callbacks,
   checks parsed argument and parameter `TypeRef` nodes before rendered
   compatibility fallback, and exposes a parsed `TypeRef` path for native
-  template placeholder binding
+  template placeholder binding; native signature matching no longer accepts a
+  string expression inference callback
 - assignment target validation and side-effect-only statement checks now infer
   expression `TypeRef` nodes for swizzle receivers, call targets, `range`
   arguments, assert/raise payloads, expression statements, and void-return

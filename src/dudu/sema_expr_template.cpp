@@ -153,7 +153,7 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
         const ClassDecl instantiated = instantiate_generic_class(*klass->second, type_args, callee);
         reject_abstract_construction(scope.symbols, callee_base, location);
         check_constructor_args_ast(
-            scope, instantiated, expr.children, location, infer_expr_ast, infer_expr_type_ast,
+            scope, instantiated, expr.children, location, infer_expr_type_ast,
             [&](const std::string& expected, const Expr& value, const std::string& got) {
                 return can_assign_ast(scope, expected, value, got);
             });
@@ -161,7 +161,7 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
     }
 
     if (const auto signature = native_signature_for_call(
-            scope, callee, expr.children, location, infer_expr_ast, infer_expr_type_ast,
+            scope, callee, expr.children, location, infer_expr_type_ast,
             [&](const std::string& expected, const Expr& value, const std::string& got) {
                 return can_assign_ast(scope, expected, value, got);
             })) {
@@ -262,7 +262,7 @@ std::string infer_constructor_call_ast(const FunctionScope& scope, const Expr& e
         klass != scope.symbols.classes.end()) {
         reject_abstract_construction(scope.symbols, callee, location);
         check_constructor_args_ast(
-            scope, *klass->second, expr.children, location, infer_expr_ast, infer_expr_type_ast,
+            scope, *klass->second, expr.children, location, infer_expr_type_ast,
             [&](const std::string& expected, const Expr& value, const std::string& got) {
                 return can_assign_ast(scope, expected, value, got);
             });
