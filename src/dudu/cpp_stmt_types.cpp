@@ -112,7 +112,6 @@ bool looks_like_dudu_type(const std::string& name) {
 }
 
 std::string infer_call_type(const std::string& callee,
-                            const std::map<std::string, std::string>& locals,
                             const std::map<std::string, std::string>& function_returns) {
     if (const auto fn = function_returns.find(callee); fn != function_returns.end()) {
         return fn->second;
@@ -120,14 +119,23 @@ std::string infer_call_type(const std::string& callee,
     if (looks_like_dudu_type(callee)) {
         return callee;
     }
-    const size_t dot = callee.rfind('.');
-    if (dot != std::string::npos) {
-        const std::string receiver = trim_copy(callee.substr(0, dot));
-        const auto local = locals.find(receiver);
-        if (local != locals.end()) {
-            const std::string method_name = trim_copy(callee.substr(dot + 1));
-            const std::string receiver_type = trim_copy(local->second);
-            const std::string key = receiver_base_type(receiver_type) + "." + method_name;
+    return {};
+}
+
+std::string infer_call_type(const Expr& expr, const std::map<std::string, std::string>& locals,
+                            const std::map<std::string, std::string>& function_returns) {
+    if (expr.callee.empty()) {
+        return infer_call_type(expr.name, function_returns);
+    }
+    const Expr& callee = expr.callee.front();
+    if (callee.kind == ExprKind::Name) {
+        return infer_call_type(callee.name, function_returns);
+    }
+    if (callee.kind == ExprKind::Member && callee.children.size() == 1) {
+        const std::string receiver_type =
+            infer_emitted_local_type(callee.children.front(), locals, function_returns);
+        if (!receiver_type.empty()) {
+            const std::string key = receiver_base_type(receiver_type) + "." + callee.name;
             if (const auto method = function_returns.find(key); method != function_returns.end()) {
                 return method->second;
             }
@@ -220,7 +228,7 @@ std::string infer_emitted_local_type(const Expr& expr,
     case ExprKind::Yield:
         return {};
     case ExprKind::Call:
-        return infer_call_type(call_callee_text(expr), locals, function_returns);
+        return infer_call_type(expr, locals, function_returns);
     case ExprKind::Index:
         if (expr.children.size() == 2) {
             if (expr.children[0].kind == ExprKind::Name) {
@@ -240,7 +248,7 @@ std::string infer_emitted_local_type(const Expr& expr,
         }
         return {};
     case ExprKind::TemplateCall:
-        return infer_call_type(call_callee_text(expr), locals, function_returns);
+        return infer_call_type(expr, locals, function_returns);
     case ExprKind::Unknown:
         return {};
     case ExprKind::CppEscape:

@@ -211,6 +211,9 @@ Already structured:
 - generated local C++ type inference unwraps parsed receiver/pointer child
   types through the shared `TypeRef` helper instead of reading child text
   directly
+- generated local C++ type inference resolves method-call result types from
+  parsed callee receiver expressions, so `make_counter().get()` does not
+  depend on splitting a dotted callee string
 - generic call-site inference reads parsed `TypeRef` nodes for nested
   templates, fixed arrays, and pointer/reference wrappers instead of carrying
   local bracket-splitting logic

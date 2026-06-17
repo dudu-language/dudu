@@ -10,4 +10,5 @@ def make_counter() -> Counter:
 
 
 def main() -> i32:
-    return make_counter().get()
+    value = make_counter().get()
+    return value
