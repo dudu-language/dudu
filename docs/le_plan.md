@@ -583,6 +583,9 @@ push. They are not release packaging work.
    them back into `TypeRef`.
    Body semantic checking now requires a typed expression callback, so statement
    checks cannot silently run without structured expression type inference.
+   Array literal element checks now carry explicit and inferred element types as
+   `TypeRef` nodes and try structured assignment before legacy literal
+   compatibility fallback.
 
 3. OOP Surface Cleanup
 

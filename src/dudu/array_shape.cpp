@@ -160,6 +160,18 @@ std::string explicit_array_element_type(const TypeRef& declared_type) {
     return info ? info->first : std::string{};
 }
 
+TypeRef explicit_array_element_type_ref(const TypeRef& declared_type) {
+    if (declared_type.kind != TypeKind::FixedArray || declared_type.children.empty()) {
+        return {};
+    }
+    const TypeRef& storage = declared_type.children.front();
+    if (storage.kind != TypeKind::Template || storage.name != "array" ||
+        storage.children.size() != 1) {
+        return {};
+    }
+    return storage.children.front();
+}
+
 std::string explicit_array_element_type(const std::string& declared_type) {
     return explicit_array_element_type(parse_type_text(declared_type));
 }

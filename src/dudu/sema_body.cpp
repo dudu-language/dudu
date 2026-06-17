@@ -108,13 +108,16 @@ void check_type_ref_match(FunctionScope& scope, const TypeRef& expected, const E
     }
 }
 
-void check_array_literal_elements(FunctionScope& scope, const std::string& element_type,
+void check_array_literal_elements(FunctionScope& scope, const TypeRef& element_type,
                                   const Expr& expr, const SourceLocation& location,
                                   const BodyCheckCallbacks& callbacks) {
     if (expr.kind != ExprKind::ListLiteral) {
-        const std::string got = callbacks.infer_expr(scope, expr, &location);
-        if (!callbacks.can_assign(scope, element_type, expr, got)) {
-            sema_fail(location, "array literal element expects " + element_type + ", got " + got);
+        const TypeRef got_ref = callbacks.infer_expr_type(scope, expr, &location);
+        const std::string expected_text = substitute_type_ref_text(element_type, {});
+        const std::string got = substitute_type_ref_text(got_ref, {});
+        if (!type_assignment_allowed(element_type, got_ref) &&
+            !callbacks.can_assign(scope, expected_text, expr, got)) {
+            sema_fail(location, "array literal element expects " + expected_text + ", got " + got);
         }
         return;
     }
@@ -376,7 +379,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
             sema_fail(node_location(stmt.location, stmt.value_expr), "ragged array literal");
         }
         const std::vector<size_t> explicit_shape = explicit_array_shape(stmt.type_ref);
-        const std::string explicit_element = explicit_array_element_type(stmt.type_ref);
+        const TypeRef explicit_element = explicit_array_element_type_ref(stmt.type_ref);
         if (!explicit_shape.empty() && stmt.value_expr.kind == ExprKind::ListLiteral) {
             const ArrayShapeInference actual =
                 infer_array_literal_shape_type(stmt.type_ref.children.front(), stmt.value_expr);
@@ -405,10 +408,10 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
         if (sema_has_expr(stmt.value_expr)) {
             if (inferred.status == ArrayShapeStatus::Inferred &&
                 is_array_literal(stmt.value_expr)) {
-                check_array_literal_elements(scope, inferred.element_type, stmt.value_expr,
+                check_array_literal_elements(scope, stmt.type_ref.children.front(), stmt.value_expr,
                                              node_location(stmt.location, stmt.value_expr),
                                              callbacks);
-            } else if (!explicit_element.empty() && is_array_literal(stmt.value_expr)) {
+            } else if (has_type_ref(explicit_element) && is_array_literal(stmt.value_expr)) {
                 check_array_literal_elements(scope, explicit_element, stmt.value_expr,
                                              node_location(stmt.location, stmt.value_expr),
                                              callbacks);

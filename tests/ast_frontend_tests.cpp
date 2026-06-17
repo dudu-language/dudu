@@ -106,6 +106,9 @@ void test_core_type_helpers_use_type_ast() {
     assert(dudu::base_type("array[f32][4, 4]") == "array");
     assert(dudu::base_type("fn(i32) -> bool") == "fn");
     assert(dudu::base_type("struct sqlite3") == "struct sqlite3");
+    assert(dudu::substitute_type_ref_text(
+               dudu::explicit_array_element_type_ref(dudu::parse_type_text("array[list[i32]][4]")),
+               {}) == "list[i32]");
 
     const std::vector<dudu::TypeRef> tuple =
         dudu::template_type_arg_refs(dudu::parse_type_text("tuple[i32, list[str]]"), "tuple");

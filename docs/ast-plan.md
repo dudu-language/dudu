@@ -408,6 +408,9 @@ Already structured:
   them back into `TypeRef`
 - body semantic checking now requires a typed expression callback, so statement
   checks cannot silently run without structured expression type inference
+- array literal element checks now carry explicit and inferred element types as
+  `TypeRef` nodes and try structured assignment before legacy literal
+  compatibility fallback
 - type compatibility has AST overloads for simple literals and list/set/dict
   literals, including expected-type disambiguation for empty `{}` dict
   initializers, reducing reliance on string parsing for assignment checks
