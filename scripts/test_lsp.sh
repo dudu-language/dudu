@@ -1146,6 +1146,8 @@ missing_native_diagnostics = next(
 )
 missing_native_diag = missing_native_diagnostics["params"]["diagnostics"][0]
 assert missing_native_diag["source"] == "dudu/native-header"
+assert missing_native_diag["code"] == "dudu.native_header.scan_failed"
+assert missing_native_diag["data"]["name"] == "./native_headers/does_not_exist.h"
 assert "could not scan native header" in missing_native_diag["message"]
 assert "hint: add the header directory" in missing_native_diag["message"]
 

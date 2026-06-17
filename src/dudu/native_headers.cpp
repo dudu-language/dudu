@@ -213,7 +213,8 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
         }
         const std::string detail = read_text(err);
         cleanup();
-        throw CompileError(import.location, scan_error_message(import, detail, clangxx_command()));
+        throw CompileError(import.location, scan_error_message(import, detail, clangxx_command()),
+                           "dudu.native_header.scan_failed", unquoted(import.module_path));
     }
     parse_macro_dump(scan, macro_dump, import.location);
     store_native_header_raw_cache(raw_cache, ast_dump, macro_dump);

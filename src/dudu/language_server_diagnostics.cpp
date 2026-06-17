@@ -19,8 +19,8 @@
 namespace dudu {
 namespace {
 
-std::string diagnostic_source(std::string_view message) {
-    if (message.find("could not scan native header") != std::string_view::npos) {
+std::string diagnostic_source(std::string_view message, std::string_view code) {
+    if (code == "dudu.native_header.scan_failed") {
         return "dudu/native-header";
     }
     if (message.find("return type mismatch") != std::string_view::npos ||
@@ -100,7 +100,7 @@ std::vector<Diagnostic> diagnostics_for_document(const Document& doc) {
     } catch (const CompileError& error) {
         return {{.location = error.location(),
                  .message = error.what(),
-                 .source = diagnostic_source(error.what()),
+                 .source = diagnostic_source(error.what(), error.code()),
                  .severity = 1,
                  .code = error.code(),
                  .data_name = error.data_name()}};
