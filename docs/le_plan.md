@@ -695,6 +695,14 @@ declarations safely.
    generating, and partial-syntax macros behind wrapper headers unless a real
    library forces a better design.
 
+   Status: implemented for the supported imported-macro surface. Fixtures cover
+   object-like macros, function-like macros, direct lowercase macro calls such
+   as `assert(expr)`, aliased lowercase calls such as `cassert.assert(expr)`,
+   variadic macros with fixed leading-argument validation, stringizing-style
+   passthrough macros, and mutation-style statement macros. Token-pasting,
+   declaration-generating, and partial-syntax macros remain intentionally
+   wrapper-header territory.
+
 16. Remove Prototype Cruft
 
    Before calling this language push complete, scan the codebase and docs for
