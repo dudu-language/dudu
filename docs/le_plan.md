@@ -18,6 +18,11 @@ architecture first, build the architecture instead of adding a narrow workaround
 The standard is:
 
 - real AST-backed language features
+- a conventional compiler pipeline with clear phase ownership: parser builds
+  AST, module resolver builds canonical module identities and imports, name
+  resolver binds symbols, type checker annotates or records semantic facts,
+  lowering produces an explicit backend-facing representation, and C++/CMake
+  emission consumes that representation
 - readable generated C++
 - diagnostics that point at Dudu source
 - no imported library special cases
@@ -28,6 +33,12 @@ The standard is:
 
 If a planned feature cannot meet that bar yet, document the missing prerequisite
 and implement the prerequisite first.
+
+The current implementation grew from a prototype, so some compatibility strings
+and backend shortcuts still exist. The goal is not to freeze that shape. The
+goal is to keep working features moving while steadily separating the compiler
+into boring, traceable phases. New work should push responsibilities into the
+proper phase instead of adding more cross-phase patching.
 
 ## Critical Module Import Blocker
 
@@ -643,6 +654,16 @@ declarations safely.
    artifact/debug/handoff command, not the primary serious-project workflow.
    Backends must fail clearly when they cannot model a project rather than
    silently dropping C/C++ build-system details.
+
+   The command-line UX must also be honest and observable. `dudu build`,
+   `dudu run`, `dudu test`, and backend-driving commands should print useful
+   progress and outcomes by default: selected backend, entry/module being
+   built, generated artifact directory when relevant, compiler/CMake phase
+   summaries, final executable path, run command, test counts, and clear skip
+   messages when incremental checks reuse existing outputs. Quiet success with
+   no useful stdout is not acceptable for normal user-facing commands. Add
+   `--quiet` for scripts if needed, rather than making humans guess what
+   happened.
 
    The implementation target is not "simple apps use `dudu build`, real apps
    leave for CMake." The target is "real apps still use `dudu build`, and Dudu
