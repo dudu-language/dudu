@@ -45,6 +45,10 @@ bool type_ref_is_name(const TypeRef& type, std::string_view name) {
     return type.kind == TypeKind::Named && type_ref_head_name(type) == name;
 }
 
+bool type_ref_is_void(const TypeRef& type) {
+    return type_ref_is_name(type, "void");
+}
+
 bool callback_can_assign_type(const BodyCheckCallbacks& callbacks, const FunctionScope& scope,
                               const TypeRef& expected, const Expr& expr, const std::string& got) {
     if (callbacks.can_assign_type) {
@@ -261,13 +265,13 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
     if (stmt.kind == StmtKind::Return) {
         const SourceLocation& value_location = node_location(stmt.location, stmt.value_expr);
         if (missing_expr(stmt.value_expr)) {
-            if (return_type != "void") {
+            if (!type_ref_is_void(return_type_ref)) {
                 sema_fail(value_location,
                           "return type mismatch: expected " + return_type + ", got void");
             }
             return;
         }
-        if (return_type != "void") {
+        if (!type_ref_is_void(return_type_ref)) {
             check_type_ref_match(scope, return_type_ref, stmt.value_expr, value_location, callbacks,
                                  "return type mismatch");
             return;
@@ -557,7 +561,7 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols,
             const TypeRef return_type_ref = function_return_type_ref(method);
             const std::string return_type = substitute_type_ref_text(return_type_ref, {});
             check_block(scope, method.statements, return_type_ref, 0, callbacks);
-            if (function_has_return_type(method) && return_type != "void" &&
+            if (function_has_return_type(method) && !type_ref_is_void(return_type_ref) &&
                 !block_guarantees_return(method.statements)) {
                 sema_fail(method.location, "missing return in function: " + method.name);
             }
@@ -572,9 +576,8 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols,
             bind_local(scope, param.name, type_ref_text(param.type_ref), param.type_ref);
         }
         const TypeRef return_type_ref = function_return_type_ref(fn);
-        const std::string return_type = substitute_type_ref_text(return_type_ref, {});
         check_block(scope, fn.statements, return_type_ref, 0, callbacks);
-        if (function_has_return_type(fn) && return_type != "void" &&
+        if (function_has_return_type(fn) && !type_ref_is_void(return_type_ref) &&
             !block_guarantees_return(fn.statements)) {
             sema_fail(fn.location, "missing return in function: " + fn.name);
         }

@@ -1516,6 +1516,8 @@ LSP source edits are also moving to AST-owned ranges:
 - Function body assignment checks now expose a typed assignment callback, so
   declared-value checks and inferred generic method return checks can compare
   expected `TypeRef` metadata before falling back to compatibility text.
+- Return statements and missing-return checks now decide `void` through parsed
+  return `TypeRef` metadata, using rendered text only for diagnostics.
 
 Expression parsing has moved onto the lexer/token stream:
 
