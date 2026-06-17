@@ -311,8 +311,14 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
         }
         return {};
     case ExprKind::Await:
+        if (use_location != nullptr) {
+            sema_expr_fail(*use_location, "unsupported Python feature: async");
+        }
         return {};
     case ExprKind::Yield:
+        if (use_location != nullptr) {
+            sema_expr_fail(*use_location, "unsupported Python feature: generators");
+        }
         return {};
     case ExprKind::Call:
         return infer_call_ast(scope, expr, use_location);

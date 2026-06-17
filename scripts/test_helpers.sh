@@ -60,5 +60,9 @@ expect_fail() {
         echo "$name unexpectedly passed" >&2
         exit 1
     fi
-    grep -q "$expected" "$repo_root/build/$name.err"
+    if ! grep -q "$expected" "$repo_root/build/$name.err"; then
+        echo "$name failed with an unexpected diagnostic; expected: $expected" >&2
+        cat "$repo_root/build/$name.err" >&2
+        exit 1
+    fi
 }

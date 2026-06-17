@@ -481,8 +481,8 @@ Already structured:
   walk parsed call expressions, with raw text scanning kept for unsupported or
   unknown expression shapes
 - unsupported `await` and expression-level `yield` forms parse into AST nodes
-  and are rejected by the unsupported-feature pass without relying on raw text
-  scanning
+  and are rejected by both the unsupported-feature pass and expression sema
+  without relying on raw text scanning
 - unsupported Python-only statement forms such as `with`, `finally`, local
   `def`, local imports, and rebinding declarations classify as structured
   unsupported statement nodes with feature labels instead of masquerading as
