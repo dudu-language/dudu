@@ -54,32 +54,6 @@ std::string file_uri(const std::filesystem::path& path) {
     return "file://" + absolute.lexically_normal().string();
 }
 
-std::string symbol_at(const Document& doc, const Json* params) {
-    const Json* position = params == nullptr ? nullptr : params->get("position");
-    const int target_line = int_value(position == nullptr ? nullptr : position->get("line"));
-    const int target_character =
-        int_value(position == nullptr ? nullptr : position->get("character"));
-    std::istringstream in(doc.text);
-    std::string line;
-    for (int row = 0; std::getline(in, line); ++row) {
-        if (row != target_line) {
-            continue;
-        }
-        int start = std::min(target_character, static_cast<int>(line.size()));
-        while (start > 0 && symbol_char(line[static_cast<size_t>(start - 1)])) {
-            --start;
-        }
-        int end = std::min(target_character, static_cast<int>(line.size()));
-        while (end < static_cast<int>(line.size()) && symbol_char(line[static_cast<size_t>(end)])) {
-            ++end;
-        }
-        return start < end
-                   ? line.substr(static_cast<size_t>(start), static_cast<size_t>(end - start))
-                   : std::string{};
-    }
-    return {};
-}
-
 SourceLocation expr_name_location(const Expr& expr) {
     SourceLocation location = expr.location;
     if (expr.kind == ExprKind::Member && !expr.name.empty() &&

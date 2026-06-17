@@ -1287,6 +1287,9 @@ LSP source edits are also moving to AST-owned ranges:
   source text as trivia, so organize-import and missing-import actions can use
   parsed import declarations for import identity, ordering, and insertion
   placement instead of rediscovering imports from line prefixes.
+- the old raw document `symbol_at` navigation helper has been removed; editor
+  definition, references, and rename entry points resolve cursor symbols through
+  AST-backed symbol lookup.
 
 ## Acceptance
 

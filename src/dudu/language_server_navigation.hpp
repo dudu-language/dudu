@@ -20,7 +20,6 @@ std::string location_json(const std::string& uri, const std::string& range);
 std::string uri_for_location(const SourceLocation& location, const Document& doc);
 std::string file_uri(const std::filesystem::path& path);
 
-std::string symbol_at(const Document& doc, const Json* params);
 std::optional<std::string> ast_symbol_at(const Document& doc, const Json* params);
 std::optional<std::string> ast_symbol_path_at(const Document& doc, const Json* params);
 bool symbol_matches(const std::string& symbol, const std::string& query);
