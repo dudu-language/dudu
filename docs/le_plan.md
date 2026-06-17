@@ -513,7 +513,9 @@ push. They are not release packaging work.
    matches parsed pointer, reference, wrapper, template, and function type
    nodes before falling back to native spelling compatibility. Typed `for`
    loop binding checks now compare against the parsed binding `TypeRef` before
-   using alias/native spelling fallback. Delete/free checks now classify
+   using alias/native spelling fallback, and render fallback diagnostics from
+   the parsed binding `TypeRef` instead of compatibility type text. Delete/free
+   checks now classify
    pointer arguments through parsed `TypeRef` nodes instead of raw leading `*`
    spelling. Indexed type inference now requires parsed index expressions
    instead of accepting public string index text, including the explicit

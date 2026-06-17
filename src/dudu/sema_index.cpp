@@ -428,11 +428,12 @@ void check_iterable_binding(const Symbols& symbols,
         throw CompileError(location, "cannot iterate non-container: " + name);
     }
     const TypeRef element_type = parse_type_text(element, location);
+    const std::string binding_text = substitute_type_ref_text(binding_type, {});
     if (!type_assignment_allowed(binding_type, element_type) &&
-        !type_assignment_allowed(resolve_alias(symbols, binding_type.text),
+        !type_assignment_allowed(resolve_alias(symbols, binding_text),
                                  resolve_alias(symbols, element))) {
         throw CompileError(location,
-                           "loop binding expects " + binding_type.text + ", got " + element);
+                           "loop binding expects " + binding_text + ", got " + element);
     }
 }
 

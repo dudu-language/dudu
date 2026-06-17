@@ -499,6 +499,8 @@ Already structured:
 - typed `for` loop binding compatibility now uses the parsed binding
   `TypeRef`, with rendered strings kept only as the alias/native spelling
   fallback
+- typed `for` loop binding fallback and diagnostics render from the parsed
+  binding `TypeRef` instead of reading the compatibility type text field
 - enum match wildcard and guard checks use parsed case pattern/guard
   expressions instead of raw case statement strings
 - wrapper match subject classification for `Option[T]` and `Result[T, E]`
