@@ -15,6 +15,7 @@
 #include <map>
 #include <optional>
 #include <regex>
+#include <set>
 #include <sstream>
 #include <string_view>
 
@@ -173,6 +174,125 @@ int bracket_delta(const std::string& line) {
     return delta;
 }
 
+bool same_source_file(const std::filesystem::path& lhs, const std::filesystem::path& rhs) {
+    if (lhs.empty() || rhs.empty()) {
+        return lhs == rhs;
+    }
+    std::error_code error;
+    const std::filesystem::path lhs_canonical = std::filesystem::weakly_canonical(lhs, error);
+    if (error) {
+        return lhs.lexically_normal() == rhs.lexically_normal();
+    }
+    const std::filesystem::path rhs_canonical = std::filesystem::weakly_canonical(rhs, error);
+    if (error) {
+        return lhs.lexically_normal() == rhs.lexically_normal();
+    }
+    return lhs_canonical == rhs_canonical;
+}
+
+void lint_cpp_escape_expr(const Expr& expr, const Document& doc,
+                          std::set<std::pair<int, int>>& seen, std::vector<Diagnostic>& out);
+
+void lint_cpp_escape_stmt(const Stmt& stmt, const Document& doc,
+                          std::set<std::pair<int, int>>& seen, std::vector<Diagnostic>& out) {
+    if (!same_source_file(stmt.location.file, doc.path)) {
+        return;
+    }
+    if (stmt.kind == StmtKind::CppEscape &&
+        seen.insert({stmt.location.line, stmt.location.column}).second) {
+        out.push_back({.location = stmt.location,
+                       .message = "native interop hazard: raw cpp escape hatch",
+                       .source = "dudu/lint",
+                       .severity = 2});
+    }
+    lint_cpp_escape_expr(stmt.expr, doc, seen, out);
+    lint_cpp_escape_expr(stmt.value_expr, doc, seen, out);
+    lint_cpp_escape_expr(stmt.target_expr, doc, seen, out);
+    lint_cpp_escape_expr(stmt.condition_expr, doc, seen, out);
+    lint_cpp_escape_expr(stmt.message_expr, doc, seen, out);
+    lint_cpp_escape_expr(stmt.iterable_expr, doc, seen, out);
+    lint_cpp_escape_expr(stmt.pattern_expr, doc, seen, out);
+    lint_cpp_escape_expr(stmt.guard_expr, doc, seen, out);
+    for (const Stmt& child : stmt.children) {
+        lint_cpp_escape_stmt(child, doc, seen, out);
+    }
+}
+
+void lint_cpp_escape_expr(const Expr& expr, const Document& doc,
+                          std::set<std::pair<int, int>>& seen, std::vector<Diagnostic>& out) {
+    if (expr.kind == ExprKind::Unknown) {
+        return;
+    }
+    if (expr.kind == ExprKind::CppEscape && same_source_file(expr.location.file, doc.path) &&
+        seen.insert({expr.location.line, expr.location.column}).second) {
+        out.push_back({.location = expr.location,
+                       .message = "native interop hazard: raw cpp escape hatch",
+                       .source = "dudu/lint",
+                       .severity = 2});
+    }
+    for (const Expr& child : expr.callee) {
+        lint_cpp_escape_expr(child, doc, seen, out);
+    }
+    for (const Expr& child : expr.params) {
+        lint_cpp_escape_expr(child, doc, seen, out);
+    }
+    for (const Expr& child : expr.template_args) {
+        lint_cpp_escape_expr(child, doc, seen, out);
+    }
+    for (const Expr& child : expr.children) {
+        lint_cpp_escape_expr(child, doc, seen, out);
+    }
+}
+
+void lint_cpp_escape_function(const FunctionDecl& fn, const Document& doc,
+                              std::set<std::pair<int, int>>& seen, std::vector<Diagnostic>& out) {
+    for (const Stmt& stmt : fn.statements) {
+        lint_cpp_escape_stmt(stmt, doc, seen, out);
+    }
+}
+
+void lint_cpp_escape_class(const ClassDecl& klass, const Document& doc,
+                           std::set<std::pair<int, int>>& seen, std::vector<Diagnostic>& out) {
+    for (const FieldDecl& field : klass.fields) {
+        lint_cpp_escape_expr(field.value_expr, doc, seen, out);
+    }
+    for (const ConstDecl& constant : klass.constants) {
+        lint_cpp_escape_expr(constant.value_expr, doc, seen, out);
+    }
+    for (const ConstDecl& field : klass.static_fields) {
+        lint_cpp_escape_expr(field.value_expr, doc, seen, out);
+    }
+    for (const FunctionDecl& method : klass.methods) {
+        lint_cpp_escape_function(method, doc, seen, out);
+    }
+}
+
+void lint_cpp_escape_module(const ModuleAst& module, const Document& doc,
+                            std::set<std::pair<int, int>>& seen, std::vector<Diagnostic>& out) {
+    for (const ConstDecl& constant : module.constants) {
+        lint_cpp_escape_expr(constant.value_expr, doc, seen, out);
+    }
+    for (const StaticAssertDecl& assertion : module.static_asserts) {
+        lint_cpp_escape_expr(assertion.expression_expr, doc, seen, out);
+    }
+    for (const FunctionDecl& fn : module.functions) {
+        lint_cpp_escape_function(fn, doc, seen, out);
+    }
+    for (const ClassDecl& klass : module.classes) {
+        lint_cpp_escape_class(klass, doc, seen, out);
+    }
+    for (const ModuleAst& unit : module.module_units) {
+        lint_cpp_escape_module(unit, doc, seen, out);
+    }
+}
+
+std::vector<Diagnostic> ast_lint_diagnostics(const ModuleAst& module, const Document& doc) {
+    std::vector<Diagnostic> out;
+    std::set<std::pair<int, int>> seen_cpp_escapes;
+    lint_cpp_escape_module(module, doc, seen_cpp_escapes, out);
+    return out;
+}
+
 std::vector<Diagnostic> lint_diagnostics(const Document& doc) {
     std::vector<Diagnostic> out;
     std::vector<std::string> lines;
@@ -248,12 +368,6 @@ std::vector<Diagnostic> lint_diagnostics(const Document& doc) {
             }
         }
         lint_suspicious_casts(line, active_decls, doc, row, out);
-        if (starts_with(trimmed, "cpp(")) {
-            out.push_back({.location = {.file = doc.path, .line = row, .column = indent + 1},
-                           .message = "native interop hazard: raw cpp escape hatch",
-                           .source = "dudu/lint",
-                           .severity = 2});
-        }
         if (std::regex_search(line, match, local_decl)) {
             const std::string name = match[2].str();
             const std::string type = trim_copy(match[3].str());
@@ -330,7 +444,10 @@ std::vector<Diagnostic> diagnostics_for_document(const Document& doc) {
         } else {
             analyze_module(module, {.check_bodies = true});
         }
-        return lint_diagnostics(doc);
+        std::vector<Diagnostic> diagnostics = lint_diagnostics(doc);
+        std::vector<Diagnostic> ast_lints = ast_lint_diagnostics(module, doc);
+        diagnostics.insert(diagnostics.end(), ast_lints.begin(), ast_lints.end());
+        return diagnostics;
     } catch (const CompileError& error) {
         return {{.location = error.location(),
                  .message = error.what(),

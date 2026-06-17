@@ -235,6 +235,7 @@ messages = [
                             "def main() -> i32:",
                             "    wide: i64 = 42",
                             "    small: i32 = i32(wide)",
+                            '    small += cpp("1")',
                             '    cpp("asm volatile(\\\"pause\\\" ::: \\\"memory\\\");")',
                             "    return small",
                             "",
