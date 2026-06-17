@@ -1136,6 +1136,10 @@ Member expression typing now has a parsed `TypeRef` wrapper, and typed
 expression/index inference plus assignment target checks use it instead of
 parsing member type text at each call site.
 
+Assignment C++ emission now uses that parsed `TypeRef` member target path when
+coercing non-name assignment values, avoiding another render-type-then-reparse
+round trip in normal statement codegen.
+
 Unsupported `def` expressions now parse as a dedicated `DefExpression` AST node
 instead of falling through to `Unknown` and being recognized later by raw text
 scanning.

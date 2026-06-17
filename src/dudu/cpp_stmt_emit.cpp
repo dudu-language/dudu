@@ -328,14 +328,17 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                 out << indent(depth) << *call << ";\n";
                 return;
             }
-            const std::string target_type =
-                symbols == nullptr ? std::string{}
-                                   : member_expr_type(*symbols, locals, nullptr, stmt.target_expr);
+            const TypeRef target_type =
+                symbols == nullptr ? TypeRef{}
+                                   : member_expr_type_ref(*symbols, locals, local_type_refs,
+                                                          nullptr, stmt.target_expr);
+            const std::string value =
+                has_type_ref(target_type)
+                    ? lower_expr_as_type_ref(target_type, stmt.value_expr, aliases, locals,
+                                             local_type_refs, function_returns, symbols, options)
+                    : lower_expr(stmt.value_expr, aliases, locals, symbols, options);
             out << indent(depth) << lower_expr(stmt.target_expr, aliases, locals, symbols, options)
-                << " = "
-                << lower_expr_as_type(target_type, stmt.value_expr, aliases, locals,
-                                      local_type_refs, function_returns, symbols, options)
-                << ";\n";
+                << " = " << value << ";\n";
             return;
         }
     }
