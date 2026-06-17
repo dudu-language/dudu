@@ -243,11 +243,14 @@ FunctionSignature instantiate_generic_signature(const FunctionDecl& fn,
     const std::map<std::string, std::string> substitutions =
         generic_substitutions(fn.generic_params, args);
     FunctionSignature signature;
-    signature.return_type = fn.return_type.empty()
-                                ? "void"
-                                : substitute_type_ref_text(fn.return_type_ref, substitutions);
+    signature.return_type_ref = fn.return_type.empty()
+                                    ? parse_type_text("void", fn.location)
+                                    : substitute_type_ref(fn.return_type_ref, substitutions);
+    signature.return_type = substitute_type_ref_text(signature.return_type_ref, {});
     for (const ParamDecl& param : fn.params) {
-        signature.params.push_back(substitute_type_ref_text(param.type_ref, substitutions));
+        TypeRef param_type = substitute_type_ref(param.type_ref, substitutions);
+        signature.params.push_back(substitute_type_ref_text(param_type, {}));
+        signature.param_type_refs.push_back(std::move(param_type));
     }
     return signature;
 }

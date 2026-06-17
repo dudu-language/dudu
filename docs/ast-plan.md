@@ -38,6 +38,9 @@ Already structured:
 - function pointer/callback signature parsing renders return and parameter
   children through the shared `TypeRef` helper instead of reading raw child
   text directly
+- function signatures now preserve parsed parameter and return `TypeRef` nodes
+  beside the compatibility strings, and call-argument semantic checks prefer
+  those structured expected types when they are available
 - function pointer/callback omitted-return detection checks for a missing
   parsed return `TypeRef`, not an empty raw child string
 - generic argument inference gets candidate parameter and argument names through

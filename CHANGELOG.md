@@ -68,6 +68,8 @@
   and `[cmake] target`.
 - Added CTest-backed `dudu test` support for user-owned CMake projects.
 - Added LSP hover for Dudu symbols reached through imported module aliases.
+- Added parsed `TypeRef` storage to function signatures so call checking can
+  prefer structured expected argument and return types.
 
 ### Changed
 

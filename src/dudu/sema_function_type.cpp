@@ -27,6 +27,24 @@ std::string function_type(const FunctionSignature& signature) {
     return out.str();
 }
 
+TypeRef signature_param_type_ref(const FunctionSignature& signature, size_t index) {
+    if (index < signature.param_type_refs.size()) {
+        return signature.param_type_refs[index];
+    }
+    if (index < signature.params.size()) {
+        return parse_type_text(signature.params[index]);
+    }
+    return {};
+}
+
+TypeRef signature_return_type_ref(const FunctionSignature& signature) {
+    if (signature.return_type_ref.kind != TypeKind::Unknown ||
+        !trim_copy(signature.return_type_ref.text).empty()) {
+        return signature.return_type_ref;
+    }
+    return parse_type_text(signature.return_type.empty() ? "void" : signature.return_type);
+}
+
 bool parse_function_type(std::string type, FunctionSignature& out) {
     return parse_function_type(parse_type_text(type), out);
 }
@@ -41,11 +59,16 @@ bool parse_function_type(const TypeRef& type, FunctionSignature& out) {
         return false;
     }
     out.params.clear();
+    out.param_type_refs.clear();
     out.return_type = missing_type_ref(function->children.front())
                           ? "void"
                           : substitute_type_ref_text(function->children.front(), {});
+    out.return_type_ref = missing_type_ref(function->children.front())
+                              ? parse_type_text("void", type.location)
+                              : function->children.front();
     for (size_t i = 1; i < function->children.size(); ++i) {
         out.params.push_back(substitute_type_ref_text(function->children[i], {}));
+        out.param_type_refs.push_back(function->children[i]);
     }
     if (out.return_type.empty()) {
         out.return_type = "void";

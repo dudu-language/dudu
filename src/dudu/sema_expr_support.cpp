@@ -1,5 +1,6 @@
 #include "dudu/ast_type.hpp"
 #include "dudu/sema_expr_internal.hpp"
+#include "dudu/sema_function_type.hpp"
 
 namespace dudu {
 namespace {
@@ -38,6 +39,21 @@ bool can_assign_ast(const FunctionScope& scope, const std::string& expected, con
            assignment_type_allowed(resolve_alias(scope.symbols, expected), expr,
                                    resolve_alias(scope.symbols, got)) ||
            native_base_assignable(scope.symbols, expected, got);
+}
+
+bool can_assign_ast(const FunctionScope& scope, const TypeRef& expected, const Expr& expr,
+                    const std::string& got) {
+    const std::string expected_text = substitute_type_ref_text(expected, {});
+    if (is_integer_type(expected_text)) {
+        if (const std::optional<std::string> path = member_path_from_expr(expr);
+            path && scope.symbols.native_enum_values.contains(*path)) {
+            return true;
+        }
+    }
+    return assignment_type_allowed(expected, expr, got) ||
+           assignment_type_allowed(resolve_alias(scope.symbols, expected_text), expr,
+                                   resolve_alias(scope.symbols, got)) ||
+           native_base_assignable(scope.symbols, expected_text, got);
 }
 
 bool is_builtin_call(const std::string& callee) {
@@ -105,11 +121,12 @@ void check_call_args_ast(const FunctionScope& scope, const std::string& callee,
                                       std::to_string(args.size()));
     }
     for (size_t i = 0; i < signature.params.size(); ++i) {
-        const std::string& expected = signature.params[i];
+        const TypeRef expected = signature_param_type_ref(signature, i);
+        const std::string expected_text = substitute_type_ref_text(expected, {});
         const std::string got = infer_expr_ast(scope, args[i], location);
         if (!can_assign_ast(scope, expected, args[i], got)) {
             sema_expr_fail(*location, "argument " + std::to_string(i + 1) + " for " + callee +
-                                          " expects " + expected + ", got " + got);
+                                          " expects " + expected_text + ", got " + got);
         }
     }
 }
@@ -161,7 +178,7 @@ bool call_args_match_ast(const FunctionScope& scope, const FunctionSignature& si
     }
     for (size_t i = 0; i < signature.params.size(); ++i) {
         const std::string got = infer_expr_ast(scope, args[i], nullptr);
-        if (!can_assign_ast(scope, signature.params[i], args[i], got)) {
+        if (!can_assign_ast(scope, signature_param_type_ref(signature, i), args[i], got)) {
             return false;
         }
     }

@@ -187,4 +187,19 @@ std::string substitute_type_ref_text(const TypeRef& type,
     return trim_copy(type.text);
 }
 
+TypeRef substitute_type_ref(const TypeRef& type,
+                            const std::map<std::string, std::string>& substitutions) {
+    const std::string name = trim_copy(type.name.empty() ? type.text : type.name);
+    if (const auto found = substitutions.find(name); found != substitutions.end()) {
+        return parse_type_text(found->second, type.location);
+    }
+
+    TypeRef out = type;
+    for (TypeRef& child : out.children) {
+        child = substitute_type_ref(child, substitutions);
+    }
+    out.text = substitute_type_ref_text(type, substitutions);
+    return out;
+}
+
 } // namespace dudu

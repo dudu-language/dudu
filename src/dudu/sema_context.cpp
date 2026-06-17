@@ -366,8 +366,11 @@ Symbols collect_symbols(const ModuleAst& module) {
         FunctionSignature signature;
         for (const ParamDecl& param : fn.params) {
             signature.params.push_back(param.type);
+            signature.param_type_refs.push_back(param.type_ref);
         }
         signature.return_type = fn.return_type.empty() ? "void" : fn.return_type;
+        signature.return_type_ref =
+            fn.return_type.empty() ? parse_type_text("void", fn.location) : fn.return_type_ref;
         symbols.functions[fn.name] = signature.return_type;
         symbols.function_signatures[fn.name] = std::move(signature);
         symbols.function_decls[fn.name] = &fn;
