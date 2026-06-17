@@ -630,6 +630,9 @@ Already structured:
 - fixed-array index-count inference and emitted local index type inference also
   use parsed `TypeRef` shape/element metadata instead of calling the
   string-facing array-shape helpers
+- string-facing index type inference now parses the resolved input type once
+  and reuses that `TypeRef` for shape/slice/index checks before crossing the
+  remaining native/operator spelling fallback
 - member-path type checks for indexed local receivers such as `items[i].field`
   parse the indexed segment into an `Expr::Index` and route the index through
   parsed expression typing instead of slicing raw index text

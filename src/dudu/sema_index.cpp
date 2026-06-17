@@ -348,6 +348,7 @@ std::string indexed_type_from_type(const Symbols& symbols, const SourceLocation&
                                    const std::string& raw_type, const Expr& index_expr,
                                    const std::string& label) {
     std::string type = resolve_alias(symbols, raw_type);
+    const TypeRef type_ref = parse_type_text(type);
     const std::string unwrapped_input_type = unwrap_reference_and_const(type);
     const TypeRef unwrapped_type_ref = parse_type_text(unwrapped_input_type);
     if (is_channel_slice_expr(index_expr)) {
@@ -363,7 +364,6 @@ std::string indexed_type_from_type(const Symbols& symbols, const SourceLocation&
         }
     }
     if (!has_step_slice(index_expr)) {
-        const TypeRef type_ref = parse_type_text(type);
         if (const std::vector<size_t> shape = explicit_array_shape(type_ref); !shape.empty()) {
             if (const auto prefix_count = trailing_full_slice_prefix_count(index_expr)) {
                 if (*prefix_count + 1 == shape.size()) {
@@ -373,8 +373,8 @@ std::string indexed_type_from_type(const Symbols& symbols, const SourceLocation&
         }
     }
     if (const auto indexed = indexed_type_from_type_ref_with_count(
-            location, parse_type_text(type), index_count_from_expr(index_expr),
-            is_slice_expr(index_expr), has_step_slice(index_expr), label)) {
+            location, type_ref, index_count_from_expr(index_expr), is_slice_expr(index_expr),
+            has_step_slice(index_expr), label)) {
         return *indexed;
     }
     return indexed_type_from_type_with_count(
