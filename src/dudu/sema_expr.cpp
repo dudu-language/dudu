@@ -3,7 +3,46 @@
 #include "dudu/ast_type.hpp"
 #include "dudu/sema_expr_internal.hpp"
 
+#include <optional>
+#include <set>
+
 namespace dudu {
+namespace {
+
+bool is_numeric_literal_expr(const Expr& expr) {
+    return expr.kind == ExprKind::IntLiteral || expr.kind == ExprKind::FloatLiteral;
+}
+
+bool is_numeric_type_name(const Symbols& symbols, std::string type) {
+    type = resolve_alias(symbols, std::move(type));
+    static const std::set<std::string> numeric = {"i8",  "i16", "i32", "i64", "u8",    "u16",
+                                                  "u32", "u64", "f32", "f64", "usize", "isize"};
+    return numeric.contains(trim(type));
+}
+
+bool is_arithmetic_op(const std::string& op) {
+    static const std::set<std::string> ops = {"+", "-", "*", "/", "%", "&", "|", "^", "<<", ">>"};
+    return ops.contains(op);
+}
+
+std::optional<std::string> contextual_numeric_binary_type(const FunctionScope& scope,
+                                                          const Expr& left_expr,
+                                                          const std::string& left,
+                                                          const Expr& right_expr,
+                                                          const std::string& right) {
+    if (is_numeric_literal_expr(left_expr) && is_numeric_type_name(scope.symbols, right) &&
+        can_assign_ast(scope, right, left_expr, left)) {
+        return right;
+    }
+    if (is_numeric_literal_expr(right_expr) && is_numeric_type_name(scope.symbols, left) &&
+        can_assign_ast(scope, left, right_expr, right)) {
+        return left;
+    }
+    return std::nullopt;
+}
+
+} // namespace
+
 [[noreturn]] void sema_expr_fail(const SourceLocation& location, const std::string& message) {
     throw CompileError(location, message);
 }
@@ -163,6 +202,10 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
             return "bool";
         }
         if (is_comparison_op(expr.op)) {
+            if (contextual_numeric_binary_type(scope, expr.children[0], left, expr.children[1],
+                                               right)) {
+                return "bool";
+            }
             if (const auto signature =
                     binary_operator_signature(scope.symbols, expr.op, left, expr.children[1],
                                               right)) {
@@ -190,6 +233,13 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                                "comparison " + expr.op + " expects " + left + ", got " + right);
             }
             return "bool";
+        }
+        if (is_arithmetic_op(expr.op)) {
+            if (const auto contextual =
+                    contextual_numeric_binary_type(scope, expr.children[0], left, expr.children[1],
+                                                   right)) {
+                return *contextual;
+            }
         }
         if (const auto signature =
                 binary_operator_signature(scope.symbols, expr.op, left, expr.children[1], right)) {

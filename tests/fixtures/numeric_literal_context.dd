@@ -1,0 +1,18 @@
+class Vec3:
+    x: f32
+    y: f32
+    z: f32
+
+
+def takes_f32(value: f32) -> f32:
+    return value
+
+
+def main() -> i32:
+    v = Vec3(0.95, 0.35, 0.22)
+    t = takes_f32(1.35)
+    x = v.x * 1.35
+    y = 0.5 * (v.y + 1.0)
+    if x > 0.0 and y > 0.0 and t > 0.0:
+        return 0
+    return 1
