@@ -578,6 +578,9 @@ push. They are not release packaging work.
    TypeRef-backed assignment checks now infer RHS expressions as `TypeRef`
    first, use structured type assignment before compatibility fallback, and
    render only for legacy assignment/literal checks and diagnostics.
+   Generic function/method inference now requires typed expression callbacks and
+   no longer falls back to inferring rendered argument type strings and parsing
+   them back into `TypeRef`.
 
 3. OOP Surface Cleanup
 

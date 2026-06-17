@@ -403,6 +403,9 @@ Already structured:
 - TypeRef-backed assignment checks now infer RHS expressions as `TypeRef`
   first, use structured type assignment before compatibility fallback, and
   render only for legacy assignment/literal checks and diagnostics
+- generic function/method inference now requires typed expression callbacks and
+  no longer falls back to inferring rendered argument type strings and parsing
+  them back into `TypeRef`
 - type compatibility has AST overloads for simple literals and list/set/dict
   literals, including expected-type disambiguation for empty `{}` dict
   initializers, reducing reliance on string parsing for assignment checks

@@ -14,7 +14,7 @@ namespace dudu {
 struct GenericInferCallbacks {
     std::function<std::string(const FunctionScope&, const Expr&, const SourceLocation*)> infer_expr;
     std::function<TypeRef(const FunctionScope&, const Expr&, const SourceLocation*)>
-        infer_expr_type = {};
+        infer_expr_type;
     std::function<bool(const FunctionScope&, const std::string&, const Expr&, const std::string&)>
         can_assign;
 };

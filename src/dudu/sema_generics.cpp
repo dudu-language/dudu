@@ -88,11 +88,7 @@ bool infer_generic_binding(const TypeRef& param_type, const TypeRef& arg_type,
 
 TypeRef infer_callback_expr_type(const GenericInferCallbacks& callbacks, const FunctionScope& scope,
                                  const Expr& expr, const SourceLocation* location) {
-    if (callbacks.infer_expr_type) {
-        return callbacks.infer_expr_type(scope, expr, location);
-    }
-    return parse_type_text(callbacks.infer_expr(scope, expr, location),
-                           node_location(location == nullptr ? expr.location : *location, expr));
+    return callbacks.infer_expr_type(scope, expr, location);
 }
 
 } // namespace
@@ -150,8 +146,9 @@ infer_generic_call_type_args(const FunctionScope& scope, const FunctionDecl& fn,
     out.reserve(fn.generic_params.size());
     for (const std::string& param : fn.generic_params) {
         const auto binding = bindings.find(param);
-        const std::string binding_text =
-            binding == bindings.end() ? std::string{} : substitute_type_ref_text(binding->second, {});
+        const std::string binding_text = binding == bindings.end()
+                                             ? std::string{}
+                                             : substitute_type_ref_text(binding->second, {});
         if (binding == bindings.end() || binding_text.empty() || binding_text == "auto" ||
             binding_text == "list" || binding_text == "dict" || binding_text == "set") {
             if (location != nullptr) {
@@ -209,8 +206,8 @@ std::optional<std::vector<TypeRef>> infer_generic_method_type_args_from_type_ref
     std::map<std::string, TypeRef> bindings;
     for (size_t i = 0; i < arg_types.size(); ++i) {
         std::string error;
-        if (!infer_generic_binding(method.params[first_param + i].type_ref,
-                                   arg_types[i], method.generic_params, bindings, error)) {
+        if (!infer_generic_binding(method.params[first_param + i].type_ref, arg_types[i],
+                                   method.generic_params, bindings, error)) {
             if (location != nullptr) {
                 sema_fail(*location, error + " for " + callee);
             }
@@ -232,8 +229,9 @@ std::optional<std::vector<TypeRef>> infer_generic_method_type_args_from_type_ref
     out.reserve(method.generic_params.size());
     for (const std::string& param : method.generic_params) {
         const auto binding = bindings.find(param);
-        const std::string binding_text =
-            binding == bindings.end() ? std::string{} : substitute_type_ref_text(binding->second, {});
+        const std::string binding_text = binding == bindings.end()
+                                             ? std::string{}
+                                             : substitute_type_ref_text(binding->second, {});
         if (binding == bindings.end() || binding_text.empty() || binding_text == "auto" ||
             binding_text == "list" || binding_text == "dict" || binding_text == "set") {
             if (location != nullptr) {

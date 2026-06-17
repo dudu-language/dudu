@@ -179,16 +179,13 @@ std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
         std::vector<TypeRef> arg_types;
         arg_types.reserve(args.size());
         for (const Expr& arg : args) {
-            arg_types.push_back(callbacks.infer_expr_type
-                                    ? callbacks.infer_expr_type(scope, arg, location)
-                                    : parse_type_text(callbacks.infer_expr(scope, arg, location),
-                                                      node_location(method.location, arg)));
+            arg_types.push_back(callbacks.infer_expr_type(scope, arg, location));
         }
         const auto inferred = infer_generic_method_type_args_from_type_refs(
             method, type + "." + method_name, arg_types, first_param,
-            expected_return.empty() ? std::nullopt
-                                    : std::optional<TypeRef>{
-                                          parse_type_text(expected_return, method.location)},
+            expected_return.empty()
+                ? std::nullopt
+                : std::optional<TypeRef>{parse_type_text(expected_return, method.location)},
             location);
         if (!inferred) {
             return std::nullopt;
