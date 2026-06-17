@@ -624,6 +624,13 @@ void test_type_ast_shape() {
     assert(signature.param_type_refs[1].name == "f32");
     assert(signature.return_type == "bool");
     assert(signature.return_type_ref.name == "bool");
+    const dudu::TypeRef signature_ref = dudu::function_type_ref(signature);
+    assert(signature_ref.kind == dudu::TypeKind::Function);
+    assert(signature_ref.children.size() == 3);
+    assert(signature_ref.children[0].name == "bool");
+    assert(signature_ref.children[1].name == "i32");
+    assert(signature_ref.children[2].name == "f32");
+    assert(dudu::substitute_type_ref_text(signature_ref, {}) == "fn(i32, f32) -> bool");
     assert(dudu::parse_function_type(dudu::parse_type_text("fn(i32)"), signature));
     assert(signature.params.size() == 1);
     assert(signature.params[0] == "i32");

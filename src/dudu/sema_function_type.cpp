@@ -27,6 +27,20 @@ std::string function_type(const FunctionSignature& signature) {
     return out.str();
 }
 
+TypeRef function_type_ref(const FunctionSignature& signature, SourceLocation location) {
+    TypeRef out;
+    out.kind = TypeKind::Function;
+    out.name = "fn";
+    out.location = location;
+    out.children.reserve(signature.params.size() + 1);
+    out.children.push_back(signature_return_type_ref(signature));
+    for (size_t i = 0; i < signature.params.size(); ++i) {
+        out.children.push_back(signature_param_type_ref(signature, i));
+    }
+    out.text = substitute_type_ref_text(out, {});
+    return out;
+}
+
 TypeRef signature_param_type_ref(const FunctionSignature& signature, size_t index) {
     if (index < signature.param_type_refs.size()) {
         return signature.param_type_refs[index];

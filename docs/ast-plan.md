@@ -1498,6 +1498,9 @@ LSP source edits are also moving to AST-owned ranges:
 - Dudu operator signatures synthesized from methods now preserve parsed
   parameter and return `TypeRef` metadata instead of carrying only rendered
   type strings.
+- Function-value typed inference now builds `TypeKind::Function` nodes from
+  `FunctionSignature` metadata directly, instead of rendering `fn(...)` text
+  and reparsing it.
 
 Expression parsing has moved onto the lexer/token stream:
 

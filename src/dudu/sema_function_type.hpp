@@ -7,6 +7,7 @@
 namespace dudu {
 
 std::string function_type(const FunctionSignature& signature);
+TypeRef function_type_ref(const FunctionSignature& signature, SourceLocation location = {});
 TypeRef signature_param_type_ref(const FunctionSignature& signature, size_t index);
 TypeRef signature_return_type_ref(const FunctionSignature& signature);
 std::string signature_return_type_text(const FunctionSignature& signature);
