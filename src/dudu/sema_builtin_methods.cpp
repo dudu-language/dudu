@@ -39,11 +39,20 @@ std::optional<std::string> first_native_template_arg_text(const std::string& typ
     return trim_copy(type.substr(open + 1, close - open - 1));
 }
 
-std::string first_type_arg(const std::string& type) {
+std::string first_type_arg(const TypeRef& type) {
+    if (const auto arg = unary_type_child_text(
+            type, {TypeKind::Atomic, TypeKind::Const, TypeKind::Volatile, TypeKind::Device,
+                   TypeKind::Storage, TypeKind::Shared})) {
+        return *arg;
+    }
     if (const auto arg = first_template_type_arg_text(type)) {
         return *arg;
     }
-    return first_native_template_arg_text(type).value_or("");
+    return first_native_template_arg_text(type.text).value_or("");
+}
+
+bool single_template_type_arg(const TypeRef& type, std::string_view name) {
+    return single_template_type_arg_text(type, name).has_value();
 }
 
 } // namespace
@@ -65,6 +74,7 @@ std::string receiver_template_type(const Symbols& symbols, std::string type) {
 bool builtin_cpp_method_signature(const Symbols& symbols, std::string receiver_type,
                                   const std::string& method_name, FunctionSignature& signature) {
     const std::string templated = receiver_template_type(symbols, std::move(receiver_type));
+    const TypeRef templated_ref = parse_type_text(templated);
     if (templated == "str" || templated == "string" || templated == "string_view" ||
         templated == "std.string" || templated == "std.string_view" || templated == "std::string" ||
         templated == "std::string_view" || templated.find("basic_string") != std::string::npos) {
@@ -81,9 +91,9 @@ bool builtin_cpp_method_signature(const Symbols& symbols, std::string receiver_t
             return true;
         }
     }
-    if (single_template_type_arg_text(templated, "list") ||
+    if (single_template_type_arg(templated_ref, "list") ||
         templated.find("vector<") != std::string::npos) {
-        const std::string item = first_type_arg(templated);
+        const std::string item = first_type_arg(templated_ref);
         if (method_name == "push_back" || method_name == "append") {
             signature.params = {item.empty() ? "auto" : item};
             signature.return_type = "void";
@@ -115,10 +125,10 @@ bool builtin_cpp_method_signature(const Symbols& symbols, std::string receiver_t
             return true;
         }
     }
-    if (single_template_type_arg_text(templated, "set") ||
+    if (single_template_type_arg(templated_ref, "set") ||
         templated.find("unordered_set<") != std::string::npos ||
         templated.find("std::set<") != std::string::npos || templated.find("set<") == 0) {
-        const std::string item = first_type_arg(templated);
+        const std::string item = first_type_arg(templated_ref);
         const std::string value_type = item.empty() ? "auto" : item;
         if (method_name == "contains") {
             signature.params = {value_type};
@@ -139,9 +149,10 @@ bool builtin_cpp_method_signature(const Symbols& symbols, std::string receiver_t
             return true;
         }
     }
-    if (starts_with(templated, "dict[") || templated.find("unordered_map<") != std::string::npos ||
+    if ((templated_ref.kind == TypeKind::Template && templated_ref.name == "dict") ||
+        templated.find("unordered_map<") != std::string::npos ||
         templated.find("std::map<") != std::string::npos || templated.find("map<") == 0) {
-        const std::string key_type = first_type_arg(templated);
+        const std::string key_type = first_type_arg(templated_ref);
         if (method_name == "contains") {
             signature.params = {key_type.empty() ? "auto" : key_type};
             signature.return_type = "bool";
@@ -156,10 +167,10 @@ bool builtin_cpp_method_signature(const Symbols& symbols, std::string receiver_t
             return true;
         }
     }
-    if (single_template_type_arg_text(templated, "Option") ||
-        single_template_type_arg_text(templated, "std.optional") ||
+    if (single_template_type_arg(templated_ref, "Option") ||
+        single_template_type_arg(templated_ref, "std.optional") ||
         templated.find("optional<") != std::string::npos) {
-        const std::string item = first_type_arg(templated);
+        const std::string item = first_type_arg(templated_ref);
         if (method_name == "has_value") {
             signature.return_type = "bool";
             return true;
@@ -169,9 +180,9 @@ bool builtin_cpp_method_signature(const Symbols& symbols, std::string receiver_t
             return true;
         }
     }
-    if (unary_type_child_text(templated, TypeKind::Atomic) ||
+    if (unary_type_child_text(templated_ref, TypeKind::Atomic) ||
         templated.find("atomic<") != std::string::npos) {
-        const std::string item = first_type_arg(templated);
+        const std::string item = first_type_arg(templated_ref);
         const std::string value_type = item.empty() ? "auto" : item;
         if (method_name == "load") {
             signature.return_type = value_type;

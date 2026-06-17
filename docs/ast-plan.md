@@ -263,6 +263,9 @@ Already structured:
   reference, and wrapper `TypeRef` nodes instead of local string-prefix loops
 - builtin method signatures for Dudu-native `list[T]` and `atomic[T]` receivers
   use parsed `TypeRef` helpers for receiver stripping and element/value types
+- builtin method signatures for Dudu-shaped `list[T]`, `set[T]`, `dict[K, V]`,
+  `Option[T]`, and `atomic[T]` receivers now read parsed `TypeRef` children
+  first, with native angle-bracket spelling kept only as imported C++ fallback
 - native C/C++ overload checks for ordinary and explicit-template parsed calls
   consume expression children directly instead of flattening arguments back to
   strings
