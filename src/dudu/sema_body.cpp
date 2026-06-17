@@ -59,6 +59,11 @@ void check_type_match(FunctionScope& scope, const std::string& expected, const E
                              FunctionScope copy = nested;
                              return callbacks.infer_expr(copy, arg, arg_location);
                          },
+                     .infer_expr_type =
+                         [&](const FunctionScope& nested, const Expr& arg,
+                             const SourceLocation* arg_location) {
+                             return callbacks.infer_expr_type(nested, arg, arg_location);
+                         },
                      .can_assign =
                          [&](const FunctionScope& nested, const std::string& nested_expected,
                              const Expr& value, const std::string& got) {
@@ -275,9 +280,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
     if (stmt.kind == StmtKind::Delete) {
         std::vector<TypeRef> arg_types;
         auto infer_type = [&](const Expr& expr) {
-            return parse_type_text(
-                callbacks.infer_expr(scope, expr, &node_location(stmt.location, expr)),
-                expr.location);
+            return callbacks.infer_expr_type(scope, expr, &node_location(stmt.location, expr));
         };
         if (stmt.value_expr.kind == ExprKind::TupleLiteral) {
             for (const Expr& child : stmt.value_expr.children)
