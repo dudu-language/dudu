@@ -336,6 +336,10 @@ Already structured:
 - annotated assignment compatibility now parses inferred Dudu-shaped `got`
   types back into `TypeRef` nodes and tries structural compatibility before
   falling back to native spelling compatibility
+- string-facing type and assignment compatibility now try parsed structural
+  `TypeRef` matching before spelling fallback, so callers that still pass type
+  strings get the AST path for Dudu-shaped pointer, reference, wrapper,
+  template, fixed-array, and function types
 - pointer/reference assignment compatibility uses parsed `TypeRef` pointer,
   reference, and const-wrapper nodes instead of testing `*`, `&`, and
   `*const[...]` spelling by hand

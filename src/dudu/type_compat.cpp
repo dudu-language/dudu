@@ -277,6 +277,11 @@ bool is_value_from_const(std::string expected, std::string got) {
 bool type_assignment_allowed(const std::string& expected, const std::string& got) {
     const std::string normalized_expected = normalize_cpp_type_artifacts(expected);
     const std::string normalized_got = normalize_cpp_type_artifacts(got);
+    if (!normalized_expected.empty() && !normalized_got.empty() &&
+        structural_type_assignment_allowed(parse_type_text(normalized_expected),
+                                           parse_type_text(normalized_got))) {
+        return true;
+    }
     return normalized_expected == "auto" || normalized_got.empty() || normalized_got == "auto" ||
            normalized_got == normalized_expected ||
            compact_type(normalized_expected) == compact_type(normalized_got) ||
@@ -306,6 +311,10 @@ bool assignment_type_allowed(const std::string& expected, const Expr& expr,
     const std::string normalized_expected = normalize_cpp_type_artifacts(expected);
     const std::string normalized_got = normalize_cpp_type_artifacts(got);
     const TypeRef expected_ref = parse_type_text(normalized_expected);
+    if (!normalized_got.empty() && normalized_got != "auto" &&
+        structural_type_assignment_allowed(expected_ref, parse_type_text(normalized_got))) {
+        return true;
+    }
     return normalized_expected == "auto" || is_explicit_cast_to(normalized_expected, expr) ||
            parsed_expected_literal_assignment_allowed(expected_ref, expr, normalized_got) ||
            (!is_container_literal_expr(expr) && normalized_got.empty()) ||
