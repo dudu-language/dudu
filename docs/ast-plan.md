@@ -521,6 +521,8 @@ Already structured:
   compatibility fallback, and exposes a parsed `TypeRef` path for native
   template placeholder binding; native signature matching no longer accepts a
   string expression inference callback
+- explicit native template placeholder discovery now walks parsed return and
+  parameter `TypeRef` nodes before falling back to native spelling scans
 - native overload matching also checks numeric promotion through parsed
   parameter and argument `TypeRef` nodes before falling back to rendered native
   spelling
