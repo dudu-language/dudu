@@ -63,6 +63,9 @@ Already structured:
 - generic argument inference gets candidate parameter and argument names through
   a shared parsed `TypeRef` head-name helper instead of open-coding
   `name`/`text` fallback logic
+- generic argument inference stores inferred bindings as `TypeRef` nodes, so
+  successful function and method generic inference returns structured type
+  arguments instead of reparsing rendered binding text
 - shared template and unary type child helpers render parsed `TypeRef` children
   structurally instead of returning raw child text
 - array shape inference and static field type extraction render parsed

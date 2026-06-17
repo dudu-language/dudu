@@ -27,15 +27,15 @@ bool generic_param_named(const std::vector<std::string>& params, const std::stri
 
 bool infer_generic_binding(const TypeRef& param_type, const TypeRef& arg_type,
                            const std::vector<std::string>& params,
-                           std::map<std::string, std::string>& bindings, std::string& error) {
+                           std::map<std::string, TypeRef>& bindings, std::string& error) {
     const std::string param = type_ref_head_name(param_type);
     const std::string arg = type_ref_head_name(arg_type);
     if (generic_param_named(params, param)) {
         const std::string arg_text = substitute_type_ref_text(arg_type, {});
-        const auto [it, inserted] = bindings.emplace(param, arg_text);
-        if (!inserted && it->second != arg_text) {
-            error = "conflicting inferred type argument " + param + ": " + it->second + " vs " +
-                    arg_text;
+        const auto [it, inserted] = bindings.emplace(param, arg_type);
+        if (!inserted && substitute_type_ref_text(it->second, {}) != arg_text) {
+            error = "conflicting inferred type argument " + param + ": " +
+                    substitute_type_ref_text(it->second, {}) + " vs " + arg_text;
             return false;
         }
         return true;
@@ -125,7 +125,7 @@ infer_generic_call_type_args(const FunctionScope& scope, const FunctionDecl& fn,
     if (args.size() != fn.params.size()) {
         return std::nullopt;
     }
-    std::map<std::string, std::string> bindings;
+    std::map<std::string, TypeRef> bindings;
     for (size_t i = 0; i < fn.params.size(); ++i) {
         const std::string got = callbacks.infer_expr(scope, args[i], location);
         std::string error;
@@ -141,15 +141,16 @@ infer_generic_call_type_args(const FunctionScope& scope, const FunctionDecl& fn,
     out.reserve(fn.generic_params.size());
     for (const std::string& param : fn.generic_params) {
         const auto binding = bindings.find(param);
-        if (binding == bindings.end() || binding->second.empty() || binding->second == "auto" ||
-            binding->second == "list" || binding->second == "dict" || binding->second == "set") {
+        const std::string binding_text =
+            binding == bindings.end() ? std::string{} : substitute_type_ref_text(binding->second, {});
+        if (binding == bindings.end() || binding_text.empty() || binding_text == "auto" ||
+            binding_text == "list" || binding_text == "dict" || binding_text == "set") {
             if (location != nullptr) {
                 sema_fail(*location, "cannot infer type argument " + param + " for " + callee);
             }
             return std::nullopt;
         }
-        out.push_back(
-            parse_type_text(binding->second, location == nullptr ? fn.location : *location));
+        out.push_back(binding->second);
     }
     return out;
 }
@@ -196,7 +197,7 @@ std::optional<std::vector<TypeRef>> infer_generic_method_type_args_from_types(
     if (arg_types.size() != expected_args) {
         return std::nullopt;
     }
-    std::map<std::string, std::string> bindings;
+    std::map<std::string, TypeRef> bindings;
     for (size_t i = 0; i < arg_types.size(); ++i) {
         std::string error;
         if (!infer_generic_binding(method.params[first_param + i].type_ref,
@@ -223,15 +224,16 @@ std::optional<std::vector<TypeRef>> infer_generic_method_type_args_from_types(
     out.reserve(method.generic_params.size());
     for (const std::string& param : method.generic_params) {
         const auto binding = bindings.find(param);
-        if (binding == bindings.end() || binding->second.empty() || binding->second == "auto" ||
-            binding->second == "list" || binding->second == "dict" || binding->second == "set") {
+        const std::string binding_text =
+            binding == bindings.end() ? std::string{} : substitute_type_ref_text(binding->second, {});
+        if (binding == bindings.end() || binding_text.empty() || binding_text == "auto" ||
+            binding_text == "list" || binding_text == "dict" || binding_text == "set") {
             if (location != nullptr) {
                 sema_fail(*location, "cannot infer type argument " + param + " for " + callee);
             }
             return std::nullopt;
         }
-        out.push_back(
-            parse_type_text(binding->second, location == nullptr ? method.location : *location));
+        out.push_back(binding->second);
     }
     return out;
 }
