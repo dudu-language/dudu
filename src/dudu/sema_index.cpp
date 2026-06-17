@@ -14,17 +14,17 @@
 namespace dudu {
 namespace {
 
-std::string unwrap_reference_and_const(std::string type) {
-    type = trim(std::move(type));
-    TypeRef parsed = parse_type_text(type);
-    if (parsed.kind == TypeKind::Reference && parsed.children.size() == 1) {
-        type = substitute_type_ref_text(parsed.children.front(), {});
-        parsed = parse_type_text(type);
-    }
-    if (parsed.kind == TypeKind::Const && parsed.children.size() == 1) {
-        type = substitute_type_ref_text(parsed.children.front(), {});
+TypeRef unwrap_reference_and_const(TypeRef type) {
+    while ((type.kind == TypeKind::Reference || type.kind == TypeKind::Const) &&
+           type.children.size() == 1) {
+        type = type.children.front();
     }
     return type;
+}
+
+std::string unwrap_reference_and_const(std::string type) {
+    return substitute_type_ref_text(
+        unwrap_reference_and_const(parse_type_text(trim(std::move(type)))), {});
 }
 
 bool foreign_indexable_type(const std::string& type) {
@@ -349,8 +349,7 @@ std::string indexed_type_from_type(const Symbols& symbols, const SourceLocation&
                                    const std::string& label) {
     std::string type = resolve_alias(symbols, raw_type);
     const TypeRef type_ref = parse_type_text(type);
-    const std::string unwrapped_input_type = unwrap_reference_and_const(type);
-    const TypeRef unwrapped_type_ref = parse_type_text(unwrapped_input_type);
+    const TypeRef unwrapped_type_ref = unwrap_reference_and_const(type_ref);
     if (is_channel_slice_expr(index_expr)) {
         const std::vector<size_t> shape = explicit_array_shape(unwrapped_type_ref);
         if (shape.size() == 3) {
@@ -389,8 +388,9 @@ std::string iterable_value_type(const Symbols& symbols,
     if (local == locals.end()) {
         return {};
     }
-    const std::string type = unwrap_reference_and_const(resolve_alias(symbols, local->second));
-    if (const auto element = iterable_type_from_type_ref(parse_type_text(type))) {
+    const TypeRef type =
+        unwrap_reference_and_const(parse_type_text(resolve_alias(symbols, local->second)));
+    if (const auto element = iterable_type_from_type_ref(type)) {
         return *element;
     }
     return {};
@@ -432,8 +432,7 @@ void check_iterable_binding(const Symbols& symbols,
     if (!type_assignment_allowed(binding_type, element_type) &&
         !type_assignment_allowed(resolve_alias(symbols, binding_text),
                                  resolve_alias(symbols, element))) {
-        throw CompileError(location,
-                           "loop binding expects " + binding_text + ", got " + element);
+        throw CompileError(location, "loop binding expects " + binding_text + ", got " + element);
     }
 }
 

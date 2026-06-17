@@ -531,7 +531,9 @@ push. They are not release packaging work.
    parsed callers to stringify only to reparse immediately.
    String-facing index type inference now parses the resolved input type once
    and reuses that `TypeRef` for shape/slice/index checks before crossing the
-   remaining native/operator spelling fallback. Emitted local index type
+   remaining native/operator spelling fallback. Index and iterable inference
+   now unwrap reference/const receivers through parsed `TypeRef` nodes instead
+   of reparsing rendered unwrapped text. Emitted local index type
    inference now tries parsed `TypeRef` handling before falling back to
    native-spelling string template extraction. Template call
    sema and codegen now consume parser-produced `template_type_args` directly

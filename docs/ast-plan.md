@@ -250,6 +250,9 @@ Already structured:
 - indexed and iterable element inference reads parsed `TypeRef` wrappers and
   template children for `list[T]`, `dict[K, V]`, `span[T]`, and storage-like
   wrappers instead of slicing those type strings directly
+- index and iterable inference unwrap reference/const receivers through
+  parsed `TypeRef` nodes, keeping the text wrapper only as a compatibility
+  boundary for callers that still pass rendered types
 - indexed and iterable fallback element extraction for references, pointers,
   fixed arrays, and single-argument template containers renders parsed
   `TypeRef` children through the shared type helper instead of reading child
