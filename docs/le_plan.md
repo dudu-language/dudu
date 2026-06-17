@@ -440,7 +440,15 @@ push. They are not release packaging work.
    expression, and type AST nodes. This unlocks better errors, fix-its, semantic
    highlighting, LSP quality, native Dudu generics, and structured macros.
 
-   Status: normal template-call emission lowers bracket arguments from parsed
+   Status: block parsing now routes keyword/control statements through a
+   token-directed statement parser instead of classifying those statements from
+   raw line text. `return`, `if`, `elif`, `else`, `match`, `case`, `while`,
+   `for`, `try`, `except`, `raise`, `delete`, `assert`, `debug_assert`,
+   `cpp(...)`, `pass`, `break`, `continue`, and unsupported local-only Python
+   statements now get their statement kind and parsed fields from parser state.
+   Var declarations, assignments, compound assignments, and bare expression
+   statements still use the legacy `statement_from_text` compatibility path and
+   are the next statement forms to migrate. Normal template-call emission lowers bracket arguments from parsed
    `TypeRef` nodes, including non-type value arguments, instead of falling back
    to raw expression text. Parsed method calls on pointer-typed member
    receivers such as `self.left.backward(...)` lower through member-path type

@@ -13,7 +13,6 @@ class Parser {
 
     ModuleAst parse();
 
-  private:
     struct JoinedTokens {
         std::string text;
         std::string source_text;
@@ -21,6 +20,7 @@ class Parser {
         bool has_tokens = false;
     };
 
+  private:
     std::span<const Token> tokens_;
     size_t cursor_ = 0;
 
@@ -59,8 +59,12 @@ class Parser {
     StaticAssertDecl parse_static_assert();
 
     std::vector<Stmt> parse_statement_block();
+    Stmt parse_statement(std::vector<Stmt> children);
     std::string join_until(std::initializer_list<TokenKind> stops);
     JoinedTokens join_until_with_range(std::initializer_list<TokenKind> stops);
+    JoinedTokens join_tokens(size_t begin, size_t end) const;
+    JoinedTokens join_until_top_level_identifier(std::string_view identifier,
+                                                 std::initializer_list<TokenKind> stops);
 };
 
 } // namespace dudu

@@ -7,13 +7,6 @@
 namespace dudu {
 namespace {
 
-SourceRange range_for_line_text(SourceLocation location, std::string_view text) {
-    return {.start = location,
-            .end = {.file = location.file,
-                    .line = location.line,
-                    .column = location.column + static_cast<int>(text.size())}};
-}
-
 SourceLocation token_end_location(const Token& token) {
     SourceLocation end = token.location;
     for (const char c : token.text) {
@@ -259,32 +252,6 @@ std::string Parser::parse_path() {
     return out;
 }
 
-std::vector<Stmt> Parser::parse_statement_block() {
-    std::vector<Stmt> out;
-    if (!match(TokenKind::Indent)) {
-        return out;
-    }
-    while (!at(TokenKind::Dedent) && !at(TokenKind::End)) {
-        if (match(TokenKind::Newline)) {
-            continue;
-        }
-        const SourceLocation location = current().location;
-        JoinedTokens joined = join_until_with_range({TokenKind::Newline});
-        std::string text = std::move(joined.text);
-        const SourceRange range =
-            joined.has_tokens ? joined.range : range_for_line_text(location, text);
-        consume(TokenKind::Newline, "expected newline after statement");
-        std::vector<Stmt> children;
-        if (at(TokenKind::Indent)) {
-            children = parse_statement_block();
-        }
-        out.push_back(statement_from_text(std::move(text), std::move(joined.source_text), location,
-                                          range, std::move(children)));
-    }
-    consume(TokenKind::Dedent, "expected dedent after block");
-    return out;
-}
-
 std::string Parser::join_until(std::initializer_list<TokenKind> stops) {
     return join_until_with_range(stops).text;
 }
@@ -343,6 +310,34 @@ Parser::JoinedTokens Parser::join_until_with_range(std::initializer_list<TokenKi
             --brace_depth;
         }
         ++cursor_;
+    }
+    joined.text = out.str();
+    joined.source_text = source_out.str();
+    return joined;
+}
+
+Parser::JoinedTokens Parser::join_tokens(size_t begin, size_t end) const {
+    JoinedTokens joined;
+    std::ostringstream out;
+    std::ostringstream source_out;
+    SourceLocation source_cursor;
+    bool first = true;
+    TokenKind previous_kind = TokenKind::End;
+    for (size_t index = begin; index < end && index < tokens_.size(); ++index) {
+        const Token& token = tokens_[index];
+        if (!joined.has_tokens) {
+            joined.range.start = token.location;
+            source_cursor = token.location;
+            joined.has_tokens = true;
+        }
+        joined.range.end = token_end_location(token);
+        append_source_token(source_out, source_cursor, token);
+        if (!first && parser_needs_space_between(previous_kind, token.kind)) {
+            out << ' ';
+        }
+        out << token.text;
+        first = false;
+        previous_kind = token.kind;
     }
     joined.text = out.str();
     joined.source_text = source_out.str();
