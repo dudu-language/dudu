@@ -81,6 +81,74 @@ std::optional<TypeRef> type_shape_builtin_type_ref(const FunctionScope& scope, c
     return named_type_ref("usize", expr.location);
 }
 
+bool call_arity_between(const Expr& expr, const SourceLocation* location, std::string_view callee,
+                        const size_t min, const size_t max) {
+    if (expr.children.size() >= min && expr.children.size() <= max) {
+        return true;
+    }
+    if (location != nullptr) {
+        sema_expr_fail(*location,
+                       std::string(callee) + " expects " +
+                           (min == max ? std::to_string(min)
+                                       : std::to_string(min) + " to " + std::to_string(max)) +
+                           " arguments, got " + std::to_string(expr.children.size()));
+    }
+    return false;
+}
+
+std::optional<TypeRef> direct_builtin_call_type_ref(const FunctionScope& scope, const Expr& expr,
+                                                    std::string_view callee,
+                                                    const SourceLocation* location) {
+    if (callee == "len") {
+        call_arity_between(expr, location, callee, 1, 1);
+        for (const Expr& arg : expr.children) {
+            (void)infer_expr_type_ast(scope, arg, location);
+        }
+        return named_type_ref("usize", expr.location);
+    }
+    if (callee == "range") {
+        call_arity_between(expr, location, callee, 1, 3);
+        for (const Expr& arg : expr.children) {
+            (void)infer_expr_type_ast(scope, arg, location);
+        }
+        return named_type_ref("range", expr.location);
+    }
+    if (callee == "min" || callee == "max") {
+        call_arity_between(expr, location, callee, 2, 2);
+        if (expr.children.empty()) {
+            return TypeRef{};
+        }
+        const TypeRef first = infer_expr_type_ast(scope, expr.children.front(), location);
+        for (size_t i = 1; i < expr.children.size(); ++i) {
+            const TypeRef got_ref = infer_expr_type_ast(scope, expr.children[i], location);
+            const std::string got = substitute_type_ref_text(got_ref, {});
+            if (location != nullptr && !can_assign_ast(scope, first, expr.children[i], got)) {
+                sema_expr_fail(*location, std::string(callee) + " argument " +
+                                              std::to_string(i + 1) + " expects " +
+                                              substitute_type_ref_text(first, {}) + ", got " + got);
+            }
+        }
+        return first;
+    }
+    if (callee == "print") {
+        for (const Expr& arg : expr.children) {
+            (void)infer_expr_type_ast(scope, arg, location);
+        }
+        return void_type_ref(expr.location);
+    }
+    if (is_deallocation_call(callee)) {
+        std::vector<TypeRef> types;
+        for (const Expr& arg : expr.children) {
+            types.push_back(infer_expr_type_ast(scope, arg, location));
+        }
+        if (location != nullptr) {
+            check_deallocation_args(*location, callee, types);
+        }
+        return void_type_ref(expr.location);
+    }
+    return std::nullopt;
+}
+
 } // namespace
 
 std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Expr& expr,
@@ -137,6 +205,9 @@ std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Ex
                 return can_assign_ast(scope, expected, value, got);
             })) {
         return signature_return_type_ref(*signature);
+    }
+    if (is_builtin_call(callee)) {
+        return direct_builtin_call_type_ref(scope, expr, callee, location);
     }
     if (known_template_constructor_type(scope, callee)) {
         if (const auto klass = scope.symbols.classes.find(resolve_alias(scope.symbols, callee));
