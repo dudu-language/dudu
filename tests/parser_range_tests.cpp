@@ -13,8 +13,9 @@ void test_statement_source_range_uses_token_span() {
                                                       "statement_range.dd");
     const dudu::FunctionDecl& main = module.functions.front();
     const dudu::Stmt& assign = main.statements.front();
-    assert(assign.text == "value = add(1, 2)");
     assert(assign.source_text == "value   =    add(1, 2)");
+    assert(assign.target_expr.text == "value");
+    assert(assign.value_expr.text == "add(1, 2)");
     assert(assign.range.start.line == 2);
     assert(assign.range.start.column == 5);
     assert(assign.range.end.line == 2);

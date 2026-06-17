@@ -154,7 +154,6 @@ struct FieldDecl {
 
 struct Stmt {
     StmtKind kind = StmtKind::Unknown;
-    std::string text;
     std::string source_text;
     std::string name;
     std::string type;

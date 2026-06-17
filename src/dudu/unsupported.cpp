@@ -115,10 +115,8 @@ void check_statement(const Stmt& stmt) {
                            "unsupported Python feature: " + stmt.unsupported_feature);
     }
     if (stmt.kind == StmtKind::Unknown) {
-        if (!trim_copy(stmt.text).empty()) {
-            throw CompileError(stmt.location, "unsupported statement: " + trim_copy(stmt.text));
-        }
-        check_unsupported_text(stmt.location, trim_copy(stmt.text));
+        throw CompileError(stmt.location, "unsupported statement kind: " +
+                                              std::string(statement_kind_name(stmt.kind)));
     } else {
         check_expr(stmt.expr);
         check_expr(stmt.value_expr);

@@ -107,7 +107,6 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         emit_cpp_escape(out, stmt.cpp_body, depth);
         return;
     }
-    const std::string text = trim_copy(stmt.text);
     if (stmt.kind == StmtKind::Pass) {
         out << indent(depth) << "(void)0;\n";
         return;
@@ -299,7 +298,9 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         return;
     }
     if (stmt.kind == StmtKind::Unknown) {
-        throw CompileError(stmt.location, "unsupported statement: " + trim_copy(stmt.text));
+        throw CompileError(stmt.location,
+                           "unsupported statement kind: " +
+                               std::string(statement_kind_name(stmt.kind)));
     }
 }
 

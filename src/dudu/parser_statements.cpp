@@ -142,12 +142,11 @@ std::string_view unsupported_feature_for_token(const Token& token) {
 }
 
 void attach_statement_source(Stmt& stmt, const Parser::JoinedTokens& joined) {
-    stmt.text = joined.text;
     stmt.source_text = joined.source_text.empty() ? joined.text : joined.source_text;
     if (joined.has_tokens) {
         stmt.range = joined.range;
     } else {
-        stmt.range = range_for_text(stmt.location, stmt.text);
+        stmt.range = range_for_text(stmt.location, stmt.source_text);
     }
 }
 
@@ -339,8 +338,9 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
     if (check_text("cpp")) {
         stmt.kind = StmtKind::CppEscape;
         join_until_with_range({TokenKind::Newline});
-        attach_statement_source(stmt, join_tokens(begin, cursor_));
-        stmt.cpp_body = cpp_escape_body(stmt.text);
+        const JoinedTokens source = join_tokens(begin, cursor_);
+        stmt.cpp_body = cpp_escape_body(source.text);
+        attach_statement_source(stmt, source);
         return stmt;
     }
 
