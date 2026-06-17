@@ -88,8 +88,7 @@ ClassDecl imported_class_shape(ClassDecl klass, const std::string& name,
     klass.name = name;
     klass.location = location;
     for (FieldDecl& field : klass.fields) {
-        field.type = substitute_type_ref_text(field.type_ref, type_substitutions);
-        field.type_ref = parse_type_text(field.type, field.location);
+        field.type_ref = substitute_type_ref(field.type_ref, type_substitutions);
     }
     for (ConstDecl& constant : klass.constants) {
         constant.type_ref = substitute_type_ref(constant.type_ref, type_substitutions);

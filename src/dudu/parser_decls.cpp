@@ -80,9 +80,10 @@ ClassDecl Parser::parse_class(const Token& start, Visibility visibility,
             }
             ConstDecl static_field;
             static_field.name = field.name;
-            static_field.type_ref = field.type_ref.children.empty()
-                                        ? make_type(TypeKind::Unknown, field.type, field.location)
-                                        : field.type_ref.children[0];
+            static_field.type_ref =
+                field.type_ref.children.empty()
+                    ? make_type(TypeKind::Unknown, type_ref_text(field.type_ref), field.location)
+                    : field.type_ref.children[0];
             static_field.value_expr = field.value_expr;
             static_field.location = field.location;
             klass.static_fields.push_back(std::move(static_field));
@@ -102,8 +103,7 @@ FieldDecl Parser::parse_field() {
     field.location = name.location;
     consume(TokenKind::Colon, "expected : after field name");
     const JoinedTokens type = join_until_with_range({TokenKind::Assign, TokenKind::Newline});
-    field.type = type.text;
-    if (field.type.empty()) {
+    if (type.text.empty()) {
         throw CompileError(name.location, "field requires a type");
     }
     field.type_ref = parse_type_piece(type);

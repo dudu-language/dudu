@@ -80,7 +80,7 @@ std::vector<Symbol> symbols_for_document(const Document& doc, bool include_nativ
                            .kind = 5});
             for (const FieldDecl& field : klass.fields) {
                 out.push_back({.name = field.name,
-                               .detail = field.name + ": " + field.type,
+                               .detail = field.name + ": " + type_ref_text(field.type_ref),
                                .location = field.location,
                                .kind = 8});
             }

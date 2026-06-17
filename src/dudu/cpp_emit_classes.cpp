@@ -53,7 +53,8 @@ void visit_class(const std::vector<ClassDecl>& classes, size_t index, std::set<s
 
     for (const FieldDecl& field : classes[index].fields) {
         for (size_t dep = 0; dep < classes.size(); ++dep) {
-            if (dep != index && contains_type_name(field.type, classes[dep].name)) {
+            if (dep != index &&
+                contains_type_name(type_ref_text(field.type_ref), classes[dep].name)) {
                 visit_class(classes, dep, visiting, emitted, order);
             }
         }

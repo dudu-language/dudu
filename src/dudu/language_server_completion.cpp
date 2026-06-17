@@ -139,7 +139,7 @@ std::string member_completion_json(const Document& doc, const std::string& targe
                 continue;
             }
             for (const FieldDecl& field : klass.fields) {
-                add(field.name, 5, field.name + ": " + field.type);
+                add(field.name, 5, field.name + ": " + type_ref_text(field.type_ref));
             }
             for (const ConstDecl& constant : klass.constants) {
                 add(constant.name, 21, constant.name + ": " + type_ref_text(constant.type_ref));
@@ -158,7 +158,7 @@ std::string member_completion_json(const Document& doc, const std::string& targe
                 continue;
             }
             for (const FieldDecl& field : klass.fields) {
-                add(field.name, 5, field.name + ": " + field.type);
+                add(field.name, 5, field.name + ": " + type_ref_text(field.type_ref));
             }
             for (const FunctionDecl& method : klass.methods) {
                 add(method.name, is_constructor_method_name(method.name) ? 4 : 2,

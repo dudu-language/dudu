@@ -50,7 +50,9 @@ std::vector<ConstructorParam> constructor_params(const ClassDecl& klass) {
 
     std::vector<ConstructorParam> out;
     for (const FieldDecl& field : klass.fields) {
-        out.push_back({.name = field.name, .type = field.type, .type_ref = field.type_ref});
+        out.push_back({.name = field.name,
+                       .type = type_ref_text(field.type_ref),
+                       .type_ref = field.type_ref});
     }
     return out;
 }

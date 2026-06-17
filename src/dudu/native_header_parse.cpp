@@ -278,7 +278,6 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         const std::string type = qualify_scoped_type(scan, namespaces, dudu_type(match[2].str()));
         scan.classes[classes.back().second].fields.push_back(
             {.name = match[1].str(),
-             .type = type,
              .type_ref = parse_type_text(type, decl_location),
              .value_expr = {},
              .location = decl_location});
