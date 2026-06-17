@@ -1,5 +1,6 @@
-#include "dudu/ast_type.hpp"
+#include "dudu/ast_expr.hpp"
 #include "dudu/ast_parse_utils.hpp"
+#include "dudu/ast_type.hpp"
 #include "dudu/parser_internal.hpp"
 #include "dudu/parser_utils.hpp"
 
@@ -76,7 +77,7 @@ ClassDecl Parser::parse_class(const Token& start, Visibility visibility,
         require_no_decorators(member_decorators, "field");
         FieldDecl field = parse_field();
         if (field.type_ref.kind == TypeKind::Static) {
-            if (field.value.empty()) {
+            if (field.value_expr.kind == ExprKind::Unknown) {
                 throw CompileError(field.location, "static field requires an initializer");
             }
             ConstDecl static_field;
@@ -84,11 +85,10 @@ ClassDecl Parser::parse_class(const Token& start, Visibility visibility,
             static_field.type = field.type_ref.children.empty()
                                     ? field.type
                                     : substitute_type_ref_text(field.type_ref.children[0], {});
-            static_field.type_ref = field.type_ref.children.empty()
-                                        ? make_type(TypeKind::Unknown, static_field.type,
-                                                    field.location)
-                                        : field.type_ref.children[0];
-            static_field.value = field.value;
+            static_field.type_ref =
+                field.type_ref.children.empty()
+                    ? make_type(TypeKind::Unknown, static_field.type, field.location)
+                    : field.type_ref.children[0];
             static_field.value_expr = field.value_expr;
             static_field.location = field.location;
             klass.static_fields.push_back(std::move(static_field));
@@ -115,7 +115,6 @@ FieldDecl Parser::parse_field() {
     field.type_ref = parse_type_piece(type);
     if (match(TokenKind::Assign)) {
         const JoinedTokens value = join_until_with_range({TokenKind::Newline});
-        field.value = value.text;
         field.value_expr = parse_expr_piece(value);
     }
     consume(TokenKind::Newline, "expected newline after field");

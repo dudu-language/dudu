@@ -1,3 +1,4 @@
+#include "dudu/ast_expr.hpp"
 #include "dudu/cpp_emit.hpp"
 #include "dudu/cpp_emit_modules.hpp"
 #include "dudu/cpp_lower.hpp"
@@ -748,7 +749,8 @@ void test_class_field_defaults_and_static_fields() {
     const dudu::ClassDecl& counter = module.classes.front();
     assert(counter.fields.size() == 1);
     assert(counter.fields[0].name == "value");
-    assert(counter.fields[0].value == "7");
+    assert(counter.fields[0].value_expr.kind == dudu::ExprKind::IntLiteral);
+    assert(counter.fields[0].value_expr.value == "7");
     assert(counter.static_fields.size() == 1);
     assert(counter.static_fields[0].name == "count");
     assert(counter.static_fields[0].type == "i32");

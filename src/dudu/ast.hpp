@@ -174,7 +174,6 @@ struct Decorator {
 struct FieldDecl {
     std::string name;
     std::string type;
-    std::string value;
     TypeRef type_ref;
     Expr value_expr;
     SourceLocation location;
