@@ -2,6 +2,7 @@
 #include "dudu/cpp_lower.hpp"
 #include "dudu/parser_internal.hpp"
 
+#include <optional>
 #include <string_view>
 
 namespace dudu {
@@ -51,6 +52,83 @@ bool has_statement_tokens_after(const std::span<const Token> tokens, size_t curs
     return false;
 }
 
+bool is_assignment_operator(const Token& token) {
+    if (token.kind == TokenKind::Assign) {
+        return true;
+    }
+    return token.kind == TokenKind::Operator && token.text.size() >= 2 &&
+           token.text.back() == '=' && token.text != "==" && token.text != "!=" &&
+           token.text != "<=" && token.text != ">=";
+}
+
+bool is_compound_assignment_operator(const Token& token) {
+    return token.kind == TokenKind::Operator && is_assignment_operator(token);
+}
+
+std::optional<size_t> find_top_level_token(std::span<const Token> tokens, size_t begin, size_t end,
+                                           TokenKind kind) {
+    int bracket_depth = 0;
+    int paren_depth = 0;
+    int brace_depth = 0;
+    for (size_t index = begin; index < end; ++index) {
+        const Token& token = tokens[index];
+        const bool inside_group = bracket_depth != 0 || paren_depth != 0 || brace_depth != 0;
+        if (!inside_group && token.kind == kind) {
+            return index;
+        }
+        if (token.kind == TokenKind::LBracket) {
+            ++bracket_depth;
+        } else if (token.kind == TokenKind::RBracket) {
+            --bracket_depth;
+        } else if (token.kind == TokenKind::LParen) {
+            ++paren_depth;
+        } else if (token.kind == TokenKind::RParen) {
+            --paren_depth;
+        } else if (token.kind == TokenKind::LBrace) {
+            ++brace_depth;
+        } else if (token.kind == TokenKind::RBrace) {
+            --brace_depth;
+        }
+    }
+    return std::nullopt;
+}
+
+std::optional<size_t> find_top_level_assignment_token(std::span<const Token> tokens, size_t begin,
+                                                      size_t end) {
+    int bracket_depth = 0;
+    int paren_depth = 0;
+    int brace_depth = 0;
+    for (size_t index = begin; index < end; ++index) {
+        const Token& token = tokens[index];
+        const bool inside_group = bracket_depth != 0 || paren_depth != 0 || brace_depth != 0;
+        if (!inside_group && is_assignment_operator(token)) {
+            return index;
+        }
+        if (token.kind == TokenKind::LBracket) {
+            ++bracket_depth;
+        } else if (token.kind == TokenKind::RBracket) {
+            --bracket_depth;
+        } else if (token.kind == TokenKind::LParen) {
+            ++paren_depth;
+        } else if (token.kind == TokenKind::RParen) {
+            --paren_depth;
+        } else if (token.kind == TokenKind::LBrace) {
+            ++brace_depth;
+        } else if (token.kind == TokenKind::RBrace) {
+            --brace_depth;
+        }
+    }
+    return std::nullopt;
+}
+
+std::string compound_assignment_op(std::string_view token_text) {
+    std::string op(token_text);
+    if (!op.empty()) {
+        op.pop_back();
+    }
+    return op;
+}
+
 std::string_view unsupported_feature_for_token(const Token& token) {
     if (token.kind != TokenKind::Identifier) {
         return {};
@@ -88,6 +166,14 @@ void parse_assert_parts(Stmt& stmt, const Parser::JoinedTokens& body) {
     }
 }
 
+void fill_expr_piece(Expr& expr, const Parser::JoinedTokens& piece) {
+    expr = parse_expr_text(piece.text, piece.range.start);
+}
+
+void fill_type_piece(TypeRef& type_ref, const Parser::JoinedTokens& piece) {
+    type_ref = parse_type_text(piece.text, piece.range.start);
+}
+
 } // namespace
 
 Parser::JoinedTokens
@@ -121,7 +207,7 @@ Parser::join_until_top_level_identifier(std::string_view identifier,
     return join_tokens(begin, cursor_);
 }
 
-Stmt Parser::parse_statement(std::vector<Stmt> children) {
+Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
     const size_t begin = cursor_;
     const Token& start = current();
     Stmt stmt;
@@ -267,9 +353,50 @@ Stmt Parser::parse_statement(std::vector<Stmt> children) {
         return stmt;
     }
 
-    JoinedTokens joined = join_until_with_range({TokenKind::Newline});
-    stmt = statement_from_text(std::move(joined.text), std::move(joined.source_text),
-                               start.location, joined.range, std::move(stmt.children));
+    const size_t line_begin = cursor_;
+    cursor_ = statement_end;
+    const size_t end = cursor_;
+    const JoinedTokens whole = join_tokens(line_begin, end);
+    attach_statement_source(stmt, whole);
+
+    const std::optional<size_t> colon =
+        find_top_level_token(tokens_, line_begin, end, TokenKind::Colon);
+    const std::optional<size_t> assignment =
+        find_top_level_assignment_token(tokens_, line_begin, end);
+    if (colon.has_value() && (!assignment.has_value() || *colon < *assignment)) {
+        stmt.kind = StmtKind::VarDecl;
+        const JoinedTokens name = join_tokens(line_begin, *colon);
+        stmt.name = name.text;
+        const size_t type_end = assignment.value_or(end);
+        const JoinedTokens type = join_tokens(*colon + 1, type_end);
+        stmt.type = type.text;
+        fill_type_piece(stmt.type_ref, type);
+        if (assignment.has_value()) {
+            const JoinedTokens value = join_tokens(*assignment + 1, end);
+            stmt.value = value.text;
+            fill_expr_piece(stmt.value_expr, value);
+        }
+        return stmt;
+    }
+
+    if (assignment.has_value()) {
+        const Token& assign = tokens_[*assignment];
+        stmt.kind =
+            is_compound_assignment_operator(assign) ? StmtKind::CompoundAssign : StmtKind::Assign;
+        if (stmt.kind == StmtKind::CompoundAssign) {
+            stmt.op = compound_assignment_op(assign.text);
+        }
+        const JoinedTokens target = join_tokens(line_begin, *assignment);
+        stmt.target = target.text;
+        fill_expr_piece(stmt.target_expr, target);
+        const JoinedTokens value = join_tokens(*assignment + 1, end);
+        stmt.value = value.text;
+        fill_expr_piece(stmt.value_expr, value);
+        return stmt;
+    }
+
+    stmt.kind = StmtKind::Expr;
+    fill_expr_piece(stmt.expr, whole);
     return stmt;
 }
 
@@ -307,13 +434,14 @@ std::vector<Stmt> Parser::parse_statement_block() {
             }
             ++cursor_;
         }
+        const size_t statement_end = cursor_;
         consume(TokenKind::Newline, "expected newline after statement");
         if (at(TokenKind::Indent)) {
             children = parse_statement_block();
         }
         const size_t after_statement = cursor_;
         cursor_ = statement_start;
-        out.push_back(parse_statement(std::move(children)));
+        out.push_back(parse_statement(std::move(children), statement_end));
         cursor_ = after_statement;
     }
     consume(TokenKind::Dedent, "expected dedent after block");

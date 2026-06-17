@@ -444,11 +444,12 @@ push. They are not release packaging work.
    token-directed statement parser instead of classifying those statements from
    raw line text. `return`, `if`, `elif`, `else`, `match`, `case`, `while`,
    `for`, `try`, `except`, `raise`, `delete`, `assert`, `debug_assert`,
-   `cpp(...)`, `pass`, `break`, `continue`, and unsupported local-only Python
-   statements now get their statement kind and parsed fields from parser state.
-   Var declarations, assignments, compound assignments, and bare expression
-   statements still use the legacy `statement_from_text` compatibility path and
-   are the next statement forms to migrate. Normal template-call emission lowers bracket arguments from parsed
+   `cpp(...)`, `pass`, `break`, `continue`, variable declarations,
+   assignments, compound assignments, bare expression statements, and
+   unsupported local-only Python statements now get their statement kind and
+   parsed fields from parser state. Normal function block parsing no longer
+   calls `statement_from_text`, and the legacy compatibility parser has been
+   removed. Normal template-call emission lowers bracket arguments from parsed
    `TypeRef` nodes, including non-type value arguments, instead of falling back
    to raw expression text. Parsed method calls on pointer-typed member
    receivers such as `self.left.backward(...)` lower through member-path type

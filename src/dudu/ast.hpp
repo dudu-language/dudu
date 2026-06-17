@@ -331,11 +331,8 @@ std::string bound_import_name(const ImportDecl& import);
 std::string_view statement_kind_name(StmtKind kind);
 std::string_view expression_kind_name(ExprKind kind);
 std::string_view type_kind_name(TypeKind kind);
-StmtKind classify_statement_text(std::string_view text);
 Expr parse_expr_text(std::string_view text, SourceLocation location = {});
 TypeRef parse_type_text(std::string_view text, SourceLocation location = {});
 std::vector<std::string> tuple_binding_names(const Expr& expr);
-Stmt statement_from_text(std::string text, std::string source_text, SourceLocation location,
-                         SourceRange range, std::vector<Stmt> children = {});
 
 } // namespace dudu

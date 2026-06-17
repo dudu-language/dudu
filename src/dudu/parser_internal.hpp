@@ -59,7 +59,7 @@ class Parser {
     StaticAssertDecl parse_static_assert();
 
     std::vector<Stmt> parse_statement_block();
-    Stmt parse_statement(std::vector<Stmt> children);
+    Stmt parse_statement(std::vector<Stmt> children, size_t statement_end);
     std::string join_until(std::initializer_list<TokenKind> stops);
     JoinedTokens join_until_with_range(std::initializer_list<TokenKind> stops);
     JoinedTokens join_tokens(size_t begin, size_t end) const;
