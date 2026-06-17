@@ -452,8 +452,8 @@ push. They are not release packaging work.
    removed. Statement mirror fields for parsed targets, iterables, match
    patterns, guards, conditions, assert messages, and general values have also
    been removed; downstream code now uses the structured expression fields, with
-   raw statement text retained only as source/trivia and explicit `cpp(...)`
-   escape bodies stored separately. Normal template-call emission lowers bracket arguments from parsed
+   `source_text` retained only as source/trivia and explicit `cpp(...)` escape
+   bodies stored separately. The raw `Stmt::text` field has been removed. Normal template-call emission lowers bracket arguments from parsed
    `TypeRef` nodes, including non-type value arguments, instead of falling back
    to raw expression text. Parsed method calls on pointer-typed member
    receivers such as `self.left.backward(...)` lower through member-path type
