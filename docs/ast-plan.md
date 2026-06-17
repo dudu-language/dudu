@@ -1564,6 +1564,10 @@ LSP source edits are also moving to AST-owned ranges:
 - Typed direct-call and template-call inference now lives in a focused
   expression type-call module, keeping the main expression inference file from
   accumulating more compatibility migration code.
+- Binary expression typed inference now has a focused operator module that
+  returns parsed `TypeRef` results for overloaded operators and contextual
+  numeric literals, instead of forcing typed callers through rendered operator
+  return strings.
 
 Expression parsing has moved onto the lexer/token stream:
 

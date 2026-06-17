@@ -3,46 +3,11 @@
 #include "dudu/ast_type.hpp"
 #include "dudu/sema_expr_internal.hpp"
 
-#include <optional>
-#include <set>
-
 namespace dudu {
 namespace {
 
-bool is_numeric_literal_expr(const Expr& expr) {
-    return expr.kind == ExprKind::IntLiteral || expr.kind == ExprKind::FloatLiteral;
-}
-
-bool is_numeric_type_name(const Symbols& symbols, std::string type) {
-    type = resolve_alias(symbols, std::move(type));
-    static const std::set<std::string> numeric = {"i8",  "i16", "i32", "i64", "u8",    "u16",
-                                                  "u32", "u64", "f32", "f64", "usize", "isize"};
-    return numeric.contains(trim(type));
-}
-
-bool is_arithmetic_op(const std::string& op) {
-    static const std::set<std::string> ops = {"+", "-", "*", "/", "%", "&", "|", "^", "<<", ">>"};
-    return ops.contains(op);
-}
-
 bool type_ref_is_name(const TypeRef& type, std::string_view name) {
     return type.kind == TypeKind::Named && type_ref_head_name(type) == name;
-}
-
-std::optional<std::string> contextual_numeric_binary_type(const FunctionScope& scope,
-                                                          const Expr& left_expr,
-                                                          const std::string& left,
-                                                          const Expr& right_expr,
-                                                          const std::string& right) {
-    if (is_numeric_literal_expr(left_expr) && is_numeric_type_name(scope.symbols, right) &&
-        can_assign_ast(scope, right, left_expr, left)) {
-        return right;
-    }
-    if (is_numeric_literal_expr(right_expr) && is_numeric_type_name(scope.symbols, left) &&
-        can_assign_ast(scope, left, right_expr, right)) {
-        return left;
-    }
-    return std::nullopt;
 }
 
 } // namespace
@@ -108,6 +73,11 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
     case ExprKind::TemplateCall:
         if (const auto call_type = direct_template_call_type_ref(scope, expr, location)) {
             return *call_type;
+        }
+        break;
+    case ExprKind::Binary:
+        if (const auto binary_type = binary_expr_type_ref(scope, expr, location)) {
+            return *binary_type;
         }
         break;
     default:

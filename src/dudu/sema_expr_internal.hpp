@@ -58,6 +58,8 @@ std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Ex
                                             const SourceLocation* location);
 std::optional<TypeRef> direct_template_call_type_ref(const FunctionScope& scope, const Expr& expr,
                                                      const SourceLocation* location);
+std::optional<TypeRef> binary_expr_type_ref(const FunctionScope& scope, const Expr& expr,
+                                            const SourceLocation* location);
 void check_call_args_ast(const FunctionScope& scope, const std::string& callee,
                          const FunctionSignature& signature, const std::vector<Expr>& args,
                          const SourceLocation* location);
@@ -75,6 +77,12 @@ bool is_local_member_call(const FunctionScope& scope, const std::string& callee)
 void reject_abstract_construction(const Symbols& symbols, const std::string& type,
                                   const SourceLocation* location);
 bool is_comparison_op(const std::string& op);
+bool is_arithmetic_op(const std::string& op);
+std::optional<std::string> contextual_numeric_binary_type(const FunctionScope& scope,
+                                                          const Expr& left_expr,
+                                                          const std::string& left,
+                                                          const Expr& right_expr,
+                                                          const std::string& right);
 bool parse_local_function_type(const FunctionScope& scope, const std::string& name,
                                const std::string& type, FunctionSignature& out);
 void check_enum_variant_args_ast(const FunctionScope& scope, const EnumDecl& en,
