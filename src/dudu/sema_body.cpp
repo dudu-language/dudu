@@ -414,7 +414,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
             }
         }
         bind_local(scope, stmt.name, type,
-                   stmt.type == type ? stmt.type_ref : parse_type_text(type));
+                   stmt.type == type ? stmt.type_ref : inferred.type_ref);
         if (is_dudu_all_caps(stmt.name)) {
             scope.constants.insert(stmt.name);
         }

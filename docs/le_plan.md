@@ -532,7 +532,9 @@ push. They are not release packaging work.
    nodes instead of concatenating `*` onto type text and reparsing it.
    Templated pointer-cast semantic inference also builds the pointee from
    parsed template `TypeRef` arguments instead of reconstructing `Name[...]`
-   text and reparsing it.
+   text and reparsing it. Inferred array literal shapes now carry a
+   fixed-array `TypeRef`, so sema and C++ emission bind inferred array locals
+   without regenerating `array[T][...]` text and reparsing it.
 
 3. OOP Surface Cleanup
 

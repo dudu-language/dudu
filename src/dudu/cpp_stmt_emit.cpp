@@ -177,7 +177,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         const std::string type =
             inferred.status == ArrayShapeStatus::Inferred ? inferred.type : stmt.type;
         const TypeRef type_ref =
-            inferred.status == ArrayShapeStatus::Inferred ? parse_type_text(type) : stmt.type_ref;
+            inferred.status == ArrayShapeStatus::Inferred ? inferred.type_ref : stmt.type_ref;
         locals[name] = type;
         local_type_refs[name] = type_ref;
         out << indent(depth) << lower_declared_stmt_type(stmt, type, aliases, options) << ' '

@@ -67,6 +67,9 @@ Already structured:
   structurally instead of returning raw child text
 - array shape inference and static field type extraction render parsed
   `TypeRef` children structurally instead of carrying raw child text
+- inferred array literal shapes now carry a fixed-array `TypeRef`, so sema and
+  C++ emission bind inferred array locals without regenerating `array[T][...]`
+  text and reparsing it
 - C ABI pointer checks and structural type-name compatibility compare rendered
   `TypeRef` forms instead of raw parser text
 - member and scoped member path reconstruction render indexed path segments

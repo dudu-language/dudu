@@ -1,4 +1,5 @@
 #include "dudu/ast_type.hpp"
+#include "dudu/array_shape.hpp"
 #include "dudu/cpp_emit.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/cpp_stmt_types.hpp"
@@ -641,6 +642,16 @@ void test_type_ast_shape() {
     assert(dudu::substitute_type_ref_text(nested, {}) == "fn(list[f32]) -> f32");
     assert(dudu::lower_cpp_type(player.fields[0].type_ref) ==
            "std::array<std::array<float, 4>, 4>");
+    const dudu::ArrayShapeInference inferred_array = dudu::infer_array_literal_shape_type(
+        dudu::parse_type_text("array[i32]"), dudu::parse_expr_text("[[1, 2], [3, 4]]"));
+    assert(inferred_array.status == dudu::ArrayShapeStatus::Inferred);
+    assert(inferred_array.type == "array[i32][2, 2]");
+    assert(inferred_array.type_ref.kind == dudu::TypeKind::FixedArray);
+    assert(inferred_array.type_ref.children.size() == 1);
+    assert(inferred_array.type_ref.children[0].kind == dudu::TypeKind::Template);
+    assert(inferred_array.type_ref.children[0].name == "array");
+    assert(dudu::lower_cpp_type(inferred_array.type_ref) ==
+           "std::array<std::array<int32_t, 2>, 2>");
     assert(dudu::lower_cpp_type("array[i32][3]") == "std::array<int32_t, 3>");
     assert(dudu::lower_cpp_type("array[f32][4, 4]") == "std::array<std::array<float, 4>, 4>");
 }

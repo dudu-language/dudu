@@ -84,6 +84,29 @@ std::string shaped_array_type(const std::string& element_type, const std::vector
     return out.str();
 }
 
+std::string shape_value_text(const std::vector<size_t>& shape) {
+    std::ostringstream out;
+    for (size_t i = 0; i < shape.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << shape[i];
+    }
+    return out.str();
+}
+
+TypeRef shaped_array_type_ref(const TypeRef& declared_type, const std::string& type_text,
+                              const std::vector<size_t>& shape) {
+    TypeRef type;
+    type.kind = TypeKind::FixedArray;
+    type.text = type_text;
+    type.value = shape_value_text(shape);
+    type.children.push_back(declared_type);
+    type.location = declared_type.location;
+    type.range = declared_type.range;
+    return type;
+}
+
 } // namespace
 
 ArrayShapeInference infer_array_literal_shape_type(const TypeRef& declared_type,
@@ -98,6 +121,7 @@ ArrayShapeInference infer_array_literal_shape_type(const TypeRef& declared_type,
     if (value.children.empty()) {
         return {.status = ArrayShapeStatus::EmptyLiteral,
                 .type = {},
+                .type_ref = {},
                 .element_type = *element_type,
                 .shape = {}};
     }
@@ -105,11 +129,14 @@ ArrayShapeInference infer_array_literal_shape_type(const TypeRef& declared_type,
     if (!shape) {
         return {.status = ArrayShapeStatus::RaggedLiteral,
                 .type = {},
+                .type_ref = {},
                 .element_type = *element_type,
                 .shape = {}};
     }
+    const std::string type_text = shaped_array_type(*element_type, *shape);
     return {.status = ArrayShapeStatus::Inferred,
-            .type = shaped_array_type(*element_type, *shape),
+            .type = type_text,
+            .type_ref = shaped_array_type_ref(declared_type, type_text, *shape),
             .element_type = *element_type,
             .shape = *shape};
 }
