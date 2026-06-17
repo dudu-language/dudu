@@ -621,7 +621,9 @@ push. They are not release packaging work.
    construct parsed `Name` expressions directly instead of reparsing imported
    identifier text inside the module loader. Semantic-token native lookups for
    member and callee expressions now derive dotted paths from parsed member
-   nodes instead of reading the compatibility expression text field first.
+   nodes instead of reading the compatibility expression text field first. LSP
+   symbol-at and reference collection locate member names from parsed receiver
+   ranges instead of shifting by compatibility expression text width.
 
 3. OOP Surface Cleanup
 

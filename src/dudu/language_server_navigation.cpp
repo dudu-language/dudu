@@ -55,12 +55,13 @@ std::string file_uri(const std::filesystem::path& path) {
 }
 
 SourceLocation expr_name_location(const Expr& expr) {
-    SourceLocation location = expr.location;
-    if (expr.kind == ExprKind::Member && !expr.name.empty() &&
-        expr.text.size() >= expr.name.size()) {
-        location.column += static_cast<int>(expr.text.size() - expr.name.size());
+    if (expr.kind == ExprKind::Member && !expr.children.empty() &&
+        expr.children.front().range.end.column > 0) {
+        SourceLocation location = expr.children.front().range.end;
+        location.column += 1;
+        return location;
     }
-    return location;
+    return expr.location;
 }
 
 std::optional<std::string> ast_symbol_at_impl(const Document& doc, const Json* params,

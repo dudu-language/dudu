@@ -544,6 +544,9 @@ Already structured:
 - semantic-token native lookups for member/callee expressions now derive the
   dotted path from parsed member nodes instead of reading the compatibility
   expression text field first
+- LSP symbol-at and reference collection locate member names from parsed
+  receiver expression ranges instead of shifting by the compatibility
+  expression text width
 - assignment compatibility for parsed explicit casts, value-wrapper
   assignments, and `Ok(...)`/`Err(...)` result construction inspects call
   expression nodes instead of rediscovering those forms from raw text
