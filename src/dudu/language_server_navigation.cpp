@@ -8,6 +8,7 @@
 #include <cctype>
 #include <filesystem>
 #include <functional>
+#include <optional>
 #include <set>
 #include <sstream>
 
@@ -79,6 +80,124 @@ std::string symbol_at(const Document& doc, const Json* params) {
     return {};
 }
 
+SourceLocation expr_name_location(const Expr& expr) {
+    SourceLocation location = expr.location;
+    if (expr.kind == ExprKind::Member && !expr.name.empty() &&
+        expr.text.size() >= expr.name.size()) {
+        location.column += static_cast<int>(expr.text.size() - expr.name.size());
+    }
+    return location;
+}
+
+std::optional<std::string> ast_symbol_at(const Document& doc, const Json* params) {
+    const Json* position = params == nullptr ? nullptr : params->get("position");
+    const int target_line = int_value(position == nullptr ? nullptr : position->get("line")) + 1;
+    const int target_column =
+        int_value(position == nullptr ? nullptr : position->get("character")) + 1;
+    const auto contains = [&](const SourceLocation& location, const std::string& name) {
+        if (name.empty() || location.line != target_line || location.column <= 0) {
+            return false;
+        }
+        const int start = location.column;
+        const int end = start + static_cast<int>(name.size());
+        return target_column >= start && target_column <= end;
+    };
+    std::optional<std::string> result;
+    const auto set_if_hit = [&](const std::string& name, const SourceLocation& location) {
+        if (!result && contains(location, name)) {
+            result = name;
+        }
+    };
+    const std::function<void(const Expr&)> visit_expr = [&](const Expr& expr) {
+        if (expr.kind == ExprKind::Name || expr.kind == ExprKind::Member) {
+            set_if_hit(expr.name, expr_name_location(expr));
+        }
+        for (const Expr& callee : expr.callee) {
+            visit_expr(callee);
+        }
+        for (const Expr& param : expr.params) {
+            visit_expr(param);
+        }
+        for (const Expr& arg : expr.template_args) {
+            visit_expr(arg);
+        }
+        for (const Expr& child : expr.children) {
+            visit_expr(child);
+        }
+    };
+    const std::function<void(const std::vector<Stmt>&)> visit_stmts =
+        [&](const std::vector<Stmt>& statements) {
+            for (const Stmt& stmt : statements) {
+                if (stmt.kind == StmtKind::VarDecl || stmt.kind == StmtKind::For ||
+                    stmt.kind == StmtKind::Except) {
+                    set_if_hit(stmt.name, stmt.location);
+                }
+                visit_expr(stmt.expr);
+                visit_expr(stmt.value_expr);
+                visit_expr(stmt.target_expr);
+                visit_expr(stmt.condition_expr);
+                visit_expr(stmt.message_expr);
+                visit_expr(stmt.iterable_expr);
+                visit_expr(stmt.pattern_expr);
+                visit_expr(stmt.guard_expr);
+                visit_stmts(stmt.children);
+            }
+        };
+    try {
+        const ModuleAst module = parse_source(doc.text, doc.path);
+        for (const ImportDecl& import : module.imports) {
+            set_if_hit(bound_import_name(import), import.location);
+            set_if_hit(import.imported_name, import.location);
+        }
+        for (const TypeAliasDecl& alias : module.aliases) {
+            set_if_hit(alias.name, alias.location);
+        }
+        for (const ConstDecl& constant : module.constants) {
+            set_if_hit(constant.name, constant.location);
+            visit_expr(constant.value_expr);
+        }
+        for (const EnumDecl& en : module.enums) {
+            set_if_hit(en.name, en.location);
+            for (const EnumValueDecl& value : en.values) {
+                set_if_hit(value.name, value.location);
+                visit_expr(value.value_expr);
+            }
+        }
+        for (const ClassDecl& klass : module.classes) {
+            set_if_hit(klass.name, klass.location);
+            for (const FieldDecl& field : klass.fields) {
+                set_if_hit(field.name, field.location);
+                visit_expr(field.value_expr);
+            }
+            for (const ConstDecl& constant : klass.constants) {
+                set_if_hit(constant.name, constant.location);
+                visit_expr(constant.value_expr);
+            }
+            for (const ConstDecl& field : klass.static_fields) {
+                set_if_hit(field.name, field.location);
+                visit_expr(field.value_expr);
+            }
+            for (const FunctionDecl& method : klass.methods) {
+                set_if_hit(method.name, method.location);
+                for (const ParamDecl& param : method.params) {
+                    set_if_hit(param.name, param.location);
+                }
+                visit_stmts(method.statements);
+            }
+        }
+        for (const FunctionDecl& fn : module.functions) {
+            set_if_hit(fn.name, fn.location);
+            for (const ParamDecl& param : fn.params) {
+                set_if_hit(param.name, param.location);
+            }
+            visit_stmts(fn.statements);
+        }
+    } catch (const std::exception&) {
+        return std::nullopt;
+    }
+    return result;
+}
+
 bool symbol_matches(const std::string& symbol, const std::string& query) {
     if (symbol == query) {
         return true;
@@ -123,9 +242,8 @@ std::vector<ReferenceLocation> references_in(const Document& doc, const std::str
                        range_json(line, start, start + static_cast<int>(name.size()))});
     };
     const std::function<void(const Expr&)> visit_expr = [&](const Expr& expr) {
-        if (expr.kind == ExprKind::Name || expr.kind == ExprKind::Member ||
-            expr.kind == ExprKind::Call || expr.kind == ExprKind::TemplateCall) {
-            add(expr.name, expr.location);
+        if (expr.kind == ExprKind::Name || expr.kind == ExprKind::Member) {
+            add(expr.name, expr_name_location(expr));
         }
         for (const Expr& callee : expr.callee) {
             visit_expr(callee);

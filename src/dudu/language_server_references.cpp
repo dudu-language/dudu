@@ -31,7 +31,7 @@ bool renameable_symbol(const Document& doc, const std::string& name) {
 
 std::string references_json(const Document& doc, const Json* params,
                             const std::map<std::string, Document>& workspace) {
-    const std::string query = symbol_at(doc, params);
+    const std::string query = ast_symbol_at(doc, params).value_or("");
     if (query.empty()) {
         return "[]";
     }
@@ -54,7 +54,7 @@ std::string references_json(const Document& doc, const Json* params,
 
 std::string rename_json(const Document& doc, const Json* params,
                         const std::map<std::string, Document>& workspace) {
-    const std::string old_name = symbol_at(doc, params);
+    const std::string old_name = ast_symbol_at(doc, params).value_or("");
     const std::string new_name =
         params == nullptr ? std::string{} : string_value(params->get("newName"));
     if (!valid_identifier(new_name) || !renameable_symbol(doc, old_name)) {
@@ -78,8 +78,8 @@ std::string rename_json(const Document& doc, const Json* params,
             if (i > 0) {
                 out << ",";
             }
-            out << "{\"range\":" << locations[i].range << ",\"newText\":\""
-                << json_escape(new_name) << "\"}";
+            out << "{\"range\":" << locations[i].range << ",\"newText\":\"" << json_escape(new_name)
+                << "\"}";
         }
         out << "]";
     }

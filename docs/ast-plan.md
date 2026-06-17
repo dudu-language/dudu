@@ -264,6 +264,9 @@ Already structured:
 - same-document LSP reference and rename locations now come from parsed
   declarations, statements, and expression nodes instead of raw token scans, so
   comments and string literals are no longer treated as editable references
+- LSP reference and rename requests now require the cursor to resolve to an AST
+  symbol before scanning the workspace, so strings/comments cannot seed a rename
+  or reference query
 - array shape inference and explicit shape extraction also consume parsed
   `TypeRef` array forms, removing the separate bracket matcher from
   `array_shape.cpp`

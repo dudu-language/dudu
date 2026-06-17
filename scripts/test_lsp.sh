@@ -166,6 +166,29 @@ messages = [
     packet(
         {
             "jsonrpc": "2.0",
+            "id": 56,
+            "method": "textDocument/references",
+            "params": {
+                "textDocument": {"uri": rename_ast_uri},
+                "position": {"line": 4, "character": 15},
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 57,
+            "method": "textDocument/rename",
+            "params": {
+                "textDocument": {"uri": rename_ast_uri},
+                "position": {"line": 5, "character": 8},
+                "newName": "comment_renamed",
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
             "method": "textDocument/didOpen",
             "params": {
                 "textDocument": {
@@ -1117,7 +1140,7 @@ messages = [
             "method": "textDocument/references",
             "params": {
                 "textDocument": {"uri": native_uri},
-                "position": {"line": 10, "character": 5},
+                "position": {"line": 7, "character": 18},
             },
         }
     ),
@@ -1471,6 +1494,12 @@ assert ast_rename_starts == {
     (6, 11, "unique_ref_renamed"),
 }
 
+ast_string_references = next(item for item in responses if item.get("id") == 56)
+assert ast_string_references["result"] == []
+
+ast_comment_rename = next(item for item in responses if item.get("id") == 57)
+assert ast_comment_rename["result"] is None
+
 code_actions = next(item for item in responses if item.get("id") == 17)
 assert code_actions["result"][0]["title"] == "Format document"
 assert code_actions["result"][0]["kind"] == "source.format"
@@ -1620,7 +1649,9 @@ unused_fix = next(item for item in unused_actions["result"] if item["title"] == 
 unused_edit = unused_fix["edit"]["changes"][unused_uri][0]
 assert unused_fix["kind"] == "quickfix"
 assert unused_edit["range"]["start"]["line"] == 1
+assert unused_edit["range"]["start"]["character"] == 0
 assert unused_edit["range"]["end"]["line"] == 2
+assert unused_edit["range"]["end"]["character"] == 0
 assert unused_edit["newText"] == ""
 
 workspace_references = next(item for item in responses if item.get("id") == 18)
