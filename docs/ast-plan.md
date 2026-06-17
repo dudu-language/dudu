@@ -1550,6 +1550,9 @@ LSP source edits are also moving to AST-owned ranges:
 - Expected-type generic method lowering now accepts parsed `TypeRef` metadata,
   so declared local initializers can infer generic method template arguments
   without reparsing the declared type text.
+- Typed expression inference now handles direct generic Dudu function calls by
+  instantiating the generic signature and returning its parsed `TypeRef`,
+  avoiding the older render-return-type-then-parse fallback for those calls.
 
 Expression parsing has moved onto the lexer/token stream:
 
