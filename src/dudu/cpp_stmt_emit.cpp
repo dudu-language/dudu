@@ -48,6 +48,34 @@ struct EffectiveStmtType {
     TypeRef ref;
 };
 
+std::string_view compound_assign_op_text(CompoundAssignOp op) {
+    switch (op) {
+    case CompoundAssignOp::None:
+        return "";
+    case CompoundAssignOp::Add:
+        return "+";
+    case CompoundAssignOp::Sub:
+        return "-";
+    case CompoundAssignOp::Mul:
+        return "*";
+    case CompoundAssignOp::Div:
+        return "/";
+    case CompoundAssignOp::Mod:
+        return "%";
+    case CompoundAssignOp::BitAnd:
+        return "&";
+    case CompoundAssignOp::BitOr:
+        return "|";
+    case CompoundAssignOp::BitXor:
+        return "^";
+    case CompoundAssignOp::ShiftLeft:
+        return "<<";
+    case CompoundAssignOp::ShiftRight:
+        return ">>";
+    }
+    return "";
+}
+
 EffectiveStmtType effective_stmt_type(const Stmt& stmt, const ArrayShapeInference& inferred) {
     if (inferred.status == ArrayShapeStatus::Inferred) {
         return {.text = inferred.type, .ref = inferred.type_ref};
@@ -295,7 +323,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
     }
     if (stmt.kind == StmtKind::CompoundAssign) {
         out << indent(depth) << lower_expr(stmt.target_expr, aliases, locals, symbols, options)
-            << ' ' << stmt.op << '=' << " "
+            << ' ' << compound_assign_op_text(stmt.compound_op) << '=' << " "
             << lower_expr(stmt.value_expr, aliases, locals, symbols, options) << ";\n";
         return;
     }

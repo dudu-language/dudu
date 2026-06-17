@@ -247,7 +247,7 @@ void test_statement_ast_shape() {
     assert(main.statements[1].children.size() == 1);
     assert(main.statements[1].children[0].kind == dudu::StmtKind::CompoundAssign);
     assert(main.statements[1].children[0].target_expr.text == "total");
-    assert(main.statements[1].children[0].op == "+");
+    assert(main.statements[1].children[0].compound_op == dudu::CompoundAssignOp::Add);
     assert(main.statements[1].children[0].value_expr.text == "item");
     assert(main.statements[2].kind == dudu::StmtKind::If);
     assert(main.statements[2].condition_expr.text == "total == 0");

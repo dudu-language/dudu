@@ -96,6 +96,20 @@ enum class StmtKind {
     Unsupported,
 };
 
+enum class CompoundAssignOp {
+    None,
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Mod,
+    BitAnd,
+    BitOr,
+    BitXor,
+    ShiftLeft,
+    ShiftRight,
+};
+
 enum class ExprKind {
     Unknown,
     Name,
@@ -161,7 +175,7 @@ struct Stmt {
     std::string type;
     std::string cpp_body;
     TypeRef type_ref;
-    std::string op;
+    CompoundAssignOp compound_op = CompoundAssignOp::None;
     std::string unsupported_feature;
     Expr expr;
     Expr value_expr;

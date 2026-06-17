@@ -121,12 +121,38 @@ std::optional<size_t> find_top_level_assignment_token(std::span<const Token> tok
     return std::nullopt;
 }
 
-std::string compound_assignment_op(std::string_view token_text) {
-    std::string op(token_text);
-    if (!op.empty()) {
-        op.pop_back();
+std::optional<CompoundAssignOp> compound_assignment_op(std::string_view token_text) {
+    if (token_text == "+=") {
+        return CompoundAssignOp::Add;
     }
-    return op;
+    if (token_text == "-=") {
+        return CompoundAssignOp::Sub;
+    }
+    if (token_text == "*=") {
+        return CompoundAssignOp::Mul;
+    }
+    if (token_text == "/=") {
+        return CompoundAssignOp::Div;
+    }
+    if (token_text == "%=") {
+        return CompoundAssignOp::Mod;
+    }
+    if (token_text == "&=") {
+        return CompoundAssignOp::BitAnd;
+    }
+    if (token_text == "|=") {
+        return CompoundAssignOp::BitOr;
+    }
+    if (token_text == "^=") {
+        return CompoundAssignOp::BitXor;
+    }
+    if (token_text == "<<=") {
+        return CompoundAssignOp::ShiftLeft;
+    }
+    if (token_text == ">>=") {
+        return CompoundAssignOp::ShiftRight;
+    }
+    return std::nullopt;
 }
 
 std::string_view unsupported_feature_for_token(const Token& token) {
@@ -396,7 +422,12 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
         stmt.kind =
             is_compound_assignment_operator(assign) ? StmtKind::CompoundAssign : StmtKind::Assign;
         if (stmt.kind == StmtKind::CompoundAssign) {
-            stmt.op = compound_assignment_op(assign.text);
+            const std::optional<CompoundAssignOp> op = compound_assignment_op(assign.text);
+            if (!op) {
+                throw CompileError(assign.location,
+                                   "unsupported compound assignment operator: " + assign.text);
+            }
+            stmt.compound_op = *op;
         }
         const JoinedTokens target = join_tokens(line_begin, *assignment);
         stmt.target_expr = parse_expr_piece(target);

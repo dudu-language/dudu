@@ -46,6 +46,5 @@ TypeRef make_type(TypeKind kind, std::string_view text, SourceLocation location)
 TypeKind wrapper_type_kind(std::string_view name);
 std::vector<TypeRef> parse_type_list(std::string_view text, SourceLocation location);
 size_t find_top_level_arrow(std::string_view text);
-std::string compound_operator_before_assign(std::string_view text, size_t assign);
 
 } // namespace dudu

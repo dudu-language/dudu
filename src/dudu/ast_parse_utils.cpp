@@ -265,24 +265,4 @@ size_t find_top_level_arrow(std::string_view text) {
     return std::string_view::npos;
 }
 
-std::string compound_operator_before_assign(std::string_view text, size_t assign) {
-    if (assign == std::string_view::npos) {
-        return {};
-    }
-    size_t pos = assign;
-    while (pos > 0 && std::isspace(static_cast<unsigned char>(text[pos - 1])) != 0) {
-        --pos;
-    }
-    if (pos >= 2 && text.substr(pos - 2, 2) == "<<") {
-        return "<<";
-    }
-    if (pos >= 2 && text.substr(pos - 2, 2) == ">>") {
-        return ">>";
-    }
-    if (pos > 0) {
-        return std::string(1, text[pos - 1]);
-    }
-    return {};
-}
-
 } // namespace dudu
