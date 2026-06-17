@@ -157,6 +157,11 @@ std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Ex
     if (callee.empty()) {
         return std::nullopt;
     }
+    if (const auto variant = enum_variant_from_path(scope.symbols, callee)) {
+        check_enum_variant_args_ast(scope, *variant->first, *variant->second, expr.children,
+                                    location);
+        return named_type_ref(variant->first->name, expr.location);
+    }
     if (callee == "Ok" || callee == "Err") {
         if (location != nullptr && expr.children.size() != 1) {
             sema_expr_fail(*location, callee + " expects 1 argument, got " +

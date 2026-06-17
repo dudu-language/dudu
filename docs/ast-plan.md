@@ -344,6 +344,8 @@ Already structured:
 - ordinary builtin calls such as `len`, `range`, `min`, `max`, `print`,
   `delete`, and `free` now return `TypeRef` nodes through direct typed
   expression inference while preserving arity and argument checks
+- enum variant constructor calls such as `Expr.Number(value)` now return the
+  enum `TypeRef` directly from typed expression inference after payload checks
 - LSP local variable/parameter type collection for hover, member completion,
   and member definition now walks parsed function/method bodies and reuses
   semantic expression inference instead of regexing source lines
