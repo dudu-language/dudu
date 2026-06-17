@@ -102,7 +102,8 @@ void check_static_assert(const StaticAssertDecl& assertion,
         return;
     }
     if (!passed) {
-        throw CompileError(assertion.location, "static_assert failed: " + assertion.expression);
+        throw CompileError(assertion.location,
+                           "static_assert failed: " + assertion.expression_expr.text);
     }
 }
 

@@ -350,7 +350,6 @@ StaticAssertDecl Parser::parse_static_assert() {
     const Token& start = consume_identifier("expected static_assert");
     assertion.location = start.location;
     const JoinedTokens expression = join_until_with_range({TokenKind::Newline});
-    assertion.expression = expression.text;
     assertion.expression_expr = parse_expr_piece(expression);
     consume(TokenKind::Newline, "expected newline after static_assert");
     return assertion;

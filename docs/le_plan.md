@@ -480,7 +480,9 @@ push. They are not release packaging work.
    constants, and static fields now rely on `ConstDecl::value_expr`; the raw
    constant initializer string mirror has been removed. Enum value initializers
    now rely on `EnumValueDecl::value_expr`; the raw enum initializer string
-   mirror has been removed.
+   mirror has been removed. Static asserts now rely on
+   `StaticAssertDecl::expression_expr`; the raw expression string mirror has
+   been removed.
    `struct stat`.
    Normal template-call emission lowers bracket arguments from parsed
    `TypeRef` nodes, including non-type value arguments, instead of falling back

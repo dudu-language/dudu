@@ -317,7 +317,6 @@ struct ClassDecl {
 };
 
 struct StaticAssertDecl {
-    std::string expression;
     Expr expression_expr;
     SourceLocation location;
 };
