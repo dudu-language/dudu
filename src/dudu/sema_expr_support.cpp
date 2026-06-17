@@ -56,6 +56,16 @@ bool can_assign_ast(const FunctionScope& scope, const TypeRef& expected, const E
            native_base_assignable(scope.symbols, expected_text, got);
 }
 
+bool can_assign_ast(const FunctionScope& scope, const std::string& expected, const Expr& expr,
+                    const TypeRef& got) {
+    return can_assign_ast(scope, expected, expr, substitute_type_ref_text(got, {}));
+}
+
+bool can_assign_ast(const FunctionScope& scope, const TypeRef& expected, const Expr& expr,
+                    const TypeRef& got) {
+    return can_assign_ast(scope, expected, expr, substitute_type_ref_text(got, {}));
+}
+
 bool is_builtin_call(const std::string& callee) {
     static const std::set<std::string> builtins = {"delete", "free",  "len",  "max",
                                                    "min",    "print", "range"};
@@ -123,8 +133,9 @@ void check_call_args_ast(const FunctionScope& scope, const std::string& callee,
     for (size_t i = 0; i < signature.params.size(); ++i) {
         const TypeRef expected = signature_param_type_ref(signature, i);
         const std::string expected_text = substitute_type_ref_text(expected, {});
-        const std::string got = infer_expr_ast(scope, args[i], location);
-        if (!can_assign_ast(scope, expected, args[i], got)) {
+        const TypeRef got_ref = infer_expr_type_ast(scope, args[i], location);
+        const std::string got = substitute_type_ref_text(got_ref, {});
+        if (!can_assign_ast(scope, expected, args[i], got_ref)) {
             sema_expr_fail(*location, "argument " + std::to_string(i + 1) + " for " + callee +
                                           " expects " + expected_text + ", got " + got);
         }
@@ -161,9 +172,10 @@ void check_enum_variant_args_ast(const FunctionScope& scope, const EnumDecl& en,
             field = &*found;
             arg = &args[i].children.front();
         }
-        const std::string got = infer_expr_ast(scope, *arg, location);
+        const TypeRef got_ref = infer_expr_type_ast(scope, *arg, location);
+        const std::string got = substitute_type_ref_text(got_ref, {});
         const std::string expected = type_ref_text(field->type_ref);
-        if (!can_assign_ast(scope, expected, *arg, got)) {
+        if (!can_assign_ast(scope, expected, *arg, got_ref)) {
             sema_expr_fail(arg->location, "argument " + std::to_string(i + 1) + " for " + en.name +
                                               "." + value.name + " expects " + expected + ", got " +
                                               got);
@@ -178,7 +190,7 @@ bool call_args_match_ast(const FunctionScope& scope, const FunctionSignature& si
         return false;
     }
     for (size_t i = 0; i < signature.params.size(); ++i) {
-        const std::string got = infer_expr_ast(scope, args[i], nullptr);
+        const TypeRef got = infer_expr_type_ast(scope, args[i], nullptr);
         if (!can_assign_ast(scope, signature_param_type_ref(signature, i), args[i], got)) {
             return false;
         }

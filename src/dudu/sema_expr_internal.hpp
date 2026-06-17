@@ -76,6 +76,10 @@ bool can_assign_ast(const FunctionScope& scope, const std::string& expected, con
                     const std::string& got);
 bool can_assign_ast(const FunctionScope& scope, const TypeRef& expected, const Expr& expr,
                     const std::string& got);
+bool can_assign_ast(const FunctionScope& scope, const std::string& expected, const Expr& expr,
+                    const TypeRef& got);
+bool can_assign_ast(const FunctionScope& scope, const TypeRef& expected, const Expr& expr,
+                    const TypeRef& got);
 bool is_builtin_call(const std::string& callee);
 bool is_local_member_call(const FunctionScope& scope, const std::string& callee);
 void reject_abstract_construction(const Symbols& symbols, const std::string& type,
