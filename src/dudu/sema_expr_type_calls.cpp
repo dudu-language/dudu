@@ -63,6 +63,13 @@ std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Ex
 
 std::optional<TypeRef> direct_template_call_type_ref(const FunctionScope& scope, const Expr& expr,
                                                      const SourceLocation* location) {
+    if (const auto allocation = infer_allocation_call_type_ref(
+            scope.symbols, location, expr.name, template_type_refs(expr), expr.children.size())) {
+        for (const Expr& arg : expr.children) {
+            (void)infer_expr_type_ast(scope, arg, location);
+        }
+        return *allocation;
+    }
     const std::string callee = template_call_callee(scope, expr, location);
     const std::string callee_base = scoped_call_callee_text(scope, expr, location);
     if (const auto signature =

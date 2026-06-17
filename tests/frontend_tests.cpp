@@ -506,6 +506,15 @@ void test_allocation_type_ref_diagnostics() {
     dudu::Symbols symbols;
     const dudu::SourceLocation location{.file = "cpp_escape_alloc.dd", .line = 7, .column = 12};
 
+    const std::vector<dudu::TypeRef> type_args = {dudu::parse_type_text("list[i32]", location)};
+    const std::optional<dudu::TypeRef> allocation =
+        dudu::infer_allocation_call_type_ref(symbols, &location, "new", type_args, 0);
+    assert(allocation.has_value());
+    assert(allocation->kind == dudu::TypeKind::Pointer);
+    assert(allocation->children.size() == 1);
+    assert(allocation->children.front().kind == dudu::TypeKind::Template);
+    assert(dudu::substitute_type_ref_text(*allocation, {}) == "*list[i32]");
+
     bool rejected = false;
     try {
         (void)dudu::infer_cpp_escape_allocation_call(symbols, &location, "new[list[MissingType]]",

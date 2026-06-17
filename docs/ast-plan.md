@@ -326,6 +326,9 @@ Already structured:
 - typed array column/channel/row slice inference now constructs
   `span[T]`/`strided_span[T]` `TypeRef` nodes from parsed array element types
   instead of formatting those view types and parsing them again
+- typed `new[T]`/`malloc[T]` semantic inference now returns pointer `TypeRef`
+  nodes from parsed template arguments before the string compatibility API
+  renders them for older callers
 - LSP local variable/parameter type collection for hover, member completion,
   and member definition now walks parsed function/method bodies and reuses
   semantic expression inference instead of regexing source lines
