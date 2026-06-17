@@ -126,6 +126,22 @@ std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Ex
             })) {
         return signature_return_type_ref(*signature);
     }
+    if (known_template_constructor_type(scope, callee)) {
+        if (const auto klass = scope.symbols.classes.find(resolve_alias(scope.symbols, callee));
+            klass != scope.symbols.classes.end()) {
+            reject_abstract_construction(scope.symbols, callee, location);
+            check_constructor_args_ast(
+                scope, *klass->second, expr.children, location, infer_expr_type_ast,
+                [&](const std::string& expected, const Expr& value, const std::string& got) {
+                    return can_assign_ast(scope, expected, value, got);
+                });
+        } else {
+            for (const Expr& arg : expr.children) {
+                (void)infer_expr_type_ast(scope, arg, location);
+            }
+        }
+        return named_type_ref(callee, expr.location);
+    }
     return std::nullopt;
 }
 
