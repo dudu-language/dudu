@@ -661,9 +661,13 @@ declarations safely.
    `dudu build` gives up. It is one of the serious native backends because
    CMake is where a large part of the C/C++ ecosystem already lives.
 
-   Status: `dudu build`, `dudu run`, and `dudu test` use the direct backend by
-   default. `[build] backend = "direct"` and `[build] backend = "cmake"` parse
-   from the manifest. The direct backend is selectable explicitly. The
+   Status: `dudu build` and `dudu run` use the direct backend by default for
+   single-module inputs. If no backend is explicitly selected and the source
+   tree imports multiple Dudu modules, `dudu build` and `dudu run` select the
+   generated CMake backend so generated C++ stays split into per-module
+   artifacts. `[build] backend = "direct"` and `[build] backend = "cmake"` parse
+   from the manifest, and explicit direct keeps strict merged-output diagnostics
+   when a project cannot honestly fit in one generated translation unit. The
    generated CMake backend is implemented for `dudu build`, `dudu run`, and
    `dudu test`; it emits an internal CMake project and drives `cmake -S/-B`
    plus `cmake --build`. Native inputs such as include paths, library paths,

@@ -342,8 +342,11 @@ inputs or guess through C/C++ build-system details.
 
 Current implementation reality:
 
-- `dudu build`, `dudu run`, and `dudu test` use the direct compiler backend
-  by default.
+- `dudu build` and `dudu run` use the direct compiler backend by default for
+  single-module Dudu inputs.
+- If no backend is explicitly selected and the Dudu source tree imports more
+  than one Dudu module, `dudu build` and `dudu run` select the generated CMake
+  backend so generated `.hpp/.cpp` artifacts stay per-module.
 - The direct backend currently emits one generated C++ translation unit for the
   Dudu source tree. Imported `.dd` files are parsed as modules, but their
   generated C++ is still merged into that one `.cpp` file before native
@@ -354,7 +357,9 @@ Current implementation reality:
   generated per-module `.cpp` files.
 - The direct backend still compiles the compatibility merged `.cpp` output.
 - `[build] backend = "direct"` and `[build] backend = "cmake"` parse from
-  `dudu.toml`. The direct backend is selectable explicitly. The generated
+  `dudu.toml`. The direct backend is selectable explicitly and keeps strict
+  merged-output diagnostics when the project cannot be represented by one
+  generated translation unit. The generated
   CMake backend is implemented for `dudu build`, `dudu run`, and `dudu test`;
   it emits an internal CMake project and drives `cmake -S/-B` plus
   `cmake --build`.
@@ -541,6 +546,8 @@ docs. Generated Dudu projects do not get a changelog by default.
 - `dudu cmake` emits a readable CMake project.
 - `dudu build` can use the direct backend explicitly.
 - `dudu build` can use the CMake backend explicitly.
+- `dudu run` selects the generated CMake backend automatically for a
+  multi-module Dudu project with no explicit backend setting.
 - `dudu run` can launch a CMake-backed executable target.
 - CMake-backed builds compile generated per-module `.cpp` files for imported
   Dudu modules.

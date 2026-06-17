@@ -94,6 +94,15 @@ ProjectConfig config_for_options(const CliOptions& options) {
     return config;
 }
 
+ProjectConfig build_config_for_options(const CliOptions& options) {
+    ProjectConfig config = config_for_options(options);
+    if (!config.build_backend_explicit && config.build_backend == "direct" &&
+        source_tree_files(options.input).size() > 1) {
+        config.build_backend = "cmake";
+    }
+    return config;
+}
+
 std::filesystem::path default_build_output(const ProjectConfig& config,
                                            const std::filesystem::path& input) {
     if (config.name.empty() && config.build_dir.empty()) {
@@ -152,7 +161,7 @@ bool check_source_path(const CliOptions& options) {
 }
 
 int run_build_command(const CliOptions& options, char* executable) {
-    const ProjectConfig config = config_for_options(options);
+    const ProjectConfig config = build_config_for_options(options);
     if (config.build_backend == "cmake") {
         print_project_step(options.project_driver, "cmake", cmake_backend_log_source(config));
         print_project_step(options.project_driver, "build", cmake_backend_log_build_dir(config));
@@ -174,7 +183,7 @@ int run_build_command(const CliOptions& options, char* executable) {
 }
 
 int run_run_command(const CliOptions& options, char* executable) {
-    const ProjectConfig config = config_for_options(options);
+    const ProjectConfig config = build_config_for_options(options);
     if (config.target_kind != "executable") {
         fail("cannot run target kind: " + config.target_kind);
     }

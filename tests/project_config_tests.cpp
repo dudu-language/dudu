@@ -58,6 +58,7 @@ void test_build_backend_selection(const std::filesystem::path& root) {
     const dudu::ProjectConfig config = dudu::parse_project_config(project / "dudu.toml");
     assert(config.build_dir == "build");
     assert(config.build_backend == "cmake");
+    assert(config.build_backend_explicit);
     assert(config.cmake_source == ".");
     assert(config.cmake_target == "backend_probe");
     assert(config.cmake_config == "Debug");
@@ -75,6 +76,12 @@ void test_build_backend_selection(const std::filesystem::path& root) {
         rejected = true;
     }
     assert(rejected);
+
+    write_text(project / "dudu.toml", "name = \"backend_probe\"\n"
+                                      "entry = \"src/main.dd\"\n");
+    const dudu::ProjectConfig implicit = dudu::parse_project_config(project / "dudu.toml");
+    assert(implicit.build_backend == "direct");
+    assert(!implicit.build_backend_explicit);
 }
 
 } // namespace

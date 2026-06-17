@@ -390,6 +390,16 @@ grep -q "DuduLeftBox" \
 grep -q "DuduRightBox" \
     "$repo_root/build/project_backend_cmake_namespaces/cmake-backend/build/generated/right.hpp"
 
+(
+    cd "$repo_root/tests/fixtures/project_backend_auto_modules"
+    "$repo_root/build/dudu" run >"$repo_root/build/project_backend_auto_modules_run.out" \
+        2>"$repo_root/build/project_backend_auto_modules_run.err"
+)
+grep -Eq "run .*project_backend_auto_modules/cmake-backend/build/backend_auto_modules" \
+    "$repo_root/build/project_backend_auto_modules_run.err"
+test -f "$repo_root/build/project_backend_auto_modules/cmake-backend/build/generated/left.cpp"
+test -f "$repo_root/build/project_backend_auto_modules/cmake-backend/build/generated/right.cpp"
+
 rm -rf "$repo_root/build/project_user_cmake"
 (
     cd "$repo_root/tests/fixtures/project_user_cmake"

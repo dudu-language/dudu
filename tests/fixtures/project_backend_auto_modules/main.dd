@@ -1,0 +1,10 @@
+import left as l
+import right as r
+
+
+def main() -> i32:
+    left_box = l.make(5)
+    right_box = r.make(7)
+    if l.score(left_box) + r.score(right_box) == 42:
+        return 0
+    return 1

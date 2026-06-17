@@ -1,0 +1,3 @@
+name = "backend_auto_modules"
+entry = "main.dd"
+build_dir = "../../../build/project_backend_auto_modules"

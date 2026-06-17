@@ -332,6 +332,7 @@ ProjectConfig parse_project_config(const std::filesystem::path& path) {
             config.build_dir = unquote(value);
         } else if (section == "build" && name == "backend") {
             config.build_backend = unquote(value);
+            config.build_backend_explicit = true;
             validate_one_of(path, line, "backend", config.build_backend, {"direct", "cmake"});
         } else if (section == "cmake" && name == "enabled") {
             config.cmake_enabled = parse_bool_value(path, line, value);
