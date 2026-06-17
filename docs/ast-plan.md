@@ -555,6 +555,9 @@ Already structured:
   return `TypeRef` nodes first, then renders compatibility strings from those
   nodes; raw text replacement remains only for signature pieces without parsed
   type metadata
+- Dudu-declared function return types and out-of-line receiver types are now
+  stored as parsed `TypeRef` nodes instead of duplicate raw declaration
+  strings; rendered strings are derived at sema/codegen/display boundaries
 - native overload matching also checks numeric promotion through parsed
   parameter and argument `TypeRef` nodes before falling back to rendered native
   spelling
