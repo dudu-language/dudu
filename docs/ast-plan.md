@@ -411,6 +411,9 @@ Already structured:
 - array literal element checks now carry explicit and inferred element types as
   `TypeRef` nodes and try structured assignment before legacy literal
   compatibility fallback
+- text-expected body type checks now infer RHS and generic-method receivers as
+  `TypeRef` first, using structured type assignment before legacy
+  assignment/literal compatibility fallback
 - type compatibility has AST overloads for simple literals and list/set/dict
   literals, including expected-type disambiguation for empty `{}` dict
   initializers, reducing reliance on string parsing for assignment checks

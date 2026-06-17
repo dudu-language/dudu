@@ -50,7 +50,8 @@ void check_type_match(FunctionScope& scope, const std::string& expected, const E
         const bool receiver_is_bare_path =
             receiver.kind == ExprKind::Name && !scope.locals.contains(receiver.name);
         if (!receiver_is_bare_path) {
-            const std::string receiver_type = callbacks.infer_expr(scope, receiver, &location);
+            const TypeRef receiver_ref = callbacks.infer_expr_type(scope, receiver, &location);
+            const std::string receiver_type = substitute_type_ref_text(receiver_ref, {});
             if (const auto signature = inferred_generic_method_signature_for_type(
                     scope, receiver_type, member.name, expr.children, expected, &location,
                     {.infer_expr =
@@ -77,8 +78,11 @@ void check_type_match(FunctionScope& scope, const std::string& expected, const E
             }
         }
     }
-    const std::string got = callbacks.infer_expr(scope, expr, &location);
-    if (!callbacks.can_assign(scope, expected, expr, got)) {
+    const TypeRef expected_ref = parse_type_text(expected, location);
+    const TypeRef got_ref = callbacks.infer_expr_type(scope, expr, &location);
+    const std::string got = substitute_type_ref_text(got_ref, {});
+    if (!type_assignment_allowed(expected_ref, got_ref) &&
+        !callbacks.can_assign(scope, expected, expr, got)) {
         if (!mismatch_label.empty()) {
             sema_fail(location,
                       std::string(mismatch_label) + ": expected " + expected + ", got " + got);

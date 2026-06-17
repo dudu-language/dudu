@@ -586,6 +586,9 @@ push. They are not release packaging work.
    Array literal element checks now carry explicit and inferred element types as
    `TypeRef` nodes and try structured assignment before legacy literal
    compatibility fallback.
+   Text-expected body type checks now infer RHS and generic-method receivers as
+   `TypeRef` first, using structured type assignment before legacy
+   assignment/literal compatibility fallback.
 
 3. OOP Surface Cleanup
 
