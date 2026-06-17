@@ -72,22 +72,28 @@ std::string normalize_type_traits(std::string type) {
     return trim_copy(type);
 }
 
-std::string normalize_tuple_element(std::string type) {
-    type = trim_copy(std::move(type));
-    const TypeRef parsed = parse_type_text(type);
-    if (parsed.kind == TypeKind::Reference && parsed.children.size() == 1) {
-        return "&" + normalize_tuple_element(substitute_type_ref_text(parsed.children.front(), {}));
+TypeRef normalize_tuple_element(const TypeRef& type) {
+    if (type.kind == TypeKind::Reference && type.children.size() == 1) {
+        TypeRef out = type;
+        out.children[0] = normalize_tuple_element(type.children.front());
+        out.text = substitute_type_ref_text(out, {});
+        return out;
     }
-    if (parsed.kind != TypeKind::Template || parsed.name != "__tuple_element_t" ||
-        parsed.children.size() != 2 || parsed.children[0].kind != TypeKind::Value) {
-        return type;
+    if (type.kind != TypeKind::Template || type.name != "__tuple_element_t" ||
+        type.children.size() != 2 || type.children[0].kind != TypeKind::Value) {
+        TypeRef out = type;
+        for (TypeRef& child : out.children) {
+            child = normalize_tuple_element(child);
+        }
+        out.text = substitute_type_ref_text(out, {});
+        return out;
     }
-    const TypeRef& tuple_type = parsed.children[1];
+    const TypeRef& tuple_type = type.children[1];
     if (tuple_type.kind != TypeKind::Template ||
         (tuple_type.name != "std.tuple" && tuple_type.name != "tuple")) {
         return type;
     }
-    const std::string index_text = trim_copy(parsed.children[0].value);
+    const std::string index_text = trim_copy(type.children[0].value);
     if (index_text.empty() || index_text.find_first_not_of("0123456789") != std::string::npos) {
         return type;
     }
@@ -95,7 +101,7 @@ std::string normalize_tuple_element(std::string type) {
     if (index >= tuple_type.children.size()) {
         return type;
     }
-    return substitute_type_ref_text(tuple_type.children[index], {});
+    return normalize_tuple_element(tuple_type.children[index]);
 }
 
 bool nonarray_template_name(const std::string& name) {
@@ -125,21 +131,7 @@ std::string normalize_nonarray_templates(const TypeRef& type) {
     return out;
 }
 
-std::string normalize_nonarray_templates(std::string type) {
-    type = trim_copy(std::move(type));
-    const TypeRef parsed = parse_type_text(type);
-    if (parsed.kind != TypeKind::Template) {
-        return type;
-    }
-    const std::string normalized = normalize_nonarray_templates(parsed);
-    return normalized.empty() ? type : normalized;
-}
-
-} // namespace
-
-std::string normalize_cpp_type_artifacts(std::string type) {
-    type = normalize_nonarray_templates(
-        normalize_tuple_element(normalize_type_traits(std::move(type))));
+std::string strip_cpp_pointer_cv_artifacts(std::string type) {
     for (const std::string_view marker : {"* const[", "& const[", "* volatile[", "& volatile["}) {
         size_t pos = type.find(marker);
         while (pos != std::string::npos) {
@@ -148,6 +140,22 @@ std::string normalize_cpp_type_artifacts(std::string type) {
         }
     }
     return type;
+}
+
+} // namespace
+
+std::string normalize_cpp_type_artifacts(const TypeRef& type) {
+    const TypeRef tuple_normalized = normalize_tuple_element(type);
+    return strip_cpp_pointer_cv_artifacts(normalize_nonarray_templates(tuple_normalized));
+}
+
+std::string normalize_cpp_type_artifacts(std::string type) {
+    type = normalize_type_traits(std::move(type));
+    const TypeRef parsed = parse_type_text(type);
+    if (parsed.kind == TypeKind::Unknown) {
+        return strip_cpp_pointer_cv_artifacts(type);
+    }
+    return normalize_cpp_type_artifacts(parsed);
 }
 
 } // namespace dudu

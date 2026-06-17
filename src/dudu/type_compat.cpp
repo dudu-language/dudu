@@ -301,9 +301,15 @@ bool type_assignment_allowed(const std::string& expected, const std::string& got
 }
 
 bool type_assignment_allowed(const TypeRef& expected, const TypeRef& got) {
+    const std::string normalized_expected = normalize_cpp_type_artifacts(expected);
+    const std::string normalized_got = normalize_cpp_type_artifacts(got);
+    if (!normalized_expected.empty() && !normalized_got.empty() &&
+        structural_type_assignment_allowed(parse_type_text(normalized_expected),
+                                           parse_type_text(normalized_got))) {
+        return true;
+    }
     return structural_type_assignment_allowed(expected, got) ||
-           type_assignment_allowed(substitute_type_ref_text(expected, {}),
-                                   substitute_type_ref_text(got, {}));
+           type_assignment_allowed(normalized_expected, normalized_got);
 }
 
 bool assignment_type_allowed(const std::string& expected, const Expr& expr,
@@ -343,22 +349,22 @@ bool assignment_type_allowed(const std::string& expected, const Expr& expr,
 }
 
 bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const std::string& got) {
-    const std::string expected_text = substitute_type_ref_text(expected, {});
-    const std::string normalized_expected = normalize_cpp_type_artifacts(expected_text);
+    const std::string normalized_expected = normalize_cpp_type_artifacts(expected);
     const std::string normalized_got = normalize_cpp_type_artifacts(got);
-    if (normalized_expected != expected_text) {
-        return assignment_type_allowed(normalized_expected, expr, normalized_got);
+    const TypeRef normalized_expected_ref = parse_type_text(normalized_expected, expected.location);
+    if (normalized_expected != substitute_type_ref_text(expected, {})) {
+        return assignment_type_allowed(normalized_expected_ref, expr, normalized_got);
     }
     if (!normalized_got.empty() && normalized_got != "auto") {
         const TypeRef got_ref = parse_type_text(normalized_got);
-        if (structural_type_assignment_allowed(expected, got_ref)) {
+        if (structural_type_assignment_allowed(normalized_expected_ref, got_ref)) {
             return true;
         }
     }
-    if (parsed_expected_literal_assignment_allowed(expected, expr, normalized_got)) {
+    if (parsed_expected_literal_assignment_allowed(normalized_expected_ref, expr, normalized_got)) {
         return true;
     }
-    if (is_variant_value(expected, expr, normalized_got)) {
+    if (is_variant_value(normalized_expected_ref, expr, normalized_got)) {
         return true;
     }
     return normalized_expected == "auto" || is_explicit_cast_to(normalized_expected, expr) ||

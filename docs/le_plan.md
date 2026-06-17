@@ -522,6 +522,9 @@ push. They are not release packaging work.
    `cpp(...)` escape inference path. Fixed-array index and slice metadata now
    reads parsed `TypeRef` shape/element nodes in the remaining compatibility
    index helpers before crossing native/operator fallback boundaries.
+   Native C++ type-artifact normalization now has a parsed `TypeRef` entry
+   point, so tuple-element and non-array template cleanup no longer require
+   parsed callers to stringify only to reparse immediately.
    String-facing index type inference now parses the resolved input type once
    and reuses that `TypeRef` for shape/slice/index checks before crossing the
    remaining native/operator spelling fallback. Emitted local index type

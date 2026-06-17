@@ -450,6 +450,10 @@ Already structured:
 - C++ tuple-element artifact normalization now reads parsed `TypeRef` template
   children for `__tuple_element_t[N, tuple[...]]` and qualified
   `std.tuple[...]` forms instead of manually splitting nested bracket text
+- native C++ type-artifact normalization now exposes a parsed `TypeRef` entry
+  point; string-facing callers parse once at the compatibility boundary, while
+  tuple-element and non-array template cleanup operate on structured type
+  nodes
 - AST literal classification no longer reclassifies `Unknown` expression nodes
   from raw text
 - C++ assignment emission detects `Option` reset from `NoneLiteral` expression
