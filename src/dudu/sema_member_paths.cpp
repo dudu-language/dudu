@@ -38,37 +38,6 @@ std::string strip_c_type_tag(std::string type) {
     return type;
 }
 
-std::string first_path_type(const Symbols& symbols,
-                            const std::map<std::string, std::string>& locals,
-                            const SourceLocation* location, const std::string& first,
-                            const std::string& unknown_local_prefix) {
-    if (is_indexed_local_segment(first)) {
-        const Expr indexed =
-            parse_expr_text(first, location == nullptr ? SourceLocation{} : *location);
-        if (indexed.kind != ExprKind::Index || indexed.children.size() != 2 ||
-            indexed.children.front().kind != ExprKind::Name) {
-            return {};
-        }
-        const std::string& name = indexed.children.front().name;
-        if (location == nullptr && !locals.contains(name)) {
-            return {};
-        }
-        return indexed_value_type(symbols, locals,
-                                  location == nullptr ? SourceLocation{} : *location, name,
-                                  indexed.children[1],
-                                  unknown_local_prefix.empty() ? "indexed access to unknown local: "
-                                                               : unknown_local_prefix);
-    }
-    const auto local = locals.find(first);
-    if (local == locals.end()) {
-        if (location != nullptr && !unknown_local_prefix.empty()) {
-            sema_fail(*location, unknown_local_prefix + first);
-        }
-        return {};
-    }
-    return local->second;
-}
-
 std::string static_member_type(const Symbols& symbols, const SourceLocation* location,
                                const std::string& type_name, const std::string& member) {
     const auto klass = symbols.classes.find(type_name);
@@ -143,87 +112,41 @@ std::string member_path_type_from_string(const Symbols& symbols,
                                          const std::map<std::string, std::string>& locals,
                                          const SourceLocation* location, const std::string& path,
                                          std::string unknown_local_prefix) {
-    const size_t dot = path.find('.');
-    if (dot == std::string::npos) {
+    const SourceLocation parse_location = location == nullptr ? SourceLocation{} : *location;
+    if (path.find('.') == std::string::npos) {
+        if (is_indexed_local_segment(path)) {
+            const Expr indexed = parse_expr_text(path, parse_location);
+            return member_expr_type(symbols, locals, location, indexed, unknown_local_prefix);
+        }
         if (const auto local = locals.find(path); local != locals.end()) {
             return local->second;
         }
-        return {};
-    }
-    std::string current = path.substr(0, dot);
-    if (symbols.classes.contains(current)) {
-        size_t start = dot + 1;
-        const ClassDecl* klass = symbols.classes.at(current);
-        while (start < path.size()) {
-            const size_t next = path.find('.', start);
-            const std::string member =
-                path.substr(start, next == std::string::npos ? next : next - start);
-            bool found = false;
-            for (const ConstDecl& constant : klass->constants) {
-                if (constant.name == member) {
-                    if (next == std::string::npos) {
-                        return type_ref_text(constant.type_ref);
-                    }
-                    const auto next_class =
-                        symbols.classes.find(base_type(type_ref_text(constant.type_ref)));
-                    if (next_class == symbols.classes.end()) {
-                        return {};
-                    }
-                    klass = next_class->second;
-                    found = true;
-                    break;
-                }
-            }
-            for (const ConstDecl& field : klass->static_fields) {
-                if (field.name == member) {
-                    if (next == std::string::npos) {
-                        return type_ref_text(field.type_ref);
-                    }
-                    const auto next_class =
-                        symbols.classes.find(base_type(type_ref_text(field.type_ref)));
-                    if (next_class == symbols.classes.end()) {
-                        return {};
-                    }
-                    klass = next_class->second;
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                if (location != nullptr) {
-                    sema_fail(*location, "unknown static member: " + path);
-                }
-                return {};
-            }
-            start = next + 1;
+        if (location != nullptr && !unknown_local_prefix.empty()) {
+            sema_fail(*location, unknown_local_prefix + path);
         }
         return {};
     }
-    std::string type = first_path_type(symbols, locals, location, current, unknown_local_prefix);
-    if (type.empty()) {
+    const Expr expr = parse_expr_text(path, parse_location);
+    if (expr.kind == ExprKind::Unknown) {
+        if (location != nullptr && !unknown_local_prefix.empty()) {
+            sema_fail(*location, unknown_local_prefix + path);
+        }
         return {};
     }
-    size_t start = dot + 1;
-    while (start < path.size()) {
-        const size_t next = path.find('.', start);
-        const std::string field =
-            path.substr(start, next == std::string::npos ? next : next - start);
-        const auto klass = symbols.classes.find(unwrap_receiver_type(symbols, type));
-        if (klass == symbols.classes.end()) {
-            return {};
-        }
-        if (const auto found = field_type_for_class(symbols, *klass->second, type, field)) {
-            type = *found;
+    const std::string type =
+        member_expr_type(symbols, locals, location, expr, unknown_local_prefix);
+    if (type.empty() && location != nullptr && !unknown_local_prefix.empty()) {
+        const size_t dot = path.find('.');
+        if (dot != std::string::npos) {
+            const std::string first = path.substr(0, dot);
+            if (!locals.contains(first) && !symbols.classes.contains(first)) {
+                sema_fail(*location, unknown_local_prefix + first);
+            }
         } else {
             if (location != nullptr) {
-                sema_fail(*location, "unknown field: " + path);
+                sema_fail(*location, unknown_local_prefix + path);
             }
-            return {};
         }
-        if (next == std::string::npos) {
-            return type;
-        }
-        start = next + 1;
     }
     return type;
 }

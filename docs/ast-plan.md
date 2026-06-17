@@ -581,6 +581,9 @@ Already structured:
 - the string member-path type resolver is explicitly named
   `member_path_type_from_string`, and current callers are confined to the
   C++ escape inference boundary rather than normal Dudu member sema
+- `member_path_type_from_string` now parses the compatibility string once and
+  delegates to structured `Member`/`Index` expression typing instead of walking
+  dotted paths with its own string parser
 - the string member-path helpers are declared only through the expression
   internal boundary used by explicit C++ escape inference; the public sema
   methods surface exposes the parsed `member_expr_type` path for normal callers
