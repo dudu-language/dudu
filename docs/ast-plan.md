@@ -1543,6 +1543,10 @@ LSP source edits are also moving to AST-owned ranges:
   argument while preserving parsed reference/const wrappers.
 - Explicit native template fallback signatures now synthesize parsed `auto`
   return metadata instead of text-only return signatures.
+- Codegen local-type inference now exposes a parsed `TypeRef` result path, so
+  inferred `auto` locals and generic method argument matching can preserve
+  structured type metadata instead of rendering inferred type strings and
+  immediately parsing them back.
 
 Expression parsing has moved onto the lexer/token stream:
 

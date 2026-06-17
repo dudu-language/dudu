@@ -76,12 +76,12 @@ lower_expected_generic_method_call(const std::string& expected_type, const Expr&
                 continue;
             }
         }
-        const std::string arg_type =
-            infer_emitted_local_type(arg, locals, local_type_refs, function_returns);
-        if (arg_type.empty() || arg_type == "auto") {
+        const TypeRef arg_type =
+            infer_emitted_local_type_ref(arg, locals, local_type_refs, function_returns);
+        if (!has_type_ref(arg_type) || type_ref_text(arg_type) == "auto") {
             return std::nullopt;
         }
-        arg_types.push_back(parse_type_text(arg_type, arg.location));
+        arg_types.push_back(arg_type);
     }
     const auto type_args =
         infer_expected_method_type_args(*symbols, receiver_type, member.name, arg_types,
