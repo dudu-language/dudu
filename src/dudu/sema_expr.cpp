@@ -75,6 +75,11 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
             return *call_type;
         }
         break;
+    case ExprKind::Unary:
+        if (const auto unary_type = unary_expr_type_ref(scope, expr, location)) {
+            return *unary_type;
+        }
+        break;
     case ExprKind::Binary:
         if (const auto binary_type = binary_expr_type_ref(scope, expr, location)) {
             return *binary_type;

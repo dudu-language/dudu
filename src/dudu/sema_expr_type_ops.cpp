@@ -21,6 +21,24 @@ bool type_ref_is_name_ref(const TypeRef& type, std::string_view name) {
     return type.kind == TypeKind::Named && type_ref_head_name(type) == name;
 }
 
+TypeRef named_type_ref(std::string name, SourceLocation location) {
+    TypeRef type;
+    type.kind = TypeKind::Named;
+    type.name = std::move(name);
+    type.location = location;
+    type.text = type.name;
+    return type;
+}
+
+TypeRef pointer_type_ref(TypeRef pointee, SourceLocation location) {
+    TypeRef pointer;
+    pointer.kind = TypeKind::Pointer;
+    pointer.children.push_back(std::move(pointee));
+    pointer.location = location;
+    pointer.text = substitute_type_ref_text(pointer, {});
+    return pointer;
+}
+
 } // namespace
 
 bool is_arithmetic_op(const std::string& op) {
@@ -40,6 +58,54 @@ std::optional<std::string> contextual_numeric_binary_type(const FunctionScope& s
     if (is_numeric_literal_expr(right_expr) && is_numeric_type_name(scope.symbols, left) &&
         can_assign_ast(scope, left, right_expr, right)) {
         return left;
+    }
+    return std::nullopt;
+}
+
+std::optional<TypeRef> unary_expr_type_ref(const FunctionScope& scope, const Expr& expr,
+                                           const SourceLocation* location) {
+    if (expr.kind != ExprKind::Unary) {
+        return std::nullopt;
+    }
+    if (expr.children.empty() || missing_expr(expr.children.front())) {
+        if (location != nullptr) {
+            sema_expr_fail(*location, "operator " + expr.op + " expects an operand");
+        }
+        return std::nullopt;
+    }
+    const TypeRef got_ref = infer_expr_type_ast(scope, expr.children.front(), location);
+    const std::string got = substitute_type_ref_text(got_ref, {});
+    if (expr.op == "not") {
+        if (location != nullptr && !got.empty() && got != "bool" && got != "auto") {
+            sema_expr_fail(*location, "not expects bool, got " + got);
+        }
+        return named_type_ref("bool", expr.location);
+    }
+    if (expr.op == "-") {
+        return got_ref;
+    }
+    if (expr.op == "~") {
+        if (location != nullptr && !got.empty() && got != "auto" && !is_integer_type(got)) {
+            sema_expr_fail(*location, "~ expects integer, got " + got);
+        }
+        return got_ref;
+    }
+    if (expr.op == "*") {
+        if (got_ref.kind == TypeKind::Pointer && got_ref.children.size() == 1) {
+            return got_ref.children.front();
+        }
+        if (location != nullptr && !got.empty() && got != "auto") {
+            sema_expr_fail(*location, "cannot dereference non-pointer: " + got);
+        }
+        return std::nullopt;
+    }
+    if (expr.op == "&") {
+        return has_type_ref(got_ref)
+                   ? std::optional<TypeRef>{pointer_type_ref(got_ref, expr.location)}
+                   : std::nullopt;
+    }
+    if (location != nullptr) {
+        sema_expr_fail(*location, "unsupported unary operator: " + expr.op);
     }
     return std::nullopt;
 }

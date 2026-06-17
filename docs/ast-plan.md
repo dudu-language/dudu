@@ -346,6 +346,9 @@ Already structured:
   expression inference while preserving arity and argument checks
 - enum variant constructor calls such as `Expr.Number(value)` now return the
   enum `TypeRef` directly from typed expression inference after payload checks
+- unary expression typing for `not`, numeric negation, bitwise-not,
+  dereference, and address-of now returns `TypeRef` nodes directly instead of
+  rendering operand types and reparsing pointer/dereference results
 - LSP local variable/parameter type collection for hover, member completion,
   and member definition now walks parsed function/method bodies and reuses
   semantic expression inference instead of regexing source lines
