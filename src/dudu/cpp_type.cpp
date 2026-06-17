@@ -311,9 +311,24 @@ std::string lower_cpp_type(const std::string& raw_type) {
     return replace_dots(type);
 }
 
+std::string lower_cpp_type(const std::string& raw_type, const CppEmitOptions& options) {
+    const std::string type = trim_copy(raw_type);
+    const std::string emitted = emitted_type_name(type, options);
+    if (emitted != type) {
+        return emitted;
+    }
+    return lower_cpp_type(type);
+}
+
 std::string lower_cpp_type(const std::string& raw_type,
                            const std::vector<std::string>& namespace_aliases) {
     return lower_cpp_type(strip_c_import_type_aliases(raw_type, namespace_aliases));
+}
+
+std::string lower_cpp_type(const std::string& raw_type,
+                           const std::vector<std::string>& namespace_aliases,
+                           const CppEmitOptions& options) {
+    return lower_cpp_type(strip_c_import_type_aliases(raw_type, namespace_aliases), options);
 }
 
 } // namespace dudu

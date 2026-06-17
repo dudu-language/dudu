@@ -29,7 +29,7 @@ void emit_enum_forward_declarations(std::ostringstream& out, const ModuleAst& mo
         }
         out << "enum class " << name;
         if (!en.underlying_type.empty()) {
-            out << " : " << lower_cpp_type(en.underlying_type_ref);
+            out << " : " << lower_cpp_type(en.underlying_type_ref, options);
         }
         out << ";\n";
     }
@@ -47,7 +47,7 @@ void emit_enums(std::ostringstream& out, const ModuleAst& module,
             for (const EnumValueDecl& value : en.values) {
                 out << "    struct " << value.name << " {\n";
                 for (const EnumPayloadField& field : value.payload_fields) {
-                    out << "        " << lower_cpp_type(field.type_ref, aliases) << " "
+                    out << "        " << lower_cpp_type(field.type_ref, aliases, options) << " "
                         << field.name << "{};\n";
                 }
                 out << "    };\n";
@@ -65,7 +65,7 @@ void emit_enums(std::ostringstream& out, const ModuleAst& module,
         }
         out << "enum class " << name;
         if (!en.underlying_type.empty()) {
-            out << " : " << lower_cpp_type(en.underlying_type_ref, aliases);
+            out << " : " << lower_cpp_type(en.underlying_type_ref, aliases, options);
         }
         out << " {\n";
         for (const EnumValueDecl& value : en.values) {

@@ -115,7 +115,7 @@ void emit_constants(std::ostringstream& out, const ModuleAst& module,
                     const std::vector<std::string>& aliases, const CppEmitOptions& options) {
     for (const ConstDecl& constant : module.constants) {
         const std::string& name = emitted_name(constant, options);
-        const std::string lowered_type = lower_cpp_type(constant.type_ref, aliases);
+        const std::string lowered_type = lower_cpp_type(constant.type_ref, aliases, options);
         const bool runtime_address = constant.type.find('*') != std::string::npos ||
                                      constant.type.find("volatile") != std::string::npos;
         out << "inline ";
@@ -173,12 +173,13 @@ void emit_function_signature(std::ostringstream& out, const FunctionDecl& fn,
     if (function_has_decorator(fn, "constexpr")) {
         out << "constexpr ";
     }
-    out << lower_cpp_type(fn.return_type_ref, aliases) << ' ' << emitted_name(fn, options) << '(';
+    out << lower_cpp_type(fn.return_type_ref, aliases, options) << ' ' << emitted_name(fn, options)
+        << '(';
     for (size_t i = 0; i < fn.params.size(); ++i) {
         if (i > 0) {
             out << ", ";
         }
-        out << lower_cpp_type(fn.params[i].type_ref, aliases) << ' ' << fn.params[i].name;
+        out << lower_cpp_type(fn.params[i].type_ref, aliases, options) << ' ' << fn.params[i].name;
     }
     out << ')';
 }

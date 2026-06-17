@@ -559,10 +559,13 @@ push. They are not release packaging work.
    per-module `.hpp/.cpp` output has authoritative module boundaries to emit
    from. The emitter can now produce inspection artifacts for each module unit.
    Those per-module artifacts opt into stable generated declaration names, so
-   same-named declarations from different Dudu modules no longer collide in the
-   artifact text. The direct native build still compiles the compatibility
-   single-file output until namespace-aware per-module sema/codegen can rewrite
-   type and expression references coherently.
+   same-named declarations from different Dudu modules no longer collide in
+   artifact declarations. Same-module parsed type references in those artifacts
+   also lower through the generated type-name map for fields, parameters,
+   returns, arrays, and templates. The direct native build still compiles the
+   compatibility single-file output until namespace-aware per-module sema/codegen
+   can rewrite expression references and cross-module type references
+   coherently.
 
 12. Language Server And Formatter
 

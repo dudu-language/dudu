@@ -271,9 +271,15 @@ void test_cpp_module_artifacts_preserve_module_boundaries() {
     std::filesystem::remove_all(dir);
     std::filesystem::create_directories(dir / "renderer");
     write_file(dir / "camera.dd", "class Camera:\n"
-                                  "    x: i32\n");
+                                  "    x: i32\n"
+                                  "\n"
+                                  "def make_camera(x: i32) -> Camera:\n"
+                                  "    return Camera(x=x)\n");
     write_file(dir / "renderer" / "camera.dd", "class Camera:\n"
-                                               "    x: i32\n");
+                                               "    x: i32\n"
+                                               "\n"
+                                               "def make_camera(x: i32) -> Camera:\n"
+                                               "    return Camera(x=x)\n");
     write_file(dir / "main.dd", "import camera as cam\n"
                                 "import renderer.camera as render_camera\n"
                                 "\n"
@@ -301,6 +307,11 @@ void test_cpp_module_artifacts_preserve_module_boundaries() {
     assert(by_path.at("camera.hpp").find("struct DuduCameraCamera") != std::string::npos);
     assert(by_path.at(std::filesystem::path("renderer") / "camera.hpp")
                .find("struct DuduRendererCameraCamera") != std::string::npos);
+    assert(by_path.at("camera.cpp").find("DuduCameraCamera dudu_camera_make_camera") !=
+           std::string::npos);
+    assert(by_path.at(std::filesystem::path("renderer") / "camera.cpp")
+               .find("DuduRendererCameraCamera dudu_renderer_camera_make_camera") !=
+           std::string::npos);
 }
 
 void test_canonical_examples_parse(const std::filesystem::path& root) {

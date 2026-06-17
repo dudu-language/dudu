@@ -36,6 +36,19 @@ std::string join_lowered_type_args(const std::vector<TypeRef>& args,
     return out.str();
 }
 
+std::string join_lowered_type_args(const std::vector<TypeRef>& args,
+                                   const std::vector<std::string>& namespace_aliases,
+                                   const CppEmitOptions& options, size_t start = 0) {
+    std::ostringstream out;
+    for (size_t i = start; i < args.size(); ++i) {
+        if (i > start) {
+            out << ", ";
+        }
+        out << lower_cpp_type(args[i], namespace_aliases, options);
+    }
+    return out.str();
+}
+
 std::string lower_template_type(const TypeRef& type) {
     const std::string& name = type.name;
     if ((name == "std.function" || name == "std::function") && type.children.size() == 1 &&
@@ -124,6 +137,60 @@ std::string lower_template_type(const TypeRef& type,
     return out.str();
 }
 
+std::string lower_template_type(const TypeRef& type,
+                                const std::vector<std::string>& namespace_aliases,
+                                const CppEmitOptions& options) {
+    const std::string& name = type.name;
+    if ((name == "std.function" || name == "std::function") && type.children.size() == 1 &&
+        type.children.front().kind == TypeKind::Function) {
+        return "std::function<" +
+               lower_cpp_type(type.children.front(), namespace_aliases, options) + ">";
+    }
+    if (name == "list") {
+        return "std::vector<" + join_lowered_type_args(type.children, namespace_aliases, options) +
+               ">";
+    }
+    if (name == "span") {
+        return "std::span<" + join_lowered_type_args(type.children, namespace_aliases, options) +
+               ">";
+    }
+    if (name == "strided_span") {
+        return "dudu::StridedSpan<" +
+               join_lowered_type_args(type.children, namespace_aliases, options) + ">";
+    }
+    if (name == "dict") {
+        return "std::unordered_map<" +
+               join_lowered_type_args(type.children, namespace_aliases, options) + ">";
+    }
+    if (name == "set") {
+        return "std::unordered_set<" +
+               join_lowered_type_args(type.children, namespace_aliases, options) + ">";
+    }
+    if (name == "Option") {
+        return "std::optional<" +
+               join_lowered_type_args(type.children, namespace_aliases, options) + ">";
+    }
+    if (name == "Result") {
+        return "dudu::Result<" + join_lowered_type_args(type.children, namespace_aliases, options) +
+               ">";
+    }
+    if (name == "tuple") {
+        std::ostringstream out;
+        out << "dudu::Tuple" << type.children.size() << "<"
+            << join_lowered_type_args(type.children, namespace_aliases, options) << ">";
+        return out.str();
+    }
+    if (name == "variant") {
+        return "std::variant<" + join_lowered_type_args(type.children, namespace_aliases, options) +
+               ">";
+    }
+    std::ostringstream out;
+    out << replace_dots(
+               emitted_type_name(strip_c_import_type_aliases(name, namespace_aliases), options))
+        << "<" << join_lowered_type_args(type.children, namespace_aliases, options) << ">";
+    return out.str();
+}
+
 std::string lower_function_type(const TypeRef& type, bool pointer) {
     std::ostringstream signature;
     const std::string result = type.children.empty() ? "void" : lower_cpp_type(type.children[0]);
@@ -149,6 +216,24 @@ std::string lower_function_type(const TypeRef& type, bool pointer,
             signature << ", ";
         }
         signature << lower_cpp_type(type.children[i], namespace_aliases);
+    }
+    signature << ')';
+    return pointer ? "std::add_pointer_t<" + signature.str() + ">" : signature.str();
+}
+
+std::string lower_function_type(const TypeRef& type, bool pointer,
+                                const std::vector<std::string>& namespace_aliases,
+                                const CppEmitOptions& options) {
+    std::ostringstream signature;
+    const std::string result = type.children.empty()
+                                   ? "void"
+                                   : lower_cpp_type(type.children[0], namespace_aliases, options);
+    signature << result << '(';
+    for (size_t i = 1; i < type.children.size(); ++i) {
+        if (i > 1) {
+            signature << ", ";
+        }
+        signature << lower_cpp_type(type.children[i], namespace_aliases, options);
     }
     signature << ')';
     return pointer ? "std::add_pointer_t<" + signature.str() + ">" : signature.str();
@@ -185,6 +270,27 @@ std::string lower_fixed_array_type(const TypeRef& type,
         out = lower_cpp_type(storage.children.front(), namespace_aliases);
     } else {
         out = lower_cpp_type(storage, namespace_aliases);
+    }
+    const std::vector<std::string> dims = split_top_level_args(type.value);
+    for (auto it = dims.rbegin(); it != dims.rend(); ++it) {
+        out = "std::array<" + out + ", " + *it + ">";
+    }
+    return out;
+}
+
+std::string lower_fixed_array_type(const TypeRef& type,
+                                   const std::vector<std::string>& namespace_aliases,
+                                   const CppEmitOptions& options) {
+    if (type.children.empty()) {
+        return lower_cpp_type(type.text, namespace_aliases, options);
+    }
+    const TypeRef& storage = type.children.front();
+    std::string out;
+    if (storage.kind == TypeKind::Template && storage.name == "array" &&
+        !storage.children.empty()) {
+        out = lower_cpp_type(storage.children.front(), namespace_aliases, options);
+    } else {
+        out = lower_cpp_type(storage, namespace_aliases, options);
     }
     const std::vector<std::string> dims = split_top_level_args(type.value);
     for (auto it = dims.rbegin(); it != dims.rend(); ++it) {
@@ -287,6 +393,65 @@ std::string lower_cpp_type(const TypeRef& type, const std::vector<std::string>& 
         return lower_cpp_type(type.text, namespace_aliases);
     }
     return lower_cpp_type(type.text, namespace_aliases);
+}
+
+std::string lower_cpp_type(const TypeRef& type, const CppEmitOptions& options) {
+    return lower_cpp_type(type, {}, options);
+}
+
+std::string lower_cpp_type(const TypeRef& type, const std::vector<std::string>& namespace_aliases,
+                           const CppEmitOptions& options) {
+    if (!options.use_generated_names && options.generated_type_names.empty()) {
+        return lower_cpp_type(type, namespace_aliases);
+    }
+    if (type.text.empty()) {
+        return "void";
+    }
+    switch (type.kind) {
+    case TypeKind::Named:
+    case TypeKind::Qualified:
+        return lower_cpp_type(type.text, namespace_aliases, options);
+    case TypeKind::Value:
+        return type_ref_head_name(type);
+    case TypeKind::Template:
+        return lower_template_type(type, namespace_aliases, options);
+    case TypeKind::Pointer:
+        return type.children.empty()
+                   ? lower_cpp_type(type.text, namespace_aliases, options)
+                   : lower_cpp_type(type.children[0], namespace_aliases, options) + "*";
+    case TypeKind::Reference:
+        return type.children.empty()
+                   ? lower_cpp_type(type.text, namespace_aliases, options)
+                   : lower_cpp_type(type.children[0], namespace_aliases, options) + "&";
+    case TypeKind::Const:
+        return type.children.empty()
+                   ? lower_cpp_type(type.text, namespace_aliases, options)
+                   : "const " + lower_cpp_type(type.children[0], namespace_aliases, options);
+    case TypeKind::Volatile:
+        return type.children.empty()
+                   ? lower_cpp_type(type.text, namespace_aliases, options)
+                   : "volatile " + lower_cpp_type(type.children[0], namespace_aliases, options);
+    case TypeKind::Atomic:
+        return type.children.empty()
+                   ? lower_cpp_type(type.text, namespace_aliases, options)
+                   : "std::atomic<" + lower_cpp_type(type.children[0], namespace_aliases, options) +
+                         ">";
+    case TypeKind::Device:
+    case TypeKind::Storage:
+    case TypeKind::Shared:
+        return type.children.empty() ? lower_cpp_type(type.text, namespace_aliases, options)
+                                     : lower_cpp_type(type.children[0], namespace_aliases, options);
+    case TypeKind::Static:
+        return type.children.empty() ? lower_cpp_type(type.text, namespace_aliases, options)
+                                     : lower_cpp_type(type.children[0], namespace_aliases, options);
+    case TypeKind::FixedArray:
+        return lower_fixed_array_type(type, namespace_aliases, options);
+    case TypeKind::Function:
+        return lower_function_type(type, true, namespace_aliases, options);
+    case TypeKind::Unknown:
+        return lower_cpp_type(type.text, namespace_aliases, options);
+    }
+    return lower_cpp_type(type.text, namespace_aliases, options);
 }
 
 std::string lower_cpp_pointer_type(const std::string& pointee) {

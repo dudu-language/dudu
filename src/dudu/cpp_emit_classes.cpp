@@ -138,7 +138,8 @@ std::string class_opening(const ClassDecl& klass, const std::vector<std::string>
             if (i > 0) {
                 opening += ", ";
             }
-            opening += "public " + lower_cpp_type(klass.base_class_refs[i].type_ref, aliases);
+            opening +=
+                "public " + lower_cpp_type(klass.base_class_refs[i].type_ref, aliases, options);
         }
         return opening;
     };
@@ -266,8 +267,8 @@ std::string_view class_section_for_method(Visibility visibility) {
 void emit_method(std::ostringstream& out, const std::string& class_name,
                  const std::string& source_class_name, const FunctionDecl& method,
                  const std::vector<std::string>& aliases,
-                 const std::map<std::string, std::string>& function_returns,
-                 const Symbols& symbols) {
+                 const std::map<std::string, std::string>& function_returns, const Symbols& symbols,
+                 const CppEmitOptions& options) {
     const size_t first_param =
         !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
     emit_template_params(out, method.generic_params, "    ");
@@ -294,14 +295,16 @@ void emit_method(std::ostringstream& out, const std::string& class_name,
         if (lowered_name == "operator bool") {
             out << "explicit " << lowered_name << '(';
         } else {
-            out << lower_cpp_type(method.return_type_ref, aliases) << ' ' << lowered_name << '(';
+            out << lower_cpp_type(method.return_type_ref, aliases, options) << ' ' << lowered_name
+                << '(';
         }
     }
     for (size_t i = first_param; i < method.params.size(); ++i) {
         if (i > first_param) {
             out << ", ";
         }
-        out << lower_cpp_type(method.params[i].type_ref, aliases) << ' ' << method.params[i].name;
+        out << lower_cpp_type(method.params[i].type_ref, aliases, options) << ' '
+            << method.params[i].name;
     }
     std::map<std::string, std::string> locals;
     locals["class"] = class_name;
@@ -319,7 +322,7 @@ void emit_method(std::ostringstream& out, const std::string& class_name,
     if (is_constructor_method(method)) {
         if (const Expr* super_init = super_init_expr(method)) {
             if (const BaseClassDecl* base = super_init_base_decl(symbols, class_name)) {
-                out << " : " << lower_cpp_type(base->type_ref, aliases) << "("
+                out << " : " << lower_cpp_type(base->type_ref, aliases, options) << "("
                     << join_lowered_args(super_init->children, aliases, locals) << ")";
             }
         }
@@ -346,8 +349,9 @@ void emit_method(std::ostringstream& out, const std::string& class_name,
 }
 
 void emit_class_constant_decl(std::ostringstream& out, const ConstDecl& constant,
-                              const std::vector<std::string>& aliases) {
-    const std::string lowered_type = lower_cpp_type(constant.type_ref, aliases);
+                              const std::vector<std::string>& aliases,
+                              const CppEmitOptions& options) {
+    const std::string lowered_type = lower_cpp_type(constant.type_ref, aliases, options);
     const bool pointer = constant.type.find('*') != std::string::npos;
     out << "    static ";
     out << (pointer ? lowered_type + " const " : "const " + lowered_type + " ");
@@ -356,8 +360,9 @@ void emit_class_constant_decl(std::ostringstream& out, const ConstDecl& constant
 
 void emit_class_constant_definition(std::ostringstream& out, const std::string& class_name,
                                     const ConstDecl& constant,
-                                    const std::vector<std::string>& aliases) {
-    const std::string lowered_type = lower_cpp_type(constant.type_ref, aliases);
+                                    const std::vector<std::string>& aliases,
+                                    const CppEmitOptions& options) {
+    const std::string lowered_type = lower_cpp_type(constant.type_ref, aliases, options);
     const bool runtime_address = constant.type.find('*') != std::string::npos ||
                                  constant.type.find("volatile") != std::string::npos;
     out << "inline ";
@@ -385,7 +390,7 @@ void emit_classes(std::ostringstream& out, const ModuleAst& module,
         emit_template_params(out, klass.generic_params);
         out << class_opening(klass, aliases, options) << " {\n";
         for (const FieldDecl& field : klass.fields) {
-            out << "    " << lower_cpp_type(field.type_ref, aliases) << ' ' << field.name;
+            out << "    " << lower_cpp_type(field.type_ref, aliases, options) << ' ' << field.name;
             if (field.value.empty()) {
                 out << "{}";
             } else {
@@ -394,11 +399,11 @@ void emit_classes(std::ostringstream& out, const ModuleAst& module,
             out << ";\n";
         }
         for (const ConstDecl& field : klass.static_fields) {
-            out << "    inline static " << lower_cpp_type(field.type_ref, aliases) << ' '
+            out << "    inline static " << lower_cpp_type(field.type_ref, aliases, options) << ' '
                 << field.name << " = " << lower_cpp_expr_ast(field.value_expr, aliases) << ";\n";
         }
         for (const ConstDecl& constant : klass.constants) {
-            emit_class_constant_decl(out, constant, aliases);
+            emit_class_constant_decl(out, constant, aliases, options);
         }
         if (class_is_polymorphic(symbols, klass) && !has_drop_method(klass)) {
             out << "    virtual ~" << class_name << "() = default;\n";
@@ -410,11 +415,12 @@ void emit_classes(std::ostringstream& out, const ModuleAst& module,
                 out << method_section << ":\n";
                 current_section = method_section;
             }
-            emit_method(out, class_name, klass.name, method, aliases, function_returns, symbols);
+            emit_method(out, class_name, klass.name, method, aliases, function_returns, symbols,
+                        options);
         }
         out << "};\n\n";
         for (const ConstDecl& constant : klass.constants) {
-            emit_class_constant_definition(out, class_name, constant, aliases);
+            emit_class_constant_definition(out, class_name, constant, aliases, options);
         }
         if (!klass.constants.empty()) {
             out << '\n';
