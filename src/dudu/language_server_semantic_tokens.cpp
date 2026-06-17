@@ -1,6 +1,9 @@
 #include "dudu/language_server_semantic_tokens.hpp"
 
+#include "dudu/ast_expr.hpp"
+
 #include <algorithm>
+#include <optional>
 #include <set>
 #include <sstream>
 #include <string_view>
@@ -164,11 +167,12 @@ void collect_call_callee_tokens(const Expr& expr, std::vector<SemanticToken>& to
             collect_expr_tokens(child, tokens, native_index);
         }
         const SourceLocation member_location = member_name_location(expr);
-        if (native_index != nullptr && native_index->macros.contains(expr.text)) {
+        const std::string path = member_path_from_expr(expr).value_or(expr.text);
+        if (native_index != nullptr && native_index->macros.contains(path)) {
             add_native_semantic_token(tokens, member_location, expr.name, token_macro);
-        } else if (native_index != nullptr && native_index->functions.contains(expr.text)) {
+        } else if (native_index != nullptr && native_index->functions.contains(path)) {
             add_native_semantic_token(tokens, member_location, expr.name, token_function);
-        } else if (native_index != nullptr && native_index->methods.contains(expr.text)) {
+        } else if (native_index != nullptr && native_index->methods.contains(path)) {
             add_native_semantic_token(tokens, member_location, expr.name, token_method);
         } else {
             add_semantic_token(tokens, member_location, expr.name, token_function);
@@ -215,14 +219,15 @@ void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
             collect_expr_tokens(child, tokens, native_index);
         }
         const SourceLocation member_location = member_name_location(expr);
-        if (native_index != nullptr && native_index->classes.contains(expr.text)) {
+        const std::string path = member_path_from_expr(expr).value_or(expr.text);
+        if (native_index != nullptr && native_index->classes.contains(path)) {
             add_native_semantic_token(tokens, member_location, expr.name, token_class);
-        } else if (native_index != nullptr && native_index->types.contains(expr.text)) {
+        } else if (native_index != nullptr && native_index->types.contains(path)) {
             add_native_semantic_token(tokens, member_location, expr.name, token_type);
-        } else if (native_index != nullptr && native_index->values.contains(expr.text)) {
+        } else if (native_index != nullptr && native_index->values.contains(path)) {
             add_native_semantic_token(tokens, member_location, expr.name, token_variable,
                                       mod_readonly);
-        } else if (native_index != nullptr && native_index->enum_members.contains(expr.text)) {
+        } else if (native_index != nullptr && native_index->enum_members.contains(path)) {
             add_native_semantic_token(tokens, member_location, expr.name, token_enum_member,
                                       mod_readonly);
         } else {

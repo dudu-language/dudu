@@ -541,6 +541,9 @@ Already structured:
 - Dudu-native constant aliases created by selective imports now build a parsed
   `Name` expression directly instead of reparsing the imported identifier from
   text inside the module loader
+- semantic-token native lookups for member/callee expressions now derive the
+  dotted path from parsed member nodes instead of reading the compatibility
+  expression text field first
 - assignment compatibility for parsed explicit casts, value-wrapper
   assignments, and `Ok(...)`/`Err(...)` result construction inspects call
   expression nodes instead of rediscovering those forms from raw text

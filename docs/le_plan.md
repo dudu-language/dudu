@@ -619,7 +619,9 @@ push. They are not release packaging work.
    `member_path_type_from_string`, with callers confined to the C++ escape
    inference boundary. Dudu-native constant aliases from selective imports now
    construct parsed `Name` expressions directly instead of reparsing imported
-   identifier text inside the module loader.
+   identifier text inside the module loader. Semantic-token native lookups for
+   member and callee expressions now derive dotted paths from parsed member
+   nodes instead of reading the compatibility expression text field first.
 
 3. OOP Surface Cleanup
 
