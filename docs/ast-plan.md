@@ -1291,6 +1291,20 @@ LSP source edits are also moving to AST-owned ranges:
   definition, references, and rename entry points resolve cursor symbols through
   AST-backed symbol lookup.
 
+Expression parsing has moved onto the lexer/token stream:
+
+- `parse_expr_text` now lexes the expression text and delegates to a token
+  parser, instead of classifying top-level expression forms by substring scans.
+- The token parser preserves structured nodes for literals, unary/binary
+  operators, calls, template calls, members, indexes, tuples, lists, dicts,
+  sets, slices, named arguments, explicit `cpp(...)` escapes, and unsupported
+  Python expression forms that need precise diagnostics.
+- This is a compatibility migration point. The public `parse_expr_text` entry
+  remains while statement/declaration parsing still passes expression spans
+  through it. Future parser work should pass token spans directly and split the
+  token expression parser into smaller files before adding more expression
+  features.
+
 ## Acceptance
 
 - Existing examples still compile and run.

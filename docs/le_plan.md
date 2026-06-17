@@ -457,6 +457,11 @@ push. They are not release packaging work.
    Import declarations now also carry whole-statement source ranges/trivia, and
    LSP organize-import/missing-import actions use parsed import declarations for
    import identity and block placement rather than prefix-scanning import lines.
+   Expression parsing now enters through the lexer/token stream instead of the
+   old top-level substring classifier, preserving structured AST nodes for
+   calls, template calls, indexes, slices, literals, unsupported lambdas/def
+   expressions, and Python conditional expressions. The token expression parser
+   still needs a follow-up file split before more expression forms are added.
    Normal template-call emission lowers bracket arguments from parsed
    `TypeRef` nodes, including non-type value arguments, instead of falling back
    to raw expression text. Parsed method calls on pointer-typed member
