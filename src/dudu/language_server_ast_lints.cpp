@@ -3,6 +3,7 @@
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/language_server_support.hpp"
+#include "dudu/sema_common.hpp"
 
 #include <filesystem>
 #include <map>
@@ -106,7 +107,7 @@ void lint_suspicious_cast_stmt(const Stmt& stmt, const Document& doc,
     lint_suspicious_cast_expr(stmt.iterable_expr, doc, active_decls, out);
     lint_suspicious_cast_expr(stmt.pattern_expr, doc, active_decls, out);
     lint_suspicious_cast_expr(stmt.guard_expr, doc, active_decls, out);
-    if (stmt.kind == StmtKind::VarDecl && !stmt.name.empty() && !stmt.type.empty()) {
+    if (stmt.kind == StmtKind::VarDecl && !stmt.name.empty() && has_type_ref(stmt.type_ref)) {
         active_decls.push_back({.name = stmt.name,
                                 .type = substitute_type_ref_text(stmt.type_ref, {}),
                                 .line = stmt.location.line,

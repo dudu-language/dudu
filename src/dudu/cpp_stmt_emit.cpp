@@ -13,6 +13,7 @@
 #include "dudu/cpp_stmt_generic_methods.hpp"
 #include "dudu/cpp_stmt_helpers.hpp"
 #include "dudu/cpp_stmt_types.hpp"
+#include "dudu/sema_common.hpp"
 #include "dudu/sema_context.hpp"
 #include "dudu/sema_enum.hpp"
 #include "dudu/sema_function_type.hpp"
@@ -352,7 +353,7 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
     }
     if (stmt.kind == StmtKind::Except) {
         out << indent(depth);
-        if (stmt.name.empty() || stmt.type.empty()) {
+        if (stmt.name.empty() || !has_type_ref(stmt.type_ref)) {
             out << "catch (...)";
         } else {
             out << "catch (const " << lower_cpp_type(stmt.type_ref, aliases, options) << "& "
@@ -376,7 +377,7 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         std::string binding = stmt.name;
         const std::string range = lower_expr(stmt.iterable_expr, aliases, locals, symbols, options);
         std::string binding_type = "auto";
-        if (!stmt.type.empty()) {
+        if (has_type_ref(stmt.type_ref)) {
             binding_type = lower_cpp_type(stmt.type_ref, aliases, options);
             locals[stmt.name] = substitute_type_ref_text(stmt.type_ref, {});
             local_type_refs[stmt.name] = stmt.type_ref;
@@ -397,7 +398,7 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
             out << indent(depth) << "}\n";
             return;
         }
-        const std::string loop_type = stmt.type.empty() ? "auto&&" : binding_type;
+        const std::string loop_type = has_type_ref(stmt.type_ref) ? binding_type : "auto&&";
         out << indent(depth) << "for (" << loop_type << ' ' << binding << " : " << range << ") {\n";
         emit_block(out, stmt.children, depth + 1, aliases, locals, local_type_refs, return_type,
                    function_returns, symbols, options);

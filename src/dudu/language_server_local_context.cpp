@@ -95,7 +95,7 @@ void bind_tuple_names(FunctionScope& scope, const Stmt& stmt) {
 
 void bind_statement(FunctionScope& scope, const Stmt& stmt) {
     if (stmt.kind == StmtKind::VarDecl) {
-        if (!stmt.type.empty()) {
+        if (has_type_ref(stmt.type_ref)) {
             const ArrayShapeInference inferred =
                 infer_array_literal_shape_type(stmt.type_ref, stmt.value_expr);
             const TypeRef type_ref =

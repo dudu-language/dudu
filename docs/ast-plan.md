@@ -96,6 +96,9 @@ Already structured:
   annotation strings as the semantic local type
 - suspicious-cast lint facts for annotated locals and parameters now render
   from parsed `TypeRef` nodes instead of reading raw annotation strings
+- typed local/catch/loop/lint paths now test parsed `TypeRef` presence instead
+  of treating non-empty raw annotation text as proof that a semantic type node
+  exists
 - C ABI pointer checks and structural type-name compatibility compare rendered
   `TypeRef` forms instead of raw parser text
 - member and scoped member path reconstruction render indexed path segments

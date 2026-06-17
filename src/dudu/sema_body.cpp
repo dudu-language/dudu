@@ -345,7 +345,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
         if (!stmt.name.empty() && sema_has_expr(stmt.iterable_expr)) {
             check_local_binding_name(stmt.location, stmt.name);
             TypeRef binding_type = stmt.type_ref;
-            if (stmt.type.empty()) {
+            if (!has_type_ref(binding_type)) {
                 const auto inferred = infer_for_binding_type(scope, stmt, callbacks);
                 if (!inferred) {
                     sema_fail(node_location(stmt.location, stmt.iterable_expr),

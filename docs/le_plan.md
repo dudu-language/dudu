@@ -561,7 +561,8 @@ push. They are not release packaging work.
    codegen, and LSP local scopes instead of using raw annotation strings as
    semantic local types. Suspicious-cast lint facts for annotated locals and
    parameters now render from parsed `TypeRef` nodes instead of raw annotation
-   strings. Generic
+   strings, and typed local/catch/loop/lint paths now test parsed `TypeRef`
+   presence instead of non-empty raw annotation text. Generic
    argument inference now keeps inferred bindings as `TypeRef` nodes, so
    function and method generic inference returns structured type arguments
    instead of reparsing rendered binding text. Generic function and method
