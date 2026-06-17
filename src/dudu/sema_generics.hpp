@@ -13,6 +13,8 @@ namespace dudu {
 
 struct GenericInferCallbacks {
     std::function<std::string(const FunctionScope&, const Expr&, const SourceLocation*)> infer_expr;
+    std::function<TypeRef(const FunctionScope&, const Expr&, const SourceLocation*)>
+        infer_expr_type = {};
     std::function<bool(const FunctionScope&, const std::string&, const Expr&, const std::string&)>
         can_assign;
 };
@@ -29,9 +31,9 @@ infer_generic_method_type_args(const FunctionScope& scope, const FunctionDecl& m
                                const std::string& callee, const std::vector<Expr>& args,
                                size_t first_param, const SourceLocation* location,
                                const GenericInferCallbacks& callbacks);
-std::optional<std::vector<TypeRef>> infer_generic_method_type_args_from_types(
-    const FunctionDecl& method, const std::string& callee, const std::vector<std::string>& arg_types,
-    size_t first_param, const std::optional<std::string>& expected_return,
+std::optional<std::vector<TypeRef>> infer_generic_method_type_args_from_type_refs(
+    const FunctionDecl& method, const std::string& callee, const std::vector<TypeRef>& arg_types,
+    size_t first_param, const std::optional<TypeRef>& expected_return,
     const SourceLocation* location);
 FunctionSignature instantiate_generic_signature(const FunctionDecl& fn,
                                                 const std::vector<TypeRef>& args);

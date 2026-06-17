@@ -66,6 +66,9 @@ Already structured:
 - generic argument inference stores inferred bindings as `TypeRef` nodes, so
   successful function and method generic inference returns structured type
   arguments instead of reparsing rendered binding text
+- generic function and method inference can now request typed expression
+  results through `infer_expr_type_ast`, so local/type-aware arguments cross
+  that boundary as `TypeRef` nodes before hitting compatibility fallback paths
 - shared template and unary type child helpers render parsed `TypeRef` children
   structurally instead of returning raw child text
 - array shape inference and static field type extraction render parsed

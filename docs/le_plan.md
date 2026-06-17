@@ -537,7 +537,10 @@ push. They are not release packaging work.
    without regenerating `array[T][...]` text and reparsing it. Generic
    argument inference now keeps inferred bindings as `TypeRef` nodes, so
    function and method generic inference returns structured type arguments
-   instead of reparsing rendered binding text.
+   instead of reparsing rendered binding text. Generic function and method
+   inference can also request typed expression results through
+   `infer_expr_type_ast`, so local/type-aware arguments cross that boundary as
+   `TypeRef` nodes before hitting compatibility fallback paths.
 
 3. OOP Surface Cleanup
 

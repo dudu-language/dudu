@@ -47,6 +47,63 @@ std::optional<std::string> contextual_numeric_binary_type(const FunctionScope& s
     throw CompileError(location, message);
 }
 
+TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
+                            const SourceLocation* location) {
+    const SourceLocation type_location =
+        location == nullptr ? node_location(expr.location, expr) : node_location(*location, expr);
+    switch (expr.kind) {
+    case ExprKind::BoolLiteral:
+        return parse_type_text("bool", type_location);
+    case ExprKind::IntLiteral:
+        return parse_type_text("i32", type_location);
+    case ExprKind::FloatLiteral:
+        return parse_type_text("f64", type_location);
+    case ExprKind::StringLiteral:
+        return parse_type_text("str", type_location);
+    case ExprKind::NoneLiteral:
+        return parse_type_text("None", type_location);
+    case ExprKind::Name:
+        if (const auto local = scope.local_type_refs.find(expr.name);
+            local != scope.local_type_refs.end()) {
+            return local->second;
+        }
+        if (const auto local = scope.locals.find(expr.name); local != scope.locals.end()) {
+            return parse_type_text(local->second, type_location);
+        }
+        if (const auto fn = scope.symbols.function_signatures.find(expr.name);
+            fn != scope.symbols.function_signatures.end()) {
+            return parse_type_text(function_type(fn->second), type_location);
+        }
+        if (const auto value = scope.symbols.native_values.find(expr.name);
+            value != scope.symbols.native_values.end()) {
+            return parse_type_text(value->second, type_location);
+        }
+        if (const auto native = scope.symbols.native_function_signatures.find(expr.name);
+            native != scope.symbols.native_function_signatures.end() && !native->second.empty()) {
+            return parse_type_text(function_type(native->second.front()), type_location);
+        }
+        break;
+    case ExprKind::TupleLiteral: {
+        TypeRef tuple;
+        tuple.kind = TypeKind::Template;
+        tuple.name = "tuple";
+        tuple.location = expr.location;
+        tuple.range = expr.range;
+        tuple.children.reserve(expr.children.size());
+        for (const Expr& child : expr.children) {
+            tuple.children.push_back(infer_expr_type_ast(scope, child, location));
+        }
+        tuple.text = substitute_type_ref_text(tuple, {});
+        return tuple;
+    }
+    default:
+        break;
+    }
+
+    const std::string inferred = infer_expr_ast(scope, expr, location);
+    return inferred.empty() ? TypeRef{} : parse_type_text(inferred, type_location);
+}
+
 std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                            const SourceLocation* location) {
     const SourceLocation* use_location =
