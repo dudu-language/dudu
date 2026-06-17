@@ -52,6 +52,13 @@ std::string decorator_arg(const Decorator& decorator, std::string_view name) {
 
 std::string operator_decorator_arg(const FunctionDecl& fn) {
     for (const Decorator& decorator : fn.decorators) {
+        if (!decorator_call_matches(decorator, "operator")) {
+            continue;
+        }
+        if (decorator.expr.children.size() != 1 ||
+            decorator.expr.children.front().kind != ExprKind::StringLiteral) {
+            fail(decorator.location, "@operator requires exactly one string literal argument");
+        }
         if (std::string value = decorator_arg(decorator, "operator"); !value.empty()) {
             return value;
         }

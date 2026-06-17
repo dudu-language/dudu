@@ -170,6 +170,7 @@ expect_fail bad_cpp_operator_mismatch --emit-cpp "operator + expects dudu_op.Vec
 expect_fail bad_dudu_operator_rhs --emit-cpp "argument 1 for + expects Vec2, got i32"
 expect_fail bad_dudu_operator_compare_return --check "comparison operator methods must return bool"
 expect_fail bad_dudu_operator_static --check "operator methods cannot be static"
+expect_fail bad_dudu_operator_non_string --check "@operator requires exactly one string literal argument"
 expect_fail bad_dunder_operator --check "reserved Python-style dunder method name: __add__"
 expect_fail bad_dunder_init --check "reserved Python-style dunder method name: __init__"
 expect_fail bad_dunder_del --check "reserved Python-style dunder method name: __del__"

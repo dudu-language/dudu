@@ -1,0 +1,11 @@
+class Vec2:
+    x: i32
+    y: i32
+
+    @operator(add)
+    def add(self, other: Vec2) -> Vec2:
+        return other
+
+
+def main() -> i32:
+    return 0
