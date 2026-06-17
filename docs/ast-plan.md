@@ -1480,6 +1480,10 @@ LSP source edits are also moving to AST-owned ranges:
 - The symbol table no longer keeps a separate function-name to return-type
   string map; Dudu functions are represented by `FunctionSignature` metadata
   with parsed parameter and return `TypeRef` fields.
+- C++ statement emission now carries function and method return metadata as
+  parsed `TypeRef` values through emitted local type inference instead of a
+  string return-type map; strings are rendered only at the C++ codegen
+  boundary.
 
 Expression parsing has moved onto the lexer/token stream:
 

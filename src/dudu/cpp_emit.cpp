@@ -98,14 +98,14 @@ void emit_template_params(std::ostringstream& out, const std::vector<std::string
     out << ">\n";
 }
 
-std::map<std::string, std::string> function_return_types(const ModuleAst& module) {
-    std::map<std::string, std::string> out;
+std::map<std::string, TypeRef> function_return_types(const ModuleAst& module) {
+    std::map<std::string, TypeRef> out;
     for (const FunctionDecl& fn : module.functions) {
-        out[fn.name] = function_return_type_text(fn);
+        out[fn.name] = function_return_type_ref(fn);
     }
     for (const ClassDecl& klass : module.classes) {
         for (const FunctionDecl& method : klass.methods) {
-            out[klass.name + "." + method.name] = function_return_type_text(method);
+            out[klass.name + "." + method.name] = function_return_type_ref(method);
         }
     }
     return out;
@@ -187,7 +187,7 @@ void emit_function_signature(std::ostringstream& out, const FunctionDecl& fn,
 
 void emit_function_body(std::ostringstream& out, const FunctionDecl& fn,
                         const std::vector<std::string>& aliases,
-                        const std::map<std::string, std::string>& function_returns,
+                        const std::map<std::string, TypeRef>& function_returns,
                         const Symbols& symbols, const CppEmitOptions& options = {}) {
     emit_template_params(out, fn.generic_params);
     emit_function_signature(out, fn, aliases, options);
@@ -240,7 +240,7 @@ void emit_class_forward_declarations(std::ostringstream& out, const ModuleAst& m
 
 void emit_early_functions(std::ostringstream& out, const ModuleAst& module,
                           const std::vector<std::string>& aliases,
-                          const std::map<std::string, std::string>& function_returns,
+                          const std::map<std::string, TypeRef>& function_returns,
                           const Symbols& symbols, bool header_only, bool test_source = false,
                           const CppEmitOptions& options = {}) {
     for (const FunctionDecl& fn : module.functions) {
@@ -370,7 +370,7 @@ void emit_test_harness(std::ostringstream& out, const ModuleAst& module, const s
 std::string emit_cpp_header(const ModuleAst& module, const CppEmitOptions& options) {
     std::ostringstream out;
     const std::vector<std::string> aliases = namespace_aliases(module);
-    const std::map<std::string, std::string> function_returns = function_return_types(module);
+    const std::map<std::string, TypeRef> function_returns = function_return_types(module);
     const Symbols symbols = collect_symbols(module);
     out << "#pragma once\n\n";
     if (options.emit_prelude) {
@@ -438,7 +438,7 @@ std::string emit_c_header(const ModuleAst& module) {
 std::string emit_cpp_source(const ModuleAst& module, const CppEmitOptions& options) {
     std::ostringstream out;
     const std::vector<std::string> aliases = namespace_aliases(module);
-    const std::map<std::string, std::string> function_returns = function_return_types(module);
+    const std::map<std::string, TypeRef> function_returns = function_return_types(module);
     const Symbols symbols = collect_symbols(module);
     if (options.emit_prelude) {
         emit_includes(out, module);
@@ -472,7 +472,7 @@ std::string emit_cpp_test_source(const ModuleAst& module, const std::string& fil
                                  bool capture_output) {
     std::ostringstream out;
     const std::vector<std::string> aliases = namespace_aliases(module);
-    const std::map<std::string, std::string> function_returns = function_return_types(module);
+    const std::map<std::string, TypeRef> function_returns = function_return_types(module);
     const Symbols symbols = collect_symbols(module);
     emit_includes(out, module);
     emit_result_prelude(out, module);

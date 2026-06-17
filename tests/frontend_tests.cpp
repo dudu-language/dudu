@@ -519,7 +519,7 @@ void test_emitted_local_index_type_inference() {
         {"names", "dict[str, Player]"},
         {"matrix", "array[f32][3, 4]"},
     };
-    const std::map<std::string, std::string> functions;
+    const std::map<std::string, dudu::TypeRef> functions;
 
     assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("values[0]"), locals, functions) ==
            "i32");
@@ -554,12 +554,12 @@ void test_emitted_local_expression_type_inference() {
         {"queue", "storage[Queue[i32]]"},
         {"scale", "f32"},
     };
-    const std::map<std::string, std::string> functions = {
-        {"make_matrix", "array[i32][2, 2]"},
-        {"make_values", "list[i32]"},
-        {"make_count", "i32"},
-        {"Player.hp", "i32"},
-        {"Queue.pop", "i32"},
+    const std::map<std::string, dudu::TypeRef> functions = {
+        {"make_matrix", dudu::parse_type_text("array[i32][2, 2]")},
+        {"make_values", dudu::parse_type_text("list[i32]")},
+        {"make_count", dudu::parse_type_text("i32")},
+        {"Player.hp", dudu::parse_type_text("i32")},
+        {"Queue.pop", dudu::parse_type_text("i32")},
     };
 
     assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("True"), locals, functions) ==

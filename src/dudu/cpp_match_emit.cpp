@@ -37,7 +37,7 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                           const std::vector<std::string>& aliases,
                           const std::map<std::string, std::string>& locals,
                           const std::string& return_type,
-                          const std::map<std::string, std::string>& function_returns,
+                          const std::map<std::string, TypeRef>& function_returns,
                           const Symbols* symbols, const CppEmitOptions& options) {
     static const std::map<std::string, TypeRef> no_type_refs;
     emit_match_statement(out, stmt, depth, aliases, locals, no_type_refs, return_type,
@@ -49,7 +49,7 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                           const std::map<std::string, std::string>& locals,
                           const std::map<std::string, TypeRef>& local_type_refs,
                           const std::string& return_type,
-                          const std::map<std::string, std::string>& function_returns,
+                          const std::map<std::string, TypeRef>& function_returns,
                           const Symbols* symbols, const CppEmitOptions& options) {
     const std::string subject_type =
         infer_emitted_local_type(stmt.condition_expr, locals, local_type_refs, function_returns);
@@ -223,7 +223,7 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                           const std::vector<std::string>& aliases,
                           const std::map<std::string, std::string>& locals,
                           const std::string& return_type,
-                          const std::map<std::string, std::string>& function_returns,
+                          const std::map<std::string, TypeRef>& function_returns,
                           const Symbols* symbols) {
     emit_match_statement(out, stmt, depth, aliases, locals, return_type, function_returns, symbols,
                          {});

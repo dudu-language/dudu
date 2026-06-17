@@ -175,9 +175,9 @@ bool looks_like_dudu_type(const std::string& name) {
 }
 
 std::string infer_call_type(const std::string& callee,
-                            const std::map<std::string, std::string>& function_returns) {
+                            const std::map<std::string, TypeRef>& function_returns) {
     if (const auto fn = function_returns.find(callee); fn != function_returns.end()) {
-        return fn->second;
+        return substitute_type_ref_text(fn->second, {});
     }
     if (looks_like_dudu_type(callee)) {
         return callee;
@@ -187,7 +187,7 @@ std::string infer_call_type(const std::string& callee,
 
 std::string infer_call_type(const Expr& expr, const std::map<std::string, std::string>& locals,
                             const std::map<std::string, TypeRef>& local_type_refs,
-                            const std::map<std::string, std::string>& function_returns) {
+                            const std::map<std::string, TypeRef>& function_returns) {
     if (expr.callee.empty()) {
         return infer_call_type(expr.name, function_returns);
     }
@@ -208,7 +208,7 @@ std::string infer_call_type(const Expr& expr, const std::map<std::string, std::s
             }
             const std::string key = base_type + "." + callee.name;
             if (const auto method = function_returns.find(key); method != function_returns.end()) {
-                return method->second;
+                return substitute_type_ref_text(method->second, {});
             }
         }
     }
@@ -218,7 +218,7 @@ std::string infer_call_type(const Expr& expr, const std::map<std::string, std::s
 std::string infer_binary_expr_type(const Expr& expr,
                                    const std::map<std::string, std::string>& locals,
                                    const std::map<std::string, TypeRef>& local_type_refs,
-                                   const std::map<std::string, std::string>& function_returns) {
+                                   const std::map<std::string, TypeRef>& function_returns) {
     if (expr.children.size() != 2) {
         return {};
     }
@@ -251,7 +251,7 @@ std::string infer_binary_expr_type(const Expr& expr,
 
 std::string infer_emitted_local_type(const Expr& expr,
                                      const std::map<std::string, std::string>& locals,
-                                     const std::map<std::string, std::string>& function_returns) {
+                                     const std::map<std::string, TypeRef>& function_returns) {
     static const std::map<std::string, TypeRef> no_type_refs;
     return infer_emitted_local_type(expr, locals, no_type_refs, function_returns);
 }
@@ -259,7 +259,7 @@ std::string infer_emitted_local_type(const Expr& expr,
 std::string infer_emitted_local_type(const Expr& expr,
                                      const std::map<std::string, std::string>& locals,
                                      const std::map<std::string, TypeRef>& local_type_refs,
-                                     const std::map<std::string, std::string>& function_returns) {
+                                     const std::map<std::string, TypeRef>& function_returns) {
     switch (expr.kind) {
     case ExprKind::BoolLiteral:
         return "bool";

@@ -263,7 +263,7 @@ std::string_view class_section_for_method(Visibility visibility) {
 void emit_method(std::ostringstream& out, const std::string& class_name,
                  const std::string& source_class_name, const FunctionDecl& method,
                  const std::vector<std::string>& aliases,
-                 const std::map<std::string, std::string>& function_returns, const Symbols& symbols,
+                 const std::map<std::string, TypeRef>& function_returns, const Symbols& symbols,
                  const CppEmitOptions& options) {
     const size_t first_param =
         !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
@@ -377,7 +377,7 @@ void emit_class_constant_definition(std::ostringstream& out, const std::string& 
 
 void emit_classes(std::ostringstream& out, const ModuleAst& module,
                   const std::vector<std::string>& aliases,
-                  const std::map<std::string, std::string>& function_returns,
+                  const std::map<std::string, TypeRef>& function_returns,
                   const Symbols& symbols, bool header_only, const CppEmitOptions& options) {
     for (const size_t index : class_emit_order(module.classes)) {
         const ClassDecl& klass = module.classes[index];

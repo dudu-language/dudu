@@ -49,7 +49,7 @@ lower_expected_generic_method_call(const std::string& expected_type, const Expr&
                                    const std::vector<std::string>& aliases,
                                    const std::map<std::string, std::string>& locals,
                                    const std::map<std::string, TypeRef>& local_type_refs,
-                                   const std::map<std::string, std::string>& function_returns,
+                                   const std::map<std::string, TypeRef>& function_returns,
                                    const Symbols* symbols, const CppEmitOptions& options) {
     if (symbols == nullptr || expected_type.empty() || expr.kind != ExprKind::Call ||
         expr.callee.empty() || expr.callee.front().kind != ExprKind::Member ||

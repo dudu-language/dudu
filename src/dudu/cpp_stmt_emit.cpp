@@ -92,7 +92,7 @@ std::string lower_expr_as_type(const std::string& expected_type, const Expr& exp
                                const std::vector<std::string>& aliases,
                                const std::map<std::string, std::string>& locals,
                                const std::map<std::string, TypeRef>& local_type_refs,
-                               const std::map<std::string, std::string>& function_returns,
+                               const std::map<std::string, TypeRef>& function_returns,
                                const Symbols* symbols, const CppEmitOptions& options) {
     if (const auto call = lower_expected_generic_method_call(expected_type, expr, aliases, locals,
                                                              local_type_refs, function_returns,
@@ -140,7 +140,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                            std::map<std::string, std::string>& locals,
                            std::map<std::string, TypeRef>& local_type_refs,
                            const std::string& return_type,
-                           const std::map<std::string, std::string>& function_returns,
+                           const std::map<std::string, TypeRef>& function_returns,
                            const Symbols* symbols, const CppEmitOptions& options) {
     if (stmt.kind == StmtKind::CppEscape) {
         emit_cpp_escape(out, stmt.cpp_body, depth);
@@ -341,7 +341,7 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                     const std::vector<std::string>& aliases,
                     std::map<std::string, std::string>& locals,
                     std::map<std::string, TypeRef>& local_type_refs, const std::string& return_type,
-                    const std::map<std::string, std::string>& function_returns,
+                    const std::map<std::string, TypeRef>& function_returns,
                     const Symbols* symbols, const CppEmitOptions& options) {
     emit_source_comment(out, stmt, depth);
     if (stmt.kind == StmtKind::If) {
@@ -448,7 +448,7 @@ void emit_block(std::ostringstream& out, const std::vector<Stmt>& body, int dept
                 const std::vector<std::string>& aliases,
                 const std::map<std::string, std::string>& initial_locals,
                 const std::string& return_type,
-                const std::map<std::string, std::string>& function_returns,
+                const std::map<std::string, TypeRef>& function_returns,
                 const Symbols* symbols) {
     emit_block(out, body, depth, aliases, initial_locals, return_type, function_returns, symbols,
                {});
@@ -458,7 +458,7 @@ void emit_block(std::ostringstream& out, const std::vector<Stmt>& body, int dept
                 const std::vector<std::string>& aliases,
                 const std::map<std::string, std::string>& initial_locals,
                 const std::string& return_type,
-                const std::map<std::string, std::string>& function_returns, const Symbols* symbols,
+                const std::map<std::string, TypeRef>& function_returns, const Symbols* symbols,
                 const CppEmitOptions& options) {
     std::map<std::string, TypeRef> local_type_refs;
     for (const auto& [name, type] : initial_locals) {
@@ -473,7 +473,7 @@ void emit_block(std::ostringstream& out, const std::vector<Stmt>& body, int dept
                 const std::map<std::string, std::string>& initial_locals,
                 const std::map<std::string, TypeRef>& initial_local_type_refs,
                 const std::string& return_type,
-                const std::map<std::string, std::string>& function_returns, const Symbols* symbols,
+                const std::map<std::string, TypeRef>& function_returns, const Symbols* symbols,
                 const CppEmitOptions& options) {
     std::map<std::string, std::string> locals = initial_locals;
     std::map<std::string, TypeRef> local_type_refs = initial_local_type_refs;
