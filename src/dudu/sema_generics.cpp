@@ -261,33 +261,33 @@ ClassDecl instantiate_generic_class(ClassDecl klass, const std::vector<TypeRef>&
         generic_substitutions(klass.generic_params, args);
     klass.name = instantiated_name;
     for (BaseClassDecl& base : klass.base_class_refs) {
-        base.type = substitute_type_ref_text(base.type_ref, substitutions);
-        base.type_ref = parse_type_text(base.type, base.location);
+        base.type_ref = substitute_type_ref(base.type_ref, substitutions);
+        base.type = substitute_type_ref_text(base.type_ref, {});
     }
     klass.base_classes.clear();
     for (const BaseClassDecl& base : klass.base_class_refs) {
         klass.base_classes.push_back(base.type);
     }
     for (FieldDecl& field : klass.fields) {
-        field.type = substitute_type_ref_text(field.type_ref, substitutions);
-        field.type_ref = parse_type_text(field.type, field.location);
+        field.type_ref = substitute_type_ref(field.type_ref, substitutions);
+        field.type = substitute_type_ref_text(field.type_ref, {});
     }
     for (ConstDecl& field : klass.static_fields) {
-        field.type = substitute_type_ref_text(field.type_ref, substitutions);
-        field.type_ref = parse_type_text(field.type, field.location);
+        field.type_ref = substitute_type_ref(field.type_ref, substitutions);
+        field.type = substitute_type_ref_text(field.type_ref, {});
     }
     for (ConstDecl& constant : klass.constants) {
-        constant.type = substitute_type_ref_text(constant.type_ref, substitutions);
-        constant.type_ref = parse_type_text(constant.type, constant.location);
+        constant.type_ref = substitute_type_ref(constant.type_ref, substitutions);
+        constant.type = substitute_type_ref_text(constant.type_ref, {});
     }
     for (FunctionDecl& method : klass.methods) {
         if (!method.return_type.empty()) {
-            method.return_type = substitute_type_ref_text(method.return_type_ref, substitutions);
-            method.return_type_ref = parse_type_text(method.return_type, method.location);
+            method.return_type_ref = substitute_type_ref(method.return_type_ref, substitutions);
+            method.return_type = substitute_type_ref_text(method.return_type_ref, {});
         }
         for (ParamDecl& param : method.params) {
-            param.type = substitute_type_ref_text(param.type_ref, substitutions);
-            param.type_ref = parse_type_text(param.type, param.location);
+            param.type_ref = substitute_type_ref(param.type_ref, substitutions);
+            param.type = substitute_type_ref_text(param.type_ref, {});
         }
     }
     return klass;

@@ -75,6 +75,8 @@
 - Added parsed `TypeRef` preservation for inherited and abstract method
   signature matching.
 - Added parsed `TypeRef` substitution for generic Dudu field member lookup.
+- Removed render-and-reparse churn from Dudu-native generic class
+  instantiation.
 
 ### Changed
 
