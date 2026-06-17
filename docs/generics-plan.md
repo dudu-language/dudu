@@ -78,7 +78,9 @@ declared Dudu signature, and type-check parsed runtime arguments. Explicit
 generic methods such as `box.id[i32](42)` and
 `box.choose[str, i32](name, value)` emit C++ method templates, substitute
 method and class type parameters positionally, and type-check parsed runtime
-arguments. Generic method type-argument arity is diagnosed in Dudu source.
+arguments. Static generic methods such as `Math.same[i32](42)` and
+`class.same[i32](value)` use the same instantiated signature path. Generic
+method type-argument arity is diagnosed in Dudu source.
 Simple free-function call-site type inference is implemented when every type
 parameter can be bound from argument types, including nested forms such as
 `list[T]`. Generic method call-site type inference is implemented when every

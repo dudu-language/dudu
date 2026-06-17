@@ -236,26 +236,39 @@ std::vector<FunctionSignature> method_signatures_for_type(const Symbols& symbols
 bool static_method_signature_for_type(const Symbols& symbols, const std::string& type_name,
                                       const std::string& method_name, FunctionSignature& signature,
                                       const SourceLocation* location) {
-    const auto klass = symbols.classes.find(type_name);
+    const std::string templated_receiver = receiver_template_type(symbols, type_name);
+    const std::vector<std::string> receiver_args = template_args_from_type(templated_receiver);
+    const std::string type = unwrap_receiver_type(symbols, type_name);
+    const std::string lookup_name = template_method_name(method_name);
+    const std::vector<std::string> method_args = template_method_args(method_name);
+    const auto klass = symbols.classes.find(type);
     if (klass == symbols.classes.end()) {
         return false;
     }
     for (const FunctionDecl& method : klass->second->methods) {
-        if (method.name != method_name || !method_is_static(method)) {
+        if (method.name != lookup_name || !method_is_static(method)) {
             continue;
         }
-        for (const ParamDecl& param : method.params) {
-            signature.params.push_back(param.type);
-            signature.param_type_refs.push_back(param.type_ref);
+        if (method.generic_params.size() != method_args.size()) {
+            if (location != nullptr) {
+                sema_fail(*location, "method " + type + "." + lookup_name + " expects " +
+                                         std::to_string(method.generic_params.size()) +
+                                         " type arguments, got " +
+                                         std::to_string(method_args.size()));
+            }
+            return false;
         }
-        signature.return_type = method.return_type.empty() ? "void" : method.return_type;
-        signature.return_type_ref = method.return_type.empty()
-                                        ? parse_type_text("void", method.location)
-                                        : method.return_type_ref;
+        signature =
+            instantiate_method_signature(*klass->second, method, receiver_args, method_args);
         return true;
     }
+    for (const std::string& base : klass->second->base_classes) {
+        if (static_method_signature_for_type(symbols, base, method_name, signature, nullptr)) {
+            return true;
+        }
+    }
     if (location != nullptr) {
-        sema_fail(*location, "unknown static method: " + type_name + "." + method_name);
+        sema_fail(*location, "unknown static method: " + type + "." + method_name);
     }
     return false;
 }

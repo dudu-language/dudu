@@ -1,0 +1,12 @@
+class Math:
+    def same[T](value: T) -> T:
+        return value
+
+    def twice[T](value: T) -> T:
+        return class.same[T](value + value)
+
+
+def main() -> i32:
+    if Math.twice[i32](21) == 42:
+        return Math.same[i32](42)
+    return 1

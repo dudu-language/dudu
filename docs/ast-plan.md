@@ -1171,6 +1171,8 @@ Normal and templated call sema now resolve Dudu-owned static and member calls
 from parsed callee/member receiver expressions. The older fallback that split
 reconstructed dotted callee strings for method lookup has been removed; dotted
 callee spelling is still used only for the native import prefix boundary.
+Static generic method lookup uses the same parsed/instantiated method
+signature path as instance generic methods, including `class.method[T](...)`.
 
 `@extern_c` C ABI signature checks now classify pointers, references, and
 primitive type names through the parsed type tree while preserving the existing
