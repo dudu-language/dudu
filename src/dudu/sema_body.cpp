@@ -130,6 +130,20 @@ std::string shape_text(const std::vector<size_t>& shape) {
     return out.str();
 }
 
+TypeRef const_reference_type_ref(TypeRef type) {
+    TypeRef const_type;
+    const_type.kind = TypeKind::Const;
+    const_type.text = "const[" + substitute_type_ref_text(type, {}) + "]";
+    const_type.name = "const";
+    const_type.children.push_back(std::move(type));
+
+    TypeRef ref_type;
+    ref_type.kind = TypeKind::Reference;
+    ref_type.text = "&" + const_type.text;
+    ref_type.children.push_back(std::move(const_type));
+    return ref_type;
+}
+
 void check_condition_type(FunctionScope& scope, const Stmt& stmt,
                           const BodyCheckCallbacks& callbacks) {
     const SourceLocation& location = node_location(stmt.location, stmt.condition_expr);
@@ -259,7 +273,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
             check_known_type_ref(scope.symbols, node_location(stmt.location, stmt.type_ref),
                                  stmt.type_ref, "unknown catch type: ");
             bind_local(nested, stmt.name, "&const[" + stmt.type + "]",
-                       parse_type_text("&const[" + stmt.type + "]", stmt.location));
+                       const_reference_type_ref(stmt.type_ref));
         }
         check_block(nested, stmt.children, return_type, loop_depth, callbacks);
         return;

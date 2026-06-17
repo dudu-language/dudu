@@ -242,6 +242,8 @@ Already structured:
 - local declaration array shape inference and explicit-shape checks now use
   the parsed statement `TypeRef` directly instead of reparsing the annotated
   type string
+- exception binding locals construct their `&const[T]` `TypeRef` directly
+  from the parsed catch type instead of reparsing a synthesized type string
 - raw-string C++ type lowering delegates Dudu fixed-array forms such as
   `array[T][N]` to parsed `TypeRef::FixedArray`, leaving only C-style
   `T[N]` fallback parsing in the string path
