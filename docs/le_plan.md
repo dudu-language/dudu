@@ -387,6 +387,8 @@ push. They are not release packaging work.
    produce `span[T]` views. Fixed multidimensional arrays support trailing row
    views such as `mat[row, :]`. Matrix column slices such as `mat[:, col]`
    produce `strided_span[T]` views so non-contiguous views are explicit.
+   Three-dimensional channel slices such as `image[:, :, c]` also produce
+   `strided_span[T]` views over interleaved channel data.
    Dudu-native `@operator("[]")` read hooks and `@operator("[]=")` indexed
    assignment hooks work for library-style tensor wrappers, and indexed member
    paths such as `self.values[i]` type-check. One-dimensional fixed-array step

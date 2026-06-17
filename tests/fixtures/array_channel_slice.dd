@@ -1,0 +1,19 @@
+def sum_view(values: strided_span[i32]) -> i32:
+    total: i32 = 0
+    for value: i32 in values:
+        total += value
+    return total
+
+
+def main() -> i32:
+    image: array[i32][2, 2, 2]
+    image[0, 0, 0] = 1
+    image[0, 0, 1] = 2
+    image[0, 1, 0] = 3
+    image[0, 1, 1] = 4
+    image[1, 0, 0] = 10
+    image[1, 0, 1] = 20
+    image[1, 1, 0] = 31
+    image[1, 1, 1] = 40
+    channel: strided_span[i32] = image[:, :, 0]
+    return sum_view(channel)

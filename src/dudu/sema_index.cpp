@@ -135,6 +135,12 @@ bool is_column_slice_expr(const Expr& expr) {
            is_full_slice_expr(expr.children[0]) && !is_slice_expr(expr.children[1]);
 }
 
+bool is_channel_slice_expr(const Expr& expr) {
+    return expr.kind == ExprKind::TupleLiteral && expr.children.size() == 3 &&
+           is_full_slice_expr(expr.children[0]) && is_full_slice_expr(expr.children[1]) &&
+           !is_slice_expr(expr.children[2]);
+}
+
 std::string indexed_type_from_type_with_count(const Symbols& symbols,
                                               const SourceLocation& location,
                                               const std::string& raw_type, const size_t index_count,
@@ -286,6 +292,12 @@ std::string indexed_value_type(const Symbols& symbols,
         throw CompileError(location, std::string(unknown_message) + name);
     }
     if (const auto type_ref = local_type_refs.find(name); type_ref != local_type_refs.end()) {
+        if (is_channel_slice_expr(index_expr)) {
+            const std::vector<size_t> shape = explicit_array_shape(type_ref->second);
+            if (shape.size() == 3) {
+                return "strided_span[" + explicit_array_element_type(type_ref->second) + "]";
+            }
+        }
         if (is_column_slice_expr(index_expr)) {
             const std::vector<size_t> shape = explicit_array_shape(type_ref->second);
             if (shape.size() == 2) {
@@ -316,6 +328,12 @@ std::string indexed_type_from_type(const Symbols& symbols, const SourceLocation&
                                    const std::string& label) {
     std::string type = resolve_alias(symbols, raw_type);
     const std::string unwrapped_input_type = unwrap_reference_and_const(type);
+    if (is_channel_slice_expr(index_expr)) {
+        const std::vector<size_t> shape = explicit_array_shape(unwrapped_input_type);
+        if (shape.size() == 3) {
+            return "strided_span[" + explicit_array_element_type(unwrapped_input_type) + "]";
+        }
+    }
     if (is_column_slice_expr(index_expr)) {
         const std::vector<size_t> shape = explicit_array_shape(unwrapped_input_type);
         if (shape.size() == 2) {

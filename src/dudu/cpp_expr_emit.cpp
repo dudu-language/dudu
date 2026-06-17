@@ -5,6 +5,7 @@
 #include "dudu/ast_parse_utils.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_expr_call_emit.hpp"
+#include "dudu/cpp_expr_slices.hpp"
 #include "dudu/cpp_expr_swizzles.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/cpp_pointer_members.hpp"
@@ -342,6 +343,10 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
                 return "std::span(&(" + out + ")[" + start + "], (" + end + ") - (" + start + "))";
             }
             if (expr.children[1].kind == ExprKind::TupleLiteral) {
+                if (const auto channel_slice = lower_channel_slice_expr(
+                        expr.children[0], expr.children[1], aliases, locals, symbols, options)) {
+                    return *channel_slice;
+                }
                 if (const auto column_slice = lower_column_slice_expr(
                         expr.children[0], expr.children[1], aliases, locals, symbols, options)) {
                     return *column_slice;
