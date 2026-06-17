@@ -521,7 +521,10 @@ push. They are not release packaging work.
    falling back to native-spelling string template extraction. Template call
    sema and codegen now consume parser-produced `template_type_args` directly
    and reject malformed internal template-call ASTs instead of reparsing
-   expression argument text as types.
+   expression argument text as types. Expression template-call parsing now
+   builds expression and type template arguments from existing token spans for
+   direct bracket calls and templated pointer casts instead of substring
+   reparsing inside the token parser.
 
 3. OOP Surface Cleanup
 

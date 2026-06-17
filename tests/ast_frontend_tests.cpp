@@ -466,6 +466,15 @@ void test_dereference_postfix_expression_shape() {
     assert(template_cast.kind == dudu::ExprKind::TemplateCall);
     assert(template_cast.name == "*list");
     assert(template_cast.template_type_args.size() == 1);
+
+    const dudu::Expr qualified_template_cast =
+        dudu::parse_expr_text("*std.vector[i32](raw_data)");
+    assert(qualified_template_cast.kind == dudu::ExprKind::TemplateCall);
+    assert(qualified_template_cast.name == "*std.vector");
+    assert(qualified_template_cast.template_args.size() == 1);
+    assert(qualified_template_cast.template_args[0].text == "i32");
+    assert(qualified_template_cast.template_type_args.size() == 1);
+    assert(qualified_template_cast.template_type_args[0].text == "i32");
 }
 
 void test_decorator_expression_ast_shape() {

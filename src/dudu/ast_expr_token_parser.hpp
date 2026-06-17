@@ -37,6 +37,8 @@ class ExprTokenParser {
     SourceRange range_between(size_t begin, size_t end) const;
     std::string text_between(size_t begin, size_t end) const;
     Expr make_node(ExprKind kind, size_t begin, size_t end) const;
+    Expr parse_expr_span(size_t begin, size_t end) const;
+    std::vector<TypeRef> parse_type_list_span(size_t begin, size_t end) const;
 
     Expr parse_comma_expr(std::initializer_list<TokenKind> stops);
     Expr parse_named_or_binary(std::initializer_list<TokenKind> stops);
@@ -49,11 +51,11 @@ class ExprTokenParser {
     Expr parse_postfix(std::initializer_list<TokenKind> stops);
     size_t matching_close(size_t open, TokenKind open_kind, TokenKind close_kind) const;
     size_t expr_token_begin(const Expr& expr) const;
+    size_t expr_token_end(const Expr& expr) const;
     Expr parse_call(Expr callee, std::initializer_list<TokenKind> stops);
     Expr parse_template_call(Expr indexed_callee, std::initializer_list<TokenKind> stops);
-    Expr parse_template_call_from_brackets(Expr callee, size_t begin,
-                                           const std::string& template_text,
-                                           SourceLocation template_location,
+    Expr parse_template_call_from_brackets(Expr callee, size_t begin, size_t template_begin,
+                                           size_t template_end,
                                            std::initializer_list<TokenKind> stops);
     std::vector<Expr> parse_arg_list(TokenKind close);
     Expr parse_index_argument();

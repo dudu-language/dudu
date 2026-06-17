@@ -35,6 +35,10 @@ Already structured:
 - type parsing now enters through the lexer/token stream instead of the old
   top-level arrow/bracket substring parser, preserving existing `TypeRef`
   shapes while making C tag spellings such as `struct stat` structured names
+- expression template-call bracket contents are parsed from existing token
+  spans for both expression and type template arguments, including templated
+  pointer casts, instead of reconstructing substring arguments and sending
+  them back through top-level text parsers
 - function pointer/callback signature parsing can consume parsed `TypeRef`
   nodes directly, including omitted-return `fn(...)` as `void` and wrapper
   templates such as `std.function[fn(...)]`

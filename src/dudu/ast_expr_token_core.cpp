@@ -1,6 +1,7 @@
 #include "dudu/ast_expr.hpp"
 #include "dudu/ast_expr_token_parser.hpp"
 #include "dudu/ast_parse_utils.hpp"
+#include "dudu/ast_type_token_parser.hpp"
 
 #include <algorithm>
 #include <utility>
@@ -125,6 +126,24 @@ Expr ExprTokenParser::make_node(ExprKind kind, size_t begin, size_t end) const {
     expr.location = begin < tokens_.size() ? tokens_[begin].location : SourceLocation{};
     expr.range = range_between(begin, end);
     return expr;
+}
+
+Expr ExprTokenParser::parse_expr_span(size_t begin, size_t end) const {
+    if (begin >= end || begin >= tokens_.size()) {
+        const SourceLocation location = begin < tokens_.size() ? tokens_[begin].location
+                                                              : SourceLocation{};
+        return make_expr(ExprKind::Unknown, "", location);
+    }
+    ExprTokenParser parser(tokens_.subspan(begin, end - begin));
+    return parser.parse();
+}
+
+std::vector<TypeRef> ExprTokenParser::parse_type_list_span(size_t begin, size_t end) const {
+    if (begin >= end || begin >= tokens_.size()) {
+        return {};
+    }
+    TypeTokenParser parser(tokens_.subspan(begin, end - begin));
+    return parser.parse_list();
 }
 
 Expr ExprTokenParser::parse_comma_expr(std::initializer_list<TokenKind> stops) {

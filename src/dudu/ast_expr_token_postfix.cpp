@@ -31,12 +31,9 @@ Expr ExprTokenParser::parse_postfix(std::initializer_list<TokenKind> stops) {
                 matching_close(body_begin - 1, TokenKind::LBracket, TokenKind::RBracket);
             if (close < tokens_.size() && close + 1 < tokens_.size() &&
                 tokens_[close + 1].kind == TokenKind::LParen) {
-                const std::string template_text = text_between(body_begin, close);
-                const SourceLocation template_location =
-                    body_begin < tokens_.size() ? tokens_[body_begin].location : expr.range.end;
                 cursor_ = close + 1;
-                expr = parse_template_call_from_brackets(std::move(expr), begin, template_text,
-                                                         template_location, stops);
+                expr = parse_template_call_from_brackets(std::move(expr), begin, body_begin, close,
+                                                         stops);
                 continue;
             }
             Expr index_arg = parse_index_argument();
@@ -86,6 +83,17 @@ size_t ExprTokenParser::expr_token_begin(const Expr& expr) const {
     return cursor_;
 }
 
+size_t ExprTokenParser::expr_token_end(const Expr& expr) const {
+    const size_t begin = expr_token_begin(expr);
+    for (size_t i = begin; i < tokens_.size(); ++i) {
+        const SourceLocation end = expr_token_end_location(tokens_[i]);
+        if (end.line == expr.range.end.line && end.column == expr.range.end.column) {
+            return i + 1;
+        }
+    }
+    return begin;
+}
+
 Expr ExprTokenParser::parse_call(Expr callee, std::initializer_list<TokenKind> stops) {
     (void)stops;
     const size_t begin = expr_token_begin(callee);
@@ -109,8 +117,8 @@ Expr ExprTokenParser::parse_template_call(Expr indexed_callee,
     const size_t begin = expr_token_begin(indexed_callee);
     Expr callee = std::move(indexed_callee.children[0]);
     Expr template_expr = std::move(indexed_callee.children[1]);
-    const std::string template_text = template_expr.text;
-    const SourceLocation template_location = template_expr.location;
+    const size_t template_begin = expr_token_begin(template_expr);
+    const size_t template_end = expr_token_end(template_expr);
     match(TokenKind::LParen);
     std::vector<Expr> args = parse_arg_list(TokenKind::RParen);
     match(TokenKind::RParen);
@@ -124,14 +132,14 @@ Expr ExprTokenParser::parse_template_call(Expr indexed_callee,
     } else {
         call.template_args.push_back(std::move(template_expr));
     }
-    call.template_type_args = parse_type_list(template_text, template_location);
+    call.template_type_args = parse_type_list_span(template_begin, template_end);
     call.children = std::move(args);
     return call;
 }
 
 Expr ExprTokenParser::parse_template_call_from_brackets(Expr callee, size_t begin,
-                                                        const std::string& template_text,
-                                                        SourceLocation template_location,
+                                                        size_t template_begin,
+                                                        size_t template_end,
                                                         std::initializer_list<TokenKind> stops) {
     (void)stops;
     match(TokenKind::LParen);
@@ -141,8 +149,8 @@ Expr ExprTokenParser::parse_template_call_from_brackets(Expr callee, size_t begi
     Expr call = make_node(ExprKind::TemplateCall, begin, cursor_);
     call.name = callee.text;
     call.callee.push_back(std::move(callee));
-    call.template_type_args = parse_type_list(template_text, template_location);
-    Expr template_expr = parse_expr_text(template_text, template_location);
+    call.template_type_args = parse_type_list_span(template_begin, template_end);
+    Expr template_expr = parse_expr_span(template_begin, template_end);
     if (!expr_missing(template_expr) && template_expr.kind != ExprKind::Unknown) {
         if (template_expr.kind == ExprKind::TupleLiteral) {
             call.template_args = std::move(template_expr.children);
@@ -322,13 +330,19 @@ Expr ExprTokenParser::parse_pointer_cast_call() {
     const std::string type_text = text_between(type_begin, type_end);
     const size_t bracket = type_text.find('[');
     if (bracket != std::string::npos && type_text.ends_with("]")) {
+        size_t bracket_token = type_end;
+        for (size_t i = type_begin; i < type_end; ++i) {
+            if (tokens_[i].kind == TokenKind::LBracket) {
+                bracket_token = i;
+                break;
+            }
+        }
+        const size_t args_begin = bracket_token + 1;
+        const size_t args_end = type_end - 1;
         call.kind = ExprKind::TemplateCall;
-        call.name = "*" + trim_string(type_text.substr(0, bracket));
-        const std::string args_text = type_text.substr(bracket + 1, type_text.size() - bracket - 2);
-        SourceLocation args_location = tokens_[type_begin].location;
-        args_location.column += static_cast<int>(bracket + 1);
-        call.template_args.push_back(parse_expr_text(args_text, args_location));
-        call.template_type_args = parse_type_list(args_text, args_location);
+        call.name = "*" + trim_string(text_between(type_begin, bracket_token));
+        call.template_args.push_back(parse_expr_span(args_begin, args_end));
+        call.template_type_args = parse_type_list_span(args_begin, args_end);
     }
     return call;
 }
