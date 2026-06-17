@@ -617,7 +617,9 @@ push. They are not release packaging work.
    remaining string member-path API is still an explicit compatibility boundary
    to replace. The string resolver is now named
    `member_path_type_from_string`, with callers confined to the C++ escape
-   inference boundary.
+   inference boundary. Dudu-native constant aliases from selective imports now
+   construct parsed `Name` expressions directly instead of reparsing imported
+   identifier text inside the module loader.
 
 3. OOP Surface Cleanup
 

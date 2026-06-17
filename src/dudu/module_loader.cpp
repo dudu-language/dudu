@@ -1,5 +1,6 @@
 #include "dudu/module_loader.hpp"
 
+#include "dudu/ast_parse_utils.hpp"
 #include "dudu/module_import_aliases.hpp"
 #include "dudu/parser.hpp"
 #include "dudu/source.hpp"
@@ -290,7 +291,8 @@ void add_from_import_aliases(ModuleAst& module) {
                 ConstDecl alias = constant;
                 alias.name = import.alias;
                 alias.value = import.imported_name;
-                alias.value_expr = parse_expr_text(import.imported_name, import.location);
+                alias.value_expr = make_expr(ExprKind::Name, import.imported_name, import.location);
+                alias.value_expr.name = import.imported_name;
                 alias.location = import.location;
                 const_aliases.push_back(std::move(alias));
                 added = true;
