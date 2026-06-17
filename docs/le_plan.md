@@ -575,6 +575,9 @@ push. They are not release packaging work.
    LSP local-context `for` bindings now infer element types from stored iterable
    `TypeRef` metadata or typed iterable expression inference, and the local
    text-to-`TypeRef` adapter has been removed.
+   TypeRef-backed assignment checks now infer RHS expressions as `TypeRef`
+   first, use structured type assignment before compatibility fallback, and
+   render only for legacy assignment/literal checks and diagnostics.
 
 3. OOP Surface Cleanup
 

@@ -95,8 +95,10 @@ void check_type_ref_match(FunctionScope& scope, const TypeRef& expected, const E
         check_type_match(scope, expected_text, expr, location, callbacks, mismatch_label);
         return;
     }
-    const std::string got = callbacks.infer_expr(scope, expr, &location);
-    if (!assignment_type_allowed(expected, expr, got) &&
+    const TypeRef got_ref = callbacks.infer_expr_type(scope, expr, &location);
+    const std::string got = substitute_type_ref_text(got_ref, {});
+    if (!type_assignment_allowed(expected, got_ref) &&
+        !assignment_type_allowed(expected, expr, got) &&
         !callbacks.can_assign(scope, expected_text, expr, got)) {
         if (!mismatch_label.empty()) {
             sema_fail(location,

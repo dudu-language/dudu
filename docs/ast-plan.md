@@ -400,6 +400,9 @@ Already structured:
 - LSP local-context `for` bindings now infer element types from stored
   iterable `TypeRef` metadata or typed iterable expression inference, and the
   local text-to-`TypeRef` adapter has been removed
+- TypeRef-backed assignment checks now infer RHS expressions as `TypeRef`
+  first, use structured type assignment before compatibility fallback, and
+  render only for legacy assignment/literal checks and diagnostics
 - type compatibility has AST overloads for simple literals and list/set/dict
   literals, including expected-type disambiguation for empty `{}` dict
   initializers, reducing reliance on string parsing for assignment checks
