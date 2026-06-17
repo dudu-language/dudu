@@ -302,6 +302,23 @@ void test_unsupported_comprehension_ast_shape() {
     assert(main.statements[1].value_expr.kind == dudu::ExprKind::Comprehension);
 }
 
+void test_unsupported_dynamic_call_ast_shape() {
+    const dudu::ModuleAst module = dudu::parse_source("def main() -> i32:\n"
+                                                      "    value = eval(\"1\")\n"
+                                                      "    exec(\"value = 1\")\n"
+                                                      "    return getattr(value, \"x\")\n",
+                                                      "unsupported_dynamic_call_shape.dd");
+    assert(module.functions.size() == 1);
+    const dudu::FunctionDecl& main = module.functions.front();
+    assert(main.statements.size() == 3);
+    assert(main.statements[0].value_expr.kind == dudu::ExprKind::Call);
+    assert(main.statements[0].value_expr.name == "eval");
+    assert(main.statements[1].expr.kind == dudu::ExprKind::Call);
+    assert(main.statements[1].expr.name == "exec");
+    assert(main.statements[2].value_expr.kind == dudu::ExprKind::Call);
+    assert(main.statements[2].value_expr.name == "getattr");
+}
+
 void test_expression_ast_shape() {
     const dudu::ModuleAst module =
         dudu::parse_source("def main() -> i32:\n"
@@ -819,6 +836,7 @@ int main() {
         test_unsupported_statement_ast_shape();
         test_unsupported_def_expression_ast_shape();
         test_unsupported_comprehension_ast_shape();
+        test_unsupported_dynamic_call_ast_shape();
         test_expression_ast_shape();
         test_cpp_escape_ast_payloads();
         test_dereference_postfix_expression_shape();

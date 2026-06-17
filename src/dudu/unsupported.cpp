@@ -4,62 +4,14 @@
 #include "dudu/cpp_lower.hpp"
 #include "dudu/sema.hpp"
 
-#include <cctype>
-
 namespace dudu {
 namespace {
-
-bool contains_call(std::string_view text, std::string_view name) {
-    size_t pos = text.find(name);
-    while (pos != std::string_view::npos) {
-        const bool left_ok =
-            pos == 0 ||
-            (std::isalnum(static_cast<unsigned char>(text[pos - 1])) == 0 && text[pos - 1] != '_');
-        const size_t open = pos + name.size();
-        if (left_ok && open < text.size() && text[open] == '(') {
-            return true;
-        }
-        pos = text.find(name, pos + name.size());
-    }
-    return false;
-}
-
-bool contains_word(std::string_view text, std::string_view name) {
-    size_t pos = text.find(name);
-    while (pos != std::string_view::npos) {
-        const bool left_ok =
-            pos == 0 ||
-            (std::isalnum(static_cast<unsigned char>(text[pos - 1])) == 0 && text[pos - 1] != '_');
-        const size_t end = pos + name.size();
-        const bool right_ok =
-            end == text.size() ||
-            (std::isalnum(static_cast<unsigned char>(text[end])) == 0 && text[end] != '_');
-        if (left_ok && right_ok) {
-            return true;
-        }
-        pos = text.find(name, pos + name.size());
-    }
-    return false;
-}
-
-void check_unsupported_text(const SourceLocation& location, const std::string& text) {
-    if (contains_call(text, "eval") || contains_call(text, "exec")) {
-        throw CompileError(location, "unsupported Python feature: dynamic execution");
-    }
-    if (contains_call(text, "getattr") || contains_call(text, "setattr")) {
-        throw CompileError(location, "unsupported Python feature: dynamic attribute access");
-    }
-    if (contains_word(text, "await")) {
-        throw CompileError(location, "unsupported Python feature: async");
-    }
-}
 
 void check_expr(const Expr& expr) {
     if (expr.text.empty()) {
         return;
     }
     if (expr.kind == ExprKind::Unknown) {
-        check_unsupported_text(expr.location, expr.text);
         return;
     }
     if (expr.kind == ExprKind::DefExpression) {

@@ -728,8 +728,7 @@ Already structured:
   awareness instead of string comma scanning, so commas inside calls or
   collection literals stay inside the condition expression
 - unsupported Python call checks for `eval`, `exec`, `getattr`, and `setattr`
-  walk parsed call expressions, with raw text scanning kept for unsupported or
-  unknown expression shapes
+  walk parsed call expressions instead of scanning raw unknown-expression text
 - unsupported `await` and expression-level `yield` forms parse into AST nodes
   and are rejected by both the unsupported-feature pass and expression sema
   without relying on raw text scanning
