@@ -175,9 +175,8 @@ std::optional<std::string> module_path_for_import(const std::filesystem::path& b
     return out.str();
 }
 
-std::optional<std::string> missing_import_action(
-    const Document& doc, const std::string& name,
-    const std::map<std::string, Document>& workspace) {
+std::optional<std::string> missing_import_action(const Document& doc, const std::string& name,
+                                                 const std::map<std::string, Document>& workspace) {
     std::optional<Document> match_doc;
     std::optional<Symbol> match_symbol;
     for (const auto& [uri, candidate] : workspace) {
@@ -212,8 +211,8 @@ std::optional<std::string> missing_import_action(
            json_escape(edit_text) + "\"}]}}}";
 }
 
-std::vector<std::string> missing_import_actions(
-    const Document& doc, const Json* params, const std::map<std::string, Document>& workspace) {
+std::vector<std::string> missing_import_actions(const Document& doc, const Json* params,
+                                                const std::map<std::string, Document>& workspace) {
     std::vector<std::string> out;
     const Json* context = params == nullptr ? nullptr : params->get("context");
     const Json* diagnostics = context == nullptr ? nullptr : context->get("diagnostics");
@@ -249,9 +248,9 @@ std::vector<std::string> lint_actions(const Document& doc, const Json* params) {
         if (string_value(diagnostic.get("source")) != "dudu/lint") {
             continue;
         }
-        const std::string message = string_value(diagnostic.get("message"));
-        const bool unreachable = message == "unreachable statement after return";
-        const bool unused_local = starts_with(message, "unused local: ");
+        const std::string code = string_value(diagnostic.get("code"));
+        const bool unreachable = code == "dudu.lint.unreachable";
+        const bool unused_local = code == "dudu.lint.unused";
         if (!unreachable && !unused_local) {
             continue;
         }
@@ -261,7 +260,8 @@ std::vector<std::string> lint_actions(const Document& doc, const Json* params) {
         if (line < 0 || !seen_lines.insert(line).second) {
             continue;
         }
-        const std::string title = unused_local ? "Remove unused local" : "Remove unreachable statement";
+        const std::string title =
+            unused_local ? "Remove unused local" : "Remove unreachable statement";
         if (const std::optional<std::string> action = remove_line_action(doc, line, title)) {
             out.push_back(*action);
         }

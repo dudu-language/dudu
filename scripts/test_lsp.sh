@@ -477,6 +477,7 @@ messages = [
                                 "end": {"line": 1, "character": 5},
                             },
                             "source": "dudu/lint",
+                            "code": "dudu.lint.unused",
                             "message": "unused local: unused_value",
                         }
                     ]
@@ -669,6 +670,7 @@ messages = [
                                 "end": {"line": 2, "character": 5},
                             },
                             "source": "dudu/lint",
+                            "code": "dudu.lint.unreachable",
                             "message": "unreachable statement after return",
                         }
                     ]
@@ -1121,6 +1123,7 @@ lint_diag = next(
 )
 assert lint_diag["source"] == "dudu/lint"
 assert lint_diag["severity"] == 2
+assert lint_diag["code"] == "dudu.lint.unreachable"
 assert lint_diag["range"]["start"]["line"] == 2
 
 unused_diagnostics = next(
@@ -1131,6 +1134,10 @@ unused_diagnostics = next(
 unused_messages = [item["message"] for item in unused_diagnostics["params"]["diagnostics"]]
 assert "unused local: unused_value" in unused_messages
 assert "unused local: used_value" not in unused_messages
+unused_codes = {
+    item["message"]: item.get("code") for item in unused_diagnostics["params"]["diagnostics"]
+}
+assert unused_codes["unused local: unused_value"] == "dudu.lint.unused"
 
 shadow_diagnostics = next(
     item
@@ -1139,6 +1146,10 @@ shadow_diagnostics = next(
 )
 shadow_messages = [item["message"] for item in shadow_diagnostics["params"]["diagnostics"]]
 assert "local shadows outer binding: value" in shadow_messages
+shadow_codes = {
+    item["message"]: item.get("code") for item in shadow_diagnostics["params"]["diagnostics"]
+}
+assert shadow_codes["local shadows outer binding: value"] == "dudu.lint.shadow"
 
 hazard_diagnostics = next(
     item
@@ -1148,6 +1159,11 @@ hazard_diagnostics = next(
 hazard_messages = [item["message"] for item in hazard_diagnostics["params"]["diagnostics"]]
 assert "suspicious narrowing cast: i32(wide) from i64" in hazard_messages
 assert "native interop hazard: raw cpp escape hatch" in hazard_messages
+hazard_codes = {
+    item["message"]: item.get("code") for item in hazard_diagnostics["params"]["diagnostics"]
+}
+assert hazard_codes["suspicious narrowing cast: i32(wide) from i64"] == "dudu.lint.suspicious_cast"
+assert hazard_codes["native interop hazard: raw cpp escape hatch"] == "dudu.lint.cpp_escape"
 
 build_config_diagnostics = next(
     item

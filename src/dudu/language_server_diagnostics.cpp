@@ -60,14 +60,18 @@ std::vector<Diagnostic> diagnostics_for_document(const Document& doc) {
         try {
             config = config_for_file(doc.path);
         } catch (const std::exception& error) {
-            return {
-                {{.file = doc.path, .line = 1, .column = 1}, error.what(), "dudu/build-config", 1}};
+            return {{.location = {.file = doc.path, .line = 1, .column = 1},
+                     .message = error.what(),
+                     .source = "dudu/build-config",
+                     .severity = 1,
+                     .code = ""}};
         }
         if (const std::optional<std::string> missing = missing_pkg_config_package(config)) {
-            return {{{.file = doc.path, .line = 1, .column = 1},
-                     "missing pkg-config package: " + *missing,
-                     "dudu/build-config",
-                     1}};
+            return {{.location = {.file = doc.path, .line = 1, .column = 1},
+                     .message = "missing pkg-config package: " + *missing,
+                     .source = "dudu/build-config",
+                     .severity = 1,
+                     .code = ""}};
         }
         const bool project_tree =
             std::filesystem::exists(doc.path) && source_tree_files(doc.path).size() > 1;
@@ -95,9 +99,14 @@ std::vector<Diagnostic> diagnostics_for_document(const Document& doc) {
         return {{.location = error.location(),
                  .message = error.what(),
                  .source = diagnostic_source(error.what()),
-                 .severity = 1}};
+                 .severity = 1,
+                 .code = ""}};
     } catch (const std::exception& error) {
-        return {{{.file = doc.path, .line = 1, .column = 1}, error.what(), "dudu/lsp", 1}};
+        return {{.location = {.file = doc.path, .line = 1, .column = 1},
+                 .message = error.what(),
+                 .source = "dudu/lsp",
+                 .severity = 1,
+                 .code = ""}};
     }
 }
 
@@ -108,8 +117,11 @@ std::string diagnostic_json(const Diagnostic& diagnostic) {
     out << "{\"range\":{\"start\":{\"line\":" << line << ",\"character\":" << column
         << "},\"end\":{\"line\":" << line << ",\"character\":" << (column + 1)
         << "}},\"severity\":" << diagnostic.severity << ",\"source\":\""
-        << json_escape(diagnostic.source) << "\",\"message\":\"" << json_escape(diagnostic.message)
-        << "\"}";
+        << json_escape(diagnostic.source) << "\"";
+    if (!diagnostic.code.empty()) {
+        out << ",\"code\":\"" << json_escape(diagnostic.code) << "\"";
+    }
+    out << ",\"message\":\"" << json_escape(diagnostic.message) << "\"}";
     return out.str();
 }
 
