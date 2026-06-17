@@ -47,6 +47,7 @@ shadow_uri = "file:///tmp/dudu_lsp_shadow.dd"
 hover_locals_uri = "file:///tmp/dudu_lsp_hover_locals.dd"
 hover_docs_uri = "file:///tmp/dudu_lsp_hover_docs.dd"
 hazard_uri = "file:///tmp/dudu_lsp_hazards.dd"
+unknown_identifier_uri = "file:///tmp/dudu_lsp_unknown_identifier.dd"
 import_graph_uri = f"file://{repo_root}/tests/fixtures/lsp_import_graph_entry.dd"
 bad_config_uri = f"file://{repo_root}/tests/fixtures/lsp_bad_config/main.dd"
 missing_pkg_uri = f"file://{repo_root}/tests/fixtures/lsp_missing_pkg/main.dd"
@@ -108,6 +109,26 @@ messages = [
                     "languageId": "dudu",
                     "version": 1,
                     "text": source,
+                }
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "method": "textDocument/didOpen",
+            "params": {
+                "textDocument": {
+                    "uri": unknown_identifier_uri,
+                    "languageId": "dudu",
+                    "version": 1,
+                    "text": "\n".join(
+                        [
+                            "def main() -> i32:",
+                            "    return missing_helper",
+                            "",
+                        ]
+                    ),
                 }
             },
         }
@@ -979,6 +1000,8 @@ messages = [
                                 "end": {"line": 8, "character": 25},
                             },
                             "source": "dudu/sema",
+                            "code": "dudu.sema.unknown_identifier",
+                            "data": {"name": "missing_helper"},
                             "message": "unknown identifier: missing_helper",
                         }
                     ]
@@ -1099,6 +1122,21 @@ diagnostics = next(item for item in responses if item.get("method") == "textDocu
 diag = diagnostics["params"]["diagnostics"][0]
 assert diag["source"] == "dudu/sema"
 assert "return type mismatch" in diag["message"]
+
+unknown_identifier_diagnostics = next(
+    item
+    for item in responses
+    if item.get("method") == "textDocument/publishDiagnostics"
+    and item["params"]["uri"] == unknown_identifier_uri
+)
+missing_helper_diag = next(
+    item
+    for item in unknown_identifier_diagnostics["params"]["diagnostics"]
+    if item.get("code") == "dudu.sema.unknown_identifier"
+    and item.get("data", {}).get("name") == "missing_helper"
+)
+assert missing_helper_diag["code"] == "dudu.sema.unknown_identifier"
+assert missing_helper_diag["data"]["name"] == "missing_helper"
 
 missing_native_diagnostics = next(
     item

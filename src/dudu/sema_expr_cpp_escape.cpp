@@ -264,7 +264,8 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
     if (is_dudu_all_caps(expr))
         return "i32";
     if (location != nullptr && is_plain_identifier(expr)) {
-        sema_expr_fail(*location, "unknown identifier: " + expr);
+        throw CompileError(*location, "unknown identifier: " + expr, "dudu.sema.unknown_identifier",
+                           expr);
     }
     return {};
 }

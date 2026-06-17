@@ -84,21 +84,6 @@ std::optional<std::string> remove_line_action(const Document& doc, int line,
            json_escape(doc.uri) + "\":[{\"range\":" + range + ",\"newText\":\"\"}]}}}";
 }
 
-std::optional<std::string> missing_identifier(const std::string& message) {
-    constexpr std::string_view prefix = "unknown identifier: ";
-    const size_t start = message.find(prefix);
-    if (start == std::string::npos) {
-        return std::nullopt;
-    }
-    std::string name = trim_copy(message.substr(start + prefix.size()));
-    const size_t end =
-        name.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_");
-    if (end != std::string::npos) {
-        name = name.substr(0, end);
-    }
-    return valid_identifier(name) ? std::optional<std::string>{name} : std::nullopt;
-}
-
 bool importable_symbol_kind(int kind) {
     return kind == 5 || kind == 10 || kind == 12 || kind == 14 || kind == 23;
 }
@@ -222,12 +207,15 @@ std::vector<std::string> missing_import_actions(const Document& doc, const Json*
     }
     std::set<std::string> seen;
     for (const Json& diagnostic : *array) {
-        const std::string message = string_value(diagnostic.get("message"));
-        const std::optional<std::string> name = missing_identifier(message);
-        if (!name || !seen.insert(*name).second) {
+        if (string_value(diagnostic.get("code")) != "dudu.sema.unknown_identifier") {
             continue;
         }
-        const std::optional<std::string> action = missing_import_action(doc, *name, workspace);
+        const Json* data = diagnostic.get("data");
+        const std::string name = string_value(data == nullptr ? nullptr : data->get("name"));
+        if (!valid_identifier(name) || !seen.insert(name).second) {
+            continue;
+        }
+        const std::optional<std::string> action = missing_import_action(doc, name, workspace);
         if (action) {
             out.push_back(*action);
         }

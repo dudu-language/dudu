@@ -135,7 +135,8 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
             return "i32";
         }
         if (use_location != nullptr) {
-            sema_expr_fail(*use_location, "unknown identifier: " + expr.name);
+            throw CompileError(*use_location, "unknown identifier: " + expr.name,
+                               "dudu.sema.unknown_identifier", expr.name);
         }
         return {};
     case ExprKind::Unary:
@@ -206,9 +207,8 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                                                right)) {
                 return "bool";
             }
-            if (const auto signature =
-                    binary_operator_signature(scope.symbols, expr.op, left, expr.children[1],
-                                              right)) {
+            if (const auto signature = binary_operator_signature(scope.symbols, expr.op, left,
+                                                                 expr.children[1], right)) {
                 if (use_location != nullptr) {
                     if (signature->params.size() != 1) {
                         sema_expr_fail(*use_location, "operator " + expr.op +
@@ -235,9 +235,8 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
             return "bool";
         }
         if (is_arithmetic_op(expr.op)) {
-            if (const auto contextual =
-                    contextual_numeric_binary_type(scope, expr.children[0], left, expr.children[1],
-                                                   right)) {
+            if (const auto contextual = contextual_numeric_binary_type(
+                    scope, expr.children[0], left, expr.children[1], right)) {
                 return *contextual;
             }
         }

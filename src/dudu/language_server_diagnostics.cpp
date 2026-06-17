@@ -64,14 +64,16 @@ std::vector<Diagnostic> diagnostics_for_document(const Document& doc) {
                      .message = error.what(),
                      .source = "dudu/build-config",
                      .severity = 1,
-                     .code = ""}};
+                     .code = "",
+                     .data_name = ""}};
         }
         if (const std::optional<std::string> missing = missing_pkg_config_package(config)) {
             return {{.location = {.file = doc.path, .line = 1, .column = 1},
                      .message = "missing pkg-config package: " + *missing,
                      .source = "dudu/build-config",
                      .severity = 1,
-                     .code = ""}};
+                     .code = "",
+                     .data_name = ""}};
         }
         const bool project_tree =
             std::filesystem::exists(doc.path) && source_tree_files(doc.path).size() > 1;
@@ -100,13 +102,15 @@ std::vector<Diagnostic> diagnostics_for_document(const Document& doc) {
                  .message = error.what(),
                  .source = diagnostic_source(error.what()),
                  .severity = 1,
-                 .code = ""}};
+                 .code = error.code(),
+                 .data_name = error.data_name()}};
     } catch (const std::exception& error) {
         return {{.location = {.file = doc.path, .line = 1, .column = 1},
                  .message = error.what(),
                  .source = "dudu/lsp",
                  .severity = 1,
-                 .code = ""}};
+                 .code = "",
+                 .data_name = ""}};
     }
 }
 
@@ -120,6 +124,9 @@ std::string diagnostic_json(const Diagnostic& diagnostic) {
         << json_escape(diagnostic.source) << "\"";
     if (!diagnostic.code.empty()) {
         out << ",\"code\":\"" << json_escape(diagnostic.code) << "\"";
+    }
+    if (!diagnostic.data_name.empty()) {
+        out << ",\"data\":{\"name\":\"" << json_escape(diagnostic.data_name) << "\"}";
     }
     out << ",\"message\":\"" << json_escape(diagnostic.message) << "\"}";
     return out.str();

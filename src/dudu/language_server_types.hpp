@@ -19,6 +19,7 @@ struct Diagnostic {
     std::string source;
     int severity = 1;
     std::string code;
+    std::string data_name;
 };
 
 struct Symbol {

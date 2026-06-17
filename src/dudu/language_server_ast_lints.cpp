@@ -133,7 +133,8 @@ void lint_suspicious_cast_expr(const Expr& expr, const Document& doc,
                                       source_name + ") from " + source_type,
                            .source = "dudu/lint",
                            .severity = 2,
-                           .code = "dudu.lint.suspicious_cast"});
+                           .code = "dudu.lint.suspicious_cast",
+                           .data_name = ""});
         }
     }
     for (const Expr& child : expr.callee) {
@@ -201,7 +202,8 @@ void lint_cpp_escape_stmt(const Stmt& stmt, const Document& doc,
                        .message = "native interop hazard: raw cpp escape hatch",
                        .source = "dudu/lint",
                        .severity = 2,
-                       .code = "dudu.lint.cpp_escape"});
+                       .code = "dudu.lint.cpp_escape",
+                       .data_name = ""});
     }
     lint_cpp_escape_expr(stmt.expr, doc, seen, out);
     lint_cpp_escape_expr(stmt.value_expr, doc, seen, out);
@@ -227,7 +229,8 @@ void lint_cpp_escape_expr(const Expr& expr, const Document& doc,
                        .message = "native interop hazard: raw cpp escape hatch",
                        .source = "dudu/lint",
                        .severity = 2,
-                       .code = "dudu.lint.cpp_escape"});
+                       .code = "dudu.lint.cpp_escape",
+                       .data_name = ""});
     }
     for (const Expr& child : expr.callee) {
         lint_cpp_escape_expr(child, doc, seen, out);
@@ -314,7 +317,8 @@ void lint_unreachable_statement_sequence(const std::vector<Stmt>& statements, co
                            .message = "unreachable statement after return",
                            .source = "dudu/lint",
                            .severity = 2,
-                           .code = "dudu.lint.unreachable"});
+                           .code = "dudu.lint.unreachable",
+                           .data_name = ""});
         }
         if (!stmt.children.empty()) {
             lint_unreachable_statement_sequence(stmt.children, doc, out);
@@ -400,7 +404,8 @@ void collect_scope_lints_stmt_sequence(const std::vector<Stmt>& statements, cons
                                    .message = "local shadows outer binding: " + stmt.name,
                                    .source = "dudu/lint",
                                    .severity = 2,
-                                   .code = "dudu.lint.shadow"});
+                                   .code = "dudu.lint.shadow",
+                                   .data_name = ""});
                     break;
                 }
             }
@@ -447,7 +452,8 @@ void lint_scope_function(const FunctionDecl& fn, const Document& doc,
                            .message = "unused local: " + local.name,
                            .source = "dudu/lint",
                            .severity = 2,
-                           .code = "dudu.lint.unused"});
+                           .code = "dudu.lint.unused",
+                           .data_name = ""});
         }
     }
 }
