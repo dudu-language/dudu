@@ -1,5 +1,6 @@
 #include "dudu/cpp_match_emit.hpp"
 
+#include "dudu/ast_type.hpp"
 #include "dudu/control_flow.hpp"
 #include "dudu/cpp_expr_emit.hpp"
 #include "dudu/cpp_lower.hpp"
@@ -166,7 +167,7 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                             }
                             const EnumPayloadField& field =
                                 value->payload_fields[binding.field_index];
-                            nested[binding.name] = field.type;
+                            nested[binding.name] = type_ref_text(field.type_ref);
                             nested_type_refs[binding.name] = field.type_ref;
                             out << indent(depth + 1) << "auto&& " << binding.name << " = "
                                 << payload << "." << field.name << ";\n";

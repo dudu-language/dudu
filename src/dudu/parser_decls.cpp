@@ -150,8 +150,7 @@ EnumDecl Parser::parse_enum(const Token& start) {
                     field.location = current().location;
                     const JoinedTokens type =
                         join_until_with_range({TokenKind::Comma, TokenKind::RParen});
-                    field.type = type.text;
-                    if (field.type.empty()) {
+                    if (type.text.empty()) {
                         throw CompileError(field.location, "enum payload field requires a type");
                     }
                     field.type_ref = parse_type_piece(type);
@@ -174,10 +173,8 @@ EnumDecl Parser::parse_enum(const Token& start) {
                     continue;
                 }
                 const FieldDecl field = parse_field();
-                value.payload_fields.push_back({.name = field.name,
-                                                .type = field.type,
-                                                .type_ref = field.type_ref,
-                                                .location = field.location});
+                value.payload_fields.push_back(
+                    {.name = field.name, .type_ref = field.type_ref, .location = field.location});
             }
             consume(TokenKind::Dedent, "expected dedent after enum payload fields");
             en.values.push_back(std::move(value));

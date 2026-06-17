@@ -162,10 +162,11 @@ void check_enum_variant_args_ast(const FunctionScope& scope, const EnumDecl& en,
             arg = &args[i].children.front();
         }
         const std::string got = infer_expr_ast(scope, *arg, location);
-        if (!can_assign_ast(scope, field->type, *arg, got)) {
+        const std::string expected = type_ref_text(field->type_ref);
+        if (!can_assign_ast(scope, expected, *arg, got)) {
             sema_expr_fail(arg->location, "argument " + std::to_string(i + 1) + " for " + en.name +
-                                              "." + value.name + " expects " + field->type +
-                                              ", got " + got);
+                                              "." + value.name + " expects " + expected + ", got " +
+                                              got);
         }
     }
 }

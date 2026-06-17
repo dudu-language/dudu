@@ -708,7 +708,7 @@ void test_payload_enum_ast_shape() {
     assert(message.values[2].tuple_payload);
     assert(message.values[2].payload_fields.size() == 1);
     assert(message.values[2].payload_fields[0].name == "_0");
-    assert(message.values[2].payload_fields[0].type == "str");
+    assert(dudu::type_ref_text(message.values[2].payload_fields[0].type_ref) == "str");
 }
 
 void test_match_case_ast_shape() {

@@ -65,7 +65,8 @@ bool bind_payload_case(FunctionScope& nested, const EnumValueDecl& value, const 
         if (binding_name->kind != ExprKind::Name || binding_name->name.empty()) {
             sema_fail(binding.location, "payload case bindings must be names");
         }
-        nested.locals[binding_name->name] = field->type;
+        nested.locals[binding_name->name] = type_ref_text(field->type_ref);
+        nested.local_type_refs[binding_name->name] = field->type_ref;
     }
     return true;
 }
