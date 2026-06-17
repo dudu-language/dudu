@@ -1158,6 +1158,11 @@ The remaining `parse_expr_text` callers in sema are confined to the explicit
 Dudu statements and expressions should not route through those helpers; new
 compiler work should pass parsed `Expr` nodes instead.
 
+Variable declaration binding names are now validated from identifier tokens
+instead of copied from joined statement text, so malformed declarations such as
+`player.hp: i32` fail in the parser rather than smuggling a raw name string into
+later semantic passes.
+
 Unsupported `def` expressions now parse as a dedicated `DefExpression` AST node
 instead of falling through to `Unknown` and being recognized later by raw text
 scanning.

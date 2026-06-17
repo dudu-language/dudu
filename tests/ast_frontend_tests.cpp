@@ -265,6 +265,22 @@ void test_statement_ast_shape() {
     assert(main.statements[4].value_expr.text == "total");
 }
 
+void test_var_decl_name_must_be_identifier() {
+    bool rejected = false;
+    try {
+        (void)dudu::parse_source("def main() -> i32:\n"
+                                 "    player.hp: i32 = 1\n"
+                                 "    return 0\n",
+                                 "invalid_decl_name.dd");
+    } catch (const dudu::CompileError& error) {
+        assert(error.location().line == 2);
+        assert(std::string(error.what()).find("expected : after declaration name") !=
+               std::string::npos);
+        rejected = true;
+    }
+    assert(rejected);
+}
+
 void test_unsupported_statement_ast_shape() {
     const dudu::ModuleAst module = dudu::parse_source("def main() -> i32:\n"
                                                       "    with open(\"data\"):\n"
@@ -834,6 +850,7 @@ int main() {
         test_ast_constructor_assignment_compatibility();
         test_ast_index_receiver_type_inference();
         test_statement_ast_shape();
+        test_var_decl_name_must_be_identifier();
         test_unsupported_statement_ast_shape();
         test_unsupported_def_expression_ast_shape();
         test_unsupported_comprehension_ast_shape();

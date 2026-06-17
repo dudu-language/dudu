@@ -176,6 +176,18 @@ void attach_statement_source(Stmt& stmt, const Parser::JoinedTokens& joined) {
     }
 }
 
+std::string declaration_name_from_piece(std::span<const Token> tokens, size_t begin, size_t end) {
+    if (begin >= end || begin >= tokens.size() || tokens[begin].kind != TokenKind::Identifier) {
+        throw CompileError(begin < tokens.size() ? tokens[begin].location : SourceLocation{},
+                           "expected declaration name", "dudu.parser.syntax");
+    }
+    for (size_t index = begin + 1; index < end && index < tokens.size(); ++index) {
+        throw CompileError(tokens[index].location, "expected : after declaration name",
+                           "dudu.parser.syntax");
+    }
+    return tokens[begin].text;
+}
+
 } // namespace
 
 std::vector<Parser::JoinedTokens>
@@ -402,8 +414,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
         find_top_level_assignment_token(tokens_, line_begin, end);
     if (colon.has_value() && (!assignment.has_value() || *colon < *assignment)) {
         stmt.kind = StmtKind::VarDecl;
-        const JoinedTokens name = join_tokens(line_begin, *colon);
-        stmt.name = name.text;
+        stmt.name = declaration_name_from_piece(tokens_, line_begin, *colon);
         const size_t type_end = assignment.value_or(end);
         const JoinedTokens type = join_tokens(*colon + 1, type_end);
         stmt.type_ref = parse_type_piece(type);
