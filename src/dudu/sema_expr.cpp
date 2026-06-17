@@ -119,6 +119,11 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
             sema_expr_fail(*location, "unsupported Python feature: def expressions");
         }
         return {};
+    case ExprKind::Comprehension:
+        if (location != nullptr) {
+            sema_expr_fail(*location, "unsupported Python feature: comprehensions");
+        }
+        return {};
     default:
         break;
     }
@@ -155,6 +160,11 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
     case ExprKind::DefExpression:
         if (use_location != nullptr) {
             sema_expr_fail(*use_location, "unsupported Python feature: def expressions");
+        }
+        return {};
+    case ExprKind::Comprehension:
+        if (use_location != nullptr) {
+            sema_expr_fail(*use_location, "unsupported Python feature: comprehensions");
         }
         return {};
     case ExprKind::Lambda:

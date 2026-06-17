@@ -1141,6 +1141,10 @@ Unsupported `def` expressions now parse as a dedicated `DefExpression` AST node
 instead of falling through to `Unknown` and being recognized later by raw text
 scanning.
 
+Unsupported list/set/dict comprehension syntax now parses as a dedicated
+`Comprehension` AST node instead of falling through to `Unknown` and being
+recognized later by raw text scanning.
+
 Nonempty `Unknown` expressions are rejected during semantic checking instead of
 calling the old raw expression inference path. Unknown expressions also no
 longer lower as raw C++ text during C++ emission. Use `cpp(...)` for explicit

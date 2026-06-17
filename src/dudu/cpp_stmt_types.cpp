@@ -375,6 +375,7 @@ TypeRef infer_emitted_local_type_ref(const Expr& expr,
     case ExprKind::Await:
     case ExprKind::Yield:
     case ExprKind::DefExpression:
+    case ExprKind::Comprehension:
     case ExprKind::Unknown:
     case ExprKind::CppEscape:
     case ExprKind::DictEntry:
@@ -496,6 +497,7 @@ std::string infer_emitted_local_type(const Expr& expr,
     case ExprKind::DictEntry:
     case ExprKind::DictLiteral:
     case ExprKind::DefExpression:
+    case ExprKind::Comprehension:
     case ExprKind::Lambda:
     case ExprKind::ListLiteral:
     case ExprKind::Member:

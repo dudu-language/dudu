@@ -144,6 +144,7 @@ enum class ExprKind {
     SetLiteral,
     TupleLiteral,
     DefExpression,
+    Comprehension,
     Lambda,
     Conditional,
     Await,

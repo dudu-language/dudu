@@ -52,6 +52,7 @@ class ExprTokenParser {
 
     Expr parse_postfix(std::initializer_list<TokenKind> stops);
     size_t matching_close(size_t open, TokenKind open_kind, TokenKind close_kind) const;
+    bool span_has_top_level_identifier(size_t begin, size_t end, std::string_view text) const;
     size_t expr_token_begin(const Expr& expr) const;
     size_t expr_token_end(const Expr& expr) const;
     Expr parse_call(Expr callee, std::initializer_list<TokenKind> stops);

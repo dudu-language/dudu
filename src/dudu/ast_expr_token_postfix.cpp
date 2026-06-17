@@ -73,6 +73,34 @@ size_t ExprTokenParser::matching_close(size_t open, TokenKind open_kind,
     return tokens_.size();
 }
 
+bool ExprTokenParser::span_has_top_level_identifier(size_t begin, size_t end,
+                                                    std::string_view text) const {
+    int bracket_depth = 0;
+    int paren_depth = 0;
+    int brace_depth = 0;
+    for (size_t i = begin; i < end && i < tokens_.size(); ++i) {
+        const Token& token = tokens_[i];
+        const bool inside_group = bracket_depth != 0 || paren_depth != 0 || brace_depth != 0;
+        if (!inside_group && token.kind == TokenKind::Identifier && token.text == text) {
+            return true;
+        }
+        if (token.kind == TokenKind::LBracket) {
+            ++bracket_depth;
+        } else if (token.kind == TokenKind::RBracket && bracket_depth > 0) {
+            --bracket_depth;
+        } else if (token.kind == TokenKind::LParen) {
+            ++paren_depth;
+        } else if (token.kind == TokenKind::RParen && paren_depth > 0) {
+            --paren_depth;
+        } else if (token.kind == TokenKind::LBrace) {
+            ++brace_depth;
+        } else if (token.kind == TokenKind::RBrace && brace_depth > 0) {
+            --brace_depth;
+        }
+    }
+    return false;
+}
+
 size_t ExprTokenParser::expr_token_begin(const Expr& expr) const {
     for (size_t i = 0; i < tokens_.size(); ++i) {
         if (tokens_[i].location.line == expr.range.start.line &&
@@ -138,8 +166,7 @@ Expr ExprTokenParser::parse_template_call(Expr indexed_callee,
 }
 
 Expr ExprTokenParser::parse_template_call_from_brackets(Expr callee, size_t begin,
-                                                        size_t template_begin,
-                                                        size_t template_end,
+                                                        size_t template_begin, size_t template_end,
                                                         std::initializer_list<TokenKind> stops) {
     (void)stops;
     match(TokenKind::LParen);
@@ -229,6 +256,12 @@ Expr ExprTokenParser::parse_primary(std::initializer_list<TokenKind> stops) {
         return inner;
     }
     if (match(TokenKind::LBracket)) {
+        const size_t body_begin = cursor_;
+        const size_t close = matching_close(begin, TokenKind::LBracket, TokenKind::RBracket);
+        if (close < tokens_.size() && span_has_top_level_identifier(body_begin, close, "for")) {
+            cursor_ = close + 1;
+            return make_node(ExprKind::Comprehension, begin, cursor_);
+        }
         Expr list = make_node(ExprKind::ListLiteral, begin, cursor_);
         list.children = parse_arg_list(TokenKind::RBracket);
         match(TokenKind::RBracket);
@@ -237,6 +270,12 @@ Expr ExprTokenParser::parse_primary(std::initializer_list<TokenKind> stops) {
         return list;
     }
     if (match(TokenKind::LBrace)) {
+        const size_t body_begin = cursor_;
+        const size_t close = matching_close(begin, TokenKind::LBrace, TokenKind::RBrace);
+        if (close < tokens_.size() && span_has_top_level_identifier(body_begin, close, "for")) {
+            cursor_ = close + 1;
+            return make_node(ExprKind::Comprehension, begin, cursor_);
+        }
         return parse_brace_literal(begin);
     }
     return make_node(ExprKind::Unknown, begin, std::min(cursor_ + 1, tokens_.size()));

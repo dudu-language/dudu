@@ -157,6 +157,8 @@ std::string_view expression_kind_name(ExprKind kind) {
         return "tuple_literal";
     case ExprKind::DefExpression:
         return "def_expression";
+    case ExprKind::Comprehension:
+        return "comprehension";
     case ExprKind::Lambda:
         return "lambda";
     case ExprKind::Conditional:

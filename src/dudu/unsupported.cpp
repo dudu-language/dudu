@@ -52,9 +52,6 @@ void check_unsupported_text(const SourceLocation& location, const std::string& t
     if (contains_word(text, "await")) {
         throw CompileError(location, "unsupported Python feature: async");
     }
-    if (contains_word(text, "for") && contains_word(text, "in")) {
-        throw CompileError(location, "unsupported Python feature: comprehensions");
-    }
 }
 
 void check_expr(const Expr& expr) {
@@ -67,6 +64,9 @@ void check_expr(const Expr& expr) {
     }
     if (expr.kind == ExprKind::DefExpression) {
         throw CompileError(expr.location, "unsupported Python feature: def expressions");
+    }
+    if (expr.kind == ExprKind::Comprehension) {
+        throw CompileError(expr.location, "unsupported Python feature: comprehensions");
     }
     if (expr.kind == ExprKind::Await) {
         throw CompileError(expr.location, "unsupported Python feature: async");

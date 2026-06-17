@@ -373,6 +373,8 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
         return join_lowered_exprs(expr.children, aliases, locals, ", ", symbols, options);
     case ExprKind::DefExpression:
         throw CompileError(expr.location, "unsupported Python feature: def expressions");
+    case ExprKind::Comprehension:
+        throw CompileError(expr.location, "unsupported Python feature: comprehensions");
     case ExprKind::Lambda:
         throw CompileError(expr.location,
                            "unsupported Python feature: lambda; declare a named function and "

@@ -204,6 +204,7 @@ std::string display_expr(const Expr& expr) {
         return trim_copy(expr.text);
     case ExprKind::Conditional:
     case ExprKind::DefExpression:
+    case ExprKind::Comprehension:
     case ExprKind::Lambda:
     case ExprKind::Await:
     case ExprKind::Yield:
