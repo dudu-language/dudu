@@ -32,6 +32,9 @@ Already structured:
   conditionals, and collection literals
 - initial type shape capture for names, qualified names, templates, pointers,
   references, wrappers, fixed arrays, and function-like type signatures
+- type parsing now enters through the lexer/token stream instead of the old
+  top-level arrow/bracket substring parser, preserving existing `TypeRef`
+  shapes while making C tag spellings such as `struct stat` structured names
 - function pointer/callback signature parsing can consume parsed `TypeRef`
   nodes directly, including omitted-return `fn(...)` as `void` and wrapper
   templates such as `std.function[fn(...)]`
@@ -562,9 +565,9 @@ Already structured:
   semantic checking with Dudu diagnostics instead of falling through legacy
   expression inference
 - AST parser implementation is split by responsibility: common parse utilities,
-  top-level scanners, type parsing, expression parsing, statement parsing, and
-  public AST helpers now live in separate files instead of one oversized mixed
-  parser file
+  top-level scanners, token-backed type parsing, token-backed expression
+  parsing, statement parsing, and public AST helpers now live in separate files
+  instead of one oversized mixed parser file
 
 Still too string-based:
 

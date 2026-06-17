@@ -462,7 +462,13 @@ push. They are not release packaging work.
    calls, template calls, indexes, slices, literals, unsupported lambdas/def
    expressions, and Python conditional expressions. The token expression parser
    has been split into a small public entry point plus focused core and
-   postfix/primary parser files.
+   postfix/primary parser files. Type parsing now follows the same shape:
+   `parse_type_text` and `parse_type_list` lex their input and build `TypeRef`
+   nodes through a token parser instead of string-scanning top-level arrows and
+   brackets. Existing type node shapes are preserved, including pointers,
+   references, wrappers, templates, fixed arrays, function pointer types,
+   non-type template value arguments, and C tag spellings such as
+   `struct stat`.
    Normal template-call emission lowers bracket arguments from parsed
    `TypeRef` nodes, including non-type value arguments, instead of falling back
    to raw expression text. Parsed method calls on pointer-typed member

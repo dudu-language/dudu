@@ -612,6 +612,17 @@ void test_type_ast_shape() {
     assert(signature.params.size() == 1);
     assert(signature.params[0] == "i32");
     assert(signature.return_type == "i32");
+    const dudu::TypeRef c_tag = dudu::parse_type_text("*struct sqlite3");
+    assert(c_tag.kind == dudu::TypeKind::Pointer);
+    assert(c_tag.children[0].kind == dudu::TypeKind::Named);
+    assert(c_tag.children[0].name == "struct sqlite3");
+    const dudu::TypeRef nested_callback =
+        dudu::parse_type_text("fn(fn(i32) -> i32, fn(i32) -> i32) -> fn(i32) -> i32");
+    assert(nested_callback.kind == dudu::TypeKind::Function);
+    assert(nested_callback.children.size() == 3);
+    assert(nested_callback.children[0].kind == dudu::TypeKind::Function);
+    assert(nested_callback.children[1].kind == dudu::TypeKind::Function);
+    assert(nested_callback.children[2].kind == dudu::TypeKind::Function);
     const dudu::TypeRef nested =
         dudu::substitute_type_ref(dudu::parse_type_text("fn(list[T]) -> T"), {{"T", "f32"}});
     assert(dudu::substitute_type_ref_text(nested, {}) == "fn(list[f32]) -> f32");
