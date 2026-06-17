@@ -10,28 +10,14 @@
 #include "dudu/parser.hpp"
 #include "dudu/sema.hpp"
 
-#include <cctype>
 #include <cstdlib>
 #include <filesystem>
 #include <optional>
-#include <regex>
 #include <sstream>
 #include <string_view>
 
 namespace dudu {
 namespace {
-
-struct LintLocal {
-    std::string name;
-    std::string type;
-    int line = 0;
-    int column = 0;
-    int indent = 0;
-};
-
-bool identifier_char(char c) {
-    return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_';
-}
 
 std::string diagnostic_source(std::string_view message) {
     if (message.find("could not scan native header") != std::string_view::npos) {
@@ -64,103 +50,6 @@ std::optional<std::string> missing_pkg_config_package(const ProjectConfig& confi
         }
     }
     return std::nullopt;
-}
-
-bool contains_identifier(const std::string& line, const std::string& name) {
-    for (size_t start = 0; start < line.size();) {
-        if (!identifier_char(line[start])) {
-            ++start;
-            continue;
-        }
-        size_t end = start + 1;
-        while (end < line.size() && identifier_char(line[end])) {
-            ++end;
-        }
-        if (line.substr(start, end - start) == name) {
-            return true;
-        }
-        start = end;
-    }
-    return false;
-}
-
-std::vector<Diagnostic> lint_diagnostics(const Document& doc) {
-    std::vector<Diagnostic> out;
-    std::vector<std::string> lines;
-    std::vector<LintLocal> locals;
-    std::vector<LintLocal> active_decls;
-    static const std::regex local_decl(
-        R"(^(\s*)([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([A-Za-z_][A-Za-z0-9_\.]*)\b)");
-    static const std::regex def_decl(R"(^(\s*)def\s+[A-Za-z_][A-Za-z0-9_]*\(([^)]*)\))");
-    std::istringstream in(doc.text);
-    std::string line;
-    int row = 0;
-    while (std::getline(in, line)) {
-        lines.push_back(line);
-        ++row;
-        const std::string trimmed = trim_copy(line);
-        if (trimmed.empty() || starts_with(trimmed, "#")) {
-            continue;
-        }
-        const int indent = leading_spaces(line);
-        while (!active_decls.empty() && active_decls.back().indent > indent) {
-            active_decls.pop_back();
-        }
-        std::smatch match;
-        if (std::regex_search(line, match, def_decl)) {
-            const std::vector<std::string> params = split_top_level_args(match[2].str());
-            for (const std::string& param : params) {
-                const size_t colon = param.find(':');
-                if (colon == std::string::npos) {
-                    continue;
-                }
-                const std::string name = trim_copy(param.substr(0, colon));
-                const std::string type = trim_copy(param.substr(colon + 1));
-                if (!name.empty() && name != "self") {
-                    active_decls.push_back({.name = name,
-                                            .type = type,
-                                            .line = row,
-                                            .column = indent + 1,
-                                            .indent = indent + 4});
-                }
-            }
-        }
-        if (std::regex_search(line, match, local_decl)) {
-            const std::string name = match[2].str();
-            const std::string type = trim_copy(match[3].str());
-            for (const LintLocal& outer : active_decls) {
-                if (outer.name == name && outer.line != row && outer.indent <= indent) {
-                    out.push_back(
-                        {.location = {.file = doc.path, .line = row, .column = indent + 1},
-                         .message = "local shadows outer binding: " + name,
-                         .source = "dudu/lint",
-                         .severity = 2});
-                    break;
-                }
-            }
-            LintLocal local{
-                .name = name, .type = type, .line = row, .column = indent + 1, .indent = indent};
-            locals.push_back(local);
-            active_decls.push_back(std::move(local));
-        }
-    }
-    for (const LintLocal& local : locals) {
-        bool used = false;
-        for (size_t i = static_cast<size_t>(local.line); i < lines.size(); ++i) {
-            if (contains_identifier(lines[i], local.name)) {
-                used = true;
-                break;
-            }
-        }
-        if (!used) {
-            out.push_back(
-                {.location = {.file = doc.path, .line = local.line, .column = local.column},
-                 .message = "unused local: " + local.name,
-                 .source = "dudu/lint",
-                 .severity = 2});
-        }
-    }
-    return out;
 }
 
 } // namespace
@@ -201,10 +90,7 @@ std::vector<Diagnostic> diagnostics_for_document(const Document& doc) {
         } else {
             analyze_module(module, {.check_bodies = true});
         }
-        std::vector<Diagnostic> diagnostics = lint_diagnostics(doc);
-        std::vector<Diagnostic> ast_lints = ast_lint_diagnostics(module, doc);
-        diagnostics.insert(diagnostics.end(), ast_lints.begin(), ast_lints.end());
-        return diagnostics;
+        return ast_lint_diagnostics(module, doc);
     } catch (const CompileError& error) {
         return {{.location = error.location(),
                  .message = error.what(),

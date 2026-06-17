@@ -17,6 +17,11 @@ struct AstLintLocal {
     int column = 0;
 };
 
+struct AstLocalDecl {
+    std::string name;
+    SourceLocation location;
+};
+
 bool numeric_type_name(const std::string& name) {
     static const std::set<std::string> types = {"i8",  "i16", "i32",   "i64",   "u8",  "u16",
                                                 "u32", "u64", "isize", "usize", "f32", "f64"};
@@ -341,6 +346,124 @@ void lint_unreachable_module(const ModuleAst& module, const Document& doc,
     }
 }
 
+void collect_name_uses_expr(const Expr& expr, const Document& doc,
+                            std::map<std::string, std::vector<SourceLocation>>& uses) {
+    if (expr.kind == ExprKind::Unknown) {
+        return;
+    }
+    if (expr.kind == ExprKind::Name && same_source_file(expr.location.file, doc.path)) {
+        uses[expr.name].push_back(expr.location);
+    }
+    for (const Expr& child : expr.callee) {
+        collect_name_uses_expr(child, doc, uses);
+    }
+    for (const Expr& child : expr.params) {
+        collect_name_uses_expr(child, doc, uses);
+    }
+    for (const Expr& child : expr.template_args) {
+        collect_name_uses_expr(child, doc, uses);
+    }
+    for (const Expr& child : expr.children) {
+        collect_name_uses_expr(child, doc, uses);
+    }
+}
+
+void collect_name_uses_stmt(const Stmt& stmt, const Document& doc,
+                            std::map<std::string, std::vector<SourceLocation>>& uses) {
+    collect_name_uses_expr(stmt.expr, doc, uses);
+    collect_name_uses_expr(stmt.value_expr, doc, uses);
+    collect_name_uses_expr(stmt.target_expr, doc, uses);
+    collect_name_uses_expr(stmt.condition_expr, doc, uses);
+    collect_name_uses_expr(stmt.message_expr, doc, uses);
+    collect_name_uses_expr(stmt.iterable_expr, doc, uses);
+    collect_name_uses_expr(stmt.pattern_expr, doc, uses);
+    collect_name_uses_expr(stmt.guard_expr, doc, uses);
+    for (const Stmt& child : stmt.children) {
+        collect_name_uses_stmt(child, doc, uses);
+    }
+}
+
+void collect_scope_lints_stmt_sequence(const std::vector<Stmt>& statements, const Document& doc,
+                                       std::vector<AstLocalDecl> active_decls,
+                                       std::vector<AstLocalDecl>& locals,
+                                       std::vector<Diagnostic>& out) {
+    for (const Stmt& stmt : statements) {
+        if (stmt.kind == StmtKind::VarDecl && !stmt.name.empty() &&
+            same_source_file(stmt.location.file, doc.path)) {
+            for (const AstLocalDecl& outer : active_decls) {
+                if (outer.name == stmt.name) {
+                    out.push_back({.location = stmt.location,
+                                   .message = "local shadows outer binding: " + stmt.name,
+                                   .source = "dudu/lint",
+                                   .severity = 2});
+                    break;
+                }
+            }
+            AstLocalDecl local{.name = stmt.name, .location = stmt.location};
+            locals.push_back(local);
+            active_decls.push_back(std::move(local));
+        }
+        if (!stmt.children.empty()) {
+            collect_scope_lints_stmt_sequence(stmt.children, doc, active_decls, locals, out);
+        }
+    }
+}
+
+bool location_after(const SourceLocation& use, const SourceLocation& decl) {
+    if (use.line != decl.line) {
+        return use.line > decl.line;
+    }
+    return use.column > decl.column;
+}
+
+void lint_scope_function(const FunctionDecl& fn, const Document& doc,
+                         std::vector<Diagnostic>& out) {
+    std::vector<AstLocalDecl> active_decls;
+    for (const ParamDecl& param : fn.params) {
+        active_decls.push_back({.name = param.name, .location = param.location});
+    }
+    std::vector<AstLocalDecl> locals;
+    collect_scope_lints_stmt_sequence(fn.statements, doc, active_decls, locals, out);
+
+    std::map<std::string, std::vector<SourceLocation>> uses;
+    for (const Stmt& stmt : fn.statements) {
+        collect_name_uses_stmt(stmt, doc, uses);
+    }
+    for (const AstLocalDecl& local : locals) {
+        bool used = false;
+        for (const SourceLocation& use : uses[local.name]) {
+            if (location_after(use, local.location)) {
+                used = true;
+                break;
+            }
+        }
+        if (!used) {
+            out.push_back({.location = local.location,
+                           .message = "unused local: " + local.name,
+                           .source = "dudu/lint",
+                           .severity = 2});
+        }
+    }
+}
+
+void lint_scope_class(const ClassDecl& klass, const Document& doc, std::vector<Diagnostic>& out) {
+    for (const FunctionDecl& method : klass.methods) {
+        lint_scope_function(method, doc, out);
+    }
+}
+
+void lint_scope_module(const ModuleAst& module, const Document& doc, std::vector<Diagnostic>& out) {
+    for (const FunctionDecl& fn : module.functions) {
+        lint_scope_function(fn, doc, out);
+    }
+    for (const ClassDecl& klass : module.classes) {
+        lint_scope_class(klass, doc, out);
+    }
+    for (const ModuleAst& unit : module.module_units) {
+        lint_scope_module(unit, doc, out);
+    }
+}
+
 } // namespace
 
 std::vector<Diagnostic> ast_lint_diagnostics(const ModuleAst& module, const Document& doc) {
@@ -349,6 +472,7 @@ std::vector<Diagnostic> ast_lint_diagnostics(const ModuleAst& module, const Docu
     lint_cpp_escape_module(module, doc, seen_cpp_escapes, out);
     lint_suspicious_cast_module(module, doc, out);
     lint_unreachable_module(module, doc, out);
+    lint_scope_module(module, doc, out);
     return out;
 }
 
