@@ -3,6 +3,7 @@
 #include "dudu/cpp_lower.hpp"
 #include "dudu/language_server_json.hpp"
 #include "dudu/language_server_support.hpp"
+#include "dudu/module_loader.hpp"
 #include "dudu/native_build.hpp"
 #include "dudu/native_headers.hpp"
 #include "dudu/parser.hpp"
@@ -10,6 +11,7 @@
 
 #include <cctype>
 #include <cstdlib>
+#include <filesystem>
 #include <map>
 #include <optional>
 #include <regex>
@@ -217,11 +219,8 @@ std::vector<Diagnostic> lint_diagnostics(const Document& doc) {
                     break;
                 }
             }
-            LintLocal local{.name = name,
-                            .type = type,
-                            .line = row,
-                            .column = indent + 1,
-                            .indent = indent};
+            LintLocal local{
+                .name = name, .type = type, .line = row, .column = indent + 1, .indent = indent};
             locals.push_back(local);
             active_decls.push_back(std::move(local));
         }
@@ -235,10 +234,11 @@ std::vector<Diagnostic> lint_diagnostics(const Document& doc) {
             }
         }
         if (!used) {
-            out.push_back({.location = {.file = doc.path, .line = local.line, .column = local.column},
-                           .message = "unused local: " + local.name,
-                           .source = "dudu/lint",
-                           .severity = 2});
+            out.push_back(
+                {.location = {.file = doc.path, .line = local.line, .column = local.column},
+                 .message = "unused local: " + local.name,
+                 .source = "dudu/lint",
+                 .severity = 2});
         }
     }
     return out;
@@ -248,15 +248,12 @@ std::vector<Diagnostic> lint_diagnostics(const Document& doc) {
 
 std::vector<Diagnostic> diagnostics_for_document(const Document& doc) {
     try {
-        ModuleAst module = parse_source(doc.text, doc.path);
         ProjectConfig config;
         try {
             config = config_for_file(doc.path);
         } catch (const std::exception& error) {
-            return {{{.file = doc.path, .line = 1, .column = 1},
-                     error.what(),
-                     "dudu/build-config",
-                     1}};
+            return {
+                {{.file = doc.path, .line = 1, .column = 1}, error.what(), "dudu/build-config", 1}};
         }
         if (const std::optional<std::string> missing = missing_pkg_config_package(config)) {
             return {{{.file = doc.path, .line = 1, .column = 1},
@@ -264,12 +261,27 @@ std::vector<Diagnostic> diagnostics_for_document(const Document& doc) {
                      "dudu/build-config",
                      1}};
         }
+        const bool project_tree =
+            std::filesystem::exists(doc.path) && source_tree_files(doc.path).size() > 1;
+        ModuleAst module =
+            project_tree ? load_source_tree(doc.path) : parse_source(doc.text, doc.path);
         module.build_values = config.build_values;
         module.build_values["TARGET_KIND"] = '"' + config.target_kind + '"';
         module.build_values["TARGET_MODE"] = '"' + config.target_mode + '"';
         module.target_mode_explicit = config.target_mode_explicit;
-        merge_native_header_types(module, {.config = config, .source_dir = doc.path.parent_path()});
-        analyze_module(module, {.check_bodies = true});
+        const NativeHeaderOptions native_options{.config = config,
+                                                 .source_dir = doc.path.parent_path()};
+        merge_native_header_types(module, native_options);
+        for (ModuleAst& unit : module.module_units) {
+            unit.build_values = module.build_values;
+            unit.target_mode_explicit = module.target_mode_explicit;
+            merge_native_header_types(unit, native_options);
+        }
+        if (project_tree || config.build_backend == "cmake") {
+            analyze_module_tree(module, {.check_bodies = true});
+        } else {
+            analyze_module(module, {.check_bodies = true});
+        }
         return lint_diagnostics(doc);
     } catch (const CompileError& error) {
         return {{.location = error.location(),

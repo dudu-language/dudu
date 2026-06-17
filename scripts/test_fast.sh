@@ -103,6 +103,7 @@ compile_and_expect native_template_function 42
 compile_and_expect native_scan_local 42
 
 "$repo_root/build/duc" check "$repo_root/tests/fixtures/simple_program.dd"
+"$repo_root/build/dudu" check "$repo_root/tests/fixtures/project_import_metadata/main.dd"
 "$repo_root/build/duc" fmt "$repo_root/tests/fixtures/simple_program.dd" --check
 "$repo_root/scripts/test_lsp.sh"
 

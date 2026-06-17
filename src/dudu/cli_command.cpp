@@ -161,7 +161,8 @@ std::filesystem::path default_build_output(const ProjectConfig& config,
 ModuleAst checked_module(const CliOptions& options, const std::string& source, bool check_bodies) {
     ModuleAst module = options.input.empty() ? parse_source(source, options.input)
                                              : load_source_tree(options.input);
-    const ProjectConfig config = config_for_options(options);
+    const ProjectConfig config =
+        options.input.empty() ? config_for_options(options) : build_config_for_options(options);
     module.build_values = config.build_values;
     module.build_values["TARGET_KIND"] = '"' + config.target_kind + '"';
     module.build_values["TARGET_MODE"] = '"' + config.target_mode + '"';
@@ -177,7 +178,7 @@ ModuleAst checked_module(const CliOptions& options, const std::string& source, b
         unit.target_mode_explicit = module.target_mode_explicit;
         merge_native_header_types(unit, native_header_options);
     }
-    if (options.emit_modules) {
+    if (options.emit_modules || config.build_backend == "cmake") {
         analyze_module_tree(module, {.check_bodies = check_bodies});
     } else {
         reject_direct_backend_module_conflicts(module);
