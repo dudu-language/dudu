@@ -555,6 +555,9 @@ push. They are not release packaging work.
    Match subject checks now pass inferred `TypeRef` nodes into wrapper-match
    detection, and match guard checks use typed expression inference before
    rendering only for diagnostics.
+   Condition checks for `if`, `while`, and assert-like statements now use typed
+   expression inference before rendering only for diagnostics and bool-operator
+   lookup.
 
 3. OOP Surface Cleanup
 

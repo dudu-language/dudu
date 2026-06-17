@@ -380,6 +380,9 @@ Already structured:
 - match subject checks now pass inferred `TypeRef` nodes into wrapper-match
   detection, and match guard checks use typed expression inference before
   rendering only for diagnostics
+- condition checks for `if`, `while`, and assert-like statements use typed
+  expression inference before rendering only for diagnostics and bool-operator
+  lookup
 - type compatibility has AST overloads for simple literals and list/set/dict
   literals, including expected-type disambiguation for empty `{}` dict
   initializers, reducing reliance on string parsing for assignment checks

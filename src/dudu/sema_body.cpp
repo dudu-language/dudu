@@ -159,7 +159,8 @@ TypeRef const_reference_type_ref(TypeRef type) {
 void check_condition_type(FunctionScope& scope, const Stmt& stmt,
                           const BodyCheckCallbacks& callbacks) {
     const SourceLocation& location = node_location(stmt.location, stmt.condition_expr);
-    const std::string got = callbacks.infer_expr(scope, stmt.condition_expr, &location);
+    const TypeRef got_ref = callbacks.infer_expr_type(scope, stmt.condition_expr, &location);
+    const std::string got = substitute_type_ref_text(got_ref, {});
     if (!got.empty() && got != "bool" && got != "auto") {
         if (const auto signature = dudu_operator_signature(scope.symbols, "bool", got);
             signature && signature->params.empty() && signature->return_type == "bool") {
