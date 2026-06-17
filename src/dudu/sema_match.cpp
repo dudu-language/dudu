@@ -1,5 +1,6 @@
 #include "dudu/sema_match.hpp"
 
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/match_patterns.hpp"
 #include "dudu/sema_common.hpp"
@@ -129,8 +130,9 @@ bool check_wrapper_match(FunctionScope& scope, const Stmt& stmt, const std::stri
         FunctionScope nested = scope;
         bind_wrapper_case(nested, wrapper, child.pattern_expr, child.location);
         if (sema_has_expr(child.guard_expr)) {
-            const std::string guard_type = callbacks.infer_expr(
+            const TypeRef guard_ref = callbacks.infer_expr_type(
                 nested, child.guard_expr, &node_location(child.location, child.guard_expr));
+            const std::string guard_type = substitute_type_ref_text(guard_ref, {});
             if (guard_type != "bool") {
                 sema_fail(node_location(child.location, child.guard_expr),
                           "match guard must be bool, got " + guard_type);
@@ -216,8 +218,9 @@ void check_enum_match(FunctionScope& scope, const Stmt& stmt, const std::string&
             }
         }
         if (sema_has_expr(child.guard_expr)) {
-            const std::string guard_type = callbacks.infer_expr(
+            const TypeRef guard_ref = callbacks.infer_expr_type(
                 nested, child.guard_expr, &node_location(child.location, child.guard_expr));
+            const std::string guard_type = substitute_type_ref_text(guard_ref, {});
             if (guard_type != "bool") {
                 sema_fail(node_location(child.location, child.guard_expr),
                           "match guard must be bool, got " + guard_type);
@@ -236,9 +239,10 @@ void check_enum_match(FunctionScope& scope, const Stmt& stmt, const std::string&
 void check_match_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& return_type,
                       int loop_depth, const MatchCheckCallbacks& callbacks) {
     const SourceLocation& subject_location = node_location(stmt.location, stmt.condition_expr);
-    const std::string subject_type =
-        callbacks.infer_expr(scope, stmt.condition_expr, &subject_location);
-    const WrapperMatchType wrapper = wrapper_match_type(subject_type);
+    const TypeRef subject_ref =
+        callbacks.infer_expr_type(scope, stmt.condition_expr, &subject_location);
+    const std::string subject_type = substitute_type_ref_text(subject_ref, {});
+    const WrapperMatchType wrapper = wrapper_match_type(subject_ref);
     if (wrapper.kind != WrapperMatchKind::None) {
         check_wrapper_match(scope, stmt, return_type, loop_depth, wrapper, callbacks);
         return;

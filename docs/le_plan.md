@@ -552,6 +552,9 @@ push. They are not release packaging work.
    Dereference assignment target checks now use typed expression inference and
    peel pointer `TypeRef` nodes instead of reparsing rendered pointee type
    strings.
+   Match subject checks now pass inferred `TypeRef` nodes into wrapper-match
+   detection, and match guard checks use typed expression inference before
+   rendering only for diagnostics.
 
 3. OOP Surface Cleanup
 

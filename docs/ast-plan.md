@@ -377,6 +377,9 @@ Already structured:
 - dereference assignment targets such as `*ptr = value` use typed expression
   inference and peel pointer `TypeRef` nodes instead of reparsing rendered
   pointee type strings
+- match subject checks now pass inferred `TypeRef` nodes into wrapper-match
+  detection, and match guard checks use typed expression inference before
+  rendering only for diagnostics
 - type compatibility has AST overloads for simple literals and list/set/dict
   literals, including expected-type disambiguation for empty `{}` dict
   initializers, reducing reliance on string parsing for assignment checks

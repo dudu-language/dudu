@@ -11,6 +11,8 @@ namespace dudu {
 
 struct MatchCheckCallbacks {
     std::function<std::string(FunctionScope&, const Expr&, const SourceLocation*)> infer_expr;
+    std::function<TypeRef(const FunctionScope&, const Expr&, const SourceLocation*)>
+        infer_expr_type;
     std::function<void(FunctionScope&, const std::vector<Stmt>&, const std::string&, int)> check_block;
 };
 
