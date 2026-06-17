@@ -554,7 +554,9 @@ push. They are not release packaging work.
    without regenerating `array[T][...]` text and reparsing it. Local
    declaration sema and C++ emission now carry an effective declared `TypeRef`
    for shaped-array inference, instead of deciding parsed metadata validity by
-   comparing rendered type strings. Generic
+   comparing rendered type strings. LSP local binding uses the same
+   shaped-array `TypeRef` inference for annotated locals, so editor facts
+   follow the compiler's effective declaration type. Generic
    argument inference now keeps inferred bindings as `TypeRef` nodes, so
    function and method generic inference returns structured type arguments
    instead of reparsing rendered binding text. Generic function and method

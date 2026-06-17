@@ -88,6 +88,9 @@ Already structured:
   `TypeRef` for shaped-array inference, so the declaration path no longer
   decides whether parsed type metadata is valid by comparing rendered type
   strings
+- LSP local binding now uses the same shaped-array `TypeRef` inference for
+  annotated locals, so hover/completion facts follow the compiler's effective
+  declaration type instead of the raw annotation string
 - C ABI pointer checks and structural type-name compatibility compare rendered
   `TypeRef` forms instead of raw parser text
 - member and scoped member path reconstruction render indexed path segments

@@ -1,5 +1,6 @@
 #include "dudu/language_server_local_context.hpp"
 
+#include "dudu/array_shape.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/language_server_json.hpp"
@@ -95,7 +96,11 @@ void bind_tuple_names(FunctionScope& scope, const Stmt& stmt) {
 void bind_statement(FunctionScope& scope, const Stmt& stmt) {
     if (stmt.kind == StmtKind::VarDecl) {
         if (!stmt.type.empty()) {
-            lsp_bind_local(scope, stmt.name, stmt.type, stmt.type_ref);
+            const ArrayShapeInference inferred =
+                infer_array_literal_shape_type(stmt.type_ref, stmt.value_expr);
+            const TypeRef type_ref =
+                inferred.status == ArrayShapeStatus::Inferred ? inferred.type_ref : stmt.type_ref;
+            lsp_bind_local(scope, stmt.name, substitute_type_ref_text(type_ref, {}), type_ref);
             return;
         }
         lsp_bind_inferred_local(scope, stmt.name, stmt.value_expr);
