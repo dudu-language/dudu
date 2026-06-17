@@ -54,6 +54,10 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                            const SourceLocation* location = nullptr);
 TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
                             const SourceLocation* location = nullptr);
+std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Expr& expr,
+                                            const SourceLocation* location);
+std::optional<TypeRef> direct_template_call_type_ref(const FunctionScope& scope, const Expr& expr,
+                                                     const SourceLocation* location);
 void check_call_args_ast(const FunctionScope& scope, const std::string& callee,
                          const FunctionSignature& signature, const std::vector<Expr>& args,
                          const SourceLocation* location);
@@ -81,6 +85,9 @@ std::string template_call_callee(const FunctionScope& scope, const Expr& expr,
 bool is_offsetof_field_expr(const Expr& expr);
 std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr,
                                     const SourceLocation* location);
+std::optional<FunctionSignature> explicit_generic_function_signature_ast(
+    const FunctionScope& scope, const Expr& expr, const std::string& callee_base,
+    const std::string& emitted_callee, const SourceLocation* location);
 std::string infer_constructor_call_ast(const FunctionScope& scope, const Expr& expr,
                                        const std::string& callee, const SourceLocation* location);
 std::string infer_builtin_call_ast(const FunctionScope& scope, const Expr& expr,

@@ -1557,6 +1557,13 @@ LSP source edits are also moving to AST-owned ranges:
   and local `TypeRef` metadata into expression coercion when available, leaving
   the string coercion wrapper only for target types that still have no
   structured metadata.
+- Explicit generic Dudu template-call validation now lives in a shared
+  signature helper, and typed expression inference returns the instantiated
+  signature `TypeRef` directly for those calls instead of routing through
+  rendered return-type text.
+- Typed direct-call and template-call inference now lives in a focused
+  expression type-call module, keeping the main expression inference file from
+  accumulating more compatibility migration code.
 
 Expression parsing has moved onto the lexer/token stream:
 

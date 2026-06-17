@@ -103,6 +103,7 @@ add_library(dudu_frontend
     src/dudu/sema_expr_cpp_escape.cpp
     src/dudu/sema_expr_support.cpp
     src/dudu/sema_expr_template.cpp
+    src/dudu/sema_expr_type_calls.cpp
     src/dudu/sema_function_type.cpp
     src/dudu/sema_generics.cpp
     src/dudu/sema_index.cpp
