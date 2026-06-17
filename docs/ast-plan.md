@@ -520,6 +520,9 @@ Already structured:
   string expression inference callback
 - generic function and method inference no longer accepts a string expression
   inference callback; inferred inputs cross that API as `TypeRef` nodes
+- body and match semantic callback APIs now expose typed expression inference
+  only, removing the old string expression inference callback from those phase
+  boundaries
 - assignment target validation and side-effect-only statement checks now infer
   expression `TypeRef` nodes for swizzle receivers, call targets, `range`
   arguments, assert/raise payloads, expression statements, and void-return

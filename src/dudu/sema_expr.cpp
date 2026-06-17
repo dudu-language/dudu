@@ -437,11 +437,7 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
 }
 
 BodyCheckCallbacks expression_body_check_callbacks() {
-    return {.infer_expr =
-                [](FunctionScope& scope, const Expr& expr, const SourceLocation* location) {
-                    return infer_expr_ast(scope, expr, location);
-                },
-            .infer_expr_type =
+    return {.infer_expr_type =
                 [](const FunctionScope& scope, const Expr& expr, const SourceLocation* location) {
                     return infer_expr_type_ast(scope, expr, location);
                 },

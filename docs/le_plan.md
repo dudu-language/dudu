@@ -602,6 +602,9 @@ push. They are not release packaging work.
    Generic function and method inference no longer accepts a string expression
    inference callback; all inference inputs cross that boundary as `TypeRef`
    nodes.
+   Body and match semantic callback APIs now expose typed expression inference
+   only; the old string expression inference callback has been removed from
+   those phase boundaries.
    Assignment target validation and side-effect-only statement checks now use
    typed expression inference for swizzle receivers, call targets, `range`
    arguments, assert/raise payloads, expression statements, and void-return
