@@ -35,6 +35,18 @@ TypeRef named_type_ref(std::string name, SourceLocation location) {
     return type;
 }
 
+TypeRef template_constructor_type_ref(const Expr& expr, std::string name,
+                                      std::vector<TypeRef> type_args) {
+    TypeRef type;
+    type.kind = TypeKind::Template;
+    type.name = std::move(name);
+    type.children = std::move(type_args);
+    type.location = expr.location;
+    type.range = expr.range;
+    type.text = substitute_type_ref_text(type, {});
+    return type;
+}
+
 std::optional<TypeRef> type_shape_builtin_type_ref(const FunctionScope& scope, const Expr& expr,
                                                    const SourceLocation* location) {
     if (expr.name != "sizeof" && expr.name != "alignof" && expr.name != "offsetof") {
@@ -189,6 +201,34 @@ std::optional<TypeRef> direct_template_call_type_ref(const FunctionScope& scope,
     if (const auto signature =
             explicit_generic_function_signature_ast(scope, expr, callee_base, callee, location)) {
         return signature_return_type_ref(*signature);
+    }
+    if (const auto klass = scope.symbols.classes.find(resolve_alias(scope.symbols, callee_base));
+        klass != scope.symbols.classes.end() && !klass->second->generic_params.empty()) {
+        const std::vector<TypeRef> type_args = template_type_refs(expr);
+        if (location != nullptr && type_args.size() != klass->second->generic_params.size()) {
+            sema_expr_fail(*location, "type " + callee_base + " expects " +
+                                          std::to_string(klass->second->generic_params.size()) +
+                                          " type arguments, got " +
+                                          std::to_string(type_args.size()));
+        }
+        if (location != nullptr) {
+            for (const TypeRef& type_arg : type_args) {
+                if (const auto unknown = unknown_type_ref(scope.symbols, type_arg)) {
+                    const SourceLocation type_location =
+                        unknown->second.line > 0 ? unknown->second : type_arg.location;
+                    sema_expr_fail(type_location,
+                                   "unknown generic argument type: " + unknown->first);
+                }
+            }
+        }
+        const ClassDecl instantiated = instantiate_generic_class(*klass->second, type_args, callee);
+        reject_abstract_construction(scope.symbols, callee_base, location);
+        check_constructor_args_ast(
+            scope, instantiated, expr.children, location, infer_expr_type_ast,
+            [&](const std::string& expected, const Expr& value, const std::string& got) {
+                return can_assign_ast(scope, expected, value, got);
+            });
+        return template_constructor_type_ref(expr, callee_base, type_args);
     }
     return std::nullopt;
 }

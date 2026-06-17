@@ -338,6 +338,9 @@ Already structured:
 - ordinary constructor calls now return named `TypeRef` nodes through direct
   typed expression inference after checking Dudu constructor arguments,
   avoiding the string-returning call inference fallback for common constructors
+- generic class constructors such as `Box[i32](value)` now return templated
+  `TypeRef` nodes through direct typed expression inference after generic
+  argument validation and constructor checking
 - LSP local variable/parameter type collection for hover, member completion,
   and member definition now walks parsed function/method bodies and reuses
   semantic expression inference instead of regexing source lines
