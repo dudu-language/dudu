@@ -1,5 +1,6 @@
 #include "dudu/language_server_ast_lints.hpp"
 
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/language_server_support.hpp"
 
@@ -107,7 +108,7 @@ void lint_suspicious_cast_stmt(const Stmt& stmt, const Document& doc,
     lint_suspicious_cast_expr(stmt.guard_expr, doc, active_decls, out);
     if (stmt.kind == StmtKind::VarDecl && !stmt.name.empty() && !stmt.type.empty()) {
         active_decls.push_back({.name = stmt.name,
-                                .type = stmt.type,
+                                .type = substitute_type_ref_text(stmt.type_ref, {}),
                                 .line = stmt.location.line,
                                 .column = stmt.location.column});
     }
@@ -165,7 +166,7 @@ void lint_suspicious_cast_function(const FunctionDecl& fn, const Document& doc,
     std::vector<AstLintLocal> active_decls;
     for (const ParamDecl& param : fn.params) {
         active_decls.push_back({.name = param.name,
-                                .type = param.type,
+                                .type = substitute_type_ref_text(param.type_ref, {}),
                                 .line = param.location.line,
                                 .column = param.location.column});
     }

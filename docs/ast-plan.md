@@ -94,6 +94,8 @@ Already structured:
 - typed catch and loop bindings now store local types from parsed `TypeRef`
   metadata in sema, codegen, and LSP local scopes instead of using raw
   annotation strings as the semantic local type
+- suspicious-cast lint facts for annotated locals and parameters now render
+  from parsed `TypeRef` nodes instead of reading raw annotation strings
 - C ABI pointer checks and structural type-name compatibility compare rendered
   `TypeRef` forms instead of raw parser text
 - member and scoped member path reconstruction render indexed path segments
