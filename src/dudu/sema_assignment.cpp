@@ -95,8 +95,9 @@ std::string assignment_target_type(FunctionScope& scope, const Stmt& stmt,
     if (stmt.target_expr.kind == ExprKind::Member) {
         if (stmt.target_expr.children.size() == 1 && is_swizzle_name(stmt.target_expr.name)) {
             const Expr& receiver = stmt.target_expr.children.front();
-            const std::string receiver_type =
-                callbacks.infer_expr(scope, receiver, &target_location);
+            const TypeRef receiver_type_ref =
+                callbacks.infer_expr_type(scope, receiver, &target_location);
+            const std::string receiver_type = substitute_type_ref_text(receiver_type_ref, {});
             if (const auto swizzle = swizzle_assignment_type_for_type(
                     scope.symbols, target_location, receiver_type, stmt.target_expr.name)) {
                 return *swizzle;
@@ -111,7 +112,7 @@ std::string assignment_target_type(FunctionScope& scope, const Stmt& stmt,
     }
     if (stmt.target_expr.kind == ExprKind::Call ||
         stmt.target_expr.kind == ExprKind::TemplateCall) {
-        (void)callbacks.infer_expr(scope, stmt.target_expr, &target_location);
+        (void)callbacks.infer_expr_type(scope, stmt.target_expr, &target_location);
         return {};
     }
     if (stmt.target_expr.kind != ExprKind::Unknown) {

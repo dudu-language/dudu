@@ -186,7 +186,7 @@ std::optional<TypeRef> infer_for_binding_type(FunctionScope& scope, const Stmt& 
     const SourceLocation& location = node_location(stmt.location, stmt.iterable_expr);
     if (stmt.iterable_expr.kind == ExprKind::Call && stmt.iterable_expr.name == "range") {
         for (const Expr& arg : stmt.iterable_expr.children) {
-            (void)callbacks.infer_expr(scope, arg, &location);
+            (void)callbacks.infer_expr_type(scope, arg, &location);
         }
         return parse_type_text("i32", location);
     }
@@ -245,7 +245,8 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
             }
             return;
         }
-        const std::string got = callbacks.infer_expr(scope, stmt.value_expr, &value_location);
+        const TypeRef got_ref = callbacks.infer_expr_type(scope, stmt.value_expr, &value_location);
+        const std::string got = substitute_type_ref_text(got_ref, {});
         if (got != "void") {
             sema_fail(value_location, "void function cannot return " + got);
         }
@@ -260,15 +261,15 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
         }
         check_condition_type(scope, stmt, callbacks);
         if (sema_has_expr(stmt.message_expr)) {
-            (void)callbacks.infer_expr(scope, stmt.message_expr,
-                                       &node_location(stmt.location, stmt.message_expr));
+            (void)callbacks.infer_expr_type(scope, stmt.message_expr,
+                                            &node_location(stmt.location, stmt.message_expr));
         }
         return;
     }
     if (stmt.kind == StmtKind::Raise) {
         if (sema_has_expr(stmt.value_expr)) {
-            (void)callbacks.infer_expr(scope, stmt.value_expr,
-                                       &node_location(stmt.location, stmt.value_expr));
+            (void)callbacks.infer_expr_type(scope, stmt.value_expr,
+                                            &node_location(stmt.location, stmt.value_expr));
         }
         return;
     }
@@ -473,7 +474,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
         }
         return;
     }
-    (void)callbacks.infer_expr(scope, stmt.expr, &stmt.location);
+    (void)callbacks.infer_expr_type(scope, stmt.expr, &stmt.location);
 }
 
 Symbols with_generic_params(Symbols symbols, const std::vector<std::string>& params) {

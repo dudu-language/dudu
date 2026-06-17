@@ -596,6 +596,10 @@ push. They are not release packaging work.
    checks argument/parameter `TypeRef` compatibility before rendered fallback
    paths, and binds native template placeholders from parsed argument types
    when available.
+   Assignment target validation and side-effect-only statement checks now use
+   typed expression inference for swizzle receivers, call targets, `range`
+   arguments, assert/raise payloads, expression statements, and void-return
+   value checks.
 
 3. OOP Surface Cleanup
 

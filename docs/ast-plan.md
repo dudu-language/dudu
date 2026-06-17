@@ -516,6 +516,10 @@ Already structured:
   checks parsed argument and parameter `TypeRef` nodes before rendered
   compatibility fallback, and exposes a parsed `TypeRef` path for native
   template placeholder binding
+- assignment target validation and side-effect-only statement checks now infer
+  expression `TypeRef` nodes for swizzle receivers, call targets, `range`
+  arguments, assert/raise payloads, expression statements, and void-return
+  value checks
 - assignment compatibility for parsed explicit casts, value-wrapper
   assignments, and `Ok(...)`/`Err(...)` result construction inspects call
   expression nodes instead of rediscovering those forms from raw text
