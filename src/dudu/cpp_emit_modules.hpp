@@ -21,5 +21,6 @@ struct CppModuleArtifact {
 };
 
 std::vector<CppModuleArtifact> emit_cpp_module_artifacts(const ModuleAst& module);
+void write_cpp_module_artifacts(const std::filesystem::path& dir, const ModuleAst& module);
 
 } // namespace dudu

@@ -73,8 +73,12 @@ the namespace backend the information it needs. Source-tree loads also preserve
 the ordered per-file module units alongside the compatibility merged view, so
 the next sema/codegen work can operate module-by-module. Same-name declarations
 now also carry stable generated C++ names derived from their owning module, but
-the emitter and semantic lookup still need to switch to those names coherently
-before they can coexist through semantic analysis and codegen.
+the direct backend and semantic lookup still need to switch to those names
+coherently before they can coexist through normal semantic analysis and
+codegen. The per-module artifact emitter now uses those generated names for
+same-module declarations and qualified imported module references, including
+`import module as alias`, `import module.path`, and selective `from module
+import Name` forms.
 
 ## Feature Validation Bar
 
@@ -553,8 +557,8 @@ push. They are not release packaging work.
    C++ compile/link step when the generated C++, native build command, and
    native source inputs are unchanged. True per-module generated C++ remains
    the larger architecture step and is a major requirement for a serious C/C++
-   ecosystem-facing toolchain. Current `duc emit` and direct `dudu build`
-   output one generated C++ translation unit for the whole Dudu source tree;
+   ecosystem-facing toolchain. Current `duc emit` and direct-backend
+   `dudu build` output one generated C++ translation unit for the whole Dudu source tree;
    source-tree module units are now preserved in the AST so that future
    per-module `.hpp/.cpp` output has authoritative module boundaries to emit
    from. The emitter can now produce inspection artifacts for each module unit.
@@ -564,9 +568,13 @@ push. They are not release packaging work.
    also lower through the generated type-name map for fields, parameters,
    returns, arrays, and templates. Same-module expression bodies now also lower
    function calls, constructors, constants, and other mapped declaration names
-   through the generated value-name map. The direct native build still compiles
-   the compatibility single-file output until namespace-aware per-module
-   sema/codegen can rewrite cross-module references coherently.
+   through the generated value-name map. Qualified imported module references
+   in per-module artifacts also lower to the imported module's generated C++
+   names, so artifact bodies no longer preserve source-level `module.symbol`
+   calls. `duc emit-modules` writes those artifacts to disk with a shared
+   generated runtime header, and the generated CMake backend now compiles the
+   per-module `.cpp` files instead of a merged generated translation unit. The
+   direct native build still compiles the compatibility single-file output.
 
 12. Language Server And Formatter
 

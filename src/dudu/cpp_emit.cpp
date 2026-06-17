@@ -373,8 +373,10 @@ std::string emit_cpp_header(const ModuleAst& module, const CppEmitOptions& optio
     const std::map<std::string, std::string> function_returns = function_return_types(module);
     const Symbols symbols = collect_symbols(module);
     out << "#pragma once\n\n";
-    emit_includes(out, module);
-    emit_result_prelude(out, module);
+    if (options.emit_prelude) {
+        emit_includes(out, module);
+        emit_result_prelude(out, module);
+    }
 
     emit_aliases(out, module, options);
     emit_enum_forward_declarations(out, module, options);
@@ -438,8 +440,10 @@ std::string emit_cpp_source(const ModuleAst& module, const CppEmitOptions& optio
     const std::vector<std::string> aliases = namespace_aliases(module);
     const std::map<std::string, std::string> function_returns = function_return_types(module);
     const Symbols symbols = collect_symbols(module);
-    emit_includes(out, module);
-    emit_result_prelude(out, module);
+    if (options.emit_prelude) {
+        emit_includes(out, module);
+        emit_result_prelude(out, module);
+    }
 
     emit_aliases(out, module, options);
     emit_enum_forward_declarations(out, module, options);

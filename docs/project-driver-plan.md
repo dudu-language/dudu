@@ -348,9 +348,11 @@ Current implementation reality:
   Dudu source tree. Imported `.dd` files are parsed as modules, but their
   generated C++ is still merged into that one `.cpp` file before native
   compilation.
-- Internal emitter support exists for per-module inspection artifacts, but
-  `dudu build` does not compile those artifacts yet. Switching the build path
-  requires namespace-aware semantic analysis and generated C++ references.
+- `duc emit-modules` writes generated `.hpp/.cpp` artifacts per Dudu module
+  plus a shared `dudu_runtime.hpp`.
+- The generated CMake backend uses `duc emit-modules` and compiles the
+  generated per-module `.cpp` files.
+- The direct backend still compiles the compatibility merged `.cpp` output.
 - `[build] backend = "direct"` and `[build] backend = "cmake"` parse from
   `dudu.toml`. The direct backend is selectable explicitly. The generated
   CMake backend is implemented for `dudu build`, `dudu run`, and `dudu test`;
@@ -534,6 +536,8 @@ docs. Generated Dudu projects do not get a changelog by default.
 - `dudu build` can use the direct backend explicitly.
 - `dudu build` can use the CMake backend explicitly.
 - `dudu run` can launch a CMake-backed executable target.
+- CMake-backed builds compile generated per-module `.cpp` files for imported
+  Dudu modules.
 - `dudu build` can drive a declared target from a user-owned CMake project.
 - `dudu run` can launch a declared executable from a user-owned CMake project.
 - `dudu build` fails clearly when the selected backend cannot model the

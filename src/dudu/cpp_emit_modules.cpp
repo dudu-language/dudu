@@ -1,9 +1,12 @@
 #include "dudu/cpp_emit_modules.hpp"
 
 #include "dudu/cpp_emit.hpp"
+#include "dudu/cpp_emit_prelude.hpp"
 
+#include <fstream>
 #include <set>
 #include <sstream>
+#include <stdexcept>
 
 namespace dudu {
 namespace {
@@ -103,6 +106,7 @@ void add_imported_generated_names(CppEmitOptions& options, const ModuleAst& depe
 CppEmitOptions module_emit_options(const ModuleAst& unit,
                                    const std::map<std::string, const ModuleAst*>& modules) {
     CppEmitOptions options;
+    options.emit_prelude = false;
     options.use_generated_names = true;
     add_local_generated_names(options, unit);
     for (const ImportDecl& import : unit.imports) {
@@ -132,12 +136,38 @@ std::vector<std::string> module_include_paths(const ModuleAst& unit) {
 }
 
 void emit_module_includes(std::ostringstream& out, const ModuleAst& unit) {
+    out << "#include \"dudu_runtime.hpp\"\n";
     const std::vector<std::string> includes = module_include_paths(unit);
     for (const std::string& path : includes) {
         out << "#include \"" << path << "\"\n";
     }
-    if (!includes.empty()) {
-        out << '\n';
+    out << '\n';
+}
+
+std::string runtime_header(const ModuleAst& module) {
+    std::ostringstream out;
+    out << "#pragma once\n\n";
+    emit_includes(out, module);
+    emit_result_prelude(out, module);
+    return out.str();
+}
+
+void emit_entry_point(std::ostringstream& out, const ModuleAst& unit,
+                      const CppEmitOptions& options) {
+    for (const FunctionDecl& fn : unit.functions) {
+        if (fn.name != "main") {
+            continue;
+        }
+        out << "int main() {\n";
+        const std::string call = emitted_name(fn, options) + "()";
+        if (fn.return_type.empty() || fn.return_type == "void") {
+            out << "    " << call << ";\n"
+                << "    return 0;\n";
+        } else {
+            out << "    return " << call << ";\n";
+        }
+        out << "}\n";
+        return;
     }
 }
 
@@ -156,6 +186,7 @@ std::string source_with_boundary_comment(const ModuleAst& unit,
     out << "// dudu module: " << (unit.module_path.empty() ? "main" : unit.module_path) << "\n";
     emit_module_includes(out, unit);
     out << emit_cpp_source(unit, options);
+    emit_entry_point(out, unit, options);
     return out.str();
 }
 
@@ -184,6 +215,10 @@ std::map<std::string, const ModuleAst*> module_map(const std::vector<ModuleAst>&
 
 std::vector<CppModuleArtifact> emit_cpp_module_artifacts(const ModuleAst& module) {
     std::vector<CppModuleArtifact> out;
+    out.push_back({.path = "dudu_runtime.hpp",
+                   .module_path = {},
+                   .kind = CppModuleArtifactKind::Header,
+                   .content = runtime_header(module)});
     if (module.module_units.empty()) {
         append_artifacts(out, module, {{module.module_path, &module}});
         return out;
@@ -193,6 +228,21 @@ std::vector<CppModuleArtifact> emit_cpp_module_artifacts(const ModuleAst& module
         append_artifacts(out, unit, modules);
     }
     return out;
+}
+
+void write_cpp_module_artifacts(const std::filesystem::path& dir, const ModuleAst& module) {
+    if (dir.empty()) {
+        throw std::runtime_error("emit-modules requires -o <directory>");
+    }
+    for (const CppModuleArtifact& artifact : emit_cpp_module_artifacts(module)) {
+        const std::filesystem::path path = dir / artifact.path;
+        std::filesystem::create_directories(path.parent_path().empty() ? dir : path.parent_path());
+        std::ofstream out(path);
+        if (!out) {
+            throw std::runtime_error("could not open output " + path.string());
+        }
+        out << artifact.content;
+    }
 }
 
 } // namespace dudu

@@ -369,6 +369,9 @@ grep -Eq "build .*project_backend_cmake/cmake-backend/build" \
 grep -Eq "run .*project_backend_cmake/cmake-backend/build/backend_cmake" \
     "$repo_root/build/project_backend_cmake_run.err"
 grep -q "cmake backend" "$repo_root/build/project_backend_cmake_run.out"
+grep -q "42" "$repo_root/build/project_backend_cmake_run.out"
+test -f "$repo_root/build/project_backend_cmake/cmake-backend/build/generated/main.cpp"
+test -f "$repo_root/build/project_backend_cmake/cmake-backend/build/generated/helper.cpp"
 grep -Eq "cmake .*project_backend_cmake/dudu-tests/main-[0-9a-f]+-cmake/source/CMakeLists.txt" \
     "$repo_root/build/project_backend_cmake_test.err"
 grep -q "1/1 tests passed" "$repo_root/build/project_backend_cmake_test.out"

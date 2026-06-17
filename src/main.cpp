@@ -2,6 +2,7 @@
 #include "dudu/cmake_backend.hpp"
 #include "dudu/cmake_emit.hpp"
 #include "dudu/cpp_emit.hpp"
+#include "dudu/cpp_emit_modules.hpp"
 #include "dudu/format_path.hpp"
 #include "dudu/language_server.hpp"
 #include "dudu/module_loader.hpp"
@@ -44,6 +45,7 @@ struct Options {
     bool clean_cache = false;
     bool cmake = false;
     bool emit_cpp = false;
+    bool emit_modules = false;
     bool format = false;
     bool init_project = false;
     bool lsp = false;
@@ -101,6 +103,9 @@ Options parse_options(int argc, char** argv, bool project_driver) {
         first_arg = 2;
     } else if (argc > 1 && std::string(argv[1]) == "emit") {
         options.emit_cpp = true;
+        first_arg = 2;
+    } else if (argc > 1 && std::string(argv[1]) == "emit-modules") {
+        options.emit_modules = true;
         first_arg = 2;
     } else if (argc > 1 && std::string(argv[1]) == "fmt") {
         options.format = true;
@@ -215,8 +220,8 @@ Options parse_options(int argc, char** argv, bool project_driver) {
     }
     if (options.input.empty() && !options.bench && !options.build && !options.check &&
         !options.clean && !options.clean_cache && !options.cmake && !options.emit_cpp &&
-        !options.init_project && !options.lsp && !options.new_project && !options.run &&
-        !options.test) {
+        !options.emit_modules && !options.init_project && !options.lsp && !options.new_project &&
+        !options.run && !options.test) {
         fail("missing input file");
     }
     return options;
@@ -511,6 +516,13 @@ int main(int argc, char** argv) {
         if (options.c_header_output.has_value()) {
             write_text_output(options.c_header_output,
                               dudu::emit_c_header(checked_module(options, source, false)));
+            return 0;
+        }
+        if (options.emit_modules) {
+            if (!options.output.has_value()) {
+                fail("emit-modules requires -o <directory>");
+            }
+            dudu::write_cpp_module_artifacts(*options.output, checked_module(options, source, true));
             return 0;
         }
         if (options.emit_cpp) {
