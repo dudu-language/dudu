@@ -530,6 +530,9 @@ push. They are not release packaging work.
    handles nested `<...>` parameter splitting, preserves native enum constant
    types, normalizes C tag spellings for native field lookup, and treats
    internal C++ implementation template aliases as opaque compiler artifacts.
+   C++ import aliases now distinguish real scanned namespaces from Dudu-only
+   header handles, so `std.vector` still lowers to `std::vector` while
+   `native.Widget` from a global using alias lowers to `Widget`.
    The standard-library algorithms fixture now validates representative
    containers, algorithms, pairs, tuples, and `std.get` without wrapper headers.
    Native overload failure diagnostics list argument types, candidate

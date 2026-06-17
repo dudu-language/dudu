@@ -4,7 +4,8 @@ namespace dudu_native {
 class Widget {
   public:
     Widget() = default;
-    explicit Widget(int initial) : value(initial) {}
+    explicit Widget(int initial) : value(initial) {
+    }
 
     int scaled(int factor) const {
         return value * factor;
@@ -35,7 +36,8 @@ class Outer {
   public:
     class Inner {
       public:
-        explicit Inner(int initial) : value(initial) {}
+        explicit Inner(int initial) : value(initial) {
+        }
 
         int doubled() const {
             return value * 2;
@@ -84,3 +86,7 @@ inline float overloaded(float value) {
 
 using DuduWidgetAlias = dudu_native::Widget;
 using Widget = dudu_native::Widget;
+
+inline int use_widget(const Widget* widget) {
+    return widget->value;
+}

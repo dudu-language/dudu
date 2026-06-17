@@ -288,6 +288,7 @@ NativeHeaderScan scan_native_headers(const ModuleAst& module, const NativeHeader
             append_unique_native_functions(out.functions,
                                            prefixed_names(scan.functions, import.alias));
             append_unique(out.macros, prefixed_names(scan.macros, import.alias));
+            append_unique(out.namespaces, scan.namespaces);
         }
     }
     return out;

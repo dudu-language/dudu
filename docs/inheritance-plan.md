@@ -551,9 +551,10 @@ class Button(widgets.Widget):
         super.draw(canvas)
 ```
 
-The imported-base example can use a local fixture header. It should prove that
-header awareness exposes inherited methods and derived/base pointer or reference
-conversions without compiler special cases.
+Status: `tests/fixtures/native_imported_base.dd` covers a Dudu class deriving
+from a C++ type imported through a non-namespace header alias. It validates
+inherited method calls, base field access, and derived-to-base pointer handoff
+without wrapper headers.
 
 ## Diagnostics
 
@@ -593,8 +594,10 @@ field declaration where possible.
 - Multiple concrete native bases are rejected: done for multiple
   storage-bearing Dudu bases.
 - Virtual destructor policy is handled for Dudu-native polymorphic classes.
-- Imported C++ inherited methods remain callable.
-- Imported C++ derived/base pointer and reference conversions work.
+- Imported C++ inherited methods remain callable: covered by
+  `native_imported_base`.
+- Imported C++ derived/base pointer and reference conversions work: covered by
+  `native_imported_base`.
 - Generic Dudu-native base classes substitute type parameters during override
   checks.
 - Static fields use `static[T]`, and `class.name` works inside class scope.

@@ -1,0 +1,14 @@
+import cpp "native_headers/simple_cpp.hpp" as native
+
+class Button(native.Widget):
+    extra: i32
+
+    def total(self) -> i32:
+        return self.scaled(2) + self.extra
+
+def main() -> i32:
+    button: Button = Button()
+    button.value = 20
+    button.extra = 2
+    base_score: i32 = native.use_widget(&button)
+    return button.total() + base_score

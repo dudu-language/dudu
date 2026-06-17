@@ -602,6 +602,7 @@ compile_and_expect class_lifecycle 42
 compile_and_expect static_members 42
 compile_and_expect static_fields 42
 compile_and_expect static_class_method_alias 42
+compile_and_expect native_imported_base 62
 compile_and_expect native_template_function 42
 compile_and_expect native_scan_local 42
 compile_and_expect constructor_comparison_arg 42; compile_and_expect native_escape 42

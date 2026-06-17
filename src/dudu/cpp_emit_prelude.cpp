@@ -40,6 +40,27 @@ bool freestanding_like(const ModuleAst& module) {
     return mode == "\"freestanding\"" || mode == "\"embedded\"";
 }
 
+bool has_native_namespace(const ModuleAst& module, const std::string& name) {
+    return std::any_of(module.native_namespaces.begin(), module.native_namespaces.end(),
+                       [&](const NativeNamespaceDecl& ns) { return ns.name == name; });
+}
+
+template <typename Decl>
+bool has_prefixed_native_symbol(const std::vector<Decl>& decls, const std::string& prefix) {
+    const std::string marker = prefix + ".";
+    return std::any_of(decls.begin(), decls.end(), [&](const Decl& decl) {
+        return decl.name.substr(0, marker.size()) == marker;
+    });
+}
+
+bool has_prefixed_native_symbol(const ModuleAst& module, const std::string& prefix) {
+    return has_prefixed_native_symbol(module.native_types, prefix) ||
+           has_prefixed_native_symbol(module.native_classes, prefix) ||
+           has_prefixed_native_symbol(module.native_values, prefix) ||
+           has_prefixed_native_symbol(module.native_functions, prefix) ||
+           has_prefixed_native_symbol(module.native_macros, prefix);
+}
+
 std::string build_type(const std::string& literal, bool freestanding) {
     if (literal == "true" || literal == "false") {
         return "bool";
@@ -78,7 +99,10 @@ std::vector<std::string> namespace_aliases(const ModuleAst& module) {
     }
     for (const ImportDecl& import : module.imports) {
         if (import.kind == ImportKind::ForeignCpp && !import.alias.empty()) {
-            aliases.push_back(import.alias);
+            aliases.push_back(!has_native_namespace(module, import.alias) &&
+                                      has_prefixed_native_symbol(module, import.alias)
+                                  ? "!" + import.alias
+                                  : import.alias);
         } else if (import.kind == ImportKind::ForeignC && !import.alias.empty()) {
             aliases.push_back("!" + import.alias);
         }
