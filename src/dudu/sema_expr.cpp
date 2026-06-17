@@ -41,6 +41,31 @@ std::optional<std::string> contextual_numeric_binary_type(const FunctionScope& s
     return std::nullopt;
 }
 
+std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Expr& expr,
+                                            const SourceLocation* location) {
+    const std::string callee = scoped_call_callee_text(scope, expr, location);
+    if (callee.empty()) {
+        return std::nullopt;
+    }
+    if (const auto decl = scope.symbols.function_decls.find(callee);
+        decl != scope.symbols.function_decls.end() && !decl->second->generic_params.empty()) {
+        return std::nullopt;
+    }
+    if (const auto fn = scope.symbols.function_signatures.find(callee);
+        fn != scope.symbols.function_signatures.end()) {
+        check_call_args_ast(scope, callee, fn->second, expr.children, location);
+        return signature_return_type_ref(fn->second);
+    }
+    if (const auto signature = native_signature_for_call(
+            scope, callee, expr.children, location, infer_expr_type_ast,
+            [&](const std::string& expected, const Expr& value, const std::string& got) {
+                return can_assign_ast(scope, expected, value, got);
+            })) {
+        return signature_return_type_ref(*signature);
+    }
+    return std::nullopt;
+}
+
 } // namespace
 
 [[noreturn]] void sema_expr_fail(const SourceLocation& location, const std::string& message) {
@@ -96,6 +121,11 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
         tuple.text = substitute_type_ref_text(tuple, {});
         return tuple;
     }
+    case ExprKind::Call:
+        if (const auto call_type = direct_call_type_ref(scope, expr, location)) {
+            return *call_type;
+        }
+        break;
     default:
         break;
     }

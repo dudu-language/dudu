@@ -1507,6 +1507,9 @@ LSP source edits are also moving to AST-owned ranges:
 - Declaration checks for `@test`, operators, constructors, destructors, and
   `@extern_c` now inspect parsed function return `TypeRef` metadata instead of
   comparing rendered return-type strings.
+- Typed expression inference for direct non-generic Dudu calls and matched
+  native calls now returns `signature_return_type_ref` directly, avoiding the
+  old path of rendering a call result type string and reparsing it.
 
 Expression parsing has moved onto the lexer/token stream:
 

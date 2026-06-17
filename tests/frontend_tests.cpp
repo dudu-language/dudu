@@ -5,8 +5,8 @@
 #include "dudu/cpp_lower.hpp"
 #include "dudu/cpp_stmt_types.hpp"
 #include "dudu/format.hpp"
-#include "dudu/lexer.hpp"
 #include "dudu/language_server_diagnostics.hpp"
+#include "dudu/lexer.hpp"
 #include "dudu/module_loader.hpp"
 #include "dudu/native_headers.hpp"
 #include "dudu/parser.hpp"
@@ -476,8 +476,7 @@ void test_lsp_diagnostic_sources_are_structured() {
                                     .path = "parser_diag.dd",
                                     .text = "def main() -> i32\n"
                                             "    return 0\n"};
-    const std::vector<dudu::Diagnostic> parser_diags =
-        dudu::diagnostics_for_document(parser_doc);
+    const std::vector<dudu::Diagnostic> parser_diags = dudu::diagnostics_for_document(parser_doc);
     assert(parser_diags.size() == 1);
     assert(parser_diags.front().source == "dudu/parser");
     assert(parser_diags.front().code.starts_with("dudu.parser."));
@@ -543,6 +542,20 @@ void test_index_type_inference_uses_type_ast() {
         {"bag", "Bag[Item]"},
     };
     assert(dudu::iterable_value_type(symbols, locals, "bag") == "Item");
+}
+
+void test_direct_call_return_type_inference_uses_type_ast() {
+    const dudu::ModuleAst module =
+        dudu::parse_source("def make_matrix() -> array[i32][2, 2]:\n"
+                           "    out: array[i32][2, 2] = [[1, 2], [3, 4]]\n"
+                           "    return out\n"
+                           "\n"
+                           "def main() -> i32:\n"
+                           "    matrix = make_matrix()\n"
+                           "    value: i32 = matrix[1, 1]\n"
+                           "    return value\n",
+                           "call_return_type.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
 }
 
 void test_emitted_local_expression_type_inference() {
@@ -874,6 +887,7 @@ int main() {
         test_allocation_type_ref_diagnostics();
         test_emitted_local_index_type_inference();
         test_index_type_inference_uses_type_ast();
+        test_direct_call_return_type_inference_uses_type_ast();
         test_emitted_local_expression_type_inference();
         test_formatter();
         test_list_iterator_methods();
