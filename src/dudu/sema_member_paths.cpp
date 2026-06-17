@@ -317,16 +317,17 @@ std::optional<std::string> field_type_for_type(const Symbols& symbols,
                                                const std::string& receiver_type,
                                                const std::string& field) {
     const std::string resolved = resolve_alias(symbols, receiver_type);
-    const std::vector<std::string> result_args = template_type_arg_texts(resolved, "Result");
+    const std::vector<TypeRef> result_args = template_type_arg_refs(parse_type_text(resolved),
+                                                                    "Result");
     if (!result_args.empty()) {
         if (field == "ok") {
             return "bool";
         }
         if (field == "value" && !result_args.empty()) {
-            return result_args[0];
+            return substitute_type_ref_text(result_args[0], {});
         }
         if (field == "err" && result_args.size() >= 2) {
-            return result_args[1];
+            return substitute_type_ref_text(result_args[1], {});
         }
     }
     const auto klass = symbols.classes.find(unwrap_receiver_type(symbols, receiver_type));
