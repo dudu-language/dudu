@@ -267,11 +267,6 @@ size_t find_top_level_char(const std::string& text, char wanted) {
     return std::string::npos;
 }
 
-std::vector<std::string> tuple_types(const Symbols& symbols, std::string type) {
-    type = resolve_alias(symbols, std::move(type));
-    return template_type_arg_texts(parse_type_text(type), "tuple");
-}
-
 void add_native_path_prefix(Symbols& symbols, const std::string& name) {
     const size_t dot = name.find('.');
     if (dot != std::string::npos && dot > 0) {

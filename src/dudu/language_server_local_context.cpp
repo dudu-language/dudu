@@ -1,5 +1,6 @@
 #include "dudu/language_server_local_context.hpp"
 
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/language_server_json.hpp"
 #include "dudu/language_server_navigation.hpp"
@@ -74,18 +75,32 @@ std::string infer_lsp_expr(FunctionScope& scope, const Expr& expr) {
     return callbacks.infer_expr(scope, expr, &node_location(expr.location, expr));
 }
 
+TypeRef infer_lsp_expr_type(FunctionScope& scope, const Expr& expr) {
+    BodyCheckCallbacks callbacks = expression_body_check_callbacks();
+    return callbacks.infer_expr_type(scope, expr, &node_location(expr.location, expr));
+}
+
+std::vector<TypeRef> tuple_type_refs_from_inferred(const Symbols& symbols, const TypeRef& type) {
+    std::vector<TypeRef> refs = template_type_arg_refs(type, "tuple");
+    if (!refs.empty()) {
+        return refs;
+    }
+    const std::string resolved = resolve_alias(symbols, substitute_type_ref_text(type, {}));
+    return template_type_arg_refs(parse_type_text(resolved), "tuple");
+}
+
 void bind_tuple_names(FunctionScope& scope, const Stmt& stmt) {
     const std::vector<std::string> names = tuple_binding_names(stmt.target_expr);
     if (names.empty()) {
         return;
     }
-    const std::vector<std::string> types =
-        tuple_types(scope.symbols, infer_lsp_expr(scope, stmt.value_expr));
+    const std::vector<TypeRef> types =
+        tuple_type_refs_from_inferred(scope.symbols, infer_lsp_expr_type(scope, stmt.value_expr));
     if (names.size() != types.size()) {
         return;
     }
     for (size_t i = 0; i < names.size(); ++i) {
-        lsp_bind_local(scope, names[i], types[i], type_ref_from_text(types[i]));
+        lsp_bind_local(scope, names[i], substitute_type_ref_text(types[i], {}), types[i]);
     }
 }
 

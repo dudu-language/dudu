@@ -1,5 +1,5 @@
-#include "dudu/ast_type.hpp"
 #include "dudu/array_shape.hpp"
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_emit.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/cpp_stmt_types.hpp"
@@ -107,11 +107,11 @@ void test_core_type_helpers_use_type_ast() {
     assert(dudu::base_type("fn(i32) -> bool") == "fn");
     assert(dudu::base_type("struct sqlite3") == "struct sqlite3");
 
-    dudu::Symbols symbols;
-    const std::vector<std::string> tuple = dudu::tuple_types(symbols, "tuple[i32, list[str]]");
+    const std::vector<dudu::TypeRef> tuple =
+        dudu::template_type_arg_refs(dudu::parse_type_text("tuple[i32, list[str]]"), "tuple");
     assert(tuple.size() == 2);
-    assert(tuple[0] == "i32");
-    assert(tuple[1] == "list[str]");
+    assert(dudu::substitute_type_ref_text(tuple[0], {}) == "i32");
+    assert(dudu::substitute_type_ref_text(tuple[1], {}) == "list[str]");
 
     assert(dudu::first_template_type_arg_text("list[*Player]") == "*Player");
     assert(dudu::first_template_type_arg_text("dict[str, list[i32]]") == "str");
@@ -468,8 +468,7 @@ void test_dereference_postfix_expression_shape() {
     assert(template_cast.name == "*list");
     assert(template_cast.template_type_args.size() == 1);
 
-    const dudu::Expr qualified_template_cast =
-        dudu::parse_expr_text("*std.vector[i32](raw_data)");
+    const dudu::Expr qualified_template_cast = dudu::parse_expr_text("*std.vector[i32](raw_data)");
     assert(qualified_template_cast.kind == dudu::ExprKind::TemplateCall);
     assert(qualified_template_cast.name == "*std.vector");
     assert(qualified_template_cast.template_args.size() == 1);

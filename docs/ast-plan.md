@@ -389,6 +389,8 @@ Already structured:
 - compiler tuple destructuring now reads RHS tuple child `TypeRef` nodes and
   binds destructured locals with structured type metadata; alias/native spelling
   fallback remains at the compatibility boundary
+- LSP local-context tuple destructuring mirrors the structured compiler path,
+  and the old public `tuple_types` string helper has been removed
 - type compatibility has AST overloads for simple literals and list/set/dict
   literals, including expected-type disambiguation for empty `{}` dict
   initializers, reducing reliance on string parsing for assignment checks

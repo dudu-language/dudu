@@ -50,7 +50,6 @@ void check_known_type_ref(const Symbols& symbols, const SourceLocation& location
 std::string resolve_alias(const Symbols& symbols, std::string type);
 std::vector<std::string> split_top_level(std::string text);
 size_t find_top_level_char(const std::string& text, char wanted);
-std::vector<std::string> tuple_types(const Symbols& symbols, std::string type);
 Symbols collect_symbols(const ModuleAst& module);
 void check_declarations(const ModuleAst& module, const Symbols& symbols);
 

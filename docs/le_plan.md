@@ -564,6 +564,8 @@ push. They are not release packaging work.
    Compiler tuple destructuring now reads RHS tuple child `TypeRef` nodes and
    binds destructured locals with structured type metadata; alias/native spelling
    fallback remains at the compatibility boundary.
+   LSP local-context tuple destructuring mirrors the structured compiler path,
+   and the old public `tuple_types` string helper has been removed.
 
 3. OOP Surface Cleanup
 
