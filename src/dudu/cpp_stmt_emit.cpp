@@ -104,7 +104,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                            const std::map<std::string, std::string>& function_returns,
                            const Symbols* symbols, const CppEmitOptions& options) {
     if (stmt.kind == StmtKind::CppEscape) {
-        emit_cpp_escape(out, stmt.value, depth);
+        emit_cpp_escape(out, stmt.cpp_body, depth);
         return;
     }
     const std::string text = trim_copy(stmt.text);

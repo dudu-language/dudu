@@ -229,7 +229,7 @@ void test_statement_ast_shape() {
     assert(main.statements[0].kind == dudu::StmtKind::VarDecl);
     assert(main.statements[0].name == "total");
     assert(main.statements[0].type == "i32");
-    assert(main.statements[0].value == "0");
+    assert(main.statements[0].value_expr.text == "0");
     assert(main.statements[1].kind == dudu::StmtKind::For);
     assert(main.statements[1].name == "item");
     assert(main.statements[1].type == "i32");
@@ -238,7 +238,7 @@ void test_statement_ast_shape() {
     assert(main.statements[1].children[0].kind == dudu::StmtKind::CompoundAssign);
     assert(main.statements[1].children[0].target_expr.text == "total");
     assert(main.statements[1].children[0].op == "+");
-    assert(main.statements[1].children[0].value == "item");
+    assert(main.statements[1].children[0].value_expr.text == "item");
     assert(main.statements[2].kind == dudu::StmtKind::If);
     assert(main.statements[2].condition_expr.text == "total == 0");
     assert(main.statements[2].children.size() == 1);
@@ -247,9 +247,9 @@ void test_statement_ast_shape() {
     assert(main.statements[3].children.size() == 1);
     assert(main.statements[3].children[0].kind == dudu::StmtKind::Assign);
     assert(main.statements[3].children[0].target_expr.text == "total");
-    assert(main.statements[3].children[0].value == "1");
+    assert(main.statements[3].children[0].value_expr.text == "1");
     assert(main.statements[4].kind == dudu::StmtKind::Return);
-    assert(main.statements[4].value == "total");
+    assert(main.statements[4].value_expr.text == "total");
 }
 
 void test_unsupported_statement_ast_shape() {
@@ -447,7 +447,7 @@ void test_cpp_escape_ast_payloads() {
     const dudu::Stmt& statement_escape = main.statements[1];
     assert(statement_escape.kind == dudu::StmtKind::CppEscape);
     assert(statement_escape.text == "cpp(\"value += 23;\")");
-    assert(statement_escape.value == "value += 23;");
+    assert(statement_escape.cpp_body == "value += 23;");
 }
 
 void test_dereference_postfix_expression_shape() {

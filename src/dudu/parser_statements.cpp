@@ -224,8 +224,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
     if (match_identifier("return")) {
         stmt.kind = StmtKind::Return;
         const JoinedTokens value = join_until_with_range({TokenKind::Newline});
-        stmt.value = value.text;
-        stmt.value_expr = parse_expr_text(stmt.value, value.range.start);
+        stmt.value_expr = parse_expr_text(value.text, value.range.start);
         attach_statement_source(stmt, join_tokens(begin, cursor_));
         return stmt;
     }
@@ -324,8 +323,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
         const std::string keyword = previous().text;
         stmt.kind = keyword == "raise" ? StmtKind::Raise : StmtKind::Delete;
         const JoinedTokens value = join_until_with_range({TokenKind::Newline});
-        stmt.value = value.text;
-        stmt.value_expr = parse_expr_text(stmt.value, value.range.start);
+        stmt.value_expr = parse_expr_text(value.text, value.range.start);
         attach_statement_source(stmt, join_tokens(begin, cursor_));
         return stmt;
     }
@@ -342,7 +340,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
         stmt.kind = StmtKind::CppEscape;
         join_until_with_range({TokenKind::Newline});
         attach_statement_source(stmt, join_tokens(begin, cursor_));
-        stmt.value = cpp_escape_body(stmt.text);
+        stmt.cpp_body = cpp_escape_body(stmt.text);
         return stmt;
     }
 
@@ -366,7 +364,6 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
         fill_type_piece(stmt.type_ref, type);
         if (assignment.has_value()) {
             const JoinedTokens value = join_tokens(*assignment + 1, end);
-            stmt.value = value.text;
             fill_expr_piece(stmt.value_expr, value);
         }
         return stmt;
@@ -382,7 +379,6 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
         const JoinedTokens target = join_tokens(line_begin, *assignment);
         fill_expr_piece(stmt.target_expr, target);
         const JoinedTokens value = join_tokens(*assignment + 1, end);
-        stmt.value = value.text;
         fill_expr_piece(stmt.value_expr, value);
         return stmt;
     }

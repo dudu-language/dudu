@@ -158,7 +158,7 @@ struct Stmt {
     std::string source_text;
     std::string name;
     std::string type;
-    std::string value;
+    std::string cpp_body;
     TypeRef type_ref;
     std::string op;
     std::string unsupported_feature;
