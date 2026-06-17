@@ -22,6 +22,7 @@ enum class WrapperMatchKind {
 struct WrapperMatchType {
     WrapperMatchKind kind = WrapperMatchKind::None;
     std::vector<std::string> args;
+    std::vector<TypeRef> arg_refs;
 };
 
 bool is_wildcard_pattern_expr(const Expr& expr);

@@ -55,8 +55,8 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
     if (!subject_type.empty()) {
         const WrapperMatchType wrapper = wrapper_match_type(subject_type);
         if (wrapper.kind != WrapperMatchKind::None) {
-            const std::string subject = "__dudu_match_" + std::to_string(stmt.location.line) +
-                                        "_" + std::to_string(stmt.location.column);
+            const std::string subject = "__dudu_match_" + std::to_string(stmt.location.line) + "_" +
+                                        std::to_string(stmt.location.column);
             const std::string matched = subject + "_matched";
             out << indent(depth) << "auto&& " << subject << " = "
                 << lower_expr(stmt.condition_expr, aliases, locals, symbols, options) << ";\n";
@@ -78,22 +78,25 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                 out << indent(depth) << "if (!" << matched << " && (" << condition << ")) {\n";
                 std::map<std::string, std::string> nested = locals;
                 std::map<std::string, TypeRef> nested_type_refs = local_type_refs;
-                if (case_name && (*case_name == "Some" || *case_name == "Ok" ||
-                                  *case_name == "Err")) {
+                if (case_name &&
+                    (*case_name == "Some" || *case_name == "Ok" || *case_name == "Err")) {
                     if (const auto binding = wrapper_case_binding_name(child.pattern_expr)) {
-                        if (*case_name == "Some" && wrapper.args.size() == 1) {
+                        if (*case_name == "Some" && wrapper.args.size() == 1 &&
+                            wrapper.arg_refs.size() == 1) {
                             nested[*binding] = trim_copy(wrapper.args[0]);
-                            nested_type_refs[*binding] = parse_type_text(wrapper.args[0]);
+                            nested_type_refs[*binding] = wrapper.arg_refs[0];
                             out << indent(depth + 1) << "auto&& " << *binding << " = " << subject
                                 << ".value();\n";
-                        } else if (*case_name == "Ok" && wrapper.args.size() == 2) {
+                        } else if (*case_name == "Ok" && wrapper.args.size() == 2 &&
+                                   wrapper.arg_refs.size() == 2) {
                             nested[*binding] = trim_copy(wrapper.args[0]);
-                            nested_type_refs[*binding] = parse_type_text(wrapper.args[0]);
+                            nested_type_refs[*binding] = wrapper.arg_refs[0];
                             out << indent(depth + 1) << "auto&& " << *binding << " = " << subject
                                 << ".value;\n";
-                        } else if (*case_name == "Err" && wrapper.args.size() == 2) {
+                        } else if (*case_name == "Err" && wrapper.args.size() == 2 &&
+                                   wrapper.arg_refs.size() == 2) {
                             nested[*binding] = trim_copy(wrapper.args[1]);
-                            nested_type_refs[*binding] = parse_type_text(wrapper.args[1]);
+                            nested_type_refs[*binding] = wrapper.arg_refs[1];
                             out << indent(depth + 1) << "auto&& " << *binding << " = " << subject
                                 << ".err;\n";
                         }
@@ -119,10 +122,11 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
             }
             return;
         }
-        const EnumDecl* en = symbols == nullptr ? nullptr : enum_decl_for_type(*symbols, subject_type);
+        const EnumDecl* en =
+            symbols == nullptr ? nullptr : enum_decl_for_type(*symbols, subject_type);
         if (en != nullptr && (enum_has_payloads(*en) || match_has_guards(stmt))) {
-            const std::string subject = "__dudu_match_" + std::to_string(stmt.location.line) +
-                                        "_" + std::to_string(stmt.location.column);
+            const std::string subject = "__dudu_match_" + std::to_string(stmt.location.line) + "_" +
+                                        std::to_string(stmt.location.column);
             const std::string matched = subject + "_matched";
             out << indent(depth) << "auto&& " << subject << " = "
                 << lower_expr(stmt.condition_expr, aliases, locals, symbols, options) << ";\n";
@@ -140,8 +144,8 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                     condition = "std::holds_alternative<" + enum_name + "::" + *variant + ">(" +
                                 subject + ".value)";
                 } else {
-                    condition = subject + " == " + emitted_type_name(en->name, options) + "::" +
-                                *variant;
+                    condition =
+                        subject + " == " + emitted_type_name(en->name, options) + "::" + *variant;
                 }
                 out << indent(depth) << "if (!" << matched << " && (" << condition << ")) {\n";
                 std::map<std::string, std::string> nested = locals;
