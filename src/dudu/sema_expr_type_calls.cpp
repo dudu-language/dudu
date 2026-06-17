@@ -26,6 +26,49 @@ TypeRef template_pointer_cast_type_ref(const Expr& expr, std::vector<TypeRef> ty
     return pointer;
 }
 
+TypeRef named_type_ref(std::string name, SourceLocation location) {
+    TypeRef type;
+    type.kind = TypeKind::Named;
+    type.name = std::move(name);
+    type.location = location;
+    type.text = type.name;
+    return type;
+}
+
+std::optional<TypeRef> type_shape_builtin_type_ref(const FunctionScope& scope, const Expr& expr,
+                                                   const SourceLocation* location) {
+    if (expr.name != "sizeof" && expr.name != "alignof" && expr.name != "offsetof") {
+        return std::nullopt;
+    }
+    const std::vector<TypeRef> type_args = template_type_refs(expr);
+    if (location != nullptr && type_args.size() != 1) {
+        sema_expr_fail(*location, expr.name + " expects 1 type argument, got " +
+                                      std::to_string(type_args.size()));
+    }
+    if (expr.name == "offsetof") {
+        if (location != nullptr && expr.children.size() != 1) {
+            sema_expr_fail(*location, "offsetof expects 1 field argument, got " +
+                                          std::to_string(expr.children.size()));
+        }
+        if (location != nullptr && expr.children.size() == 1 &&
+            !is_offsetof_field_expr(expr.children.front())) {
+            sema_expr_fail(node_location(*location, expr.children.front()),
+                           "offsetof field argument must be a field name");
+        }
+    }
+    if (type_args.size() == 1) {
+        if (const auto unknown = unknown_type_ref(scope.symbols, type_args.front())) {
+            if (location != nullptr) {
+                const SourceLocation type_location =
+                    unknown->second.line > 0 ? unknown->second : type_args.front().location;
+                sema_expr_fail(type_location, "unknown " + expr.name + " type: " + unknown->first);
+            }
+            return std::nullopt;
+        }
+    }
+    return named_type_ref("usize", expr.location);
+}
+
 } // namespace
 
 std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Expr& expr,
@@ -121,6 +164,9 @@ std::optional<TypeRef> direct_template_call_type_ref(const FunctionScope& scope,
             (void)infer_expr_type_ast(scope, arg, location);
         }
         return *allocation;
+    }
+    if (const auto builtin_type = type_shape_builtin_type_ref(scope, expr, location)) {
+        return *builtin_type;
     }
     const std::string callee = template_call_callee(scope, expr, location);
     const std::string callee_base = scoped_call_callee_text(scope, expr, location);
