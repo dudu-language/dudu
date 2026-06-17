@@ -40,6 +40,37 @@ goal is to keep working features moving while steadily separating the compiler
 into boring, traceable phases. New work should push responsibilities into the
 proper phase instead of adding more cross-phase patching.
 
+## Diagnostic And Lint Cleanup
+
+All diagnostics, lint warnings, code actions, hover data, definition lookup,
+and fix-its must move onto parser AST, resolved symbols, typed expressions, and
+semantic control-flow facts.
+
+The current editor lint pass still contains prototype string/regex heuristics
+for things like unreachable code, unused locals, shadowing, suspicious casts,
+and raw `cpp(...)` warnings. That is not acceptable as the final architecture.
+These checks can produce false positives because they do not understand real
+statement trees, expression continuations, imports, scopes, overloads, or typed
+control flow.
+
+Required behavior:
+
+- parser errors come from parser state and AST construction, not line-text
+  guesses
+- semantic errors come from name/type/control-flow analysis over AST nodes
+- lint warnings use the same AST and semantic model as the compiler
+- LSP code actions are tied to concrete AST ranges and edits
+- hover, go-to-definition, references, and rename use resolved symbols rather
+  than reconstructed strings
+- string/regex lint heuristics must either be deleted or replaced with
+  AST-backed implementations
+- tests must include realistic false-positive cases, not only toy positive
+  lint fixtures
+
+Until this is complete, prefer no lint diagnostic over a noisy wrong lint
+diagnostic. Compiler correctness diagnostics are more important than clever
+editor warnings.
+
 ## Critical Module Import Blocker
 
 Dudu-native imports must be fixed before the language can be considered sound

@@ -143,6 +143,36 @@ bool contains_identifier(const std::string& line, const std::string& name) {
     return false;
 }
 
+int bracket_delta(const std::string& line) {
+    int delta = 0;
+    bool in_string = false;
+    char quote = '\0';
+    bool escaped = false;
+    for (const char c : line) {
+        if (in_string) {
+            if (escaped) {
+                escaped = false;
+            } else if (c == '\\') {
+                escaped = true;
+            } else if (c == quote) {
+                in_string = false;
+            }
+            continue;
+        }
+        if (c == '"' || c == '\'') {
+            in_string = true;
+            quote = c;
+            continue;
+        }
+        if (c == '(' || c == '[' || c == '{') {
+            ++delta;
+        } else if (c == ')' || c == ']' || c == '}') {
+            --delta;
+        }
+    }
+    return delta;
+}
+
 std::vector<Diagnostic> lint_diagnostics(const Document& doc) {
     std::vector<Diagnostic> out;
     std::vector<std::string> lines;
@@ -154,7 +184,9 @@ std::vector<Diagnostic> lint_diagnostics(const Document& doc) {
     std::istringstream in(doc.text);
     std::string line;
     int row = 0;
+    int continuation_depth = 0;
     std::optional<int> returned_indent;
+    std::optional<int> pending_return_indent;
     while (std::getline(in, line)) {
         lines.push_back(line);
         ++row;
@@ -165,6 +197,15 @@ std::vector<Diagnostic> lint_diagnostics(const Document& doc) {
         const int indent = leading_spaces(line);
         while (!active_decls.empty() && active_decls.back().indent > indent) {
             active_decls.pop_back();
+        }
+        if (continuation_depth > 0) {
+            continuation_depth += bracket_delta(line);
+            if (continuation_depth <= 0 && pending_return_indent) {
+                returned_indent = *pending_return_indent;
+                pending_return_indent = std::nullopt;
+                continuation_depth = 0;
+            }
+            continue;
         }
         if (returned_indent && indent >= *returned_indent) {
             out.push_back({.location = {.file = doc.path, .line = row, .column = indent + 1},
@@ -178,8 +219,15 @@ std::vector<Diagnostic> lint_diagnostics(const Document& doc) {
         }
         if (starts_with(trimmed, "return") &&
             (trimmed.size() == 6 || std::isspace(static_cast<unsigned char>(trimmed[6])) != 0)) {
-            returned_indent = indent;
+            continuation_depth = std::max(0, bracket_delta(line));
+            if (continuation_depth > 0) {
+                pending_return_indent = indent;
+            } else {
+                returned_indent = indent;
+            }
+            continue;
         }
+        continuation_depth = std::max(0, bracket_delta(line));
         std::smatch match;
         if (std::regex_search(line, match, def_decl)) {
             const std::vector<std::string> params = split_top_level_args(match[2].str());
