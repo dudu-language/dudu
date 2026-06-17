@@ -329,6 +329,9 @@ Already structured:
 - typed `new[T]`/`malloc[T]` semantic inference now returns pointer `TypeRef`
   nodes from parsed template arguments before the string compatibility API
   renders them for older callers
+- parsed template pointer casts such as `*const[i32](ptr)` now return pointer
+  `TypeRef` nodes through direct typed expression inference before the legacy
+  string expression inference path
 - LSP local variable/parameter type collection for hover, member completion,
   and member definition now walks parsed function/method bodies and reuses
   semantic expression inference instead of regexing source lines

@@ -1,7 +1,32 @@
+#include "dudu/ast_parse_utils.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/sema_expr_internal.hpp"
 
 namespace dudu {
+namespace {
+
+TypeRef template_pointer_cast_type_ref(const Expr& expr, std::vector<TypeRef> type_args) {
+    const std::string name = expr.name.size() > 1 ? expr.name.substr(1) : "";
+    const TypeKind wrapper = wrapper_type_kind(name);
+    TypeRef pointee;
+    pointee.kind =
+        wrapper != TypeKind::Unknown && type_args.size() == 1 ? wrapper : TypeKind::Template;
+    pointee.name = name;
+    pointee.children = std::move(type_args);
+    pointee.location = expr.location;
+    pointee.range = expr.range;
+    pointee.text = substitute_type_ref_text(pointee, {});
+
+    TypeRef pointer;
+    pointer.kind = TypeKind::Pointer;
+    pointer.children.push_back(std::move(pointee));
+    pointer.location = expr.location;
+    pointer.range = expr.range;
+    pointer.text = substitute_type_ref_text(pointer, {});
+    return pointer;
+}
+
+} // namespace
 
 std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Expr& expr,
                                             const SourceLocation* location) {
@@ -63,6 +88,33 @@ std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Ex
 
 std::optional<TypeRef> direct_template_call_type_ref(const FunctionScope& scope, const Expr& expr,
                                                      const SourceLocation* location) {
+    if (expr.name.starts_with("*")) {
+        const std::vector<TypeRef> type_args = template_type_refs(expr);
+        if (location != nullptr && type_args.empty()) {
+            sema_expr_fail(*location, "pointer casts expect at least 1 type argument");
+        }
+        if (location != nullptr && expr.children.size() != 1) {
+            sema_expr_fail(*location, "pointer casts expect 1 argument, got " +
+                                          std::to_string(expr.children.size()));
+        }
+        if (type_args.empty()) {
+            return std::nullopt;
+        }
+        TypeRef pointer = template_pointer_cast_type_ref(expr, type_args);
+        const TypeRef& pointee = pointer.children.front();
+        if (const auto unknown = unknown_type_ref(scope.symbols, pointee)) {
+            if (location != nullptr) {
+                const SourceLocation type_location =
+                    unknown->second.line > 0 ? unknown->second : pointee.location;
+                sema_expr_fail(type_location, "unknown pointer cast type: " + unknown->first);
+            }
+            return std::nullopt;
+        }
+        for (const Expr& arg : expr.children) {
+            (void)infer_expr_type_ast(scope, arg, location);
+        }
+        return pointer;
+    }
     if (const auto allocation = infer_allocation_call_type_ref(
             scope.symbols, location, expr.name, template_type_refs(expr), expr.children.size())) {
         for (const Expr& arg : expr.children) {
