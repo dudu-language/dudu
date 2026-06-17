@@ -365,7 +365,9 @@ push. They are not release packaging work.
    pointer arguments through parsed `TypeRef` nodes instead of raw leading `*`
    spelling. Indexed type inference now requires parsed index expressions
    instead of accepting public string index text, including the explicit
-   `cpp(...)` escape inference path.
+   `cpp(...)` escape inference path. Fixed-array index and slice metadata now
+   reads parsed `TypeRef` shape/element nodes in the remaining compatibility
+   index helpers before crossing native/operator fallback boundaries.
 
 3. OOP Surface Cleanup
 
