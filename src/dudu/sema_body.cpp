@@ -19,6 +19,7 @@
 #include "dudu/sema_super.hpp"
 #include "dudu/type_compat.hpp"
 
+#include <optional>
 #include <set>
 #include <sstream>
 #include <utility>
@@ -163,6 +164,36 @@ void check_condition_type(FunctionScope& scope, const Stmt& stmt,
     }
 }
 
+std::optional<TypeRef> infer_for_binding_type(FunctionScope& scope, const Stmt& stmt,
+                                              const BodyCheckCallbacks& callbacks) {
+    if (!sema_has_expr(stmt.iterable_expr)) {
+        return std::nullopt;
+    }
+    const SourceLocation& location = node_location(stmt.location, stmt.iterable_expr);
+    if (stmt.iterable_expr.kind == ExprKind::Call && stmt.iterable_expr.name == "range") {
+        for (const Expr& arg : stmt.iterable_expr.children) {
+            (void)callbacks.infer_expr(scope, arg, &location);
+        }
+        return parse_type_text("i32", location);
+    }
+    if (stmt.iterable_expr.kind == ExprKind::Name) {
+        const std::string element = iterable_value_type(scope.symbols, scope.locals,
+                                                        scope.local_type_refs,
+                                                        stmt.iterable_expr.name);
+        if (!element.empty()) {
+            return parse_type_text(element, location);
+        }
+    }
+    const std::string iterable_type = callbacks.infer_expr(scope, stmt.iterable_expr, &location);
+    if (iterable_type.empty()) {
+        return std::nullopt;
+    }
+    if (const auto element = iterable_type_from_type(parse_type_text(iterable_type, location))) {
+        return parse_type_text(*element, location);
+    }
+    return std::nullopt;
+}
+
 void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& return_type,
                 int loop_depth, const BodyCheckCallbacks& callbacks);
 
@@ -296,14 +327,24 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
     }
     if (stmt.kind == StmtKind::For) {
         FunctionScope nested = scope;
-        if (!stmt.name.empty() && !stmt.type.empty() && sema_has_expr(stmt.iterable_expr)) {
+        if (!stmt.name.empty() && sema_has_expr(stmt.iterable_expr)) {
             check_local_binding_name(stmt.location, stmt.name);
-            check_known_type_ref(scope.symbols, node_location(stmt.location, stmt.type_ref),
-                                 stmt.type_ref, "unknown loop binding type: ");
-            check_iterable_binding(scope.symbols, scope.locals, scope.local_type_refs,
-                                   node_location(stmt.location, stmt.iterable_expr), stmt.type_ref,
-                                   stmt.iterable_expr);
-            bind_local(nested, stmt.name, stmt.type, stmt.type_ref);
+            TypeRef binding_type = stmt.type_ref;
+            if (stmt.type.empty()) {
+                const auto inferred = infer_for_binding_type(scope, stmt, callbacks);
+                if (!inferred) {
+                    sema_fail(node_location(stmt.location, stmt.iterable_expr),
+                              "cannot infer loop binding type");
+                }
+                binding_type = *inferred;
+            } else {
+                check_known_type_ref(scope.symbols, node_location(stmt.location, stmt.type_ref),
+                                     stmt.type_ref, "unknown loop binding type: ");
+                check_iterable_binding(scope.symbols, scope.locals, scope.local_type_refs,
+                                       node_location(stmt.location, stmt.iterable_expr),
+                                       binding_type, stmt.iterable_expr);
+            }
+            bind_local(nested, stmt.name, substitute_type_ref_text(binding_type, {}), binding_type);
         }
         check_block(nested, stmt.children, return_type, loop_depth + 1, callbacks);
         return;

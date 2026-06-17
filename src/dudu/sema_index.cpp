@@ -288,6 +288,10 @@ std::optional<std::string> iterable_type_from_type_ref(TypeRef type) {
 
 } // namespace
 
+std::optional<std::string> iterable_type_from_type(TypeRef type) {
+    return iterable_type_from_type_ref(std::move(type));
+}
+
 std::string indexed_value_type(const Symbols& symbols,
                                const std::map<std::string, std::string>& locals,
                                const SourceLocation& location, const std::string& name,

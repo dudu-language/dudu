@@ -254,7 +254,7 @@ std::string completion_json(const Document* doc, const Json* params) {
     add_snippet("def", "snippet", "def ${1:name}(${2:args}) -> ${3:i32}:\n    ${0:return 0}");
     add_snippet("class", "snippet", "class ${1:Name}:\n    ${0:field: i32}");
     add_snippet("if", "snippet", "if ${1:condition}:\n    ${0:pass}");
-    add_snippet("for", "snippet", "for ${1:item}: ${2:i32} in ${3:items}:\n    ${0:pass}");
+    add_snippet("for", "snippet", "for ${1:item} in ${2:items}:\n    ${0:pass}");
     add_snippet("while", "snippet", "while ${1:condition}:\n    ${0:pass}");
     add_snippet("enum", "snippet", "enum ${1:Name}:\n    ${0:VALUE}");
     add_snippet("import", "snippet", "import ${1:module}");
