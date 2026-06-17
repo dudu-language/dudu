@@ -40,6 +40,81 @@ goal is to keep working features moving while steadily separating the compiler
 into boring, traceable phases. New work should push responsibilities into the
 proper phase instead of adding more cross-phase patching.
 
+## Proper AST And Compiler Pipeline
+
+This is the next architecture priority. Dudu must stop treating raw statement
+text as semantic data.
+
+The clean compiler split is:
+
+1. Lexer/tokenizer
+
+   Turn source into tokens with exact ranges. Keep comments and trivia for the
+   formatter, LSP, doc comments, and diagnostics.
+
+2. Parser to sugared AST
+
+   Build a source-shaped AST with real statement, expression, and type nodes:
+   `IfStmt`, `ForStmt`, `VarDeclStmt`, `AssignStmt`, `ReturnStmt`,
+   `BinaryExpr`, `CallExpr`, `MemberExpr`, `IndexExpr`, and structured
+   `TypeRef` nodes. Every relevant node carries a source range.
+
+3. Lowering/desugaring
+
+   Convert convenient Python-shaped syntax into a smaller core AST or IR where
+   useful: augmented assignment, range loops, destructuring, operator sugar, and
+   other explicit language conveniences.
+
+4. Semantic analysis
+
+   Run name binding, overload resolution, type checking, control-flow facts,
+   and module export checks on structured AST/core AST nodes, not strings.
+
+5. Codegen
+
+   Emit C++ from structured nodes and semantic facts. Codegen must not
+   reconstruct Dudu syntax by joining source strings and parsing them again.
+
+6. Diagnostics, lint, LSP, and formatter
+
+   Consume the AST, token/trivia model, symbol tables, and semantic facts.
+   Hover, definition, references, rename, diagnostics, quick fixes, semantic
+   tokens, and formatting all follow the same compiler model.
+
+Raw source text is still valid compiler data for comments, doc comments,
+literal spelling, exact diagnostic snippets, formatter trivia, and explicit
+escape hatches such as `cpp(...)`. Raw text is not valid as the source of truth
+for Dudu syntax after parsing.
+
+Migration path:
+
+- add proper token stream and parser APIs for statement forms
+- make block parsing produce structured `Stmt` nodes directly
+- keep legacy string fields only as temporary compatibility mirrors while
+  callers move over
+- migrate sema, codegen, lints, diagnostics, LSP, and formatter form by form to
+  structured nodes
+- delete `statement_from_text`, substring-based statement classification, and
+  compatibility string fields once callers no longer need them
+- add regression tests proving comments, strings, and formatting trivia do not
+  affect semantics, lints, test discovery, references, or rename
+
+This work also sets up separate-file compilation. Per-module generated C++
+needs the compiler to understand modules as real units with stable public
+interfaces:
+
+- parse each `.dd` file into its own AST module
+- analyze and export only public declarations from that module
+- generate one `.hpp/.cpp` pair or equivalent artifact per module
+- emit imports as generated includes and references instead of flattening every
+  module into one mega-file
+- use stable generated names and namespaces per module
+- track dependencies so CMake/Ninja rebuilds only changed generated files
+
+The current merged-output model is a compatibility backend, not the long-term
+shape of the compiler. A real AST, module graph, symbol/export model, and CMake
+backend are the path to clean separate-file output.
+
 ## Diagnostic And Lint Cleanup
 
 All diagnostics, lint warnings, code actions, hover data, definition lookup,
