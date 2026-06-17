@@ -301,3 +301,13 @@ if (
     exit 1
 fi
 grep -q "unknown \\[cc\\] entry" "$repo_root/build/bad_project_unknown_key.err"
+
+if (
+    cd "$repo_root/tests/fixtures/bad_project_transitive_import_leak"
+    "$repo_root/build/dudu" build
+) 2>"$repo_root/build/bad_project_transitive_import_leak.err"; then
+    echo "bad_project_transitive_import_leak unexpectedly passed" >&2
+    exit 1
+fi
+grep -q "unknown function: leaf.hidden_answer" \
+    "$repo_root/build/bad_project_transitive_import_leak.err"

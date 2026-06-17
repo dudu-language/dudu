@@ -1,0 +1,7 @@
+name = "bad_transitive_import_leak"
+entry = "main.dd"
+build_dir = "../../../build/bad_project_transitive_import_leak"
+
+[build]
+backend = "cmake"
+

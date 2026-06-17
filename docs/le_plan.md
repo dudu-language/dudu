@@ -83,9 +83,11 @@ own semantic scope, and per-unit imports materialize qualified/selective
 symbols without pulling dependency declarations into the current module. The
 generated CMake backend has a regression fixture with two modules that both
 declare `Box`, `make`, and `score`; those compile as separate generated C++
-artifacts with distinct generated names. The direct backend still uses the
-compatibility merged output and remains intentionally narrower until semantic
-lookup and direct codegen fully move to module namespaces.
+artifacts with distinct generated names. A CMake-backend negative fixture now
+rejects transitive import leakage, so importing a facade module does not let the
+importer use the facade's private dependencies by accident. The direct backend
+still uses the compatibility merged output and remains intentionally narrower
+until semantic lookup and direct codegen fully move to module namespaces.
 
 ## Feature Validation Bar
 

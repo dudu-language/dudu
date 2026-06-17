@@ -1,0 +1,6 @@
+import facade
+
+
+def main() -> i32:
+    return leaf.hidden_answer()
+
