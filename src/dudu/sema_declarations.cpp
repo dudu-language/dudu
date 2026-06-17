@@ -47,7 +47,7 @@ bool is_virtual_like(const FunctionDecl& fn) {
 }
 
 std::string decorator_arg(const Decorator& decorator, std::string_view name) {
-    return decorator_first_string_arg(decorator, name).value_or("");
+    return decorator_first_string_literal_arg(decorator, name).value_or("");
 }
 
 std::string operator_decorator_arg(const FunctionDecl& fn) {
@@ -64,6 +64,14 @@ std::string operator_decorator_arg(const FunctionDecl& fn) {
         }
     }
     return {};
+}
+
+void check_single_string_arg(const Decorator& decorator, std::string_view name,
+                             std::string_view message) {
+    if (decorator_call_matches(decorator, name) &&
+        !decorator_has_single_string_literal_arg(decorator, name)) {
+        fail(decorator.location, std::string(message));
+    }
 }
 
 bool is_operator_method(const FunctionDecl& method) {
@@ -190,6 +198,19 @@ void check_function_decorator(const ModuleAst& module, const Decorator& decorato
     }
     if (text == "property") {
         fail(decorator.location, "@property is not supported; use an explicit method");
+    }
+    if (decorator_call_matches(decorator, "operator")) {
+        check_single_string_arg(decorator, "operator",
+                                "@operator requires exactly one string literal argument");
+    }
+    if (decorator_call_matches(decorator, "test.should_panic")) {
+        check_single_string_arg(
+            decorator, "test.should_panic",
+            "@test.should_panic requires exactly one string literal argument");
+    }
+    if (decorator_call_matches(decorator, "section")) {
+        check_single_string_arg(decorator, "section",
+                                "@section requires exactly one string literal argument");
     }
     if (text == "inline" || text == "constexpr" || text == "extern_c" || text == "cuda.global" ||
         text == "cuda.device" || text == "cuda.host" || text == "shader.compute" ||

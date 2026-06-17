@@ -1,0 +1,3 @@
+@test.should_panic(expected_message)
+def fails():
+    assert false

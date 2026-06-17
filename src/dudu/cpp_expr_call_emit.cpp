@@ -120,20 +120,12 @@ std::string unquoted_string_literal(std::string text) {
 
 std::string decorator_arg(const FunctionDecl& fn, std::string_view name) {
     for (const Decorator& decorator : fn.decorators) {
-        if (const std::optional<std::string> arg = decorator_first_arg_text(decorator, name)) {
+        if (const std::optional<std::string> arg =
+                decorator_first_string_literal_arg(decorator, name)) {
             return *arg;
         }
     }
     return {};
-}
-
-std::string unquoted(std::string text) {
-    text = trim_copy(std::move(text));
-    if (text.size() >= 2 && ((text.front() == '"' && text.back() == '"') ||
-                             (text.front() == '\'' && text.back() == '\''))) {
-        return text.substr(1, text.size() - 2);
-    }
-    return text;
 }
 
 std::optional<std::string> dudu_operator_method_name(const Symbols& symbols, std::string type,
@@ -153,7 +145,7 @@ std::optional<std::string> dudu_operator_method_name(const Symbols& symbols, std
         return std::nullopt;
     }
     for (const FunctionDecl& method : klass->second->methods) {
-        if (unquoted(decorator_arg(method, "operator")) == op) {
+        if (decorator_arg(method, "operator") == op) {
             return method.name;
         }
     }

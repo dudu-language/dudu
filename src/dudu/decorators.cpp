@@ -8,15 +8,6 @@
 namespace dudu {
 namespace {
 
-std::string unquote(std::string text) {
-    text = trim_copy(std::move(text));
-    if (text.size() >= 2 && ((text.front() == '"' && text.back() == '"') ||
-                             (text.front() == '\'' && text.back() == '\''))) {
-        return text.substr(1, text.size() - 2);
-    }
-    return text;
-}
-
 std::string expr_path(const Expr& expr) {
     if (const std::optional<std::string> path = member_path_from_expr(expr)) {
         return *path;
@@ -77,15 +68,24 @@ std::optional<std::string> decorator_arg_list_text(const Decorator& decorator,
 
 std::optional<std::string> decorator_first_string_arg(const Decorator& decorator,
                                                       std::string_view name) {
-    const std::optional<std::string> text = decorator_first_arg_text(decorator, name);
-    if (!text.has_value()) {
+    return decorator_first_string_literal_arg(decorator, name);
+}
+
+std::optional<std::string> decorator_first_string_literal_arg(const Decorator& decorator,
+                                                              std::string_view name) {
+    if (!decorator_call_matches(decorator, name) || decorator.expr.children.empty()) {
         return std::nullopt;
     }
     const Expr& arg = decorator.expr.children.front();
     if (arg.kind == ExprKind::StringLiteral) {
         return arg.value;
     }
-    return unquote(*text);
+    return std::nullopt;
+}
+
+bool decorator_has_single_string_literal_arg(const Decorator& decorator, std::string_view name) {
+    return decorator_call_matches(decorator, name) && decorator.expr.children.size() == 1 &&
+           decorator.expr.children.front().kind == ExprKind::StringLiteral;
 }
 
 } // namespace dudu

@@ -25,10 +25,13 @@ Compiler-recognized decorators use a shared helper over that parsed expression
 for name matching and first-argument extraction. The parser also has regression
 coverage for decorator string arguments containing operator characters, such as
 `@operator("+")`, so macro/decorator work has a structured input shape instead
-of relying on raw decorator text slicing. `@operator(...)` now requires exactly
-one parsed string literal argument, so raw identifier arguments such as
-`@operator(add)` are rejected in Dudu source instead of being treated like
-operator names.
+of relying on raw decorator text slicing. String-valued compiler decorators
+such as `@operator(...)`, `@section(...)`, and
+`@test.should_panic(...)` require exactly one parsed string literal argument,
+so raw identifier arguments such as `@operator(add)` are rejected in Dudu source
+instead of being treated like operator names. Expression-valued decorators such
+as `@align(16)` and `@workgroup_size(8, 8, 1)` remain parsed expression
+arguments, not strings.
 
 ## Decorator Macros
 

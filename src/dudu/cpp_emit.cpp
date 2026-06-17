@@ -55,7 +55,7 @@ std::string cpp_string_literal(std::string text) {
 
 std::string function_decorator_arg(const FunctionDecl& fn, std::string_view name) {
     for (const Decorator& decorator : fn.decorators) {
-        if (const std::optional<std::string> arg = decorator_first_arg_text(decorator, name)) {
+        if (const auto arg = decorator_first_string_literal_arg(decorator, name)) {
             return *arg;
         }
     }
@@ -161,7 +161,7 @@ void emit_function_signature(std::ostringstream& out, const FunctionDecl& fn,
     }
     const std::string section = function_decorator_arg(fn, "section");
     if (!section.empty()) {
-        out << "__attribute__((section(" << section << "))) ";
+        out << "__attribute__((section(" << cpp_string_literal(section) << "))) ";
     }
     const std::string workgroup = function_decorator_args(fn, "workgroup_size");
     if (!workgroup.empty()) {
@@ -345,7 +345,7 @@ void emit_test_harness(std::ostringstream& out, const ModuleAst& module, const s
             const std::string expected = function_decorator_arg(fn, "test.should_panic");
             out << "    ++total;\n"
                 << "    if (dudu_test::run_should_panic(" << cpp_string_literal(fn.name) << ", "
-                << fn.name << ", " << (expected.empty() ? "\"\"" : expected)
+                << fn.name << ", " << cpp_string_literal(expected)
                 << ")) { ++passed; }\n";
         } else {
             out << "    ++total;\n"

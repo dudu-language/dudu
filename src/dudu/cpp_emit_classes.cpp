@@ -91,20 +91,12 @@ bool method_has_decorator(const FunctionDecl& method, std::string_view name) {
 
 std::string function_decorator_arg(const FunctionDecl& fn, std::string_view name) {
     for (const Decorator& decorator : fn.decorators) {
-        if (const std::optional<std::string> arg = decorator_first_arg_text(decorator, name)) {
+        if (const std::optional<std::string> arg =
+                decorator_first_string_literal_arg(decorator, name)) {
             return *arg;
         }
     }
     return {};
-}
-
-std::string unquoted(std::string text) {
-    text = trim_copy(std::move(text));
-    if (text.size() >= 2 && ((text.front() == '"' && text.back() == '"') ||
-                             (text.front() == '\'' && text.back() == '\''))) {
-        return text.substr(1, text.size() - 2);
-    }
-    return text;
 }
 
 bool is_constructor_method(const FunctionDecl& method) {
@@ -116,7 +108,7 @@ bool is_destructor_method(const FunctionDecl& method) {
 }
 
 std::string operator_name(const FunctionDecl& method) {
-    const std::string op = unquoted(function_decorator_arg(method, "operator"));
+    const std::string op = function_decorator_arg(method, "operator");
     if (!op.empty()) {
         if (op == "[]=") {
             return method.name;

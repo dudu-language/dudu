@@ -530,8 +530,11 @@ push. They are not release packaging work.
    compiler-recognized decorators use a shared parsed-expression helper for
    name matching and first-argument extraction. Decorator parsing has regression
    coverage for string arguments containing operator characters, such as
-   `@operator("+")`. `@operator(...)` now requires exactly one parsed string
-   literal argument, keeping operator decorators off raw argument text fallback.
+   `@operator("+")`. String-valued compiler decorators now require exactly one
+   parsed string literal argument, keeping `@operator(...)`, `@section(...)`,
+   and `@test.should_panic(...)` off raw argument text fallback while preserving
+   expression arguments for decorators such as `@align(...)` and
+   `@workgroup_size(...)`.
 
 9. Native Header Hardening
 
