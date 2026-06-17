@@ -683,6 +683,12 @@ declarations safely.
    embedded targets reject runtime `assert` instead of accidentally emitting
    hosted runtime machinery.
 
+   Status: implemented. Semantic checking rejects runtime `assert` in
+   `freestanding` and `embedded` target modes with a Dudu-source diagnostic
+   that recommends `debug_assert` or a target-specific assert handler.
+   `debug_assert` remains available and lowers to native C/C++ assertion
+   behavior.
+
 15. Macro Edge Cases
 
    Normal imported macros are covered. Keep token-pasting, declaration-
