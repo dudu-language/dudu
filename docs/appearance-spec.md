@@ -1458,7 +1458,7 @@ Annotations are still required or strongly preferred for:
 Examples:
 
 ```python
-window: *struct SDL_Window = None
+window: *SDL_Window = None
 pixels: Color[PIXELS]
 SAMPLE_RATE: i32 = 48000
 
@@ -1469,6 +1469,36 @@ def update(player: &Player, dt: f32):
 
 The goal is aggressive-enough local inference for pleasant code, not global
 guessing. If inference is ambiguous, Dudu should ask for a type annotation.
+
+Native C tag names should not leak into normal Dudu code. Header scanning gives
+tagged C declarations ordinary Dudu type names:
+
+```c
+struct stat;
+union SDL_Event;
+enum ColorKind;
+```
+
+```python
+info: stat
+event: SDL_Event
+kind: ColorKind
+```
+
+Only collision escape hatches use explicit tag namespaces. This is for unusual
+C headers where the tag namespace and ordinary type namespace contain distinct
+types with the same spelling.
+
+```python
+plain: Foo
+tagged: struct.Foo
+payload: union.Foo
+kind: enum.Foo
+```
+
+User code should not spell C tags as `struct Foo`, `union Foo`, or `enum Foo`.
+The compiler should remember the native spelling internally and emit it only
+when C/C++ requires it.
 
 Inference should not cross arbitrary function side effects. This is valid when
 `take_players` has a known parameter type:

@@ -420,5 +420,9 @@ Current migration state:
   calls such as `foo[T, U](...)`
 - native C struct tag spellings such as `struct stat` resolve to scanned class
   fields
+- normal Dudu code should not need C tag spellings. Header scanning should map
+  `struct Foo`, `union Foo`, and `enum Foo` to ordinary Dudu type names such as
+  `Foo`; only true C tag/type collisions should require escape hatches like
+  `struct.Foo`, `union.Foo`, or `enum.Foo`
 - internal C++ implementation aliases remain compiler artifacts; Dudu should
   not require wrapper headers just to name private libstdc++ helper aliases
