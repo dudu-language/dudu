@@ -77,6 +77,7 @@
 - Added parsed `TypeRef` substitution for generic Dudu field member lookup.
 - Removed render-and-reparse churn from Dudu-native generic class
   instantiation.
+- Removed obsolete string-based Dudu method/class template substitution helpers.
 
 ### Changed
 

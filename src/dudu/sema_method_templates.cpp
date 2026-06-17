@@ -87,16 +87,6 @@ std::vector<std::string> template_args_from_type(const std::string& type) {
     return out;
 }
 
-std::string substitute_method_template_type(std::string type,
-                                            const std::vector<std::string>& generic_params,
-                                            const std::vector<std::string>& args) {
-    std::map<std::string, std::string> substitutions;
-    for (size_t i = 0; i < generic_params.size() && i < args.size(); ++i) {
-        substitutions.emplace(generic_params[i], trim_copy(args[i]));
-    }
-    return substitute_type_ref_text(parse_type_text(type), substitutions);
-}
-
 std::string substitute_receiver_template_type(std::string type,
                                               const std::vector<std::string>& receiver_args) {
     const std::map<std::string, std::string> substitutions =
@@ -109,16 +99,6 @@ std::string substitute_receiver_template_type(std::string type,
         return substitute_type_ref_text(parsed, substitutions);
     }
     return substitute_native_type_identifiers(std::move(type), substitutions);
-}
-
-std::string substitute_class_template_type(std::string type,
-                                           const std::vector<std::string>& generic_params,
-                                           const std::vector<std::string>& receiver_args) {
-    std::map<std::string, std::string> substitutions;
-    for (size_t i = 0; i < generic_params.size() && i < receiver_args.size(); ++i) {
-        substitutions.emplace(generic_params[i], trim_copy(receiver_args[i]));
-    }
-    return substitute_type_ref_text(parse_type_text(type), substitutions);
 }
 
 } // namespace dudu
