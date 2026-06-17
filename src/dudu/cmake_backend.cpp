@@ -42,6 +42,46 @@ std::string command_failure_message(const std::string& label, const std::string&
     return message;
 }
 
+void configure_user_cmake(const UserCMakeBackendOptions& options,
+                          const std::filesystem::path& build_dir) {
+    const std::filesystem::path source_dir =
+        project_path(options.config, options.config.cmake_source);
+    std::string configure_command =
+        "cmake -S " + shell_quote_path(source_dir) + " -B " + shell_quote_path(build_dir);
+    if (!options.config.cmake_generator.empty()) {
+        configure_command += " -G " + shell_quote_arg(options.config.cmake_generator);
+    }
+    if (!options.config.cmake_config.empty()) {
+        configure_command += " -DCMAKE_BUILD_TYPE=" + shell_quote_arg(options.config.cmake_config);
+    }
+    const std::filesystem::path configure_log = options.root / "configure.log";
+    if (options.verbose) {
+        std::cerr << configure_command << '\n';
+    }
+    if (run_shell_command(configure_command, configure_log) != 0) {
+        fail(command_failure_message("CMake configure", configure_command, configure_log));
+    }
+}
+
+void build_user_cmake(const UserCMakeBackendOptions& options,
+                      const std::filesystem::path& build_dir,
+                      const std::optional<std::string>& target) {
+    std::string build_command = "cmake --build " + shell_quote_path(build_dir);
+    if (target.has_value()) {
+        build_command += " --target " + shell_quote_arg(*target);
+    }
+    if (!options.config.cmake_config.empty()) {
+        build_command += " --config " + shell_quote_arg(options.config.cmake_config);
+    }
+    const std::filesystem::path build_log = options.root / "build.log";
+    if (options.verbose) {
+        std::cerr << build_command << '\n';
+    }
+    if (run_shell_command(build_command, build_log) != 0) {
+        fail(command_failure_message("CMake build", build_command, build_log));
+    }
+}
+
 } // namespace
 
 std::filesystem::path default_cmake_backend_root(const ProjectConfig& config) {
@@ -121,40 +161,36 @@ std::filesystem::path run_user_cmake_backend(const UserCMakeBackendOptions& opti
         fail("user-owned CMake backend requires [build] backend = \"cmake\" and [cmake] source");
     }
     std::filesystem::create_directories(options.root);
-    const std::filesystem::path source_dir =
-        project_path(options.config, options.config.cmake_source);
     const std::filesystem::path build_dir = options.root / "build";
     const std::string target = user_cmake_target_name(options.config);
 
-    std::string configure_command =
-        "cmake -S " + shell_quote_path(source_dir) + " -B " + shell_quote_path(build_dir);
-    if (!options.config.cmake_generator.empty()) {
-        configure_command += " -G " + shell_quote_arg(options.config.cmake_generator);
-    }
-    if (!options.config.cmake_config.empty()) {
-        configure_command += " -DCMAKE_BUILD_TYPE=" + shell_quote_arg(options.config.cmake_config);
-    }
-    const std::filesystem::path configure_log = options.root / "configure.log";
-    if (options.verbose) {
-        std::cerr << configure_command << '\n';
-    }
-    if (run_shell_command(configure_command, configure_log) != 0) {
-        fail(command_failure_message("CMake configure", configure_command, configure_log));
-    }
-
-    std::string build_command =
-        "cmake --build " + shell_quote_path(build_dir) + " --target " + shell_quote_arg(target);
-    if (!options.config.cmake_config.empty()) {
-        build_command += " --config " + shell_quote_arg(options.config.cmake_config);
-    }
-    const std::filesystem::path build_log = options.root / "build.log";
-    if (options.verbose) {
-        std::cerr << build_command << '\n';
-    }
-    if (run_shell_command(build_command, build_log) != 0) {
-        fail(command_failure_message("CMake build", build_command, build_log));
-    }
+    configure_user_cmake(options, build_dir);
+    build_user_cmake(options, build_dir, target);
     return build_dir / target;
+}
+
+int run_user_cmake_tests(const UserCMakeBackendOptions& options) {
+    if (!uses_user_cmake_backend(options.config)) {
+        fail("user-owned CMake tests require [build] backend = \"cmake\" and [cmake] source");
+    }
+    std::filesystem::create_directories(options.root);
+    const std::filesystem::path build_dir = options.root / "build";
+    configure_user_cmake(options, build_dir);
+    build_user_cmake(options, build_dir, std::nullopt);
+
+    std::string test_command = "ctest --test-dir " + shell_quote_path(build_dir);
+    if (!options.config.cmake_config.empty()) {
+        test_command += " --build-config " + shell_quote_arg(options.config.cmake_config);
+    }
+    const std::filesystem::path test_log = options.root / "test.log";
+    if (options.verbose) {
+        std::cerr << test_command << '\n';
+    }
+    if (run_shell_command(test_command, test_log) != 0) {
+        fail(command_failure_message("CTest", test_command, test_log));
+    }
+    std::cout << read_text_file(test_log);
+    return 0;
 }
 
 std::filesystem::path build_cmake_project(const BuildCMakeProjectOptions& options) {

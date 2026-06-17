@@ -66,6 +66,7 @@
   language server.
 - Added user-owned CMake project build/run support through `[cmake] source`
   and `[cmake] target`.
+- Added CTest-backed `dudu test` support for user-owned CMake projects.
 
 ### Changed
 

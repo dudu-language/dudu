@@ -396,6 +396,8 @@ rm -rf "$repo_root/build/project_user_cmake"
     "$repo_root/build/dudu" build --verbose 2>"$repo_root/build/project_user_cmake_build.err"
     "$repo_root/build/dudu" run >"$repo_root/build/project_user_cmake_run.out" \
         2>"$repo_root/build/project_user_cmake_run.err"
+    "$repo_root/build/dudu" test --verbose >"$repo_root/build/project_user_cmake_test.out" \
+        2>"$repo_root/build/project_user_cmake_test.err"
 )
 grep -Eq "cmake .*project_user_cmake/CMakeLists.txt" \
     "$repo_root/build/project_user_cmake_build.err"
@@ -404,6 +406,9 @@ grep -Eq "build .*project_user_cmake/cmake-user/build" \
 grep -Eq "run .*project_user_cmake/cmake-user/build/user_cmake_tool" \
     "$repo_root/build/project_user_cmake_run.err"
 grep -q "user cmake backend" "$repo_root/build/project_user_cmake_run.out"
+grep -Eq "test .*project_user_cmake/cmake-user/build" \
+    "$repo_root/build/project_user_cmake_test.err"
+grep -q "100% tests passed" "$repo_root/build/project_user_cmake_test.out"
 rm -f "$repo_root/build/project_linker_script_bin" "$repo_root/build/project_linker_script_bin.cpp"
 (
     cd "$repo_root/tests/fixtures/project_linker_script"

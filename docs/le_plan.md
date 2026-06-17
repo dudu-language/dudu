@@ -658,10 +658,11 @@ declarations safely.
    plus `cmake --build`. Native inputs such as include paths, library paths,
    libraries, flags, pkg-config packages, and extra C/C++ sources are partially
    implemented and useful. `dudu cmake` still emits CMake for inspection or
-   handoff. User-owned CMake build/run are implemented for manifests that
+   handoff. User-owned CMake build/run/test are implemented for manifests that
    declare `[cmake] source` and `[cmake] target`; the driver configures and
-   builds the existing CMake project under the Dudu build directory. The
-   serious path is to make these backend choices work behind the same
+   builds the existing CMake project under the Dudu build directory, and runs
+   CTest when no Dudu test entry or explicit delegated test command is present.
+   The serious path is to make these backend choices work behind the same
    front-door commands, not to tell users that real projects must leave
    `dudu build`.
 

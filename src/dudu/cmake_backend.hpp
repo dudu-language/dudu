@@ -33,6 +33,7 @@ struct BuildCMakeProjectOptions {
 
 std::filesystem::path run_cmake_backend(const CMakeBackendOptions& options);
 std::filesystem::path run_user_cmake_backend(const UserCMakeBackendOptions& options);
+int run_user_cmake_tests(const UserCMakeBackendOptions& options);
 std::filesystem::path build_cmake_project(const BuildCMakeProjectOptions& options);
 std::filesystem::path default_cmake_backend_root(const ProjectConfig& config);
 std::filesystem::path default_user_cmake_backend_root(const ProjectConfig& config);

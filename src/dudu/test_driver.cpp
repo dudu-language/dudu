@@ -120,15 +120,28 @@ std::vector<std::filesystem::path> discover_test_files(const std::filesystem::pa
     return files;
 }
 
-int run_delegated_project_tests() {
-    std::string command = parse_project_config(find_project_config({})).test_command;
-    if (command.empty() && std::filesystem::exists("scripts/test.sh")) {
-        command = "./scripts/test.sh";
+bool has_project_test_script(const ProjectConfig& config) {
+    return std::filesystem::exists(project_path(config, "scripts/test.sh"));
+}
+
+int run_delegated_project_tests(const ProjectConfig& config) {
+    std::string command = config.test_command;
+    if (command.empty() && has_project_test_script(config)) {
+        command = shell_quote_path(project_path(config, "scripts/test.sh"));
     }
     if (command.empty()) {
         fail("missing test entry and no [test] command or scripts/test.sh");
     }
     return std::system(command.c_str()) == 0 ? 0 : 1;
+}
+
+int run_user_owned_cmake_project_tests(const ProjectConfig& config,
+                                       const TestDriverOptions& options) {
+    const std::filesystem::path root = default_user_cmake_backend_root(config);
+    print_project_step(options.project_driver, "cmake", cmake_backend_log_source(config));
+    print_project_step(options.project_driver, "build", cmake_backend_log_build_dir(config));
+    print_project_step(options.project_driver, "test", cmake_backend_log_build_dir(config));
+    return run_user_cmake_tests({.config = config, .root = root, .verbose = options.verbose});
 }
 
 uint64_t fnv1a(std::string_view text) {
@@ -256,7 +269,11 @@ int run_project_tests(TestDriverOptions options) {
         }
     }
     if (options.input.empty()) {
-        return run_delegated_project_tests();
+        if (uses_user_cmake_backend(project) && project.test_command.empty() &&
+            !has_project_test_script(project)) {
+            return run_user_owned_cmake_project_tests(project, options);
+        }
+        return run_delegated_project_tests(project);
     }
     return run_one_test_entry(std::move(options));
 }

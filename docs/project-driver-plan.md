@@ -362,10 +362,12 @@ Current implementation reality:
   paths, libraries, compile flags, link flags, pkg-config packages, and extra
   C/C++ sources.
 - `dudu cmake` emits CMake for inspection or handoff.
-- User-owned CMake project integration is implemented for `dudu build` and
-  `dudu run` when `[build] backend = "cmake"` and `[cmake] source` select an
-  existing CMake source tree. The driver configures/builds the declared
-  `[cmake] target` under the configured Dudu build directory.
+- User-owned CMake project integration is implemented for `dudu build`,
+  `dudu run`, and `dudu test` when `[build] backend = "cmake"` and
+  `[cmake] source` select an existing CMake source tree. The driver
+  configures/builds the declared `[cmake] target` under the configured Dudu
+  build directory, and `dudu test` runs CTest when there is no Dudu test entry
+  or explicit delegated test command.
 
 The next build-driver work should close that gap without changing the front
 door: users should still type `dudu build`, `dudu run`, and `dudu test`.
@@ -524,7 +526,8 @@ docs. Generated Dudu projects do not get a changelog by default.
 17. Add a generated-CMake backend behind `dudu build`, `dudu run`, and
     `dudu test`.
 18. Support user-owned CMake projects as another backend mode behind the same
-    commands. Build/run are implemented for declared executable targets.
+    commands. Build/run/test are implemented for declared executable targets
+    and CTest-enabled projects.
 19. Keep `dudu cmake` as artifact emission for inspection and handoff, not as
     the required workflow for serious native projects.
 
@@ -543,6 +546,7 @@ docs. Generated Dudu projects do not get a changelog by default.
   Dudu modules.
 - `dudu build` can drive a declared target from a user-owned CMake project.
 - `dudu run` can launch a declared executable from a user-owned CMake project.
+- `dudu test` can run CTest for a user-owned CMake project.
 - `dudu build` fails clearly when the selected backend cannot model the
   manifest.
 - `duc emit` still works without a manifest.
