@@ -540,7 +540,10 @@ push. They are not release packaging work.
    instead of reparsing rendered binding text. Generic function and method
    inference can also request typed expression results through
    `infer_expr_type_ast`, so local/type-aware arguments cross that boundary as
-   `TypeRef` nodes before hitting compatibility fallback paths.
+   `TypeRef` nodes before hitting compatibility fallback paths. Deallocation
+   argument checks now accept `TypeRef` nodes, so `delete` and `free`
+   validation checks pointer shape structurally instead of parsing rendered
+   argument type strings inside the allocator helper.
 
 3. OOP Surface Cleanup
 

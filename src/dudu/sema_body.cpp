@@ -273,15 +273,17 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& retur
         sema_fail(stmt.location, "case outside match");
     }
     if (stmt.kind == StmtKind::Delete) {
-        std::vector<std::string> arg_types;
+        std::vector<TypeRef> arg_types;
+        auto infer_type = [&](const Expr& expr) {
+            return parse_type_text(
+                callbacks.infer_expr(scope, expr, &node_location(stmt.location, expr)),
+                expr.location);
+        };
         if (stmt.value_expr.kind == ExprKind::TupleLiteral) {
-            for (const Expr& child : stmt.value_expr.children) {
-                arg_types.push_back(
-                    callbacks.infer_expr(scope, child, &node_location(stmt.location, child)));
-            }
+            for (const Expr& child : stmt.value_expr.children)
+                arg_types.push_back(infer_type(child));
         } else {
-            arg_types.push_back(callbacks.infer_expr(
-                scope, stmt.value_expr, &node_location(stmt.location, stmt.value_expr)));
+            arg_types.push_back(infer_type(stmt.value_expr));
         }
         check_deallocation_args(stmt.location, "delete", arg_types);
         return;

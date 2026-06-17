@@ -21,6 +21,6 @@ std::optional<std::string> infer_allocation_call(const Symbols& symbols,
                                                  size_t arg_count);
 bool is_deallocation_call(std::string_view callee);
 void check_deallocation_args(const SourceLocation& location, std::string_view callee,
-                             const std::vector<std::string>& arg_types);
+                             const std::vector<TypeRef>& arg_types);
 
 } // namespace dudu

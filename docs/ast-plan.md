@@ -69,6 +69,9 @@ Already structured:
 - generic function and method inference can now request typed expression
   results through `infer_expr_type_ast`, so local/type-aware arguments cross
   that boundary as `TypeRef` nodes before hitting compatibility fallback paths
+- deallocation argument checks now accept `TypeRef` nodes, so `delete` and
+  `free` validation checks pointer shape structurally instead of parsing
+  rendered argument type strings inside the allocator helper
 - shared template and unary type child helpers render parsed `TypeRef` children
   structurally instead of returning raw child text
 - array shape inference and static field type extraction render parsed

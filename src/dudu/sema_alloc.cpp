@@ -101,15 +101,15 @@ bool is_deallocation_call(std::string_view callee) {
 }
 
 void check_deallocation_args(const SourceLocation& location, std::string_view callee,
-                             const std::vector<std::string>& arg_types) {
+                             const std::vector<TypeRef>& arg_types) {
     if (arg_types.size() != 1) {
         throw CompileError(location, std::string(callee) + " expects 1 pointer argument, got " +
                                          std::to_string(arg_types.size()));
     }
-    const std::string type = trim_copy(arg_types.front());
-    const TypeRef parsed = parse_type_text(type, location);
-    if (parsed.kind != TypeKind::Pointer) {
-        throw CompileError(location, std::string(callee) + " expects pointer, got " + type);
+    const TypeRef& type = arg_types.front();
+    if (type.kind != TypeKind::Pointer) {
+        throw CompileError(location, std::string(callee) + " expects pointer, got " +
+                                         substitute_type_ref_text(type, {}));
     }
 }
 

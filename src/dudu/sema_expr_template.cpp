@@ -326,9 +326,9 @@ std::string infer_builtin_call_ast(const FunctionScope& scope, const Expr& expr,
         return "void";
     }
     if (is_deallocation_call(callee)) {
-        std::vector<std::string> types;
+        std::vector<TypeRef> types;
         for (const Expr& arg : expr.children) {
-            types.push_back(infer_expr_ast(scope, arg, location));
+            types.push_back(infer_expr_type_ast(scope, arg, location));
         }
         if (location != nullptr) {
             check_deallocation_args(*location, callee, types);

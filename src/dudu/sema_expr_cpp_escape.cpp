@@ -63,9 +63,9 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
                 infer_cpp_escape_allocation_call(scope.symbols, location, callee, args))
             return *type;
         if (is_deallocation_call(callee)) {
-            std::vector<std::string> types;
+            std::vector<TypeRef> types;
             for (const Expr& arg : args)
-                types.push_back(infer_expr_ast(scope, arg, location));
+                types.push_back(infer_expr_type_ast(scope, arg, location));
             if (location != nullptr)
                 check_deallocation_args(*location, callee, types);
             return "void";
