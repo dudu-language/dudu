@@ -549,6 +549,9 @@ push. They are not release packaging work.
    Deallocation argument checks now accept `TypeRef` nodes, so `delete` and
    `free` validation checks pointer shape structurally instead of parsing
    rendered argument type strings inside the allocator helper.
+   Dereference assignment target checks now use typed expression inference and
+   peel pointer `TypeRef` nodes instead of reparsing rendered pointee type
+   strings.
 
 3. OOP Surface Cleanup
 

@@ -44,13 +44,14 @@ std::string assignment_target_type(FunctionScope& scope, const Stmt& stmt,
     if (stmt.target_expr.kind == ExprKind::Unary && stmt.target_expr.op == "*" &&
         stmt.target_expr.children.size() == 1) {
         const Expr& pointee = stmt.target_expr.children.front();
-        std::string type = trim(callbacks.infer_expr(scope, pointee, &target_location));
-        if (type.empty() || type == "auto") {
+        const TypeRef type = callbacks.infer_expr_type(scope, pointee, &target_location);
+        const std::string type_text = trim(substitute_type_ref_text(type, {}));
+        if (type_text.empty() || type_text == "auto") {
             return {};
         }
         const auto pointee_type = unary_type_child_text(type, TypeKind::Pointer);
         if (!pointee_type) {
-            sema_fail(target_location, "cannot dereference non-pointer: " + type);
+            sema_fail(target_location, "cannot dereference non-pointer: " + type_text);
         }
         return *pointee_type;
     }

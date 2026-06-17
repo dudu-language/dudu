@@ -374,6 +374,9 @@ Already structured:
 - assignment target checks use parsed target expressions only, including
   call/template-call lvalue targets such as native reference-returning accessors;
   the legacy raw target-string fallback has been removed
+- dereference assignment targets such as `*ptr = value` use typed expression
+  inference and peel pointer `TypeRef` nodes instead of reparsing rendered
+  pointee type strings
 - type compatibility has AST overloads for simple literals and list/set/dict
   literals, including expected-type disambiguation for empty `{}` dict
   initializers, reducing reliance on string parsing for assignment checks
