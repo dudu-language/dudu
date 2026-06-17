@@ -10,10 +10,10 @@
 
 namespace dudu {
 
-std::string member_path_type(const Symbols& symbols,
-                             const std::map<std::string, std::string>& locals,
-                             const SourceLocation* location, const std::string& path,
-                             std::string unknown_local_prefix);
+std::string member_path_type_from_string(const Symbols& symbols,
+                                         const std::map<std::string, std::string>& locals,
+                                         const SourceLocation* location, const std::string& path,
+                                         std::string unknown_local_prefix);
 std::string member_expr_type(const Symbols& symbols,
                              const std::map<std::string, std::string>& locals,
                              const SourceLocation* location, const Expr& expr,

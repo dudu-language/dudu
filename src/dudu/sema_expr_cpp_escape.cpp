@@ -122,7 +122,7 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
                 return signature.return_type;
             }
             const std::string receiver_type =
-                member_path_type(scope.symbols, scope.locals, nullptr, receiver, "");
+                member_path_type_from_string(scope.symbols, scope.locals, nullptr, receiver, "");
             if (scope.locals.contains(receiver) &&
                 foreign_cpp_type_name(scope.symbols, resolve_alias(scope.symbols, receiver_type))) {
                 for (const Expr& arg : args) {
@@ -235,7 +235,7 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
         }
         if (is_member_path(name)) {
             const std::string receiver_type =
-                member_path_type(scope.symbols, scope.locals, location, name, "");
+                member_path_type_from_string(scope.symbols, scope.locals, location, name, "");
             if (!receiver_type.empty()) {
                 return indexed_type_from_type(scope.symbols, *location, receiver_type,
                                               parse_expr_text(index_expr, *location), name);
@@ -244,7 +244,7 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
     }
     const size_t dot = expr.find('.');
     if (dot != std::string::npos && is_member_path(expr)) {
-        return member_path_type(scope.symbols, scope.locals, location, expr, "");
+        return member_path_type_from_string(scope.symbols, scope.locals, location, expr, "");
     }
     if (const auto local = scope.locals.find(expr); local != scope.locals.end()) {
         return local->second;

@@ -535,6 +535,9 @@ Already structured:
   the AST display helper for labels; the remaining string member-path API is a
   compatibility boundary that still needs replacement with structured path
   nodes
+- the string member-path type resolver is explicitly named
+  `member_path_type_from_string`, and current callers are confined to the
+  C++ escape inference boundary rather than normal Dudu member sema
 - assignment compatibility for parsed explicit casts, value-wrapper
   assignments, and `Ok(...)`/`Err(...)` result construction inspects call
   expression nodes instead of rediscovering those forms from raw text

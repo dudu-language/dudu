@@ -138,10 +138,10 @@ std::optional<std::string> field_type_for_class(const Symbols& symbols, const Cl
     return std::nullopt;
 }
 
-std::string member_path_type(const Symbols& symbols,
-                             const std::map<std::string, std::string>& locals,
-                             const SourceLocation* location, const std::string& path,
-                             std::string unknown_local_prefix) {
+std::string member_path_type_from_string(const Symbols& symbols,
+                                         const std::map<std::string, std::string>& locals,
+                                         const SourceLocation* location, const std::string& path,
+                                         std::string unknown_local_prefix) {
     const size_t dot = path.find('.');
     if (dot == std::string::npos) {
         if (const auto local = locals.find(path); local != locals.end()) {

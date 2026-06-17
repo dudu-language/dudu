@@ -615,7 +615,9 @@ push. They are not release packaging work.
    use the same structured display path. Member-path semantic diagnostics now
    use structured expression display for parsed member/index labels, while the
    remaining string member-path API is still an explicit compatibility boundary
-   to replace.
+   to replace. The string resolver is now named
+   `member_path_type_from_string`, with callers confined to the C++ escape
+   inference boundary.
 
 3. OOP Surface Cleanup
 
