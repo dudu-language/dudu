@@ -187,7 +187,6 @@ EnumDecl Parser::parse_enum(const Token& start) {
             continue;
         } else if (match(TokenKind::Assign)) {
             const JoinedTokens expr = join_until_with_range({TokenKind::Newline});
-            value.value = expr.text;
             value.value_expr = parse_expr_piece(expr);
         }
         consume(TokenKind::Newline, "expected newline after enum value");
