@@ -72,8 +72,9 @@ or function name now preserve their declaration origin in the AST, which gives
 the namespace backend the information it needs. Source-tree loads also preserve
 the ordered per-file module units alongside the compatibility merged view, so
 the next sema/codegen work can operate module-by-module. Same-name declarations
-still require real per-module C++ namespaces before they can coexist through
-semantic analysis and codegen.
+now also carry stable generated C++ names derived from their owning module, but
+the emitter and semantic lookup still need to switch to those names coherently
+before they can coexist through semantic analysis and codegen.
 
 ## Feature Validation Bar
 

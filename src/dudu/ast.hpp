@@ -182,6 +182,7 @@ struct Stmt {
 
 struct TypeAliasDecl {
     std::string name;
+    std::string cpp_name;
     std::string type;
     TypeRef type_ref;
     std::string origin_module;
@@ -241,6 +242,7 @@ struct EnumValueDecl {
 
 struct EnumDecl {
     std::string name;
+    std::string cpp_name;
     std::string underlying_type;
     TypeRef underlying_type_ref;
     std::string origin_module;
@@ -251,6 +253,7 @@ struct EnumDecl {
 struct FunctionDecl {
     Visibility visibility = Visibility::Default;
     std::string name;
+    std::string cpp_name;
     std::string receiver_type;
     std::vector<std::string> generic_params;
     std::vector<Decorator> decorators;
@@ -264,6 +267,7 @@ struct FunctionDecl {
 
 struct ConstDecl {
     std::string name;
+    std::string cpp_name;
     std::string type;
     std::string value;
     TypeRef type_ref;
@@ -281,6 +285,7 @@ struct BaseClassDecl {
 struct ClassDecl {
     Visibility visibility = Visibility::Default;
     std::string name;
+    std::string cpp_name;
     std::vector<std::string> generic_params;
     std::vector<std::string> base_classes;
     std::vector<BaseClassDecl> base_class_refs;

@@ -231,26 +231,38 @@ void test_module_loader_preserves_declaration_origins() {
     int renderer_camera_count = 0;
     int root_make_count = 0;
     int renderer_make_count = 0;
+    std::string root_camera_cpp_name;
+    std::string renderer_camera_cpp_name;
+    std::string root_make_cpp_name;
+    std::string renderer_make_cpp_name;
     for (const dudu::ClassDecl& klass : module.classes) {
         if (klass.name == "Camera" && klass.origin_module == "camera") {
             ++root_camera_count;
+            root_camera_cpp_name = klass.cpp_name;
         }
         if (klass.name == "Camera" && klass.origin_module == "renderer.camera") {
             ++renderer_camera_count;
+            renderer_camera_cpp_name = klass.cpp_name;
         }
     }
     for (const dudu::FunctionDecl& fn : module.functions) {
         if (fn.name == "make_camera" && fn.origin_module == "camera") {
             ++root_make_count;
+            root_make_cpp_name = fn.cpp_name;
         }
         if (fn.name == "make_camera" && fn.origin_module == "renderer.camera") {
             ++renderer_make_count;
+            renderer_make_cpp_name = fn.cpp_name;
         }
     }
     assert(root_camera_count == 1);
     assert(renderer_camera_count == 1);
     assert(root_make_count == 1);
     assert(renderer_make_count == 1);
+    assert(root_camera_cpp_name == "DuduCameraCamera");
+    assert(renderer_camera_cpp_name == "DuduRendererCameraCamera");
+    assert(root_make_cpp_name == "dudu_camera_make_camera");
+    assert(renderer_make_cpp_name == "dudu_renderer_camera_make_camera");
 }
 
 void test_cpp_module_artifacts_preserve_module_boundaries() {

@@ -4,6 +4,7 @@
 #include "dudu/source.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <fstream>
 #include <map>
 #include <set>
@@ -52,33 +53,101 @@ std::string module_name_from_file(const std::filesystem::path& root,
     return out.str();
 }
 
+std::string cpp_name_piece(const std::string& text, bool pascal) {
+    std::string out;
+    bool upper_next = pascal;
+    for (const char c : text) {
+        if (std::isalnum(static_cast<unsigned char>(c)) == 0) {
+            upper_next = pascal;
+            if (!pascal && !out.empty() && out.back() != '_') {
+                out.push_back('_');
+            }
+            continue;
+        }
+        if (pascal && upper_next) {
+            out.push_back(static_cast<char>(std::toupper(static_cast<unsigned char>(c))));
+            upper_next = false;
+        } else {
+            out.push_back(c);
+        }
+    }
+    if (!out.empty() && out.back() == '_') {
+        out.pop_back();
+    }
+    return out.empty() ? (pascal ? "Main" : "main") : out;
+}
+
+std::string module_cpp_prefix(const std::string& module_path, bool pascal) {
+    if (module_path.empty()) {
+        return pascal ? "DuduMain" : "dudu_main";
+    }
+    std::ostringstream out;
+    if (pascal) {
+        out << "Dudu";
+    } else {
+        out << "dudu";
+    }
+    size_t start = 0;
+    while (start < module_path.size()) {
+        const size_t dot = module_path.find('.', start);
+        const size_t end = dot == std::string::npos ? module_path.size() : dot;
+        const std::string piece = module_path.substr(start, end - start);
+        if (pascal) {
+            out << cpp_name_piece(piece, true);
+        } else {
+            out << '_' << cpp_name_piece(piece, false);
+        }
+        if (dot == std::string::npos) {
+            break;
+        }
+        start = dot + 1;
+    }
+    return out.str();
+}
+
+std::string generated_type_name(const std::string& module_path, const std::string& name) {
+    return module_cpp_prefix(module_path, true) + cpp_name_piece(name, true);
+}
+
+std::string generated_value_name(const std::string& module_path, const std::string& name) {
+    return module_cpp_prefix(module_path, false) + "_" + cpp_name_piece(name, false);
+}
+
 void stamp_module_origin(ModuleAst& module, const std::filesystem::path& source_path,
                          const std::string& module_path) {
     module.source_path = source_path;
     module.module_path = module_path;
     for (TypeAliasDecl& alias : module.aliases) {
         alias.origin_module = module_path;
+        alias.cpp_name = generated_type_name(module_path, alias.name);
     }
     for (EnumDecl& en : module.enums) {
         en.origin_module = module_path;
+        en.cpp_name = generated_type_name(module_path, en.name);
     }
     for (ClassDecl& klass : module.classes) {
         klass.origin_module = module_path;
+        klass.cpp_name = generated_type_name(module_path, klass.name);
         for (ConstDecl& constant : klass.constants) {
             constant.origin_module = module_path;
+            constant.cpp_name = generated_value_name(module_path, klass.name + "_" + constant.name);
         }
         for (ConstDecl& field : klass.static_fields) {
             field.origin_module = module_path;
+            field.cpp_name = generated_value_name(module_path, klass.name + "_" + field.name);
         }
         for (FunctionDecl& method : klass.methods) {
             method.origin_module = module_path;
+            method.cpp_name = generated_value_name(module_path, klass.name + "_" + method.name);
         }
     }
     for (ConstDecl& constant : module.constants) {
         constant.origin_module = module_path;
+        constant.cpp_name = generated_value_name(module_path, constant.name);
     }
     for (FunctionDecl& fn : module.functions) {
         fn.origin_module = module_path;
+        fn.cpp_name = generated_value_name(module_path, fn.name);
     }
 }
 
