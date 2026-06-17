@@ -65,6 +65,15 @@ The clean compiler split is:
    useful: augmented assignment, range loops, destructuring, operator sugar, and
    other explicit language conveniences.
 
+   The near-term target is a typed/core AST, also commonly called HIR, not a
+   separate low-level optimizer IR. Dudu is primarily a source-to-source systems
+   language targeting readable C++ today, so codegen should consume structured
+   AST/HIR nodes and semantic facts directly. A lower-level IR becomes
+   appropriate when there is a concrete need for optimizer passes, non-C++
+   native backends, deeper dataflow analysis, or multiple backend families. Do
+   not add a low-level IR just to hide remaining parser/sema/codegen string
+   shortcuts; remove those shortcuts at the AST/HIR boundary instead.
+
 4. Semantic analysis
 
    Run name binding, overload resolution, type checking, control-flow facts,

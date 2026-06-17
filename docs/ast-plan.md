@@ -9,6 +9,14 @@ errors, generics, macros, semantic highlighting, and reliable refactors.
 The goal is not to make the compiler academic. The goal is to stop treating
 function bodies as strings.
 
+Dudu does not need a separate low-level optimizer IR as the next step. The
+proper next compiler layer is a typed/core AST, or HIR, that preserves Dudu
+program structure after name binding, type checking, overload resolution, and
+desugaring. C++ codegen should consume that structured HIR directly. A lower
+level IR should be introduced only when Dudu needs optimizer passes, non-C++
+native backends, deeper dataflow analysis, or another concrete capability that
+HIR-to-C++ cannot honestly support.
+
 ## Current Shape
 
 Already structured:
