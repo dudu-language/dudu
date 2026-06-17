@@ -602,9 +602,13 @@ push. They are not release packaging work.
    paths, and binds native template placeholders from parsed argument types
    when available. Explicit native template placeholder discovery now walks
    parsed return and parameter `TypeRef` nodes before falling back to native
-   spelling scans. Numeric promotion now checks parsed parameter and argument
-   `TypeRef` nodes before falling back to rendered native spelling. The native
-   signature matcher no longer accepts a string expression inference callback.
+   spelling scans. Explicit native template substitution now rewrites parsed
+   parameter and return `TypeRef` nodes first, then renders compatibility
+   strings from those nodes; raw text replacement remains only for signature
+   pieces without parsed type metadata. Numeric promotion now checks parsed
+   parameter and argument `TypeRef` nodes before falling back to rendered
+   native spelling. The native signature matcher no longer accepts a string
+   expression inference callback.
    Generic function and method inference no longer accepts a string expression
    inference callback; all inference inputs cross that boundary as `TypeRef`
    nodes.

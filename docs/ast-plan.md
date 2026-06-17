@@ -523,6 +523,10 @@ Already structured:
   string expression inference callback
 - explicit native template placeholder discovery now walks parsed return and
   parameter `TypeRef` nodes before falling back to native spelling scans
+- explicit native template substitution now rewrites parsed parameter and
+  return `TypeRef` nodes first, then renders compatibility strings from those
+  nodes; raw text replacement remains only for signature pieces without parsed
+  type metadata
 - native overload matching also checks numeric promotion through parsed
   parameter and argument `TypeRef` nodes before falling back to rendered native
   spelling
