@@ -1141,9 +1141,9 @@ coercing non-name assignment values, avoiding another render-type-then-reparse
 round trip in normal statement codegen.
 
 Local C++ emission type inference now routes call, template-call, and binary
-expression results through the parsed `TypeRef` path first. The string-returning
-helper remains only as a compatibility wrapper for older tests and legacy call
-sites that have not yet been moved to structured type metadata.
+expression results through the parsed `TypeRef` path. The old public
+string-returning helper has been removed; callers that need display text render
+from the inferred `TypeRef` at their own boundary.
 
 Expected-return generic method lowering now infers receiver types through
 `TypeRef` metadata first, including member-path fallback, and renders the

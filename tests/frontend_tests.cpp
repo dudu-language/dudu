@@ -35,6 +35,17 @@ std::string read_file(const std::filesystem::path& path) {
     return {std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
 }
 
+std::string
+infer_emitted_local_type_text(std::string_view expr_text,
+                              const std::map<std::string, std::string>& locals,
+                              const std::map<std::string, dudu::TypeRef>& function_returns) {
+    static const std::map<std::string, dudu::TypeRef> no_local_type_refs;
+    const dudu::TypeRef inferred = dudu::infer_emitted_local_type_ref(
+        dudu::parse_expr_text(expr_text), locals, no_local_type_refs, function_returns);
+    return dudu::has_type_ref(inferred) ? dudu::substitute_type_ref_text(inferred, {})
+                                        : std::string{};
+}
+
 void test_lexer_indentation() {
     const std::string source = "def main() -> i32:\n"
                                "    x: i32 = 1\n"
@@ -520,14 +531,10 @@ void test_emitted_local_index_type_inference() {
     };
     const std::map<std::string, dudu::TypeRef> functions;
 
-    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("values[0]"), locals, functions) ==
-           "i32");
-    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("names[key]"), locals, functions) ==
-           "Player");
-    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("matrix[1]"), locals, functions) ==
-           "array[f32][4]");
-    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("matrix[1, 2]"), locals,
-                                          functions) == "f32");
+    assert(infer_emitted_local_type_text("values[0]", locals, functions) == "i32");
+    assert(infer_emitted_local_type_text("names[key]", locals, functions) == "Player");
+    assert(infer_emitted_local_type_text("matrix[1]", locals, functions) == "array[f32][4]");
+    assert(infer_emitted_local_type_text("matrix[1, 2]", locals, functions) == "f32");
 }
 
 void test_index_type_inference_uses_type_ast() {
@@ -575,38 +582,22 @@ void test_emitted_local_expression_type_inference() {
         {"Queue.pop", dudu::parse_type_text("i32")},
     };
 
-    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("True"), locals, functions) ==
-           "bool");
-    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("1_024"), locals, functions) ==
-           "i32");
-    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("1.5"), locals, functions) ==
-           "f64");
-    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("\"hi\""), locals, functions) ==
-           "str");
-    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("&count"), locals, functions) ==
-           "*i32");
-    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("*&count"), locals, functions) ==
-           "i32");
-    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("*item_ptr"), locals, functions) ==
-           "Item");
-    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("not flag"), locals, functions) ==
-           "bool");
-    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("count + 2"), locals, functions) ==
-           "i32");
-    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("scale + 2"), locals, functions) ==
-           "f32");
-    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("count < 4"), locals, functions) ==
-           "bool");
-    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("make_count()"), locals,
-                                          functions) == "i32");
-    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("player.hp()"), locals,
-                                          functions) == "i32");
-    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("queue.pop()"), locals,
-                                          functions) == "i32");
-    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("make_values()[0]"), locals,
-                                          functions) == "i32");
-    assert(dudu::infer_emitted_local_type(dudu::parse_expr_text("make_matrix()[1][0]"), locals,
-                                          functions) == "i32");
+    assert(infer_emitted_local_type_text("True", locals, functions) == "bool");
+    assert(infer_emitted_local_type_text("1_024", locals, functions) == "i32");
+    assert(infer_emitted_local_type_text("1.5", locals, functions) == "f64");
+    assert(infer_emitted_local_type_text("\"hi\"", locals, functions) == "str");
+    assert(infer_emitted_local_type_text("&count", locals, functions) == "*i32");
+    assert(infer_emitted_local_type_text("*&count", locals, functions) == "i32");
+    assert(infer_emitted_local_type_text("*item_ptr", locals, functions) == "Item");
+    assert(infer_emitted_local_type_text("not flag", locals, functions) == "bool");
+    assert(infer_emitted_local_type_text("count + 2", locals, functions) == "i32");
+    assert(infer_emitted_local_type_text("scale + 2", locals, functions) == "f32");
+    assert(infer_emitted_local_type_text("count < 4", locals, functions) == "bool");
+    assert(infer_emitted_local_type_text("make_count()", locals, functions) == "i32");
+    assert(infer_emitted_local_type_text("player.hp()", locals, functions) == "i32");
+    assert(infer_emitted_local_type_text("queue.pop()", locals, functions) == "i32");
+    assert(infer_emitted_local_type_text("make_values()[0]", locals, functions) == "i32");
+    assert(infer_emitted_local_type_text("make_matrix()[1][0]", locals, functions) == "i32");
 }
 
 void test_formatter() {

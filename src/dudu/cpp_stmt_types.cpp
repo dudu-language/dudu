@@ -93,36 +93,6 @@ std::string shaped_array_type(const std::string& element_type, const std::vector
 
 std::string indexed_local_type(const TypeRef& receiver_type, const Expr& index_expr);
 
-std::string indexed_local_type(const std::string& receiver_type, const Expr& index_expr) {
-    const std::string type = trim_copy(receiver_type);
-    const TypeRef parsed = parse_type_text(type);
-    if (const std::string indexed_type = indexed_local_type(parsed, index_expr);
-        !indexed_type.empty()) {
-        return indexed_type;
-    }
-    if (const std::vector<std::string> args = template_type_arg_texts(type, "list");
-        args.size() == 1) {
-        return trim_copy(args.front());
-    }
-    if (const std::vector<std::string> args = template_type_arg_texts(type, "span");
-        args.size() == 1) {
-        return trim_copy(args.front());
-    }
-    if (const std::vector<std::string> args = template_type_arg_texts(type, "strided_span");
-        args.size() == 1) {
-        return trim_copy(args.front());
-    }
-    if (const std::vector<std::string> args = template_type_arg_texts(type, "set");
-        args.size() == 1) {
-        return trim_copy(args.front());
-    }
-    if (const std::vector<std::string> args = template_type_arg_texts(type, "dict");
-        args.size() == 2) {
-        return trim_copy(args[1]);
-    }
-    return {};
-}
-
 std::string indexed_local_type(const TypeRef& receiver_type, const Expr& index_expr) {
     for (std::string_view name : {"list", "span", "strided_span", "set"}) {
         const std::vector<TypeRef> args = template_type_arg_refs(receiver_type, name);
@@ -352,40 +322,6 @@ TypeRef infer_emitted_local_type_ref(const Expr& expr,
         return {};
     }
     return {};
-}
-
-std::string infer_emitted_local_type(const Expr& expr,
-                                     const std::map<std::string, std::string>& locals,
-                                     const std::map<std::string, TypeRef>& function_returns) {
-    static const std::map<std::string, TypeRef> no_type_refs;
-    return infer_emitted_local_type(expr, locals, no_type_refs, function_returns);
-}
-
-std::string infer_emitted_local_type(const Expr& expr,
-                                     const std::map<std::string, std::string>& locals,
-                                     const std::map<std::string, TypeRef>& local_type_refs,
-                                     const std::map<std::string, TypeRef>& function_returns) {
-    if (const TypeRef inferred =
-            infer_emitted_local_type_ref(expr, locals, local_type_refs, function_returns);
-        has_type_ref(inferred)) {
-        return substitute_type_ref_text(inferred, {});
-    }
-    switch (expr.kind) {
-    case ExprKind::Name:
-        if (const auto local = locals.find(expr.name); local != locals.end()) {
-            return local->second;
-        }
-        return {};
-    case ExprKind::Index:
-        if (expr.children.size() == 2 && expr.children[0].kind == ExprKind::Name) {
-            if (const auto local = locals.find(expr.children[0].name); local != locals.end()) {
-                return indexed_local_type(local->second, expr.children[1]);
-            }
-        }
-        return {};
-    default:
-        return {};
-    }
 }
 
 } // namespace dudu
