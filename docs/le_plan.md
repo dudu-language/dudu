@@ -476,7 +476,9 @@ push. They are not release packaging work.
    mirror has been removed. Unsupported statement forms now carry a structured
    unsupported-feature enum instead of diagnostic text on the AST node. Class
    field initializers now rely on `FieldDecl::value_expr`; the raw field
-   initializer string mirror has been removed.
+   initializer string mirror has been removed. Module constants, class
+   constants, and static fields now rely on `ConstDecl::value_expr`; the raw
+   constant initializer string mirror has been removed.
    `struct stat`.
    Normal template-call emission lowers bracket arguments from parsed
    `TypeRef` nodes, including non-type value arguments, instead of falling back

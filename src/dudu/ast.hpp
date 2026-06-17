@@ -289,7 +289,6 @@ struct ConstDecl {
     std::string name;
     std::string cpp_name;
     std::string type;
-    std::string value;
     TypeRef type_ref;
     Expr value_expr;
     std::string origin_module;

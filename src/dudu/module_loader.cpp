@@ -290,7 +290,6 @@ void add_from_import_aliases(ModuleAst& module) {
             if (constant.name == import.imported_name) {
                 ConstDecl alias = constant;
                 alias.name = import.alias;
-                alias.value = import.imported_name;
                 alias.value_expr = make_expr(ExprKind::Name, import.imported_name, import.location);
                 alias.value_expr.name = import.imported_name;
                 alias.location = import.location;

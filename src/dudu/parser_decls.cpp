@@ -341,7 +341,6 @@ ConstDecl Parser::parse_constant() {
     constant.type_ref = parse_type_piece(type);
     consume(TokenKind::Assign, "expected = after constant type");
     const JoinedTokens value = join_until_with_range({TokenKind::Newline});
-    constant.value = value.text;
     constant.value_expr = parse_expr_piece(value);
     consume(TokenKind::Newline, "expected newline after constant");
     return constant;
