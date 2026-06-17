@@ -227,6 +227,34 @@ std::string member_expr_type(const Symbols& symbols,
     return {};
 }
 
+TypeRef member_expr_type_ref(const Symbols& symbols,
+                             const std::map<std::string, std::string>& locals,
+                             const std::map<std::string, TypeRef>& local_type_refs,
+                             const SourceLocation* location, const Expr& expr,
+                             std::string_view unknown_local_prefix,
+                             std::string_view current_class) {
+    const SourceLocation type_location = location == nullptr ? expr.location : *location;
+    if (expr.kind == ExprKind::Name && !expr.name.empty()) {
+        if (const auto local = local_type_refs.find(expr.name); local != local_type_refs.end()) {
+            return local->second;
+        }
+    }
+    if (expr.kind == ExprKind::Index && expr.children.size() == 2) {
+        const TypeRef receiver_type =
+            member_expr_type_ref(symbols, locals, local_type_refs, location, expr.children[0],
+                                 unknown_local_prefix, current_class);
+        if (!has_type_ref(receiver_type)) {
+            return {};
+        }
+        const std::string label = display_expr(expr);
+        return indexed_type_ref_from_type(symbols, type_location, receiver_type, expr.children[1],
+                                          label.empty() ? "indexed expression" : label);
+    }
+    const std::string type =
+        member_expr_type(symbols, locals, location, expr, unknown_local_prefix, current_class);
+    return type.empty() ? TypeRef{} : parse_type_text(type, type_location);
+}
+
 bool is_member_path(const std::string& path) {
     if (path.find('.') == std::string::npos) {
         return false;

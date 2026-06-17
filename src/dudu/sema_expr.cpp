@@ -98,11 +98,12 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
                                               index_location, receiver.name, expr.children[1],
                                               "indexed access to unknown local: ");
             }
-            if (const std::string receiver_type = member_expr_type(
-                    scope.symbols, scope.locals, location, receiver, {}, scope.current_class);
-                !receiver_type.empty()) {
+            const TypeRef receiver_member_type =
+                member_expr_type_ref(scope.symbols, scope.locals, scope.local_type_refs, location,
+                                     receiver, {}, scope.current_class);
+            if (has_type_ref(receiver_member_type)) {
                 return indexed_type_ref_from_type(
-                    scope.symbols, index_location, receiver_type, expr.children[1],
+                    scope.symbols, index_location, receiver_member_type, expr.children[1],
                     display_expr(receiver).empty() ? "indexed expression" : display_expr(receiver));
             }
             const TypeRef receiver_type = infer_expr_type_ast(scope, receiver, location);
@@ -353,10 +354,11 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                 }
             }
         }
-        if (const std::string found = member_expr_type(scope.symbols, scope.locals, use_location,
-                                                       expr, {}, scope.current_class);
-            !found.empty()) {
-            return found;
+        if (const TypeRef found =
+                member_expr_type_ref(scope.symbols, scope.locals, scope.local_type_refs,
+                                     use_location, expr, {}, scope.current_class);
+            has_type_ref(found)) {
+            return substitute_type_ref_text(found, {});
         }
         if (expr.children.size() == 1) {
             const Expr& receiver = expr.children.front();

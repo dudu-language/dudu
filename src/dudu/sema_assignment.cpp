@@ -76,9 +76,10 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt,
     }
     if (stmt.target_expr.kind == ExprKind::Index && stmt.target_expr.children.size() == 2) {
         const Expr& receiver = stmt.target_expr.children[0];
-        const std::string receiver_type = member_expr_type(
-            scope.symbols, scope.locals, &target_location, receiver, {}, scope.current_class);
-        if (!receiver_type.empty()) {
+        const TypeRef receiver_type =
+            member_expr_type_ref(scope.symbols, scope.locals, scope.local_type_refs,
+                                 &target_location, receiver, {}, scope.current_class);
+        if (has_type_ref(receiver_type)) {
             return indexed_type_ref_from_type(
                 scope.symbols, target_location, receiver_type, stmt.target_expr.children[1],
                 display_expr(receiver).empty() ? "indexed assignment" : display_expr(receiver));
@@ -110,10 +111,11 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt,
                 return parse_type_text(*swizzle, target_location);
             }
         }
-        if (const std::string type = member_expr_type(scope.symbols, scope.locals, &target_location,
-                                                      stmt.target_expr, {}, scope.current_class);
-            !type.empty()) {
-            return parse_type_text(type, target_location);
+        if (const TypeRef type =
+                member_expr_type_ref(scope.symbols, scope.locals, scope.local_type_refs,
+                                     &target_location, stmt.target_expr, {}, scope.current_class);
+            has_type_ref(type)) {
+            return type;
         }
         sema_fail(target_location,
                   "unsupported assignment target: " + display_expr(stmt.target_expr));

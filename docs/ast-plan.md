@@ -1133,6 +1133,10 @@ rewrite.
 `break` and `continue` statements now emit directly from their `StmtKind`
 instead of falling through the unknown-statement raw text path.
 
+Member expression typing now has a parsed `TypeRef` wrapper, and typed
+expression/index inference plus assignment target checks use it instead of
+parsing member type text at each call site.
+
 Nonempty `Unknown` expressions are rejected during semantic checking instead of
 calling the old raw expression inference path. Unknown expressions also no
 longer lower as raw C++ text during C++ emission. Use `cpp(...)` for explicit

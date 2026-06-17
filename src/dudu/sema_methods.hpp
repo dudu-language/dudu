@@ -15,6 +15,12 @@ std::string member_expr_type(const Symbols& symbols,
                              const SourceLocation* location, const Expr& expr,
                              std::string_view unknown_local_prefix = {},
                              std::string_view current_class = {});
+TypeRef member_expr_type_ref(const Symbols& symbols,
+                             const std::map<std::string, std::string>& locals,
+                             const std::map<std::string, TypeRef>& local_type_refs,
+                             const SourceLocation* location, const Expr& expr,
+                             std::string_view unknown_local_prefix = {},
+                             std::string_view current_class = {});
 
 std::optional<std::string> field_type_for_type(const Symbols& symbols,
                                                const std::string& receiver_type,
