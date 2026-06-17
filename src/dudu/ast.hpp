@@ -268,7 +268,7 @@ struct FunctionDecl {
     Visibility visibility = Visibility::Default;
     std::string name;
     std::string cpp_name;
-    std::string receiver_type;
+    TypeRef receiver_type_ref;
     std::vector<std::string> generic_params;
     std::vector<Decorator> decorators;
     std::vector<ParamDecl> params;

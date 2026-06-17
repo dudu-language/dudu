@@ -1,5 +1,6 @@
 #include "dudu/ast_expr_token_parser.hpp"
 #include "dudu/ast_parse_utils.hpp"
+#include "dudu/ast_type.hpp"
 #include "dudu/ast_type_token_parser.hpp"
 #include "dudu/lexer.hpp"
 #include "dudu/parser_internal.hpp"
@@ -40,14 +41,15 @@ void append_source_token(std::ostringstream& out, SourceLocation& cursor, const 
 }
 
 void attach_out_of_line_method(ModuleAst& module, FunctionDecl method) {
+    const std::string receiver_type = function_receiver_type_text(method);
     for (ClassDecl& klass : module.classes) {
-        if (klass.name == method.receiver_type) {
+        if (klass.name == receiver_type) {
             klass.methods.push_back(std::move(method));
             return;
         }
     }
     throw CompileError(method.location,
-                       "out-of-line method receiver is not a known class: " + method.receiver_type);
+                       "out-of-line method receiver is not a known class: " + receiver_type);
 }
 
 std::vector<Token> syntax_piece_tokens(std::span<const Token> tokens) {
@@ -105,7 +107,7 @@ ModuleAst Parser::parse() {
             parse_type_decl(previous(), module);
         } else if (match_identifier("def")) {
             FunctionDecl fn = parse_function(previous(), visibility, decorators);
-            if (fn.receiver_type.empty()) {
+            if (!function_has_receiver_type(fn)) {
                 module.functions.push_back(std::move(fn));
             } else {
                 attach_out_of_line_method(module, std::move(fn));

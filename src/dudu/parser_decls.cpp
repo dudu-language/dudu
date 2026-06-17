@@ -216,12 +216,14 @@ FunctionDecl Parser::parse_function(const Token& start, Visibility visibility,
     SourceLocation name_location = name.location;
     fn.name = name.text;
     if (receiver_type.empty() && match(TokenKind::Dot)) {
-        fn.receiver_type = fn.name;
+        fn.receiver_type_ref = parse_type_text(fn.name, name.location);
         const Token& method_name = consume_identifier("expected method name after .");
         name_location = method_name.location;
         fn.name = method_name.text;
     } else {
-        fn.receiver_type = std::string(receiver_type);
+        if (!receiver_type.empty()) {
+            fn.receiver_type_ref = parse_type_text(std::string(receiver_type), name.location);
+        }
     }
     fn.location = name_location;
     fn.visibility = visibility_from_name(fn.visibility, fn.name);
@@ -229,7 +231,7 @@ FunctionDecl Parser::parse_function(const Token& start, Visibility visibility,
     consume(TokenKind::LParen, "expected ( after function name");
     skip_signature_separators();
     if (!at(TokenKind::RParen)) {
-        parse_params(fn.params, fn.receiver_type);
+        parse_params(fn.params, function_receiver_type_text(fn));
     }
     skip_signature_separators();
     consume(TokenKind::RParen, "expected ) after parameters");
