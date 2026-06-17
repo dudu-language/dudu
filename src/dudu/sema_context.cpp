@@ -373,12 +373,17 @@ Symbols collect_symbols(const ModuleAst& module) {
         FunctionSignature signature;
         signature.template_params = fn.template_params;
         signature.params = fn.params;
-        signature.param_type_refs.reserve(fn.params.size());
-        for (const std::string& param : fn.params) {
-            signature.param_type_refs.push_back(parse_type_text(param, fn.location));
+        signature.param_type_refs = fn.param_type_refs;
+        if (signature.param_type_refs.empty()) {
+            signature.param_type_refs.reserve(fn.params.size());
+            for (const std::string& param : fn.params) {
+                signature.param_type_refs.push_back(parse_type_text(param, fn.location));
+            }
         }
         signature.return_type = fn.return_type.empty() ? "auto" : fn.return_type;
-        signature.return_type_ref = parse_type_text(signature.return_type, fn.location);
+        signature.return_type_ref = has_type_ref(fn.return_type_ref)
+                                        ? fn.return_type_ref
+                                        : parse_type_text(signature.return_type, fn.location);
         signature.min_params = fn.min_params;
         signature.variadic = fn.variadic;
         symbols.native_function_signatures[fn.name].push_back(std::move(signature));

@@ -236,6 +236,11 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         }
         fn.params = qualify_scoped_types(scan, namespaces, signature_params(signature));
         fn.return_type = qualify_scoped_type(scan, namespaces, signature_return_type(signature));
+        fn.param_type_refs.reserve(fn.params.size());
+        for (const std::string& param : fn.params) {
+            fn.param_type_refs.push_back(parse_type_text(param, decl_location));
+        }
+        fn.return_type_ref = parse_type_text(fn.return_type, decl_location);
         fn.min_params = static_cast<int>(fn.params.size());
         fn.variadic = signature.find("...") != std::string::npos;
         fn.location = decl_location;
@@ -245,10 +250,9 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                std::regex_search(line, match, method_decl)) {
         FunctionDecl method;
         method.name = match[1].str();
-        method.return_type_ref =
-            parse_type_text(qualify_scoped_type(scan, namespaces,
-                                                signature_return_type(match[2].str())),
-                            decl_location);
+        method.return_type_ref = parse_type_text(
+            qualify_scoped_type(scan, namespaces, signature_return_type(match[2].str())),
+            decl_location);
         for (const std::string& param : signature_params(match[2].str())) {
             ParamDecl decl;
             decl.name = "arg" + std::to_string(method.params.size());
@@ -377,7 +381,10 @@ void parse_macro_dump(NativeHeaderScan& scan, const std::string& dump,
                 {.name = name,
                  .template_params = {},
                  .params = std::vector<std::string>(static_cast<size_t>(params.arity), "auto"),
+                 .param_type_refs = std::vector<TypeRef>(static_cast<size_t>(params.arity),
+                                                         parse_type_text("auto", location)),
                  .return_type = "auto",
+                 .return_type_ref = parse_type_text("auto", location),
                  .min_params = params.arity,
                  .variadic = params.variadic,
                  .location = location});

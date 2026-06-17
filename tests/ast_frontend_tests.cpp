@@ -176,11 +176,14 @@ void test_native_semantic_tokens() {
         {.name = "DuduNativeEvent", .type = "DuduNativeEvent", .location = {}});
     native_symbols.native_values.push_back(
         {.name = "DUDU_NATIVE_MAGIC", .type = "i32", .location = {}});
-    native_symbols.native_functions.push_back({.name = "dudu_native_add",
-                                               .template_params = {},
-                                               .params = {"i32", "i32"},
-                                               .return_type = "i32",
-                                               .location = {}});
+    native_symbols.native_functions.push_back(
+        {.name = "dudu_native_add",
+         .template_params = {},
+         .params = {"i32", "i32"},
+         .param_type_refs = {dudu::parse_type_text("i32"), dudu::parse_type_text("i32")},
+         .return_type = "i32",
+         .return_type_ref = dudu::parse_type_text("i32"),
+         .location = {}});
     native_symbols.native_macros.push_back(
         {.name = "DUDU_NATIVE_CHECK", .arity = 0, .function_like = true, .location = {}});
 

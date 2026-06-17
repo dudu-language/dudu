@@ -1524,6 +1524,9 @@ LSP source edits are also moving to AST-owned ranges:
 - Native function signatures now attach parsed parameter and return `TypeRef`
   metadata during symbol collection, narrowing fallback parsing to the native
   declaration AST boundary that still stores imported signatures as text.
+- `NativeFunctionDecl` now carries parsed parameter and return `TypeRef`
+  metadata directly, and native header scans plus module-imported function
+  aliases populate those refs at the AST boundary.
 - Explicit native template return rewriting now refreshes return `TypeRef`
   metadata at the same time as return text, avoiding stale semantic facts after
   helpers such as indexed tuple/variant returns refine the type.
