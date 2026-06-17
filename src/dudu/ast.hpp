@@ -161,8 +161,6 @@ struct Stmt {
     std::string value;
     TypeRef type_ref;
     std::string op;
-    std::string condition;
-    std::string message;
     std::string unsupported_feature;
     Expr expr;
     Expr value_expr;

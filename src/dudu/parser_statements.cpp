@@ -156,13 +156,11 @@ void parse_assert_parts(Stmt& stmt, const Parser::JoinedTokens& body) {
     if (parts.empty()) {
         return;
     }
-    stmt.condition = trim_string(parts.front().text);
-    stmt.condition_expr =
-        parse_expr_text(stmt.condition, advance_columns(body.range.start, parts.front().offset));
+    stmt.condition_expr = parse_expr_text(trim_string(parts.front().text),
+                                          advance_columns(body.range.start, parts.front().offset));
     if (parts.size() >= 2) {
-        stmt.message = trim_string(parts[1].text);
-        stmt.message_expr =
-            parse_expr_text(stmt.message, advance_columns(body.range.start, parts[1].offset));
+        stmt.message_expr = parse_expr_text(trim_string(parts[1].text),
+                                            advance_columns(body.range.start, parts[1].offset));
     }
 }
 
@@ -241,8 +239,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
                                          : StmtKind::Match;
         const JoinedTokens condition =
             join_until_with_range({TokenKind::Colon, TokenKind::Newline});
-        stmt.condition = condition.text;
-        stmt.condition_expr = parse_expr_text(stmt.condition, condition.range.start);
+        stmt.condition_expr = parse_expr_text(condition.text, condition.range.start);
         consume(TokenKind::Colon, "expected : after " + keyword + " condition");
         attach_statement_source(stmt, join_tokens(begin, cursor_));
         return stmt;
@@ -306,8 +303,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
             stmt.type = type.text;
             stmt.type_ref = parse_type_text(stmt.type, type.range.start);
         } else {
-            stmt.condition = header.text;
-            stmt.condition_expr = parse_expr_text(stmt.condition, header.range.start);
+            stmt.condition_expr = parse_expr_text(header.text, header.range.start);
         }
         consume(TokenKind::Colon, "expected : after except");
         attach_statement_source(stmt, join_tokens(begin, cursor_));

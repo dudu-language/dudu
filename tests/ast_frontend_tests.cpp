@@ -240,7 +240,7 @@ void test_statement_ast_shape() {
     assert(main.statements[1].children[0].op == "+");
     assert(main.statements[1].children[0].value == "item");
     assert(main.statements[2].kind == dudu::StmtKind::If);
-    assert(main.statements[2].condition == "total == 0");
+    assert(main.statements[2].condition_expr.text == "total == 0");
     assert(main.statements[2].children.size() == 1);
     assert(main.statements[2].children[0].kind == dudu::StmtKind::CompoundAssign);
     assert(main.statements[3].kind == dudu::StmtKind::Else);
@@ -683,7 +683,7 @@ void test_match_case_ast_shape() {
     assert(handle.statements.size() == 1);
     const dudu::Stmt& match = handle.statements[0];
     assert(match.kind == dudu::StmtKind::Match);
-    assert(match.condition == "msg");
+    assert(match.condition_expr.text == "msg");
     assert(match.condition_expr.kind == dudu::ExprKind::Name);
     assert(match.children.size() == 3);
 

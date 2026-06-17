@@ -48,7 +48,7 @@ void test_keyword_statements_keep_token_ranges() {
 
     const dudu::Stmt& branch = main.statements[0];
     assert(branch.kind == dudu::StmtKind::If);
-    assert(branch.condition == "ready(value)");
+    assert(branch.condition_expr.text == "ready(value)");
     assert(branch.source_text == "if   ready(value):");
     assert(branch.condition_expr.kind == dudu::ExprKind::Call);
     assert(branch.condition_expr.range.start.column == 10);
@@ -62,8 +62,8 @@ void test_keyword_statements_keep_token_ranges() {
     assert(loop.iterable_expr.text == "values");
     assert(loop.iterable_expr.range.start.column == 22);
     assert(loop.children.front().kind == dudu::StmtKind::DebugAssert);
-    assert(loop.children.front().condition == "item > 0");
-    assert(loop.children.front().message == "\"positive\"");
+    assert(loop.children.front().condition_expr.text == "item > 0");
+    assert(loop.children.front().message_expr.text == "\"positive\"");
 }
 
 } // namespace
