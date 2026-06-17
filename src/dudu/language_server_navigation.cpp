@@ -89,7 +89,8 @@ SourceLocation expr_name_location(const Expr& expr) {
     return location;
 }
 
-std::optional<std::string> ast_symbol_at(const Document& doc, const Json* params) {
+std::optional<std::string> ast_symbol_at_impl(const Document& doc, const Json* params,
+                                              bool prefer_member_path) {
     const Json* position = params == nullptr ? nullptr : params->get("position");
     const int target_line = int_value(position == nullptr ? nullptr : position->get("line")) + 1;
     const int target_column =
@@ -110,7 +111,13 @@ std::optional<std::string> ast_symbol_at(const Document& doc, const Json* params
     };
     const std::function<void(const Expr&)> visit_expr = [&](const Expr& expr) {
         if (expr.kind == ExprKind::Name || expr.kind == ExprKind::Member) {
-            set_if_hit(expr.name, expr_name_location(expr));
+            std::string name = expr.name;
+            if (prefer_member_path && expr.kind == ExprKind::Member) {
+                if (const std::optional<std::string> path = member_path_from_expr(expr)) {
+                    name = *path;
+                }
+            }
+            set_if_hit(name, expr_name_location(expr));
         }
         for (const Expr& callee : expr.callee) {
             visit_expr(callee);
@@ -196,6 +203,14 @@ std::optional<std::string> ast_symbol_at(const Document& doc, const Json* params
         return std::nullopt;
     }
     return result;
+}
+
+std::optional<std::string> ast_symbol_at(const Document& doc, const Json* params) {
+    return ast_symbol_at_impl(doc, params, false);
+}
+
+std::optional<std::string> ast_symbol_path_at(const Document& doc, const Json* params) {
+    return ast_symbol_at_impl(doc, params, true);
 }
 
 bool symbol_matches(const std::string& symbol, const std::string& query) {

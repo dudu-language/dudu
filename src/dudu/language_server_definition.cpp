@@ -260,7 +260,10 @@ std::string definition_json(const Document& doc, const Json* params) {
     if (const std::optional<std::string> header = header_definition_json(doc, params)) {
         return *header;
     }
-    const std::string word = symbol_at(doc, params);
+    const std::string word = ast_symbol_path_at(doc, params).value_or("");
+    if (word.empty()) {
+        return "null";
+    }
     for (const Symbol& symbol : symbols_for_document(doc)) {
         if (symbol_matches(symbol.name, word)) {
             std::ostringstream out;

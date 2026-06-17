@@ -269,6 +269,9 @@ Already structured:
   or reference query
 - C/C++ header go-to-definition now uses parsed foreign import ranges from the
   AST instead of regexing the active source line
+- LSP go-to-definition now resolves its symbol/path from the AST before looking
+  up Dudu, imported, native, or member definitions, so comments and strings do
+  not act like definitions
 - array shape inference and explicit shape extraction also consume parsed
   `TypeRef` array forms, removing the separate bracket matcher from
   `array_shape.cpp`

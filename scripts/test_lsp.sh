@@ -189,6 +189,17 @@ messages = [
     packet(
         {
             "jsonrpc": "2.0",
+            "id": 58,
+            "method": "textDocument/definition",
+            "params": {
+                "textDocument": {"uri": rename_ast_uri},
+                "position": {"line": 5, "character": 8},
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
             "method": "textDocument/didOpen",
             "params": {
                 "textDocument": {
@@ -1499,6 +1510,9 @@ assert ast_string_references["result"] == []
 
 ast_comment_rename = next(item for item in responses if item.get("id") == 57)
 assert ast_comment_rename["result"] is None
+
+ast_comment_definition = next(item for item in responses if item.get("id") == 58)
+assert ast_comment_definition["result"] is None
 
 code_actions = next(item for item in responses if item.get("id") == 17)
 assert code_actions["result"][0]["title"] == "Format document"

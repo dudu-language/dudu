@@ -22,6 +22,7 @@ std::string file_uri(const std::filesystem::path& path);
 
 std::string symbol_at(const Document& doc, const Json* params);
 std::optional<std::string> ast_symbol_at(const Document& doc, const Json* params);
+std::optional<std::string> ast_symbol_path_at(const Document& doc, const Json* params);
 bool symbol_matches(const std::string& symbol, const std::string& query);
 bool symbol_char(char c);
 bool identifier_char(char c);
