@@ -1,6 +1,7 @@
 #include "dudu/cpp_emit_classes.hpp"
 
 #include "dudu/ast_expr.hpp"
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_expr_emit.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/cpp_stmt_emit.hpp"
@@ -41,7 +42,8 @@ void visit_class(const std::vector<ClassDecl>& classes, size_t index, std::set<s
     }
     visiting.insert(index);
 
-    for (const std::string& base : classes[index].base_classes) {
+    for (const BaseClassDecl& base_decl : classes[index].base_class_refs) {
+        const std::string base = type_ref_text(base_decl.type_ref);
         for (size_t dep = 0; dep < classes.size(); ++dep) {
             if (dep != index && base == classes[dep].name) {
                 visit_class(classes, dep, visiting, emitted, order);
@@ -122,7 +124,7 @@ std::string class_opening(const ClassDecl& klass, const std::vector<std::string>
                           const CppEmitOptions& options) {
     const std::string& class_name = emitted_name(klass, options);
     auto with_bases = [&](std::string opening) {
-        if (klass.base_classes.empty()) {
+        if (klass.base_class_refs.empty()) {
             return opening;
         }
         opening += " : ";
@@ -171,7 +173,7 @@ const BaseClassDecl* super_init_base_decl(const Symbols& symbols, const std::str
     }
     const BaseClassDecl* storage_base = nullptr;
     for (const BaseClassDecl& base : klass->second->base_class_refs) {
-        if (class_type_has_instance_storage(symbols, base.type)) {
+        if (class_type_has_instance_storage(symbols, type_ref_text(base.type_ref))) {
             if (storage_base != nullptr) {
                 return nullptr;
             }
@@ -218,7 +220,8 @@ bool class_is_polymorphic(const Symbols& symbols, const ClassDecl& klass,
             return true;
         }
     }
-    for (const std::string& base : klass.base_classes) {
+    for (const BaseClassDecl& base_decl : klass.base_class_refs) {
+        const std::string base = type_ref_text(base_decl.type_ref);
         const auto parent = symbols.classes.find(base_type(base));
         if (parent != symbols.classes.end() &&
             class_is_polymorphic(symbols, *parent->second, seen)) {
@@ -301,8 +304,8 @@ void emit_method(std::ostringstream& out, const std::string& class_name,
     std::map<std::string, std::string> locals;
     locals["class"] = class_name;
     const auto klass = symbols.classes.find(source_class_name);
-    if (klass != symbols.classes.end() && klass->second->base_classes.size() == 1) {
-        locals["super"] = klass->second->base_classes.front();
+    if (klass != symbols.classes.end() && klass->second->base_class_refs.size() == 1) {
+        locals["super"] = type_ref_text(klass->second->base_class_refs.front().type_ref);
     }
     if (first_param == 1) {
         locals[method.params.front().name] = method.params.front().type;

@@ -268,8 +268,9 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
             check_supported_type_shape(base.location, base.type_ref);
             check_known_type_ref(class_symbols, base.location, base.type_ref,
                                  "unknown base class: ");
-            if (!bases.insert(base.type).second) {
-                fail(base.location, "duplicate base class: " + base.type);
+            const std::string base_text = type_ref_text(base.type_ref);
+            if (!bases.insert(base_text).second) {
+                fail(base.location, "duplicate base class: " + base_text);
             }
         }
         check_multiple_inheritance_rules(symbols, klass);
@@ -364,8 +365,9 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
             }
             if (is_override) {
                 std::optional<InheritedMethod> base_method;
-                for (const std::string& base : klass.base_classes) {
-                    base_method = find_inherited_method(symbols, base, method.name);
+                for (const BaseClassDecl& base : klass.base_class_refs) {
+                    base_method =
+                        find_inherited_method(symbols, type_ref_text(base.type_ref), method.name);
                     if (base_method) {
                         break;
                     }

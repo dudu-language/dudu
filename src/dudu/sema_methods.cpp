@@ -114,7 +114,8 @@ bool method_signature_for_type(const Symbols& symbols, std::string receiver_type
             instantiate_method_signature(*klass->second, method, receiver_args, method_args);
         return true;
     }
-    for (const std::string& base : klass->second->base_classes) {
+    for (const BaseClassDecl& base_decl : klass->second->base_class_refs) {
+        const std::string base = type_ref_text(base_decl.type_ref);
         if (method_signature_for_type(symbols, base, method_name, signature, nullptr)) {
             return true;
         }
@@ -150,7 +151,8 @@ std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
         return instantiate_method_signature(*klass->second, method, receiver_args,
                                             type_ref_texts(*inferred));
     }
-    for (const std::string& base : klass->second->base_classes) {
+    for (const BaseClassDecl& base_decl : klass->second->base_class_refs) {
+        const std::string base = type_ref_text(base_decl.type_ref);
         if (const auto signature = inferred_generic_method_signature_for_type(
                 scope, base, method_name, args, nullptr, callbacks)) {
             return signature;
@@ -193,7 +195,8 @@ std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
         return instantiate_method_signature(*klass->second, method, receiver_args,
                                             type_ref_texts(*inferred));
     }
-    for (const std::string& base : klass->second->base_classes) {
+    for (const BaseClassDecl& base_decl : klass->second->base_class_refs) {
+        const std::string base = type_ref_text(base_decl.type_ref);
         if (const auto signature = inferred_generic_method_signature_for_type(
                 scope, base, method_name, args, expected_return, nullptr, callbacks)) {
             return signature;
@@ -229,7 +232,8 @@ std::vector<FunctionSignature> method_signatures_for_type(const Symbols& symbols
         out.push_back(
             instantiate_method_signature(*klass->second, method, receiver_args, method_args));
     }
-    for (const std::string& base : klass->second->base_classes) {
+    for (const BaseClassDecl& base_decl : klass->second->base_class_refs) {
+        const std::string base = type_ref_text(base_decl.type_ref);
         std::vector<FunctionSignature> base_signatures =
             method_signatures_for_type(symbols, base, method_name);
         out.insert(out.end(), base_signatures.begin(), base_signatures.end());
@@ -266,7 +270,8 @@ bool static_method_signature_for_type(const Symbols& symbols, const std::string&
             instantiate_method_signature(*klass->second, method, receiver_args, method_args);
         return true;
     }
-    for (const std::string& base : klass->second->base_classes) {
+    for (const BaseClassDecl& base_decl : klass->second->base_class_refs) {
+        const std::string base = type_ref_text(base_decl.type_ref);
         if (static_method_signature_for_type(symbols, base, method_name, signature, nullptr)) {
             return true;
         }

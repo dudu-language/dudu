@@ -202,6 +202,10 @@ std::string substitute_type_ref_text(const TypeRef& type,
     return trim_copy(type.text);
 }
 
+std::string type_ref_text(const TypeRef& type) {
+    return substitute_type_ref_text(type, {});
+}
+
 TypeRef substitute_type_ref(const TypeRef& type,
                             const std::map<std::string, std::string>& substitutions) {
     const std::string name = trim_copy(type.name.empty() ? type.text : type.name);

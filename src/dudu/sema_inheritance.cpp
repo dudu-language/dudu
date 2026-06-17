@@ -49,8 +49,9 @@ bool derives_from_impl(const Symbols& symbols, const std::string& derived, const
     const auto klass = symbols.classes.find(derived);
     if (klass == symbols.classes.end())
         return false;
-    for (const std::string& parent : klass->second->base_classes) {
-        if (derives_from_impl(symbols, unwrap_type(symbols, parent), base, seen))
+    for (const BaseClassDecl& parent : klass->second->base_class_refs) {
+        const std::string parent_type = type_ref_text(parent.type_ref);
+        if (derives_from_impl(symbols, unwrap_type(symbols, parent_type), base, seen))
             return true;
     }
     return false;
@@ -150,7 +151,8 @@ bool class_has_instance_storage(const Symbols& symbols, const ClassDecl& klass,
     if (!klass.fields.empty()) {
         return true;
     }
-    for (const std::string& base : klass.base_classes) {
+    for (const BaseClassDecl& base_decl : klass.base_class_refs) {
+        const std::string base = type_ref_text(base_decl.type_ref);
         if (const ClassDecl* parent = dudu_class_for_base(symbols, base)) {
             if (class_has_instance_storage(symbols, *parent, seen)) {
                 return true;
@@ -175,7 +177,8 @@ bool class_has_abstract_method(const Symbols& symbols, const ClassDecl& klass,
             return true;
         }
     }
-    for (const std::string& base : klass.base_classes) {
+    for (const BaseClassDecl& base_decl : klass.base_class_refs) {
+        const std::string base = type_ref_text(base_decl.type_ref);
         if (const ClassDecl* parent = dudu_class_for_base(symbols, base)) {
             if (class_has_abstract_method(symbols, *parent, seen)) {
                 return true;
@@ -203,7 +206,8 @@ void collect_inherited_fields(const Symbols& symbols, const ClassDecl& klass,
     for (const FieldDecl& field : klass.fields) {
         fields.emplace(field.name, klass.name);
     }
-    for (const std::string& base : klass.base_classes) {
+    for (const BaseClassDecl& base_decl : klass.base_class_refs) {
+        const std::string base = type_ref_text(base_decl.type_ref);
         if (const ClassDecl* parent = dudu_class_for_base(symbols, base)) {
             collect_inherited_fields(symbols, *parent, fields, seen);
         }
@@ -223,7 +227,8 @@ void collect_concrete_methods(const Symbols& symbols, const ClassDecl& klass,
             methods.emplace(method_key_without_self(klass, receiver_type, method), klass.name);
         }
     }
-    for (const std::string& base : klass.base_classes) {
+    for (const BaseClassDecl& base_decl : klass.base_class_refs) {
+        const std::string base = type_ref_text(base_decl.type_ref);
         if (const ClassDecl* parent = dudu_class_for_base(symbols, base)) {
             collect_concrete_methods(symbols, *parent, base, methods, seen);
         }
@@ -243,7 +248,8 @@ std::vector<std::string> unresolved_abstract_methods_impl(const Symbols& symbols
     }
 
     std::map<std::string, std::string> unresolved;
-    for (const std::string& base : klass->second->base_classes) {
+    for (const BaseClassDecl& base_decl : klass->second->base_class_refs) {
+        const std::string base = type_ref_text(base_decl.type_ref);
         std::set<std::string> branch_seen = seen;
         for (const std::string& method :
              unresolved_abstract_methods_impl(symbols, base, branch_seen)) {
@@ -294,9 +300,10 @@ bool class_type_has_instance_storage(const Symbols& symbols, const std::string& 
         return false;
     }
     return !klass->second->fields.empty() ||
-           std::any_of(klass->second->base_classes.begin(), klass->second->base_classes.end(),
-                       [&](const std::string& base) {
-                           return class_type_has_instance_storage(symbols, base);
+           std::any_of(klass->second->base_class_refs.begin(), klass->second->base_class_refs.end(),
+                       [&](const BaseClassDecl& base) {
+                           const std::string base_type = type_ref_text(base.type_ref);
+                           return class_type_has_instance_storage(symbols, base_type);
                        });
 }
 
@@ -335,7 +342,8 @@ find_inherited_method(const Symbols& symbols, const std::string& type, const std
             };
         }
     }
-    for (const std::string& base : klass->second->base_classes) {
+    for (const BaseClassDecl& base_decl : klass->second->base_class_refs) {
+        const std::string base = type_ref_text(base_decl.type_ref);
         if (auto method = find_inherited_method(symbols, base, name)) {
             return method;
         }
@@ -354,7 +362,8 @@ const FunctionDecl* find_method_decl(const Symbols& symbols, const std::string& 
             return &method;
         }
     }
-    for (const std::string& base : klass->second->base_classes) {
+    for (const BaseClassDecl& base_decl : klass->second->base_class_refs) {
+        const std::string base = type_ref_text(base_decl.type_ref);
         if (const FunctionDecl* method = find_method_decl(symbols, base, name)) {
             return method;
         }
@@ -367,7 +376,7 @@ bool same_signature(const FunctionSignature& a, const FunctionSignature& b) {
 }
 
 void check_multiple_inheritance_rules(const Symbols& symbols, const ClassDecl& klass) {
-    if (klass.base_classes.size() <= 1) {
+    if (klass.base_class_refs.size() <= 1) {
         return;
     }
     size_t storage_bases = 0;
@@ -380,7 +389,8 @@ void check_multiple_inheritance_rules(const Symbols& symbols, const ClassDecl& k
         }
     }
 
-    for (const std::string& base : klass.base_classes) {
+    for (const BaseClassDecl& base_decl : klass.base_class_refs) {
+        const std::string base = type_ref_text(base_decl.type_ref);
         const ClassDecl* parent = dudu_class_for_base(symbols, base);
         if (parent == nullptr) {
             continue;

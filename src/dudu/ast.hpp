@@ -294,7 +294,6 @@ struct ConstDecl {
 };
 
 struct BaseClassDecl {
-    std::string type;
     TypeRef type_ref;
     SourceLocation location;
 };
@@ -304,7 +303,6 @@ struct ClassDecl {
     std::string name;
     std::string cpp_name;
     std::vector<std::string> generic_params;
-    std::vector<std::string> base_classes;
     std::vector<BaseClassDecl> base_class_refs;
     std::vector<Decorator> decorators;
     std::vector<FieldDecl> fields;

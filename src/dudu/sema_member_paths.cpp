@@ -126,7 +126,8 @@ std::optional<std::string> field_type_for_class(const Symbols& symbols, const Cl
             return receiver_substituted;
         }
     }
-    for (const std::string& base : klass.base_classes) {
+    for (const BaseClassDecl& base_decl : klass.base_class_refs) {
+        const std::string base = type_ref_text(base_decl.type_ref);
         const auto base_class = symbols.classes.find(unwrap_receiver_type(symbols, base));
         if (base_class == symbols.classes.end()) {
             continue;

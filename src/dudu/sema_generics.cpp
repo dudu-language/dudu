@@ -268,11 +268,6 @@ ClassDecl instantiate_generic_class(ClassDecl klass, const std::vector<TypeRef>&
     klass.name = instantiated_name;
     for (BaseClassDecl& base : klass.base_class_refs) {
         base.type_ref = substitute_type_ref(base.type_ref, substitutions);
-        base.type = substitute_type_ref_text(base.type_ref, {});
-    }
-    klass.base_classes.clear();
-    for (const BaseClassDecl& base : klass.base_class_refs) {
-        klass.base_classes.push_back(base.type);
     }
     for (FieldDecl& field : klass.fields) {
         field.type_ref = substitute_type_ref(field.type_ref, substitutions);

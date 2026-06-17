@@ -1,6 +1,7 @@
 #include "dudu/sema_super.hpp"
 
 #include "dudu/ast_expr.hpp"
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/sema_constructors.hpp"
 #include "dudu/sema_inheritance.hpp"
@@ -26,19 +27,19 @@ std::string super_base_type(const FunctionScope& scope, const SourceLocation* lo
     if (klass == scope.symbols.classes.end()) {
         return {};
     }
-    if (klass->second->base_classes.empty()) {
+    if (klass->second->base_class_refs.empty()) {
         if (location != nullptr) {
             fail(*location, "super access requires a base class");
         }
         return {};
     }
-    if (klass->second->base_classes.size() > 1) {
+    if (klass->second->base_class_refs.size() > 1) {
         if (location != nullptr) {
             fail(*location, "super access is ambiguous with multiple base classes");
         }
         return {};
     }
-    return klass->second->base_classes.front();
+    return type_ref_text(klass->second->base_class_refs.front().type_ref);
 }
 
 std::string super_init_base_type(const FunctionScope& scope, const SourceLocation* location) {
@@ -52,17 +53,18 @@ std::string super_init_base_type(const FunctionScope& scope, const SourceLocatio
     if (klass == scope.symbols.classes.end()) {
         return {};
     }
-    if (klass->second->base_classes.empty()) {
+    if (klass->second->base_class_refs.empty()) {
         if (location != nullptr) {
             fail(*location, "super access requires a base class");
         }
         return {};
     }
-    if (klass->second->base_classes.size() == 1) {
-        return klass->second->base_classes.front();
+    if (klass->second->base_class_refs.size() == 1) {
+        return type_ref_text(klass->second->base_class_refs.front().type_ref);
     }
     std::vector<std::string> storage_bases;
-    for (const std::string& base : klass->second->base_classes) {
+    for (const BaseClassDecl& base_decl : klass->second->base_class_refs) {
+        const std::string base = type_ref_text(base_decl.type_ref);
         if (class_type_has_instance_storage(scope.symbols, base)) {
             storage_bases.push_back(base);
         }

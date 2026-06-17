@@ -34,10 +34,8 @@ ClassDecl Parser::parse_class(const Token& start, Visibility visibility,
                     fail_current("expected base class name");
                 }
                 BaseClassDecl base_decl;
-                base_decl.type = base.text;
                 base_decl.type_ref = parse_type_piece(base);
                 base_decl.location = base.range.start;
-                klass.base_classes.push_back(base_decl.type);
                 klass.base_class_refs.push_back(std::move(base_decl));
                 if (match(TokenKind::Comma)) {
                     continue;

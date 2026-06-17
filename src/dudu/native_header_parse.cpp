@@ -82,20 +82,21 @@ std::string method_key(const FunctionDecl& fn) {
 
 void add_base_class(ClassDecl& klass, std::string base, const SourceLocation& location) {
     BaseClassDecl decl;
-    decl.type = std::move(base);
-    decl.type_ref = parse_type_text(decl.type, location);
+    decl.type_ref = parse_type_text(std::move(base), location);
     decl.location = location;
-    klass.base_classes.push_back(decl.type);
     klass.base_class_refs.push_back(std::move(decl));
 }
 
 void merge_class(ClassDecl& target, const ClassDecl& source) {
-    std::set<std::string> bases(target.base_classes.begin(), target.base_classes.end());
-    for (const BaseClassDecl& base : source.base_class_refs)
-        if (bases.insert(base.type).second) {
-            target.base_classes.push_back(base.type);
+    std::set<std::string> bases;
+    for (const BaseClassDecl& base : target.base_class_refs) {
+        bases.insert(type_ref_text(base.type_ref));
+    }
+    for (const BaseClassDecl& base : source.base_class_refs) {
+        if (bases.insert(type_ref_text(base.type_ref)).second) {
             target.base_class_refs.push_back(base);
         }
+    }
     std::set<std::string> fields;
     for (const FieldDecl& field : target.fields)
         fields.insert(field.name);

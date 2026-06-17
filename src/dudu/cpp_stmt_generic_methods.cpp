@@ -1,5 +1,6 @@
 #include "dudu/cpp_stmt_generic_methods.hpp"
 
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_expr_call_emit.hpp"
 #include "dudu/cpp_expr_emit.hpp"
 #include "dudu/cpp_lower.hpp"
@@ -31,7 +32,8 @@ std::optional<std::vector<TypeRef>> infer_expected_method_type_args(
         return infer_generic_method_type_args_from_type_refs(
             method, type + "." + method_name, arg_types, first_param, expected_type, nullptr);
     }
-    for (const std::string& base : klass->second->base_classes) {
+    for (const BaseClassDecl& base_decl : klass->second->base_class_refs) {
+        const std::string base = type_ref_text(base_decl.type_ref);
         if (const auto inferred = infer_expected_method_type_args(symbols, base, method_name,
                                                                   arg_types, expected_type)) {
             return inferred;
@@ -81,10 +83,9 @@ lower_expected_generic_method_call(const std::string& expected_type, const Expr&
         }
         arg_types.push_back(parse_type_text(arg_type, arg.location));
     }
-    const auto type_args = infer_expected_method_type_args(*symbols, receiver_type, member.name,
-                                                           arg_types,
-                                                           parse_type_text(expected_type,
-                                                                           expr.location));
+    const auto type_args =
+        infer_expected_method_type_args(*symbols, receiver_type, member.name, arg_types,
+                                        parse_type_text(expected_type, expr.location));
     if (!type_args) {
         return std::nullopt;
     }
