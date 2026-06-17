@@ -108,7 +108,8 @@ std::string assignment_target_type(FunctionScope& scope, const Stmt& stmt,
             !type.empty()) {
             return type;
         }
-        sema_fail(target_location, "unsupported assignment target: " + stmt.target_expr.text);
+        sema_fail(target_location,
+                  "unsupported assignment target: " + display_expr(stmt.target_expr));
     }
     if (stmt.target_expr.kind == ExprKind::Call ||
         stmt.target_expr.kind == ExprKind::TemplateCall) {
@@ -116,9 +117,10 @@ std::string assignment_target_type(FunctionScope& scope, const Stmt& stmt,
         return {};
     }
     if (stmt.target_expr.kind != ExprKind::Unknown) {
-        sema_fail(target_location, "unsupported assignment target: " + stmt.target_expr.text);
+        sema_fail(target_location,
+                  "unsupported assignment target: " + display_expr(stmt.target_expr));
     }
-    sema_fail(target_location, "unsupported assignment target: " + trim(stmt.target_expr.text));
+    sema_fail(target_location, "unsupported assignment target: " + display_expr(stmt.target_expr));
 }
 
 } // namespace dudu

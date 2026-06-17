@@ -527,6 +527,9 @@ Already structured:
   expression `TypeRef` nodes for swizzle receivers, call targets, `range`
   arguments, assert/raise payloads, expression statements, and void-return
   value checks
+- diagnostics and generated default assert messages now use an AST expression
+  display helper for structured nodes instead of reading raw expression text
+  directly
 - assignment compatibility for parsed explicit casts, value-wrapper
   assignments, and `Ok(...)`/`Err(...)` result construction inspects call
   expression nodes instead of rediscovering those forms from raw text

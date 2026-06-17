@@ -139,7 +139,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         if (has_expr(stmt.message_expr))
             out << lower_expr(stmt.message_expr, aliases, locals, symbols, options);
         else
-            out << cpp_string_literal("assert failed: " + stmt.condition_expr.text);
+            out << cpp_string_literal("assert failed: " + display_expr(stmt.condition_expr));
         out << "); }\n";
         return;
     }
@@ -220,8 +220,8 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                     << '}';
             } else {
                 out << " = "
-                    << lower_expr_as_type(type, stmt.value_expr, aliases, locals,
-                                          local_type_refs, function_returns, symbols, options);
+                    << lower_expr_as_type(type, stmt.value_expr, aliases, locals, local_type_refs,
+                                          function_returns, symbols, options);
             }
         } else {
             out << "{}";
@@ -254,9 +254,8 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
             } else {
                 const std::string value =
                     lower_expr(stmt.value_expr, aliases, locals, symbols, options);
-                const std::string inferred =
-                    infer_emitted_local_type(stmt.value_expr, locals, local_type_refs,
-                                             function_returns);
+                const std::string inferred = infer_emitted_local_type(
+                    stmt.value_expr, locals, local_type_refs, function_returns);
                 locals.emplace(lhs, inferred.empty() ? "auto" : inferred);
                 if (!inferred.empty()) {
                     local_type_refs.emplace(lhs, parse_type_text(inferred));
@@ -298,17 +297,15 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         return;
     }
     if (stmt.kind == StmtKind::Unknown) {
-        throw CompileError(stmt.location,
-                           "unsupported statement kind: " +
-                               std::string(statement_kind_name(stmt.kind)));
+        throw CompileError(stmt.location, "unsupported statement kind: " +
+                                              std::string(statement_kind_name(stmt.kind)));
     }
 }
 
 void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                     const std::vector<std::string>& aliases,
                     std::map<std::string, std::string>& locals,
-                    std::map<std::string, TypeRef>& local_type_refs,
-                    const std::string& return_type,
+                    std::map<std::string, TypeRef>& local_type_refs, const std::string& return_type,
                     const std::map<std::string, std::string>& function_returns,
                     const Symbols* symbols, const CppEmitOptions& options) {
     emit_source_comment(out, stmt, depth);
@@ -389,8 +386,8 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                 args.size() >= 3 ? lower_expr(args.at(2), aliases, locals, symbols, options) : "1";
             out << indent(depth) << "for (" << binding_type << ' ' << binding << " = " << start
                 << "; " << binding << " < " << end << "; " << binding << " += " << step << ") {\n";
-            emit_block(out, stmt.children, depth + 1, aliases, locals, local_type_refs,
-                       return_type, function_returns, symbols, options);
+            emit_block(out, stmt.children, depth + 1, aliases, locals, local_type_refs, return_type,
+                       function_returns, symbols, options);
             out << indent(depth) << "}\n";
             return;
         }

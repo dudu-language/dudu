@@ -609,6 +609,9 @@ push. They are not release packaging work.
    typed expression inference for swizzle receivers, call targets, `range`
    arguments, assert/raise payloads, expression statements, and void-return
    value checks.
+   Diagnostics and generated default assert messages now use an AST expression
+   display helper for structured nodes instead of reading raw expression text
+   directly.
 
 3. OOP Surface Cleanup
 

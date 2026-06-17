@@ -1,6 +1,9 @@
 #include "dudu/ast_expr.hpp"
 
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
+
+#include <sstream>
 
 namespace dudu {
 
@@ -105,6 +108,109 @@ std::string call_callee_text(const Expr& expr) {
         }
     }
     return trim_copy(expr.name);
+}
+
+std::string join_display_exprs(const std::vector<Expr>& exprs, std::string_view separator) {
+    std::ostringstream out;
+    for (size_t i = 0; i < exprs.size(); ++i) {
+        if (i > 0) {
+            out << separator;
+        }
+        out << display_expr(exprs[i]);
+    }
+    return out.str();
+}
+
+std::string display_template_args(const Expr& expr) {
+    std::ostringstream out;
+    bool first = true;
+    for (const TypeRef& type : expr.template_type_args) {
+        if (!first) {
+            out << ", ";
+        }
+        first = false;
+        out << substitute_type_ref_text(type, {});
+    }
+    for (const Expr& value : expr.template_args) {
+        if (!first) {
+            out << ", ";
+        }
+        first = false;
+        out << display_expr(value);
+    }
+    return out.str();
+}
+
+std::string display_call_expr(const Expr& expr) {
+    std::string callee = call_callee_text(expr);
+    if (callee.empty() && !expr.callee.empty()) {
+        callee = display_expr(expr.callee.front());
+    }
+    return callee + "(" + join_display_exprs(expr.children, ", ") + ")";
+}
+
+std::string display_expr(const Expr& expr) {
+    switch (expr.kind) {
+    case ExprKind::Name:
+        return expr.name;
+    case ExprKind::BoolLiteral:
+    case ExprKind::IntLiteral:
+    case ExprKind::FloatLiteral:
+    case ExprKind::StringLiteral:
+        return expr.text;
+    case ExprKind::NoneLiteral:
+        return "None";
+    case ExprKind::Unary:
+        return expr.children.empty() ? expr.op : expr.op + display_expr(expr.children.front());
+    case ExprKind::Binary:
+        return expr.children.size() == 2 ? display_expr(expr.children[0]) + " " + expr.op + " " +
+                                               display_expr(expr.children[1])
+                                         : trim_copy(expr.text);
+    case ExprKind::Call:
+        return display_call_expr(expr);
+    case ExprKind::TemplateCall:
+        return call_callee_text(expr) + "[" + display_template_args(expr) + "](" +
+               join_display_exprs(expr.children, ", ") + ")";
+    case ExprKind::Member:
+        return expr.children.size() == 1 ? display_expr(expr.children.front()) + "." + expr.name
+                                         : trim_copy(expr.text);
+    case ExprKind::Index:
+        return expr.children.size() == 2
+                   ? display_expr(expr.children[0]) + "[" + display_expr(expr.children[1]) + "]"
+                   : trim_copy(expr.text);
+    case ExprKind::ListLiteral:
+        return "[" + join_display_exprs(expr.children, ", ") + "]";
+    case ExprKind::SetLiteral:
+        return "{" + join_display_exprs(expr.children, ", ") + "}";
+    case ExprKind::TupleLiteral:
+        return "(" + join_display_exprs(expr.children, ", ") + ")";
+    case ExprKind::DictEntry:
+        return expr.children.size() == 2
+                   ? display_expr(expr.children[0]) + ": " + display_expr(expr.children[1])
+                   : trim_copy(expr.text);
+    case ExprKind::DictLiteral:
+        return "{" + join_display_exprs(expr.children, ", ") + "}";
+    case ExprKind::NamedArg:
+        return expr.children.size() == 1 ? expr.name + "=" + display_expr(expr.children.front())
+                                         : trim_copy(expr.text);
+    case ExprKind::Slice:
+        if (expr.children.empty()) {
+            return ":";
+        }
+        if (expr.children.size() == 2) {
+            return (expr_missing(expr.children[0]) ? "" : display_expr(expr.children[0])) + ":" +
+                   (expr_missing(expr.children[1]) ? "" : display_expr(expr.children[1]));
+        }
+        return trim_copy(expr.text);
+    case ExprKind::Conditional:
+    case ExprKind::Lambda:
+    case ExprKind::Await:
+    case ExprKind::Yield:
+    case ExprKind::CppEscape:
+    case ExprKind::Unknown:
+        return trim_copy(expr.text);
+    }
+    return trim_copy(expr.text);
 }
 
 } // namespace dudu
