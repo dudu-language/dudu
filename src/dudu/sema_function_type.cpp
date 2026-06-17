@@ -45,6 +45,10 @@ TypeRef signature_return_type_ref(const FunctionSignature& signature) {
     return parse_type_text(signature.return_type.empty() ? "void" : signature.return_type);
 }
 
+std::string signature_return_type_text(const FunctionSignature& signature) {
+    return substitute_type_ref_text(signature_return_type_ref(signature), {});
+}
+
 bool parse_function_type(std::string type, FunctionSignature& out) {
     return parse_function_type(parse_type_text(type), out);
 }

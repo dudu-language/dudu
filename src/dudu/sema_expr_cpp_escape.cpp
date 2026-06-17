@@ -90,14 +90,14 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
         if (const auto fn = scope.symbols.function_signatures.find(callee);
             fn != scope.symbols.function_signatures.end()) {
             check_call_args_ast(scope, callee, fn->second, args, location);
-            return fn->second.return_type;
+            return signature_return_type_text(fn->second);
         }
         if (const auto signature = native_signature_for_call(
                 scope, callee, args, location, infer_expr_type_ast,
                 [&](const std::string& expected, const Expr& value, const std::string& got) {
                     return can_assign_ast(scope, expected, value, got);
                 })) {
-            return signature->return_type;
+            return signature_return_type_text(*signature);
         }
         if (!is_local_member_call(scope, callee) && callee.find('.') == std::string::npos &&
             known_type(scope.symbols, callee)) {
@@ -107,7 +107,7 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
             FunctionSignature signature;
             if (parse_local_function_type(scope, callee, local->second, signature)) {
                 check_call_args_ast(scope, callee, signature, args, location);
-                return signature.return_type;
+                return signature_return_type_text(signature);
             }
         }
         const size_t method_dot = callee.rfind('.');
@@ -119,7 +119,7 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
                 static_method_signature_for_type(scope.symbols, receiver, method_name, signature,
                                                  location)) {
                 check_call_args_ast(scope, callee, signature, args, location);
-                return signature.return_type;
+                return signature_return_type_text(signature);
             }
             const std::string receiver_type =
                 member_path_type_from_string(scope.symbols, scope.locals, nullptr, receiver, "");
@@ -136,7 +136,7 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
                     method_signatures_for_type(scope.symbols, receiver_type, method_name);
                 if (const auto match = matching_signature_ast(scope, signatures, args)) {
                     check_call_args_ast(scope, callee, *match, args, location);
-                    return match->return_type;
+                    return signature_return_type_text(*match);
                 }
                 if (foreign_cpp_type_name(scope.symbols,
                                           resolve_alias(scope.symbols, receiver_type))) {
@@ -146,7 +146,7 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
                     return "auto";
                 }
                 check_call_args_ast(scope, callee, signature, args, location);
-                return signature.return_type;
+                return signature_return_type_text(signature);
             }
         }
         if (method_dot != std::string::npos) {
@@ -157,7 +157,7 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
                 if (method_signature_for_type(scope.symbols, local->second, method_name, signature,
                                               nullptr)) {
                     check_call_args_ast(scope, callee, signature, args, location);
-                    return signature.return_type;
+                    return signature_return_type_text(signature);
                 }
             }
             if (const auto local = scope.locals.find(prefix);

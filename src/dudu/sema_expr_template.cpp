@@ -128,7 +128,7 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
         }
         const FunctionSignature signature = instantiate_generic_signature(*fn->second, type_args);
         check_call_args_ast(scope, callee, signature, expr.children, location);
-        return signature.return_type;
+        return signature_return_type_text(signature);
     }
 
     if (const auto klass = scope.symbols.classes.find(resolve_alias(scope.symbols, callee_base));
@@ -165,7 +165,7 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
             [&](const std::string& expected, const Expr& value, const std::string& got) {
                 return can_assign_ast(scope, expected, value, got);
             })) {
-        return signature->return_type;
+        return signature_return_type_text(*signature);
     }
     if (!expr.callee.empty() && expr.callee.front().kind == ExprKind::Member &&
         expr.callee.front().children.size() == 1) {
@@ -178,7 +178,7 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
             static_method_signature_for_type(scope.symbols, scope.current_class, method_name,
                                              signature, location)) {
             check_call_args_ast(scope, callee, signature, expr.children, location);
-            return signature.return_type;
+            return signature_return_type_text(signature);
         }
         if (receiver_expr.kind == ExprKind::Name && receiver_expr.name != "class" &&
             !scope.locals.contains(receiver_expr.name) &&
@@ -186,7 +186,7 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
             static_method_signature_for_type(scope.symbols, receiver_expr.name, method_name,
                                              signature, location)) {
             check_call_args_ast(scope, callee, signature, expr.children, location);
-            return signature.return_type;
+            return signature_return_type_text(signature);
         }
         const bool bare_nonlocal_receiver =
             receiver_expr.kind == ExprKind::Name && !scope.locals.contains(receiver_expr.name);
@@ -207,10 +207,10 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
                     method_signatures_for_type(scope.symbols, receiver_type, method_name);
                 if (const auto match = matching_signature_ast(scope, signatures, expr.children)) {
                     check_call_args_ast(scope, callee, *match, expr.children, location);
-                    return match->return_type;
+                    return signature_return_type_text(*match);
                 }
                 check_call_args_ast(scope, callee, signature, expr.children, location);
-                return signature.return_type;
+                return signature_return_type_text(signature);
             }
             if (foreign_receiver) {
                 for (const Expr& arg : expr.children) {

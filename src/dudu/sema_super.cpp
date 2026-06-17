@@ -4,6 +4,7 @@
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/sema_constructors.hpp"
+#include "dudu/sema_function_type.hpp"
 #include "dudu/sema_inheritance.hpp"
 #include "dudu/sema_methods.hpp"
 #include "dudu/source.hpp"
@@ -142,10 +143,10 @@ std::string infer_super_call_ast(const FunctionScope& scope, const Expr& expr,
         method_signatures_for_type(scope.symbols, base, method_name);
     if (const auto match = callbacks.matching_signature(scope, signatures, expr.children)) {
         callbacks.check_call_args(scope, callee, *match, expr.children, location);
-        return match->return_type;
+        return signature_return_type_text(*match);
     }
     callbacks.check_call_args(scope, callee, signature, expr.children, location);
-    return signature.return_type;
+    return signature_return_type_text(signature);
 }
 
 } // namespace dudu

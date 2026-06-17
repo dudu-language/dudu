@@ -303,7 +303,7 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                 check_call_args_ast(scope, expr.op, *signature, std::vector<Expr>{expr.children[1]},
                                     use_location);
             }
-            return signature->return_type;
+            return signature_return_type_text(*signature);
         }
         if (use_location != nullptr && !left.empty() && !right.empty() &&
             !binary_rhs_allowed(scope.symbols, expr.op, left, expr.children[1], right)) {

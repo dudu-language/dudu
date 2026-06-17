@@ -5,6 +5,7 @@
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/sema_common.hpp"
+#include "dudu/sema_function_type.hpp"
 #include "dudu/sema_ops.hpp"
 #include "dudu/type_compat.hpp"
 
@@ -196,7 +197,7 @@ std::string indexed_type_from_type_with_count(const Symbols& symbols,
         return dict_args[1];
     }
     if (const auto signature = dudu_operator_signature(symbols, "[]", type)) {
-        return signature->return_type;
+        return signature_return_type_text(*signature);
     }
     if (type_ref.kind == TypeKind::Template && type_ref.children.size() == 1) {
         return substitute_type_ref_text(type_ref.children.front(), {});

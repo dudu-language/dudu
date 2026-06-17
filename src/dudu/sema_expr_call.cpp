@@ -68,20 +68,20 @@ std::string infer_call_ast(const FunctionScope& scope, const Expr& expr,
             const FunctionSignature signature =
                 instantiate_generic_signature(*generic_fn->second, *type_args);
             check_call_args_ast(scope, callee, signature, expr.children, use_location);
-            return signature.return_type;
+            return signature_return_type_text(signature);
         }
     }
     if (const auto fn = scope.symbols.function_signatures.find(callee);
         fn != scope.symbols.function_signatures.end()) {
         check_call_args_ast(scope, callee, fn->second, expr.children, use_location);
-        return fn->second.return_type;
+        return signature_return_type_text(fn->second);
     }
     if (const auto signature = native_signature_for_call(
             scope, callee, expr.children, use_location, infer_expr_type_ast,
             [&](const std::string& expected, const Expr& value, const std::string& got) {
                 return can_assign_ast(scope, expected, value, got);
             })) {
-        return signature->return_type;
+        return signature_return_type_text(*signature);
     }
     if (known_template_constructor_type(scope, callee)) {
         return infer_constructor_call_ast(scope, expr, callee, use_location);
@@ -90,7 +90,7 @@ std::string infer_call_ast(const FunctionScope& scope, const Expr& expr,
         FunctionSignature signature;
         if (parse_local_function_type(scope, callee, local->second, signature)) {
             check_call_args_ast(scope, callee, signature, expr.children, use_location);
-            return signature.return_type;
+            return signature_return_type_text(signature);
         }
     }
     if (is_builtin_call(callee)) {
@@ -106,7 +106,7 @@ std::string infer_call_ast(const FunctionScope& scope, const Expr& expr,
             if (static_method_signature_for_type(scope.symbols, scope.current_class, member.name,
                                                  signature, use_location)) {
                 check_call_args_ast(scope, callee, signature, expr.children, use_location);
-                return signature.return_type;
+                return signature_return_type_text(signature);
             }
         }
         if (receiver_expr.kind == ExprKind::Name && receiver_expr.name != "class" &&
@@ -116,7 +116,7 @@ std::string infer_call_ast(const FunctionScope& scope, const Expr& expr,
             if (static_method_signature_for_type(scope.symbols, receiver_expr.name, member.name,
                                                  signature, use_location)) {
                 check_call_args_ast(scope, callee, signature, expr.children, use_location);
-                return signature.return_type;
+                return signature_return_type_text(signature);
             }
         }
         const bool bare_nonlocal_receiver =
@@ -149,7 +149,7 @@ std::string infer_call_ast(const FunctionScope& scope, const Expr& expr,
                                  return can_assign_ast(nested, expected, value, got);
                              }})) {
                     check_call_args_ast(scope, callee, *inferred, expr.children, use_location);
-                    return inferred->return_type;
+                    return signature_return_type_text(*inferred);
                 }
             }
             if (method_signature_for_type(scope.symbols, receiver_type, member.name, signature,
@@ -158,10 +158,10 @@ std::string infer_call_ast(const FunctionScope& scope, const Expr& expr,
                     method_signatures_for_type(scope.symbols, receiver_type, member.name);
                 if (const auto match = matching_signature_ast(scope, signatures, expr.children)) {
                     check_call_args_ast(scope, callee, *match, expr.children, use_location);
-                    return match->return_type;
+                    return signature_return_type_text(*match);
                 }
                 check_call_args_ast(scope, callee, signature, expr.children, use_location);
-                return signature.return_type;
+                return signature_return_type_text(signature);
             }
             if (foreign_receiver) {
                 for (const Expr& arg : expr.children) {

@@ -1470,6 +1470,10 @@ LSP source edits are also moving to AST-owned ranges:
 - LSP diagnostic source labels now route from structured error codes such as
   `dudu.parser.*`, `dudu.lexer.*`, and `dudu.sema.*` instead of classifying
   diagnostics by searching human-readable error text.
+- Call, method, operator, local function, template call, super call, and
+  indexing inference now read `FunctionSignature` return types through the
+  structured `return_type_ref` helper first, falling back to native text
+  signatures only when imported metadata has no parsed type reference.
 
 Expression parsing has moved onto the lexer/token stream:
 
