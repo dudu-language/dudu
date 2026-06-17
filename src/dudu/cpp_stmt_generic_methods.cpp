@@ -45,13 +45,13 @@ std::optional<std::vector<TypeRef>> infer_expected_method_type_args(
 } // namespace
 
 std::optional<std::string>
-lower_expected_generic_method_call(const std::string& expected_type, const Expr& expr,
+lower_expected_generic_method_call(const TypeRef& expected_type, const Expr& expr,
                                    const std::vector<std::string>& aliases,
                                    const std::map<std::string, std::string>& locals,
                                    const std::map<std::string, TypeRef>& local_type_refs,
                                    const std::map<std::string, TypeRef>& function_returns,
                                    const Symbols* symbols, const CppEmitOptions& options) {
-    if (symbols == nullptr || expected_type.empty() || expr.kind != ExprKind::Call ||
+    if (symbols == nullptr || !has_type_ref(expected_type) || expr.kind != ExprKind::Call ||
         expr.callee.empty() || expr.callee.front().kind != ExprKind::Member ||
         expr.callee.front().children.size() != 1) {
         return std::nullopt;
@@ -83,9 +83,8 @@ lower_expected_generic_method_call(const std::string& expected_type, const Expr&
         }
         arg_types.push_back(arg_type);
     }
-    const auto type_args =
-        infer_expected_method_type_args(*symbols, receiver_type, member.name, arg_types,
-                                        parse_type_text(expected_type, expr.location));
+    const auto type_args = infer_expected_method_type_args(*symbols, receiver_type, member.name,
+                                                           arg_types, expected_type);
     if (!type_args) {
         return std::nullopt;
     }

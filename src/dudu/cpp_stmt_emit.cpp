@@ -88,18 +88,28 @@ std::string lower_declared_stmt_type(const TypeRef& type, const std::vector<std:
     return lower_cpp_type(type, aliases, options);
 }
 
-std::string lower_expr_as_type(const std::string& expected_type, const Expr& expr,
-                               const std::vector<std::string>& aliases,
-                               const std::map<std::string, std::string>& locals,
-                               const std::map<std::string, TypeRef>& local_type_refs,
-                               const std::map<std::string, TypeRef>& function_returns,
-                               const Symbols* symbols, const CppEmitOptions& options) {
+std::string lower_expr_as_type_ref(const TypeRef& expected_type, const Expr& expr,
+                                   const std::vector<std::string>& aliases,
+                                   const std::map<std::string, std::string>& locals,
+                                   const std::map<std::string, TypeRef>& local_type_refs,
+                                   const std::map<std::string, TypeRef>& function_returns,
+                                   const Symbols* symbols, const CppEmitOptions& options) {
     if (const auto call = lower_expected_generic_method_call(expected_type, expr, aliases, locals,
                                                              local_type_refs, function_returns,
                                                              symbols, options)) {
         return *call;
     }
     return lower_expr(expr, aliases, locals, symbols, options);
+}
+
+std::string lower_expr_as_type(const std::string& expected_type, const Expr& expr,
+                               const std::vector<std::string>& aliases,
+                               const std::map<std::string, std::string>& locals,
+                               const std::map<std::string, TypeRef>& local_type_refs,
+                               const std::map<std::string, TypeRef>& function_returns,
+                               const Symbols* symbols, const CppEmitOptions& options) {
+    return lower_expr_as_type_ref(parse_type_text(expected_type, expr.location), expr, aliases,
+                                  locals, local_type_refs, function_returns, symbols, options);
 }
 
 bool is_template_type(const TypeRef& type, std::string_view name) {
@@ -256,8 +266,8 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                     << '}';
             } else {
                 out << " = "
-                    << lower_expr_as_type(type.text, stmt.value_expr, aliases, locals,
-                                          local_type_refs, function_returns, symbols, options);
+                    << lower_expr_as_type_ref(type.ref, stmt.value_expr, aliases, locals,
+                                              local_type_refs, function_returns, symbols, options);
             }
         } else {
             out << "{}";

@@ -13,7 +13,7 @@ namespace dudu {
 struct Symbols;
 
 std::optional<std::string>
-lower_expected_generic_method_call(const std::string& expected_type, const Expr& expr,
+lower_expected_generic_method_call(const TypeRef& expected_type, const Expr& expr,
                                    const std::vector<std::string>& aliases,
                                    const std::map<std::string, std::string>& locals,
                                    const std::map<std::string, TypeRef>& local_type_refs,

@@ -1547,6 +1547,9 @@ LSP source edits are also moving to AST-owned ranges:
   inferred `auto` locals and generic method argument matching can preserve
   structured type metadata instead of rendering inferred type strings and
   immediately parsing them back.
+- Expected-type generic method lowering now accepts parsed `TypeRef` metadata,
+  so declared local initializers can infer generic method template arguments
+  without reparsing the declared type text.
 
 Expression parsing has moved onto the lexer/token stream:
 
