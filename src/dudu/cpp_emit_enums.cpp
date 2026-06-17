@@ -19,13 +19,15 @@ bool enum_has_payload_fields(const EnumDecl& en) {
 
 } // namespace
 
-void emit_enum_forward_declarations(std::ostringstream& out, const ModuleAst& module) {
+void emit_enum_forward_declarations(std::ostringstream& out, const ModuleAst& module,
+                                    const CppEmitOptions& options) {
     for (const EnumDecl& en : module.enums) {
+        const std::string& name = emitted_name(en, options);
         if (enum_has_payload_fields(en)) {
-            out << "struct " << en.name << ";\n";
+            out << "struct " << name << ";\n";
             continue;
         }
-        out << "enum class " << en.name;
+        out << "enum class " << name;
         if (!en.underlying_type.empty()) {
             out << " : " << lower_cpp_type(en.underlying_type_ref);
         }
@@ -37,10 +39,11 @@ void emit_enum_forward_declarations(std::ostringstream& out, const ModuleAst& mo
 }
 
 void emit_enums(std::ostringstream& out, const ModuleAst& module,
-                const std::vector<std::string>& aliases) {
+                const std::vector<std::string>& aliases, const CppEmitOptions& options) {
     for (const EnumDecl& en : module.enums) {
+        const std::string& name = emitted_name(en, options);
         if (enum_has_payload_fields(en)) {
-            out << "struct " << en.name << " {\n";
+            out << "struct " << name << " {\n";
             for (const EnumValueDecl& value : en.values) {
                 out << "    struct " << value.name << " {\n";
                 for (const EnumPayloadField& field : value.payload_fields) {
@@ -60,7 +63,7 @@ void emit_enums(std::ostringstream& out, const ModuleAst& module,
             out << "};\n\n";
             continue;
         }
-        out << "enum class " << en.name;
+        out << "enum class " << name;
         if (!en.underlying_type.empty()) {
             out << " : " << lower_cpp_type(en.underlying_type_ref, aliases);
         }

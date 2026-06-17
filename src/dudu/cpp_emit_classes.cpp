@@ -126,7 +126,9 @@ std::string operator_name(const FunctionDecl& method) {
     return method.name;
 }
 
-std::string class_opening(const ClassDecl& klass, const std::vector<std::string>& aliases) {
+std::string class_opening(const ClassDecl& klass, const std::vector<std::string>& aliases,
+                          const CppEmitOptions& options) {
+    const std::string& class_name = emitted_name(klass, options);
     auto with_bases = [&](std::string opening) {
         if (klass.base_classes.empty()) {
             return opening;
@@ -144,15 +146,15 @@ std::string class_opening(const ClassDecl& klass, const std::vector<std::string>
     const std::string alignment = decorator_arg(klass, "align");
     if (packed && !alignment.empty()) {
         return with_bases("struct __attribute__((packed, aligned(" + alignment + "))) " +
-                          klass.name);
+                          class_name);
     }
     if (packed) {
-        return with_bases("struct __attribute__((packed)) " + klass.name);
+        return with_bases("struct __attribute__((packed)) " + class_name);
     }
     if (!alignment.empty()) {
-        return with_bases("struct alignas(" + alignment + ") " + klass.name);
+        return with_bases("struct alignas(" + alignment + ") " + class_name);
     }
-    return with_bases("struct " + klass.name);
+    return with_bases("struct " + class_name);
 }
 
 const Expr* super_init_expr(const FunctionDecl& method) {
@@ -261,7 +263,8 @@ std::string_view class_section_for_method(Visibility visibility) {
     return visibility == Visibility::Private ? "private" : "public";
 }
 
-void emit_method(std::ostringstream& out, const std::string& class_name, const FunctionDecl& method,
+void emit_method(std::ostringstream& out, const std::string& class_name,
+                 const std::string& source_class_name, const FunctionDecl& method,
                  const std::vector<std::string>& aliases,
                  const std::map<std::string, std::string>& function_returns,
                  const Symbols& symbols) {
@@ -271,7 +274,7 @@ void emit_method(std::ostringstream& out, const std::string& class_name, const F
     if (is_constructor_method(method)) {
         out << "    " << class_name << '(';
     } else if (is_destructor_method(method)) {
-        const auto klass = symbols.classes.find(class_name);
+        const auto klass = symbols.classes.find(source_class_name);
         if (klass != symbols.classes.end() && class_is_polymorphic(symbols, *klass->second)) {
             out << "    virtual ";
         } else {
@@ -302,7 +305,7 @@ void emit_method(std::ostringstream& out, const std::string& class_name, const F
     }
     std::map<std::string, std::string> locals;
     locals["class"] = class_name;
-    const auto klass = symbols.classes.find(class_name);
+    const auto klass = symbols.classes.find(source_class_name);
     if (klass != symbols.classes.end() && klass->second->base_classes.size() == 1) {
         locals["super"] = klass->second->base_classes.front();
     }
@@ -372,14 +375,15 @@ void emit_class_constant_definition(std::ostringstream& out, const std::string& 
 void emit_classes(std::ostringstream& out, const ModuleAst& module,
                   const std::vector<std::string>& aliases,
                   const std::map<std::string, std::string>& function_returns,
-                  const Symbols& symbols, bool header_only) {
+                  const Symbols& symbols, bool header_only, const CppEmitOptions& options) {
     for (const size_t index : class_emit_order(module.classes)) {
         const ClassDecl& klass = module.classes[index];
+        const std::string& class_name = emitted_name(klass, options);
         if (header_only && !visible_in_header(klass.visibility)) {
             continue;
         }
         emit_template_params(out, klass.generic_params);
-        out << class_opening(klass, aliases) << " {\n";
+        out << class_opening(klass, aliases, options) << " {\n";
         for (const FieldDecl& field : klass.fields) {
             out << "    " << lower_cpp_type(field.type_ref, aliases) << ' ' << field.name;
             if (field.value.empty()) {
@@ -397,7 +401,7 @@ void emit_classes(std::ostringstream& out, const ModuleAst& module,
             emit_class_constant_decl(out, constant, aliases);
         }
         if (class_is_polymorphic(symbols, klass) && !has_drop_method(klass)) {
-            out << "    virtual ~" << klass.name << "() = default;\n";
+            out << "    virtual ~" << class_name << "() = default;\n";
         }
         std::string_view current_section = "public";
         for (const FunctionDecl& method : klass.methods) {
@@ -406,11 +410,11 @@ void emit_classes(std::ostringstream& out, const ModuleAst& module,
                 out << method_section << ":\n";
                 current_section = method_section;
             }
-            emit_method(out, klass.name, method, aliases, function_returns, symbols);
+            emit_method(out, class_name, klass.name, method, aliases, function_returns, symbols);
         }
         out << "};\n\n";
         for (const ConstDecl& constant : klass.constants) {
-            emit_class_constant_definition(out, klass.name, constant, aliases);
+            emit_class_constant_definition(out, class_name, constant, aliases);
         }
         if (!klass.constants.empty()) {
             out << '\n';

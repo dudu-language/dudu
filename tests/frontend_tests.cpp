@@ -295,6 +295,12 @@ void test_cpp_module_artifacts_preserve_module_boundaries() {
     assert(by_path.at("camera.cpp").find("// dudu module: camera") != std::string::npos);
     assert(by_path.at(std::filesystem::path("renderer") / "camera.cpp")
                .find("// dudu module: renderer.camera") != std::string::npos);
+    assert(by_path.at("camera.cpp").find("struct DuduCameraCamera") != std::string::npos);
+    assert(by_path.at(std::filesystem::path("renderer") / "camera.cpp")
+               .find("struct DuduRendererCameraCamera") != std::string::npos);
+    assert(by_path.at("camera.hpp").find("struct DuduCameraCamera") != std::string::npos);
+    assert(by_path.at(std::filesystem::path("renderer") / "camera.hpp")
+               .find("struct DuduRendererCameraCamera") != std::string::npos);
 }
 
 void test_canonical_examples_parse(const std::filesystem::path& root) {

@@ -26,7 +26,7 @@ std::filesystem::path module_artifact_base(const ModuleAst& module) {
 std::string source_with_boundary_comment(const ModuleAst& unit) {
     std::ostringstream out;
     out << "// dudu module: " << (unit.module_path.empty() ? "main" : unit.module_path) << "\n";
-    out << emit_cpp_source(unit);
+    out << emit_cpp_source(unit, {.use_generated_names = true});
     return out.str();
 }
 
@@ -35,7 +35,7 @@ void append_artifacts(std::vector<CppModuleArtifact>& out, const ModuleAst& unit
     out.push_back({.path = base.string() + ".hpp",
                    .module_path = unit.module_path,
                    .kind = CppModuleArtifactKind::Header,
-                   .content = emit_cpp_header(unit)});
+                   .content = emit_cpp_header(unit, {.use_generated_names = true})});
     out.push_back({.path = base.string() + ".cpp",
                    .module_path = unit.module_path,
                    .kind = CppModuleArtifactKind::Source,

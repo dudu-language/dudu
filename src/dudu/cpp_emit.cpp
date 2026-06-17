@@ -16,9 +16,10 @@
 
 namespace dudu {
 namespace {
-void emit_aliases(std::ostringstream& out, const ModuleAst& module) {
+void emit_aliases(std::ostringstream& out, const ModuleAst& module, const CppEmitOptions& options) {
     for (const TypeAliasDecl& alias : module.aliases) {
-        out << "using " << alias.name << " = " << lower_cpp_type(alias.type_ref) << ";\n";
+        out << "using " << emitted_name(alias, options) << " = " << lower_cpp_type(alias.type_ref)
+            << ";\n";
     }
     if (!module.aliases.empty()) {
         out << '\n';
@@ -111,17 +112,17 @@ std::map<std::string, std::string> function_return_types(const ModuleAst& module
 }
 
 void emit_constants(std::ostringstream& out, const ModuleAst& module,
-                    const std::vector<std::string>& aliases) {
+                    const std::vector<std::string>& aliases, const CppEmitOptions& options) {
     for (const ConstDecl& constant : module.constants) {
+        const std::string& name = emitted_name(constant, options);
         const std::string lowered_type = lower_cpp_type(constant.type_ref, aliases);
         const bool runtime_address = constant.type.find('*') != std::string::npos ||
                                      constant.type.find("volatile") != std::string::npos;
         out << "inline ";
         if (runtime_address && constant.type.find('*') != std::string::npos) {
-            out << lowered_type << " const " << constant.name;
+            out << lowered_type << " const " << name;
         } else {
-            out << (runtime_address ? "const " : "constexpr ") << lowered_type << ' '
-                << constant.name;
+            out << (runtime_address ? "const " : "constexpr ") << lowered_type << ' ' << name;
         }
         out << " = " << lower_cpp_expr_ast(constant.value_expr, aliases) << ";\n";
     }
@@ -141,7 +142,8 @@ void emit_static_asserts(std::ostringstream& out, const ModuleAst& module,
 }
 
 void emit_function_signature(std::ostringstream& out, const FunctionDecl& fn,
-                             const std::vector<std::string>& aliases) {
+                             const std::vector<std::string>& aliases,
+                             const CppEmitOptions& options = {}) {
     if (function_has_decorator(fn, "extern_c")) {
         out << "extern \"C\" ";
     }
@@ -171,7 +173,7 @@ void emit_function_signature(std::ostringstream& out, const FunctionDecl& fn,
     if (function_has_decorator(fn, "constexpr")) {
         out << "constexpr ";
     }
-    out << lower_cpp_type(fn.return_type_ref, aliases) << ' ' << fn.name << '(';
+    out << lower_cpp_type(fn.return_type_ref, aliases) << ' ' << emitted_name(fn, options) << '(';
     for (size_t i = 0; i < fn.params.size(); ++i) {
         if (i > 0) {
             out << ", ";
@@ -184,9 +186,9 @@ void emit_function_signature(std::ostringstream& out, const FunctionDecl& fn,
 void emit_function_body(std::ostringstream& out, const FunctionDecl& fn,
                         const std::vector<std::string>& aliases,
                         const std::map<std::string, std::string>& function_returns,
-                        const Symbols& symbols) {
+                        const Symbols& symbols, const CppEmitOptions& options = {}) {
     emit_template_params(out, fn.generic_params);
-    emit_function_signature(out, fn, aliases);
+    emit_function_signature(out, fn, aliases, options);
     out << " {\n";
     std::map<std::string, std::string> locals;
     for (const ParamDecl& param : fn.params) {
@@ -202,7 +204,7 @@ bool should_emit_function(const FunctionDecl& fn, bool test_source) {
 
 void emit_function_declarations(std::ostringstream& out, const ModuleAst& module,
                                 const std::vector<std::string>& aliases, bool header_only,
-                                bool test_source = false) {
+                                bool test_source = false, const CppEmitOptions& options = {}) {
     bool emitted = false;
     for (const FunctionDecl& fn : module.functions) {
         if (!should_emit_function(fn, test_source)) {
@@ -212,7 +214,7 @@ void emit_function_declarations(std::ostringstream& out, const ModuleAst& module
             continue;
         }
         emit_template_params(out, fn.generic_params);
-        emit_function_signature(out, fn, aliases);
+        emit_function_signature(out, fn, aliases, options);
         out << ";\n";
         emitted = true;
     }
@@ -221,13 +223,14 @@ void emit_function_declarations(std::ostringstream& out, const ModuleAst& module
     }
 }
 
-void emit_class_forward_declarations(std::ostringstream& out, const ModuleAst& module) {
+void emit_class_forward_declarations(std::ostringstream& out, const ModuleAst& module,
+                                     const CppEmitOptions& options = {}) {
     if (module.classes.empty()) {
         return;
     }
     for (const ClassDecl& klass : module.classes) {
         emit_template_params(out, klass.generic_params);
-        out << "struct " << klass.name << ";\n";
+        out << "struct " << emitted_name(klass, options) << ";\n";
     }
     out << '\n';
 }
@@ -235,7 +238,8 @@ void emit_class_forward_declarations(std::ostringstream& out, const ModuleAst& m
 void emit_early_functions(std::ostringstream& out, const ModuleAst& module,
                           const std::vector<std::string>& aliases,
                           const std::map<std::string, std::string>& function_returns,
-                          const Symbols& symbols, bool header_only, bool test_source = false) {
+                          const Symbols& symbols, bool header_only, bool test_source = false,
+                          const CppEmitOptions& options = {}) {
     for (const FunctionDecl& fn : module.functions) {
         if (!emit_before_constants(fn) || !should_emit_function(fn, test_source)) {
             continue;
@@ -243,7 +247,7 @@ void emit_early_functions(std::ostringstream& out, const ModuleAst& module,
         if (header_only && !visible_function_in_header(fn)) {
             continue;
         }
-        emit_function_body(out, fn, aliases, function_returns, symbols);
+        emit_function_body(out, fn, aliases, function_returns, symbols, options);
     }
 }
 
@@ -361,7 +365,7 @@ void emit_test_harness(std::ostringstream& out, const ModuleAst& module, const s
 
 } // namespace
 
-std::string emit_cpp_header(const ModuleAst& module) {
+std::string emit_cpp_header(const ModuleAst& module, const CppEmitOptions& options) {
     std::ostringstream out;
     const std::vector<std::string> aliases = namespace_aliases(module);
     const std::map<std::string, std::string> function_returns = function_return_types(module);
@@ -370,12 +374,12 @@ std::string emit_cpp_header(const ModuleAst& module) {
     emit_includes(out, module);
     emit_result_prelude(out, module);
 
-    emit_aliases(out, module);
-    emit_enum_forward_declarations(out, module);
-    emit_classes(out, module, aliases, function_returns, symbols, true);
-    emit_enums(out, module, aliases);
-    emit_early_functions(out, module, aliases, function_returns, symbols, true);
-    emit_constants(out, module, aliases);
+    emit_aliases(out, module, options);
+    emit_enum_forward_declarations(out, module, options);
+    emit_classes(out, module, aliases, function_returns, symbols, true, options);
+    emit_enums(out, module, aliases, options);
+    emit_early_functions(out, module, aliases, function_returns, symbols, true, false, options);
+    emit_constants(out, module, aliases, options);
 
     for (const FunctionDecl& fn : module.functions) {
         if (emit_before_constants(fn)) {
@@ -385,11 +389,15 @@ std::string emit_cpp_header(const ModuleAst& module) {
             continue;
         }
         emit_template_params(out, fn.generic_params);
-        emit_function_signature(out, fn, aliases);
+        emit_function_signature(out, fn, aliases, options);
         out << ";\n";
     }
     emit_static_asserts(out, module, aliases);
     return out.str();
+}
+
+std::string emit_cpp_header(const ModuleAst& module) {
+    return emit_cpp_header(module, {});
 }
 
 std::string emit_c_header(const ModuleAst& module) {
@@ -423,7 +431,7 @@ std::string emit_c_header(const ModuleAst& module) {
     return out.str();
 }
 
-std::string emit_cpp_source(const ModuleAst& module) {
+std::string emit_cpp_source(const ModuleAst& module, const CppEmitOptions& options) {
     std::ostringstream out;
     const std::vector<std::string> aliases = namespace_aliases(module);
     const std::map<std::string, std::string> function_returns = function_return_types(module);
@@ -431,23 +439,27 @@ std::string emit_cpp_source(const ModuleAst& module) {
     emit_includes(out, module);
     emit_result_prelude(out, module);
 
-    emit_aliases(out, module);
-    emit_enum_forward_declarations(out, module);
-    emit_class_forward_declarations(out, module);
-    emit_function_declarations(out, module, aliases, false);
-    emit_classes(out, module, aliases, function_returns, symbols);
-    emit_enums(out, module, aliases);
-    emit_early_functions(out, module, aliases, function_returns, symbols, false);
-    emit_constants(out, module, aliases);
+    emit_aliases(out, module, options);
+    emit_enum_forward_declarations(out, module, options);
+    emit_class_forward_declarations(out, module, options);
+    emit_function_declarations(out, module, aliases, false, false, options);
+    emit_classes(out, module, aliases, function_returns, symbols, false, options);
+    emit_enums(out, module, aliases, options);
+    emit_early_functions(out, module, aliases, function_returns, symbols, false, false, options);
+    emit_constants(out, module, aliases, options);
 
     for (const FunctionDecl& fn : module.functions) {
         if (emit_before_constants(fn)) {
             continue;
         }
-        emit_function_body(out, fn, aliases, function_returns, symbols);
+        emit_function_body(out, fn, aliases, function_returns, symbols, options);
     }
     emit_static_asserts(out, module, aliases);
     return out.str();
+}
+
+std::string emit_cpp_source(const ModuleAst& module) {
+    return emit_cpp_source(module, {});
 }
 
 std::string emit_cpp_test_source(const ModuleAst& module, const std::string& filter,
@@ -459,14 +471,14 @@ std::string emit_cpp_test_source(const ModuleAst& module, const std::string& fil
     emit_includes(out, module);
     emit_result_prelude(out, module);
 
-    emit_aliases(out, module);
+    emit_aliases(out, module, {});
     emit_enum_forward_declarations(out, module);
     emit_class_forward_declarations(out, module);
     emit_function_declarations(out, module, aliases, false, true);
     emit_classes(out, module, aliases, function_returns, symbols);
     emit_enums(out, module, aliases);
     emit_early_functions(out, module, aliases, function_returns, symbols, false, true);
-    emit_constants(out, module, aliases);
+    emit_constants(out, module, aliases, {});
 
     for (const FunctionDecl& fn : module.functions) {
         if (emit_before_constants(fn) || !should_emit_function(fn, true)) {
