@@ -611,7 +611,8 @@ push. They are not release packaging work.
    value checks.
    Diagnostics and generated default assert messages now use an AST expression
    display helper for structured nodes instead of reading raw expression text
-   directly.
+   directly. Member/index expression diagnostics and indexed-assignment labels
+   use the same structured display path.
 
 3. OOP Surface Cleanup
 

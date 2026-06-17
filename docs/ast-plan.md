@@ -529,7 +529,8 @@ Already structured:
   value checks
 - diagnostics and generated default assert messages now use an AST expression
   display helper for structured nodes instead of reading raw expression text
-  directly
+  directly; member/index expression diagnostics and indexed-assignment labels
+  use the same structured display path
 - assignment compatibility for parsed explicit casts, value-wrapper
   assignments, and `Ok(...)`/`Err(...)` result construction inspects call
   expression nodes instead of rediscovering those forms from raw text

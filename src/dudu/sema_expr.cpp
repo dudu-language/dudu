@@ -363,7 +363,7 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
             return {};
         }
         if (use_location != nullptr) {
-            sema_expr_fail(*use_location, "unsupported member expression: " + expr.text);
+            sema_expr_fail(*use_location, "unsupported member expression: " + display_expr(expr));
         }
         return {};
     case ExprKind::Index:
@@ -395,17 +395,17 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                 !receiver_type.empty()) {
                 return indexed_type_from_type(
                     scope.symbols, index_location, receiver_type, expr.children[1],
-                    receiver.text.empty() ? "indexed expression" : receiver.text);
+                    display_expr(receiver).empty() ? "indexed expression" : display_expr(receiver));
             }
             const std::string receiver_type = infer_expr_ast(scope, receiver, use_location);
             if (!receiver_type.empty()) {
                 return indexed_type_from_type(
                     scope.symbols, index_location, receiver_type, expr.children[1],
-                    receiver.text.empty() ? "indexed expression" : receiver.text);
+                    display_expr(receiver).empty() ? "indexed expression" : display_expr(receiver));
             }
         }
         if (use_location != nullptr) {
-            sema_expr_fail(*use_location, "unsupported index expression: " + expr.text);
+            sema_expr_fail(*use_location, "unsupported index expression: " + display_expr(expr));
         }
         return {};
     case ExprKind::Conditional:

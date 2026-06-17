@@ -78,7 +78,7 @@ std::string assignment_target_type(FunctionScope& scope, const Stmt& stmt,
         if (!receiver_type.empty()) {
             return indexed_type_from_type(
                 scope.symbols, target_location, receiver_type, stmt.target_expr.children[1],
-                receiver.text.empty() ? "indexed assignment" : receiver.text);
+                display_expr(receiver).empty() ? "indexed assignment" : display_expr(receiver));
         }
     }
     if (stmt.target_expr.kind == ExprKind::Name) {
