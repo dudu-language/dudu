@@ -1474,6 +1474,9 @@ LSP source edits are also moving to AST-owned ranges:
   indexing inference now read `FunctionSignature` return types through the
   structured `return_type_ref` helper first, falling back to native text
   signatures only when imported metadata has no parsed type reference.
+- Function and method body checking now carries the parsed return `TypeRef`
+  through nested blocks and match cases instead of threading a raw return-type
+  string through statement sema.
 
 Expression parsing has moved onto the lexer/token stream:
 

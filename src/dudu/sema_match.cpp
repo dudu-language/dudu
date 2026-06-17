@@ -102,7 +102,7 @@ void bind_wrapper_case(FunctionScope& nested, const WrapperMatchType& wrapper, c
     }
 }
 
-bool check_wrapper_match(FunctionScope& scope, const Stmt& stmt, const std::string& return_type,
+bool check_wrapper_match(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_type,
                          int loop_depth, const WrapperMatchType& wrapper,
                          const MatchCheckCallbacks& callbacks) {
     const std::set<std::string> expected = wrapper.kind == WrapperMatchKind::Option
@@ -184,7 +184,7 @@ std::string missing_enum_cases(const EnumDecl& en, const std::set<std::string>& 
     return out.str();
 }
 
-void check_enum_match(FunctionScope& scope, const Stmt& stmt, const std::string& return_type,
+void check_enum_match(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_type,
                       int loop_depth, const MatchCheckCallbacks& callbacks, const EnumDecl& en) {
     std::set<std::string> covered;
     bool wildcard = false;
@@ -242,7 +242,7 @@ void check_enum_match(FunctionScope& scope, const Stmt& stmt, const std::string&
 
 } // namespace
 
-void check_match_stmt(FunctionScope& scope, const Stmt& stmt, const std::string& return_type,
+void check_match_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_type,
                       int loop_depth, const MatchCheckCallbacks& callbacks) {
     const SourceLocation& subject_location = node_location(stmt.location, stmt.condition_expr);
     const TypeRef subject_ref =
