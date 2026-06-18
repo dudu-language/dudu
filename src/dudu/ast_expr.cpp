@@ -6,14 +6,45 @@
 #include <sstream>
 
 namespace dudu {
+namespace {
+
+std::string display_string_literal_value(std::string_view value) {
+    std::string out = "\"";
+    for (const char c : value) {
+        if (c == '"') {
+            out += "\\\"";
+            continue;
+        }
+        if (c == '\n') {
+            out += "\\n";
+            continue;
+        }
+        if (c == '\r') {
+            out += "\\r";
+            continue;
+        }
+        out.push_back(c);
+    }
+    out += "\"";
+    return out;
+}
+
+std::string malformed_expr_display(std::string_view kind) {
+    return "<malformed " + std::string(kind) + " expression>";
+}
+
+} // namespace
 
 std::optional<std::string> path_index_from_expr(const Expr& expr) {
     switch (expr.kind) {
     case ExprKind::Name:
         return expr.name.empty() ? std::nullopt : std::optional<std::string>{expr.name};
     case ExprKind::IntLiteral:
+        return expr.value.empty() ? std::nullopt : std::optional<std::string>{expr.value};
     case ExprKind::StringLiteral:
-        return expr.text.empty() ? std::nullopt : std::optional<std::string>{expr.text};
+        return expr.value.empty()
+                   ? std::nullopt
+                   : std::optional<std::string>{display_string_literal_value(expr.value)};
     case ExprKind::Member:
         if (const std::optional<ExprPath> path = expr_path_from_expr(expr)) {
             return render_expr_path(*path);
@@ -191,8 +222,9 @@ std::string display_expr(const Expr& expr) {
     case ExprKind::BoolLiteral:
     case ExprKind::IntLiteral:
     case ExprKind::FloatLiteral:
+        return expr.value;
     case ExprKind::StringLiteral:
-        return expr.text;
+        return display_string_literal_value(expr.value);
     case ExprKind::NoneLiteral:
         return "None";
     case ExprKind::Unary:
@@ -200,7 +232,7 @@ std::string display_expr(const Expr& expr) {
     case ExprKind::Binary:
         return expr.children.size() == 2 ? display_expr(expr.children[0]) + " " + expr.op + " " +
                                                display_expr(expr.children[1])
-                                         : trim_copy(expr.text);
+                                         : malformed_expr_display("binary");
     case ExprKind::Call:
         return display_call_expr(expr);
     case ExprKind::TemplateCall:
@@ -208,11 +240,11 @@ std::string display_expr(const Expr& expr) {
                join_display_exprs(expr.children, ", ") + ")";
     case ExprKind::Member:
         return expr.children.size() == 1 ? display_expr(expr.children.front()) + "." + expr.name
-                                         : trim_copy(expr.text);
+                                         : malformed_expr_display("member");
     case ExprKind::Index:
         return expr.children.size() == 2
                    ? display_expr(expr.children[0]) + "[" + display_expr(expr.children[1]) + "]"
-                   : trim_copy(expr.text);
+                   : malformed_expr_display("index");
     case ExprKind::ListLiteral:
         return "[" + join_display_exprs(expr.children, ", ") + "]";
     case ExprKind::SetLiteral:
@@ -222,12 +254,12 @@ std::string display_expr(const Expr& expr) {
     case ExprKind::DictEntry:
         return expr.children.size() == 2
                    ? display_expr(expr.children[0]) + ": " + display_expr(expr.children[1])
-                   : trim_copy(expr.text);
+                   : malformed_expr_display("dict entry");
     case ExprKind::DictLiteral:
         return "{" + join_display_exprs(expr.children, ", ") + "}";
     case ExprKind::NamedArg:
         return expr.children.size() == 1 ? expr.name + "=" + display_expr(expr.children.front())
-                                         : trim_copy(expr.text);
+                                         : malformed_expr_display("named argument");
     case ExprKind::Missing:
         return "";
     case ExprKind::Slice:
@@ -238,7 +270,7 @@ std::string display_expr(const Expr& expr) {
             return (expr_missing(expr.children[0]) ? "" : display_expr(expr.children[0])) + ":" +
                    (expr_missing(expr.children[1]) ? "" : display_expr(expr.children[1]));
         }
-        return trim_copy(expr.text);
+        return malformed_expr_display("slice");
     case ExprKind::Conditional:
     case ExprKind::DefExpression:
     case ExprKind::Comprehension:
@@ -249,7 +281,7 @@ std::string display_expr(const Expr& expr) {
     case ExprKind::Unknown:
         return trim_copy(expr.text);
     }
-    return trim_copy(expr.text);
+    return malformed_expr_display("unknown");
 }
 
 } // namespace dudu

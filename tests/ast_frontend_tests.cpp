@@ -904,12 +904,19 @@ void test_literal_ast_values() {
     assert(main.statements[1].kind == dudu::StmtKind::Assign);
     assert(main.statements[1].value_expr.kind == dudu::ExprKind::IntLiteral);
     assert(main.statements[1].value_expr.value == "0x80");
+    assert(dudu::display_expr(main.statements[1].value_expr) == "0x80");
     assert(main.statements[2].value_expr.kind == dudu::ExprKind::StringLiteral);
     assert(main.statements[2].value_expr.value == "hi \"there\"");
+    assert(dudu::display_expr(main.statements[2].value_expr) == "\"hi \\\"there\\\"\"");
     assert(dudu::lower_cpp_expr_ast(main.statements[2].value_expr, {}) == "\"hi \\\"there\\\"\"");
     assert(main.statements[3].value_expr.kind == dudu::ExprKind::StringLiteral);
     assert(main.statements[3].value_expr.value == "line\nnext");
+    assert(dudu::display_expr(main.statements[3].value_expr) == "\"line\\nnext\"");
     assert(dudu::lower_cpp_expr_ast(main.statements[3].value_expr, {}) == "\"line\\nnext\"");
+    dudu::Expr malformed_binary;
+    malformed_binary.kind = dudu::ExprKind::Binary;
+    malformed_binary.text = "stale + source";
+    assert(dudu::display_expr(malformed_binary) == "<malformed binary expression>");
 }
 
 void test_expression_ast_shape() {

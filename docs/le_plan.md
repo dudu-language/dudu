@@ -860,6 +860,10 @@ push. They are not release packaging work.
    Literal parsing/codegen now treats bool, numeric, and string literal values
    as parsed `Expr::value` data; C++ string literal emission renders from that
    parsed value instead of forwarding the source spelling mirror.
+   Expression display for diagnostics now renders ordinary literals from
+   parsed values and reports malformed structured binary/member/index/dict
+   entry/named-argument/slice nodes explicitly instead of falling back to raw
+   `Expr::text`.
 
 3. OOP Surface Cleanup
 
