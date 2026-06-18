@@ -155,6 +155,12 @@ Until this is complete, prefer no lint diagnostic over a noisy wrong lint
 diagnostic. Compiler correctness diagnostics are more important than clever
 editor warnings.
 
+Status: AST lint traversal now uses shared AST expression walkers instead of
+hand-maintained statement expression slot lists. The unreachable-code lint also
+uses structured control-flow shape for `if`/`elif`/`else` chains and reports
+only the first unreachable statement in a block, reducing noisy cascades while
+keeping the quick fix anchored to a concrete AST statement.
+
 ## Critical Module Import Blocker
 
 Dudu-native imports must be fixed before the language can be considered sound
