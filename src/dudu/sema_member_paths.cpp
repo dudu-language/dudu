@@ -108,49 +108,6 @@ std::optional<std::string> field_type_for_class(const Symbols& symbols, const Cl
     return std::nullopt;
 }
 
-std::string member_path_type_from_string(const Symbols& symbols,
-                                         const std::map<std::string, std::string>& locals,
-                                         const SourceLocation* location, const std::string& path,
-                                         std::string unknown_local_prefix) {
-    const SourceLocation parse_location = location == nullptr ? SourceLocation{} : *location;
-    if (path.find('.') == std::string::npos) {
-        if (is_indexed_local_segment(path)) {
-            const Expr indexed = parse_expr_text(path, parse_location);
-            return member_expr_type(symbols, locals, location, indexed, unknown_local_prefix);
-        }
-        if (const auto local = locals.find(path); local != locals.end()) {
-            return local->second;
-        }
-        if (location != nullptr && !unknown_local_prefix.empty()) {
-            sema_fail(*location, unknown_local_prefix + path);
-        }
-        return {};
-    }
-    const Expr expr = parse_expr_text(path, parse_location);
-    if (expr.kind == ExprKind::Unknown) {
-        if (location != nullptr && !unknown_local_prefix.empty()) {
-            sema_fail(*location, unknown_local_prefix + path);
-        }
-        return {};
-    }
-    const std::string type =
-        member_expr_type(symbols, locals, location, expr, unknown_local_prefix);
-    if (type.empty() && location != nullptr && !unknown_local_prefix.empty()) {
-        const size_t dot = path.find('.');
-        if (dot != std::string::npos) {
-            const std::string first = path.substr(0, dot);
-            if (!locals.contains(first) && !symbols.classes.contains(first)) {
-                sema_fail(*location, unknown_local_prefix + first);
-            }
-        } else {
-            if (location != nullptr) {
-                sema_fail(*location, unknown_local_prefix + path);
-            }
-        }
-    }
-    return type;
-}
-
 std::string member_expr_type(const Symbols& symbols,
                              const std::map<std::string, std::string>& locals,
                              const SourceLocation* location, const Expr& expr,

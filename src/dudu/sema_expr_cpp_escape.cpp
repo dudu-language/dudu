@@ -2,6 +2,20 @@
 #include "dudu/sema_expr_internal.hpp"
 
 namespace dudu {
+namespace {
+
+std::string cpp_escape_member_path_type(const FunctionScope& scope, const SourceLocation* location,
+                                        const std::string& path) {
+    const SourceLocation parse_location = location == nullptr ? SourceLocation{} : *location;
+    const Expr expr = parse_expr_text(path, parse_location);
+    if (expr.kind == ExprKind::Unknown) {
+        return {};
+    }
+    return member_expr_type(scope.symbols, scope.locals, location, expr);
+}
+
+} // namespace
+
 std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
                                   const SourceLocation* location) {
     expr = trim(std::move(expr));
@@ -125,8 +139,7 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
                 check_call_args_ast(scope, callee, signature, args, location);
                 return signature_return_type_text(signature);
             }
-            const std::string receiver_type =
-                member_path_type_from_string(scope.symbols, scope.locals, nullptr, receiver, "");
+            const std::string receiver_type = cpp_escape_member_path_type(scope, nullptr, receiver);
             if (scope.locals.contains(receiver) &&
                 foreign_cpp_type_name(scope.symbols, resolve_alias(scope.symbols, receiver_type))) {
                 for (const Expr& arg : args) {
@@ -238,8 +251,7 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
                                       "indexed access to unknown local: ");
         }
         if (is_member_path(name)) {
-            const std::string receiver_type =
-                member_path_type_from_string(scope.symbols, scope.locals, location, name, "");
+            const std::string receiver_type = cpp_escape_member_path_type(scope, location, name);
             if (!receiver_type.empty()) {
                 return indexed_type_from_type(scope.symbols, *location, receiver_type,
                                               parse_expr_text(index_expr, *location), name);
@@ -248,7 +260,7 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
     }
     const size_t dot = expr.find('.');
     if (dot != std::string::npos && is_member_path(expr)) {
-        return member_path_type_from_string(scope.symbols, scope.locals, location, expr, "");
+        return cpp_escape_member_path_type(scope, location, expr);
     }
     if (const auto local = scope.locals.find(expr); local != scope.locals.end()) {
         return local->second;

@@ -42,10 +42,6 @@ namespace dudu {
 
 [[noreturn]] void sema_expr_fail(const SourceLocation& location, const std::string& message);
 
-std::string member_path_type_from_string(const Symbols& symbols,
-                                         const std::map<std::string, std::string>& locals,
-                                         const SourceLocation* location, const std::string& path,
-                                         std::string unknown_local_prefix);
 bool is_member_path(const std::string& path);
 
 std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,

@@ -382,6 +382,9 @@ Already structured:
 - the dead `infer_expr_ast` string expression inferencer has been removed; expression
   sema now exposes structured `infer_expr_type_ast` plus explicit compatibility
   renderers for C++ escapes, calls, and template calls
+- `member_path_type_from_string` has been removed from sema internals; explicit
+  `cpp(...)` escape inference now owns the remaining string-to-expression parse
+  it needs for raw member path compatibility
 - LSP local variable/parameter type collection for hover, member completion,
   and member definition now walks parsed function/method bodies and reuses
   semantic expression inference instead of regexing source lines
