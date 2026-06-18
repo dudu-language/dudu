@@ -1495,3 +1495,7 @@ push. They are not release packaging work.
    `TypeRef` shape directly and update matched signatures through
    `set_signature_return_type`; the old path rendered the return placeholder,
    sliced the string, and manually synchronized return mirrors.
+   Native operator signature receiver dropping now rebuilds the remaining
+   parameter list from `TypeRef` accessors and writes it back through
+   `set_signature_param_types`; direct parameter mirror mutation is confined to
+   the signature helper implementation.

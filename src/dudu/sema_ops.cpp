@@ -127,10 +127,12 @@ native_operator_signature(const Symbols& symbols, const std::string& op, const T
                                          value_right_ref)) {
                 continue;
             }
-            signature.params.erase(signature.params.begin());
-            if (!signature.param_type_refs.empty()) {
-                signature.param_type_refs.erase(signature.param_type_refs.begin());
+            std::vector<TypeRef> remaining_params;
+            remaining_params.reserve(signature_param_count(signature) - 1);
+            for (size_t i = 1; i < signature_param_count(signature); ++i) {
+                remaining_params.push_back(signature_param_type_ref(signature, i));
             }
+            set_signature_param_types(signature, std::move(remaining_params));
             return signature;
         }
     }
