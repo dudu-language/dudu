@@ -332,18 +332,12 @@ Symbols collect_symbols(const ModuleAst& module) {
         symbols.native_types.insert(type.name);
         add_native_path_prefix(symbols, type.name);
         if (!type.type.empty() && !symbols.alias_type_refs.contains(type.name)) {
-            const TypeRef alias_type = has_type_ref(type.type_ref)
-                                           ? type.type_ref
-                                           : parse_type_text(type.type, type.location);
-            symbols.alias_type_refs[type.name] = alias_type;
+            symbols.alias_type_refs[type.name] = native_type_alias_type_ref(type);
         }
     }
     for (const NativeValueDecl& value : module.native_values) {
         add_name(names, value.name, value.location);
-        const TypeRef value_type = has_type_ref(value.type_ref)
-                                       ? value.type_ref
-                                       : parse_type_text(value.type, value.location);
-        symbols.native_value_type_refs[value.name] = value_type;
+        symbols.native_value_type_refs[value.name] = native_value_type_ref(value);
         if (value.enum_constant) {
             symbols.native_enum_values.insert(value.name);
         }

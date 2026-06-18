@@ -1587,6 +1587,9 @@ push. They are not release packaging work.
    collection, native function deduplication, and LSP symbol details use those
    accessors instead of open-coding `NativeFunctionDecl::params` /
    `return_type` fallback logic.
+   Native type aliases and values now expose structured accessor helpers as
+   well. Symbol collection and LSP native symbol/local context code use those
+   helpers instead of open-coding `type_ref`-or-rendered-string fallback logic.
    Index-result inference now detects foreign/qualified indexable receivers from
    `TypeRef` head/kind metadata instead of rendering the receiver type to search
    for namespace separators.

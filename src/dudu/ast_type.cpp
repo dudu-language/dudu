@@ -298,6 +298,23 @@ std::string native_function_return_type_text(const NativeFunctionDecl& fn) {
     return type_ref_text(native_function_return_type_ref(fn));
 }
 
+TypeRef native_type_alias_type_ref(const NativeTypeDecl& type) {
+    return has_type_ref(type.type_ref) ? type.type_ref : parse_type_text(type.type, type.location);
+}
+
+TypeRef native_value_type_ref(const NativeValueDecl& value) {
+    return has_type_ref(value.type_ref) ? value.type_ref
+                                        : parse_type_text(value.type, value.location);
+}
+
+std::string native_type_alias_type_text(const NativeTypeDecl& type) {
+    return type_ref_text(native_type_alias_type_ref(type));
+}
+
+std::string native_value_type_text(const NativeValueDecl& value) {
+    return type_ref_text(native_value_type_ref(value));
+}
+
 TypeRef substitute_type_ref(const TypeRef& type,
                             const std::map<std::string, std::string>& substitutions) {
     const std::string name = trim_copy(type.name.empty() ? type.text : type.name);

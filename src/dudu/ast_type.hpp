@@ -36,6 +36,10 @@ std::vector<TypeRef> native_function_param_type_refs(const NativeFunctionDecl& f
 TypeRef native_function_return_type_ref(const NativeFunctionDecl& fn);
 std::vector<std::string> native_function_param_type_texts(const NativeFunctionDecl& fn);
 std::string native_function_return_type_text(const NativeFunctionDecl& fn);
+TypeRef native_type_alias_type_ref(const NativeTypeDecl& type);
+TypeRef native_value_type_ref(const NativeValueDecl& value);
+std::string native_type_alias_type_text(const NativeTypeDecl& type);
+std::string native_value_type_text(const NativeValueDecl& value);
 TypeRef substitute_type_ref(const TypeRef& type,
                             const std::map<std::string, std::string>& substitutions);
 std::string substitute_type_ref_text(const TypeRef& type,
