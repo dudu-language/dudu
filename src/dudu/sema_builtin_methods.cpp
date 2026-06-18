@@ -11,7 +11,7 @@ namespace dudu {
 namespace {
 
 TypeRef auto_type_ref() {
-    return parse_type_text("auto");
+    return named_type_ref("auto");
 }
 
 std::optional<TypeRef> first_type_arg_ref(const TypeRef& type) {

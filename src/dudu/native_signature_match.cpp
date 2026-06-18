@@ -376,7 +376,7 @@ match_native_signature(const FunctionScope& scope, const std::string& callee,
         }
         FunctionSignature signature;
         set_signature_return_type(
-            signature, parse_type_text("auto", location == nullptr ? SourceLocation{} : *location));
+            signature, named_type_ref("auto", location == nullptr ? SourceLocation{} : *location));
         return signature;
     }
     if (location != nullptr) {

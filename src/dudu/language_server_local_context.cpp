@@ -135,7 +135,7 @@ void lsp_bind_local(FunctionScope& scope, const std::string& name, TypeRef type_
         return;
     }
     if (!has_type_ref(type_ref)) {
-        type_ref = parse_type_text("auto");
+        type_ref = named_type_ref("auto");
     }
     bind_local(scope, name, type_ref);
 }
@@ -197,7 +197,7 @@ std::optional<TypeRef> infer_lsp_for_binding_type(FunctionScope& scope, const St
         return std::nullopt;
     }
     if (direct_callee_name(stmt.iterable_expr) == "range") {
-        return parse_type_text("i32", stmt.iterable_expr.location);
+        return named_type_ref("i32", stmt.iterable_expr.location);
     }
     if (stmt.iterable_expr.kind == ExprKind::Name) {
         const TypeRef local_ref =

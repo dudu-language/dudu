@@ -60,7 +60,7 @@ std::optional<TypeRef> native_member_path_type_ref(const Symbols& symbols, const
     }
     const std::string prefix = path.substr(0, dot);
     if (prefix == "build" || prefix == "shader" || native_import_path_prefix(symbols, path)) {
-        return parse_type_text("auto", location);
+        return named_type_ref("auto", location);
     }
     return std::nullopt;
 }

@@ -68,7 +68,7 @@ void add_function_alias(ModuleAst& module, const FunctionDecl& fn, const std::st
     alias.template_params = fn.generic_params;
     alias.return_type_ref = function_has_return_type(fn)
                                 ? substitute_type_ref(fn.return_type_ref, type_substitutions)
-                                : parse_type_text("void", location);
+                                : void_type_ref(location);
     alias.return_type = substitute_type_ref_text(alias.return_type_ref, {});
     alias.location = location;
     for (const ParamDecl& param : fn.params) {

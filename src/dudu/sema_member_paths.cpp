@@ -188,7 +188,7 @@ TypeRef member_expr_type_ref(const Symbols& symbols,
         }
         const std::string receiver_type_text = substitute_type_ref_text(receiver_type, {});
         if (type_ref_is_auto(receiver_type) || foreign_cpp_type_name(symbols, receiver_type)) {
-            return parse_type_text("auto", expr.location);
+            return named_type_ref("auto", expr.location);
         }
         if (location != nullptr) {
             const std::string label = expr_label(expr);
@@ -231,7 +231,7 @@ std::optional<TypeRef> field_type_ref_for_type(const Symbols& symbols, const Typ
     const std::vector<TypeRef> result_args = template_type_arg_refs(resolved_type, "Result");
     if (!result_args.empty()) {
         if (field == "ok") {
-            return parse_type_text("bool", receiver_type.location);
+            return named_type_ref("bool", receiver_type.location);
         }
         if (field == "value" && !result_args.empty()) {
             return result_args[0];

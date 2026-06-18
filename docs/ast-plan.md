@@ -2032,6 +2032,10 @@ LSP source edits are also moving to AST-owned ranges:
   emission-side literal inference now construct built-in `TypeRef` nodes
   directly instead of invoking the type-text parser for names like `i32`,
   `bool`, or `auto`.
+- Member-path helpers, LSP local-context binding, function-signature defaults,
+  module import aliases, native fallback signatures, and built-in method helpers
+  now also construct built-in `TypeRef` nodes directly. Remaining built-in
+  parser calls are confined to the type parser and native header parser.
 
 Expression parsing has moved onto the lexer/token stream:
 

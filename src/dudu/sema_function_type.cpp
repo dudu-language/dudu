@@ -35,7 +35,7 @@ void set_signature_param_types(FunctionSignature& signature, std::vector<TypeRef
 
 void set_signature_return_type(FunctionSignature& signature, TypeRef type) {
     if (!has_type_ref(type)) {
-        type = parse_type_text("void");
+        type = void_type_ref();
     }
     signature.return_type_ref = std::move(type);
 }
@@ -56,7 +56,7 @@ TypeRef signature_return_type_ref(const FunctionSignature& signature) {
     if (has_type_ref(signature.return_type_ref)) {
         return signature.return_type_ref;
     }
-    return parse_type_text("void");
+    return void_type_ref();
 }
 
 std::string signature_param_type_text(const FunctionSignature& signature, size_t index) {
@@ -91,7 +91,7 @@ bool parse_function_type(const TypeRef& type, FunctionSignature& out) {
         return false;
     }
     set_signature_return_type(out, missing_type_ref(function->children.front())
-                                       ? parse_type_text("void", type.location)
+                                       ? void_type_ref(type.location)
                                        : function->children.front());
     std::vector<TypeRef> param_types;
     param_types.reserve(function->children.size() - 1);
