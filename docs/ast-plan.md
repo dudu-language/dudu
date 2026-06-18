@@ -1725,6 +1725,11 @@ LSP source edits are also moving to AST-owned ranges:
 - Index result inference now exposes parsed `TypeRef` APIs, and typed
   expression inference plus indexed assignment target checks use them instead
   of owning their own indexed-type text parsing.
+- Member-path type inference now resolves local names, class static members,
+  recursive member fields, indexed member receivers, inherited fields,
+  `Result` helper fields, and Dudu swizzles through parsed `TypeRef` metadata
+  before rendering fallback display text. The string member resolver remains
+  for explicit C++ escape and C++ emission boundaries only.
 
 Expression parsing has moved onto the lexer/token stream:
 

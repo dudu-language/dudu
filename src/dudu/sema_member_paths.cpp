@@ -60,6 +60,28 @@ std::string static_member_type(const Symbols& symbols, const SourceLocation* loc
     return {};
 }
 
+TypeRef static_member_type_ref(const Symbols& symbols, const SourceLocation* location,
+                               const std::string& type_name, const std::string& member) {
+    const auto klass = symbols.classes.find(type_name);
+    if (klass == symbols.classes.end()) {
+        return {};
+    }
+    for (const ConstDecl& constant : klass->second->constants) {
+        if (constant.name == member) {
+            return constant.type_ref;
+        }
+    }
+    for (const ConstDecl& field : klass->second->static_fields) {
+        if (field.name == member) {
+            return field.type_ref;
+        }
+    }
+    if (location != nullptr) {
+        sema_fail(*location, "unknown static member: " + type_name + "." + member);
+    }
+    return {};
+}
+
 } // namespace
 
 std::string unwrap_receiver_type(const Symbols& symbols, std::string type) {
@@ -102,6 +124,35 @@ std::optional<std::string> field_type_for_class(const Symbols& symbols, const Cl
             continue;
         }
         if (const auto found = field_type_for_class(symbols, *base_class->second, base, field)) {
+            return found;
+        }
+    }
+    return std::nullopt;
+}
+
+std::optional<TypeRef> field_type_ref_for_class(const Symbols& symbols, const ClassDecl& klass,
+                                                const TypeRef& receiver_type,
+                                                const std::string& field) {
+    const std::string receiver_type_text = substitute_type_ref_text(receiver_type, {});
+    for (const FieldDecl& decl : klass.fields) {
+        if (decl.name == field) {
+            const std::vector<std::string> receiver_args =
+                template_args_from_type(receiver_type_text);
+            TypeRef type = substitute_type_ref(
+                decl.type_ref, type_substitutions(klass.generic_params, receiver_args));
+            const std::string receiver_substituted = substitute_receiver_template_type(
+                substitute_type_ref_text(type, {}), receiver_args);
+            return parse_type_text(receiver_substituted, decl.location);
+        }
+    }
+    for (const BaseClassDecl& base_decl : klass.base_class_refs) {
+        const std::string base = type_ref_text(base_decl.type_ref);
+        const auto base_class = symbols.classes.find(unwrap_receiver_type(symbols, base));
+        if (base_class == symbols.classes.end()) {
+            continue;
+        }
+        if (const auto found =
+                field_type_ref_for_class(symbols, *base_class->second, base_decl.type_ref, field)) {
             return found;
         }
     }
@@ -192,9 +243,28 @@ TypeRef member_expr_type_ref(const Symbols& symbols,
                              std::string_view current_class) {
     const SourceLocation type_location = location == nullptr ? expr.location : *location;
     if (expr.kind == ExprKind::Name && !expr.name.empty()) {
+        if (expr.name == "class") {
+            if (!current_class.empty()) {
+                return parse_type_text(std::string(current_class), expr.location);
+            }
+            if (location != nullptr) {
+                sema_fail(*location, "class static access outside class");
+            }
+            return {};
+        }
         if (const auto local = local_type_refs.find(expr.name); local != local_type_refs.end()) {
             return local->second;
         }
+        if (const auto local = locals.find(expr.name); local != locals.end()) {
+            return parse_type_text(local->second, type_location);
+        }
+        if (symbols.classes.contains(expr.name)) {
+            return parse_type_text(expr.name, expr.location);
+        }
+        if (location != nullptr && !unknown_local_prefix.empty()) {
+            sema_fail(*location, std::string(unknown_local_prefix) + expr.name);
+        }
+        return {};
     }
     if (expr.kind == ExprKind::Index && expr.children.size() == 2) {
         const TypeRef receiver_type =
@@ -207,9 +277,46 @@ TypeRef member_expr_type_ref(const Symbols& symbols,
         return indexed_type_ref_from_type(symbols, type_location, receiver_type, expr.children[1],
                                           label.empty() ? "indexed expression" : label);
     }
-    const std::string type =
-        member_expr_type(symbols, locals, location, expr, unknown_local_prefix, current_class);
-    return type.empty() ? TypeRef{} : parse_type_text(type, type_location);
+    if (expr.kind == ExprKind::Member && expr.children.size() == 1 && !expr.name.empty()) {
+        const Expr& receiver = expr.children.front();
+        if (receiver.kind == ExprKind::Name && receiver.name == "class") {
+            if (current_class.empty()) {
+                if (location != nullptr) {
+                    sema_fail(*location, "class static access outside class");
+                }
+                return {};
+            }
+            return static_member_type_ref(symbols, location, std::string(current_class), expr.name);
+        }
+        if (receiver.kind == ExprKind::Name && !locals.contains(receiver.name) &&
+            symbols.classes.contains(receiver.name)) {
+            return static_member_type_ref(symbols, location, receiver.name, expr.name);
+        }
+        const TypeRef receiver_type =
+            member_expr_type_ref(symbols, locals, local_type_refs, location, receiver,
+                                 unknown_local_prefix, current_class);
+        if (!has_type_ref(receiver_type)) {
+            return {};
+        }
+        if (const auto field = field_type_ref_for_type(symbols, receiver_type, expr.name)) {
+            return *field;
+        }
+        const std::string receiver_type_text = substitute_type_ref_text(receiver_type, {});
+        if (const auto swizzle = swizzle_type_for_type(symbols, receiver_type_text, expr.name)) {
+            return parse_type_text(*swizzle, type_location);
+        }
+        if (receiver_type_text == "auto" ||
+            foreign_cpp_type_name(symbols, resolve_alias(symbols, receiver_type_text))) {
+            return parse_type_text("auto", expr.location);
+        }
+        if (location != nullptr) {
+            const std::string label = display_expr(expr);
+            sema_fail(*location,
+                      "unknown field: " +
+                          (label.empty() ? receiver_type_text + "." + expr.name : label));
+        }
+    }
+    return {};
 }
 
 bool is_member_path(const std::string& path) {
@@ -259,6 +366,30 @@ std::optional<std::string> field_type_for_type(const Symbols& symbols,
         return std::nullopt;
     }
     return field_type_for_class(symbols, *klass->second, receiver_type, field);
+}
+
+std::optional<TypeRef> field_type_ref_for_type(const Symbols& symbols, const TypeRef& receiver_type,
+                                               const std::string& field) {
+    const std::string receiver_type_text = substitute_type_ref_text(receiver_type, {});
+    const std::string resolved = resolve_alias(symbols, receiver_type_text);
+    const std::vector<TypeRef> result_args =
+        template_type_arg_refs(parse_type_text(resolved), "Result");
+    if (!result_args.empty()) {
+        if (field == "ok") {
+            return parse_type_text("bool", receiver_type.location);
+        }
+        if (field == "value" && !result_args.empty()) {
+            return result_args[0];
+        }
+        if (field == "err" && result_args.size() >= 2) {
+            return result_args[1];
+        }
+    }
+    const auto klass = symbols.classes.find(unwrap_receiver_type(symbols, receiver_type_text));
+    if (klass == symbols.classes.end()) {
+        return std::nullopt;
+    }
+    return field_type_ref_for_class(symbols, *klass->second, receiver_type, field);
 }
 
 } // namespace dudu

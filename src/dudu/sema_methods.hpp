@@ -25,6 +25,8 @@ TypeRef member_expr_type_ref(const Symbols& symbols,
 std::optional<std::string> field_type_for_type(const Symbols& symbols,
                                                const std::string& receiver_type,
                                                const std::string& field);
+std::optional<TypeRef> field_type_ref_for_type(const Symbols& symbols, const TypeRef& receiver_type,
+                                               const std::string& field);
 std::optional<std::string> swizzle_type_for_type(const Symbols& symbols,
                                                  const std::string& receiver_type,
                                                  const std::string& swizzle);
