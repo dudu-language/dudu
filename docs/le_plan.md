@@ -707,6 +707,9 @@ push. They are not release packaging work.
    Static method signature lookup now accepts parsed receiver `TypeRef` nodes,
    so inherited static lookup walks parsed base-class references without
    rendering base types before recursion.
+   Generic method inference now accepts parsed receiver `TypeRef` nodes for the
+   normal inference path, so inherited generic method lookup walks parsed
+   base-class references without rendering base types before recursion.
    TypeRef-backed assignment checks now infer RHS expressions as `TypeRef`
    first, use structured type assignment before compatibility fallback, and
    render only for legacy assignment/literal checks and diagnostics.
