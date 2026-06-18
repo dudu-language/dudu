@@ -161,6 +161,17 @@ std::string type_ref_spelling(const TypeRef& type) {
     return trim_copy(!type.name.empty() ? type.name : substitute_type_ref_text(type, {}));
 }
 
+TypeRef normalized_cpp_type_ref(const TypeRef& type, const std::string& normalized) {
+    if (normalized.empty()) {
+        return {};
+    }
+    const std::string spelling = substitute_type_ref_text(type, {});
+    if (normalized == spelling) {
+        return type;
+    }
+    return parse_type_text(normalized, type.location);
+}
+
 std::string type_ref_tail_name(const TypeRef& type) {
     std::string name = type_ref_spelling(type);
     const size_t dot = name.find_last_of(".:");
@@ -299,9 +310,10 @@ bool text_type_assignment_allowed(const std::string& expected, const std::string
 bool type_assignment_allowed(const TypeRef& expected, const TypeRef& got) {
     const std::string normalized_expected = normalize_cpp_type_artifacts(expected);
     const std::string normalized_got = normalize_cpp_type_artifacts(got);
+    const TypeRef normalized_expected_ref = normalized_cpp_type_ref(expected, normalized_expected);
+    const TypeRef normalized_got_ref = normalized_cpp_type_ref(got, normalized_got);
     if (!normalized_expected.empty() && !normalized_got.empty() &&
-        structural_type_assignment_allowed(parse_type_text(normalized_expected),
-                                           parse_type_text(normalized_got))) {
+        structural_type_assignment_allowed(normalized_expected_ref, normalized_got_ref)) {
         return true;
     }
     return structural_type_assignment_allowed(expected, got) ||
@@ -317,9 +329,9 @@ bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const Ty
     const std::string normalized_expected = normalize_cpp_type_artifacts(expected);
     const std::string got_text = substitute_type_ref_text(got, {});
     const std::string normalized_got = normalize_cpp_type_artifacts(got_text);
-    const TypeRef normalized_expected_ref = parse_type_text(normalized_expected, expected.location);
+    const TypeRef normalized_expected_ref = normalized_cpp_type_ref(expected, normalized_expected);
     const TypeRef normalized_got_ref =
-        normalized_got == got_text ? got : parse_type_text(normalized_got, got.location);
+        normalized_got == got_text ? got : normalized_cpp_type_ref(got, normalized_got);
     if (normalized_expected != substitute_type_ref_text(expected, {})) {
         return assignment_type_allowed(normalized_expected_ref, expr, normalized_got_ref);
     }

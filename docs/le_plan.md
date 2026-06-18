@@ -1723,3 +1723,7 @@ push. They are not release packaging work.
    `void` and `auto` `TypeRef` nodes directly. The broad built-in parser-call
    scan is now down to explicit parser/native type parsing and `cpp(...)`
    escape-boundary text.
+   Assignment compatibility now preserves existing `TypeRef` nodes when C++
+   artifact normalization is a no-op, and only parses normalized spellings at
+   the native compatibility boundary. The generic `TypeRef` assignment path no
+   longer reparses normalized expected/got strings before structural checks.
