@@ -34,7 +34,7 @@ std::string lower_offsetof_field(const Expr& expr, const std::vector<std::string
         return expr.name;
     }
     if (expr.kind == ExprKind::StringLiteral) {
-        return unquoted_string_literal(expr.text);
+        return expr.value.empty() ? unquoted_string_literal(expr.text) : expr.value;
     }
     if (expr.kind == ExprKind::Member) {
         if (const std::optional<ExprPath> path = expr_path_from_expr(expr)) {
