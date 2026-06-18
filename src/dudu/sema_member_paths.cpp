@@ -113,17 +113,16 @@ std::optional<TypeRef> field_type_ref_for_class(const Symbols& symbols, const Cl
 }
 
 std::string member_expr_type(const Symbols& symbols,
-                             const std::map<std::string, std::string>& locals,
+                             const std::map<std::string, TypeRef>& local_type_refs,
                              const SourceLocation* location, const Expr& expr,
                              std::string_view unknown_local_prefix,
                              std::string_view current_class) {
-    const TypeRef type_ref = member_expr_type_ref(symbols, locals, {}, location, expr,
+    const TypeRef type_ref = member_expr_type_ref(symbols, local_type_refs, location, expr,
                                                   unknown_local_prefix, current_class);
     return has_type_ref(type_ref) ? substitute_type_ref_text(type_ref, {}) : std::string{};
 }
 
 TypeRef member_expr_type_ref(const Symbols& symbols,
-                             const std::map<std::string, std::string>& locals,
                              const std::map<std::string, TypeRef>& local_type_refs,
                              const SourceLocation* location, const Expr& expr,
                              std::string_view unknown_local_prefix,
@@ -139,7 +138,6 @@ TypeRef member_expr_type_ref(const Symbols& symbols,
             }
             return {};
         }
-        (void)locals;
         if (const TypeRef local = local_type_ref(local_type_refs, expr.name, type_location);
             has_type_ref(local)) {
             return local;
@@ -154,7 +152,7 @@ TypeRef member_expr_type_ref(const Symbols& symbols,
     }
     if (expr.kind == ExprKind::Index && expr.children.size() == 2) {
         const TypeRef receiver_type =
-            member_expr_type_ref(symbols, locals, local_type_refs, location, expr.children[0],
+            member_expr_type_ref(symbols, local_type_refs, location, expr.children[0],
                                  unknown_local_prefix, current_class);
         if (!has_type_ref(receiver_type)) {
             return {};
@@ -174,13 +172,12 @@ TypeRef member_expr_type_ref(const Symbols& symbols,
             }
             return static_member_type_ref(symbols, location, std::string(current_class), expr.name);
         }
-        if (receiver.kind == ExprKind::Name && !locals.contains(receiver.name) &&
+        if (receiver.kind == ExprKind::Name && !local_type_refs.contains(receiver.name) &&
             symbols.classes.contains(receiver.name)) {
             return static_member_type_ref(symbols, location, receiver.name, expr.name);
         }
-        const TypeRef receiver_type =
-            member_expr_type_ref(symbols, locals, local_type_refs, location, receiver,
-                                 unknown_local_prefix, current_class);
+        const TypeRef receiver_type = member_expr_type_ref(
+            symbols, local_type_refs, location, receiver, unknown_local_prefix, current_class);
         if (!has_type_ref(receiver_type)) {
             return {};
         }

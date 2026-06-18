@@ -236,9 +236,9 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                 return;
             }
             const TypeRef target_type =
-                symbols == nullptr ? TypeRef{}
-                                   : member_expr_type_ref(*symbols, locals, local_type_refs,
-                                                          nullptr, stmt.target_expr);
+                symbols == nullptr
+                    ? TypeRef{}
+                    : member_expr_type_ref(*symbols, local_type_refs, nullptr, stmt.target_expr);
             const std::string value =
                 has_type_ref(target_type)
                     ? lower_expr_as_type_ref(target_type, stmt.value_expr, aliases, locals,

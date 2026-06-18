@@ -197,6 +197,9 @@ Already structured:
 - destructuring shadow checks and inferred-assignment local existence checks now
   use local `TypeRef` metadata instead of the compatibility rendered local type
   map
+- local existence checks in semantic call/member handling now use
+  `local_type_refs`, and member-path type helpers no longer accept the rendered
+  local type map
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path

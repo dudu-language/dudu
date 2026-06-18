@@ -110,7 +110,7 @@ std::optional<std::string> lower_swizzle_expr(const Expr& expr,
     std::optional<TypeRef> result_type;
     if (symbols != nullptr) {
         const TypeRef receiver_type =
-            member_expr_type_ref(*symbols, locals, local_type_refs, nullptr, expr.children.front());
+            member_expr_type_ref(*symbols, local_type_refs, nullptr, expr.children.front());
         if (has_type_ref(receiver_type)) {
             result_type = swizzle_type_ref_for_type(*symbols, receiver_type, expr.name);
         }

@@ -27,7 +27,7 @@ std::string cpp_escape_member_path_type(const FunctionScope& scope, const Source
     if (expr.kind == ExprKind::Unknown) {
         return {};
     }
-    return member_expr_type(scope.symbols, scope.locals, location, expr);
+    return member_expr_type(scope.symbols, scope.local_type_refs, location, expr);
 }
 
 } // namespace
@@ -143,7 +143,7 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
             known_type(scope.symbols, callee)) {
             return callee;
         }
-        if (scope.locals.contains(callee)) {
+        if (scope.local_type_refs.contains(callee)) {
             FunctionSignature signature;
             if (parse_local_function_type(scope, callee, signature)) {
                 check_call_args_ast(scope, callee, signature, args, location);
@@ -155,14 +155,15 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
             const std::string receiver = trim(callee.substr(0, method_dot));
             const std::string method_name = trim(callee.substr(method_dot + 1));
             FunctionSignature signature;
-            if (!scope.locals.contains(receiver) && scope.symbols.classes.contains(receiver) &&
+            if (!scope.local_type_refs.contains(receiver) &&
+                scope.symbols.classes.contains(receiver) &&
                 static_method_signature_for_type(scope.symbols, receiver, method_name, signature,
                                                  location)) {
                 check_call_args_ast(scope, callee, signature, args, location);
                 return signature_return_type_text(signature);
             }
             const std::string receiver_type = cpp_escape_member_path_type(scope, nullptr, receiver);
-            if (scope.locals.contains(receiver) &&
+            if (scope.local_type_refs.contains(receiver) &&
                 foreign_cpp_type_name(scope.symbols, resolve_alias(scope.symbols, receiver_type))) {
                 for (const Expr& arg : args) {
                     (void)infer_expr_type_ast(scope, arg, location);

@@ -164,9 +164,8 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
                                               receiver.name, expr.children[1],
                                               "indexed access to unknown local: ");
             }
-            const TypeRef receiver_member_type =
-                member_expr_type_ref(scope.symbols, scope.locals, scope.local_type_refs, location,
-                                     receiver, {}, scope.current_class);
+            const TypeRef receiver_member_type = member_expr_type_ref(
+                scope.symbols, scope.local_type_refs, location, receiver, {}, scope.current_class);
             if (has_type_ref(receiver_member_type)) {
                 return indexed_type_ref_from_type(
                     scope.symbols, index_location, receiver_member_type, expr.children[1],

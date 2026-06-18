@@ -29,7 +29,7 @@ std::optional<TypeRef> receiver_call_type_ref(const FunctionScope& scope, const 
         return signature_return_type_ref(signature);
     }
     if (receiver_expr.kind == ExprKind::Name && receiver_expr.name != "class" &&
-        !scope.locals.contains(receiver_expr.name) &&
+        !scope.local_type_refs.contains(receiver_expr.name) &&
         scope.symbols.classes.contains(receiver_expr.name) &&
         static_method_signature_for_type(scope.symbols, receiver_expr.name, method_name, signature,
                                          location)) {
@@ -37,7 +37,7 @@ std::optional<TypeRef> receiver_call_type_ref(const FunctionScope& scope, const 
         return signature_return_type_ref(signature);
     }
     const bool bare_nonlocal_receiver =
-        receiver_expr.kind == ExprKind::Name && !scope.locals.contains(receiver_expr.name);
+        receiver_expr.kind == ExprKind::Name && !scope.local_type_refs.contains(receiver_expr.name);
     if (bare_nonlocal_receiver) {
         return std::nullopt;
     }
@@ -83,7 +83,7 @@ std::optional<TypeRef> direct_member_call_type_ref(const FunctionScope& scope, c
     const Expr& member = expr.callee.front();
     const Expr& receiver_expr = member.children.front();
     const bool bare_nonlocal_receiver =
-        receiver_expr.kind == ExprKind::Name && !scope.locals.contains(receiver_expr.name);
+        receiver_expr.kind == ExprKind::Name && !scope.local_type_refs.contains(receiver_expr.name);
     const bool static_class_receiver =
         receiver_expr.kind == ExprKind::Name &&
         (receiver_expr.name == "class" || scope.symbols.classes.contains(receiver_expr.name));

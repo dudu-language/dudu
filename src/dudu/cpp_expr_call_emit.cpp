@@ -104,7 +104,7 @@ bool expression_has_pointer_type(const Expr& expr, const std::map<std::string, s
     if (symbols == nullptr) {
         return false;
     }
-    const TypeRef type = member_expr_type_ref(*symbols, locals, local_type_refs, nullptr, expr);
+    const TypeRef type = member_expr_type_ref(*symbols, local_type_refs, nullptr, expr);
     return type.kind == TypeKind::Pointer;
 }
 

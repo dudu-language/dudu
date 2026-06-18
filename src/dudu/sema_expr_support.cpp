@@ -69,7 +69,7 @@ bool is_builtin_call(const std::string& callee) {
 }
 bool is_local_member_call(const FunctionScope& scope, const std::string& callee) {
     const size_t dot = callee.find('.');
-    return dot != std::string::npos && scope.locals.contains(trim(callee.substr(0, dot)));
+    return dot != std::string::npos && scope.local_type_refs.contains(trim(callee.substr(0, dot)));
 }
 void reject_abstract_construction(const Symbols& symbols, const std::string& type,
                                   const SourceLocation* location) {

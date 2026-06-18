@@ -39,7 +39,7 @@ void check_type_match(FunctionScope& scope, const TypeRef& expected_ref, const E
         const Expr& member = expr.callee.front();
         const Expr& receiver = member.children.front();
         const bool receiver_is_bare_path =
-            receiver.kind == ExprKind::Name && !scope.locals.contains(receiver.name);
+            receiver.kind == ExprKind::Name && !scope.local_type_refs.contains(receiver.name);
         if (!receiver_is_bare_path) {
             const TypeRef receiver_ref = callbacks.infer_expr_type(scope, receiver, &location);
             const std::string receiver_type = substitute_type_ref_text(receiver_ref, {});

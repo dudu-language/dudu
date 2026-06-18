@@ -61,8 +61,7 @@ lower_expected_generic_method_call(const TypeRef& expected_type, const Expr& exp
     TypeRef receiver_type_ref =
         infer_emitted_local_type_ref(receiver, local_type_refs, function_returns, symbols);
     if (!has_type_ref(receiver_type_ref)) {
-        receiver_type_ref =
-            member_expr_type_ref(*symbols, locals, local_type_refs, nullptr, receiver);
+        receiver_type_ref = member_expr_type_ref(*symbols, local_type_refs, nullptr, receiver);
     }
     const std::string receiver_type =
         has_type_ref(receiver_type_ref) ? type_ref_text(receiver_type_ref) : std::string{};
