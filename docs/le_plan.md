@@ -526,7 +526,13 @@ push. They are not release packaging work.
    compatibility fallbacks. Generic method calls on nested receivers also
    type-check through parsed callee receiver expressions. Pointer receiver
    emission now uses parsed member expression typing instead of reconstructing
-   a member path string first. Nested expression emission preserves symbol
+   a member path string first. C++ escape expression inference now prefers
+   parsed member expressions, parsed member-call callees, parsed index
+   expressions, parsed tuple expressions, parsed name expressions, and parsed
+   collection literal nodes before the remaining explicit native spelling
+   fallback paths. The parsed C++ escape call/member helper code has been
+   split into a focused helper module so the boundary logic does not keep
+   growing inside expression sema. Nested expression emission preserves symbol
    context through callee, member, dict-entry, named-argument, index,
    collection literal, tuple, template-call argument, swizzle, pointer-cast,
    and fixed-array literal children. Iterable/indexed-local helpers now accept
