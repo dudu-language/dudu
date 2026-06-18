@@ -4,6 +4,22 @@
 #include "dudu/sema_expr_internal.hpp"
 
 namespace dudu {
+namespace {
+
+std::string expr_label(const Expr& expr) {
+    if (const std::optional<ExprPath> path = expr_path_from_expr(expr)) {
+        return render_expr_path(*path);
+    }
+    return display_expr(expr);
+}
+
+std::string index_receiver_label(const Expr& receiver) {
+    const std::string label = expr_label(receiver);
+    return label.empty() ? "indexed expression" : label;
+}
+
+} // namespace
+
 [[noreturn]] void sema_expr_fail(const SourceLocation& location, const std::string& message) {
     throw CompileError(location, message, "dudu.sema.expression");
 }
@@ -160,17 +176,17 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
             if (has_type_ref(receiver_member_type)) {
                 return indexed_type_ref_from_type(
                     scope.symbols, index_location, receiver_member_type, expr.children[1],
-                    display_expr(receiver).empty() ? "indexed expression" : display_expr(receiver));
+                    index_receiver_label(receiver));
             }
             const TypeRef receiver_type = infer_expr_type_ast(scope, receiver, location);
             if (has_type_ref(receiver_type)) {
                 return indexed_type_ref_from_type(
                     scope.symbols, index_location, receiver_type, expr.children[1],
-                    display_expr(receiver).empty() ? "indexed expression" : display_expr(receiver));
+                    index_receiver_label(receiver));
             }
         }
         if (location != nullptr) {
-            sema_expr_fail(*location, "unsupported index expression: " + display_expr(expr));
+            sema_expr_fail(*location, "unsupported index expression: " + expr_label(expr));
         }
         return {};
     case ExprKind::Member:

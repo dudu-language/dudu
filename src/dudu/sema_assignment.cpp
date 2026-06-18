@@ -38,6 +38,18 @@ bool is_swizzle_name(std::string_view name) {
     return false;
 }
 
+std::string assignment_expr_label(const Expr& expr) {
+    if (const std::optional<ExprPath> path = expr_path_from_expr(expr)) {
+        return render_expr_path(*path);
+    }
+    return display_expr(expr);
+}
+
+std::string indexed_assignment_label(const Expr& receiver) {
+    const std::string label = assignment_expr_label(receiver);
+    return label.empty() ? "indexed assignment" : label;
+}
+
 } // namespace
 
 TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
@@ -81,7 +93,7 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
         if (has_type_ref(receiver_type)) {
             return indexed_type_ref_from_type(
                 scope.symbols, target_location, receiver_type, stmt.target_expr.children[1],
-                display_expr(receiver).empty() ? "indexed assignment" : display_expr(receiver));
+                indexed_assignment_label(receiver));
         }
     }
     if (stmt.target_expr.kind == ExprKind::Name) {
@@ -113,7 +125,7 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
             return type;
         }
         sema_fail(target_location,
-                  "unsupported assignment target: " + display_expr(stmt.target_expr));
+                  "unsupported assignment target: " + assignment_expr_label(stmt.target_expr));
     }
     if (stmt.target_expr.kind == ExprKind::Call ||
         stmt.target_expr.kind == ExprKind::TemplateCall) {
@@ -122,9 +134,10 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
     }
     if (expr_present(stmt.target_expr)) {
         sema_fail(target_location,
-                  "unsupported assignment target: " + display_expr(stmt.target_expr));
+                  "unsupported assignment target: " + assignment_expr_label(stmt.target_expr));
     }
-    sema_fail(target_location, "unsupported assignment target: " + display_expr(stmt.target_expr));
+    sema_fail(target_location,
+              "unsupported assignment target: " + assignment_expr_label(stmt.target_expr));
 }
 
 } // namespace dudu
