@@ -56,12 +56,9 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
     case ExprKind::SetLiteral:
         return parse_type_text("set", type_location);
     case ExprKind::Name:
-        if (const auto local = scope.local_type_refs.find(expr.name);
-            local != scope.local_type_refs.end()) {
-            return local->second;
-        }
-        if (const auto local = scope.locals.find(expr.name); local != scope.locals.end()) {
-            return parse_type_text(local->second, type_location);
+        if (const TypeRef local = local_type_ref(scope, expr.name, type_location);
+            has_type_ref(local)) {
+            return local;
         }
         if (const auto fn = scope.symbols.function_signatures.find(expr.name);
             fn != scope.symbols.function_signatures.end()) {

@@ -1780,6 +1780,10 @@ LSP source edits are also moving to AST-owned ranges:
 - Local swizzle C++ emission now passes parsed local `TypeRef` metadata into
   the local-class fast path instead of reparsing the local type string before
   asking semantic swizzle helpers for the result type.
+- Function-scope local type lookup now has a shared `TypeRef` helper that
+  prefers parsed local metadata and names the old local string map as an
+  explicit compatibility fallback. Normal expression sema and explicit
+  `cpp(...)` pointer/address escape inference now use it.
 - Native value symbols now store parsed `TypeRef` metadata beside their C++
   spelling strings, and normal name/member expression sema reads those refs
   directly for imported constants, build flags, shader/native values, and class

@@ -68,17 +68,23 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
     }
     if (expr.size() > 1 && expr.front() == '*') {
         const std::string name = trim(expr.substr(1));
-        if (const auto local = scope.locals.find(name); local != scope.locals.end()) {
-            std::string type = trim(local->second);
-            if (!type.empty() && type.front() == '*') {
-                return trim(type.substr(1));
-            }
+        if (const TypeRef type =
+                local_type_ref(scope, name, location == nullptr ? SourceLocation{} : *location);
+            type.kind == TypeKind::Pointer && !type.children.empty()) {
+            return type_ref_text(type.children.front());
         }
     }
     if (expr.size() > 1 && expr.front() == '&') {
         const std::string name = trim(expr.substr(1));
-        if (const auto local = scope.locals.find(name); local != scope.locals.end()) {
-            return "*" + trim(local->second);
+        if (const TypeRef type =
+                local_type_ref(scope, name, location == nullptr ? SourceLocation{} : *location);
+            has_type_ref(type)) {
+            TypeRef pointer;
+            pointer.kind = TypeKind::Pointer;
+            pointer.location = location == nullptr ? SourceLocation{} : *location;
+            pointer.children.push_back(type);
+            pointer.text = substitute_type_ref_text(pointer, {});
+            return pointer.text;
         }
         const std::string value_type = infer_cpp_escape_expr(scope, name, location);
         if (!value_type.empty() && value_type != "void") {
