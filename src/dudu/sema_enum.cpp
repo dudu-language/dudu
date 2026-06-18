@@ -4,10 +4,6 @@
 
 namespace dudu {
 
-const EnumDecl* enum_decl_for_type(const Symbols& symbols, const std::string& type) {
-    return enum_decl_for_type(symbols, parse_type_text(type));
-}
-
 const EnumDecl* enum_decl_for_type(const Symbols& symbols, const TypeRef& type) {
     const TypeRef resolved = resolve_alias_ref(symbols, type);
     const auto found = symbols.enums.find(type_ref_head_name(resolved));

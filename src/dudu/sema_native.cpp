@@ -27,10 +27,6 @@ std::optional<std::string> native_path_from_expr(const Expr& expr) {
 
 } // namespace
 
-bool foreign_cpp_type_name(const Symbols& symbols, const std::string& type) {
-    return foreign_cpp_type_name(symbols, parse_type_text(type));
-}
-
 bool foreign_cpp_type_name(const Symbols& symbols, const TypeRef& type) {
     TypeRef resolved_type = resolve_alias_ref(symbols, type);
     while (const auto inner = unary_type_child_ref(

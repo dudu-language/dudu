@@ -1682,3 +1682,6 @@ push. They are not release packaging work.
    string reparsing overload has been removed. `cpp(...)` escape inference now
    keeps member-path, index, pointer-cast, and unary address/deref helper
    results as `TypeRef` nodes until the explicit escape-boundary render.
+   Enum declaration lookup, foreign C++ type detection, and pointer type
+   lowering no longer expose unused raw-string overloads that only parsed text
+   and delegated to structured `TypeRef` implementations.

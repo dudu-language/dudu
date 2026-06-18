@@ -471,14 +471,4 @@ std::string lower_cpp_type(const TypeRef& type, const std::vector<std::string>& 
     return lower_spelled_or_reparsed_type(type, namespace_aliases, options);
 }
 
-std::string lower_cpp_pointer_type(const std::string& pointee) {
-    return lower_cpp_type(wrapped_type_ref(TypeKind::Pointer, parse_type_text(pointee)));
-}
-
-std::string lower_cpp_pointer_type(const std::string& pointee,
-                                   const std::vector<std::string>& namespace_aliases) {
-    return lower_cpp_type(wrapped_type_ref(TypeKind::Pointer, parse_type_text(pointee)),
-                          namespace_aliases);
-}
-
 } // namespace dudu
