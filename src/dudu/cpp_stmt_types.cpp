@@ -1,15 +1,13 @@
 #include "dudu/cpp_stmt_types.hpp"
 
-#include "dudu/array_shape.hpp"
 #include "dudu/ast_expr.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
+#include "dudu/sema_index_type_ref.hpp"
 #include "dudu/sema_scan.hpp"
 
 #include <cctype>
 #include <cstddef>
-#include <optional>
-#include <sstream>
 #include <vector>
 
 namespace dudu {
@@ -54,65 +52,11 @@ size_t index_count(const Expr& expr) {
     return 1;
 }
 
-std::string shaped_array_type(const std::string& element_type, const std::vector<size_t>& shape) {
-    std::ostringstream out;
-    out << "array[" << element_type << "][";
-    for (size_t i = 0; i < shape.size(); ++i) {
-        if (i > 0) {
-            out << ", ";
-        }
-        out << shape[i];
-    }
-    out << "]";
-    return out.str();
-}
-
-std::string indexed_local_type(const TypeRef& receiver_type, const Expr& index_expr);
-
-std::string indexed_local_type(const TypeRef& receiver_type, const Expr& index_expr) {
-    for (std::string_view name : {"list", "span", "strided_span", "set"}) {
-        const std::vector<TypeRef> args = template_type_arg_refs(receiver_type, name);
-        if (args.size() == 1) {
-            return substitute_type_ref_text(args.front(), {});
-        }
-    }
-    if (const std::vector<TypeRef> args = template_type_arg_refs(receiver_type, "dict");
-        args.size() == 2) {
-        return substitute_type_ref_text(args[1], {});
-    }
-    switch (receiver_type.kind) {
-    case TypeKind::Pointer:
-    case TypeKind::Reference:
-    case TypeKind::Const:
-    case TypeKind::Volatile:
-    case TypeKind::Atomic:
-    case TypeKind::Storage:
-    case TypeKind::Shared:
-    case TypeKind::Device:
-    case TypeKind::Static:
-        return receiver_type.children.empty()
-                   ? std::string{}
-                   : indexed_local_type(receiver_type.children.front(), index_expr);
-    case TypeKind::Template:
-    case TypeKind::FixedArray: {
-        const std::string element_type = explicit_array_element_type(receiver_type);
-        const std::vector<size_t> shape = explicit_array_shape(receiver_type);
-        const size_t used_indices = index_count(index_expr);
-        if (element_type.empty() || shape.empty() || used_indices >= shape.size()) {
-            return element_type;
-        }
-        const std::vector<size_t> remaining_shape{
-            shape.begin() + static_cast<std::ptrdiff_t>(used_indices), shape.end()};
-        return shaped_array_type(element_type, remaining_shape);
-    }
-    case TypeKind::Named:
-    case TypeKind::Qualified:
-    case TypeKind::Function:
-    case TypeKind::Value:
-    case TypeKind::Unknown:
-        break;
-    }
-    return {};
+TypeRef indexed_local_type_ref(const TypeRef& receiver_type, const Expr& index_expr) {
+    const auto indexed = indexed_type_ref_from_type_ref_with_count(
+        index_expr.location, receiver_type, index_count(index_expr), false, false,
+        substitute_type_ref_text(receiver_type, {}));
+    return indexed ? *indexed : TypeRef{};
 }
 
 bool looks_like_dudu_type(const std::string& name) {
@@ -259,20 +203,20 @@ TypeRef infer_emitted_local_type_ref(const Expr& expr,
             if (expr.children[0].kind == ExprKind::Name) {
                 if (const auto local = local_type_refs.find(expr.children[0].name);
                     local != local_type_refs.end()) {
-                    if (const std::string indexed_type =
-                            indexed_local_type(local->second, expr.children[1]);
-                        !indexed_type.empty()) {
-                        return parse_type_text(indexed_type, expr.location);
+                    if (const TypeRef indexed_type =
+                            indexed_local_type_ref(local->second, expr.children[1]);
+                        has_type_ref(indexed_type)) {
+                        return indexed_type;
                     }
                 }
             }
             const TypeRef receiver_type = infer_emitted_local_type_ref(
                 expr.children[0], locals, local_type_refs, function_returns);
             if (has_type_ref(receiver_type)) {
-                if (const std::string indexed_type =
-                        indexed_local_type(receiver_type, expr.children[1]);
-                    !indexed_type.empty()) {
-                    return parse_type_text(indexed_type, expr.location);
+                if (const TypeRef indexed_type =
+                        indexed_local_type_ref(receiver_type, expr.children[1]);
+                    has_type_ref(indexed_type)) {
+                    return indexed_type;
                 }
             }
         }
