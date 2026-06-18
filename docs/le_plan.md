@@ -1281,6 +1281,9 @@ declarations safely.
    statement/expression parsing; exact source reconstruction is isolated to
    import declarations where LSP import-code actions need to preserve the
    original line.
+   Native overload matching no longer caches a rendered argument type beside
+   the inferred `TypeRef`; diagnostics and remaining native-template fallback
+   bindings render on demand at their boundary.
    Indexing type inference exposes only parsed `TypeRef` receiver APIs; the old
    string receiver and string result wrappers have been removed, with
    `cpp(...)` escape inference rendering only at its boundary.
