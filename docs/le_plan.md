@@ -1762,3 +1762,6 @@ push. They are not release packaging work.
    scanned type names instead of reparsing those names after prefix adjustment.
    Native function return fallback now constructs `auto` directly as a `TypeRef`
    when no native return spelling exists instead of parsing synthesized text.
+   Parsed template member calls now pass their `template_type_args` through typed
+   method-signature lookup instead of reconstructing `method[T]` strings and
+   reparsing the type arguments in sema.

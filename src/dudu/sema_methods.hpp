@@ -29,6 +29,10 @@ std::optional<TypeRef> swizzle_assignment_type_ref_for_type(const Symbols& symbo
 bool method_signature_for_type(const Symbols& symbols, const TypeRef& receiver_type,
                                const std::string& method_name, FunctionSignature& signature,
                                const SourceLocation* location);
+bool method_signature_for_type(const Symbols& symbols, const TypeRef& receiver_type,
+                               const std::string& method_name,
+                               const std::vector<TypeRef>& method_args,
+                               FunctionSignature& signature, const SourceLocation* location);
 std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
     const FunctionScope& scope, const TypeRef& receiver_type, const std::string& method_name,
     const std::vector<Expr>& args, const SourceLocation* location);
@@ -39,8 +43,16 @@ std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
 std::vector<FunctionSignature> method_signatures_for_type(const Symbols& symbols,
                                                           const TypeRef& receiver_type,
                                                           const std::string& method_name);
+std::vector<FunctionSignature> method_signatures_for_type(const Symbols& symbols,
+                                                          const TypeRef& receiver_type,
+                                                          const std::string& method_name,
+                                                          const std::vector<TypeRef>& method_args);
 bool static_method_signature_for_type(const Symbols& symbols, const TypeRef& type_name,
                                       const std::string& method_name, FunctionSignature& signature,
                                       const SourceLocation* location);
+bool static_method_signature_for_type(const Symbols& symbols, const TypeRef& type_name,
+                                      const std::string& method_name,
+                                      const std::vector<TypeRef>& method_args,
+                                      FunctionSignature& signature, const SourceLocation* location);
 
 } // namespace dudu

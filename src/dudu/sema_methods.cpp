@@ -57,7 +57,118 @@ TypeRef instantiate_method_type_ref(const ClassDecl& klass, const FunctionDecl& 
     return substitute_receiver_template_type(out, receiver_args);
 }
 
-} // namespace
+FunctionSignature instantiate_method_signature(const ClassDecl& klass, const FunctionDecl& method,
+                                               const std::vector<TypeRef>& receiver_args,
+                                               const std::vector<TypeRef>& method_args);
+
+bool method_signature_for_type_impl(const Symbols& symbols, const TypeRef& receiver_type,
+                                    const std::string& lookup_name,
+                                    const std::vector<TypeRef>& method_args,
+                                    const std::string& display_name, FunctionSignature& signature,
+                                    const SourceLocation* location) {
+    const TypeRef templated_receiver = receiver_template_type_ref(symbols, receiver_type);
+    const std::vector<TypeRef> receiver_args = template_arg_refs_from_type(templated_receiver);
+    const std::string type = unwrap_receiver_type(symbols, receiver_type);
+    const ClassDecl* klass = class_for_receiver_type(symbols, receiver_type);
+    if (klass == nullptr) {
+        return false;
+    }
+    for (const FunctionDecl& method : klass->methods) {
+        if (method.name != lookup_name) {
+            continue;
+        }
+        if (method.generic_params.size() != method_args.size()) {
+            if (location != nullptr) {
+                sema_fail(*location, "method " + type + "." + lookup_name + " expects " +
+                                         std::to_string(method.generic_params.size()) +
+                                         " type arguments, got " +
+                                         std::to_string(method_args.size()));
+            }
+            return false;
+        }
+        signature = instantiate_method_signature(*klass, method, receiver_args, method_args);
+        return true;
+    }
+    for (const BaseClassDecl& base_decl : klass->base_class_refs) {
+        if (method_signature_for_type_impl(symbols, base_decl.type_ref, lookup_name, method_args,
+                                           display_name, signature, nullptr)) {
+            return true;
+        }
+    }
+    if (location != nullptr) {
+        sema_fail(*location, "unknown method: " + type + "." + display_name);
+    }
+    return false;
+}
+
+std::vector<FunctionSignature>
+method_signatures_for_type_impl(const Symbols& symbols, const TypeRef& receiver_type,
+                                const std::string& lookup_name,
+                                const std::vector<TypeRef>& method_args) {
+    std::vector<FunctionSignature> out;
+    const TypeRef templated_receiver = receiver_template_type_ref(symbols, receiver_type);
+    const std::vector<TypeRef> receiver_args = template_arg_refs_from_type(templated_receiver);
+    const ClassDecl* klass = class_for_receiver_type(symbols, receiver_type);
+    if (klass == nullptr) {
+        return out;
+    }
+    for (const FunctionDecl& method : klass->methods) {
+        if (method.name != lookup_name) {
+            continue;
+        }
+        if (method.generic_params.size() != method_args.size()) {
+            continue;
+        }
+        out.push_back(instantiate_method_signature(*klass, method, receiver_args, method_args));
+    }
+    for (const BaseClassDecl& base_decl : klass->base_class_refs) {
+        std::vector<FunctionSignature> base_signatures =
+            method_signatures_for_type_impl(symbols, base_decl.type_ref, lookup_name, method_args);
+        out.insert(out.end(), base_signatures.begin(), base_signatures.end());
+    }
+    return out;
+}
+
+bool static_method_signature_for_type_impl(const Symbols& symbols, const TypeRef& type_name,
+                                           const std::string& lookup_name,
+                                           const std::vector<TypeRef>& method_args,
+                                           const std::string& display_name,
+                                           FunctionSignature& signature,
+                                           const SourceLocation* location) {
+    const TypeRef templated_receiver = receiver_template_type_ref(symbols, type_name);
+    const std::vector<TypeRef> receiver_args = template_arg_refs_from_type(templated_receiver);
+    const std::string type = unwrap_receiver_type(symbols, type_name);
+    const ClassDecl* klass = class_for_receiver_type(symbols, type_name);
+    if (klass == nullptr) {
+        return false;
+    }
+    for (const FunctionDecl& method : klass->methods) {
+        if (method.name != lookup_name || !method_is_static(method)) {
+            continue;
+        }
+        if (method.generic_params.size() != method_args.size()) {
+            if (location != nullptr) {
+                sema_fail(*location, "method " + type + "." + lookup_name + " expects " +
+                                         std::to_string(method.generic_params.size()) +
+                                         " type arguments, got " +
+                                         std::to_string(method_args.size()));
+            }
+            return false;
+        }
+        signature = instantiate_method_signature(*klass, method, receiver_args, method_args);
+        return true;
+    }
+    for (const BaseClassDecl& base_decl : klass->base_class_refs) {
+        if (static_method_signature_for_type_impl(symbols, base_decl.type_ref, lookup_name,
+                                                  method_args, display_name, signature, nullptr)) {
+            return true;
+        }
+    }
+    if (location != nullptr) {
+        sema_fail(*location, "unknown static method: " + type + "." + display_name);
+    }
+    return false;
+}
 
 FunctionSignature instantiate_method_signature(const ClassDecl& klass, const FunctionDecl& method,
                                                const std::vector<TypeRef>& receiver_args,
@@ -80,48 +191,30 @@ FunctionSignature instantiate_method_signature(const ClassDecl& klass, const Fun
     return signature;
 }
 
+} // namespace
+
 bool method_signature_for_type(const Symbols& symbols, const TypeRef& receiver_type,
                                const std::string& method_name, FunctionSignature& signature,
                                const SourceLocation* location) {
     if (builtin_cpp_method_signature(symbols, receiver_type, method_name, signature)) {
         return true;
     }
-    const TypeRef templated_receiver = receiver_template_type_ref(symbols, receiver_type);
-    const std::vector<TypeRef> receiver_args = template_arg_refs_from_type(templated_receiver);
-    const std::string type = unwrap_receiver_type(symbols, receiver_type);
     const std::string lookup_name = template_method_name(method_name);
     const std::vector<TypeRef> method_args =
         template_method_args(method_name, receiver_type.location);
-    const ClassDecl* klass = class_for_receiver_type(symbols, receiver_type);
-    if (klass == nullptr) {
-        return false;
-    }
-    for (const FunctionDecl& method : klass->methods) {
-        if (method.name != lookup_name) {
-            continue;
-        }
-        if (method.generic_params.size() != method_args.size()) {
-            if (location != nullptr) {
-                sema_fail(*location, "method " + type + "." + lookup_name + " expects " +
-                                         std::to_string(method.generic_params.size()) +
-                                         " type arguments, got " +
-                                         std::to_string(method_args.size()));
-            }
-            return false;
-        }
-        signature = instantiate_method_signature(*klass, method, receiver_args, method_args);
+    return method_signature_for_type_impl(symbols, receiver_type, lookup_name, method_args,
+                                          method_name, signature, location);
+}
+
+bool method_signature_for_type(const Symbols& symbols, const TypeRef& receiver_type,
+                               const std::string& method_name,
+                               const std::vector<TypeRef>& method_args,
+                               FunctionSignature& signature, const SourceLocation* location) {
+    if (builtin_cpp_method_signature(symbols, receiver_type, method_name, signature)) {
         return true;
     }
-    for (const BaseClassDecl& base_decl : klass->base_class_refs) {
-        if (method_signature_for_type(symbols, base_decl.type_ref, method_name, signature,
-                                      nullptr)) {
-            return true;
-        }
-    }
-    if (location != nullptr) {
-        sema_fail(*location, "unknown method: " + type + "." + method_name);
-    }
-    return false;
+    return method_signature_for_type_impl(symbols, receiver_type, method_name, method_args,
+                                          method_name, signature, location);
 }
 
 std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
@@ -201,72 +294,39 @@ std::vector<FunctionSignature> method_signatures_for_type(const Symbols& symbols
     if (builtin_cpp_method_signature(symbols, receiver_type, method_name, builtin)) {
         return {builtin};
     }
-    std::vector<FunctionSignature> out;
-    const TypeRef templated_receiver = receiver_template_type_ref(symbols, receiver_type);
-    const std::vector<TypeRef> receiver_args = template_arg_refs_from_type(templated_receiver);
-    const std::string type = unwrap_receiver_type(symbols, receiver_type);
     const std::string lookup_name = template_method_name(method_name);
     const std::vector<TypeRef> method_args =
         template_method_args(method_name, receiver_type.location);
-    const ClassDecl* klass = class_for_receiver_type(symbols, receiver_type);
-    if (klass == nullptr) {
-        return out;
+    return method_signatures_for_type_impl(symbols, receiver_type, lookup_name, method_args);
+}
+
+std::vector<FunctionSignature> method_signatures_for_type(const Symbols& symbols,
+                                                          const TypeRef& receiver_type,
+                                                          const std::string& method_name,
+                                                          const std::vector<TypeRef>& method_args) {
+    FunctionSignature builtin;
+    if (builtin_cpp_method_signature(symbols, receiver_type, method_name, builtin)) {
+        return {builtin};
     }
-    for (const FunctionDecl& method : klass->methods) {
-        if (method.name != lookup_name) {
-            continue;
-        }
-        if (method.generic_params.size() != method_args.size()) {
-            continue;
-        }
-        out.push_back(instantiate_method_signature(*klass, method, receiver_args, method_args));
-    }
-    for (const BaseClassDecl& base_decl : klass->base_class_refs) {
-        std::vector<FunctionSignature> base_signatures =
-            method_signatures_for_type(symbols, base_decl.type_ref, method_name);
-        out.insert(out.end(), base_signatures.begin(), base_signatures.end());
-    }
-    return out;
+    return method_signatures_for_type_impl(symbols, receiver_type, method_name, method_args);
 }
 
 bool static_method_signature_for_type(const Symbols& symbols, const TypeRef& type_name,
                                       const std::string& method_name, FunctionSignature& signature,
                                       const SourceLocation* location) {
-    const TypeRef templated_receiver = receiver_template_type_ref(symbols, type_name);
-    const std::vector<TypeRef> receiver_args = template_arg_refs_from_type(templated_receiver);
-    const std::string type = unwrap_receiver_type(symbols, type_name);
     const std::string lookup_name = template_method_name(method_name);
     const std::vector<TypeRef> method_args = template_method_args(method_name, type_name.location);
-    const ClassDecl* klass = class_for_receiver_type(symbols, type_name);
-    if (klass == nullptr) {
-        return false;
-    }
-    for (const FunctionDecl& method : klass->methods) {
-        if (method.name != lookup_name || !method_is_static(method)) {
-            continue;
-        }
-        if (method.generic_params.size() != method_args.size()) {
-            if (location != nullptr) {
-                sema_fail(*location, "method " + type + "." + lookup_name + " expects " +
-                                         std::to_string(method.generic_params.size()) +
-                                         " type arguments, got " +
-                                         std::to_string(method_args.size()));
-            }
-            return false;
-        }
-        signature = instantiate_method_signature(*klass, method, receiver_args, method_args);
-        return true;
-    }
-    for (const BaseClassDecl& base_decl : klass->base_class_refs) {
-        if (static_method_signature_for_type(symbols, base_decl.type_ref, method_name, signature,
-                                             nullptr)) {
-            return true;
-        }
-    }
-    if (location != nullptr) {
-        sema_fail(*location, "unknown static method: " + type + "." + method_name);
-    }
-    return false;
+    return static_method_signature_for_type_impl(symbols, type_name, lookup_name, method_args,
+                                                 method_name, signature, location);
+}
+
+bool static_method_signature_for_type(const Symbols& symbols, const TypeRef& type_name,
+                                      const std::string& method_name,
+                                      const std::vector<TypeRef>& method_args,
+                                      FunctionSignature& signature,
+                                      const SourceLocation* location) {
+    return static_method_signature_for_type_impl(symbols, type_name, method_name, method_args,
+                                                 method_name, signature, location);
 }
 
 } // namespace dudu

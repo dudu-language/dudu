@@ -8,15 +8,16 @@ namespace {
 std::optional<TypeRef> receiver_call_type_ref(const FunctionScope& scope, const Expr& expr,
                                               const std::string& callee,
                                               const std::string& method_name,
+                                              const std::vector<TypeRef>& method_args,
                                               const SourceLocation* location) {
     const Expr& member = expr.callee.front();
     const Expr& receiver_expr = member.children.front();
     FunctionSignature signature;
     if (receiver_expr.kind == ExprKind::Name && receiver_expr.name == "class" &&
         !scope.current_class.empty() &&
-        static_method_signature_for_type(scope.symbols,
-                                         named_type_ref(scope.current_class, receiver_expr.location),
-                                         method_name, signature, location)) {
+        static_method_signature_for_type(
+            scope.symbols, named_type_ref(scope.current_class, receiver_expr.location), method_name,
+            method_args, signature, location)) {
         check_call_args_ast(scope, callee, signature, expr.children, location);
         return signature_return_type_ref(signature);
     }
@@ -25,7 +26,7 @@ std::optional<TypeRef> receiver_call_type_ref(const FunctionScope& scope, const 
         scope.symbols.classes.contains(receiver_expr.name) &&
         static_method_signature_for_type(scope.symbols,
                                          named_type_ref(receiver_expr.name, receiver_expr.location),
-                                         method_name, signature, location)) {
+                                         method_name, method_args, signature, location)) {
         check_call_args_ast(scope, callee, signature, expr.children, location);
         return signature_return_type_ref(signature);
     }
@@ -43,10 +44,10 @@ std::optional<TypeRef> receiver_call_type_ref(const FunctionScope& scope, const 
         return named_type_ref("auto", expr.location);
     }
     const bool foreign_receiver = foreign_cpp_type_name(scope.symbols, receiver_type_ref);
-    if (method_signature_for_type(scope.symbols, receiver_type_ref, method_name, signature,
-                                  foreign_receiver ? nullptr : location)) {
+    if (method_signature_for_type(scope.symbols, receiver_type_ref, method_name, method_args,
+                                  signature, foreign_receiver ? nullptr : location)) {
         const std::vector<FunctionSignature> signatures =
-            method_signatures_for_type(scope.symbols, receiver_type_ref, method_name);
+            method_signatures_for_type(scope.symbols, receiver_type_ref, method_name, method_args);
         if (const auto match = matching_signature_ast(scope, signatures, expr.children)) {
             check_call_args_ast(scope, callee, *match, expr.children, location);
             return signature_return_type_ref(*match);
@@ -90,7 +91,7 @@ std::optional<TypeRef> direct_member_call_type_ref(const FunctionScope& scope, c
             }
         }
     }
-    return receiver_call_type_ref(scope, expr, callee, member.name, location);
+    return receiver_call_type_ref(scope, expr, callee, member.name, {}, location);
 }
 
 std::optional<TypeRef> direct_member_call_type_ref(const FunctionScope& scope, const Expr& expr,
@@ -111,8 +112,8 @@ std::optional<TypeRef> direct_template_member_call_type_ref(const FunctionScope&
         return std::nullopt;
     }
     const Expr& member = expr.callee.front();
-    const std::string method_name = member.name + "[" + template_args_lookup_text(expr) + "]";
-    return receiver_call_type_ref(scope, expr, callee, method_name, location);
+    return receiver_call_type_ref(scope, expr, callee, member.name, expr.template_type_args,
+                                  location);
 }
 
 } // namespace dudu
