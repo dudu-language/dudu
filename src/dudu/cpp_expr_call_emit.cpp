@@ -8,6 +8,7 @@
 #include "dudu/sema_enum.hpp"
 #include "dudu/sema_function_type.hpp"
 #include "dudu/sema_methods.hpp"
+#include "dudu/sema_scope.hpp"
 #include "dudu/source.hpp"
 
 #include <algorithm>
@@ -319,10 +320,9 @@ lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& al
     if (local == locals.end()) {
         return std::nullopt;
     }
-    std::string receiver_type = local->second;
-    if (const auto typed = local_type_refs.find(receiver); typed != local_type_refs.end()) {
-        receiver_type = substitute_type_ref_text(typed->second, {});
-    }
+    const TypeRef receiver_type_ref =
+        local_type_ref(*symbols, locals, local_type_refs, receiver, stmt.target_expr.location);
+    const std::string receiver_type = substitute_type_ref_text(receiver_type_ref, {});
     const auto method = dudu_operator_method_name(*symbols, receiver_type, "[]=");
     if (!method) {
         return std::nullopt;

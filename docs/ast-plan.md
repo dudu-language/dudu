@@ -146,6 +146,8 @@ Already structured:
   instead of reading local type maps directly
 - member-path semantic lookup uses the shared typed-first local `TypeRef` helper
   instead of maintaining a private local-map fallback
+- index-assignment C++ emission uses the shared typed-first local `TypeRef`
+  helper when looking up `[]=` operator methods
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path
