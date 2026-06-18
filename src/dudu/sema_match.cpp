@@ -249,7 +249,7 @@ void check_match_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& ret
         check_wrapper_match(scope, stmt, return_type, loop_depth, wrapper, callbacks);
         return;
     }
-    const EnumDecl* en = enum_decl_for_type(scope.symbols, subject_type);
+    const EnumDecl* en = enum_decl_for_type(scope.symbols, subject_ref);
     if (en == nullptr) {
         sema_fail(subject_location, "match subject must be an enum, got " + subject_type);
     }

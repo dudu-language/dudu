@@ -34,8 +34,7 @@ bool match_cases_return(const Stmt& stmt) {
 }
 
 void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
-                          const std::vector<std::string>& aliases,
-                          const CppLocalContext& locals,
+                          const std::vector<std::string>& aliases, const CppLocalContext& locals,
                           const TypeRef& return_type_ref,
                           const std::map<std::string, TypeRef>& function_returns,
                           const Symbols* symbols, const CppEmitOptions& options) {
@@ -45,8 +44,7 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
 }
 
 void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
-                          const std::vector<std::string>& aliases,
-                          const CppLocalContext& locals,
+                          const std::vector<std::string>& aliases, const CppLocalContext& locals,
                           const std::map<std::string, TypeRef>& local_type_refs,
                           const TypeRef& return_type_ref,
                           const std::map<std::string, TypeRef>& function_returns,
@@ -128,7 +126,7 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
             return;
         }
         const EnumDecl* en =
-            symbols == nullptr ? nullptr : enum_decl_for_type(*symbols, subject_type);
+            symbols == nullptr ? nullptr : enum_decl_for_type(*symbols, subject_type_ref);
         if (en != nullptr && (enum_has_payloads(*en) || match_has_guards(stmt))) {
             const std::string subject = "__dudu_match_" + std::to_string(stmt.location.line) + "_" +
                                         std::to_string(stmt.location.column);
@@ -230,8 +228,7 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
 }
 
 void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
-                          const std::vector<std::string>& aliases,
-                          const CppLocalContext& locals,
+                          const std::vector<std::string>& aliases, const CppLocalContext& locals,
                           const TypeRef& return_type_ref,
                           const std::map<std::string, TypeRef>& function_returns,
                           const Symbols* symbols) {
