@@ -13,7 +13,6 @@
 namespace dudu {
 
 struct EffectiveVarType {
-    std::string text;
     TypeRef ref;
     bool inferred = false;
 };

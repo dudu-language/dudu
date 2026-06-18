@@ -136,11 +136,9 @@ void check_array_literal_elements(FunctionScope& scope, const TypeRef& element_t
 
 EffectiveVarType effective_var_type(const Stmt& stmt, const ArrayShapeInference& inferred) {
     if (inferred.status == ArrayShapeStatus::Inferred) {
-        return {.text = substitute_type_ref_text(inferred.type_ref, {}),
-                .ref = inferred.type_ref,
-                .inferred = true};
+        return {.ref = inferred.type_ref, .inferred = true};
     }
-    return {.text = substitute_type_ref_text(stmt.type_ref, {}), .ref = stmt.type_ref};
+    return {.ref = stmt.type_ref};
 }
 
 std::string shape_text(const std::vector<size_t>& shape) {

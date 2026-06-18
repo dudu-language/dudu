@@ -214,9 +214,9 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
         if (!type.inferred) {
             check_known_type_ref(scope.symbols, node_location(stmt.location, stmt.type_ref),
                                  stmt.type_ref, "unknown local type: ");
-        } else if (!known_type(scope.symbols, type.text)) {
-            sema_fail(node_location(stmt.location, stmt.type_ref),
-                      "unknown local type: " + type.text);
+        } else {
+            check_known_type_ref(scope.symbols, node_location(stmt.location, type.ref), type.ref,
+                                 "unknown local type: ");
         }
         if (sema_has_expr(stmt.value_expr)) {
             if (inferred.status == ArrayShapeStatus::Inferred &&

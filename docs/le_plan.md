@@ -1271,6 +1271,9 @@ declarations safely.
    checks and LSP local lookup bind locals through `TypeRef` metadata only.
    Assignment target semantic typing exposes only the structured `TypeRef`
    helper; the old string-returning wrapper has been removed.
+   Semantic var-decl effective type calculation no longer stores a rendered
+   type string beside the authoritative `TypeRef`; inferred array local type
+   validation now uses `check_known_type_ref` directly.
    AST type child helper APIs no longer expose string-returning template or
    unary child accessors; callers must consume `TypeRef` children and render
    only at explicit display, native compatibility, or C++ emission boundaries.
