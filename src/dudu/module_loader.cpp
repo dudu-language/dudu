@@ -344,6 +344,11 @@ const ModuleAst& load_one(const std::filesystem::path& path, const std::filesyst
         const std::filesystem::path dependency =
             module_path_to_file(path.parent_path(), import.module_path);
         const ModuleAst& dependency_module = load_one(dependency, root, loading, loaded, ordered);
+        parsed.dependencies.push_back({.kind = import.kind,
+                                       .import_module_path = import.module_path,
+                                       .resolved_module_path = dependency_module.module_path,
+                                       .source_path = dependency_module.source_path,
+                                       .location = import.location});
         if (import.kind == ImportKind::From &&
             !has_module_symbol(dependency_module, import.imported_name)) {
             throw CompileError(import.location, "module '" + import.module_path +

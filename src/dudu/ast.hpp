@@ -34,6 +34,14 @@ struct ImportDecl {
     SourceRange module_range;
 };
 
+struct ModuleDependency {
+    ImportKind kind = ImportKind::Module;
+    std::string import_module_path;
+    std::string resolved_module_path;
+    std::filesystem::path source_path;
+    SourceLocation location;
+};
+
 enum class TypeKind {
     Unknown,
     Named,
@@ -323,6 +331,7 @@ struct ModuleAst {
     std::map<std::string, std::string> build_values;
     bool target_mode_explicit = false;
     std::vector<ImportDecl> imports;
+    std::vector<ModuleDependency> dependencies;
     std::vector<TypeAliasDecl> aliases;
     std::vector<NativeTypeDecl> native_types;
     std::vector<NativeValueDecl> native_values;

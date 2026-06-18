@@ -104,6 +104,17 @@ void add_imported_generated_names(CppEmitOptions& options, const ModuleAst& depe
     }
 }
 
+std::string resolved_module_path_for_import(const ModuleAst& unit, const ImportDecl& import) {
+    for (const ModuleDependency& dependency : unit.dependencies) {
+        if (dependency.kind == import.kind && dependency.import_module_path == import.module_path &&
+            dependency.location.line == import.location.line &&
+            dependency.location.column == import.location.column) {
+            return dependency.resolved_module_path;
+        }
+    }
+    return import.module_path;
+}
+
 CppEmitOptions module_emit_options(const ModuleAst& unit,
                                    const std::map<std::string, const ModuleAst*>& modules) {
     CppEmitOptions options;
@@ -114,7 +125,7 @@ CppEmitOptions module_emit_options(const ModuleAst& unit,
         if (import.kind != ImportKind::Module && import.kind != ImportKind::From) {
             continue;
         }
-        const auto dependency = modules.find(import.module_path);
+        const auto dependency = modules.find(resolved_module_path_for_import(unit, import));
         if (dependency != modules.end()) {
             add_imported_generated_names(options, *dependency->second, import);
         }
@@ -131,7 +142,9 @@ std::vector<std::string> module_include_paths(const ModuleAst& unit) {
         if (import.module_path.empty() || import.module_path == unit.module_path) {
             continue;
         }
-        paths.insert(module_artifact_base_for_path(import.module_path).string() + ".hpp");
+        paths.insert(module_artifact_base_for_path(resolved_module_path_for_import(unit, import))
+                         .string() +
+                     ".hpp");
     }
     return {paths.begin(), paths.end()};
 }

@@ -135,6 +135,14 @@ void test_module_loader_canonicalizes_physical_modules() {
     assert(module.module_units[0].module_path == "vec3");
     assert(module.module_units[1].module_path == "camera");
     assert(module.module_units[2].module_path == "main");
+    assert(module.module_units[0].dependencies.empty());
+    assert(module.module_units[1].dependencies.size() == 1);
+    assert(module.module_units[1].dependencies[0].import_module_path == "vec3");
+    assert(module.module_units[1].dependencies[0].resolved_module_path == "vec3");
+    assert(module.module_units[2].dependencies.size() == 3);
+    assert(module.module_units[2].dependencies[0].resolved_module_path == "vec3");
+    assert(module.module_units[2].dependencies[1].resolved_module_path == "camera");
+    assert(module.module_units[2].dependencies[2].resolved_module_path == "camera");
     int vec3_count = 0;
     int camera_count = 0;
     int view_camera_alias_count = 0;
@@ -250,6 +258,11 @@ void test_module_loader_preserves_declaration_origins() {
 
     const dudu::ModuleAst module = dudu::load_source_tree(dir / "main.dd");
     assert(module.module_units.size() == 3);
+    assert(module.module_units[2].dependencies.size() == 2);
+    assert(module.module_units[2].dependencies[0].import_module_path == "camera");
+    assert(module.module_units[2].dependencies[0].resolved_module_path == "camera");
+    assert(module.module_units[2].dependencies[1].import_module_path == "renderer.camera");
+    assert(module.module_units[2].dependencies[1].resolved_module_path == "renderer.camera");
     int root_camera_count = 0;
     int renderer_camera_count = 0;
     int root_make_count = 0;
