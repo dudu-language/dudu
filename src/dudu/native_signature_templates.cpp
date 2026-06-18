@@ -19,16 +19,6 @@ bool bind_template_placeholder(const std::string& name, const std::string& got,
     return found->second == got;
 }
 
-std::optional<std::pair<std::string, std::string>> wrapped_type(std::string type) {
-    type = trim(std::move(type));
-    const size_t open = type.find('[');
-    if (open == std::string::npos || !type.ends_with("]")) {
-        return std::nullopt;
-    }
-    return std::make_pair(trim(type.substr(0, open)),
-                          trim(type.substr(open + 1, type.size() - open - 2)));
-}
-
 std::string strip_forwarding_suffix(std::string type) {
     type = trim(std::move(type));
     if (type.ends_with("...")) {
@@ -42,6 +32,49 @@ std::string strip_forwarding_suffix(std::string type) {
 
 std::string type_ref_binding_text(const TypeRef& type) {
     return substitute_type_ref_text(type, {});
+}
+
+std::string join_type_ref_binding_texts(const std::vector<TypeRef>& types) {
+    std::string out;
+    for (size_t i = 0; i < types.size(); ++i) {
+        if (i > 0) {
+            out += ", ";
+        }
+        out += type_ref_binding_text(types[i]);
+    }
+    return out;
+}
+
+std::string strip_pack_marker_suffix(std::string text) {
+    text = trim(std::move(text));
+    while (!text.empty() && text.back() == '.') {
+        text = trim(text.substr(0, text.size() - 1));
+    }
+    return text;
+}
+
+bool native_pack_marker(const TypeRef& type) {
+    return trim(type_ref_binding_text(type)) == ".";
+}
+
+bool bind_template_pack_expansion(const std::vector<TypeRef>& expected,
+                                  const std::vector<TypeRef>& got,
+                                  NativeTemplateBindings& bindings) {
+    if (expected.size() < 2) {
+        return false;
+    }
+    const std::string pack_name = strip_pack_marker_suffix(type_ref_binding_text(expected.front()));
+    if (!native_template_placeholder(pack_name)) {
+        return false;
+    }
+    for (size_t i = 1; i < expected.size(); ++i) {
+        if (!native_pack_marker(expected[i])) {
+            return false;
+        }
+    }
+    const std::string expected_expansion = join_type_ref_binding_texts(expected);
+    const std::string got_expansion = join_type_ref_binding_texts(got);
+    return bind_template_placeholder(expected_expansion, got_expansion, bindings);
 }
 
 bool bind_template_type_ref(const TypeRef& expected, const TypeRef& got,
@@ -103,6 +136,9 @@ bool bind_template_type_ref(const TypeRef& expected, const TypeRef& got,
     }
     if (expected.kind == TypeKind::Template && got.kind == TypeKind::Template &&
         same_native_template_name(expected.name, got.name)) {
+        if (bind_template_pack_expansion(expected.children, got.children, bindings)) {
+            return true;
+        }
         return bind_same_shape_children(expected, got, bindings);
     }
     if (expected.kind == TypeKind::FixedArray && got.kind == TypeKind::FixedArray &&
@@ -133,36 +169,6 @@ std::optional<std::string> native_template_pack_placeholder(std::string type) {
         return type;
     }
     return std::nullopt;
-}
-
-bool bind_native_template_type(std::string expected, std::string got,
-                               NativeTemplateBindings& bindings) {
-    expected = trim(std::move(expected));
-    got = trim(std::move(got));
-    if (native_template_placeholder(expected)) {
-        return bind_template_placeholder(expected, got, bindings);
-    }
-    if (!expected.empty() && expected.front() == '&') {
-        if (!got.empty() && got.front() == '&') {
-            got = trim(got.substr(1));
-        }
-        return bind_native_template_type(expected.substr(1), std::move(got), bindings);
-    }
-    if (!expected.empty() && expected.front() == '*') {
-        if (got.empty() || got.front() != '*') {
-            return false;
-        }
-        return bind_native_template_type(expected.substr(1), got.substr(1), bindings);
-    }
-    const std::optional<std::pair<std::string, std::string>> expected_wrap = wrapped_type(expected);
-    if (expected_wrap.has_value()) {
-        if (const std::optional<std::pair<std::string, std::string>> got_wrap = wrapped_type(got);
-            got_wrap.has_value() && got_wrap->first == expected_wrap->first) {
-            got = got_wrap->second;
-        }
-        return bind_native_template_type(expected_wrap->second, std::move(got), bindings);
-    }
-    return false;
 }
 
 bool bind_native_template_type_ast(const TypeRef& expected, const TypeRef& got,
