@@ -8,6 +8,7 @@
 
 #include <filesystem>
 #include <map>
+#include <optional>
 #include <set>
 
 namespace dudu {
@@ -15,7 +16,7 @@ namespace {
 
 struct AstLintLocal {
     std::string name;
-    std::string type;
+    TypeRef type_ref;
     int line = 0;
     int column = 0;
 };
@@ -75,14 +76,14 @@ bool same_source_file(const std::filesystem::path& lhs, const std::filesystem::p
     return lhs_canonical == rhs_canonical;
 }
 
-std::string visible_local_type(const std::vector<AstLintLocal>& active_decls,
-                               const std::string& name) {
+std::optional<TypeRef> visible_local_type_ref(const std::vector<AstLintLocal>& active_decls,
+                                              const std::string& name) {
     for (auto it = active_decls.rbegin(); it != active_decls.rend(); ++it) {
         if (it->name == name) {
-            return it->type;
+            return it->type_ref;
         }
     }
-    return {};
+    return std::nullopt;
 }
 
 void lint_suspicious_cast_expr(const Expr& expr, const Document& doc,
@@ -105,7 +106,7 @@ void lint_suspicious_cast_stmt(const Stmt& stmt, const Document& doc,
     });
     if (stmt.kind == StmtKind::VarDecl && !stmt.name.empty() && has_type_ref(stmt.type_ref)) {
         active_decls.push_back({.name = stmt.name,
-                                .type = substitute_type_ref_text(stmt.type_ref, {}),
+                                .type_ref = stmt.type_ref,
                                 .line = stmt.location.line,
                                 .column = stmt.location.column});
     }
@@ -126,8 +127,11 @@ void lint_suspicious_cast_expr(const Expr& expr, const Document& doc,
             node.children.front().kind == ExprKind::Name &&
             same_source_file(node.location.file, doc.path)) {
             const std::string& source_name = node.children.front().name;
-            const std::string source_type = visible_local_type(active_decls, source_name);
-            if (!source_type.empty() && is_suspicious_numeric_cast(callee, source_type)) {
+            const std::optional<TypeRef> source_type_ref =
+                visible_local_type_ref(active_decls, source_name);
+            const std::string source_type =
+                source_type_ref ? substitute_type_ref_text(*source_type_ref, {}) : "";
+            if (source_type_ref && is_suspicious_numeric_cast(callee, source_type)) {
                 out.push_back({.location = node.location,
                                .message = "suspicious narrowing cast: " + callee + "(" +
                                           source_name + ") from " + source_type,
@@ -154,7 +158,7 @@ void lint_suspicious_cast_function(const FunctionDecl& fn, const Document& doc,
     std::vector<AstLintLocal> active_decls;
     for (const ParamDecl& param : fn.params) {
         active_decls.push_back({.name = param.name,
-                                .type = substitute_type_ref_text(param.type_ref, {}),
+                                .type_ref = param.type_ref,
                                 .line = param.location.line,
                                 .column = param.location.column});
     }

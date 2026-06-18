@@ -159,7 +159,9 @@ Status: AST lint traversal now uses shared AST expression walkers instead of
 hand-maintained statement expression slot lists. The unreachable-code lint also
 uses structured control-flow shape for `if`/`elif`/`else` chains and reports
 only the first unreachable statement in a block, reducing noisy cascades while
-keeping the quick fix anchored to a concrete AST statement.
+keeping the quick fix anchored to a concrete AST statement. Suspicious-cast
+lint scope state now carries structured `TypeRef` locals and renders type text
+only at the diagnostic message boundary.
 
 ## Critical Module Import Blocker
 
