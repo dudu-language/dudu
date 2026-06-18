@@ -45,27 +45,6 @@ bool native_numeric_promotion(const TypeRef& expected, const TypeRef& got) {
     return type_ref_head_name(expected) == "f64" && type_ref_head_name(got) == "f32";
 }
 
-std::string signature_text(const std::string& callee, const FunctionSignature& signature) {
-    std::ostringstream out;
-    out << callee << "(";
-    for (size_t i = 0; i < signature.params.size(); ++i) {
-        if (i > 0)
-            out << ", ";
-        out << signature.params[i];
-    }
-    if (signature.variadic) {
-        if (!signature.params.empty())
-            out << ", ";
-        out << "...";
-    }
-    if (signature.min_params >= 0 &&
-        static_cast<size_t>(signature.min_params) < signature.params.size()) {
-        out << "; min " << signature.min_params;
-    }
-    out << ") -> " << signature.return_type;
-    return out.str();
-}
-
 TypeRef signature_param_ref(const FunctionSignature& signature, size_t index) {
     return signature_param_type_ref(signature, index);
 }
@@ -76,6 +55,27 @@ std::string signature_param_text(const FunctionSignature& signature, size_t inde
         return substitute_type_ref_text(ref, {});
     }
     return index < signature.params.size() ? signature.params[index] : "";
+}
+
+std::string signature_text(const std::string& callee, const FunctionSignature& signature) {
+    std::ostringstream out;
+    out << callee << "(";
+    for (size_t i = 0; i < signature.params.size(); ++i) {
+        if (i > 0)
+            out << ", ";
+        out << signature_param_text(signature, i);
+    }
+    if (signature.variadic) {
+        if (!signature.params.empty())
+            out << ", ";
+        out << "...";
+    }
+    if (signature.min_params >= 0 &&
+        static_cast<size_t>(signature.min_params) < signature.params.size()) {
+        out << "; min " << signature.min_params;
+    }
+    out << ") -> " << signature_return_type_text(signature);
+    return out.str();
 }
 
 NativeArgType native_arg_type(const FunctionScope& scope, const Expr& arg,

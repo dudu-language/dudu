@@ -1960,6 +1960,9 @@ LSP source edits are also moving to AST-owned ranges:
 - Builtin C++ method signature matching now normalizes receiver aliases and
   pointer/reference wrappers through parsed `TypeRef` metadata before deriving
   list/set/dict/optional/atomic method signatures.
+- Native overload candidate diagnostics now render parameters and return types
+  through signature `TypeRef` helpers instead of reading raw signature string
+  mirrors directly.
 
 Expression parsing has moved onto the lexer/token stream:
 
