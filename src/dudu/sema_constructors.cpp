@@ -16,7 +16,7 @@ namespace {
 }
 
 std::string constructor_param_type_text(const ConstructorParam& param) {
-    return has_type_ref(param.type_ref) ? type_ref_text(param.type_ref) : param.type;
+    return type_ref_text(param.type_ref);
 }
 
 bool constructor_arg_assignable(
@@ -41,7 +41,6 @@ std::vector<ConstructorParam> constructor_params(const ClassDecl& klass) {
             !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
         for (size_t i = first_param; i < method.params.size(); ++i) {
             out.push_back({.name = method.params[i].name,
-                           .type = type_ref_text(method.params[i].type_ref),
                            .type_ref = method.params[i].type_ref});
         }
         return out;
@@ -49,9 +48,7 @@ std::vector<ConstructorParam> constructor_params(const ClassDecl& klass) {
 
     std::vector<ConstructorParam> out;
     for (const FieldDecl& field : klass.fields) {
-        out.push_back({.name = field.name,
-                       .type = type_ref_text(field.type_ref),
-                       .type_ref = field.type_ref});
+        out.push_back({.name = field.name, .type_ref = field.type_ref});
     }
     return out;
 }
@@ -62,7 +59,6 @@ std::vector<ConstructorParam> method_constructor_params(const FunctionDecl& meth
         !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
     for (size_t i = first_param; i < method.params.size(); ++i)
         out.push_back({.name = method.params[i].name,
-                       .type = type_ref_text(method.params[i].type_ref),
                        .type_ref = method.params[i].type_ref});
     return out;
 }

@@ -1972,6 +1972,9 @@ LSP source edits are also moving to AST-owned ranges:
 - Body checking no longer exposes the older rendered-string assignability
   callback. Body assignment checks now use the structured `TypeRef` callback
   path, including array literal element checks.
+- Constructor parameter checking no longer stores a duplicate rendered type
+  string beside `TypeRef`; diagnostics render from the parsed type metadata at
+  the edge.
 
 Expression parsing has moved onto the lexer/token stream:
 

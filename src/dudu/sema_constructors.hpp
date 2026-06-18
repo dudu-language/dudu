@@ -11,7 +11,6 @@ namespace dudu {
 
 struct ConstructorParam {
     std::string name;
-    std::string type;
     TypeRef type_ref;
 };
 

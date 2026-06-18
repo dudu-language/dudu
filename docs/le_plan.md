@@ -1239,5 +1239,6 @@ declarations safely.
 
    Status: in progress. Body, generic, constructor, and native assignment
    paths are being migrated from rendered string type pairs to parsed
-   `TypeRef` pairs. The remaining compatibility callbacks and mirrors should
-   be removed rather than normalized into permanent API.
+   `TypeRef` pairs. Constructor parameter checking no longer stores a duplicate
+   rendered type string beside `TypeRef`. The remaining compatibility callbacks
+   and mirrors should be removed rather than normalized into permanent API.
