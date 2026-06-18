@@ -1398,3 +1398,6 @@ push. They are not release packaging work.
    Void return checks now use an AST-level `type_ref_is_void` helper, and
    module entry-point emission no longer renders a function return type string
    just to compare it with `void`.
+   Function parameter parsing now carries receiver `TypeRef` nodes into
+   implicit `self` parameter synthesis instead of rendering the receiver type
+   string and rebuilding the parameter type from text.

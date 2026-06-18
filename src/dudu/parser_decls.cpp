@@ -231,7 +231,7 @@ FunctionDecl Parser::parse_function(const Token& start, Visibility visibility,
     consume(TokenKind::LParen, "expected ( after function name");
     skip_signature_separators();
     if (!at(TokenKind::RParen)) {
-        parse_params(fn.params, function_receiver_type_text(fn));
+        parse_params(fn.params, fn.receiver_type_ref);
     }
     skip_signature_separators();
     consume(TokenKind::RParen, "expected ) after parameters");
@@ -264,7 +264,7 @@ std::vector<std::string> Parser::parse_generic_params() {
     return params;
 }
 
-void Parser::parse_params(std::vector<ParamDecl>& params, std::string_view receiver_type) {
+void Parser::parse_params(std::vector<ParamDecl>& params, const TypeRef& receiver_type) {
     while (true) {
         skip_signature_separators();
         if (at(TokenKind::RParen)) {
@@ -274,10 +274,10 @@ void Parser::parse_params(std::vector<ParamDecl>& params, std::string_view recei
         const Token& name = consume_identifier("expected parameter name");
         param.name = name.text;
         param.location = name.location;
-        if (!receiver_type.empty() && params.empty() && param.name == "self" &&
+        if (has_type_ref(receiver_type) && params.empty() && param.name == "self" &&
             !at(TokenKind::Colon)) {
-            param.type_ref = make_type(TypeKind::Named, std::string(receiver_type), name.location);
-            param.type_ref.name = std::string(receiver_type);
+            param.type_ref = receiver_type;
+            param.type_ref.location = name.location;
             params.push_back(std::move(param));
             if (match(TokenKind::Comma)) {
                 continue;

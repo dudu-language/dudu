@@ -53,7 +53,7 @@ class Parser {
                                 const std::vector<Decorator>& decorators,
                                 std::string_view receiver_type = {});
     std::vector<std::string> parse_generic_params();
-    void parse_params(std::vector<ParamDecl>& params, std::string_view receiver_type);
+    void parse_params(std::vector<ParamDecl>& params, const TypeRef& receiver_type);
     void skip_signature_separators();
     ConstDecl parse_constant();
     StaticAssertDecl parse_static_assert();
