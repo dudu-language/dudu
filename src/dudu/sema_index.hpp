@@ -35,9 +35,6 @@ TypeRef indexed_value_type_ref(const Symbols& symbols,
                                const Expr& index_expr, std::string_view unknown_message);
 std::string iterable_value_type(const Symbols& symbols,
                                 const std::map<std::string, std::string>& locals,
-                                const std::string& name);
-std::string iterable_value_type(const Symbols& symbols,
-                                const std::map<std::string, std::string>& locals,
                                 const std::map<std::string, TypeRef>& local_type_refs,
                                 const std::string& name);
 std::optional<TypeRef>

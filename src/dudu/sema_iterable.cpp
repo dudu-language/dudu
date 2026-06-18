@@ -68,21 +68,6 @@ std::optional<std::string> iterable_type_from_type(TypeRef type) {
     return std::nullopt;
 }
 
-std::string iterable_value_type(const Symbols& symbols,
-                                const std::map<std::string, std::string>& locals,
-                                const std::string& name) {
-    const auto local = locals.find(name);
-    if (local == locals.end()) {
-        return {};
-    }
-    const TypeRef type =
-        unwrap_reference_and_const(parse_type_text(resolve_alias(symbols, local->second)));
-    if (const auto element = iterable_type_ref_from_type(type)) {
-        return substitute_type_ref_text(*element, {});
-    }
-    return {};
-}
-
 std::optional<TypeRef>
 iterable_value_type_ref(const Symbols& symbols, const std::map<std::string, std::string>& locals,
                         const std::map<std::string, TypeRef>& local_type_refs,

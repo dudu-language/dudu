@@ -605,7 +605,13 @@ void test_index_type_inference_uses_type_ast() {
     const std::map<std::string, std::string> locals = {
         {"bag", "Bag[Item]"},
     };
-    assert(dudu::iterable_value_type(symbols, locals, "bag") == "Item");
+    const std::map<std::string, dudu::TypeRef> local_type_refs = {
+        {"bag", dudu::parse_type_text("Bag[Item]", location)},
+    };
+    const std::optional<dudu::TypeRef> bag_item =
+        dudu::iterable_value_type_ref(symbols, locals, local_type_refs, "bag");
+    assert(bag_item);
+    assert(dudu::substitute_type_ref_text(*bag_item, {}) == "Item");
 
     dudu::ClassDecl tensor;
     tensor.name = "Tensor";
