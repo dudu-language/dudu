@@ -1768,3 +1768,7 @@ push. They are not release packaging work.
    Core type helpers no longer repair malformed pointer/reference/fixed-array
    `TypeRef` nodes by reparsing `TypeRef.text`; callers and tests must build
    those type shapes with structured child nodes.
+   C++ lowering of `TypeRef` pointer/reference/wrapper/fixed-array nodes no
+   longer reparses `TypeRef.text` to repair malformed internal nodes. Structured
+   lowering expects structured children; the string lowering API remains the
+   explicit boundary for raw native spellings.

@@ -3,7 +3,6 @@
 #include "dudu/cpp_lower.hpp"
 #include "dudu/cpp_type_internal.hpp"
 
-#include <optional>
 #include <sstream>
 
 namespace dudu {
@@ -12,45 +11,6 @@ namespace {
 std::string lower_function_type(const TypeRef& type, bool pointer);
 std::string lower_function_type(const TypeRef& type, bool pointer,
                                 const std::vector<std::string>& namespace_aliases);
-
-std::optional<TypeRef> reparse_type_mirror(const TypeRef& type) {
-    if (type.text.empty()) {
-        return std::nullopt;
-    }
-    TypeRef parsed = parse_type_text(type.text, type.location);
-    if (parsed.kind == TypeKind::Unknown) {
-        return std::nullopt;
-    }
-    if (parsed.kind == type.kind && parsed.children.empty() && parsed.name == type.name &&
-        parsed.value == type.value) {
-        return std::nullopt;
-    }
-    return parsed;
-}
-
-std::string lower_spelled_or_reparsed_type(const TypeRef& type) {
-    if (const auto parsed = reparse_type_mirror(type)) {
-        return lower_cpp_type(*parsed);
-    }
-    return lower_cpp_type(type.text);
-}
-
-std::string lower_spelled_or_reparsed_type(const TypeRef& type,
-                                           const std::vector<std::string>& namespace_aliases) {
-    if (const auto parsed = reparse_type_mirror(type)) {
-        return lower_cpp_type(*parsed, namespace_aliases);
-    }
-    return lower_cpp_type(type.text, namespace_aliases);
-}
-
-std::string lower_spelled_or_reparsed_type(const TypeRef& type,
-                                           const std::vector<std::string>& namespace_aliases,
-                                           const CppEmitOptions& options) {
-    if (const auto parsed = reparse_type_mirror(type)) {
-        return lower_cpp_type(*parsed, namespace_aliases, options);
-    }
-    return lower_cpp_type(type.text, namespace_aliases, options);
-}
 
 std::string join_lowered_type_args(const std::vector<TypeRef>& args, size_t start = 0) {
     std::ostringstream out;
@@ -327,36 +287,34 @@ std::string lower_cpp_type(const TypeRef& type) {
     case TypeKind::Template:
         return lower_template_type(type);
     case TypeKind::Pointer:
-        return type.children.empty() ? lower_spelled_or_reparsed_type(type)
+        return type.children.empty() ? lower_cpp_type(type.text)
                                      : lower_cpp_type(type.children[0]) + "*";
     case TypeKind::Reference:
-        return type.children.empty() ? lower_spelled_or_reparsed_type(type)
+        return type.children.empty() ? lower_cpp_type(type.text)
                                      : lower_cpp_type(type.children[0]) + "&";
     case TypeKind::Const:
-        return type.children.empty() ? lower_spelled_or_reparsed_type(type)
+        return type.children.empty() ? lower_cpp_type(type.text)
                                      : lower_top_level_const_type(type.children[0]);
     case TypeKind::Volatile:
-        return type.children.empty() ? lower_spelled_or_reparsed_type(type)
+        return type.children.empty() ? lower_cpp_type(type.text)
                                      : "volatile " + lower_cpp_type(type.children[0]);
     case TypeKind::Atomic:
-        return type.children.empty() ? lower_spelled_or_reparsed_type(type)
+        return type.children.empty() ? lower_cpp_type(type.text)
                                      : "std::atomic<" + lower_cpp_type(type.children[0]) + ">";
     case TypeKind::Device:
     case TypeKind::Storage:
     case TypeKind::Shared:
-        return type.children.empty() ? lower_spelled_or_reparsed_type(type)
-                                     : lower_cpp_type(type.children[0]);
+        return type.children.empty() ? lower_cpp_type(type.text) : lower_cpp_type(type.children[0]);
     case TypeKind::Static:
-        return type.children.empty() ? lower_spelled_or_reparsed_type(type)
-                                     : lower_cpp_type(type.children[0]);
+        return type.children.empty() ? lower_cpp_type(type.text) : lower_cpp_type(type.children[0]);
     case TypeKind::FixedArray:
         return lower_fixed_array_type(type);
     case TypeKind::Function:
         return lower_function_type(type, true);
     case TypeKind::Unknown:
-        return lower_spelled_or_reparsed_type(type);
+        return lower_cpp_type(type.text);
     }
-    return lower_spelled_or_reparsed_type(type);
+    return lower_cpp_type(type.text);
 }
 
 std::string lower_cpp_type(const TypeRef& type, const std::vector<std::string>& namespace_aliases) {
@@ -375,39 +333,39 @@ std::string lower_cpp_type(const TypeRef& type, const std::vector<std::string>& 
     case TypeKind::Template:
         return lower_template_type(type, namespace_aliases);
     case TypeKind::Pointer:
-        return type.children.empty() ? lower_spelled_or_reparsed_type(type, namespace_aliases)
+        return type.children.empty() ? lower_cpp_type(type.text, namespace_aliases)
                                      : lower_cpp_type(type.children[0], namespace_aliases) + "*";
     case TypeKind::Reference:
-        return type.children.empty() ? lower_spelled_or_reparsed_type(type, namespace_aliases)
+        return type.children.empty() ? lower_cpp_type(type.text, namespace_aliases)
                                      : lower_cpp_type(type.children[0], namespace_aliases) + "&";
     case TypeKind::Const:
         return type.children.empty()
-                   ? lower_spelled_or_reparsed_type(type, namespace_aliases)
+                   ? lower_cpp_type(type.text, namespace_aliases)
                    : lower_top_level_const_type(type.children[0], namespace_aliases);
     case TypeKind::Volatile:
         return type.children.empty()
-                   ? lower_spelled_or_reparsed_type(type, namespace_aliases)
+                   ? lower_cpp_type(type.text, namespace_aliases)
                    : "volatile " + lower_cpp_type(type.children[0], namespace_aliases);
     case TypeKind::Atomic:
         return type.children.empty()
-                   ? lower_spelled_or_reparsed_type(type, namespace_aliases)
+                   ? lower_cpp_type(type.text, namespace_aliases)
                    : "std::atomic<" + lower_cpp_type(type.children[0], namespace_aliases) + ">";
     case TypeKind::Device:
     case TypeKind::Storage:
     case TypeKind::Shared:
-        return type.children.empty() ? lower_spelled_or_reparsed_type(type, namespace_aliases)
+        return type.children.empty() ? lower_cpp_type(type.text, namespace_aliases)
                                      : lower_cpp_type(type.children[0], namespace_aliases);
     case TypeKind::Static:
-        return type.children.empty() ? lower_spelled_or_reparsed_type(type, namespace_aliases)
+        return type.children.empty() ? lower_cpp_type(type.text, namespace_aliases)
                                      : lower_cpp_type(type.children[0], namespace_aliases);
     case TypeKind::FixedArray:
         return lower_fixed_array_type(type, namespace_aliases);
     case TypeKind::Function:
         return lower_function_type(type, true, namespace_aliases);
     case TypeKind::Unknown:
-        return lower_spelled_or_reparsed_type(type, namespace_aliases);
+        return lower_cpp_type(type.text, namespace_aliases);
     }
-    return lower_spelled_or_reparsed_type(type, namespace_aliases);
+    return lower_cpp_type(type.text, namespace_aliases);
 }
 
 std::string lower_cpp_type(const TypeRef& type, const CppEmitOptions& options) {
@@ -432,43 +390,41 @@ std::string lower_cpp_type(const TypeRef& type, const std::vector<std::string>& 
         return lower_template_type(type, namespace_aliases, options);
     case TypeKind::Pointer:
         return type.children.empty()
-                   ? lower_spelled_or_reparsed_type(type, namespace_aliases, options)
+                   ? lower_cpp_type(type.text, namespace_aliases, options)
                    : lower_cpp_type(type.children[0], namespace_aliases, options) + "*";
     case TypeKind::Reference:
         return type.children.empty()
-                   ? lower_spelled_or_reparsed_type(type, namespace_aliases, options)
+                   ? lower_cpp_type(type.text, namespace_aliases, options)
                    : lower_cpp_type(type.children[0], namespace_aliases, options) + "&";
     case TypeKind::Const:
         return type.children.empty()
-                   ? lower_spelled_or_reparsed_type(type, namespace_aliases, options)
+                   ? lower_cpp_type(type.text, namespace_aliases, options)
                    : lower_top_level_const_type(type.children[0], namespace_aliases, options);
     case TypeKind::Volatile:
         return type.children.empty()
-                   ? lower_spelled_or_reparsed_type(type, namespace_aliases, options)
+                   ? lower_cpp_type(type.text, namespace_aliases, options)
                    : "volatile " + lower_cpp_type(type.children[0], namespace_aliases, options);
     case TypeKind::Atomic:
         return type.children.empty()
-                   ? lower_spelled_or_reparsed_type(type, namespace_aliases, options)
+                   ? lower_cpp_type(type.text, namespace_aliases, options)
                    : "std::atomic<" + lower_cpp_type(type.children[0], namespace_aliases, options) +
                          ">";
     case TypeKind::Device:
     case TypeKind::Storage:
     case TypeKind::Shared:
-        return type.children.empty()
-                   ? lower_spelled_or_reparsed_type(type, namespace_aliases, options)
-                   : lower_cpp_type(type.children[0], namespace_aliases, options);
+        return type.children.empty() ? lower_cpp_type(type.text, namespace_aliases, options)
+                                     : lower_cpp_type(type.children[0], namespace_aliases, options);
     case TypeKind::Static:
-        return type.children.empty()
-                   ? lower_spelled_or_reparsed_type(type, namespace_aliases, options)
-                   : lower_cpp_type(type.children[0], namespace_aliases, options);
+        return type.children.empty() ? lower_cpp_type(type.text, namespace_aliases, options)
+                                     : lower_cpp_type(type.children[0], namespace_aliases, options);
     case TypeKind::FixedArray:
         return lower_fixed_array_type(type, namespace_aliases, options);
     case TypeKind::Function:
         return lower_function_type(type, true, namespace_aliases, options);
     case TypeKind::Unknown:
-        return lower_spelled_or_reparsed_type(type, namespace_aliases, options);
+        return lower_cpp_type(type.text, namespace_aliases, options);
     }
-    return lower_spelled_or_reparsed_type(type, namespace_aliases, options);
+    return lower_cpp_type(type.text, namespace_aliases, options);
 }
 
 } // namespace dudu

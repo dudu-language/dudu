@@ -2085,6 +2085,10 @@ LSP source edits are also moving to AST-owned ranges:
 - Core type helpers no longer repair malformed pointer/reference/fixed-array
   `TypeRef` nodes by reparsing `TypeRef.text`. Callers and tests must build
   those type shapes with structured child nodes.
+- C++ lowering of `TypeRef` pointer/reference/wrapper/fixed-array nodes no
+  longer reparses `TypeRef.text` to repair malformed internal nodes. Structured
+  lowering expects structured children; the string lowering API remains the
+  explicit boundary for raw native spellings.
 
 Expression parsing has moved onto the lexer/token stream:
 

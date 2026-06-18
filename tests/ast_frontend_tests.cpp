@@ -1202,7 +1202,7 @@ void test_type_ast_shape() {
     assert(dudu::lower_cpp_type(structured_named) == "Player");
     dudu::TypeRef spelled_pointer_type;
     spelled_pointer_type.kind = dudu::TypeKind::Pointer;
-    spelled_pointer_type.text = "*Player";
+    spelled_pointer_type.children.push_back(dudu::named_type_ref("Player"));
     assert(dudu::lower_cpp_type(spelled_pointer_type) == "Player*");
     assert(dudu::lower_cpp_type("*const[i32]") == "const int32_t*");
     assert(dudu::lower_cpp_type("const[*i32]") == "int32_t* const");
