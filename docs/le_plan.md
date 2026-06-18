@@ -1433,3 +1433,6 @@ push. They are not release packaging work.
    statements and match cases instead of treating raw expression text as the
    canonical AST contract; raw text checks remain only for source-spelling
    cases such as numeric literal spelling and explicit `cpp(...)` escapes.
+   Parser statement range attachment is now named as range attachment rather
+   than source attachment, matching the fact that raw statement source mirrors
+   have been removed.

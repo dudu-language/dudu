@@ -166,7 +166,7 @@ UnsupportedFeature unsupported_feature_for_token(const Token& token) {
     return UnsupportedFeature::None;
 }
 
-void attach_statement_source(Stmt& stmt, const Parser::JoinedTokens& joined) {
+void attach_statement_range(Stmt& stmt, const Parser::JoinedTokens& joined) {
     if (joined.has_tokens)
         stmt.range = joined.range;
 }
@@ -264,7 +264,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
         stmt.kind = StmtKind::Unsupported;
         stmt.unsupported_feature = unsupported;
         join_until_with_range({TokenKind::Newline});
-        attach_statement_source(stmt, join_tokens(begin, cursor_));
+        attach_statement_range(stmt, join_tokens(begin, cursor_));
         return stmt;
     }
 
@@ -272,7 +272,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
         stmt.kind = StmtKind::Return;
         const JoinedTokens value = join_until_with_range({TokenKind::Newline});
         stmt.value_expr = parse_expr_piece(value);
-        attach_statement_source(stmt, join_tokens(begin, cursor_));
+        attach_statement_range(stmt, join_tokens(begin, cursor_));
         return stmt;
     }
 
@@ -287,7 +287,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
             join_until_with_range({TokenKind::Colon, TokenKind::Newline});
         stmt.condition_expr = parse_expr_piece(condition);
         consume(TokenKind::Colon, "expected : after " + keyword + " condition");
-        attach_statement_source(stmt, join_tokens(begin, cursor_));
+        attach_statement_range(stmt, join_tokens(begin, cursor_));
         return stmt;
     }
 
@@ -295,7 +295,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
         const std::string keyword = previous().text;
         stmt.kind = keyword == "else" ? StmtKind::Else : StmtKind::Try;
         consume(TokenKind::Colon, "expected : after " + keyword);
-        attach_statement_source(stmt, join_tokens(begin, cursor_));
+        attach_statement_range(stmt, join_tokens(begin, cursor_));
         return stmt;
     }
 
@@ -313,7 +313,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
         const JoinedTokens iterable = join_until_with_range({TokenKind::Colon, TokenKind::Newline});
         stmt.iterable_expr = parse_expr_piece(iterable);
         consume(TokenKind::Colon, "expected : after for loop iterable");
-        attach_statement_source(stmt, join_tokens(begin, cursor_));
+        attach_statement_range(stmt, join_tokens(begin, cursor_));
         return stmt;
     }
 
@@ -327,7 +327,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
             stmt.guard_expr = parse_expr_piece(guard);
         }
         consume(TokenKind::Colon, "expected : after case pattern");
-        attach_statement_source(stmt, join_tokens(begin, cursor_));
+        attach_statement_range(stmt, join_tokens(begin, cursor_));
         return stmt;
     }
 
@@ -335,7 +335,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
         stmt.kind = StmtKind::Except;
         if (at(TokenKind::Colon)) {
             consume(TokenKind::Colon, "expected : after except");
-            attach_statement_source(stmt, join_tokens(begin, cursor_));
+            attach_statement_range(stmt, join_tokens(begin, cursor_));
             return stmt;
         }
         const JoinedTokens header = join_until_with_range({TokenKind::Colon, TokenKind::Newline});
@@ -350,7 +350,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
             stmt.condition_expr = parse_expr_piece(header);
         }
         consume(TokenKind::Colon, "expected : after except");
-        attach_statement_source(stmt, join_tokens(begin, cursor_));
+        attach_statement_range(stmt, join_tokens(begin, cursor_));
         return stmt;
     }
 
@@ -360,7 +360,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
                     : keyword == "continue" ? StmtKind::Continue
                                             : StmtKind::Pass;
         join_until_with_range({TokenKind::Newline});
-        attach_statement_source(stmt, join_tokens(begin, cursor_));
+        attach_statement_range(stmt, join_tokens(begin, cursor_));
         return stmt;
     }
 
@@ -369,7 +369,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
         stmt.kind = keyword == "raise" ? StmtKind::Raise : StmtKind::Delete;
         const JoinedTokens value = join_until_with_range({TokenKind::Newline});
         stmt.value_expr = parse_expr_piece(value);
-        attach_statement_source(stmt, join_tokens(begin, cursor_));
+        attach_statement_range(stmt, join_tokens(begin, cursor_));
         return stmt;
     }
 
@@ -384,7 +384,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
         if (parts.size() >= 2) {
             stmt.message_expr = parse_expr_piece(parts[1]);
         }
-        attach_statement_source(stmt, join_tokens(begin, cursor_));
+        attach_statement_range(stmt, join_tokens(begin, cursor_));
         return stmt;
     }
 
@@ -394,7 +394,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
         const JoinedTokens source = join_tokens(begin, cursor_);
         stmt.cpp_lines =
             cpp_escape_lines(cpp_escape_body(source_text_for_tokens(source.begin, source.end)));
-        attach_statement_source(stmt, source);
+        attach_statement_range(stmt, source);
         return stmt;
     }
 
@@ -402,7 +402,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
     cursor_ = statement_end;
     const size_t end = cursor_;
     const JoinedTokens whole = join_tokens(line_begin, end);
-    attach_statement_source(stmt, whole);
+    attach_statement_range(stmt, whole);
 
     const std::optional<size_t> colon =
         find_top_level_token(tokens_, line_begin, end, TokenKind::Colon);
