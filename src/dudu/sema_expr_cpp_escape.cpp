@@ -1,3 +1,4 @@
+#include "dudu/ast_type.hpp"
 #include "dudu/sema_expr_internal.hpp"
 
 namespace dudu {
@@ -30,7 +31,7 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
             const std::vector<Expr> args = call_arg_exprs(
                 expr, pointer_cast_call, location == nullptr ? SourceLocation{} : *location);
             for (const Expr& arg : args) {
-                (void)infer_expr_ast(scope, arg, location);
+                (void)infer_expr_type_ast(scope, arg, location);
             }
             return "*" + type;
         }
@@ -126,7 +127,7 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
             if (scope.locals.contains(receiver) &&
                 foreign_cpp_type_name(scope.symbols, resolve_alias(scope.symbols, receiver_type))) {
                 for (const Expr& arg : args) {
-                    (void)infer_expr_ast(scope, arg, location);
+                    (void)infer_expr_type_ast(scope, arg, location);
                 }
                 return "auto";
             }
@@ -141,7 +142,7 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
                 if (foreign_cpp_type_name(scope.symbols,
                                           resolve_alias(scope.symbols, receiver_type))) {
                     for (const Expr& arg : args) {
-                        (void)infer_expr_ast(scope, arg, location);
+                        (void)infer_expr_type_ast(scope, arg, location);
                     }
                     return "auto";
                 }
@@ -164,13 +165,13 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
                 local != scope.locals.end() &&
                 foreign_cpp_type_name(scope.symbols, resolve_alias(scope.symbols, local->second))) {
                 for (const Expr& arg : args) {
-                    (void)infer_expr_ast(scope, arg, location);
+                    (void)infer_expr_type_ast(scope, arg, location);
                 }
                 return "auto";
             }
             if (native_import_path_prefix(scope.symbols, callee)) {
                 for (const Expr& arg : args) {
-                    (void)infer_expr_ast(scope, arg, location);
+                    (void)infer_expr_type_ast(scope, arg, location);
                 }
                 return "auto";
             }
@@ -205,10 +206,10 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
         return "str";
     }
     if (parsed_expr.kind == ExprKind::Unary && parsed_expr.op == "not") {
-        return infer_expr_ast(scope, parsed_expr, location);
+        return substitute_type_ref_text(infer_expr_type_ast(scope, parsed_expr, location), {});
     }
     if (parsed_expr.kind == ExprKind::Binary) {
-        return infer_expr_ast(scope, parsed_expr, location);
+        return substitute_type_ref_text(infer_expr_type_ast(scope, parsed_expr, location), {});
     }
     if (std::isdigit(static_cast<unsigned char>(expr.front())) != 0) {
         return expr.find('.') == std::string::npos ? "i32" : "f64";

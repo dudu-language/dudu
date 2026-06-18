@@ -364,6 +364,9 @@ Already structured:
 - legacy string expression inference now delegates member expressions to the
   structured member `TypeRef` helper instead of duplicating enum, native,
   field, swizzle, and foreign-member checks
+- C++ escape compatibility inference now uses structured expression typing for
+  validation-only argument walks and parsed unary/binary fallback expressions,
+  leaving rendered strings only where the escape boundary returns display text
 - LSP local variable/parameter type collection for hover, member completion,
   and member definition now walks parsed function/method bodies and reuses
   semantic expression inference instead of regexing source lines
