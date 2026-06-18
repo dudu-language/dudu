@@ -86,12 +86,21 @@ std::string join_lowered_exprs(const std::vector<Expr>& exprs,
                                const std::map<std::string, std::string>& locals,
                                std::string_view separator, const Symbols* symbols,
                                const CppEmitOptions& options) {
+    return join_lowered_exprs(exprs, aliases, locals, {}, separator, symbols, options);
+}
+
+std::string join_lowered_exprs(const std::vector<Expr>& exprs,
+                               const std::vector<std::string>& aliases,
+                               const std::map<std::string, std::string>& locals,
+                               const std::map<std::string, TypeRef>& local_type_refs,
+                               std::string_view separator, const Symbols* symbols,
+                               const CppEmitOptions& options) {
     std::ostringstream out;
     for (size_t i = 0; i < exprs.size(); ++i) {
         if (i > 0) {
             out << separator;
         }
-        out << lower_expr(exprs[i], aliases, locals, symbols, options);
+        out << lower_expr(exprs[i], aliases, locals, local_type_refs, symbols, options);
     }
     return out.str();
 }
@@ -219,20 +228,26 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
         return expr.text;
     case ExprKind::Unary:
         if (const auto pointer_cast =
-                lower_pointer_cast_expr(expr, aliases, locals, symbols, options)) {
+                lower_pointer_cast_expr(expr, aliases, locals, local_type_refs, symbols, options)) {
             return *pointer_cast;
         }
         if (expr.children.size() == 1) {
             const std::string op = expr.op == "not" ? "!" : expr.op;
-            return "(" + op + lower_expr(expr.children.front(), aliases, locals, symbols, options) +
+            return "(" + op +
+                   lower_expr(expr.children.front(), aliases, locals, local_type_refs, symbols,
+                              options) +
                    ")";
         }
         break;
     case ExprKind::Binary:
         if (expr.children.size() == 2 && has_expr(expr.children[0]) && has_expr(expr.children[1])) {
-            return "(" + lower_expr(expr.children[0], aliases, locals, symbols, options) + " " +
-                   cpp_binary_operator(expr.op) + " " +
-                   lower_expr(expr.children[1], aliases, locals, symbols, options) + ")";
+            return "(" +
+                   lower_expr(expr.children[0], aliases, locals, local_type_refs, symbols,
+                              options) +
+                   " " + cpp_binary_operator(expr.op) + " " +
+                   lower_expr(expr.children[1], aliases, locals, local_type_refs, symbols,
+                              options) +
+                   ")";
         }
         break;
     case ExprKind::Conditional:
@@ -252,8 +267,8 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
         }
         const std::string lowered_template_args =
             join_lowered_type_args(expr.template_type_args, aliases, options);
-        const std::string lowered_call_args =
-            join_lowered_exprs(expr.children, aliases, locals, ", ", symbols, options);
+        const std::string lowered_call_args = join_lowered_exprs(
+            expr.children, aliases, locals, local_type_refs, ", ", symbols, options);
         const std::string callee = direct_callee_name(expr);
         if (callee == "new") {
             return "new " + lowered_template_args + "(" + lowered_call_args + ")";
@@ -273,7 +288,8 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
         }
         if (callee == "offsetof" && expr.children.size() == 1) {
             return "offsetof(" + lowered_template_args + ", " +
-                   lower_offsetof_field(expr.children.front(), aliases, locals, symbols, options) +
+                   lower_offsetof_field(expr.children.front(), aliases, locals, local_type_refs,
+                                        symbols, options) +
                    ")";
         }
         if ((callee == "std.function" || callee == "std::function") &&
@@ -287,7 +303,7 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
                 lower_cpp_type(template_type_ref_from_expr(expr, callee), aliases, options);
             return expr.children.empty() ? type + "{}" : type + "(" + lowered_call_args + ")";
         }
-        return lower_callee_expr(expr, aliases, locals, symbols, options) + "<" +
+        return lower_callee_expr(expr, aliases, locals, local_type_refs, symbols, options) + "<" +
                lowered_template_args + ">(" + lowered_call_args + ")";
     }
     case ExprKind::Member:
@@ -296,7 +312,8 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
                 if (const auto variant = enum_variant_from_expr(*symbols, expr)) {
                     if (enum_has_payloads(*variant->first)) {
                         return lower_enum_variant_constructor(*variant->first, *variant->second, {},
-                                                              aliases, locals, symbols, options);
+                                                              aliases, locals, local_type_refs,
+                                                              symbols, options);
                     }
                 }
             }
@@ -305,57 +322,68 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
                 return *swizzle;
             }
             if (is_pointer_receiver_expr(expr.children.front(), locals)) {
-                return lower_expr(expr.children.front(), aliases, locals, symbols, options) + "->" +
-                       expr.name;
+                return lower_expr(expr.children.front(), aliases, locals, local_type_refs, symbols,
+                                  options) +
+                       "->" + expr.name;
             }
             if (symbols != nullptr) {
                 const TypeRef receiver_type = member_expr_type_ref(
                     *symbols, locals, local_type_refs, nullptr, expr.children.front());
                 if (has_type_ref(receiver_type) &&
                     field_type_ref_for_type(*symbols, receiver_type, expr.name)) {
-                    return lower_expr(expr.children.front(), aliases, locals, symbols, options) +
+                    return lower_expr(expr.children.front(), aliases, locals, local_type_refs,
+                                      symbols, options) +
                            "." + expr.name;
                 }
             }
-            return lower_member_expr(
-                lower_expr(expr.children.front(), aliases, locals, symbols, options), expr.name,
-                aliases, options);
+            return lower_member_expr(lower_expr(expr.children.front(), aliases, locals,
+                                                local_type_refs, symbols, options),
+                                     expr.name, aliases, options);
         }
         break;
     case ExprKind::DictEntry:
         if (expr.children.size() == 2) {
-            return "{" + lower_expr(expr.children[0], aliases, locals, symbols, options) + ", " +
-                   lower_expr(expr.children[1], aliases, locals, symbols, options) + "}";
+            return "{" +
+                   lower_expr(expr.children[0], aliases, locals, local_type_refs, symbols,
+                              options) +
+                   ", " +
+                   lower_expr(expr.children[1], aliases, locals, local_type_refs, symbols,
+                              options) +
+                   "}";
         }
         break;
     case ExprKind::NamedArg:
         if (expr.children.size() == 1) {
             return "." + expr.name + " = " +
-                   lower_expr(expr.children.front(), aliases, locals, symbols, options);
+                   lower_expr(expr.children.front(), aliases, locals, local_type_refs, symbols,
+                              options);
         }
         break;
     case ExprKind::Slice:
         throw CompileError(expr.location, "slice expression must be used inside an index");
     case ExprKind::DictLiteral:
-        return "{" + join_lowered_exprs(expr.children, aliases, locals, ", ", symbols, options) +
+        return "{" +
+               join_lowered_exprs(expr.children, aliases, locals, local_type_refs, ", ", symbols,
+                                  options) +
                "}";
     case ExprKind::Index:
         if (expr.children.size() == 2) {
-            std::string out = lower_expr(expr.children[0], aliases, locals, symbols, options);
+            std::string out =
+                lower_expr(expr.children[0], aliases, locals, local_type_refs, symbols, options);
             if (const std::optional<SliceParts> slice = slice_parts(expr.children[1])) {
-                const std::string start =
-                    expr_missing(*slice->start)
-                        ? "0"
-                        : lower_expr(*slice->start, aliases, locals, symbols, options);
-                const std::string end =
-                    expr_missing(*slice->end)
-                        ? "(" + out + ").size()"
-                        : lower_expr(*slice->end, aliases, locals, symbols, options);
+                const std::string start = expr_missing(*slice->start)
+                                              ? "0"
+                                              : lower_expr(*slice->start, aliases, locals,
+                                                           local_type_refs, symbols, options);
+                const std::string end = expr_missing(*slice->end)
+                                            ? "(" + out + ").size()"
+                                            : lower_expr(*slice->end, aliases, locals,
+                                                         local_type_refs, symbols, options);
                 if (slice->step != nullptr) {
-                    const std::string step =
-                        expr_missing(*slice->step)
-                            ? "1"
-                            : lower_expr(*slice->step, aliases, locals, symbols, options);
+                    const std::string step = expr_missing(*slice->step)
+                                                 ? "1"
+                                                 : lower_expr(*slice->step, aliases, locals,
+                                                              local_type_refs, symbols, options);
                     return "dudu::StridedSpan{&(" + out + ")[" + start + "], ((" + end + ") - (" +
                            start + ") + (" + step + ") - 1) / (" + step + "), " + step + "}";
                 }
@@ -378,20 +406,27 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
                     return *slice;
                 }
                 for (const Expr& index : expr.children[1].children) {
-                    out += "[" + lower_expr(index, aliases, locals, symbols, options) + "]";
+                    out += "[" +
+                           lower_expr(index, aliases, locals, local_type_refs, symbols, options) +
+                           "]";
                 }
                 return out;
             }
-            return out + "[" + lower_expr(expr.children[1], aliases, locals, symbols, options) +
+            return out + "[" +
+                   lower_expr(expr.children[1], aliases, locals, local_type_refs, symbols,
+                              options) +
                    "]";
         }
         break;
     case ExprKind::ListLiteral:
     case ExprKind::SetLiteral:
-        return "{" + join_lowered_exprs(expr.children, aliases, locals, ", ", symbols, options) +
+        return "{" +
+               join_lowered_exprs(expr.children, aliases, locals, local_type_refs, ", ", symbols,
+                                  options) +
                "}";
     case ExprKind::TupleLiteral:
-        return join_lowered_exprs(expr.children, aliases, locals, ", ", symbols, options);
+        return join_lowered_exprs(expr.children, aliases, locals, local_type_refs, ", ", symbols,
+                                  options);
     case ExprKind::DefExpression:
         throw CompileError(expr.location, "unsupported Python feature: def expressions");
     case ExprKind::Comprehension:

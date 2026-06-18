@@ -34,6 +34,12 @@ std::string lower_enum_variant_constructor(const EnumDecl& en, const EnumValueDe
                                            const std::vector<std::string>& aliases,
                                            const std::map<std::string, std::string>& locals,
                                            const Symbols* symbols, const CppEmitOptions& options);
+std::string lower_enum_variant_constructor(const EnumDecl& en, const EnumValueDecl& value,
+                                           const std::vector<Expr>& args,
+                                           const std::vector<std::string>& aliases,
+                                           const std::map<std::string, std::string>& locals,
+                                           const std::map<std::string, TypeRef>& local_type_refs,
+                                           const Symbols* symbols, const CppEmitOptions& options);
 std::optional<std::string>
 lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& aliases,
                             const std::map<std::string, std::string>& locals,
@@ -53,6 +59,10 @@ std::string lower_offsetof_field(const Expr& expr, const std::vector<std::string
 std::string lower_offsetof_field(const Expr& expr, const std::vector<std::string>& aliases,
                                  const std::map<std::string, std::string>& locals,
                                  const Symbols* symbols, const CppEmitOptions& options);
+std::string lower_offsetof_field(const Expr& expr, const std::vector<std::string>& aliases,
+                                 const std::map<std::string, std::string>& locals,
+                                 const std::map<std::string, TypeRef>& local_type_refs,
+                                 const Symbols* symbols, const CppEmitOptions& options);
 std::optional<std::string> lower_pointer_cast_expr(const Expr& expr,
                                                    const std::vector<std::string>& aliases,
                                                    const std::map<std::string, std::string>& locals,
@@ -62,6 +72,11 @@ std::optional<std::string> lower_pointer_cast_expr(const Expr& expr,
                                                    const std::map<std::string, std::string>& locals,
                                                    const Symbols* symbols,
                                                    const CppEmitOptions& options);
+std::optional<std::string>
+lower_pointer_cast_expr(const Expr& expr, const std::vector<std::string>& aliases,
+                        const std::map<std::string, std::string>& locals,
+                        const std::map<std::string, TypeRef>& local_type_refs,
+                        const Symbols* symbols, const CppEmitOptions& options);
 std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& aliases,
                             const std::map<std::string, std::string>& locals,
                             const Symbols* symbols);

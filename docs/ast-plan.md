@@ -1763,6 +1763,11 @@ LSP source edits are also moving to AST-owned ranges:
   matrix/slice helper recursion, so nested lowering preserves `local_type_refs`
   through method-call receiver decisions, swizzle receiver typing, and sliced
   index expressions.
+- Shared argument-list lowering now also has a typed path. Template calls,
+  collection literals, enum payload constructors, pointer casts, `offsetof`
+  fallback fields, named arguments, tuple-shaped indexes, and expected generic
+  method calls keep `local_type_refs` when they recursively lower child
+  expressions.
 - Native value symbols now store parsed `TypeRef` metadata beside their C++
   spelling strings, and normal name/member expression sema reads those refs
   directly for imported constants, build flags, shader/native values, and class

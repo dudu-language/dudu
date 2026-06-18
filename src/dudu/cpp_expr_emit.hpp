@@ -22,6 +22,12 @@ std::string join_lowered_exprs(const std::vector<Expr>& exprs,
                                const std::map<std::string, std::string>& locals,
                                std::string_view separator, const Symbols* symbols,
                                const CppEmitOptions& options);
+std::string join_lowered_exprs(const std::vector<Expr>& exprs,
+                               const std::vector<std::string>& aliases,
+                               const std::map<std::string, std::string>& locals,
+                               const std::map<std::string, TypeRef>& local_type_refs,
+                               std::string_view separator, const Symbols* symbols,
+                               const CppEmitOptions& options);
 std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases,
                        const std::map<std::string, std::string>& locals,
                        const Symbols* symbols = nullptr);

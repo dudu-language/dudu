@@ -124,15 +124,6 @@ bool expression_has_pointer_type(const Expr& expr, const std::map<std::string, s
     return is_pointer_type_ref(type);
 }
 
-std::string unquoted_string_literal(std::string text) {
-    text = trim_copy(std::move(text));
-    if (text.size() >= 2 && ((text.front() == '"' && text.back() == '"') ||
-                             (text.front() == '\'' && text.back() == '\''))) {
-        return text.substr(1, text.size() - 2);
-    }
-    return text;
-}
-
 std::string decorator_arg(const FunctionDecl& fn, std::string_view name) {
     for (const Decorator& decorator : fn.decorators) {
         if (const std::optional<std::string> arg =
@@ -270,6 +261,15 @@ std::string lower_enum_variant_constructor(const EnumDecl& en, const EnumValueDe
                                            const std::vector<std::string>& aliases,
                                            const std::map<std::string, std::string>& locals,
                                            const Symbols* symbols, const CppEmitOptions& options) {
+    return lower_enum_variant_constructor(en, value, args, aliases, locals, {}, symbols, options);
+}
+
+std::string lower_enum_variant_constructor(const EnumDecl& en, const EnumValueDecl& value,
+                                           const std::vector<Expr>& args,
+                                           const std::vector<std::string>& aliases,
+                                           const std::map<std::string, std::string>& locals,
+                                           const std::map<std::string, TypeRef>& local_type_refs,
+                                           const Symbols* symbols, const CppEmitOptions& options) {
     std::ostringstream out;
     const std::string enum_name = emitted_type_name(en.name, options);
     out << enum_name << "{" << enum_name << "::" << value.name << "{";
@@ -279,9 +279,10 @@ std::string lower_enum_variant_constructor(const EnumDecl& en, const EnumValueDe
         }
         if (args[i].kind == ExprKind::NamedArg && args[i].children.size() == 1) {
             out << "." << args[i].name << " = "
-                << lower_expr(args[i].children.front(), aliases, locals, symbols, options);
+                << lower_expr(args[i].children.front(), aliases, locals, local_type_refs, symbols,
+                              options);
         } else {
-            out << lower_expr(args[i], aliases, locals, symbols, options);
+            out << lower_expr(args[i], aliases, locals, local_type_refs, symbols, options);
         }
     }
     out << "}}";
@@ -329,7 +330,7 @@ lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& al
     std::vector<Expr> args = index_arg_exprs(stmt.target_expr.children[1]);
     args.push_back(stmt.value_expr);
     return receiver + "." + *method + "(" +
-           join_lowered_exprs(args, aliases, locals, ", ", symbols, options) + ")";
+           join_lowered_exprs(args, aliases, locals, local_type_refs, ", ", symbols, options) + ")";
 }
 
 std::optional<std::string>
@@ -339,34 +340,19 @@ lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& al
     return lower_index_assignment_hook(stmt, aliases, locals, symbols, {});
 }
 
-std::string lower_offsetof_field(const Expr& expr, const std::vector<std::string>& aliases,
-                                 const std::map<std::string, std::string>& locals,
-                                 const Symbols* symbols, const CppEmitOptions& options) {
-    if (expr.kind == ExprKind::Name && !expr.name.empty()) {
-        return expr.name;
-    }
-    if (expr.kind == ExprKind::StringLiteral) {
-        return unquoted_string_literal(expr.text);
-    }
-    if (expr.kind == ExprKind::Member) {
-        if (const std::optional<ExprPath> path = expr_path_from_expr(expr)) {
-            return render_expr_path(*path);
-        }
-    }
-    return lower_expr(expr, aliases, locals, symbols, options);
-}
-
-std::string lower_offsetof_field(const Expr& expr, const std::vector<std::string>& aliases,
-                                 const std::map<std::string, std::string>& locals,
-                                 const Symbols* symbols) {
-    return lower_offsetof_field(expr, aliases, locals, symbols, {});
-}
-
 std::optional<std::string> lower_pointer_cast_expr(const Expr& expr,
                                                    const std::vector<std::string>& aliases,
                                                    const std::map<std::string, std::string>& locals,
                                                    const Symbols* symbols,
                                                    const CppEmitOptions& options) {
+    return lower_pointer_cast_expr(expr, aliases, locals, {}, symbols, options);
+}
+
+std::optional<std::string>
+lower_pointer_cast_expr(const Expr& expr, const std::vector<std::string>& aliases,
+                        const std::map<std::string, std::string>& locals,
+                        const std::map<std::string, TypeRef>& local_type_refs,
+                        const Symbols* symbols, const CppEmitOptions& options) {
     if (expr.op != "*" || expr.children.size() != 1 ||
         expr.children.front().kind != ExprKind::Call) {
         return std::nullopt;
@@ -383,7 +369,10 @@ std::optional<std::string> lower_pointer_cast_expr(const Expr& expr,
     return "reinterpret_cast<" +
            lower_cpp_type(pointer_type_ref_from_pointee_text(type_name, expr.location), aliases,
                           options) +
-           ">(" + join_lowered_exprs(call.children, aliases, locals, ", ", symbols, options) + ")";
+           ">(" +
+           join_lowered_exprs(call.children, aliases, locals, local_type_refs, ", ", symbols,
+                              options) +
+           ")";
 }
 
 std::optional<std::string> lower_pointer_cast_expr(const Expr& expr,
@@ -408,8 +397,8 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
             if (const auto variant = enum_variant_from_expr(*symbols, expr.callee.front())) {
                 if (enum_has_payloads(*variant->first)) {
                     return lower_enum_variant_constructor(*variant->first, *variant->second,
-                                                          expr.children, aliases, locals, symbols,
-                                                          options);
+                                                          expr.children, aliases, locals,
+                                                          local_type_refs, symbols, options);
                 }
             }
         }
@@ -425,7 +414,9 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
                    lower_cpp_type(pointer_type_ref_from_pointee_text(type, expr.location), aliases,
                                   options) +
                    ">(" +
-                   join_lowered_exprs(expr.children, aliases, locals, ", ", symbols, options) + ")";
+                   join_lowered_exprs(expr.children, aliases, locals, local_type_refs, ", ",
+                                      symbols, options) +
+                   ")";
         }
     }
     if (callee_name == "len" && expr.children.size() == 1) {
@@ -448,7 +439,9 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
     }
     if ((callee_name == "Ok" || callee_name == "Err") && expr.children.size() == 1) {
         return "dudu::" + callee_name + "(" +
-               join_lowered_exprs(expr.children, aliases, locals, ", ", symbols, options) + ")";
+               join_lowered_exprs(expr.children, aliases, locals, local_type_refs, ", ", symbols,
+                                  options) +
+               ")";
     }
     if (callee_name == "cstr" && expr.children.size() == 1) {
         return "reinterpret_cast<const char*>(" +
@@ -458,7 +451,9 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
     }
     if (is_builtin_cast_call(callee_name)) {
         return lower_cpp_type(callee_name, aliases) + "(" +
-               join_lowered_exprs(expr.children, aliases, locals, ", ", symbols, options) + ")";
+               join_lowered_exprs(expr.children, aliases, locals, local_type_refs, ", ", symbols,
+                                  options) +
+               ")";
     }
     std::string callee =
         lower_callee_expr(expr, aliases, locals, local_type_refs, symbols, options);
@@ -475,7 +470,9 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
         }
     }
     return callee + "(" +
-           join_lowered_exprs(expr.children, aliases, locals, ", ", symbols, options) + ")";
+           join_lowered_exprs(expr.children, aliases, locals, local_type_refs, ", ", symbols,
+                              options) +
+           ")";
 }
 
 std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& aliases,

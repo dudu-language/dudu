@@ -154,25 +154,25 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
             } else if (is_template_type(type.ref, "list") &&
                        stmt.value_expr.kind == ExprKind::ListLiteral) {
                 out << " = {"
-                    << join_lowered_exprs(stmt.value_expr.children, aliases, locals, ", ", symbols,
-                                          options)
+                    << join_lowered_exprs(stmt.value_expr.children, aliases, locals,
+                                          local_type_refs, ", ", symbols, options)
                     << "}";
             } else if (is_template_type(type.ref, "dict") &&
                        stmt.value_expr.kind == ExprKind::DictLiteral) {
                 out << " = {"
-                    << join_lowered_exprs(stmt.value_expr.children, aliases, locals, ", ", symbols,
-                                          options)
+                    << join_lowered_exprs(stmt.value_expr.children, aliases, locals,
+                                          local_type_refs, ", ", symbols, options)
                     << "}";
             } else if (is_template_type(type.ref, "set") &&
                        stmt.value_expr.kind == ExprKind::SetLiteral) {
                 out << " = {"
-                    << join_lowered_exprs(stmt.value_expr.children, aliases, locals, ", ", symbols,
-                                          options)
+                    << join_lowered_exprs(stmt.value_expr.children, aliases, locals,
+                                          local_type_refs, ", ", symbols, options)
                     << "}";
             } else if (stmt.value_expr.kind == ExprKind::TupleLiteral) {
                 out << " = " << lower_declared_stmt_type(type.ref, aliases, options) << "{"
-                    << join_lowered_exprs(stmt.value_expr.children, aliases, locals, ", ", symbols,
-                                          options)
+                    << join_lowered_exprs(stmt.value_expr.children, aliases, locals,
+                                          local_type_refs, ", ", symbols, options)
                     << '}';
             } else {
                 out << " = "

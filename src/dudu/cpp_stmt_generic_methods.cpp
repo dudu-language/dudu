@@ -98,8 +98,11 @@ lower_expected_generic_method_call(const TypeRef& expected_type, const Expr& exp
         }
         lowered_args << lower_cpp_type((*type_args)[i], aliases, options);
     }
-    return lower_callee_expr(expr, aliases, locals, symbols, options) + "<" + lowered_args.str() +
-           ">(" + join_lowered_exprs(expr.children, aliases, locals, ", ", symbols, options) + ")";
+    return lower_callee_expr(expr, aliases, locals, local_type_refs, symbols, options) + "<" +
+           lowered_args.str() + ">(" +
+           join_lowered_exprs(expr.children, aliases, locals, local_type_refs, ", ", symbols,
+                              options) +
+           ")";
 }
 
 } // namespace dudu
