@@ -32,6 +32,63 @@ std::string cpp_escape_member_path_type(const FunctionScope& scope, const Source
     return has_type_ref(type) ? substitute_type_ref_text(type, {}) : std::string{};
 }
 
+std::string pointer_type_text(TypeRef pointee, SourceLocation location) {
+    TypeRef pointer;
+    pointer.kind = TypeKind::Pointer;
+    pointer.location = location;
+    pointer.children.push_back(std::move(pointee));
+    pointer.text = substitute_type_ref_text(pointer, {});
+    return pointer.text;
+}
+
+std::optional<std::string> infer_parsed_pointer_cast_escape(const FunctionScope& scope,
+                                                            const Expr& parsed,
+                                                            const SourceLocation* location) {
+    if (parsed.kind != ExprKind::Call || parsed.callee.size() != 1 ||
+        parsed.callee.front().kind != ExprKind::Name ||
+        !starts_with(parsed.callee.front().name, "*")) {
+        return std::nullopt;
+    }
+    TypeRef type_ref = parse_type_text(parsed.callee.front().name.substr(1),
+                                       parsed.callee.front().location);
+    const std::string type = substitute_type_ref_text(type_ref, {});
+    if (const auto unknown = unknown_type_ref(scope.symbols, type_ref)) {
+        if (location != nullptr) {
+            const SourceLocation error_location =
+                unknown->second.line > 0 ? unknown->second : parsed.callee.front().location;
+            sema_expr_fail(error_location, "unknown pointer cast type: " + unknown->first);
+        }
+        return std::nullopt;
+    }
+    for (const Expr& arg : parsed.children) {
+        (void)infer_expr_type_ast(scope, arg, location);
+    }
+    return "*" + type;
+}
+
+std::optional<std::string> infer_parsed_unary_escape(const FunctionScope& scope, const Expr& parsed,
+                                                     const SourceLocation* location) {
+    if (parsed.kind != ExprKind::Unary || parsed.children.size() != 1) {
+        return std::nullopt;
+    }
+    const Expr& child = parsed.children.front();
+    if (parsed.op == "*" && child.kind == ExprKind::Name) {
+        const TypeRef type = local_type_ref(
+            scope, child.name, location == nullptr ? child.location : *location);
+        if (type.kind == TypeKind::Pointer && !type.children.empty()) {
+            return type_ref_text(type.children.front());
+        }
+        return std::nullopt;
+    }
+    if (parsed.op == "&") {
+        const TypeRef type = infer_expr_type_ast(scope, child, location);
+        if (has_type_ref(type)) {
+            return pointer_type_text(type, location == nullptr ? child.location : *location);
+        }
+    }
+    return std::nullopt;
+}
+
 } // namespace
 
 std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
@@ -39,6 +96,8 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
     expr = trim(std::move(expr));
     if (expr.empty())
         return "void";
+    const SourceLocation parse_location = location == nullptr ? SourceLocation{} : *location;
+    const Expr parsed_expr = parse_expr_text(expr, parse_location);
     if (starts_with(expr, "{") && expr.back() == '}') {
         for (const std::string& entry : split_top_level(expr.substr(1, expr.size() - 2))) {
             if (find_top_level_char(entry, ':') != std::string::npos)
@@ -47,51 +106,14 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
         return "set";
     }
     const size_t pointer_cast_call = find_call_open(expr);
-    if (expr.size() > 1 && expr.front() == '*' && pointer_cast_call != std::string::npos &&
+    if (pointer_cast_call != std::string::npos &&
         find_call_close(expr, pointer_cast_call) == expr.size() - 1) {
-        const TypeRef type_ref =
-            parse_type_text(expr.substr(1, pointer_cast_call - 1),
-                            location == nullptr ? SourceLocation{} : *location);
-        const std::string type = trim(type_ref.text);
-        if (const auto unknown = unknown_type_ref(scope.symbols, type_ref)) {
-            if (location != nullptr) {
-                const SourceLocation error_location =
-                    unknown->second.line > 0 ? unknown->second : *location;
-                sema_expr_fail(error_location, "unknown pointer cast type: " + unknown->first);
-            }
-        } else {
-            const std::vector<Expr> args = call_arg_exprs(
-                expr, pointer_cast_call, location == nullptr ? SourceLocation{} : *location);
-            for (const Expr& arg : args) {
-                (void)infer_expr_type_ast(scope, arg, location);
-            }
-            return "*" + type;
+        if (const auto type = infer_parsed_pointer_cast_escape(scope, parsed_expr, location)) {
+            return *type;
         }
     }
-    if (expr.size() > 1 && expr.front() == '*') {
-        const std::string name = trim(expr.substr(1));
-        if (const TypeRef type =
-                local_type_ref(scope, name, location == nullptr ? SourceLocation{} : *location);
-            type.kind == TypeKind::Pointer && !type.children.empty()) {
-            return type_ref_text(type.children.front());
-        }
-    }
-    if (expr.size() > 1 && expr.front() == '&') {
-        const std::string name = trim(expr.substr(1));
-        if (const TypeRef type =
-                local_type_ref(scope, name, location == nullptr ? SourceLocation{} : *location);
-            has_type_ref(type)) {
-            TypeRef pointer;
-            pointer.kind = TypeKind::Pointer;
-            pointer.location = location == nullptr ? SourceLocation{} : *location;
-            pointer.children.push_back(type);
-            pointer.text = substitute_type_ref_text(pointer, {});
-            return pointer.text;
-        }
-        const std::string value_type = infer_cpp_escape_expr(scope, name, location);
-        if (!value_type.empty() && value_type != "void") {
-            return "*" + value_type;
-        }
+    if (const auto type = infer_parsed_unary_escape(scope, parsed_expr, location)) {
+        return *type;
     }
     const size_t call = find_call_open(expr);
     if (call != std::string::npos && find_call_close(expr, call) == expr.size() - 1) {
@@ -236,8 +258,6 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
         out << "]";
         return out.str();
     }
-    const Expr parsed_expr =
-        parse_expr_text(expr, location == nullptr ? SourceLocation{} : *location);
     if (parsed_expr.kind == ExprKind::BoolLiteral) {
         return "bool";
     }
