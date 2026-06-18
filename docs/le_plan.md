@@ -1908,3 +1908,6 @@ push. They are not release packaging work.
    `array[T][shape]` mirror into `TypeRef.text`; the inferred type is carried
    by `FixedArray` children and shape value metadata, and renderers derive the
    spelling from that structure.
+   Receiver class lookup no longer renders a receiver `TypeRef` when the
+   structured head name is missing; member lookup uses parsed receiver type
+   structure and C-tag stripping only.

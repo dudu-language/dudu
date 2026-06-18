@@ -88,8 +88,7 @@ TypeRef unwrap_receiver_type_ref(const Symbols& symbols, const TypeRef& type) {
 
 std::string unwrap_receiver_type(const Symbols& symbols, const TypeRef& type) {
     const TypeRef current = unwrap_receiver_type_ref(symbols, type);
-    const std::string head = type_ref_head_name(current);
-    return strip_c_type_tag(head.empty() ? substitute_type_ref_text(current, {}) : head);
+    return strip_c_type_tag(type_ref_head_name(current));
 }
 
 const ClassDecl* class_for_receiver_type(const Symbols& symbols, const TypeRef& type) {
