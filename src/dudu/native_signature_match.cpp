@@ -277,9 +277,11 @@ match_signature_ast(const FunctionScope& scope, const FunctionSignature& signatu
                     const NativeCanAssignAstFn& can_assign) {
     NativeTemplateBindings bindings;
     NativePackBindingMap pack_bindings;
-    const bool has_pack_param =
-        signature.variadic && !signature.params.empty() &&
-        native_template_pack_placeholder(signature.params.back()).has_value();
+    const size_t param_count = signature_param_count(signature);
+    const std::string pack_param_text =
+        param_count == 0 ? std::string{} : signature_param_type_text(signature, param_count - 1);
+    const bool has_pack_param = signature.variadic && param_count != 0 &&
+                                native_template_pack_placeholder(pack_param_text).has_value();
     FunctionSignature arity_signature = signature;
     if (has_pack_param &&
         arity_signature.min_params >= static_cast<int>(signature_param_count(arity_signature))) {
@@ -305,7 +307,7 @@ match_signature_ast(const FunctionScope& scope, const FunctionSignature& signatu
         }
     }
     if (has_pack_param) {
-        const std::string pack_name = *native_template_pack_placeholder(signature.params.back());
+        const std::string pack_name = *native_template_pack_placeholder(pack_param_text);
         std::vector<std::string> types;
         for (size_t i = fixed_params; i < args.size(); ++i) {
             types.push_back(substitute_type_ref_text(

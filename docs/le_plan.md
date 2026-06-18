@@ -1502,3 +1502,6 @@ push. They are not release packaging work.
    AST frontend tests now assert `FunctionSignature` parameters and returns
    through structured accessors rather than treating the legacy string mirrors
    as the public contract.
+   Native variadic pack matching now reads the final parameter through
+   `signature_param_type_text`; direct `FunctionSignature` mirror access in
+   production code is confined to `sema_function_type.cpp`.
