@@ -89,9 +89,9 @@ bool is_super_init_stmt(const Stmt& stmt) {
     return stmt.kind == StmtKind::Expr && is_member_callee(stmt.expr, "super", "init");
 }
 
-std::string infer_super_call_ast(const FunctionScope& scope, const Expr& expr,
-                                 const std::string& callee, const SourceLocation* location,
-                                 const SuperCheckCallbacks& callbacks) {
+TypeRef infer_super_call_type_ref(const FunctionScope& scope, const Expr& expr,
+                                  const std::string& callee, const SourceLocation* location,
+                                  const SuperCheckCallbacks& callbacks) {
     const size_t dot = callee.find('.');
     if (dot == std::string::npos) {
         if (location != nullptr) {
@@ -129,7 +129,7 @@ std::string infer_super_call_ast(const FunctionScope& scope, const Expr& expr,
             [&](const std::string& expected, const Expr& value, const std::string& got) {
                 return callbacks.can_assign(scope, expected, value, got);
             });
-        return "void";
+        return void_type_ref(expr.location);
     }
     const std::string base = super_base_type(scope, location);
     if (base.empty()) {
@@ -143,10 +143,10 @@ std::string infer_super_call_ast(const FunctionScope& scope, const Expr& expr,
         method_signatures_for_type(scope.symbols, base, method_name);
     if (const auto match = callbacks.matching_signature(scope, signatures, expr.children)) {
         callbacks.check_call_args(scope, callee, *match, expr.children, location);
-        return signature_return_type_text(*match);
+        return signature_return_type_ref(*match);
     }
     callbacks.check_call_args(scope, callee, signature, expr.children, location);
-    return signature_return_type_text(signature);
+    return signature_return_type_ref(signature);
 }
 
 } // namespace dudu

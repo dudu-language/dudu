@@ -37,6 +37,15 @@ TypeRef named_type_ref(std::string name, SourceLocation location) {
     return type;
 }
 
+TypeRef pointer_type_ref_from_pointee(TypeRef pointee, SourceLocation location) {
+    TypeRef pointer;
+    pointer.kind = TypeKind::Pointer;
+    pointer.location = location;
+    pointer.children.push_back(std::move(pointee));
+    pointer.text = substitute_type_ref_text(pointer, {});
+    return pointer;
+}
+
 TypeRef template_constructor_type_ref(const Expr& expr, std::string name,
                                       std::vector<TypeRef> type_args) {
     TypeRef type;
@@ -152,147 +161,25 @@ std::optional<TypeRef> direct_builtin_call_type_ref(const FunctionScope& scope, 
     return std::nullopt;
 }
 
-std::optional<TypeRef> direct_member_call_type_ref(const FunctionScope& scope, const Expr& expr,
-                                                   const std::string& callee,
-                                                   const SourceLocation* location) {
-    if (expr.callee.empty() || expr.callee.front().kind != ExprKind::Member ||
-        expr.callee.front().children.size() != 1) {
+std::optional<TypeRef> direct_pointer_cast_type_ref(const FunctionScope& scope, const Expr& expr,
+                                                    const std::string& callee,
+                                                    const SourceLocation* location) {
+    if (!starts_with(callee, "*")) {
         return std::nullopt;
     }
-    const Expr& member = expr.callee.front();
-    const Expr& receiver_expr = member.children.front();
-    if (receiver_expr.kind == ExprKind::Name && receiver_expr.name == "class" &&
-        !scope.current_class.empty()) {
-        FunctionSignature signature;
-        if (static_method_signature_for_type(scope.symbols, scope.current_class, member.name,
-                                             signature, location)) {
-            check_call_args_ast(scope, callee, signature, expr.children, location);
-            return signature_return_type_ref(signature);
+    TypeRef pointee = parse_type_text(callee.substr(1), expr.location);
+    if (const auto unknown = unknown_type_ref(scope.symbols, pointee)) {
+        if (location != nullptr) {
+            const SourceLocation error_location =
+                unknown->second.line > 0 ? unknown->second : expr.location;
+            sema_expr_fail(error_location, "unknown pointer cast type: " + unknown->first);
         }
-    }
-    if (receiver_expr.kind == ExprKind::Name && receiver_expr.name != "class" &&
-        !scope.locals.contains(receiver_expr.name) &&
-        scope.symbols.classes.contains(receiver_expr.name)) {
-        FunctionSignature signature;
-        if (static_method_signature_for_type(scope.symbols, receiver_expr.name, member.name,
-                                             signature, location)) {
-            check_call_args_ast(scope, callee, signature, expr.children, location);
-            return signature_return_type_ref(signature);
-        }
-    }
-    const bool bare_nonlocal_receiver =
-        receiver_expr.kind == ExprKind::Name && !scope.locals.contains(receiver_expr.name);
-    if (bare_nonlocal_receiver) {
         return std::nullopt;
     }
-    const TypeRef receiver_type_ref = infer_expr_type_ast(scope, receiver_expr, location);
-    const std::string receiver_type = substitute_type_ref_text(receiver_type_ref, {});
-    if (receiver_type.empty() || receiver_type == "auto") {
-        for (const Expr& arg : expr.children) {
-            check_expr_ast(scope, arg, location);
-        }
-        return named_type_ref("auto", expr.location);
+    for (const Expr& arg : expr.children) {
+        (void)infer_expr_type_ast(scope, arg, location);
     }
-    const bool foreign_receiver =
-        foreign_cpp_type_name(scope.symbols, resolve_alias(scope.symbols, receiver_type));
-    if (!foreign_receiver) {
-        if (const auto inferred = inferred_generic_method_signature_for_type(
-                scope, receiver_type, member.name, expr.children, location,
-                {.infer_expr_type =
-                     [](const FunctionScope& nested, const Expr& arg,
-                        const SourceLocation* arg_location) {
-                         return infer_expr_type_ast(nested, arg, arg_location);
-                     },
-                 .can_assign =
-                     [](const FunctionScope& nested, const std::string& expected, const Expr& value,
-                        const std::string& got) {
-                         return can_assign_ast(nested, expected, value, got);
-                     }})) {
-            check_call_args_ast(scope, callee, *inferred, expr.children, location);
-            return signature_return_type_ref(*inferred);
-        }
-    }
-    FunctionSignature signature;
-    if (method_signature_for_type(scope.symbols, receiver_type, member.name, signature,
-                                  foreign_receiver ? nullptr : location)) {
-        const std::vector<FunctionSignature> signatures =
-            method_signatures_for_type(scope.symbols, receiver_type, member.name);
-        if (const auto match = matching_signature_ast(scope, signatures, expr.children)) {
-            check_call_args_ast(scope, callee, *match, expr.children, location);
-            return signature_return_type_ref(*match);
-        }
-        check_call_args_ast(scope, callee, signature, expr.children, location);
-        return signature_return_type_ref(signature);
-    }
-    if (foreign_receiver) {
-        for (const Expr& arg : expr.children) {
-            check_expr_ast(scope, arg, location);
-        }
-        return named_type_ref("auto", expr.location);
-    }
-    return std::nullopt;
-}
-
-std::optional<TypeRef> direct_template_member_call_type_ref(const FunctionScope& scope,
-                                                            const Expr& expr,
-                                                            const std::string& callee,
-                                                            const SourceLocation* location) {
-    if (expr.callee.empty() || expr.callee.front().kind != ExprKind::Member ||
-        expr.callee.front().children.size() != 1) {
-        return std::nullopt;
-    }
-    const Expr& member = expr.callee.front();
-    const Expr& receiver_expr = member.children.front();
-    const std::string method_name = member.name + "[" + template_args_lookup_text(expr) + "]";
-    FunctionSignature signature;
-    if (receiver_expr.kind == ExprKind::Name && receiver_expr.name == "class" &&
-        !scope.current_class.empty() &&
-        static_method_signature_for_type(scope.symbols, scope.current_class, method_name, signature,
-                                         location)) {
-        check_call_args_ast(scope, callee, signature, expr.children, location);
-        return signature_return_type_ref(signature);
-    }
-    if (receiver_expr.kind == ExprKind::Name && receiver_expr.name != "class" &&
-        !scope.locals.contains(receiver_expr.name) &&
-        scope.symbols.classes.contains(receiver_expr.name) &&
-        static_method_signature_for_type(scope.symbols, receiver_expr.name, method_name, signature,
-                                         location)) {
-        check_call_args_ast(scope, callee, signature, expr.children, location);
-        return signature_return_type_ref(signature);
-    }
-    const bool bare_nonlocal_receiver =
-        receiver_expr.kind == ExprKind::Name && !scope.locals.contains(receiver_expr.name);
-    if (bare_nonlocal_receiver) {
-        return std::nullopt;
-    }
-    const TypeRef receiver_type_ref = infer_expr_type_ast(scope, receiver_expr, location);
-    const std::string receiver_type = substitute_type_ref_text(receiver_type_ref, {});
-    if (receiver_type.empty() || receiver_type == "auto") {
-        for (const Expr& arg : expr.children) {
-            check_expr_ast(scope, arg, location);
-        }
-        return named_type_ref("auto", expr.location);
-    }
-    const bool foreign_receiver =
-        foreign_cpp_type_name(scope.symbols, resolve_alias(scope.symbols, receiver_type));
-    if (method_signature_for_type(scope.symbols, receiver_type, method_name, signature,
-                                  foreign_receiver ? nullptr : location)) {
-        const std::vector<FunctionSignature> signatures =
-            method_signatures_for_type(scope.symbols, receiver_type, method_name);
-        if (const auto match = matching_signature_ast(scope, signatures, expr.children)) {
-            check_call_args_ast(scope, callee, *match, expr.children, location);
-            return signature_return_type_ref(*match);
-        }
-        check_call_args_ast(scope, callee, signature, expr.children, location);
-        return signature_return_type_ref(signature);
-    }
-    if (foreign_receiver) {
-        for (const Expr& arg : expr.children) {
-            check_expr_ast(scope, arg, location);
-        }
-        return named_type_ref("auto", expr.location);
-    }
-    return std::nullopt;
+    return pointer_type_ref_from_pointee(std::move(pointee), expr.location);
 }
 
 } // namespace
@@ -303,6 +190,34 @@ std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Ex
     const std::string& callee = scoped_callee.key;
     if (callee.empty()) {
         return std::nullopt;
+    }
+    if (const auto pointer_cast = direct_pointer_cast_type_ref(scope, expr, callee, location)) {
+        return *pointer_cast;
+    }
+    if (is_super_call(callee)) {
+        return infer_super_call_type_ref(
+            scope, expr, callee, location,
+            {.infer_expr_type =
+                 [](const FunctionScope& nested, const Expr& arg,
+                    const SourceLocation* arg_location) {
+                     return infer_expr_type_ast(nested, arg, arg_location);
+                 },
+             .can_assign =
+                 [](const FunctionScope& nested, const std::string& expected, const Expr& value,
+                    const std::string& got) {
+                     return can_assign_ast(nested, expected, value, got);
+                 },
+             .matching_signature =
+                 [](const FunctionScope& nested, const std::vector<FunctionSignature>& options,
+                    const std::vector<Expr>& args) {
+                     return matching_signature_ast(nested, options, args);
+                 },
+             .check_call_args =
+                 [](const FunctionScope& nested, const std::string& nested_callee,
+                    const FunctionSignature& signature, const std::vector<Expr>& args,
+                    const SourceLocation* arg_location) {
+                     check_call_args_ast(nested, nested_callee, signature, args, arg_location);
+                 }});
     }
     if (const auto variant = enum_variant_from_path(scope.symbols, callee)) {
         check_enum_variant_args_ast(scope, *variant->first, *variant->second, expr.children,

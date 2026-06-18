@@ -54,6 +54,13 @@ std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Ex
                                             const SourceLocation* location);
 std::optional<TypeRef> direct_template_call_type_ref(const FunctionScope& scope, const Expr& expr,
                                                      const SourceLocation* location);
+std::optional<TypeRef> direct_member_call_type_ref(const FunctionScope& scope, const Expr& expr,
+                                                   const std::string& callee,
+                                                   const SourceLocation* location);
+std::optional<TypeRef> direct_template_member_call_type_ref(const FunctionScope& scope,
+                                                            const Expr& expr,
+                                                            const std::string& callee,
+                                                            const SourceLocation* location);
 std::optional<TypeRef> member_expr_direct_type_ref(const FunctionScope& scope, const Expr& expr,
                                                    const SourceLocation* location);
 std::optional<TypeRef> unary_expr_type_ref(const FunctionScope& scope, const Expr& expr,
@@ -98,13 +105,6 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
 std::optional<FunctionSignature> explicit_generic_function_signature_ast(
     const FunctionScope& scope, const Expr& expr, const std::string& callee_base,
     const std::string& emitted_callee, const SourceLocation* location);
-std::string infer_constructor_call_ast(const FunctionScope& scope, const Expr& expr,
-                                       const std::string& callee, const SourceLocation* location);
-std::string infer_builtin_call_ast(const FunctionScope& scope, const Expr& expr,
-                                   const std::string& callee, const SourceLocation* location);
-std::optional<std::string> infer_pointer_cast_call_ast(const FunctionScope& scope, const Expr& expr,
-                                                       const std::string& callee,
-                                                       const SourceLocation* location);
 std::string infer_call_ast(const FunctionScope& scope, const Expr& expr,
                            const SourceLocation* location);
 

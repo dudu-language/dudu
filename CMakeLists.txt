@@ -108,6 +108,7 @@ add_library(dudu_frontend
     src/dudu/sema_expr_support.cpp
     src/dudu/sema_expr_template.cpp
     src/dudu/sema_expr_type_calls.cpp
+    src/dudu/sema_expr_type_member_calls.cpp
     src/dudu/sema_expr_type_members.cpp
     src/dudu/sema_expr_type_ops.cpp
     src/dudu/sema_function_type.cpp

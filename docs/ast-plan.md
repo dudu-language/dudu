@@ -1650,6 +1650,12 @@ LSP source edits are also moving to AST-owned ranges:
   explicit template calls, and templated known constructors now returns parsed
   `TypeRef` metadata directly; the corresponding string-returning template-call
   fallback branches have been removed.
+- Typed expression inference for `super` calls and direct pointer casts now
+  returns parsed `TypeRef` metadata directly. Ordinary call compatibility
+  inference now renders the typed direct-call result instead of duplicating
+  constructor, built-in, pointer-cast, generic, native, and `super` semantic
+  branches; the unused string-returning helpers for those cases have been
+  deleted.
 - Condition and comparison-operator semantic checks now validate operator
   return types through parsed `signature_return_type_ref` metadata instead of
   comparing rendered signature return strings.
