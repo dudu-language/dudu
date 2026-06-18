@@ -805,6 +805,9 @@ push. They are not release packaging work.
    old string alias maps retained only at explicit compatibility boundaries.
    Inheritance receiver/base unwrapping now follows the same typed-first alias
    resolution path for base assignability and inherited lookup.
+   Builtin C++ method signature matching now normalizes receiver aliases and
+   pointer/reference wrappers through parsed `TypeRef` metadata before deriving
+   container/optional/atomic method signatures.
    The duplicate string-only indexed type implementation has been removed;
    public string index queries parse the receiver once and delegate to the
    structured `TypeRef` indexing implementation.
