@@ -228,14 +228,4 @@ void check_expr_ast(const FunctionScope& scope, const Expr& expr, const SourceLo
     (void)infer_expr_type_ast(scope, expr, location);
 }
 
-BodyCheckCallbacks expression_body_check_callbacks() {
-    return {.infer_expr_type =
-                [](const FunctionScope& scope, const Expr& expr, const SourceLocation* location) {
-                    return infer_expr_type_ast(scope, expr, location);
-                },
-            .can_assign_type =
-                [](const FunctionScope& scope, const TypeRef& expected, const Expr& expr,
-                   const TypeRef& got) { return can_assign_ast(scope, expected, expr, got); }};
-}
-
 } // namespace dudu

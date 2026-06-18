@@ -2,9 +2,9 @@
 
 #include "dudu/build_flags.hpp"
 #include "dudu/naming.hpp"
+#include "dudu/sema_body.hpp"
 #include "dudu/sema_constexpr.hpp"
 #include "dudu/sema_context.hpp"
-#include "dudu/sema_expr.hpp"
 #include "dudu/sema_scan.hpp"
 #include "dudu/source.hpp"
 #include "dudu/unsupported.hpp"
@@ -38,7 +38,7 @@ void analyze_module(const ModuleAst& module, SemanticOptions options) {
     check_declarations(module, symbols);
     check_constexpr_uses(module);
     if (options.check_bodies) {
-        check_bodies(module, symbols, expression_body_check_callbacks());
+        check_bodies(module, symbols);
     }
 }
 

@@ -40,13 +40,12 @@ bool is_swizzle_name(std::string_view name) {
 
 } // namespace
 
-TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt,
-                                   const BodyCheckCallbacks& callbacks) {
+TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
     const SourceLocation& target_location = node_location(stmt.location, stmt.target_expr);
     if (stmt.target_expr.kind == ExprKind::Unary && stmt.target_expr.op == "*" &&
         stmt.target_expr.children.size() == 1) {
         const Expr& pointee = stmt.target_expr.children.front();
-        const TypeRef type = callbacks.infer_expr_type(scope, pointee, &target_location);
+        const TypeRef type = infer_expr_type_ast(scope, pointee, &target_location);
         if (!has_type_ref(type) || type_ref_is_auto(type)) {
             return {};
         }
@@ -101,7 +100,7 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt,
         if (stmt.target_expr.children.size() == 1 && is_swizzle_name(stmt.target_expr.name)) {
             const Expr& receiver = stmt.target_expr.children.front();
             const TypeRef receiver_type_ref =
-                callbacks.infer_expr_type(scope, receiver, &target_location);
+                infer_expr_type_ast(scope, receiver, &target_location);
             if (const auto swizzle = swizzle_assignment_type_ref_for_type(
                     scope.symbols, target_location, receiver_type_ref, stmt.target_expr.name)) {
                 return *swizzle;
@@ -118,7 +117,7 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt,
     }
     if (stmt.target_expr.kind == ExprKind::Call ||
         stmt.target_expr.kind == ExprKind::TemplateCall) {
-        (void)callbacks.infer_expr_type(scope, stmt.target_expr, &target_location);
+        (void)infer_expr_type_ast(scope, stmt.target_expr, &target_location);
         return {};
     }
     if (expr_present(stmt.target_expr)) {

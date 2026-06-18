@@ -19,14 +19,8 @@
 namespace dudu {
 namespace {
 
-bool callback_can_assign_type(const BodyCheckCallbacks& callbacks, const FunctionScope& scope,
-                              const TypeRef& expected, const Expr& expr, const TypeRef& got) {
-    return callbacks.can_assign_type(scope, expected, expr, got);
-}
-
 void check_type_match(FunctionScope& scope, const TypeRef& expected_ref, const Expr& expr,
-                      const SourceLocation& location, const BodyCheckCallbacks& callbacks,
-                      std::string_view mismatch_label) {
+                      const SourceLocation& location, std::string_view mismatch_label) {
     if (expr.kind == ExprKind::Call && !expr.callee.empty() &&
         expr.callee.front().kind == ExprKind::Member && expr.callee.front().children.size() == 1) {
         const Expr& member = expr.callee.front();
@@ -34,28 +28,27 @@ void check_type_match(FunctionScope& scope, const TypeRef& expected_ref, const E
         const bool receiver_is_bare_path =
             receiver.kind == ExprKind::Name && !scope.local_type_refs.contains(receiver.name);
         if (!receiver_is_bare_path) {
-            const TypeRef receiver_ref = callbacks.infer_expr_type(scope, receiver, &location);
+            const TypeRef receiver_ref = infer_expr_type_ast(scope, receiver, &location);
             if (const auto signature = inferred_generic_method_signature_for_type(
                     scope, receiver_ref, member.name, expr.children,
                     std::optional<TypeRef>{expected_ref}, &location,
                     {.infer_expr_type = [&](const FunctionScope& nested, const Expr& arg,
                                             const SourceLocation* arg_location) {
-                        return callbacks.infer_expr_type(nested, arg, arg_location);
+                        return infer_expr_type_ast(nested, arg, arg_location);
                     }})) {
                 const ScopedCallee scoped_callee = scoped_call_callee(scope, expr, &location);
                 check_call_args_ast(scope, scoped_callee.key, *signature, expr.children, &location);
                 const TypeRef signature_return = signature_return_type_ref(*signature);
                 if (type_assignment_allowed(expected_ref, signature_return) ||
-                    callback_can_assign_type(callbacks, scope, expected_ref, expr,
-                                             signature_return)) {
+                    can_assign_ast(scope, expected_ref, expr, signature_return)) {
                     return;
                 }
             }
         }
     }
-    const TypeRef got_ref = callbacks.infer_expr_type(scope, expr, &location);
+    const TypeRef got_ref = infer_expr_type_ast(scope, expr, &location);
     if (!type_assignment_allowed(expected_ref, got_ref) &&
-        !callback_can_assign_type(callbacks, scope, expected_ref, expr, got_ref)) {
+        !can_assign_ast(scope, expected_ref, expr, got_ref)) {
         if (!mismatch_label.empty()) {
             const std::string expected = substitute_type_ref_text(expected_ref, {});
             const std::string got = substitute_type_ref_text(got_ref, {});
@@ -82,16 +75,15 @@ bool function_has_decorator(const FunctionDecl& fn, std::string_view name) {
 }
 
 void check_type_ref_match(FunctionScope& scope, const TypeRef& expected, const Expr& expr,
-                          const SourceLocation& location, const BodyCheckCallbacks& callbacks,
-                          std::string_view mismatch_label) {
+                          const SourceLocation& location, std::string_view mismatch_label) {
     if (expr.kind == ExprKind::Call || expr.kind == ExprKind::TemplateCall) {
-        check_type_match(scope, expected, expr, location, callbacks, mismatch_label);
+        check_type_match(scope, expected, expr, location, mismatch_label);
         return;
     }
-    const TypeRef got_ref = callbacks.infer_expr_type(scope, expr, &location);
+    const TypeRef got_ref = infer_expr_type_ast(scope, expr, &location);
     if (!type_assignment_allowed(expected, got_ref) &&
         !assignment_type_allowed(expected, expr, got_ref) &&
-        !callback_can_assign_type(callbacks, scope, expected, expr, got_ref)) {
+        !can_assign_ast(scope, expected, expr, got_ref)) {
         if (!mismatch_label.empty()) {
             const std::string expected_text = substitute_type_ref_text(expected, {});
             const std::string got = substitute_type_ref_text(got_ref, {});
@@ -104,12 +96,11 @@ void check_type_ref_match(FunctionScope& scope, const TypeRef& expected, const E
 }
 
 void check_array_literal_elements(FunctionScope& scope, const TypeRef& element_type,
-                                  const Expr& expr, const SourceLocation& location,
-                                  const BodyCheckCallbacks& callbacks) {
+                                  const Expr& expr, const SourceLocation& location) {
     if (expr.kind != ExprKind::ListLiteral) {
-        const TypeRef got_ref = callbacks.infer_expr_type(scope, expr, &location);
+        const TypeRef got_ref = infer_expr_type_ast(scope, expr, &location);
         if (!type_assignment_allowed(element_type, got_ref) &&
-            !callback_can_assign_type(callbacks, scope, element_type, expr, got_ref)) {
+            !can_assign_ast(scope, element_type, expr, got_ref)) {
             const std::string expected_text = substitute_type_ref_text(element_type, {});
             const std::string got = substitute_type_ref_text(got_ref, {});
             sema_fail(location, "array literal element expects " + expected_text + ", got " + got);
@@ -117,8 +108,7 @@ void check_array_literal_elements(FunctionScope& scope, const TypeRef& element_t
         return;
     }
     for (const Expr& child : expr.children) {
-        check_array_literal_elements(scope, element_type, child, node_location(location, child),
-                                     callbacks);
+        check_array_literal_elements(scope, element_type, child, node_location(location, child));
     }
 }
 
@@ -156,10 +146,9 @@ TypeRef const_reference_type_ref(TypeRef type) {
     return ref_type;
 }
 
-void check_condition_type(FunctionScope& scope, const Stmt& stmt,
-                          const BodyCheckCallbacks& callbacks) {
+void check_condition_type(FunctionScope& scope, const Stmt& stmt) {
     const SourceLocation& location = node_location(stmt.location, stmt.condition_expr);
-    const TypeRef got_ref = callbacks.infer_expr_type(scope, stmt.condition_expr, &location);
+    const TypeRef got_ref = infer_expr_type_ast(scope, stmt.condition_expr, &location);
     if (has_type_ref(got_ref) && !type_ref_is_name(got_ref, "bool") && !type_ref_is_auto(got_ref)) {
         if (const auto signature = dudu_operator_signature(scope.symbols, "bool", got_ref);
             signature && signature_param_count(*signature) == 0 &&
@@ -171,15 +160,14 @@ void check_condition_type(FunctionScope& scope, const Stmt& stmt,
     }
 }
 
-std::optional<TypeRef> infer_for_binding_type(FunctionScope& scope, const Stmt& stmt,
-                                              const BodyCheckCallbacks& callbacks) {
+std::optional<TypeRef> infer_for_binding_type(FunctionScope& scope, const Stmt& stmt) {
     if (!sema_has_expr(stmt.iterable_expr)) {
         return std::nullopt;
     }
     const SourceLocation& location = node_location(stmt.location, stmt.iterable_expr);
     if (direct_callee_name(stmt.iterable_expr) == "range") {
         for (const Expr& arg : stmt.iterable_expr.children) {
-            (void)callbacks.infer_expr_type(scope, arg, &location);
+            (void)infer_expr_type_ast(scope, arg, &location);
         }
         return parse_type_text("i32", location);
     }
@@ -190,7 +178,7 @@ std::optional<TypeRef> infer_for_binding_type(FunctionScope& scope, const Stmt& 
             return *element;
         }
     }
-    const TypeRef iterable_type = callbacks.infer_expr_type(scope, stmt.iterable_expr, &location);
+    const TypeRef iterable_type = infer_expr_type_ast(scope, stmt.iterable_expr, &location);
     if (!has_type_ref(iterable_type)) {
         return std::nullopt;
     }

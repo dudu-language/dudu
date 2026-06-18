@@ -71,8 +71,7 @@ void lsp_bind_local(FunctionScope& scope, const std::string& name, TypeRef type_
 }
 
 TypeRef infer_lsp_expr_type(FunctionScope& scope, const Expr& expr) {
-    BodyCheckCallbacks callbacks = expression_body_check_callbacks();
-    return callbacks.infer_expr_type(scope, expr, &node_location(expr.location, expr));
+    return infer_expr_type_ast(scope, expr, &node_location(expr.location, expr));
 }
 
 void lsp_bind_inferred_local(FunctionScope& scope, const std::string& name, const Expr& expr) {

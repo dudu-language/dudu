@@ -1,10 +1,10 @@
 #pragma once
 
-#include "dudu/sema_body.hpp"
+#include "dudu/ast.hpp"
+#include "dudu/sema_scope.hpp"
 
 namespace dudu {
 
-TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt,
-                                   const BodyCheckCallbacks& callbacks);
+TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt);
 
 } // namespace dudu

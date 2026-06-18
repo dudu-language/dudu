@@ -1567,6 +1567,10 @@ push. They are not release packaging work.
    directly after overload selection.
    `GenericInferCallbacks` now carries only typed expression inference; the
    unused assignment callback and wrapper shim have been deleted.
+   `BodyCheckCallbacks` and `expression_body_check_callbacks` have been
+   deleted entirely; body checking, body helper checks, assignment target
+   checks, and LSP local inference now call the structured expression
+   inference and assignment compatibility APIs directly.
    Index-result inference now detects foreign/qualified indexable receivers from
    `TypeRef` head/kind metadata instead of rendering the receiver type to search
    for namespace separators.

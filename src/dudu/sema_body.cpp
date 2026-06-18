@@ -11,6 +11,7 @@
 #include "dudu/sema_body_helpers.hpp"
 #include "dudu/sema_common.hpp"
 #include "dudu/sema_context.hpp"
+#include "dudu/sema_expr_internal.hpp"
 #include "dudu/sema_index.hpp"
 #include "dudu/sema_match.hpp"
 #include "dudu/sema_super.hpp"
@@ -20,23 +21,22 @@ namespace dudu {
 namespace {
 
 void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_type_ref,
-                int loop_depth, const BodyCheckCallbacks& callbacks);
+                int loop_depth);
 
 void check_block(FunctionScope& scope, const std::vector<Stmt>& body,
-                 const TypeRef& return_type_ref, int loop_depth,
-                 const BodyCheckCallbacks& callbacks) {
+                 const TypeRef& return_type_ref, int loop_depth) {
     const bool allow_super_init_at_start = scope.allow_super_init;
     for (size_t i = 0; i < body.size(); ++i) {
         const Stmt& stmt = body[i];
         scope.allow_super_init =
             allow_super_init_at_start && i == 0 && loop_depth == 0 && is_super_init_stmt(stmt);
-        check_stmt(scope, stmt, return_type_ref, loop_depth, callbacks);
+        check_stmt(scope, stmt, return_type_ref, loop_depth);
     }
     scope.allow_super_init = false;
 }
 
 void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_type_ref,
-                int loop_depth, const BodyCheckCallbacks& callbacks) {
+                int loop_depth) {
     check_local_address_escape(stmt, scope.local_type_refs);
     const std::string return_type = substitute_type_ref_text(return_type_ref, {});
     if (stmt.kind == StmtKind::Return) {
@@ -49,11 +49,11 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
             return;
         }
         if (!type_ref_is_void(return_type_ref)) {
-            check_type_ref_match(scope, return_type_ref, stmt.value_expr, value_location, callbacks,
+            check_type_ref_match(scope, return_type_ref, stmt.value_expr, value_location,
                                  "return type mismatch");
             return;
         }
-        const TypeRef got_ref = callbacks.infer_expr_type(scope, stmt.value_expr, &value_location);
+        const TypeRef got_ref = infer_expr_type_ast(scope, stmt.value_expr, &value_location);
         const std::string got = substitute_type_ref_text(got_ref, {});
         if (got != "void") {
             sema_fail(value_location, "void function cannot return " + got);
@@ -67,27 +67,27 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
                       "runtime assert is not available in " + scope.target_mode +
                           " target mode; use debug_assert or a target-specific assert handler");
         }
-        check_condition_type(scope, stmt, callbacks);
+        check_condition_type(scope, stmt);
         if (sema_has_expr(stmt.message_expr)) {
-            (void)callbacks.infer_expr_type(scope, stmt.message_expr,
-                                            &node_location(stmt.location, stmt.message_expr));
+            (void)infer_expr_type_ast(scope, stmt.message_expr,
+                                      &node_location(stmt.location, stmt.message_expr));
         }
         return;
     }
     if (stmt.kind == StmtKind::Raise) {
         if (sema_has_expr(stmt.value_expr)) {
-            (void)callbacks.infer_expr_type(scope, stmt.value_expr,
-                                            &node_location(stmt.location, stmt.value_expr));
+            (void)infer_expr_type_ast(scope, stmt.value_expr,
+                                      &node_location(stmt.location, stmt.value_expr));
         }
         return;
     }
     if (stmt.kind == StmtKind::Match) {
         check_match_stmt(
             scope, stmt, return_type_ref, loop_depth,
-            {.infer_expr_type = callbacks.infer_expr_type,
+            {.infer_expr_type = infer_expr_type_ast,
              .check_block = [&](FunctionScope& nested, const std::vector<Stmt>& body,
                                 const TypeRef& nested_return_type, int nested_loop_depth) {
-                 check_block(nested, body, nested_return_type, nested_loop_depth, callbacks);
+                 check_block(nested, body, nested_return_type, nested_loop_depth);
              }});
         return;
     }
@@ -97,7 +97,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
     if (stmt.kind == StmtKind::Delete) {
         std::vector<TypeRef> arg_types;
         auto infer_type = [&](const Expr& expr) {
-            return callbacks.infer_expr_type(scope, expr, &node_location(stmt.location, expr));
+            return infer_expr_type_ast(scope, expr, &node_location(stmt.location, expr));
         };
         if (stmt.value_expr.kind == ExprKind::TupleLiteral) {
             for (const Expr& child : stmt.value_expr.children)
@@ -118,12 +118,12 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
         return;
     }
     if (stmt.kind == StmtKind::If || stmt.kind == StmtKind::Elif) {
-        check_condition_type(scope, stmt, callbacks);
-        check_block(scope, stmt.children, return_type_ref, loop_depth, callbacks);
+        check_condition_type(scope, stmt);
+        check_block(scope, stmt.children, return_type_ref, loop_depth);
         return;
     }
     if (stmt.kind == StmtKind::Else || stmt.kind == StmtKind::Try) {
-        check_block(scope, stmt.children, return_type_ref, loop_depth, callbacks);
+        check_block(scope, stmt.children, return_type_ref, loop_depth);
         return;
     }
     if (stmt.kind == StmtKind::Except) {
@@ -139,12 +139,12 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
             TypeRef catch_type = const_reference_type_ref(stmt.type_ref);
             bind_local(nested, stmt.name, catch_type);
         }
-        check_block(nested, stmt.children, return_type_ref, loop_depth, callbacks);
+        check_block(nested, stmt.children, return_type_ref, loop_depth);
         return;
     }
     if (stmt.kind == StmtKind::While) {
-        check_condition_type(scope, stmt, callbacks);
-        check_block(scope, stmt.children, return_type_ref, loop_depth + 1, callbacks);
+        check_condition_type(scope, stmt);
+        check_block(scope, stmt.children, return_type_ref, loop_depth + 1);
         return;
     }
     if (stmt.kind == StmtKind::For) {
@@ -153,7 +153,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
             check_local_binding_name(stmt.location, stmt.name);
             TypeRef binding_type = stmt.type_ref;
             if (!has_type_ref(binding_type)) {
-                const auto inferred = infer_for_binding_type(scope, stmt, callbacks);
+                const auto inferred = infer_for_binding_type(scope, stmt);
                 if (!inferred) {
                     sema_fail(node_location(stmt.location, stmt.iterable_expr),
                               "cannot infer loop binding type");
@@ -168,14 +168,14 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
             }
             bind_local(nested, stmt.name, binding_type);
         }
-        check_block(nested, stmt.children, return_type_ref, loop_depth + 1, callbacks);
+        check_block(nested, stmt.children, return_type_ref, loop_depth + 1);
         return;
     }
     if (stmt.kind == StmtKind::CompoundAssign) {
-        const TypeRef target_type = assignment_target_type_ref(scope, stmt, callbacks);
+        const TypeRef target_type = assignment_target_type_ref(scope, stmt);
         if (has_type_ref(target_type)) {
             check_type_ref_match(scope, target_type, stmt.value_expr,
-                                 node_location(stmt.location, stmt.value_expr), callbacks);
+                                 node_location(stmt.location, stmt.value_expr));
         }
         return;
     }
@@ -222,18 +222,16 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
             if (inferred.status == ArrayShapeStatus::Inferred &&
                 is_array_literal(stmt.value_expr)) {
                 check_array_literal_elements(scope, inferred.element_type_ref, stmt.value_expr,
-                                             node_location(stmt.location, stmt.value_expr),
-                                             callbacks);
+                                             node_location(stmt.location, stmt.value_expr));
             } else if (has_type_ref(explicit_element) && is_array_literal(stmt.value_expr)) {
                 check_array_literal_elements(scope, explicit_element, stmt.value_expr,
-                                             node_location(stmt.location, stmt.value_expr),
-                                             callbacks);
+                                             node_location(stmt.location, stmt.value_expr));
             } else if (!type.inferred) {
                 check_type_ref_match(scope, type.ref, stmt.value_expr,
-                                     node_location(stmt.location, stmt.value_expr), callbacks);
+                                     node_location(stmt.location, stmt.value_expr));
             } else {
                 check_type_ref_match(scope, type.ref, stmt.value_expr,
-                                     node_location(stmt.location, stmt.value_expr), callbacks);
+                                     node_location(stmt.location, stmt.value_expr));
             }
         }
         bind_local(scope, stmt.name, type.ref);
@@ -247,7 +245,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
             !names.empty()) {
             const SourceLocation& value_location = node_location(stmt.location, stmt.value_expr);
             const std::vector<TypeRef> types = template_type_arg_refs_with_aliases(
-                callbacks.infer_expr_type(scope, stmt.value_expr, &value_location), "tuple",
+                infer_expr_type_ast(scope, stmt.value_expr, &value_location), "tuple",
                 scope.symbols.alias_type_refs);
             if (names.size() != types.size()) {
                 sema_fail(value_location, "tuple destructuring count mismatch");
@@ -266,7 +264,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
             !scope.local_type_refs.contains(stmt.target_expr.name)) {
             const std::string& name = stmt.target_expr.name;
             check_local_binding_name(node_location(stmt.location, stmt.target_expr), name);
-            const TypeRef inferred = callbacks.infer_expr_type(
+            const TypeRef inferred = infer_expr_type_ast(
                 scope, stmt.value_expr, &node_location(stmt.location, stmt.value_expr));
             bind_local(scope, name, inferred);
             if (is_dudu_all_caps(name)) {
@@ -274,14 +272,14 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
             }
             return;
         }
-        const TypeRef target_type = assignment_target_type_ref(scope, stmt, callbacks);
+        const TypeRef target_type = assignment_target_type_ref(scope, stmt);
         if (has_type_ref(target_type)) {
             check_type_ref_match(scope, target_type, stmt.value_expr,
-                                 node_location(stmt.location, stmt.value_expr), callbacks);
+                                 node_location(stmt.location, stmt.value_expr));
         }
         return;
     }
-    (void)callbacks.infer_expr_type(scope, stmt.expr, &stmt.location);
+    (void)infer_expr_type_ast(scope, stmt.expr, &stmt.location);
 }
 
 Symbols with_generic_params(Symbols symbols, const std::vector<std::string>& params) {
@@ -303,8 +301,7 @@ void copy_base_scope_state(FunctionScope& dst, const FunctionScope& src) {
 
 } // namespace
 
-void check_bodies(const ModuleAst& module, const Symbols& symbols,
-                  const BodyCheckCallbacks& callbacks) {
+void check_bodies(const ModuleAst& module, const Symbols& symbols) {
     FunctionScope base{symbols};
     const auto mode = module.build_values.find("TARGET_MODE");
     if (mode != module.build_values.end()) {
@@ -334,8 +331,7 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols,
                 bind_local(scope, param.name, param.type_ref);
             }
             const TypeRef return_type_ref = function_return_type_ref(method);
-            const std::string return_type = substitute_type_ref_text(return_type_ref, {});
-            check_block(scope, method.statements, return_type_ref, 0, callbacks);
+            check_block(scope, method.statements, return_type_ref, 0);
             if (function_has_return_type(method) && !type_ref_is_void(return_type_ref) &&
                 !block_guarantees_return(method.statements)) {
                 sema_fail(method.location, "missing return in function: " + method.name);
@@ -351,7 +347,7 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols,
             bind_local(scope, param.name, param.type_ref);
         }
         const TypeRef return_type_ref = function_return_type_ref(fn);
-        check_block(scope, fn.statements, return_type_ref, 0, callbacks);
+        check_block(scope, fn.statements, return_type_ref, 0);
         if (function_has_return_type(fn) && !type_ref_is_void(return_type_ref) &&
             !block_guarantees_return(fn.statements)) {
             sema_fail(fn.location, "missing return in function: " + fn.name);
