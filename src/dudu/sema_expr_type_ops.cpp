@@ -26,15 +26,6 @@ bool type_ref_is_bool(const TypeRef& type) {
     return type_ref_is_name(type, "bool");
 }
 
-TypeRef named_type_ref(std::string name, SourceLocation location) {
-    TypeRef type;
-    type.kind = TypeKind::Named;
-    type.name = std::move(name);
-    type.location = location;
-    type.text = type.name;
-    return type;
-}
-
 TypeRef pointer_type_ref(TypeRef pointee, SourceLocation location) {
     return wrapped_type_ref(TypeKind::Pointer, std::move(pointee), location);
 }

@@ -26,15 +26,6 @@ TypeRef template_pointer_cast_type_ref(const Expr& expr, std::vector<TypeRef> ty
     return pointer;
 }
 
-TypeRef named_type_ref(std::string name, SourceLocation location) {
-    TypeRef type;
-    type.kind = TypeKind::Named;
-    type.name = std::move(name);
-    type.location = location;
-    type.text = type.name;
-    return type;
-}
-
 TypeRef pointer_type_ref_from_pointee(TypeRef pointee, SourceLocation location) {
     return wrapped_type_ref(TypeKind::Pointer, std::move(pointee), location);
 }

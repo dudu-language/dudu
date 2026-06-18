@@ -179,6 +179,7 @@ std::string substitute_type_ref_text(const TypeRef& type,
         return trim_copy(type.value.empty() ? type.text : type.value);
     case TypeKind::Named:
     case TypeKind::Qualified:
+        return trim_copy(type.name.empty() ? type.text : type.name);
     case TypeKind::Unknown:
         return trim_copy(type.text);
     }
@@ -258,8 +259,16 @@ bool type_ref_equivalent(const TypeRef& left, const TypeRef& right) {
     return true;
 }
 
+TypeRef named_type_ref(std::string name, SourceLocation location) {
+    TypeRef type;
+    type.kind = TypeKind::Named;
+    type.name = std::move(name);
+    type.location = location;
+    return type;
+}
+
 TypeRef void_type_ref(SourceLocation location) {
-    return parse_type_text("void", location);
+    return named_type_ref("void", location);
 }
 
 TypeRef wrapped_type_ref(TypeKind kind, TypeRef child, SourceLocation location) {

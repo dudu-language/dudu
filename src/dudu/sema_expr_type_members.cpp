@@ -2,18 +2,6 @@
 #include "dudu/sema_expr_internal.hpp"
 
 namespace dudu {
-namespace {
-
-TypeRef named_member_type_ref(std::string name, SourceLocation location) {
-    TypeRef type;
-    type.kind = TypeKind::Named;
-    type.name = std::move(name);
-    type.location = location;
-    type.text = type.name;
-    return type;
-}
-
-} // namespace
 
 std::optional<TypeRef> member_expr_direct_type_ref(const FunctionScope& scope, const Expr& expr,
                                                    const SourceLocation* location) {
@@ -26,7 +14,7 @@ std::optional<TypeRef> member_expr_direct_type_ref(const FunctionScope& scope, c
             sema_expr_fail(*location, "payload enum variant requires construction: " +
                                           variant->first->name + "." + variant->second->name);
         }
-        return named_member_type_ref(variant->first->name, expr.location);
+        return named_type_ref(variant->first->name, expr.location);
     }
     if (const auto native = native_member_expr_type_ref(scope.symbols, expr, type_location)) {
         return *native;
@@ -55,7 +43,7 @@ std::optional<TypeRef> member_expr_direct_type_ref(const FunctionScope& scope, c
         return *swizzle;
     }
     if (foreign_cpp_type_name(scope.symbols, receiver_ref)) {
-        return named_member_type_ref("auto", expr.location);
+        return named_type_ref("auto", expr.location);
     }
     if (location != nullptr) {
         sema_expr_fail(*location, "unknown field: " + receiver_type + "." + expr.name);

@@ -37,15 +37,6 @@ TypeRef shaped_array_type_ref(const TypeRef& element_type, const std::vector<siz
     return type;
 }
 
-TypeRef named_type_ref(std::string name, const SourceLocation& location) {
-    TypeRef type;
-    type.kind = TypeKind::Named;
-    type.name = std::move(name);
-    type.location = location;
-    type.text = type.name;
-    return type;
-}
-
 TypeRef resolve_type_ref_alias(const Symbols& symbols, const TypeRef& raw_type) {
     return resolve_alias_ref(symbols, raw_type);
 }
