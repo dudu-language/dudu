@@ -1491,3 +1491,7 @@ push. They are not release packaging work.
    Builtin container/optional/atomic method signatures now carry extracted
    item, key, and value types as `TypeRef` nodes instead of rendering template
    children to strings and reparsing them when constructing signatures.
+   Native explicit-template indexed tuple returns now inspect the return
+   `TypeRef` shape directly and update matched signatures through
+   `set_signature_return_type`; the old path rendered the return placeholder,
+   sliced the string, and manually synchronized return mirrors.

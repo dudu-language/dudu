@@ -94,14 +94,24 @@ bool native_arg_assignable(const FunctionSignature& signature, size_t index, con
     return can_assign(expected_ref, arg, got.ref);
 }
 
-std::optional<std::string>
-indexed_tuple_return_type(std::string return_type, const std::vector<std::string>& template_args,
-                          const std::vector<Expr>& args, const FunctionScope& scope,
-                          const SourceLocation* location,
-                          const NativeInferExprTypeAstFn& infer_expr_type) {
-    return_type = trim(std::move(return_type));
-    const bool reference = starts_with(return_type, "&");
-    const std::string index_text = reference ? trim(return_type.substr(1)) : return_type;
+std::optional<TypeRef> indexed_tuple_return_type(const TypeRef& return_type,
+                                                 const std::vector<std::string>& template_args,
+                                                 const std::vector<Expr>& args,
+                                                 const FunctionScope& scope,
+                                                 const SourceLocation* location,
+                                                 const NativeInferExprTypeAstFn& infer_expr_type) {
+    const bool reference = return_type.kind == TypeKind::Reference;
+    const TypeRef* index_type = &return_type;
+    if (reference) {
+        if (return_type.children.size() != 1) {
+            return std::nullopt;
+        }
+        index_type = &return_type.children.front();
+    }
+    if (index_type->kind != TypeKind::Value) {
+        return std::nullopt;
+    }
+    const std::string index_text = index_type->value;
     if (template_args.empty() || index_text != template_args.front() || args.empty() ||
         index_text.empty() || index_text.find_first_not_of("0123456789") != std::string::npos) {
         return std::nullopt;
@@ -116,8 +126,15 @@ indexed_tuple_return_type(std::string return_type, const std::vector<std::string
     if (index >= tuple.children.size()) {
         return std::nullopt;
     }
-    const std::string type = substitute_type_ref_text(tuple.children[index], {});
-    return reference ? "&" + type : type;
+    if (!reference) {
+        return tuple.children[index];
+    }
+    TypeRef out;
+    out.kind = TypeKind::Reference;
+    out.children.push_back(tuple.children[index]);
+    out.location = return_type.location;
+    out.text = substitute_type_ref_text(out, {});
+    return out;
 }
 
 bool has_native_placeholder_ref(const TypeRef& type) {
@@ -337,15 +354,13 @@ match_native_signature(const FunctionScope& scope, const std::string& callee,
                 scope, signature, args, location, infer_expr_type, can_assign)) {
             FunctionSignature resolved = *matched;
             if (template_call) {
-                if (const auto indexed =
-                        indexed_tuple_return_type(resolved.return_type, template_call->second, args,
-                                                  scope, location, infer_expr_type)) {
-                    resolved.return_type = *indexed;
-                    resolved.return_type_ref = parse_type_text(resolved.return_type);
+                if (const auto indexed = indexed_tuple_return_type(
+                        signature_return_type_ref(resolved), template_call->second, args, scope,
+                        location, infer_expr_type)) {
+                    set_signature_return_type(resolved, *indexed);
                 } else if (const auto explicit_return = explicit_type_return_ref(
                                signature_return_type_ref(resolved), template_call->second)) {
-                    resolved.return_type_ref = *explicit_return;
-                    resolved.return_type = substitute_type_ref_text(resolved.return_type_ref, {});
+                    set_signature_return_type(resolved, *explicit_return);
                 }
             }
             return resolved;
