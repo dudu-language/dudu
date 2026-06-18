@@ -1,5 +1,6 @@
 #include "dudu/language_server_definition.hpp"
 
+#include "dudu/ast_expr.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/language_server_json.hpp"
@@ -139,14 +140,15 @@ std::optional<std::string> header_definition_json(const Document& doc, const Jso
     return std::nullopt;
 }
 
-std::optional<std::string> member_definition_json(const Document& doc, const std::string& word,
+std::optional<std::string> member_definition_json(const Document& doc, const ExprPath& path,
                                                   const Json* params) {
-    const size_t dot = word.find('.');
-    if (dot == std::string::npos || dot == 0 || dot + 1 >= word.size()) {
+    if (path.segments.size() < 2 ||
+        path.segments.front().kind != ExprPathSegmentKind::Name ||
+        path.segments.back().kind != ExprPathSegmentKind::Name) {
         return std::nullopt;
     }
-    const std::string receiver = word.substr(0, dot);
-    const std::string member = word.substr(dot + 1);
+    const std::string& receiver = path.segments.front().text;
+    const std::string& member = path.segments.back().text;
     const TypeRef type_ref = local_type_ref_before_cursor(doc, receiver, params);
     const std::string type = substitute_type_ref_text(type_ref, {});
     if (type.empty()) {
@@ -274,12 +276,21 @@ std::string definition_json(const Document& doc, const Json* params) {
             return out.str();
         }
     }
-    if (const std::optional<std::string> member_definition =
-            member_definition_json(doc, word, params)) {
-        return *member_definition;
+    const std::optional<ExprPath> path = ast_expr_path_at(doc, params);
+    if (path && path->segments.size() >= 2) {
+        if (const std::optional<std::string> member_definition =
+                member_definition_json(doc, *path, params)) {
+            return *member_definition;
+        }
     }
     if (const std::optional<std::string> import_definition = import_definition_json(doc, word)) {
         return *import_definition;
+    }
+    if (path && path->segments.size() >= 2) {
+        const std::string path_text = render_expr_path(*path);
+        if (path_text != word) {
+            return import_definition_json(doc, path_text).value_or("null");
+        }
     }
     return "null";
 }

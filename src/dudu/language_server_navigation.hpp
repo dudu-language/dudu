@@ -11,6 +11,7 @@
 namespace dudu {
 
 struct Json;
+struct ExprPath;
 
 std::string range_json(const SourceLocation& location);
 std::string range_json(int line, int start_character, int end_character);
@@ -22,6 +23,7 @@ std::string file_uri(const std::filesystem::path& path);
 
 std::optional<std::string> ast_symbol_at(const Document& doc, const Json* params);
 std::optional<std::string> ast_symbol_path_at(const Document& doc, const Json* params);
+std::optional<ExprPath> ast_expr_path_at(const Document& doc, const Json* params);
 bool symbol_matches(const std::string& symbol, const std::string& query);
 bool symbol_char(char c);
 bool identifier_char(char c);

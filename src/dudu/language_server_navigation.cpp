@@ -173,12 +173,92 @@ std::optional<std::string> ast_symbol_at_impl(const Document& doc, const Json* p
     return result;
 }
 
+std::optional<ExprPath> ast_expr_path_at_impl(const Document& doc, const Json* params) {
+    const Json* position = params == nullptr ? nullptr : params->get("position");
+    const int target_line = int_value(position == nullptr ? nullptr : position->get("line")) + 1;
+    const int target_column =
+        int_value(position == nullptr ? nullptr : position->get("character")) + 1;
+    const auto contains = [&](const SourceLocation& location, const std::string& name) {
+        if (name.empty() || location.line != target_line || location.column <= 0) {
+            return false;
+        }
+        const int start = location.column;
+        const int end = start + static_cast<int>(name.size());
+        return target_column >= start && target_column <= end;
+    };
+    std::optional<ExprPath> result;
+    const std::function<void(const Expr&)> visit_expr = [&](const Expr& expr) {
+        if (result) {
+            return;
+        }
+        if ((expr.kind == ExprKind::Name || expr.kind == ExprKind::Member) &&
+            contains(expr_name_location(expr), expr.name)) {
+            result = expr_path_from_expr(expr);
+            return;
+        }
+        for (const Expr& callee : expr.callee) {
+            visit_expr(callee);
+        }
+        for (const Expr& param : expr.params) {
+            visit_expr(param);
+        }
+        for (const Expr& arg : expr.template_args) {
+            visit_expr(arg);
+        }
+        for (const Expr& child : expr.children) {
+            visit_expr(child);
+        }
+    };
+    const std::function<void(const std::vector<Stmt>&)> visit_stmts =
+        [&](const std::vector<Stmt>& statements) {
+            for (const Stmt& stmt : statements) {
+                visit_stmt_expressions(stmt, visit_expr);
+                visit_stmts(stmt.children);
+            }
+        };
+    try {
+        const ModuleAst module = parse_source(doc.text, doc.path);
+        for (const ConstDecl& constant : module.constants) {
+            visit_expr(constant.value_expr);
+        }
+        for (const EnumDecl& en : module.enums) {
+            for (const EnumValueDecl& value : en.values) {
+                visit_expr(value.value_expr);
+            }
+        }
+        for (const ClassDecl& klass : module.classes) {
+            for (const FieldDecl& field : klass.fields) {
+                visit_expr(field.value_expr);
+            }
+            for (const ConstDecl& constant : klass.constants) {
+                visit_expr(constant.value_expr);
+            }
+            for (const ConstDecl& field : klass.static_fields) {
+                visit_expr(field.value_expr);
+            }
+            for (const FunctionDecl& method : klass.methods) {
+                visit_stmts(method.statements);
+            }
+        }
+        for (const FunctionDecl& fn : module.functions) {
+            visit_stmts(fn.statements);
+        }
+    } catch (const std::exception&) {
+        return std::nullopt;
+    }
+    return result;
+}
+
 std::optional<std::string> ast_symbol_at(const Document& doc, const Json* params) {
     return ast_symbol_at_impl(doc, params, false);
 }
 
 std::optional<std::string> ast_symbol_path_at(const Document& doc, const Json* params) {
     return ast_symbol_at_impl(doc, params, true);
+}
+
+std::optional<ExprPath> ast_expr_path_at(const Document& doc, const Json* params) {
+    return ast_expr_path_at_impl(doc, params);
 }
 
 bool symbol_matches(const std::string& symbol, const std::string& query) {

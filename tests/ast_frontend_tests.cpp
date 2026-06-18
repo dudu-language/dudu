@@ -7,6 +7,7 @@
 #include "dudu/language_server_completion.hpp"
 #include "dudu/language_server_json.hpp"
 #include "dudu/language_server_local_context.hpp"
+#include "dudu/language_server_navigation.hpp"
 #include "dudu/language_server_semantic_tokens.hpp"
 #include "dudu/match_patterns.hpp"
 #include "dudu/native_header_types.hpp"
@@ -28,6 +29,7 @@
 #include <cctype>
 #include <exception>
 #include <iostream>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -1406,6 +1408,25 @@ void test_signature_help_call_site_uses_tokens() {
     assert(help.find("\"activeParameter\":1") != std::string::npos);
 }
 
+void test_ast_expr_path_at_cursor() {
+    const std::string source =
+        "def main() -> i32:\n"
+        "    player.hp.current\n";
+    const dudu::Document doc{
+        .uri = "file:///path.dd",
+        .path = "/tmp/path.dd",
+        .text = source,
+    };
+
+    dudu::Json params = completion_params(1, 17);
+    const std::optional<dudu::ExprPath> path = dudu::ast_expr_path_at(doc, &params);
+    assert(path);
+    assert(path->segments.size() == 3);
+    assert(path->segments[0].text == "player");
+    assert(path->segments[1].text == "hp");
+    assert(path->segments[2].text == "current");
+}
+
 } // namespace
 
 int main() {
@@ -1456,6 +1477,7 @@ int main() {
         test_wrapper_match_type_uses_type_ast();
         test_member_completion_target_uses_tokens();
         test_signature_help_call_site_uses_tokens();
+        test_ast_expr_path_at_cursor();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;
