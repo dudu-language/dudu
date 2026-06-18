@@ -156,7 +156,7 @@ bool is_value_wrapper_assignment(std::string expected, const Expr& expr, std::st
     if (inner == expected) {
         return false;
     }
-    return assignment_type_allowed(inner, expr, got);
+    return assignment_type_allowed(parse_type_text(inner, expr.location), expr, got);
 }
 
 bool is_null_pointer(std::string expected, const Expr& expr, std::string got) {
@@ -395,17 +395,6 @@ bool type_assignment_allowed(const TypeRef& expected, const TypeRef& got) {
            is_value_from_reference(expected, got) || is_value_from_const(expected, got) ||
            is_native_function_pointer(expected, got) ||
            text_type_assignment_allowed(normalized_expected, normalized_got);
-}
-
-bool assignment_type_allowed(const std::string& expected, const Expr& expr,
-                             const std::string& got) {
-    const std::string normalized_expected = normalize_cpp_type_artifacts(expected);
-    const std::string normalized_got = normalize_cpp_type_artifacts(got);
-    const TypeRef expected_ref = parse_type_text(normalized_expected);
-    if (!normalized_got.empty() && normalized_got != "auto") {
-        return assignment_type_allowed(expected_ref, expr, parse_type_text(normalized_got));
-    }
-    return assignment_type_allowed(expected_ref, expr, normalized_got);
 }
 
 bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const TypeRef& got) {

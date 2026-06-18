@@ -1311,3 +1311,6 @@ declarations safely.
    General type assignment compatibility now exposes only the parsed
    `TypeRef`/`TypeRef` public API; the former public string/string helper is a
    private native-artifact compatibility helper.
+   Expression-aware assignment compatibility no longer exposes an
+   expected-type string overload; value-wrapper recursion parses its inner type
+   before re-entering the structured assignment path.
