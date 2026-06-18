@@ -269,43 +269,6 @@ indexed_type_from_type_ref_with_count(const SourceLocation& location, const Type
 
 } // namespace
 
-std::string indexed_value_type(const std::map<std::string, TypeRef>& local_type_refs,
-                               const SourceLocation& location, const std::string& name,
-                               const Expr& index_expr, std::string_view unknown_message) {
-    const auto type_ref = local_type_refs.find(name);
-    if (type_ref == local_type_refs.end()) {
-        throw CompileError(location, std::string(unknown_message) + name);
-    }
-    if (is_channel_slice_expr(index_expr)) {
-        const std::vector<size_t> shape = explicit_array_shape(type_ref->second);
-        if (shape.size() == 3) {
-            return "strided_span[" + explicit_array_element_type(type_ref->second) + "]";
-        }
-    }
-    if (is_column_slice_expr(index_expr)) {
-        const std::vector<size_t> shape = explicit_array_shape(type_ref->second);
-        if (shape.size() == 2) {
-            return "strided_span[" + explicit_array_element_type(type_ref->second) + "]";
-        }
-    }
-    if (!has_step_slice(index_expr)) {
-        if (const std::vector<size_t> shape = explicit_array_shape(type_ref->second);
-            !shape.empty()) {
-            if (const auto prefix_count = trailing_full_slice_prefix_count(index_expr)) {
-                if (*prefix_count + 1 == shape.size()) {
-                    return "span[" + explicit_array_element_type(type_ref->second) + "]";
-                }
-            }
-        }
-    }
-    if (const auto indexed = indexed_type_from_type_ref_with_count(
-            location, type_ref->second, index_count_from_expr(index_expr),
-            is_slice_expr(index_expr), has_step_slice(index_expr), name)) {
-        return *indexed;
-    }
-    throw CompileError(location, "cannot index non-container: " + name);
-}
-
 TypeRef indexed_value_type_ref(const Symbols& symbols,
                                const std::map<std::string, TypeRef>& local_type_refs,
                                const SourceLocation& location, const std::string& name,

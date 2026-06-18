@@ -274,9 +274,11 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
                         parse_escape_exprs(split_top_level_args(index_expr), *location), location);
                 }
             }
-            return indexed_value_type(scope.local_type_refs, *location, name,
-                                      parse_expr_text(index_expr, *location),
-                                      "indexed access to unknown local: ");
+            return substitute_type_ref_text(
+                indexed_value_type_ref(scope.symbols, scope.local_type_refs, *location, name,
+                                       parse_expr_text(index_expr, *location),
+                                       "indexed access to unknown local: "),
+                {});
         }
         if (is_member_path(name)) {
             const std::string receiver_type = cpp_escape_member_path_type(scope, location, name);

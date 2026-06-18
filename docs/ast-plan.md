@@ -271,6 +271,9 @@ Already structured:
 - iterable binding inference now exposes only `TypeRef` helpers; the remaining
   string-only iterable element APIs were removed, and LSP local binding
   inference uses the same structured iterable element path as semantic checks
+- indexed local inference now exposes only the `TypeRef` helper; `cpp(...)`
+  escape inference uses structured indexed-local metadata internally and
+  renders only at the escape compatibility boundary
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path

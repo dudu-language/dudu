@@ -730,6 +730,9 @@ push. They are not release packaging work.
    Iterable binding inference now exposes only `TypeRef` helpers; the remaining
    string-only iterable element APIs were removed, and LSP local binding
    inference uses the same structured iterable element path as semantic checks.
+   Indexed local inference now exposes only the `TypeRef` helper; `cpp(...)`
+   escape inference uses structured indexed-local metadata internally and
+   renders only at the escape compatibility boundary.
    TypeRef-backed assignment checks now infer RHS expressions as `TypeRef`
    first, use structured type assignment before compatibility fallback, and
    render only for legacy assignment/literal checks and diagnostics.
