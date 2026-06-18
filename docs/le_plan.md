@@ -1455,9 +1455,10 @@ push. They are not release packaging work.
    Local function type parsing and function-type missing-return checks now also
    use `has_type_ref`; the remaining raw text presence checks are confined to
    parser/type rendering, LSP display, and the helper implementation itself.
-   Indexed-type alias resolution now also uses the centralized
-   `resolve_alias_ref_with_legacy_fallback` helper instead of carrying a local
-   render/resolve/reparse fallback copy.
+   `resolve_alias_ref` now expands aliases recursively inside structured
+   `TypeRef` children. Indexed-type alias resolution uses that structured
+   resolver directly, so list/dict/array indexing no longer depends on the
+   legacy render/resolve/reparse alias fallback.
    Function signatures now expose `signature_param_count`, and regular call
    checking, function-type construction/rendering, and native overload arity
    diagnostics use it instead of reading the legacy parameter string vector

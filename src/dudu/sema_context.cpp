@@ -209,13 +209,16 @@ std::string resolve_alias(const Symbols& symbols, std::string type) {
 TypeRef resolve_alias_ref(const Symbols& symbols, TypeRef type) {
     for (size_t guard = 0; guard < symbols.alias_type_refs.size(); ++guard) {
         if (type.kind != TypeKind::Named && type.kind != TypeKind::Qualified) {
-            return type;
+            break;
         }
         const auto found = symbols.alias_type_refs.find(type.name);
         if (found == symbols.alias_type_refs.end()) {
-            return type;
+            break;
         }
         type = found->second;
+    }
+    for (TypeRef& child : type.children) {
+        child = resolve_alias_ref(symbols, std::move(child));
     }
     return type;
 }

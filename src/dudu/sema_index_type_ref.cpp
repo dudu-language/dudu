@@ -48,7 +48,7 @@ TypeRef named_type_ref(std::string name, const SourceLocation& location) {
 }
 
 TypeRef resolve_type_ref_alias(const Symbols& symbols, const TypeRef& raw_type) {
-    return resolve_alias_ref_with_legacy_fallback(symbols, raw_type);
+    return resolve_alias_ref(symbols, raw_type);
 }
 
 bool foreign_or_auto_indexable_type(const TypeRef& type) {

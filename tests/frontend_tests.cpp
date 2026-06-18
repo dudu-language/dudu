@@ -622,25 +622,30 @@ void test_index_type_inference_uses_type_ast() {
     const dudu::SourceLocation location{.file = "index_types.dd", .line = 1, .column = 1};
     symbols.aliases["Ints"] = "list[i32]";
     symbols.alias_type_refs["Ints"] = dudu::parse_type_text("list[i32]", location);
-    const dudu::TypeRef pointer_item =
-        dudu::indexed_type_ref_from_type(symbols, location,
-                                         dudu::parse_type_text("*const[Item]", location),
-                                         dudu::parse_expr_text("0", location), "items");
+    symbols.aliases["ItemAlias"] = "Item";
+    symbols.alias_type_refs["ItemAlias"] = dudu::parse_type_text("Item", location);
+    symbols.aliases["AliasItems"] = "list[ItemAlias]";
+    symbols.alias_type_refs["AliasItems"] = dudu::parse_type_text("list[ItemAlias]", location);
+    const dudu::TypeRef pointer_item = dudu::indexed_type_ref_from_type(
+        symbols, location, dudu::parse_type_text("*const[Item]", location),
+        dudu::parse_expr_text("0", location), "items");
     assert(dudu::substitute_type_ref_text(pointer_item, {}) == "Item");
-    const dudu::TypeRef indexed_bag_item =
-        dudu::indexed_type_ref_from_type(symbols, location,
-                                         dudu::parse_type_text("Bag[Item]", location),
-                                         dudu::parse_expr_text("0", location), "bag");
+    const dudu::TypeRef indexed_bag_item = dudu::indexed_type_ref_from_type(
+        symbols, location, dudu::parse_type_text("Bag[Item]", location),
+        dudu::parse_expr_text("0", location), "bag");
     assert(dudu::substitute_type_ref_text(indexed_bag_item, {}) == "Item");
-    const dudu::TypeRef dict_item =
-        dudu::indexed_type_ref_from_type(symbols, location,
-                                         dudu::parse_type_text("dict[str, Item]", location),
-                                         dudu::parse_expr_text("key", location), "items");
+    const dudu::TypeRef dict_item = dudu::indexed_type_ref_from_type(
+        symbols, location, dudu::parse_type_text("dict[str, Item]", location),
+        dudu::parse_expr_text("key", location), "items");
     assert(dudu::substitute_type_ref_text(dict_item, {}) == "Item");
     const dudu::TypeRef aliased_list_item =
         dudu::indexed_type_ref_from_type(symbols, location, dudu::parse_type_text("Ints", location),
                                          dudu::parse_expr_text("0", location), "ints");
     assert(dudu::substitute_type_ref_text(aliased_list_item, {}) == "i32");
+    const dudu::TypeRef nested_alias_item = dudu::indexed_type_ref_from_type(
+        symbols, location, dudu::parse_type_text("AliasItems", location),
+        dudu::parse_expr_text("0", location), "items");
+    assert(dudu::substitute_type_ref_text(nested_alias_item, {}) == "Item");
 
     const dudu::TypeRef matrix_type = dudu::parse_type_text("array[list[i32]][3, 4]");
     const dudu::TypeRef row_type = dudu::indexed_type_ref_from_type(
