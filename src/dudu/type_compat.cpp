@@ -42,6 +42,15 @@ std::string wrapped_type_arg(const TypeRef& type) {
     return substitute_type_ref_text(type, {});
 }
 
+TypeRef wrapped_type_arg_ref(const TypeRef& type) {
+    if (const auto inner =
+            unary_type_child_ref(type, {TypeKind::Const, TypeKind::Atomic, TypeKind::Volatile,
+                                        TypeKind::Device, TypeKind::Storage, TypeKind::Shared})) {
+        return *inner;
+    }
+    return type;
+}
+
 std::optional<std::string> unary_child(std::string type, TypeKind kind) {
     type = trim_copy(std::move(type));
     const auto child = unary_type_child_ref(parse_type_text(type), kind);
@@ -181,8 +190,7 @@ bool is_void_pointer_target(const TypeRef& expected, const TypeRef& got) {
     if (!expected_pointee || !got_pointee) {
         return false;
     }
-    return wrapped_type_arg(*expected_pointee) == "void" ||
-           wrapped_type_arg(*expected_pointee) == "const[void]";
+    return type_ref_is_void(wrapped_type_arg_ref(*expected_pointee));
 }
 
 bool is_const_pointer_binding(std::string expected, std::string got) {
@@ -276,7 +284,7 @@ bool is_native_function_pointer(std::string expected, std::string got) {
 
 bool is_native_function_pointer(const TypeRef& expected, const TypeRef& got) {
     const auto expected_pointee = pointer_pointee_ref(expected);
-    return expected_pointee && wrapped_type_arg(*expected_pointee) == "void" &&
+    return expected_pointee && type_ref_is_void(wrapped_type_arg_ref(*expected_pointee)) &&
            got.kind == TypeKind::Function;
 }
 

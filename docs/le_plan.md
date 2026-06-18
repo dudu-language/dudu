@@ -1413,3 +1413,7 @@ push. They are not release packaging work.
    implementations.
    Binary/comparison expression semantic checks also use the shared
    `type_ref_is_name` helper instead of carrying a local duplicate.
+   TypeRef pointer compatibility checks now unwrap unary type wrappers
+   structurally and use `type_ref_is_void` for void-pointer and native function
+   pointer checks, leaving rendered comparisons only in the explicit legacy
+   string compatibility overloads.
