@@ -34,7 +34,6 @@ TypeRef shaped_array_type_ref(const TypeRef& element_type, const std::vector<siz
     type.value = value.str();
     type.location = element_type.location;
     type.range = element_type.range;
-    type.text = substitute_type_ref_text(type, {});
     return type;
 }
 
@@ -66,7 +65,6 @@ TypeRef array_element_template_type_ref(const SourceLocation& location, const Ty
     type.name = std::string(template_name);
     type.children.push_back(explicit_array_element_type_ref(array_type));
     type.location = location;
-    type.text = substitute_type_ref_text(type, {});
     return type;
 }
 
@@ -112,7 +110,6 @@ std::optional<TypeRef> indexed_type_ref_from_type_ref_with_count(
             span.name = has_step ? "strided_span" : "span";
             span.children.push_back(element);
             span.location = location;
-            span.text = substitute_type_ref_text(span, {});
             return span;
         }
         if (index_count > shape.size()) {

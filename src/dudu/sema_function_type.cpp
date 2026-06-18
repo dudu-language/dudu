@@ -26,7 +26,6 @@ TypeRef function_type_ref(const FunctionSignature& signature, SourceLocation loc
     for (size_t i = 0; i < param_count; ++i) {
         out.children.push_back(signature_param_type_ref(signature, i));
     }
-    out.text = substitute_type_ref_text(out, {});
     return out;
 }
 

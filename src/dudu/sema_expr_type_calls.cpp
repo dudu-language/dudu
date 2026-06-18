@@ -20,7 +20,6 @@ TypeRef template_pointer_cast_type_ref(const Expr& expr, std::vector<TypeRef> ty
     pointee.children = std::move(type_args);
     pointee.location = expr.location;
     pointee.range = expr.range;
-    pointee.text = substitute_type_ref_text(pointee, {});
 
     TypeRef pointer = wrapped_type_ref(TypeKind::Pointer, std::move(pointee), expr.location);
     pointer.range = expr.range;
@@ -48,7 +47,6 @@ TypeRef template_constructor_type_ref(const Expr& expr, std::string name,
     type.children = std::move(type_args);
     type.location = expr.location;
     type.range = expr.range;
-    type.text = substitute_type_ref_text(type, {});
     return type;
 }
 
@@ -214,7 +212,6 @@ std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Ex
         if (expr.children.size() == 1) {
             out.children.push_back(infer_expr_type_ast(scope, expr.children.front(), location));
         }
-        out.text = substitute_type_ref_text(out, {});
         return out;
     }
     if (const auto decl = scope.symbols.function_decls.find(callee);

@@ -96,7 +96,6 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
         for (const Expr& child : expr.children) {
             tuple.children.push_back(infer_expr_type_ast(scope, child, location));
         }
-        tuple.text = substitute_type_ref_text(tuple, {});
         return tuple;
     }
     case ExprKind::Call:

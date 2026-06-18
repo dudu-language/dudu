@@ -133,7 +133,6 @@ std::optional<TypeRef> indexed_tuple_return_type(const TypeRef& return_type,
     out.kind = TypeKind::Reference;
     out.children.push_back(tuple.children[index]);
     out.location = return_type.location;
-    out.text = substitute_type_ref_text(out, {});
     return out;
 }
 
@@ -199,7 +198,6 @@ std::optional<TypeRef> explicit_type_return_ref(const TypeRef& return_type,
                    : std::optional<TypeRef>{parse_type_text(*first_type_arg, return_type.location)};
     }
     TypeRef substituted = substitute_type_ref(return_type, bindings);
-    substituted.text = substitute_type_ref_text(substituted, {});
     return substituted;
 }
 
