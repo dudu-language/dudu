@@ -1698,9 +1698,9 @@ push. They are not release packaging work.
    `TypeRef` nodes directly for known class names instead of reparsing class
    name strings as type syntax.
    Template-call unknown-type diagnostics now build a named `TypeRef` directly
-   for plain callees instead of reparsing the callee string. The remaining
-   string spelling helper is named `known_type_spelling` and is confined to
-   explicit `cpp(...)` escape inference.
+   for plain callees instead of reparsing the callee string. Raw type-spelling
+   recognition is now a private helper inside explicit `cpp(...)` escape
+   inference.
    `named_type_ref` now preserves qualified-name shape for dotted or `::`
    names, and template-constructor recognition accepts parsed `TypeRef`
    metadata instead of reparsing a rendered callee string.
