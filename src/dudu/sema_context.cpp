@@ -138,13 +138,6 @@ bool known_type_ref(const Symbols& symbols, const TypeRef& type) {
            base == "volatile" || base == "storage" || base == "shared" || base == "device";
 }
 
-bool known_type_spelling(const Symbols& symbols, const std::string& type) {
-    if (starts_with(trim(type), "fn(")) {
-        return true;
-    }
-    return known_type_ref(symbols, parse_type_text(type));
-}
-
 std::optional<std::pair<std::string, SourceLocation>> unknown_type_ref(const Symbols& symbols,
                                                                        const TypeRef& type) {
     switch (type.kind) {

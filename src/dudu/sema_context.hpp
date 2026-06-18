@@ -38,7 +38,6 @@ struct Symbols {
 
 std::string trim(std::string text);
 std::string base_type(const TypeRef& type);
-bool known_type_spelling(const Symbols& symbols, const std::string& type);
 bool known_type_ref(const Symbols& symbols, const TypeRef& type);
 std::optional<std::pair<std::string, SourceLocation>> unknown_type_ref(const Symbols& symbols,
                                                                        const TypeRef& type);

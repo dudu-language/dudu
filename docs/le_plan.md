@@ -1782,3 +1782,6 @@ push. They are not release packaging work.
    Pointer-cast C++ emission now uses the parsed `Expr::type_ref` carried by the
    pointer-cast call node instead of reparsing the callee spelling during
    codegen.
+   Raw type-spelling recognition for `cpp(...)` calls is now private to the
+   explicit C++ escape inference boundary; general semantic context exposes only
+   structured `TypeRef` type checks.

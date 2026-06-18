@@ -14,6 +14,13 @@ TypeRef cpp_escape_member_path_type_ref(const FunctionScope& scope, const Source
 TypeRef cpp_escape_member_expr_type_ref(const FunctionScope& scope, const SourceLocation* location,
                                         const Expr& expr);
 
+bool known_cpp_escape_type_spelling(const Symbols& symbols, const std::string& type) {
+    if (starts_with(trim(type), "fn(")) {
+        return true;
+    }
+    return known_type_ref(symbols, parse_type_text(type));
+}
+
 std::string render_type(const TypeRef& type) {
     return has_type_ref(type) ? substitute_type_ref_text(type, {}) : std::string{};
 }
@@ -226,7 +233,7 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
             return signature_return_type_text(*signature);
         }
         if (!is_local_member_call(scope, callee) && callee.find('.') == std::string::npos &&
-            known_type_spelling(scope.symbols, callee)) {
+            known_cpp_escape_type_spelling(scope.symbols, callee)) {
             return callee;
         }
         if (scope.local_type_refs.contains(callee)) {
@@ -343,7 +350,7 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
         }
         if (location != nullptr && callee.find('.') == std::string::npos &&
             callee.find('[') == std::string::npos && is_plain_identifier(callee) &&
-            !known_type_spelling(scope.symbols, callee) && !is_builtin_call(callee)) {
+            !known_cpp_escape_type_spelling(scope.symbols, callee) && !is_builtin_call(callee)) {
             if (is_dudu_all_caps(callee))
                 return "auto";
             sema_expr_fail(*location, "unknown function: " + callee);
