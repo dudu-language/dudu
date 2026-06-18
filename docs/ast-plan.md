@@ -379,6 +379,9 @@ Already structured:
 - expression `TypeRef` inference now has explicit cases for all expression
   kinds; the old generic fallback into `infer_expr_ast` is gone, with remaining
   string compatibility isolated to call/template-call paths that still need it
+- the dead `infer_expr_ast` string expression inferencer has been removed; expression
+  sema now exposes structured `infer_expr_type_ast` plus explicit compatibility
+  renderers for C++ escapes, calls, and template calls
 - LSP local variable/parameter type collection for hover, member completion,
   and member definition now walks parsed function/method bodies and reuses
   semantic expression inference instead of regexing source lines
