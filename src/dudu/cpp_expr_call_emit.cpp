@@ -92,9 +92,13 @@ std::string lower_call_args_for_signature(const std::vector<Expr>& args, const F
     return out.str();
 }
 
+bool is_pointer_type_ref(const TypeRef& type) {
+    return type.kind == TypeKind::Pointer;
+}
+
 bool is_pointer_type(std::string type) {
     type = trim_copy(std::move(type));
-    return parse_type_text(type).kind == TypeKind::Pointer;
+    return is_pointer_type_ref(parse_type_text(type));
 }
 
 bool is_pointer_list_type(std::string type) {
@@ -114,8 +118,8 @@ bool expression_has_pointer_type(const Expr& expr, const std::map<std::string, s
     if (symbols == nullptr) {
         return false;
     }
-    const std::string type = member_expr_type(*symbols, locals, nullptr, expr);
-    return is_pointer_type(type);
+    const TypeRef type = member_expr_type_ref(*symbols, locals, {}, nullptr, expr);
+    return is_pointer_type_ref(type);
 }
 
 std::string unquoted_string_literal(std::string text) {

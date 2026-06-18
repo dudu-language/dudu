@@ -1751,6 +1751,9 @@ LSP source edits are also moving to AST-owned ranges:
 - C++ expression emission now also uses structured member and swizzle type
   helpers for deciding Dudu field access and swizzle result construction,
   instead of querying those semantics through rendered type strings.
+- C++ call emission now detects pointer-typed member receivers through
+  structured member `TypeRef` metadata when resolving `value.method(...)`
+  lowering, leaving text parsing only for the older string-local map boundary.
 - Native value symbols now store parsed `TypeRef` metadata beside their C++
   spelling strings, and normal name/member expression sema reads those refs
   directly for imported constants, build flags, shader/native values, and class
