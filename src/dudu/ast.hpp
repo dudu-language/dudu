@@ -28,7 +28,6 @@ struct ImportDecl {
     std::string module_path;
     std::string imported_name;
     std::string alias;
-    std::string source_text;
     SourceLocation location;
     SourceRange range;
     SourceRange module_range;

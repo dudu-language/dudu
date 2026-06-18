@@ -1426,3 +1426,6 @@ push. They are not release packaging work.
    fallback logic locally.
    Member-path alias resolution now uses that same centralized migration
    helper, removing another local render/compare/reparse fallback copy.
+   `ImportDecl::source_text` has been removed; the LSP organize-imports action
+   now renders canonical import lines from structured `ImportDecl` fields
+   instead of storing a raw source-line mirror in the AST.

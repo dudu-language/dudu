@@ -232,7 +232,6 @@ ImportDecl Parser::parse_import(const Token& start) {
         import.alias = consume_identifier("expected alias after as").text;
     }
     const JoinedTokens source = join_tokens(statement_begin, cursor_);
-    import.source_text = source_text_for_tokens(statement_begin, cursor_);
     import.range = source.range;
     consume(TokenKind::Newline, "expected newline after import");
     return import;
@@ -256,7 +255,6 @@ ImportDecl Parser::parse_foreign_import(const Token& start, ImportKind kind,
         import.alias = consume_identifier("expected alias after as").text;
     }
     const JoinedTokens source = join_tokens(statement_begin, cursor_);
-    import.source_text = source_text_for_tokens(statement_begin, cursor_);
     import.range = source.range;
     consume(TokenKind::Newline, "expected newline after foreign import");
     return import;
@@ -276,7 +274,6 @@ ImportDecl Parser::parse_from_import(const Token& start) {
         import.alias = consume_identifier("expected alias after as").text;
     }
     const JoinedTokens source = join_tokens(statement_begin, cursor_);
-    import.source_text = source_text_for_tokens(statement_begin, cursor_);
     import.range = source.range;
     consume(TokenKind::Newline, "expected newline after from import");
     return import;

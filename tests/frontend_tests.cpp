@@ -77,10 +77,8 @@ void test_import_bindings() {
     assert(dudu::bound_import_name(module.imports[0]) == "renderer");
     assert(dudu::bound_import_name(module.imports[2]) == "camera");
     assert(dudu::bound_import_name(module.imports[3]) == "UiButton");
-    assert(module.imports[0].source_text == "import renderer.camera");
     assert(module.imports[0].range.start.line == 1);
     assert(module.imports[0].range.end.line == 1);
-    assert(module.imports[3].source_text == "from ui.button import Button as UiButton");
 
     bool collided = false;
     try {
