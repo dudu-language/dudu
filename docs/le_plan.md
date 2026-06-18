@@ -1424,3 +1424,5 @@ push. They are not release packaging work.
    centralized in `resolve_alias_ref_with_legacy_fallback`; native template
    matching and inheritance unwrapping no longer duplicate that render/compare
    fallback logic locally.
+   Member-path alias resolution now uses that same centralized migration
+   helper, removing another local render/compare/reparse fallback copy.
