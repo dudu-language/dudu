@@ -217,14 +217,12 @@ bool type_ref_equivalent(const TypeRef& left, const TypeRef& right) {
     case TypeKind::Named:
     case TypeKind::Qualified:
     case TypeKind::Template:
-        if (trim_copy(left.name.empty() ? left.text : left.name) !=
-            trim_copy(right.name.empty() ? right.text : right.name)) {
+        if (type_ref_head_name(left) != type_ref_head_name(right)) {
             return false;
         }
         break;
     case TypeKind::Value:
-        if (trim_copy(left.value.empty() ? left.text : left.value) !=
-            trim_copy(right.value.empty() ? right.text : right.value)) {
+        if (trim_copy(left.value) != trim_copy(right.value)) {
             return false;
         }
         break;

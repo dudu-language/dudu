@@ -1920,3 +1920,6 @@ push. They are not release packaging work.
    Numeric native template arguments now build structured `Value` `TypeRef`
    nodes with `value` metadata only, without duplicating the number into
    `TypeRef.text`.
+   Core `type_ref_equivalent` now compares parsed head names and value fields
+   for named/template/value nodes instead of falling back to raw
+   `TypeRef.text`; only `Unknown` nodes compare raw text.
