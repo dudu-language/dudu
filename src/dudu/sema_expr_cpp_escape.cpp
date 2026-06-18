@@ -401,38 +401,6 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
     if (const auto indexed = infer_parsed_index_escape(scope, parsed_expr, location)) {
         return *indexed;
     }
-    const size_t index = expr.find('[');
-    if (location != nullptr && index != std::string::npos && expr.back() == ']') {
-        const std::string name = trim(expr.substr(0, index));
-        const std::string index_expr = expr.substr(index + 1, expr.size() - index - 2);
-        if (is_plain_identifier(name)) {
-            if (const TypeRef name_type =
-                    local_type_ref(scope, name, location == nullptr ? SourceLocation{} : *location);
-                has_type_ref(name_type)) {
-                if (const auto signature =
-                        dudu_operator_signature(scope.symbols, "[]", name_type)) {
-                    check_call_args_ast(
-                        scope, name + "[]", *signature,
-                        parse_escape_exprs(split_top_level_args(index_expr), *location), location);
-                }
-            }
-            return substitute_type_ref_text(
-                indexed_value_type_ref(scope.symbols, scope.local_type_refs, *location, name,
-                                       parse_expr_text(index_expr, *location),
-                                       "indexed access to unknown local: "),
-                {});
-        }
-        if (is_member_path(name)) {
-            const std::string receiver_type = cpp_escape_member_path_type(scope, location, name);
-            if (!receiver_type.empty()) {
-                return substitute_type_ref_text(
-                    indexed_type_ref_from_type(scope.symbols, *location,
-                                               parse_type_text(receiver_type, *location),
-                                               parse_expr_text(index_expr, *location), name),
-                    {});
-            }
-        }
-    }
     if (parsed_expr.kind == ExprKind::Member) {
         const std::string type = cpp_escape_member_expr_type(scope, location, parsed_expr);
         if (!type.empty()) {
