@@ -4,6 +4,7 @@
 #include "dudu/cpp_emit.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/cpp_stmt_types.hpp"
+#include "dudu/language_server_completion.hpp"
 #include "dudu/language_server_json.hpp"
 #include "dudu/language_server_local_context.hpp"
 #include "dudu/language_server_semantic_tokens.hpp"
@@ -1386,6 +1387,25 @@ void test_member_completion_target_uses_tokens() {
     assert(dudu::member_completion_target(doc, &params) == "player");
 }
 
+void test_signature_help_call_site_uses_tokens() {
+    const std::string source =
+        "def add(a: i32, b: i32) -> i32:\n"
+        "    return a + b\n"
+        "\n"
+        "def main() -> i32:\n"
+        "    return add(max(1, 2), 3)\n";
+    const dudu::Document doc{
+        .uri = "file:///signature.dd",
+        .path = "/tmp/signature.dd",
+        .text = source,
+    };
+
+    dudu::Json params = completion_params(4, 26);
+    const std::string help = dudu::signature_help_json(&doc, &params);
+    assert(help.find("add(a: i32, b: i32) -> i32") != std::string::npos);
+    assert(help.find("\"activeParameter\":1") != std::string::npos);
+}
+
 } // namespace
 
 int main() {
@@ -1435,6 +1455,7 @@ int main() {
         test_match_case_ast_shape();
         test_wrapper_match_type_uses_type_ast();
         test_member_completion_target_uses_tokens();
+        test_signature_help_call_site_uses_tokens();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;

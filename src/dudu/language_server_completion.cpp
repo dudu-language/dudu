@@ -6,11 +6,11 @@
 #include "dudu/language_server_navigation.hpp"
 #include "dudu/language_server_support.hpp"
 #include "dudu/language_server_symbols.hpp"
+#include "dudu/lexer.hpp"
 #include "dudu/native_headers.hpp"
 #include "dudu/parser.hpp"
 
 #include <algorithm>
-#include <cctype>
 #include <filesystem>
 #include <fstream>
 #include <optional>
@@ -178,43 +178,70 @@ struct CallSite {
     int parameter = 0;
 };
 
+bool signature_token_before_cursor(const Token& token, int line, int character) {
+    if (token.kind == TokenKind::Newline || token.kind == TokenKind::Indent ||
+        token.kind == TokenKind::Dedent || token.kind == TokenKind::End) {
+        return false;
+    }
+    if (token.location.line - 1 != line) {
+        return false;
+    }
+    return token.location.column - 1 < character;
+}
+
+std::vector<Token> signature_tokens_before_cursor(const Document& doc, int line, int character) {
+    std::vector<Token> out;
+    for (const Token& token : lex_source(doc.text, doc.path)) {
+        if (signature_token_before_cursor(token, line, character)) {
+            out.push_back(token);
+        }
+    }
+    return out;
+}
+
+std::string call_name_before_open_paren(const std::vector<Token>& tokens, size_t open_index) {
+    if (open_index == 0 || tokens[open_index - 1].kind != TokenKind::Identifier) {
+        return {};
+    }
+    size_t start = open_index - 1;
+    while (start >= 2 && tokens[start - 1].kind == TokenKind::Dot &&
+           tokens[start - 2].kind == TokenKind::Identifier) {
+        start -= 2;
+    }
+    std::string out;
+    for (size_t i = start; i < open_index; ++i) {
+        if (tokens[i].kind != TokenKind::Identifier && tokens[i].kind != TokenKind::Dot) {
+            return {};
+        }
+        out += tokens[i].text;
+    }
+    return out;
+}
+
 CallSite call_site_at(const Document& doc, const Json* params) {
     const Json* position = params == nullptr ? nullptr : params->get("position");
     const int target_line = int_value(position == nullptr ? nullptr : position->get("line"));
     const int target_character =
         int_value(position == nullptr ? nullptr : position->get("character"));
-    std::istringstream in(doc.text);
-    std::string line;
-    for (int row = 0; std::getline(in, line); ++row) {
-        if (row != target_line) {
+    const std::vector<Token> tokens =
+        signature_tokens_before_cursor(doc, target_line, target_character);
+    int depth = 0;
+    int parameter = 0;
+    for (size_t index = tokens.size(); index-- > 0;) {
+        const Token& token = tokens[index];
+        if (token.kind == TokenKind::RParen) {
+            ++depth;
             continue;
         }
-        const int cursor = std::min(target_character, static_cast<int>(line.size()));
-        int depth = 0;
-        int parameter = 0;
-        for (int i = cursor - 1; i >= 0; --i) {
-            const char c = line[static_cast<size_t>(i)];
-            if (c == ')') {
-                ++depth;
-            } else if (c == '(') {
-                if (depth > 0) {
-                    --depth;
-                    continue;
-                }
-                int end = i;
-                while (end > 0 && std::isspace(static_cast<unsigned char>(
-                                      line[static_cast<size_t>(end - 1)])) != 0) {
-                    --end;
-                }
-                int start = end;
-                while (start > 0 && symbol_char(line[static_cast<size_t>(start - 1)])) {
-                    --start;
-                }
-                return {line.substr(static_cast<size_t>(start), static_cast<size_t>(end - start)),
-                        parameter};
-            } else if (c == ',' && depth == 0) {
-                ++parameter;
+        if (token.kind == TokenKind::LParen) {
+            if (depth > 0) {
+                --depth;
+                continue;
             }
+            return {.name = call_name_before_open_paren(tokens, index), .parameter = parameter};
+        }
+        if (token.kind == TokenKind::Comma && depth == 0) {
+            ++parameter;
         }
     }
     return {};
