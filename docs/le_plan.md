@@ -1466,3 +1466,7 @@ push. They are not release packaging work.
    Native overload fallback signatures also use `set_signature_return_type`
    for `auto` returns instead of writing the return string and `TypeRef`
    fields separately.
+   Native template substitution still operates at a native spelling boundary,
+   but its refresh step now reparses the substituted strings through
+   `set_signature_param_types` and `set_signature_return_type` instead of
+   manually synchronizing the string and `TypeRef` mirrors.

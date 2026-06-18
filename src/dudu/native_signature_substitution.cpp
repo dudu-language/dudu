@@ -3,6 +3,7 @@
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/sema_common.hpp"
+#include "dudu/sema_function_type.hpp"
 
 #include <cctype>
 #include <set>
@@ -135,13 +136,15 @@ explicit_template_bindings(const std::vector<std::string>& names,
 }
 
 void refresh_signature_type_refs(FunctionSignature& signature) {
-    signature.param_type_refs.clear();
-    signature.param_type_refs.reserve(signature.params.size());
+    std::vector<TypeRef> param_types;
+    param_types.reserve(signature.params.size());
     for (const std::string& param : signature.params) {
-        signature.param_type_refs.push_back(parse_type_text(param));
+        param_types.push_back(parse_type_text(param));
     }
-    signature.return_type_ref =
+    const TypeRef return_type =
         signature.return_type.empty() ? TypeRef{} : parse_type_text(signature.return_type);
+    set_signature_param_types(signature, std::move(param_types));
+    set_signature_return_type(signature, return_type);
 }
 
 std::string join_types(const std::vector<std::string>& types) {
