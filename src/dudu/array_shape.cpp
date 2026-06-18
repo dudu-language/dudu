@@ -17,8 +17,7 @@ std::optional<TypeRef> inferred_array_element_type_ref(const TypeRef& type) {
     return type.children.front();
 }
 
-std::optional<std::pair<std::string, std::vector<size_t>>>
-explicit_array_type_info(const TypeRef& type) {
+std::optional<std::vector<size_t>> explicit_array_shape_from_type(const TypeRef& type) {
     if (type.kind != TypeKind::FixedArray || type.children.empty()) {
         return std::nullopt;
     }
@@ -42,7 +41,7 @@ explicit_array_type_info(const TypeRef& type) {
         }
         shape.push_back(value);
     }
-    return std::pair{substitute_type_ref_text(storage.children.front(), {}), shape};
+    return shape;
 }
 
 std::optional<std::vector<size_t>> literal_shape(const Expr& expr) {
@@ -140,8 +139,8 @@ ArrayShapeInference infer_array_literal_shape_type(const TypeRef& declared_type,
 }
 
 std::vector<size_t> explicit_array_shape(const TypeRef& declared_type) {
-    const auto info = explicit_array_type_info(declared_type);
-    return info ? info->second : std::vector<size_t>{};
+    const auto shape = explicit_array_shape_from_type(declared_type);
+    return shape.value_or(std::vector<size_t>{});
 }
 
 TypeRef explicit_array_element_type_ref(const TypeRef& declared_type) {

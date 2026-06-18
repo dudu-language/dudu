@@ -1293,6 +1293,8 @@ declarations safely.
    `CppLocalContext` with local-name presence plus dedicated `current_class`
    and `super_class` lowering fields; `local_type_refs` remains the
    authoritative local type table.
+   Explicit fixed-array shape extraction no longer renders the array element
+   type just to read dimensions; it now returns structured shape data only.
    Indexing type inference exposes only parsed `TypeRef` receiver APIs; the old
    string receiver and string result wrappers have been removed, with
    `cpp(...)` escape inference rendering only at its boundary.
