@@ -626,6 +626,7 @@ void test_allocation_type_ref_diagnostics() {
     assert(allocation->children.front().kind == dudu::TypeKind::Template);
     assert(dudu::substitute_type_ref_text(*allocation, {}) == "*list[i32]");
     assert(dudu::infer_cpp_escape_expr(scope, "new[list[i32]]()", &location) == "*list[i32]");
+    assert(dudu::infer_cpp_escape_expr(scope, "*struct State(None)", &location) == "*struct State");
 
     bool rejected = false;
     try {

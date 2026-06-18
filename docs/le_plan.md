@@ -1961,6 +1961,8 @@ push. They are not release packaging work.
    Parsed `cpp(...)` allocation expressions such as `new[T]` and `malloc[T]`
    now infer through the parsed `TemplateCall` and its `TypeRef` arguments
    before reaching the raw escape fallback.
+   Parsed `cpp(...)` pointer casts now reuse the parser-attached target
+   `TypeRef` instead of slicing the callee spelling to recover the type.
    LSP semantic type-token collection now uses `TypeRef` helper APIs for type
    heads and rendered spellings instead of reading `name`/`text` fields
    directly.
