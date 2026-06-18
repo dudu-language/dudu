@@ -9,14 +9,23 @@
 namespace dudu {
 namespace {
 
-bool bind_template_placeholder(const std::string& name, const std::string& got,
+std::string type_ref_binding_text(const TypeRef& type) {
+    return substitute_type_ref_text(type, {});
+}
+
+bool binding_equivalent(const TypeRef& left, const TypeRef& right) {
+    return type_ref_equivalent(left, right) ||
+           type_ref_binding_text(left) == type_ref_binding_text(right);
+}
+
+bool bind_template_placeholder(const std::string& name, TypeRef got,
                                NativeTemplateBindings& bindings) {
     const auto found = bindings.find(name);
     if (found == bindings.end()) {
-        bindings[name] = got;
+        bindings[name] = std::move(got);
         return true;
     }
-    return found->second == got;
+    return binding_equivalent(found->second, got);
 }
 
 std::string strip_forwarding_suffix(std::string type) {
@@ -28,10 +37,6 @@ std::string strip_forwarding_suffix(std::string type) {
         type = trim(type.substr(0, type.size() - 1));
     }
     return type;
-}
-
-std::string type_ref_binding_text(const TypeRef& type) {
-    return substitute_type_ref_text(type, {});
 }
 
 std::string join_type_ref_binding_texts(const std::vector<TypeRef>& types) {
@@ -74,7 +79,10 @@ bool bind_template_pack_expansion(const std::vector<TypeRef>& expected,
     }
     const std::string expected_expansion = join_type_ref_binding_texts(expected);
     const std::string got_expansion = join_type_ref_binding_texts(got);
-    return bind_template_placeholder(expected_expansion, got_expansion, bindings);
+    TypeRef got_expansion_ref;
+    got_expansion_ref.text = got_expansion;
+    got_expansion_ref.location = got.front().location;
+    return bind_template_placeholder(expected_expansion, std::move(got_expansion_ref), bindings);
 }
 
 bool bind_template_type_ref(const TypeRef& expected, const TypeRef& got,
@@ -105,9 +113,8 @@ bool bind_template_type_ref(const TypeRef& expected, const TypeRef& got,
          expected.kind == TypeKind::Value) &&
         native_template_placeholder(expected_name.empty() ? trim_copy(expected.value)
                                                           : expected_name)) {
-        return bind_template_placeholder(expected_name.empty() ? trim_copy(expected.value)
-                                                               : expected_name,
-                                         type_ref_binding_text(got), bindings);
+        return bind_template_placeholder(
+            expected_name.empty() ? trim_copy(expected.value) : expected_name, got, bindings);
     }
     if (expected.kind == TypeKind::Pointer) {
         return got.kind == TypeKind::Pointer && expected.children.size() == 1 &&

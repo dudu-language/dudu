@@ -278,7 +278,9 @@ void test_native_template_binding_resolves_alias_type_refs() {
     dudu::NativeTemplateBindings bindings;
     assert(dudu::bind_native_template_type_ast(symbols, dudu::parse_type_text("list[T]"),
                                                dudu::parse_type_text("FloatList"), bindings));
-    assert(bindings.at("T") == "f32");
+    assert(bindings.at("T").kind == dudu::TypeKind::Named);
+    assert(bindings.at("T").name == "f32");
+    assert(dudu::substitute_type_ref_text(bindings.at("T"), {}) == "f32");
 }
 
 void test_receiver_template_substitution_uses_type_ast() {

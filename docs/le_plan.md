@@ -1677,6 +1677,9 @@ push. They are not release packaging work.
    Native variadic pack bindings now store `TypeRef` argument nodes during
    overload matching and render only when feeding the remaining native-artifact
    text replacement boundary.
+   Ordinary native template placeholder bindings now store matched `TypeRef`
+   nodes instead of rendered type strings. Binding equality checks compare
+   structured types first and render only for native artifact compatibility.
    `substitute_type_ref` now has a structured `TypeRef` substitution overload.
    Receiver generic substitution for fields, methods, inherited methods, and
    inferred generic method signatures uses parsed receiver template arguments

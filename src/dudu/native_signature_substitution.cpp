@@ -241,17 +241,13 @@ std::string replace_template_bindings(std::string type, const NativeTemplateBind
         type = replace_pack_binding(std::move(type), name, args);
     }
     for (const auto& [name, arg] : bindings) {
-        type = replace_type_identifier(std::move(type), name, arg);
+        type = replace_type_identifier(std::move(type), name, substitute_type_ref_text(arg, {}));
     }
     return collapse_decay_and_strip(std::move(type));
 }
 
 std::map<std::string, TypeRef> type_ref_bindings(const NativeTemplateBindings& bindings) {
-    std::map<std::string, TypeRef> out;
-    for (const auto& [name, type] : bindings) {
-        out.emplace(name, native_template_binding_type_ref(type));
-    }
-    return out;
+    return bindings;
 }
 
 bool structured_binding_text(std::string_view type) {
@@ -264,7 +260,7 @@ bool structured_binding_text(std::string_view type) {
 bool structured_binding_texts(const NativeTemplateBindings& bindings) {
     for (const auto& [name, type] : bindings) {
         (void)name;
-        if (!structured_binding_text(type)) {
+        if (!structured_binding_text(substitute_type_ref_text(type, {}))) {
             return false;
         }
     }
