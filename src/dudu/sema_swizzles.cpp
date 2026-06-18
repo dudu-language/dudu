@@ -40,18 +40,18 @@ std::optional<TypeRef> swizzle_type_ref_for_type(const Symbols& symbols,
         return std::nullopt;
     }
     const std::string class_name = unwrap_receiver_type(symbols, receiver_type);
-    const auto klass = symbols.classes.find(class_name);
-    if (klass == symbols.classes.end()) {
+    const ClassDecl* klass = class_for_receiver_type(symbols, receiver_type);
+    if (klass == nullptr) {
         return std::nullopt;
     }
     size_t component_count = 0;
     for (const char ch : *component_set) {
-        if (field_type_ref_for_class(symbols, *klass->second, receiver_type, std::string(1, ch))) {
+        if (field_type_ref_for_class(symbols, *klass, receiver_type, std::string(1, ch))) {
             ++component_count;
         }
     }
     for (const char ch : swizzle) {
-        if (!field_type_ref_for_class(symbols, *klass->second, receiver_type, std::string(1, ch))) {
+        if (!field_type_ref_for_class(symbols, *klass, receiver_type, std::string(1, ch))) {
             return std::nullopt;
         }
     }
@@ -70,7 +70,7 @@ std::optional<TypeRef> swizzle_type_ref_for_type(const Symbols& symbols,
             const auto result_type = field_type_ref_for_class(
                 symbols, *candidate, parse_type_text(candidate_name), result_field);
             const auto source_type =
-                field_type_ref_for_class(symbols, *klass->second, receiver_type, source_field);
+                field_type_ref_for_class(symbols, *klass, receiver_type, source_field);
             if (!result_type || !source_type || !type_ref_equivalent(*result_type, *source_type)) {
                 matches = false;
                 break;

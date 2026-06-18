@@ -117,16 +117,15 @@ TypeRef infer_super_call_type_ref(const FunctionScope& scope, const Expr& expr,
         if (!has_type_ref(base)) {
             return {};
         }
-        const std::string base_name = unwrap_receiver_type(scope.symbols, base);
-        const auto base_class = scope.symbols.classes.find(base_name);
-        if (base_class == scope.symbols.classes.end()) {
+        const ClassDecl* base_class = class_for_receiver_type(scope.symbols, base);
+        if (base_class == nullptr) {
             if (location != nullptr) {
                 fail(*location,
                      "unknown base constructor type: " + substitute_type_ref_text(base, {}));
             }
             return {};
         }
-        check_constructor_args_ast(scope, *base_class->second, expr.children, location);
+        check_constructor_args_ast(scope, *base_class, expr.children, location);
         return void_type_ref(expr.location);
     }
     const TypeRef base = super_base_type(scope, location);
