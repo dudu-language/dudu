@@ -1533,6 +1533,9 @@ push. They are not release packaging work.
    binding, pointer-to-reference values, and const unwrapping now compare
    unwrapped `TypeRef` nodes directly; the text versions remain only at explicit
    legacy/native text boundaries.
+   Structural type compatibility now ignores C `struct`/`class`/`union`/`enum`
+   tags through recursive `TypeRef` comparison instead of rendering whole types
+   and stripping tag text.
    Native value type inference now reads `native_value_type_refs` directly.
    The `native_values` string map remains only as a display/native-boundary
    mirror populated from structured `TypeRef` data during symbol collection.

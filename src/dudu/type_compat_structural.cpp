@@ -1,42 +1,77 @@
 #include "dudu/type_compat_structural.hpp"
 
+#include "dudu/ast_parse_utils.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
-
-#include <cctype>
 
 namespace dudu {
 namespace {
 
-std::string compact_type(std::string type) {
-    std::string out;
-    for (const char c : type) {
-        if (std::isspace(static_cast<unsigned char>(c)) == 0) {
-            out.push_back(c);
-        }
-    }
-    return out;
-}
-
-std::string normalize_c_tags(std::string type) {
+std::string strip_c_tag_prefix(std::string type) {
+    type = trim_copy(std::move(type));
     for (std::string_view tag : {"struct ", "class ", "union ", "enum "}) {
-        size_t pos = type.find(tag);
-        while (pos != std::string::npos) {
-            type.erase(pos, tag.size());
-            pos = type.find(tag, pos);
+        if (type.starts_with(tag)) {
+            return trim_copy(type.substr(tag.size()));
         }
     }
     return type;
 }
 
+bool type_refs_equivalent_ignoring_c_tags(const TypeRef& expected, const TypeRef& got) {
+    if (expected.kind != got.kind || expected.children.size() != got.children.size()) {
+        return false;
+    }
+    switch (expected.kind) {
+    case TypeKind::Named:
+    case TypeKind::Qualified:
+    case TypeKind::Template:
+        if (strip_c_tag_prefix(expected.name.empty() ? expected.text : expected.name) !=
+            strip_c_tag_prefix(got.name.empty() ? got.text : got.name)) {
+            return false;
+        }
+        break;
+    case TypeKind::Value:
+        if (trim_copy(expected.value.empty() ? expected.text : expected.value) !=
+            trim_copy(got.value.empty() ? got.text : got.value)) {
+            return false;
+        }
+        break;
+    case TypeKind::FixedArray:
+        if (trim_copy(expected.value) != trim_copy(got.value)) {
+            return false;
+        }
+        break;
+    case TypeKind::Pointer:
+    case TypeKind::Reference:
+    case TypeKind::Const:
+    case TypeKind::Volatile:
+    case TypeKind::Atomic:
+    case TypeKind::Device:
+    case TypeKind::Storage:
+    case TypeKind::Shared:
+    case TypeKind::Static:
+    case TypeKind::Function:
+        break;
+    case TypeKind::Unknown:
+        if (trim_copy(expected.text) != trim_copy(got.text)) {
+            return false;
+        }
+        break;
+    }
+    for (size_t i = 0; i < expected.children.size(); ++i) {
+        if (!type_refs_equivalent_ignoring_c_tags(expected.children[i], got.children[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool same_type_name(const TypeRef& expected, const TypeRef& got) {
-    return compact_type(normalize_c_tags(substitute_type_ref_text(expected, {}))) ==
-           compact_type(normalize_c_tags(substitute_type_ref_text(got, {})));
+    return type_refs_equivalent_ignoring_c_tags(expected, got);
 }
 
 bool same_type_name(std::string expected, const TypeRef& got) {
-    return compact_type(normalize_c_tags(std::move(expected))) ==
-           compact_type(normalize_c_tags(substitute_type_ref_text(got, {})));
+    return type_refs_equivalent_ignoring_c_tags(parse_type_text(std::move(expected)), got);
 }
 
 bool is_transparent_wrapper(const TypeKind kind) {
