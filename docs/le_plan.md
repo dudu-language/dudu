@@ -1417,3 +1417,6 @@ push. They are not release packaging work.
    structurally and use `type_ref_is_void` for void-pointer and native function
    pointer checks, leaving rendered comparisons only in the explicit legacy
    string compatibility overloads.
+   Native template compatibility now recognizes `basic_string[char]` through a
+   structured `TypeRef` child-name check instead of rendering the child type to
+   compare it with `char`.

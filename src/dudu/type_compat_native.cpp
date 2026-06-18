@@ -10,6 +10,10 @@
 namespace dudu {
 namespace {
 
+bool type_ref_is_native_char(const TypeRef& type) {
+    return type_ref_is_name(type, "char");
+}
+
 size_t matching_angle(const std::string& text, const size_t open) {
     int depth = 0;
     for (size_t i = open; i < text.size(); ++i) {
@@ -163,7 +167,7 @@ std::string normalize_nonarray_templates(const TypeRef& type) {
     }
     if ((type.name == "basic_string" || type.name == "std.basic_string" ||
          type.name == "std::basic_string") &&
-        !type.children.empty() && substitute_type_ref_text(type.children.front(), {}) == "char") {
+        !type.children.empty() && type_ref_is_native_char(type.children.front())) {
         return "std.string";
     }
     if (nonarray_template_name(type.name) && type.children.size() == 1) {
