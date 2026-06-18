@@ -1,6 +1,7 @@
 #include "dudu/module_loader.hpp"
 
 #include "dudu/ast_parse_utils.hpp"
+#include "dudu/ast_type.hpp"
 #include "dudu/module_import_aliases.hpp"
 #include "dudu/parser.hpp"
 #include "dudu/source.hpp"
@@ -260,7 +261,7 @@ void add_from_import_aliases(ModuleAst& module) {
             if (en.name == import.imported_name) {
                 TypeAliasDecl alias;
                 alias.name = import.alias;
-                alias.type_ref = parse_type_text(import.imported_name, import.location);
+                alias.type_ref = named_type_ref(import.imported_name, import.location);
                 alias.location = import.location;
                 type_aliases.push_back(std::move(alias));
                 added = true;
@@ -274,7 +275,7 @@ void add_from_import_aliases(ModuleAst& module) {
             if (klass.name == import.imported_name) {
                 TypeAliasDecl alias;
                 alias.name = import.alias;
-                alias.type_ref = parse_type_text(import.imported_name, import.location);
+                alias.type_ref = named_type_ref(import.imported_name, import.location);
                 alias.location = import.location;
                 type_aliases.push_back(std::move(alias));
                 added = true;
