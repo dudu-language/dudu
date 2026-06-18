@@ -354,6 +354,8 @@ void test_native_base_assignable_resolves_alias_type_refs() {
 
     assert(dudu::native_base_assignable(symbols, dudu::parse_type_text("*BaseAlias"),
                                         dudu::parse_type_text("*DerivedAlias")));
+    assert(dudu::native_base_assignable(symbols, dudu::parse_type_text("*const[BaseAlias]"),
+                                        dudu::parse_type_text("*const[DerivedAlias]")));
 }
 
 void test_unwrap_receiver_uses_type_ast() {

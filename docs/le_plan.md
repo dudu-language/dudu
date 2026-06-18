@@ -1459,6 +1459,9 @@ push. They are not release packaging work.
    `TypeRef` children. Indexed-type alias resolution uses that structured
    resolver directly, so list/dict/array indexing no longer depends on the
    legacy render/resolve/reparse alias fallback.
+   Inheritance/base assignability unwrapping also uses structured alias
+   resolution plus `type_ref_equivalent`; pointer/reference base checks no
+   longer route through the legacy alias fallback helper.
    Function signatures now expose `signature_param_count`, and regular call
    checking, function-type construction/rendering, and native overload arity
    diagnostics use it instead of reading the legacy parameter string vector

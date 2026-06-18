@@ -22,9 +22,8 @@ std::string unwrap_type(const Symbols& symbols, const TypeRef& type);
 std::string unwrap_type(const Symbols& symbols, const TypeRef& type) {
     TypeRef current = type;
     while (true) {
-        const std::string rendered = type_ref_text(current);
-        TypeRef resolved = resolve_alias_ref_with_legacy_fallback(symbols, current);
-        if (type_ref_text(resolved) != rendered) {
+        TypeRef resolved = resolve_alias_ref(symbols, current);
+        if (!type_ref_equivalent(resolved, current)) {
             current = resolved;
             continue;
         }
