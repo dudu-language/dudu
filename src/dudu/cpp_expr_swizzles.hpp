@@ -14,25 +14,9 @@ namespace dudu {
 std::optional<std::string> lower_swizzle_expr(const Expr& expr,
                                               const std::vector<std::string>& aliases,
                                               const std::map<std::string, std::string>& locals,
-                                              const Symbols* symbols = nullptr);
-std::optional<std::string> lower_swizzle_expr(const Expr& expr,
-                                              const std::vector<std::string>& aliases,
-                                              const std::map<std::string, std::string>& locals,
-                                              const Symbols* symbols,
-                                              const CppEmitOptions& options);
-std::optional<std::string> lower_swizzle_expr(const Expr& expr,
-                                              const std::vector<std::string>& aliases,
-                                              const std::map<std::string, std::string>& locals,
                                               const std::map<std::string, TypeRef>& local_type_refs,
                                               const Symbols* symbols,
                                               const CppEmitOptions& options);
-std::optional<std::string>
-lower_swizzle_assignment(const Stmt& stmt, const std::vector<std::string>& aliases,
-                         const std::map<std::string, std::string>& locals, const Symbols* symbols);
-std::optional<std::string>
-lower_swizzle_assignment(const Stmt& stmt, const std::vector<std::string>& aliases,
-                         const std::map<std::string, std::string>& locals, const Symbols* symbols,
-                         const CppEmitOptions& options);
 std::optional<std::string>
 lower_swizzle_assignment(const Stmt& stmt, const std::vector<std::string>& aliases,
                          const std::map<std::string, std::string>& locals,
