@@ -2057,6 +2057,9 @@ LSP source edits are also moving to AST-owned ranges:
 - Parsed method receiver declarations and synthetic `build.*` value symbols now
   construct `TypeRef` nodes directly instead of rendering simple type names and
   reparsing them during parser/sema setup.
+- Dudu module import alias synthesis now constructs qualified `TypeRef` nodes
+  directly for `module.Type` and aliased selective imports instead of routing
+  module metadata through the text type parser.
 
 Expression parsing has moved onto the lexer/token stream:
 
