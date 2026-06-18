@@ -265,6 +265,39 @@ std::string function_return_type_text(const FunctionDecl& fn) {
     return type_ref_text(function_return_type_ref(fn));
 }
 
+std::vector<TypeRef> native_function_param_type_refs(const NativeFunctionDecl& fn) {
+    if (!fn.param_type_refs.empty()) {
+        return fn.param_type_refs;
+    }
+    std::vector<TypeRef> out;
+    out.reserve(fn.params.size());
+    for (const std::string& param : fn.params) {
+        out.push_back(parse_type_text(param, fn.location));
+    }
+    return out;
+}
+
+TypeRef native_function_return_type_ref(const NativeFunctionDecl& fn) {
+    if (has_type_ref(fn.return_type_ref)) {
+        return fn.return_type_ref;
+    }
+    return parse_type_text(fn.return_type.empty() ? "auto" : fn.return_type, fn.location);
+}
+
+std::vector<std::string> native_function_param_type_texts(const NativeFunctionDecl& fn) {
+    const std::vector<TypeRef> params = native_function_param_type_refs(fn);
+    std::vector<std::string> out;
+    out.reserve(params.size());
+    for (const TypeRef& param : params) {
+        out.push_back(type_ref_text(param));
+    }
+    return out;
+}
+
+std::string native_function_return_type_text(const NativeFunctionDecl& fn) {
+    return type_ref_text(native_function_return_type_ref(fn));
+}
+
 TypeRef substitute_type_ref(const TypeRef& type,
                             const std::map<std::string, std::string>& substitutions) {
     const std::string name = trim_copy(type.name.empty() ? type.text : type.name);

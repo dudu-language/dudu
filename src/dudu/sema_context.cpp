@@ -405,19 +405,8 @@ Symbols collect_symbols(const ModuleAst& module) {
     for (const NativeFunctionDecl& fn : module.native_functions) {
         FunctionSignature signature;
         signature.template_params = fn.template_params;
-        std::vector<TypeRef> param_types = fn.param_type_refs;
-        if (param_types.empty()) {
-            param_types.reserve(fn.params.size());
-            for (const std::string& param : fn.params) {
-                param_types.push_back(parse_type_text(param, fn.location));
-            }
-        }
-        set_signature_param_types(signature, std::move(param_types));
-        set_signature_return_type(
-            signature,
-            has_type_ref(fn.return_type_ref)
-                ? fn.return_type_ref
-                : parse_type_text(fn.return_type.empty() ? "auto" : fn.return_type, fn.location));
+        set_signature_param_types(signature, native_function_param_type_refs(fn));
+        set_signature_return_type(signature, native_function_return_type_ref(fn));
         signature.min_params = fn.min_params;
         signature.variadic = fn.variadic;
         symbols.native_function_signatures[fn.name].push_back(std::move(signature));

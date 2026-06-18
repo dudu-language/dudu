@@ -1582,6 +1582,11 @@ push. They are not release packaging work.
    Match checking no longer accepts an expression-inference callback; match
    subjects and guards now use the normal structured expression inference path
    directly, leaving only the recursive block-check hook for nested case bodies.
+   Native function signatures now expose structured accessor helpers for
+   parameter and return `TypeRef`s plus rendered display text. Symbol
+   collection, native function deduplication, and LSP symbol details use those
+   accessors instead of open-coding `NativeFunctionDecl::params` /
+   `return_type` fallback logic.
    Index-result inference now detects foreign/qualified indexable receivers from
    `TypeRef` head/kind metadata instead of rendering the receiver type to search
    for namespace separators.

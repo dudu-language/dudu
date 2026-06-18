@@ -1,15 +1,17 @@
 #include "dudu/native_header_merge.hpp"
 
+#include "dudu/ast_type.hpp"
+
 #include <set>
 
 namespace dudu {
 
 std::string native_function_key(const NativeFunctionDecl& fn) {
     std::string key = fn.name + "(";
-    for (const std::string& param : fn.params) {
+    for (const std::string& param : native_function_param_type_texts(fn)) {
         key += param + ",";
     }
-    return key + (fn.variadic ? "..." : "") + ")->" + fn.return_type + "/" +
+    return key + (fn.variadic ? "..." : "") + ")->" + native_function_return_type_text(fn) + "/" +
            std::to_string(fn.min_params);
 }
 
