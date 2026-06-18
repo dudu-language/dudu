@@ -851,6 +851,9 @@ push. They are not release packaging work.
    Type-token parsing now fills semantic `TypeRef` names and numeric
    template values from token spans directly instead of copying from the raw
    `TypeRef.text` source spelling mirror.
+   Common `TypeRef` head-name queries now derive pointer, reference, wrapper,
+   function, value, template, and fixed-array heads from structured fields,
+   keeping raw text only for explicit unknown/native-boundary spellings.
 
 3. OOP Surface Cleanup
 

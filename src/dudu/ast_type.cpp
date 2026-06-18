@@ -99,19 +99,29 @@ std::string type_ref_head_name(const TypeRef& type) {
     case TypeKind::Function:
         return "fn";
     case TypeKind::Pointer:
+        return "*";
     case TypeKind::Reference:
+        return "&";
     case TypeKind::Const:
+        return "const";
     case TypeKind::Volatile:
+        return "volatile";
     case TypeKind::Atomic:
+        return "atomic";
     case TypeKind::Device:
+        return "device";
     case TypeKind::Storage:
+        return "storage";
     case TypeKind::Shared:
+        return "shared";
     case TypeKind::Static:
+        return "static";
     case TypeKind::FixedArray:
+        return "array";
     case TypeKind::Unknown:
         return trim_copy(type.text);
     }
-    return trim_copy(type.text);
+    return {};
 }
 
 bool type_ref_contains_kind(const TypeRef& type, TypeKind kind) {
