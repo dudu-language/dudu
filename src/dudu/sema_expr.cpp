@@ -151,8 +151,12 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
             if (receiver.kind == ExprKind::Name) {
                 if (const auto local = scope.locals.find(receiver.name);
                     local != scope.locals.end()) {
+                    const TypeRef receiver_type =
+                        local_type_ref(scope, receiver.name, index_location);
+                    const std::string receiver_type_text =
+                        substitute_type_ref_text(receiver_type, {});
                     if (const auto signature =
-                            dudu_operator_signature(scope.symbols, "[]", local->second)) {
+                            dudu_operator_signature(scope.symbols, "[]", receiver_type_text)) {
                         check_call_args_ast(scope, receiver.name + "[]", *signature,
                                             index_arg_exprs(expr.children[1]), location);
                     }
