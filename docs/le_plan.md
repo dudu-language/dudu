@@ -1565,12 +1565,14 @@ push. They are not release packaging work.
    `SuperCheckCallbacks` likewise no longer carries a call-argument checking
    callback; `super` method validation now calls the structured checker
    directly after overload selection.
-   `GenericInferCallbacks` now carries only typed expression inference; the
-   unused assignment callback and wrapper shim have been deleted.
    `BodyCheckCallbacks` and `expression_body_check_callbacks` have been
    deleted entirely; body checking, body helper checks, assignment target
    checks, and LSP local inference now call the structured expression
    inference and assignment compatibility APIs directly.
+   `GenericInferCallbacks` has been deleted entirely; generic function and
+   method inference now use the normal structured expression inference path
+   directly, and tests set up real scope type facts instead of callback-only
+   fake inference.
    Index-result inference now detects foreign/qualified indexable receivers from
    `TypeRef` head/kind metadata instead of rendering the receiver type to search
    for namespace separators.

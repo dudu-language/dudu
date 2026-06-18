@@ -4,6 +4,7 @@
 #include "dudu/cpp_lower.hpp"
 #include "dudu/sema_builtin_methods.hpp"
 #include "dudu/sema_common.hpp"
+#include "dudu/sema_expr.hpp"
 #include "dudu/sema_function_type.hpp"
 #include "dudu/sema_method_templates.hpp"
 #include "dudu/sema_methods_internal.hpp"
@@ -129,8 +130,7 @@ bool method_signature_for_type(const Symbols& symbols, const TypeRef& receiver_t
 
 std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
     const FunctionScope& scope, const TypeRef& receiver_type, const std::string& method_name,
-    const std::vector<Expr>& args, const SourceLocation* location,
-    const GenericInferCallbacks& callbacks) {
+    const std::vector<Expr>& args, const SourceLocation* location) {
     const TypeRef templated_receiver = receiver_template_type_ref(scope.symbols, receiver_type);
     const std::vector<std::string> receiver_args = template_args_from_type(templated_receiver);
     const std::string type = unwrap_receiver_type(scope.symbols, receiver_type);
@@ -145,7 +145,7 @@ std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
         const size_t first_param =
             !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
         const auto inferred = infer_generic_method_type_args(
-            scope, method, type + "." + method_name, args, first_param, location, callbacks);
+            scope, method, type + "." + method_name, args, first_param, location);
         if (!inferred) {
             return std::nullopt;
         }
@@ -154,7 +154,7 @@ std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
     }
     for (const BaseClassDecl& base_decl : klass->second->base_class_refs) {
         if (const auto signature = inferred_generic_method_signature_for_type(
-                scope, base_decl.type_ref, method_name, args, nullptr, callbacks)) {
+                scope, base_decl.type_ref, method_name, args, nullptr)) {
             return signature;
         }
     }
@@ -164,7 +164,7 @@ std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
 std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
     const FunctionScope& scope, const TypeRef& receiver_type, const std::string& method_name,
     const std::vector<Expr>& args, const std::optional<TypeRef>& expected_return,
-    const SourceLocation* location, const GenericInferCallbacks& callbacks) {
+    const SourceLocation* location) {
     const TypeRef templated_receiver = receiver_template_type_ref(scope.symbols, receiver_type);
     const std::vector<std::string> receiver_args = template_args_from_type(templated_receiver);
     const std::string type = unwrap_receiver_type(scope.symbols, receiver_type);
@@ -181,7 +181,7 @@ std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
         std::vector<TypeRef> arg_types;
         arg_types.reserve(args.size());
         for (const Expr& arg : args) {
-            arg_types.push_back(callbacks.infer_expr_type(scope, arg, location));
+            arg_types.push_back(infer_expr_type_ast(scope, arg, location));
         }
         const auto inferred = infer_generic_method_type_args_from_type_refs(
             method, type + "." + method_name, arg_types, first_param, expected_return, location);
@@ -193,8 +193,7 @@ std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
     }
     for (const BaseClassDecl& base_decl : klass->second->base_class_refs) {
         if (const auto signature = inferred_generic_method_signature_for_type(
-                scope, base_decl.type_ref, method_name, args, expected_return, nullptr,
-                callbacks)) {
+                scope, base_decl.type_ref, method_name, args, expected_return, nullptr)) {
             return signature;
         }
     }

@@ -31,11 +31,7 @@ void check_type_match(FunctionScope& scope, const TypeRef& expected_ref, const E
             const TypeRef receiver_ref = infer_expr_type_ast(scope, receiver, &location);
             if (const auto signature = inferred_generic_method_signature_for_type(
                     scope, receiver_ref, member.name, expr.children,
-                    std::optional<TypeRef>{expected_ref}, &location,
-                    {.infer_expr_type = [&](const FunctionScope& nested, const Expr& arg,
-                                            const SourceLocation* arg_location) {
-                        return infer_expr_type_ast(nested, arg, arg_location);
-                    }})) {
+                    std::optional<TypeRef>{expected_ref}, &location)) {
                 const ScopedCallee scoped_callee = scoped_call_callee(scope, expr, &location);
                 check_call_args_ast(scope, scoped_callee.key, *signature, expr.children, &location);
                 const TypeRef signature_return = signature_return_type_ref(*signature);

@@ -31,12 +31,11 @@ bool method_signature_for_type(const Symbols& symbols, const TypeRef& receiver_t
                                const SourceLocation* location);
 std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
     const FunctionScope& scope, const TypeRef& receiver_type, const std::string& method_name,
-    const std::vector<Expr>& args, const SourceLocation* location,
-    const GenericInferCallbacks& callbacks);
+    const std::vector<Expr>& args, const SourceLocation* location);
 std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
     const FunctionScope& scope, const TypeRef& receiver_type, const std::string& method_name,
     const std::vector<Expr>& args, const std::optional<TypeRef>& expected_return,
-    const SourceLocation* location, const GenericInferCallbacks& callbacks);
+    const SourceLocation* location);
 std::vector<FunctionSignature> method_signatures_for_type(const Symbols& symbols,
                                                           const TypeRef& receiver_type,
                                                           const std::string& method_name);

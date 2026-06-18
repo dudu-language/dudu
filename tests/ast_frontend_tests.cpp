@@ -543,17 +543,13 @@ void test_inferred_generic_method_uses_type_ast_receiver() {
     dudu::Symbols symbols;
     symbols.classes.emplace("Box", &box);
     symbols.classes.emplace("Wrapper", &wrapper);
-    const dudu::FunctionScope scope(symbols);
+    dudu::FunctionScope scope(symbols);
+    scope.local_type_refs.emplace("value", dudu::parse_type_text("f32"));
     const std::vector<dudu::Expr> args = {dudu::parse_expr_text("value")};
-    dudu::GenericInferCallbacks callbacks;
-    callbacks.infer_expr_type = [](const dudu::FunctionScope&, const dudu::Expr&,
-                                   const dudu::SourceLocation*) {
-        return dudu::parse_type_text("f32");
-    };
 
     const std::optional<dudu::FunctionSignature> signature =
         dudu::inferred_generic_method_signature_for_type(scope, dudu::parse_type_text("Wrapper"),
-                                                         "wrap", args, nullptr, callbacks);
+                                                         "wrap", args, nullptr);
     assert(signature);
     assert(dudu::signature_param_count(*signature) == 1);
     assert(dudu::substitute_type_ref_text(dudu::signature_param_type_ref(*signature, 0), {}) ==
@@ -582,16 +578,11 @@ void test_expected_generic_method_uses_type_ast_receiver() {
     symbols.classes.emplace("Box", &box);
     symbols.classes.emplace("Wrapper", &wrapper);
     const dudu::FunctionScope scope(symbols);
-    dudu::GenericInferCallbacks callbacks;
-    callbacks.infer_expr_type = [](const dudu::FunctionScope&, const dudu::Expr&,
-                                   const dudu::SourceLocation*) {
-        return dudu::parse_type_text("auto");
-    };
 
     const std::optional<dudu::FunctionSignature> signature =
         dudu::inferred_generic_method_signature_for_type(
             scope, dudu::parse_type_text("Wrapper"), "make", {},
-            std::optional<dudu::TypeRef>{dudu::parse_type_text("str")}, nullptr, callbacks);
+            std::optional<dudu::TypeRef>{dudu::parse_type_text("str")}, nullptr);
     assert(signature);
     assert(dudu::signature_param_count(*signature) == 0);
     assert(dudu::substitute_type_ref_text(dudu::signature_return_type_ref(*signature), {}) ==

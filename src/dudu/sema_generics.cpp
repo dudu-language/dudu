@@ -2,6 +2,7 @@
 
 #include "dudu/ast_type.hpp"
 #include "dudu/sema_common.hpp"
+#include "dudu/sema_expr.hpp"
 #include "dudu/sema_function_type.hpp"
 
 #include <algorithm>
@@ -118,11 +119,11 @@ std::string template_args_lookup_text(const Expr& expr) {
     return out.str();
 }
 
-std::optional<std::vector<TypeRef>>
-infer_generic_call_type_args(const FunctionScope& scope, const FunctionDecl& fn,
-                             const std::string& callee, const std::vector<Expr>& args,
-                             const SourceLocation* location,
-                             const GenericInferCallbacks& callbacks) {
+std::optional<std::vector<TypeRef>> infer_generic_call_type_args(const FunctionScope& scope,
+                                                                 const FunctionDecl& fn,
+                                                                 const std::string& callee,
+                                                                 const std::vector<Expr>& args,
+                                                                 const SourceLocation* location) {
     if (fn.generic_params.empty()) {
         return std::nullopt;
     }
@@ -135,7 +136,7 @@ infer_generic_call_type_args(const FunctionScope& scope, const FunctionDecl& fn,
     }
     std::map<std::string, TypeRef> bindings;
     for (size_t i = 0; i < fn.params.size(); ++i) {
-        const TypeRef got = callbacks.infer_expr_type(scope, args[i], location);
+        const TypeRef got = infer_expr_type_ast(scope, args[i], location);
         std::string error;
         if (!infer_generic_binding(fn.params[i].type_ref, got, fn.generic_params, bindings,
                                    error)) {
@@ -163,8 +164,7 @@ infer_generic_call_type_args(const FunctionScope& scope, const FunctionDecl& fn,
 std::optional<std::vector<TypeRef>>
 infer_generic_method_type_args(const FunctionScope& scope, const FunctionDecl& method,
                                const std::string& callee, const std::vector<Expr>& args,
-                               size_t first_param, const SourceLocation* location,
-                               const GenericInferCallbacks& callbacks) {
+                               size_t first_param, const SourceLocation* location) {
     if (method.generic_params.empty()) {
         return std::nullopt;
     }
@@ -180,7 +180,7 @@ infer_generic_method_type_args(const FunctionScope& scope, const FunctionDecl& m
     std::vector<TypeRef> arg_types;
     arg_types.reserve(args.size());
     for (size_t i = 0; i < args.size(); ++i) {
-        arg_types.push_back(callbacks.infer_expr_type(scope, args[i], location));
+        arg_types.push_back(infer_expr_type_ast(scope, args[i], location));
     }
     return infer_generic_method_type_args_from_type_refs(method, callee, arg_types, first_param,
                                                          std::nullopt, location);

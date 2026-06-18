@@ -4,30 +4,23 @@
 #include "dudu/sema_context.hpp"
 #include "dudu/sema_scope.hpp"
 
-#include <functional>
 #include <optional>
 #include <string>
 #include <vector>
 
 namespace dudu {
 
-struct GenericInferCallbacks {
-    std::function<TypeRef(const FunctionScope&, const Expr&, const SourceLocation*)>
-        infer_expr_type;
-};
-
 std::string template_args_lookup_text(const Expr& expr);
 std::vector<TypeRef> template_type_refs(const Expr& expr);
-std::optional<std::vector<TypeRef>>
-infer_generic_call_type_args(const FunctionScope& scope, const FunctionDecl& fn,
-                             const std::string& callee, const std::vector<Expr>& args,
-                             const SourceLocation* location,
-                             const GenericInferCallbacks& callbacks);
+std::optional<std::vector<TypeRef>> infer_generic_call_type_args(const FunctionScope& scope,
+                                                                 const FunctionDecl& fn,
+                                                                 const std::string& callee,
+                                                                 const std::vector<Expr>& args,
+                                                                 const SourceLocation* location);
 std::optional<std::vector<TypeRef>>
 infer_generic_method_type_args(const FunctionScope& scope, const FunctionDecl& method,
                                const std::string& callee, const std::vector<Expr>& args,
-                               size_t first_param, const SourceLocation* location,
-                               const GenericInferCallbacks& callbacks);
+                               size_t first_param, const SourceLocation* location);
 std::optional<std::vector<TypeRef>> infer_generic_method_type_args_from_type_refs(
     const FunctionDecl& method, const std::string& callee, const std::vector<TypeRef>& arg_types,
     size_t first_param, const std::optional<TypeRef>& expected_return,
