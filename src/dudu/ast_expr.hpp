@@ -26,6 +26,7 @@ struct ExprPath {
 
 std::optional<ExprPath> expr_path_from_expr(const Expr& expr);
 std::string render_expr_path(const ExprPath& path);
+std::string expr_label(const Expr& expr);
 std::optional<std::string> path_index_from_expr(const Expr& expr);
 bool expr_missing(const Expr& expr);
 bool expr_present(const Expr& expr);

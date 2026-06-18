@@ -80,6 +80,13 @@ std::string render_expr_path(const ExprPath& path) {
     return out;
 }
 
+std::string expr_label(const Expr& expr) {
+    if (const std::optional<ExprPath> path = expr_path_from_expr(expr)) {
+        return render_expr_path(*path);
+    }
+    return display_expr(expr);
+}
+
 bool expr_missing(const Expr& expr) {
     return expr.kind == ExprKind::Missing;
 }

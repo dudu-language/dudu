@@ -38,7 +38,7 @@ std::optional<TypeRef> member_expr_direct_type_ref(const FunctionScope& scope, c
     }
     if (expr.children.size() != 1) {
         if (location != nullptr) {
-            sema_expr_fail(*location, "unsupported member expression: " + display_expr(expr));
+            sema_expr_fail(*location, "unsupported member expression: " + expr_label(expr));
         }
         return std::nullopt;
     }

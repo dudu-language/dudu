@@ -6,13 +6,6 @@
 namespace dudu {
 namespace {
 
-std::string expr_label(const Expr& expr) {
-    if (const std::optional<ExprPath> path = expr_path_from_expr(expr)) {
-        return render_expr_path(*path);
-    }
-    return display_expr(expr);
-}
-
 std::string index_receiver_label(const Expr& receiver) {
     const std::string label = expr_label(receiver);
     return label.empty() ? "indexed expression" : label;
