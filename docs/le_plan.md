@@ -1288,3 +1288,6 @@ declarations safely.
    Emitted local call-return inference no longer has an internal receiver-base
    string fallback that renders a type and peels brackets; it relies on parsed
    `TypeRef` shape and `type_ref_head_name`.
+   Receiver template argument extraction now accepts parsed `TypeRef` only; the
+   unused string overload that reparsed rendered receiver types has been
+   removed.

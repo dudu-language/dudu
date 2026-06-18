@@ -4,7 +4,6 @@
 
 namespace dudu {
 namespace {
-
 std::string first_type_arg(const TypeRef& type) {
     if (const auto arg =
             unary_type_child_text(type, {TypeKind::Atomic, TypeKind::Const, TypeKind::Volatile,
@@ -35,6 +34,8 @@ void set_param_types(FunctionSignature& signature, std::initializer_list<std::st
     }
 }
 
+} // namespace
+
 TypeRef receiver_template_type_ref(const Symbols& symbols, TypeRef type) {
     type = resolve_alias_ref(symbols, std::move(type));
     while (true) {
@@ -48,8 +49,6 @@ TypeRef receiver_template_type_ref(const Symbols& symbols, TypeRef type) {
     }
     return type;
 }
-
-} // namespace
 
 std::string receiver_template_type(const Symbols& symbols, std::string type) {
     TypeRef type_ref = parse_type_text(type);

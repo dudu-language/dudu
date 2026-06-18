@@ -86,10 +86,6 @@ std::vector<std::string> template_args_from_type(const TypeRef& type) {
     return out;
 }
 
-std::vector<std::string> template_args_from_type(const std::string& type) {
-    return template_args_from_type(parse_type_text(type));
-}
-
 TypeRef substitute_receiver_template_type(const TypeRef& type,
                                           const std::vector<std::string>& receiver_args) {
     const std::map<std::string, std::string> substitutions =

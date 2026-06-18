@@ -87,7 +87,7 @@ bool method_signature_for_type(const Symbols& symbols, const TypeRef& receiver_t
     if (builtin_cpp_method_signature(symbols, receiver_type_text, method_name, signature)) {
         return true;
     }
-    const std::string templated_receiver = receiver_template_type(symbols, receiver_type_text);
+    const TypeRef templated_receiver = receiver_template_type_ref(symbols, receiver_type);
     const std::vector<std::string> receiver_args = template_args_from_type(templated_receiver);
     const std::string type = unwrap_receiver_type(symbols, receiver_type);
     const std::string lookup_name = template_method_name(method_name);
@@ -129,9 +129,8 @@ std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
     const FunctionScope& scope, const TypeRef& receiver_type, const std::string& method_name,
     const std::vector<Expr>& args, const SourceLocation* location,
     const GenericInferCallbacks& callbacks) {
-    const std::string receiver_type_text = substitute_type_ref_text(receiver_type, {});
-    const std::string templated_receiver =
-        receiver_template_type(scope.symbols, receiver_type_text);
+    const TypeRef templated_receiver =
+        receiver_template_type_ref(scope.symbols, receiver_type);
     const std::vector<std::string> receiver_args = template_args_from_type(templated_receiver);
     const std::string type = unwrap_receiver_type(scope.symbols, receiver_type);
     const auto klass = scope.symbols.classes.find(type);
@@ -165,9 +164,8 @@ std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
     const FunctionScope& scope, const TypeRef& receiver_type, const std::string& method_name,
     const std::vector<Expr>& args, const std::string& expected_return,
     const SourceLocation* location, const GenericInferCallbacks& callbacks) {
-    const std::string receiver_type_text = substitute_type_ref_text(receiver_type, {});
-    const std::string templated_receiver =
-        receiver_template_type(scope.symbols, receiver_type_text);
+    const TypeRef templated_receiver =
+        receiver_template_type_ref(scope.symbols, receiver_type);
     const std::vector<std::string> receiver_args = template_args_from_type(templated_receiver);
     const std::string type = unwrap_receiver_type(scope.symbols, receiver_type);
     const auto klass = scope.symbols.classes.find(type);
@@ -216,7 +214,7 @@ std::vector<FunctionSignature> method_signatures_for_type(const Symbols& symbols
         return {builtin};
     }
     std::vector<FunctionSignature> out;
-    const std::string templated_receiver = receiver_template_type(symbols, receiver_type_text);
+    const TypeRef templated_receiver = receiver_template_type_ref(symbols, receiver_type);
     const std::vector<std::string> receiver_args = template_args_from_type(templated_receiver);
     const std::string type = unwrap_receiver_type(symbols, receiver_type);
     const std::string lookup_name = template_method_name(method_name);
@@ -246,8 +244,7 @@ std::vector<FunctionSignature> method_signatures_for_type(const Symbols& symbols
 bool static_method_signature_for_type(const Symbols& symbols, const TypeRef& type_name,
                                       const std::string& method_name, FunctionSignature& signature,
                                       const SourceLocation* location) {
-    const std::string type_name_text = substitute_type_ref_text(type_name, {});
-    const std::string templated_receiver = receiver_template_type(symbols, type_name_text);
+    const TypeRef templated_receiver = receiver_template_type_ref(symbols, type_name);
     const std::vector<std::string> receiver_args = template_args_from_type(templated_receiver);
     const std::string type = unwrap_receiver_type(symbols, type_name);
     const std::string lookup_name = template_method_name(method_name);
