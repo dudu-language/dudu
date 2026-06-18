@@ -370,6 +370,9 @@ Already structured:
 - call/template inference now uses `check_expr_ast` for validation-only argument
   walks, and builtin `min`/`max` compares parsed actual `TypeRef` nodes instead
   of recursive string expression results
+- named-argument, slice, and index expression typing now have direct `TypeRef`
+  cases, and the legacy string path delegates to them instead of recursing
+  through raw receiver/index type strings
 - LSP local variable/parameter type collection for hover, member completion,
   and member definition now walks parsed function/method bodies and reuses
   semantic expression inference instead of regexing source lines

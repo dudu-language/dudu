@@ -23,6 +23,28 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
         return parse_type_text("str", type_location);
     case ExprKind::NoneLiteral:
         return parse_type_text("None", type_location);
+    case ExprKind::ListLiteral:
+        return parse_type_text("list", type_location);
+    case ExprKind::DictLiteral:
+        return parse_type_text("dict", type_location);
+    case ExprKind::DictEntry:
+        return parse_type_text("auto", type_location);
+    case ExprKind::NamedArg:
+        return expr.children.size() == 1
+                   ? infer_expr_type_ast(scope, expr.children.front(), location)
+                   : parse_type_text("auto", type_location);
+    case ExprKind::Slice:
+        if (location != nullptr) {
+            sema_expr_fail(*location, "slice expression must be used inside an index");
+        }
+        for (const Expr& child : expr.children) {
+            if (!missing_expr(child)) {
+                check_expr_ast(scope, child, location);
+            }
+        }
+        return parse_type_text("slice", type_location);
+    case ExprKind::SetLiteral:
+        return parse_type_text("set", type_location);
     case ExprKind::Name:
         if (const auto local = scope.local_type_refs.find(expr.name);
             local != scope.local_type_refs.end()) {
@@ -110,7 +132,10 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
                     display_expr(receiver).empty() ? "indexed expression" : display_expr(receiver));
             }
         }
-        break;
+        if (location != nullptr) {
+            sema_expr_fail(*location, "unsupported index expression: " + display_expr(expr));
+        }
+        return {};
     case ExprKind::Member:
         if (const auto member_type = member_expr_direct_type_ref(scope, expr, location)) {
             return *member_type;
@@ -188,20 +213,9 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
     case ExprKind::DictEntry:
         return "auto";
     case ExprKind::NamedArg:
-        if (expr.children.size() == 1) {
-            return infer_expr_ast(scope, expr.children.front(), use_location);
-        }
-        return "auto";
+        return substitute_type_ref_text(infer_expr_type_ast(scope, expr, use_location), {});
     case ExprKind::Slice:
-        if (use_location != nullptr) {
-            sema_expr_fail(*use_location, "slice expression must be used inside an index");
-        }
-        for (const Expr& child : expr.children) {
-            if (!missing_expr(child)) {
-                (void)infer_expr_ast(scope, child, use_location);
-            }
-        }
-        return "slice";
+        return substitute_type_ref_text(infer_expr_type_ast(scope, expr, use_location), {});
     case ExprKind::SetLiteral:
         return "set";
     case ExprKind::TupleLiteral:
@@ -247,45 +261,9 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
         }
         return {};
     case ExprKind::Index:
-        if (expr.children.size() == 2) {
-            if (missing_expr(expr.children[0]) || missing_expr(expr.children[1])) {
-                if (use_location != nullptr) {
-                    sema_expr_fail(*use_location, "index expression expects receiver and index");
-                }
-                return {};
-            }
-            const SourceLocation& index_location =
-                use_location != nullptr ? *use_location : expr.location;
-            const Expr& receiver = expr.children[0];
-            if (receiver.kind == ExprKind::Name) {
-                if (const auto local = scope.locals.find(receiver.name);
-                    local != scope.locals.end()) {
-                    if (const auto signature =
-                            dudu_operator_signature(scope.symbols, "[]", local->second)) {
-                        check_call_args_ast(scope, receiver.name + "[]", *signature,
-                                            index_arg_exprs(expr.children[1]), use_location);
-                    }
-                }
-                return indexed_value_type(scope.symbols, scope.locals, scope.local_type_refs,
-                                          index_location, receiver.name, expr.children[1],
-                                          "indexed access to unknown local: ");
-            }
-            if (const std::string receiver_type = member_expr_type(
-                    scope.symbols, scope.locals, use_location, receiver, {}, scope.current_class);
-                !receiver_type.empty()) {
-                return indexed_type_from_type(
-                    scope.symbols, index_location, receiver_type, expr.children[1],
-                    display_expr(receiver).empty() ? "indexed expression" : display_expr(receiver));
-            }
-            const std::string receiver_type = infer_expr_ast(scope, receiver, use_location);
-            if (!receiver_type.empty()) {
-                return indexed_type_from_type(
-                    scope.symbols, index_location, receiver_type, expr.children[1],
-                    display_expr(receiver).empty() ? "indexed expression" : display_expr(receiver));
-            }
-        }
-        if (use_location != nullptr) {
-            sema_expr_fail(*use_location, "unsupported index expression: " + display_expr(expr));
+        if (const TypeRef type = infer_expr_type_ast(scope, expr, use_location);
+            has_type_ref(type)) {
+            return substitute_type_ref_text(type, {});
         }
         return {};
     case ExprKind::Conditional:
