@@ -15,59 +15,61 @@ void add_module_type_alias(ModuleAst& module, const std::string& prefix, const s
                                    .location = location});
 }
 
-std::map<std::string, std::string> qualified_type_substitutions(const ModuleAst& dependency,
-                                                                const std::string& prefix) {
-    std::map<std::string, std::string> out;
+std::map<std::string, TypeRef> qualified_type_substitutions(const ModuleAst& dependency,
+                                                            const std::string& prefix,
+                                                            const SourceLocation& location) {
+    std::map<std::string, TypeRef> out;
     for (const TypeAliasDecl& alias : dependency.aliases) {
-        out[alias.name] = prefix + "." + alias.name;
+        out[alias.name] = parse_type_text(prefix + "." + alias.name, location);
     }
     for (const EnumDecl& en : dependency.enums) {
-        out[en.name] = prefix + "." + en.name;
+        out[en.name] = parse_type_text(prefix + "." + en.name, location);
     }
     for (const ClassDecl& klass : dependency.classes) {
-        out[klass.name] = prefix + "." + klass.name;
+        out[klass.name] = parse_type_text(prefix + "." + klass.name, location);
     }
     return out;
 }
 
-std::map<std::string, std::string> selective_type_substitutions(const ModuleAst& dependency,
-                                                                const ImportDecl& import) {
+std::map<std::string, TypeRef> selective_type_substitutions(const ModuleAst& dependency,
+                                                            const ImportDecl& import) {
     const std::string exposed_name = import.alias.empty() ? import.imported_name : import.alias;
-    std::map<std::string, std::string> out;
+    std::map<std::string, TypeRef> out;
     for (const TypeAliasDecl& alias : dependency.aliases) {
-        out[alias.name] = alias.name == import.imported_name
-                              ? exposed_name
-                              : import.module_path + "." + alias.name;
+        out[alias.name] =
+            alias.name == import.imported_name
+                ? parse_type_text(exposed_name, import.location)
+                : parse_type_text(import.module_path + "." + alias.name, import.location);
     }
     for (const EnumDecl& en : dependency.enums) {
-        out[en.name] =
-            en.name == import.imported_name ? exposed_name : import.module_path + "." + en.name;
+        out[en.name] = en.name == import.imported_name
+                           ? parse_type_text(exposed_name, import.location)
+                           : parse_type_text(import.module_path + "." + en.name, import.location);
     }
     for (const ClassDecl& klass : dependency.classes) {
-        out[klass.name] = klass.name == import.imported_name
-                              ? exposed_name
-                              : import.module_path + "." + klass.name;
+        out[klass.name] =
+            klass.name == import.imported_name
+                ? parse_type_text(exposed_name, import.location)
+                : parse_type_text(import.module_path + "." + klass.name, import.location);
     }
     for (const NativeTypeDecl& type : dependency.native_types) {
         if (type.name.find('.') == std::string::npos && !type.type.empty()) {
-            out[type.name] = type.type;
+            out[type.name] = native_type_alias_type_ref(type);
         }
     }
     return out;
 }
 
 void add_function_alias(ModuleAst& module, const FunctionDecl& fn, const std::string& name,
-                        const std::map<std::string, std::string>& type_substitutions,
+                        const std::map<std::string, TypeRef>& type_substitutions,
                         const SourceLocation& location) {
     NativeFunctionDecl alias;
     alias.name = name;
     alias.template_params = fn.generic_params;
-    alias.return_type = function_has_return_type(fn)
-                            ? substitute_type_ref_text(fn.return_type_ref, type_substitutions)
-                            : "void";
     alias.return_type_ref = function_has_return_type(fn)
                                 ? substitute_type_ref(fn.return_type_ref, type_substitutions)
                                 : parse_type_text("void", location);
+    alias.return_type = substitute_type_ref_text(alias.return_type_ref, {});
     alias.location = location;
     for (const ParamDecl& param : fn.params) {
         TypeRef param_type = substitute_type_ref(param.type_ref, type_substitutions);
@@ -78,7 +80,7 @@ void add_function_alias(ModuleAst& module, const FunctionDecl& fn, const std::st
 }
 
 FunctionDecl substituted_method(FunctionDecl method,
-                                const std::map<std::string, std::string>& type_substitutions) {
+                                const std::map<std::string, TypeRef>& type_substitutions) {
     if (function_has_return_type(method)) {
         method.return_type_ref = substitute_type_ref(method.return_type_ref, type_substitutions);
     }
@@ -89,7 +91,7 @@ FunctionDecl substituted_method(FunctionDecl method,
 }
 
 ClassDecl imported_class_shape(ClassDecl klass, const std::string& name,
-                               const std::map<std::string, std::string>& type_substitutions,
+                               const std::map<std::string, TypeRef>& type_substitutions,
                                const SourceLocation& location) {
     klass.name = name;
     klass.location = location;
@@ -116,8 +118,8 @@ void add_qualified_module_symbols(ModuleAst& module, const ModuleAst& dependency
     if (prefix.empty()) {
         return;
     }
-    const std::map<std::string, std::string> type_substitutions =
-        qualified_type_substitutions(dependency, prefix);
+    const std::map<std::string, TypeRef> type_substitutions =
+        qualified_type_substitutions(dependency, prefix, import.location);
     module.module_strip_prefixes.push_back(prefix);
     for (const TypeAliasDecl& alias : dependency.aliases) {
         add_module_type_alias(module, prefix, alias.name,
@@ -151,7 +153,7 @@ void add_qualified_module_symbols(ModuleAst& module, const ModuleAst& dependency
 void add_selective_module_symbol(ModuleAst& module, const ModuleAst& dependency,
                                  const ImportDecl& import) {
     const std::string exposed_name = import.alias.empty() ? import.imported_name : import.alias;
-    const std::map<std::string, std::string> type_substitutions =
+    const std::map<std::string, TypeRef> type_substitutions =
         selective_type_substitutions(dependency, import);
     module.module_strip_prefixes.push_back(import.module_path);
     for (const EnumDecl& en : dependency.enums) {

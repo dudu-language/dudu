@@ -1643,3 +1643,7 @@ push. They are not release packaging work.
    Generic function and class instantiation now also build substitution maps
    with `TypeRef` values directly, removing another render/reparse step from
    native Dudu generics.
+   Module import aliasing now also builds qualified/selective type
+   substitutions as `TypeRef` maps. Imported aliases, class shapes, constants,
+   and function signatures preserve structured type data through import
+   rewriting and render only their native mirror fields after substitution.
