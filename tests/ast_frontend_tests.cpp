@@ -388,6 +388,7 @@ void test_expression_ast_shape() {
     const dudu::Stmt& answer = main.statements[0];
     assert(answer.kind == dudu::StmtKind::VarDecl);
     assert(answer.value_expr.kind == dudu::ExprKind::Call);
+    assert(answer.value_expr.name.empty());
     assert(dudu::direct_callee_name(answer.value_expr) == "add");
     assert(answer.value_expr.callee.size() == 1);
     assert(answer.value_expr.callee[0].kind == dudu::ExprKind::Name);
@@ -425,6 +426,7 @@ void test_expression_ast_shape() {
     assert(assign.target_expr.name == "name");
     assert(assign.target_expr.children[0].kind == dudu::ExprKind::Index);
     assert(assign.value_expr.kind == dudu::ExprKind::TemplateCall);
+    assert(assign.value_expr.name.empty());
     assert(dudu::direct_callee_name(assign.value_expr) == "Vec4");
     assert(assign.value_expr.callee.size() == 1);
     assert(assign.value_expr.callee[0].kind == dudu::ExprKind::Name);
@@ -563,10 +565,12 @@ void test_dereference_postfix_expression_shape() {
 
     const dudu::Expr cast = dudu::parse_expr_text("*struct State(user_data)");
     assert(cast.kind == dudu::ExprKind::Call);
+    assert(cast.name.empty());
     assert(dudu::direct_callee_name(cast) == "*struct State");
 
     const dudu::Expr template_cast = dudu::parse_expr_text("*list[MissingType](ptr)");
     assert(template_cast.kind == dudu::ExprKind::TemplateCall);
+    assert(template_cast.name.empty());
     assert(dudu::direct_callee_name(template_cast) == "*list");
     assert(template_cast.template_type_args.size() == 1);
 
