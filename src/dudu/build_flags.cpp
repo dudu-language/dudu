@@ -1,5 +1,6 @@
 #include "dudu/build_flags.hpp"
 
+#include "dudu/ast_expr.hpp"
 #include "dudu/sema.hpp"
 #include "dudu/sema_common.hpp"
 
@@ -102,8 +103,7 @@ void check_static_assert(const StaticAssertDecl& assertion,
         return;
     }
     if (!passed) {
-        throw CompileError(assertion.location,
-                           "static_assert failed: " + assertion.expression_expr.text);
+        throw CompileError(assertion.location, "static_assert failed: " + display_expr(expr));
     }
 }
 
