@@ -176,7 +176,7 @@ void check_condition_type(FunctionScope& scope, const Stmt& stmt,
     const TypeRef got_ref = callbacks.infer_expr_type(scope, stmt.condition_expr, &location);
     const std::string got = substitute_type_ref_text(got_ref, {});
     if (!got.empty() && got != "bool" && got != "auto") {
-        if (const auto signature = dudu_operator_signature(scope.symbols, "bool", got);
+        if (const auto signature = dudu_operator_signature(scope.symbols, "bool", got_ref);
             signature && signature->params.empty() &&
             type_ref_is_name(signature_return_type_ref(*signature), "bool")) {
             return;

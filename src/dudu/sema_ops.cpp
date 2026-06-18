@@ -31,21 +31,6 @@ bool is_numeric_type(const TypeRef& type) {
     return is_numeric_type(substitute_type_ref_text(type, {}));
 }
 
-std::string unwrap_value_type(const Symbols& symbols, std::string type) {
-    type = resolve_alias(symbols, std::move(type));
-    while (true) {
-        type = trim(std::move(type));
-        const TypeRef parsed = parse_type_text(type);
-        if (const auto inner = unary_type_child_text(parsed, {TypeKind::Const, TypeKind::Volatile,
-                                                              TypeKind::Storage, TypeKind::Shared,
-                                                              TypeKind::Device})) {
-            type = *inner;
-            continue;
-        }
-        return type;
-    }
-}
-
 TypeRef unwrap_value_type_ref(const Symbols& symbols, TypeRef type) {
     type = resolve_alias_ref(symbols, std::move(type));
     while (true) {
@@ -154,11 +139,12 @@ native_operator_signature(const Symbols& symbols, const std::string& op, const T
 } // namespace
 
 std::optional<FunctionSignature>
-dudu_operator_signature(const Symbols& symbols, const std::string& op, const std::string& left) {
+dudu_operator_signature(const Symbols& symbols, const std::string& op, const TypeRef& left) {
     if (!is_supported_dudu_operator(op)) {
         return std::nullopt;
     }
-    const auto klass = symbols.classes.find(unwrap_value_type(symbols, left));
+    const std::string type = substitute_type_ref_text(unwrap_value_type_ref(symbols, left), {});
+    const auto klass = symbols.classes.find(type);
     if (klass == symbols.classes.end()) {
         return std::nullopt;
     }

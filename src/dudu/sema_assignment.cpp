@@ -61,9 +61,8 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt,
         const std::string& name = stmt.target_expr.children[0].name;
         if (scope.local_type_refs.contains(name)) {
             const TypeRef receiver_type = local_type_ref(scope, name, target_location);
-            const std::string receiver_type_text = substitute_type_ref_text(receiver_type, {});
             if (const auto signature =
-                    dudu_operator_signature(scope.symbols, "[]=", receiver_type_text)) {
+                    dudu_operator_signature(scope.symbols, "[]=", receiver_type)) {
                 std::vector<Expr> args = index_arg_exprs(stmt.target_expr.children[1]);
                 args.push_back(stmt.value_expr);
                 callbacks.check_call_args(scope, name + "[]=", *signature, args, &target_location);

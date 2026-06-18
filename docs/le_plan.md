@@ -1305,3 +1305,6 @@ declarations safely.
    Binary operator signature lookup now accepts parsed operand `TypeRef` nodes;
    Dudu operator matching and native operator argument checks no longer reparse
    rendered left/right operand type strings.
+   Dudu operator lookup for `bool`, `[]`, and `[]=` now takes parsed receiver
+   `TypeRef` nodes; index, assignment-target, condition, and `cpp(...)` escape
+   checks no longer render receiver types before querying operator metadata.

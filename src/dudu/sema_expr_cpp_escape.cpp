@@ -270,9 +270,8 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
             if (const TypeRef name_type =
                     local_type_ref(scope, name, location == nullptr ? SourceLocation{} : *location);
                 has_type_ref(name_type)) {
-                const std::string name_type_text = substitute_type_ref_text(name_type, {});
                 if (const auto signature =
-                        dudu_operator_signature(scope.symbols, "[]", name_type_text)) {
+                        dudu_operator_signature(scope.symbols, "[]", name_type)) {
                     check_call_args_ast(
                         scope, name + "[]", *signature,
                         parse_escape_exprs(split_top_level_args(index_expr), *location), location);
