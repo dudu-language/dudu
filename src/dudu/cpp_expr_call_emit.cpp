@@ -94,35 +94,17 @@ std::string lower_call_args_for_signature(const std::vector<Expr>& args, const F
     return out.str();
 }
 
-bool is_pointer_type_ref(const TypeRef& type) {
-    return type.kind == TypeKind::Pointer;
-}
-
-bool is_pointer_type(std::string type) {
-    type = trim_copy(std::move(type));
-    return is_pointer_type_ref(parse_type_text(type));
-}
-
-bool is_pointer_list_type(std::string type) {
-    type = trim_copy(std::move(type));
-    const TypeRef parsed = parse_type_text(type);
-    if (parsed.kind != TypeKind::Template || parsed.name != "list" || parsed.children.size() != 1) {
-        return false;
-    }
-    return parsed.children.front().kind == TypeKind::Pointer;
-}
-
 bool expression_has_pointer_type(const Expr& expr, const std::map<std::string, std::string>& locals,
                                  const std::map<std::string, TypeRef>& local_type_refs,
                                  const Symbols* symbols) {
-    if (is_pointer_receiver_expr(expr, locals)) {
+    if (is_pointer_receiver_expr(expr, locals, local_type_refs, symbols)) {
         return true;
     }
     if (symbols == nullptr) {
         return false;
     }
     const TypeRef type = member_expr_type_ref(*symbols, locals, local_type_refs, nullptr, expr);
-    return is_pointer_type_ref(type);
+    return type.kind == TypeKind::Pointer;
 }
 
 std::string decorator_arg(const FunctionDecl& fn, std::string_view name) {
@@ -233,19 +215,6 @@ std::string lower_callee_expr(const Expr& expr, const std::vector<std::string>& 
                               const std::map<std::string, std::string>& locals,
                               const Symbols* symbols) {
     return lower_callee_expr(expr, aliases, locals, symbols, {});
-}
-
-bool is_pointer_receiver_expr(const Expr& expr, const std::map<std::string, std::string>& locals) {
-    if (expr.kind == ExprKind::Name) {
-        const auto local = locals.find(expr.name);
-        return local != locals.end() && is_pointer_type(local->second);
-    }
-    if (expr.kind == ExprKind::Index && expr.children.size() == 2 &&
-        expr.children.front().kind == ExprKind::Name) {
-        const auto local = locals.find(expr.children.front().name);
-        return local != locals.end() && is_pointer_list_type(local->second);
-    }
-    return false;
 }
 
 bool enum_has_payloads(const EnumDecl& en) {
