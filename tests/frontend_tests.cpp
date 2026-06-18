@@ -376,6 +376,40 @@ void test_cpp_module_artifacts_preserve_module_boundaries() {
     assert(by_path.at("main.cpp").find("return dudu_main_main();") != std::string::npos);
 }
 
+void test_cpp_module_artifacts_use_resolved_dependency_paths() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_module_resolved_dependency_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir / "renderer");
+    write_file(dir / "renderer" / "vec3.dd", "class Vec3:\n"
+                                             "    x: f32\n");
+    write_file(dir / "renderer" / "camera.dd", "from vec3 import Vec3\n"
+                                               "\n"
+                                               "class Camera:\n"
+                                               "    origin: Vec3\n");
+    write_file(dir / "main.dd", "import renderer.camera\n"
+                                "\n"
+                                "def main() -> i32:\n"
+                                "    return 0\n");
+
+    const dudu::ModuleAst module = dudu::load_source_tree(dir / "main.dd");
+    assert(module.module_units.size() == 3);
+    assert(module.module_units[1].module_path == "renderer.camera");
+    assert(module.module_units[1].dependencies.size() == 1);
+    assert(module.module_units[1].dependencies[0].import_module_path == "vec3");
+    assert(module.module_units[1].dependencies[0].resolved_module_path == "renderer.vec3");
+
+    const std::vector<dudu::CppModuleArtifact> artifacts = dudu::emit_cpp_module_artifacts(module);
+    std::map<std::filesystem::path, std::string> by_path;
+    for (const dudu::CppModuleArtifact& artifact : artifacts) {
+        by_path[artifact.path] = artifact.content;
+    }
+    const std::filesystem::path camera_header = std::filesystem::path("renderer") / "camera.hpp";
+    assert(by_path.contains(camera_header));
+    assert(by_path.at(camera_header).find("#include \"renderer/vec3.hpp\"") != std::string::npos);
+    assert(by_path.at(camera_header).find("#include \"vec3.hpp\"") == std::string::npos);
+}
+
 void test_canonical_examples_parse(const std::filesystem::path& root) {
     const std::vector<std::string> examples = {
         "allocators.dd",           "audio_synth.dd",     "compile_time.dd",
@@ -1010,6 +1044,7 @@ int main() {
         test_module_loader_qualified_module_imports();
         test_module_loader_preserves_declaration_origins();
         test_cpp_module_artifacts_preserve_module_boundaries();
+        test_cpp_module_artifacts_use_resolved_dependency_paths();
         test_canonical_examples_parse(root);
         test_header_emission();
         test_semantic_diagnostics();
