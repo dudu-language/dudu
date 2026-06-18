@@ -14,19 +14,6 @@ bool missing_type_ref(const TypeRef& type) {
 
 } // namespace
 
-std::string function_type(const FunctionSignature& signature) {
-    std::ostringstream out;
-    out << "fn(";
-    for (size_t i = 0; i < signature.params.size(); ++i) {
-        if (i > 0) {
-            out << ", ";
-        }
-        out << signature.params[i];
-    }
-    out << ") -> " << signature.return_type;
-    return out.str();
-}
-
 TypeRef function_type_ref(const FunctionSignature& signature, SourceLocation location) {
     TypeRef out;
     out.kind = TypeKind::Function;
@@ -62,6 +49,19 @@ TypeRef signature_return_type_ref(const FunctionSignature& signature) {
 
 std::string signature_return_type_text(const FunctionSignature& signature) {
     return substitute_type_ref_text(signature_return_type_ref(signature), {});
+}
+
+std::string function_type(const FunctionSignature& signature) {
+    std::ostringstream out;
+    out << "fn(";
+    for (size_t i = 0; i < signature.params.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << substitute_type_ref_text(signature_param_type_ref(signature, i), {});
+    }
+    out << ") -> " << signature_return_type_text(signature);
+    return out.str();
 }
 
 bool parse_function_type(std::string type, FunctionSignature& out) {

@@ -1771,6 +1771,9 @@ LSP source edits are also moving to AST-owned ranges:
 - Decorator helpers now render names and non-string arguments from parsed
   expression nodes through the shared AST display/path helpers instead of
   trimming raw decorator expression text.
+- Function signature display now renders parameters and return types through
+  `TypeRef` helpers, leaving string signature fields as native-interop mirrors
+  rather than the primary semantic source.
 - Native value symbols now store parsed `TypeRef` metadata beside their C++
   spelling strings, and normal name/member expression sema reads those refs
   directly for imported constants, build flags, shader/native values, and class
