@@ -343,8 +343,11 @@ Symbols collect_symbols(const ModuleAst& module) {
     }
     for (const NativeValueDecl& value : module.native_values) {
         add_name(names, value.name, value.location);
-        symbols.native_values[value.name] = value.type;
-        symbols.native_value_type_refs[value.name] = parse_type_text(value.type, value.location);
+        const TypeRef value_type = has_type_ref(value.type_ref)
+                                       ? value.type_ref
+                                       : parse_type_text(value.type, value.location);
+        symbols.native_values[value.name] = substitute_type_ref_text(value_type, {});
+        symbols.native_value_type_refs[value.name] = value_type;
         if (value.enum_constant) {
             symbols.native_enum_values.insert(value.name);
         }

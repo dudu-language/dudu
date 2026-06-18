@@ -120,8 +120,10 @@ std::vector<Symbol> symbols_for_document(const Document& doc, bool include_nativ
                  .kind = 23});
         }
         for (const NativeValueDecl& value : module.native_values) {
+            const std::string type =
+                has_type_ref(value.type_ref) ? type_ref_text(value.type_ref) : value.type;
             out.push_back({.name = value.name,
-                           .detail = value.name + ": " + value.type,
+                           .detail = value.name + ": " + type,
                            .location = value.location,
                            .kind = 14});
         }

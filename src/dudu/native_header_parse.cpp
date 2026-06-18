@@ -301,16 +301,22 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
             const std::string type = match.size() > 2
                                          ? dudu_type(match[2].str())
                                          : (enums.empty() ? "i32" : enums.back().second);
-            scan.values.push_back(
-                {.name = name, .type = type, .enum_constant = true, .location = decl_location});
+            scan.values.push_back({.name = name,
+                                   .type = type,
+                                   .type_ref = parse_type_text(type, decl_location),
+                                   .enum_constant = true,
+                                   .location = decl_location});
         }
     } else if (line.find("VarDecl") != std::string::npos &&
                line.find("ParmVarDecl") == std::string::npos &&
                std::regex_search(line, match, var_decl)) {
         const std::string name = match[1].str();
         if (!starts_with(name, "__")) {
-            scan.values.push_back(
-                {.name = name, .type = dudu_type(match[2].str()), .location = decl_location});
+            const std::string type = dudu_type(match[2].str());
+            scan.values.push_back({.name = name,
+                                   .type = type,
+                                   .type_ref = parse_type_text(type, decl_location),
+                                   .location = decl_location});
         }
     }
 }
@@ -394,7 +400,10 @@ void parse_macro_dump(NativeHeaderScan& scan, const std::string& dump,
                 continue;
             }
             scan.macros.push_back({.name = name, .function_like = false, .location = location});
-            scan.values.push_back({.name = name, .type = "auto", .location = location});
+            scan.values.push_back({.name = name,
+                                   .type = "auto",
+                                   .type_ref = parse_type_text("auto", location),
+                                   .location = location});
         }
     }
 }

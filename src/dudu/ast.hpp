@@ -225,6 +225,7 @@ struct NativeTypeDecl {
 struct NativeValueDecl {
     std::string name;
     std::string type;
+    TypeRef type_ref;
     bool enum_constant = false;
     SourceLocation location;
 };
