@@ -175,6 +175,49 @@ std::string replace_pack_binding(std::string type, const std::string& name,
     return type;
 }
 
+std::optional<size_t> matching_angle(const std::string& text, size_t open) {
+    int depth = 0;
+    for (size_t i = open; i < text.size(); ++i) {
+        if (text[i] == '<') {
+            ++depth;
+        } else if (text[i] == '>') {
+            --depth;
+            if (depth == 0) {
+                return i;
+            }
+        }
+    }
+    return std::nullopt;
+}
+
+std::string collapse_decay_and_strip(std::string type) {
+    constexpr std::string_view marker = "typename __decay_and_strip<";
+    size_t pos = type.find(marker);
+    while (pos != std::string::npos) {
+        const size_t inner_start = pos + marker.size();
+        const std::optional<size_t> close = matching_angle(type, inner_start - 1);
+        if (!close) {
+            break;
+        }
+        const std::string dotted_suffix = ".__type";
+        const std::string scoped_suffix = "::__type";
+        const size_t suffix_start = *close + 1;
+        size_t suffix_size = 0;
+        if (type.compare(suffix_start, dotted_suffix.size(), dotted_suffix) == 0) {
+            suffix_size = dotted_suffix.size();
+        } else if (type.compare(suffix_start, scoped_suffix.size(), scoped_suffix) == 0) {
+            suffix_size = scoped_suffix.size();
+        } else {
+            pos = type.find(marker, suffix_start);
+            continue;
+        }
+        const std::string inner = type.substr(inner_start, *close - inner_start);
+        type.replace(pos, suffix_start + suffix_size - pos, inner);
+        pos = type.find(marker, pos + inner.size());
+    }
+    return type;
+}
+
 std::string replace_template_bindings(std::string type, const NativeTemplateBindings& bindings,
                                       const NativePackBindingMap& pack_bindings) {
     for (const auto& [name, args] : pack_bindings) {
@@ -183,7 +226,7 @@ std::string replace_template_bindings(std::string type, const NativeTemplateBind
     for (const auto& [name, arg] : bindings) {
         type = replace_type_identifier(std::move(type), name, arg);
     }
-    return type;
+    return collapse_decay_and_strip(std::move(type));
 }
 
 } // namespace

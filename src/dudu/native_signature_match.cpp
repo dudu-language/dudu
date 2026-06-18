@@ -10,7 +10,9 @@
 #include "dudu/type_compat.hpp"
 
 #include <algorithm>
+#include <map>
 #include <optional>
+#include <set>
 #include <sstream>
 
 namespace dudu {
@@ -136,23 +138,56 @@ bool has_native_placeholder_ref(const TypeRef& type) {
     return false;
 }
 
+void collect_native_return_placeholders(const TypeRef& type, std::vector<std::string>& out,
+                                        std::set<std::string>& seen) {
+    const std::string head = type_ref_head_name(type);
+    if (native_template_placeholder(head) && !native_index_placeholder(head) &&
+        seen.insert(head).second) {
+        out.push_back(head);
+    }
+    if (!type.value.empty() && native_template_placeholder(type.value) &&
+        !native_index_placeholder(type.value) && seen.insert(type.value).second) {
+        out.push_back(type.value);
+    }
+    for (const TypeRef& child : type.children) {
+        collect_native_return_placeholders(child, out, seen);
+    }
+}
+
 std::optional<TypeRef> explicit_type_return_ref(const TypeRef& return_type,
                                                 const std::vector<std::string>& template_args) {
-    auto type_arg = std::ranges::find_if_not(template_args, numeric_template_arg);
-    if (type_arg == template_args.end() || !has_native_placeholder_ref(return_type)) {
+    if (!has_native_placeholder_ref(return_type)) {
         return std::nullopt;
     }
-    if ((return_type.kind == TypeKind::Reference || return_type.kind == TypeKind::Const ||
-         return_type.kind == TypeKind::Pointer) &&
-        return_type.children.size() == 1) {
-        if (auto inner = explicit_type_return_ref(return_type.children.front(), template_args)) {
-            TypeRef wrapped = return_type;
-            wrapped.children = {*inner};
-            wrapped.text = substitute_type_ref_text(wrapped, {});
-            return wrapped;
-        }
+    const auto first_type_arg = std::ranges::find_if_not(template_args, numeric_template_arg);
+    std::vector<std::string> placeholders;
+    std::set<std::string> seen;
+    collect_native_return_placeholders(return_type, placeholders, seen);
+    if (placeholders.empty()) {
+        return first_type_arg == template_args.end()
+                   ? std::nullopt
+                   : std::optional<TypeRef>{parse_type_text(*first_type_arg, return_type.location)};
     }
-    return parse_type_text(*type_arg, return_type.location);
+    std::map<std::string, std::string> bindings;
+    size_t placeholder_index = 0;
+    for (const std::string& arg : template_args) {
+        if (numeric_template_arg(arg)) {
+            continue;
+        }
+        if (placeholder_index >= placeholders.size()) {
+            break;
+        }
+        bindings.emplace(placeholders[placeholder_index], arg);
+        ++placeholder_index;
+    }
+    if (bindings.empty()) {
+        return first_type_arg == template_args.end()
+                   ? std::nullopt
+                   : std::optional<TypeRef>{parse_type_text(*first_type_arg, return_type.location)};
+    }
+    TypeRef substituted = substitute_type_ref(return_type, bindings);
+    substituted.text = substitute_type_ref_text(substituted, {});
+    return substituted;
 }
 
 std::string mismatch_reason_ast(const FunctionScope& scope, const FunctionSignature& signature,
