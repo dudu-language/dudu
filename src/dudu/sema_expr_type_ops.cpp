@@ -10,16 +10,11 @@ bool is_numeric_literal_expr(const Expr& expr) {
     return expr.kind == ExprKind::IntLiteral || expr.kind == ExprKind::FloatLiteral;
 }
 
-bool is_numeric_type_name(const Symbols& symbols, std::string type) {
-    type = resolve_alias(symbols, std::move(type));
-    static const std::set<std::string> numeric = {"i8",  "i16", "i32", "i64", "u8",    "u16",
-                                                  "u32", "u64", "f32", "f64", "usize", "isize"};
-    return numeric.contains(trim(type));
-}
-
 bool is_numeric_type_ref(const Symbols& symbols, TypeRef type) {
     type = resolve_alias_ref(symbols, std::move(type));
-    return is_numeric_type_name(symbols, type_ref_head_name(type));
+    static const std::set<std::string> numeric = {"i8",  "i16", "i32", "i64", "u8",    "u16",
+                                                  "u32", "u64", "f32", "f64", "usize", "isize"};
+    return numeric.contains(type_ref_head_name(type));
 }
 
 bool type_ref_known_non_auto(const TypeRef& type) {

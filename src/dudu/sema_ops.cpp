@@ -29,10 +29,6 @@ bool is_numeric_type(std::string type) {
     return numeric.contains(type);
 }
 
-bool is_numeric_type(const TypeRef& type) {
-    return is_numeric_type(type_ref_head_name(type));
-}
-
 TypeRef unwrap_value_type_ref(const Symbols& symbols, TypeRef type) {
     type = resolve_alias_ref(symbols, std::move(type));
     while (true) {
@@ -45,6 +41,17 @@ TypeRef unwrap_value_type_ref(const Symbols& symbols, TypeRef type) {
         }
         return type;
     }
+}
+
+bool is_numeric_type(const TypeRef& type) {
+    return is_numeric_type(type_ref_head_name(type));
+}
+
+const ClassDecl* dudu_class_for_type(const Symbols& symbols, const TypeRef& type) {
+    const TypeRef value_type = unwrap_value_type_ref(symbols, type);
+    const std::string name = type_ref_head_name(value_type);
+    const auto klass = symbols.classes.find(name);
+    return klass == symbols.classes.end() ? nullptr : klass->second;
 }
 
 bool unknown_or_auto(const TypeRef& type) {
@@ -146,12 +153,11 @@ dudu_operator_signature(const Symbols& symbols, const std::string& op, const Typ
     if (!is_supported_dudu_operator(op)) {
         return std::nullopt;
     }
-    const std::string type = substitute_type_ref_text(unwrap_value_type_ref(symbols, left), {});
-    const auto klass = symbols.classes.find(type);
-    if (klass == symbols.classes.end()) {
+    const ClassDecl* klass = dudu_class_for_type(symbols, left);
+    if (klass == nullptr) {
         return std::nullopt;
     }
-    for (const FunctionDecl& method : klass->second->methods) {
+    for (const FunctionDecl& method : klass->methods) {
         if (!method_has_operator(method, op)) {
             continue;
         }
@@ -176,12 +182,11 @@ dudu_binary_operator_signature(const Symbols& symbols, const std::string& op, co
     if (!is_supported_dudu_operator(op)) {
         return std::nullopt;
     }
-    const std::string type = substitute_type_ref_text(unwrap_value_type_ref(symbols, left), {});
-    const auto klass = symbols.classes.find(type);
-    if (klass == symbols.classes.end()) {
+    const ClassDecl* klass = dudu_class_for_type(symbols, left);
+    if (klass == nullptr) {
         return std::nullopt;
     }
-    for (const FunctionDecl& method : klass->second->methods) {
+    for (const FunctionDecl& method : klass->methods) {
         if (!method_has_operator(method, op)) {
             continue;
         }
