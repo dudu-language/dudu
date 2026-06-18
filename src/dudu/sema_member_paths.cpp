@@ -38,28 +38,6 @@ std::string strip_c_type_tag(std::string type) {
     return type;
 }
 
-std::string static_member_type(const Symbols& symbols, const SourceLocation* location,
-                               const std::string& type_name, const std::string& member) {
-    const auto klass = symbols.classes.find(type_name);
-    if (klass == symbols.classes.end()) {
-        return {};
-    }
-    for (const ConstDecl& constant : klass->second->constants) {
-        if (constant.name == member) {
-            return type_ref_text(constant.type_ref);
-        }
-    }
-    for (const ConstDecl& field : klass->second->static_fields) {
-        if (field.name == member) {
-            return type_ref_text(field.type_ref);
-        }
-    }
-    if (location != nullptr) {
-        sema_fail(*location, "unknown static member: " + type_name + "." + member);
-    }
-    return {};
-}
-
 TypeRef static_member_type_ref(const Symbols& symbols, const SourceLocation* location,
                                const std::string& type_name, const std::string& member) {
     const auto klass = symbols.classes.find(type_name);
@@ -104,32 +82,6 @@ std::string unwrap_receiver_type(const Symbols& symbols, std::string type) {
     }
 }
 
-std::optional<std::string> field_type_for_class(const Symbols& symbols, const ClassDecl& klass,
-                                                const std::string& receiver_type,
-                                                const std::string& field) {
-    for (const FieldDecl& decl : klass.fields) {
-        if (decl.name == field) {
-            const std::vector<std::string> receiver_args = template_args_from_type(receiver_type);
-            TypeRef type = substitute_type_ref(
-                decl.type_ref, type_substitutions(klass.generic_params, receiver_args));
-            const std::string receiver_substituted = substitute_receiver_template_type(
-                substitute_type_ref_text(type, {}), receiver_args);
-            return receiver_substituted;
-        }
-    }
-    for (const BaseClassDecl& base_decl : klass.base_class_refs) {
-        const std::string base = type_ref_text(base_decl.type_ref);
-        const auto base_class = symbols.classes.find(unwrap_receiver_type(symbols, base));
-        if (base_class == symbols.classes.end()) {
-            continue;
-        }
-        if (const auto found = field_type_for_class(symbols, *base_class->second, base, field)) {
-            return found;
-        }
-    }
-    return std::nullopt;
-}
-
 std::optional<TypeRef> field_type_ref_for_class(const Symbols& symbols, const ClassDecl& klass,
                                                 const TypeRef& receiver_type,
                                                 const std::string& field) {
@@ -164,75 +116,9 @@ std::string member_expr_type(const Symbols& symbols,
                              const SourceLocation* location, const Expr& expr,
                              std::string_view unknown_local_prefix,
                              std::string_view current_class) {
-    if (expr.kind == ExprKind::Name && !expr.name.empty()) {
-        if (expr.name == "class") {
-            if (!current_class.empty()) {
-                return std::string(current_class);
-            }
-            if (location != nullptr) {
-                sema_fail(*location, "class static access outside class");
-            }
-            return {};
-        }
-        if (const auto local = locals.find(expr.name); local != locals.end()) {
-            return local->second;
-        }
-        if (symbols.classes.contains(expr.name)) {
-            return expr.name;
-        }
-        if (location != nullptr && !unknown_local_prefix.empty()) {
-            sema_fail(*location, std::string(unknown_local_prefix) + expr.name);
-        }
-        return {};
-    }
-    if (expr.kind == ExprKind::Index && expr.children.size() == 2) {
-        const std::string receiver_type = member_expr_type(
-            symbols, locals, location, expr.children[0], unknown_local_prefix, current_class);
-        if (receiver_type.empty()) {
-            return {};
-        }
-        const std::string label = display_expr(expr);
-        return indexed_type_from_type(symbols, location == nullptr ? SourceLocation{} : *location,
-                                      receiver_type, expr.children[1],
-                                      label.empty() ? "indexed expression" : label);
-    }
-    if (expr.kind == ExprKind::Member && expr.children.size() == 1 && !expr.name.empty()) {
-        const Expr& receiver = expr.children.front();
-        if (receiver.kind == ExprKind::Name && receiver.name == "class") {
-            if (current_class.empty()) {
-                if (location != nullptr) {
-                    sema_fail(*location, "class static access outside class");
-                }
-                return {};
-            }
-            return static_member_type(symbols, location, std::string(current_class), expr.name);
-        }
-        if (receiver.kind == ExprKind::Name && !locals.contains(receiver.name) &&
-            symbols.classes.contains(receiver.name)) {
-            return static_member_type(symbols, location, receiver.name, expr.name);
-        }
-        const std::string receiver_type = member_expr_type(symbols, locals, location, receiver,
-                                                           unknown_local_prefix, current_class);
-        if (receiver_type.empty()) {
-            return {};
-        }
-        if (const auto field = field_type_for_type(symbols, receiver_type, expr.name)) {
-            return *field;
-        }
-        if (const auto swizzle = swizzle_type_for_type(symbols, receiver_type, expr.name)) {
-            return *swizzle;
-        }
-        if (receiver_type == "auto" ||
-            foreign_cpp_type_name(symbols, resolve_alias(symbols, receiver_type))) {
-            return "auto";
-        }
-        if (location != nullptr) {
-            const std::string label = display_expr(expr);
-            sema_fail(*location, "unknown field: " +
-                                     (label.empty() ? receiver_type + "." + expr.name : label));
-        }
-    }
-    return {};
+    const TypeRef type_ref = member_expr_type_ref(symbols, locals, {}, location, expr,
+                                                  unknown_local_prefix, current_class);
+    return has_type_ref(type_ref) ? substitute_type_ref_text(type_ref, {}) : std::string{};
 }
 
 TypeRef member_expr_type_ref(const Symbols& symbols,
@@ -347,25 +233,12 @@ bool is_member_path(const std::string& path) {
 std::optional<std::string> field_type_for_type(const Symbols& symbols,
                                                const std::string& receiver_type,
                                                const std::string& field) {
-    const std::string resolved = resolve_alias(symbols, receiver_type);
-    const std::vector<TypeRef> result_args =
-        template_type_arg_refs(parse_type_text(resolved), "Result");
-    if (!result_args.empty()) {
-        if (field == "ok") {
-            return "bool";
-        }
-        if (field == "value" && !result_args.empty()) {
-            return substitute_type_ref_text(result_args[0], {});
-        }
-        if (field == "err" && result_args.size() >= 2) {
-            return substitute_type_ref_text(result_args[1], {});
-        }
-    }
-    const auto klass = symbols.classes.find(unwrap_receiver_type(symbols, receiver_type));
-    if (klass == symbols.classes.end()) {
+    const std::optional<TypeRef> found =
+        field_type_ref_for_type(symbols, parse_type_text(receiver_type), field);
+    if (!found) {
         return std::nullopt;
     }
-    return field_type_for_class(symbols, *klass->second, receiver_type, field);
+    return substitute_type_ref_text(*found, {});
 }
 
 std::optional<TypeRef> field_type_ref_for_type(const Symbols& symbols, const TypeRef& receiver_type,

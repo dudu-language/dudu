@@ -1741,6 +1741,10 @@ LSP source edits are also moving to AST-owned ranges:
   `Result` helper fields, and Dudu swizzles through parsed `TypeRef` metadata
   before rendering fallback display text. The string member resolver remains
   for explicit C++ escape and C++ emission boundaries only.
+- The older string-recursive member resolver and string class-field helper have
+  been deleted; compatibility callers now render the result of structured
+  `TypeRef` member/field inference instead of maintaining a parallel semantic
+  path.
 - Native value symbols now store parsed `TypeRef` metadata beside their C++
   spelling strings, and normal name/member expression sema reads those refs
   directly for imported constants, build flags, shader/native values, and class

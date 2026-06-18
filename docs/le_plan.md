@@ -695,12 +695,12 @@ push. They are not release packaging work.
    display helper for structured nodes instead of reading raw expression text
    directly. Member/index expression diagnostics and indexed-assignment labels
    use the same structured display path. Member-path semantic diagnostics now
-   use structured expression display for parsed member/index labels, while the
-   remaining string member-path API is still an explicit compatibility boundary
-   to replace. The string resolver is now named
-   `member_path_type_from_string`, with callers confined to the C++ escape
-   inference boundary, and the helper declarations now live behind the
-   expression-internal header rather than the public sema methods surface.
+   use structured expression display for parsed member/index labels.
+   Member-path inference has one structured source of truth for local names,
+   class static members, recursive fields, indexed receivers, inherited
+   fields, `Result` helper fields, and swizzles; remaining string-returning
+   member and field helpers render the structured `TypeRef` result for
+   compatibility boundaries instead of maintaining a parallel resolver.
    Dudu-native constant aliases from selective imports now construct parsed
    `Name` expressions directly instead of reparsing imported identifier text
    inside the module loader. Semantic-token native lookups for member and
