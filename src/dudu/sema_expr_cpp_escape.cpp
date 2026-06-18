@@ -27,8 +27,7 @@ std::string cpp_escape_member_path_type(const FunctionScope& scope, const Source
     if (expr.kind == ExprKind::Unknown) {
         return {};
     }
-    const TypeRef type =
-        member_expr_type_ref(scope.symbols, scope.local_type_refs, location, expr);
+    const TypeRef type = member_expr_type_ref(scope.symbols, scope.local_type_refs, location, expr);
     return has_type_ref(type) ? substitute_type_ref_text(type, {}) : std::string{};
 }
 
@@ -307,9 +306,9 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
         fn != scope.symbols.function_signatures.end()) {
         return function_type(fn->second);
     }
-    if (const auto value = scope.symbols.native_values.find(expr);
-        value != scope.symbols.native_values.end()) {
-        return value->second;
+    if (const auto value = scope.symbols.native_value_type_refs.find(expr);
+        value != scope.symbols.native_value_type_refs.end()) {
+        return substitute_type_ref_text(value->second, {});
     }
     if (const auto native = scope.symbols.native_function_signatures.find(expr);
         native != scope.symbols.native_function_signatures.end() && !native->second.empty()) {

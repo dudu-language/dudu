@@ -363,9 +363,9 @@ Symbols collect_symbols(const ModuleAst& module) {
     }
     for (const auto& [name, value] : build_values) {
         const std::string symbol_name = "build." + name;
-        symbols.native_values[symbol_name] = build_value_type(value);
-        symbols.native_value_type_refs[symbol_name] =
-            parse_type_text(symbols.native_values[symbol_name]);
+        const TypeRef value_type = parse_type_text(build_value_type(value));
+        symbols.native_values[symbol_name] = substitute_type_ref_text(value_type, {});
+        symbols.native_value_type_refs[symbol_name] = value_type;
     }
     symbols.native_import_prefixes.insert("build");
     for (const NativeNamespaceDecl& ns : module.native_namespaces) {
@@ -382,7 +382,7 @@ Symbols collect_symbols(const ModuleAst& module) {
         symbols.classes[klass.name] = &klass;
         for (const ConstDecl& constant : klass.constants) {
             const std::string symbol_name = klass.name + "." + constant.name;
-            symbols.native_values[symbol_name] = type_ref_text(constant.type_ref);
+            symbols.native_values[symbol_name] = substitute_type_ref_text(constant.type_ref, {});
             symbols.native_value_type_refs[symbol_name] = constant.type_ref;
         }
     }
