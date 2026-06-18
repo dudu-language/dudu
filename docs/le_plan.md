@@ -1845,3 +1845,5 @@ push. They are not release packaging work.
    to hand it to the diagnostic helper.
    Builtin `min`/`max` semantic checks now defer argument type rendering until
    the diagnostic branch instead of rendering every checked argument eagerly.
+   Constructor argument semantic checks now also defer inferred argument type
+   rendering until a constructor mismatch diagnostic is actually emitted.

@@ -120,11 +120,12 @@ void check_constructor_args_ast(const FunctionScope& scope, const ClassDecl& kla
                                     std::to_string(args.size()));
             const ConstructorParam& param = expected[positional];
             const TypeRef got_ref = infer_expr_type_ast(scope, arg, location);
-            const std::string got = substitute_type_ref_text(got_ref, {});
-            if (!constructor_arg_assignable(scope, param, arg, got_ref))
+            if (!constructor_arg_assignable(scope, param, arg, got_ref)) {
                 fail(*location, "constructor " + klass.name + " argument " +
                                     std::to_string(positional + 1) + " expects " +
-                                    constructor_param_type_text(param) + ", got " + got);
+                                    constructor_param_type_text(param) + ", got " +
+                                    type_ref_text(got_ref));
+            }
             ++positional;
             continue;
         }
@@ -139,10 +140,11 @@ void check_constructor_args_ast(const FunctionScope& scope, const ClassDecl& kla
             fail(*location, "unknown constructor field: " + klass.name + "." + name);
         const Expr& value = arg.children.empty() ? arg : arg.children.front();
         const TypeRef got_ref = infer_expr_type_ast(scope, value, location);
-        const std::string got = substitute_type_ref_text(got_ref, {});
-        if (!constructor_arg_assignable(scope, *param, value, got_ref))
+        if (!constructor_arg_assignable(scope, *param, value, got_ref)) {
             fail(*location, "constructor field " + klass.name + "." + name + " expects " +
-                                constructor_param_type_text(*param) + ", got " + got);
+                                constructor_param_type_text(*param) + ", got " +
+                                type_ref_text(got_ref));
+        }
     }
 }
 
