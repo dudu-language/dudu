@@ -1436,3 +1436,8 @@ push. They are not release packaging work.
    Parser statement range attachment is now named as range attachment rather
    than source attachment, matching the fact that raw statement source mirrors
    have been removed.
+   Type-known checks now expose a structured `known_type_ref` API, and
+   unknown-type diagnostics use it directly instead of reparsing rendered type
+   strings. Native/foreign C++ receiver checks also accept `TypeRef` nodes so
+   normal member/method inference no longer renders receiver types just to
+   recognize native C++ types.

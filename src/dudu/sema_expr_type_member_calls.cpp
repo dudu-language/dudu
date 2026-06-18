@@ -49,8 +49,8 @@ std::optional<TypeRef> receiver_call_type_ref(const FunctionScope& scope, const 
         }
         return named_type_ref("auto", expr.location);
     }
-    const bool foreign_receiver =
-        foreign_cpp_type_name(scope.symbols, resolve_alias(scope.symbols, receiver_type));
+    const bool foreign_receiver = foreign_cpp_type_name(
+        scope.symbols, resolve_alias_ref_with_legacy_fallback(scope.symbols, receiver_type_ref));
     if (method_signature_for_type(scope.symbols, receiver_type_ref, method_name, signature,
                                   foreign_receiver ? nullptr : location)) {
         const std::vector<FunctionSignature> signatures =
@@ -89,9 +89,9 @@ std::optional<TypeRef> direct_member_call_type_ref(const FunctionScope& scope, c
         (receiver_expr.name == "class" || scope.symbols.classes.contains(receiver_expr.name));
     if (!bare_nonlocal_receiver && !static_class_receiver) {
         const TypeRef receiver_type_ref = infer_expr_type_ast(scope, receiver_expr, location);
-        const std::string receiver_type = substitute_type_ref_text(receiver_type_ref, {});
-        const bool foreign_receiver =
-            foreign_cpp_type_name(scope.symbols, resolve_alias(scope.symbols, receiver_type));
+        const bool foreign_receiver = foreign_cpp_type_name(
+            scope.symbols,
+            resolve_alias_ref_with_legacy_fallback(scope.symbols, receiver_type_ref));
         if (!foreign_receiver) {
             if (const auto inferred = inferred_generic_method_signature_for_type(
                     scope, receiver_type_ref, member.name, expr.children, location,
@@ -101,8 +101,8 @@ std::optional<TypeRef> direct_member_call_type_ref(const FunctionScope& scope, c
                              return infer_expr_type_ast(nested, arg, arg_location);
                          },
                      .can_assign =
-                         [](const FunctionScope& nested, const TypeRef& expected,
-                            const Expr& value, const TypeRef& got) {
+                         [](const FunctionScope& nested, const TypeRef& expected, const Expr& value,
+                            const TypeRef& got) {
                              return can_assign_ast(nested, expected, value, got);
                          }})) {
                 check_call_args_ast(scope, callee, *inferred, expr.children, location);

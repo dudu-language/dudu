@@ -1,6 +1,7 @@
 #include "dudu/sema_native.hpp"
 
 #include "dudu/ast_expr.hpp"
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/native_signature_match.hpp"
 
@@ -27,8 +28,13 @@ std::optional<std::string> native_path_from_expr(const Expr& expr) {
 } // namespace
 
 bool foreign_cpp_type_name(const Symbols& symbols, const std::string& type) {
-    return type.find('.') != std::string::npos || type.find("::") != std::string::npos ||
-           symbols.native_types.contains(base_type(parse_type_text(type)));
+    return foreign_cpp_type_name(symbols, parse_type_text(type));
+}
+
+bool foreign_cpp_type_name(const Symbols& symbols, const TypeRef& type) {
+    const std::string head = type_ref_head_name(type);
+    return head.find('.') != std::string::npos || head.find("::") != std::string::npos ||
+           symbols.native_types.contains(base_type(type));
 }
 
 bool native_import_path_prefix(const Symbols& symbols, const std::string& path) {

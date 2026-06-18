@@ -122,11 +122,8 @@ std::string base_type(const TypeRef& type) {
     return compute_base_type(type);
 }
 
-bool known_type(const Symbols& symbols, const std::string& type) {
-    if (starts_with(trim(type), "fn(")) {
-        return true;
-    }
-    const std::string base = base_type(parse_type_text(type));
+bool known_type_ref(const Symbols& symbols, const TypeRef& type) {
+    const std::string base = base_type(type);
     return base.empty() || is_builtin_type(base) || symbols.types.contains(base) ||
            base.find('.') != std::string::npos || starts_with(base, "struct ") || base == "list" ||
            base == "array" || base == "span" || base == "strided_span" || base == "dict" ||
@@ -135,19 +132,26 @@ bool known_type(const Symbols& symbols, const std::string& type) {
            base == "volatile" || base == "storage" || base == "shared" || base == "device";
 }
 
+bool known_type(const Symbols& symbols, const std::string& type) {
+    if (starts_with(trim(type), "fn(")) {
+        return true;
+    }
+    return known_type_ref(symbols, parse_type_text(type));
+}
+
 std::optional<std::pair<std::string, SourceLocation>> unknown_type_ref(const Symbols& symbols,
                                                                        const TypeRef& type) {
     switch (type.kind) {
     case TypeKind::Named:
     case TypeKind::Qualified:
-        return known_type(symbols, type.text)
+        return known_type_ref(symbols, type)
                    ? std::nullopt
                    : std::optional<std::pair<std::string, SourceLocation>>{
-                         std::pair{type.text, type.location}};
+                         std::pair{type_ref_head_name(type), type.location}};
     case TypeKind::Value:
         return std::nullopt;
     case TypeKind::Template:
-        if (!known_type(symbols, type.name)) {
+        if (!known_type_ref(symbols, type)) {
             return std::pair{type.name, type.location};
         }
         for (const TypeRef& child : type.children) {
@@ -174,7 +178,7 @@ std::optional<std::pair<std::string, SourceLocation>> unknown_type_ref(const Sym
         }
         return std::nullopt;
     case TypeKind::Unknown:
-        return known_type(symbols, type.text)
+        return known_type_ref(symbols, type)
                    ? std::nullopt
                    : std::optional<std::pair<std::string, SourceLocation>>{
                          std::pair{type.text, type.location}};
@@ -223,7 +227,8 @@ TypeRef resolve_alias_ref_with_legacy_fallback(const Symbols& symbols, const Typ
     }
     const std::string type_text = substitute_type_ref_text(type, {});
     const std::string legacy_resolved = resolve_alias(symbols, type_text);
-    return legacy_resolved == type_text ? resolved : parse_type_text(legacy_resolved, type.location);
+    return legacy_resolved == type_text ? resolved
+                                        : parse_type_text(legacy_resolved, type.location);
 }
 
 std::vector<std::string> split_top_level(std::string text) {

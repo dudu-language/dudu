@@ -20,6 +20,7 @@ native_signature_for_call(const FunctionScope& scope, const std::string& callee,
                           const NativeInferExprTypeAstFn& infer_expr_type,
                           const NativeCanAssignAstFn& can_assign);
 bool foreign_cpp_type_name(const Symbols& symbols, const std::string& type);
+bool foreign_cpp_type_name(const Symbols& symbols, const TypeRef& type);
 bool native_import_path_prefix(const Symbols& symbols, const std::string& path);
 std::optional<TypeRef> native_member_path_type_ref(const Symbols& symbols, const std::string& path,
                                                    SourceLocation location = {});

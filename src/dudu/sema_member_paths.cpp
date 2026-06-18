@@ -180,7 +180,8 @@ TypeRef member_expr_type_ref(const Symbols& symbols,
         }
         const std::string receiver_type_text = substitute_type_ref_text(receiver_type, {});
         if (type_ref_is_auto(receiver_type) ||
-            foreign_cpp_type_name(symbols, resolve_alias(symbols, receiver_type_text))) {
+            foreign_cpp_type_name(symbols,
+                                  resolve_alias_ref_with_legacy_fallback(symbols, receiver_type))) {
             return parse_type_text("auto", expr.location);
         }
         if (location != nullptr) {
