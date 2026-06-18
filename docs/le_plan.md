@@ -810,6 +810,8 @@ push. They are not release packaging work.
    container/optional/atomic method signatures.
    Native overload candidate diagnostics render parameter and return types
    through signature `TypeRef` helpers rather than raw string mirrors.
+   Native overload assignment callbacks now carry expected and actual argument
+   types as parsed `TypeRef` nodes instead of string type names.
    The duplicate string-only indexed type implementation has been removed;
    public string index queries parse the receiver once and delegate to the
    structured `TypeRef` indexing implementation.
