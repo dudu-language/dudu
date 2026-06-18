@@ -1959,8 +1959,8 @@ push. They are not release packaging work.
    expression, and sema/codegen reuse that `TypeRef` instead of stripping `*`
    from the callee spelling and rebuilding the target from text.
    Parsed `cpp(...)` allocation expressions such as `new[T]` and `malloc[T]`
-   now infer through the parsed `TemplateCall` and its `TypeRef` arguments
-   before reaching the raw escape fallback.
+   now infer through the parsed `TemplateCall` and its `TypeRef` arguments;
+   the duplicate raw string allocation inference fallback has been deleted.
    Parsed `cpp(...)` pointer casts now reuse the parser-attached target
    `TypeRef` instead of slicing the callee spelling to recover the type.
    LSP semantic type-token collection now uses `TypeRef` helper APIs for type

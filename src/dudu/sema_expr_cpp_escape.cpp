@@ -218,9 +218,6 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
     if (call_info) {
         const std::string& callee = call_info->callee;
         const std::vector<Expr>& args = call_info->args;
-        if (const auto type =
-                infer_cpp_escape_allocation_call(scope.symbols, location, callee, args))
-            return *type;
         if (is_deallocation_call(callee)) {
             std::vector<TypeRef> types;
             for (const Expr& arg : args)

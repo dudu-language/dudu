@@ -14,46 +14,6 @@ TypeRef pointer_type_ref_from_pointee(TypeRef pointee) {
     return wrapped_type_ref(TypeKind::Pointer, std::move(pointee), location);
 }
 
-std::optional<std::string> infer_allocation_call_with_count(const Symbols& symbols,
-                                                            const SourceLocation* location,
-                                                            const std::string& callee,
-                                                            const size_t arg_count) {
-    const size_t open = callee.find('[');
-    if (open == std::string::npos || callee.back() != ']') {
-        return std::nullopt;
-    }
-    const std::string name = callee.substr(0, open);
-    if (name != "new" && name != "malloc") {
-        return std::nullopt;
-    }
-    SourceLocation type_location;
-    if (location != nullptr) {
-        type_location = *location;
-        type_location.column += static_cast<int>(open + 1);
-    }
-    const TypeRef type_ref =
-        parse_type_text(callee.substr(open + 1, callee.size() - open - 2), type_location);
-    const std::string type = substitute_type_ref_text(type_ref, {});
-    if (location != nullptr) {
-        if (const auto unknown = unknown_type_ref(symbols, type_ref)) {
-            const SourceLocation error_location =
-                unknown->second.line > 0 ? unknown->second : type_location;
-            throw CompileError(error_location, "unknown allocation type: " + unknown->first);
-        }
-    }
-    if (location != nullptr && name == "malloc" && arg_count != 1) {
-        throw CompileError(*location,
-                           "malloc expects 1 count argument, got " + std::to_string(arg_count));
-    }
-    if (location != nullptr && name == "new") {
-        const std::vector<std::string> missing = unimplemented_abstract_methods(symbols, type_ref);
-        if (!missing.empty()) {
-            throw CompileError(*location, "cannot allocate abstract class: " + type);
-        }
-    }
-    return "*" + type;
-}
-
 std::optional<TypeRef> infer_allocation_call_type_ref_from_type_args(
     const Symbols& symbols, const SourceLocation* location, const std::string& callee,
     const std::vector<TypeRef>& type_args, const size_t arg_count) {
@@ -87,13 +47,6 @@ std::optional<TypeRef> infer_allocation_call_type_ref_from_type_args(
 }
 
 } // namespace
-
-std::optional<std::string> infer_cpp_escape_allocation_call(const Symbols& symbols,
-                                                            const SourceLocation* location,
-                                                            const std::string& callee,
-                                                            const std::vector<Expr>& args) {
-    return infer_allocation_call_with_count(symbols, location, callee, args.size());
-}
 
 std::optional<TypeRef> infer_allocation_call_type_ref(const Symbols& symbols,
                                                       const SourceLocation* location,
