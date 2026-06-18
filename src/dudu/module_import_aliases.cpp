@@ -79,11 +79,9 @@ void add_function_alias(ModuleAst& module, const FunctionDecl& fn, const std::st
     alias.return_type_ref = function_has_return_type(fn)
                                 ? substitute_type_ref(fn.return_type_ref, type_substitutions)
                                 : void_type_ref(location);
-    alias.return_type = substitute_type_ref_text(alias.return_type_ref, {});
     alias.location = location;
     for (const ParamDecl& param : fn.params) {
         TypeRef param_type = substitute_type_ref(param.type_ref, type_substitutions);
-        alias.params.push_back(substitute_type_ref_text(param_type, {}));
         alias.param_type_refs.push_back(std::move(param_type));
     }
     module.native_functions.push_back(std::move(alias));

@@ -1695,6 +1695,10 @@ push. They are not release packaging work.
    already-verified signature `TypeRef` nodes are present and deletes its dead
    render/reparse fallback for missing parameter or return types. Text
    replacement remains only in the explicit native-artifact fallback branch.
+   Dudu-origin imported function aliases now populate native alias signatures
+   with `TypeRef` parameter and return nodes only, without also materializing
+   rendered `params` or `return_type` string mirrors. C++ header imports keep
+   their native text mirrors at the foreign boundary.
    `substitute_type_ref` now has a structured `TypeRef` substitution overload.
    Receiver generic substitution for fields, methods, inherited methods, and
    inferred generic method signatures uses parsed receiver template arguments
