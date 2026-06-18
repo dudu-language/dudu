@@ -4,6 +4,7 @@
 #include "dudu/sema_common.hpp"
 #include "dudu/sema_expr.hpp"
 #include "dudu/sema_function_type.hpp"
+#include "dudu/sema_methods_internal.hpp"
 
 #include <algorithm>
 #include <map>
@@ -293,13 +294,14 @@ std::string template_method_name(const Expr& expr, const std::string& callee_bas
 }
 
 bool known_template_constructor_type(const FunctionScope& scope, const std::string& callee) {
-    const std::string base = base_type(parse_type_text(callee));
+    const TypeRef callee_type = parse_type_text(callee);
+    const std::string base = base_type(callee_type);
     if (base.find('.') != std::string::npos || base.find("::") != std::string::npos) {
         return scope.symbols.types.contains(base) || scope.symbols.native_classes.contains(base) ||
-               scope.symbols.classes.contains(resolve_alias(scope.symbols, callee));
+               class_for_receiver_type(scope.symbols, callee_type) != nullptr;
     }
-    return known_type(scope.symbols, callee) ||
-           scope.symbols.classes.contains(resolve_alias(scope.symbols, callee));
+    return known_type_ref(scope.symbols, callee_type) ||
+           class_for_receiver_type(scope.symbols, callee_type) != nullptr;
 }
 
 } // namespace dudu
