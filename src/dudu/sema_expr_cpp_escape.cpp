@@ -239,7 +239,9 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
             FunctionSignature signature;
             if (!scope.local_type_refs.contains(member->receiver) &&
                 scope.symbols.classes.contains(member->receiver) &&
-                static_method_signature_for_type(scope.symbols, parse_type_text(member->receiver),
+                static_method_signature_for_type(scope.symbols,
+                                                 named_type_ref(member->receiver,
+                                                                member->receiver_expr.location),
                                                  member->method, signature, location)) {
                 check_call_args_ast(scope, callee, signature, args, location);
                 return signature_return_type_text(signature);
@@ -278,8 +280,10 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
             FunctionSignature signature;
             if (!scope.local_type_refs.contains(receiver) &&
                 scope.symbols.classes.contains(receiver) &&
-                static_method_signature_for_type(scope.symbols, parse_type_text(receiver),
-                                                 method_name, signature, location)) {
+                static_method_signature_for_type(
+                    scope.symbols,
+                    named_type_ref(receiver, location == nullptr ? SourceLocation{} : *location),
+                    method_name, signature, location)) {
                 check_call_args_ast(scope, callee, signature, args, location);
                 return signature_return_type_text(signature);
             }

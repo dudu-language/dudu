@@ -1694,3 +1694,6 @@ push. They are not release packaging work.
    `TypeRef` nodes and reuses those nodes for lowering, rather than rendering
    a type-like callee and reparsing it through separate predicate/lowering
    helpers.
+   Static member-call checks and swizzle result inference now build named
+   `TypeRef` nodes directly for known class names instead of reparsing class
+   name strings as type syntax.

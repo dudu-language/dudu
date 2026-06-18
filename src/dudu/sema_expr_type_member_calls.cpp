@@ -14,7 +14,8 @@ std::optional<TypeRef> receiver_call_type_ref(const FunctionScope& scope, const 
     FunctionSignature signature;
     if (receiver_expr.kind == ExprKind::Name && receiver_expr.name == "class" &&
         !scope.current_class.empty() &&
-        static_method_signature_for_type(scope.symbols, parse_type_text(scope.current_class),
+        static_method_signature_for_type(scope.symbols,
+                                         named_type_ref(scope.current_class, receiver_expr.location),
                                          method_name, signature, location)) {
         check_call_args_ast(scope, callee, signature, expr.children, location);
         return signature_return_type_ref(signature);
@@ -22,7 +23,8 @@ std::optional<TypeRef> receiver_call_type_ref(const FunctionScope& scope, const 
     if (receiver_expr.kind == ExprKind::Name && receiver_expr.name != "class" &&
         !scope.local_type_refs.contains(receiver_expr.name) &&
         scope.symbols.classes.contains(receiver_expr.name) &&
-        static_method_signature_for_type(scope.symbols, parse_type_text(receiver_expr.name),
+        static_method_signature_for_type(scope.symbols,
+                                         named_type_ref(receiver_expr.name, receiver_expr.location),
                                          method_name, signature, location)) {
         check_call_args_ast(scope, callee, signature, expr.children, location);
         return signature_return_type_ref(signature);
