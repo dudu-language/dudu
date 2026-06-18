@@ -1292,6 +1292,10 @@ declarations safely.
    text while parsing declarations or statements; expression/type parsers now
    consume the token slice directly, with exact source reconstruction reserved
    for explicit `cpp(...)` escape bodies and import source preservation.
+   Expression semantic checking, C++ emission, and unsupported-feature
+   detection no longer treat empty `Expr::text` as an absent expression;
+   absence is represented by the structured `ExprKind::Missing` node, while
+   `ExprKind::Unknown` remains a diagnosed unsupported expression.
    Native overload matching no longer caches a rendered argument type beside
    the inferred `TypeRef`; diagnostics and remaining native-template fallback
    bindings render on demand at their boundary.

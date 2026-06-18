@@ -16,9 +16,6 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
     case ExprKind::Missing:
         return {};
     case ExprKind::Unknown:
-        if (trim(expr.text).empty()) {
-            return {};
-        }
         if (location != nullptr) {
             sema_expr_fail(*location, "unsupported expression: " + trim(expr.text));
         }

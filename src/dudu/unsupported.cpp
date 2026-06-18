@@ -8,7 +8,7 @@ namespace dudu {
 namespace {
 
 void check_expr(const Expr& expr) {
-    if (expr.text.empty()) {
+    if (expr_missing(expr)) {
         return;
     }
     if (expr.kind == ExprKind::Unknown) {

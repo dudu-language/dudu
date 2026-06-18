@@ -202,9 +202,6 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
     if (expr.kind == ExprKind::Missing) {
         return {};
     }
-    if (expr.text.empty()) {
-        return {};
-    }
     if (expr.kind == ExprKind::Unknown) {
         throw CompileError(expr.location, "unsupported expression: " + trim_copy(expr.text));
     }
