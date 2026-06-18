@@ -27,23 +27,23 @@ inline TypeRef local_type_ref(const FunctionScope& scope, const std::string& nam
     if (const auto local = scope.local_type_refs.find(name); local != scope.local_type_refs.end()) {
         return local->second;
     }
-    if (const auto local = scope.locals.find(name); local != scope.locals.end()) {
-        return parse_type_text(local->second, location);
-    }
-    return {};
+    TypeRef unknown;
+    unknown.location = location;
+    return unknown;
 }
 
 inline TypeRef local_type_ref(const Symbols& symbols,
                               const std::map<std::string, std::string>& locals,
                               const std::map<std::string, TypeRef>& local_type_refs,
                               const std::string& name, SourceLocation location = {}) {
+    (void)symbols;
+    (void)locals;
     if (const auto local = local_type_refs.find(name); local != local_type_refs.end()) {
         return local->second;
     }
-    if (const auto local = locals.find(name); local != locals.end()) {
-        return parse_type_text(resolve_alias(symbols, local->second), location);
-    }
-    return {};
+    TypeRef unknown;
+    unknown.location = location;
+    return unknown;
 }
 
 } // namespace dudu
