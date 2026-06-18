@@ -1834,3 +1834,6 @@ push. They are not release packaging work.
    Statement semantic checking no longer renders the function return type for
    every statement; return checks use structured void predicates and render
    type names only for diagnostics.
+   Native enum-value assignability now checks integer expected types through
+   structured `TypeRef` metadata instead of rendering the expected type before
+   testing whether the enum value can be assigned.

@@ -12,8 +12,8 @@ std::optional<std::string> expr_path_key(const Expr& expr) {
 }
 
 bool is_native_enum_value_expr(const FunctionScope& scope, const Expr& expr,
-                               const std::string& expected) {
-    if (!is_integer_type(expected)) {
+                               const TypeRef& expected) {
+    if (!is_integer_type(type_ref_head_name(resolve_alias_ref(scope.symbols, expected)))) {
         return false;
     }
     const std::optional<std::string> path = expr_path_key(expr);
@@ -25,8 +25,7 @@ bool can_assign_ast(const FunctionScope& scope, const TypeRef& expected, const E
                     const TypeRef& got) {
     const TypeRef resolved_expected = resolve_alias_ref(scope.symbols, expected);
     const TypeRef resolved_got = resolve_alias_ref(scope.symbols, got);
-    const std::string expected_text = substitute_type_ref_text(resolved_expected, {});
-    if (is_native_enum_value_expr(scope, expr, expected_text)) {
+    if (is_native_enum_value_expr(scope, expr, resolved_expected)) {
         return true;
     }
     return assignment_type_allowed(expected, expr, got) ||
