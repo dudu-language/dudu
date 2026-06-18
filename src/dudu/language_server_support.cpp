@@ -1,6 +1,8 @@
 #include "dudu/language_server_support.hpp"
 
+#include <algorithm>
 #include <filesystem>
+#include <sstream>
 
 namespace dudu {
 
@@ -58,6 +60,21 @@ int leading_spaces(const std::string& line) {
         ++out;
     }
     return out;
+}
+
+int document_line_count(const std::string& text) {
+    return static_cast<int>(std::count(text.begin(), text.end(), '\n')) +
+           (text.empty() || text.back() == '\n' ? 0 : 1);
+}
+
+std::vector<std::string> document_lines(const std::string& text) {
+    std::istringstream in(text);
+    std::vector<std::string> lines;
+    std::string line;
+    while (std::getline(in, line)) {
+        lines.push_back(line);
+    }
+    return lines;
 }
 
 } // namespace dudu

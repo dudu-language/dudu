@@ -3,6 +3,7 @@
 #include "dudu/cpp_lower.hpp"
 #include "dudu/language_server_json.hpp"
 #include "dudu/language_server_navigation.hpp"
+#include "dudu/language_server_support.hpp"
 #include "dudu/language_server_symbols.hpp"
 #include "dudu/parser.hpp"
 
@@ -19,27 +20,12 @@
 namespace dudu {
 namespace {
 
-int line_count(const std::string& text) {
-    return static_cast<int>(std::count(text.begin(), text.end(), '\n')) +
-           (text.empty() || text.back() == '\n' ? 0 : 1);
-}
-
 std::optional<ModuleAst> parsed_document(const Document& doc) {
     try {
         return parse_source(doc.text, doc.path);
     } catch (const std::exception&) {
         return std::nullopt;
     }
-}
-
-std::vector<std::string> document_lines(const std::string& text) {
-    std::istringstream in(text);
-    std::vector<std::string> lines;
-    std::string line;
-    while (std::getline(in, line)) {
-        lines.push_back(line);
-    }
-    return lines;
 }
 
 std::optional<TextEdit> organize_imports_edit(const Document& doc, const ModuleAst& module) {
@@ -101,7 +87,7 @@ std::optional<std::string> remove_line_action(const Document& doc, int line,
     if (line < 0 || line >= static_cast<int>(lines.size())) {
         return std::nullopt;
     }
-    const bool has_next = line + 1 <= line_count(doc.text);
+    const bool has_next = line + 1 <= document_line_count(doc.text);
     const std::string range =
         has_next
             ? range_json(line, 0, line + 1, 0)
