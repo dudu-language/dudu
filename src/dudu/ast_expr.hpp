@@ -5,9 +5,27 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace dudu {
 
+enum class ExprPathSegmentKind {
+    Name,
+    Index,
+};
+
+struct ExprPathSegment {
+    ExprPathSegmentKind kind = ExprPathSegmentKind::Name;
+    std::string text;
+    SourceLocation location;
+};
+
+struct ExprPath {
+    std::vector<ExprPathSegment> segments;
+};
+
+std::optional<ExprPath> expr_path_from_expr(const Expr& expr);
+std::string render_expr_path(const ExprPath& path);
 std::optional<std::string> member_path_from_expr(const Expr& expr);
 std::optional<std::string> path_index_from_expr(const Expr& expr);
 bool expr_missing(const Expr& expr);

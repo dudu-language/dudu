@@ -150,6 +150,11 @@ void collect_type_tokens(const TypeRef& type, std::vector<SemanticToken>& tokens
 void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
                          const NativeSemanticIndex* native_index);
 
+std::optional<std::string> expr_path_key(const Expr& expr) {
+    const std::optional<ExprPath> path = expr_path_from_expr(expr);
+    return path ? std::optional<std::string>{render_expr_path(*path)} : std::nullopt;
+}
+
 void collect_call_callee_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
                                 const NativeSemanticIndex* native_index) {
     if (expr.kind == ExprKind::Name) {
@@ -167,7 +172,7 @@ void collect_call_callee_tokens(const Expr& expr, std::vector<SemanticToken>& to
             collect_expr_tokens(child, tokens, native_index);
         }
         const SourceLocation member_location = member_name_location(expr);
-        const std::optional<std::string> path = member_path_from_expr(expr);
+        const std::optional<std::string> path = expr_path_key(expr);
         if (native_index != nullptr && path && native_index->macros.contains(*path)) {
             add_native_semantic_token(tokens, member_location, expr.name, token_macro);
         } else if (native_index != nullptr && path && native_index->functions.contains(*path)) {
@@ -219,7 +224,7 @@ void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
             collect_expr_tokens(child, tokens, native_index);
         }
         const SourceLocation member_location = member_name_location(expr);
-        const std::optional<std::string> path = member_path_from_expr(expr);
+        const std::optional<std::string> path = expr_path_key(expr);
         if (native_index != nullptr && path && native_index->classes.contains(*path)) {
             add_native_semantic_token(tokens, member_location, expr.name, token_class);
         } else if (native_index != nullptr && path && native_index->types.contains(*path)) {

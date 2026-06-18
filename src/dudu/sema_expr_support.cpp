@@ -10,6 +10,20 @@ std::vector<std::string> call_args(std::string expr, size_t open) {
     return args.empty() ? std::vector<std::string>{} : split_top_level_args(args);
 }
 
+std::optional<std::string> expr_path_key(const Expr& expr) {
+    const std::optional<ExprPath> path = expr_path_from_expr(expr);
+    return path ? std::optional<std::string>{render_expr_path(*path)} : std::nullopt;
+}
+
+bool is_native_enum_value_expr(const FunctionScope& scope, const Expr& expr,
+                               const std::string& expected) {
+    if (!is_integer_type(expected)) {
+        return false;
+    }
+    const std::optional<std::string> path = expr_path_key(expr);
+    return path && scope.symbols.native_enum_values.contains(*path);
+}
+
 } // namespace
 
 std::vector<Expr> call_arg_exprs(std::string expr, size_t open, SourceLocation location) {
@@ -29,11 +43,8 @@ std::vector<Expr> parse_exprs(const std::vector<std::string>& exprs, SourceLocat
 }
 bool can_assign_ast(const FunctionScope& scope, const std::string& expected, const Expr& expr,
                     const std::string& got) {
-    if (is_integer_type(expected)) {
-        if (const std::optional<std::string> path = member_path_from_expr(expr);
-            path && scope.symbols.native_enum_values.contains(*path)) {
-            return true;
-        }
+    if (is_native_enum_value_expr(scope, expr, expected)) {
+        return true;
     }
     return assignment_type_allowed(expected, expr, got) ||
            assignment_type_allowed(resolve_alias(scope.symbols, expected), expr,
@@ -44,11 +55,8 @@ bool can_assign_ast(const FunctionScope& scope, const std::string& expected, con
 bool can_assign_ast(const FunctionScope& scope, const TypeRef& expected, const Expr& expr,
                     const std::string& got) {
     const std::string expected_text = substitute_type_ref_text(expected, {});
-    if (is_integer_type(expected_text)) {
-        if (const std::optional<std::string> path = member_path_from_expr(expr);
-            path && scope.symbols.native_enum_values.contains(*path)) {
-            return true;
-        }
+    if (is_native_enum_value_expr(scope, expr, expected_text)) {
+        return true;
     }
     return assignment_type_allowed(expected, expr, got) ||
            assignment_type_allowed(resolve_alias(scope.symbols, expected_text), expr,
@@ -65,11 +73,8 @@ bool can_assign_ast(const FunctionScope& scope, const TypeRef& expected, const E
                     const TypeRef& got) {
     const std::string expected_text = substitute_type_ref_text(expected, {});
     const std::string got_text = substitute_type_ref_text(got, {});
-    if (is_integer_type(expected_text)) {
-        if (const std::optional<std::string> path = member_path_from_expr(expr);
-            path && scope.symbols.native_enum_values.contains(*path)) {
-            return true;
-        }
+    if (is_native_enum_value_expr(scope, expr, expected_text)) {
+        return true;
     }
     return assignment_type_allowed(expected, expr, got) ||
            assignment_type_allowed(resolve_alias(scope.symbols, expected_text), expr,
@@ -233,7 +238,7 @@ bool is_offsetof_field_expr(const Expr& expr) {
         return true;
     }
     if (expr.kind == ExprKind::Member) {
-        return member_path_from_expr(expr).has_value();
+        return expr_path_from_expr(expr).has_value();
     }
     return false;
 }

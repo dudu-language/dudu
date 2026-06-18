@@ -88,8 +88,8 @@ std::optional<std::string> ast_symbol_at_impl(const Document& doc, const Json* p
         if (expr.kind == ExprKind::Name || expr.kind == ExprKind::Member) {
             std::string name = expr.name;
             if (prefer_member_path && expr.kind == ExprKind::Member) {
-                if (const std::optional<std::string> path = member_path_from_expr(expr)) {
-                    name = *path;
+                if (const std::optional<ExprPath> path = expr_path_from_expr(expr)) {
+                    name = render_expr_path(*path);
                 }
             }
             set_if_hit(name, expr_name_location(expr));

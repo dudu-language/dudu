@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dudu/ast.hpp"
+#include "dudu/ast_expr.hpp"
 #include "dudu/sema_scope.hpp"
 
 #include <optional>
@@ -17,6 +18,8 @@ const SourceLocation& node_location(const SourceLocation& fallback, const TypeRe
 void bind_local(FunctionScope& scope, const std::string& name, const std::string& type,
                 const TypeRef& type_ref = {});
 std::vector<Expr> index_arg_exprs(const Expr& index_expr);
+std::optional<ExprPath> scoped_expr_path_from_expr(const FunctionScope& scope, const Expr& expr,
+                                                   const SourceLocation* location);
 std::optional<std::string> scoped_member_path_from_expr(const FunctionScope& scope,
                                                         const Expr& expr,
                                                         const SourceLocation* location);

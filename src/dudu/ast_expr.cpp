@@ -35,24 +35,51 @@ std::optional<std::string> path_index_from_expr(const Expr& expr) {
     }
 }
 
-std::optional<std::string> member_path_from_expr(const Expr& expr) {
+std::optional<ExprPath> expr_path_from_expr(const Expr& expr) {
     if (expr.kind == ExprKind::Name && !expr.name.empty()) {
-        return expr.name;
+        return ExprPath{
+            .segments = {
+                {.kind = ExprPathSegmentKind::Name, .text = expr.name, .location = expr.location}}};
     }
     if (expr.kind == ExprKind::Member && expr.children.size() == 1 && !expr.name.empty()) {
-        const std::optional<std::string> receiver = member_path_from_expr(expr.children.front());
+        std::optional<ExprPath> receiver = expr_path_from_expr(expr.children.front());
         if (receiver.has_value()) {
-            return *receiver + "." + expr.name;
+            receiver->segments.push_back(
+                {.kind = ExprPathSegmentKind::Name, .text = expr.name, .location = expr.location});
+            return receiver;
         }
     }
     if (expr.kind == ExprKind::Index && expr.children.size() == 2) {
-        const std::optional<std::string> receiver = member_path_from_expr(expr.children.front());
+        std::optional<ExprPath> receiver = expr_path_from_expr(expr.children.front());
         const std::optional<std::string> index = path_index_from_expr(expr.children[1]);
         if (receiver.has_value() && index.has_value()) {
-            return *receiver + "[" + *index + "]";
+            receiver->segments.push_back({.kind = ExprPathSegmentKind::Index,
+                                          .text = *index,
+                                          .location = expr.children[1].location});
+            return receiver;
         }
     }
     return std::nullopt;
+}
+
+std::string render_expr_path(const ExprPath& path) {
+    std::string out;
+    for (const ExprPathSegment& segment : path.segments) {
+        if (segment.kind == ExprPathSegmentKind::Index) {
+            out += "[" + segment.text + "]";
+            continue;
+        }
+        if (!out.empty()) {
+            out += ".";
+        }
+        out += segment.text;
+    }
+    return out;
+}
+
+std::optional<std::string> member_path_from_expr(const Expr& expr) {
+    const std::optional<ExprPath> path = expr_path_from_expr(expr);
+    return path ? std::optional<std::string>{render_expr_path(*path)} : std::nullopt;
 }
 
 bool expr_missing(const Expr& expr) {

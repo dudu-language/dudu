@@ -43,37 +43,52 @@ std::vector<Expr> index_arg_exprs(const Expr& index_expr) {
     return {index_expr};
 }
 
-std::optional<std::string> scoped_member_path_from_expr(const FunctionScope& scope,
-                                                        const Expr& expr,
-                                                        const SourceLocation* location) {
+std::optional<ExprPath> scoped_expr_path_from_expr(const FunctionScope& scope, const Expr& expr,
+                                                   const SourceLocation* location) {
     if (expr.kind == ExprKind::Name && !expr.name.empty()) {
         if (expr.name == "class") {
             if (!scope.current_class.empty()) {
-                return scope.current_class;
+                return ExprPath{.segments = {{.kind = ExprPathSegmentKind::Name,
+                                              .text = scope.current_class,
+                                              .location = expr.location}}};
             }
             if (location != nullptr) {
                 sema_fail(*location, "class static access outside class");
             }
             return std::nullopt;
         }
-        return expr.name;
+        return ExprPath{
+            .segments = {
+                {.kind = ExprPathSegmentKind::Name, .text = expr.name, .location = expr.location}}};
     }
     if (expr.kind == ExprKind::Member && expr.children.size() == 1 && !expr.name.empty()) {
-        const std::optional<std::string> receiver =
-            scoped_member_path_from_expr(scope, expr.children.front(), location);
+        std::optional<ExprPath> receiver =
+            scoped_expr_path_from_expr(scope, expr.children.front(), location);
         if (receiver.has_value()) {
-            return *receiver + "." + expr.name;
+            receiver->segments.push_back(
+                {.kind = ExprPathSegmentKind::Name, .text = expr.name, .location = expr.location});
+            return receiver;
         }
     }
     if (expr.kind == ExprKind::Index && expr.children.size() == 2) {
-        const std::optional<std::string> receiver =
-            scoped_member_path_from_expr(scope, expr.children.front(), location);
+        std::optional<ExprPath> receiver =
+            scoped_expr_path_from_expr(scope, expr.children.front(), location);
         const std::optional<std::string> index = path_index_from_expr(expr.children[1]);
         if (receiver.has_value() && index.has_value()) {
-            return *receiver + "[" + *index + "]";
+            receiver->segments.push_back({.kind = ExprPathSegmentKind::Index,
+                                          .text = *index,
+                                          .location = expr.children[1].location});
+            return receiver;
         }
     }
     return std::nullopt;
+}
+
+std::optional<std::string> scoped_member_path_from_expr(const FunctionScope& scope,
+                                                        const Expr& expr,
+                                                        const SourceLocation* location) {
+    const std::optional<ExprPath> path = scoped_expr_path_from_expr(scope, expr, location);
+    return path ? std::optional<std::string>{render_expr_path(*path)} : std::nullopt;
 }
 
 std::string scoped_call_callee_text(const FunctionScope& scope, const Expr& expr,

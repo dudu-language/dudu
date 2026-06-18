@@ -9,8 +9,8 @@ namespace dudu {
 namespace {
 
 std::string expr_path(const Expr& expr) {
-    if (const std::optional<std::string> path = member_path_from_expr(expr)) {
-        return *path;
+    if (const std::optional<ExprPath> path = expr_path_from_expr(expr)) {
+        return render_expr_path(*path);
     }
     return trim_copy(expr.text);
 }
