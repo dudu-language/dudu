@@ -1640,3 +1640,6 @@ push. They are not release packaging work.
    Receiver generic substitution for fields, methods, inherited methods, and
    inferred generic method signatures uses parsed receiver template arguments
    directly instead of rendering them to strings and reparsing them.
+   Generic function and class instantiation now also build substitution maps
+   with `TypeRef` values directly, removing another render/reparse step from
+   native Dudu generics.

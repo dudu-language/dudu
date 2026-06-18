@@ -15,11 +15,11 @@ namespace dudu {
 
 namespace {
 
-std::map<std::string, std::string> generic_substitutions(const std::vector<std::string>& params,
-                                                         const std::vector<TypeRef>& args) {
-    std::map<std::string, std::string> out;
+std::map<std::string, TypeRef> generic_substitutions(const std::vector<std::string>& params,
+                                                     const std::vector<TypeRef>& args) {
+    std::map<std::string, TypeRef> out;
     for (size_t i = 0; i < params.size() && i < args.size(); ++i) {
-        out.emplace(params[i], substitute_type_ref_text(args[i], {}));
+        out.emplace(params[i], args[i]);
     }
     return out;
 }
@@ -240,7 +240,7 @@ std::optional<std::vector<TypeRef>> infer_generic_method_type_args_from_type_ref
 
 FunctionSignature instantiate_generic_signature(const FunctionDecl& fn,
                                                 const std::vector<TypeRef>& args) {
-    const std::map<std::string, std::string> substitutions =
+    const std::map<std::string, TypeRef> substitutions =
         generic_substitutions(fn.generic_params, args);
     FunctionSignature signature;
     set_signature_return_type(signature,
@@ -258,7 +258,7 @@ FunctionSignature instantiate_generic_signature(const FunctionDecl& fn,
 
 ClassDecl instantiate_generic_class(ClassDecl klass, const std::vector<TypeRef>& args,
                                     const std::string& instantiated_name) {
-    const std::map<std::string, std::string> substitutions =
+    const std::map<std::string, TypeRef> substitutions =
         generic_substitutions(klass.generic_params, args);
     klass.name = instantiated_name;
     for (BaseClassDecl& base : klass.base_class_refs) {
@@ -282,17 +282,6 @@ ClassDecl instantiate_generic_class(ClassDecl klass, const std::vector<TypeRef>&
         }
     }
     return klass;
-}
-
-std::string join_type_ref_texts(const std::vector<TypeRef>& types) {
-    std::ostringstream out;
-    for (size_t i = 0; i < types.size(); ++i) {
-        if (i > 0) {
-            out << ", ";
-        }
-        out << substitute_type_ref_text(types[i], {});
-    }
-    return out.str();
 }
 
 std::string template_method_name(const Expr& expr, const std::string& callee_base,
