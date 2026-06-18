@@ -12,6 +12,12 @@ std::string lower_function_type(const TypeRef& type, bool pointer);
 std::string lower_function_type(const TypeRef& type, bool pointer,
                                 const std::vector<std::string>& namespace_aliases);
 
+[[noreturn]] void malformed_type_ref(const TypeRef& type) {
+    throw CompileError(type.location,
+                       "malformed structured type node: " + std::string(type_kind_name(type.kind)) +
+                           " is missing its child type");
+}
+
 std::string join_lowered_type_args(const std::vector<TypeRef>& args, size_t start = 0) {
     std::ostringstream out;
     for (size_t i = start; i < args.size(); ++i) {
@@ -287,26 +293,42 @@ std::string lower_cpp_type(const TypeRef& type) {
     case TypeKind::Template:
         return lower_template_type(type);
     case TypeKind::Pointer:
-        return type.children.empty() ? lower_cpp_type(type.text)
-                                     : lower_cpp_type(type.children[0]) + "*";
+        if (type.children.empty()) {
+            malformed_type_ref(type);
+        }
+        return lower_cpp_type(type.children[0]) + "*";
     case TypeKind::Reference:
-        return type.children.empty() ? lower_cpp_type(type.text)
-                                     : lower_cpp_type(type.children[0]) + "&";
+        if (type.children.empty()) {
+            malformed_type_ref(type);
+        }
+        return lower_cpp_type(type.children[0]) + "&";
     case TypeKind::Const:
-        return type.children.empty() ? lower_cpp_type(type.text)
-                                     : lower_top_level_const_type(type.children[0]);
+        if (type.children.empty()) {
+            malformed_type_ref(type);
+        }
+        return lower_top_level_const_type(type.children[0]);
     case TypeKind::Volatile:
-        return type.children.empty() ? lower_cpp_type(type.text)
-                                     : "volatile " + lower_cpp_type(type.children[0]);
+        if (type.children.empty()) {
+            malformed_type_ref(type);
+        }
+        return "volatile " + lower_cpp_type(type.children[0]);
     case TypeKind::Atomic:
-        return type.children.empty() ? lower_cpp_type(type.text)
-                                     : "std::atomic<" + lower_cpp_type(type.children[0]) + ">";
+        if (type.children.empty()) {
+            malformed_type_ref(type);
+        }
+        return "std::atomic<" + lower_cpp_type(type.children[0]) + ">";
     case TypeKind::Device:
     case TypeKind::Storage:
     case TypeKind::Shared:
-        return type.children.empty() ? lower_cpp_type(type.text) : lower_cpp_type(type.children[0]);
+        if (type.children.empty()) {
+            malformed_type_ref(type);
+        }
+        return lower_cpp_type(type.children[0]);
     case TypeKind::Static:
-        return type.children.empty() ? lower_cpp_type(type.text) : lower_cpp_type(type.children[0]);
+        if (type.children.empty()) {
+            malformed_type_ref(type);
+        }
+        return lower_cpp_type(type.children[0]);
     case TypeKind::FixedArray:
         return lower_fixed_array_type(type);
     case TypeKind::Function:
@@ -314,7 +336,7 @@ std::string lower_cpp_type(const TypeRef& type) {
     case TypeKind::Unknown:
         return lower_cpp_type(type.text);
     }
-    return lower_cpp_type(type.text);
+    malformed_type_ref(type);
 }
 
 std::string lower_cpp_type(const TypeRef& type, const std::vector<std::string>& namespace_aliases) {
@@ -333,31 +355,42 @@ std::string lower_cpp_type(const TypeRef& type, const std::vector<std::string>& 
     case TypeKind::Template:
         return lower_template_type(type, namespace_aliases);
     case TypeKind::Pointer:
-        return type.children.empty() ? lower_cpp_type(type.text, namespace_aliases)
-                                     : lower_cpp_type(type.children[0], namespace_aliases) + "*";
+        if (type.children.empty()) {
+            malformed_type_ref(type);
+        }
+        return lower_cpp_type(type.children[0], namespace_aliases) + "*";
     case TypeKind::Reference:
-        return type.children.empty() ? lower_cpp_type(type.text, namespace_aliases)
-                                     : lower_cpp_type(type.children[0], namespace_aliases) + "&";
+        if (type.children.empty()) {
+            malformed_type_ref(type);
+        }
+        return lower_cpp_type(type.children[0], namespace_aliases) + "&";
     case TypeKind::Const:
-        return type.children.empty()
-                   ? lower_cpp_type(type.text, namespace_aliases)
-                   : lower_top_level_const_type(type.children[0], namespace_aliases);
+        if (type.children.empty()) {
+            malformed_type_ref(type);
+        }
+        return lower_top_level_const_type(type.children[0], namespace_aliases);
     case TypeKind::Volatile:
-        return type.children.empty()
-                   ? lower_cpp_type(type.text, namespace_aliases)
-                   : "volatile " + lower_cpp_type(type.children[0], namespace_aliases);
+        if (type.children.empty()) {
+            malformed_type_ref(type);
+        }
+        return "volatile " + lower_cpp_type(type.children[0], namespace_aliases);
     case TypeKind::Atomic:
-        return type.children.empty()
-                   ? lower_cpp_type(type.text, namespace_aliases)
-                   : "std::atomic<" + lower_cpp_type(type.children[0], namespace_aliases) + ">";
+        if (type.children.empty()) {
+            malformed_type_ref(type);
+        }
+        return "std::atomic<" + lower_cpp_type(type.children[0], namespace_aliases) + ">";
     case TypeKind::Device:
     case TypeKind::Storage:
     case TypeKind::Shared:
-        return type.children.empty() ? lower_cpp_type(type.text, namespace_aliases)
-                                     : lower_cpp_type(type.children[0], namespace_aliases);
+        if (type.children.empty()) {
+            malformed_type_ref(type);
+        }
+        return lower_cpp_type(type.children[0], namespace_aliases);
     case TypeKind::Static:
-        return type.children.empty() ? lower_cpp_type(type.text, namespace_aliases)
-                                     : lower_cpp_type(type.children[0], namespace_aliases);
+        if (type.children.empty()) {
+            malformed_type_ref(type);
+        }
+        return lower_cpp_type(type.children[0], namespace_aliases);
     case TypeKind::FixedArray:
         return lower_fixed_array_type(type, namespace_aliases);
     case TypeKind::Function:
@@ -365,7 +398,7 @@ std::string lower_cpp_type(const TypeRef& type, const std::vector<std::string>& 
     case TypeKind::Unknown:
         return lower_cpp_type(type.text, namespace_aliases);
     }
-    return lower_cpp_type(type.text, namespace_aliases);
+    malformed_type_ref(type);
 }
 
 std::string lower_cpp_type(const TypeRef& type, const CppEmitOptions& options) {
@@ -389,34 +422,42 @@ std::string lower_cpp_type(const TypeRef& type, const std::vector<std::string>& 
     case TypeKind::Template:
         return lower_template_type(type, namespace_aliases, options);
     case TypeKind::Pointer:
-        return type.children.empty()
-                   ? lower_cpp_type(type.text, namespace_aliases, options)
-                   : lower_cpp_type(type.children[0], namespace_aliases, options) + "*";
+        if (type.children.empty()) {
+            malformed_type_ref(type);
+        }
+        return lower_cpp_type(type.children[0], namespace_aliases, options) + "*";
     case TypeKind::Reference:
-        return type.children.empty()
-                   ? lower_cpp_type(type.text, namespace_aliases, options)
-                   : lower_cpp_type(type.children[0], namespace_aliases, options) + "&";
+        if (type.children.empty()) {
+            malformed_type_ref(type);
+        }
+        return lower_cpp_type(type.children[0], namespace_aliases, options) + "&";
     case TypeKind::Const:
-        return type.children.empty()
-                   ? lower_cpp_type(type.text, namespace_aliases, options)
-                   : lower_top_level_const_type(type.children[0], namespace_aliases, options);
+        if (type.children.empty()) {
+            malformed_type_ref(type);
+        }
+        return lower_top_level_const_type(type.children[0], namespace_aliases, options);
     case TypeKind::Volatile:
-        return type.children.empty()
-                   ? lower_cpp_type(type.text, namespace_aliases, options)
-                   : "volatile " + lower_cpp_type(type.children[0], namespace_aliases, options);
+        if (type.children.empty()) {
+            malformed_type_ref(type);
+        }
+        return "volatile " + lower_cpp_type(type.children[0], namespace_aliases, options);
     case TypeKind::Atomic:
-        return type.children.empty()
-                   ? lower_cpp_type(type.text, namespace_aliases, options)
-                   : "std::atomic<" + lower_cpp_type(type.children[0], namespace_aliases, options) +
-                         ">";
+        if (type.children.empty()) {
+            malformed_type_ref(type);
+        }
+        return "std::atomic<" + lower_cpp_type(type.children[0], namespace_aliases, options) + ">";
     case TypeKind::Device:
     case TypeKind::Storage:
     case TypeKind::Shared:
-        return type.children.empty() ? lower_cpp_type(type.text, namespace_aliases, options)
-                                     : lower_cpp_type(type.children[0], namespace_aliases, options);
+        if (type.children.empty()) {
+            malformed_type_ref(type);
+        }
+        return lower_cpp_type(type.children[0], namespace_aliases, options);
     case TypeKind::Static:
-        return type.children.empty() ? lower_cpp_type(type.text, namespace_aliases, options)
-                                     : lower_cpp_type(type.children[0], namespace_aliases, options);
+        if (type.children.empty()) {
+            malformed_type_ref(type);
+        }
+        return lower_cpp_type(type.children[0], namespace_aliases, options);
     case TypeKind::FixedArray:
         return lower_fixed_array_type(type, namespace_aliases, options);
     case TypeKind::Function:
@@ -424,7 +465,7 @@ std::string lower_cpp_type(const TypeRef& type, const std::vector<std::string>& 
     case TypeKind::Unknown:
         return lower_cpp_type(type.text, namespace_aliases, options);
     }
-    return lower_cpp_type(type.text, namespace_aliases, options);
+    malformed_type_ref(type);
 }
 
 } // namespace dudu

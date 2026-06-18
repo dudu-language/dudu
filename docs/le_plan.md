@@ -1789,3 +1789,8 @@ push. They are not release packaging work.
    types. Assignment compatibility uses that structured path, so normal
    expected/got type checks no longer render normalized `TypeRef`s and reparse
    them; only the foreign spelling overload still parses raw C++ text.
+   C++ type emission now rejects malformed structured pointer, reference,
+   wrapper, and fixed-array `TypeRef` nodes instead of falling back to
+   `TypeRef.text`. The raw string type-lowering overload remains the explicit
+   boundary for imported/native spellings, while structured lowering requires
+   structured children.

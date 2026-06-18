@@ -4,10 +4,18 @@
 #include "dudu/cpp_type_internal.hpp"
 
 namespace dudu {
+namespace {
+
+[[noreturn]] void malformed_fixed_array_type_ref(const TypeRef& type) {
+    throw CompileError(type.location,
+                       "malformed structured type node: fixed array is missing its element type");
+}
+
+} // namespace
 
 std::string lower_fixed_array_type(const TypeRef& type) {
     if (type.children.empty()) {
-        return lower_cpp_type(type.text);
+        malformed_fixed_array_type_ref(type);
     }
     const TypeRef& storage = type.children.front();
     std::string out;
@@ -27,7 +35,7 @@ std::string lower_fixed_array_type(const TypeRef& type) {
 std::string lower_fixed_array_type(const TypeRef& type,
                                    const std::vector<std::string>& namespace_aliases) {
     if (type.children.empty()) {
-        return lower_cpp_type(type.text, namespace_aliases);
+        malformed_fixed_array_type_ref(type);
     }
     const TypeRef& storage = type.children.front();
     std::string out;
@@ -48,7 +56,7 @@ std::string lower_fixed_array_type(const TypeRef& type,
                                    const std::vector<std::string>& namespace_aliases,
                                    const CppEmitOptions& options) {
     if (type.children.empty()) {
-        return lower_cpp_type(type.text, namespace_aliases, options);
+        malformed_fixed_array_type_ref(type);
     }
     const TypeRef& storage = type.children.front();
     std::string out;
