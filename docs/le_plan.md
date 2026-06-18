@@ -1222,3 +1222,22 @@ declarations safely.
    found in the implementation. Optional expression holes now use a dedicated
    `Missing` expression kind; `Unknown` is reserved for unsupported source text
    that should be diagnosed rather than interpreted.
+
+17. Delete AST Migration Fallbacks
+
+   After each language form has structured parser, semantic, codegen,
+   diagnostic, lint, LSP, and formatter coverage, remove the compatibility
+   mirrors that existed only to keep the compiler green during migration.
+
+   This includes fallback string callbacks such as assignability hooks that
+   receive rendered type names, raw statement/value mirrors that duplicate
+   structured `Stmt` and `Expr` fields, string-only local/type maps when a
+   `TypeRef` map is authoritative, and parser helpers that reparse text that
+   was already tokenized. Explicit user escape hatches such as `cpp(...)` may
+   remain, but compiler-internal fallback APIs should be deleted once their
+   callers have structured equivalents.
+
+   Status: in progress. Body, generic, constructor, and native assignment
+   paths are being migrated from rendered string type pairs to parsed
+   `TypeRef` pairs. The remaining compatibility callbacks and mirrors should
+   be removed rather than normalized into permanent API.

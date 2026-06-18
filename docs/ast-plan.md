@@ -1969,6 +1969,9 @@ LSP source edits are also moving to AST-owned ranges:
   callbacks over parsed `TypeRef` nodes. Constructor diagnostics still render
   types at the edge, but overload matching no longer stringifies expected and
   actual argument types before checking compatibility.
+- Body checking no longer exposes the older rendered-string assignability
+  callback. Body assignment checks now use the structured `TypeRef` callback
+  path, including array literal element checks.
 
 Expression parsing has moved onto the lexer/token stream:
 

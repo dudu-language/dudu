@@ -24,11 +24,7 @@ bool type_ref_is_name(const TypeRef& type, std::string_view name) {
 
 bool callback_can_assign_type(const BodyCheckCallbacks& callbacks, const FunctionScope& scope,
                               const TypeRef& expected, const Expr& expr, const TypeRef& got) {
-    if (callbacks.can_assign_type) {
-        return callbacks.can_assign_type(scope, expected, expr, got);
-    }
-    return callbacks.can_assign(scope, substitute_type_ref_text(expected, {}), expr,
-                                substitute_type_ref_text(got, {}));
+    return callbacks.can_assign_type(scope, expected, expr, got);
 }
 
 void check_type_match(FunctionScope& scope, const TypeRef& expected_ref, const Expr& expr,
@@ -128,7 +124,7 @@ void check_array_literal_elements(FunctionScope& scope, const TypeRef& element_t
         const std::string expected_text = substitute_type_ref_text(element_type, {});
         const std::string got = substitute_type_ref_text(got_ref, {});
         if (!type_assignment_allowed(element_type, got_ref) &&
-            !callbacks.can_assign(scope, expected_text, expr, got)) {
+            !callback_can_assign_type(callbacks, scope, element_type, expr, got_ref)) {
             sema_fail(location, "array literal element expects " + expected_text + ", got " + got);
         }
         return;

@@ -13,8 +13,6 @@ namespace dudu {
 struct BodyCheckCallbacks {
     std::function<TypeRef(const FunctionScope&, const Expr&, const SourceLocation*)>
         infer_expr_type;
-    std::function<bool(const FunctionScope&, const std::string&, const Expr&, const std::string&)>
-        can_assign;
     std::function<bool(const FunctionScope&, const TypeRef&, const Expr&, const TypeRef&)>
         can_assign_type;
     std::function<void(const FunctionScope&, const std::string&, const FunctionSignature&,
