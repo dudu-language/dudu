@@ -1923,3 +1923,7 @@ push. They are not release packaging work.
    Core `type_ref_equivalent` now compares parsed head names and value fields
    for named/template/value nodes instead of falling back to raw
    `TypeRef.text`; only `Unknown` nodes compare raw text.
+   `type_ref_head_name` and `substitute_type_ref_text` now render
+   named/qualified/template/value nodes from parsed `name` or `value` fields
+   only, leaving raw text rendering to `Unknown` and malformed wrapper
+   fallback cases.

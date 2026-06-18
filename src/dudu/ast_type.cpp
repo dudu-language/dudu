@@ -93,9 +93,9 @@ std::string type_ref_head_name(const TypeRef& type) {
     case TypeKind::Named:
     case TypeKind::Qualified:
     case TypeKind::Template:
-        return trim_copy(type.name.empty() ? type.text : type.name);
+        return trim_copy(type.name);
     case TypeKind::Value:
-        return trim_copy(type.value.empty() ? type.text : type.value);
+        return trim_copy(type.value);
     case TypeKind::Function:
         return "fn";
     case TypeKind::Pointer:
@@ -176,10 +176,10 @@ std::string substitute_type_ref_text(const TypeRef& type,
         return "fn(" + join_substituted_types(type.children, 1, substitutions) + ") -> " + result;
     }
     case TypeKind::Value:
-        return trim_copy(type.value.empty() ? type.text : type.value);
+        return trim_copy(type.value);
     case TypeKind::Named:
     case TypeKind::Qualified:
-        return trim_copy(type.name.empty() ? type.text : type.name);
+        return trim_copy(type.name);
     case TypeKind::Unknown:
         return trim_copy(type.text);
     }
