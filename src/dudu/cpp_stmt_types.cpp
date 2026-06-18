@@ -14,12 +14,6 @@
 namespace dudu {
 namespace {
 
-std::string receiver_base_type_fallback(const TypeRef& type) {
-    const std::string text = trim_copy(substitute_type_ref_text(type, {}));
-    const size_t bracket = text.find('[');
-    return bracket == std::string::npos ? text : trim_copy(text.substr(0, bracket));
-}
-
 std::string receiver_base_type(const TypeRef& type) {
     switch (type.kind) {
     case TypeKind::Pointer:
@@ -39,11 +33,10 @@ std::string receiver_base_type(const TypeRef& type) {
     case TypeKind::Qualified:
     case TypeKind::Function:
     case TypeKind::Value:
-        return type_ref_head_name(type);
     case TypeKind::Unknown:
-        break;
+        return type_ref_head_name(type);
     }
-    return receiver_base_type_fallback(type);
+    return type_ref_head_name(type);
 }
 
 size_t index_count(const Expr& expr) {

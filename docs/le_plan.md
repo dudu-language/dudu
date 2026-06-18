@@ -1239,6 +1239,9 @@ declarations safely.
    callbacks are migration scaffolding only: after the structured AST path
    owns a behavior, the matching callback must be removed rather than kept as
    a parallel implementation or quiet recovery path.
+   Finish this milestone with a codebase-wide audit for fallback string
+   callbacks, callback adapters, and compatibility mirrors, and delete every
+   compiler-internal one that is no longer an explicit native/C++ boundary.
 
    Status: in progress. Body, generic, constructor, and native assignment
    paths are being migrated from rendered string type pairs to parsed
@@ -1282,3 +1285,6 @@ declarations safely.
    unused string-returning wrappers have been removed.
    Member-expression typing now exposes the parsed `TypeRef` API only; the
    explicit C++ escape boundary renders the result locally.
+   Emitted local call-return inference no longer has an internal receiver-base
+   string fallback that renders a type and peels brackets; it relies on parsed
+   `TypeRef` shape and `type_ref_head_name`.
