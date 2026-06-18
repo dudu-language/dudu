@@ -1973,6 +1973,9 @@ push. They are not release packaging work.
    once into `TypeRef` nodes at the call boundary and uses the structured
    substitution overload; the duplicate string-argument substitution overload
    has been deleted.
+   Explicit native template substitution now requires structured parameter and
+   return `TypeRef` metadata instead of falling back to signature text
+   replacement and reparsing.
    LSP semantic type-token collection now uses `TypeRef` helper APIs for type
    heads and rendered spellings instead of reading `name`/`text` fields
    directly.

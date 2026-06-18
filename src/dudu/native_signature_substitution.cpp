@@ -114,25 +114,8 @@ std::vector<std::string> native_signature_placeholders(const FunctionSignature& 
     return out;
 }
 
-std::string replace_explicit_template_args(std::string type, const std::vector<std::string>& names,
-                                           const std::vector<std::string>& args) {
-    for (size_t i = 0; i < args.size() && i < names.size(); ++i) {
-        type = replace_type_identifier(std::move(type), names[i], args[i]);
-    }
-    return type;
-}
-
 std::string explicit_template_arg_text(const TypeRef& arg) {
     return substitute_type_ref_text(arg, {});
-}
-
-std::vector<std::string> explicit_template_arg_texts(const std::vector<TypeRef>& args) {
-    std::vector<std::string> out;
-    out.reserve(args.size());
-    for (const TypeRef& arg : args) {
-        out.push_back(explicit_template_arg_text(arg));
-    }
-    return out;
 }
 
 std::map<std::string, TypeRef>
@@ -241,6 +224,14 @@ std::string replace_template_bindings(std::string type, const NativeTemplateBind
 
 std::map<std::string, TypeRef> type_ref_bindings(const NativeTemplateBindings& bindings) {
     return bindings;
+}
+
+TypeRef require_signature_type_ref(const TypeRef& type, std::string_view context) {
+    if (has_type_ref(type)) {
+        return type;
+    }
+    throw CompileError(type.location, "malformed native signature: missing " +
+                                          std::string(context) + " type metadata");
 }
 
 bool structured_binding_text(std::string_view type) {
@@ -359,29 +350,17 @@ FunctionSignature substitute_explicit_template_signature(FunctionSignature signa
                                                : signature.template_params;
     const std::map<std::string, TypeRef> ref_bindings =
         explicit_template_type_ref_bindings(names, args);
-    const std::vector<std::string> arg_texts = explicit_template_arg_texts(args);
     std::vector<TypeRef> param_types;
     param_types.reserve(signature_param_count(signature));
     for (size_t i = 0; i < signature_param_count(signature); ++i) {
-        const TypeRef param_type = signature_param_type_ref(signature, i);
-        if (has_type_ref(param_type)) {
-            param_types.push_back(substitute_type_ref(param_type, ref_bindings));
-        } else {
-            const std::string param_text = replace_explicit_template_args(
-                signature_param_type_text(signature, i), names, arg_texts);
-            param_types.push_back(parse_type_text(param_text));
-        }
+        const TypeRef param_type =
+            require_signature_type_ref(signature_param_type_ref(signature, i), "parameter");
+        param_types.push_back(substitute_type_ref(param_type, ref_bindings));
     }
     set_signature_param_types(signature, std::move(param_types));
-    const TypeRef return_type = signature_return_type_ref(signature);
-    if (has_type_ref(return_type)) {
-        set_signature_return_type(signature, substitute_type_ref(return_type, ref_bindings));
-    } else {
-        set_signature_return_type(
-            signature, parse_type_text(replace_explicit_template_args(
-                                           signature_return_type_text(signature), names, arg_texts),
-                                       return_type.location));
-    }
+    const TypeRef return_type =
+        require_signature_type_ref(signature_return_type_ref(signature), "return");
+    set_signature_return_type(signature, substitute_type_ref(return_type, ref_bindings));
     return signature;
 }
 
