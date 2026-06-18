@@ -121,6 +121,23 @@ std::optional<TypeRef> infer_parsed_unary_escape_ref(const FunctionScope& scope,
     return std::nullopt;
 }
 
+std::optional<TypeRef> infer_parsed_template_escape_ref(const FunctionScope& scope,
+                                                        const Expr& parsed,
+                                                        const SourceLocation* location) {
+    if (parsed.kind != ExprKind::TemplateCall) {
+        return std::nullopt;
+    }
+    const std::string callee = direct_callee_name(parsed);
+    if (const auto allocation = infer_allocation_call_type_ref(
+            scope.symbols, location, callee, template_type_refs(parsed), parsed.children.size())) {
+        for (const Expr& arg : parsed.children) {
+            (void)infer_expr_type_ast(scope, arg, location);
+        }
+        return *allocation;
+    }
+    return std::nullopt;
+}
+
 std::optional<std::string> infer_parsed_name_escape(const FunctionScope& scope, const Expr& parsed,
                                                     const SourceLocation* location) {
     if (parsed.kind != ExprKind::Name) {
@@ -180,6 +197,9 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
         }
     }
     if (const auto type = infer_parsed_unary_escape_ref(scope, parsed_expr, location)) {
+        return render_type(*type);
+    }
+    if (const auto type = infer_parsed_template_escape_ref(scope, parsed_expr, location)) {
         return render_type(*type);
     }
     std::optional<EscapeCall> call_info = parsed_escape_call(parsed_expr);

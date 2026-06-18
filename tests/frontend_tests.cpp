@@ -14,6 +14,7 @@
 #include "dudu/project_config.hpp"
 #include "dudu/sema.hpp"
 #include "dudu/sema_alloc.hpp"
+#include "dudu/sema_expr_internal.hpp"
 #include "dudu/sema_function_type.hpp"
 #include "dudu/sema_index.hpp"
 #include "dudu/type_compat.hpp"
@@ -613,6 +614,7 @@ void test_lsp_references_track_assignment_bindings() {
 
 void test_allocation_type_ref_diagnostics() {
     dudu::Symbols symbols;
+    const dudu::FunctionScope scope(symbols);
     const dudu::SourceLocation location{.file = "cpp_escape_alloc.dd", .line = 7, .column = 12};
 
     const std::vector<dudu::TypeRef> type_args = {dudu::parse_type_text("list[i32]", location)};
@@ -623,11 +625,11 @@ void test_allocation_type_ref_diagnostics() {
     assert(allocation->children.size() == 1);
     assert(allocation->children.front().kind == dudu::TypeKind::Template);
     assert(dudu::substitute_type_ref_text(*allocation, {}) == "*list[i32]");
+    assert(dudu::infer_cpp_escape_expr(scope, "new[list[i32]]()", &location) == "*list[i32]");
 
     bool rejected = false;
     try {
-        (void)dudu::infer_cpp_escape_allocation_call(symbols, &location, "new[list[MissingType]]",
-                                                     std::vector<dudu::Expr>{});
+        (void)dudu::infer_cpp_escape_expr(scope, "new[list[MissingType]]()", &location);
     } catch (const dudu::CompileError& error) {
         assert(error.location().line == 7);
         assert(error.location().column > location.column);
