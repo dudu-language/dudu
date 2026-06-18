@@ -8,6 +8,9 @@ namespace {
 std::string cpp_escape_member_path_type(const FunctionScope& scope, const SourceLocation* location,
                                         const std::string& path);
 
+std::string cpp_escape_member_expr_type(const FunctionScope& scope, const SourceLocation* location,
+                                        const Expr& expr);
+
 std::vector<Expr> parse_escape_exprs(const std::vector<std::string>& exprs,
                                      SourceLocation location) {
     std::vector<Expr> out;
@@ -73,7 +76,7 @@ std::optional<std::string> infer_parsed_index_escape(const FunctionScope& scope,
     if (const auto path = expr_path_from_expr(receiver)) {
         const std::string name = render_expr_path(*path);
         if (is_member_path(name)) {
-            const std::string receiver_type = cpp_escape_member_path_type(scope, location, name);
+            const std::string receiver_type = cpp_escape_member_expr_type(scope, location, receiver);
             if (!receiver_type.empty()) {
                 return substitute_type_ref_text(
                     indexed_type_ref_from_type(scope.symbols, *location,
@@ -86,15 +89,20 @@ std::optional<std::string> infer_parsed_index_escape(const FunctionScope& scope,
     return std::nullopt;
 }
 
-std::string cpp_escape_member_path_type(const FunctionScope& scope, const SourceLocation* location,
-                                        const std::string& path) {
-    const SourceLocation parse_location = location == nullptr ? SourceLocation{} : *location;
-    const Expr expr = parse_expr_text(path, parse_location);
+std::string cpp_escape_member_expr_type(const FunctionScope& scope, const SourceLocation* location,
+                                        const Expr& expr) {
     if (expr.kind == ExprKind::Unknown) {
         return {};
     }
     const TypeRef type = member_expr_type_ref(scope.symbols, scope.local_type_refs, location, expr);
     return has_type_ref(type) ? substitute_type_ref_text(type, {}) : std::string{};
+}
+
+std::string cpp_escape_member_path_type(const FunctionScope& scope, const SourceLocation* location,
+                                        const std::string& path) {
+    const SourceLocation parse_location = location == nullptr ? SourceLocation{} : *location;
+    const Expr expr = parse_expr_text(path, parse_location);
+    return cpp_escape_member_expr_type(scope, location, expr);
 }
 
 std::string pointer_type_text(TypeRef pointee, SourceLocation location) {
@@ -383,6 +391,12 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
                                                parse_expr_text(index_expr, *location), name),
                     {});
             }
+        }
+    }
+    if (parsed_expr.kind == ExprKind::Member) {
+        const std::string type = cpp_escape_member_expr_type(scope, location, parsed_expr);
+        if (!type.empty()) {
+            return type;
         }
     }
     const size_t dot = expr.find('.');
