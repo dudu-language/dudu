@@ -377,9 +377,8 @@ std::vector<TypeRef> TypeTokenParser::parse_angle_template_args() {
             }
             ++cursor_;
         }
-        out.push_back(parse_type_text(text_between(begin, cursor_), begin < tokens_.size()
-                                                                        ? tokens_[begin].location
-                                                                        : SourceLocation{}));
+        TypeTokenParser parser(tokens_.subspan(begin, cursor_ - begin));
+        out.push_back(parser.parse());
         if (at(TokenKind::Comma)) {
             ++cursor_;
         }

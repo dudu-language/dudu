@@ -1746,3 +1746,6 @@ push. They are not release packaging work.
    Pointer-style type calls in the expression token parser now parse their
    callee type from the original token span, removing another normal expression
    parser render-and-reparse path.
+   Angle-bracket template arguments in the type-token parser now parse from
+   token subspans instead of reconstructing each argument as text and sending it
+   back through `parse_type_text`.
