@@ -17,20 +17,10 @@
 namespace dudu {
 namespace {
 
-bool is_numeric_type(const std::string& type) {
+bool is_numeric_type_name(const std::string& type) {
     static const std::set<std::string> numeric = {"i8",  "i16", "i32", "i64", "u8",    "u16",
                                                   "u32", "u64", "f32", "f64", "usize", "isize"};
     return numeric.contains(type);
-}
-
-std::string wrapped_type_arg(std::string type) {
-    type = trim_copy(std::move(type));
-    if (const auto inner = unary_type_child_ref(
-            parse_type_text(type), {TypeKind::Const, TypeKind::Atomic, TypeKind::Volatile,
-                                    TypeKind::Device, TypeKind::Storage, TypeKind::Shared})) {
-        return substitute_type_ref_text(*inner, {});
-    }
-    return type;
 }
 
 TypeRef wrapped_type_arg_ref(const TypeRef& type) {
@@ -40,6 +30,10 @@ TypeRef wrapped_type_arg_ref(const TypeRef& type) {
         return *inner;
     }
     return type;
+}
+
+bool is_numeric_type(const TypeRef& type) {
+    return is_numeric_type_name(type_ref_head_name(wrapped_type_arg_ref(type)));
 }
 
 std::optional<TypeRef> unary_child_ref(const TypeRef& type, TypeKind kind) {
@@ -193,7 +187,7 @@ bool is_cpp_associated_type_binding(const TypeRef& expected, const TypeRef& got)
         return false;
     }
     if ((expected_name == "size_type" || expected_name == "difference_type") &&
-        is_numeric_type(wrapped_type_arg(type_ref_spelling(got)))) {
+        is_numeric_type(got)) {
         return true;
     }
     if (type_ref_ends_with_name(got, expected_name)) {
@@ -373,8 +367,7 @@ bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const Ty
            is_cpp_associated_type_binding(normalized_expected_ref, normalized_got_ref) ||
            (normalized_expected == "cstr" && normalized_got == "str" &&
             expr.kind == ExprKind::StringLiteral) ||
-           (is_numeric_type(wrapped_type_arg(normalized_expected)) &&
-            simple_literal_type(expr) == "number");
+           (is_numeric_type(normalized_expected_ref) && simple_literal_type(expr) == "number");
 }
 
 std::string display_type(const Expr& expr, const std::string& got) {

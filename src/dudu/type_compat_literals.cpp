@@ -10,19 +10,23 @@
 namespace dudu {
 namespace {
 
-bool is_numeric_type(const std::string& type) {
+bool is_numeric_type_name(const std::string& type) {
     static const std::set<std::string> numeric = {"i8",  "i16", "i32", "i64", "u8",    "u16",
                                                   "u32", "u64", "f32", "f64", "usize", "isize"};
     return numeric.contains(type);
 }
 
-std::string wrapped_type_arg(const TypeRef& type) {
+TypeRef wrapped_type_arg(const TypeRef& type) {
     if (const auto inner =
             unary_type_child_ref(type, {TypeKind::Const, TypeKind::Atomic, TypeKind::Volatile,
                                         TypeKind::Device, TypeKind::Storage, TypeKind::Shared})) {
-        return substitute_type_ref_text(*inner, {});
+        return *inner;
     }
-    return substitute_type_ref_text(type, {});
+    return type;
+}
+
+bool is_numeric_type(const TypeRef& type) {
+    return is_numeric_type_name(type_ref_head_name(wrapped_type_arg(type)));
 }
 
 TypeRef simple_literal_type_ref(const Expr& expr) {
@@ -64,7 +68,7 @@ bool literal_assignable_to(const TypeRef& expected, const Expr& expr) {
         if (expected.kind == TypeKind::Template && expected.name == "variant") {
             return assignment_type_allowed(expected, expr, got);
         }
-        return is_numeric_type(wrapped_type_arg(expected));
+        return is_numeric_type(expected);
     }
     return assignment_type_allowed(expected, expr, got);
 }
@@ -140,7 +144,7 @@ bool option_value_allowed(const TypeRef& expected, const Expr& expr, const TypeR
         return false;
     }
     return expr.kind == ExprKind::NoneLiteral || type_ref_equivalent(got, parts[0]) ||
-           (is_numeric_type(wrapped_type_arg(parts[0])) &&
+           (is_numeric_type(parts[0]) &&
             (expr.kind == ExprKind::IntLiteral || expr.kind == ExprKind::FloatLiteral));
 }
 
