@@ -27,7 +27,9 @@ std::string cpp_escape_member_path_type(const FunctionScope& scope, const Source
     if (expr.kind == ExprKind::Unknown) {
         return {};
     }
-    return member_expr_type(scope.symbols, scope.local_type_refs, location, expr);
+    const TypeRef type =
+        member_expr_type_ref(scope.symbols, scope.local_type_refs, location, expr);
+    return has_type_ref(type) ? substitute_type_ref_text(type, {}) : std::string{};
 }
 
 } // namespace

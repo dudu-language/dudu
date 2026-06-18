@@ -10,11 +10,6 @@
 
 namespace dudu {
 
-std::string member_expr_type(const Symbols& symbols,
-                             const std::map<std::string, TypeRef>& local_type_refs,
-                             const SourceLocation* location, const Expr& expr,
-                             std::string_view unknown_local_prefix = {},
-                             std::string_view current_class = {});
 TypeRef member_expr_type_ref(const Symbols& symbols,
                              const std::map<std::string, TypeRef>& local_type_refs,
                              const SourceLocation* location, const Expr& expr,

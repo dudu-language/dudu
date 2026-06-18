@@ -123,16 +123,6 @@ std::optional<TypeRef> field_type_ref_for_class(const Symbols& symbols, const Cl
     return std::nullopt;
 }
 
-std::string member_expr_type(const Symbols& symbols,
-                             const std::map<std::string, TypeRef>& local_type_refs,
-                             const SourceLocation* location, const Expr& expr,
-                             std::string_view unknown_local_prefix,
-                             std::string_view current_class) {
-    const TypeRef type_ref = member_expr_type_ref(symbols, local_type_refs, location, expr,
-                                                  unknown_local_prefix, current_class);
-    return has_type_ref(type_ref) ? substitute_type_ref_text(type_ref, {}) : std::string{};
-}
-
 TypeRef member_expr_type_ref(const Symbols& symbols,
                              const std::map<std::string, TypeRef>& local_type_refs,
                              const SourceLocation* location, const Expr& expr,

@@ -2013,6 +2013,8 @@ LSP source edits are also moving to AST-owned ranges:
   explicit C++ escape paths parse receiver strings at the boundary.
 - Field and swizzle lookup now expose parsed `TypeRef` receiver APIs only; the
   unused string-returning wrappers have been removed.
+- Member-expression typing now exposes the parsed `TypeRef` API only; the
+  explicit C++ escape boundary renders the result locally.
 
 Expression parsing has moved onto the lexer/token stream:
 

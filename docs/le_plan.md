@@ -1280,3 +1280,5 @@ declarations safely.
    explicit C++ escape paths parse receiver strings at the boundary.
    Field and swizzle lookup now expose parsed `TypeRef` receiver APIs only; the
    unused string-returning wrappers have been removed.
+   Member-expression typing now exposes the parsed `TypeRef` API only; the
+   explicit C++ escape boundary renders the result locally.
