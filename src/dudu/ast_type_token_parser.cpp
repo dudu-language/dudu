@@ -1,6 +1,7 @@
 #include "dudu/ast_type_token_parser.hpp"
 
 #include "dudu/ast_parse_utils.hpp"
+#include "dudu/ast_type.hpp"
 
 #include <algorithm>
 #include <utility>
@@ -163,7 +164,7 @@ TypeRef TypeTokenParser::parse_type(std::initializer_list<TokenKind> stops) {
         if (type.kind == TypeKind::Unknown && type.text.empty()) {
             params = {};
         } else if (type.kind == TypeKind::Function && !type.children.empty() &&
-                   type.children.front().text == "void") {
+                   type_ref_is_void(type.children.front())) {
             params.assign(type.children.begin() + 1, type.children.end());
         } else {
             params.push_back(std::move(type));

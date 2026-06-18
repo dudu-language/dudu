@@ -1405,3 +1405,6 @@ push. They are not release packaging work.
    assignment-target validation, generic method emission, indexability checks,
    and member path lookup instead of rendering `TypeRef` nodes just to compare
    them with `auto`.
+   Function-type parsing now uses the AST-level `type_ref_is_void` helper when
+   recognizing chained function type syntax instead of inspecting a child
+   type's raw text field.
