@@ -1976,6 +1976,9 @@ push. They are not release packaging work.
    Explicit native template substitution now requires structured parameter and
    return `TypeRef` metadata instead of falling back to signature text
    replacement and reparsing.
+   Bound native template substitution now expands direct variadic pack
+   parameters such as `T...` from `TypeRef` pack bindings before falling back
+   to native signature text for compiler-specific artifacts.
    LSP semantic type-token collection now uses `TypeRef` helper APIs for type
    heads and rendered spellings instead of reading `name`/`text` fields
    directly.

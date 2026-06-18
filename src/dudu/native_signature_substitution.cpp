@@ -279,6 +279,19 @@ bool structured_signature_texts(const FunctionSignature& signature) {
     return true;
 }
 
+std::optional<std::vector<TypeRef>>
+structured_pack_expansion(const TypeRef& param_type, const NativePackBindingMap& pack_bindings) {
+    const std::optional<std::string> pack_name = native_template_pack_placeholder(param_type);
+    if (!pack_name) {
+        return std::nullopt;
+    }
+    const auto found = pack_bindings.find(*pack_name);
+    if (found == pack_bindings.end()) {
+        return std::nullopt;
+    }
+    return found->second;
+}
+
 } // namespace
 
 bool native_index_placeholder(const std::string& name) {
@@ -367,13 +380,17 @@ FunctionSignature substitute_explicit_template_signature(FunctionSignature signa
 FunctionSignature substitute_bound_template_signature(FunctionSignature signature,
                                                       const NativeTemplateBindings& bindings,
                                                       const NativePackBindingMap& pack_bindings) {
-    if (pack_bindings.empty() && structured_binding_texts(bindings) &&
-        structured_signature_texts(signature)) {
+    if (structured_binding_texts(bindings) && structured_signature_texts(signature)) {
         const std::map<std::string, TypeRef> refs = type_ref_bindings(bindings);
         std::vector<TypeRef> params;
         params.reserve(signature_param_count(signature));
         for (size_t i = 0; i < signature_param_count(signature); ++i) {
             const TypeRef param_type = signature_param_type_ref(signature, i);
+            if (const std::optional<std::vector<TypeRef>> expanded =
+                    structured_pack_expansion(param_type, pack_bindings)) {
+                params.insert(params.end(), expanded->begin(), expanded->end());
+                continue;
+            }
             params.push_back(substitute_type_ref(param_type, refs));
         }
         set_signature_param_types(signature, std::move(params));

@@ -12,6 +12,7 @@
 #include "dudu/language_server_semantic_tokens.hpp"
 #include "dudu/match_patterns.hpp"
 #include "dudu/native_header_types.hpp"
+#include "dudu/native_signature_substitution.hpp"
 #include "dudu/native_signature_templates.hpp"
 #include "dudu/parser.hpp"
 #include "dudu/sema.hpp"
@@ -293,6 +294,28 @@ void test_native_template_binding_resolves_alias_type_refs() {
     assert(bindings.at("T").kind == dudu::TypeKind::Named);
     assert(bindings.at("T").name == "f32");
     assert(dudu::substitute_type_ref_text(bindings.at("T"), {}) == "f32");
+}
+
+void test_bound_native_template_pack_substitution_uses_type_refs() {
+    dudu::FunctionSignature signature;
+    signature.template_params = {"T"};
+    signature.variadic = true;
+    signature.min_params = 0;
+    dudu::TypeRef pack_param = dudu::parse_type_text("T");
+    pack_param.text = "T...";
+    dudu::set_signature_param_types(signature, {pack_param});
+    dudu::set_signature_return_type(signature, dudu::parse_type_text("tuple[T]"));
+
+    dudu::NativePackBindingMap packs;
+    packs["T"] = {dudu::parse_type_text("i32"), dudu::parse_type_text("f32")};
+
+    const dudu::FunctionSignature substituted =
+        dudu::substitute_bound_template_signature(signature, {}, packs);
+    assert(dudu::signature_param_count(substituted) == 2);
+    assert(dudu::signature_param_type_ref(substituted, 0).kind == dudu::TypeKind::Named);
+    assert(dudu::signature_param_type_ref(substituted, 0).name == "i32");
+    assert(dudu::signature_param_type_ref(substituted, 1).kind == dudu::TypeKind::Named);
+    assert(dudu::signature_param_type_ref(substituted, 1).name == "f32");
 }
 
 void test_receiver_template_substitution_uses_type_ast() {
@@ -1572,6 +1595,7 @@ int main() {
         test_builtin_method_signature_uses_type_ast();
         test_native_header_types_split_cpp_templates();
         test_native_template_binding_resolves_alias_type_refs();
+        test_bound_native_template_pack_substitution_uses_type_refs();
         test_receiver_template_substitution_uses_type_ast();
         test_inherited_method_signature_uses_type_ast();
         test_find_inherited_method_uses_type_ast_receiver();
