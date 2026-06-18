@@ -30,6 +30,7 @@ class TypeTokenParser {
     bool match(TokenKind kind);
     bool match_operator(std::string_view op);
     bool match_identifier(std::string_view text);
+    bool match_scope_separator();
 
     SourceRange range_between(size_t begin, size_t end) const;
     std::string text_between(size_t begin, size_t end) const;
@@ -43,6 +44,7 @@ class TypeTokenParser {
     TypeRef parse_paren_or_function(size_t begin, std::initializer_list<TokenKind> stops);
     TypeRef parse_c_tag_name(size_t begin);
     TypeRef parse_name_or_template(size_t begin);
+    std::vector<TypeRef> parse_angle_template_args();
     std::vector<TypeRef> parse_list_until(TokenKind close);
 };
 

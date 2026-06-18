@@ -676,6 +676,10 @@ push. They are not release packaging work.
    Statement block C++ emission no longer exposes string-only local-type
    overloads that parse rendered locals back into `TypeRef`; callers must pass
    structured local metadata alongside the compatibility local-name map.
+   The type parser now recognizes C++ scoped template spellings such as
+   `std::vector<std::string>` as structured `Template` `TypeRef` nodes, and
+   builtin method inference uses those parsed children instead of owning a
+   separate native-template substring splitter.
    TypeRef-backed assignment checks now infer RHS expressions as `TypeRef`
    first, use structured type assignment before compatibility fallback, and
    render only for legacy assignment/literal checks and diagnostics.

@@ -8,37 +8,6 @@
 namespace dudu {
 namespace {
 
-std::optional<std::string> first_native_template_arg_text(const std::string& type) {
-    const size_t open = type.find('<');
-    if (open == std::string::npos || type.empty() || type.back() != '>') {
-        return std::nullopt;
-    }
-
-    int angle_depth = 0;
-    int bracket_depth = 0;
-    int paren_depth = 0;
-    const size_t close = type.size() - 1;
-    for (size_t i = open + 1; i < close; ++i) {
-        const char c = type[i];
-        if (c == '<') {
-            ++angle_depth;
-        } else if (c == '>') {
-            --angle_depth;
-        } else if (c == '[') {
-            ++bracket_depth;
-        } else if (c == ']') {
-            --bracket_depth;
-        } else if (c == '(') {
-            ++paren_depth;
-        } else if (c == ')') {
-            --paren_depth;
-        } else if (c == ',' && angle_depth == 0 && bracket_depth == 0 && paren_depth == 0) {
-            return trim_copy(type.substr(open + 1, i - open - 1));
-        }
-    }
-    return trim_copy(type.substr(open + 1, close - open - 1));
-}
-
 std::string first_type_arg(const TypeRef& type) {
     if (const auto arg =
             unary_type_child_text(type, {TypeKind::Atomic, TypeKind::Const, TypeKind::Volatile,
@@ -48,7 +17,7 @@ std::string first_type_arg(const TypeRef& type) {
     if (const auto arg = first_template_type_arg_text(type)) {
         return *arg;
     }
-    return first_native_template_arg_text(type.text).value_or("");
+    return "";
 }
 
 bool single_template_type_arg(const TypeRef& type, std::string_view name) {

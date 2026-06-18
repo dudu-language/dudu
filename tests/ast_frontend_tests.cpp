@@ -136,6 +136,18 @@ void test_core_type_helpers_use_type_ast() {
     assert(dudu::first_template_type_arg_text("list[*Player]") == "*Player");
     assert(dudu::first_template_type_arg_text("dict[str, list[i32]]") == "str");
     assert(!dudu::first_template_type_arg_text("*Player"));
+
+    const dudu::TypeRef cpp_vector = dudu::parse_type_text("std::vector<std::string>");
+    assert(cpp_vector.kind == dudu::TypeKind::Template);
+    assert(cpp_vector.name == "std::vector");
+    assert(cpp_vector.children.size() == 1);
+    assert(dudu::substitute_type_ref_text(cpp_vector.children[0], {}) == "std::string");
+
+    const dudu::TypeRef cpp_atomic = dudu::parse_type_text("std::atomic<uint64_t>");
+    assert(cpp_atomic.kind == dudu::TypeKind::Template);
+    assert(cpp_atomic.name == "std::atomic");
+    assert(cpp_atomic.children.size() == 1);
+    assert(dudu::substitute_type_ref_text(cpp_atomic.children[0], {}) == "uint64_t");
 }
 
 void test_builtin_method_signature_uses_type_ast() {

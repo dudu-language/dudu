@@ -98,6 +98,18 @@ bool TypeTokenParser::match_identifier(std::string_view text) {
     return true;
 }
 
+bool TypeTokenParser::match_scope_separator() {
+    if (match(TokenKind::Dot)) {
+        return true;
+    }
+    if (cursor_ + 1 < tokens_.size() && tokens_[cursor_].kind == TokenKind::Colon &&
+        tokens_[cursor_ + 1].kind == TokenKind::Colon) {
+        cursor_ += 2;
+        return true;
+    }
+    return false;
+}
+
 SourceRange TypeTokenParser::range_between(size_t begin, size_t end) const {
     SourceRange range;
     if (begin >= tokens_.size() || begin >= end) {
@@ -266,30 +278,34 @@ TypeRef TypeTokenParser::parse_paren_or_function(size_t begin,
 TypeRef TypeTokenParser::parse_c_tag_name(size_t begin) {
     ++cursor_;
     ++cursor_;
-    while (match(TokenKind::Dot)) {
+    while (match_scope_separator()) {
         if (!match(TokenKind::Identifier)) {
             return make_node(TypeKind::Unknown, begin, cursor_);
         }
     }
-    TypeRef type = make_node(text_between(begin, cursor_).find('.') == std::string::npos
-                                 ? TypeKind::Named
-                                 : TypeKind::Qualified,
-                             begin, cursor_);
+    const std::string text = text_between(begin, cursor_);
+    TypeRef type =
+        make_node(text.find('.') == std::string::npos && text.find("::") == std::string::npos
+                      ? TypeKind::Named
+                      : TypeKind::Qualified,
+                  begin, cursor_);
     type.name = type.text;
     return type;
 }
 
 TypeRef TypeTokenParser::parse_name_or_template(size_t begin) {
     ++cursor_;
-    while (match(TokenKind::Dot)) {
+    while (match_scope_separator()) {
         if (!match(TokenKind::Identifier)) {
             return make_node(TypeKind::Unknown, begin, cursor_);
         }
     }
-    TypeRef type = make_node(text_between(begin, cursor_).find('.') == std::string::npos
-                                 ? TypeKind::Named
-                                 : TypeKind::Qualified,
-                             begin, cursor_);
+    const std::string text = text_between(begin, cursor_);
+    TypeRef type =
+        make_node(text.find('.') == std::string::npos && text.find("::") == std::string::npos
+                      ? TypeKind::Named
+                      : TypeKind::Qualified,
+                  begin, cursor_);
     type.name = type.text;
     while (match(TokenKind::LBracket)) {
         const size_t inner_begin = cursor_;
@@ -317,7 +333,57 @@ TypeRef TypeTokenParser::parse_name_or_template(size_t begin) {
         templ.children = std::move(args);
         type = std::move(templ);
     }
+    while (match_operator("<")) {
+        TypeRef templ = make_node(TypeKind::Template, begin, cursor_);
+        templ.name = type.name.empty() ? type.text : type.name;
+        templ.children = parse_angle_template_args();
+        match_operator(">");
+        templ.text = text_between(begin, cursor_);
+        templ.range = range_between(begin, cursor_);
+        type = std::move(templ);
+    }
     return type;
+}
+
+std::vector<TypeRef> TypeTokenParser::parse_angle_template_args() {
+    std::vector<TypeRef> out;
+    while (!at_end() && !at_operator(">")) {
+        if (at(TokenKind::Comma)) {
+            ++cursor_;
+            continue;
+        }
+        const size_t begin = cursor_;
+        int paren_depth = 0;
+        int bracket_depth = 0;
+        int angle_depth = 0;
+        while (!at_end()) {
+            if (paren_depth == 0 && bracket_depth == 0 && angle_depth == 0 &&
+                (at(TokenKind::Comma) || at_operator(">"))) {
+                break;
+            }
+            if (at(TokenKind::LParen)) {
+                ++paren_depth;
+            } else if (at(TokenKind::RParen) && paren_depth > 0) {
+                --paren_depth;
+            } else if (at(TokenKind::LBracket)) {
+                ++bracket_depth;
+            } else if (at(TokenKind::RBracket) && bracket_depth > 0) {
+                --bracket_depth;
+            } else if (at_operator("<")) {
+                ++angle_depth;
+            } else if (at_operator(">") && angle_depth > 0) {
+                --angle_depth;
+            }
+            ++cursor_;
+        }
+        out.push_back(parse_type_text(text_between(begin, cursor_), begin < tokens_.size()
+                                                                        ? tokens_[begin].location
+                                                                        : SourceLocation{}));
+        if (at(TokenKind::Comma)) {
+            ++cursor_;
+        }
+    }
+    return out;
 }
 
 std::vector<TypeRef> TypeTokenParser::parse_list_until(TokenKind close) {

@@ -212,6 +212,10 @@ std::string substitute_type_ref_text(const TypeRef& type,
     case TypeKind::Static:
         return substitute_wrapper("static", type, substitutions);
     case TypeKind::Template:
+        if (type.name.find("::") != std::string::npos) {
+            return trim_copy(type.name) + "<" +
+                   join_substituted_types(type.children, 0, substitutions) + ">";
+        }
         return trim_copy(type.name) + "[" +
                join_substituted_types(type.children, 0, substitutions) + "]";
     case TypeKind::FixedArray:

@@ -217,6 +217,10 @@ Already structured:
 - statement block C++ emission no longer exposes string-only local-type
   overloads that parse rendered locals back into `TypeRef`; callers must pass
   structured local metadata alongside the compatibility local-name map
+- the type parser now recognizes C++ scoped template spellings such as
+  `std::vector<std::string>` as structured `Template` `TypeRef` nodes, and
+  builtin method inference uses those parsed children instead of owning a
+  separate native-template substring splitter
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path
