@@ -104,8 +104,9 @@ TypeRef infer_call_type_ref(const Expr& expr, const std::map<std::string, TypeRe
     return {};
 }
 
-bool is_numeric_type(std::string_view type) {
-    return type == "i32" || type == "f32" || type == "f64";
+bool is_numeric_type(const TypeRef& type) {
+    return type_ref_is_name(type, "i32") || type_ref_is_name(type, "f32") ||
+           type_ref_is_name(type, "f64");
 }
 
 TypeRef infer_binary_expr_type_ref(const Expr& expr,
@@ -123,20 +124,19 @@ TypeRef infer_binary_expr_type_ref(const Expr& expr,
         infer_emitted_local_type_ref(expr.children[0], local_type_refs, function_returns, symbols);
     const TypeRef right_ref =
         infer_emitted_local_type_ref(expr.children[1], local_type_refs, function_returns, symbols);
-    const std::string left = has_type_ref(left_ref) ? substitute_type_ref_text(left_ref, {}) : "";
-    const std::string right =
-        has_type_ref(right_ref) ? substitute_type_ref_text(right_ref, {}) : "";
-    if (left.empty() && !right.empty()) {
+    if (!has_type_ref(left_ref) && has_type_ref(right_ref)) {
         return right_ref;
     }
-    if (right.empty() || right == left) {
+    if (!has_type_ref(right_ref) || type_ref_equivalent(left_ref, right_ref)) {
         return left_ref;
     }
-    if ((left == "f64" || right == "f64") && is_numeric_type(left) && is_numeric_type(right)) {
+    if ((type_ref_is_name(left_ref, "f64") || type_ref_is_name(right_ref, "f64")) &&
+        is_numeric_type(left_ref) && is_numeric_type(right_ref)) {
         return parse_type_text("f64", expr.location);
     }
-    if ((left == "f32" || right == "f32") && (left == "f32" || left == "i32") &&
-        (right == "f32" || right == "i32")) {
+    if ((type_ref_is_name(left_ref, "f32") || type_ref_is_name(right_ref, "f32")) &&
+        (type_ref_is_name(left_ref, "f32") || type_ref_is_name(left_ref, "i32")) &&
+        (type_ref_is_name(right_ref, "f32") || type_ref_is_name(right_ref, "i32"))) {
         return parse_type_text("f32", expr.location);
     }
     return {};
