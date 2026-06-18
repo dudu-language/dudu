@@ -12,22 +12,15 @@
 namespace dudu {
 
 std::vector<std::string> template_type_arg_texts(const TypeRef& type, std::string_view name);
-std::vector<std::string> template_type_arg_texts(std::string_view type, std::string_view name);
 std::vector<TypeRef> template_type_arg_refs(const TypeRef& type, std::string_view name);
 std::vector<TypeRef>
 template_type_arg_refs_resolved(const TypeRef& type, std::string_view name,
                                 const std::map<std::string, std::string>& aliases);
 std::optional<std::string> first_template_type_arg_text(const TypeRef& type);
-std::optional<std::string> first_template_type_arg_text(std::string_view type);
 std::optional<std::string> single_template_type_arg_text(const TypeRef& type,
                                                          std::string_view name);
-std::optional<std::string> single_template_type_arg_text(std::string_view type,
-                                                         std::string_view name);
 std::optional<std::string> unary_type_child_text(const TypeRef& type, TypeKind kind);
-std::optional<std::string> unary_type_child_text(std::string_view type, TypeKind kind);
 std::optional<std::string> unary_type_child_text(const TypeRef& type,
-                                                 std::initializer_list<TypeKind> kinds);
-std::optional<std::string> unary_type_child_text(std::string_view type,
                                                  std::initializer_list<TypeKind> kinds);
 std::optional<TypeRef> unary_type_child_ref(const TypeRef& type, TypeKind kind);
 std::optional<TypeRef> unary_type_child_ref(const TypeRef& type,

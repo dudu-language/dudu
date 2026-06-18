@@ -150,9 +150,11 @@ void test_core_type_helpers_use_type_ast() {
     assert(dudu::substitute_type_ref_text(aliased_tuple[0], {}) == "i32");
     assert(dudu::substitute_type_ref_text(aliased_tuple[1], {}) == "f32");
 
-    assert(dudu::first_template_type_arg_text("list[*Player]") == "*Player");
-    assert(dudu::first_template_type_arg_text("dict[str, list[i32]]") == "str");
-    assert(!dudu::first_template_type_arg_text("*Player"));
+    assert(dudu::first_template_type_arg_text(dudu::parse_type_text("list[*Player]")) ==
+           "*Player");
+    assert(dudu::first_template_type_arg_text(dudu::parse_type_text("dict[str, list[i32]]")) ==
+           "str");
+    assert(!dudu::first_template_type_arg_text(dudu::parse_type_text("*Player")));
 
     const dudu::TypeRef cpp_vector = dudu::parse_type_text("std::vector<std::string>");
     assert(cpp_vector.kind == dudu::TypeKind::Template);

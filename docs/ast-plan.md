@@ -2004,6 +2004,8 @@ LSP source edits are also moving to AST-owned ranges:
 - Array shape inference and fixed-array introspection now accept parsed
   `TypeRef` declarations only; dead string overloads and unused string element
   helpers have been removed.
+- General AST type helper convenience overloads that parsed raw strings have
+  been removed; callers must parse once and pass `TypeRef`.
 
 Expression parsing has moved onto the lexer/token stream:
 
