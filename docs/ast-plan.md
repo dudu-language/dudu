@@ -167,6 +167,8 @@ Already structured:
 - local callable sema now resolves function types through local `TypeRef`
   metadata and alias `TypeRef`s instead of reparsing the compatibility local
   type string
+- fixed-array slice emission now reads shape metadata from local `TypeRef`s
+  only, and the no-`TypeRef` slice emit overloads were removed
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path

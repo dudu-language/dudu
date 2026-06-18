@@ -12,30 +12,16 @@ bool is_full_slice_expr(const Expr& expr) {
            expr_missing(expr.children[0]) && expr_missing(expr.children[1]);
 }
 
-std::vector<size_t> local_array_shape(const std::map<std::string, std::string>& locals,
-                                      const std::map<std::string, TypeRef>& local_type_refs,
+std::vector<size_t> local_array_shape(const std::map<std::string, TypeRef>& local_type_refs,
                                       const Symbols* symbols, const std::string& name) {
+    (void)symbols;
     if (const auto local = local_type_refs.find(name); local != local_type_refs.end()) {
         return explicit_array_shape(local->second);
     }
-    const auto local = locals.find(name);
-    if (local == locals.end()) {
-        return {};
-    }
-    const std::string type =
-        symbols == nullptr ? local->second : resolve_alias(*symbols, local->second);
-    return explicit_array_shape(type);
+    return {};
 }
 
 } // namespace
-
-std::optional<std::string>
-lower_trailing_full_slice_expr(const Expr& base, const Expr& index,
-                               const std::vector<std::string>& aliases,
-                               const std::map<std::string, std::string>& locals,
-                               const Symbols* symbols, const CppEmitOptions& options) {
-    return lower_trailing_full_slice_expr(base, index, aliases, locals, {}, symbols, options);
-}
 
 std::optional<std::string>
 lower_trailing_full_slice_expr(const Expr& base, const Expr& index,
@@ -59,20 +45,6 @@ lower_trailing_full_slice_expr(const Expr& base, const Expr& index,
     return "std::span(&(" + row + ")[0], (" + row + ").size())";
 }
 
-std::optional<std::string> lower_trailing_full_slice_expr(
-    const Expr& base, const Expr& index, const std::vector<std::string>& aliases,
-    const std::map<std::string, std::string>& locals, const Symbols* symbols) {
-    return lower_trailing_full_slice_expr(base, index, aliases, locals, symbols, {});
-}
-
-std::optional<std::string> lower_column_slice_expr(const Expr& base, const Expr& index,
-                                                   const std::vector<std::string>& aliases,
-                                                   const std::map<std::string, std::string>& locals,
-                                                   const Symbols* symbols,
-                                                   const CppEmitOptions& options) {
-    return lower_column_slice_expr(base, index, aliases, locals, {}, symbols, options);
-}
-
 std::optional<std::string>
 lower_column_slice_expr(const Expr& base, const Expr& index,
                         const std::vector<std::string>& aliases,
@@ -85,8 +57,7 @@ lower_column_slice_expr(const Expr& base, const Expr& index,
         index.children[1].kind == ExprKind::Slice) {
         return std::nullopt;
     }
-    const std::vector<size_t> shape =
-        local_array_shape(locals, local_type_refs, symbols, base.name);
+    const std::vector<size_t> shape = local_array_shape(local_type_refs, symbols, base.name);
     if (shape.size() != 2) {
         return std::nullopt;
     }
@@ -96,21 +67,6 @@ lower_column_slice_expr(const Expr& base, const Expr& index,
         lower_expr(index.children[1], aliases, locals, local_type_refs, symbols, options);
     return "dudu::StridedSpan{" + lowered_base + ".data()->data() + (" + column + "), " +
            std::to_string(shape[0]) + ", " + std::to_string(shape[1]) + "}";
-}
-
-std::optional<std::string> lower_column_slice_expr(const Expr& base, const Expr& index,
-                                                   const std::vector<std::string>& aliases,
-                                                   const std::map<std::string, std::string>& locals,
-                                                   const Symbols* symbols) {
-    return lower_column_slice_expr(base, index, aliases, locals, symbols, {});
-}
-
-std::optional<std::string>
-lower_channel_slice_expr(const Expr& base, const Expr& index,
-                         const std::vector<std::string>& aliases,
-                         const std::map<std::string, std::string>& locals, const Symbols* symbols,
-                         const CppEmitOptions& options) {
-    return lower_channel_slice_expr(base, index, aliases, locals, {}, symbols, options);
 }
 
 std::optional<std::string>
@@ -125,8 +81,7 @@ lower_channel_slice_expr(const Expr& base, const Expr& index,
         !is_full_slice_expr(index.children[1]) || index.children[2].kind == ExprKind::Slice) {
         return std::nullopt;
     }
-    const std::vector<size_t> shape =
-        local_array_shape(locals, local_type_refs, symbols, base.name);
+    const std::vector<size_t> shape = local_array_shape(local_type_refs, symbols, base.name);
     if (shape.size() != 3) {
         return std::nullopt;
     }
@@ -136,13 +91,6 @@ lower_channel_slice_expr(const Expr& base, const Expr& index,
         lower_expr(index.children[2], aliases, locals, local_type_refs, symbols, options);
     return "dudu::StridedSpan{" + lowered_base + ".data()->data()->data() + (" + channel + "), " +
            std::to_string(shape[0] * shape[1]) + ", " + std::to_string(shape[2]) + "}";
-}
-
-std::optional<std::string>
-lower_channel_slice_expr(const Expr& base, const Expr& index,
-                         const std::vector<std::string>& aliases,
-                         const std::map<std::string, std::string>& locals, const Symbols* symbols) {
-    return lower_channel_slice_expr(base, index, aliases, locals, symbols, {});
 }
 
 } // namespace dudu
