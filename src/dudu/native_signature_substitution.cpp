@@ -94,7 +94,7 @@ void append_placeholders(std::vector<std::string>& out, std::set<std::string>& s
     if (!type.value.empty()) {
         append_placeholder(out, seen, type.value, only_index);
     }
-    if (!type.text.empty()) {
+    if (type.kind == TypeKind::Unknown && !type.text.empty()) {
         append_placeholders_from_text(out, seen, type.text, only_index);
     }
     for (const TypeRef& child : type.children) {
@@ -263,8 +263,8 @@ bool structured_binding_type_ref(const TypeRef& type) {
     if (!has_type_ref(type)) {
         return false;
     }
-    if (!structured_binding_text(type.text)) {
-        return false;
+    if (type.kind == TypeKind::Unknown) {
+        return structured_binding_text(type.text);
     }
     for (const TypeRef& child : type.children) {
         if (!structured_binding_type_ref(child)) {

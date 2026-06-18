@@ -180,7 +180,7 @@ std::optional<std::string> native_template_pack_placeholder(const TypeRef& type)
             native_template_pack_placeholder(type_ref_head_name(type))) {
         return placeholder;
     }
-    if (!type.text.empty()) {
+    if (type.kind == TypeKind::Unknown && !type.text.empty()) {
         return native_template_pack_placeholder(type.text);
     }
     return std::nullopt;

@@ -1946,6 +1946,9 @@ push. They are not release packaging work.
    named/qualified/template/value nodes from parsed `name` or `value` fields
    only, leaving raw text rendering to `Unknown` and malformed wrapper
    fallback cases.
+   Native signature placeholder discovery and structured-substitution guards
+   now scan raw `TypeRef.text` only for explicit `Unknown` native-boundary
+   nodes; structured type nodes recurse through parsed head/value/child fields.
    LSP semantic type-token collection now uses `TypeRef` helper APIs for type
    heads and rendered spellings instead of reading `name`/`text` fields
    directly.
