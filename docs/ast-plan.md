@@ -1729,6 +1729,10 @@ LSP source edits are also moving to AST-owned ranges:
   foreign/auto receivers, and Dudu `[]` operator return metadata inside the
   `TypeRef` path, removing the render-to-string and reparse fallback from
   normal `indexed_type_ref_from_type` calls.
+- Structured iterable inference now extracts element `TypeRef` results from
+  parsed local metadata or one parsed declared local type, instead of routing
+  through the older string-returning iterable helper and reparsing the rendered
+  element type.
 - Member-path type inference now resolves local names, class static members,
   recursive member fields, indexed member receivers, inherited fields,
   `Result` helper fields, and Dudu swizzles through parsed `TypeRef` metadata

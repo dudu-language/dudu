@@ -89,11 +89,13 @@ iterable_value_type_ref(const Symbols& symbols, const std::map<std::string, std:
     if (const auto type_ref = local_type_refs.find(name); type_ref != local_type_refs.end()) {
         return iterable_type_ref_from_type(type_ref->second);
     }
-    const std::string element = iterable_value_type(symbols, locals, name);
-    if (element.empty()) {
+    const auto local = locals.find(name);
+    if (local == locals.end()) {
         return std::nullopt;
     }
-    return parse_type_text(element);
+    const TypeRef type =
+        unwrap_reference_and_const(parse_type_text(resolve_alias(symbols, local->second)));
+    return iterable_type_ref_from_type(type);
 }
 
 std::string iterable_value_type(const Symbols& symbols,

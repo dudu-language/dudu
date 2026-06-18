@@ -566,7 +566,10 @@ push. They are not release packaging work.
    reads parsed `TypeRef` shape/element nodes, and the structured index helper
    handles aliases, foreign/auto receivers, and Dudu `[]` operator return
    metadata without rendering `TypeRef` input back into source text and
-   reparsing it.
+   reparsing it. Iterable inference now follows the same direction: the
+   `TypeRef` result path extracts local iterable element types directly from
+   parsed local metadata or one parsed declared local type, instead of calling
+   the string-result helper and parsing the rendered element type.
    Native C++ type-artifact normalization now has a parsed `TypeRef` entry
    point, so tuple-element and non-array template cleanup no longer require
    parsed callers to stringify only to reparse immediately.
