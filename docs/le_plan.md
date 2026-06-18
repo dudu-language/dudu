@@ -1460,3 +1460,6 @@ push. They are not release packaging work.
    for arity and inherited signature construction, leaving direct
    `signature.params` access mostly in native signature substitution/pack
    spelling boundaries and the legacy fallback accessors.
+   Native function symbol collection now populates `FunctionSignature` through
+   `set_signature_param_types` and `set_signature_return_type` instead of
+   manually assigning the string and `TypeRef` mirrors in parallel.
