@@ -577,12 +577,21 @@ void test_index_type_inference_uses_type_ast() {
     const dudu::SourceLocation location{.file = "index_types.dd", .line = 1, .column = 1};
     symbols.aliases["Ints"] = "list[i32]";
     symbols.alias_type_refs["Ints"] = dudu::parse_type_text("list[i32]", location);
-    assert(dudu::indexed_type_from_type(symbols, location, "*const[Item]",
-                                        dudu::parse_expr_text("0", location), "items") == "Item");
-    assert(dudu::indexed_type_from_type(symbols, location, "Bag[Item]",
-                                        dudu::parse_expr_text("0", location), "bag") == "Item");
-    assert(dudu::indexed_type_from_type(symbols, location, "dict[str, Item]",
-                                        dudu::parse_expr_text("key", location), "items") == "Item");
+    const dudu::TypeRef pointer_item =
+        dudu::indexed_type_ref_from_type(symbols, location,
+                                         dudu::parse_type_text("*const[Item]", location),
+                                         dudu::parse_expr_text("0", location), "items");
+    assert(dudu::substitute_type_ref_text(pointer_item, {}) == "Item");
+    const dudu::TypeRef indexed_bag_item =
+        dudu::indexed_type_ref_from_type(symbols, location,
+                                         dudu::parse_type_text("Bag[Item]", location),
+                                         dudu::parse_expr_text("0", location), "bag");
+    assert(dudu::substitute_type_ref_text(indexed_bag_item, {}) == "Item");
+    const dudu::TypeRef dict_item =
+        dudu::indexed_type_ref_from_type(symbols, location,
+                                         dudu::parse_type_text("dict[str, Item]", location),
+                                         dudu::parse_expr_text("key", location), "items");
+    assert(dudu::substitute_type_ref_text(dict_item, {}) == "Item");
     const dudu::TypeRef aliased_list_item =
         dudu::indexed_type_ref_from_type(symbols, location, dudu::parse_type_text("Ints", location),
                                          dudu::parse_expr_text("0", location), "ints");

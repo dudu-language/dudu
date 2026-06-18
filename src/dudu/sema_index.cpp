@@ -105,15 +105,6 @@ TypeRef indexed_value_type_ref(const Symbols& symbols,
     return indexed_type_ref_from_type(symbols, location, type_ref, index_expr, name);
 }
 
-std::string indexed_type_from_type(const Symbols& symbols, const SourceLocation& location,
-                                   const std::string& raw_type, const Expr& index_expr,
-                                   const std::string& label) {
-    return substitute_type_ref_text(indexed_type_ref_from_type(symbols, location,
-                                                               parse_type_text(raw_type, location),
-                                                               index_expr, label),
-                                    {});
-}
-
 TypeRef indexed_type_ref_from_type(const Symbols& symbols, const SourceLocation& location,
                                    const TypeRef& raw_type, const Expr& index_expr,
                                    const std::string& label) {
@@ -145,13 +136,6 @@ TypeRef indexed_type_ref_from_type(const Symbols& symbols, const SourceLocation&
         return *indexed_ref;
     }
     throw CompileError(location, "cannot index non-container: " + label);
-}
-
-TypeRef indexed_type_ref_from_type(const Symbols& symbols, const SourceLocation& location,
-                                   const std::string& raw_type, const Expr& index_expr,
-                                   const std::string& label) {
-    return indexed_type_ref_from_type(symbols, location, parse_type_text(raw_type, location),
-                                      index_expr, label);
 }
 
 } // namespace dudu

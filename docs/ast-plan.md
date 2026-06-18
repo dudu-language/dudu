@@ -1998,6 +1998,9 @@ LSP source edits are also moving to AST-owned ranges:
   display or native compatibility boundaries.
 - Assignment target semantic typing now exposes only the structured `TypeRef`
   API; the old string-returning wrapper has been removed.
+- Indexing type inference now exposes only parsed `TypeRef` receiver APIs; the
+  old string receiver and string result wrappers have been removed, with
+  `cpp(...)` escape inference rendering only at its boundary.
 
 Expression parsing has moved onto the lexer/token stream:
 

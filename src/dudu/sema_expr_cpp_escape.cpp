@@ -283,8 +283,11 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
         if (is_member_path(name)) {
             const std::string receiver_type = cpp_escape_member_path_type(scope, location, name);
             if (!receiver_type.empty()) {
-                return indexed_type_from_type(scope.symbols, *location, receiver_type,
-                                              parse_expr_text(index_expr, *location), name);
+                return substitute_type_ref_text(
+                    indexed_type_ref_from_type(scope.symbols, *location,
+                                               parse_type_text(receiver_type, *location),
+                                               parse_expr_text(index_expr, *location), name),
+                    {});
             }
         }
     }

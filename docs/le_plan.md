@@ -1265,3 +1265,6 @@ declarations safely.
    checks and LSP local lookup bind locals through `TypeRef` metadata only.
    Assignment target semantic typing exposes only the structured `TypeRef`
    helper; the old string-returning wrapper has been removed.
+   Indexing type inference exposes only parsed `TypeRef` receiver APIs; the old
+   string receiver and string result wrappers have been removed, with
+   `cpp(...)` escape inference rendering only at its boundary.

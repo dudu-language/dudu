@@ -5,19 +5,12 @@
 
 #include <map>
 #include <optional>
-#include <string>
 #include <string_view>
 
 namespace dudu {
 
-std::string indexed_type_from_type(const Symbols& symbols, const SourceLocation& location,
-                                   const std::string& type, const Expr& index_expr,
-                                   const std::string& label);
 TypeRef indexed_type_ref_from_type(const Symbols& symbols, const SourceLocation& location,
                                    const TypeRef& type, const Expr& index_expr,
-                                   const std::string& label);
-TypeRef indexed_type_ref_from_type(const Symbols& symbols, const SourceLocation& location,
-                                   const std::string& type, const Expr& index_expr,
                                    const std::string& label);
 TypeRef indexed_value_type_ref(const Symbols& symbols,
                                const std::map<std::string, TypeRef>& local_type_refs,
