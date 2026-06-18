@@ -176,7 +176,7 @@ void test_core_type_helpers_use_type_ast() {
     assert(dudu::base_type(dudu::parse_type_text("struct sqlite3")) == "struct sqlite3");
     dudu::TypeRef spelled_pointer;
     spelled_pointer.kind = dudu::TypeKind::Pointer;
-    spelled_pointer.text = "*Player";
+    spelled_pointer.children.push_back(dudu::named_type_ref("Player"));
     assert(dudu::base_type(spelled_pointer) == "Player");
     assert(dudu::substitute_type_ref_text(
                dudu::explicit_array_element_type_ref(dudu::parse_type_text("array[list[i32]][4]")),
@@ -1243,9 +1243,8 @@ void test_type_ast_shape() {
     assert(nested_callback.children[0].kind == dudu::TypeKind::Function);
     assert(nested_callback.children[1].kind == dudu::TypeKind::Function);
     assert(nested_callback.children[2].kind == dudu::TypeKind::Function);
-    const dudu::TypeRef nested =
-        dudu::substitute_type_ref(dudu::parse_type_text("fn(list[T]) -> T"),
-                                  {{"T", dudu::named_type_ref("f32")}});
+    const dudu::TypeRef nested = dudu::substitute_type_ref(
+        dudu::parse_type_text("fn(list[T]) -> T"), {{"T", dudu::named_type_ref("f32")}});
     assert(dudu::substitute_type_ref_text(nested, {}) == "fn(list[f32]) -> f32");
     assert(dudu::lower_cpp_type(player.fields[0].type_ref) ==
            "std::array<std::array<float, 4>, 4>");

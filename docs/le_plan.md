@@ -1765,3 +1765,6 @@ push. They are not release packaging work.
    Parsed template member calls now pass their `template_type_args` through typed
    method-signature lookup instead of reconstructing `method[T]` strings and
    reparsing the type arguments in sema.
+   Core type helpers no longer repair malformed pointer/reference/fixed-array
+   `TypeRef` nodes by reparsing `TypeRef.text`; callers and tests must build
+   those type shapes with structured child nodes.

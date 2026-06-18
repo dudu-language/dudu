@@ -70,19 +70,6 @@ void add_name(std::map<std::string, SourceLocation>& names, const std::string& n
     }
 }
 
-std::optional<std::string> reparsed_base_type(const TypeRef& type) {
-    if (type.text.empty()) {
-        return std::nullopt;
-    }
-    const TypeRef parsed = parse_type_text(type.text, type.location);
-    if (parsed.kind == TypeKind::Unknown ||
-        (parsed.kind == type.kind && parsed.children.empty() && parsed.name == type.name &&
-         parsed.value == type.value)) {
-        return std::nullopt;
-    }
-    return base_type(parsed);
-}
-
 std::string compute_base_type(const TypeRef& type) {
     switch (type.kind) {
     case TypeKind::Named:
@@ -94,9 +81,6 @@ std::string compute_base_type(const TypeRef& type) {
     case TypeKind::Reference:
         if (!type.children.empty()) {
             return compute_base_type(type.children.front());
-        }
-        if (const auto reparsed = reparsed_base_type(type)) {
-            return *reparsed;
         }
         return trim(type.text);
     case TypeKind::Const:
@@ -116,9 +100,6 @@ std::string compute_base_type(const TypeRef& type) {
     case TypeKind::FixedArray:
         if (!type.children.empty()) {
             return compute_base_type(type.children.front());
-        }
-        if (const auto reparsed = reparsed_base_type(type)) {
-            return *reparsed;
         }
         return trim(type.text);
     case TypeKind::Function:

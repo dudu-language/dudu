@@ -2082,6 +2082,9 @@ LSP source edits are also moving to AST-owned ranges:
 - Parsed template member calls now pass their `template_type_args` through typed
   method-signature lookup instead of reconstructing `method[T]` strings and
   reparsing the type arguments in sema.
+- Core type helpers no longer repair malformed pointer/reference/fixed-array
+  `TypeRef` nodes by reparsing `TypeRef.text`. Callers and tests must build
+  those type shapes with structured child nodes.
 
 Expression parsing has moved onto the lexer/token stream:
 
