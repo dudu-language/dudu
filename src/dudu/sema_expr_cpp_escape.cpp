@@ -5,6 +5,9 @@
 namespace dudu {
 namespace {
 
+std::string cpp_escape_member_path_type(const FunctionScope& scope, const SourceLocation* location,
+                                        const std::string& path);
+
 std::vector<Expr> parse_escape_exprs(const std::vector<std::string>& exprs,
                                      SourceLocation location) {
     std::vector<Expr> out;
@@ -44,6 +47,43 @@ std::optional<EscapeCall> escape_call_from_text(const std::string& expr, size_t 
     }
     return EscapeCall{.callee = trim(expr.substr(0, open)),
                       .args = call_arg_exprs(expr, open, location)};
+}
+
+std::optional<std::string> infer_parsed_index_escape(const FunctionScope& scope,
+                                                     const Expr& parsed,
+                                                     const SourceLocation* location) {
+    if (location == nullptr || parsed.kind != ExprKind::Index || parsed.children.size() != 2) {
+        return std::nullopt;
+    }
+    const Expr& receiver = parsed.children[0];
+    const Expr& index_expr = parsed.children[1];
+    if (receiver.kind == ExprKind::Name && !receiver.name.empty()) {
+        const TypeRef name_type = local_type_ref(scope, receiver.name, *location);
+        if (has_type_ref(name_type)) {
+            if (const auto signature = dudu_operator_signature(scope.symbols, "[]", name_type)) {
+                check_call_args_ast(scope, receiver.name + "[]", *signature,
+                                    index_arg_exprs(index_expr), location);
+            }
+        }
+        return substitute_type_ref_text(
+            indexed_value_type_ref(scope.symbols, scope.local_type_refs, *location, receiver.name,
+                                   index_expr, "indexed access to unknown local: "),
+            {});
+    }
+    if (const auto path = expr_path_from_expr(receiver)) {
+        const std::string name = render_expr_path(*path);
+        if (is_member_path(name)) {
+            const std::string receiver_type = cpp_escape_member_path_type(scope, location, name);
+            if (!receiver_type.empty()) {
+                return substitute_type_ref_text(
+                    indexed_type_ref_from_type(scope.symbols, *location,
+                                               parse_type_text(receiver_type, *location),
+                                               index_expr, name),
+                    {});
+            }
+        }
+    }
+    return std::nullopt;
 }
 
 std::string cpp_escape_member_path_type(const FunctionScope& scope, const SourceLocation* location,
@@ -306,6 +346,9 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
     }
     if (expr == "None") {
         return "None";
+    }
+    if (const auto indexed = infer_parsed_index_escape(scope, parsed_expr, location)) {
+        return *indexed;
     }
     const size_t index = expr.find('[');
     if (location != nullptr && index != std::string::npos && expr.back() == ']') {
