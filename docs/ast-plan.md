@@ -1984,6 +1984,9 @@ LSP source edits are also moving to AST-owned ranges:
 - Enum payload checking and operator overload matching now use parsed
   expected-side `TypeRef` metadata for assignment compatibility instead of
   reading expected parameter/payload types from rendered strings.
+- LSP completion no longer asks local context for a rendered local-type string
+  map. It consumes `local_type_refs_before_cursor` and renders completion
+  detail text at the UI boundary.
 
 Expression parsing has moved onto the lexer/token stream:
 

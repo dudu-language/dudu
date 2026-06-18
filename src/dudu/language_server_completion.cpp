@@ -270,8 +270,8 @@ std::string completion_json(const Document* doc, const Json* params) {
         add(type, 25, "type");
     }
     if (doc != nullptr) {
-        for (const auto& [name, type] : local_types_before_cursor(*doc, params)) {
-            add(name, 6, name + ": " + type);
+        for (const auto& [name, type_ref] : local_type_refs_before_cursor(*doc, params)) {
+            add(name, 6, name + ": " + substitute_type_ref_text(type_ref, {}));
         }
         for (const Symbol& symbol : symbols_for_document(*doc)) {
             add(symbol.name, completion_kind(symbol.kind), symbol.detail);

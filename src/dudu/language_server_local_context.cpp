@@ -281,15 +281,6 @@ std::map<std::string, TypeRef> local_type_refs_before_cursor(const Document& doc
     return {};
 }
 
-std::map<std::string, std::string> local_types_before_cursor(const Document& doc,
-                                                             const Json* params) {
-    std::map<std::string, std::string> out;
-    for (const auto& [name, type_ref] : local_type_refs_before_cursor(doc, params)) {
-        out[name] = substitute_type_ref_text(type_ref, {});
-    }
-    return out;
-}
-
 std::set<std::string> member_candidate_types(const ModuleAst& module, const std::string& type) {
     std::set<std::string> out{type};
     bool changed = true;

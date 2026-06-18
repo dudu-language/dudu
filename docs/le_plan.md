@@ -1248,3 +1248,7 @@ declarations safely.
    assignment compatibility instead of rendered type strings. The remaining
    compatibility callbacks and mirrors should be removed rather than normalized
    into permanent API.
+
+   LSP local completion now consumes `local_type_refs_before_cursor` directly
+   and renders completion detail text at the UI boundary; the rendered
+   `local_types_before_cursor` wrapper has been removed.
