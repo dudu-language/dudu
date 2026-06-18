@@ -1966,6 +1966,9 @@ push. They are not release packaging work.
    Parsed `cpp(...)` calls now carry a structured callee `TypeRef`, so
    constructor/type-name checks can use parsed name/template data instead of
    reparsing the callee spelling.
+   `cpp(...)` expression type inference now uses `infer_cpp_escape_expr_ref`
+   as the primary structured path; the legacy string-returning helper renders
+   the resulting `TypeRef` instead of forcing sema to infer text and reparse it.
    LSP semantic type-token collection now uses `TypeRef` helper APIs for type
    heads and rendered spellings instead of reading `name`/`text` fields
    directly.
