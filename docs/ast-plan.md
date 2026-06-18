@@ -1260,6 +1260,9 @@ Optional expression holes now use a dedicated `Missing` expression kind instead
 of overloading empty `Unknown` nodes. Parser, sema, codegen, and LSP/lint
 helpers should treat `Missing` as absence and reserve `Unknown` for unsupported
 source text that must be diagnosed rather than interpreted.
+Default-constructed `Expr` values are `Missing`, so optional AST slots stay
+absent unless the parser explicitly fills them with real source structure or an
+unsupported `Unknown` node.
 
 The old raw-text compound-assignment normalization fallback has been removed.
 Compound assignment is emitted only through the parsed `CompoundAssign` node;
