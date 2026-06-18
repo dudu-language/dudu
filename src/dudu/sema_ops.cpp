@@ -3,6 +3,7 @@
 #include "dudu/ast_parse_utils.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/decorators.hpp"
+#include "dudu/sema_function_type.hpp"
 #include "dudu/type_compat.hpp"
 
 #include <set>
@@ -113,11 +114,13 @@ native_operator_signature(const Symbols& symbols, const std::string& op, const s
         }
         for (FunctionSignature signature : found->second) {
             if (signature.params.size() < 2 ||
-                !type_assignment_allowed(signature.params.front(), value_left)) {
+                !type_assignment_allowed(signature_param_type_ref(signature, 0),
+                                         parse_type_text(value_left))) {
                 continue;
             }
             if (right_expr != nullptr &&
-                !assignment_type_allowed(signature.params[1], *right_expr, value_right)) {
+                !assignment_type_allowed(signature_param_type_ref(signature, 1), *right_expr,
+                                         value_right)) {
                 continue;
             }
             signature.params.erase(signature.params.begin());
@@ -185,7 +188,7 @@ std::optional<FunctionSignature> dudu_binary_operator_signature(const Symbols& s
         signature.return_type = function_return_type_text(method);
         signature.return_type_ref = function_return_type_ref(method);
         if (signature.params.empty() ||
-            assignment_type_allowed(signature.params.front(), right_expr, right)) {
+            assignment_type_allowed(signature_param_type_ref(signature, 0), right_expr, right)) {
             return signature;
         }
     }

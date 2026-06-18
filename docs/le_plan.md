@@ -1243,5 +1243,8 @@ declarations safely.
    rendered type string beside `TypeRef`, and array shape inference no longer
    stores duplicate rendered array or element type strings beside its inferred
    `TypeRef` nodes. Native template binding no longer reparses expected/got
-   strings for its alias-aware path. The remaining compatibility callbacks and
-   mirrors should be removed rather than normalized into permanent API.
+   strings for its alias-aware path. Enum payload checking and operator
+   overload matching now use parsed expected-side `TypeRef` metadata for
+   assignment compatibility instead of rendered type strings. The remaining
+   compatibility callbacks and mirrors should be removed rather than normalized
+   into permanent API.

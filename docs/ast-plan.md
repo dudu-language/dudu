@@ -1981,6 +1981,9 @@ LSP source edits are also moving to AST-owned ranges:
 - Native template binding no longer reparses expected/got strings for the
   alias-aware path. The symbol-aware binder accepts parsed expected and actual
   `TypeRef` nodes and resolves aliases before binding placeholders.
+- Enum payload checking and operator overload matching now use parsed
+  expected-side `TypeRef` metadata for assignment compatibility instead of
+  reading expected parameter/payload types from rendered strings.
 
 Expression parsing has moved onto the lexer/token stream:
 
