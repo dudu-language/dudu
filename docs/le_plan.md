@@ -1837,3 +1837,6 @@ push. They are not release packaging work.
    Native enum-value assignability now checks integer expected types through
    structured `TypeRef` metadata instead of rendering the expected type before
    testing whether the enum value can be assigned.
+   Match semantic checks now validate guard expressions with structured bool
+   `TypeRef` predicates and only render guard or subject types when producing
+   diagnostics.

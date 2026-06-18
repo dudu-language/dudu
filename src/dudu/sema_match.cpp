@@ -135,10 +135,9 @@ bool check_wrapper_match(FunctionScope& scope, const Stmt& stmt, const TypeRef& 
         if (sema_has_expr(child.guard_expr)) {
             const TypeRef guard_ref = infer_expr_type_ast(
                 nested, child.guard_expr, &node_location(child.location, child.guard_expr));
-            const std::string guard_type = substitute_type_ref_text(guard_ref, {});
-            if (guard_type != "bool") {
+            if (!type_ref_is_name(guard_ref, "bool")) {
                 sema_fail(node_location(child.location, child.guard_expr),
-                          "match guard must be bool, got " + guard_type);
+                          "match guard must be bool, got " + type_ref_text(guard_ref));
             }
         }
         callbacks.check_block(nested, child.children, return_type, loop_depth);
@@ -223,10 +222,9 @@ void check_enum_match(FunctionScope& scope, const Stmt& stmt, const TypeRef& ret
         if (sema_has_expr(child.guard_expr)) {
             const TypeRef guard_ref = infer_expr_type_ast(
                 nested, child.guard_expr, &node_location(child.location, child.guard_expr));
-            const std::string guard_type = substitute_type_ref_text(guard_ref, {});
-            if (guard_type != "bool") {
+            if (!type_ref_is_name(guard_ref, "bool")) {
                 sema_fail(node_location(child.location, child.guard_expr),
-                          "match guard must be bool, got " + guard_type);
+                          "match guard must be bool, got " + type_ref_text(guard_ref));
             }
         }
         callbacks.check_block(nested, child.children, return_type, loop_depth);
@@ -243,7 +241,6 @@ void check_match_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& ret
                       int loop_depth, const MatchCheckCallbacks& callbacks) {
     const SourceLocation& subject_location = node_location(stmt.location, stmt.condition_expr);
     const TypeRef subject_ref = infer_expr_type_ast(scope, stmt.condition_expr, &subject_location);
-    const std::string subject_type = substitute_type_ref_text(subject_ref, {});
     const WrapperMatchType wrapper = wrapper_match_type(subject_ref);
     if (wrapper.kind != WrapperMatchKind::None) {
         check_wrapper_match(scope, stmt, return_type, loop_depth, wrapper, callbacks);
@@ -251,7 +248,8 @@ void check_match_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& ret
     }
     const EnumDecl* en = enum_decl_for_type(scope.symbols, subject_ref);
     if (en == nullptr) {
-        sema_fail(subject_location, "match subject must be an enum, got " + subject_type);
+        sema_fail(subject_location,
+                  "match subject must be an enum, got " + type_ref_text(subject_ref));
     }
     check_enum_match(scope, stmt, return_type, loop_depth, callbacks, *en);
 }
