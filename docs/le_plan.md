@@ -1498,6 +1498,10 @@ push. They are not release packaging work.
    `Result` and `Option` wrapper literals; the string overload remains only as
    a compatibility shim for callers that have not crossed the native/text
    boundary yet.
+   Literal assignment compatibility now exposes only the `TypeRef` got-type
+   entry point; the last string overload in that layer has been deleted, with
+   any remaining string compatibility parsing kept at the outer
+   `assignment_type_allowed` boundary.
    Operator and condition semantic diagnostics now use `FunctionSignature`
    accessors for parameter counts and parameter type text instead of reading
    the legacy signature string vector directly.

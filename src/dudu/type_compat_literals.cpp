@@ -25,34 +25,44 @@ std::string wrapped_type_arg(const TypeRef& type) {
     return substitute_type_ref_text(type, {});
 }
 
-std::string simple_literal_type(const Expr& expr) {
+TypeRef simple_literal_type_ref(const Expr& expr) {
+    std::string name;
     switch (expr.kind) {
     case ExprKind::BoolLiteral:
-        return "bool";
+        name = "bool";
+        break;
     case ExprKind::NoneLiteral:
-        return "None";
+        name = "None";
+        break;
     case ExprKind::ListLiteral:
-        return "list";
+        name = "list";
+        break;
     case ExprKind::DictLiteral:
-        return "dict";
+        name = "dict";
+        break;
     case ExprKind::SetLiteral:
-        return "set";
+        name = "set";
+        break;
     case ExprKind::StringLiteral:
-        return "str";
+        name = "str";
+        break;
     case ExprKind::IntLiteral:
+        name = "i32";
+        break;
     case ExprKind::FloatLiteral:
-        return "number";
+        name = "f64";
+        break;
     default:
         return {};
     }
+    return parse_type_text(name, expr.location);
 }
 
 bool literal_assignable_to(const TypeRef& expected, const Expr& expr) {
-    const std::string got = simple_literal_type(expr);
-    if (got == "number") {
+    const TypeRef got = simple_literal_type_ref(expr);
+    if (expr.kind == ExprKind::IntLiteral || expr.kind == ExprKind::FloatLiteral) {
         if (expected.kind == TypeKind::Template && expected.name == "variant") {
-            return assignment_type_allowed(expected, expr,
-                                           expr.kind == ExprKind::FloatLiteral ? "f64" : "i32");
+            return assignment_type_allowed(expected, expr, got);
         }
         return is_numeric_type(wrapped_type_arg(expected));
     }
@@ -130,16 +140,11 @@ bool option_value_allowed(const TypeRef& expected, const Expr& expr, const TypeR
         return false;
     }
     return expr.kind == ExprKind::NoneLiteral || type_ref_equivalent(got, parts[0]) ||
-           (is_numeric_type(wrapped_type_arg(parts[0])) && simple_literal_type(expr) == "number");
+           (is_numeric_type(wrapped_type_arg(parts[0])) &&
+            (expr.kind == ExprKind::IntLiteral || expr.kind == ExprKind::FloatLiteral));
 }
 
 } // namespace
-
-bool parsed_expected_literal_assignment_allowed(const TypeRef& expected, const Expr& expr,
-                                                const std::string& got) {
-    return parsed_expected_literal_assignment_allowed(
-        expected, expr, got.empty() ? TypeRef{} : parse_type_text(got, expr.location));
-}
 
 bool parsed_expected_literal_assignment_allowed(const TypeRef& expected, const Expr& expr,
                                                 const TypeRef& got) {

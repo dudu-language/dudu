@@ -460,7 +460,9 @@ bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const st
     }
     const std::string normalized_expected = normalize_cpp_type_artifacts(expected);
     const TypeRef normalized_expected_ref = parse_type_text(normalized_expected, expected.location);
-    if (parsed_expected_literal_assignment_allowed(normalized_expected_ref, expr, normalized_got)) {
+    if (parsed_expected_literal_assignment_allowed(
+            normalized_expected_ref, expr,
+            normalized_got.empty() ? TypeRef{} : parse_type_text(normalized_got, expr.location))) {
         return true;
     }
     return normalized_expected == "auto" || is_explicit_cast_to(normalized_expected, expr) ||
