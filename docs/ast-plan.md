@@ -258,6 +258,10 @@ Already structured:
 - expected-type generic method C++ emission now keeps receiver inference as
   parsed `TypeRef` metadata and walks inherited base-class references without
   rendering receiver/base types before template argument inference
+- inheritance traversal helpers for derives-from checks, abstract-method
+  resolution, inherited field/method collection, storage checks, and method
+  declaration lookup now walk parsed base-class `TypeRef` nodes instead of
+  rendering base types before recursion
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path

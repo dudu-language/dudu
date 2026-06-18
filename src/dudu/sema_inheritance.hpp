@@ -32,6 +32,8 @@ std::optional<InheritedMethod> find_inherited_method(const Symbols& symbols, con
                                                      const std::string& name);
 std::optional<InheritedMethod>
 find_inherited_method(const Symbols& symbols, const std::string& type, const std::string& name);
+const FunctionDecl* find_method_decl(const Symbols& symbols, const TypeRef& type,
+                                     const std::string& name);
 const FunctionDecl* find_method_decl(const Symbols& symbols, const std::string& type,
                                      const std::string& name);
 bool same_signature(const FunctionSignature& a, const FunctionSignature& b);
