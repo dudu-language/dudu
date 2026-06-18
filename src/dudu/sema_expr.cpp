@@ -235,13 +235,7 @@ BodyCheckCallbacks expression_body_check_callbacks() {
                 },
             .can_assign_type =
                 [](const FunctionScope& scope, const TypeRef& expected, const Expr& expr,
-                   const TypeRef& got) { return can_assign_ast(scope, expected, expr, got); },
-            .check_call_args =
-                [](const FunctionScope& scope, const std::string& callee,
-                   const FunctionSignature& signature, const std::vector<Expr>& args,
-                   const SourceLocation* location) {
-                    check_call_args_ast(scope, callee, signature, args, location);
-                }};
+                   const TypeRef& got) { return can_assign_ast(scope, expected, expr, got); }};
 }
 
 } // namespace dudu

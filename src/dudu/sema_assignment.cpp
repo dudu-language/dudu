@@ -5,6 +5,7 @@
 #include "dudu/sema_bindings.hpp"
 #include "dudu/sema_common.hpp"
 #include "dudu/sema_context.hpp"
+#include "dudu/sema_expr_internal.hpp"
 #include "dudu/sema_index.hpp"
 #include "dudu/sema_methods.hpp"
 #include "dudu/sema_ops.hpp"
@@ -65,7 +66,7 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt,
                     dudu_operator_signature(scope.symbols, "[]=", receiver_type)) {
                 std::vector<Expr> args = index_arg_exprs(stmt.target_expr.children[1]);
                 args.push_back(stmt.value_expr);
-                callbacks.check_call_args(scope, name + "[]=", *signature, args, &target_location);
+                check_call_args_ast(scope, name + "[]=", *signature, args, &target_location);
                 return {};
             }
         }

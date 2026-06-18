@@ -1559,6 +1559,9 @@ push. They are not release packaging work.
    Function signature construction no longer exposes general-purpose
    string-type setters; native template substitution parses at the native
    boundary and then updates signatures through `TypeRef` setters.
+   `BodyCheckCallbacks` no longer carries a call-argument checking callback;
+   sema body helpers and assignment target checks call the structured
+   `check_call_args_ast` path directly.
    Index-result inference now detects foreign/qualified indexable receivers from
    `TypeRef` head/kind metadata instead of rendering the receiver type to search
    for namespace separators.

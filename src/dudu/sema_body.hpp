@@ -15,9 +15,6 @@ struct BodyCheckCallbacks {
         infer_expr_type;
     std::function<bool(const FunctionScope&, const TypeRef&, const Expr&, const TypeRef&)>
         can_assign_type;
-    std::function<void(const FunctionScope&, const std::string&, const FunctionSignature&,
-                       const std::vector<Expr>&, const SourceLocation*)>
-        check_call_args;
 };
 
 void check_bodies(const ModuleAst& module, const Symbols& symbols,

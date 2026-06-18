@@ -5,6 +5,7 @@
 #include "dudu/decorators.hpp"
 #include "dudu/sema_common.hpp"
 #include "dudu/sema_context.hpp"
+#include "dudu/sema_expr_internal.hpp"
 #include "dudu/sema_function_type.hpp"
 #include "dudu/sema_index.hpp"
 #include "dudu/sema_methods.hpp"
@@ -49,8 +50,7 @@ void check_type_match(FunctionScope& scope, const TypeRef& expected_ref, const E
                                                              value, got);
                          }})) {
                 const ScopedCallee scoped_callee = scoped_call_callee(scope, expr, &location);
-                callbacks.check_call_args(scope, scoped_callee.key, *signature, expr.children,
-                                          &location);
+                check_call_args_ast(scope, scoped_callee.key, *signature, expr.children, &location);
                 const TypeRef signature_return = signature_return_type_ref(*signature);
                 if (type_assignment_allowed(expected_ref, signature_return) ||
                     callback_can_assign_type(callbacks, scope, expected_ref, expr,
