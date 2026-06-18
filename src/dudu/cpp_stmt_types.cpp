@@ -66,7 +66,7 @@ TypeRef infer_call_type_ref(const std::string& callee,
         return fn->second;
     }
     if (looks_like_dudu_type(callee)) {
-        return parse_type_text(callee, location);
+        return named_type_ref(callee, location);
     }
     return {};
 }

@@ -2026,6 +2026,8 @@ LSP source edits are also moving to AST-owned ranges:
   pointee `TypeRef` on the expression node. Semantic analysis reads that AST
   field and rejects malformed internal pointer-cast nodes instead of reparsing
   the rendered callee string.
+- C++ emission-side call type probing now builds named `TypeRef` metadata for
+  type-like constructor calls instead of reparsing the callee string.
 
 Expression parsing has moved onto the lexer/token stream:
 
