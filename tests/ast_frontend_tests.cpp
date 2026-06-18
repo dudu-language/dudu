@@ -817,6 +817,23 @@ void test_unsupported_dynamic_call_ast_shape() {
     assert(dudu::direct_callee_name(main.statements[2].value_expr) == "getattr");
 }
 
+void test_literal_ast_values() {
+    const dudu::ModuleAst module = dudu::parse_source("def main() -> i32:\n"
+                                                      "    enabled = True\n"
+                                                      "    mask = 0x80\n"
+                                                      "    return mask\n",
+                                                      "literal_values.dd");
+    assert(module.functions.size() == 1);
+    const dudu::FunctionDecl& main = module.functions.front();
+    assert(main.statements.size() == 3);
+    assert(main.statements[0].kind == dudu::StmtKind::Assign);
+    assert(main.statements[0].value_expr.kind == dudu::ExprKind::BoolLiteral);
+    assert(main.statements[0].value_expr.value == "True");
+    assert(main.statements[1].kind == dudu::StmtKind::Assign);
+    assert(main.statements[1].value_expr.kind == dudu::ExprKind::IntLiteral);
+    assert(main.statements[1].value_expr.value == "0x80");
+}
+
 void test_expression_ast_shape() {
     const dudu::ModuleAst module =
         dudu::parse_source("def main() -> i32:\n"
@@ -1371,6 +1388,7 @@ int main() {
         test_unsupported_def_expression_ast_shape();
         test_unsupported_comprehension_ast_shape();
         test_unsupported_dynamic_call_ast_shape();
+        test_literal_ast_values();
         test_expression_ast_shape();
         test_cpp_escape_ast_payloads();
         test_dereference_postfix_expression_shape();

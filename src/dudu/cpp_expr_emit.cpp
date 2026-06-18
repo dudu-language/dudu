@@ -39,8 +39,7 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
                        const std::map<std::string, TypeRef>& local_type_refs,
                        const Symbols* symbols, const CppEmitOptions& options);
 
-std::string lower_name_expr(const std::string& name,
-                            const CppLocalContext& locals,
+std::string lower_name_expr(const std::string& name, const CppLocalContext& locals,
                             const CppEmitOptions& options) {
     if (!locals.contains(name)) {
         return emitted_value_name(name, options);
@@ -84,9 +83,8 @@ std::string lower_member_expr(std::string receiver, const std::string& member,
 
 std::string join_lowered_exprs(const std::vector<Expr>& exprs,
                                const std::vector<std::string>& aliases,
-                               const CppLocalContext& locals,
-                               std::string_view separator, const Symbols* symbols,
-                               const CppEmitOptions& options) {
+                               const CppLocalContext& locals, std::string_view separator,
+                               const Symbols* symbols, const CppEmitOptions& options) {
     return join_lowered_exprs(exprs, aliases, locals, {}, separator, symbols, options);
 }
 
@@ -108,8 +106,8 @@ std::string join_lowered_exprs(const std::vector<Expr>& exprs,
 
 std::string join_lowered_exprs(const std::vector<Expr>& exprs,
                                const std::vector<std::string>& aliases,
-                               const CppLocalContext& locals,
-                               std::string_view separator, const Symbols* symbols) {
+                               const CppLocalContext& locals, std::string_view separator,
+                               const Symbols* symbols) {
     return join_lowered_exprs(exprs, aliases, locals, separator, symbols, {});
 }
 
@@ -206,13 +204,15 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
         throw CompileError(expr.location, "unsupported expression: " + trim_copy(expr.text));
     }
     switch (expr.kind) {
-    case ExprKind::BoolLiteral:
-        return expr.text == "True" ? "true" : "false";
+    case ExprKind::BoolLiteral: {
+        const std::string value = expr.value.empty() ? expr.text : expr.value;
+        return value == "True" ? "true" : "false";
+    }
     case ExprKind::NoneLiteral:
         return "nullptr";
     case ExprKind::IntLiteral:
     case ExprKind::FloatLiteral:
-        return lower_numeric_separators(expr.text);
+        return lower_numeric_separators(expr.value.empty() ? expr.text : expr.value);
     case ExprKind::Name:
         if (expr.name == "class") {
             if (!locals.current_class.empty()) {
@@ -442,8 +442,8 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
 }
 
 std::string lower_array_literal(const Expr& expr, const std::vector<std::string>& aliases,
-                                const CppLocalContext& locals,
-                                const Symbols* symbols, const CppEmitOptions& options) {
+                                const CppLocalContext& locals, const Symbols* symbols,
+                                const CppEmitOptions& options) {
     return lower_array_literal(expr, aliases, locals, {}, symbols, options);
 }
 
@@ -468,8 +468,7 @@ std::string lower_array_literal(const Expr& expr, const std::vector<std::string>
 }
 
 std::string lower_array_literal(const Expr& expr, const std::vector<std::string>& aliases,
-                                const CppLocalContext& locals,
-                                const Symbols* symbols) {
+                                const CppLocalContext& locals, const Symbols* symbols) {
     return lower_array_literal(expr, aliases, locals, symbols, {});
 }
 
@@ -484,8 +483,7 @@ std::string lower_cpp_expr_ast(const Expr& expr, const std::vector<std::string>&
 }
 
 std::string lower_cpp_expr_ast(const Expr& expr, const std::vector<std::string>& aliases,
-                               const CppLocalContext& locals,
-                               const CppEmitOptions& options) {
+                               const CppLocalContext& locals, const CppEmitOptions& options) {
     return lower_expr(expr, aliases, locals, nullptr, options);
 }
 

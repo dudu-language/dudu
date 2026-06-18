@@ -1491,6 +1491,9 @@ push. They are not release packaging work.
    Function-type parsing now also routes parsed return and parameter
    `TypeRef`s through the signature setters, removing another hand-synced
    string/`TypeRef` mirror write.
+   Expression codegen now lowers boolean and numeric literals from structured
+   literal `value` fields, with raw text retained only as a spelling fallback;
+   AST tests assert those literal values explicitly.
    Function signatures now expose a parameter text accessor beside the return
    text accessor. Native matching and substitution use those signature APIs,
    leaving direct access to the legacy parameter/return string mirrors confined
