@@ -61,6 +61,13 @@ TypeRef static_member_type_ref(const Symbols& symbols, const SourceLocation* loc
     return {};
 }
 
+std::string member_expr_label(const Expr& expr) {
+    if (const std::optional<ExprPath> path = expr_path_from_expr(expr)) {
+        return render_expr_path(*path);
+    }
+    return display_expr(expr);
+}
+
 } // namespace
 
 TypeRef unwrap_receiver_type_ref(const Symbols& symbols, const TypeRef& type) {
@@ -156,7 +163,7 @@ TypeRef member_expr_type_ref(const Symbols& symbols,
         if (!has_type_ref(receiver_type)) {
             return {};
         }
-        const std::string label = display_expr(expr);
+        const std::string label = member_expr_label(expr);
         return indexed_type_ref_from_type(symbols, type_location, receiver_type, expr.children[1],
                                           label.empty() ? "indexed expression" : label);
     }
@@ -191,7 +198,7 @@ TypeRef member_expr_type_ref(const Symbols& symbols,
             return parse_type_text("auto", expr.location);
         }
         if (location != nullptr) {
-            const std::string label = display_expr(expr);
+            const std::string label = member_expr_label(expr);
             sema_fail(*location,
                       "unknown field: " +
                           (label.empty() ? receiver_type_text + "." + expr.name : label));
