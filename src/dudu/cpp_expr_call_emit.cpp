@@ -72,12 +72,7 @@ bool is_pointer_cast_type_like(const std::string& type) {
 }
 
 TypeRef pointer_type_ref_from_pointee_text(std::string_view type, SourceLocation location) {
-    TypeRef pointer;
-    pointer.kind = TypeKind::Pointer;
-    pointer.location = location;
-    pointer.text = "*" + trim_copy(std::string(type));
-    pointer.children.push_back(parse_type_text(type, location));
-    return pointer;
+    return wrapped_type_ref(TypeKind::Pointer, parse_type_text(type, location), location);
 }
 
 std::string lower_call_args_for_signature(const std::vector<Expr>& args, const FunctionSignature&,

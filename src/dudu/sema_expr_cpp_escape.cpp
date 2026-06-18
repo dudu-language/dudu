@@ -3,6 +3,8 @@
 #include "dudu/sema_expr_internal.hpp"
 #include "dudu/sema_methods_internal.hpp"
 
+#include <utility>
+
 namespace dudu {
 namespace {
 
@@ -64,12 +66,8 @@ std::string cpp_escape_member_path_type(const FunctionScope& scope, const Source
 }
 
 std::string pointer_type_text(TypeRef pointee, SourceLocation location) {
-    TypeRef pointer;
-    pointer.kind = TypeKind::Pointer;
-    pointer.location = location;
-    pointer.children.push_back(std::move(pointee));
-    pointer.text = substitute_type_ref_text(pointer, {});
-    return pointer.text;
+    return substitute_type_ref_text(wrapped_type_ref(TypeKind::Pointer, std::move(pointee), location),
+                                    {});
 }
 
 std::optional<std::string> infer_parsed_pointer_cast_escape(const FunctionScope& scope,

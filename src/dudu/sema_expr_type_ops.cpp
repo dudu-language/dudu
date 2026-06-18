@@ -2,6 +2,7 @@
 #include "dudu/sema_expr_internal.hpp"
 
 #include <set>
+#include <utility>
 
 namespace dudu {
 namespace {
@@ -35,12 +36,7 @@ TypeRef named_type_ref(std::string name, SourceLocation location) {
 }
 
 TypeRef pointer_type_ref(TypeRef pointee, SourceLocation location) {
-    TypeRef pointer;
-    pointer.kind = TypeKind::Pointer;
-    pointer.children.push_back(std::move(pointee));
-    pointer.location = location;
-    pointer.text = substitute_type_ref_text(pointer, {});
-    return pointer;
+    return wrapped_type_ref(TypeKind::Pointer, std::move(pointee), location);
 }
 
 } // namespace

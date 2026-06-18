@@ -4,6 +4,7 @@
 #include "dudu/cpp_lower.hpp"
 
 #include <sstream>
+#include <utility>
 
 namespace dudu {
 namespace {
@@ -259,6 +260,15 @@ bool type_ref_equivalent(const TypeRef& left, const TypeRef& right) {
 
 TypeRef void_type_ref(SourceLocation location) {
     return parse_type_text("void", location);
+}
+
+TypeRef wrapped_type_ref(TypeKind kind, TypeRef child, SourceLocation location) {
+    TypeRef type;
+    type.kind = kind;
+    type.location = location;
+    type.range = child.range;
+    type.children.push_back(std::move(child));
+    return type;
 }
 
 bool function_has_receiver_type(const FunctionDecl& fn) {

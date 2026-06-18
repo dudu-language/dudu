@@ -129,17 +129,9 @@ std::string shape_text(const std::vector<size_t>& shape) {
 }
 
 TypeRef const_reference_type_ref(TypeRef type) {
-    TypeRef const_type;
-    const_type.kind = TypeKind::Const;
-    const_type.text = "const[" + substitute_type_ref_text(type, {}) + "]";
+    TypeRef const_type = wrapped_type_ref(TypeKind::Const, std::move(type));
     const_type.name = "const";
-    const_type.children.push_back(std::move(type));
-
-    TypeRef ref_type;
-    ref_type.kind = TypeKind::Reference;
-    ref_type.text = "&" + const_type.text;
-    ref_type.children.push_back(std::move(const_type));
-    return ref_type;
+    return wrapped_type_ref(TypeKind::Reference, std::move(const_type));
 }
 
 void check_condition_type(FunctionScope& scope, const Stmt& stmt) {

@@ -174,12 +174,7 @@ TypeRef infer_emitted_local_type_ref(const Expr& expr,
             if (!has_type_ref(child)) {
                 return {};
             }
-            TypeRef pointer;
-            pointer.kind = TypeKind::Pointer;
-            pointer.location = expr.location;
-            pointer.children.push_back(child);
-            pointer.text = substitute_type_ref_text(pointer, {});
-            return pointer;
+            return wrapped_type_ref(TypeKind::Pointer, child, expr.location);
         }
         if (expr.op == "*") {
             TypeRef child = infer_emitted_local_type_ref(expr.children.front(), local_type_refs,

@@ -472,20 +472,13 @@ std::string lower_cpp_type(const TypeRef& type, const std::vector<std::string>& 
 }
 
 std::string lower_cpp_pointer_type(const std::string& pointee) {
-    TypeRef pointer;
-    pointer.kind = TypeKind::Pointer;
-    pointer.text = "*" + trim_copy(pointee);
-    pointer.children.push_back(parse_type_text(pointee));
-    return lower_cpp_type(pointer);
+    return lower_cpp_type(wrapped_type_ref(TypeKind::Pointer, parse_type_text(pointee)));
 }
 
 std::string lower_cpp_pointer_type(const std::string& pointee,
                                    const std::vector<std::string>& namespace_aliases) {
-    TypeRef pointer;
-    pointer.kind = TypeKind::Pointer;
-    pointer.text = "*" + trim_copy(pointee);
-    pointer.children.push_back(parse_type_text(pointee));
-    return lower_cpp_type(pointer, namespace_aliases);
+    return lower_cpp_type(wrapped_type_ref(TypeKind::Pointer, parse_type_text(pointee)),
+                          namespace_aliases);
 }
 
 } // namespace dudu

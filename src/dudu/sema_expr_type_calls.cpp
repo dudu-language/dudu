@@ -4,6 +4,8 @@
 #include "dudu/sema_expr_internal.hpp"
 #include "dudu/sema_methods_internal.hpp"
 
+#include <utility>
+
 namespace dudu {
 namespace {
 
@@ -20,12 +22,8 @@ TypeRef template_pointer_cast_type_ref(const Expr& expr, std::vector<TypeRef> ty
     pointee.range = expr.range;
     pointee.text = substitute_type_ref_text(pointee, {});
 
-    TypeRef pointer;
-    pointer.kind = TypeKind::Pointer;
-    pointer.children.push_back(std::move(pointee));
-    pointer.location = expr.location;
+    TypeRef pointer = wrapped_type_ref(TypeKind::Pointer, std::move(pointee), expr.location);
     pointer.range = expr.range;
-    pointer.text = substitute_type_ref_text(pointer, {});
     return pointer;
 }
 
@@ -39,12 +37,7 @@ TypeRef named_type_ref(std::string name, SourceLocation location) {
 }
 
 TypeRef pointer_type_ref_from_pointee(TypeRef pointee, SourceLocation location) {
-    TypeRef pointer;
-    pointer.kind = TypeKind::Pointer;
-    pointer.location = location;
-    pointer.children.push_back(std::move(pointee));
-    pointer.text = substitute_type_ref_text(pointer, {});
-    return pointer;
+    return wrapped_type_ref(TypeKind::Pointer, std::move(pointee), location);
 }
 
 TypeRef template_constructor_type_ref(const Expr& expr, std::string name,

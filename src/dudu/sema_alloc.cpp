@@ -4,17 +4,14 @@
 #include "dudu/cpp_lower.hpp"
 #include "dudu/sema_inheritance.hpp"
 
+#include <utility>
+
 namespace dudu {
 namespace {
 
 TypeRef pointer_type_ref_from_pointee(TypeRef pointee) {
-    TypeRef pointer;
-    pointer.kind = TypeKind::Pointer;
-    pointer.location = pointee.location;
-    pointer.range = pointee.range;
-    pointer.children.push_back(std::move(pointee));
-    pointer.text = substitute_type_ref_text(pointer, {});
-    return pointer;
+    const SourceLocation location = pointee.location;
+    return wrapped_type_ref(TypeKind::Pointer, std::move(pointee), location);
 }
 
 std::optional<std::string> infer_allocation_call_with_count(const Symbols& symbols,
