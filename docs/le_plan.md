@@ -1843,3 +1843,5 @@ push. They are not release packaging work.
    Assignment mismatch diagnostics now accept structured `TypeRef` values for
    the inferred type, so semantic body checks no longer render the got type just
    to hand it to the diagnostic helper.
+   Builtin `min`/`max` semantic checks now defer argument type rendering until
+   the diagnostic branch instead of rendering every checked argument eagerly.
