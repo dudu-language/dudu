@@ -2044,6 +2044,8 @@ LSP source edits are also moving to AST-owned ranges:
   artifact normalization is a no-op, and only parses normalized spellings at
   the native compatibility boundary. The generic `TypeRef` assignment path no
   longer reparses normalized expected/got strings before structural checks.
+- Member-path class references and simple literal compatibility now build
+  named `TypeRef` nodes directly rather than parsing known type-name strings.
 
 Expression parsing has moved onto the lexer/token stream:
 

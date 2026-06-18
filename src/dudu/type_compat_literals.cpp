@@ -59,7 +59,7 @@ TypeRef simple_literal_type_ref(const Expr& expr) {
     default:
         return {};
     }
-    return parse_type_text(name, expr.location);
+    return named_type_ref(name, expr.location);
 }
 
 bool literal_assignable_to(const TypeRef& expected, const Expr& expr) {

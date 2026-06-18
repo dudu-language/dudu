@@ -1727,3 +1727,5 @@ push. They are not release packaging work.
    artifact normalization is a no-op, and only parses normalized spellings at
    the native compatibility boundary. The generic `TypeRef` assignment path no
    longer reparses normalized expected/got strings before structural checks.
+   Member-path class references and simple literal compatibility now build
+   named `TypeRef` nodes directly rather than parsing known type-name strings.

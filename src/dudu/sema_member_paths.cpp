@@ -130,7 +130,7 @@ TypeRef member_expr_type_ref(const Symbols& symbols,
     if (expr.kind == ExprKind::Name && !expr.name.empty()) {
         if (expr.name == "class") {
             if (!current_class.empty()) {
-                return parse_type_text(std::string(current_class), expr.location);
+                return named_type_ref(std::string(current_class), expr.location);
             }
             if (location != nullptr) {
                 sema_fail(*location, "class static access outside class");
@@ -142,7 +142,7 @@ TypeRef member_expr_type_ref(const Symbols& symbols,
             return local;
         }
         if (symbols.classes.contains(expr.name)) {
-            return parse_type_text(expr.name, expr.location);
+            return named_type_ref(expr.name, expr.location);
         }
         if (location != nullptr && !unknown_local_prefix.empty()) {
             sema_fail(*location, std::string(unknown_local_prefix) + expr.name);
