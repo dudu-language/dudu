@@ -58,8 +58,7 @@ TypeRef signature_param_type_ref(const FunctionSignature& signature, size_t inde
 }
 
 TypeRef signature_return_type_ref(const FunctionSignature& signature) {
-    if (signature.return_type_ref.kind != TypeKind::Unknown ||
-        !trim_copy(signature.return_type_ref.text).empty()) {
+    if (has_type_ref(signature.return_type_ref)) {
         return signature.return_type_ref;
     }
     return parse_type_text(signature.return_type.empty() ? "void" : signature.return_type);

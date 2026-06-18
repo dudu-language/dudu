@@ -216,8 +216,7 @@ std::optional<std::vector<TypeRef>> infer_generic_method_type_args_from_type_ref
             return std::nullopt;
         }
     }
-    if (expected_return && has_type_ref(*expected_return) &&
-        method.return_type_ref.kind != TypeKind::Unknown) {
+    if (expected_return && has_type_ref(*expected_return) && has_type_ref(method.return_type_ref)) {
         std::string error;
         if (!infer_generic_binding(method.return_type_ref, *expected_return, method.generic_params,
                                    bindings, error)) {
@@ -251,9 +250,10 @@ FunctionSignature instantiate_generic_signature(const FunctionDecl& fn,
     const std::map<std::string, std::string> substitutions =
         generic_substitutions(fn.generic_params, args);
     FunctionSignature signature;
-    set_signature_return_type(signature, function_has_return_type(fn)
-                                             ? substitute_type_ref(fn.return_type_ref, substitutions)
-                                             : void_type_ref(fn.location));
+    set_signature_return_type(signature,
+                              function_has_return_type(fn)
+                                  ? substitute_type_ref(fn.return_type_ref, substitutions)
+                                  : void_type_ref(fn.location));
     std::vector<TypeRef> param_types;
     param_types.reserve(fn.params.size());
     for (const ParamDecl& param : fn.params) {

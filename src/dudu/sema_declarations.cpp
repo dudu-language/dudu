@@ -124,7 +124,7 @@ bool is_c_abi_primitive(const std::string& type, bool allow_void) {
 }
 
 bool is_c_abi_type_ref(const TypeRef& type, bool allow_void) {
-    if (type.kind == TypeKind::Unknown && trim(type.text).empty()) {
+    if (!has_type_ref(type)) {
         return false;
     }
     if (type.kind == TypeKind::Reference) {

@@ -1,5 +1,6 @@
 #include "dudu/cpp_emit_enums.hpp"
 
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_expr_emit.hpp"
 #include "dudu/cpp_lower.hpp"
 
@@ -18,7 +19,7 @@ bool enum_has_payload_fields(const EnumDecl& en) {
 }
 
 bool enum_has_underlying_type(const EnumDecl& en) {
-    return en.underlying_type_ref.kind != TypeKind::Unknown || !en.underlying_type_ref.text.empty();
+    return has_type_ref(en.underlying_type_ref);
 }
 
 } // namespace

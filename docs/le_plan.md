@@ -1441,3 +1441,7 @@ push. They are not release packaging work.
    strings. Native/foreign C++ receiver checks also accept `TypeRef` nodes so
    normal member/method inference no longer renders receiver types just to
    recognize native C++ types.
+   Type presence checks in local binding, C ABI validation, enum emission,
+   function signature return access, and generic return binding now use
+   `has_type_ref` rather than open-coding `TypeKind::Unknown` plus raw text
+   checks.

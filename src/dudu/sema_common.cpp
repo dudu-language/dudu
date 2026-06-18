@@ -1,6 +1,7 @@
 #include "dudu/sema_common.hpp"
 
 #include "dudu/ast_expr.hpp"
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/source.hpp"
 
@@ -27,7 +28,7 @@ const SourceLocation& node_location(const SourceLocation& fallback, const TypeRe
 }
 
 void bind_local(FunctionScope& scope, const std::string& name, const TypeRef& type_ref) {
-    if (type_ref.kind != TypeKind::Unknown || !type_ref.text.empty()) {
+    if (has_type_ref(type_ref)) {
         scope.local_type_refs[name] = type_ref;
     } else {
         scope.local_type_refs.erase(name);
