@@ -1,5 +1,8 @@
 #include "dudu/format.hpp"
 
+#include "dudu/ast.hpp"
+#include "dudu/parser.hpp"
+
 #include <algorithm>
 #include <sstream>
 #include <string>
@@ -30,24 +33,75 @@ void normalize_leading_indent(std::string& line) {
     }
 }
 
-bool starts_with_import(const std::string& line) {
-    return line.rfind("import ", 0) == 0 || line.rfind("from ", 0) == 0;
+std::string render_import_decl(const ImportDecl& import) {
+    std::ostringstream out;
+    if (import.kind == ImportKind::From) {
+        out << "from " << import.module_path << " import " << import.imported_name;
+    } else {
+        out << "import ";
+        if (import.kind == ImportKind::ForeignC) {
+            out << "c ";
+        } else if (import.kind == ImportKind::ForeignCpp) {
+            out << "cpp ";
+        }
+        out << import.module_path;
+    }
+    if (!import.alias.empty()) {
+        out << " as " << import.alias;
+    }
+    return out.str();
 }
 
-void sort_leading_imports(std::vector<std::string>& lines) {
+void sort_leading_imports(std::vector<std::string>& lines, const std::string& normalized_source) {
+    ModuleAst module;
+    try {
+        module = parse_source(normalized_source, {});
+    } catch (const std::exception&) {
+        return;
+    }
+    if (module.imports.size() < 2) {
+        return;
+    }
     size_t start = 0;
     while (start < lines.size() && lines[start].empty()) {
         ++start;
     }
-    if (start >= lines.size() || !starts_with_import(lines[start])) {
+    if (start >= lines.size()) {
         return;
     }
+    std::vector<ImportDecl> imports = module.imports;
+    std::sort(imports.begin(), imports.end(), [](const ImportDecl& lhs, const ImportDecl& rhs) {
+        return lhs.location.line < rhs.location.line;
+    });
+    if (imports.front().location.line != static_cast<int>(start + 1)) {
+        return;
+    }
+    std::vector<std::string> import_lines;
     size_t end = start;
-    while (end < lines.size() && starts_with_import(lines[end])) {
+    for (const ImportDecl& import : imports) {
+        if (import.location.line != static_cast<int>(end + 1)) {
+            break;
+        }
+        import_lines.push_back(render_import_decl(import));
         ++end;
     }
-    std::sort(lines.begin() + static_cast<std::ptrdiff_t>(start),
-              lines.begin() + static_cast<std::ptrdiff_t>(end));
+    if (import_lines.size() < 2) {
+        return;
+    }
+    std::vector<std::string> sorted = import_lines;
+    std::sort(sorted.begin(), sorted.end());
+    if (sorted == import_lines) {
+        return;
+    }
+    std::copy(sorted.begin(), sorted.end(), lines.begin() + static_cast<std::ptrdiff_t>(start));
+}
+
+std::string join_lines(const std::vector<std::string>& lines) {
+    std::ostringstream out;
+    for (const std::string& line : lines) {
+        out << line << '\n';
+    }
+    return out.str();
 }
 
 } // namespace
@@ -61,7 +115,7 @@ std::string format_source(std::string_view source) {
         normalize_leading_indent(line);
         lines.push_back(std::move(line));
     }
-    sort_leading_imports(lines);
+    sort_leading_imports(lines, join_lines(lines));
 
     std::ostringstream out;
     int blank_count = 0;
