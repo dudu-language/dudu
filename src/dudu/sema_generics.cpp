@@ -27,17 +27,23 @@ bool generic_param_named(const std::vector<std::string>& params, const std::stri
     return std::find(params.begin(), params.end(), name) != params.end();
 }
 
+bool unresolved_generic_binding(const TypeRef& binding) {
+    return !has_type_ref(binding) || type_ref_is_auto(binding) ||
+           type_ref_is_name(binding, "list") || type_ref_is_name(binding, "dict") ||
+           type_ref_is_name(binding, "set");
+}
+
 bool infer_generic_binding(const TypeRef& param_type, const TypeRef& arg_type,
                            const std::vector<std::string>& params,
                            std::map<std::string, TypeRef>& bindings, std::string& error) {
     const std::string param = type_ref_head_name(param_type);
     const std::string arg = type_ref_head_name(arg_type);
     if (generic_param_named(params, param)) {
-        const std::string arg_text = substitute_type_ref_text(arg_type, {});
         const auto [it, inserted] = bindings.emplace(param, arg_type);
-        if (!inserted && substitute_type_ref_text(it->second, {}) != arg_text) {
+        if (!inserted && !type_ref_equivalent(it->second, arg_type)) {
             error = "conflicting inferred type argument " + param + ": " +
-                    substitute_type_ref_text(it->second, {}) + " vs " + arg_text;
+                    substitute_type_ref_text(it->second, {}) + " vs " +
+                    substitute_type_ref_text(arg_type, {});
             return false;
         }
         return true;
@@ -148,11 +154,7 @@ infer_generic_call_type_args(const FunctionScope& scope, const FunctionDecl& fn,
     out.reserve(fn.generic_params.size());
     for (const std::string& param : fn.generic_params) {
         const auto binding = bindings.find(param);
-        const std::string binding_text = binding == bindings.end()
-                                             ? std::string{}
-                                             : substitute_type_ref_text(binding->second, {});
-        if (binding == bindings.end() || binding_text.empty() || binding_text == "auto" ||
-            binding_text == "list" || binding_text == "dict" || binding_text == "set") {
+        if (binding == bindings.end() || unresolved_generic_binding(binding->second)) {
             if (location != nullptr) {
                 sema_fail(*location, "cannot infer type argument " + param + " for " + callee);
             }
@@ -230,11 +232,7 @@ std::optional<std::vector<TypeRef>> infer_generic_method_type_args_from_type_ref
     out.reserve(method.generic_params.size());
     for (const std::string& param : method.generic_params) {
         const auto binding = bindings.find(param);
-        const std::string binding_text = binding == bindings.end()
-                                             ? std::string{}
-                                             : substitute_type_ref_text(binding->second, {});
-        if (binding == bindings.end() || binding_text.empty() || binding_text == "auto" ||
-            binding_text == "list" || binding_text == "dict" || binding_text == "set") {
+        if (binding == bindings.end() || unresolved_generic_binding(binding->second)) {
             if (location != nullptr) {
                 sema_fail(*location, "cannot infer type argument " + param + " for " + callee);
             }

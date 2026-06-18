@@ -71,9 +71,7 @@ std::optional<TypeRef> swizzle_type_ref_for_type(const Symbols& symbols,
                 symbols, *candidate, parse_type_text(candidate_name), result_field);
             const auto source_type =
                 field_type_ref_for_class(symbols, *klass->second, receiver_type, source_field);
-            if (!result_type || !source_type ||
-                substitute_type_ref_text(*result_type, {}) !=
-                    substitute_type_ref_text(*source_type, {})) {
+            if (!result_type || !source_type || !type_ref_equivalent(*result_type, *source_type)) {
                 matches = false;
                 break;
             }

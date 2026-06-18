@@ -1523,6 +1523,9 @@ push. They are not release packaging work.
    Index-result inference now detects foreign/qualified indexable receivers from
    `TypeRef` head/kind metadata instead of rendering the receiver type to search
    for namespace separators.
+   Swizzle result matching and native generic inference conflict checks now use
+   `type_ref_equivalent` for semantic type equality; rendering remains only for
+   diagnostics and template substitution text boundaries.
    Native value type inference now reads `native_value_type_refs` directly.
    The `native_values` string map remains only as a display/native-boundary
    mirror populated from structured `TypeRef` data during symbol collection.
