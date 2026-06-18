@@ -190,30 +190,28 @@ void test_builtin_method_signature_uses_type_ast() {
     dudu::FunctionSignature signature;
     assert(dudu::builtin_cpp_method_signature(symbols, dudu::parse_type_text("list[*Player]"),
                                               "append", signature));
-    assert(signature.params.size() == 1);
-    assert(signature.params[0] == "*Player");
-    assert(signature.return_type == "void");
+    assert(dudu::signature_param_count(signature) == 1);
+    assert(dudu::signature_param_type_ref(signature, 0).kind == dudu::TypeKind::Pointer);
+    assert(dudu::signature_return_type_ref(signature).name == "void");
 
     signature = {};
     assert(dudu::builtin_cpp_method_signature(symbols, dudu::parse_type_text("Players"), "append",
                                               signature));
-    assert(signature.params.size() == 1);
-    assert(signature.params[0] == "*Player");
-    assert(signature.param_type_refs.size() == 1);
-    assert(signature.param_type_refs[0].kind == dudu::TypeKind::Pointer);
-    assert(signature.return_type == "void");
+    assert(dudu::signature_param_count(signature) == 1);
+    assert(dudu::signature_param_type_ref(signature, 0).kind == dudu::TypeKind::Pointer);
+    assert(dudu::signature_return_type_ref(signature).name == "void");
 
     signature = {};
     assert(dudu::builtin_cpp_method_signature(
         symbols, dudu::parse_type_text("std::vector<std::string>"), "push_back", signature));
-    assert(signature.params.size() == 1);
-    assert(signature.params[0] == "std::string");
-    assert(signature.return_type == "void");
+    assert(dudu::signature_param_count(signature) == 1);
+    assert(dudu::signature_param_type_text(signature, 0) == "std::string");
+    assert(dudu::signature_return_type_ref(signature).name == "void");
 
     signature = {};
     assert(dudu::builtin_cpp_method_signature(
         symbols, dudu::parse_type_text("std::atomic<uint64_t>"), "load", signature));
-    assert(signature.return_type == "uint64_t");
+    assert(dudu::signature_return_type_text(signature) == "uint64_t");
 }
 
 void test_native_header_types_split_cpp_templates() {
@@ -265,11 +263,9 @@ void test_inherited_method_signature_uses_type_ast() {
 
     const dudu::FunctionSignature signature =
         dudu::inherited_method_signature_for_type(owner, dudu::parse_type_text("Box[i32]"), method);
-    assert(signature.params == std::vector<std::string>({"i32"}));
-    assert(signature.param_type_refs.size() == 1);
-    assert(dudu::substitute_type_ref_text(signature.param_type_refs[0], {}) == "i32");
-    assert(signature.return_type == "i32");
-    assert(dudu::substitute_type_ref_text(signature.return_type_ref, {}) == "i32");
+    assert(dudu::signature_param_count(signature) == 1);
+    assert(dudu::signature_param_type_ref(signature, 0).name == "i32");
+    assert(dudu::signature_return_type_ref(signature).name == "i32");
 }
 
 void test_find_inherited_method_uses_type_ast_receiver() {
@@ -291,9 +287,9 @@ void test_find_inherited_method_uses_type_ast_receiver() {
         dudu::find_inherited_method(symbols, dudu::parse_type_text("Box[i32]"), "replace");
     assert(found);
     assert(found->method == &owner.methods.front());
-    assert(found->signature.params == std::vector<std::string>({"i32"}));
-    assert(found->signature.return_type == "i32");
-    assert(dudu::substitute_type_ref_text(found->signature.return_type_ref, {}) == "i32");
+    assert(dudu::signature_param_count(found->signature) == 1);
+    assert(dudu::signature_param_type_ref(found->signature, 0).name == "i32");
+    assert(dudu::signature_return_type_ref(found->signature).name == "i32");
 }
 
 void test_instance_storage_uses_type_ast_receiver() {
@@ -437,9 +433,9 @@ void test_method_signature_lookup_uses_type_ast_receiver() {
     dudu::FunctionSignature signature;
     assert(dudu::method_signature_for_type(symbols, dudu::parse_type_text("Wrapper"), "replace",
                                            signature, nullptr));
-    assert(signature.params == std::vector<std::string>({"f32"}));
-    assert(signature.return_type == "f32");
-    assert(dudu::substitute_type_ref_text(signature.return_type_ref, {}) == "f32");
+    assert(dudu::signature_param_count(signature) == 1);
+    assert(dudu::signature_param_type_ref(signature, 0).name == "f32");
+    assert(dudu::signature_return_type_ref(signature).name == "f32");
 }
 
 void test_method_signature_list_uses_type_ast_receiver() {
@@ -465,9 +461,9 @@ void test_method_signature_list_uses_type_ast_receiver() {
     const std::vector<dudu::FunctionSignature> signatures =
         dudu::method_signatures_for_type(symbols, dudu::parse_type_text("Wrapper"), "replace");
     assert(signatures.size() == 1);
-    assert(signatures[0].params == std::vector<std::string>({"f32"}));
-    assert(signatures[0].return_type == "f32");
-    assert(dudu::substitute_type_ref_text(signatures[0].return_type_ref, {}) == "f32");
+    assert(dudu::signature_param_count(signatures[0]) == 1);
+    assert(dudu::signature_param_type_ref(signatures[0], 0).name == "f32");
+    assert(dudu::signature_return_type_ref(signatures[0]).name == "f32");
 }
 
 void test_static_method_signature_lookup_uses_type_ast_receiver() {
@@ -491,9 +487,8 @@ void test_static_method_signature_lookup_uses_type_ast_receiver() {
     dudu::FunctionSignature signature;
     assert(dudu::static_method_signature_for_type(symbols, dudu::parse_type_text("Wrapper"), "make",
                                                   signature, nullptr));
-    assert(signature.params.empty());
-    assert(signature.return_type == "f32");
-    assert(dudu::substitute_type_ref_text(signature.return_type_ref, {}) == "f32");
+    assert(dudu::signature_param_count(signature) == 0);
+    assert(dudu::signature_return_type_ref(signature).name == "f32");
 }
 
 void test_inferred_generic_method_uses_type_ast_receiver() {
@@ -1137,14 +1132,10 @@ void test_type_ast_shape() {
            "std::add_pointer_t<void(int32_t)>");
     dudu::FunctionSignature signature;
     assert(dudu::parse_function_type(dudu::parse_type_text("fn(i32, f32) -> bool"), signature));
-    assert(signature.params.size() == 2);
-    assert(signature.param_type_refs.size() == 2);
-    assert(signature.params[0] == "i32");
-    assert(signature.param_type_refs[0].name == "i32");
-    assert(signature.params[1] == "f32");
-    assert(signature.param_type_refs[1].name == "f32");
-    assert(signature.return_type == "bool");
-    assert(signature.return_type_ref.name == "bool");
+    assert(dudu::signature_param_count(signature) == 2);
+    assert(dudu::signature_param_type_ref(signature, 0).name == "i32");
+    assert(dudu::signature_param_type_ref(signature, 1).name == "f32");
+    assert(dudu::signature_return_type_ref(signature).name == "bool");
     const dudu::TypeRef signature_ref = dudu::function_type_ref(signature);
     assert(signature_ref.kind == dudu::TypeKind::Function);
     assert(signature_ref.children.size() == 3);
@@ -1153,15 +1144,14 @@ void test_type_ast_shape() {
     assert(signature_ref.children[2].name == "f32");
     assert(dudu::substitute_type_ref_text(signature_ref, {}) == "fn(i32, f32) -> bool");
     assert(dudu::parse_function_type(dudu::parse_type_text("fn(i32)"), signature));
-    assert(signature.params.size() == 1);
-    assert(signature.params[0] == "i32");
-    assert(signature.return_type == "void");
-    assert(signature.return_type_ref.name == "void");
+    assert(dudu::signature_param_count(signature) == 1);
+    assert(dudu::signature_param_type_ref(signature, 0).name == "i32");
+    assert(dudu::signature_return_type_ref(signature).name == "void");
     assert(dudu::parse_function_type(dudu::parse_type_text("std.function[fn(i32) -> i32]"),
                                      signature));
-    assert(signature.params.size() == 1);
-    assert(signature.params[0] == "i32");
-    assert(signature.return_type == "i32");
+    assert(dudu::signature_param_count(signature) == 1);
+    assert(dudu::signature_param_type_ref(signature, 0).name == "i32");
+    assert(dudu::signature_return_type_ref(signature).name == "i32");
     const dudu::TypeRef c_tag = dudu::parse_type_text("*struct sqlite3");
     assert(c_tag.kind == dudu::TypeKind::Pointer);
     assert(c_tag.children[0].kind == dudu::TypeKind::Named);

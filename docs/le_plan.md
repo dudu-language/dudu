@@ -1499,3 +1499,6 @@ push. They are not release packaging work.
    parameter list from `TypeRef` accessors and writes it back through
    `set_signature_param_types`; direct parameter mirror mutation is confined to
    the signature helper implementation.
+   AST frontend tests now assert `FunctionSignature` parameters and returns
+   through structured accessors rather than treating the legacy string mirrors
+   as the public contract.
