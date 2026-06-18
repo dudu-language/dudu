@@ -157,8 +157,8 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
             FunctionSignature signature;
             if (!scope.local_type_refs.contains(receiver) &&
                 scope.symbols.classes.contains(receiver) &&
-                static_method_signature_for_type(scope.symbols, receiver, method_name, signature,
-                                                 location)) {
+                static_method_signature_for_type(scope.symbols, parse_type_text(receiver),
+                                                 method_name, signature, location)) {
                 check_call_args_ast(scope, callee, signature, args, location);
                 return signature_return_type_text(signature);
             }
@@ -170,10 +170,12 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
                 }
                 return "auto";
             }
-            if (method_signature_for_type(scope.symbols, receiver_type, method_name, signature,
+            const TypeRef receiver_type_ref =
+                parse_type_text(receiver_type, location == nullptr ? SourceLocation{} : *location);
+            if (method_signature_for_type(scope.symbols, receiver_type_ref, method_name, signature,
                                           location)) {
                 const std::vector<FunctionSignature> signatures =
-                    method_signatures_for_type(scope.symbols, receiver_type, method_name);
+                    method_signatures_for_type(scope.symbols, receiver_type_ref, method_name);
                 if (const auto match = matching_signature_ast(scope, signatures, args)) {
                     check_call_args_ast(scope, callee, *match, args, location);
                     return signature_return_type_text(*match);
@@ -197,8 +199,8 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
             const std::string prefix_type = substitute_type_ref_text(prefix_type_ref, {});
             if (has_type_ref(prefix_type_ref)) {
                 FunctionSignature signature;
-                if (method_signature_for_type(scope.symbols, prefix_type, method_name, signature,
-                                              nullptr)) {
+                if (method_signature_for_type(scope.symbols, prefix_type_ref, method_name,
+                                              signature, nullptr)) {
                     check_call_args_ast(scope, callee, signature, args, location);
                     return signature_return_type_text(signature);
                 }

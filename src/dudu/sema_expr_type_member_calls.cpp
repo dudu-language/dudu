@@ -23,16 +23,16 @@ std::optional<TypeRef> receiver_call_type_ref(const FunctionScope& scope, const 
     FunctionSignature signature;
     if (receiver_expr.kind == ExprKind::Name && receiver_expr.name == "class" &&
         !scope.current_class.empty() &&
-        static_method_signature_for_type(scope.symbols, scope.current_class, method_name, signature,
-                                         location)) {
+        static_method_signature_for_type(scope.symbols, parse_type_text(scope.current_class),
+                                         method_name, signature, location)) {
         check_call_args_ast(scope, callee, signature, expr.children, location);
         return signature_return_type_ref(signature);
     }
     if (receiver_expr.kind == ExprKind::Name && receiver_expr.name != "class" &&
         !scope.local_type_refs.contains(receiver_expr.name) &&
         scope.symbols.classes.contains(receiver_expr.name) &&
-        static_method_signature_for_type(scope.symbols, receiver_expr.name, method_name, signature,
-                                         location)) {
+        static_method_signature_for_type(scope.symbols, parse_type_text(receiver_expr.name),
+                                         method_name, signature, location)) {
         check_call_args_ast(scope, callee, signature, expr.children, location);
         return signature_return_type_ref(signature);
     }
@@ -51,10 +51,10 @@ std::optional<TypeRef> receiver_call_type_ref(const FunctionScope& scope, const 
     }
     const bool foreign_receiver =
         foreign_cpp_type_name(scope.symbols, resolve_alias(scope.symbols, receiver_type));
-    if (method_signature_for_type(scope.symbols, receiver_type, method_name, signature,
+    if (method_signature_for_type(scope.symbols, receiver_type_ref, method_name, signature,
                                   foreign_receiver ? nullptr : location)) {
         const std::vector<FunctionSignature> signatures =
-            method_signatures_for_type(scope.symbols, receiver_type, method_name);
+            method_signatures_for_type(scope.symbols, receiver_type_ref, method_name);
         if (const auto match = matching_signature_ast(scope, signatures, expr.children)) {
             check_call_args_ast(scope, callee, *match, expr.children, location);
             return signature_return_type_ref(*match);
@@ -94,7 +94,7 @@ std::optional<TypeRef> direct_member_call_type_ref(const FunctionScope& scope, c
             foreign_cpp_type_name(scope.symbols, resolve_alias(scope.symbols, receiver_type));
         if (!foreign_receiver) {
             if (const auto inferred = inferred_generic_method_signature_for_type(
-                    scope, receiver_type, member.name, expr.children, location,
+                    scope, receiver_type_ref, member.name, expr.children, location,
                     {.infer_expr_type =
                          [](const FunctionScope& nested, const Expr& arg,
                             const SourceLocation* arg_location) {

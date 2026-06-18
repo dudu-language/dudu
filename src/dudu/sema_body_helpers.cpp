@@ -39,9 +39,8 @@ void check_type_match(FunctionScope& scope, const TypeRef& expected_ref, const E
             receiver.kind == ExprKind::Name && !scope.local_type_refs.contains(receiver.name);
         if (!receiver_is_bare_path) {
             const TypeRef receiver_ref = callbacks.infer_expr_type(scope, receiver, &location);
-            const std::string receiver_type = substitute_type_ref_text(receiver_ref, {});
             if (const auto signature = inferred_generic_method_signature_for_type(
-                    scope, receiver_type, member.name, expr.children, expected, &location,
+                    scope, receiver_ref, member.name, expr.children, expected, &location,
                     {.infer_expr_type =
                          [&](const FunctionScope& nested, const Expr& arg,
                              const SourceLocation* arg_location) {

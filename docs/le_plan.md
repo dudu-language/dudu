@@ -1275,3 +1275,6 @@ declarations safely.
    been removed; callers must parse once and pass `TypeRef`.
    Native member lookup exposes the parsed `TypeRef` result API only; unused
    string-returning native member helpers have been removed.
+   Dudu method lookup, generic method inference, static method lookup, and
+   receiver unwrapping now expose parsed `TypeRef` receiver APIs only; remaining
+   explicit C++ escape paths parse receiver strings at the boundary.

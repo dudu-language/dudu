@@ -73,10 +73,6 @@ TypeRef static_member_type_ref(const Symbols& symbols, const SourceLocation* loc
 
 } // namespace
 
-std::string unwrap_receiver_type(const Symbols& symbols, std::string type) {
-    return unwrap_receiver_type(symbols, parse_type_text(std::move(type)));
-}
-
 std::string unwrap_receiver_type(const Symbols& symbols, const TypeRef& type) {
     TypeRef current = type;
     while (true) {

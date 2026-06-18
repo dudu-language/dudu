@@ -125,13 +125,6 @@ bool method_signature_for_type(const Symbols& symbols, const TypeRef& receiver_t
     return false;
 }
 
-bool method_signature_for_type(const Symbols& symbols, std::string receiver_type,
-                               const std::string& method_name, FunctionSignature& signature,
-                               const SourceLocation* location) {
-    return method_signature_for_type(symbols, parse_type_text(receiver_type), method_name,
-                                     signature, location);
-}
-
 std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
     const FunctionScope& scope, const TypeRef& receiver_type, const std::string& method_name,
     const std::vector<Expr>& args, const SourceLocation* location,
@@ -166,14 +159,6 @@ std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
         }
     }
     return std::nullopt;
-}
-
-std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
-    const FunctionScope& scope, std::string receiver_type, const std::string& method_name,
-    const std::vector<Expr>& args, const SourceLocation* location,
-    const GenericInferCallbacks& callbacks) {
-    return inferred_generic_method_signature_for_type(scope, parse_type_text(receiver_type),
-                                                      method_name, args, location, callbacks);
 }
 
 std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
@@ -222,15 +207,6 @@ std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
     return std::nullopt;
 }
 
-std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
-    const FunctionScope& scope, std::string receiver_type, const std::string& method_name,
-    const std::vector<Expr>& args, const std::string& expected_return,
-    const SourceLocation* location, const GenericInferCallbacks& callbacks) {
-    return inferred_generic_method_signature_for_type(scope, parse_type_text(receiver_type),
-                                                      method_name, args, expected_return, location,
-                                                      callbacks);
-}
-
 std::vector<FunctionSignature> method_signatures_for_type(const Symbols& symbols,
                                                           const TypeRef& receiver_type,
                                                           const std::string& method_name) {
@@ -265,12 +241,6 @@ std::vector<FunctionSignature> method_signatures_for_type(const Symbols& symbols
         out.insert(out.end(), base_signatures.begin(), base_signatures.end());
     }
     return out;
-}
-
-std::vector<FunctionSignature> method_signatures_for_type(const Symbols& symbols,
-                                                          std::string receiver_type,
-                                                          const std::string& method_name) {
-    return method_signatures_for_type(symbols, parse_type_text(receiver_type), method_name);
 }
 
 bool static_method_signature_for_type(const Symbols& symbols, const TypeRef& type_name,
@@ -313,13 +283,6 @@ bool static_method_signature_for_type(const Symbols& symbols, const TypeRef& typ
         sema_fail(*location, "unknown static method: " + type + "." + method_name);
     }
     return false;
-}
-
-bool static_method_signature_for_type(const Symbols& symbols, const std::string& type_name,
-                                      const std::string& method_name, FunctionSignature& signature,
-                                      const SourceLocation* location) {
-    return static_method_signature_for_type(symbols, parse_type_text(type_name), method_name,
-                                            signature, location);
 }
 
 } // namespace dudu
