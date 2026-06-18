@@ -143,8 +143,6 @@ void test_type_compat_uses_type_ast_for_pointers() {
 
 void test_can_assign_resolves_alias_type_refs() {
     dudu::Symbols symbols;
-    symbols.aliases["Meters"] = "f32";
-    symbols.aliases["Distance"] = "Meters";
     symbols.alias_type_refs["Meters"] = dudu::parse_type_text("f32");
     symbols.alias_type_refs["Distance"] = dudu::parse_type_text("Meters");
     const dudu::FunctionScope scope(symbols);
@@ -205,7 +203,6 @@ void test_core_type_helpers_use_type_ast() {
 
 void test_builtin_method_signature_uses_type_ast() {
     dudu::Symbols symbols;
-    symbols.aliases["Players"] = "list[*Player]";
     symbols.alias_type_refs["Players"] = dudu::parse_type_text("list[*Player]");
     dudu::FunctionSignature signature;
     assert(dudu::builtin_cpp_method_signature(symbols, dudu::parse_type_text("list[*Player]"),
@@ -242,7 +239,6 @@ void test_native_header_types_split_cpp_templates() {
 
 void test_native_template_binding_resolves_alias_type_refs() {
     dudu::Symbols symbols;
-    symbols.aliases["FloatList"] = "list[f32]";
     symbols.alias_type_refs["FloatList"] = dudu::parse_type_text("list[f32]");
     dudu::NativeTemplateBindings bindings;
     assert(dudu::bind_native_template_type_ast(symbols, dudu::parse_type_text("list[T]"),
@@ -361,8 +357,6 @@ void test_native_base_assignable_resolves_alias_type_refs() {
     dudu::Symbols symbols;
     symbols.classes.emplace("Base", &base);
     symbols.classes.emplace("Derived", &derived);
-    symbols.aliases["BaseAlias"] = "Base";
-    symbols.aliases["DerivedAlias"] = "Derived";
     symbols.alias_type_refs["BaseAlias"] = dudu::parse_type_text("Base");
     symbols.alias_type_refs["DerivedAlias"] = dudu::parse_type_text("Derived");
 
@@ -375,9 +369,7 @@ void test_native_base_assignable_resolves_alias_type_refs() {
 void test_foreign_cpp_type_name_resolves_alias_type_refs() {
     dudu::Symbols symbols;
     symbols.native_types.insert("std.vector");
-    symbols.aliases["VecAlias"] = "std.vector";
     symbols.alias_type_refs["VecAlias"] = dudu::parse_type_text("std.vector");
-    symbols.aliases["ConstVecAlias"] = "const[VecAlias]";
     symbols.alias_type_refs["ConstVecAlias"] = dudu::parse_type_text("const[VecAlias]");
 
     assert(dudu::foreign_cpp_type_name(symbols, dudu::parse_type_text("VecAlias")));
@@ -386,9 +378,7 @@ void test_foreign_cpp_type_name_resolves_alias_type_refs() {
 
 void test_unwrap_receiver_uses_type_ast() {
     dudu::Symbols symbols;
-    symbols.aliases["AliasBox"] = "Box[i32]";
     symbols.alias_type_refs["AliasBox"] = dudu::parse_type_text("Box[i32]");
-    symbols.aliases["ConstAliasBox"] = "const[AliasBox]";
     symbols.alias_type_refs["ConstAliasBox"] = dudu::parse_type_text("const[AliasBox]");
 
     assert(dudu::unwrap_receiver_type(symbols, dudu::parse_type_text("*const[AliasBox]")) == "Box");
@@ -419,9 +409,7 @@ void test_inherited_field_lookup_uses_type_ast_receiver() {
 
 void test_result_field_lookup_resolves_alias_type_refs() {
     dudu::Symbols symbols;
-    symbols.aliases["Parsed"] = "Result[i32, str]";
     symbols.alias_type_refs["Parsed"] = dudu::parse_type_text("Result[i32, str]");
-    symbols.aliases["ParsedAlias"] = "Parsed";
     symbols.alias_type_refs["ParsedAlias"] = dudu::parse_type_text("Parsed");
 
     const std::optional<dudu::TypeRef> value =

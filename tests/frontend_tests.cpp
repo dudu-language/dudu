@@ -620,11 +620,8 @@ void test_emitted_local_index_type_inference() {
 void test_index_type_inference_uses_type_ast() {
     dudu::Symbols symbols;
     const dudu::SourceLocation location{.file = "index_types.dd", .line = 1, .column = 1};
-    symbols.aliases["Ints"] = "list[i32]";
     symbols.alias_type_refs["Ints"] = dudu::parse_type_text("list[i32]", location);
-    symbols.aliases["ItemAlias"] = "Item";
     symbols.alias_type_refs["ItemAlias"] = dudu::parse_type_text("Item", location);
-    symbols.aliases["AliasItems"] = "list[ItemAlias]";
     symbols.alias_type_refs["AliasItems"] = dudu::parse_type_text("list[ItemAlias]", location);
     const dudu::TypeRef pointer_item = dudu::indexed_type_ref_from_type(
         symbols, location, dudu::parse_type_text("*const[Item]", location),

@@ -196,12 +196,16 @@ void check_known_type_ref(const Symbols& symbols, const SourceLocation& location
 
 std::string resolve_alias(const Symbols& symbols, std::string type) {
     type = trim(std::move(type));
-    for (size_t guard = 0; guard < symbols.aliases.size(); ++guard) {
-        const auto found = symbols.aliases.find(type);
-        if (found == symbols.aliases.end()) {
+    for (size_t guard = 0; guard < symbols.alias_type_refs.size(); ++guard) {
+        const TypeRef parsed = parse_type_text(type);
+        if (parsed.kind != TypeKind::Named && parsed.kind != TypeKind::Qualified) {
             return type;
         }
-        type = trim(found->second);
+        const auto found = symbols.alias_type_refs.find(parsed.name);
+        if (found == symbols.alias_type_refs.end()) {
+            return type;
+        }
+        type = substitute_type_ref_text(found->second, {});
     }
     return type;
 }
@@ -321,18 +325,16 @@ Symbols collect_symbols(const ModuleAst& module) {
     for (const TypeAliasDecl& alias : module.aliases) {
         add_name(names, alias.name, alias.location);
         symbols.types.insert(alias.name);
-        symbols.aliases[alias.name] = type_ref_text(alias.type_ref);
         symbols.alias_type_refs[alias.name] = alias.type_ref;
     }
     for (const NativeTypeDecl& type : module.native_types) {
         symbols.types.insert(type.name);
         symbols.native_types.insert(type.name);
         add_native_path_prefix(symbols, type.name);
-        if (!type.type.empty() && !symbols.aliases.contains(type.name)) {
+        if (!type.type.empty() && !symbols.alias_type_refs.contains(type.name)) {
             const TypeRef alias_type = has_type_ref(type.type_ref)
                                            ? type.type_ref
                                            : parse_type_text(type.type, type.location);
-            symbols.aliases[type.name] = substitute_type_ref_text(alias_type, {});
             symbols.alias_type_refs[type.name] = alias_type;
         }
     }

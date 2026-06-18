@@ -1508,6 +1508,9 @@ push. They are not release packaging work.
    Null literal pointer assignment compatibility now checks pointer shape and
    `None` through `TypeRef` nodes instead of rendering expected/got types to
    strings.
+   The duplicate `Symbols::aliases` rendered string map has been deleted.
+   Alias resolution now uses `alias_type_refs` as the single source of truth
+   and renders only at string-returning compatibility call sites.
    Operator and condition semantic diagnostics now use `FunctionSignature`
    accessors for parameter counts and parameter type text instead of reading
    the legacy signature string vector directly.
