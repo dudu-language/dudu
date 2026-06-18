@@ -171,6 +171,7 @@ struct Expr {
     std::vector<Expr> params;
     std::vector<Expr> template_args;
     std::vector<TypeRef> template_type_args;
+    TypeRef type_ref;
     std::vector<Expr> children;
     SourceLocation location;
     SourceRange range;

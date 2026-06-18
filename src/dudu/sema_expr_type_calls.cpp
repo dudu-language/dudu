@@ -150,7 +150,13 @@ std::optional<TypeRef> direct_pointer_cast_type_ref(const FunctionScope& scope, 
     if (!starts_with(callee, "*")) {
         return std::nullopt;
     }
-    TypeRef pointee = parse_type_text(callee.substr(1), expr.location);
+    if (!has_type_ref(expr.type_ref)) {
+        if (location != nullptr) {
+            sema_expr_fail(*location, "unsupported pointer cast expression: " + callee);
+        }
+        return std::nullopt;
+    }
+    TypeRef pointee = expr.type_ref;
     if (const auto unknown = unknown_type_ref(scope.symbols, pointee)) {
         if (location != nullptr) {
             const SourceLocation error_location =
@@ -240,8 +246,7 @@ std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Ex
     }
     const TypeRef callee_type = named_type_ref(callee, expr.location);
     if (known_template_constructor_type(scope, callee_type)) {
-        if (const ClassDecl* klass =
-                class_for_receiver_type(scope.symbols, callee_type)) {
+        if (const ClassDecl* klass = class_for_receiver_type(scope.symbols, callee_type)) {
             reject_abstract_construction(scope.symbols, callee_type, location);
             check_constructor_args_ast(scope, *klass, expr.children, location);
         } else {

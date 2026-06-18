@@ -2022,6 +2022,10 @@ LSP source edits are also moving to AST-owned ranges:
 - `named_type_ref` now preserves qualified-name shape for dotted or `::`
   names, and template-constructor recognition accepts parsed `TypeRef`
   metadata instead of reparsing a rendered callee string.
+- Pointer-cast calls such as `*struct State(value)` now carry the parsed
+  pointee `TypeRef` on the expression node. Semantic analysis reads that AST
+  field and rejects malformed internal pointer-cast nodes instead of reparsing
+  the rendered callee string.
 
 Expression parsing has moved onto the lexer/token stream:
 

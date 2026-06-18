@@ -68,8 +68,7 @@ dudu::Json completion_params(int line, int character) {
     dudu::Json character_json;
     character_json.value = static_cast<double>(character);
     dudu::Json position_json;
-    position_json.value =
-        dudu::JsonObject{{"line", line_json}, {"character", character_json}};
+    position_json.value = dudu::JsonObject{{"line", line_json}, {"character", character_json}};
     dudu::Json params;
     params.value = dudu::JsonObject{{"position", position_json}};
     return params;
@@ -1056,6 +1055,7 @@ void test_dereference_postfix_expression_shape() {
     assert(cast.kind == dudu::ExprKind::Call);
     assert(cast.name.empty());
     assert(dudu::direct_callee_name(cast) == "*struct State");
+    assert(dudu::type_ref_head_name(cast.type_ref) == "struct State");
 
     const dudu::Expr template_cast = dudu::parse_expr_text("*list[MissingType](ptr)");
     assert(template_cast.kind == dudu::ExprKind::TemplateCall);
@@ -1381,12 +1381,11 @@ void test_wrapper_match_type_uses_type_ast() {
 }
 
 void test_member_completion_target_uses_tokens() {
-    const std::string source =
-        "def main() -> i32:\n"
-        "    player: Player = Player()\n"
-        "    player.\n"
-        "    module.value.\n"
-        "    player.hp\n";
+    const std::string source = "def main() -> i32:\n"
+                               "    player: Player = Player()\n"
+                               "    player.\n"
+                               "    module.value.\n"
+                               "    player.hp\n";
     const dudu::Document doc{
         .uri = "file:///completion.dd",
         .path = "/tmp/completion.dd",
@@ -1404,12 +1403,11 @@ void test_member_completion_target_uses_tokens() {
 }
 
 void test_signature_help_call_site_uses_tokens() {
-    const std::string source =
-        "def add(a: i32, b: i32) -> i32:\n"
-        "    return a + b\n"
-        "\n"
-        "def main() -> i32:\n"
-        "    return add(max(1, 2), 3)\n";
+    const std::string source = "def add(a: i32, b: i32) -> i32:\n"
+                               "    return a + b\n"
+                               "\n"
+                               "def main() -> i32:\n"
+                               "    return add(max(1, 2), 3)\n";
     const dudu::Document doc{
         .uri = "file:///signature.dd",
         .path = "/tmp/signature.dd",
@@ -1423,9 +1421,8 @@ void test_signature_help_call_site_uses_tokens() {
 }
 
 void test_ast_expr_path_at_cursor() {
-    const std::string source =
-        "def main() -> i32:\n"
-        "    player.hp.current\n";
+    const std::string source = "def main() -> i32:\n"
+                               "    player.hp.current\n";
     const dudu::Document doc{
         .uri = "file:///path.dd",
         .path = "/tmp/path.dd",
