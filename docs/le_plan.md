@@ -1565,6 +1565,8 @@ push. They are not release packaging work.
    `SuperCheckCallbacks` likewise no longer carries a call-argument checking
    callback; `super` method validation now calls the structured checker
    directly after overload selection.
+   `GenericInferCallbacks` now carries only typed expression inference; the
+   unused assignment callback and wrapper shim have been deleted.
    Index-result inference now detects foreign/qualified indexable receivers from
    `TypeRef` head/kind metadata instead of rendering the receiver type to search
    for namespace separators.

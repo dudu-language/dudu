@@ -242,16 +242,10 @@ std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Ex
         decl != scope.symbols.function_decls.end() && !decl->second->generic_params.empty()) {
         if (const auto type_args = infer_generic_call_type_args(
                 scope, *decl->second, callee, expr.children, location,
-                {.infer_expr_type =
-                     [](const FunctionScope& nested, const Expr& arg,
-                        const SourceLocation* arg_location) {
-                         return infer_expr_type_ast(nested, arg, arg_location);
-                     },
-                 .can_assign =
-                     [](const FunctionScope& nested, const TypeRef& expected, const Expr& value,
-                        const TypeRef& got) {
-                         return can_assign_ast(nested, expected, value, got);
-                     }})) {
+                {.infer_expr_type = [](const FunctionScope& nested, const Expr& arg,
+                                       const SourceLocation* arg_location) {
+                    return infer_expr_type_ast(nested, arg, arg_location);
+                }})) {
             const FunctionSignature signature =
                 instantiate_generic_signature(*decl->second, *type_args);
             check_call_args_ast(scope, callee, signature, expr.children, location);

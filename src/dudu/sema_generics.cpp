@@ -94,11 +94,6 @@ bool infer_generic_binding(const TypeRef& param_type, const TypeRef& arg_type,
     return true;
 }
 
-TypeRef infer_callback_expr_type(const GenericInferCallbacks& callbacks, const FunctionScope& scope,
-                                 const Expr& expr, const SourceLocation* location) {
-    return callbacks.infer_expr_type(scope, expr, location);
-}
-
 } // namespace
 
 std::vector<TypeRef> template_type_refs(const Expr& expr) {
@@ -140,7 +135,7 @@ infer_generic_call_type_args(const FunctionScope& scope, const FunctionDecl& fn,
     }
     std::map<std::string, TypeRef> bindings;
     for (size_t i = 0; i < fn.params.size(); ++i) {
-        const TypeRef got = infer_callback_expr_type(callbacks, scope, args[i], location);
+        const TypeRef got = callbacks.infer_expr_type(scope, args[i], location);
         std::string error;
         if (!infer_generic_binding(fn.params[i].type_ref, got, fn.generic_params, bindings,
                                    error)) {
@@ -185,7 +180,7 @@ infer_generic_method_type_args(const FunctionScope& scope, const FunctionDecl& m
     std::vector<TypeRef> arg_types;
     arg_types.reserve(args.size());
     for (size_t i = 0; i < args.size(); ++i) {
-        arg_types.push_back(infer_callback_expr_type(callbacks, scope, args[i], location));
+        arg_types.push_back(callbacks.infer_expr_type(scope, args[i], location));
     }
     return infer_generic_method_type_args_from_type_refs(method, callee, arg_types, first_param,
                                                          std::nullopt, location);

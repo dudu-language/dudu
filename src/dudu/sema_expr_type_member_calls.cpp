@@ -92,16 +92,10 @@ std::optional<TypeRef> direct_member_call_type_ref(const FunctionScope& scope, c
         if (!foreign_receiver) {
             if (const auto inferred = inferred_generic_method_signature_for_type(
                     scope, receiver_type_ref, member.name, expr.children, location,
-                    {.infer_expr_type =
-                         [](const FunctionScope& nested, const Expr& arg,
-                            const SourceLocation* arg_location) {
-                             return infer_expr_type_ast(nested, arg, arg_location);
-                         },
-                     .can_assign =
-                         [](const FunctionScope& nested, const TypeRef& expected, const Expr& value,
-                            const TypeRef& got) {
-                             return can_assign_ast(nested, expected, value, got);
-                         }})) {
+                    {.infer_expr_type = [](const FunctionScope& nested, const Expr& arg,
+                                           const SourceLocation* arg_location) {
+                        return infer_expr_type_ast(nested, arg, arg_location);
+                    }})) {
                 check_call_args_ast(scope, callee, *inferred, expr.children, location);
                 return signature_return_type_ref(*inferred);
             }
