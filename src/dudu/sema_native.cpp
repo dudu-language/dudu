@@ -39,33 +39,6 @@ bool native_import_path_prefix(const Symbols& symbols, const std::string& path) 
     return symbols.native_import_prefixes.contains(path.substr(0, dot));
 }
 
-std::optional<std::string> native_member_path_type(const Symbols& symbols,
-                                                   const std::string& path) {
-    const size_t dot = path.find('.');
-    if (dot == std::string::npos) {
-        return std::nullopt;
-    }
-    if (const auto value = symbols.native_values.find(path); value != symbols.native_values.end()) {
-        return value->second;
-    }
-    const std::string prefix = path.substr(0, dot);
-    if (prefix == "build" || prefix == "shader") {
-        return "auto";
-    }
-    if (!native_import_path_prefix(symbols, path)) {
-        return std::nullopt;
-    }
-    return "auto";
-}
-
-std::optional<std::string> native_member_expr_type(const Symbols& symbols, const Expr& expr) {
-    const std::optional<std::string> path = native_path_from_expr(expr);
-    if (!path) {
-        return std::nullopt;
-    }
-    return native_member_path_type(symbols, *path);
-}
-
 std::optional<TypeRef> native_member_path_type_ref(const Symbols& symbols, const std::string& path,
                                                    SourceLocation location) {
     const size_t dot = path.find('.');

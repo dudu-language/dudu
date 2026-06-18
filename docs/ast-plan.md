@@ -2006,6 +2006,8 @@ LSP source edits are also moving to AST-owned ranges:
   helpers have been removed.
 - General AST type helper convenience overloads that parsed raw strings have
   been removed; callers must parse once and pass `TypeRef`.
+- Native member lookup exposes the parsed `TypeRef` result API only; unused
+  string-returning native member helpers have been removed.
 
 Expression parsing has moved onto the lexer/token stream:
 

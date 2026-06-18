@@ -1273,3 +1273,5 @@ declarations safely.
    helpers have been removed.
    General AST type helper convenience overloads that parsed raw strings have
    been removed; callers must parse once and pass `TypeRef`.
+   Native member lookup exposes the parsed `TypeRef` result API only; unused
+   string-returning native member helpers have been removed.
