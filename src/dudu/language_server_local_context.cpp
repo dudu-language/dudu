@@ -325,9 +325,11 @@ std::set<std::string> type_candidate_names(const TypeRef& type) {
     }
     if (const std::string head = type_ref_head_name(type); !head.empty()) {
         out.insert(head);
-    }
-    if (const std::string rendered = type_ref_text(type); !rendered.empty()) {
-        out.insert(rendered);
+        for (std::string_view tag : {"struct ", "class ", "union ", "enum "}) {
+            if (head.starts_with(tag)) {
+                out.insert(trim_copy(head.substr(tag.size())));
+            }
+        }
     }
     return out;
 }

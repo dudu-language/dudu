@@ -1995,3 +1995,6 @@ push. They are not release packaging work.
    LSP semantic native type/class token classification now checks parsed
    `TypeRef` head names directly instead of rendering whole template type
    spellings for native-index lookup.
+   LSP member-candidate type expansion now uses parsed `TypeRef` head names
+   and C-tag-stripped head aliases instead of adding whole rendered type
+   spellings to the candidate set.

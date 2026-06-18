@@ -1541,6 +1541,11 @@ void test_member_candidate_types_use_type_refs() {
                              .type = "",
                              .type_ref = dudu::named_type_ref("NativeCamera"),
                              .location = {}});
+    module.native_types.push_back(
+        dudu::NativeTypeDecl{.name = "TaggedView",
+                             .type = "",
+                             .type_ref = dudu::named_type_ref("struct NativeTaggedCamera"),
+                             .location = {}});
 
     const std::set<std::string> dudu_candidates =
         dudu::member_candidate_types(module, dudu::named_type_ref("ViewCamera"));
@@ -1551,6 +1556,12 @@ void test_member_candidate_types_use_type_refs() {
         dudu::member_candidate_types(module, dudu::named_type_ref("NativeView"));
     assert(native_candidates.contains("NativeView"));
     assert(native_candidates.contains("NativeCamera"));
+
+    const std::set<std::string> tagged_candidates =
+        dudu::member_candidate_types(module, dudu::named_type_ref("TaggedView"));
+    assert(tagged_candidates.contains("TaggedView"));
+    assert(tagged_candidates.contains("struct NativeTaggedCamera"));
+    assert(tagged_candidates.contains("NativeTaggedCamera"));
 }
 
 void test_signature_help_call_site_uses_tokens() {
