@@ -1299,3 +1299,6 @@ declarations safely.
    overloads have been deleted.
    `Result` literal compatibility now parses `Ok[T]`/`Err[E]` result types
    and reads template children instead of slicing rendered type strings.
+   Binary and comparison RHS validation now expose parsed `TypeRef` APIs; they
+   unwrap aliases through structured type nodes and render strings only for
+   native/foreign compatibility checks and diagnostics.

@@ -27,6 +27,10 @@ bool is_numeric_type(std::string type) {
     return numeric.contains(type);
 }
 
+bool is_numeric_type(const TypeRef& type) {
+    return is_numeric_type(substitute_type_ref_text(type, {}));
+}
+
 std::string unwrap_value_type(const Symbols& symbols, std::string type) {
     type = resolve_alias(symbols, std::move(type));
     while (true) {
@@ -35,6 +39,20 @@ std::string unwrap_value_type(const Symbols& symbols, std::string type) {
         if (const auto inner = unary_type_child_text(parsed, {TypeKind::Const, TypeKind::Volatile,
                                                               TypeKind::Storage, TypeKind::Shared,
                                                               TypeKind::Device})) {
+            type = *inner;
+            continue;
+        }
+        return type;
+    }
+}
+
+TypeRef unwrap_value_type_ref(const Symbols& symbols, TypeRef type) {
+    type = resolve_alias_ref(symbols, std::move(type));
+    while (true) {
+        type = resolve_alias_ref(symbols, std::move(type));
+        if (const auto inner = unary_type_child_ref(type, {TypeKind::Const, TypeKind::Volatile,
+                                                           TypeKind::Storage, TypeKind::Shared,
+                                                           TypeKind::Device})) {
             type = *inner;
             continue;
         }
@@ -61,12 +79,11 @@ bool same_generic_param_type(const Symbols& symbols, const std::string& left,
     return !lhs.empty() && lhs == trim(right) && symbols.generic_params.contains(lhs);
 }
 
-bool numeric_operand_allowed(const std::string& expected, const Expr& expr,
-                             const std::string& got) {
+bool numeric_operand_allowed(const TypeRef& expected, const Expr& expr, const TypeRef& got) {
     return is_numeric_type(expected) && assignment_type_allowed(expected, expr, got);
 }
 
-bool same_or_assignable(const std::string& left, const Expr& right_expr, const std::string& right) {
+bool same_or_assignable(const TypeRef& left, const Expr& right_expr, const TypeRef& right) {
     return assignment_type_allowed(left, right_expr, right) || type_assignment_allowed(right, left);
 }
 
@@ -205,12 +222,16 @@ binary_operator_signature(const Symbols& symbols, const std::string& op, const s
     return native_operator_signature(symbols, op, left, &right_expr, right);
 }
 
-bool binary_rhs_allowed(const Symbols& symbols, const std::string& op, const std::string& left,
-                        const Expr& right_expr, const std::string& right) {
-    const std::string resolved_left = resolve_alias(symbols, left);
-    const std::string value_left = unwrap_value_type(symbols, left);
-    const std::string value_right = unwrap_value_type(symbols, right);
-    if (unknown_or_auto(left) || unknown_or_auto(right) || unknown_or_auto(value_left) ||
+bool binary_rhs_allowed(const Symbols& symbols, const std::string& op, const TypeRef& left,
+                        const Expr& right_expr, const TypeRef& right) {
+    const TypeRef resolved_left = resolve_alias_ref(symbols, left);
+    const TypeRef value_left_ref = unwrap_value_type_ref(symbols, left);
+    const TypeRef value_right_ref = unwrap_value_type_ref(symbols, right);
+    const std::string left_text = substitute_type_ref_text(left, {});
+    const std::string right_text = substitute_type_ref_text(right, {});
+    const std::string value_left = substitute_type_ref_text(value_left_ref, {});
+    const std::string value_right = substitute_type_ref_text(value_right_ref, {});
+    if (unknown_or_auto(left_text) || unknown_or_auto(right_text) || unknown_or_auto(value_left) ||
         unknown_or_auto(value_right)) {
         return true;
     }
@@ -221,29 +242,33 @@ bool binary_rhs_allowed(const Symbols& symbols, const std::string& op, const std
         return true;
     }
     if (op == "+" && value_left == "str") {
-        return assignment_type_allowed(value_left, right_expr, value_right);
+        return assignment_type_allowed(value_left_ref, right_expr, value_right_ref);
     }
     if (op == "+" || op == "-") {
-        return (parse_type_text(resolved_left).kind == TypeKind::Pointer &&
+        return (resolved_left.kind == TypeKind::Pointer &&
                 is_integer_type(value_right)) ||
-               numeric_operand_allowed(value_left, right_expr, value_right);
+               numeric_operand_allowed(value_left_ref, right_expr, value_right_ref);
     }
     if (op == "*" || op == "/") {
-        return numeric_operand_allowed(value_left, right_expr, value_right);
+        return numeric_operand_allowed(value_left_ref, right_expr, value_right_ref);
     }
     if (op == "%" || op == "^" || op == "&" || op == "|" || op == "<<" || op == ">>") {
         return is_integer_type(value_left) &&
-               (assignment_type_allowed(value_left, right_expr, value_right) ||
+               (assignment_type_allowed(value_left_ref, right_expr, value_right_ref) ||
                 is_integer_type(value_right));
     }
     return false;
 }
 
-bool comparison_rhs_allowed(const Symbols& symbols, const std::string& op, const std::string& left,
-                            const Expr& right_expr, const std::string& right) {
-    const std::string value_left = unwrap_value_type(symbols, left);
-    const std::string value_right = unwrap_value_type(symbols, right);
-    if (unknown_or_auto(left) || unknown_or_auto(right) || unknown_or_auto(value_left) ||
+bool comparison_rhs_allowed(const Symbols& symbols, const std::string& op, const TypeRef& left,
+                            const Expr& right_expr, const TypeRef& right) {
+    const TypeRef value_left_ref = unwrap_value_type_ref(symbols, left);
+    const TypeRef value_right_ref = unwrap_value_type_ref(symbols, right);
+    const std::string left_text = substitute_type_ref_text(left, {});
+    const std::string right_text = substitute_type_ref_text(right, {});
+    const std::string value_left = substitute_type_ref_text(value_left_ref, {});
+    const std::string value_right = substitute_type_ref_text(value_right_ref, {});
+    if (unknown_or_auto(left_text) || unknown_or_auto(right_text) || unknown_or_auto(value_left) ||
         unknown_or_auto(value_right)) {
         return true;
     }
@@ -254,12 +279,12 @@ bool comparison_rhs_allowed(const Symbols& symbols, const std::string& op, const
         return true;
     }
     if (op == "==" || op == "!=") {
-        return same_or_assignable(value_left, right_expr, value_right);
+        return same_or_assignable(value_left_ref, right_expr, value_right_ref);
     }
     if (value_left == "str") {
-        return assignment_type_allowed(value_left, right_expr, value_right);
+        return assignment_type_allowed(value_left_ref, right_expr, value_right_ref);
     }
-    return numeric_operand_allowed(value_left, right_expr, value_right);
+    return numeric_operand_allowed(value_left_ref, right_expr, value_right_ref);
 }
 
 } // namespace dudu

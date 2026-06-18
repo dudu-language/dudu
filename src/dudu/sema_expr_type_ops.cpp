@@ -160,7 +160,8 @@ std::optional<TypeRef> binary_expr_type_ref(const FunctionScope& scope, const Ex
             return named_type_ref("bool", expr.location);
         }
         if (location != nullptr && !left.empty() && !right.empty() &&
-            !comparison_rhs_allowed(scope.symbols, expr.op, left, expr.children[1], right)) {
+            !comparison_rhs_allowed(scope.symbols, expr.op, left_ref, expr.children[1],
+                                    right_ref)) {
             sema_expr_fail(*location,
                            "comparison " + expr.op + " expects " + left + ", got " + right);
         }
@@ -181,7 +182,7 @@ std::optional<TypeRef> binary_expr_type_ref(const FunctionScope& scope, const Ex
         return signature_return_type_ref(*signature);
     }
     if (location != nullptr && !left.empty() && !right.empty() &&
-        !binary_rhs_allowed(scope.symbols, expr.op, left, expr.children[1], right)) {
+        !binary_rhs_allowed(scope.symbols, expr.op, left_ref, expr.children[1], right_ref)) {
         sema_expr_fail(*location, "operator " + expr.op + " expects " + left + ", got " + right);
     }
     if (has_type_ref(left_ref)) {
