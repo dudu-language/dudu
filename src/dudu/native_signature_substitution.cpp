@@ -70,6 +70,11 @@ void append_placeholders(std::vector<std::string>& out, std::set<std::string>& s
     }
 }
 
+void append_placeholders_from_text(std::vector<std::string>& out, std::set<std::string>& seen,
+                                   std::string_view text, bool only_index) {
+    append_placeholders(out, seen, native_placeholders_in(text), only_index);
+}
+
 void append_placeholder(std::vector<std::string>& out, std::set<std::string>& seen,
                         const std::string& name, bool only_index) {
     if (!native_template_placeholder(name) || native_index_placeholder(name) != only_index) {
@@ -89,6 +94,9 @@ void append_placeholders(std::vector<std::string>& out, std::set<std::string>& s
     if (!type.value.empty()) {
         append_placeholder(out, seen, type.value, only_index);
     }
+    if (!type.text.empty()) {
+        append_placeholders_from_text(out, seen, type.text, only_index);
+    }
     for (const TypeRef& child : type.children) {
         append_placeholders(out, seen, child, only_index);
     }
@@ -98,16 +106,10 @@ std::vector<std::string> native_signature_placeholders(const FunctionSignature& 
     std::vector<std::string> out;
     std::set<std::string> seen;
     append_placeholders(out, seen, signature_return_type_ref(signature), true);
-    append_placeholders(out, seen, native_placeholders_in(signature_return_type_text(signature)),
-                        true);
     append_placeholders(out, seen, signature_return_type_ref(signature), false);
-    append_placeholders(out, seen, native_placeholders_in(signature_return_type_text(signature)),
-                        false);
     const size_t param_count = signature_param_count(signature);
     for (size_t i = 0; i < param_count; ++i) {
         append_placeholders(out, seen, signature_param_type_ref(signature, i), false);
-        append_placeholders(out, seen,
-                            native_placeholders_in(signature_param_type_text(signature, i)), false);
     }
     return out;
 }

@@ -1687,6 +1687,10 @@ push. They are not release packaging work.
    safe by walking signature and binding `TypeRef` nodes, consulting raw node
    spelling only for native artifact markers instead of rendering whole
    signature types first.
+   Native explicit-template placeholder discovery now walks signature
+   `TypeRef` nodes and scans each node's attached raw spelling for native
+   artifact placeholders, instead of rendering whole signature return/parameter
+   types before scanning.
    `substitute_type_ref` now has a structured `TypeRef` substitution overload.
    Receiver generic substitution for fields, methods, inherited methods, and
    inferred generic method signatures uses parsed receiver template arguments
