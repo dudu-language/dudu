@@ -106,6 +106,17 @@ bool is_template_type(const TypeRef& type, std::string_view name) {
     return type.kind == TypeKind::Template && type.name == name;
 }
 
+TypeRef emitted_local_type_ref(const std::map<std::string, TypeRef>& local_type_refs,
+                               std::string_view name, SourceLocation location) {
+    const auto type_ref = local_type_refs.find(std::string(name));
+    if (type_ref != local_type_refs.end()) {
+        return type_ref->second;
+    }
+    TypeRef unknown;
+    unknown.location = location;
+    return unknown;
+}
+
 bool is_fixed_array_type(const TypeRef& type) {
     if (type.kind == TypeKind::Template && type.name == "array") {
         return true;
@@ -267,11 +278,8 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         if (stmt.target_expr.kind == ExprKind::Name && !stmt.target_expr.name.empty()) {
             const std::string& lhs = stmt.target_expr.name;
             if (locals.contains(lhs)) {
-                const auto lhs_type_ref = local_type_refs.find(lhs);
                 const TypeRef lhs_type =
-                    lhs_type_ref == local_type_refs.end()
-                        ? parse_type_text(locals.at(lhs), stmt.target_expr.location)
-                        : lhs_type_ref->second;
+                    emitted_local_type_ref(local_type_refs, lhs, stmt.target_expr.location);
                 const bool option_target = is_template_type(lhs_type, "Option");
                 const std::string value =
                     lower_expr_as_type_ref(lhs_type, stmt.value_expr, aliases, locals,
