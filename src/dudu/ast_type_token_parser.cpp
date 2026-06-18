@@ -208,14 +208,14 @@ TypeRef TypeTokenParser::parse_primary(std::initializer_list<TokenKind> stops) {
         if (at(TokenKind::Number)) {
             ++cursor_;
             TypeRef type = make_node(TypeKind::Value, begin, cursor_);
-            type.value = type.text;
+            type.value = text_between(begin, cursor_);
             return type;
         }
         return make_node(TypeKind::Unknown, begin, cursor_);
     }
     if (match(TokenKind::Number)) {
         TypeRef type = make_node(TypeKind::Value, begin, cursor_);
-        type.value = type.text;
+        type.value = text_between(begin, cursor_);
         return type;
     }
     if ((at_identifier("struct") || at_identifier("union") || at_identifier("enum")) &&
@@ -290,7 +290,7 @@ TypeRef TypeTokenParser::parse_c_tag_name(size_t begin) {
                       ? TypeKind::Named
                       : TypeKind::Qualified,
                   begin, cursor_);
-    type.name = type.text;
+    type.name = text;
     return type;
 }
 
@@ -307,7 +307,7 @@ TypeRef TypeTokenParser::parse_name_or_template(size_t begin) {
                       ? TypeKind::Named
                       : TypeKind::Qualified,
                   begin, cursor_);
-    type.name = type.text;
+    type.name = text;
     while (match(TokenKind::LBracket)) {
         const size_t inner_begin = cursor_;
         std::vector<TypeRef> args = parse_list_until(TokenKind::RBracket);
@@ -336,7 +336,7 @@ TypeRef TypeTokenParser::parse_name_or_template(size_t begin) {
     }
     while (match_operator("<")) {
         TypeRef templ = make_node(TypeKind::Template, begin, cursor_);
-        templ.name = type.name.empty() ? type.text : type.name;
+        templ.name = type.name;
         templ.children = parse_angle_template_args();
         match_operator(">");
         templ.text = text_between(begin, cursor_);

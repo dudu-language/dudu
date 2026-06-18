@@ -848,6 +848,9 @@ push. They are not release packaging work.
    The duplicate string-only indexed type implementation has been removed;
    public string index queries parse the receiver once and delegate to the
    structured `TypeRef` indexing implementation.
+   Type-token parsing now fills semantic `TypeRef` names and numeric
+   template values from token spans directly instead of copying from the raw
+   `TypeRef.text` source spelling mirror.
 
 3. OOP Surface Cleanup
 
