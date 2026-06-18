@@ -370,7 +370,6 @@ TypeRef substitute_type_ref(const TypeRef& type,
     for (TypeRef& child : out.children) {
         child = substitute_type_ref(child, substitutions);
     }
-    out.text = substitute_type_ref_text(type, substitutions);
     return out;
 }
 
@@ -398,7 +397,6 @@ TypeRef substitute_type_ref(const TypeRef& type,
     for (TypeRef& child : out.children) {
         child = substitute_type_ref(child, substitutions);
     }
-    out.text = type_ref_text(out);
     return out;
 }
 
