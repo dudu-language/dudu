@@ -1777,6 +1777,9 @@ LSP source edits are also moving to AST-owned ranges:
 - Match C++ emission now lowers subject, guard, and simple switch pattern
   expressions through the typed expression path, so payload-bound locals in
   guarded cases keep parsed `TypeRef` metadata during codegen.
+- Local swizzle C++ emission now passes parsed local `TypeRef` metadata into
+  the local-class fast path instead of reparsing the local type string before
+  asking semantic swizzle helpers for the result type.
 - Native value symbols now store parsed `TypeRef` metadata beside their C++
   spelling strings, and normal name/member expression sema reads those refs
   directly for imported constants, build flags, shader/native values, and class

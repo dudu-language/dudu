@@ -55,8 +55,9 @@ bool looks_like_local_dudu_class_type(const std::string& type) {
 
 std::optional<std::string>
 lower_local_swizzle_expr(const Expr& expr, const std::vector<std::string>& aliases,
-                         const std::map<std::string, std::string>& locals, const Symbols* symbols,
-                         const CppEmitOptions& options) {
+                         const std::map<std::string, std::string>& locals,
+                         const std::map<std::string, TypeRef>& local_type_refs,
+                         const Symbols* symbols, const CppEmitOptions& options) {
     if (expr.kind != ExprKind::Member || expr.children.size() != 1 ||
         expr.children.front().kind != ExprKind::Name || !is_supported_swizzle(expr.name)) {
         return std::nullopt;
@@ -66,14 +67,17 @@ lower_local_swizzle_expr(const Expr& expr, const std::vector<std::string>& alias
     if (local == locals.end()) {
         return std::nullopt;
     }
-    if (!looks_like_local_dudu_class_type(local->second)) {
+    const auto typed = local_type_refs.find(receiver);
+    const TypeRef receiver_type = typed == local_type_refs.end()
+                                      ? parse_type_text(local->second, expr.location)
+                                      : typed->second;
+    if (!looks_like_local_dudu_class_type(type_ref_text(receiver_type))) {
         return std::nullopt;
     }
     if (symbols == nullptr) {
         return std::nullopt;
     }
-    const auto result_type =
-        swizzle_type_ref_for_type(*symbols, parse_type_text(local->second), expr.name);
+    const auto result_type = swizzle_type_ref_for_type(*symbols, receiver_type, expr.name);
     if (!result_type) {
         return std::nullopt;
     }
@@ -105,7 +109,8 @@ std::optional<std::string> lower_swizzle_expr(const Expr& expr,
                                               const std::map<std::string, TypeRef>& local_type_refs,
                                               const Symbols* symbols,
                                               const CppEmitOptions& options) {
-    if (const auto local = lower_local_swizzle_expr(expr, aliases, locals, symbols, options)) {
+    if (const auto local =
+            lower_local_swizzle_expr(expr, aliases, locals, local_type_refs, symbols, options)) {
         return local;
     }
     if (expr.kind != ExprKind::Member || expr.children.size() != 1 ||
