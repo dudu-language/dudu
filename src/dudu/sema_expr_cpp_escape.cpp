@@ -162,6 +162,37 @@ std::optional<std::string> infer_parsed_unary_escape(const FunctionScope& scope,
     return std::nullopt;
 }
 
+std::optional<std::string> infer_parsed_name_escape(const FunctionScope& scope, const Expr& parsed,
+                                                    const SourceLocation* location) {
+    if (parsed.kind != ExprKind::Name) {
+        return std::nullopt;
+    }
+    const SourceLocation name_location = location == nullptr ? parsed.location : *location;
+    if (parsed.name == "None") {
+        return "None";
+    }
+    if (const TypeRef local = local_type_ref(scope, parsed.name, name_location);
+        has_type_ref(local)) {
+        return substitute_type_ref_text(local, {});
+    }
+    if (const auto fn = scope.symbols.function_signatures.find(parsed.name);
+        fn != scope.symbols.function_signatures.end()) {
+        return function_type(fn->second);
+    }
+    if (const auto value = scope.symbols.native_value_type_refs.find(parsed.name);
+        value != scope.symbols.native_value_type_refs.end()) {
+        return substitute_type_ref_text(value->second, {});
+    }
+    if (const auto native = scope.symbols.native_function_signatures.find(parsed.name);
+        native != scope.symbols.native_function_signatures.end() && !native->second.empty()) {
+        return function_type(native->second.front());
+    }
+    if (is_dudu_all_caps(parsed.name)) {
+        return "i32";
+    }
+    return std::nullopt;
+}
+
 } // namespace
 
 std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
@@ -171,6 +202,12 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
         return "void";
     const SourceLocation parse_location = location == nullptr ? SourceLocation{} : *location;
     const Expr parsed_expr = parse_expr_text(expr, parse_location);
+    if (parsed_expr.kind == ExprKind::DictLiteral) {
+        return "dict";
+    }
+    if (parsed_expr.kind == ExprKind::SetLiteral) {
+        return "set";
+    }
     if (starts_with(expr, "{") && expr.back() == '}') {
         for (const std::string& entry : split_top_level(expr.substr(1, expr.size() - 2))) {
             if (find_top_level_char(entry, ':') != std::string::npos)
@@ -352,14 +389,14 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
     if (parsed_expr.kind == ExprKind::FloatLiteral) {
         return "f64";
     }
+    if (parsed_expr.kind == ExprKind::NoneLiteral) {
+        return "None";
+    }
     if (parsed_expr.kind == ExprKind::Unary && parsed_expr.op == "not") {
         return substitute_type_ref_text(infer_expr_type_ast(scope, parsed_expr, location), {});
     }
     if (parsed_expr.kind == ExprKind::Binary) {
         return substitute_type_ref_text(infer_expr_type_ast(scope, parsed_expr, location), {});
-    }
-    if (expr == "None") {
-        return "None";
     }
     if (const auto indexed = infer_parsed_index_escape(scope, parsed_expr, location)) {
         return *indexed;
@@ -405,6 +442,9 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
     const size_t dot = expr.find('.');
     if (dot != std::string::npos && is_member_path(expr)) {
         return cpp_escape_member_path_type(scope, location, expr);
+    }
+    if (const auto type = infer_parsed_name_escape(scope, parsed_expr, location)) {
+        return *type;
     }
     if (const TypeRef local =
             local_type_ref(scope, expr, location == nullptr ? SourceLocation{} : *location);
