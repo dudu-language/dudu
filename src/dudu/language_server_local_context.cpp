@@ -7,6 +7,7 @@
 #include "dudu/language_server_json.hpp"
 #include "dudu/language_server_navigation.hpp"
 #include "dudu/language_server_support.hpp"
+#include "dudu/lexer.hpp"
 #include "dudu/parser.hpp"
 #include "dudu/sema_common.hpp"
 #include "dudu/sema_context.hpp"
@@ -14,12 +15,10 @@
 #include "dudu/sema_index.hpp"
 #include "dudu/sema_scope.hpp"
 
-#include <cctype>
 #include <limits>
 #include <map>
 #include <optional>
 #include <set>
-#include <sstream>
 #include <string>
 
 namespace dudu {
@@ -58,6 +57,77 @@ bool function_contains_line(const FunctionDecl& fn, int cursor_line) {
                                                       : fn.statements.back().location.line;
     }
     return fn.location.line <= cursor_line && cursor_line <= std::max(fn.location.line, end);
+}
+
+bool token_is_syntax(const Token& token) {
+    return token.kind != TokenKind::Newline && token.kind != TokenKind::Indent &&
+           token.kind != TokenKind::Dedent && token.kind != TokenKind::End;
+}
+
+int token_start_character(const Token& token) {
+    return std::max(0, token.location.column - 1);
+}
+
+int token_end_character(const Token& token) {
+    return token_start_character(token) + static_cast<int>(token.text.size());
+}
+
+bool token_before_or_at_cursor(const Token& token, int line, int character) {
+    const int token_line = token.location.line - 1;
+    if (token_line != line) {
+        return false;
+    }
+    return token_start_character(token) < character;
+}
+
+std::vector<Token> syntax_tokens_before_cursor(const Document& doc, int line, int character) {
+    std::vector<Token> out;
+    for (const Token& token : lex_source(doc.text, doc.path)) {
+        if (!token_is_syntax(token)) {
+            continue;
+        }
+        if (!token_before_or_at_cursor(token, line, character)) {
+            continue;
+        }
+        out.push_back(token);
+    }
+    return out;
+}
+
+std::optional<size_t> member_access_dot_index(const std::vector<Token>& tokens, int character) {
+    if (tokens.empty()) {
+        return std::nullopt;
+    }
+    const Token& last = tokens.back();
+    if (last.kind == TokenKind::Dot && token_end_character(last) <= character) {
+        return tokens.size() - 1;
+    }
+    if (last.kind == TokenKind::Identifier && tokens.size() >= 2 &&
+        tokens[tokens.size() - 2].kind == TokenKind::Dot &&
+        token_start_character(last) <= character) {
+        return tokens.size() - 2;
+    }
+    return std::nullopt;
+}
+
+std::optional<std::string> dotted_target_before(const std::vector<Token>& tokens,
+                                                size_t dot_index) {
+    if (dot_index == 0 || tokens[dot_index - 1].kind != TokenKind::Identifier) {
+        return std::nullopt;
+    }
+    size_t start = dot_index - 1;
+    while (start >= 2 && tokens[start - 1].kind == TokenKind::Dot &&
+           tokens[start - 2].kind == TokenKind::Identifier) {
+        start -= 2;
+    }
+    std::string out;
+    for (size_t i = start; i < dot_index; ++i) {
+        if (tokens[i].kind != TokenKind::Identifier && tokens[i].kind != TokenKind::Dot) {
+            return std::nullopt;
+        }
+        out += tokens[i].text;
+    }
+    return out.empty() ? std::nullopt : std::optional<std::string>{out};
 }
 
 void lsp_bind_local(FunctionScope& scope, const std::string& name, TypeRef type_ref) {
@@ -224,35 +294,13 @@ std::optional<std::string> member_completion_target(const Document& doc, const J
     const int target_line = int_value(position == nullptr ? nullptr : position->get("line"));
     const int target_character =
         int_value(position == nullptr ? nullptr : position->get("character"));
-    std::istringstream in(doc.text);
-    std::string line;
-    for (int row = 0; std::getline(in, line); ++row) {
-        if (row != target_line) {
-            continue;
-        }
-        int cursor = std::min(target_character, static_cast<int>(line.size()));
-        while (cursor > 0 && identifier_char(line[static_cast<size_t>(cursor - 1)])) {
-            --cursor;
-        }
-        if (cursor <= 0 || line[static_cast<size_t>(cursor - 1)] != '.') {
-            return std::nullopt;
-        }
-        int end = cursor - 1;
-        while (end > 0 &&
-               std::isspace(static_cast<unsigned char>(line[static_cast<size_t>(end - 1)])) != 0) {
-            --end;
-        }
-        int start = end;
-        while (start > 0 && (identifier_char(line[static_cast<size_t>(start - 1)]) ||
-                             line[static_cast<size_t>(start - 1)] == '.')) {
-            --start;
-        }
-        if (start == end) {
-            return std::nullopt;
-        }
-        return line.substr(static_cast<size_t>(start), static_cast<size_t>(end - start));
+    const std::vector<Token> tokens =
+        syntax_tokens_before_cursor(doc, target_line, target_character);
+    const std::optional<size_t> dot_index = member_access_dot_index(tokens, target_character);
+    if (!dot_index) {
+        return std::nullopt;
     }
-    return std::nullopt;
+    return dotted_target_before(tokens, *dot_index);
 }
 
 TypeRef local_type_ref_before_cursor(const Document& doc, const std::string& name,

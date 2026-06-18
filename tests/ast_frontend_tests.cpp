@@ -4,6 +4,8 @@
 #include "dudu/cpp_emit.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/cpp_stmt_types.hpp"
+#include "dudu/language_server_json.hpp"
+#include "dudu/language_server_local_context.hpp"
 #include "dudu/language_server_semantic_tokens.hpp"
 #include "dudu/match_patterns.hpp"
 #include "dudu/native_header_types.hpp"
@@ -55,6 +57,19 @@ bool has_semantic_token(const std::vector<int>& data, int type, int modifier) {
         }
     }
     return false;
+}
+
+dudu::Json completion_params(int line, int character) {
+    dudu::Json line_json;
+    line_json.value = static_cast<double>(line);
+    dudu::Json character_json;
+    character_json.value = static_cast<double>(character);
+    dudu::Json position_json;
+    position_json.value =
+        dudu::JsonObject{{"line", line_json}, {"character", character_json}};
+    dudu::Json params;
+    params.value = dudu::JsonObject{{"position", position_json}};
+    return params;
 }
 
 void test_ast_assignment_display_types() {
@@ -1348,6 +1363,29 @@ void test_wrapper_match_type_uses_type_ast() {
     assert(option.args[0] == "Result[i32, str]");
 }
 
+void test_member_completion_target_uses_tokens() {
+    const std::string source =
+        "def main() -> i32:\n"
+        "    player: Player = Player()\n"
+        "    player.\n"
+        "    module.value.\n"
+        "    player.hp\n";
+    const dudu::Document doc{
+        .uri = "file:///completion.dd",
+        .path = "/tmp/completion.dd",
+        .text = source,
+    };
+
+    dudu::Json params = completion_params(2, 11);
+    assert(dudu::member_completion_target(doc, &params) == "player");
+
+    params = completion_params(3, 17);
+    assert(dudu::member_completion_target(doc, &params) == "module.value");
+
+    params = completion_params(4, 13);
+    assert(dudu::member_completion_target(doc, &params) == "player");
+}
+
 } // namespace
 
 int main() {
@@ -1396,6 +1434,7 @@ int main() {
         test_payload_enum_ast_shape();
         test_match_case_ast_shape();
         test_wrapper_match_type_uses_type_ast();
+        test_member_completion_target_uses_tokens();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;
