@@ -304,7 +304,7 @@ void emit_method(std::ostringstream& out, const std::string& class_name,
     CppLocalContext locals;
     std::map<std::string, TypeRef> local_type_refs;
     locals.current_class = class_name;
-    local_type_refs["class"] = parse_type_text(class_name, method.location);
+    local_type_refs["class"] = named_type_ref(class_name, method.location);
     const auto klass = symbols.classes.find(source_class_name);
     if (klass != symbols.classes.end() && klass->second->base_class_refs.size() == 1) {
         locals.super_class = type_ref_text(klass->second->base_class_refs.front().type_ref);

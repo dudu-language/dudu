@@ -1729,3 +1729,5 @@ push. They are not release packaging work.
    longer reparses normalized expected/got strings before structural checks.
    Member-path class references and simple literal compatibility now build
    named `TypeRef` nodes directly rather than parsing known type-name strings.
+   Class-emission pseudo-locals and built-in method return signatures now also
+   build named `TypeRef` nodes directly for known type names.

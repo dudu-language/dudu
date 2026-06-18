@@ -31,7 +31,7 @@ bool single_template_type_arg(const TypeRef& type, std::string_view name) {
 }
 
 void set_return_type(FunctionSignature& signature, const std::string& type) {
-    set_signature_return_type(signature, parse_type_text(type));
+    set_signature_return_type(signature, named_type_ref(type));
 }
 
 void set_return_type(FunctionSignature& signature, TypeRef type) {

@@ -2046,6 +2046,8 @@ LSP source edits are also moving to AST-owned ranges:
   longer reparses normalized expected/got strings before structural checks.
 - Member-path class references and simple literal compatibility now build
   named `TypeRef` nodes directly rather than parsing known type-name strings.
+- Class-emission pseudo-locals and built-in method return signatures now also
+  build named `TypeRef` nodes directly for known type names.
 
 Expression parsing has moved onto the lexer/token stream:
 
