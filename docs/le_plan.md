@@ -1483,3 +1483,8 @@ push. They are not release packaging work.
    Explicit and bound native template substitution now routes transformed
    parameter and return types through the signature setters directly; the old
    local refresh helper has been deleted.
+   Function signatures now expose a parameter text accessor beside the return
+   text accessor. Native matching and substitution use those signature APIs,
+   leaving direct access to the legacy parameter/return string mirrors confined
+   to `sema_function_type.cpp`, where the temporary mirror boundary is
+   implemented.

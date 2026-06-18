@@ -50,11 +50,7 @@ TypeRef signature_param_ref(const FunctionSignature& signature, size_t index) {
 }
 
 std::string signature_param_text(const FunctionSignature& signature, size_t index) {
-    const TypeRef ref = signature_param_ref(signature, index);
-    if (has_type_ref(ref)) {
-        return substitute_type_ref_text(ref, {});
-    }
-    return index < signature.params.size() ? signature.params[index] : "";
+    return signature_param_type_text(signature, index);
 }
 
 std::string signature_text(const std::string& callee, const FunctionSignature& signature) {

@@ -96,15 +96,17 @@ void append_placeholders(std::vector<std::string>& out, std::set<std::string>& s
 std::vector<std::string> native_signature_placeholders(const FunctionSignature& signature) {
     std::vector<std::string> out;
     std::set<std::string> seen;
-    append_placeholders(out, seen, signature.return_type_ref, true);
-    append_placeholders(out, seen, native_placeholders_in(signature.return_type), true);
-    append_placeholders(out, seen, signature.return_type_ref, false);
-    append_placeholders(out, seen, native_placeholders_in(signature.return_type), false);
-    for (size_t i = 0; i < signature.params.size(); ++i) {
-        if (i < signature.param_type_refs.size()) {
-            append_placeholders(out, seen, signature.param_type_refs[i], false);
-        }
-        append_placeholders(out, seen, native_placeholders_in(signature.params[i]), false);
+    append_placeholders(out, seen, signature_return_type_ref(signature), true);
+    append_placeholders(out, seen, native_placeholders_in(signature_return_type_text(signature)),
+                        true);
+    append_placeholders(out, seen, signature_return_type_ref(signature), false);
+    append_placeholders(out, seen, native_placeholders_in(signature_return_type_text(signature)),
+                        false);
+    const size_t param_count = signature_param_count(signature);
+    for (size_t i = 0; i < param_count; ++i) {
+        append_placeholders(out, seen, signature_param_type_ref(signature, i), false);
+        append_placeholders(out, seen,
+                            native_placeholders_in(signature_param_type_text(signature, i)), false);
     }
     return out;
 }
@@ -271,23 +273,23 @@ FunctionSignature substitute_explicit_template_signature(FunctionSignature signa
     std::vector<TypeRef> param_types;
     param_types.reserve(signature_param_count(signature));
     for (size_t i = 0; i < signature_param_count(signature); ++i) {
-        if (i < signature.param_type_refs.size() && has_type_ref(signature.param_type_refs[i])) {
-            param_types.push_back(substitute_type_ref(signature.param_type_refs[i], bindings));
+        const TypeRef param_type = signature_param_type_ref(signature, i);
+        if (has_type_ref(param_type)) {
+            param_types.push_back(substitute_type_ref(param_type, bindings));
         } else {
-            const std::string param_text =
-                i < signature.params.size()
-                    ? replace_explicit_template_args(signature.params[i], names, args)
-                    : std::string{};
+            const std::string param_text = replace_explicit_template_args(
+                signature_param_type_text(signature, i), names, args);
             param_types.push_back(parse_type_text(param_text));
         }
     }
     set_signature_param_types(signature, std::move(param_types));
-    if (has_type_ref(signature.return_type_ref)) {
-        set_signature_return_type(signature,
-                                  substitute_type_ref(signature.return_type_ref, bindings));
+    const TypeRef return_type = signature_return_type_ref(signature);
+    if (has_type_ref(return_type)) {
+        set_signature_return_type(signature, substitute_type_ref(return_type, bindings));
     } else {
         set_signature_return_type_text(
-            signature, replace_explicit_template_args(signature.return_type, names, args));
+            signature,
+            replace_explicit_template_args(signature_return_type_text(signature), names, args));
     }
     return signature;
 }
@@ -296,13 +298,15 @@ FunctionSignature substitute_bound_template_signature(FunctionSignature signatur
                                                       const NativeTemplateBindings& bindings,
                                                       const NativePackBindingMap& pack_bindings) {
     std::vector<std::string> params;
-    params.reserve(signature.params.size());
-    for (const std::string& param : signature.params) {
-        params.push_back(replace_template_bindings(param, bindings, pack_bindings));
+    params.reserve(signature_param_count(signature));
+    for (size_t i = 0; i < signature_param_count(signature); ++i) {
+        params.push_back(replace_template_bindings(signature_param_type_text(signature, i),
+                                                   bindings, pack_bindings));
     }
     set_signature_param_type_texts(signature, params);
     set_signature_return_type_text(
-        signature, replace_template_bindings(signature.return_type, bindings, pack_bindings));
+        signature,
+        replace_template_bindings(signature_return_type_text(signature), bindings, pack_bindings));
     return signature;
 }
 
