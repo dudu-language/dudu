@@ -8,6 +8,7 @@
 #include "dudu/sema_methods_internal.hpp"
 #include "dudu/sema_native.hpp"
 #include "dudu/sema_scan.hpp"
+#include "dudu/sema_scope.hpp"
 #include "dudu/source.hpp"
 
 namespace dudu {
@@ -56,18 +57,6 @@ TypeRef static_member_type_ref(const Symbols& symbols, const SourceLocation* loc
     }
     if (location != nullptr) {
         sema_fail(*location, "unknown static member: " + type_name + "." + member);
-    }
-    return {};
-}
-
-TypeRef local_type_ref_from_maps(const std::map<std::string, std::string>& locals,
-                                 const std::map<std::string, TypeRef>& local_type_refs,
-                                 const std::string& name, SourceLocation location) {
-    if (const auto local = local_type_refs.find(name); local != local_type_refs.end()) {
-        return local->second;
-    }
-    if (const auto local = locals.find(name); local != locals.end()) {
-        return parse_type_text(local->second, location);
     }
     return {};
 }
@@ -151,7 +140,7 @@ TypeRef member_expr_type_ref(const Symbols& symbols,
             return {};
         }
         if (const TypeRef local =
-                local_type_ref_from_maps(locals, local_type_refs, expr.name, type_location);
+                local_type_ref(symbols, locals, local_type_refs, expr.name, type_location);
             has_type_ref(local)) {
             return local;
         }
