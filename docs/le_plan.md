@@ -1826,3 +1826,6 @@ push. They are not release packaging work.
    Semantic base-type discovery no longer recovers malformed pointer,
    reference, or fixed-array `TypeRef` nodes from `TypeRef.text`; those
    structured nodes must carry children or produce no base type.
+   Member-call semantic inference now checks missing/`auto` receivers through
+   structured `TypeRef` state instead of rendering the receiver type to text
+   just to compare against `"auto"`.

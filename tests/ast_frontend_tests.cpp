@@ -626,6 +626,18 @@ void test_expected_generic_method_uses_type_ast_receiver() {
            "str");
 }
 
+void test_auto_member_call_receiver_uses_type_ast() {
+    dudu::Symbols symbols;
+    dudu::FunctionScope scope(symbols);
+    scope.local_type_refs.emplace("thing", dudu::named_type_ref("auto"));
+    const dudu::Expr call = dudu::parse_expr_text("thing.anything(1)");
+
+    const std::optional<dudu::TypeRef> result =
+        dudu::direct_member_call_type_ref(scope, call, nullptr);
+    assert(result);
+    assert(dudu::type_ref_is_auto(*result));
+}
+
 void test_native_semantic_tokens() {
     dudu::ModuleAst module =
         dudu::parse_source("import c \"native.h\"\n"
@@ -1528,6 +1540,7 @@ int main() {
         test_static_method_signature_lookup_uses_type_ast_receiver();
         test_inferred_generic_method_uses_type_ast_receiver();
         test_expected_generic_method_uses_type_ast_receiver();
+        test_auto_member_call_receiver_uses_type_ast();
         test_native_semantic_tokens();
         test_ast_constructor_assignment_compatibility();
         test_ast_index_receiver_type_inference();

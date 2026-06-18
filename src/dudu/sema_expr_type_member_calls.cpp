@@ -36,8 +36,7 @@ std::optional<TypeRef> receiver_call_type_ref(const FunctionScope& scope, const 
         return std::nullopt;
     }
     const TypeRef receiver_type_ref = infer_expr_type_ast(scope, receiver_expr, location);
-    const std::string receiver_type = substitute_type_ref_text(receiver_type_ref, {});
-    if (receiver_type.empty() || receiver_type == "auto") {
+    if (!has_type_ref(receiver_type_ref) || type_ref_is_auto(receiver_type_ref)) {
         for (const Expr& arg : expr.children) {
             check_expr_ast(scope, arg, location);
         }
