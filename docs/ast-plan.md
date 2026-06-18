@@ -214,6 +214,9 @@ Already structured:
 - explicit `cpp(...)` pointer-member rewrites for expression and statement
   escapes now read local pointer/list-pointer facts from `TypeRef` metadata
   instead of reparsing rendered local type strings
+- statement block C++ emission no longer exposes string-only local-type
+  overloads that parse rendered locals back into `TypeRef`; callers must pass
+  structured local metadata alongside the compatibility local-name map
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path

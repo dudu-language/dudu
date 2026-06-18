@@ -398,34 +398,6 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
 } // namespace
 
 void emit_block(std::ostringstream& out, const std::vector<Stmt>& body, int depth,
-                const std::vector<std::string>& aliases) {
-    emit_block(out, body, depth, aliases, {});
-}
-
-void emit_block(std::ostringstream& out, const std::vector<Stmt>& body, int depth,
-                const std::vector<std::string>& aliases,
-                const std::map<std::string, std::string>& initial_locals,
-                const TypeRef& return_type_ref,
-                const std::map<std::string, TypeRef>& function_returns, const Symbols* symbols) {
-    emit_block(out, body, depth, aliases, initial_locals, return_type_ref, function_returns,
-               symbols, {});
-}
-
-void emit_block(std::ostringstream& out, const std::vector<Stmt>& body, int depth,
-                const std::vector<std::string>& aliases,
-                const std::map<std::string, std::string>& initial_locals,
-                const TypeRef& return_type_ref,
-                const std::map<std::string, TypeRef>& function_returns, const Symbols* symbols,
-                const CppEmitOptions& options) {
-    std::map<std::string, TypeRef> local_type_refs;
-    for (const auto& [name, type] : initial_locals) {
-        local_type_refs[name] = parse_type_text(type);
-    }
-    emit_block(out, body, depth, aliases, initial_locals, local_type_refs, return_type_ref,
-               function_returns, symbols, options);
-}
-
-void emit_block(std::ostringstream& out, const std::vector<Stmt>& body, int depth,
                 const std::vector<std::string>& aliases,
                 const std::map<std::string, std::string>& initial_locals,
                 const std::map<std::string, TypeRef>& initial_local_type_refs,

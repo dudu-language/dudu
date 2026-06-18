@@ -673,6 +673,9 @@ push. They are not release packaging work.
    Explicit `cpp(...)` pointer-member rewrites for expression and statement
    escapes now read local pointer/list-pointer facts from `TypeRef` metadata
    instead of reparsing rendered local type strings.
+   Statement block C++ emission no longer exposes string-only local-type
+   overloads that parse rendered locals back into `TypeRef`; callers must pass
+   structured local metadata alongside the compatibility local-name map.
    TypeRef-backed assignment checks now infer RHS expressions as `TypeRef`
    first, use structured type assignment before compatibility fallback, and
    render only for legacy assignment/literal checks and diagnostics.
