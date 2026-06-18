@@ -1594,6 +1594,9 @@ push. They are not release packaging work.
    metadata, falling back to raw text only for unknown/raw type refs. This
    removes another general-purpose dependency on rendering whole types before
    applying substitutions.
+   Template argument extraction through aliases now uses the same structured
+   `TypeRef` lookup key instead of rendering the whole candidate type before
+   checking `alias_type_refs`.
    Index-result inference now detects foreign/qualified indexable receivers from
    `TypeRef` head/kind metadata instead of rendering the receiver type to search
    for namespace separators.

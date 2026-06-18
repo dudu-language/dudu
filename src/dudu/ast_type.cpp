@@ -58,8 +58,9 @@ template_type_arg_refs_with_aliases(const TypeRef& type, std::string_view name,
     if (!refs.empty()) {
         return refs;
     }
-    const std::string rendered = substitute_type_ref_text(type, {});
-    const auto found = aliases.find(rendered);
+
+    const std::string key = substitution_lookup_key(type);
+    const auto found = !key.empty() ? aliases.find(key) : aliases.end();
     if (found == aliases.end()) {
         return {};
     }
