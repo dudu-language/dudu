@@ -79,7 +79,8 @@ grep -Fq "#include \"assert.h\"" "$repo_root/build/c_lowercase_macro.cpp"
 grep -Fq "assert((value == 42));" "$repo_root/build/c_lowercase_macro.cpp"
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/c_direct_lowercase_macro.dd" \
     -o "$repo_root/build/c_direct_lowercase_macro.cpp"
-grep -Fq "assert((value == 42));" "$repo_root/build/c_direct_lowercase_macro.cpp"
+grep -Fq "if (!((value == 42))) { throw std::runtime_error(\"assert failed: value == 42\"); }" \
+    "$repo_root/build/c_direct_lowercase_macro.cpp"
 
 "$repo_root/build/duc" emit "$repo_root/tests/fixtures/named_callback.dd" \
     -o "$repo_root/build/function_pointer.cpp"

@@ -108,9 +108,58 @@ bool nonarray_template_name(const std::string& name) {
     return name == "_NonArray" || name.ends_with("._NonArray") || name.ends_with("::_NonArray");
 }
 
+std::string normalize_cpp_primitive_type(std::string type) {
+    type = trim_copy(std::move(type));
+    const size_t qualifier = type.find_last_of(".:");
+    if (qualifier != std::string::npos && qualifier + 1 < type.size()) {
+        const std::string tail = type.substr(qualifier + 1);
+        const std::string normalized_tail = normalize_cpp_primitive_type(tail);
+        if (normalized_tail != tail) {
+            return normalized_tail;
+        }
+    }
+    if (type == "bool") {
+        return "bool";
+    }
+    if (type == "char" || type == "signed char" || type == "int8_t" || type == "std.int8_t") {
+        return "i8";
+    }
+    if (type == "unsigned char" || type == "uint8_t" || type == "std.uint8_t") {
+        return "u8";
+    }
+    if (type == "short" || type == "short int" || type == "int16_t" || type == "std.int16_t") {
+        return "i16";
+    }
+    if (type == "unsigned short" || type == "unsigned short int" || type == "uint16_t" ||
+        type == "std.uint16_t") {
+        return "u16";
+    }
+    if (type == "int" || type == "signed int" || type == "int32_t" || type == "std.int32_t") {
+        return "i32";
+    }
+    if (type == "unsigned int" || type == "uint32_t" || type == "std.uint32_t") {
+        return "u32";
+    }
+    if (type == "long long" || type == "long long int" || type == "int64_t" ||
+        type == "std.int64_t") {
+        return "i64";
+    }
+    if (type == "unsigned long long" || type == "unsigned long long int" || type == "uint64_t" ||
+        type == "std.uint64_t") {
+        return "u64";
+    }
+    if (type == "float") {
+        return "f32";
+    }
+    if (type == "double") {
+        return "f64";
+    }
+    return type;
+}
+
 std::string normalize_nonarray_templates(const TypeRef& type) {
     if (type.kind != TypeKind::Template) {
-        return substitute_type_ref_text(type, {});
+        return normalize_cpp_primitive_type(substitute_type_ref_text(type, {}));
     }
     if ((type.name == "basic_string" || type.name == "std.basic_string" ||
          type.name == "std::basic_string") &&
@@ -153,7 +202,7 @@ std::string normalize_cpp_type_artifacts(std::string type) {
     type = normalize_type_traits(std::move(type));
     const TypeRef parsed = parse_type_text(type);
     if (parsed.kind == TypeKind::Unknown) {
-        return strip_cpp_pointer_cv_artifacts(type);
+        return strip_cpp_pointer_cv_artifacts(normalize_cpp_primitive_type(type));
     }
     return normalize_cpp_type_artifacts(parsed);
 }

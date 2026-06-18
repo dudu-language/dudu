@@ -121,6 +121,9 @@ native_operator_signature(const Symbols& symbols, const std::string& op, const s
                 continue;
             }
             signature.params.erase(signature.params.begin());
+            if (!signature.param_type_refs.empty()) {
+                signature.param_type_refs.erase(signature.param_type_refs.begin());
+            }
             return signature;
         }
     }
