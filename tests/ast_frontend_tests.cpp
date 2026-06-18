@@ -1072,6 +1072,7 @@ void test_type_ast_shape() {
         dudu::parse_type_text("array[i32]"), dudu::parse_expr_text("[[1, 2], [3, 4]]"));
     assert(inferred_array.status == dudu::ArrayShapeStatus::Inferred);
     assert(inferred_array.type == "array[i32][2, 2]");
+    assert(dudu::substitute_type_ref_text(inferred_array.element_type_ref, {}) == "i32");
     assert(inferred_array.type_ref.kind == dudu::TypeKind::FixedArray);
     assert(inferred_array.type_ref.children.size() == 1);
     assert(inferred_array.type_ref.children[0].kind == dudu::TypeKind::Template);

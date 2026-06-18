@@ -221,7 +221,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
         if (sema_has_expr(stmt.value_expr)) {
             if (inferred.status == ArrayShapeStatus::Inferred &&
                 is_array_literal(stmt.value_expr)) {
-                check_array_literal_elements(scope, stmt.type_ref.children.front(), stmt.value_expr,
+                check_array_literal_elements(scope, inferred.element_type_ref, stmt.value_expr,
                                              node_location(stmt.location, stmt.value_expr),
                                              callbacks);
             } else if (has_type_ref(explicit_element) && is_array_literal(stmt.value_expr)) {

@@ -724,6 +724,9 @@ push. They are not release packaging work.
    `super` method and `super.init` inference now keep selected base classes as
    parsed `TypeRef` nodes, passing structured receiver types into constructor
    and method checks and rendering only for diagnostics.
+   Array literal shape inference now carries the inferred element type as a
+   parsed `TypeRef`, and semantic element checks use that structured metadata
+   instead of reaching back through rendered declaration text.
    TypeRef-backed assignment checks now infer RHS expressions as `TypeRef`
    first, use structured type assignment before compatibility fallback, and
    render only for legacy assignment/literal checks and diagnostics.

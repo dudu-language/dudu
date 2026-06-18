@@ -19,6 +19,7 @@ struct ArrayShapeInference {
     std::string type;
     TypeRef type_ref;
     std::string element_type;
+    TypeRef element_type_ref;
     std::vector<size_t> shape;
 };
 

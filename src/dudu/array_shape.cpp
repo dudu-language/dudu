@@ -10,11 +10,11 @@
 namespace dudu {
 namespace {
 
-std::optional<std::string> inferred_array_element_type(const TypeRef& type) {
+std::optional<TypeRef> inferred_array_element_type_ref(const TypeRef& type) {
     if (type.kind != TypeKind::Template || type.name != "array" || type.children.size() != 1) {
         return std::nullopt;
     }
-    return substitute_type_ref_text(type.children.front(), {});
+    return type.children.front();
 }
 
 std::optional<std::pair<std::string, std::vector<size_t>>>
@@ -111,10 +111,11 @@ TypeRef shaped_array_type_ref(const TypeRef& declared_type, const std::string& t
 
 ArrayShapeInference infer_array_literal_shape_type(const TypeRef& declared_type,
                                                    const Expr& value) {
-    const auto element_type = inferred_array_element_type(declared_type);
+    const auto element_type = inferred_array_element_type_ref(declared_type);
     if (!element_type) {
         return {};
     }
+    const std::string element_type_text = substitute_type_ref_text(*element_type, {});
     if (value.kind != ExprKind::ListLiteral) {
         return {};
     }
@@ -122,7 +123,8 @@ ArrayShapeInference infer_array_literal_shape_type(const TypeRef& declared_type,
         return {.status = ArrayShapeStatus::EmptyLiteral,
                 .type = {},
                 .type_ref = {},
-                .element_type = *element_type,
+                .element_type = element_type_text,
+                .element_type_ref = *element_type,
                 .shape = {}};
     }
     const auto shape = literal_shape(value);
@@ -130,14 +132,16 @@ ArrayShapeInference infer_array_literal_shape_type(const TypeRef& declared_type,
         return {.status = ArrayShapeStatus::RaggedLiteral,
                 .type = {},
                 .type_ref = {},
-                .element_type = *element_type,
+                .element_type = element_type_text,
+                .element_type_ref = *element_type,
                 .shape = {}};
     }
-    const std::string type_text = shaped_array_type(*element_type, *shape);
+    const std::string type_text = shaped_array_type(element_type_text, *shape);
     return {.status = ArrayShapeStatus::Inferred,
             .type = type_text,
             .type_ref = shaped_array_type_ref(declared_type, type_text, *shape),
-            .element_type = *element_type,
+            .element_type = element_type_text,
+            .element_type_ref = *element_type,
             .shape = *shape};
 }
 

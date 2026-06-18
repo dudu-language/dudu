@@ -265,6 +265,9 @@ Already structured:
 - `super` method and `super.init` inference now keep selected base classes as
   parsed `TypeRef` nodes, passing structured receiver types into constructor
   and method checks and rendering only for diagnostics
+- array literal shape inference now carries the inferred element type as a
+  parsed `TypeRef`, and semantic element checks use that structured metadata
+  instead of reaching back through rendered declaration text
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path
