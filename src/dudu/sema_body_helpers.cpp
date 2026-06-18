@@ -11,6 +11,7 @@
 #include "dudu/sema_ops.hpp"
 #include "dudu/type_compat.hpp"
 
+#include <optional>
 #include <sstream>
 #include <utility>
 
@@ -200,18 +201,18 @@ std::optional<TypeRef> infer_for_binding_type(FunctionScope& scope, const Stmt& 
         return parse_type_text("i32", location);
     }
     if (stmt.iterable_expr.kind == ExprKind::Name) {
-        const std::string element = iterable_value_type(
+        const std::optional<TypeRef> element = iterable_value_type_ref(
             scope.symbols, scope.locals, scope.local_type_refs, stmt.iterable_expr.name);
-        if (!element.empty()) {
-            return parse_type_text(element, location);
+        if (element) {
+            return *element;
         }
     }
     const TypeRef iterable_type = callbacks.infer_expr_type(scope, stmt.iterable_expr, &location);
     if (!has_type_ref(iterable_type)) {
         return std::nullopt;
     }
-    if (const auto element = iterable_type_from_type(iterable_type)) {
-        return parse_type_text(*element, location);
+    if (const auto element = iterable_type_ref_from_type(iterable_type)) {
+        return *element;
     }
     return std::nullopt;
 }

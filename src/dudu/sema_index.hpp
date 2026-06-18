@@ -40,7 +40,12 @@ std::string iterable_value_type(const Symbols& symbols,
                                 const std::map<std::string, std::string>& locals,
                                 const std::map<std::string, TypeRef>& local_type_refs,
                                 const std::string& name);
+std::optional<TypeRef>
+iterable_value_type_ref(const Symbols& symbols, const std::map<std::string, std::string>& locals,
+                        const std::map<std::string, TypeRef>& local_type_refs,
+                        const std::string& name);
 std::optional<std::string> iterable_type_from_type(TypeRef type);
+std::optional<TypeRef> iterable_type_ref_from_type(TypeRef type);
 void check_iterable_binding(const Symbols& symbols,
                             const std::map<std::string, std::string>& locals,
                             const std::map<std::string, TypeRef>& local_type_refs,

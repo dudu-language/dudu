@@ -266,34 +266,7 @@ indexed_type_from_type_ref_with_count(const SourceLocation& location, const Type
     return std::nullopt;
 }
 
-std::optional<std::string> iterable_type_from_type_ref(TypeRef type) {
-    while ((type.kind == TypeKind::Reference || type.kind == TypeKind::Const) &&
-           type.children.size() == 1) {
-        type = type.children.front();
-    }
-    if (const auto element = single_template_child_type(type, "list")) {
-        return *element;
-    }
-    if (const auto element = single_template_child_type(type, "span")) {
-        return *element;
-    }
-    if (const auto element = single_template_child_type(type, "strided_span")) {
-        return *element;
-    }
-    if (const auto element = fixed_array_element_type(type)) {
-        return *element;
-    }
-    if (type.kind == TypeKind::Template && type.children.size() == 1) {
-        return substitute_type_ref_text(type.children.front(), {});
-    }
-    return std::nullopt;
-}
-
 } // namespace
-
-std::optional<std::string> iterable_type_from_type(TypeRef type) {
-    return iterable_type_from_type_ref(std::move(type));
-}
 
 std::string indexed_value_type(const Symbols& symbols,
                                const std::map<std::string, std::string>& locals,
@@ -438,61 +411,6 @@ TypeRef indexed_type_ref_from_type(const Symbols& symbols, const SourceLocation&
                                    const std::string& label) {
     const std::string type = indexed_type_from_type(symbols, location, raw_type, index_expr, label);
     return type.empty() ? TypeRef{} : parse_type_text(type, location);
-}
-
-std::string iterable_value_type(const Symbols& symbols,
-                                const std::map<std::string, std::string>& locals,
-                                const std::string& name) {
-    const auto local = locals.find(name);
-    if (local == locals.end()) {
-        return {};
-    }
-    const TypeRef type =
-        unwrap_reference_and_const(parse_type_text(resolve_alias(symbols, local->second)));
-    if (const auto element = iterable_type_from_type_ref(type)) {
-        return *element;
-    }
-    return {};
-}
-
-std::string iterable_value_type(const Symbols& symbols,
-                                const std::map<std::string, std::string>& locals,
-                                const std::map<std::string, TypeRef>& local_type_refs,
-                                const std::string& name) {
-    if (const auto type_ref = local_type_refs.find(name); type_ref != local_type_refs.end()) {
-        if (const auto element = iterable_type_from_type_ref(type_ref->second)) {
-            return *element;
-        }
-    }
-    return iterable_value_type(symbols, locals, name);
-}
-
-void check_iterable_binding(const Symbols& symbols,
-                            const std::map<std::string, std::string>& locals,
-                            const std::map<std::string, TypeRef>& local_type_refs,
-                            const SourceLocation& location, const TypeRef& binding_type,
-                            const Expr& iterable) {
-    if (direct_callee_name(iterable) == "range") {
-        return;
-    }
-    if (iterable.kind != ExprKind::Name) {
-        return;
-    }
-    const std::string& name = iterable.name;
-    if (!locals.contains(name)) {
-        throw CompileError(location, "iteration over unknown local: " + name);
-    }
-    const std::string element = iterable_value_type(symbols, locals, local_type_refs, name);
-    if (element.empty()) {
-        throw CompileError(location, "cannot iterate non-container: " + name);
-    }
-    const TypeRef element_type = parse_type_text(element, location);
-    const std::string binding_text = substitute_type_ref_text(binding_type, {});
-    if (!type_assignment_allowed(binding_type, element_type) &&
-        !type_assignment_allowed(resolve_alias(symbols, binding_text),
-                                 resolve_alias(symbols, element))) {
-        throw CompileError(location, "loop binding expects " + binding_text + ", got " + element);
-    }
 }
 
 } // namespace dudu
