@@ -2060,6 +2060,9 @@ LSP source edits are also moving to AST-owned ranges:
 - Dudu module import alias synthesis now constructs qualified `TypeRef` nodes
   directly for `module.Type` and aliased selective imports instead of routing
   module metadata through the text type parser.
+- Pointer-style type calls in the expression token parser now parse their
+  callee type from the original token span, removing another normal expression
+  parser render-and-reparse path.
 
 Expression parsing has moved onto the lexer/token stream:
 

@@ -138,6 +138,16 @@ Expr ExprTokenParser::parse_expr_span(size_t begin, size_t end) const {
     return parser.parse();
 }
 
+TypeRef ExprTokenParser::parse_type_span(size_t begin, size_t end) const {
+    if (begin >= end || begin >= tokens_.size()) {
+        const SourceLocation location =
+            begin < tokens_.size() ? tokens_[begin].location : SourceLocation{};
+        return make_type(TypeKind::Unknown, "", location);
+    }
+    TypeTokenParser parser(tokens_.subspan(begin, end - begin));
+    return parser.parse();
+}
+
 std::vector<TypeRef> ExprTokenParser::parse_type_list_span(size_t begin, size_t end) const {
     if (begin >= end || begin >= tokens_.size()) {
         return {};

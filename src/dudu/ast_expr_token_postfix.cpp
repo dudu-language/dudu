@@ -365,9 +365,7 @@ Expr ExprTokenParser::parse_pointer_cast_call() {
     call.children = std::move(args);
 
     const std::string type_text = text_between(type_begin, type_end);
-    const SourceLocation type_location =
-        type_begin < tokens_.size() ? tokens_[type_begin].location : call.location;
-    call.type_ref = parse_type_text(type_text, type_location);
+    call.type_ref = parse_type_span(type_begin, type_end);
     const size_t bracket = type_text.find('[');
     if (bracket != std::string::npos && type_text.ends_with("]")) {
         size_t bracket_token = type_end;

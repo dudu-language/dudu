@@ -38,6 +38,7 @@ class ExprTokenParser {
     std::string text_between(size_t begin, size_t end) const;
     Expr make_node(ExprKind kind, size_t begin, size_t end) const;
     Expr parse_expr_span(size_t begin, size_t end) const;
+    TypeRef parse_type_span(size_t begin, size_t end) const;
     std::vector<TypeRef> parse_type_list_span(size_t begin, size_t end) const;
 
     Expr parse_comma_expr(std::initializer_list<TokenKind> stops);
