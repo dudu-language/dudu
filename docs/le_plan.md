@@ -1955,6 +1955,9 @@ push. They are not release packaging work.
    Native overload numeric-promotion matching now uses parsed parameter/argument
    `TypeRef` head names only; rendered strings remain only in mismatch
    diagnostics.
+   Pointer-template casts now carry the parsed target type on the call
+   expression, and sema/codegen reuse that `TypeRef` instead of stripping `*`
+   from the callee spelling and rebuilding the target from text.
    LSP semantic type-token collection now uses `TypeRef` helper APIs for type
    heads and rendered spellings instead of reading `name`/`text` fields
    directly.

@@ -1127,11 +1127,18 @@ void test_dereference_postfix_expression_shape() {
     assert(template_cast.kind == dudu::ExprKind::TemplateCall);
     assert(template_cast.name.empty());
     assert(dudu::direct_callee_name(template_cast) == "*list");
+    assert(template_cast.type_ref.kind == dudu::TypeKind::Template);
+    assert(template_cast.type_ref.name == "list");
+    assert(template_cast.type_ref.children.size() == 1);
+    assert(template_cast.type_ref.children[0].name == "MissingType");
     assert(template_cast.template_type_args.size() == 1);
 
     const dudu::Expr qualified_template_cast = dudu::parse_expr_text("*std.vector[i32](raw_data)");
     assert(qualified_template_cast.kind == dudu::ExprKind::TemplateCall);
     assert(dudu::direct_callee_name(qualified_template_cast) == "*std.vector");
+    assert(qualified_template_cast.type_ref.kind == dudu::TypeKind::Template);
+    assert(qualified_template_cast.type_ref.name == "std.vector");
+    assert(qualified_template_cast.type_ref.children.size() == 1);
     assert(qualified_template_cast.template_args.size() == 1);
     assert(qualified_template_cast.template_args[0].kind == dudu::ExprKind::Name);
     assert(qualified_template_cast.template_args[0].name == "i32");

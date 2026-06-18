@@ -183,11 +183,12 @@ TypeRef template_type_ref_from_expr(const Expr& expr, std::string name) {
 }
 
 TypeRef pointer_template_type_ref_from_expr(const Expr& expr) {
-    const std::string callee = direct_callee_name(expr);
-    TypeRef pointee =
-        template_type_ref_from_expr(expr, callee.size() > 1 ? trim_copy(callee.substr(1)) : "");
+    if (!has_type_ref(expr.type_ref)) {
+        throw CompileError(expr.location,
+                           "malformed pointer cast expression: missing parsed target type");
+    }
 
-    TypeRef pointer = wrapped_type_ref(TypeKind::Pointer, std::move(pointee), expr.location);
+    TypeRef pointer = wrapped_type_ref(TypeKind::Pointer, expr.type_ref, expr.location);
     pointer.range = expr.range;
     return pointer;
 }

@@ -9,19 +9,8 @@
 namespace dudu {
 namespace {
 
-TypeRef template_pointer_cast_type_ref(const Expr& expr, std::vector<TypeRef> type_args) {
-    const std::string callee = direct_callee_name(expr);
-    const std::string name = callee.size() > 1 ? callee.substr(1) : "";
-    const TypeKind wrapper = wrapper_type_kind(name);
-    TypeRef pointee;
-    pointee.kind =
-        wrapper != TypeKind::Unknown && type_args.size() == 1 ? wrapper : TypeKind::Template;
-    pointee.name = name;
-    pointee.children = std::move(type_args);
-    pointee.location = expr.location;
-    pointee.range = expr.range;
-
-    TypeRef pointer = wrapped_type_ref(TypeKind::Pointer, std::move(pointee), expr.location);
+TypeRef template_pointer_cast_type_ref(const Expr& expr) {
+    TypeRef pointer = wrapped_type_ref(TypeKind::Pointer, expr.type_ref, expr.location);
     pointer.range = expr.range;
     return pointer;
 }
@@ -291,7 +280,7 @@ std::optional<TypeRef> direct_template_call_type_ref(const FunctionScope& scope,
         if (type_args.empty()) {
             return std::nullopt;
         }
-        TypeRef pointer = template_pointer_cast_type_ref(expr, type_args);
+        TypeRef pointer = template_pointer_cast_type_ref(expr);
         const TypeRef& pointee = pointer.children.front();
         if (const auto unknown = unknown_type_ref(scope.symbols, pointee)) {
             if (location != nullptr) {
