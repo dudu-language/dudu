@@ -14,11 +14,6 @@ std::optional<std::string> infer_cpp_escape_allocation_call(const Symbols& symbo
                                                             const SourceLocation* location,
                                                             const std::string& callee,
                                                             const std::vector<Expr>& args);
-std::optional<std::string> infer_allocation_call(const Symbols& symbols,
-                                                 const SourceLocation* location,
-                                                 const std::string& callee,
-                                                 const std::vector<TypeRef>& type_args,
-                                                 size_t arg_count);
 std::optional<TypeRef> infer_allocation_call_type_ref(const Symbols& symbols,
                                                       const SourceLocation* location,
                                                       const std::string& callee,

@@ -95,19 +95,6 @@ std::optional<std::string> infer_cpp_escape_allocation_call(const Symbols& symbo
     return infer_allocation_call_with_count(symbols, location, callee, args.size());
 }
 
-std::optional<std::string> infer_allocation_call(const Symbols& symbols,
-                                                 const SourceLocation* location,
-                                                 const std::string& callee,
-                                                 const std::vector<TypeRef>& type_args,
-                                                 const size_t arg_count) {
-    const auto type_ref =
-        infer_allocation_call_type_ref(symbols, location, callee, type_args, arg_count);
-    if (!type_ref) {
-        return std::nullopt;
-    }
-    return substitute_type_ref_text(*type_ref, {});
-}
-
 std::optional<TypeRef> infer_allocation_call_type_ref(const Symbols& symbols,
                                                       const SourceLocation* location,
                                                       const std::string& callee,

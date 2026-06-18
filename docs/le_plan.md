@@ -1662,6 +1662,10 @@ push. They are not release packaging work.
    Assignment compatibility now detects whether native normalization changed a
    type through `TypeRef` equivalence instead of rendering the original type
    and comparing text.
+   Normal `new[T]`/`malloc[T]` allocation inference now exposes only the
+   parsed `TypeRef` result API; the obsolete string-returning allocation helper
+   has been removed. The remaining text allocation helper is confined to the
+   explicit `cpp(...)` escape boundary.
    Native overload template matching no longer retries failed argument binding
    through a rendered-string template binder. The structured binder now handles
    native C++ pack-expansion artifacts inside template types, and the old
