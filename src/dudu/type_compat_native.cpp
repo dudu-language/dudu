@@ -110,6 +110,11 @@ bool nonarray_template_name(const std::string& name) {
     return name == "_NonArray" || name.ends_with("._NonArray") || name.ends_with("::_NonArray");
 }
 
+bool type_traits_template_name(const std::string& name) {
+    return name == "__decay_and_strip" || name == "std.remove_reference" ||
+           name == "std::remove_reference";
+}
+
 std::string normalize_cpp_primitive_type(std::string type) {
     type = trim_copy(std::move(type));
     const size_t qualifier = type.find_last_of(".:");
@@ -159,26 +164,43 @@ std::string normalize_cpp_primitive_type(std::string type) {
     return type;
 }
 
-std::string normalize_nonarray_templates(const TypeRef& type) {
-    if (type.kind != TypeKind::Template) {
-        return normalize_cpp_primitive_type(substitute_type_ref_text(type, {}));
+TypeRef normalize_cpp_primitive_type_ref(const TypeRef& type) {
+    TypeRef out = type;
+    for (TypeRef& child : out.children) {
+        child = normalize_cpp_primitive_type_ref(child);
     }
-    if ((type.name == "basic_string" || type.name == "std.basic_string" ||
-         type.name == "std::basic_string") &&
-        !type.children.empty() && type_ref_is_native_char(type.children.front())) {
-        return "std.string";
-    }
-    if (nonarray_template_name(type.name) && type.children.size() == 1) {
-        return normalize_nonarray_templates(type.children.front());
-    }
-    std::string out = type.name + "[";
-    for (size_t i = 0; i < type.children.size(); ++i) {
-        if (i > 0) {
-            out += ", ";
+
+    if (out.kind == TypeKind::Named || out.kind == TypeKind::Qualified) {
+        const std::string original = type_ref_head_name(out);
+        const std::string normalized = normalize_cpp_primitive_type(original);
+        if (normalized != original) {
+            return named_type_ref(normalized, out.location);
         }
-        out += normalize_nonarray_templates(type.children[i]);
+        return out;
     }
-    out += "]";
+
+    if (out.kind == TypeKind::Template) {
+        if ((out.name == "basic_string" || out.name == "std.basic_string" ||
+             out.name == "std::basic_string") &&
+            !out.children.empty() && type_ref_is_native_char(out.children.front())) {
+            return named_type_ref("std.string", out.location);
+        }
+        if ((nonarray_template_name(out.name) || type_traits_template_name(out.name)) &&
+            out.children.size() == 1) {
+            return out.children.front();
+        }
+        const std::string original = type_ref_head_name(out);
+        const std::string normalized = normalize_cpp_primitive_type(original);
+        if (normalized != original) {
+            out.name = normalized;
+            out.kind = normalized.find('.') == std::string::npos &&
+                               normalized.find("::") == std::string::npos
+                           ? TypeKind::Named
+                           : TypeKind::Qualified;
+        }
+        return out;
+    }
+
     return out;
 }
 
@@ -195,9 +217,13 @@ std::string strip_cpp_pointer_cv_artifacts(std::string type) {
 
 } // namespace
 
+TypeRef normalize_cpp_type_artifacts_ref(const TypeRef& type) {
+    return normalize_cpp_primitive_type_ref(normalize_tuple_element(type));
+}
+
 std::string normalize_cpp_type_artifacts(const TypeRef& type) {
-    const TypeRef tuple_normalized = normalize_tuple_element(type);
-    return strip_cpp_pointer_cv_artifacts(normalize_nonarray_templates(tuple_normalized));
+    return strip_cpp_pointer_cv_artifacts(
+        substitute_type_ref_text(normalize_cpp_type_artifacts_ref(type), {}));
 }
 
 std::string normalize_cpp_type_artifacts(std::string type) {

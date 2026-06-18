@@ -1785,3 +1785,7 @@ push. They are not release packaging work.
    Raw type-spelling recognition for `cpp(...)` calls is now private to the
    explicit C++ escape inference boundary; general semantic context exposes only
    structured `TypeRef` type checks.
+   C++ artifact normalization now exposes a `TypeRef`-returning path for parsed
+   types. Assignment compatibility uses that structured path, so normal
+   expected/got type checks no longer render normalized `TypeRef`s and reparse
+   them; only the foreign spelling overload still parses raw C++ text.
