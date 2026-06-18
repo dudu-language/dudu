@@ -201,6 +201,20 @@ std::string resolve_alias(const Symbols& symbols, std::string type) {
     return type;
 }
 
+TypeRef resolve_alias_ref(const Symbols& symbols, TypeRef type) {
+    for (size_t guard = 0; guard < symbols.alias_type_refs.size(); ++guard) {
+        if (type.kind != TypeKind::Named && type.kind != TypeKind::Qualified) {
+            return type;
+        }
+        const auto found = symbols.alias_type_refs.find(type.name);
+        if (found == symbols.alias_type_refs.end()) {
+            return type;
+        }
+        type = found->second;
+    }
+    return type;
+}
+
 std::vector<std::string> split_top_level(std::string text) {
     std::vector<std::string> out;
     int depth = 0;

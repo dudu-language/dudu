@@ -274,6 +274,9 @@ Already structured:
 - indexed local inference now exposes only the `TypeRef` helper; `cpp(...)`
   escape inference uses structured indexed-local metadata internally and
   renders only at the escape compatibility boundary
+- loop binding compatibility now resolves aliases through `Symbols::alias_type_refs`
+  and compares parsed `TypeRef` nodes instead of resolving binding and element
+  types through string aliases
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path

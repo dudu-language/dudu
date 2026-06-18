@@ -850,12 +850,16 @@ void test_typed_for_emission() {
     const dudu::ModuleAst module = dudu::parse_source("class Item:\n"
                                                       "    value: i32\n"
                                                       "\n"
+                                                      "type ItemAlias = Item\n"
+                                                      "\n"
                                                       "def sum_items(items: list[Item]) -> i32:\n"
                                                       "    total: i32 = 0\n"
                                                       "    for index in range(3):\n"
                                                       "        total += index\n"
                                                       "    for item: &Item in items:\n"
                                                       "        total += item.value\n"
+                                                      "    for alias_item: ItemAlias in items:\n"
+                                                      "        total += alias_item.value\n"
                                                       "    for copy in items:\n"
                                                       "        total += copy.value\n"
                                                       "    return total\n",
@@ -864,6 +868,7 @@ void test_typed_for_emission() {
     const std::string cpp = dudu::emit_cpp_source(module);
     assert(cpp.find("for (auto index = 0; index < 3; index += 1)") != std::string::npos);
     assert(cpp.find("for (Item& item : items)") != std::string::npos);
+    assert(cpp.find("for (ItemAlias alias_item : items)") != std::string::npos);
     assert(cpp.find("for (auto&& copy : items)") != std::string::npos);
 }
 

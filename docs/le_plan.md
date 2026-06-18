@@ -733,6 +733,9 @@ push. They are not release packaging work.
    Indexed local inference now exposes only the `TypeRef` helper; `cpp(...)`
    escape inference uses structured indexed-local metadata internally and
    renders only at the escape compatibility boundary.
+   Loop binding compatibility now resolves aliases through `Symbols::alias_type_refs`
+   and compares parsed `TypeRef` nodes instead of resolving binding and element
+   types through string aliases.
    TypeRef-backed assignment checks now infer RHS expressions as `TypeRef`
    first, use structured type assignment before compatibility fallback, and
    render only for legacy assignment/literal checks and diagnostics.
