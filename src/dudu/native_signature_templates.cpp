@@ -178,6 +178,17 @@ std::optional<std::string> native_template_pack_placeholder(std::string type) {
     return std::nullopt;
 }
 
+std::optional<std::string> native_template_pack_placeholder(const TypeRef& type) {
+    if (const std::optional<std::string> placeholder =
+            native_template_pack_placeholder(type_ref_head_name(type))) {
+        return placeholder;
+    }
+    if (!type.text.empty()) {
+        return native_template_pack_placeholder(type.text);
+    }
+    return std::nullopt;
+}
+
 bool bind_native_template_type_ast(const TypeRef& expected, const TypeRef& got,
                                    NativeTemplateBindings& bindings) {
     return bind_template_type_ref(expected, got, bindings);

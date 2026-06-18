@@ -279,10 +279,12 @@ match_signature_ast(const FunctionScope& scope, const FunctionSignature& signatu
     NativeTemplateBindings bindings;
     NativePackBindingMap pack_bindings;
     const size_t param_count = signature_param_count(signature);
-    const std::string pack_param_text =
-        param_count == 0 ? std::string{} : signature_param_type_text(signature, param_count - 1);
-    const bool has_pack_param = signature.variadic && param_count != 0 &&
-                                native_template_pack_placeholder(pack_param_text).has_value();
+    const TypeRef pack_param_ref =
+        param_count == 0 ? TypeRef{} : signature_param_type_ref(signature, param_count - 1);
+    const std::optional<std::string> pack_param_placeholder =
+        signature.variadic && param_count != 0 ? native_template_pack_placeholder(pack_param_ref)
+                                               : std::nullopt;
+    const bool has_pack_param = pack_param_placeholder.has_value();
     FunctionSignature arity_signature = signature;
     if (has_pack_param &&
         arity_signature.min_params >= static_cast<int>(signature_param_count(arity_signature))) {
@@ -307,7 +309,7 @@ match_signature_ast(const FunctionScope& scope, const FunctionSignature& signatu
         }
     }
     if (has_pack_param) {
-        const std::string pack_name = *native_template_pack_placeholder(pack_param_text);
+        const std::string pack_name = *pack_param_placeholder;
         std::vector<TypeRef> types;
         for (size_t i = fixed_params; i < args.size(); ++i) {
             types.push_back(native_arg_type(scope, args[i], location, infer_expr_type).ref);

@@ -1680,6 +1680,9 @@ push. They are not release packaging work.
    Ordinary native template placeholder bindings now store matched `TypeRef`
    nodes instead of rendered type strings. Binding equality checks compare
    structured types first and render only for native artifact compatibility.
+   Native overload matching now detects variadic template pack parameters from
+   the signature parameter `TypeRef`, keeping raw spelling fallback inside the
+   native template helper for malformed C++ artifact nodes.
    `substitute_type_ref` now has a structured `TypeRef` substitution overload.
    Receiver generic substitution for fields, methods, inherited methods, and
    inferred generic method signatures uses parsed receiver template arguments
