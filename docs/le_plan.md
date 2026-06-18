@@ -803,6 +803,8 @@ push. They are not release packaging work.
    `Result[...]` field lookup, indexed type inference, and native template
    binding now resolve aliases through parsed `TypeRef` metadata first, with
    old string alias maps retained only at explicit compatibility boundaries.
+   Inheritance receiver/base unwrapping now follows the same typed-first alias
+   resolution path for base assignability and inherited lookup.
    The duplicate string-only indexed type implementation has been removed;
    public string index queries parse the receiver once and delegate to the
    structured `TypeRef` indexing implementation.
