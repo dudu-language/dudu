@@ -80,19 +80,23 @@ TypeRef infer_call_type_ref(const std::string& callee,
 
 TypeRef emitted_local_type_ref(const std::map<std::string, std::string>& locals,
                                const std::map<std::string, TypeRef>& local_type_refs,
-                               const std::string& name, SourceLocation location) {
+                               const std::string& name, SourceLocation location,
+                               const Symbols* symbols) {
     if (const auto local = local_type_refs.find(name); local != local_type_refs.end()) {
         return local->second;
     }
     if (const auto local = locals.find(name); local != locals.end()) {
-        return parse_type_text(local->second, location);
+        const std::string type =
+            symbols == nullptr ? local->second : resolve_alias(*symbols, local->second);
+        return parse_type_text(type, location);
     }
     return {};
 }
 
 TypeRef infer_call_type_ref(const Expr& expr, const std::map<std::string, std::string>& locals,
                             const std::map<std::string, TypeRef>& local_type_refs,
-                            const std::map<std::string, TypeRef>& function_returns) {
+                            const std::map<std::string, TypeRef>& function_returns,
+                            const Symbols* symbols) {
     if (expr.callee.empty()) {
         return infer_call_type_ref(expr.name, function_returns, expr.location);
     }
@@ -102,7 +106,7 @@ TypeRef infer_call_type_ref(const Expr& expr, const std::map<std::string, std::s
     }
     if (callee.kind == ExprKind::Member && callee.children.size() == 1) {
         const TypeRef receiver_type = infer_emitted_local_type_ref(
-            callee.children.front(), locals, local_type_refs, function_returns);
+            callee.children.front(), locals, local_type_refs, function_returns, symbols);
         if (has_type_ref(receiver_type)) {
             const std::string key = receiver_base_type(receiver_type) + "." + callee.name;
             if (const auto method = function_returns.find(key); method != function_returns.end()) {
@@ -120,7 +124,8 @@ bool is_numeric_type(std::string_view type) {
 TypeRef infer_binary_expr_type_ref(const Expr& expr,
                                    const std::map<std::string, std::string>& locals,
                                    const std::map<std::string, TypeRef>& local_type_refs,
-                                   const std::map<std::string, TypeRef>& function_returns) {
+                                   const std::map<std::string, TypeRef>& function_returns,
+                                   const Symbols* symbols) {
     if (expr.children.size() != 2) {
         return {};
     }
@@ -128,10 +133,10 @@ TypeRef infer_binary_expr_type_ref(const Expr& expr,
         expr.op == "<" || expr.op == "<=" || expr.op == ">" || expr.op == ">=") {
         return parse_type_text("bool", expr.location);
     }
-    const TypeRef left_ref =
-        infer_emitted_local_type_ref(expr.children[0], locals, local_type_refs, function_returns);
-    const TypeRef right_ref =
-        infer_emitted_local_type_ref(expr.children[1], locals, local_type_refs, function_returns);
+    const TypeRef left_ref = infer_emitted_local_type_ref(expr.children[0], locals, local_type_refs,
+                                                          function_returns, symbols);
+    const TypeRef right_ref = infer_emitted_local_type_ref(
+        expr.children[1], locals, local_type_refs, function_returns, symbols);
     const std::string left = has_type_ref(left_ref) ? substitute_type_ref_text(left_ref, {}) : "";
     const std::string right =
         has_type_ref(right_ref) ? substitute_type_ref_text(right_ref, {}) : "";
@@ -156,7 +161,8 @@ TypeRef infer_binary_expr_type_ref(const Expr& expr,
 TypeRef infer_emitted_local_type_ref(const Expr& expr,
                                      const std::map<std::string, std::string>& locals,
                                      const std::map<std::string, TypeRef>& local_type_refs,
-                                     const std::map<std::string, TypeRef>& function_returns) {
+                                     const std::map<std::string, TypeRef>& function_returns,
+                                     const Symbols* symbols) {
     switch (expr.kind) {
     case ExprKind::BoolLiteral:
         return parse_type_text("bool", expr.location);
@@ -169,7 +175,7 @@ TypeRef infer_emitted_local_type_ref(const Expr& expr,
     case ExprKind::NoneLiteral:
         return parse_type_text("None", expr.location);
     case ExprKind::Name:
-        return emitted_local_type_ref(locals, local_type_refs, expr.name, expr.location);
+        return emitted_local_type_ref(locals, local_type_refs, expr.name, expr.location, symbols);
     case ExprKind::Unary:
         if (expr.children.size() != 1) {
             return {};
@@ -178,8 +184,8 @@ TypeRef infer_emitted_local_type_ref(const Expr& expr,
             return parse_type_text("bool", expr.location);
         }
         if (expr.op == "&") {
-            const TypeRef child = infer_emitted_local_type_ref(expr.children.front(), locals,
-                                                               local_type_refs, function_returns);
+            const TypeRef child = infer_emitted_local_type_ref(
+                expr.children.front(), locals, local_type_refs, function_returns, symbols);
             if (!has_type_ref(child)) {
                 return {};
             }
@@ -191,8 +197,8 @@ TypeRef infer_emitted_local_type_ref(const Expr& expr,
             return pointer;
         }
         if (expr.op == "*") {
-            TypeRef child = infer_emitted_local_type_ref(expr.children.front(), locals,
-                                                         local_type_refs, function_returns);
+            TypeRef child = infer_emitted_local_type_ref(
+                expr.children.front(), locals, local_type_refs, function_returns, symbols);
             if (child.kind == TypeKind::Pointer && child.children.size() == 1) {
                 return child.children.front();
             }
@@ -200,17 +206,18 @@ TypeRef infer_emitted_local_type_ref(const Expr& expr,
         }
         if (expr.op == "-") {
             return infer_emitted_local_type_ref(expr.children.front(), locals, local_type_refs,
-                                                function_returns);
+                                                function_returns, symbols);
         }
         return {};
     case ExprKind::Call:
     case ExprKind::TemplateCall:
-        return infer_call_type_ref(expr, locals, local_type_refs, function_returns);
+        return infer_call_type_ref(expr, locals, local_type_refs, function_returns, symbols);
     case ExprKind::Index:
         if (expr.children.size() == 2) {
             if (expr.children[0].kind == ExprKind::Name) {
-                const TypeRef local_type = emitted_local_type_ref(
-                    locals, local_type_refs, expr.children[0].name, expr.children[0].location);
+                const TypeRef local_type =
+                    emitted_local_type_ref(locals, local_type_refs, expr.children[0].name,
+                                           expr.children[0].location, symbols);
                 if (const TypeRef indexed_type =
                         indexed_local_type_ref(local_type, expr.children[1]);
                     has_type_ref(indexed_type)) {
@@ -218,7 +225,7 @@ TypeRef infer_emitted_local_type_ref(const Expr& expr,
                 }
             }
             const TypeRef receiver_type = infer_emitted_local_type_ref(
-                expr.children[0], locals, local_type_refs, function_returns);
+                expr.children[0], locals, local_type_refs, function_returns, symbols);
             if (has_type_ref(receiver_type)) {
                 if (const TypeRef indexed_type =
                         indexed_local_type_ref(receiver_type, expr.children[1]);
@@ -229,7 +236,7 @@ TypeRef infer_emitted_local_type_ref(const Expr& expr,
         }
         return {};
     case ExprKind::Binary:
-        return infer_binary_expr_type_ref(expr, locals, local_type_refs, function_returns);
+        return infer_binary_expr_type_ref(expr, locals, local_type_refs, function_returns, symbols);
     case ExprKind::Missing:
     case ExprKind::Conditional:
     case ExprKind::Await:

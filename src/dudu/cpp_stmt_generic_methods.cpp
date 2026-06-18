@@ -59,7 +59,7 @@ lower_expected_generic_method_call(const TypeRef& expected_type, const Expr& exp
     const Expr& member = expr.callee.front();
     const Expr& receiver = member.children.front();
     TypeRef receiver_type_ref =
-        infer_emitted_local_type_ref(receiver, locals, local_type_refs, function_returns);
+        infer_emitted_local_type_ref(receiver, locals, local_type_refs, function_returns, symbols);
     if (!has_type_ref(receiver_type_ref)) {
         receiver_type_ref =
             member_expr_type_ref(*symbols, locals, local_type_refs, nullptr, receiver);
@@ -73,7 +73,7 @@ lower_expected_generic_method_call(const TypeRef& expected_type, const Expr& exp
     arg_types.reserve(expr.children.size());
     for (const Expr& arg : expr.children) {
         const TypeRef arg_type =
-            infer_emitted_local_type_ref(arg, locals, local_type_refs, function_returns);
+            infer_emitted_local_type_ref(arg, locals, local_type_refs, function_returns, symbols);
         if (!has_type_ref(arg_type) || type_ref_text(arg_type) == "auto") {
             return std::nullopt;
         }

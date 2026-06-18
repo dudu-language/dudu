@@ -148,6 +148,9 @@ Already structured:
   instead of maintaining a private local-map fallback
 - index-assignment C++ emission uses the shared typed-first local `TypeRef`
   helper when looking up `[]=` operator methods
+- statement C++ expression-type inference can receive symbol context, so
+  inferred local assignments, match subjects, and generic method arguments
+  resolve local type aliases before parsing compatibility local type strings
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path
