@@ -175,6 +175,10 @@ void test_core_type_helpers_use_type_ast() {
     assert(dudu::base_type(dudu::parse_type_text("array[f32][4, 4]")) == "array");
     assert(dudu::base_type(dudu::parse_type_text("fn(i32) -> bool")) == "fn");
     assert(dudu::base_type(dudu::parse_type_text("struct sqlite3")) == "struct sqlite3");
+    dudu::TypeRef spelled_pointer;
+    spelled_pointer.kind = dudu::TypeKind::Pointer;
+    spelled_pointer.text = "*Player";
+    assert(dudu::base_type(spelled_pointer) == "Player");
     assert(dudu::substitute_type_ref_text(
                dudu::explicit_array_element_type_ref(dudu::parse_type_text("array[list[i32]][4]")),
                {}) == "list[i32]");
