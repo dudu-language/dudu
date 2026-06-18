@@ -1420,6 +1420,9 @@ push. They are not release packaging work.
    Built-in C++ method signature lookup now accepts parsed receiver `TypeRef`
    nodes; the old public rendered receiver-type API and receiver template
    string helper have been deleted.
+   Native operator lookup now derives candidate namespaces from the parsed
+   receiver `TypeRef` head rather than rendering the receiver type and slicing
+   the rendered spelling.
    Native signature matching now keeps inferred argument types and expected
    parameter types as `TypeRef` nodes for assignability and tuple-indexed
    return handling; rendered argument type strings remain only for diagnostics

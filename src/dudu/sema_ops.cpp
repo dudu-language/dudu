@@ -95,13 +95,16 @@ std::string operator_function_name(const std::string& op) {
     return "operator" + op;
 }
 
-std::vector<std::string> native_operator_names_for_type(const std::string& type,
+std::vector<std::string> native_operator_names_for_type(const TypeRef& type,
                                                         const std::string& op) {
     std::vector<std::string> names;
     const std::string op_name = operator_function_name(op);
-    const size_t dot = type.rfind('.');
-    if (dot != std::string::npos) {
-        names.push_back(type.substr(0, dot) + "." + op_name);
+    const std::string head = type_ref_head_name(type);
+    const size_t cpp_namespace = head.rfind("::");
+    if (cpp_namespace != std::string::npos) {
+        names.push_back(head.substr(0, cpp_namespace) + "." + op_name);
+    } else if (const size_t dot = head.rfind('.'); dot != std::string::npos) {
+        names.push_back(head.substr(0, dot) + "." + op_name);
     }
     names.push_back(op_name);
     return names;
@@ -112,8 +115,7 @@ native_operator_signature(const Symbols& symbols, const std::string& op, const T
                           const Expr* right_expr, const TypeRef& right) {
     const TypeRef value_left_ref = unwrap_value_type_ref(symbols, left);
     const TypeRef value_right_ref = unwrap_value_type_ref(symbols, right);
-    const std::string value_left = substitute_type_ref_text(value_left_ref, {});
-    for (const std::string& name : native_operator_names_for_type(value_left, op)) {
+    for (const std::string& name : native_operator_names_for_type(value_left_ref, op)) {
         const auto found = symbols.native_function_signatures.find(name);
         if (found == symbols.native_function_signatures.end()) {
             continue;
