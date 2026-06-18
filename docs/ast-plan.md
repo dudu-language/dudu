@@ -1768,6 +1768,9 @@ LSP source edits are also moving to AST-owned ranges:
   fallback fields, named arguments, tuple-shaped indexes, and expected generic
   method calls keep `local_type_refs` when they recursively lower child
   expressions.
+- Decorator helpers now render names and non-string arguments from parsed
+  expression nodes through the shared AST display/path helpers instead of
+  trimming raw decorator expression text.
 - Native value symbols now store parsed `TypeRef` metadata beside their C++
   spelling strings, and normal name/member expression sema reads those refs
   directly for imported constants, build flags, shader/native values, and class

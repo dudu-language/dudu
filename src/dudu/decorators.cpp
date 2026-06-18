@@ -1,7 +1,6 @@
 #include "dudu/decorators.hpp"
 
 #include "dudu/ast_expr.hpp"
-#include "dudu/cpp_lower.hpp"
 
 #include <sstream>
 
@@ -12,7 +11,7 @@ std::string expr_path(const Expr& expr) {
     if (const std::optional<ExprPath> path = expr_path_from_expr(expr)) {
         return render_expr_path(*path);
     }
-    return trim_copy(expr.text);
+    return display_expr(expr);
 }
 
 } // namespace
@@ -48,7 +47,7 @@ std::optional<std::string> decorator_first_arg_text(const Decorator& decorator,
     if (!decorator_call_matches(decorator, name) || decorator.expr.children.empty()) {
         return std::nullopt;
     }
-    return trim_copy(decorator.expr.children.front().text);
+    return display_expr(decorator.expr.children.front());
 }
 
 std::optional<std::string> decorator_arg_list_text(const Decorator& decorator,
@@ -61,7 +60,7 @@ std::optional<std::string> decorator_arg_list_text(const Decorator& decorator,
         if (i > 0) {
             out << ", ";
         }
-        out << trim_copy(decorator.expr.children[i].text);
+        out << display_expr(decorator.expr.children[i]);
     }
     return out.str();
 }
