@@ -6,7 +6,6 @@
 
 namespace dudu {
 
-bool type_assignment_allowed(const std::string& expected, const std::string& got);
 bool type_assignment_allowed(const TypeRef& expected, const TypeRef& got);
 bool assignment_type_allowed(const std::string& expected, const Expr& expr, const std::string& got);
 bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const std::string& got);

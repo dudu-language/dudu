@@ -353,9 +353,7 @@ bool is_value_from_const(const TypeRef& expected, const TypeRef& got) {
                                     compact_type(substitute_type_ref_text(*inner, {}));
 }
 
-} // namespace
-
-bool type_assignment_allowed(const std::string& expected, const std::string& got) {
+bool text_type_assignment_allowed(const std::string& expected, const std::string& got) {
     const std::string normalized_expected = normalize_cpp_type_artifacts(expected);
     const std::string normalized_got = normalize_cpp_type_artifacts(got);
     if (!normalized_expected.empty() && !normalized_got.empty() &&
@@ -381,6 +379,8 @@ bool type_assignment_allowed(const std::string& expected, const std::string& got
            is_cpp_associated_type_binding(normalized_expected, normalized_got);
 }
 
+} // namespace
+
 bool type_assignment_allowed(const TypeRef& expected, const TypeRef& got) {
     const std::string normalized_expected = normalize_cpp_type_artifacts(expected);
     const std::string normalized_got = normalize_cpp_type_artifacts(got);
@@ -394,7 +394,7 @@ bool type_assignment_allowed(const TypeRef& expected, const TypeRef& got) {
            is_pointer_to_reference_value(expected, got) || is_reference_binding(expected, got) ||
            is_value_from_reference(expected, got) || is_value_from_const(expected, got) ||
            is_native_function_pointer(expected, got) ||
-           type_assignment_allowed(normalized_expected, normalized_got);
+           text_type_assignment_allowed(normalized_expected, normalized_got);
 }
 
 bool assignment_type_allowed(const std::string& expected, const Expr& expr,

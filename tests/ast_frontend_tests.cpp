@@ -81,13 +81,20 @@ void test_missing_expression_is_not_unknown() {
 }
 
 void test_type_compat_uses_type_ast_for_pointers() {
-    assert(dudu::type_assignment_allowed("*const[void]", "*i32"));
-    assert(dudu::type_assignment_allowed("* const[void]", "*i32"));
-    assert(dudu::type_assignment_allowed("*const[i32]", "*i32"));
-    assert(dudu::type_assignment_allowed("*i32", "*&i32"));
-    assert(dudu::type_assignment_allowed("&const[i32]", "i32"));
-    assert(dudu::type_assignment_allowed("i32", "&const[i32]"));
-    assert(dudu::type_assignment_allowed("fn(i32) -> void", "fn(i32)"));
+    assert(dudu::type_assignment_allowed(dudu::parse_type_text("*const[void]"),
+                                         dudu::parse_type_text("*i32")));
+    assert(dudu::type_assignment_allowed(dudu::parse_type_text("* const[void]"),
+                                         dudu::parse_type_text("*i32")));
+    assert(dudu::type_assignment_allowed(dudu::parse_type_text("*const[i32]"),
+                                         dudu::parse_type_text("*i32")));
+    assert(dudu::type_assignment_allowed(dudu::parse_type_text("*i32"),
+                                         dudu::parse_type_text("*&i32")));
+    assert(dudu::type_assignment_allowed(dudu::parse_type_text("&const[i32]"),
+                                         dudu::parse_type_text("i32")));
+    assert(dudu::type_assignment_allowed(dudu::parse_type_text("i32"),
+                                         dudu::parse_type_text("&const[i32]")));
+    assert(dudu::type_assignment_allowed(dudu::parse_type_text("fn(i32) -> void"),
+                                         dudu::parse_type_text("fn(i32)")));
 
     assert(dudu::type_assignment_allowed(dudu::parse_type_text("*const[void]"),
                                          dudu::parse_type_text("*list[i32]")));

@@ -1308,3 +1308,6 @@ declarations safely.
    Dudu operator lookup for `bool`, `[]`, and `[]=` now takes parsed receiver
    `TypeRef` nodes; index, assignment-target, condition, and `cpp(...)` escape
    checks no longer render receiver types before querying operator metadata.
+   General type assignment compatibility now exposes only the parsed
+   `TypeRef`/`TypeRef` public API; the former public string/string helper is a
+   private native-artifact compatibility helper.
