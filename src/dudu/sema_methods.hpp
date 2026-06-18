@@ -21,21 +21,11 @@ TypeRef member_expr_type_ref(const Symbols& symbols,
                              std::string_view unknown_local_prefix = {},
                              std::string_view current_class = {});
 
-std::optional<std::string> field_type_for_type(const Symbols& symbols,
-                                               const std::string& receiver_type,
-                                               const std::string& field);
 std::optional<TypeRef> field_type_ref_for_type(const Symbols& symbols, const TypeRef& receiver_type,
                                                const std::string& field);
-std::optional<std::string> swizzle_type_for_type(const Symbols& symbols,
-                                                 const std::string& receiver_type,
-                                                 const std::string& swizzle);
 std::optional<TypeRef> swizzle_type_ref_for_type(const Symbols& symbols,
                                                  const TypeRef& receiver_type,
                                                  const std::string& swizzle);
-std::optional<std::string> swizzle_assignment_type_for_type(const Symbols& symbols,
-                                                            const SourceLocation& location,
-                                                            const std::string& receiver_type,
-                                                            const std::string& swizzle);
 std::optional<TypeRef> swizzle_assignment_type_ref_for_type(const Symbols& symbols,
                                                             const SourceLocation& location,
                                                             const TypeRef& receiver_type,

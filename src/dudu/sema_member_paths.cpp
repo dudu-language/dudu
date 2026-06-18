@@ -195,10 +195,10 @@ TypeRef member_expr_type_ref(const Symbols& symbols,
         if (const auto field = field_type_ref_for_type(symbols, receiver_type, expr.name)) {
             return *field;
         }
-        const std::string receiver_type_text = substitute_type_ref_text(receiver_type, {});
-        if (const auto swizzle = swizzle_type_for_type(symbols, receiver_type_text, expr.name)) {
-            return parse_type_text(*swizzle, type_location);
+        if (const auto swizzle = swizzle_type_ref_for_type(symbols, receiver_type, expr.name)) {
+            return *swizzle;
         }
+        const std::string receiver_type_text = substitute_type_ref_text(receiver_type, {});
         if (receiver_type_text == "auto" ||
             foreign_cpp_type_name(symbols, resolve_alias(symbols, receiver_type_text))) {
             return parse_type_text("auto", expr.location);
@@ -236,17 +236,6 @@ bool is_member_path(const std::string& path) {
         start = dot + 1;
     }
     return false;
-}
-
-std::optional<std::string> field_type_for_type(const Symbols& symbols,
-                                               const std::string& receiver_type,
-                                               const std::string& field) {
-    const std::optional<TypeRef> found =
-        field_type_ref_for_type(symbols, parse_type_text(receiver_type), field);
-    if (!found) {
-        return std::nullopt;
-    }
-    return substitute_type_ref_text(*found, {});
 }
 
 std::optional<TypeRef> field_type_ref_for_type(const Symbols& symbols, const TypeRef& receiver_type,

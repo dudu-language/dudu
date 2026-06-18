@@ -32,16 +32,6 @@ std::optional<std::string_view> swizzle_component_set(const std::string& swizzle
 
 } // namespace
 
-std::optional<std::string> swizzle_type_for_type(const Symbols& symbols,
-                                                 const std::string& receiver_type,
-                                                 const std::string& swizzle) {
-    const auto type = swizzle_type_ref_for_type(symbols, parse_type_text(receiver_type), swizzle);
-    if (!type) {
-        return std::nullopt;
-    }
-    return substitute_type_ref_text(*type, {});
-}
-
 std::optional<TypeRef> swizzle_type_ref_for_type(const Symbols& symbols,
                                                  const TypeRef& receiver_type,
                                                  const std::string& swizzle) {
@@ -93,23 +83,6 @@ std::optional<TypeRef> swizzle_type_ref_for_type(const Symbols& symbols,
         }
     }
     return std::nullopt;
-}
-
-std::optional<std::string> swizzle_assignment_type_for_type(const Symbols& symbols,
-                                                            const SourceLocation& location,
-                                                            const std::string& receiver_type,
-                                                            const std::string& swizzle) {
-    const auto component_set = swizzle_component_set(swizzle);
-    if (!component_set) {
-        return std::nullopt;
-    }
-    std::set<char> seen;
-    for (const char ch : swizzle) {
-        if (!seen.insert(ch).second) {
-            sema_fail(location, "swizzle assignment cannot repeat component: " + swizzle);
-        }
-    }
-    return swizzle_type_for_type(symbols, receiver_type, swizzle);
 }
 
 std::optional<TypeRef> swizzle_assignment_type_ref_for_type(const Symbols& symbols,

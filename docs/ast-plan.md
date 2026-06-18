@@ -2011,6 +2011,8 @@ LSP source edits are also moving to AST-owned ranges:
 - Dudu method lookup, generic method inference, static method lookup, and
   receiver unwrapping now expose parsed `TypeRef` receiver APIs only; remaining
   explicit C++ escape paths parse receiver strings at the boundary.
+- Field and swizzle lookup now expose parsed `TypeRef` receiver APIs only; the
+  unused string-returning wrappers have been removed.
 
 Expression parsing has moved onto the lexer/token stream:
 
