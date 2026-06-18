@@ -158,7 +158,8 @@ bool is_pointer_to_reference_value(const TypeRef& expected, const TypeRef& got) 
 }
 
 std::string type_ref_spelling(const TypeRef& type) {
-    return trim_copy(!type.name.empty() ? type.name : substitute_type_ref_text(type, {}));
+    const std::string head = type_ref_head_name(type);
+    return !head.empty() ? trim_copy(head) : substitute_type_ref_text(type, {});
 }
 
 std::string type_ref_tail_name(const TypeRef& type) {
