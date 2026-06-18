@@ -1494,6 +1494,10 @@ push. They are not release packaging work.
    Expression codegen now lowers boolean and numeric literals from structured
    literal `value` fields, with raw text retained only as a spelling fallback;
    AST tests assert those literal values explicitly.
+   Literal assignment compatibility now has a `TypeRef` got-type path for
+   `Result` and `Option` wrapper literals; the string overload remains only as
+   a compatibility shim for callers that have not crossed the native/text
+   boundary yet.
    Function signatures now expose a parameter text accessor beside the return
    text accessor. Native matching and substitution use those signature APIs,
    leaving direct access to the legacy parameter/return string mirrors confined

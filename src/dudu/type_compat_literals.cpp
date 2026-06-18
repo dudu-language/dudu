@@ -105,33 +105,31 @@ bool container_literal_allowed(const TypeRef& expected, const Expr& expr) {
     return true;
 }
 
-bool result_value_allowed(const TypeRef& expected, const Expr& expr, const std::string& got) {
+bool result_value_allowed(const TypeRef& expected, const Expr& expr, const TypeRef& got) {
     const std::vector<TypeRef> parts = template_type_arg_refs(expected, "Result");
     if (parts.size() != 2 || expr.kind != ExprKind::Call || expr.children.size() != 1) {
         return false;
     }
-    const TypeRef got_ref = parse_type_text(got, expr.location);
     const std::string callee = direct_callee_name(expr);
     if (callee == "Ok") {
-        const std::vector<TypeRef> ok_args = template_type_arg_refs(got_ref, "Ok");
+        const std::vector<TypeRef> ok_args = template_type_arg_refs(got, "Ok");
         return ok_args.size() == 1 &&
                assignment_type_allowed(parts[0], expr.children.front(), ok_args.front());
     }
     if (callee == "Err") {
-        const std::vector<TypeRef> err_args = template_type_arg_refs(got_ref, "Err");
+        const std::vector<TypeRef> err_args = template_type_arg_refs(got, "Err");
         return err_args.size() == 1 &&
                assignment_type_allowed(parts[1], expr.children.front(), err_args.front());
     }
     return false;
 }
 
-bool option_value_allowed(const TypeRef& expected, const Expr& expr, const std::string& got) {
+bool option_value_allowed(const TypeRef& expected, const Expr& expr, const TypeRef& got) {
     const std::vector<TypeRef> parts = template_type_arg_refs(expected, "Option");
     if (parts.size() != 1) {
         return false;
     }
-    const std::string inner = substitute_type_ref_text(parts[0], {});
-    return expr.kind == ExprKind::NoneLiteral || got == inner ||
+    return expr.kind == ExprKind::NoneLiteral || type_ref_equivalent(got, parts[0]) ||
            (is_numeric_type(wrapped_type_arg(parts[0])) && simple_literal_type(expr) == "number");
 }
 
@@ -139,6 +137,12 @@ bool option_value_allowed(const TypeRef& expected, const Expr& expr, const std::
 
 bool parsed_expected_literal_assignment_allowed(const TypeRef& expected, const Expr& expr,
                                                 const std::string& got) {
+    return parsed_expected_literal_assignment_allowed(
+        expected, expr, got.empty() ? TypeRef{} : parse_type_text(got, expr.location));
+}
+
+bool parsed_expected_literal_assignment_allowed(const TypeRef& expected, const Expr& expr,
+                                                const TypeRef& got) {
     return container_literal_allowed(expected, expr) || option_value_allowed(expected, expr, got) ||
            result_value_allowed(expected, expr, got);
 }

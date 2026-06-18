@@ -410,7 +410,8 @@ bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const Ty
             return true;
         }
     }
-    if (parsed_expected_literal_assignment_allowed(normalized_expected_ref, expr, normalized_got)) {
+    if (parsed_expected_literal_assignment_allowed(normalized_expected_ref, expr,
+                                                   normalized_got_ref)) {
         return true;
     }
     if (is_variant_value(normalized_expected_ref, expr, normalized_got)) {

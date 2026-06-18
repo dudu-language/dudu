@@ -126,6 +126,18 @@ void test_type_compat_uses_type_ast_for_pointers() {
     assert(dudu::assignment_type_allowed(dudu::parse_type_text("std.unique_ptr[Node]"), name_expr,
                                          "__detail.__unique_ptr_t[Node]"));
     assert(!dudu::assignment_type_allowed(dudu::parse_type_text("f32"), name_expr, "__m128"));
+
+    assert(dudu::assignment_type_allowed(dudu::parse_type_text("Result[i32, str]"),
+                                         dudu::parse_expr_text("Ok(7)"),
+                                         dudu::parse_type_text("Ok[i32]")));
+    assert(dudu::assignment_type_allowed(dudu::parse_type_text("Result[i32, str]"),
+                                         dudu::parse_expr_text("Err(\"bad\")"),
+                                         dudu::parse_type_text("Err[str]")));
+    assert(dudu::assignment_type_allowed(dudu::parse_type_text("Option[i32]"),
+                                         dudu::parse_expr_text("7"), dudu::parse_type_text("i32")));
+    assert(!dudu::assignment_type_allowed(dudu::parse_type_text("Option[i32]"),
+                                          dudu::parse_expr_text("\"bad\""),
+                                          dudu::parse_type_text("str")));
 }
 
 void test_can_assign_resolves_alias_type_refs() {
