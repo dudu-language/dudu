@@ -32,11 +32,6 @@ TypeRef function_type_ref(const FunctionSignature& signature, SourceLocation loc
 
 void set_signature_param_types(FunctionSignature& signature, std::vector<TypeRef> types) {
     signature.param_type_refs = std::move(types);
-    signature.params.clear();
-    signature.params.reserve(signature.param_type_refs.size());
-    for (const TypeRef& type : signature.param_type_refs) {
-        signature.params.push_back(substitute_type_ref_text(type, {}));
-    }
 }
 
 void set_signature_param_type_texts(FunctionSignature& signature,
@@ -55,7 +50,6 @@ void set_signature_return_type(FunctionSignature& signature, TypeRef type) {
         type = parse_type_text("void");
     }
     signature.return_type_ref = std::move(type);
-    signature.return_type = substitute_type_ref_text(signature.return_type_ref, {});
 }
 
 void set_signature_return_type_text(FunctionSignature& signature, const std::string& type,
@@ -65,17 +59,13 @@ void set_signature_return_type_text(FunctionSignature& signature, const std::str
 }
 
 size_t signature_param_count(const FunctionSignature& signature) {
-    return !signature.param_type_refs.empty() ? signature.param_type_refs.size()
-                                              : signature.params.size();
+    return signature.param_type_refs.size();
 }
 
 TypeRef signature_param_type_ref(const FunctionSignature& signature, size_t index) {
     if (index < signature.param_type_refs.size() &&
         has_type_ref(signature.param_type_refs[index])) {
         return signature.param_type_refs[index];
-    }
-    if (index < signature.params.size()) {
-        return parse_type_text(signature.params[index]);
     }
     return {};
 }
@@ -84,7 +74,7 @@ TypeRef signature_return_type_ref(const FunctionSignature& signature) {
     if (has_type_ref(signature.return_type_ref)) {
         return signature.return_type_ref;
     }
-    return parse_type_text(signature.return_type.empty() ? "void" : signature.return_type);
+    return parse_type_text("void");
 }
 
 std::string signature_param_type_text(const FunctionSignature& signature, size_t index) {

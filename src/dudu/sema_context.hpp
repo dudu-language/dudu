@@ -13,9 +13,7 @@ namespace dudu {
 
 struct FunctionSignature {
     std::vector<std::string> template_params;
-    std::vector<std::string> params;
     std::vector<TypeRef> param_type_refs;
-    std::string return_type;
     TypeRef return_type_ref;
     int min_params = -1;
     bool variadic = false;

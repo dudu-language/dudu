@@ -1514,6 +1514,9 @@ push. They are not release packaging work.
    The dead `Symbols::native_values` rendered string map has been deleted;
    semantic lookup uses `native_value_type_refs` directly, while
    `ModuleAst::native_values` remains the declaration list for code emission.
+   `FunctionSignature` no longer stores rendered parameter or return type
+   mirrors. Signature construction and tests now use `TypeRef` fields plus
+   accessor helpers as the only semantic representation.
    Operator and condition semantic diagnostics now use `FunctionSignature`
    accessors for parameter counts and parameter type text instead of reading
    the legacy signature string vector directly.

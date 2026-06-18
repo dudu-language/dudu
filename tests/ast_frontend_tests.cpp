@@ -554,9 +554,11 @@ void test_inferred_generic_method_uses_type_ast_receiver() {
         dudu::inferred_generic_method_signature_for_type(scope, dudu::parse_type_text("Wrapper"),
                                                          "wrap", args, nullptr, callbacks);
     assert(signature);
-    assert(signature->params == std::vector<std::string>({"f32"}));
-    assert(signature->return_type == "f32");
-    assert(dudu::substitute_type_ref_text(signature->return_type_ref, {}) == "f32");
+    assert(dudu::signature_param_count(*signature) == 1);
+    assert(dudu::substitute_type_ref_text(dudu::signature_param_type_ref(*signature, 0), {}) ==
+           "f32");
+    assert(dudu::substitute_type_ref_text(dudu::signature_return_type_ref(*signature), {}) ==
+           "f32");
 }
 
 void test_expected_generic_method_uses_type_ast_receiver() {
@@ -590,9 +592,9 @@ void test_expected_generic_method_uses_type_ast_receiver() {
             scope, dudu::parse_type_text("Wrapper"), "make", {},
             std::optional<dudu::TypeRef>{dudu::parse_type_text("str")}, nullptr, callbacks);
     assert(signature);
-    assert(signature->params.empty());
-    assert(signature->return_type == "str");
-    assert(dudu::substitute_type_ref_text(signature->return_type_ref, {}) == "str");
+    assert(dudu::signature_param_count(*signature) == 0);
+    assert(dudu::substitute_type_ref_text(dudu::signature_return_type_ref(*signature), {}) ==
+           "str");
 }
 
 void test_native_semantic_tokens() {
