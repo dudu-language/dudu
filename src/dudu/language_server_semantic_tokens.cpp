@@ -127,13 +127,9 @@ void collect_type_tokens(const TypeRef& type, std::vector<SemanticToken>& tokens
     if (type.kind == TypeKind::Named || type.kind == TypeKind::Qualified ||
         type.kind == TypeKind::Template) {
         const std::string label_text = type_ref_head_name(type);
-        const std::string full = type_ref_text(type);
-        const bool native_class =
-            native_index != nullptr &&
-            (native_index->classes.contains(full) || native_index->classes.contains(label_text));
-        const bool native_type =
-            native_index != nullptr &&
-            (native_index->types.contains(full) || native_index->types.contains(label_text));
+        const bool native_class = native_index != nullptr &&
+                                  native_index->classes.contains(label_text);
+        const bool native_type = native_index != nullptr && native_index->types.contains(label_text);
         if (native_class) {
             add_native_semantic_token(tokens, type.location, label_text, token_class);
         } else if (native_type) {

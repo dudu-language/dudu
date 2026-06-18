@@ -1992,3 +1992,6 @@ push. They are not release packaging work.
    LSP semantic type-token collection now uses `TypeRef` helper APIs for type
    heads and rendered spellings instead of reading `name`/`text` fields
    directly.
+   LSP semantic native type/class token classification now checks parsed
+   `TypeRef` head names directly instead of rendering whole template type
+   spellings for native-index lookup.
