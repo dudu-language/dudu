@@ -91,7 +91,7 @@ bool native_arg_assignable(const FunctionSignature& signature, size_t index, con
 }
 
 std::optional<TypeRef> indexed_tuple_return_type(const TypeRef& return_type,
-                                                 const std::vector<std::string>& template_args,
+                                                 const std::vector<TypeRef>& template_args,
                                                  const std::vector<Expr>& args,
                                                  const FunctionScope& scope,
                                                  const SourceLocation* location,
@@ -108,8 +108,9 @@ std::optional<TypeRef> indexed_tuple_return_type(const TypeRef& return_type,
         return std::nullopt;
     }
     const std::string index_text = index_type->value;
-    if (template_args.empty() || index_text != template_args.front() || args.empty() ||
-        index_text.empty() || index_text.find_first_not_of("0123456789") != std::string::npos) {
+    if (template_args.empty() || template_args.front().kind != TypeKind::Value ||
+        index_text != template_args.front().value || args.empty() || index_text.empty() ||
+        index_text.find_first_not_of("0123456789") != std::string::npos) {
         return std::nullopt;
     }
     const NativeArgType arg_type = native_arg_type(scope, args.front(), location, infer_expr_type);
@@ -130,6 +131,20 @@ std::optional<TypeRef> indexed_tuple_return_type(const TypeRef& return_type,
     out.children.push_back(tuple.children[index]);
     out.location = return_type.location;
     return out;
+}
+
+std::vector<TypeRef> native_template_type_refs(const std::vector<std::string>& args,
+                                               SourceLocation location) {
+    std::vector<TypeRef> out;
+    out.reserve(args.size());
+    for (const std::string& arg : args) {
+        out.push_back(native_template_binding_type_ref(arg, location));
+    }
+    return out;
+}
+
+bool numeric_template_arg_ref(const TypeRef& arg) {
+    return arg.kind == TypeKind::Value && numeric_template_arg(arg.value);
 }
 
 bool has_native_placeholder_ref(const TypeRef& type) {
@@ -163,38 +178,33 @@ void collect_native_return_placeholders(const TypeRef& type, std::vector<std::st
 }
 
 std::optional<TypeRef> explicit_type_return_ref(const TypeRef& return_type,
-                                                const std::vector<std::string>& template_args) {
+                                                const std::vector<TypeRef>& template_args) {
     if (!has_native_placeholder_ref(return_type)) {
         return std::nullopt;
     }
-    const auto first_type_arg = std::ranges::find_if_not(template_args, numeric_template_arg);
+    const auto first_type_arg = std::ranges::find_if_not(template_args, numeric_template_arg_ref);
     std::vector<std::string> placeholders;
     std::set<std::string> seen;
     collect_native_return_placeholders(return_type, placeholders, seen);
     if (placeholders.empty()) {
-        return first_type_arg == template_args.end()
-                   ? std::nullopt
-                   : std::optional<TypeRef>{
-                         native_template_binding_type_ref(*first_type_arg, return_type.location)};
+        return first_type_arg == template_args.end() ? std::nullopt
+                                                     : std::optional<TypeRef>{*first_type_arg};
     }
     std::map<std::string, TypeRef> bindings;
     size_t placeholder_index = 0;
-    for (const std::string& arg : template_args) {
-        if (numeric_template_arg(arg)) {
+    for (const TypeRef& arg : template_args) {
+        if (numeric_template_arg_ref(arg)) {
             continue;
         }
         if (placeholder_index >= placeholders.size()) {
             break;
         }
-        bindings.emplace(placeholders[placeholder_index],
-                         native_template_binding_type_ref(arg, return_type.location));
+        bindings.emplace(placeholders[placeholder_index], arg);
         ++placeholder_index;
     }
     if (bindings.empty()) {
-        return first_type_arg == template_args.end()
-                   ? std::nullopt
-                   : std::optional<TypeRef>{
-                         native_template_binding_type_ref(*first_type_arg, return_type.location)};
+        return first_type_arg == template_args.end() ? std::nullopt
+                                                     : std::optional<TypeRef>{*first_type_arg};
     }
     TypeRef substituted = substitute_type_ref(return_type, bindings);
     return substituted;
@@ -334,6 +344,11 @@ match_native_signature(const FunctionScope& scope, const std::string& callee,
                        const NativeCanAssignAstFn& can_assign) {
     const auto template_call = native_template_call_base(callee);
     const std::string lookup = template_call ? template_call->first : callee;
+    const std::vector<TypeRef> explicit_template_args =
+        template_call
+            ? native_template_type_refs(template_call->second,
+                                        location == nullptr ? SourceLocation{} : *location)
+            : std::vector<TypeRef>{};
     const auto found = scope.symbols.native_function_signatures.find(lookup);
     if (found == scope.symbols.native_function_signatures.end()) {
         return std::nullopt;
@@ -341,8 +356,8 @@ match_native_signature(const FunctionScope& scope, const std::string& callee,
     std::vector<FunctionSignature> candidates = found->second;
     if (template_call) {
         for (FunctionSignature& signature : candidates) {
-            signature =
-                substitute_explicit_template_signature(std::move(signature), template_call->second);
+            signature = substitute_explicit_template_signature(std::move(signature),
+                                                               explicit_template_args);
         }
     }
     for (const FunctionSignature& signature : candidates) {
@@ -351,11 +366,11 @@ match_native_signature(const FunctionScope& scope, const std::string& callee,
             FunctionSignature resolved = *matched;
             if (template_call) {
                 if (const auto indexed = indexed_tuple_return_type(
-                        signature_return_type_ref(resolved), template_call->second, args, scope,
+                        signature_return_type_ref(resolved), explicit_template_args, args, scope,
                         location, infer_expr_type)) {
                     set_signature_return_type(resolved, *indexed);
                 } else if (const auto explicit_return = explicit_type_return_ref(
-                               signature_return_type_ref(resolved), template_call->second)) {
+                               signature_return_type_ref(resolved), explicit_template_args)) {
                     set_signature_return_type(resolved, *explicit_return);
                 }
             }

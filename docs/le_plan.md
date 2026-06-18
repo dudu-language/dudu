@@ -1969,6 +1969,10 @@ push. They are not release packaging work.
    `cpp(...)` expression type inference now uses `infer_cpp_escape_expr_ref`
    as the primary structured path; the legacy string-returning helper renders
    the resulting `TypeRef` instead of forcing sema to infer text and reparse it.
+   Native explicit template matching now parses explicit template arguments
+   once into `TypeRef` nodes at the call boundary and uses the structured
+   substitution overload; the duplicate string-argument substitution overload
+   has been deleted.
    LSP semantic type-token collection now uses `TypeRef` helper APIs for type
    heads and rendered spellings instead of reading `name`/`text` fields
    directly.

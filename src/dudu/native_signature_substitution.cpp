@@ -154,15 +154,6 @@ explicit_template_type_ref_bindings(const std::vector<std::string>& names,
     return out;
 }
 
-std::vector<TypeRef> explicit_template_type_refs(const std::vector<std::string>& args) {
-    std::vector<TypeRef> out;
-    out.reserve(args.size());
-    for (const std::string& arg : args) {
-        out.push_back(native_template_binding_type_ref(arg));
-    }
-    return out;
-}
-
 std::string join_type_refs(const std::vector<TypeRef>& types) {
     std::string out;
     for (size_t i = 0; i < types.size(); ++i) {
@@ -359,12 +350,6 @@ native_template_call_base(const std::string& callee) {
         }
     }
     return std::nullopt;
-}
-
-FunctionSignature substitute_explicit_template_signature(FunctionSignature signature,
-                                                         const std::vector<std::string>& args) {
-    return substitute_explicit_template_signature(std::move(signature),
-                                                  explicit_template_type_refs(args));
 }
 
 FunctionSignature substitute_explicit_template_signature(FunctionSignature signature,
