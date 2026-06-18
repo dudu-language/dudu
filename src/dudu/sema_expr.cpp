@@ -1,5 +1,6 @@
 #include "dudu/sema_expr.hpp"
 
+#include "dudu/ast_expr.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/sema_expr_internal.hpp"
 
@@ -26,7 +27,7 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
         return {};
     case ExprKind::Unknown:
         if (location != nullptr) {
-            sema_expr_fail(*location, "unsupported expression: " + trim(expr.text));
+            sema_expr_fail(*location, "unsupported expression: " + display_expr(expr));
         }
         return {};
     case ExprKind::BoolLiteral:

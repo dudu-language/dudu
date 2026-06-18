@@ -224,7 +224,7 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
         return {};
     }
     if (expr.kind == ExprKind::Unknown) {
-        throw CompileError(expr.location, "unsupported expression: " + trim_copy(expr.text));
+        throw CompileError(expr.location, "unsupported expression: " + display_expr(expr));
     }
     switch (expr.kind) {
     case ExprKind::BoolLiteral: {
@@ -460,7 +460,7 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
     case ExprKind::Missing:
         return {};
     case ExprKind::Unknown:
-        throw CompileError(expr.location, "unsupported expression: " + trim_copy(expr.text));
+        throw CompileError(expr.location, "unsupported expression: " + display_expr(expr));
     }
     return {};
 }

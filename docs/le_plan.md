@@ -864,6 +864,9 @@ push. They are not release packaging work.
    parsed values and reports malformed structured binary/member/index/dict
    entry/named-argument/slice nodes explicitly instead of falling back to raw
    `Expr::text`.
+   Sema and C++ emission unsupported-expression diagnostics now call the shared
+   structured expression display helper instead of reading raw expression text
+   directly at each diagnostic site.
 
 3. OOP Surface Cleanup
 
