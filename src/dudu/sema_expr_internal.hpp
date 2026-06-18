@@ -56,6 +56,8 @@ std::optional<TypeRef> direct_template_call_type_ref(const FunctionScope& scope,
 std::optional<TypeRef> direct_member_call_type_ref(const FunctionScope& scope, const Expr& expr,
                                                    const std::string& callee,
                                                    const SourceLocation* location);
+std::optional<TypeRef> direct_member_call_type_ref(const FunctionScope& scope, const Expr& expr,
+                                                   const SourceLocation* location);
 std::optional<TypeRef> direct_template_member_call_type_ref(const FunctionScope& scope,
                                                             const Expr& expr,
                                                             const std::string& callee,

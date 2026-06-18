@@ -14,6 +14,13 @@ TypeRef named_type_ref(std::string name, SourceLocation location) {
     return type;
 }
 
+std::string member_call_label(const Expr& member) {
+    if (const std::optional<ExprPath> path = expr_path_from_expr(member)) {
+        return render_expr_path(*path);
+    }
+    return display_expr(member);
+}
+
 std::optional<TypeRef> receiver_call_type_ref(const FunctionScope& scope, const Expr& expr,
                                               const std::string& callee,
                                               const std::string& method_name,
@@ -98,6 +105,15 @@ std::optional<TypeRef> direct_member_call_type_ref(const FunctionScope& scope, c
         }
     }
     return receiver_call_type_ref(scope, expr, callee, member.name, location);
+}
+
+std::optional<TypeRef> direct_member_call_type_ref(const FunctionScope& scope, const Expr& expr,
+                                                   const SourceLocation* location) {
+    if (expr.callee.empty() || expr.callee.front().kind != ExprKind::Member) {
+        return std::nullopt;
+    }
+    const std::string callee = member_call_label(expr.callee.front());
+    return direct_member_call_type_ref(scope, expr, callee, location);
 }
 
 std::optional<TypeRef> direct_template_member_call_type_ref(const FunctionScope& scope,
