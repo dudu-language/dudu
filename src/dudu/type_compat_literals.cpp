@@ -110,14 +110,17 @@ bool result_value_allowed(const TypeRef& expected, const Expr& expr, const std::
     if (parts.size() != 2 || expr.kind != ExprKind::Call || expr.children.size() != 1) {
         return false;
     }
+    const TypeRef got_ref = parse_type_text(got, expr.location);
     const std::string callee = direct_callee_name(expr);
-    if (starts_with(got, "Ok[") && got.back() == ']' && callee == "Ok") {
-        return assignment_type_allowed(parts[0], expr.children.front(),
-                                       got.substr(3, got.size() - 4));
+    if (callee == "Ok") {
+        const std::vector<TypeRef> ok_args = template_type_arg_refs(got_ref, "Ok");
+        return ok_args.size() == 1 &&
+               assignment_type_allowed(parts[0], expr.children.front(), ok_args.front());
     }
-    if (starts_with(got, "Err[") && got.back() == ']' && callee == "Err") {
-        return assignment_type_allowed(parts[1], expr.children.front(),
-                                       got.substr(4, got.size() - 5));
+    if (callee == "Err") {
+        const std::vector<TypeRef> err_args = template_type_arg_refs(got_ref, "Err");
+        return err_args.size() == 1 &&
+               assignment_type_allowed(parts[1], expr.children.front(), err_args.front());
     }
     return false;
 }

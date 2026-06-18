@@ -1297,3 +1297,5 @@ declarations safely.
    Body expression assignment checking now exposes only the parsed
    `TypeRef`/`TypeRef` `can_assign_ast` API; the string and mixed string
    overloads have been deleted.
+   `Result` literal compatibility now parses `Ok[T]`/`Err[E]` result types
+   and reads template children instead of slicing rendered type strings.
