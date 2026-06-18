@@ -1829,3 +1829,5 @@ push. They are not release packaging work.
    Member-call semantic inference now checks missing/`auto` receivers through
    structured `TypeRef` state instead of rendering the receiver type to text
    just to compare against `"auto"`.
+   Member-field semantic inference now does the same for direct member
+   expressions and only renders receiver types when constructing a diagnostic.

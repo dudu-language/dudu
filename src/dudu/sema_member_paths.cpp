@@ -186,12 +186,12 @@ TypeRef member_expr_type_ref(const Symbols& symbols,
         if (const auto swizzle = swizzle_type_ref_for_type(symbols, receiver_type, expr.name)) {
             return *swizzle;
         }
-        const std::string receiver_type_text = substitute_type_ref_text(receiver_type, {});
         if (type_ref_is_auto(receiver_type) || foreign_cpp_type_name(symbols, receiver_type)) {
             return named_type_ref("auto", expr.location);
         }
         if (location != nullptr) {
             const std::string label = expr_label(expr);
+            const std::string receiver_type_text = type_ref_text(receiver_type);
             sema_fail(*location,
                       "unknown field: " +
                           (label.empty() ? receiver_type_text + "." + expr.name : label));

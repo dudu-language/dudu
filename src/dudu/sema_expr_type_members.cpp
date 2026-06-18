@@ -32,8 +32,7 @@ std::optional<TypeRef> member_expr_direct_type_ref(const FunctionScope& scope, c
     }
     const Expr& receiver = expr.children.front();
     const TypeRef receiver_ref = infer_expr_type_ast(scope, receiver, location);
-    const std::string receiver_type = substitute_type_ref_text(receiver_ref, {});
-    if (receiver_type.empty()) {
+    if (!has_type_ref(receiver_ref)) {
         return std::nullopt;
     }
     if (const auto field = field_type_ref_for_type(scope.symbols, receiver_ref, expr.name)) {
@@ -45,8 +44,12 @@ std::optional<TypeRef> member_expr_direct_type_ref(const FunctionScope& scope, c
     if (foreign_cpp_type_name(scope.symbols, receiver_ref)) {
         return named_type_ref("auto", expr.location);
     }
+    if (type_ref_is_auto(receiver_ref)) {
+        return named_type_ref("auto", expr.location);
+    }
     if (location != nullptr) {
-        sema_expr_fail(*location, "unknown field: " + receiver_type + "." + expr.name);
+        sema_expr_fail(*location,
+                       "unknown field: " + type_ref_text(receiver_ref) + "." + expr.name);
     }
     return std::nullopt;
 }
