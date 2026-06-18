@@ -335,14 +335,17 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
     if (parsed_expr.kind == ExprKind::StringLiteral) {
         return "str";
     }
+    if (parsed_expr.kind == ExprKind::IntLiteral) {
+        return "i32";
+    }
+    if (parsed_expr.kind == ExprKind::FloatLiteral) {
+        return "f64";
+    }
     if (parsed_expr.kind == ExprKind::Unary && parsed_expr.op == "not") {
         return substitute_type_ref_text(infer_expr_type_ast(scope, parsed_expr, location), {});
     }
     if (parsed_expr.kind == ExprKind::Binary) {
         return substitute_type_ref_text(infer_expr_type_ast(scope, parsed_expr, location), {});
-    }
-    if (std::isdigit(static_cast<unsigned char>(expr.front())) != 0) {
-        return expr.find('.') == std::string::npos ? "i32" : "f64";
     }
     if (expr == "None") {
         return "None";
