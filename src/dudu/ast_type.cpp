@@ -39,23 +39,8 @@ std::vector<TypeRef> template_type_arg_refs(const TypeRef& type, std::string_vie
 }
 
 std::vector<TypeRef>
-template_type_arg_refs_resolved(const TypeRef& type, std::string_view name,
-                                const std::map<std::string, std::string>& aliases) {
-    std::vector<TypeRef> refs = template_type_arg_refs(type, name);
-    if (!refs.empty()) {
-        return refs;
-    }
-    const std::string rendered = substitute_type_ref_text(type, {});
-    const auto found = aliases.find(rendered);
-    if (found == aliases.end()) {
-        return {};
-    }
-    return template_type_arg_refs(parse_type_text(found->second), name);
-}
-
-std::vector<TypeRef>
-template_type_arg_refs_resolved(const TypeRef& type, std::string_view name,
-                                const std::map<std::string, TypeRef>& aliases) {
+template_type_arg_refs_with_aliases(const TypeRef& type, std::string_view name,
+                                    const std::map<std::string, TypeRef>& aliases) {
     std::vector<TypeRef> refs = template_type_arg_refs(type, name);
     if (!refs.empty()) {
         return refs;

@@ -246,7 +246,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
         if (const std::vector<std::string> names = tuple_binding_names(stmt.target_expr);
             !names.empty()) {
             const SourceLocation& value_location = node_location(stmt.location, stmt.value_expr);
-            const std::vector<TypeRef> types = template_type_arg_refs_resolved(
+            const std::vector<TypeRef> types = template_type_arg_refs_with_aliases(
                 callbacks.infer_expr_type(scope, stmt.value_expr, &value_location), "tuple",
                 scope.symbols.alias_type_refs);
             if (names.size() != types.size()) {

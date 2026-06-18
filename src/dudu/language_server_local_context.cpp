@@ -85,7 +85,7 @@ void bind_tuple_names(FunctionScope& scope, const Stmt& stmt) {
     if (names.empty()) {
         return;
     }
-    const std::vector<TypeRef> types = template_type_arg_refs_resolved(
+    const std::vector<TypeRef> types = template_type_arg_refs_with_aliases(
         infer_lsp_expr_type(scope, stmt.value_expr), "tuple", scope.symbols.alias_type_refs);
     if (names.size() != types.size()) {
         return;

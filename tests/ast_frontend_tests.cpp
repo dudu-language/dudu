@@ -171,8 +171,9 @@ void test_core_type_helpers_use_type_ast() {
     assert(dudu::substitute_type_ref_text(tuple[0], {}) == "i32");
     assert(dudu::substitute_type_ref_text(tuple[1], {}) == "list[str]");
 
-    const std::vector<dudu::TypeRef> aliased_tuple = dudu::template_type_arg_refs_resolved(
-        dudu::parse_type_text("Pair"), "tuple", {{"Pair", "tuple[i32, f32]"}});
+    const std::vector<dudu::TypeRef> aliased_tuple = dudu::template_type_arg_refs_with_aliases(
+        dudu::parse_type_text("Pair"), "tuple",
+        {{"Pair", dudu::parse_type_text("tuple[i32, f32]")}});
     assert(aliased_tuple.size() == 2);
     assert(dudu::substitute_type_ref_text(aliased_tuple[0], {}) == "i32");
     assert(dudu::substitute_type_ref_text(aliased_tuple[1], {}) == "f32");
