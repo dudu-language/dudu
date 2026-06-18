@@ -17,16 +17,22 @@ namespace {
 std::string unwrap_type(const Symbols& symbols, const TypeRef& type);
 
 std::string unwrap_type(const Symbols& symbols, std::string type) {
-    return unwrap_type(symbols, parse_type_text(resolve_alias(symbols, std::move(type))));
+    return unwrap_type(symbols, parse_type_text(std::move(type)));
 }
 
 std::string unwrap_type(const Symbols& symbols, const TypeRef& type) {
     TypeRef current = type;
     while (true) {
         const std::string rendered = type_ref_text(current);
-        const std::string resolved = resolve_alias(symbols, rendered);
-        if (resolved != rendered) {
-            current = parse_type_text(resolved, current.location);
+        TypeRef resolved = resolve_alias_ref(symbols, current);
+        if (type_ref_text(resolved) == rendered) {
+            const std::string legacy_resolved = resolve_alias(symbols, rendered);
+            if (legacy_resolved != rendered) {
+                resolved = parse_type_text(legacy_resolved, current.location);
+            }
+        }
+        if (type_ref_text(resolved) != rendered) {
+            current = resolved;
             continue;
         }
         if (const auto inner =

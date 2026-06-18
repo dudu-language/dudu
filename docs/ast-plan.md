@@ -1954,6 +1954,9 @@ LSP source edits are also moving to AST-owned ranges:
 - Public string-index type queries now parse their receiver once and delegate to
   the structured `TypeRef` indexing implementation. The older duplicate
   string-only indexing implementation has been removed.
+- Inheritance receiver/base unwrapping now resolves aliases through parsed
+  `TypeRef` metadata first, with the string alias map retained only as a
+  compatibility fallback.
 
 Expression parsing has moved onto the lexer/token stream:
 

@@ -301,6 +301,26 @@ void test_native_base_assignable_uses_type_ast() {
                                          dudu::parse_type_text("Derived")));
 }
 
+void test_native_base_assignable_resolves_alias_type_refs() {
+    dudu::ClassDecl base;
+    base.name = "Base";
+
+    dudu::ClassDecl derived;
+    derived.name = "Derived";
+    derived.base_class_refs.push_back({dudu::parse_type_text("Base"), {}});
+
+    dudu::Symbols symbols;
+    symbols.classes.emplace("Base", &base);
+    symbols.classes.emplace("Derived", &derived);
+    symbols.aliases["BaseAlias"] = "Base";
+    symbols.aliases["DerivedAlias"] = "Derived";
+    symbols.alias_type_refs["BaseAlias"] = dudu::parse_type_text("Base");
+    symbols.alias_type_refs["DerivedAlias"] = dudu::parse_type_text("Derived");
+
+    assert(dudu::native_base_assignable(symbols, dudu::parse_type_text("*BaseAlias"),
+                                        dudu::parse_type_text("*DerivedAlias")));
+}
+
 void test_unwrap_receiver_uses_type_ast() {
     dudu::Symbols symbols;
     symbols.aliases["AliasBox"] = "Box[i32]";
@@ -1242,6 +1262,7 @@ int main() {
         test_find_inherited_method_uses_type_ast_receiver();
         test_instance_storage_uses_type_ast_receiver();
         test_native_base_assignable_uses_type_ast();
+        test_native_base_assignable_resolves_alias_type_refs();
         test_unwrap_receiver_uses_type_ast();
         test_inherited_field_lookup_uses_type_ast_receiver();
         test_result_field_lookup_resolves_alias_type_refs();
