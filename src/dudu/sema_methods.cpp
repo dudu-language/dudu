@@ -212,16 +212,17 @@ std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
 }
 
 std::vector<FunctionSignature> method_signatures_for_type(const Symbols& symbols,
-                                                          std::string receiver_type,
+                                                          const TypeRef& receiver_type,
                                                           const std::string& method_name) {
+    const std::string receiver_type_text = substitute_type_ref_text(receiver_type, {});
     FunctionSignature builtin;
-    if (builtin_cpp_method_signature(symbols, receiver_type, method_name, builtin)) {
+    if (builtin_cpp_method_signature(symbols, receiver_type_text, method_name, builtin)) {
         return {builtin};
     }
     std::vector<FunctionSignature> out;
-    const std::string templated_receiver = receiver_template_type(symbols, receiver_type);
+    const std::string templated_receiver = receiver_template_type(symbols, receiver_type_text);
     const std::vector<std::string> receiver_args = template_args_from_type(templated_receiver);
-    const std::string type = unwrap_receiver_type(symbols, std::move(receiver_type));
+    const std::string type = unwrap_receiver_type(symbols, receiver_type);
     const std::string lookup_name = template_method_name(method_name);
     const std::vector<std::string> method_args = template_method_args(method_name);
     const auto klass = symbols.classes.find(type);
@@ -239,12 +240,17 @@ std::vector<FunctionSignature> method_signatures_for_type(const Symbols& symbols
             instantiate_method_signature(*klass->second, method, receiver_args, method_args));
     }
     for (const BaseClassDecl& base_decl : klass->second->base_class_refs) {
-        const std::string base = type_ref_text(base_decl.type_ref);
         std::vector<FunctionSignature> base_signatures =
-            method_signatures_for_type(symbols, base, method_name);
+            method_signatures_for_type(symbols, base_decl.type_ref, method_name);
         out.insert(out.end(), base_signatures.begin(), base_signatures.end());
     }
     return out;
+}
+
+std::vector<FunctionSignature> method_signatures_for_type(const Symbols& symbols,
+                                                          std::string receiver_type,
+                                                          const std::string& method_name) {
+    return method_signatures_for_type(symbols, parse_type_text(receiver_type), method_name);
 }
 
 bool static_method_signature_for_type(const Symbols& symbols, const std::string& type_name,

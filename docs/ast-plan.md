@@ -242,6 +242,9 @@ Already structured:
 - instance method signature lookup now accepts parsed receiver `TypeRef` nodes,
   and inherited method recursion walks parsed base-class references instead of
   rendering base types before lookup
+- instance method signature collection now accepts parsed receiver `TypeRef`
+  nodes, so overload-list collection walks inherited base-class references
+  without rendering base types before recursion
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path

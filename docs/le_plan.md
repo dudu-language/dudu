@@ -701,6 +701,9 @@ push. They are not release packaging work.
    Instance method signature lookup now accepts parsed receiver `TypeRef`
    nodes, and inherited method recursion walks parsed base-class references
    instead of rendering base types before lookup.
+   Instance method signature collection now accepts parsed receiver `TypeRef`
+   nodes, so overload-list collection walks inherited base-class references
+   without rendering base types before recursion.
    TypeRef-backed assignment checks now infer RHS expressions as `TypeRef`
    first, use structured type assignment before compatibility fallback, and
    render only for legacy assignment/literal checks and diagnostics.

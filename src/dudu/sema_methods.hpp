@@ -56,6 +56,9 @@ std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
     const std::vector<Expr>& args, const std::string& expected_return,
     const SourceLocation* location, const GenericInferCallbacks& callbacks);
 std::vector<FunctionSignature> method_signatures_for_type(const Symbols& symbols,
+                                                          const TypeRef& receiver_type,
+                                                          const std::string& method_name);
+std::vector<FunctionSignature> method_signatures_for_type(const Symbols& symbols,
                                                           std::string receiver_type,
                                                           const std::string& method_name);
 bool static_method_signature_for_type(const Symbols& symbols, const std::string& type_name,
