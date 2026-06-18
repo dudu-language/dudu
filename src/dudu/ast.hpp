@@ -350,6 +350,7 @@ struct ModuleAst {
 };
 
 std::string bound_import_name(const ImportDecl& import);
+std::string render_import_decl(const ImportDecl& import);
 std::string_view statement_kind_name(StmtKind kind);
 std::string_view unsupported_feature_name(UnsupportedFeature feature);
 std::string_view expression_kind_name(ExprKind kind);

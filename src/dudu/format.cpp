@@ -33,25 +33,6 @@ void normalize_leading_indent(std::string& line) {
     }
 }
 
-std::string render_import_decl(const ImportDecl& import) {
-    std::ostringstream out;
-    if (import.kind == ImportKind::From) {
-        out << "from " << import.module_path << " import " << import.imported_name;
-    } else {
-        out << "import ";
-        if (import.kind == ImportKind::ForeignC) {
-            out << "c ";
-        } else if (import.kind == ImportKind::ForeignCpp) {
-            out << "cpp ";
-        }
-        out << import.module_path;
-    }
-    if (!import.alias.empty()) {
-        out << " as " << import.alias;
-    }
-    return out.str();
-}
-
 void sort_leading_imports(std::vector<std::string>& lines, const std::string& normalized_source) {
     ModuleAst module;
     try {

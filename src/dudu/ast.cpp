@@ -1,5 +1,6 @@
 #include "dudu/ast.hpp"
 
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -66,6 +67,25 @@ std::string bound_import_name(const ImportDecl& import) {
         return import.module_path;
     }
     return import.module_path.substr(0, dot);
+}
+
+std::string render_import_decl(const ImportDecl& import) {
+    std::ostringstream out;
+    if (import.kind == ImportKind::From) {
+        out << "from " << import.module_path << " import " << import.imported_name;
+    } else {
+        out << "import ";
+        if (import.kind == ImportKind::ForeignC) {
+            out << "c ";
+        } else if (import.kind == ImportKind::ForeignCpp) {
+            out << "cpp ";
+        }
+        out << import.module_path;
+    }
+    if (!import.alias.empty()) {
+        out << " as " << import.alias;
+    }
+    return out.str();
 }
 
 std::string_view statement_kind_name(StmtKind kind) {
