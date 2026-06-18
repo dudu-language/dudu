@@ -279,9 +279,9 @@ std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Ex
             })) {
         return signature_return_type_ref(*signature);
     }
-    if (const auto local = scope.locals.find(callee); local != scope.locals.end()) {
+    if (scope.locals.contains(callee)) {
         FunctionSignature signature;
-        if (parse_local_function_type(scope, callee, local->second, signature)) {
+        if (parse_local_function_type(scope, callee, signature)) {
             check_call_args_ast(scope, callee, signature, expr.children, location);
             return signature_return_type_ref(signature);
         }

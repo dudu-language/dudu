@@ -93,7 +93,7 @@ std::optional<std::string> contextual_numeric_binary_type(const FunctionScope& s
                                                           const Expr& right_expr,
                                                           const std::string& right);
 bool parse_local_function_type(const FunctionScope& scope, const std::string& name,
-                               const std::string& type, FunctionSignature& out);
+                               FunctionSignature& out);
 void check_enum_variant_args_ast(const FunctionScope& scope, const EnumDecl& en,
                                  const EnumValueDecl& value, const std::vector<Expr>& args,
                                  const SourceLocation* location);

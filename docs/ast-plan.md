@@ -164,6 +164,9 @@ Already structured:
 - indexed `cpp(...)` escape inference now threads local `TypeRef` metadata
   through the indexed local helper; the older string-only indexed local API was
   removed
+- local callable sema now resolves function types through local `TypeRef`
+  metadata and alias `TypeRef`s instead of reparsing the compatibility local
+  type string
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path

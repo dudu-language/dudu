@@ -96,7 +96,7 @@ bool is_comparison_op(const std::string& op) {
 }
 
 bool parse_local_function_type(const FunctionScope& scope, const std::string& name,
-                               const std::string& type, FunctionSignature& out) {
+                               FunctionSignature& out) {
     std::set<std::string> seen_aliases;
     std::function<bool(const TypeRef&)> parse_ref = [&](const TypeRef& type_ref) -> bool {
         if (parse_function_type(type_ref, out)) {
@@ -112,7 +112,7 @@ bool parse_local_function_type(const FunctionScope& scope, const std::string& na
     if (local_type.kind != TypeKind::Unknown && parse_ref(local_type)) {
         return true;
     }
-    return parse_function_type(resolve_alias(scope.symbols, type), out);
+    return false;
 }
 
 void check_call_args_ast(const FunctionScope& scope, const std::string& callee,

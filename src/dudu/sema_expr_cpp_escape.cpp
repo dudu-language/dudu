@@ -143,9 +143,9 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
             known_type(scope.symbols, callee)) {
             return callee;
         }
-        if (const auto local = scope.locals.find(callee); local != scope.locals.end()) {
+        if (scope.locals.contains(callee)) {
             FunctionSignature signature;
-            if (parse_local_function_type(scope, callee, local->second, signature)) {
+            if (parse_local_function_type(scope, callee, signature)) {
                 check_call_args_ast(scope, callee, signature, args, location);
                 return signature_return_type_text(signature);
             }
