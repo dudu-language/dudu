@@ -196,7 +196,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         }
         if (stmt.target_expr.kind == ExprKind::Name && !stmt.target_expr.name.empty()) {
             const std::string& lhs = stmt.target_expr.name;
-            if (locals.contains(lhs)) {
+            if (local_type_refs.contains(lhs)) {
                 const TypeRef lhs_type =
                     emitted_local_type_ref(local_type_refs, lhs, stmt.target_expr.location);
                 const bool option_target = is_template_type(lhs_type, "Option");
@@ -219,6 +219,13 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                 locals.emplace(lhs, inferred.empty() ? "auto" : inferred);
                 if (has_type_ref(inferred_ref)) {
                     local_type_refs.emplace(lhs, inferred_ref);
+                } else {
+                    TypeRef auto_ref;
+                    auto_ref.kind = TypeKind::Named;
+                    auto_ref.name = "auto";
+                    auto_ref.text = "auto";
+                    auto_ref.location = stmt.target_expr.location;
+                    local_type_refs.emplace(lhs, auto_ref);
                 }
                 out << indent(depth) << "auto " << lhs << " = " << value << ";\n";
             }

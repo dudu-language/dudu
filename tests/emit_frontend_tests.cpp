@@ -160,6 +160,20 @@ void test_typed_literal_initializers_use_type_ast() {
     assert(cpp.find("maybe = std::nullopt;") != std::string::npos);
 }
 
+void test_inferred_auto_assignment_is_not_redeclared() {
+    const dudu::ModuleAst module = dudu::parse_source("def main() -> i32:\n"
+                                                      "    value = cpp(\"MAKE_VALUE()\")\n"
+                                                      "    value = cpp(\"MAKE_VALUE()\")\n"
+                                                      "    return i32(0)\n",
+                                                      "inferred_auto_assignment.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+    const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find("auto value = MAKE_VALUE();") != std::string::npos);
+    assert(cpp.find("value = MAKE_VALUE();") != std::string::npos);
+    assert(cpp.find("auto value = MAKE_VALUE();\n    auto value = MAKE_VALUE();") ==
+           std::string::npos);
+}
+
 } // namespace
 
 int main() {
@@ -174,6 +188,7 @@ int main() {
         test_offsetof_field_emission();
         test_array_literal_scalar_ast_emission();
         test_typed_literal_initializers_use_type_ast();
+        test_inferred_auto_assignment_is_not_redeclared();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;

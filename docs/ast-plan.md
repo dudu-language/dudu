@@ -207,6 +207,10 @@ Already structured:
   boundaries
 - slice/swizzle and pointer-call emission helpers now avoid unused rendered
   local type parameters when the decision comes from local `TypeRef` metadata
+- assignment C++ emission now uses local `TypeRef` metadata to decide whether a
+  name is an existing local, and first assignments with unknown native escape
+  types store an explicit `auto` `TypeRef` instead of relying on rendered local
+  strings
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path

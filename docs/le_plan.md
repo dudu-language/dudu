@@ -666,6 +666,10 @@ push. They are not release packaging work.
    LSP local-context `for` bindings now infer element types from stored iterable
    `TypeRef` metadata or typed iterable expression inference, and the local
    text-to-`TypeRef` adapter has been removed.
+   Assignment C++ emission now uses local `TypeRef` metadata to decide whether
+   a name is an existing local, and first assignments with unknown native escape
+   types store an explicit `auto` `TypeRef` instead of relying on rendered local
+   strings.
    TypeRef-backed assignment checks now infer RHS expressions as `TypeRef`
    first, use structured type assignment before compatibility fallback, and
    render only for legacy assignment/literal checks and diagnostics.
