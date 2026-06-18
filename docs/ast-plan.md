@@ -227,6 +227,9 @@ Already structured:
 - inherited method signature instantiation now has a `TypeRef` receiver path,
   so generic base/interface methods substitute receiver arguments without
   reparsing the rendered receiver type
+- inherited method lookup now accepts parsed receiver `TypeRef` nodes, and
+  override validation passes parsed base-class references through that path
+  instead of rendering base types for lookup
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path

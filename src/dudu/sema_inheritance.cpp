@@ -14,23 +14,34 @@
 namespace dudu {
 namespace {
 
+std::string unwrap_type(const Symbols& symbols, const TypeRef& type);
+
 std::string unwrap_type(const Symbols& symbols, std::string type) {
-    type = resolve_alias(symbols, std::move(type));
+    return unwrap_type(symbols, parse_type_text(resolve_alias(symbols, std::move(type))));
+}
+
+std::string unwrap_type(const Symbols& symbols, const TypeRef& type) {
+    TypeRef current = type;
     while (true) {
-        type = trim(std::move(type));
-        const TypeRef parsed = parse_type_text(type);
+        const std::string rendered = type_ref_text(current);
+        const std::string resolved = resolve_alias(symbols, rendered);
+        if (resolved != rendered) {
+            current = parse_type_text(resolved, current.location);
+            continue;
+        }
         if (const auto inner =
-                unary_type_child_text(parsed, {TypeKind::Pointer, TypeKind::Reference})) {
-            type = *inner;
+                unary_type_child_ref(current, {TypeKind::Pointer, TypeKind::Reference})) {
+            current = *inner;
             continue;
         }
-        if (const auto inner = unary_type_child_text(
-                parsed, {TypeKind::Const, TypeKind::Volatile, TypeKind::Atomic, TypeKind::Storage,
-                         TypeKind::Shared, TypeKind::Device})) {
-            type = *inner;
+        if (const auto inner = unary_type_child_ref(
+                current, {TypeKind::Const, TypeKind::Volatile, TypeKind::Atomic, TypeKind::Storage,
+                          TypeKind::Shared, TypeKind::Device})) {
+            current = *inner;
             continue;
         }
-        return base_type(type);
+        const std::string head = type_ref_head_name(current);
+        return head.empty() ? trim(type_ref_text(current)) : head;
     }
 }
 
@@ -337,8 +348,8 @@ FunctionSignature inherited_method_signature_for_type(const ClassDecl& owner,
     return inherited_method_signature_for_class_type(owner, receiver_type, method);
 }
 
-std::optional<InheritedMethod>
-find_inherited_method(const Symbols& symbols, const std::string& type, const std::string& name) {
+std::optional<InheritedMethod> find_inherited_method(const Symbols& symbols, const TypeRef& type,
+                                                     const std::string& name) {
     const auto klass = symbols.classes.find(unwrap_type(symbols, type));
     if (klass == symbols.classes.end()) {
         return std::nullopt;
@@ -353,12 +364,16 @@ find_inherited_method(const Symbols& symbols, const std::string& type, const std
         }
     }
     for (const BaseClassDecl& base_decl : klass->second->base_class_refs) {
-        const std::string base = type_ref_text(base_decl.type_ref);
-        if (auto method = find_inherited_method(symbols, base, name)) {
+        if (auto method = find_inherited_method(symbols, base_decl.type_ref, name)) {
             return method;
         }
     }
     return std::nullopt;
+}
+
+std::optional<InheritedMethod>
+find_inherited_method(const Symbols& symbols, const std::string& type, const std::string& name) {
+    return find_inherited_method(symbols, parse_type_text(type), name);
 }
 
 const FunctionDecl* find_method_decl(const Symbols& symbols, const std::string& type,

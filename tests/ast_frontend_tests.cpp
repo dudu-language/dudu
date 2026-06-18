@@ -214,6 +214,30 @@ void test_inherited_method_signature_uses_type_ast() {
     assert(dudu::substitute_type_ref_text(signature.return_type_ref, {}) == "i32");
 }
 
+void test_find_inherited_method_uses_type_ast_receiver() {
+    dudu::ClassDecl owner;
+    owner.name = "Box";
+    owner.generic_params = {"T"};
+
+    dudu::FunctionDecl method;
+    method.name = "replace";
+    method.params.push_back({"self", dudu::parse_type_text("Box[T]"), {}});
+    method.params.push_back({"value", dudu::parse_type_text("T"), {}});
+    method.return_type_ref = dudu::parse_type_text("T");
+    owner.methods.push_back(method);
+
+    dudu::Symbols symbols;
+    symbols.classes.emplace("Box", &owner);
+
+    const std::optional<dudu::InheritedMethod> found =
+        dudu::find_inherited_method(symbols, dudu::parse_type_text("Box[i32]"), "replace");
+    assert(found);
+    assert(found->method == &owner.methods.front());
+    assert(found->signature.params == std::vector<std::string>({"i32"}));
+    assert(found->signature.return_type == "i32");
+    assert(dudu::substitute_type_ref_text(found->signature.return_type_ref, {}) == "i32");
+}
+
 void test_native_semantic_tokens() {
     dudu::ModuleAst module =
         dudu::parse_source("import c \"native.h\"\n"
@@ -935,6 +959,7 @@ int main() {
         test_native_header_types_split_cpp_templates();
         test_receiver_template_substitution_uses_type_ast();
         test_inherited_method_signature_uses_type_ast();
+        test_find_inherited_method_uses_type_ast_receiver();
         test_native_semantic_tokens();
         test_ast_constructor_assignment_compatibility();
         test_ast_index_receiver_type_inference();

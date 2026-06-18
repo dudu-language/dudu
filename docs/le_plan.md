@@ -686,6 +686,9 @@ push. They are not release packaging work.
    Inherited method signature instantiation now has a `TypeRef` receiver path,
    so generic base/interface methods substitute receiver arguments without
    reparsing the rendered receiver type.
+   Inherited method lookup now accepts parsed receiver `TypeRef` nodes, and
+   override validation passes parsed base-class references through that path
+   instead of rendering base types for lookup.
    TypeRef-backed assignment checks now infer RHS expressions as `TypeRef`
    first, use structured type assignment before compatibility fallback, and
    render only for legacy assignment/literal checks and diagnostics.

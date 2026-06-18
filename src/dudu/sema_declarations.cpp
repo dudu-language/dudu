@@ -374,8 +374,7 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
             if (is_override) {
                 std::optional<InheritedMethod> base_method;
                 for (const BaseClassDecl& base : klass.base_class_refs) {
-                    base_method =
-                        find_inherited_method(symbols, type_ref_text(base.type_ref), method.name);
+                    base_method = find_inherited_method(symbols, base.type_ref, method.name);
                     if (base_method) {
                         break;
                     }
