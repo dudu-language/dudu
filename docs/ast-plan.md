@@ -388,6 +388,9 @@ Already structured:
 - statement C++ emission no longer has local string wrappers for typed
   assignment lowering or template-kind checks; missing local metadata is parsed
   once at the compatibility boundary and the normal path uses `TypeRef`
+- emitted local type inference now extracts receiver base names directly from
+  `TypeRef` nodes and no longer reparses rendered receiver type strings for
+  method-return lookup
 - LSP local variable/parameter type collection for hover, member completion,
   and member definition now walks parsed function/method bodies and reuses
   semantic expression inference instead of regexing source lines

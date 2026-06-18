@@ -15,34 +15,10 @@
 namespace dudu {
 namespace {
 
-std::string receiver_base_type(std::string type) {
-    type = trim_copy(std::move(type));
-    const TypeRef parsed = parse_type_text(type);
-    switch (parsed.kind) {
-    case TypeKind::Pointer:
-    case TypeKind::Reference:
-    case TypeKind::Const:
-    case TypeKind::Volatile:
-    case TypeKind::Atomic:
-    case TypeKind::Storage:
-    case TypeKind::Shared:
-    case TypeKind::Device:
-    case TypeKind::Static:
-    case TypeKind::FixedArray:
-        return parsed.children.empty()
-                   ? type
-                   : receiver_base_type(substitute_type_ref_text(parsed.children.front(), {}));
-    case TypeKind::Template:
-    case TypeKind::Named:
-    case TypeKind::Qualified:
-    case TypeKind::Function:
-    case TypeKind::Value:
-        return type_ref_head_name(parsed);
-    case TypeKind::Unknown:
-        break;
-    }
-    const size_t bracket = type.find('[');
-    return bracket == std::string::npos ? type : trim_copy(type.substr(0, bracket));
+std::string receiver_base_type_fallback(const TypeRef& type) {
+    const std::string text = trim_copy(substitute_type_ref_text(type, {}));
+    const size_t bracket = text.find('[');
+    return bracket == std::string::npos ? text : trim_copy(text.substr(0, bracket));
 }
 
 std::string receiver_base_type(const TypeRef& type) {
@@ -68,7 +44,7 @@ std::string receiver_base_type(const TypeRef& type) {
     case TypeKind::Unknown:
         break;
     }
-    return receiver_base_type(substitute_type_ref_text(type, {}));
+    return receiver_base_type_fallback(type);
 }
 
 size_t index_count(const Expr& expr) {
