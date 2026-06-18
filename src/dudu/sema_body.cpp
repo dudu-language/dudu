@@ -86,8 +86,9 @@ void check_type_match(FunctionScope& scope, const TypeRef& expected_ref, const E
                              const Expr& value, const std::string& got) {
                              return callbacks.can_assign(nested, nested_expected, value, got);
                          }})) {
-                callbacks.check_call_args(scope, scoped_call_callee_text(scope, expr, &location),
-                                          *signature, expr.children, &location);
+                const ScopedCallee scoped_callee = scoped_call_callee(scope, expr, &location);
+                callbacks.check_call_args(scope, scoped_callee.key, *signature, expr.children,
+                                          &location);
                 const TypeRef signature_return = signature_return_type_ref(*signature);
                 const std::string signature_return_text =
                     substitute_type_ref_text(signature_return, {});

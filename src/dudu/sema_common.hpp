@@ -18,11 +18,16 @@ const SourceLocation& node_location(const SourceLocation& fallback, const TypeRe
 void bind_local(FunctionScope& scope, const std::string& name, const std::string& type,
                 const TypeRef& type_ref = {});
 std::vector<Expr> index_arg_exprs(const Expr& index_expr);
+struct ScopedCallee {
+    std::optional<ExprPath> path;
+    std::string key;
+};
+
 std::optional<ExprPath> scoped_expr_path_from_expr(const FunctionScope& scope, const Expr& expr,
                                                    const SourceLocation* location);
 std::optional<ExprPath> scoped_call_callee_path(const FunctionScope& scope, const Expr& expr,
                                                 const SourceLocation* location);
-std::string scoped_call_callee_text(const FunctionScope& scope, const Expr& expr,
-                                    const SourceLocation* location);
+ScopedCallee scoped_call_callee(const FunctionScope& scope, const Expr& expr,
+                                const SourceLocation* location);
 
 } // namespace dudu

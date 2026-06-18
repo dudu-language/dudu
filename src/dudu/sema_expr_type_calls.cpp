@@ -153,7 +153,8 @@ std::optional<TypeRef> direct_builtin_call_type_ref(const FunctionScope& scope, 
 
 std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Expr& expr,
                                             const SourceLocation* location) {
-    const std::string callee = scoped_call_callee_text(scope, expr, location);
+    const ScopedCallee scoped_callee = scoped_call_callee(scope, expr, location);
+    const std::string& callee = scoped_callee.key;
     if (callee.empty()) {
         return std::nullopt;
     }
@@ -273,7 +274,8 @@ std::optional<TypeRef> direct_template_call_type_ref(const FunctionScope& scope,
         return *builtin_type;
     }
     const std::string callee = template_call_callee(scope, expr, location);
-    const std::string callee_base = scoped_call_callee_text(scope, expr, location);
+    const ScopedCallee scoped_callee = scoped_call_callee(scope, expr, location);
+    const std::string& callee_base = scoped_callee.key;
     if (const auto signature =
             explicit_generic_function_signature_ast(scope, expr, callee_base, callee, location)) {
         return signature_return_type_ref(*signature);

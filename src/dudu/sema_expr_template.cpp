@@ -57,7 +57,8 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
         return {};
     }
     const std::string callee = template_call_callee(scope, expr, location);
-    const std::string callee_base = scoped_call_callee_text(scope, expr, location);
+    const ScopedCallee scoped_callee = scoped_call_callee(scope, expr, location);
+    const std::string& callee_base = scoped_callee.key;
 
     if (starts_with(expr.name, "*")) {
         const std::vector<TypeRef> type_args = template_type_refs(expr);

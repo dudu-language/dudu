@@ -97,12 +97,12 @@ std::optional<ExprPath> scoped_call_callee_path(const FunctionScope& scope, cons
     return std::nullopt;
 }
 
-std::string scoped_call_callee_text(const FunctionScope& scope, const Expr& expr,
-                                    const SourceLocation* location) {
-    if (const std::optional<ExprPath> path = scoped_call_callee_path(scope, expr, location)) {
-        return render_expr_path(*path);
-    }
-    return trim_copy(expr.name);
+ScopedCallee scoped_call_callee(const FunctionScope& scope, const Expr& expr,
+                                const SourceLocation* location) {
+    ScopedCallee out;
+    out.path = scoped_call_callee_path(scope, expr, location);
+    out.key = out.path ? render_expr_path(*out.path) : trim_copy(expr.name);
+    return out;
 }
 
 } // namespace dudu

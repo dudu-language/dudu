@@ -4,7 +4,8 @@
 namespace dudu {
 std::string infer_call_ast(const FunctionScope& scope, const Expr& expr,
                            const SourceLocation* use_location) {
-    const std::string callee = scoped_call_callee_text(scope, expr, use_location);
+    const ScopedCallee scoped_callee = scoped_call_callee(scope, expr, use_location);
+    const std::string& callee = scoped_callee.key;
     if (callee.empty()) {
         return {};
     }
