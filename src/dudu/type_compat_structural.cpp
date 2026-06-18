@@ -25,14 +25,13 @@ bool type_refs_equivalent_ignoring_c_tags(const TypeRef& expected, const TypeRef
     case TypeKind::Named:
     case TypeKind::Qualified:
     case TypeKind::Template:
-        if (strip_c_tag_prefix(expected.name.empty() ? expected.text : expected.name) !=
-            strip_c_tag_prefix(got.name.empty() ? got.text : got.name)) {
+        if (strip_c_tag_prefix(type_ref_head_name(expected)) !=
+            strip_c_tag_prefix(type_ref_head_name(got))) {
             return false;
         }
         break;
     case TypeKind::Value:
-        if (trim_copy(expected.value.empty() ? expected.text : expected.value) !=
-            trim_copy(got.value.empty() ? got.text : got.value)) {
+        if (trim_copy(expected.value) != trim_copy(got.value)) {
             return false;
         }
         break;

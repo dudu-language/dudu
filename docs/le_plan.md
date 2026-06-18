@@ -1911,3 +1911,6 @@ push. They are not release packaging work.
    Receiver class lookup no longer renders a receiver `TypeRef` when the
    structured head name is missing; member lookup uses parsed receiver type
    structure and C-tag stripping only.
+   Structural type compatibility now compares parsed head names and value
+   fields for named/template/value nodes instead of falling back to raw
+   `TypeRef.text`; raw text comparison remains confined to `Unknown` nodes.
