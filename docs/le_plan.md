@@ -1401,3 +1401,7 @@ push. They are not release packaging work.
    Function parameter parsing now carries receiver `TypeRef` nodes into
    implicit `self` parameter synthesis instead of rendering the receiver type
    string and rebuilding the parameter type from text.
+   Auto-type checks now use an AST-level `type_ref_is_auto` helper in
+   assignment-target validation, generic method emission, indexability checks,
+   and member path lookup instead of rendering `TypeRef` nodes just to compare
+   them with `auto`.

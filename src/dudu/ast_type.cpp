@@ -178,6 +178,10 @@ bool has_type_ref(const TypeRef& type) {
            !type.children.empty();
 }
 
+bool type_ref_is_auto(const TypeRef& type) {
+    return type.kind == TypeKind::Named && type_ref_head_name(type) == "auto";
+}
+
 bool type_ref_is_void(const TypeRef& type) {
     return type.kind == TypeKind::Named && type_ref_head_name(type) == "void";
 }

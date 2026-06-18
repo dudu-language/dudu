@@ -22,6 +22,7 @@ bool type_ref_contains_kind(const TypeRef& type, TypeKind kind);
 std::string type_ref_head_name(const TypeRef& type);
 std::string type_ref_text(const TypeRef& type);
 bool has_type_ref(const TypeRef& type);
+bool type_ref_is_auto(const TypeRef& type);
 bool type_ref_is_void(const TypeRef& type);
 TypeRef void_type_ref(SourceLocation location = {});
 bool function_has_receiver_type(const FunctionDecl& fn);

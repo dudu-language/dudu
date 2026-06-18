@@ -46,12 +46,12 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt,
         stmt.target_expr.children.size() == 1) {
         const Expr& pointee = stmt.target_expr.children.front();
         const TypeRef type = callbacks.infer_expr_type(scope, pointee, &target_location);
-        const std::string type_text = trim(substitute_type_ref_text(type, {}));
-        if (type_text.empty() || type_text == "auto") {
+        if (!has_type_ref(type) || type_ref_is_auto(type)) {
             return {};
         }
         const auto pointee_type = unary_type_child_ref(type, TypeKind::Pointer);
         if (!pointee_type) {
+            const std::string type_text = trim(substitute_type_ref_text(type, {}));
             sema_fail(target_location, "cannot dereference non-pointer: " + type_text);
         }
         return *pointee_type;

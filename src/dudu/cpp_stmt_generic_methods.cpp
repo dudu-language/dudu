@@ -62,8 +62,7 @@ lower_expected_generic_method_call(const TypeRef& expected_type, const Expr& exp
     if (!has_type_ref(receiver_type_ref)) {
         receiver_type_ref = member_expr_type_ref(*symbols, local_type_refs, nullptr, receiver);
     }
-    if (!has_type_ref(receiver_type_ref) ||
-        substitute_type_ref_text(receiver_type_ref, {}) == "auto") {
+    if (!has_type_ref(receiver_type_ref) || type_ref_is_auto(receiver_type_ref)) {
         return std::nullopt;
     }
     std::vector<TypeRef> arg_types;
@@ -71,7 +70,7 @@ lower_expected_generic_method_call(const TypeRef& expected_type, const Expr& exp
     for (const Expr& arg : expr.children) {
         const TypeRef arg_type =
             infer_emitted_local_type_ref(arg, local_type_refs, function_returns, symbols);
-        if (!has_type_ref(arg_type) || type_ref_text(arg_type) == "auto") {
+        if (!has_type_ref(arg_type) || type_ref_is_auto(arg_type)) {
             return std::nullopt;
         }
         arg_types.push_back(arg_type);
