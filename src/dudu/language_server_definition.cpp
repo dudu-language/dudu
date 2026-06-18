@@ -112,10 +112,7 @@ std::optional<std::filesystem::path> resolve_header_path(const std::filesystem::
 }
 
 std::optional<std::string> header_definition_json(const Document& doc, const Json* params) {
-    const Json* position = params == nullptr ? nullptr : params->get("position");
-    const int target_line = int_value(position == nullptr ? nullptr : position->get("line"));
-    const int target_character =
-        int_value(position == nullptr ? nullptr : position->get("character"));
+    const LspPosition position = lsp_position(params);
     ModuleAst module;
     try {
         module = parse_source(doc.text, doc.path);
@@ -126,7 +123,7 @@ std::optional<std::string> header_definition_json(const Document& doc, const Jso
         if (import.kind != ImportKind::ForeignC && import.kind != ImportKind::ForeignCpp) {
             continue;
         }
-        if (!range_contains_position(import.module_range, target_line, target_character)) {
+        if (!range_contains_position(import.module_range, position.line, position.character)) {
             continue;
         }
         const ProjectConfig config = config_for_file(doc.path);

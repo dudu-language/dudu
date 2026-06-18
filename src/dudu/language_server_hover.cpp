@@ -3,6 +3,7 @@
 #include "dudu/cpp_lower.hpp"
 #include "dudu/language_server_json.hpp"
 #include "dudu/language_server_navigation.hpp"
+#include "dudu/language_server_support.hpp"
 #include "dudu/language_server_symbols.hpp"
 #include "dudu/parser.hpp"
 
@@ -18,12 +19,7 @@ namespace dudu {
 namespace {
 
 std::string doc_comment_before(const Document& doc, int one_based_line) {
-    std::vector<std::string> lines;
-    std::istringstream in(doc.text);
-    std::string line;
-    while (std::getline(in, line)) {
-        lines.push_back(line);
-    }
+    const std::vector<std::string> lines = document_lines(doc.text);
     int row = one_based_line - 2;
     std::vector<std::string> comments;
     while (row >= 0 && row < static_cast<int>(lines.size())) {

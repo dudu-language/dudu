@@ -290,13 +290,10 @@ std::optional<FunctionScope> local_scope_before_cursor(const Document& doc, cons
 } // namespace
 
 std::optional<std::string> member_completion_target(const Document& doc, const Json* params) {
-    const Json* position = params == nullptr ? nullptr : params->get("position");
-    const int target_line = int_value(position == nullptr ? nullptr : position->get("line"));
-    const int target_character =
-        int_value(position == nullptr ? nullptr : position->get("character"));
+    const LspPosition position = lsp_position(params);
     const std::vector<Token> tokens =
-        syntax_tokens_before_cursor(doc, target_line, target_character);
-    const std::optional<size_t> dot_index = member_access_dot_index(tokens, target_character);
+        syntax_tokens_before_cursor(doc, position.line, position.character);
+    const std::optional<size_t> dot_index = member_access_dot_index(tokens, position.character);
     if (!dot_index) {
         return std::nullopt;
     }

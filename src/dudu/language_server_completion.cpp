@@ -219,12 +219,9 @@ std::string call_name_before_open_paren(const std::vector<Token>& tokens, size_t
 }
 
 CallSite call_site_at(const Document& doc, const Json* params) {
-    const Json* position = params == nullptr ? nullptr : params->get("position");
-    const int target_line = int_value(position == nullptr ? nullptr : position->get("line"));
-    const int target_character =
-        int_value(position == nullptr ? nullptr : position->get("character"));
+    const LspPosition position = lsp_position(params);
     const std::vector<Token> tokens =
-        signature_tokens_before_cursor(doc, target_line, target_character);
+        signature_tokens_before_cursor(doc, position.line, position.character);
     int depth = 0;
     int parameter = 0;
     for (size_t index = tokens.size(); index-- > 0;) {

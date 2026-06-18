@@ -31,6 +31,12 @@ std::string range_json(int start_line, int start_character, int end_line, int en
     return out.str();
 }
 
+LspPosition lsp_position(const Json* params) {
+    const Json* position = params == nullptr ? nullptr : params->get("position");
+    return {.line = int_value(position == nullptr ? nullptr : position->get("line")),
+            .character = int_value(position == nullptr ? nullptr : position->get("character"))};
+}
+
 std::string location_json(const std::string& uri, const std::string& range) {
     return "{\"uri\":\"" + json_escape(uri) + "\",\"range\":" + range + "}";
 }
@@ -66,10 +72,9 @@ SourceLocation expr_name_location(const Expr& expr) {
 
 std::optional<std::string> ast_symbol_at_impl(const Document& doc, const Json* params,
                                               bool prefer_member_path) {
-    const Json* position = params == nullptr ? nullptr : params->get("position");
-    const int target_line = int_value(position == nullptr ? nullptr : position->get("line")) + 1;
-    const int target_column =
-        int_value(position == nullptr ? nullptr : position->get("character")) + 1;
+    const LspPosition position = lsp_position(params);
+    const int target_line = position.line + 1;
+    const int target_column = position.character + 1;
     const auto contains = [&](const SourceLocation& location, const std::string& name) {
         if (name.empty() || location.line != target_line || location.column <= 0) {
             return false;
@@ -174,10 +179,9 @@ std::optional<std::string> ast_symbol_at_impl(const Document& doc, const Json* p
 }
 
 std::optional<ExprPath> ast_expr_path_at_impl(const Document& doc, const Json* params) {
-    const Json* position = params == nullptr ? nullptr : params->get("position");
-    const int target_line = int_value(position == nullptr ? nullptr : position->get("line")) + 1;
-    const int target_column =
-        int_value(position == nullptr ? nullptr : position->get("character")) + 1;
+    const LspPosition position = lsp_position(params);
+    const int target_line = position.line + 1;
+    const int target_column = position.character + 1;
     const auto contains = [&](const SourceLocation& location, const std::string& name) {
         if (name.empty() || location.line != target_line || location.column <= 0) {
             return false;

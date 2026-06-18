@@ -13,10 +13,16 @@ namespace dudu {
 struct Json;
 struct ExprPath;
 
+struct LspPosition {
+    int line = 0;
+    int character = 0;
+};
+
 std::string range_json(const SourceLocation& location);
 std::string range_json(int line, int start_character, int end_character);
 std::string range_json(int start_line, int start_character, int end_line, int end_character);
 
+LspPosition lsp_position(const Json* params);
 std::string location_json(const std::string& uri, const std::string& range);
 std::string uri_for_location(const SourceLocation& location, const Document& doc);
 std::string file_uri(const std::filesystem::path& path);
