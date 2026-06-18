@@ -177,12 +177,14 @@ std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
 }
 
 std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
-    const FunctionScope& scope, std::string receiver_type, const std::string& method_name,
+    const FunctionScope& scope, const TypeRef& receiver_type, const std::string& method_name,
     const std::vector<Expr>& args, const std::string& expected_return,
     const SourceLocation* location, const GenericInferCallbacks& callbacks) {
-    const std::string templated_receiver = receiver_template_type(scope.symbols, receiver_type);
+    const std::string receiver_type_text = substitute_type_ref_text(receiver_type, {});
+    const std::string templated_receiver =
+        receiver_template_type(scope.symbols, receiver_type_text);
     const std::vector<std::string> receiver_args = template_args_from_type(templated_receiver);
-    const std::string type = unwrap_receiver_type(scope.symbols, std::move(receiver_type));
+    const std::string type = unwrap_receiver_type(scope.symbols, receiver_type);
     const auto klass = scope.symbols.classes.find(type);
     if (klass == scope.symbols.classes.end()) {
         return std::nullopt;
@@ -211,13 +213,22 @@ std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
                                             type_ref_texts(*inferred));
     }
     for (const BaseClassDecl& base_decl : klass->second->base_class_refs) {
-        const std::string base = type_ref_text(base_decl.type_ref);
         if (const auto signature = inferred_generic_method_signature_for_type(
-                scope, base, method_name, args, expected_return, nullptr, callbacks)) {
+                scope, base_decl.type_ref, method_name, args, expected_return, nullptr,
+                callbacks)) {
             return signature;
         }
     }
     return std::nullopt;
+}
+
+std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
+    const FunctionScope& scope, std::string receiver_type, const std::string& method_name,
+    const std::vector<Expr>& args, const std::string& expected_return,
+    const SourceLocation* location, const GenericInferCallbacks& callbacks) {
+    return inferred_generic_method_signature_for_type(scope, parse_type_text(receiver_type),
+                                                      method_name, args, expected_return, location,
+                                                      callbacks);
 }
 
 std::vector<FunctionSignature> method_signatures_for_type(const Symbols& symbols,

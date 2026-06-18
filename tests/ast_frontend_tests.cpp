@@ -441,6 +441,41 @@ void test_inferred_generic_method_uses_type_ast_receiver() {
     assert(dudu::substitute_type_ref_text(signature->return_type_ref, {}) == "f32");
 }
 
+void test_expected_generic_method_uses_type_ast_receiver() {
+    dudu::ClassDecl box;
+    box.name = "Box";
+    box.generic_params = {"T"};
+
+    dudu::FunctionDecl method;
+    method.name = "make";
+    method.generic_params = {"U"};
+    method.params.push_back({"self", dudu::parse_type_text("Box[T]"), {}});
+    method.return_type_ref = dudu::parse_type_text("U");
+    box.methods.push_back(method);
+
+    dudu::ClassDecl wrapper;
+    wrapper.name = "Wrapper";
+    wrapper.base_class_refs.push_back({dudu::parse_type_text("Box[f32]"), {}});
+
+    dudu::Symbols symbols;
+    symbols.classes.emplace("Box", &box);
+    symbols.classes.emplace("Wrapper", &wrapper);
+    const dudu::FunctionScope scope(symbols);
+    dudu::GenericInferCallbacks callbacks;
+    callbacks.infer_expr_type = [](const dudu::FunctionScope&, const dudu::Expr&,
+                                   const dudu::SourceLocation*) {
+        return dudu::parse_type_text("auto");
+    };
+
+    const std::optional<dudu::FunctionSignature> signature =
+        dudu::inferred_generic_method_signature_for_type(scope, dudu::parse_type_text("Wrapper"),
+                                                         "make", {}, "str", nullptr, callbacks);
+    assert(signature);
+    assert(signature->params.empty());
+    assert(signature->return_type == "str");
+    assert(dudu::substitute_type_ref_text(signature->return_type_ref, {}) == "str");
+}
+
 void test_native_semantic_tokens() {
     dudu::ModuleAst module =
         dudu::parse_source("import c \"native.h\"\n"
@@ -1172,6 +1207,7 @@ int main() {
         test_method_signature_list_uses_type_ast_receiver();
         test_static_method_signature_lookup_uses_type_ast_receiver();
         test_inferred_generic_method_uses_type_ast_receiver();
+        test_expected_generic_method_uses_type_ast_receiver();
         test_native_semantic_tokens();
         test_ast_constructor_assignment_compatibility();
         test_ast_index_receiver_type_inference();

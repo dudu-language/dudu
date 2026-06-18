@@ -251,6 +251,10 @@ Already structured:
 - generic method inference now accepts parsed receiver `TypeRef` nodes for the
   normal inference path, so inherited generic method lookup walks parsed
   base-class references without rendering base types before recursion
+- expected-return generic method inference now accepts parsed receiver
+  `TypeRef` nodes, so contextual return inference for inherited generic
+  methods walks parsed base-class references without rendering base types
+  before recursion
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path
