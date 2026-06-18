@@ -96,10 +96,6 @@ WrapperMatchType wrapper_match_type(const TypeRef& type) {
     return {};
 }
 
-WrapperMatchType wrapper_match_type(const std::string& type) {
-    return wrapper_match_type(parse_type_text(type));
-}
-
 std::optional<std::string> wrapper_case_name(const Expr& pattern) {
     if (pattern.kind == ExprKind::Name && pattern.name == "_") {
         return std::string{"_"};

@@ -1678,3 +1678,7 @@ push. They are not release packaging work.
    substitution for non-pack signatures with ordinary bindings. Native C++
    variadic packs and decay artifacts remain at the native spelling boundary
    because those are foreign signature encodings, not Dudu AST syntax.
+   Match wrapper recognition exposes only the parsed `TypeRef` API; the dead
+   string reparsing overload has been removed. `cpp(...)` escape inference now
+   keeps member-path, index, pointer-cast, and unary address/deref helper
+   results as `TypeRef` nodes until the explicit escape-boundary render.
