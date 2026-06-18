@@ -6,18 +6,18 @@ namespace dudu {
 namespace {
 std::string first_type_arg(const TypeRef& type) {
     if (const auto arg =
-            unary_type_child_text(type, {TypeKind::Atomic, TypeKind::Const, TypeKind::Volatile,
-                                         TypeKind::Device, TypeKind::Storage, TypeKind::Shared})) {
-        return *arg;
+            unary_type_child_ref(type, {TypeKind::Atomic, TypeKind::Const, TypeKind::Volatile,
+                                        TypeKind::Device, TypeKind::Storage, TypeKind::Shared})) {
+        return substitute_type_ref_text(*arg, {});
     }
-    if (const auto arg = first_template_type_arg_text(type)) {
-        return *arg;
+    if (type.kind == TypeKind::Template && !type.children.empty()) {
+        return substitute_type_ref_text(type.children.front(), {});
     }
     return "";
 }
 
 bool single_template_type_arg(const TypeRef& type, std::string_view name) {
-    return single_template_type_arg_text(type, name).has_value();
+    return template_type_arg_refs(type, name).size() == 1;
 }
 
 void set_return_type(FunctionSignature& signature, const std::string& type) {
@@ -175,7 +175,7 @@ bool builtin_cpp_method_signature(const Symbols& symbols, std::string receiver_t
             return true;
         }
     }
-    if (unary_type_child_text(templated_ref, TypeKind::Atomic) ||
+    if (unary_type_child_ref(templated_ref, TypeKind::Atomic) ||
         templated.find("atomic<") != std::string::npos) {
         const std::string item = first_type_arg(templated_ref);
         const std::string value_type = item.empty() ? "auto" : item;

@@ -122,9 +122,9 @@ std::optional<std::string> dudu_operator_method_name(const Symbols& symbols, std
     type = trim_copy(resolve_alias(symbols, std::move(type)));
     while (true) {
         const TypeRef parsed = parse_type_text(type);
-        if (const auto inner = unary_type_child_text(
+        if (const auto inner = unary_type_child_ref(
                 parsed, {TypeKind::Const, TypeKind::Pointer, TypeKind::Reference})) {
-            type = *inner;
+            type = substitute_type_ref_text(*inner, {});
             continue;
         }
         break;

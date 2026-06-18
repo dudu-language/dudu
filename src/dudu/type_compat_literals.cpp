@@ -18,9 +18,9 @@ bool is_numeric_type(const std::string& type) {
 
 std::string wrapped_type_arg(const TypeRef& type) {
     if (const auto inner =
-            unary_type_child_text(type, {TypeKind::Const, TypeKind::Atomic, TypeKind::Volatile,
-                                         TypeKind::Device, TypeKind::Storage, TypeKind::Shared})) {
-        return *inner;
+            unary_type_child_ref(type, {TypeKind::Const, TypeKind::Atomic, TypeKind::Volatile,
+                                        TypeKind::Device, TypeKind::Storage, TypeKind::Shared})) {
+        return substitute_type_ref_text(*inner, {});
     }
     return substitute_type_ref_text(type, {});
 }

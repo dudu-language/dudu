@@ -31,18 +31,6 @@ std::string substitute_wrapper(std::string_view name, const TypeRef& type,
 
 } // namespace
 
-std::vector<std::string> template_type_arg_texts(const TypeRef& type, std::string_view name) {
-    if (type.kind != TypeKind::Template || type.name != name) {
-        return {};
-    }
-    std::vector<std::string> out;
-    out.reserve(type.children.size());
-    for (const TypeRef& child : type.children) {
-        out.push_back(substitute_type_ref_text(child, {}));
-    }
-    return out;
-}
-
 std::vector<TypeRef> template_type_arg_refs(const TypeRef& type, std::string_view name) {
     if (type.kind != TypeKind::Template || type.name != name) {
         return {};
@@ -63,42 +51,6 @@ template_type_arg_refs_resolved(const TypeRef& type, std::string_view name,
         return {};
     }
     return template_type_arg_refs(parse_type_text(found->second), name);
-}
-
-std::optional<std::string> first_template_type_arg_text(const TypeRef& type) {
-    if (type.kind != TypeKind::Template || type.children.empty()) {
-        return std::nullopt;
-    }
-    return substitute_type_ref_text(type.children.front(), {});
-}
-
-std::optional<std::string> single_template_type_arg_text(const TypeRef& type,
-                                                         std::string_view name) {
-    const std::vector<std::string> args = template_type_arg_texts(type, name);
-    if (args.size() != 1) {
-        return std::nullopt;
-    }
-    return args.front();
-}
-
-std::optional<std::string> unary_type_child_text(const TypeRef& type, TypeKind kind) {
-    if (type.kind != kind || type.children.size() != 1) {
-        return std::nullopt;
-    }
-    return substitute_type_ref_text(type.children.front(), {});
-}
-
-std::optional<std::string> unary_type_child_text(const TypeRef& type,
-                                                 std::initializer_list<TypeKind> kinds) {
-    if (type.children.size() != 1) {
-        return std::nullopt;
-    }
-    for (const TypeKind kind : kinds) {
-        if (type.kind == kind) {
-            return substitute_type_ref_text(type.children.front(), {});
-        }
-    }
-    return std::nullopt;
 }
 
 std::optional<TypeRef> unary_type_child_ref(const TypeRef& type, TypeKind kind) {

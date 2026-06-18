@@ -25,27 +25,27 @@ bool is_numeric_type(const std::string& type) {
 
 std::string wrapped_type_arg(std::string type) {
     type = trim_copy(std::move(type));
-    if (const auto inner =
-            unary_type_child_text(parse_type_text(type),
-                                  {TypeKind::Const, TypeKind::Atomic, TypeKind::Volatile,
-                                   TypeKind::Device, TypeKind::Storage, TypeKind::Shared})) {
-        return *inner;
+    if (const auto inner = unary_type_child_ref(
+            parse_type_text(type), {TypeKind::Const, TypeKind::Atomic, TypeKind::Volatile,
+                                    TypeKind::Device, TypeKind::Storage, TypeKind::Shared})) {
+        return substitute_type_ref_text(*inner, {});
     }
     return type;
 }
 
 std::string wrapped_type_arg(const TypeRef& type) {
     if (const auto inner =
-            unary_type_child_text(type, {TypeKind::Const, TypeKind::Atomic, TypeKind::Volatile,
-                                         TypeKind::Device, TypeKind::Storage, TypeKind::Shared})) {
-        return *inner;
+            unary_type_child_ref(type, {TypeKind::Const, TypeKind::Atomic, TypeKind::Volatile,
+                                        TypeKind::Device, TypeKind::Storage, TypeKind::Shared})) {
+        return substitute_type_ref_text(*inner, {});
     }
     return substitute_type_ref_text(type, {});
 }
 
 std::optional<std::string> unary_child(std::string type, TypeKind kind) {
     type = trim_copy(std::move(type));
-    return unary_type_child_text(parse_type_text(type), kind);
+    const auto child = unary_type_child_ref(parse_type_text(type), kind);
+    return child ? std::optional<std::string>{substitute_type_ref_text(*child, {})} : std::nullopt;
 }
 
 std::optional<TypeRef> unary_child_ref(const TypeRef& type, TypeKind kind) {

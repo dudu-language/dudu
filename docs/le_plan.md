@@ -1230,18 +1230,21 @@ declarations safely.
    mirrors that existed only to keep the compiler green during migration.
 
    This includes fallback string callbacks such as assignability hooks that
-   receive rendered type names, raw statement/value mirrors that duplicate
+   receive rendered type names, generic inference hooks that pass text instead
+   of `TypeRef`/AST nodes, raw statement/value mirrors that duplicate
    structured `Stmt` and `Expr` fields, string-only local/type maps when a
    `TypeRef` map is authoritative, and parser helpers that reparse text that
    was already tokenized. Explicit user escape hatches such as `cpp(...)` may
    remain, but compiler-internal fallback APIs should be deleted once their
-   callers have structured equivalents. In particular, fallback string
-   callbacks are migration scaffolding only: after the structured AST path
-   owns a behavior, the matching callback must be removed rather than kept as
-   a parallel implementation or quiet recovery path.
-   Finish this milestone with a codebase-wide audit for fallback string
-   callbacks, callback adapters, and compatibility mirrors, and delete every
-   compiler-internal one that is no longer an explicit native/C++ boundary.
+   callers have structured equivalents.
+
+   Fallback string callbacks are migration scaffolding only. After the
+   structured AST path owns a behavior, the matching callback must be removed
+   rather than kept as a parallel implementation, callback adapter, quiet
+   recovery path, or legacy compatibility layer. Finish this milestone with a
+   codebase-wide audit for fallback string callbacks, callback adapters, and
+   compatibility mirrors, and delete every compiler-internal one that is no
+   longer an explicit native/C++ boundary.
 
    Status: in progress. Body, generic, constructor, and native assignment
    paths are being migrated from rendered string type pairs to parsed
@@ -1268,6 +1271,9 @@ declarations safely.
    checks and LSP local lookup bind locals through `TypeRef` metadata only.
    Assignment target semantic typing exposes only the structured `TypeRef`
    helper; the old string-returning wrapper has been removed.
+   AST type child helper APIs no longer expose string-returning template or
+   unary child accessors; callers must consume `TypeRef` children and render
+   only at explicit display, native compatibility, or C++ emission boundaries.
    Indexing type inference exposes only parsed `TypeRef` receiver APIs; the old
    string receiver and string result wrappers have been removed, with
    `cpp(...)` escape inference rendering only at its boundary.
