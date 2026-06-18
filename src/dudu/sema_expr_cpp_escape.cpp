@@ -191,17 +191,19 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
         if (method_dot != std::string::npos) {
             const std::string prefix = trim(callee.substr(0, method_dot));
             const std::string method_name = trim(callee.substr(method_dot + 1));
-            if (const auto local = scope.locals.find(prefix); local != scope.locals.end()) {
+            const TypeRef prefix_type_ref =
+                local_type_ref(scope, prefix, location == nullptr ? SourceLocation{} : *location);
+            const std::string prefix_type = substitute_type_ref_text(prefix_type_ref, {});
+            if (has_type_ref(prefix_type_ref)) {
                 FunctionSignature signature;
-                if (method_signature_for_type(scope.symbols, local->second, method_name, signature,
+                if (method_signature_for_type(scope.symbols, prefix_type, method_name, signature,
                                               nullptr)) {
                     check_call_args_ast(scope, callee, signature, args, location);
                     return signature_return_type_text(signature);
                 }
             }
-            if (const auto local = scope.locals.find(prefix);
-                local != scope.locals.end() &&
-                foreign_cpp_type_name(scope.symbols, resolve_alias(scope.symbols, local->second))) {
+            if (has_type_ref(prefix_type_ref) &&
+                foreign_cpp_type_name(scope.symbols, resolve_alias(scope.symbols, prefix_type))) {
                 for (const Expr& arg : args) {
                     (void)infer_expr_type_ast(scope, arg, location);
                 }
@@ -260,9 +262,12 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
         const std::string name = trim(expr.substr(0, index));
         const std::string index_expr = expr.substr(index + 1, expr.size() - index - 2);
         if (is_plain_identifier(name)) {
-            if (const auto local = scope.locals.find(name); local != scope.locals.end()) {
+            if (const TypeRef name_type =
+                    local_type_ref(scope, name, location == nullptr ? SourceLocation{} : *location);
+                has_type_ref(name_type)) {
+                const std::string name_type_text = substitute_type_ref_text(name_type, {});
                 if (const auto signature =
-                        dudu_operator_signature(scope.symbols, "[]", local->second)) {
+                        dudu_operator_signature(scope.symbols, "[]", name_type_text)) {
                     check_call_args_ast(
                         scope, name + "[]", *signature,
                         parse_escape_exprs(split_top_level_args(index_expr), *location), location);
@@ -284,8 +289,10 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
     if (dot != std::string::npos && is_member_path(expr)) {
         return cpp_escape_member_path_type(scope, location, expr);
     }
-    if (const auto local = scope.locals.find(expr); local != scope.locals.end()) {
-        return local->second;
+    if (const TypeRef local =
+            local_type_ref(scope, expr, location == nullptr ? SourceLocation{} : *location);
+        has_type_ref(local)) {
+        return substitute_type_ref_text(local, {});
     }
     if (const auto fn = scope.symbols.function_signatures.find(expr);
         fn != scope.symbols.function_signatures.end()) {

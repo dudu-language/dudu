@@ -183,6 +183,9 @@ Already structured:
   longer falls back to reparsing compatibility local type strings
 - assignment/index expression sema now uses local `TypeRef` presence for local
   typed targets instead of the compatibility local string map
+- explicit `cpp(...)` expression inference now uses local `TypeRef` metadata for
+  local method/index/name type checks instead of the compatibility local string
+  map
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path
