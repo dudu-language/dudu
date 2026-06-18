@@ -302,31 +302,29 @@ std::vector<TypeRef> native_function_param_type_refs(const NativeFunctionDecl& f
     if (!fn.param_type_refs.empty()) {
         return fn.param_type_refs;
     }
-    std::vector<TypeRef> out;
-    out.reserve(fn.params.size());
-    for (const std::string& param : fn.params) {
-        out.push_back(parse_type_text(param, fn.location));
-    }
-    return out;
+    return std::vector<TypeRef>(fn.params.size(), named_type_ref("auto", fn.location));
 }
 
 TypeRef native_function_return_type_ref(const NativeFunctionDecl& fn) {
     if (has_type_ref(fn.return_type_ref)) {
         return fn.return_type_ref;
     }
-    if (fn.return_type.empty()) {
-        return named_type_ref("auto", fn.location);
-    }
-    return parse_type_text(fn.return_type, fn.location);
+    return named_type_ref("auto", fn.location);
 }
 
 TypeRef native_type_alias_type_ref(const NativeTypeDecl& type) {
-    return has_type_ref(type.type_ref) ? type.type_ref : parse_type_text(type.type, type.location);
+    if (has_type_ref(type.type_ref)) {
+        return type.type_ref;
+    }
+    return named_type_ref(type.type.empty() ? type.name : type.type, type.location);
 }
 
 TypeRef native_value_type_ref(const NativeValueDecl& value) {
-    return has_type_ref(value.type_ref) ? value.type_ref
-                                        : parse_type_text(value.type, value.location);
+    if (has_type_ref(value.type_ref)) {
+        return value.type_ref;
+    }
+    return value.type.empty() ? named_type_ref("auto", value.location)
+                              : named_type_ref(value.type, value.location);
 }
 
 std::string native_type_alias_type_text(const NativeTypeDecl& type) {

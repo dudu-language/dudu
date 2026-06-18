@@ -1775,3 +1775,7 @@ push. They are not release packaging work.
    Method signature lookup no longer parses bracketed `method[T]` strings.
    Explicit generic method calls must pass parsed `TypeRef` template arguments
    through the typed lookup overloads.
+   Native metadata accessor fallbacks no longer parse mirror strings into
+   structured `TypeRef` nodes. Header scanning/import code is responsible for
+   carrying structured metadata; missing native metadata degrades to `auto` or a
+   simple named type instead of hidden reparsing.
