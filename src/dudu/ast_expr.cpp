@@ -15,7 +15,10 @@ std::optional<std::string> path_index_from_expr(const Expr& expr) {
     case ExprKind::StringLiteral:
         return expr.text.empty() ? std::nullopt : std::optional<std::string>{expr.text};
     case ExprKind::Member:
-        return member_path_from_expr(expr);
+        if (const std::optional<ExprPath> path = expr_path_from_expr(expr)) {
+            return render_expr_path(*path);
+        }
+        return std::nullopt;
     case ExprKind::TupleLiteral: {
         std::string out;
         for (const Expr& child : expr.children) {
@@ -77,11 +80,6 @@ std::string render_expr_path(const ExprPath& path) {
     return out;
 }
 
-std::optional<std::string> member_path_from_expr(const Expr& expr) {
-    const std::optional<ExprPath> path = expr_path_from_expr(expr);
-    return path ? std::optional<std::string>{render_expr_path(*path)} : std::nullopt;
-}
-
 bool expr_missing(const Expr& expr) {
     return expr.text.empty() || (expr.kind == ExprKind::Unknown && trim_copy(expr.text).empty());
 }
@@ -96,13 +94,6 @@ std::optional<std::string> bare_callee_name(const Expr& expr) {
         return expr.callee.front().name;
     }
     return std::nullopt;
-}
-
-std::string direct_callee_name(const Expr& expr) {
-    if (const std::optional<std::string> callee = bare_callee_name(expr)) {
-        return *callee;
-    }
-    return trim_copy(expr.name);
 }
 
 std::optional<std::string> member_callee_name(const Expr& expr) {
