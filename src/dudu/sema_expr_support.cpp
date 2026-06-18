@@ -5,11 +5,6 @@
 namespace dudu {
 namespace {
 
-std::vector<std::string> call_args(std::string expr, size_t open) {
-    std::string args = trim(expr.substr(open + 1, expr.size() - open - 2));
-    return args.empty() ? std::vector<std::string>{} : split_top_level_args(args);
-}
-
 std::optional<std::string> expr_path_key(const Expr& expr) {
     const std::optional<ExprPath> path = expr_path_from_expr(expr);
     return path ? std::optional<std::string>{render_expr_path(*path)} : std::nullopt;
@@ -25,22 +20,6 @@ bool is_native_enum_value_expr(const FunctionScope& scope, const Expr& expr,
 }
 
 } // namespace
-
-std::vector<Expr> call_arg_exprs(std::string expr, size_t open, SourceLocation location) {
-    std::vector<Expr> out;
-    for (const std::string& arg : call_args(std::move(expr), open)) {
-        out.push_back(parse_expr_text(arg, location));
-    }
-    return out;
-}
-
-std::vector<Expr> parse_exprs(const std::vector<std::string>& exprs, SourceLocation location) {
-    std::vector<Expr> out;
-    for (const std::string& expr : exprs) {
-        out.push_back(parse_expr_text(expr, location));
-    }
-    return out;
-}
 bool can_assign_ast(const FunctionScope& scope, const std::string& expected, const Expr& expr,
                     const std::string& got) {
     if (is_native_enum_value_expr(scope, expr, expected)) {

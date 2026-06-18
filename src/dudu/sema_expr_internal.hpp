@@ -66,8 +66,6 @@ void check_call_args_ast(const FunctionScope& scope, const std::string& callee,
 std::optional<FunctionSignature>
 matching_signature_ast(const FunctionScope& scope, const std::vector<FunctionSignature>& options,
                        const std::vector<Expr>& args);
-std::vector<Expr> call_arg_exprs(std::string expr, size_t open, SourceLocation location);
-std::vector<Expr> parse_exprs(const std::vector<std::string>& exprs, SourceLocation location);
 bool can_assign_ast(const FunctionScope& scope, const std::string& expected, const Expr& expr,
                     const std::string& got);
 bool can_assign_ast(const FunctionScope& scope, const TypeRef& expected, const Expr& expr,

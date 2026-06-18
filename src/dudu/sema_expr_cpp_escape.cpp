@@ -4,6 +4,22 @@
 namespace dudu {
 namespace {
 
+std::vector<Expr> parse_escape_exprs(const std::vector<std::string>& exprs,
+                                     SourceLocation location) {
+    std::vector<Expr> out;
+    out.reserve(exprs.size());
+    for (const std::string& expr : exprs) {
+        out.push_back(parse_expr_text(expr, location));
+    }
+    return out;
+}
+
+std::vector<Expr> call_arg_exprs(std::string expr, size_t open, SourceLocation location) {
+    std::string args = trim(expr.substr(open + 1, expr.size() - open - 2));
+    return parse_escape_exprs(
+        args.empty() ? std::vector<std::string>{} : split_top_level_args(args), location);
+}
+
 std::string cpp_escape_member_path_type(const FunctionScope& scope, const SourceLocation* location,
                                         const std::string& path) {
     const SourceLocation parse_location = location == nullptr ? SourceLocation{} : *location;
@@ -241,9 +257,9 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
             if (const auto local = scope.locals.find(name); local != scope.locals.end()) {
                 if (const auto signature =
                         dudu_operator_signature(scope.symbols, "[]", local->second)) {
-                    check_call_args_ast(scope, name + "[]", *signature,
-                                        parse_exprs(split_top_level_args(index_expr), *location),
-                                        location);
+                    check_call_args_ast(
+                        scope, name + "[]", *signature,
+                        parse_escape_exprs(split_top_level_args(index_expr), *location), location);
                 }
             }
             return indexed_value_type(scope.symbols, scope.locals, *location, name,
