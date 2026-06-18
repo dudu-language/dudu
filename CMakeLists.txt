@@ -91,6 +91,7 @@ add_library(dudu_frontend
     src/dudu/sema_assignment.cpp
     src/dudu/sema_bindings.cpp
     src/dudu/sema_body.cpp
+    src/dudu/sema_body_helpers.cpp
     src/dudu/sema_builtin_methods.cpp
     src/dudu/sema_common.cpp
     src/dudu/sema_context.cpp
