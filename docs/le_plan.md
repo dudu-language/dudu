@@ -727,6 +727,9 @@ push. They are not release packaging work.
    Array literal shape inference now carries the inferred element type as a
    parsed `TypeRef`, and semantic element checks use that structured metadata
    instead of reaching back through rendered declaration text.
+   Iterable binding inference now exposes only `TypeRef` helpers; the remaining
+   string-only iterable element APIs were removed, and LSP local binding
+   inference uses the same structured iterable element path as semantic checks.
    TypeRef-backed assignment checks now infer RHS expressions as `TypeRef`
    first, use structured type assignment before compatibility fallback, and
    render only for legacy assignment/literal checks and diagnostics.

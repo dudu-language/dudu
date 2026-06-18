@@ -61,13 +61,6 @@ std::optional<TypeRef> iterable_type_ref_from_type(TypeRef type) {
     return std::nullopt;
 }
 
-std::optional<std::string> iterable_type_from_type(TypeRef type) {
-    if (const auto element = iterable_type_ref_from_type(std::move(type))) {
-        return substitute_type_ref_text(*element, {});
-    }
-    return std::nullopt;
-}
-
 std::optional<TypeRef>
 iterable_value_type_ref(const std::map<std::string, TypeRef>& local_type_refs,
                         const std::string& name) {
@@ -76,14 +69,6 @@ iterable_value_type_ref(const std::map<std::string, TypeRef>& local_type_refs,
         return std::nullopt;
     }
     return iterable_type_ref_from_type(type_ref);
-}
-
-std::string iterable_value_type(const std::map<std::string, TypeRef>& local_type_refs,
-                                const std::string& name) {
-    if (const auto element = iterable_value_type_ref(local_type_refs, name)) {
-        return substitute_type_ref_text(*element, {});
-    }
-    return {};
 }
 
 void check_iterable_binding(const Symbols& symbols,

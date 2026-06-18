@@ -268,6 +268,9 @@ Already structured:
 - array literal shape inference now carries the inferred element type as a
   parsed `TypeRef`, and semantic element checks use that structured metadata
   instead of reaching back through rendered declaration text
+- iterable binding inference now exposes only `TypeRef` helpers; the remaining
+  string-only iterable element APIs were removed, and LSP local binding
+  inference uses the same structured iterable element path as semantic checks
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path
