@@ -72,8 +72,8 @@ lower_local_swizzle_expr(const Expr& expr, const std::vector<std::string>& alias
     if (symbols == nullptr) {
         return std::nullopt;
     }
-    const auto result_type = swizzle_type_ref_for_type(*symbols, parse_type_text(local->second),
-                                                       expr.name);
+    const auto result_type =
+        swizzle_type_ref_for_type(*symbols, parse_type_text(local->second), expr.name);
     if (!result_type) {
         return std::nullopt;
     }
@@ -146,6 +146,14 @@ std::optional<std::string>
 lower_swizzle_assignment(const Stmt& stmt, const std::vector<std::string>& aliases,
                          const std::map<std::string, std::string>& locals, const Symbols* symbols,
                          const CppEmitOptions& options) {
+    return lower_swizzle_assignment(stmt, aliases, locals, {}, symbols, options);
+}
+
+std::optional<std::string>
+lower_swizzle_assignment(const Stmt& stmt, const std::vector<std::string>& aliases,
+                         const std::map<std::string, std::string>& locals,
+                         const std::map<std::string, TypeRef>& local_type_refs,
+                         const Symbols* symbols, const CppEmitOptions& options) {
     if (stmt.target_expr.kind != ExprKind::Member || stmt.target_expr.children.size() != 1) {
         return std::nullopt;
     }
@@ -157,13 +165,14 @@ lower_swizzle_assignment(const Stmt& stmt, const std::vector<std::string>& alias
     if (!rhs_order) {
         return std::nullopt;
     }
-    std::string receiver = lower_expr(receiver_expr, aliases, locals, symbols, options);
+    std::string receiver =
+        lower_expr(receiver_expr, aliases, locals, local_type_refs, symbols, options);
     if (receiver.empty()) {
         return std::nullopt;
     }
     std::ostringstream out;
     out << "([&]() { auto&& __dudu_swizzle_rhs = "
-        << lower_expr(stmt.value_expr, aliases, locals, symbols, options) << "; ";
+        << lower_expr(stmt.value_expr, aliases, locals, local_type_refs, symbols, options) << "; ";
     for (size_t i = 0; i < stmt.target_expr.name.size(); ++i) {
         out << receiver << "." << stmt.target_expr.name[i] << " = __dudu_swizzle_rhs."
             << (*rhs_order)[i] << "; ";

@@ -42,6 +42,7 @@ add_library(dudu_frontend
     src/dudu/cpp_raw_escape.cpp
     src/dudu/cpp_raw_escape_templates.cpp
     src/dudu/cpp_stmt_emit.cpp
+    src/dudu/cpp_stmt_emit_support.cpp
     src/dudu/cpp_stmt_generic_methods.cpp
     src/dudu/cpp_stmt_helpers.cpp
     src/dudu/cpp_stmt_types.cpp

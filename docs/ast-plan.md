@@ -1754,6 +1754,11 @@ LSP source edits are also moving to AST-owned ranges:
 - C++ call emission now detects pointer-typed member receivers through
   structured member `TypeRef` metadata when resolving `value.method(...)`
   lowering, leaving text parsing only for the older string-local map boundary.
+- Statement codegen now routes expression emission through a typed overload
+  that carries `local_type_refs`; member field decisions, swizzle assignment
+  lowering, array literal recursion, and `[]=` operator hook lookup can use
+  structured local metadata instead of relying only on rendered local type
+  strings.
 - Native value symbols now store parsed `TypeRef` metadata beside their C++
   spelling strings, and normal name/member expression sema reads those refs
   directly for imported constants, build flags, shader/native values, and class

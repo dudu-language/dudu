@@ -33,6 +33,10 @@ std::string lower_cpp_escape_expr(std::string expr, const std::vector<std::strin
 std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases,
                        const std::map<std::string, std::string>& locals, const Symbols* symbols,
                        const CppEmitOptions& options);
+std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases,
+                       const std::map<std::string, std::string>& locals,
+                       const std::map<std::string, TypeRef>& local_type_refs,
+                       const Symbols* symbols, const CppEmitOptions& options);
 
 std::string lower_name_expr(const std::string& name,
                             const std::map<std::string, std::string>& locals,
@@ -178,6 +182,13 @@ std::string cpp_binary_operator(const std::string& op) {
 std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases,
                        const std::map<std::string, std::string>& locals, const Symbols* symbols,
                        const CppEmitOptions& options) {
+    return lower_expr(expr, aliases, locals, {}, symbols, options);
+}
+
+std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases,
+                       const std::map<std::string, std::string>& locals,
+                       const std::map<std::string, TypeRef>& local_type_refs,
+                       const Symbols* symbols, const CppEmitOptions& options) {
     if (expr.kind == ExprKind::Missing) {
         return {};
     }
@@ -297,8 +308,8 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
                        expr.name;
             }
             if (symbols != nullptr) {
-                const TypeRef receiver_type =
-                    member_expr_type_ref(*symbols, locals, {}, nullptr, expr.children.front());
+                const TypeRef receiver_type = member_expr_type_ref(
+                    *symbols, locals, local_type_refs, nullptr, expr.children.front());
                 if (has_type_ref(receiver_type) &&
                     field_type_ref_for_type(*symbols, receiver_type, expr.name)) {
                     return lower_expr(expr.children.front(), aliases, locals, symbols, options) +
@@ -396,8 +407,15 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
 std::string lower_array_literal(const Expr& expr, const std::vector<std::string>& aliases,
                                 const std::map<std::string, std::string>& locals,
                                 const Symbols* symbols, const CppEmitOptions& options) {
+    return lower_array_literal(expr, aliases, locals, {}, symbols, options);
+}
+
+std::string lower_array_literal(const Expr& expr, const std::vector<std::string>& aliases,
+                                const std::map<std::string, std::string>& locals,
+                                const std::map<std::string, TypeRef>& local_type_refs,
+                                const Symbols* symbols, const CppEmitOptions& options) {
     if (expr.kind != ExprKind::ListLiteral) {
-        return lower_expr(expr, aliases, locals, symbols, options);
+        return lower_expr(expr, aliases, locals, local_type_refs, symbols, options);
     }
     std::ostringstream out;
     out << "{";
@@ -405,7 +423,8 @@ std::string lower_array_literal(const Expr& expr, const std::vector<std::string>
         if (i > 0) {
             out << ", ";
         }
-        out << lower_array_literal(expr.children[i], aliases, locals, symbols, options);
+        out << lower_array_literal(expr.children[i], aliases, locals, local_type_refs, symbols,
+                                   options);
     }
     out << "}";
     return out.str();

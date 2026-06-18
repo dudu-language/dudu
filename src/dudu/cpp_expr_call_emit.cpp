@@ -287,6 +287,14 @@ std::optional<std::string>
 lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& aliases,
                             const std::map<std::string, std::string>& locals,
                             const Symbols* symbols, const CppEmitOptions& options) {
+    return lower_index_assignment_hook(stmt, aliases, locals, {}, symbols, options);
+}
+
+std::optional<std::string>
+lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& aliases,
+                            const std::map<std::string, std::string>& locals,
+                            const std::map<std::string, TypeRef>& local_type_refs,
+                            const Symbols* symbols, const CppEmitOptions& options) {
     if (symbols == nullptr || stmt.target_expr.kind != ExprKind::Index ||
         stmt.target_expr.children.size() != 2 ||
         stmt.target_expr.children[0].kind != ExprKind::Name) {
@@ -297,7 +305,11 @@ lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& al
     if (local == locals.end()) {
         return std::nullopt;
     }
-    const auto method = dudu_operator_method_name(*symbols, local->second, "[]=");
+    std::string receiver_type = local->second;
+    if (const auto typed = local_type_refs.find(receiver); typed != local_type_refs.end()) {
+        receiver_type = substitute_type_ref_text(typed->second, {});
+    }
+    const auto method = dudu_operator_method_name(*symbols, receiver_type, "[]=");
     if (!method) {
         return std::nullopt;
     }
