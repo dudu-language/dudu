@@ -8,7 +8,6 @@
 #include "dudu/cpp_expr_slices.hpp"
 #include "dudu/cpp_expr_swizzles.hpp"
 #include "dudu/cpp_lower.hpp"
-#include "dudu/cpp_pointer_members.hpp"
 #include "dudu/cpp_stmt_types.hpp"
 #include "dudu/sema_context.hpp"
 #include "dudu/sema_enum.hpp"
@@ -25,12 +24,6 @@
 #include <vector>
 
 namespace dudu {
-std::string lower_cpp_escape_expr(std::string expr, const std::vector<std::string>& aliases,
-                                  const std::map<std::string, TypeRef>& local_type_refs) {
-    return lower_raw_cpp_escape_expr(rewrite_pointer_members(std::move(expr), local_type_refs),
-                                     aliases);
-}
-
 std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases,
                        const CppLocalContext& locals, const Symbols* symbols,
                        const CppEmitOptions& options);
