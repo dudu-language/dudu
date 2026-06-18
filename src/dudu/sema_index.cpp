@@ -271,17 +271,6 @@ indexed_type_from_type_ref_with_count(const SourceLocation& location, const Type
 
 std::string indexed_value_type(const Symbols& symbols,
                                const std::map<std::string, std::string>& locals,
-                               const SourceLocation& location, const std::string& name,
-                               const Expr& index_expr, std::string_view unknown_message) {
-    const auto local = locals.find(name);
-    if (local == locals.end()) {
-        throw CompileError(location, std::string(unknown_message) + name);
-    }
-    return indexed_type_from_type(symbols, location, local->second, index_expr, name);
-}
-
-std::string indexed_value_type(const Symbols& symbols,
-                               const std::map<std::string, std::string>& locals,
                                const std::map<std::string, TypeRef>& local_type_refs,
                                const SourceLocation& location, const std::string& name,
                                const Expr& index_expr, std::string_view unknown_message) {

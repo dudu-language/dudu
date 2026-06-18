@@ -21,10 +21,6 @@ TypeRef indexed_type_ref_from_type(const Symbols& symbols, const SourceLocation&
                                    const std::string& label);
 std::string indexed_value_type(const Symbols& symbols,
                                const std::map<std::string, std::string>& locals,
-                               const SourceLocation& location, const std::string& name,
-                               const Expr& index_expr, std::string_view unknown_message);
-std::string indexed_value_type(const Symbols& symbols,
-                               const std::map<std::string, std::string>& locals,
                                const std::map<std::string, TypeRef>& local_type_refs,
                                const SourceLocation& location, const std::string& name,
                                const Expr& index_expr, std::string_view unknown_message);

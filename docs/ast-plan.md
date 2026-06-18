@@ -161,6 +161,9 @@ Already structured:
   metadata before falling back to compatibility local type strings
 - iterable value tests and callers now use the `TypeRef` iterable helper; the
   older string-only iterable local API was removed
+- indexed `cpp(...)` escape inference now threads local `TypeRef` metadata
+  through the indexed local helper; the older string-only indexed local API was
+  removed
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path
