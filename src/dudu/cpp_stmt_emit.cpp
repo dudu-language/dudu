@@ -33,9 +33,10 @@
 namespace dudu {
 namespace {
 
-void emit_cpp_escape(std::ostringstream& out, const Stmt& stmt, int depth) {
+void emit_cpp_escape(std::ostringstream& out, const Stmt& stmt, int depth,
+                     const std::map<std::string, TypeRef>& local_type_refs) {
     for (const std::string& line : stmt.cpp_lines) {
-        out << indent(depth) << line << '\n';
+        out << indent(depth) << rewrite_pointer_members(line, local_type_refs) << '\n';
     }
 }
 
@@ -51,7 +52,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                            const std::map<std::string, TypeRef>& function_returns,
                            const Symbols* symbols, const CppEmitOptions& options) {
     if (stmt.kind == StmtKind::CppEscape) {
-        emit_cpp_escape(out, stmt, depth);
+        emit_cpp_escape(out, stmt, depth, local_type_refs);
         return;
     }
     if (stmt.kind == StmtKind::Pass) {

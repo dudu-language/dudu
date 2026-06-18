@@ -58,6 +58,18 @@ void test_pointer_member_emission(const std::filesystem::path& root) {
         const std::string cpp = dudu::emit_cpp_source(module);
         assert(cpp.find("return ptrs[0]->value;") != std::string::npos);
     }
+    {
+        const dudu::ModuleAst module =
+            dudu::parse_source("class Item:\n"
+                               "    value: i32\n"
+                               "\n"
+                               "def copy(item: *Item, ptrs: list[*Item]):\n"
+                               "    cpp(\"item.value = ptrs[0].value;\")\n",
+                               "cpp_escape_pointer_members.dd");
+        dudu::analyze_module(module, {.check_bodies = true});
+        const std::string cpp = dudu::emit_cpp_source(module);
+        assert(cpp.find("item->value = ptrs[0]->value;") != std::string::npos);
+    }
 }
 
 void test_value_member_emission() {

@@ -1,24 +1,19 @@
 #include "dudu/cpp_pointer_members.hpp"
 
-#include "dudu/ast_type.hpp"
-#include "dudu/cpp_lower.hpp"
-
 #include <cctype>
 
 namespace dudu {
 namespace {
 
-bool is_pointer_type(const std::string& type) {
-    return parse_type_text(type).kind == TypeKind::Pointer;
+bool is_pointer_type(const TypeRef& type) {
+    return type.kind == TypeKind::Pointer;
 }
 
-bool is_pointer_list_type(std::string type) {
-    type = trim_copy(std::move(type));
-    const TypeRef parsed = parse_type_text(type);
-    if (parsed.kind != TypeKind::Template || parsed.name != "list" || parsed.children.size() != 1) {
+bool is_pointer_list_type(const TypeRef& type) {
+    if (type.kind != TypeKind::Template || type.name != "list" || type.children.size() != 1) {
         return false;
     }
-    return parsed.children.front().kind == TypeKind::Pointer;
+    return type.children.front().kind == TypeKind::Pointer;
 }
 
 size_t matching_bracket(const std::string& text, size_t open) {
@@ -69,8 +64,8 @@ void rewrite_pointer_list(std::string& expr, const std::string& name) {
 } // namespace
 
 std::string rewrite_pointer_members(std::string expr,
-                                    const std::map<std::string, std::string>& locals) {
-    for (const auto& [name, type] : locals) {
+                                    const std::map<std::string, TypeRef>& local_type_refs) {
+    for (const auto& [name, type] : local_type_refs) {
         if (is_pointer_type(type)) {
             rewrite_pointer_local(expr, name);
         }

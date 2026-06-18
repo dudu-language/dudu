@@ -211,6 +211,9 @@ Already structured:
   name is an existing local, and first assignments with unknown native escape
   types store an explicit `auto` `TypeRef` instead of relying on rendered local
   strings
+- explicit `cpp(...)` pointer-member rewrites for expression and statement
+  escapes now read local pointer/list-pointer facts from `TypeRef` metadata
+  instead of reparsing rendered local type strings
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path

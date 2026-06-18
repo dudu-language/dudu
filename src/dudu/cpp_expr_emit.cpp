@@ -26,8 +26,9 @@
 
 namespace dudu {
 std::string lower_cpp_escape_expr(std::string expr, const std::vector<std::string>& aliases,
-                                  const std::map<std::string, std::string>& locals) {
-    return lower_raw_cpp_escape_expr(rewrite_pointer_members(std::move(expr), locals), aliases);
+                                  const std::map<std::string, TypeRef>& local_type_refs) {
+    return lower_raw_cpp_escape_expr(rewrite_pointer_members(std::move(expr), local_type_refs),
+                                     aliases);
 }
 
 std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases,
@@ -223,7 +224,7 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
         }
         return lower_name_expr(expr.name, locals, options);
     case ExprKind::CppEscape:
-        return lower_cpp_escape_expr(expr.value, aliases, locals);
+        return lower_cpp_escape_expr(expr.value, aliases, local_type_refs);
     case ExprKind::StringLiteral:
         return expr.text;
     case ExprKind::Unary:
