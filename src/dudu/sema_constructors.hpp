@@ -21,6 +21,6 @@ void check_constructor_args_ast(
     const SourceLocation* location,
     const std::function<TypeRef(const FunctionScope&, const Expr&, const SourceLocation*)>&
         infer_expr_type,
-    const std::function<bool(const std::string&, const Expr&, const std::string&)>& can_assign);
+    const std::function<bool(const TypeRef&, const Expr&, const TypeRef&)>& can_assign);
 
 } // namespace dudu

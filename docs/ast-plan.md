@@ -1965,6 +1965,10 @@ LSP source edits are also moving to AST-owned ranges:
   mirrors directly.
 - Native overload assignment callbacks now carry expected and actual argument
   types as parsed `TypeRef` nodes instead of string type names.
+- Generic inference and constructor argument checking now carry assignability
+  callbacks over parsed `TypeRef` nodes. Constructor diagnostics still render
+  types at the edge, but overload matching no longer stringifies expected and
+  actual argument types before checking compatibility.
 
 Expression parsing has moved onto the lexer/token stream:
 

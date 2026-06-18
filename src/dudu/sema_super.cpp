@@ -128,7 +128,7 @@ TypeRef infer_super_call_type_ref(const FunctionScope& scope, const Expr& expr,
         }
         check_constructor_args_ast(
             scope, *base_class->second, expr.children, location, callbacks.infer_expr_type,
-            [&](const std::string& expected, const Expr& value, const std::string& got) {
+            [&](const TypeRef& expected, const Expr& value, const TypeRef& got) {
                 return callbacks.can_assign(scope, expected, value, got);
             });
         return void_type_ref(expr.location);

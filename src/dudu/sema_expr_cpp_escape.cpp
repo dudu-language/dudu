@@ -122,7 +122,7 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
             klass != scope.symbols.classes.end()) {
             check_constructor_args_ast(
                 scope, *klass->second, args, location, infer_expr_type_ast,
-                [&](const std::string& expected, const Expr& value, const std::string& got) {
+                [&](const TypeRef& expected, const Expr& value, const TypeRef& got) {
                     return can_assign_ast(scope, expected, value, got);
                 });
             return callee;

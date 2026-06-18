@@ -581,9 +581,12 @@ void test_native_semantic_tokens() {
 }
 
 void test_ast_constructor_assignment_compatibility() {
-    const dudu::ModuleAst module = dudu::parse_source("class Bag:\n"
-                                                      "    names: dict[str, i32]\n"
-                                                      "    values: list[i32]\n"
+    const dudu::ModuleAst module = dudu::parse_source("type Scores = dict[str, i32]\n"
+                                                      "type Values = list[i32]\n"
+                                                      "\n"
+                                                      "class Bag:\n"
+                                                      "    names: Scores\n"
+                                                      "    values: Values\n"
                                                       "\n"
                                                       "def make_bag() -> Bag:\n"
                                                       "    first: Bag = Bag({}, [])\n"

@@ -812,6 +812,10 @@ push. They are not release packaging work.
    through signature `TypeRef` helpers rather than raw string mirrors.
    Native overload assignment callbacks now carry expected and actual argument
    types as parsed `TypeRef` nodes instead of string type names.
+   Generic inference callbacks and constructor argument assignment callbacks
+   now carry parsed expected/actual `TypeRef` nodes too. Constructor errors
+   still render readable type names at the diagnostic edge, but matching no
+   longer has to stringify the type pair before asking semantic assignability.
    The duplicate string-only indexed type implementation has been removed;
    public string index queries parse the receiver once and delegate to the
    structured `TypeRef` indexing implementation.

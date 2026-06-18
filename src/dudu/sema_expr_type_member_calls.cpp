@@ -101,8 +101,8 @@ std::optional<TypeRef> direct_member_call_type_ref(const FunctionScope& scope, c
                              return infer_expr_type_ast(nested, arg, arg_location);
                          },
                      .can_assign =
-                         [](const FunctionScope& nested, const std::string& expected,
-                            const Expr& value, const std::string& got) {
+                         [](const FunctionScope& nested, const TypeRef& expected,
+                            const Expr& value, const TypeRef& got) {
                              return can_assign_ast(nested, expected, value, got);
                          }})) {
                 check_call_args_ast(scope, callee, *inferred, expr.children, location);
