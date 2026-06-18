@@ -102,22 +102,8 @@ std::string lower_expr_as_type_ref(const TypeRef& expected_type, const Expr& exp
     return lower_expr(expr, aliases, locals, symbols, options);
 }
 
-std::string lower_expr_as_type(const std::string& expected_type, const Expr& expr,
-                               const std::vector<std::string>& aliases,
-                               const std::map<std::string, std::string>& locals,
-                               const std::map<std::string, TypeRef>& local_type_refs,
-                               const std::map<std::string, TypeRef>& function_returns,
-                               const Symbols* symbols, const CppEmitOptions& options) {
-    return lower_expr_as_type_ref(parse_type_text(expected_type, expr.location), expr, aliases,
-                                  locals, local_type_refs, function_returns, symbols, options);
-}
-
 bool is_template_type(const TypeRef& type, std::string_view name) {
     return type.kind == TypeKind::Template && type.name == name;
-}
-
-bool is_template_type(std::string_view type, std::string_view name) {
-    return is_template_type(parse_type_text(type), name);
 }
 
 bool is_fixed_array_type(const TypeRef& type) {
@@ -286,16 +272,14 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
             const std::string& lhs = stmt.target_expr.name;
             if (locals.contains(lhs)) {
                 const auto lhs_type_ref = local_type_refs.find(lhs);
-                const bool option_target = lhs_type_ref == local_type_refs.end()
-                                               ? is_template_type(locals.at(lhs), "Option")
-                                               : is_template_type(lhs_type_ref->second, "Option");
-                const std::string value =
+                const TypeRef lhs_type =
                     lhs_type_ref == local_type_refs.end()
-                        ? lower_expr_as_type(locals.at(lhs), stmt.value_expr, aliases, locals,
-                                             local_type_refs, function_returns, symbols, options)
-                        : lower_expr_as_type_ref(lhs_type_ref->second, stmt.value_expr, aliases,
-                                                 locals, local_type_refs, function_returns, symbols,
-                                                 options);
+                        ? parse_type_text(locals.at(lhs), stmt.target_expr.location)
+                        : lhs_type_ref->second;
+                const bool option_target = is_template_type(lhs_type, "Option");
+                const std::string value =
+                    lower_expr_as_type_ref(lhs_type, stmt.value_expr, aliases, locals,
+                                           local_type_refs, function_returns, symbols, options);
                 out << indent(depth) << lhs << " = ";
                 if (option_target && stmt.value_expr.kind == ExprKind::NoneLiteral) {
                     out << "std::nullopt";

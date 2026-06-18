@@ -385,6 +385,9 @@ Already structured:
 - `member_path_type_from_string` has been removed from sema internals; explicit
   `cpp(...)` escape inference now owns the remaining string-to-expression parse
   it needs for raw member path compatibility
+- statement C++ emission no longer has local string wrappers for typed
+  assignment lowering or template-kind checks; missing local metadata is parsed
+  once at the compatibility boundary and the normal path uses `TypeRef`
 - LSP local variable/parameter type collection for hover, member completion,
   and member definition now walks parsed function/method bodies and reuses
   semantic expression inference instead of regexing source lines
