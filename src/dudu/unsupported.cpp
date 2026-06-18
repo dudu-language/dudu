@@ -70,14 +70,7 @@ void check_statement(const Stmt& stmt) {
         throw CompileError(stmt.location, "unsupported statement kind: " +
                                               std::string(statement_kind_name(stmt.kind)));
     } else {
-        check_expr(stmt.expr);
-        check_expr(stmt.value_expr);
-        check_expr(stmt.target_expr);
-        check_expr(stmt.condition_expr);
-        check_expr(stmt.message_expr);
-        check_expr(stmt.iterable_expr);
-        check_expr(stmt.pattern_expr);
-        check_expr(stmt.guard_expr);
+        visit_stmt_expressions(stmt, check_expr);
     }
     for (const Stmt& child : stmt.children) {
         check_statement(child);

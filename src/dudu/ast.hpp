@@ -3,6 +3,7 @@
 #include "dudu/source.hpp"
 
 #include <filesystem>
+#include <functional>
 #include <map>
 #include <string>
 #include <string_view>
@@ -343,6 +344,9 @@ std::string_view statement_kind_name(StmtKind kind);
 std::string_view unsupported_feature_name(UnsupportedFeature feature);
 std::string_view expression_kind_name(ExprKind kind);
 std::string_view type_kind_name(TypeKind kind);
+void visit_expr_tree(const Expr& expr, const std::function<void(const Expr&)>& visitor);
+void visit_stmt_expressions(const Stmt& stmt, const std::function<void(const Expr&)>& visitor);
+void visit_stmt_tree_expressions(const Stmt& stmt, const std::function<void(const Expr&)>& visitor);
 Expr parse_expr_text(std::string_view text, SourceLocation location = {});
 TypeRef parse_type_text(std::string_view text, SourceLocation location = {});
 std::vector<std::string> tuple_binding_names(const Expr& expr);

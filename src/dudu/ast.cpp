@@ -19,6 +19,41 @@ std::vector<std::string> tuple_binding_names(const Expr& expr) {
     return names;
 }
 
+void visit_expr_tree(const Expr& expr, const std::function<void(const Expr&)>& visitor) {
+    visitor(expr);
+    for (const Expr& child : expr.callee) {
+        visit_expr_tree(child, visitor);
+    }
+    for (const Expr& child : expr.params) {
+        visit_expr_tree(child, visitor);
+    }
+    for (const Expr& child : expr.template_args) {
+        visit_expr_tree(child, visitor);
+    }
+    for (const Expr& child : expr.children) {
+        visit_expr_tree(child, visitor);
+    }
+}
+
+void visit_stmt_expressions(const Stmt& stmt, const std::function<void(const Expr&)>& visitor) {
+    visitor(stmt.expr);
+    visitor(stmt.value_expr);
+    visitor(stmt.target_expr);
+    visitor(stmt.condition_expr);
+    visitor(stmt.message_expr);
+    visitor(stmt.iterable_expr);
+    visitor(stmt.pattern_expr);
+    visitor(stmt.guard_expr);
+}
+
+void visit_stmt_tree_expressions(const Stmt& stmt,
+                                 const std::function<void(const Expr&)>& visitor) {
+    visit_stmt_expressions(stmt, [&](const Expr& expr) { visit_expr_tree(expr, visitor); });
+    for (const Stmt& child : stmt.children) {
+        visit_stmt_tree_expressions(child, visitor);
+    }
+}
+
 std::string bound_import_name(const ImportDecl& import) {
     if (!import.alias.empty()) {
         return import.alias;

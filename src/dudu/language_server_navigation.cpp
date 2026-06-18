@@ -114,14 +114,7 @@ std::optional<std::string> ast_symbol_at_impl(const Document& doc, const Json* p
                     stmt.kind == StmtKind::Except) {
                     set_if_hit(stmt.name, stmt.location);
                 }
-                visit_expr(stmt.expr);
-                visit_expr(stmt.value_expr);
-                visit_expr(stmt.target_expr);
-                visit_expr(stmt.condition_expr);
-                visit_expr(stmt.message_expr);
-                visit_expr(stmt.iterable_expr);
-                visit_expr(stmt.pattern_expr);
-                visit_expr(stmt.guard_expr);
+                visit_stmt_expressions(stmt, visit_expr);
                 visit_stmts(stmt.children);
             }
         };
@@ -255,14 +248,7 @@ std::vector<ReferenceLocation> references_in(const Document& doc, const std::str
                     stmt.kind == StmtKind::Except) {
                     add(stmt.name, stmt.location);
                 }
-                visit_expr(stmt.expr);
-                visit_expr(stmt.value_expr);
-                visit_expr(stmt.target_expr);
-                visit_expr(stmt.condition_expr);
-                visit_expr(stmt.message_expr);
-                visit_expr(stmt.iterable_expr);
-                visit_expr(stmt.pattern_expr);
-                visit_expr(stmt.guard_expr);
+                visit_stmt_expressions(stmt, visit_expr);
                 visit_stmts(stmt.children);
             }
         };

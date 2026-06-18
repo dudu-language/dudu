@@ -694,7 +694,11 @@ push. They are not release packaging work.
    of reading the compatibility expression text field first, and no longer fall
    back to compatibility text when a parsed member path is unavailable. LSP
    symbol-at and reference collection locate member names from parsed receiver
-   ranges instead of shifting by compatibility expression text width.
+   ranges instead of shifting by compatibility expression text width. Shared
+   AST traversal helpers now own expression-tree and statement-expression
+   walking, and the AST lint, unsupported-feature, build-flag, and navigation
+   passes use those helpers instead of maintaining hand-written expression-slot
+   lists.
 
 3. OOP Surface Cleanup
 

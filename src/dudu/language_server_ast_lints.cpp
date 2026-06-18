@@ -100,14 +100,9 @@ void lint_suspicious_cast_stmt(const Stmt& stmt, const Document& doc,
     if (!same_source_file(stmt.location.file, doc.path)) {
         return;
     }
-    lint_suspicious_cast_expr(stmt.expr, doc, active_decls, out);
-    lint_suspicious_cast_expr(stmt.value_expr, doc, active_decls, out);
-    lint_suspicious_cast_expr(stmt.target_expr, doc, active_decls, out);
-    lint_suspicious_cast_expr(stmt.condition_expr, doc, active_decls, out);
-    lint_suspicious_cast_expr(stmt.message_expr, doc, active_decls, out);
-    lint_suspicious_cast_expr(stmt.iterable_expr, doc, active_decls, out);
-    lint_suspicious_cast_expr(stmt.pattern_expr, doc, active_decls, out);
-    lint_suspicious_cast_expr(stmt.guard_expr, doc, active_decls, out);
+    visit_stmt_expressions(stmt, [&](const Expr& expr) {
+        lint_suspicious_cast_expr(expr, doc, active_decls, out);
+    });
     if (stmt.kind == StmtKind::VarDecl && !stmt.name.empty() && has_type_ref(stmt.type_ref)) {
         active_decls.push_back({.name = stmt.name,
                                 .type = substitute_type_ref_text(stmt.type_ref, {}),
@@ -122,37 +117,27 @@ void lint_suspicious_cast_stmt(const Stmt& stmt, const Document& doc,
 void lint_suspicious_cast_expr(const Expr& expr, const Document& doc,
                                const std::vector<AstLintLocal>& active_decls,
                                std::vector<Diagnostic>& out) {
-    if (expr_missing(expr)) {
-        return;
-    }
-    const std::string callee = direct_callee_name(expr);
-    if (expr.kind == ExprKind::Call && numeric_type_name(callee) && expr.children.size() == 1 &&
-        expr.children.front().kind == ExprKind::Name &&
-        same_source_file(expr.location.file, doc.path)) {
-        const std::string& source_name = expr.children.front().name;
-        const std::string source_type = visible_local_type(active_decls, source_name);
-        if (!source_type.empty() && is_suspicious_numeric_cast(callee, source_type)) {
-            out.push_back({.location = expr.location,
-                           .message = "suspicious narrowing cast: " + callee + "(" + source_name +
-                                      ") from " + source_type,
-                           .source = "dudu/lint",
-                           .severity = 2,
-                           .code = "dudu.lint.suspicious_cast",
-                           .data_name = ""});
+    visit_expr_tree(expr, [&](const Expr& node) {
+        if (expr_missing(node)) {
+            return;
         }
-    }
-    for (const Expr& child : expr.callee) {
-        lint_suspicious_cast_expr(child, doc, active_decls, out);
-    }
-    for (const Expr& child : expr.params) {
-        lint_suspicious_cast_expr(child, doc, active_decls, out);
-    }
-    for (const Expr& child : expr.template_args) {
-        lint_suspicious_cast_expr(child, doc, active_decls, out);
-    }
-    for (const Expr& child : expr.children) {
-        lint_suspicious_cast_expr(child, doc, active_decls, out);
-    }
+        const std::string callee = direct_callee_name(node);
+        if (node.kind == ExprKind::Call && numeric_type_name(callee) && node.children.size() == 1 &&
+            node.children.front().kind == ExprKind::Name &&
+            same_source_file(node.location.file, doc.path)) {
+            const std::string& source_name = node.children.front().name;
+            const std::string source_type = visible_local_type(active_decls, source_name);
+            if (!source_type.empty() && is_suspicious_numeric_cast(callee, source_type)) {
+                out.push_back({.location = node.location,
+                               .message = "suspicious narrowing cast: " + callee + "(" +
+                                          source_name + ") from " + source_type,
+                               .source = "dudu/lint",
+                               .severity = 2,
+                               .code = "dudu.lint.suspicious_cast",
+                               .data_name = ""});
+            }
+        }
+    });
 }
 
 void lint_suspicious_cast_statement_sequence(const std::vector<Stmt>& statements,
@@ -209,14 +194,8 @@ void lint_cpp_escape_stmt(const Stmt& stmt, const Document& doc,
                        .code = "dudu.lint.cpp_escape",
                        .data_name = ""});
     }
-    lint_cpp_escape_expr(stmt.expr, doc, seen, out);
-    lint_cpp_escape_expr(stmt.value_expr, doc, seen, out);
-    lint_cpp_escape_expr(stmt.target_expr, doc, seen, out);
-    lint_cpp_escape_expr(stmt.condition_expr, doc, seen, out);
-    lint_cpp_escape_expr(stmt.message_expr, doc, seen, out);
-    lint_cpp_escape_expr(stmt.iterable_expr, doc, seen, out);
-    lint_cpp_escape_expr(stmt.pattern_expr, doc, seen, out);
-    lint_cpp_escape_expr(stmt.guard_expr, doc, seen, out);
+    visit_stmt_expressions(stmt,
+                           [&](const Expr& expr) { lint_cpp_escape_expr(expr, doc, seen, out); });
     for (const Stmt& child : stmt.children) {
         lint_cpp_escape_stmt(child, doc, seen, out);
     }
@@ -224,30 +203,20 @@ void lint_cpp_escape_stmt(const Stmt& stmt, const Document& doc,
 
 void lint_cpp_escape_expr(const Expr& expr, const Document& doc,
                           std::set<std::pair<int, int>>& seen, std::vector<Diagnostic>& out) {
-    if (expr_missing(expr)) {
-        return;
-    }
-    if (expr.kind == ExprKind::CppEscape && same_source_file(expr.location.file, doc.path) &&
-        seen.insert({expr.location.line, expr.location.column}).second) {
-        out.push_back({.location = expr.location,
-                       .message = "native interop hazard: raw cpp escape hatch",
-                       .source = "dudu/lint",
-                       .severity = 2,
-                       .code = "dudu.lint.cpp_escape",
-                       .data_name = ""});
-    }
-    for (const Expr& child : expr.callee) {
-        lint_cpp_escape_expr(child, doc, seen, out);
-    }
-    for (const Expr& child : expr.params) {
-        lint_cpp_escape_expr(child, doc, seen, out);
-    }
-    for (const Expr& child : expr.template_args) {
-        lint_cpp_escape_expr(child, doc, seen, out);
-    }
-    for (const Expr& child : expr.children) {
-        lint_cpp_escape_expr(child, doc, seen, out);
-    }
+    visit_expr_tree(expr, [&](const Expr& node) {
+        if (expr_missing(node)) {
+            return;
+        }
+        if (node.kind == ExprKind::CppEscape && same_source_file(node.location.file, doc.path) &&
+            seen.insert({node.location.line, node.location.column}).second) {
+            out.push_back({.location = node.location,
+                           .message = "native interop hazard: raw cpp escape hatch",
+                           .source = "dudu/lint",
+                           .severity = 2,
+                           .code = "dudu.lint.cpp_escape",
+                           .data_name = ""});
+        }
+    });
 }
 
 void lint_cpp_escape_function(const FunctionDecl& fn, const Document& doc,
@@ -358,41 +327,13 @@ void lint_unreachable_module(const ModuleAst& module, const Document& doc,
     }
 }
 
-void collect_name_uses_expr(const Expr& expr, const Document& doc,
-                            std::map<std::string, std::vector<SourceLocation>>& uses) {
-    if (expr_missing(expr)) {
-        return;
-    }
-    if (expr.kind == ExprKind::Name && same_source_file(expr.location.file, doc.path)) {
-        uses[expr.name].push_back(expr.location);
-    }
-    for (const Expr& child : expr.callee) {
-        collect_name_uses_expr(child, doc, uses);
-    }
-    for (const Expr& child : expr.params) {
-        collect_name_uses_expr(child, doc, uses);
-    }
-    for (const Expr& child : expr.template_args) {
-        collect_name_uses_expr(child, doc, uses);
-    }
-    for (const Expr& child : expr.children) {
-        collect_name_uses_expr(child, doc, uses);
-    }
-}
-
 void collect_name_uses_stmt(const Stmt& stmt, const Document& doc,
                             std::map<std::string, std::vector<SourceLocation>>& uses) {
-    collect_name_uses_expr(stmt.expr, doc, uses);
-    collect_name_uses_expr(stmt.value_expr, doc, uses);
-    collect_name_uses_expr(stmt.target_expr, doc, uses);
-    collect_name_uses_expr(stmt.condition_expr, doc, uses);
-    collect_name_uses_expr(stmt.message_expr, doc, uses);
-    collect_name_uses_expr(stmt.iterable_expr, doc, uses);
-    collect_name_uses_expr(stmt.pattern_expr, doc, uses);
-    collect_name_uses_expr(stmt.guard_expr, doc, uses);
-    for (const Stmt& child : stmt.children) {
-        collect_name_uses_stmt(child, doc, uses);
-    }
+    visit_stmt_tree_expressions(stmt, [&](const Expr& expr) {
+        if (expr.kind == ExprKind::Name && same_source_file(expr.location.file, doc.path)) {
+            uses[expr.name].push_back(expr.location);
+        }
+    });
 }
 
 void collect_scope_lints_stmt_sequence(const std::vector<Stmt>& statements, const Document& doc,

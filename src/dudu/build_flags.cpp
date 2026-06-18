@@ -174,12 +174,7 @@ void check_stmt(const std::set<std::string>& names, const Stmt& stmt) {
         }
         return;
     }
-    check_expr(names, stmt.expr);
-    check_expr(names, stmt.value_expr);
-    check_expr(names, stmt.target_expr);
-    check_expr(names, stmt.condition_expr);
-    check_expr(names, stmt.message_expr);
-    check_expr(names, stmt.iterable_expr);
+    visit_stmt_expressions(stmt, [&](const Expr& expr) { check_expr(names, expr); });
 }
 
 void check_body(const std::set<std::string>& names, const std::vector<Stmt>& body) {
