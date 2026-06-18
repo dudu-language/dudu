@@ -65,6 +65,16 @@ void test_ast_assignment_display_types() {
            "cannot assign  to bool without an explicit cast");
 }
 
+void test_missing_expression_is_not_unknown() {
+    const dudu::Expr parsed_empty = dudu::parse_expr_text("");
+    assert(parsed_empty.kind == dudu::ExprKind::Missing);
+    assert(dudu::expr_missing(parsed_empty));
+
+    dudu::Expr unknown;
+    unknown.kind = dudu::ExprKind::Unknown;
+    assert(!dudu::expr_missing(unknown));
+}
+
 void test_type_compat_uses_type_ast_for_pointers() {
     assert(dudu::type_assignment_allowed("*const[void]", "*i32"));
     assert(dudu::type_assignment_allowed("* const[void]", "*i32"));
@@ -876,6 +886,7 @@ void test_wrapper_match_type_uses_type_ast() {
 int main() {
     try {
         test_ast_assignment_display_types();
+        test_missing_expression_is_not_unknown();
         test_type_compat_uses_type_ast_for_pointers();
         test_core_type_helpers_use_type_ast();
         test_builtin_method_signature_uses_type_ast();

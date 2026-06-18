@@ -81,8 +81,7 @@ std::string render_expr_path(const ExprPath& path) {
 }
 
 bool expr_missing(const Expr& expr) {
-    return expr.kind == ExprKind::Missing ||
-           (expr.kind == ExprKind::Unknown && trim_copy(expr.text).empty());
+    return expr.kind == ExprKind::Missing;
 }
 
 bool expr_present(const Expr& expr) {
