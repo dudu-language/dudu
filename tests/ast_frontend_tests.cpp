@@ -561,8 +561,9 @@ void test_expected_generic_method_uses_type_ast_receiver() {
     };
 
     const std::optional<dudu::FunctionSignature> signature =
-        dudu::inferred_generic_method_signature_for_type(scope, dudu::parse_type_text("Wrapper"),
-                                                         "make", {}, "str", nullptr, callbacks);
+        dudu::inferred_generic_method_signature_for_type(
+            scope, dudu::parse_type_text("Wrapper"), "make", {},
+            std::optional<dudu::TypeRef>{dudu::parse_type_text("str")}, nullptr, callbacks);
     assert(signature);
     assert(signature->params.empty());
     assert(signature->return_type == "str");

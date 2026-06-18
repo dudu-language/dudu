@@ -26,7 +26,6 @@ bool callback_can_assign_type(const BodyCheckCallbacks& callbacks, const Functio
 void check_type_match(FunctionScope& scope, const TypeRef& expected_ref, const Expr& expr,
                       const SourceLocation& location, const BodyCheckCallbacks& callbacks,
                       std::string_view mismatch_label) {
-    const std::string expected = substitute_type_ref_text(expected_ref, {});
     if (expr.kind == ExprKind::Call && !expr.callee.empty() &&
         expr.callee.front().kind == ExprKind::Member && expr.callee.front().children.size() == 1) {
         const Expr& member = expr.callee.front();
@@ -36,7 +35,8 @@ void check_type_match(FunctionScope& scope, const TypeRef& expected_ref, const E
         if (!receiver_is_bare_path) {
             const TypeRef receiver_ref = callbacks.infer_expr_type(scope, receiver, &location);
             if (const auto signature = inferred_generic_method_signature_for_type(
-                    scope, receiver_ref, member.name, expr.children, expected, &location,
+                    scope, receiver_ref, member.name, expr.children,
+                    std::optional<TypeRef>{expected_ref}, &location,
                     {.infer_expr_type =
                          [&](const FunctionScope& nested, const Expr& arg,
                              const SourceLocation* arg_location) {
@@ -61,13 +61,15 @@ void check_type_match(FunctionScope& scope, const TypeRef& expected_ref, const E
         }
     }
     const TypeRef got_ref = callbacks.infer_expr_type(scope, expr, &location);
-    const std::string got = substitute_type_ref_text(got_ref, {});
     if (!type_assignment_allowed(expected_ref, got_ref) &&
         !callback_can_assign_type(callbacks, scope, expected_ref, expr, got_ref)) {
         if (!mismatch_label.empty()) {
+            const std::string expected = substitute_type_ref_text(expected_ref, {});
+            const std::string got = substitute_type_ref_text(got_ref, {});
             sema_fail(location,
                       std::string(mismatch_label) + ": expected " + expected + ", got " + got);
         }
+        const std::string got = substitute_type_ref_text(got_ref, {});
         sema_fail(location, assignment_error(expected_ref, expr, got));
     }
 }
@@ -89,20 +91,21 @@ bool function_has_decorator(const FunctionDecl& fn, std::string_view name) {
 void check_type_ref_match(FunctionScope& scope, const TypeRef& expected, const Expr& expr,
                           const SourceLocation& location, const BodyCheckCallbacks& callbacks,
                           std::string_view mismatch_label) {
-    const std::string expected_text = substitute_type_ref_text(expected, {});
     if (expr.kind == ExprKind::Call || expr.kind == ExprKind::TemplateCall) {
         check_type_match(scope, expected, expr, location, callbacks, mismatch_label);
         return;
     }
     const TypeRef got_ref = callbacks.infer_expr_type(scope, expr, &location);
-    const std::string got = substitute_type_ref_text(got_ref, {});
     if (!type_assignment_allowed(expected, got_ref) &&
         !assignment_type_allowed(expected, expr, got_ref) &&
         !callback_can_assign_type(callbacks, scope, expected, expr, got_ref)) {
         if (!mismatch_label.empty()) {
+            const std::string expected_text = substitute_type_ref_text(expected, {});
+            const std::string got = substitute_type_ref_text(got_ref, {});
             sema_fail(location,
                       std::string(mismatch_label) + ": expected " + expected_text + ", got " + got);
         }
+        const std::string got = substitute_type_ref_text(got_ref, {});
         sema_fail(location, assignment_error(expected, expr, got));
     }
 }
@@ -112,10 +115,10 @@ void check_array_literal_elements(FunctionScope& scope, const TypeRef& element_t
                                   const BodyCheckCallbacks& callbacks) {
     if (expr.kind != ExprKind::ListLiteral) {
         const TypeRef got_ref = callbacks.infer_expr_type(scope, expr, &location);
-        const std::string expected_text = substitute_type_ref_text(element_type, {});
-        const std::string got = substitute_type_ref_text(got_ref, {});
         if (!type_assignment_allowed(element_type, got_ref) &&
             !callback_can_assign_type(callbacks, scope, element_type, expr, got_ref)) {
+            const std::string expected_text = substitute_type_ref_text(element_type, {});
+            const std::string got = substitute_type_ref_text(got_ref, {});
             sema_fail(location, "array literal element expects " + expected_text + ", got " + got);
         }
         return;
@@ -164,13 +167,13 @@ void check_condition_type(FunctionScope& scope, const Stmt& stmt,
                           const BodyCheckCallbacks& callbacks) {
     const SourceLocation& location = node_location(stmt.location, stmt.condition_expr);
     const TypeRef got_ref = callbacks.infer_expr_type(scope, stmt.condition_expr, &location);
-    const std::string got = substitute_type_ref_text(got_ref, {});
-    if (!got.empty() && got != "bool" && got != "auto") {
+    if (has_type_ref(got_ref) && !type_ref_is_name(got_ref, "bool") && !type_ref_is_auto(got_ref)) {
         if (const auto signature = dudu_operator_signature(scope.symbols, "bool", got_ref);
             signature && signature->params.empty() &&
             type_ref_is_name(signature_return_type_ref(*signature), "bool")) {
             return;
         }
+        const std::string got = substitute_type_ref_text(got_ref, {});
         sema_fail(location, "condition must be bool, got " + got);
     }
 }

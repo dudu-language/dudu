@@ -1541,6 +1541,10 @@ push. They are not release packaging work.
    render type text only inside diagnostic branches.
    Loop iterable binding checks now also keep the success path structured and
    render binding/element type text only when reporting a mismatch.
+   Generic method expected-return inference now accepts an expected-return
+   `TypeRef` directly instead of reparsing rendered return text.
+   Function call, enum payload, return, assignment, and array-literal checks now
+   render expected/got type text only on diagnostic paths.
    Native value type inference now reads `native_value_type_refs` directly.
    The `native_values` string map remains only as a display/native-boundary
    mirror populated from structured `TypeRef` data during symbol collection.
