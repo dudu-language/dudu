@@ -1699,5 +1699,5 @@ push. They are not release packaging work.
    name strings as type syntax.
    Template-call unknown-type diagnostics now build a named `TypeRef` directly
    for plain callees instead of reparsing the callee string. The remaining
-   `known_type` string callers are confined to explicit `cpp(...)` escape
-   inference.
+   string spelling helper is named `known_type_spelling` and is confined to
+   explicit `cpp(...)` escape inference.

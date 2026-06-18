@@ -2017,8 +2017,8 @@ LSP source edits are also moving to AST-owned ranges:
   explicit C++ escape boundary renders the result locally.
 - Template-call unknown-type diagnostics now build a named `TypeRef` directly
   for plain callees instead of reparsing the callee string. The remaining
-  `known_type` string callers are confined to explicit `cpp(...)` escape
-  inference.
+  string spelling helper is named `known_type_spelling` and is confined to
+  explicit `cpp(...)` escape inference.
 
 Expression parsing has moved onto the lexer/token stream:
 

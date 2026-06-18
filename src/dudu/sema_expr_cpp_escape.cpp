@@ -225,7 +225,7 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
             return signature_return_type_text(*signature);
         }
         if (!is_local_member_call(scope, callee) && callee.find('.') == std::string::npos &&
-            known_type(scope.symbols, callee)) {
+            known_type_spelling(scope.symbols, callee)) {
             return callee;
         }
         if (scope.local_type_refs.contains(callee)) {
@@ -343,7 +343,7 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
         }
         if (location != nullptr && callee.find('.') == std::string::npos &&
             callee.find('[') == std::string::npos && is_plain_identifier(callee) &&
-            !known_type(scope.symbols, callee) && !is_builtin_call(callee)) {
+            !known_type_spelling(scope.symbols, callee) && !is_builtin_call(callee)) {
             if (is_dudu_all_caps(callee))
                 return "auto";
             sema_expr_fail(*location, "unknown function: " + callee);
