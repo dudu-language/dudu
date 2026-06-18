@@ -196,8 +196,11 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         const std::string lowered_type = dudu_type(match[3].str());
         const bool useful_alias = lowered_type != name;
         if (!starts_with(name, "__") || useful_alias) {
+            const TypeRef type_ref =
+                useful_alias ? parse_type_text(lowered_type, decl_location) : TypeRef{};
             scan.types.push_back({.name = name,
                                   .type = useful_alias ? lowered_type : "",
+                                  .type_ref = type_ref,
                                   .location = decl_location});
         }
     } else if ((line.find("RecordDecl") != std::string::npos ||
@@ -206,7 +209,8 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         const std::string raw_name = match[3].str();
         const std::string name = class_name(scan, namespaces, classes, raw_name);
         if (!starts_with(raw_name, "__")) {
-            scan.types.push_back({.name = name, .type = "", .location = decl_location});
+            scan.types.push_back(
+                {.name = name, .type = "", .type_ref = {}, .location = decl_location});
             if (line.find(" definition") != std::string::npos) {
                 ClassDecl klass;
                 klass.name = name;
@@ -219,7 +223,8 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                std::regex_search(line, match, enum_decl)) {
         const std::string name = match[1].str();
         if (!starts_with(name, "__")) {
-            scan.types.push_back({.name = name, .type = "", .location = decl_location});
+            scan.types.push_back(
+                {.name = name, .type = "", .type_ref = {}, .location = decl_location});
             enums.push_back({depth, name});
         }
     } else if (line.find("FunctionDecl") != std::string::npos &&

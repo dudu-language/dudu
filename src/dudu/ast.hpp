@@ -219,6 +219,7 @@ struct TypeAliasDecl {
 struct NativeTypeDecl {
     std::string name;
     std::string type;
+    TypeRef type_ref;
     SourceLocation location;
 };
 

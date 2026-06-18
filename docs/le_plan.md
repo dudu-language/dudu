@@ -1509,3 +1509,7 @@ push. They are not release packaging work.
    Header scanning, module constant imports, symbol collection, and LSP symbol
    detail use the structured type when available instead of reparsing the
    native value type string.
+   `NativeTypeDecl` now carries a `TypeRef` for alias targets. Native header
+   typedefs, module import aliasing, prefixed native symbols, symbol
+   collection, and LSP local alias expansion use structured type metadata when
+   available instead of reparsing the native type string.

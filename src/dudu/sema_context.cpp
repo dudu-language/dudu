@@ -337,8 +337,11 @@ Symbols collect_symbols(const ModuleAst& module) {
         symbols.native_types.insert(type.name);
         add_native_path_prefix(symbols, type.name);
         if (!type.type.empty() && !symbols.aliases.contains(type.name)) {
-            symbols.aliases[type.name] = type.type;
-            symbols.alias_type_refs[type.name] = parse_type_text(type.type, type.location);
+            const TypeRef alias_type = has_type_ref(type.type_ref)
+                                           ? type.type_ref
+                                           : parse_type_text(type.type, type.location);
+            symbols.aliases[type.name] = substitute_type_ref_text(alias_type, {});
+            symbols.alias_type_refs[type.name] = alias_type;
         }
     }
     for (const NativeValueDecl& value : module.native_values) {

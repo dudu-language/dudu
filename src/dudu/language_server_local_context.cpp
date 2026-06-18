@@ -280,7 +280,9 @@ std::set<std::string> member_candidate_types(const ModuleAst& module, const std:
     while (changed) {
         changed = false;
         for (const NativeTypeDecl& alias : module.native_types) {
-            if (!alias.type.empty() && out.contains(alias.name) && out.insert(alias.type).second) {
+            const std::string alias_type =
+                has_type_ref(alias.type_ref) ? type_ref_text(alias.type_ref) : alias.type;
+            if (!alias_type.empty() && out.contains(alias.name) && out.insert(alias_type).second) {
                 changed = true;
             }
         }

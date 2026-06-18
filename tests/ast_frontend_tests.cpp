@@ -574,8 +574,10 @@ void test_native_semantic_tokens() {
                            "    return 0\n",
                            "native_semantic_tokens.dd");
     dudu::ModuleAst native_symbols = module;
-    native_symbols.native_types.push_back(
-        {.name = "DuduNativeEvent", .type = "DuduNativeEvent", .location = {}});
+    native_symbols.native_types.push_back({.name = "DuduNativeEvent",
+                                           .type = "DuduNativeEvent",
+                                           .type_ref = dudu::parse_type_text("DuduNativeEvent"),
+                                           .location = {}});
     native_symbols.native_values.push_back({.name = "DUDU_NATIVE_MAGIC",
                                             .type = "i32",
                                             .type_ref = dudu::parse_type_text("i32"),
