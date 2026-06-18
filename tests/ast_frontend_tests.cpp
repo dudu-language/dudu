@@ -1266,6 +1266,18 @@ void test_type_ast_shape() {
     assert(dudu::lower_cpp_type("array[f32][4, 4]") == "std::array<std::array<float, 4>, 4>");
 }
 
+void test_malformed_static_field_type_is_rejected() {
+    bool threw = false;
+    try {
+        (void)dudu::parse_source("class Counter:\n"
+                                 "    count: static[] = 0\n",
+                                 "bad_static_type.dd");
+    } catch (const dudu::CompileError& error) {
+        threw = std::string(error.what()).find("malformed static field type") != std::string::npos;
+    }
+    assert(threw);
+}
+
 void test_generic_decl_ast_shape() {
     const dudu::ModuleAst module = dudu::parse_source("class Box[T]:\n"
                                                       "    value: T\n"
@@ -1507,6 +1519,7 @@ int main() {
         test_dereference_postfix_expression_shape();
         test_decorator_expression_ast_shape();
         test_type_ast_shape();
+        test_malformed_static_field_type_is_rejected();
         test_generic_decl_ast_shape();
         test_payload_enum_ast_shape();
         test_match_case_ast_shape();

@@ -80,10 +80,11 @@ ClassDecl Parser::parse_class(const Token& start, Visibility visibility,
             }
             ConstDecl static_field;
             static_field.name = field.name;
-            static_field.type_ref =
-                field.type_ref.children.empty()
-                    ? make_type(TypeKind::Unknown, type_ref_text(field.type_ref), field.location)
-                    : field.type_ref.children[0];
+            if (field.type_ref.children.empty()) {
+                throw CompileError(field.location,
+                                   "malformed static field type: missing child type");
+            }
+            static_field.type_ref = field.type_ref.children[0];
             static_field.value_expr = field.value_expr;
             static_field.location = field.location;
             klass.static_fields.push_back(std::move(static_field));

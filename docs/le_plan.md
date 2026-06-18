@@ -1817,3 +1817,6 @@ push. They are not release packaging work.
    receiver's structured `TypeRef` directly and expands Dudu/native aliases
    from typed metadata instead of requiring callers to render the receiver type
    into a string first.
+   Class `static[...]` field parsing now rejects malformed static type nodes
+   that are missing a child type instead of rendering the static wrapper back
+   into an `Unknown` compatibility type.
