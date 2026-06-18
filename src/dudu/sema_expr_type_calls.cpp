@@ -274,7 +274,7 @@ std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Ex
     }
     if (const auto signature = native_signature_for_call(
             scope, callee, expr.children, location, infer_expr_type_ast,
-            [&](const std::string& expected, const Expr& value, const std::string& got) {
+            [&](const TypeRef& expected, const Expr& value, const TypeRef& got) {
                 return can_assign_ast(scope, expected, value, got);
             })) {
         return signature_return_type_ref(*signature);
@@ -402,7 +402,7 @@ std::optional<TypeRef> direct_template_call_type_ref(const FunctionScope& scope,
     }
     if (const auto signature = native_signature_for_call(
             scope, callee, expr.children, location, infer_expr_type_ast,
-            [&](const std::string& expected, const Expr& value, const std::string& got) {
+            [&](const TypeRef& expected, const Expr& value, const TypeRef& got) {
                 return can_assign_ast(scope, expected, value, got);
             })) {
         return signature_return_type_ref(*signature);

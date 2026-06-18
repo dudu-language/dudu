@@ -12,8 +12,7 @@ namespace dudu {
 
 using NativeInferExprTypeAstFn =
     std::function<TypeRef(const FunctionScope&, const Expr&, const SourceLocation*)>;
-using NativeCanAssignAstFn =
-    std::function<bool(const std::string&, const Expr&, const std::string&)>;
+using NativeCanAssignAstFn = std::function<bool(const TypeRef&, const Expr&, const TypeRef&)>;
 
 std::optional<FunctionSignature>
 native_signature_for_call(const FunctionScope& scope, const std::string& callee,

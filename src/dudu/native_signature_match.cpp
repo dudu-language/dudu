@@ -89,12 +89,19 @@ NativeArgType native_arg_type(const FunctionScope& scope, const Expr& arg,
 
 bool native_arg_assignable(const FunctionSignature& signature, size_t index, const Expr& arg,
                            const NativeArgType& got, const NativeCanAssignAstFn& can_assign) {
-    const TypeRef expected_ref = signature_param_ref(signature, index);
-    if (has_type_ref(expected_ref) && has_type_ref(got.ref) &&
-        type_assignment_allowed(expected_ref, got.ref)) {
+    TypeRef expected_ref = signature_param_ref(signature, index);
+    TypeRef got_ref = got.ref;
+    if (!has_type_ref(expected_ref)) {
+        expected_ref = parse_type_text(signature_param_text(signature, index));
+    }
+    if (!has_type_ref(got_ref)) {
+        got_ref = parse_type_text(got.text);
+    }
+    if (has_type_ref(expected_ref) && has_type_ref(got_ref) &&
+        type_assignment_allowed(expected_ref, got_ref)) {
         return true;
     }
-    return can_assign(signature_param_text(signature, index), arg, got.text);
+    return can_assign(expected_ref, arg, got_ref);
 }
 
 std::optional<std::string>

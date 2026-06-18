@@ -1963,6 +1963,8 @@ LSP source edits are also moving to AST-owned ranges:
 - Native overload candidate diagnostics now render parameters and return types
   through signature `TypeRef` helpers instead of reading raw signature string
   mirrors directly.
+- Native overload assignment callbacks now carry expected and actual argument
+  types as parsed `TypeRef` nodes instead of string type names.
 
 Expression parsing has moved onto the lexer/token stream:
 
