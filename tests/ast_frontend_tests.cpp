@@ -1278,6 +1278,19 @@ void test_malformed_static_field_type_is_rejected() {
     assert(threw);
 }
 
+void test_malformed_declaration_type_syntax_is_rejected() {
+    bool threw = false;
+    try {
+        (void)dudu::parse_source("def bad_type() -> i32:\n"
+                                 "    value: * = 1\n"
+                                 "    return value\n",
+                                 "bad_decl_type_syntax.dd");
+    } catch (const dudu::CompileError& error) {
+        threw = std::string(error.what()).find("malformed type syntax") != std::string::npos;
+    }
+    assert(threw);
+}
+
 void test_generic_decl_ast_shape() {
     const dudu::ModuleAst module = dudu::parse_source("class Box[T]:\n"
                                                       "    value: T\n"
@@ -1520,6 +1533,7 @@ int main() {
         test_decorator_expression_ast_shape();
         test_type_ast_shape();
         test_malformed_static_field_type_is_rejected();
+        test_malformed_declaration_type_syntax_is_rejected();
         test_generic_decl_ast_shape();
         test_payload_enum_ast_shape();
         test_match_case_ast_shape();

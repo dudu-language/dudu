@@ -40,6 +40,18 @@ void append_source_token(std::ostringstream& out, SourceLocation& cursor, const 
     cursor = token_end_location(token);
 }
 
+const TypeRef* malformed_type_node(const TypeRef& type) {
+    if (type.kind == TypeKind::Unknown) {
+        return &type;
+    }
+    for (const TypeRef& child : type.children) {
+        if (const TypeRef* malformed = malformed_type_node(child)) {
+            return malformed;
+        }
+    }
+    return nullptr;
+}
+
 void attach_out_of_line_method(ModuleAst& module, FunctionDecl method) {
     const std::string receiver_type = function_receiver_type_text(method);
     for (ClassDecl& klass : module.classes) {
@@ -382,7 +394,18 @@ TypeRef Parser::parse_type_piece(const JoinedTokens& piece) const {
     std::vector<Token> tokens =
         syntax_piece_tokens(tokens_.subspan(piece.begin, piece.end - piece.begin));
     TypeTokenParser parser(tokens);
-    return parser.parse();
+    TypeRef type = parser.parse();
+    if (const TypeRef* malformed = malformed_type_node(type)) {
+        std::string spelling = trim_string(malformed->text);
+        if (spelling.empty()) {
+            spelling = trim_string(type.text);
+        }
+        const std::string message =
+            spelling.empty() ? "malformed type syntax" : "malformed type syntax: " + spelling;
+        throw CompileError(malformed->location.line > 0 ? malformed->location : type.location,
+                           message, "dudu.parser.malformed_type");
+    }
+    return type;
 }
 
 ModuleAst parse_module(std::span<const Token> tokens) {
