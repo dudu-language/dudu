@@ -66,6 +66,32 @@ std::optional<std::string> native_member_expr_type(const Symbols& symbols, const
     return native_member_path_type(symbols, *path);
 }
 
+std::optional<TypeRef> native_member_path_type_ref(const Symbols& symbols, const std::string& path,
+                                                   SourceLocation location) {
+    const size_t dot = path.find('.');
+    if (dot == std::string::npos) {
+        return std::nullopt;
+    }
+    if (const auto value = symbols.native_value_type_refs.find(path);
+        value != symbols.native_value_type_refs.end()) {
+        return value->second;
+    }
+    const std::string prefix = path.substr(0, dot);
+    if (prefix == "build" || prefix == "shader" || native_import_path_prefix(symbols, path)) {
+        return parse_type_text("auto", location);
+    }
+    return std::nullopt;
+}
+
+std::optional<TypeRef> native_member_expr_type_ref(const Symbols& symbols, const Expr& expr,
+                                                   SourceLocation location) {
+    const std::optional<std::string> path = native_path_from_expr(expr);
+    if (!path) {
+        return std::nullopt;
+    }
+    return native_member_path_type_ref(symbols, *path, location);
+}
+
 std::optional<FunctionSignature>
 native_signature_for_call(const FunctionScope& scope, const std::string& callee,
                           const std::vector<Expr>& args, const SourceLocation* location,

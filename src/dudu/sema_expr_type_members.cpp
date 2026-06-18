@@ -36,8 +36,7 @@ std::optional<TypeRef> member_expr_direct_type_ref(const FunctionScope& scope, c
         }
         return named_member_type_ref(variant->first->name, expr.location);
     }
-    if (const auto native =
-            parse_member_type_text(native_member_expr_type(scope.symbols, expr), type_location)) {
+    if (const auto native = native_member_expr_type_ref(scope.symbols, expr, type_location)) {
         return *native;
     }
     if (const TypeRef found =

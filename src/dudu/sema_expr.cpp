@@ -67,6 +67,10 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
             fn != scope.symbols.function_signatures.end()) {
             return function_type_ref(fn->second, type_location);
         }
+        if (const auto value = scope.symbols.native_value_type_refs.find(expr.name);
+            value != scope.symbols.native_value_type_refs.end()) {
+            return value->second;
+        }
         if (const auto value = scope.symbols.native_values.find(expr.name);
             value != scope.symbols.native_values.end()) {
             return parse_type_text(value->second, type_location);

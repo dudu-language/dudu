@@ -314,6 +314,7 @@ Symbols collect_symbols(const ModuleAst& module) {
     for (const NativeValueDecl& value : module.native_values) {
         add_name(names, value.name, value.location);
         symbols.native_values[value.name] = value.type;
+        symbols.native_value_type_refs[value.name] = parse_type_text(value.type, value.location);
         if (value.enum_constant) {
             symbols.native_enum_values.insert(value.name);
         }
@@ -325,7 +326,10 @@ Symbols collect_symbols(const ModuleAst& module) {
         build_values[name] = value;
     }
     for (const auto& [name, value] : build_values) {
-        symbols.native_values["build." + name] = build_value_type(value);
+        const std::string symbol_name = "build." + name;
+        symbols.native_values[symbol_name] = build_value_type(value);
+        symbols.native_value_type_refs[symbol_name] =
+            parse_type_text(symbols.native_values[symbol_name]);
     }
     symbols.native_import_prefixes.insert("build");
     for (const NativeNamespaceDecl& ns : module.native_namespaces) {
@@ -341,8 +345,9 @@ Symbols collect_symbols(const ModuleAst& module) {
         symbols.types.insert(klass.name);
         symbols.classes[klass.name] = &klass;
         for (const ConstDecl& constant : klass.constants) {
-            symbols.native_values[klass.name + "." + constant.name] =
-                type_ref_text(constant.type_ref);
+            const std::string symbol_name = klass.name + "." + constant.name;
+            symbols.native_values[symbol_name] = type_ref_text(constant.type_ref);
+            symbols.native_value_type_refs[symbol_name] = constant.type_ref;
         }
     }
     for (const ClassDecl& klass : module.native_classes) {
