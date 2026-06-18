@@ -53,6 +53,21 @@ template_type_arg_refs_resolved(const TypeRef& type, std::string_view name,
     return template_type_arg_refs(parse_type_text(found->second), name);
 }
 
+std::vector<TypeRef>
+template_type_arg_refs_resolved(const TypeRef& type, std::string_view name,
+                                const std::map<std::string, TypeRef>& aliases) {
+    std::vector<TypeRef> refs = template_type_arg_refs(type, name);
+    if (!refs.empty()) {
+        return refs;
+    }
+    const std::string rendered = substitute_type_ref_text(type, {});
+    const auto found = aliases.find(rendered);
+    if (found == aliases.end()) {
+        return {};
+    }
+    return template_type_arg_refs(found->second, name);
+}
+
 std::optional<TypeRef> unary_type_child_ref(const TypeRef& type, TypeKind kind) {
     if (type.kind != kind || type.children.size() != 1) {
         return std::nullopt;

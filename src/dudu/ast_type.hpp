@@ -15,6 +15,8 @@ std::vector<TypeRef> template_type_arg_refs(const TypeRef& type, std::string_vie
 std::vector<TypeRef>
 template_type_arg_refs_resolved(const TypeRef& type, std::string_view name,
                                 const std::map<std::string, std::string>& aliases);
+std::vector<TypeRef> template_type_arg_refs_resolved(const TypeRef& type, std::string_view name,
+                                                     const std::map<std::string, TypeRef>& aliases);
 std::optional<TypeRef> unary_type_child_ref(const TypeRef& type, TypeKind kind);
 std::optional<TypeRef> unary_type_child_ref(const TypeRef& type,
                                             std::initializer_list<TypeKind> kinds);

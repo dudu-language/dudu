@@ -1513,6 +1513,10 @@ push. They are not release packaging work.
    typedefs, module import aliasing, prefixed native symbols, symbol
    collection, and LSP local alias expansion use structured type metadata when
    available instead of reparsing the native type string.
+   Tuple destructuring now resolves aliased tuple types through structured
+   `alias_type_refs`; the string-alias overload of
+   `template_type_arg_refs_resolved` remains only as compatibility coverage until
+   the legacy alias map is deleted.
    Native value type inference now reads `native_value_type_refs` directly.
    The `native_values` string map remains only as a display/native-boundary
    mirror populated from structured `TypeRef` data during symbol collection.

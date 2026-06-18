@@ -248,7 +248,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
             const SourceLocation& value_location = node_location(stmt.location, stmt.value_expr);
             const std::vector<TypeRef> types = template_type_arg_refs_resolved(
                 callbacks.infer_expr_type(scope, stmt.value_expr, &value_location), "tuple",
-                scope.symbols.aliases);
+                scope.symbols.alias_type_refs);
             if (names.size() != types.size()) {
                 sema_fail(value_location, "tuple destructuring count mismatch");
             }
