@@ -210,7 +210,7 @@ std::string template_call_callee(const FunctionScope& scope, const Expr& expr,
     if (const std::optional<ExprPath> path = scoped_call_callee_path(scope, expr, location)) {
         out << render_expr_path(*path);
     } else {
-        out << trim_copy(expr.name);
+        return {};
     }
     out << "[" << template_args_lookup_text(expr) << "]";
     return out.str();

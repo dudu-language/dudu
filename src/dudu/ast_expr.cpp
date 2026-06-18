@@ -123,17 +123,12 @@ std::optional<ExprPath> call_callee_path(const Expr& expr) {
     if (!expr.callee.empty()) {
         return expr_path_from_expr(expr.callee.front());
     }
-    if (!trim_copy(expr.name).empty()) {
-        return ExprPath{.segments = {{.kind = ExprPathSegmentKind::Name,
-                                      .text = trim_copy(expr.name),
-                                      .location = expr.location}}};
-    }
     return std::nullopt;
 }
 
 std::string call_callee_text(const Expr& expr) {
     const std::optional<ExprPath> path = call_callee_path(expr);
-    return path ? render_expr_path(*path) : trim_copy(expr.name);
+    return path ? render_expr_path(*path) : "";
 }
 
 std::string direct_callee_name(const Expr& expr) {

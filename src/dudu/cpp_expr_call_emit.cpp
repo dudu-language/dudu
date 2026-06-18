@@ -381,9 +381,7 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
     if (has_named_argument_shape(expr.children)) {
         return lower_named_argument_call(expr, aliases, locals, symbols, options);
     }
-    const std::optional<ExprPath> callee_path = call_callee_path(expr);
-    const std::string callee_name =
-        callee_path ? render_expr_path(*callee_path) : trim_copy(expr.name);
+    const std::string callee_name = direct_callee_name(expr);
     if (starts_with(callee_name, "*")) {
         const std::string type = trim_copy(callee_name.substr(1));
         if (is_pointer_cast_type_like(type)) {

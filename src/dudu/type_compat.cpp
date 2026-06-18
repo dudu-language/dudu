@@ -86,8 +86,7 @@ bool is_string_type(const std::string& type) {
 }
 
 bool is_explicit_cast_to(const std::string& expected, const Expr& expr) {
-    const std::optional<ExprPath> path = call_callee_path(expr);
-    const std::string callee = path ? render_expr_path(*path) : trim_copy(expr.name);
+    const std::string callee = direct_callee_name(expr);
     return (expr.kind == ExprKind::Call || expr.kind == ExprKind::TemplateCall) &&
            compact_type(callee) == compact_type(expected);
 }
