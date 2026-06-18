@@ -30,7 +30,7 @@ std::optional<int64_t> parse_int_literal(std::string text) {
 std::optional<int64_t> eval_int(const Expr& expr, const std::map<std::string, int64_t>& constants) {
     switch (expr.kind) {
     case ExprKind::IntLiteral:
-        return parse_int_literal(expr.text);
+        return parse_int_literal(expr.value.empty() ? expr.text : expr.value);
     case ExprKind::Name:
         if (const auto it = constants.find(expr.name); it != constants.end()) {
             return it->second;
