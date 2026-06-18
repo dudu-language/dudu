@@ -799,6 +799,13 @@ push. They are not release packaging work.
    walking, and the AST lint, unsupported-feature, build-flag, and navigation
    passes use those helpers instead of maintaining hand-written expression-slot
    lists.
+   Loop binding, assignment compatibility, member-path receiver unwrapping,
+   `Result[...]` field lookup, indexed type inference, and native template
+   binding now resolve aliases through parsed `TypeRef` metadata first, with
+   old string alias maps retained only at explicit compatibility boundaries.
+   The duplicate string-only indexed type implementation has been removed;
+   public string index queries parse the receiver once and delegate to the
+   structured `TypeRef` indexing implementation.
 
 3. OOP Surface Cleanup
 
