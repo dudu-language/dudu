@@ -12,6 +12,21 @@ bool is_full_slice_expr(const Expr& expr) {
            expr_missing(expr.children[0]) && expr_missing(expr.children[1]);
 }
 
+std::vector<size_t> local_array_shape(const std::map<std::string, std::string>& locals,
+                                      const std::map<std::string, TypeRef>& local_type_refs,
+                                      const Symbols* symbols, const std::string& name) {
+    if (const auto local = local_type_refs.find(name); local != local_type_refs.end()) {
+        return explicit_array_shape(local->second);
+    }
+    const auto local = locals.find(name);
+    if (local == locals.end()) {
+        return {};
+    }
+    const std::string type =
+        symbols == nullptr ? local->second : resolve_alias(*symbols, local->second);
+    return explicit_array_shape(type);
+}
+
 } // namespace
 
 std::optional<std::string>
@@ -70,11 +85,8 @@ lower_column_slice_expr(const Expr& base, const Expr& index,
         index.children[1].kind == ExprKind::Slice) {
         return std::nullopt;
     }
-    const auto local = locals.find(base.name);
-    if (local == locals.end()) {
-        return std::nullopt;
-    }
-    const std::vector<size_t> shape = explicit_array_shape(local->second);
+    const std::vector<size_t> shape =
+        local_array_shape(locals, local_type_refs, symbols, base.name);
     if (shape.size() != 2) {
         return std::nullopt;
     }
@@ -113,11 +125,8 @@ lower_channel_slice_expr(const Expr& base, const Expr& index,
         !is_full_slice_expr(index.children[1]) || index.children[2].kind == ExprKind::Slice) {
         return std::nullopt;
     }
-    const auto local = locals.find(base.name);
-    if (local == locals.end()) {
-        return std::nullopt;
-    }
-    const std::vector<size_t> shape = explicit_array_shape(local->second);
+    const std::vector<size_t> shape =
+        local_array_shape(locals, local_type_refs, symbols, base.name);
     if (shape.size() != 3) {
         return std::nullopt;
     }

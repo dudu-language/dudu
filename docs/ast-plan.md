@@ -155,6 +155,8 @@ Already structured:
   operator signatures
 - indexed-assignment semantic checks use typed local lookup when resolving
   `[]=` operator signatures
+- column and channel slice C++ emission read fixed-array shapes from local
+  `TypeRef` metadata before falling back to compatibility local type strings
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path
