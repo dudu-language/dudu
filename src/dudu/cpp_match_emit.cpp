@@ -35,7 +35,7 @@ bool match_cases_return(const Stmt& stmt) {
 
 void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                           const std::vector<std::string>& aliases,
-                          const std::map<std::string, std::string>& locals,
+                          const CppLocalContext& locals,
                           const TypeRef& return_type_ref,
                           const std::map<std::string, TypeRef>& function_returns,
                           const Symbols* symbols, const CppEmitOptions& options) {
@@ -46,7 +46,7 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
 
 void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                           const std::vector<std::string>& aliases,
-                          const std::map<std::string, std::string>& locals,
+                          const CppLocalContext& locals,
                           const std::map<std::string, TypeRef>& local_type_refs,
                           const TypeRef& return_type_ref,
                           const std::map<std::string, TypeRef>& function_returns,
@@ -80,26 +80,26 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                     }
                 }
                 out << indent(depth) << "if (!" << matched << " && (" << condition << ")) {\n";
-                std::map<std::string, std::string> nested = locals;
+                CppLocalContext nested = locals;
                 std::map<std::string, TypeRef> nested_type_refs = local_type_refs;
                 if (case_name &&
                     (*case_name == "Some" || *case_name == "Ok" || *case_name == "Err")) {
                     if (const auto binding = wrapper_case_binding_name(child.pattern_expr)) {
                         if (*case_name == "Some" && wrapper.args.size() == 1 &&
                             wrapper.arg_refs.size() == 1) {
-                            nested[*binding] = trim_copy(wrapper.args[0]);
+                            nested.bind(*binding);
                             nested_type_refs[*binding] = wrapper.arg_refs[0];
                             out << indent(depth + 1) << "auto&& " << *binding << " = " << subject
                                 << ".value();\n";
                         } else if (*case_name == "Ok" && wrapper.args.size() == 2 &&
                                    wrapper.arg_refs.size() == 2) {
-                            nested[*binding] = trim_copy(wrapper.args[0]);
+                            nested.bind(*binding);
                             nested_type_refs[*binding] = wrapper.arg_refs[0];
                             out << indent(depth + 1) << "auto&& " << *binding << " = " << subject
                                 << ".value;\n";
                         } else if (*case_name == "Err" && wrapper.args.size() == 2 &&
                                    wrapper.arg_refs.size() == 2) {
-                            nested[*binding] = trim_copy(wrapper.args[1]);
+                            nested.bind(*binding);
                             nested_type_refs[*binding] = wrapper.arg_refs[1];
                             out << indent(depth + 1) << "auto&& " << *binding << " = " << subject
                                 << ".err;\n";
@@ -155,7 +155,7 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                         subject + " == " + emitted_type_name(en->name, options) + "::" + *variant;
                 }
                 out << indent(depth) << "if (!" << matched << " && (" << condition << ")) {\n";
-                std::map<std::string, std::string> nested = locals;
+                CppLocalContext nested = locals;
                 std::map<std::string, TypeRef> nested_type_refs = local_type_refs;
                 if (enum_has_payloads(*en) && variant && *variant != "_") {
                     if (const EnumValueDecl* value = enum_variant_decl(*en, *variant)) {
@@ -173,7 +173,7 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                             }
                             const EnumPayloadField& field =
                                 value->payload_fields[binding.field_index];
-                            nested[binding.name] = type_ref_text(field.type_ref);
+                            nested.bind(binding.name);
                             nested_type_refs[binding.name] = field.type_ref;
                             out << indent(depth + 1) << "auto&& " << binding.name << " = "
                                 << payload << "." << field.name << ";\n";
@@ -231,7 +231,7 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
 
 void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                           const std::vector<std::string>& aliases,
-                          const std::map<std::string, std::string>& locals,
+                          const CppLocalContext& locals,
                           const TypeRef& return_type_ref,
                           const std::map<std::string, TypeRef>& function_returns,
                           const Symbols* symbols) {

@@ -46,7 +46,7 @@ void emit_source_comment(std::ostringstream& out, const Stmt& stmt, int depth) {
 
 void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                            const std::vector<std::string>& aliases,
-                           std::map<std::string, std::string>& locals,
+                           CppLocalContext& locals,
                            std::map<std::string, TypeRef>& local_type_refs,
                            const TypeRef& return_type_ref,
                            const std::map<std::string, TypeRef>& function_returns,
@@ -135,7 +135,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         const ArrayShapeInference inferred =
             infer_array_literal_shape_type(stmt.type_ref, stmt.value_expr);
         const EffectiveStmtType type = effective_stmt_type(stmt, inferred);
-        locals[name] = "";
+        locals.bind(name);
         local_type_refs[name] = type.ref;
         out << indent(depth) << lower_declared_stmt_type(type.ref, aliases, options) << ' ' << name;
         if (has_expr(stmt.value_expr)) {
@@ -216,7 +216,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                                                              local_type_refs, symbols, options);
                 const TypeRef inferred_ref = infer_emitted_local_type_ref(
                     stmt.value_expr, local_type_refs, function_returns, symbols);
-                locals.emplace(lhs, "");
+                locals.bind(lhs);
                 if (has_type_ref(inferred_ref)) {
                     local_type_refs.emplace(lhs, inferred_ref);
                 } else {
@@ -283,7 +283,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
 
 void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                     const std::vector<std::string>& aliases,
-                    std::map<std::string, std::string>& locals,
+                    CppLocalContext& locals,
                     std::map<std::string, TypeRef>& local_type_refs, const TypeRef& return_type_ref,
                     const std::map<std::string, TypeRef>& function_returns, const Symbols* symbols,
                     const CppEmitOptions& options) {
@@ -356,7 +356,7 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         const std::string range = lower_emitted_expr(stmt.iterable_expr, aliases, locals,
                                                      local_type_refs, symbols, options);
         std::string binding_type = "auto";
-        locals[stmt.name] = "";
+        locals.bind(stmt.name);
         if (has_type_ref(stmt.type_ref)) {
             binding_type = lower_cpp_type(stmt.type_ref, aliases, options);
             local_type_refs[stmt.name] = stmt.type_ref;
@@ -398,12 +398,12 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
 
 void emit_block(std::ostringstream& out, const std::vector<Stmt>& body, int depth,
                 const std::vector<std::string>& aliases,
-                const std::map<std::string, std::string>& initial_locals,
+                const CppLocalContext& initial_locals,
                 const std::map<std::string, TypeRef>& initial_local_type_refs,
                 const TypeRef& return_type_ref,
                 const std::map<std::string, TypeRef>& function_returns, const Symbols* symbols,
                 const CppEmitOptions& options) {
-    std::map<std::string, std::string> locals = initial_locals;
+    CppLocalContext locals = initial_locals;
     std::map<std::string, TypeRef> local_type_refs = initial_local_type_refs;
     for (const Stmt& stmt : body) {
         emit_statement(out, stmt, depth, aliases, locals, local_type_refs, return_type_ref,

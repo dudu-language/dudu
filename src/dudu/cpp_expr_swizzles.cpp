@@ -93,7 +93,7 @@ lower_local_swizzle_expr(const Expr& expr, const std::vector<std::string>& alias
 
 std::optional<std::string> lower_swizzle_expr(const Expr& expr,
                                               const std::vector<std::string>& aliases,
-                                              const std::map<std::string, std::string>& locals,
+                                              const CppLocalContext& locals,
                                               const std::map<std::string, TypeRef>& local_type_refs,
                                               const Symbols* symbols,
                                               const CppEmitOptions& options) {
@@ -139,7 +139,7 @@ std::optional<std::string> lower_swizzle_expr(const Expr& expr,
 
 std::optional<std::string>
 lower_swizzle_assignment(const Stmt& stmt, const std::vector<std::string>& aliases,
-                         const std::map<std::string, std::string>& locals,
+                         const CppLocalContext& locals,
                          const std::map<std::string, TypeRef>& local_type_refs,
                          const Symbols* symbols, const CppEmitOptions& options) {
     if (stmt.target_expr.kind != ExprKind::Member || stmt.target_expr.children.size() != 1) {

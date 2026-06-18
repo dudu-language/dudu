@@ -25,7 +25,7 @@ std::vector<size_t> local_array_shape(const std::map<std::string, TypeRef>& loca
 std::optional<std::string>
 lower_trailing_full_slice_expr(const Expr& base, const Expr& index,
                                const std::vector<std::string>& aliases,
-                               const std::map<std::string, std::string>& locals,
+                               const CppLocalContext& locals,
                                const std::map<std::string, TypeRef>& local_type_refs,
                                const Symbols* symbols, const CppEmitOptions& options) {
     if (index.kind != ExprKind::TupleLiteral || index.children.empty() ||
@@ -47,7 +47,7 @@ lower_trailing_full_slice_expr(const Expr& base, const Expr& index,
 std::optional<std::string>
 lower_column_slice_expr(const Expr& base, const Expr& index,
                         const std::vector<std::string>& aliases,
-                        const std::map<std::string, std::string>& locals,
+                        const CppLocalContext& locals,
                         const std::map<std::string, TypeRef>& local_type_refs,
                         const Symbols* symbols, const CppEmitOptions& options) {
     (void)symbols;
@@ -71,7 +71,7 @@ lower_column_slice_expr(const Expr& base, const Expr& index,
 std::optional<std::string>
 lower_channel_slice_expr(const Expr& base, const Expr& index,
                          const std::vector<std::string>& aliases,
-                         const std::map<std::string, std::string>& locals,
+                         const CppLocalContext& locals,
                          const std::map<std::string, TypeRef>& local_type_refs,
                          const Symbols* symbols, const CppEmitOptions& options) {
     (void)symbols;

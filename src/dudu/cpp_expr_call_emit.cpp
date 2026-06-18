@@ -81,7 +81,7 @@ TypeRef pointer_type_ref_from_pointee_text(std::string_view type, SourceLocation
 
 std::string lower_call_args_for_signature(const std::vector<Expr>& args, const FunctionSignature&,
                                           const std::vector<std::string>& aliases,
-                                          const std::map<std::string, std::string>& locals,
+                                          const CppLocalContext& locals,
                                           const std::map<std::string, TypeRef>& local_type_refs,
                                           const Symbols* symbols, const CppEmitOptions& options) {
     std::ostringstream out;
@@ -149,7 +149,7 @@ std::vector<Expr> index_arg_exprs(const Expr& index_expr) {
 }
 
 std::string lower_named_argument_call(const Expr& expr, const std::vector<std::string>& aliases,
-                                      const std::map<std::string, std::string>& locals,
+                                      const CppLocalContext& locals,
                                       const std::map<std::string, TypeRef>& local_type_refs,
                                       const Symbols* symbols, const CppEmitOptions& options) {
     std::ostringstream out;
@@ -179,13 +179,13 @@ bool is_builtin_template_constructor(std::string_view name) {
 }
 
 std::string lower_callee_expr(const Expr& expr, const std::vector<std::string>& aliases,
-                              const std::map<std::string, std::string>& locals,
+                              const CppLocalContext& locals,
                               const Symbols* symbols, const CppEmitOptions& options) {
     return lower_callee_expr(expr, aliases, locals, {}, symbols, options);
 }
 
 std::string lower_callee_expr(const Expr& expr, const std::vector<std::string>& aliases,
-                              const std::map<std::string, std::string>& locals,
+                              const CppLocalContext& locals,
                               const std::map<std::string, TypeRef>& local_type_refs,
                               const Symbols* symbols, const CppEmitOptions& options) {
     if (!expr.callee.empty()) {
@@ -193,8 +193,8 @@ std::string lower_callee_expr(const Expr& expr, const std::vector<std::string>& 
         if (callee.kind == ExprKind::Member && callee.children.size() == 1 &&
             callee.children.front().kind == ExprKind::Name &&
             callee.children.front().name == "super") {
-            if (const auto base = locals.find("super"); base != locals.end()) {
-                return base->second + "::" + callee.name;
+            if (!locals.super_class.empty()) {
+                return locals.super_class + "::" + callee.name;
             }
         }
         if (callee.kind == ExprKind::Member && callee.children.size() == 1 &&
@@ -211,7 +211,7 @@ std::string lower_callee_expr(const Expr& expr, const std::vector<std::string>& 
 }
 
 std::string lower_callee_expr(const Expr& expr, const std::vector<std::string>& aliases,
-                              const std::map<std::string, std::string>& locals,
+                              const CppLocalContext& locals,
                               const Symbols* symbols) {
     return lower_callee_expr(expr, aliases, locals, symbols, {});
 }
@@ -228,7 +228,7 @@ bool enum_has_payloads(const EnumDecl& en) {
 std::string lower_enum_variant_constructor(const EnumDecl& en, const EnumValueDecl& value,
                                            const std::vector<Expr>& args,
                                            const std::vector<std::string>& aliases,
-                                           const std::map<std::string, std::string>& locals,
+                                           const CppLocalContext& locals,
                                            const Symbols* symbols, const CppEmitOptions& options) {
     return lower_enum_variant_constructor(en, value, args, aliases, locals, {}, symbols, options);
 }
@@ -236,7 +236,7 @@ std::string lower_enum_variant_constructor(const EnumDecl& en, const EnumValueDe
 std::string lower_enum_variant_constructor(const EnumDecl& en, const EnumValueDecl& value,
                                            const std::vector<Expr>& args,
                                            const std::vector<std::string>& aliases,
-                                           const std::map<std::string, std::string>& locals,
+                                           const CppLocalContext& locals,
                                            const std::map<std::string, TypeRef>& local_type_refs,
                                            const Symbols* symbols, const CppEmitOptions& options) {
     std::ostringstream out;
@@ -261,14 +261,14 @@ std::string lower_enum_variant_constructor(const EnumDecl& en, const EnumValueDe
 std::string lower_enum_variant_constructor(const EnumDecl& en, const EnumValueDecl& value,
                                            const std::vector<Expr>& args,
                                            const std::vector<std::string>& aliases,
-                                           const std::map<std::string, std::string>& locals,
+                                           const CppLocalContext& locals,
                                            const Symbols* symbols) {
     return lower_enum_variant_constructor(en, value, args, aliases, locals, symbols, {});
 }
 
 std::optional<std::string>
 lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& aliases,
-                            const std::map<std::string, std::string>& locals,
+                            const CppLocalContext& locals,
                             const std::map<std::string, TypeRef>& local_type_refs,
                             const Symbols* symbols, const CppEmitOptions& options) {
     if (symbols == nullptr || stmt.target_expr.kind != ExprKind::Index ||
@@ -294,7 +294,7 @@ lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& al
 
 std::optional<std::string> lower_pointer_cast_expr(const Expr& expr,
                                                    const std::vector<std::string>& aliases,
-                                                   const std::map<std::string, std::string>& locals,
+                                                   const CppLocalContext& locals,
                                                    const Symbols* symbols,
                                                    const CppEmitOptions& options) {
     return lower_pointer_cast_expr(expr, aliases, locals, {}, symbols, options);
@@ -302,7 +302,7 @@ std::optional<std::string> lower_pointer_cast_expr(const Expr& expr,
 
 std::optional<std::string>
 lower_pointer_cast_expr(const Expr& expr, const std::vector<std::string>& aliases,
-                        const std::map<std::string, std::string>& locals,
+                        const CppLocalContext& locals,
                         const std::map<std::string, TypeRef>& local_type_refs,
                         const Symbols* symbols, const CppEmitOptions& options) {
     if (expr.op != "*" || expr.children.size() != 1 ||
@@ -329,19 +329,19 @@ lower_pointer_cast_expr(const Expr& expr, const std::vector<std::string>& aliase
 
 std::optional<std::string> lower_pointer_cast_expr(const Expr& expr,
                                                    const std::vector<std::string>& aliases,
-                                                   const std::map<std::string, std::string>& locals,
+                                                   const CppLocalContext& locals,
                                                    const Symbols* symbols) {
     return lower_pointer_cast_expr(expr, aliases, locals, symbols, {});
 }
 
 std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& aliases,
-                            const std::map<std::string, std::string>& locals,
+                            const CppLocalContext& locals,
                             const Symbols* symbols, const CppEmitOptions& options) {
     return lower_call_expr(expr, aliases, locals, {}, symbols, options);
 }
 
 std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& aliases,
-                            const std::map<std::string, std::string>& locals,
+                            const CppLocalContext& locals,
                             const std::map<std::string, TypeRef>& local_type_refs,
                             const Symbols* symbols, const CppEmitOptions& options) {
     if (!expr.callee.empty()) {
@@ -428,7 +428,7 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
 }
 
 std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& aliases,
-                            const std::map<std::string, std::string>& locals,
+                            const CppLocalContext& locals,
                             const Symbols* symbols) {
     return lower_call_expr(expr, aliases, locals, symbols, {});
 }

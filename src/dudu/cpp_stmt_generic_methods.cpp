@@ -46,7 +46,7 @@ std::optional<std::vector<TypeRef>> infer_expected_method_type_args(
 std::optional<std::string>
 lower_expected_generic_method_call(const TypeRef& expected_type, const Expr& expr,
                                    const std::vector<std::string>& aliases,
-                                   const std::map<std::string, std::string>& locals,
+                                   const CppLocalContext& locals,
                                    const std::map<std::string, TypeRef>& local_type_refs,
                                    const std::map<std::string, TypeRef>& function_returns,
                                    const Symbols* symbols, const CppEmitOptions& options) {

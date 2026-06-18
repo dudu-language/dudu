@@ -2,6 +2,7 @@
 
 #include "dudu/array_shape.hpp"
 #include "dudu/ast.hpp"
+#include "dudu/cpp_emit_context.hpp"
 #include "dudu/cpp_emit_options.hpp"
 #include "dudu/sema_context.hpp"
 
@@ -22,12 +23,12 @@ EffectiveStmtType effective_stmt_type(const Stmt& stmt, const ArrayShapeInferenc
 std::string lower_declared_stmt_type(const TypeRef& type, const std::vector<std::string>& aliases,
                                      const CppEmitOptions& options);
 std::string lower_emitted_expr(const Expr& expr, const std::vector<std::string>& aliases,
-                               const std::map<std::string, std::string>& locals,
+                               const CppLocalContext& locals,
                                const std::map<std::string, TypeRef>& local_type_refs,
                                const Symbols* symbols, const CppEmitOptions& options);
 std::string lower_expr_as_type_ref(const TypeRef& expected_type, const Expr& expr,
                                    const std::vector<std::string>& aliases,
-                                   const std::map<std::string, std::string>& locals,
+                                   const CppLocalContext& locals,
                                    const std::map<std::string, TypeRef>& local_type_refs,
                                    const std::map<std::string, TypeRef>& function_returns,
                                    const Symbols* symbols, const CppEmitOptions& options);

@@ -32,15 +32,15 @@ std::string lower_cpp_escape_expr(std::string expr, const std::vector<std::strin
 }
 
 std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases,
-                       const std::map<std::string, std::string>& locals, const Symbols* symbols,
+                       const CppLocalContext& locals, const Symbols* symbols,
                        const CppEmitOptions& options);
 std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases,
-                       const std::map<std::string, std::string>& locals,
+                       const CppLocalContext& locals,
                        const std::map<std::string, TypeRef>& local_type_refs,
                        const Symbols* symbols, const CppEmitOptions& options);
 
 std::string lower_name_expr(const std::string& name,
-                            const std::map<std::string, std::string>& locals,
+                            const CppLocalContext& locals,
                             const CppEmitOptions& options) {
     if (!locals.contains(name)) {
         return emitted_value_name(name, options);
@@ -84,7 +84,7 @@ std::string lower_member_expr(std::string receiver, const std::string& member,
 
 std::string join_lowered_exprs(const std::vector<Expr>& exprs,
                                const std::vector<std::string>& aliases,
-                               const std::map<std::string, std::string>& locals,
+                               const CppLocalContext& locals,
                                std::string_view separator, const Symbols* symbols,
                                const CppEmitOptions& options) {
     return join_lowered_exprs(exprs, aliases, locals, {}, separator, symbols, options);
@@ -92,7 +92,7 @@ std::string join_lowered_exprs(const std::vector<Expr>& exprs,
 
 std::string join_lowered_exprs(const std::vector<Expr>& exprs,
                                const std::vector<std::string>& aliases,
-                               const std::map<std::string, std::string>& locals,
+                               const CppLocalContext& locals,
                                const std::map<std::string, TypeRef>& local_type_refs,
                                std::string_view separator, const Symbols* symbols,
                                const CppEmitOptions& options) {
@@ -108,7 +108,7 @@ std::string join_lowered_exprs(const std::vector<Expr>& exprs,
 
 std::string join_lowered_exprs(const std::vector<Expr>& exprs,
                                const std::vector<std::string>& aliases,
-                               const std::map<std::string, std::string>& locals,
+                               const CppLocalContext& locals,
                                std::string_view separator, const Symbols* symbols) {
     return join_lowered_exprs(exprs, aliases, locals, separator, symbols, {});
 }
@@ -190,13 +190,13 @@ std::string cpp_binary_operator(const std::string& op) {
 }
 
 std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases,
-                       const std::map<std::string, std::string>& locals, const Symbols* symbols,
+                       const CppLocalContext& locals, const Symbols* symbols,
                        const CppEmitOptions& options) {
     return lower_expr(expr, aliases, locals, {}, symbols, options);
 }
 
 std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases,
-                       const std::map<std::string, std::string>& locals,
+                       const CppLocalContext& locals,
                        const std::map<std::string, TypeRef>& local_type_refs,
                        const Symbols* symbols, const CppEmitOptions& options) {
     if (expr.kind == ExprKind::Missing) {
@@ -218,8 +218,8 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
         return lower_numeric_separators(expr.text);
     case ExprKind::Name:
         if (expr.name == "class") {
-            if (const auto current_class = locals.find("class"); current_class != locals.end()) {
-                return current_class->second;
+            if (!locals.current_class.empty()) {
+                return locals.current_class;
             }
         }
         return lower_name_expr(expr.name, locals, options);
@@ -445,13 +445,13 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
 }
 
 std::string lower_array_literal(const Expr& expr, const std::vector<std::string>& aliases,
-                                const std::map<std::string, std::string>& locals,
+                                const CppLocalContext& locals,
                                 const Symbols* symbols, const CppEmitOptions& options) {
     return lower_array_literal(expr, aliases, locals, {}, symbols, options);
 }
 
 std::string lower_array_literal(const Expr& expr, const std::vector<std::string>& aliases,
-                                const std::map<std::string, std::string>& locals,
+                                const CppLocalContext& locals,
                                 const std::map<std::string, TypeRef>& local_type_refs,
                                 const Symbols* symbols, const CppEmitOptions& options) {
     if (expr.kind != ExprKind::ListLiteral) {
@@ -471,23 +471,23 @@ std::string lower_array_literal(const Expr& expr, const std::vector<std::string>
 }
 
 std::string lower_array_literal(const Expr& expr, const std::vector<std::string>& aliases,
-                                const std::map<std::string, std::string>& locals,
+                                const CppLocalContext& locals,
                                 const Symbols* symbols) {
     return lower_array_literal(expr, aliases, locals, symbols, {});
 }
 
 std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases,
-                       const std::map<std::string, std::string>& locals, const Symbols* symbols) {
+                       const CppLocalContext& locals, const Symbols* symbols) {
     return lower_expr(expr, aliases, locals, symbols, {});
 }
 
 std::string lower_cpp_expr_ast(const Expr& expr, const std::vector<std::string>& aliases,
-                               const std::map<std::string, std::string>& locals) {
+                               const CppLocalContext& locals) {
     return lower_expr(expr, aliases, locals);
 }
 
 std::string lower_cpp_expr_ast(const Expr& expr, const std::vector<std::string>& aliases,
-                               const std::map<std::string, std::string>& locals,
+                               const CppLocalContext& locals,
                                const CppEmitOptions& options) {
     return lower_expr(expr, aliases, locals, nullptr, options);
 }
