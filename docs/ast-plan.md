@@ -175,6 +175,8 @@ Already structured:
   no-`TypeRef` swizzle emit overloads were removed
 - emitted local type inference now resolves named locals from local `TypeRef`
   metadata only instead of reparsing compatibility local type strings
+- indexed local string inference now requires local `TypeRef` metadata and no
+  longer falls back to reparsing compatibility local type strings
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path
