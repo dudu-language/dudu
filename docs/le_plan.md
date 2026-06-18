@@ -1755,3 +1755,8 @@ push. They are not release packaging work.
    Native template substitution now converts simple explicit template bindings
    directly into `TypeRef` nodes and uses typed substitution for structured
    signatures, leaving text parsing only for complex native fallback spellings.
+   The unused string-map `substitute_type_ref` overload has been deleted from
+   the shared AST type API; native/template paths now use typed substitution
+   unless they are explicitly handling complex native fallback text.
+   Native header prefixing now builds direct named `TypeRef` metadata for simple
+   scanned type names instead of reparsing those names after prefix adjustment.

@@ -335,29 +335,6 @@ std::string native_value_type_text(const NativeValueDecl& value) {
 }
 
 TypeRef substitute_type_ref(const TypeRef& type,
-                            const std::map<std::string, std::string>& substitutions) {
-    const std::string key = substitution_lookup_key(type);
-    if (!key.empty()) {
-        if (const auto found = substitutions.find(key); found != substitutions.end()) {
-            return parse_type_text(found->second, type.location);
-        }
-    }
-
-    if (type.kind == TypeKind::Unknown && key.empty()) {
-        const std::string rendered = trim_copy(type.text);
-        if (const auto found = substitutions.find(rendered); found != substitutions.end()) {
-            return parse_type_text(found->second, type.location);
-        }
-    }
-
-    TypeRef out = type;
-    for (TypeRef& child : out.children) {
-        child = substitute_type_ref(child, substitutions);
-    }
-    return out;
-}
-
-TypeRef substitute_type_ref(const TypeRef& type,
                             const std::map<std::string, TypeRef>& substitutions) {
     const std::string key = substitution_lookup_key(type);
     if (!key.empty()) {

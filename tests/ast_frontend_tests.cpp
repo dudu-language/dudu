@@ -1244,7 +1244,8 @@ void test_type_ast_shape() {
     assert(nested_callback.children[1].kind == dudu::TypeKind::Function);
     assert(nested_callback.children[2].kind == dudu::TypeKind::Function);
     const dudu::TypeRef nested =
-        dudu::substitute_type_ref(dudu::parse_type_text("fn(list[T]) -> T"), {{"T", "f32"}});
+        dudu::substitute_type_ref(dudu::parse_type_text("fn(list[T]) -> T"),
+                                  {{"T", dudu::named_type_ref("f32")}});
     assert(dudu::substitute_type_ref_text(nested, {}) == "fn(list[f32]) -> f32");
     assert(dudu::lower_cpp_type(player.fields[0].type_ref) ==
            "std::array<std::array<float, 4>, 4>");

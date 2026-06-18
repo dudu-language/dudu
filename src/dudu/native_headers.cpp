@@ -1,5 +1,6 @@
 #include "dudu/native_headers.hpp"
 
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/native_build.hpp"
 #include "dudu/native_header_cache.hpp"
@@ -253,7 +254,7 @@ std::vector<NativeTypeDecl> prefixed_type_names(const std::vector<NativeTypeDecl
         }
         if (item.type.empty()) {
             item.type = original;
-            item.type_ref = parse_type_text(original, item.location);
+            item.type_ref = named_type_ref(original, item.location);
         }
         out.push_back(std::move(item));
     }
