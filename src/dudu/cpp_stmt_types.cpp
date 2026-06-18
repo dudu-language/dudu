@@ -4,6 +4,7 @@
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/sema_index_type_ref.hpp"
+#include "dudu/sema_context.hpp"
 #include "dudu/sema_scan.hpp"
 
 #include <cctype>
@@ -53,8 +54,9 @@ size_t index_count(const Expr& expr) {
 }
 
 TypeRef indexed_local_type_ref(const TypeRef& receiver_type, const Expr& index_expr) {
+    const Symbols symbols;
     const auto indexed = indexed_type_ref_from_type_ref_with_count(
-        index_expr.location, receiver_type, index_count(index_expr), false, false,
+        symbols, index_expr.location, receiver_type, index_count(index_expr), false, false,
         substitute_type_ref_text(receiver_type, {}));
     return indexed ? *indexed : TypeRef{};
 }

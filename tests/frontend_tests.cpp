@@ -606,6 +606,27 @@ void test_index_type_inference_uses_type_ast() {
         {"bag", "Bag[Item]"},
     };
     assert(dudu::iterable_value_type(symbols, locals, "bag") == "Item");
+
+    dudu::ClassDecl tensor;
+    tensor.name = "Tensor";
+    dudu::FunctionDecl index_method;
+    index_method.name = "get";
+    index_method.decorators.push_back(
+        {.expr = dudu::parse_expr_text("operator(\"[]\")", location), .location = location});
+    index_method.params.push_back({.name = "self",
+                                   .type_ref = dudu::parse_type_text("Tensor", location),
+                                   .location = location});
+    index_method.params.push_back({.name = "index",
+                                   .type_ref = dudu::parse_type_text("i32", location),
+                                   .location = location});
+    index_method.return_type_ref = dudu::parse_type_text("f32", location);
+    tensor.methods.push_back(index_method);
+    symbols.classes["Tensor"] = &tensor;
+
+    const dudu::TypeRef tensor_index_type = dudu::indexed_type_ref_from_type(
+        symbols, location, dudu::parse_type_text("Tensor", location),
+        dudu::parse_expr_text("0", location), "tensor");
+    assert(dudu::substitute_type_ref_text(tensor_index_type, {}) == "f32");
 }
 
 void test_direct_call_return_type_inference_uses_type_ast() {

@@ -398,12 +398,11 @@ TypeRef indexed_type_ref_from_type(const Symbols& symbols, const SourceLocation&
         }
     }
     if (const auto indexed_ref = indexed_type_ref_from_type_ref_with_count(
-            location, raw_type, index_count_from_expr(index_expr), is_slice_expr(index_expr),
+            symbols, location, raw_type, index_count_from_expr(index_expr), is_slice_expr(index_expr),
             has_step_slice(index_expr), label)) {
         return *indexed_ref;
     }
-    return indexed_type_ref_from_type(symbols, location, substitute_type_ref_text(raw_type, {}),
-                                      index_expr, label);
+    throw CompileError(location, "cannot index non-container: " + label);
 }
 
 TypeRef indexed_type_ref_from_type(const Symbols& symbols, const SourceLocation& location,

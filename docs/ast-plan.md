@@ -1725,6 +1725,10 @@ LSP source edits are also moving to AST-owned ranges:
 - Index result inference now exposes parsed `TypeRef` APIs, and typed
   expression inference plus indexed assignment target checks use them instead
   of owning their own indexed-type text parsing.
+- Structured index result inference now handles alias resolution,
+  foreign/auto receivers, and Dudu `[]` operator return metadata inside the
+  `TypeRef` path, removing the render-to-string and reparse fallback from
+  normal `indexed_type_ref_from_type` calls.
 - Member-path type inference now resolves local names, class static members,
   recursive member fields, indexed member receivers, inherited fields,
   `Result` helper fields, and Dudu swizzles through parsed `TypeRef` metadata

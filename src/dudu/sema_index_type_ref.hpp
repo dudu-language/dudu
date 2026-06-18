@@ -9,7 +9,10 @@
 
 namespace dudu {
 
-std::optional<TypeRef> indexed_type_ref_from_type_ref_with_count(const SourceLocation& location,
+struct Symbols;
+
+std::optional<TypeRef> indexed_type_ref_from_type_ref_with_count(const Symbols& symbols,
+                                                                 const SourceLocation& location,
                                                                  const TypeRef& raw_type,
                                                                  size_t index_count, bool is_slice,
                                                                  bool has_step,

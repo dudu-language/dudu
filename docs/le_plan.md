@@ -563,8 +563,10 @@ push. They are not release packaging work.
    spelling. Indexed type inference now requires parsed index expressions
    instead of accepting public string index text, including the explicit
    `cpp(...)` escape inference path. Fixed-array index and slice metadata now
-   reads parsed `TypeRef` shape/element nodes in the remaining compatibility
-   index helpers before crossing native/operator fallback boundaries.
+   reads parsed `TypeRef` shape/element nodes, and the structured index helper
+   handles aliases, foreign/auto receivers, and Dudu `[]` operator return
+   metadata without rendering `TypeRef` input back into source text and
+   reparsing it.
    Native C++ type-artifact normalization now has a parsed `TypeRef` entry
    point, so tuple-element and non-array template cleanup no longer require
    parsed callers to stringify only to reparse immediately.
