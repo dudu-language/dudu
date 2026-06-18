@@ -82,7 +82,7 @@ std::string compute_base_type(const TypeRef& type) {
         if (!type.children.empty()) {
             return compute_base_type(type.children.front());
         }
-        return trim(type.text);
+        return {};
     case TypeKind::Const:
         return "const";
     case TypeKind::Volatile:
@@ -101,7 +101,7 @@ std::string compute_base_type(const TypeRef& type) {
         if (!type.children.empty()) {
             return compute_base_type(type.children.front());
         }
-        return trim(type.text);
+        return {};
     case TypeKind::Function:
         return type_ref_head_name(type);
     case TypeKind::Value:

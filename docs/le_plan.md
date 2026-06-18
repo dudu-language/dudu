@@ -1823,3 +1823,6 @@ push. They are not release packaging work.
    Declaration type parsing now rejects malformed `TypeRef` trees with parser
    diagnostics instead of letting `Unknown` type nodes with raw source text
    survive into declaration ASTs.
+   Semantic base-type discovery no longer recovers malformed pointer,
+   reference, or fixed-array `TypeRef` nodes from `TypeRef.text`; those
+   structured nodes must carry children or produce no base type.

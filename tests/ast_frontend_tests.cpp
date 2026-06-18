@@ -179,6 +179,18 @@ void test_core_type_helpers_use_type_ast() {
     spelled_pointer.kind = dudu::TypeKind::Pointer;
     spelled_pointer.children.push_back(dudu::named_type_ref("Player"));
     assert(dudu::base_type(spelled_pointer) == "Player");
+    dudu::TypeRef malformed_pointer;
+    malformed_pointer.kind = dudu::TypeKind::Pointer;
+    malformed_pointer.text = "*Player";
+    assert(dudu::base_type(malformed_pointer).empty());
+    dudu::TypeRef malformed_reference;
+    malformed_reference.kind = dudu::TypeKind::Reference;
+    malformed_reference.text = "&Player";
+    assert(dudu::base_type(malformed_reference).empty());
+    dudu::TypeRef malformed_array;
+    malformed_array.kind = dudu::TypeKind::FixedArray;
+    malformed_array.text = "Player[4]";
+    assert(dudu::base_type(malformed_array).empty());
     assert(dudu::substitute_type_ref_text(
                dudu::explicit_array_element_type_ref(dudu::parse_type_text("array[list[i32]][4]")),
                {}) == "list[i32]");
