@@ -200,6 +200,8 @@ Already structured:
 - local existence checks in semantic call/member handling now use
   `local_type_refs`, and member-path type helpers no longer accept the rendered
   local type map
+- enum payload match bindings now go through the shared local-binding helper
+  instead of writing rendered and structured local maps by hand
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path

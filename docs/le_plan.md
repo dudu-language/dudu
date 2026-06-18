@@ -533,9 +533,10 @@ push. They are not release packaging work.
    inferred-assignment local existence checks now use local `TypeRef` metadata
    instead of rendered type strings. Local existence checks in semantic
    call/member handling now use `local_type_refs`, and member-path type helpers
-   no longer accept the rendered local type map. Enum variant recognition now
-   uses a shared structural expression helper in sema, codegen, and match
-   patterns instead of
+   no longer accept the rendered local type map. Enum payload match bindings
+   now go through the shared local-binding helper instead of writing rendered
+   and structured local maps by hand. Enum variant recognition now uses a shared
+   structural expression helper in sema, codegen, and match patterns instead of
    duplicate dotted-string reconstruction. Native import member type lookup now
    walks parsed member expressions inside `sema_native` before crossing into
    native metadata table spelling. `class.name` static access in expression and
