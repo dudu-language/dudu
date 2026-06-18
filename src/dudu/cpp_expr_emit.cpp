@@ -152,7 +152,6 @@ TypeRef template_type_ref_from_expr(const Expr& expr, std::string name) {
     type.children = expr.template_type_args;
     type.location = expr.location;
     type.range = expr.range;
-    type.text = substitute_type_ref_text(type, {});
     return type;
 }
 

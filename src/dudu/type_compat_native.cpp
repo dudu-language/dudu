@@ -80,7 +80,6 @@ TypeRef normalize_tuple_element(const TypeRef& type) {
     if (type.kind == TypeKind::Reference && type.children.size() == 1) {
         TypeRef out = type;
         out.children[0] = normalize_tuple_element(type.children.front());
-        out.text = substitute_type_ref_text(out, {});
         return out;
     }
     if (type.kind != TypeKind::Template || type.name != "__tuple_element_t" ||
@@ -89,7 +88,6 @@ TypeRef normalize_tuple_element(const TypeRef& type) {
         for (TypeRef& child : out.children) {
             child = normalize_tuple_element(child);
         }
-        out.text = substitute_type_ref_text(out, {});
         return out;
     }
     const TypeRef& tuple_type = type.children[1];

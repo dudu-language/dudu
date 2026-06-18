@@ -220,12 +220,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                 if (has_type_ref(inferred_ref)) {
                     local_type_refs.emplace(lhs, inferred_ref);
                 } else {
-                    TypeRef auto_ref;
-                    auto_ref.kind = TypeKind::Named;
-                    auto_ref.name = "auto";
-                    auto_ref.text = "auto";
-                    auto_ref.location = stmt.target_expr.location;
-                    local_type_refs.emplace(lhs, auto_ref);
+                    local_type_refs.emplace(lhs, named_type_ref("auto", stmt.target_expr.location));
                 }
                 out << indent(depth) << "auto " << lhs << " = " << value << ";\n";
             }
