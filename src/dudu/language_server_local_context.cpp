@@ -132,11 +132,10 @@ std::optional<TypeRef> infer_lsp_for_binding_type(FunctionScope& scope, const St
         return parse_type_text("i32", stmt.iterable_expr.location);
     }
     if (stmt.iterable_expr.kind == ExprKind::Name) {
-        const auto local_ref = scope.local_type_refs.find(stmt.iterable_expr.name);
-        if (local_ref != scope.local_type_refs.end()) {
-            if (const auto element = iterable_type_from_type(local_ref->second)) {
-                return parse_type_text(*element, stmt.iterable_expr.location);
-            }
+        const TypeRef local_ref =
+            local_type_ref(scope, stmt.iterable_expr.name, stmt.iterable_expr.location);
+        if (const auto element = iterable_type_ref_from_type(local_ref)) {
+            return *element;
         }
     }
     const TypeRef iterable_type = infer_lsp_expr_type(scope, stmt.iterable_expr);
