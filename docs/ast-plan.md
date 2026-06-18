@@ -1948,6 +1948,9 @@ LSP source edits are also moving to AST-owned ranges:
 - Indexed type inference now also resolves aliases through parsed `TypeRef`
   metadata before unwrapping pointer/reference/container/array shapes, keeping
   aliases to list/span/array-like types off the string-only path.
+- Native template signature binding now resolves compatibility `got` types
+  through parsed alias `TypeRef` metadata before binding placeholders, with the
+  string alias map retained only as a fallback for older callers.
 
 Expression parsing has moved onto the lexer/token stream:
 

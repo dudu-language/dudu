@@ -7,6 +7,7 @@
 #include "dudu/language_server_semantic_tokens.hpp"
 #include "dudu/match_patterns.hpp"
 #include "dudu/native_header_types.hpp"
+#include "dudu/native_signature_templates.hpp"
 #include "dudu/parser.hpp"
 #include "dudu/sema.hpp"
 #include "dudu/sema_builtin_methods.hpp"
@@ -190,6 +191,15 @@ void test_native_header_types_split_cpp_templates() {
     assert(dudu::dudu_type("const vec<L, T, Q> &") == "&const[vec[L, T, Q]]");
     assert(dudu::signature_params("T (const vec<L, T, Q> &, const vec<L, T, Q> &)") ==
            std::vector<std::string>({"&const[vec[L, T, Q]]", "&const[vec[L, T, Q]]"}));
+}
+
+void test_native_template_binding_resolves_alias_type_refs() {
+    dudu::Symbols symbols;
+    symbols.aliases["FloatList"] = "list[f32]";
+    symbols.alias_type_refs["FloatList"] = dudu::parse_type_text("list[f32]");
+    dudu::NativeTemplateBindings bindings;
+    assert(dudu::bind_native_template_type_ast(symbols, "list[T]", "FloatList", bindings));
+    assert(bindings.at("T") == "f32");
 }
 
 void test_receiver_template_substitution_uses_type_ast() {
@@ -1226,6 +1236,7 @@ int main() {
         test_core_type_helpers_use_type_ast();
         test_builtin_method_signature_uses_type_ast();
         test_native_header_types_split_cpp_templates();
+        test_native_template_binding_resolves_alias_type_refs();
         test_receiver_template_substitution_uses_type_ast();
         test_inherited_method_signature_uses_type_ast();
         test_find_inherited_method_uses_type_ast_receiver();
