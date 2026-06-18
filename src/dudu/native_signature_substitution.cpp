@@ -266,19 +266,6 @@ bool structured_binding_texts(const NativeTemplateBindings& bindings) {
     return true;
 }
 
-bool structured_signature_texts(const FunctionSignature& signature) {
-    if (!structured_binding_type_ref(signature_return_type_ref(signature))) {
-        return false;
-    }
-    const size_t param_count = signature_param_count(signature);
-    for (size_t i = 0; i < param_count; ++i) {
-        if (!structured_binding_type_ref(signature_param_type_ref(signature, i))) {
-            return false;
-        }
-    }
-    return true;
-}
-
 std::optional<std::vector<TypeRef>>
 structured_pack_expansion(const TypeRef& param_type, const NativePackBindingMap& pack_bindings) {
     const std::optional<std::string> pack_name = native_template_pack_placeholder(param_type);
@@ -380,36 +367,35 @@ FunctionSignature substitute_explicit_template_signature(FunctionSignature signa
 FunctionSignature substitute_bound_template_signature(FunctionSignature signature,
                                                       const NativeTemplateBindings& bindings,
                                                       const NativePackBindingMap& pack_bindings) {
-    if (structured_binding_texts(bindings) && structured_signature_texts(signature)) {
-        const std::map<std::string, TypeRef> refs = type_ref_bindings(bindings);
-        std::vector<TypeRef> params;
-        params.reserve(signature_param_count(signature));
-        for (size_t i = 0; i < signature_param_count(signature); ++i) {
-            const TypeRef param_type = signature_param_type_ref(signature, i);
+    const bool structured_bindings = structured_binding_texts(bindings);
+    const std::map<std::string, TypeRef> refs =
+        structured_bindings ? type_ref_bindings(bindings) : std::map<std::string, TypeRef>{};
+
+    std::vector<TypeRef> params;
+    params.reserve(signature_param_count(signature));
+    for (size_t i = 0; i < signature_param_count(signature); ++i) {
+        const TypeRef param_type = signature_param_type_ref(signature, i);
+        if (structured_bindings && structured_binding_type_ref(param_type)) {
             if (const std::optional<std::vector<TypeRef>> expanded =
                     structured_pack_expansion(param_type, pack_bindings)) {
                 params.insert(params.end(), expanded->begin(), expanded->end());
                 continue;
             }
             params.push_back(substitute_type_ref(param_type, refs));
+            continue;
         }
-        set_signature_param_types(signature, std::move(params));
-        const TypeRef return_type = signature_return_type_ref(signature);
-        set_signature_return_type(signature, substitute_type_ref(return_type, refs));
-        return signature;
-    }
-
-    std::vector<TypeRef> params;
-    params.reserve(signature_param_count(signature));
-    for (size_t i = 0; i < signature_param_count(signature); ++i) {
-        const TypeRef param_type = signature_param_type_ref(signature, i);
         params.push_back(
             parse_type_text(replace_template_bindings(signature_param_type_text(signature, i),
                                                       bindings, pack_bindings),
                             param_type.location));
     }
     set_signature_param_types(signature, std::move(params));
+
     const TypeRef return_type = signature_return_type_ref(signature);
+    if (structured_bindings && structured_binding_type_ref(return_type)) {
+        set_signature_return_type(signature, substitute_type_ref(return_type, refs));
+        return signature;
+    }
     set_signature_return_type(
         signature, parse_type_text(replace_template_bindings(signature_return_type_text(signature),
                                                              bindings, pack_bindings),
