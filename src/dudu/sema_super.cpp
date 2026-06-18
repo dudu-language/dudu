@@ -66,7 +66,7 @@ std::string super_init_base_type(const FunctionScope& scope, const SourceLocatio
     std::vector<std::string> storage_bases;
     for (const BaseClassDecl& base_decl : klass->second->base_class_refs) {
         const std::string base = type_ref_text(base_decl.type_ref);
-        if (class_type_has_instance_storage(scope.symbols, base)) {
+        if (class_type_has_instance_storage(scope.symbols, base_decl.type_ref)) {
             storage_bases.push_back(base);
         }
     }

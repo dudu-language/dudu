@@ -689,6 +689,9 @@ push. They are not release packaging work.
    Inherited method lookup now accepts parsed receiver `TypeRef` nodes, and
    override validation passes parsed base-class references through that path
    instead of rendering base types for lookup.
+   Class instance-storage queries now accept parsed `TypeRef` receivers, so
+   super/base-class emission can inspect generic base storage without rendering
+   base types first.
    TypeRef-backed assignment checks now infer RHS expressions as `TypeRef`
    first, use structured type assignment before compatibility fallback, and
    render only for legacy assignment/literal checks and diagnostics.

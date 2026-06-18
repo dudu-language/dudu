@@ -230,6 +230,9 @@ Already structured:
 - inherited method lookup now accepts parsed receiver `TypeRef` nodes, and
   override validation passes parsed base-class references through that path
   instead of rendering base types for lookup
+- class instance-storage queries now accept parsed `TypeRef` receivers, so
+  super/base-class emission can inspect generic base storage without rendering
+  base types first
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path

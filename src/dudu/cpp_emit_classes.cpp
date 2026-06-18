@@ -174,7 +174,7 @@ const BaseClassDecl* super_init_base_decl(const Symbols& symbols, const std::str
     }
     const BaseClassDecl* storage_base = nullptr;
     for (const BaseClassDecl& base : klass->second->base_class_refs) {
-        if (class_type_has_instance_storage(symbols, type_ref_text(base.type_ref))) {
+        if (class_type_has_instance_storage(symbols, base.type_ref)) {
             if (storage_base != nullptr) {
                 return nullptr;
             }

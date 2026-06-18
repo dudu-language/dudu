@@ -238,6 +238,24 @@ void test_find_inherited_method_uses_type_ast_receiver() {
     assert(dudu::substitute_type_ref_text(found->signature.return_type_ref, {}) == "i32");
 }
 
+void test_instance_storage_uses_type_ast_receiver() {
+    dudu::ClassDecl owner;
+    owner.name = "Box";
+    owner.generic_params = {"T"};
+    owner.fields.push_back({"value", dudu::parse_type_text("T"), {}, {}});
+
+    dudu::ClassDecl wrapper;
+    wrapper.name = "Wrapper";
+    wrapper.base_class_refs.push_back({dudu::parse_type_text("Box[i32]"), {}});
+
+    dudu::Symbols symbols;
+    symbols.classes.emplace("Box", &owner);
+    symbols.classes.emplace("Wrapper", &wrapper);
+
+    assert(dudu::class_type_has_instance_storage(symbols, dudu::parse_type_text("Box[i32]")));
+    assert(dudu::class_type_has_instance_storage(symbols, dudu::parse_type_text("Wrapper")));
+}
+
 void test_native_semantic_tokens() {
     dudu::ModuleAst module =
         dudu::parse_source("import c \"native.h\"\n"
@@ -960,6 +978,7 @@ int main() {
         test_receiver_template_substitution_uses_type_ast();
         test_inherited_method_signature_uses_type_ast();
         test_find_inherited_method_uses_type_ast_receiver();
+        test_instance_storage_uses_type_ast_receiver();
         test_native_semantic_tokens();
         test_ast_constructor_assignment_compatibility();
         test_ast_index_receiver_type_inference();

@@ -309,7 +309,7 @@ bool native_base_assignable(const Symbols& symbols, const std::string& expected,
     return base != derived && type_derives_from(symbols, derived, base);
 }
 
-bool class_type_has_instance_storage(const Symbols& symbols, const std::string& type) {
+bool class_type_has_instance_storage(const Symbols& symbols, const TypeRef& type) {
     const auto klass = symbols.classes.find(unwrap_type(symbols, type));
     if (klass == symbols.classes.end()) {
         return false;
@@ -317,9 +317,12 @@ bool class_type_has_instance_storage(const Symbols& symbols, const std::string& 
     return !klass->second->fields.empty() ||
            std::any_of(klass->second->base_class_refs.begin(), klass->second->base_class_refs.end(),
                        [&](const BaseClassDecl& base) {
-                           const std::string base_type = type_ref_text(base.type_ref);
-                           return class_type_has_instance_storage(symbols, base_type);
+                           return class_type_has_instance_storage(symbols, base.type_ref);
                        });
+}
+
+bool class_type_has_instance_storage(const Symbols& symbols, const std::string& type) {
+    return class_type_has_instance_storage(symbols, parse_type_text(type));
 }
 
 std::vector<std::string> unimplemented_abstract_methods(const Symbols& symbols,
