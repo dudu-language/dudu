@@ -1752,3 +1752,6 @@ push. They are not release packaging work.
    `from module import Type as Alias` alias materialization now stores direct
    named `TypeRef` metadata for imported Dudu enums/classes instead of reparsing
    the imported symbol name during module loading.
+   Native template substitution now converts simple explicit template bindings
+   directly into `TypeRef` nodes and uses typed substitution for structured
+   signatures, leaving text parsing only for complex native fallback spellings.

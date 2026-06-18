@@ -178,9 +178,10 @@ std::optional<TypeRef> explicit_type_return_ref(const TypeRef& return_type,
     if (placeholders.empty()) {
         return first_type_arg == template_args.end()
                    ? std::nullopt
-                   : std::optional<TypeRef>{parse_type_text(*first_type_arg, return_type.location)};
+                   : std::optional<TypeRef>{
+                         native_template_binding_type_ref(*first_type_arg, return_type.location)};
     }
-    std::map<std::string, std::string> bindings;
+    std::map<std::string, TypeRef> bindings;
     size_t placeholder_index = 0;
     for (const std::string& arg : template_args) {
         if (numeric_template_arg(arg)) {
@@ -189,13 +190,15 @@ std::optional<TypeRef> explicit_type_return_ref(const TypeRef& return_type,
         if (placeholder_index >= placeholders.size()) {
             break;
         }
-        bindings.emplace(placeholders[placeholder_index], arg);
+        bindings.emplace(placeholders[placeholder_index],
+                         native_template_binding_type_ref(arg, return_type.location));
         ++placeholder_index;
     }
     if (bindings.empty()) {
         return first_type_arg == template_args.end()
                    ? std::nullopt
-                   : std::optional<TypeRef>{parse_type_text(*first_type_arg, return_type.location)};
+                   : std::optional<TypeRef>{
+                         native_template_binding_type_ref(*first_type_arg, return_type.location)};
     }
     TypeRef substituted = substitute_type_ref(return_type, bindings);
     return substituted;

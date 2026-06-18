@@ -5,6 +5,7 @@
 #include "dudu/sema_common.hpp"
 #include "dudu/sema_function_type.hpp"
 
+#include <algorithm>
 #include <cctype>
 #include <set>
 
@@ -137,6 +138,24 @@ explicit_template_bindings(const std::vector<std::string>& names,
     return out;
 }
 
+std::map<std::string, TypeRef>
+explicit_template_type_ref_bindings(const std::vector<std::string>& names,
+                                    const std::vector<std::string>& args) {
+    std::map<std::string, TypeRef> out;
+    size_t arg_index = 0;
+    for (const std::string& name : names) {
+        if (arg_index >= args.size()) {
+            break;
+        }
+        if (native_index_placeholder(name) && !numeric_template_arg(args[arg_index])) {
+            continue;
+        }
+        out.emplace(name, native_template_binding_type_ref(args[arg_index]));
+        ++arg_index;
+    }
+    return out;
+}
+
 std::string join_types(const std::vector<std::string>& types) {
     std::string out;
     for (size_t i = 0; i < types.size(); ++i) {
@@ -225,7 +244,7 @@ std::string replace_template_bindings(std::string type, const NativeTemplateBind
 std::map<std::string, TypeRef> type_ref_bindings(const NativeTemplateBindings& bindings) {
     std::map<std::string, TypeRef> out;
     for (const auto& [name, type] : bindings) {
-        out.emplace(name, parse_type_text(type));
+        out.emplace(name, native_template_binding_type_ref(type));
     }
     return out;
 }
@@ -233,8 +252,7 @@ std::map<std::string, TypeRef> type_ref_bindings(const NativeTemplateBindings& b
 bool structured_binding_text(std::string_view type) {
     const std::string trimmed = trim_copy(std::string(type));
     return trimmed != "." && trimmed.find(".,") == std::string::npos &&
-           trimmed.find(", .") == std::string::npos &&
-           trimmed.find("...") == std::string::npos &&
+           trimmed.find(", .") == std::string::npos && trimmed.find("...") == std::string::npos &&
            trimmed.find("__decay_and_strip") == std::string::npos;
 }
 
@@ -273,6 +291,29 @@ bool numeric_template_arg(std::string_view arg) {
     return !arg.empty() && arg.find_first_not_of("0123456789") == std::string::npos;
 }
 
+TypeRef native_template_binding_type_ref(std::string_view text, SourceLocation location) {
+    const std::string trimmed = trim_copy(std::string(text));
+    if (numeric_template_arg(trimmed)) {
+        TypeRef type;
+        type.kind = TypeKind::Value;
+        type.value = trimmed;
+        type.text = trimmed;
+        type.location = location;
+        return type;
+    }
+
+    const bool name_like =
+        !trimmed.empty() && std::all_of(trimmed.begin(), trimmed.end(), [](char c) {
+            return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_' || c == '.' ||
+                   c == ':';
+        });
+    if (name_like) {
+        return named_type_ref(trimmed, location);
+    }
+
+    return parse_type_text(trimmed, location);
+}
+
 std::optional<std::pair<std::string, std::vector<std::string>>>
 native_template_call_base(const std::string& callee) {
     const size_t close = callee.rfind(']');
@@ -309,12 +350,14 @@ FunctionSignature substitute_explicit_template_signature(FunctionSignature signa
                                                ? native_signature_placeholders(signature)
                                                : signature.template_params;
     const std::map<std::string, std::string> bindings = explicit_template_bindings(names, args);
+    const std::map<std::string, TypeRef> ref_bindings =
+        explicit_template_type_ref_bindings(names, args);
     std::vector<TypeRef> param_types;
     param_types.reserve(signature_param_count(signature));
     for (size_t i = 0; i < signature_param_count(signature); ++i) {
         const TypeRef param_type = signature_param_type_ref(signature, i);
         if (has_type_ref(param_type)) {
-            param_types.push_back(substitute_type_ref(param_type, bindings));
+            param_types.push_back(substitute_type_ref(param_type, ref_bindings));
         } else {
             const std::string param_text = replace_explicit_template_args(
                 signature_param_type_text(signature, i), names, args);
@@ -324,7 +367,7 @@ FunctionSignature substitute_explicit_template_signature(FunctionSignature signa
     set_signature_param_types(signature, std::move(param_types));
     const TypeRef return_type = signature_return_type_ref(signature);
     if (has_type_ref(return_type)) {
-        set_signature_return_type(signature, substitute_type_ref(return_type, bindings));
+        set_signature_return_type(signature, substitute_type_ref(return_type, ref_bindings));
     } else {
         set_signature_return_type(
             signature, parse_type_text(replace_explicit_template_args(
@@ -358,11 +401,11 @@ FunctionSignature substitute_bound_template_signature(FunctionSignature signatur
         if (has_type_ref(return_type)) {
             set_signature_return_type(signature, substitute_type_ref(return_type, refs));
         } else {
-            set_signature_return_type(signature,
-                                      parse_type_text(replace_template_bindings(
-                                                          signature_return_type_text(signature),
+            set_signature_return_type(
+                signature,
+                parse_type_text(replace_template_bindings(signature_return_type_text(signature),
                                                           bindings, pack_bindings),
-                                                      return_type.location));
+                                return_type.location));
         }
         return signature;
     }

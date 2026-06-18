@@ -15,6 +15,7 @@ using NativePackBindingMap = std::map<std::string, std::vector<std::string>>;
 
 bool native_index_placeholder(const std::string& name);
 bool numeric_template_arg(std::string_view arg);
+TypeRef native_template_binding_type_ref(std::string_view text, SourceLocation location = {});
 
 std::optional<std::pair<std::string, std::vector<std::string>>>
 native_template_call_base(const std::string& callee);
