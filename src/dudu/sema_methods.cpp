@@ -21,24 +21,6 @@ bool method_is_static(const FunctionDecl& method) {
     return method.params.empty() || method.params.front().name != "self";
 }
 
-std::string template_method_name(const std::string& method_name) {
-    const size_t open = method_name.find('[');
-    return open == std::string::npos ? method_name : method_name.substr(0, open);
-}
-
-std::vector<TypeRef> template_method_args(const std::string& method_name, SourceLocation location) {
-    const size_t open = method_name.find('[');
-    if (open == std::string::npos || method_name.back() != ']') {
-        return {};
-    }
-    std::vector<TypeRef> out;
-    for (const std::string& arg :
-         split_top_level_args(method_name.substr(open + 1, method_name.size() - open - 2))) {
-        out.push_back(parse_type_text(arg, location));
-    }
-    return out;
-}
-
 std::map<std::string, TypeRef> type_ref_substitutions(const std::vector<std::string>& params,
                                                       const std::vector<TypeRef>& args) {
     std::map<std::string, TypeRef> out;
@@ -199,11 +181,8 @@ bool method_signature_for_type(const Symbols& symbols, const TypeRef& receiver_t
     if (builtin_cpp_method_signature(symbols, receiver_type, method_name, signature)) {
         return true;
     }
-    const std::string lookup_name = template_method_name(method_name);
-    const std::vector<TypeRef> method_args =
-        template_method_args(method_name, receiver_type.location);
-    return method_signature_for_type_impl(symbols, receiver_type, lookup_name, method_args,
-                                          method_name, signature, location);
+    return method_signature_for_type_impl(symbols, receiver_type, method_name, {}, method_name,
+                                          signature, location);
 }
 
 bool method_signature_for_type(const Symbols& symbols, const TypeRef& receiver_type,
@@ -294,10 +273,7 @@ std::vector<FunctionSignature> method_signatures_for_type(const Symbols& symbols
     if (builtin_cpp_method_signature(symbols, receiver_type, method_name, builtin)) {
         return {builtin};
     }
-    const std::string lookup_name = template_method_name(method_name);
-    const std::vector<TypeRef> method_args =
-        template_method_args(method_name, receiver_type.location);
-    return method_signatures_for_type_impl(symbols, receiver_type, lookup_name, method_args);
+    return method_signatures_for_type_impl(symbols, receiver_type, method_name, {});
 }
 
 std::vector<FunctionSignature> method_signatures_for_type(const Symbols& symbols,
@@ -314,10 +290,8 @@ std::vector<FunctionSignature> method_signatures_for_type(const Symbols& symbols
 bool static_method_signature_for_type(const Symbols& symbols, const TypeRef& type_name,
                                       const std::string& method_name, FunctionSignature& signature,
                                       const SourceLocation* location) {
-    const std::string lookup_name = template_method_name(method_name);
-    const std::vector<TypeRef> method_args = template_method_args(method_name, type_name.location);
-    return static_method_signature_for_type_impl(symbols, type_name, lookup_name, method_args,
-                                                 method_name, signature, location);
+    return static_method_signature_for_type_impl(symbols, type_name, method_name, {}, method_name,
+                                                 signature, location);
 }
 
 bool static_method_signature_for_type(const Symbols& symbols, const TypeRef& type_name,

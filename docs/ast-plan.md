@@ -2089,6 +2089,9 @@ LSP source edits are also moving to AST-owned ranges:
   longer reparses `TypeRef.text` to repair malformed internal nodes. Structured
   lowering expects structured children; the string lowering API remains the
   explicit boundary for raw native spellings.
+- Method signature lookup no longer parses bracketed `method[T]` strings.
+  Explicit generic method calls must pass parsed `TypeRef` template arguments
+  through the typed lookup overloads.
 
 Expression parsing has moved onto the lexer/token stream:
 
