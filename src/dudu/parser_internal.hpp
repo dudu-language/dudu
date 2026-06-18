@@ -14,7 +14,6 @@ class Parser {
     ModuleAst parse();
 
     struct JoinedTokens {
-        std::string text;
         SourceRange range;
         size_t begin = 0;
         size_t end = 0;

@@ -32,20 +32,6 @@ bool is_all_caps_identifier(const Token& token) {
     return saw_letter;
 }
 
-bool parser_needs_space_between(TokenKind previous, TokenKind current) {
-    if (current == TokenKind::Comma || current == TokenKind::Colon ||
-        current == TokenKind::RParen || current == TokenKind::RBracket ||
-        current == TokenKind::RBrace || current == TokenKind::Dot || current == TokenKind::LParen ||
-        current == TokenKind::LBracket || current == TokenKind::LBrace) {
-        return false;
-    }
-    if (previous == TokenKind::Dot || previous == TokenKind::LParen ||
-        previous == TokenKind::LBracket || previous == TokenKind::LBrace) {
-        return false;
-    }
-    return true;
-}
-
 void validate_import_bindings(const std::vector<ImportDecl>& imports) {
     std::map<std::string, ImportDecl> direct;
     for (const ImportDecl& import : imports) {

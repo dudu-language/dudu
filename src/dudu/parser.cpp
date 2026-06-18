@@ -294,9 +294,6 @@ std::string Parser::parse_path() {
 Parser::JoinedTokens Parser::join_until_with_range(std::initializer_list<TokenKind> stops) {
     JoinedTokens joined;
     joined.begin = cursor_;
-    std::ostringstream out;
-    bool first = true;
-    TokenKind previous_kind = TokenKind::End;
     int bracket_depth = 0;
     int paren_depth = 0;
     int brace_depth = 0;
@@ -322,12 +319,6 @@ Parser::JoinedTokens Parser::join_until_with_range(std::initializer_list<TokenKi
             joined.has_tokens = true;
         }
         joined.range.end = token_end_location(token);
-        if (!first && parser_needs_space_between(previous_kind, current().kind)) {
-            out << ' ';
-        }
-        out << current().text;
-        first = false;
-        previous_kind = current().kind;
         if (current().kind == TokenKind::LBracket) {
             ++bracket_depth;
         } else if (current().kind == TokenKind::RBracket) {
@@ -344,7 +335,6 @@ Parser::JoinedTokens Parser::join_until_with_range(std::initializer_list<TokenKi
         ++cursor_;
     }
     joined.end = cursor_;
-    joined.text = out.str();
     return joined;
 }
 
@@ -352,9 +342,6 @@ Parser::JoinedTokens Parser::join_tokens(size_t begin, size_t end) const {
     JoinedTokens joined;
     joined.begin = begin;
     joined.end = std::min(end, tokens_.size());
-    std::ostringstream out;
-    bool first = true;
-    TokenKind previous_kind = TokenKind::End;
     for (size_t index = begin; index < end && index < tokens_.size(); ++index) {
         const Token& token = tokens_[index];
         if (!joined.has_tokens) {
@@ -362,14 +349,7 @@ Parser::JoinedTokens Parser::join_tokens(size_t begin, size_t end) const {
             joined.has_tokens = true;
         }
         joined.range.end = token_end_location(token);
-        if (!first && parser_needs_space_between(previous_kind, token.kind)) {
-            out << ' ';
-        }
-        out << token.text;
-        first = false;
-        previous_kind = token.kind;
     }
-    joined.text = out.str();
     return joined;
 }
 
@@ -400,7 +380,7 @@ Expr Parser::parse_expr_piece(const JoinedTokens& piece) const {
 
 TypeRef Parser::parse_type_piece(const JoinedTokens& piece) const {
     if (!piece.has_tokens) {
-        return make_type(TypeKind::Unknown, piece.text, piece.range.start);
+        return make_type(TypeKind::Unknown, "", piece.range.start);
     }
     std::vector<Token> tokens =
         syntax_piece_tokens(tokens_.subspan(piece.begin, piece.end - piece.begin));

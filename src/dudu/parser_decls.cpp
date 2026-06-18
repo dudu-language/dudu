@@ -30,7 +30,7 @@ ClassDecl Parser::parse_class(const Token& start, Visibility visibility,
             while (true) {
                 const JoinedTokens base =
                     join_until_with_range({TokenKind::Comma, TokenKind::RParen});
-                if (base.text.empty()) {
+                if (!base.has_tokens) {
                     fail_current("expected base class name");
                 }
                 BaseClassDecl base_decl;
@@ -103,7 +103,7 @@ FieldDecl Parser::parse_field() {
     field.location = name.location;
     consume(TokenKind::Colon, "expected : after field name");
     const JoinedTokens type = join_until_with_range({TokenKind::Assign, TokenKind::Newline});
-    if (type.text.empty()) {
+    if (!type.has_tokens) {
         throw CompileError(name.location, "field requires a type");
     }
     field.type_ref = parse_type_piece(type);
@@ -146,7 +146,7 @@ EnumDecl Parser::parse_enum(const Token& start) {
                     field.location = current().location;
                     const JoinedTokens type =
                         join_until_with_range({TokenKind::Comma, TokenKind::RParen});
-                    if (type.text.empty()) {
+                    if (!type.has_tokens) {
                         throw CompileError(field.location, "enum payload field requires a type");
                     }
                     field.type_ref = parse_type_piece(type);
@@ -290,7 +290,7 @@ void Parser::parse_params(std::vector<ParamDecl>& params, std::string_view recei
         consume(TokenKind::Colon, "expected : after parameter name");
         const JoinedTokens type =
             join_until_with_range({TokenKind::Comma, TokenKind::RParen, TokenKind::Newline});
-        if (type.text.empty()) {
+        if (!type.has_tokens) {
             throw CompileError(name.location, "parameter requires a type");
         }
         param.type_ref = parse_type_piece(type);
@@ -321,7 +321,7 @@ ConstDecl Parser::parse_constant() {
     constant.location = name.location;
     consume(TokenKind::Colon, "expected : after constant name");
     const JoinedTokens type = join_until_with_range({TokenKind::Assign});
-    if (type.text.empty()) {
+    if (!type.has_tokens) {
         throw CompileError(name.location, "constant requires a type");
     }
     constant.type_ref = parse_type_piece(type);

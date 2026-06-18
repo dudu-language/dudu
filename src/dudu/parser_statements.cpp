@@ -167,11 +167,8 @@ UnsupportedFeature unsupported_feature_for_token(const Token& token) {
 }
 
 void attach_statement_source(Stmt& stmt, const Parser::JoinedTokens& joined) {
-    if (joined.has_tokens) {
+    if (joined.has_tokens)
         stmt.range = joined.range;
-    } else {
-        stmt.range = range_for_text(stmt.location, joined.text);
-    }
 }
 
 std::string declaration_name_from_piece(std::span<const Token> tokens, size_t begin, size_t end) {
@@ -395,7 +392,8 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
         stmt.kind = StmtKind::CppEscape;
         join_until_with_range({TokenKind::Newline});
         const JoinedTokens source = join_tokens(begin, cursor_);
-        stmt.cpp_lines = cpp_escape_lines(cpp_escape_body(source.text));
+        stmt.cpp_lines =
+            cpp_escape_lines(cpp_escape_body(source_text_for_tokens(source.begin, source.end)));
         attach_statement_source(stmt, source);
         return stmt;
     }
