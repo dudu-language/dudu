@@ -33,15 +33,16 @@ std::optional<TypeRef> infer_parsed_index_escape_ref(const FunctionScope& scope,
                                     index_arg_exprs(index_expr), location);
             }
         }
-        return indexed_value_type_ref(scope.symbols, scope.local_type_refs, *location, receiver.name,
-                                      index_expr, "indexed access to unknown local: ");
+        return indexed_value_type_ref(scope.symbols, scope.local_type_refs, *location,
+                                      receiver.name, index_expr,
+                                      "indexed access to unknown local: ");
     }
     if (const auto path = expr_path_from_expr(receiver)) {
         const std::string name = render_expr_path(*path);
         const TypeRef receiver_type = cpp_escape_member_expr_type_ref(scope, location, receiver);
         if (has_type_ref(receiver_type)) {
             return indexed_type_ref_from_type(scope.symbols, *location, receiver_type, index_expr,
-                                             name);
+                                              name);
         }
     }
     return std::nullopt;
@@ -74,8 +75,8 @@ std::optional<TypeRef> infer_parsed_pointer_cast_escape_ref(const FunctionScope&
         !starts_with(parsed.callee.front().name, "*")) {
         return std::nullopt;
     }
-    TypeRef type_ref = parse_type_text(parsed.callee.front().name.substr(1),
-                                       parsed.callee.front().location);
+    TypeRef type_ref =
+        parse_type_text(parsed.callee.front().name.substr(1), parsed.callee.front().location);
     if (const auto unknown = unknown_type_ref(scope.symbols, type_ref)) {
         if (location != nullptr) {
             const SourceLocation error_location =
@@ -97,8 +98,8 @@ std::optional<TypeRef> infer_parsed_unary_escape_ref(const FunctionScope& scope,
     }
     const Expr& child = parsed.children.front();
     if (parsed.op == "*" && child.kind == ExprKind::Name) {
-        const TypeRef type = local_type_ref(
-            scope, child.name, location == nullptr ? child.location : *location);
+        const TypeRef type =
+            local_type_ref(scope, child.name, location == nullptr ? child.location : *location);
         if (type.kind == TypeKind::Pointer && !type.children.empty()) {
             return type.children.front();
         }
@@ -178,8 +179,8 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
     if (!call_info) {
         const size_t call = find_call_open(expr);
         if (call != std::string::npos) {
-            call_info = escape_call_from_text(
-                expr, call, location == nullptr ? SourceLocation{} : *location);
+            call_info = escape_call_from_text(expr, call,
+                                              location == nullptr ? SourceLocation{} : *location);
         }
     }
     if (call_info) {
@@ -239,10 +240,9 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
             FunctionSignature signature;
             if (!scope.local_type_refs.contains(member->receiver) &&
                 scope.symbols.classes.contains(member->receiver) &&
-                static_method_signature_for_type(scope.symbols,
-                                                 named_type_ref(member->receiver,
-                                                                member->receiver_expr.location),
-                                                 member->method, signature, location)) {
+                static_method_signature_for_type(
+                    scope.symbols, named_type_ref(member->receiver, member->receiver_expr.location),
+                    member->method, signature, location)) {
                 check_call_args_ast(scope, callee, signature, args, location);
                 return signature_return_type_text(signature);
             }
@@ -424,6 +424,15 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
                            expr);
     }
     return {};
+}
+
+TypeRef infer_cpp_escape_expr_ref(const FunctionScope& scope, std::string expr,
+                                  const SourceLocation* location) {
+    const std::string inferred = infer_cpp_escape_expr(scope, std::move(expr), location);
+    if (inferred.empty()) {
+        return {};
+    }
+    return parse_type_text(inferred, location == nullptr ? SourceLocation{} : *location);
 }
 
 } // namespace dudu

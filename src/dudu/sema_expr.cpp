@@ -222,9 +222,12 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
         }
         return {};
     case ExprKind::CppEscape:
-        if (const std::string inferred = infer_cpp_escape_expr(scope, expr.value, location);
-            !inferred.empty()) {
-            return parse_type_text(inferred, type_location);
+        if (TypeRef inferred = infer_cpp_escape_expr_ref(scope, expr.value, location);
+            has_type_ref(inferred)) {
+            if (inferred.location.line == 0) {
+                inferred.location = type_location;
+            }
+            return inferred;
         }
         return {};
     }

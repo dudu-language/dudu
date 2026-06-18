@@ -46,6 +46,8 @@ bool is_member_path(const std::string& path);
 
 std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
                                   const SourceLocation* location = nullptr);
+TypeRef infer_cpp_escape_expr_ref(const FunctionScope& scope, std::string expr,
+                                  const SourceLocation* location = nullptr);
 TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
                             const SourceLocation* location);
 void check_expr_ast(const FunctionScope& scope, const Expr& expr, const SourceLocation* location);

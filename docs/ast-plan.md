@@ -2050,6 +2050,10 @@ LSP source edits are also moving to AST-owned ranges:
   build named `TypeRef` nodes directly for known type names.
 - Structural compatibility checks for known names such as `void` and `auto`
   now compare named `TypeRef` nodes directly instead of parsing those strings.
+- Normal expression sema now consumes a typed `cpp(...)` inference API. The
+  string-to-type parse for `cpp(...)` expression inference is confined inside
+  the explicit escape-boundary implementation instead of happening in the
+  ordinary expression sema path.
 
 Expression parsing has moved onto the lexer/token stream:
 
