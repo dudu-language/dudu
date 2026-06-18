@@ -1,9 +1,6 @@
 #include "dudu/sema_builtin_methods.hpp"
 
-#include "dudu/ast_parse_utils.hpp"
 #include "dudu/ast_type.hpp"
-#include "dudu/cpp_lower.hpp"
-#include "dudu/source.hpp"
 
 namespace dudu {
 namespace {
@@ -38,26 +35,42 @@ void set_param_types(FunctionSignature& signature, std::initializer_list<std::st
     }
 }
 
-} // namespace
-
-std::string receiver_template_type(const Symbols& symbols, std::string type) {
-    type = resolve_alias(symbols, std::move(type));
+TypeRef receiver_template_type_ref(const Symbols& symbols, TypeRef type) {
+    type = resolve_alias_ref(symbols, std::move(type));
     while (true) {
-        const TypeRef parsed = parse_type_text(type);
         if (const auto inner =
-                unary_type_child_text(parsed, {TypeKind::Pointer, TypeKind::Reference})) {
+                unary_type_child_ref(type, {TypeKind::Pointer, TypeKind::Reference})) {
             type = *inner;
+            type = resolve_alias_ref(symbols, std::move(type));
             continue;
         }
         break;
     }
-    return trim(std::move(type));
+    return type;
+}
+
+} // namespace
+
+std::string receiver_template_type(const Symbols& symbols, std::string type) {
+    TypeRef type_ref = parse_type_text(type);
+    type_ref = receiver_template_type_ref(symbols, std::move(type_ref));
+    if (substitute_type_ref_text(type_ref, {}) == type) {
+        const std::string resolved = resolve_alias(symbols, std::move(type));
+        if (resolved != substitute_type_ref_text(type_ref, {})) {
+            type_ref = receiver_template_type_ref(symbols, parse_type_text(resolved));
+        }
+    }
+    return trim(substitute_type_ref_text(type_ref, {}));
 }
 
 bool builtin_cpp_method_signature(const Symbols& symbols, std::string receiver_type,
                                   const std::string& method_name, FunctionSignature& signature) {
-    const std::string templated = receiver_template_type(symbols, std::move(receiver_type));
-    const TypeRef templated_ref = parse_type_text(templated);
+    TypeRef templated_ref = receiver_template_type_ref(symbols, parse_type_text(receiver_type));
+    std::string templated = substitute_type_ref_text(templated_ref, {});
+    if (templated == receiver_type) {
+        templated = receiver_template_type(symbols, std::move(receiver_type));
+        templated_ref = parse_type_text(templated);
+    }
     if (templated == "str" || templated == "string" || templated == "string_view" ||
         templated == "std.string" || templated == "std.string_view" || templated == "std::string" ||
         templated == "std::string_view" || templated.find("basic_string") != std::string::npos) {

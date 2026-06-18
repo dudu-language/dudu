@@ -1957,6 +1957,9 @@ LSP source edits are also moving to AST-owned ranges:
 - Inheritance receiver/base unwrapping now resolves aliases through parsed
   `TypeRef` metadata first, with the string alias map retained only as a
   compatibility fallback.
+- Builtin C++ method signature matching now normalizes receiver aliases and
+  pointer/reference wrappers through parsed `TypeRef` metadata before deriving
+  list/set/dict/optional/atomic method signatures.
 
 Expression parsing has moved onto the lexer/token stream:
 

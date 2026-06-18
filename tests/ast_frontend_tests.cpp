@@ -169,10 +169,20 @@ void test_core_type_helpers_use_type_ast() {
 
 void test_builtin_method_signature_uses_type_ast() {
     dudu::Symbols symbols;
+    symbols.aliases["Players"] = "list[*Player]";
+    symbols.alias_type_refs["Players"] = dudu::parse_type_text("list[*Player]");
     dudu::FunctionSignature signature;
     assert(dudu::builtin_cpp_method_signature(symbols, "list[*Player]", "append", signature));
     assert(signature.params.size() == 1);
     assert(signature.params[0] == "*Player");
+    assert(signature.return_type == "void");
+
+    signature = {};
+    assert(dudu::builtin_cpp_method_signature(symbols, "Players", "append", signature));
+    assert(signature.params.size() == 1);
+    assert(signature.params[0] == "*Player");
+    assert(signature.param_type_refs.size() == 1);
+    assert(signature.param_type_refs[0].kind == dudu::TypeKind::Pointer);
     assert(signature.return_type == "void");
 
     signature = {};
