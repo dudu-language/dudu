@@ -118,7 +118,7 @@ std::string infer_call_ast(const FunctionScope& scope, const Expr& expr,
             const std::string receiver_type = infer_expr_ast(scope, receiver_expr, use_location);
             if (receiver_type.empty() || receiver_type == "auto") {
                 for (const Expr& arg : expr.children) {
-                    (void)infer_expr_ast(scope, arg, use_location);
+                    check_expr_ast(scope, arg, use_location);
                 }
                 return "auto";
             }
@@ -158,7 +158,7 @@ std::string infer_call_ast(const FunctionScope& scope, const Expr& expr,
             }
             if (foreign_receiver) {
                 for (const Expr& arg : expr.children) {
-                    (void)infer_expr_ast(scope, arg, use_location);
+                    check_expr_ast(scope, arg, use_location);
                 }
                 return "auto";
             }
@@ -168,7 +168,7 @@ std::string infer_call_ast(const FunctionScope& scope, const Expr& expr,
     if (method_dot != std::string::npos) {
         if (native_import_path_prefix(scope.symbols, callee)) {
             for (const Expr& arg : expr.children) {
-                (void)infer_expr_ast(scope, arg, use_location);
+                check_expr_ast(scope, arg, use_location);
             }
             return "auto";
         }

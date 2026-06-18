@@ -54,6 +54,8 @@ std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                            const SourceLocation* location = nullptr);
 TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
                             const SourceLocation* location = nullptr);
+void check_expr_ast(const FunctionScope& scope, const Expr& expr,
+                    const SourceLocation* location = nullptr);
 std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Expr& expr,
                                             const SourceLocation* location);
 std::optional<TypeRef> direct_template_call_type_ref(const FunctionScope& scope, const Expr& expr,

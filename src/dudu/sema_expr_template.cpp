@@ -79,7 +79,7 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
             return {};
         }
         for (const Expr& arg : expr.children) {
-            (void)infer_expr_ast(scope, arg, location);
+            check_expr_ast(scope, arg, location);
         }
         return "*" + substitute_type_ref_text(pointee_ref, {});
     }
@@ -88,7 +88,7 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
                                                   template_type_refs(expr), expr.children.size());
     if (allocation) {
         for (const Expr& arg : expr.children) {
-            (void)infer_expr_ast(scope, arg, location);
+            check_expr_ast(scope, arg, location);
         }
         return *allocation;
     }
@@ -203,7 +203,7 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
                 member_expr_type(scope.symbols, scope.locals, location, receiver_expr);
             if (receiver_type.empty() || receiver_type == "auto") {
                 for (const Expr& arg : expr.children) {
-                    (void)infer_expr_ast(scope, arg, location);
+                    check_expr_ast(scope, arg, location);
                 }
                 return "auto";
             }
@@ -222,7 +222,7 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
             }
             if (foreign_receiver) {
                 for (const Expr& arg : expr.children) {
-                    (void)infer_expr_ast(scope, arg, location);
+                    check_expr_ast(scope, arg, location);
                 }
                 return "auto";
             }
@@ -231,7 +231,7 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
     const size_t method_dot = callee_base.rfind('.');
     if (known_template_constructor_type(scope, callee)) {
         for (const Expr& arg : expr.children) {
-            (void)infer_expr_ast(scope, arg, location);
+            check_expr_ast(scope, arg, location);
         }
         return callee;
     }
@@ -243,7 +243,7 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
         const std::string prefix = trim(callee_base.substr(0, method_dot));
         if (native_import_path_prefix(scope.symbols, callee_base)) {
             for (const Expr& arg : expr.children) {
-                (void)infer_expr_ast(scope, arg, location);
+                check_expr_ast(scope, arg, location);
             }
             return "auto";
         }
@@ -277,7 +277,7 @@ std::string infer_constructor_call_ast(const FunctionScope& scope, const Expr& e
         return callee;
     }
     for (const Expr& arg : expr.children) {
-        (void)infer_expr_ast(scope, arg, location);
+        check_expr_ast(scope, arg, location);
     }
     return callee;
 }
@@ -301,35 +301,37 @@ std::string infer_builtin_call_ast(const FunctionScope& scope, const Expr& expr,
     if (callee == "len") {
         check_arity(1, 1);
         for (const Expr& arg : expr.children) {
-            (void)infer_expr_ast(scope, arg, location);
+            check_expr_ast(scope, arg, location);
         }
         return "usize";
     }
     if (callee == "range") {
         check_arity(1, 3);
         for (const Expr& arg : expr.children) {
-            (void)infer_expr_ast(scope, arg, location);
+            check_expr_ast(scope, arg, location);
         }
         return "range";
     }
     if (callee == "min" || callee == "max") {
         check_arity(2, 2);
-        std::string first;
+        TypeRef first;
         for (size_t i = 0; i < expr.children.size(); ++i) {
-            const std::string got = infer_expr_ast(scope, expr.children[i], location);
+            const TypeRef got = infer_expr_type_ast(scope, expr.children[i], location);
             if (i == 0) {
                 first = got;
                 continue;
             }
             if (location != nullptr && !can_assign_ast(scope, first, expr.children[i], got)) {
-                sema_expr_fail(*location, callee + " argument 2 expects " + first + ", got " + got);
+                sema_expr_fail(*location, callee + " argument 2 expects " +
+                                              substitute_type_ref_text(first, {}) + ", got " +
+                                              substitute_type_ref_text(got, {}));
             }
         }
-        return first.empty() ? "auto" : first;
+        return has_type_ref(first) ? substitute_type_ref_text(first, {}) : "auto";
     }
     if (callee == "print") {
         for (const Expr& arg : expr.children) {
-            (void)infer_expr_ast(scope, arg, location);
+            check_expr_ast(scope, arg, location);
         }
         return "void";
     }
@@ -363,7 +365,7 @@ std::optional<std::string> infer_pointer_cast_call_ast(const FunctionScope& scop
         return std::nullopt;
     }
     for (const Expr& arg : expr.children) {
-        (void)infer_expr_ast(scope, arg, location);
+        check_expr_ast(scope, arg, location);
     }
     return "*" + type;
 }

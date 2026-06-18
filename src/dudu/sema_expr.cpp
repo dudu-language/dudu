@@ -134,6 +134,10 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
     return inferred.empty() ? TypeRef{} : parse_type_text(inferred, type_location);
 }
 
+void check_expr_ast(const FunctionScope& scope, const Expr& expr, const SourceLocation* location) {
+    (void)infer_expr_type_ast(scope, expr, location);
+}
+
 std::string infer_expr_ast(const FunctionScope& scope, const Expr& expr,
                            const SourceLocation* location) {
     const SourceLocation* use_location =

@@ -367,6 +367,9 @@ Already structured:
 - C++ escape compatibility inference now uses structured expression typing for
   validation-only argument walks and parsed unary/binary fallback expressions,
   leaving rendered strings only where the escape boundary returns display text
+- call/template inference now uses `check_expr_ast` for validation-only argument
+  walks, and builtin `min`/`max` compares parsed actual `TypeRef` nodes instead
+  of recursive string expression results
 - LSP local variable/parameter type collection for hover, member completion,
   and member definition now walks parsed function/method bodies and reuses
   semantic expression inference instead of regexing source lines
