@@ -411,26 +411,11 @@ FunctionSignature substitute_bound_template_signature(FunctionSignature signatur
         params.reserve(signature_param_count(signature));
         for (size_t i = 0; i < signature_param_count(signature); ++i) {
             const TypeRef param_type = signature_param_type_ref(signature, i);
-            if (has_type_ref(param_type)) {
-                params.push_back(substitute_type_ref(param_type, refs));
-            } else {
-                params.push_back(parse_type_text(
-                    replace_template_bindings(signature_param_type_text(signature, i), bindings,
-                                              pack_bindings),
-                    param_type.location));
-            }
+            params.push_back(substitute_type_ref(param_type, refs));
         }
         set_signature_param_types(signature, std::move(params));
         const TypeRef return_type = signature_return_type_ref(signature);
-        if (has_type_ref(return_type)) {
-            set_signature_return_type(signature, substitute_type_ref(return_type, refs));
-        } else {
-            set_signature_return_type(
-                signature,
-                parse_type_text(replace_template_bindings(signature_return_type_text(signature),
-                                                          bindings, pack_bindings),
-                                return_type.location));
-        }
+        set_signature_return_type(signature, substitute_type_ref(return_type, refs));
         return signature;
     }
 

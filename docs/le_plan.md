@@ -1691,6 +1691,10 @@ push. They are not release packaging work.
    `TypeRef` nodes and scans each node's attached raw spelling for native
    artifact placeholders, instead of rendering whole signature return/parameter
    types before scanning.
+   The structured native template substitution branch now assumes the
+   already-verified signature `TypeRef` nodes are present and deletes its dead
+   render/reparse fallback for missing parameter or return types. Text
+   replacement remains only in the explicit native-artifact fallback branch.
    `substitute_type_ref` now has a structured `TypeRef` substitution overload.
    Receiver generic substitution for fields, methods, inherited methods, and
    inferred generic method signatures uses parsed receiver template arguments
