@@ -1642,6 +1642,10 @@ LSP source edits are also moving to AST-owned ranges:
 - Typed expression inference for calls through local `fn(...)` values now uses
   parsed `FunctionSignature` metadata directly, so callback variables no longer
   depend on the older string-returning call inference fallback.
+- Typed expression inference for normal method calls, static method calls, and
+  inferred generic method calls now returns parsed `FunctionSignature` result
+  metadata directly; the duplicate string-returning method-call fallback has
+  been removed.
 - Condition and comparison-operator semantic checks now validate operator
   return types through parsed `signature_return_type_ref` metadata instead of
   comparing rendered signature return strings.
