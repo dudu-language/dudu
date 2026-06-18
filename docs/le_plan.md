@@ -1831,3 +1831,6 @@ push. They are not release packaging work.
    just to compare against `"auto"`.
    Member-field semantic inference now does the same for direct member
    expressions and only renders receiver types when constructing a diagnostic.
+   Statement semantic checking no longer renders the function return type for
+   every statement; return checks use structured void predicates and render
+   type names only for diagnostics.

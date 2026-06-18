@@ -38,11 +38,11 @@ void check_block(FunctionScope& scope, const std::vector<Stmt>& body,
 void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_type_ref,
                 int loop_depth) {
     check_local_address_escape(stmt, scope.local_type_refs);
-    const std::string return_type = substitute_type_ref_text(return_type_ref, {});
     if (stmt.kind == StmtKind::Return) {
         const SourceLocation& value_location = node_location(stmt.location, stmt.value_expr);
         if (missing_expr(stmt.value_expr)) {
             if (!type_ref_is_void(return_type_ref)) {
+                const std::string return_type = type_ref_text(return_type_ref);
                 sema_fail(value_location,
                           "return type mismatch: expected " + return_type + ", got void");
             }
@@ -54,9 +54,8 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
             return;
         }
         const TypeRef got_ref = infer_expr_type_ast(scope, stmt.value_expr, &value_location);
-        const std::string got = substitute_type_ref_text(got_ref, {});
-        if (got != "void") {
-            sema_fail(value_location, "void function cannot return " + got);
+        if (!type_ref_is_void(got_ref)) {
+            sema_fail(value_location, "void function cannot return " + type_ref_text(got_ref));
         }
         return;
     }
