@@ -1731,3 +1731,5 @@ push. They are not release packaging work.
    named `TypeRef` nodes directly rather than parsing known type-name strings.
    Class-emission pseudo-locals and built-in method return signatures now also
    build named `TypeRef` nodes directly for known type names.
+   Structural compatibility checks for known names such as `void` and `auto`
+   now compare named `TypeRef` nodes directly instead of parsing those strings.

@@ -71,7 +71,7 @@ bool same_type_name(const TypeRef& expected, const TypeRef& got) {
 }
 
 bool same_type_name(std::string expected, const TypeRef& got) {
-    return type_refs_equivalent_ignoring_c_tags(parse_type_text(std::move(expected)), got);
+    return type_refs_equivalent_ignoring_c_tags(named_type_ref(std::move(expected)), got);
 }
 
 bool is_transparent_wrapper(const TypeKind kind) {
