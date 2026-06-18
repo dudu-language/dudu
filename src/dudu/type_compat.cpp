@@ -33,15 +33,6 @@ std::string wrapped_type_arg(std::string type) {
     return type;
 }
 
-std::string wrapped_type_arg(const TypeRef& type) {
-    if (const auto inner =
-            unary_type_child_ref(type, {TypeKind::Const, TypeKind::Atomic, TypeKind::Volatile,
-                                        TypeKind::Device, TypeKind::Storage, TypeKind::Shared})) {
-        return substitute_type_ref_text(*inner, {});
-    }
-    return substitute_type_ref_text(type, {});
-}
-
 TypeRef wrapped_type_arg_ref(const TypeRef& type) {
     if (const auto inner =
             unary_type_child_ref(type, {TypeKind::Const, TypeKind::Atomic, TypeKind::Volatile,
@@ -138,7 +129,7 @@ bool is_reference_binding(std::string expected, std::string got) {
 
 bool is_reference_binding(const TypeRef& expected, const TypeRef& got) {
     if (const auto target = reference_target_ref(expected)) {
-        return wrapped_type_arg(*target) == substitute_type_ref_text(got, {});
+        return type_ref_equivalent(wrapped_type_arg_ref(*target), got);
     }
     return false;
 }
@@ -153,7 +144,7 @@ bool is_value_from_reference(std::string expected, std::string got) {
 
 bool is_value_from_reference(const TypeRef& expected, const TypeRef& got) {
     if (const auto target = reference_target_ref(got)) {
-        return substitute_type_ref_text(expected, {}) == wrapped_type_arg(*target);
+        return type_ref_equivalent(expected, wrapped_type_arg_ref(*target));
     }
     return false;
 }
@@ -211,7 +202,7 @@ bool is_const_pointer_binding(const TypeRef& expected, const TypeRef& got) {
     }
     const auto expected_const_inner = unary_child_ref(*expected_pointee, TypeKind::Const);
     return expected_const_inner &&
-           wrapped_type_arg(*got_pointee) == substitute_type_ref_text(*expected_const_inner, {});
+           type_ref_equivalent(wrapped_type_arg_ref(*got_pointee), *expected_const_inner);
 }
 
 bool is_pointer_to_reference_value(std::string expected, std::string got) {
@@ -232,8 +223,8 @@ bool is_pointer_to_reference_value(const TypeRef& expected, const TypeRef& got) 
         return false;
     }
     const auto got_reference_target = reference_target_ref(*got_pointee);
-    return got_reference_target &&
-           wrapped_type_arg(*expected_pointee) == wrapped_type_arg(*got_reference_target);
+    return got_reference_target && type_ref_equivalent(wrapped_type_arg_ref(*expected_pointee),
+                                                       wrapped_type_arg_ref(*got_reference_target));
 }
 
 bool is_cpp_associated_type_binding(std::string expected, std::string got) {
@@ -357,8 +348,7 @@ bool is_value_from_const(std::string expected, std::string got) {
 
 bool is_value_from_const(const TypeRef& expected, const TypeRef& got) {
     const auto inner = unary_child_ref(got, TypeKind::Const);
-    return inner.has_value() && compact_type(substitute_type_ref_text(expected, {})) ==
-                                    compact_type(substitute_type_ref_text(*inner, {}));
+    return inner.has_value() && type_ref_equivalent(expected, *inner);
 }
 
 bool text_type_assignment_allowed(const std::string& expected, const std::string& got) {

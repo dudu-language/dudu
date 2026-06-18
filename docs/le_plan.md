@@ -1529,6 +1529,10 @@ push. They are not release packaging work.
    Binary and comparison operator validation now checks unknown/auto,
    foreign-type sameness, generic-parameter sameness, string, numeric, and
    integer predicates from `TypeRef` helpers instead of rendered type strings.
+   TypeRef assignment compatibility helpers for reference binding, const pointer
+   binding, pointer-to-reference values, and const unwrapping now compare
+   unwrapped `TypeRef` nodes directly; the text versions remain only at explicit
+   legacy/native text boundaries.
    Native value type inference now reads `native_value_type_refs` directly.
    The `native_values` string map remains only as a display/native-boundary
    mirror populated from structured `TypeRef` data during symbol collection.
