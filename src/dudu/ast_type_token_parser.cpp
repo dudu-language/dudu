@@ -249,7 +249,7 @@ TypeRef TypeTokenParser::parse_fn_type(size_t begin) {
         return parse_function_type(begin, std::move(params));
     }
     TypeRef type = make_node(TypeKind::Function, begin, cursor_);
-    type.children.push_back(parse_type_text("void", type.location));
+    type.children.push_back(void_type_ref(type.location));
     type.children.insert(type.children.end(), std::make_move_iterator(params.begin()),
                          std::make_move_iterator(params.end()));
     type.text = text_between(begin, cursor_);

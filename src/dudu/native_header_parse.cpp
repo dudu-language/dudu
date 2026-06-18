@@ -393,9 +393,9 @@ void parse_macro_dump(NativeHeaderScan& scan, const std::string& dump,
                  .template_params = {},
                  .params = std::vector<std::string>(static_cast<size_t>(params.arity), "auto"),
                  .param_type_refs = std::vector<TypeRef>(static_cast<size_t>(params.arity),
-                                                         parse_type_text("auto", location)),
+                                                         named_type_ref("auto", location)),
                  .return_type = "auto",
-                 .return_type_ref = parse_type_text("auto", location),
+                 .return_type_ref = named_type_ref("auto", location),
                  .min_params = params.arity,
                  .variadic = params.variadic,
                  .location = location});
@@ -407,7 +407,7 @@ void parse_macro_dump(NativeHeaderScan& scan, const std::string& dump,
             scan.macros.push_back({.name = name, .function_like = false, .location = location});
             scan.values.push_back({.name = name,
                                    .type = "auto",
-                                   .type_ref = parse_type_text("auto", location),
+                                   .type_ref = named_type_ref("auto", location),
                                    .location = location});
         }
     }

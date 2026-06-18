@@ -1719,3 +1719,7 @@ push. They are not release packaging work.
    helpers now also construct built-in `TypeRef` nodes directly. Remaining
    built-in parser calls are confined to the type parser and native header
    parser.
+   Function-type parsing and native macro fallback metadata now also construct
+   `void` and `auto` `TypeRef` nodes directly. The broad built-in parser-call
+   scan is now down to explicit parser/native type parsing and `cpp(...)`
+   escape-boundary text.
