@@ -80,13 +80,6 @@ std::string infer_call_ast(const FunctionScope& scope, const Expr& expr,
     if (known_template_constructor_type(scope, callee)) {
         return infer_constructor_call_ast(scope, expr, callee, use_location);
     }
-    if (const auto local = scope.locals.find(callee); local != scope.locals.end()) {
-        FunctionSignature signature;
-        if (parse_local_function_type(scope, callee, local->second, signature)) {
-            check_call_args_ast(scope, callee, signature, expr.children, use_location);
-            return signature_return_type_text(signature);
-        }
-    }
     if (is_builtin_call(callee)) {
         return infer_builtin_call_ast(scope, expr, callee, use_location);
     }
