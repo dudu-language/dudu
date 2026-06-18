@@ -532,7 +532,9 @@ push. They are not release packaging work.
    dotted callees remain only at native import prefix boundaries.
    Parsed call and template-call expressions no longer receive a parser-filled
    callee-name mirror; sema, codegen, lints, and AST tests read direct call
-   identity through the structured callee expression.
+   identity through the structured callee expression. Shared callee helpers now
+   return an empty callee for malformed internal call nodes instead of falling
+   back to stale `Expr::name` mirrors.
    `super.init(...)` recognition in sema and class emission now checks parsed
    member-callee shape instead of reconstructed callee text. Type
    compatibility exposes parsed `TypeRef`
