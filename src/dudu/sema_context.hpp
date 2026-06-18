@@ -44,7 +44,6 @@ std::optional<std::pair<std::string, SourceLocation>> unknown_type_ref(const Sym
                                                                        const TypeRef& type);
 void check_known_type_ref(const Symbols& symbols, const SourceLocation& location,
                           const TypeRef& type, const std::string& message);
-std::string resolve_alias(const Symbols& symbols, std::string type);
 TypeRef resolve_alias_ref(const Symbols& symbols, TypeRef type);
 std::vector<std::string> split_top_level(std::string text);
 size_t find_top_level_char(const std::string& text, char wanted);

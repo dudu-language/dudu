@@ -1688,3 +1688,5 @@ push. They are not release packaging work.
    Native function display and merge-key code now renders directly from
    `TypeRef` parameter/return helpers, and the public native/function return
    string helper APIs have been removed.
+   The dead rendered-string alias resolver has been deleted; alias resolution
+   now goes through `resolve_alias_ref` and structured `TypeRef` metadata.

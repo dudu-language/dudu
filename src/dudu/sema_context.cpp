@@ -219,22 +219,6 @@ void check_known_type_ref(const Symbols& symbols, const SourceLocation& location
     }
 }
 
-std::string resolve_alias(const Symbols& symbols, std::string type) {
-    type = trim(std::move(type));
-    for (size_t guard = 0; guard < symbols.alias_type_refs.size(); ++guard) {
-        const TypeRef parsed = parse_type_text(type);
-        if (parsed.kind != TypeKind::Named && parsed.kind != TypeKind::Qualified) {
-            return type;
-        }
-        const auto found = symbols.alias_type_refs.find(parsed.name);
-        if (found == symbols.alias_type_refs.end()) {
-            return type;
-        }
-        type = substitute_type_ref_text(found->second, {});
-    }
-    return type;
-}
-
 TypeRef resolve_alias_ref(const Symbols& symbols, TypeRef type) {
     for (size_t guard = 0; guard < symbols.alias_type_refs.size(); ++guard) {
         if (type.kind != TypeKind::Named && type.kind != TypeKind::Qualified) {
