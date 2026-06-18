@@ -97,7 +97,8 @@ std::string lower_call_args_for_signature(const std::vector<Expr>& args, const F
 bool expression_has_pointer_type(const Expr& expr, const std::map<std::string, std::string>& locals,
                                  const std::map<std::string, TypeRef>& local_type_refs,
                                  const Symbols* symbols) {
-    if (is_pointer_receiver_expr(expr, locals, local_type_refs, symbols)) {
+    (void)locals;
+    if (is_pointer_receiver_expr(expr, local_type_refs)) {
         return true;
     }
     if (symbols == nullptr) {

@@ -321,7 +321,7 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
                     lower_swizzle_expr(expr, aliases, locals, local_type_refs, symbols, options)) {
                 return *swizzle;
             }
-            if (is_pointer_receiver_expr(expr.children.front(), locals, local_type_refs, symbols)) {
+            if (is_pointer_receiver_expr(expr.children.front(), local_type_refs)) {
                 return lower_expr(expr.children.front(), aliases, locals, local_type_refs, symbols,
                                   options) +
                        "->" + expr.name;

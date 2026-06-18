@@ -169,6 +169,8 @@ Already structured:
   type string
 - fixed-array slice emission now reads shape metadata from local `TypeRef`s
   only, and the no-`TypeRef` slice emit overloads were removed
+- pointer receiver detection in C++ expression emit now reads local `TypeRef`
+  metadata directly instead of reparsing compatibility local type strings
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path
