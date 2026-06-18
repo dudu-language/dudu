@@ -1321,6 +1321,9 @@ declarations safely.
    helpers have been removed.
    General AST type helper convenience overloads that parsed raw strings have
    been removed; callers must parse once and pass `TypeRef`.
+   Unused string reparsing overloads for function-type parsing and receiver
+   template substitution have been removed; tests now exercise those paths by
+   parsing once and passing `TypeRef`.
    Native member lookup exposes the parsed `TypeRef` result API only; unused
    string-returning native member helpers have been removed.
    Dudu method lookup, generic method inference, static method lookup, and

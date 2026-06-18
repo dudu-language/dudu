@@ -3,37 +3,11 @@
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/sema_context.hpp"
-#include "dudu/source.hpp"
 
-#include <cctype>
 #include <map>
 
 namespace dudu {
 namespace {
-
-bool is_identifier_char(char ch) {
-    return std::isalnum(static_cast<unsigned char>(ch)) != 0 || ch == '_';
-}
-
-std::string replace_type_identifier(std::string type, const std::string& from,
-                                    const std::string& to) {
-    if (from.empty() || to.empty()) {
-        return type;
-    }
-    size_t pos = type.find(from);
-    while (pos != std::string::npos) {
-        const bool left_ok = pos == 0 || !is_identifier_char(type[pos - 1]);
-        const size_t end = pos + from.size();
-        const bool right_ok = end == type.size() || !is_identifier_char(type[end]);
-        if (left_ok && right_ok) {
-            type.replace(pos, from.size(), to);
-            pos = type.find(from, pos + to.size());
-        } else {
-            pos = type.find(from, end);
-        }
-    }
-    return type;
-}
 
 std::map<std::string, std::string>
 receiver_template_substitutions(const std::vector<std::string>& receiver_args) {
@@ -63,15 +37,6 @@ receiver_template_substitutions(const std::vector<std::string>& receiver_args) {
     return substitutions;
 }
 
-std::string
-substitute_native_type_identifiers(std::string type,
-                                   const std::map<std::string, std::string>& substitutions) {
-    for (const auto& [name, value] : substitutions) {
-        type = replace_type_identifier(std::move(type), name, value);
-    }
-    return type;
-}
-
 } // namespace
 
 std::vector<std::string> template_args_from_type(const TypeRef& type) {
@@ -94,20 +59,6 @@ TypeRef substitute_receiver_template_type(const TypeRef& type,
         return type;
     }
     return substitute_type_ref(type, substitutions);
-}
-
-std::string substitute_receiver_template_type(std::string type,
-                                              const std::vector<std::string>& receiver_args) {
-    const std::map<std::string, std::string> substitutions =
-        receiver_template_substitutions(receiver_args);
-    if (substitutions.empty()) {
-        return type;
-    }
-    const TypeRef parsed = parse_type_text(type);
-    if (has_type_ref(parsed)) {
-        return substitute_type_ref_text(substitute_type_ref(parsed, substitutions), {});
-    }
-    return substitute_native_type_identifiers(std::move(type), substitutions);
 }
 
 } // namespace dudu

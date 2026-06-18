@@ -82,10 +82,6 @@ std::string function_type(const FunctionSignature& signature) {
     return out.str();
 }
 
-bool parse_function_type(std::string type, FunctionSignature& out) {
-    return parse_function_type(parse_type_text(type), out);
-}
-
 bool parse_function_type(const TypeRef& type, FunctionSignature& out) {
     const TypeRef* function = &type;
     if (type.kind == TypeKind::Template && type.children.size() == 1 &&

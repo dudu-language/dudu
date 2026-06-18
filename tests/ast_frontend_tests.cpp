@@ -25,6 +25,7 @@
 #include <exception>
 #include <iostream>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace {
@@ -229,11 +230,14 @@ void test_native_template_binding_resolves_alias_type_refs() {
 }
 
 void test_receiver_template_substitution_uses_type_ast() {
-    assert(dudu::substitute_receiver_template_type("list[value_type]", {"i32"}) == "list[i32]");
-    assert(dudu::substitute_receiver_template_type("fn(value_type) -> element_type", {"f32"}) ==
-           "fn(f32) -> f32");
-    assert(dudu::substitute_receiver_template_type("std::vector<value_type>", {"i32"}) ==
-           "std::vector<i32>");
+    auto substitute = [](std::string_view type, std::vector<std::string> receiver_args) {
+        return dudu::substitute_type_ref_text(
+            dudu::substitute_receiver_template_type(dudu::parse_type_text(type), receiver_args),
+            {});
+    };
+    assert(substitute("list[value_type]", {"i32"}) == "list[i32]");
+    assert(substitute("fn(value_type) -> element_type", {"f32"}) == "fn(f32) -> f32");
+    assert(substitute("std::vector<value_type>", {"i32"}) == "std::vector<i32>");
 
     const dudu::TypeRef vector_type = dudu::parse_type_text("std::vector<value_type>");
     const dudu::TypeRef vector_substituted =
