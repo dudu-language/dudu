@@ -17,10 +17,6 @@ bool is_numeric_type_name(const Symbols& symbols, std::string type) {
     return numeric.contains(trim(type));
 }
 
-bool type_ref_is_name_ref(const TypeRef& type, std::string_view name) {
-    return type.kind == TypeKind::Named && type_ref_head_name(type) == name;
-}
-
 TypeRef named_type_ref(std::string name, SourceLocation location) {
     TypeRef type;
     type.kind = TypeKind::Named;
@@ -153,7 +149,7 @@ std::optional<TypeRef> binary_expr_type_ref(const FunctionScope& scope, const Ex
                     sema_expr_fail(*location, "operator " + expr.op + " expects " +
                                                   signature->params.front() + ", got " + right);
                 }
-                if (!type_ref_is_name_ref(signature_return_type_ref(*signature), "bool")) {
+                if (!type_ref_is_name(signature_return_type_ref(*signature), "bool")) {
                     sema_expr_fail(*location,
                                    "comparison operator " + expr.op + " must return bool");
                 }

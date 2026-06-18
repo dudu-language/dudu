@@ -1411,3 +1411,5 @@ push. They are not release packaging work.
    Named-type checks now use a shared AST-level `type_ref_is_name` helper;
    declaration and body semantic helpers no longer carry duplicate local
    implementations.
+   Binary/comparison expression semantic checks also use the shared
+   `type_ref_is_name` helper instead of carrying a local duplicate.
