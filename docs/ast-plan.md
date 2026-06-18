@@ -2002,7 +2002,8 @@ LSP source edits are also moving to AST-owned ranges:
   old string receiver and string result wrappers have been removed, with
   `cpp(...)` escape inference rendering only at its boundary.
 - Array shape inference and fixed-array introspection now accept parsed
-  `TypeRef` declarations only; dead string overloads have been removed.
+  `TypeRef` declarations only; dead string overloads and unused string element
+  helpers have been removed.
 
 Expression parsing has moved onto the lexer/token stream:
 

@@ -22,7 +22,6 @@ struct ArrayShapeInference {
 };
 
 ArrayShapeInference infer_array_literal_shape_type(const TypeRef& declared_type, const Expr& value);
-std::string explicit_array_element_type(const TypeRef& declared_type);
 TypeRef explicit_array_element_type_ref(const TypeRef& declared_type);
 std::vector<size_t> explicit_array_shape(const TypeRef& declared_type);
 

@@ -144,11 +144,6 @@ std::vector<size_t> explicit_array_shape(const TypeRef& declared_type) {
     return info ? info->second : std::vector<size_t>{};
 }
 
-std::string explicit_array_element_type(const TypeRef& declared_type) {
-    const auto info = explicit_array_type_info(declared_type);
-    return info ? info->first : std::string{};
-}
-
 TypeRef explicit_array_element_type_ref(const TypeRef& declared_type) {
     if (declared_type.kind != TypeKind::FixedArray || declared_type.children.empty()) {
         return {};
