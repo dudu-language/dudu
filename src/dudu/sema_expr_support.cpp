@@ -1,6 +1,7 @@
 #include "dudu/ast_type.hpp"
 #include "dudu/sema_expr_internal.hpp"
 #include "dudu/sema_function_type.hpp"
+#include "dudu/sema_scope.hpp"
 
 namespace dudu {
 namespace {
@@ -107,8 +108,8 @@ bool parse_local_function_type(const FunctionScope& scope, const std::string& na
         const auto alias = scope.symbols.alias_type_refs.find(type_ref.name);
         return alias != scope.symbols.alias_type_refs.end() && parse_ref(alias->second);
     };
-    if (const auto local_type = scope.local_type_refs.find(name);
-        local_type != scope.local_type_refs.end() && parse_ref(local_type->second)) {
+    const TypeRef local_type = local_type_ref(scope, name);
+    if (local_type.kind != TypeKind::Unknown && parse_ref(local_type)) {
         return true;
     }
     return parse_function_type(resolve_alias(scope.symbols, type), out);

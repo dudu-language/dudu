@@ -136,6 +136,8 @@ Already structured:
 - indexed-local and iterable-local semantic lookup now enters through the shared
   typed-first local `TypeRef` helper before touching compatibility local type
   strings
+- assignment-target and local callback signature semantic lookup also enter
+  through the same typed-first local `TypeRef` helper
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path

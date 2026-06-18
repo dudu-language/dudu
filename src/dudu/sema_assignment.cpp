@@ -8,6 +8,7 @@
 #include "dudu/sema_index.hpp"
 #include "dudu/sema_methods.hpp"
 #include "dudu/sema_ops.hpp"
+#include "dudu/sema_scope.hpp"
 
 #include <optional>
 #include <string_view>
@@ -91,13 +92,9 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt,
         if (local == scope.locals.end()) {
             sema_fail(target_location, "assignment to unknown local: " + name);
         }
-        if (const auto type_ref = scope.local_type_refs.find(name);
-            type_ref != scope.local_type_refs.end()) {
-            return type_ref->second;
-        }
-        TypeRef unknown;
-        unknown.location = target_location;
-        return unknown;
+        TypeRef type_ref = local_type_ref(scope, name, target_location);
+        type_ref.location = target_location;
+        return type_ref;
     }
     if (stmt.target_expr.kind == ExprKind::Member) {
         if (stmt.target_expr.children.size() == 1 && is_swizzle_name(stmt.target_expr.name)) {
