@@ -1939,6 +1939,9 @@ LSP source edits are also moving to AST-owned ranges:
   spelling strings, and normal name/member expression sema reads those refs
   directly for imported constants, build flags, shader/native values, and class
   constants instead of reparsing native value type text.
+- AST assignment compatibility now resolves aliases through parsed `TypeRef`
+  metadata when either side is already structured. The pure string overload is
+  kept as a named compatibility boundary for older callers.
 
 Expression parsing has moved onto the lexer/token stream:
 

@@ -11,6 +11,7 @@
 #include "dudu/sema.hpp"
 #include "dudu/sema_builtin_methods.hpp"
 #include "dudu/sema_context.hpp"
+#include "dudu/sema_expr_internal.hpp"
 #include "dudu/sema_function_type.hpp"
 #include "dudu/sema_inheritance.hpp"
 #include "dudu/sema_method_templates.hpp"
@@ -112,6 +113,18 @@ void test_type_compat_uses_type_ast_for_pointers() {
     assert(dudu::assignment_type_allowed(dudu::parse_type_text("std.unique_ptr[Node]"), name_expr,
                                          "__detail.__unique_ptr_t[Node]"));
     assert(!dudu::assignment_type_allowed(dudu::parse_type_text("f32"), name_expr, "__m128"));
+}
+
+void test_can_assign_resolves_alias_type_refs() {
+    dudu::Symbols symbols;
+    symbols.aliases["Meters"] = "f32";
+    symbols.aliases["Distance"] = "Meters";
+    symbols.alias_type_refs["Meters"] = dudu::parse_type_text("f32");
+    symbols.alias_type_refs["Distance"] = dudu::parse_type_text("Meters");
+    const dudu::FunctionScope scope(symbols);
+    const dudu::Expr value = dudu::parse_expr_text("value");
+    assert(dudu::can_assign_ast(scope, dudu::parse_type_text("Distance"), value,
+                                dudu::parse_type_text("Meters")));
 }
 
 void test_core_type_helpers_use_type_ast() {
@@ -1193,6 +1206,7 @@ int main() {
         test_ast_assignment_display_types();
         test_missing_expression_is_not_unknown();
         test_type_compat_uses_type_ast_for_pointers();
+        test_can_assign_resolves_alias_type_refs();
         test_core_type_helpers_use_type_ast();
         test_builtin_method_signature_uses_type_ast();
         test_native_header_types_split_cpp_templates();
