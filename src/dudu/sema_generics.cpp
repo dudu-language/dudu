@@ -50,9 +50,6 @@ bool infer_generic_binding(const TypeRef& param_type, const TypeRef& arg_type,
         }
         return true;
     }
-    if (param.empty() || arg.empty()) {
-        return true;
-    }
     if ((param_type.kind == TypeKind::Pointer || param_type.kind == TypeKind::Reference) &&
         param_type.kind == arg_type.kind && param_type.children.size() == 1 &&
         arg_type.children.size() == 1) {
@@ -82,6 +79,10 @@ bool infer_generic_binding(const TypeRef& param_type, const TypeRef& arg_type,
         }
         return infer_generic_binding(param_type.children.front(), arg_type.children.front(), params,
                                      bindings, error);
+    }
+
+    if (param.empty() || arg.empty()) {
+        return true;
     }
 
     if (param_type.children.empty() || param_type.children.size() != arg_type.children.size()) {

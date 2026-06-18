@@ -1904,3 +1904,7 @@ push. They are not release packaging work.
    Pointer-cast C++ emission no longer has a raw `TypeRef.text` special case
    for `struct Foo` cast targets; it recognizes the parsed type shape carried
    by the call expression.
+   Inferred fixed-array literal types no longer synthesize a rendered
+   `array[T][shape]` mirror into `TypeRef.text`; the inferred type is carried
+   by `FixedArray` children and shape value metadata, and renderers derive the
+   spelling from that structure.
