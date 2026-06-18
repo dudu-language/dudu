@@ -253,10 +253,11 @@ std::vector<FunctionSignature> method_signatures_for_type(const Symbols& symbols
     return method_signatures_for_type(symbols, parse_type_text(receiver_type), method_name);
 }
 
-bool static_method_signature_for_type(const Symbols& symbols, const std::string& type_name,
+bool static_method_signature_for_type(const Symbols& symbols, const TypeRef& type_name,
                                       const std::string& method_name, FunctionSignature& signature,
                                       const SourceLocation* location) {
-    const std::string templated_receiver = receiver_template_type(symbols, type_name);
+    const std::string type_name_text = substitute_type_ref_text(type_name, {});
+    const std::string templated_receiver = receiver_template_type(symbols, type_name_text);
     const std::vector<std::string> receiver_args = template_args_from_type(templated_receiver);
     const std::string type = unwrap_receiver_type(symbols, type_name);
     const std::string lookup_name = template_method_name(method_name);
@@ -283,8 +284,8 @@ bool static_method_signature_for_type(const Symbols& symbols, const std::string&
         return true;
     }
     for (const BaseClassDecl& base_decl : klass->second->base_class_refs) {
-        const std::string base = type_ref_text(base_decl.type_ref);
-        if (static_method_signature_for_type(symbols, base, method_name, signature, nullptr)) {
+        if (static_method_signature_for_type(symbols, base_decl.type_ref, method_name, signature,
+                                             nullptr)) {
             return true;
         }
     }
@@ -292,6 +293,13 @@ bool static_method_signature_for_type(const Symbols& symbols, const std::string&
         sema_fail(*location, "unknown static method: " + type + "." + method_name);
     }
     return false;
+}
+
+bool static_method_signature_for_type(const Symbols& symbols, const std::string& type_name,
+                                      const std::string& method_name, FunctionSignature& signature,
+                                      const SourceLocation* location) {
+    return static_method_signature_for_type(symbols, parse_type_text(type_name), method_name,
+                                            signature, location);
 }
 
 } // namespace dudu

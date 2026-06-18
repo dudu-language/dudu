@@ -378,6 +378,32 @@ void test_method_signature_list_uses_type_ast_receiver() {
     assert(dudu::substitute_type_ref_text(signatures[0].return_type_ref, {}) == "f32");
 }
 
+void test_static_method_signature_lookup_uses_type_ast_receiver() {
+    dudu::ClassDecl box;
+    box.name = "Box";
+    box.generic_params = {"T"};
+
+    dudu::FunctionDecl method;
+    method.name = "make";
+    method.return_type_ref = dudu::parse_type_text("T");
+    box.methods.push_back(method);
+
+    dudu::ClassDecl wrapper;
+    wrapper.name = "Wrapper";
+    wrapper.base_class_refs.push_back({dudu::parse_type_text("Box[f32]"), {}});
+
+    dudu::Symbols symbols;
+    symbols.classes.emplace("Box", &box);
+    symbols.classes.emplace("Wrapper", &wrapper);
+
+    dudu::FunctionSignature signature;
+    assert(dudu::static_method_signature_for_type(symbols, dudu::parse_type_text("Wrapper"), "make",
+                                                  signature, nullptr));
+    assert(signature.params.empty());
+    assert(signature.return_type == "f32");
+    assert(dudu::substitute_type_ref_text(signature.return_type_ref, {}) == "f32");
+}
+
 void test_native_semantic_tokens() {
     dudu::ModuleAst module =
         dudu::parse_source("import c \"native.h\"\n"
@@ -1107,6 +1133,7 @@ int main() {
         test_swizzle_lookup_uses_type_ast_receiver();
         test_method_signature_lookup_uses_type_ast_receiver();
         test_method_signature_list_uses_type_ast_receiver();
+        test_static_method_signature_lookup_uses_type_ast_receiver();
         test_native_semantic_tokens();
         test_ast_constructor_assignment_compatibility();
         test_ast_index_receiver_type_inference();

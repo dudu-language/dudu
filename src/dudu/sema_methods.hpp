@@ -61,6 +61,9 @@ std::vector<FunctionSignature> method_signatures_for_type(const Symbols& symbols
 std::vector<FunctionSignature> method_signatures_for_type(const Symbols& symbols,
                                                           std::string receiver_type,
                                                           const std::string& method_name);
+bool static_method_signature_for_type(const Symbols& symbols, const TypeRef& type_name,
+                                      const std::string& method_name, FunctionSignature& signature,
+                                      const SourceLocation* location);
 bool static_method_signature_for_type(const Symbols& symbols, const std::string& type_name,
                                       const std::string& method_name, FunctionSignature& signature,
                                       const SourceLocation* location);
