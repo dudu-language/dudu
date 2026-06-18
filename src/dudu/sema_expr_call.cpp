@@ -115,7 +115,9 @@ std::string infer_call_ast(const FunctionScope& scope, const Expr& expr,
         const bool bare_nonlocal_receiver =
             receiver_expr.kind == ExprKind::Name && !scope.locals.contains(receiver_expr.name);
         if (!bare_nonlocal_receiver) {
-            const std::string receiver_type = infer_expr_ast(scope, receiver_expr, use_location);
+            const TypeRef receiver_type_ref =
+                infer_expr_type_ast(scope, receiver_expr, use_location);
+            const std::string receiver_type = substitute_type_ref_text(receiver_type_ref, {});
             if (receiver_type.empty() || receiver_type == "auto") {
                 for (const Expr& arg : expr.children) {
                     check_expr_ast(scope, arg, use_location);

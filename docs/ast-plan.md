@@ -373,6 +373,9 @@ Already structured:
 - named-argument, slice, and index expression typing now have direct `TypeRef`
   cases, and the legacy string path delegates to them instead of recursing
   through raw receiver/index type strings
+- member-call receiver typing and C++ escape `Ok`/`Err` rendering now use
+  structured `TypeRef` inference, leaving `infer_expr_ast` as the central legacy
+  string-rendering fallback rather than a dependency of normal call inference
 - LSP local variable/parameter type collection for hover, member completion,
   and member definition now walks parsed function/method bodies and reuses
   semantic expression inference instead of regexing source lines

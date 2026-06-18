@@ -77,7 +77,10 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
                                callee + " expects 1 argument, got " + std::to_string(args.size()));
             }
             return callee + "[" +
-                   (args.size() == 1 ? infer_expr_ast(scope, args.front(), location) : "") + "]";
+                   (args.size() == 1 ? substitute_type_ref_text(
+                                           infer_expr_type_ast(scope, args.front(), location), {})
+                                     : "") +
+                   "]";
         }
         if (const auto klass = scope.symbols.classes.find(resolve_alias(scope.symbols, callee));
             klass != scope.symbols.classes.end()) {
