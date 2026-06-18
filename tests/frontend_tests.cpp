@@ -573,6 +573,24 @@ void test_lsp_unreachable_lint_uses_branch_structure() {
     assert(unreachable_count == 1);
 }
 
+void test_lsp_scope_lint_tracks_inferred_assignment_locals() {
+    const dudu::Document doc{.uri = "",
+                             .path = "lint_inferred_locals.dd",
+                             .text = "def main() -> i32:\n"
+                                     "    used = 1\n"
+                                     "    unused = 2\n"
+                                     "    return used\n"};
+    const std::vector<dudu::Diagnostic> diags = dudu::diagnostics_for_document(doc);
+    int unused_count = 0;
+    for (const dudu::Diagnostic& diag : diags) {
+        if (diag.code == "dudu.lint.unused") {
+            ++unused_count;
+            assert(diag.location.line == 3);
+        }
+    }
+    assert(unused_count == 1);
+}
+
 void test_allocation_type_ref_diagnostics() {
     dudu::Symbols symbols;
     const dudu::SourceLocation location{.file = "cpp_escape_alloc.dd", .line = 7, .column = 12};
@@ -1050,6 +1068,7 @@ int main() {
         test_semantic_diagnostics();
         test_lsp_diagnostic_sources_are_structured();
         test_lsp_unreachable_lint_uses_branch_structure();
+        test_lsp_scope_lint_tracks_inferred_assignment_locals();
         test_allocation_type_ref_diagnostics();
         test_emitted_local_index_type_inference();
         test_index_type_inference_uses_type_ast();

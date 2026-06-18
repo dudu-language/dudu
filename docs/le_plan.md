@@ -1802,3 +1802,7 @@ push. They are not release packaging work.
    literal value fields for boolean and numeric literals instead of falling
    back to raw expression text. Raw literal spelling remains available for LSP
    display and string literal emission only.
+   LSP scope lints now discover locals from structured statement forms that
+   sema treats as bindings: typed declarations, first-assignment name targets,
+   tuple destructuring, loop bindings, and catch bindings. Unused/shadow
+   diagnostics no longer depend only on `VarDecl` statements.

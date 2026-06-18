@@ -86,9 +86,8 @@ void lint_suspicious_cast_stmt(const Stmt& stmt, const Document& doc,
     if (!lint_same_source_file(stmt.location.file, doc.path)) {
         return;
     }
-    visit_stmt_expressions(stmt, [&](const Expr& expr) {
-        lint_suspicious_cast_expr(expr, doc, active_decls, out);
-    });
+    visit_stmt_expressions(
+        stmt, [&](const Expr& expr) { lint_suspicious_cast_expr(expr, doc, active_decls, out); });
     if (stmt.kind == StmtKind::VarDecl && !stmt.name.empty() && has_type_ref(stmt.type_ref)) {
         active_decls.push_back({.name = stmt.name,
                                 .type_ref = stmt.type_ref,
@@ -279,6 +278,39 @@ void collect_name_uses_stmt(const Stmt& stmt, const Document& doc,
     });
 }
 
+bool active_decl_contains(const std::vector<AstLocalDecl>& active_decls, const std::string& name) {
+    for (const AstLocalDecl& decl : active_decls) {
+        if (decl.name == name) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void add_scope_local(const std::string& name, const SourceLocation& location,
+                     std::vector<AstLocalDecl>& active_decls, std::vector<AstLocalDecl>& locals,
+                     std::vector<Diagnostic>& out, bool warn_shadow) {
+    if (name.empty()) {
+        return;
+    }
+    if (warn_shadow) {
+        for (const AstLocalDecl& outer : active_decls) {
+            if (outer.name == name) {
+                out.push_back({.location = location,
+                               .message = "local shadows outer binding: " + name,
+                               .source = "dudu/lint",
+                               .severity = 2,
+                               .code = "dudu.lint.shadow",
+                               .data_name = ""});
+                break;
+            }
+        }
+    }
+    AstLocalDecl local{.name = name, .location = location};
+    locals.push_back(local);
+    active_decls.push_back(std::move(local));
+}
+
 void collect_scope_lints_stmt_sequence(const std::vector<Stmt>& statements, const Document& doc,
                                        std::vector<AstLocalDecl> active_decls,
                                        std::vector<AstLocalDecl>& locals,
@@ -286,20 +318,31 @@ void collect_scope_lints_stmt_sequence(const std::vector<Stmt>& statements, cons
     for (const Stmt& stmt : statements) {
         if (stmt.kind == StmtKind::VarDecl && !stmt.name.empty() &&
             lint_same_source_file(stmt.location.file, doc.path)) {
-            for (const AstLocalDecl& outer : active_decls) {
-                if (outer.name == stmt.name) {
-                    out.push_back({.location = stmt.location,
-                                   .message = "local shadows outer binding: " + stmt.name,
-                                   .source = "dudu/lint",
-                                   .severity = 2,
-                                   .code = "dudu.lint.shadow",
-                                   .data_name = ""});
-                    break;
+            add_scope_local(stmt.name, stmt.location, active_decls, locals, out, true);
+        } else if (stmt.kind == StmtKind::Assign &&
+                   lint_same_source_file(stmt.location.file, doc.path)) {
+            if (const std::vector<std::string> names = tuple_binding_names(stmt.target_expr);
+                !names.empty()) {
+                for (const std::string& name : names) {
+                    if (!active_decl_contains(active_decls, name)) {
+                        add_scope_local(name, stmt.location, active_decls, locals, out, false);
+                    }
                 }
+            } else if (stmt.target_expr.kind == ExprKind::Name &&
+                       !active_decl_contains(active_decls, stmt.target_expr.name)) {
+                add_scope_local(stmt.target_expr.name, stmt.target_expr.location, active_decls,
+                                locals, out, false);
             }
-            AstLocalDecl local{.name = stmt.name, .location = stmt.location};
-            locals.push_back(local);
-            active_decls.push_back(std::move(local));
+        } else if ((stmt.kind == StmtKind::For || stmt.kind == StmtKind::Except) &&
+                   !stmt.name.empty() && lint_same_source_file(stmt.location.file, doc.path)) {
+            std::vector<AstLocalDecl> nested_decls = active_decls;
+            if (!active_decl_contains(nested_decls, stmt.name)) {
+                add_scope_local(stmt.name, stmt.location, nested_decls, locals, out, false);
+            }
+            if (!stmt.children.empty()) {
+                collect_scope_lints_stmt_sequence(stmt.children, doc, nested_decls, locals, out);
+            }
+            continue;
         }
         if (!stmt.children.empty()) {
             collect_scope_lints_stmt_sequence(stmt.children, doc, active_decls, locals, out);
