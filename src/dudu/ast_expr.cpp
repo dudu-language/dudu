@@ -128,13 +128,21 @@ bool is_member_callee(const Expr& expr, std::string_view receiver, std::string_v
     return receiver_expr.kind == ExprKind::Name && receiver_expr.name == receiver;
 }
 
-std::string call_callee_text(const Expr& expr) {
+std::optional<ExprPath> call_callee_path(const Expr& expr) {
     if (!expr.callee.empty()) {
-        if (const std::optional<std::string> path = member_path_from_expr(expr.callee.front())) {
-            return *path;
-        }
+        return expr_path_from_expr(expr.callee.front());
     }
-    return trim_copy(expr.name);
+    if (!trim_copy(expr.name).empty()) {
+        return ExprPath{.segments = {{.kind = ExprPathSegmentKind::Name,
+                                      .text = trim_copy(expr.name),
+                                      .location = expr.location}}};
+    }
+    return std::nullopt;
+}
+
+std::string call_callee_text(const Expr& expr) {
+    const std::optional<ExprPath> path = call_callee_path(expr);
+    return path ? render_expr_path(*path) : trim_copy(expr.name);
 }
 
 std::string join_display_exprs(const std::vector<Expr>& exprs, std::string_view separator) {

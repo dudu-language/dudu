@@ -320,8 +320,8 @@ std::string lower_offsetof_field(const Expr& expr, const std::vector<std::string
         return unquoted_string_literal(expr.text);
     }
     if (expr.kind == ExprKind::Member) {
-        if (const std::optional<std::string> path = member_path_from_expr(expr)) {
-            return *path;
+        if (const std::optional<ExprPath> path = expr_path_from_expr(expr)) {
+            return render_expr_path(*path);
         }
     }
     return lower_expr(expr, aliases, locals, symbols, options);
@@ -343,15 +343,15 @@ std::optional<std::string> lower_pointer_cast_expr(const Expr& expr,
         return std::nullopt;
     }
     const Expr& call = expr.children.front();
-    const std::string type_name = call_callee_text(call);
+    const std::optional<ExprPath> path = call_callee_path(call);
+    const std::string type_name = path ? render_expr_path(*path) : trim_copy(call.name);
     if (!is_pointer_cast_type_like(type_name)) {
         return std::nullopt;
     }
     return "reinterpret_cast<" +
            lower_cpp_type(pointer_type_ref_from_pointee_text(type_name, expr.location), aliases,
                           options) +
-           ">(" +
-           join_lowered_exprs(call.children, aliases, locals, ", ", symbols, options) + ")";
+           ">(" + join_lowered_exprs(call.children, aliases, locals, ", ", symbols, options) + ")";
 }
 
 std::optional<std::string> lower_pointer_cast_expr(const Expr& expr,
@@ -378,7 +378,9 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
     if (has_named_argument_shape(expr.children)) {
         return lower_named_argument_call(expr, aliases, locals, symbols, options);
     }
-    const std::string callee_name = call_callee_text(expr);
+    const std::optional<ExprPath> callee_path = call_callee_path(expr);
+    const std::string callee_name =
+        callee_path ? render_expr_path(*callee_path) : trim_copy(expr.name);
     if (starts_with(callee_name, "*")) {
         const std::string type = trim_copy(callee_name.substr(1));
         if (is_pointer_cast_type_like(type)) {

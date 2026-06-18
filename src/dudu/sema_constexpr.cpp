@@ -16,7 +16,8 @@ bool has_constexpr_decorator(const FunctionDecl& fn) {
 void check_expr_calls(const Expr& expr, const std::set<std::string>& constexpr_functions,
                       const std::set<std::string>& dudu_functions) {
     if (expr.kind == ExprKind::Call || expr.kind == ExprKind::TemplateCall) {
-        const std::string callee = call_callee_text(expr);
+        const std::optional<ExprPath> path = call_callee_path(expr);
+        const std::string callee = path ? render_expr_path(*path) : trim_copy(expr.name);
         if (dudu_functions.contains(callee) && !constexpr_functions.contains(callee)) {
             throw CompileError(expr.location,
                                "compile-time expression calls non-constexpr function: " + callee);
