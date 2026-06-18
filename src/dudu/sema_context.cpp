@@ -70,7 +70,7 @@ void add_name(std::map<std::string, SourceLocation>& names, const std::string& n
     }
 }
 
-std::string base_type_ref(const TypeRef& type) {
+std::string compute_base_type(const TypeRef& type) {
     switch (type.kind) {
     case TypeKind::Named:
     case TypeKind::Qualified:
@@ -79,7 +79,7 @@ std::string base_type_ref(const TypeRef& type) {
         return type_ref_head_name(type);
     case TypeKind::Pointer:
     case TypeKind::Reference:
-        return type.children.empty() ? trim(type.text) : base_type_ref(type.children.front());
+        return type.children.empty() ? trim(type.text) : compute_base_type(type.children.front());
     case TypeKind::Const:
         return "const";
     case TypeKind::Volatile:
@@ -95,7 +95,7 @@ std::string base_type_ref(const TypeRef& type) {
     case TypeKind::Static:
         return "static";
     case TypeKind::FixedArray:
-        return type.children.empty() ? trim(type.text) : base_type_ref(type.children.front());
+        return type.children.empty() ? trim(type.text) : compute_base_type(type.children.front());
     case TypeKind::Function:
         return type_ref_head_name(type);
     case TypeKind::Value:
@@ -118,15 +118,15 @@ std::string trim(std::string text) {
     return text;
 }
 
-std::string base_type(std::string type) {
-    return base_type_ref(parse_type_text(type));
+std::string base_type(const TypeRef& type) {
+    return compute_base_type(type);
 }
 
 bool known_type(const Symbols& symbols, const std::string& type) {
     if (starts_with(trim(type), "fn(")) {
         return true;
     }
-    const std::string base = base_type(type);
+    const std::string base = base_type(parse_type_text(type));
     return base.empty() || is_builtin_type(base) || symbols.types.contains(base) ||
            base.find('.') != std::string::npos || starts_with(base, "struct ") || base == "list" ||
            base == "array" || base == "span" || base == "strided_span" || base == "dict" ||

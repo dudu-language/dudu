@@ -311,7 +311,7 @@ std::string template_method_name(const Expr& expr, const std::string& callee_bas
 }
 
 bool known_template_constructor_type(const FunctionScope& scope, const std::string& callee) {
-    const std::string base = base_type(callee);
+    const std::string base = base_type(parse_type_text(callee));
     if (base.find('.') != std::string::npos || base.find("::") != std::string::npos) {
         return scope.symbols.types.contains(base) || scope.symbols.native_classes.contains(base) ||
                scope.symbols.classes.contains(resolve_alias(scope.symbols, callee));

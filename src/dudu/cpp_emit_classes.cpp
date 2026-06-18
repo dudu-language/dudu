@@ -222,8 +222,7 @@ bool class_is_polymorphic(const Symbols& symbols, const ClassDecl& klass,
         }
     }
     for (const BaseClassDecl& base_decl : klass.base_class_refs) {
-        const std::string base = type_ref_text(base_decl.type_ref);
-        const auto parent = symbols.classes.find(base_type(base));
+        const auto parent = symbols.classes.find(base_type(base_decl.type_ref));
         if (parent != symbols.classes.end() &&
             class_is_polymorphic(symbols, *parent->second, seen)) {
             return true;

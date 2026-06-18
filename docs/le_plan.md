@@ -1261,6 +1261,12 @@ push. They are not release packaging work.
    migration if a caller has not been ported yet; they should not silently
    preserve the old string path.
 
+   Final audit: search explicitly for fallback string callbacks, callback
+   adapters, `std::function` hooks that traffic in rendered source/type text,
+   and helpers whose only job is to stringify structured AST data so it can be
+   parsed again. Remove every compiler-internal instance unless it is an
+   explicit native/C++ boundary or user-authored escape hatch.
+
    Status: in progress. Body, generic, constructor, and native assignment
    paths are being migrated from rendered string type pairs to parsed
    `TypeRef` pairs. Constructor parameter checking no longer stores a duplicate
@@ -1375,3 +1381,6 @@ push. They are not release packaging work.
    before re-entering the structured assignment path.
    Assignment diagnostics now expose only the parsed expected-`TypeRef` API;
    string formatting is kept private to the diagnostic renderer.
+   General base-type queries now expose a parsed `TypeRef` API; the old public
+   raw-string helper has been removed, and remaining callers parse only at
+   explicit text/native boundaries.

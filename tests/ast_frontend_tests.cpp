@@ -138,11 +138,11 @@ void test_can_assign_resolves_alias_type_refs() {
 }
 
 void test_core_type_helpers_use_type_ast() {
-    assert(dudu::base_type("*const[i32]") == "const");
-    assert(dudu::base_type("&Player") == "Player");
-    assert(dudu::base_type("array[f32][4, 4]") == "array");
-    assert(dudu::base_type("fn(i32) -> bool") == "fn");
-    assert(dudu::base_type("struct sqlite3") == "struct sqlite3");
+    assert(dudu::base_type(dudu::parse_type_text("*const[i32]")) == "const");
+    assert(dudu::base_type(dudu::parse_type_text("&Player")) == "Player");
+    assert(dudu::base_type(dudu::parse_type_text("array[f32][4, 4]")) == "array");
+    assert(dudu::base_type(dudu::parse_type_text("fn(i32) -> bool")) == "fn");
+    assert(dudu::base_type(dudu::parse_type_text("struct sqlite3")) == "struct sqlite3");
     assert(dudu::substitute_type_ref_text(
                dudu::explicit_array_element_type_ref(dudu::parse_type_text("array[list[i32]][4]")),
                {}) == "list[i32]");

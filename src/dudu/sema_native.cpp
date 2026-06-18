@@ -28,7 +28,7 @@ std::optional<std::string> native_path_from_expr(const Expr& expr) {
 
 bool foreign_cpp_type_name(const Symbols& symbols, const std::string& type) {
     return type.find('.') != std::string::npos || type.find("::") != std::string::npos ||
-           symbols.native_types.contains(base_type(type));
+           symbols.native_types.contains(base_type(parse_type_text(type)));
 }
 
 bool native_import_path_prefix(const Symbols& symbols, const std::string& path) {
