@@ -1840,3 +1840,6 @@ push. They are not release packaging work.
    Match semantic checks now validate guard expressions with structured bool
    `TypeRef` predicates and only render guard or subject types when producing
    diagnostics.
+   Assignment mismatch diagnostics now accept structured `TypeRef` values for
+   the inferred type, so semantic body checks no longer render the got type just
+   to hand it to the diagnostic helper.

@@ -387,4 +387,8 @@ std::string assignment_error(const TypeRef& expected, const Expr& expr, const st
     return assignment_error_text(substitute_type_ref_text(expected, {}), expr, got);
 }
 
+std::string assignment_error(const TypeRef& expected, const Expr& expr, const TypeRef& got) {
+    return assignment_error(expected, expr, substitute_type_ref_text(got, {}));
+}
+
 } // namespace dudu

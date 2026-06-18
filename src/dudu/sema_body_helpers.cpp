@@ -51,8 +51,7 @@ void check_type_match(FunctionScope& scope, const TypeRef& expected_ref, const E
             sema_fail(location,
                       std::string(mismatch_label) + ": expected " + expected + ", got " + got);
         }
-        const std::string got = substitute_type_ref_text(got_ref, {});
-        sema_fail(location, assignment_error(expected_ref, expr, got));
+        sema_fail(location, assignment_error(expected_ref, expr, got_ref));
     }
 }
 
@@ -86,8 +85,7 @@ void check_type_ref_match(FunctionScope& scope, const TypeRef& expected, const E
             sema_fail(location,
                       std::string(mismatch_label) + ": expected " + expected_text + ", got " + got);
         }
-        const std::string got = substitute_type_ref_text(got_ref, {});
-        sema_fail(location, assignment_error(expected, expr, got));
+        sema_fail(location, assignment_error(expected, expr, got_ref));
     }
 }
 
