@@ -157,10 +157,9 @@ bool is_value_wrapper_assignment(const TypeRef& expected, const Expr& expr, cons
     return assignment_type_allowed(inner, expr, got);
 }
 
-bool is_null_pointer(std::string expected, const Expr& expr, std::string got) {
-    got = trim_copy(std::move(got));
-    return pointer_pointee(std::move(expected)).has_value() && expr.kind == ExprKind::NoneLiteral &&
-           got == "None";
+bool is_null_pointer(const TypeRef& expected, const Expr& expr, const TypeRef& got) {
+    return pointer_pointee_ref(expected).has_value() && expr.kind == ExprKind::NoneLiteral &&
+           type_ref_is_name(got, "None");
 }
 
 bool is_void_pointer_target(std::string expected, std::string got) {
@@ -434,7 +433,7 @@ bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const Ty
                compact_type(normalize_c_tags(normalized_got)) ||
            (is_string_type(normalized_expected) && is_string_type(normalized_got)) ||
            is_value_wrapper_assignment(normalized_expected_ref, expr, normalized_got_ref) ||
-           is_null_pointer(normalized_expected, expr, normalized_got) ||
+           is_null_pointer(normalized_expected_ref, expr, normalized_got_ref) ||
            is_void_pointer_target(normalized_expected, normalized_got) ||
            is_const_pointer_binding(normalized_expected, normalized_got) ||
            is_pointer_to_reference_value(normalized_expected, normalized_got) ||

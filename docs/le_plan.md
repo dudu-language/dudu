@@ -1505,6 +1505,9 @@ push. They are not release packaging work.
    The public `assignment_type_allowed` API now accepts only structured
    `TypeRef` got-types; its string overload and the dependent wrapper/variant
    helper paths have been removed rather than preserved for tests.
+   Null literal pointer assignment compatibility now checks pointer shape and
+   `None` through `TypeRef` nodes instead of rendering expected/got types to
+   strings.
    Operator and condition semantic diagnostics now use `FunctionSignature`
    accessors for parameter counts and parameter type text instead of reading
    the legacy signature string vector directly.
