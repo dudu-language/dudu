@@ -33,7 +33,6 @@ std::optional<std::string> bare_callee_name(const Expr& expr);
 std::optional<std::string> member_callee_name(const Expr& expr);
 bool is_member_callee(const Expr& expr, std::string_view receiver, std::string_view member);
 std::optional<ExprPath> call_callee_path(const Expr& expr);
-std::string call_callee_text(const Expr& expr);
 std::string display_expr(const Expr& expr);
 
 } // namespace dudu
