@@ -135,7 +135,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         const ArrayShapeInference inferred =
             infer_array_literal_shape_type(stmt.type_ref, stmt.value_expr);
         const EffectiveStmtType type = effective_stmt_type(stmt, inferred);
-        locals[name] = substitute_type_ref_text(type.ref, {});
+        locals[name] = "";
         local_type_refs[name] = type.ref;
         out << indent(depth) << lower_declared_stmt_type(type.ref, aliases, options) << ' ' << name;
         if (has_expr(stmt.value_expr)) {
@@ -216,8 +216,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                                                              local_type_refs, symbols, options);
                 const TypeRef inferred_ref = infer_emitted_local_type_ref(
                     stmt.value_expr, local_type_refs, function_returns, symbols);
-                const std::string inferred = substitute_type_ref_text(inferred_ref, {});
-                locals.emplace(lhs, inferred.empty() ? "auto" : inferred);
+                locals.emplace(lhs, "");
                 if (has_type_ref(inferred_ref)) {
                     local_type_refs.emplace(lhs, inferred_ref);
                 } else {
@@ -357,9 +356,9 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         const std::string range = lower_emitted_expr(stmt.iterable_expr, aliases, locals,
                                                      local_type_refs, symbols, options);
         std::string binding_type = "auto";
+        locals[stmt.name] = "";
         if (has_type_ref(stmt.type_ref)) {
             binding_type = lower_cpp_type(stmt.type_ref, aliases, options);
-            locals[stmt.name] = substitute_type_ref_text(stmt.type_ref, {});
             local_type_refs[stmt.name] = stmt.type_ref;
         }
         if (direct_callee_name(stmt.iterable_expr) == "range") {

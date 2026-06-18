@@ -312,11 +312,11 @@ void emit_method(std::ostringstream& out, const std::string& class_name,
         local_type_refs["super"] = klass->second->base_class_refs.front().type_ref;
     }
     if (first_param == 1) {
-        locals[method.params.front().name] = type_ref_text(method.params.front().type_ref);
+        locals[method.params.front().name] = "";
         local_type_refs[method.params.front().name] = method.params.front().type_ref;
     }
     for (size_t i = first_param; i < method.params.size(); ++i) {
-        locals[method.params[i].name] = type_ref_text(method.params[i].type_ref);
+        locals[method.params[i].name] = "";
         local_type_refs[method.params[i].name] = method.params[i].type_ref;
     }
     out << ")";

@@ -1287,6 +1287,12 @@ declarations safely.
    C++ statement emission effective local type calculation no longer stores a
    rendered type string beside `TypeRef`; the legacy string locals map is
    populated by rendering at the emission boundary only.
+   The C++ emitter no longer stores rendered type names for ordinary function
+   params, method params, local declarations, implicit assignment locals, or
+   loop bindings in its legacy `locals` map. That map is now reduced to
+   emitted-name presence plus explicit special lowering values such as
+   `class` and `super`; `local_type_refs` remains the authoritative local type
+   table.
    Indexing type inference exposes only parsed `TypeRef` receiver APIs; the old
    string receiver and string result wrappers have been removed, with
    `cpp(...)` escape inference rendering only at its boundary.
