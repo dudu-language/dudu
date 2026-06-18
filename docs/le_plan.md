@@ -1252,3 +1252,6 @@ declarations safely.
    LSP local completion now consumes `local_type_refs_before_cursor` directly
    and renders completion detail text at the UI boundary; the rendered
    `local_types_before_cursor` wrapper has been removed.
+   Hover, member completion, and member definition lookup now use
+   `local_type_ref_before_cursor`, leaving rendered local type strings at the
+   UI/member-candidate display boundary.

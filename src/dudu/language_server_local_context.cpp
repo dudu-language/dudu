@@ -263,11 +263,11 @@ std::optional<std::string> member_completion_target(const Document& doc, const J
     return std::nullopt;
 }
 
-std::string local_type_before_cursor(const Document& doc, const std::string& name,
+TypeRef local_type_ref_before_cursor(const Document& doc, const std::string& name,
                                      const Json* params) {
     const std::map<std::string, TypeRef> locals = local_type_refs_before_cursor(doc, params);
     const auto found = locals.find(name);
-    return found == locals.end() ? std::string{} : substitute_type_ref_text(found->second, {});
+    return found == locals.end() ? TypeRef{} : found->second;
 }
 
 std::map<std::string, TypeRef> local_type_refs_before_cursor(const Document& doc,

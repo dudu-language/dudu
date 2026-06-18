@@ -13,7 +13,7 @@ namespace dudu {
 struct Json;
 
 std::optional<std::string> member_completion_target(const Document& doc, const Json* params);
-std::string local_type_before_cursor(const Document& doc, const std::string& name,
+TypeRef local_type_ref_before_cursor(const Document& doc, const std::string& name,
                                      const Json* params = nullptr);
 std::map<std::string, TypeRef> local_type_refs_before_cursor(const Document& doc,
                                                              const Json* params);

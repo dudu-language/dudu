@@ -114,7 +114,8 @@ std::string member_completion_json(const Document& doc, const std::string& targe
     if (const std::optional<std::string> module_result = module_completion_json(doc, target)) {
         return *module_result;
     }
-    const std::string type = local_type_before_cursor(doc, target, params);
+    const TypeRef type_ref = local_type_ref_before_cursor(doc, target, params);
+    const std::string type = substitute_type_ref_text(type_ref, {});
     if (type.empty()) {
         return "[]";
     }

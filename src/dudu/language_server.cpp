@@ -1,5 +1,6 @@
 #include "dudu/language_server.hpp"
 
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/format.hpp"
 #include "dudu/language_server_code_actions.hpp"
@@ -404,7 +405,9 @@ class LanguageServer {
             return "null";
         }
         const std::string word = ast_symbol_path_at(*doc, params).value_or("");
-        return hover_json(*doc, word, local_type_before_cursor(*doc, word, params));
+        return hover_json(*doc, word,
+                          substitute_type_ref_text(
+                              local_type_ref_before_cursor(*doc, word, params), {}));
     }
 
     std::string completion_result(const Json* params) const {

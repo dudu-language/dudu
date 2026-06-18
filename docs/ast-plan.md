@@ -1987,6 +1987,9 @@ LSP source edits are also moving to AST-owned ranges:
 - LSP completion no longer asks local context for a rendered local-type string
   map. It consumes `local_type_refs_before_cursor` and renders completion
   detail text at the UI boundary.
+- LSP hover, member completion, and member definition lookup now use
+  `local_type_ref_before_cursor`; rendered local type strings are produced only
+  at hover/completion/member-candidate display boundaries.
 
 Expression parsing has moved onto the lexer/token stream:
 

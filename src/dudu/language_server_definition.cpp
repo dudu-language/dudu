@@ -1,5 +1,6 @@
 #include "dudu/language_server_definition.hpp"
 
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/language_server_json.hpp"
 #include "dudu/language_server_local_context.hpp"
@@ -146,7 +147,8 @@ std::optional<std::string> member_definition_json(const Document& doc, const std
     }
     const std::string receiver = word.substr(0, dot);
     const std::string member = word.substr(dot + 1);
-    const std::string type = local_type_before_cursor(doc, receiver, params);
+    const TypeRef type_ref = local_type_ref_before_cursor(doc, receiver, params);
+    const std::string type = substitute_type_ref_text(type_ref, {});
     if (type.empty()) {
         return std::nullopt;
     }
