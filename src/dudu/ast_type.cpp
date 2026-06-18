@@ -24,7 +24,9 @@ std::string join_substituted_types(const std::vector<TypeRef>& types, size_t sta
 std::string substitute_wrapper(std::string_view name, const TypeRef& type,
                                const std::map<std::string, std::string>& substitutions) {
     if (type.children.empty()) {
-        return trim_copy(type.text);
+        throw CompileError(type.location, "malformed structured type node: " +
+                                              std::string(type_kind_name(type.kind)) +
+                                              " is missing its child type");
     }
     return std::string(name) + "[" + substitute_type_ref_text(type.children[0], substitutions) +
            "]";
@@ -147,13 +149,18 @@ std::string substitute_type_ref_text(const TypeRef& type,
 
     switch (type.kind) {
     case TypeKind::Pointer:
-        return type.children.empty()
-                   ? trim_copy(type.text)
-                   : "*" + substitute_type_ref_text(type.children[0], substitutions);
+        if (type.children.empty()) {
+            throw CompileError(type.location,
+                               "malformed structured type node: pointer is missing its child type");
+        }
+        return "*" + substitute_type_ref_text(type.children[0], substitutions);
     case TypeKind::Reference:
-        return type.children.empty()
-                   ? trim_copy(type.text)
-                   : "&" + substitute_type_ref_text(type.children[0], substitutions);
+        if (type.children.empty()) {
+            throw CompileError(
+                type.location,
+                "malformed structured type node: reference is missing its child type");
+        }
+        return "&" + substitute_type_ref_text(type.children[0], substitutions);
     case TypeKind::Const:
         return substitute_wrapper("const", type, substitutions);
     case TypeKind::Volatile:
@@ -176,9 +183,13 @@ std::string substitute_type_ref_text(const TypeRef& type,
         return trim_copy(type.name) + "[" +
                join_substituted_types(type.children, 0, substitutions) + "]";
     case TypeKind::FixedArray:
-        return type.children.empty() ? trim_copy(type.text)
-                                     : substitute_type_ref_text(type.children[0], substitutions) +
-                                           "[" + trim_copy(type.value) + "]";
+        if (type.children.empty()) {
+            throw CompileError(
+                type.location,
+                "malformed structured type node: fixed_array is missing its child type");
+        }
+        return substitute_type_ref_text(type.children[0], substitutions) + "[" +
+               trim_copy(type.value) + "]";
     case TypeKind::Function: {
         const std::string result = type.children.empty()
                                        ? "void"

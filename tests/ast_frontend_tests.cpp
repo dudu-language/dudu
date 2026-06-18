@@ -187,6 +187,13 @@ void test_core_type_helpers_use_type_ast() {
     malformed_pointer.kind = dudu::TypeKind::Pointer;
     malformed_pointer.text = "*Player";
     assert(dudu::base_type(malformed_pointer).empty());
+    bool malformed_pointer_render_failed = false;
+    try {
+        (void)dudu::substitute_type_ref_text(malformed_pointer, {});
+    } catch (const dudu::CompileError&) {
+        malformed_pointer_render_failed = true;
+    }
+    assert(malformed_pointer_render_failed);
     dudu::TypeRef malformed_reference;
     malformed_reference.kind = dudu::TypeKind::Reference;
     malformed_reference.text = "&Player";

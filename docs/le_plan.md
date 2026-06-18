@@ -854,6 +854,9 @@ push. They are not release packaging work.
    Common `TypeRef` head-name queries now derive pointer, reference, wrapper,
    function, value, template, and fixed-array heads from structured fields,
    keeping raw text only for explicit unknown/native-boundary spellings.
+   `substitute_type_ref_text` now rejects malformed structured pointer,
+   reference, wrapper, and fixed-array nodes instead of rendering stale raw
+   `TypeRef.text` as a compatibility fallback.
 
 3. OOP Surface Cleanup
 
