@@ -2,6 +2,7 @@
 #include "dudu/ast_expr.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_emit.hpp"
+#include "dudu/cpp_expr_emit.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/cpp_stmt_types.hpp"
 #include "dudu/language_server_completion.hpp"
@@ -890,17 +891,25 @@ void test_literal_ast_values() {
     const dudu::ModuleAst module = dudu::parse_source("def main() -> i32:\n"
                                                       "    enabled = True\n"
                                                       "    mask = 0x80\n"
+                                                      "    title = 'hi \"there\"'\n"
+                                                      "    blob = \"\"\"line\nnext\"\"\"\n"
                                                       "    return mask\n",
                                                       "literal_values.dd");
     assert(module.functions.size() == 1);
     const dudu::FunctionDecl& main = module.functions.front();
-    assert(main.statements.size() == 3);
+    assert(main.statements.size() == 5);
     assert(main.statements[0].kind == dudu::StmtKind::Assign);
     assert(main.statements[0].value_expr.kind == dudu::ExprKind::BoolLiteral);
     assert(main.statements[0].value_expr.value == "True");
     assert(main.statements[1].kind == dudu::StmtKind::Assign);
     assert(main.statements[1].value_expr.kind == dudu::ExprKind::IntLiteral);
     assert(main.statements[1].value_expr.value == "0x80");
+    assert(main.statements[2].value_expr.kind == dudu::ExprKind::StringLiteral);
+    assert(main.statements[2].value_expr.value == "hi \"there\"");
+    assert(dudu::lower_cpp_expr_ast(main.statements[2].value_expr, {}) == "\"hi \\\"there\\\"\"");
+    assert(main.statements[3].value_expr.kind == dudu::ExprKind::StringLiteral);
+    assert(main.statements[3].value_expr.value == "line\nnext");
+    assert(dudu::lower_cpp_expr_ast(main.statements[3].value_expr, {}) == "\"line\\nnext\"");
 }
 
 void test_expression_ast_shape() {

@@ -857,6 +857,9 @@ push. They are not release packaging work.
    `substitute_type_ref_text` now rejects malformed structured pointer,
    reference, wrapper, and fixed-array nodes instead of rendering stale raw
    `TypeRef.text` as a compatibility fallback.
+   Literal parsing/codegen now treats bool, numeric, and string literal values
+   as parsed `Expr::value` data; C++ string literal emission renders from that
+   parsed value instead of forwarding the source spelling mirror.
 
 3. OOP Surface Cleanup
 

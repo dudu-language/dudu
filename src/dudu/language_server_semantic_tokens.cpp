@@ -245,8 +245,9 @@ void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
         break;
     case ExprKind::IntLiteral:
     case ExprKind::FloatLiteral:
-        add_semantic_token(tokens, expr.location, expr.value.empty() ? expr.text : expr.value,
-                           token_number);
+        if (!expr.value.empty()) {
+            add_semantic_token(tokens, expr.location, expr.value, token_number);
+        }
         break;
     case ExprKind::StringLiteral:
         add_semantic_token(tokens, expr.location, expr.text, token_string);

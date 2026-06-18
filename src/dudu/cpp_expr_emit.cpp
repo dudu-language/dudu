@@ -40,6 +40,33 @@ std::string lower_name_expr(const std::string& name, const CppLocalContext& loca
     return name;
 }
 
+std::string lower_string_literal_value(std::string_view value) {
+    std::string out = "\"";
+    for (size_t i = 0; i < value.size(); ++i) {
+        const char c = value[i];
+        if (c == '\\' && i + 1 < value.size()) {
+            out.push_back(c);
+            out.push_back(value[++i]);
+            continue;
+        }
+        if (c == '"') {
+            out += "\\\"";
+            continue;
+        }
+        if (c == '\n') {
+            out += "\\n";
+            continue;
+        }
+        if (c == '\r') {
+            out += "\\r";
+            continue;
+        }
+        out.push_back(c);
+    }
+    out += "\"";
+    return out;
+}
+
 std::string lower_member_expr(std::string receiver, const std::string& member,
                               const std::vector<std::string>& aliases,
                               const CppEmitOptions& options) {
@@ -220,7 +247,7 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
     case ExprKind::CppEscape:
         return lower_cpp_escape_expr(expr.value, aliases, local_type_refs);
     case ExprKind::StringLiteral:
-        return expr.text;
+        return lower_string_literal_value(parsed_literal_value(expr, "string"));
     case ExprKind::Unary:
         if (const auto pointer_cast =
                 lower_pointer_cast_expr(expr, aliases, locals, local_type_refs, symbols, options)) {

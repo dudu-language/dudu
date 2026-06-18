@@ -7,6 +7,21 @@
 #include <utility>
 
 namespace dudu {
+namespace {
+
+std::string string_literal_value(std::string_view text) {
+    if (text.size() >= 6 && text[0] == text[1] && text[1] == text[2] &&
+        text[text.size() - 1] == text[0] && text[text.size() - 2] == text[0] &&
+        text[text.size() - 3] == text[0]) {
+        return std::string(text.substr(3, text.size() - 6));
+    }
+    if (text.size() >= 2) {
+        return std::string(text.substr(1, text.size() - 2));
+    }
+    return {};
+}
+
+} // namespace
 
 Expr ExprTokenParser::parse_postfix(std::initializer_list<TokenKind> stops) {
     Expr expr = parse_primary(stops);
@@ -222,14 +237,14 @@ Expr ExprTokenParser::parse_primary(std::initializer_list<TokenKind> stops) {
         const Token& token = current();
         ++cursor_;
         Expr expr = make_node(ExprKind::StringLiteral, begin, cursor_);
-        if (token.text.size() >= 2) {
-            expr.value = token.text.substr(1, token.text.size() - 2);
-        }
+        expr.value = string_literal_value(token.text);
         return expr;
     }
-    if (match_identifier("True") || match_identifier("False")) {
+    if (at_identifier("True") || at_identifier("False")) {
+        const Token& token = current();
+        ++cursor_;
         Expr expr = make_node(ExprKind::BoolLiteral, begin, cursor_);
-        expr.value = expr.text;
+        expr.value = token.text;
         return expr;
     }
     if (match_identifier("None")) {
