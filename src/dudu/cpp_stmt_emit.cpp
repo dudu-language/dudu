@@ -117,13 +117,9 @@ bool is_fixed_array_type(const TypeRef& type) {
     return storage.kind == TypeKind::Template && storage.name == "array";
 }
 
-void emit_cpp_escape(std::ostringstream& out, const std::string& body_text, int depth) {
-    std::istringstream body(body_text);
-    std::string line;
-    while (std::getline(body, line)) {
-        if (!trim_copy(line).empty()) {
-            out << indent(depth) << trim_copy(line) << '\n';
-        }
+void emit_cpp_escape(std::ostringstream& out, const Stmt& stmt, int depth) {
+    for (const std::string& line : stmt.cpp_lines) {
+        out << indent(depth) << line << '\n';
     }
 }
 
@@ -139,7 +135,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                            const std::map<std::string, TypeRef>& function_returns,
                            const Symbols* symbols, const CppEmitOptions& options) {
     if (stmt.kind == StmtKind::CppEscape) {
-        emit_cpp_escape(out, stmt.cpp_body, depth);
+        emit_cpp_escape(out, stmt, depth);
         return;
     }
     if (stmt.kind == StmtKind::Pass) {

@@ -33,9 +33,8 @@ bool token_is_identifier(const Token& token, std::string_view text) {
 
 bool token_is_stop(const Token& token, std::initializer_list<TokenKind> stops) {
     for (const TokenKind stop : stops) {
-        if (token.kind == stop) {
+        if (token.kind == stop)
             return true;
-        }
     }
     return false;
 }
@@ -398,6 +397,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
         join_until_with_range({TokenKind::Newline});
         const JoinedTokens source = join_tokens(begin, cursor_);
         stmt.cpp_body = cpp_escape_body(source.text);
+        stmt.cpp_lines = cpp_escape_lines(stmt.cpp_body);
         attach_statement_source(stmt, source);
         return stmt;
     }

@@ -88,6 +88,19 @@ std::string cpp_escape_body(std::string text) {
     return {};
 }
 
+std::vector<std::string> cpp_escape_lines(std::string body_text) {
+    std::vector<std::string> lines;
+    std::istringstream body(std::move(body_text));
+    std::string line;
+    while (std::getline(body, line)) {
+        line = trim_copy(std::move(line));
+        if (!line.empty()) {
+            lines.push_back(std::move(line));
+        }
+    }
+    return lines;
+}
+
 std::string lower_function_template_arg(const std::string& type,
                                         const std::vector<std::string>& namespace_aliases) {
     const size_t open = type.find('(');

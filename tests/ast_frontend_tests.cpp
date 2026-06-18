@@ -547,6 +547,8 @@ void test_cpp_escape_ast_payloads() {
     const dudu::Stmt& statement_escape = main.statements[1];
     assert(statement_escape.kind == dudu::StmtKind::CppEscape);
     assert(statement_escape.cpp_body == "value += 23;");
+    assert(statement_escape.cpp_lines.size() == 1);
+    assert(statement_escape.cpp_lines[0] == "value += 23;");
     assert(statement_escape.range.start.column == 5);
     assert(statement_escape.range.end.column > statement_escape.range.start.column);
 }
