@@ -13,14 +13,6 @@ TypeRef named_member_type_ref(std::string name, SourceLocation location) {
     return type;
 }
 
-std::optional<TypeRef> parse_member_type_text(std::optional<std::string> type,
-                                              SourceLocation location) {
-    if (!type || type->empty()) {
-        return std::nullopt;
-    }
-    return parse_type_text(*type, location);
-}
-
 } // namespace
 
 std::optional<TypeRef> member_expr_direct_type_ref(const FunctionScope& scope, const Expr& expr,
@@ -57,12 +49,10 @@ std::optional<TypeRef> member_expr_direct_type_ref(const FunctionScope& scope, c
     if (receiver_type.empty()) {
         return std::nullopt;
     }
-    if (const auto field = parse_member_type_text(
-            field_type_for_type(scope.symbols, receiver_type, expr.name), type_location)) {
+    if (const auto field = field_type_ref_for_type(scope.symbols, receiver_ref, expr.name)) {
         return *field;
     }
-    if (const auto swizzle = parse_member_type_text(
-            swizzle_type_for_type(scope.symbols, receiver_type, expr.name), type_location)) {
+    if (const auto swizzle = swizzle_type_ref_for_type(scope.symbols, receiver_ref, expr.name)) {
         return *swizzle;
     }
     if (foreign_cpp_type_name(scope.symbols, resolve_alias(scope.symbols, receiver_type))) {

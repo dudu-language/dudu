@@ -36,31 +36,40 @@ std::optional<std::string_view> swizzle_component_set(const std::string& swizzle
 std::optional<std::string> swizzle_type_for_type(const Symbols& symbols,
                                                  const std::string& receiver_type,
                                                  const std::string& swizzle) {
+    const auto type = swizzle_type_ref_for_type(symbols, parse_type_text(receiver_type), swizzle);
+    if (!type) {
+        return std::nullopt;
+    }
+    return substitute_type_ref_text(*type, {});
+}
+
+std::optional<TypeRef> swizzle_type_ref_for_type(const Symbols& symbols,
+                                                 const TypeRef& receiver_type,
+                                                 const std::string& swizzle) {
     const auto component_set = swizzle_component_set(swizzle);
     if (!component_set) {
         return std::nullopt;
     }
-    const std::string class_name = unwrap_receiver_type(symbols, receiver_type);
+    const std::string receiver_type_text = substitute_type_ref_text(receiver_type, {});
+    const std::string class_name = unwrap_receiver_type(symbols, receiver_type_text);
     const auto klass = symbols.classes.find(class_name);
     if (klass == symbols.classes.end()) {
         return std::nullopt;
     }
-    const TypeRef receiver_type_ref = parse_type_text(receiver_type);
     size_t component_count = 0;
     for (const char ch : *component_set) {
-        if (field_type_ref_for_class(symbols, *klass->second, receiver_type_ref,
-                                     std::string(1, ch))) {
+        if (field_type_ref_for_class(symbols, *klass->second, receiver_type, std::string(1, ch))) {
             ++component_count;
         }
     }
     for (const char ch : swizzle) {
-        if (!field_type_ref_for_class(symbols, *klass->second, receiver_type_ref,
+        if (!field_type_ref_for_class(symbols, *klass->second, receiver_type,
                                       std::string(1, ch))) {
             return std::nullopt;
         }
     }
     if (component_count == swizzle.size()) {
-        return class_name;
+        return parse_type_text(class_name, receiver_type.location);
     }
     const std::string_view result_components = component_set->substr(0, swizzle.size());
     for (const auto& [candidate_name, candidate] : symbols.classes) {
@@ -75,7 +84,7 @@ std::optional<std::string> swizzle_type_for_type(const Symbols& symbols,
                 field_type_ref_for_class(symbols, *candidate, parse_type_text(candidate_name),
                                          result_field);
             const auto source_type =
-                field_type_ref_for_class(symbols, *klass->second, receiver_type_ref, source_field);
+                field_type_ref_for_class(symbols, *klass->second, receiver_type, source_field);
             if (!result_type || !source_type ||
                 substitute_type_ref_text(*result_type, {}) !=
                     substitute_type_ref_text(*source_type, {})) {
@@ -84,7 +93,7 @@ std::optional<std::string> swizzle_type_for_type(const Symbols& symbols,
             }
         }
         if (matches) {
-            return candidate_name;
+            return parse_type_text(candidate_name, receiver_type.location);
         }
     }
     return std::nullopt;
@@ -111,18 +120,17 @@ std::optional<TypeRef> swizzle_assignment_type_ref_for_type(const Symbols& symbo
                                                             const SourceLocation& location,
                                                             const TypeRef& receiver_type,
                                                             const std::string& swizzle) {
-    const auto type =
-        swizzle_assignment_type_for_type(symbols, location,
-                                         substitute_type_ref_text(receiver_type, {}), swizzle);
-    if (!type) {
+    const auto component_set = swizzle_component_set(swizzle);
+    if (!component_set) {
         return std::nullopt;
     }
-    TypeRef result;
-    result.kind = TypeKind::Named;
-    result.name = *type;
-    result.text = *type;
-    result.location = location;
-    return result;
+    std::set<char> seen;
+    for (const char ch : swizzle) {
+        if (!seen.insert(ch).second) {
+            sema_fail(location, "swizzle assignment cannot repeat component: " + swizzle);
+        }
+    }
+    return swizzle_type_ref_for_type(symbols, receiver_type, swizzle);
 }
 
 } // namespace dudu

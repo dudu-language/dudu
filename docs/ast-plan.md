@@ -1745,6 +1745,9 @@ LSP source edits are also moving to AST-owned ranges:
   been deleted; compatibility callers now render the result of structured
   `TypeRef` member/field inference instead of maintaining a parallel semantic
   path.
+- Direct member expression typing now asks field and swizzle helpers for
+  structured `TypeRef` results, removing the previous string result and
+  immediate reparse step for `value.field` and `value.xy` style expressions.
 - Native value symbols now store parsed `TypeRef` metadata beside their C++
   spelling strings, and normal name/member expression sema reads those refs
   directly for imported constants, build flags, shader/native values, and class

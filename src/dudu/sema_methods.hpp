@@ -30,6 +30,9 @@ std::optional<TypeRef> field_type_ref_for_type(const Symbols& symbols, const Typ
 std::optional<std::string> swizzle_type_for_type(const Symbols& symbols,
                                                  const std::string& receiver_type,
                                                  const std::string& swizzle);
+std::optional<TypeRef> swizzle_type_ref_for_type(const Symbols& symbols,
+                                                 const TypeRef& receiver_type,
+                                                 const std::string& swizzle);
 std::optional<std::string> swizzle_assignment_type_for_type(const Symbols& symbols,
                                                             const SourceLocation& location,
                                                             const std::string& receiver_type,
