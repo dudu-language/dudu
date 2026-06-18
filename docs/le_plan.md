@@ -683,6 +683,9 @@ push. They are not release packaging work.
    Receiver-template substitution now has a `TypeRef` path, so method and field
    instantiation can substitute `value_type`/`element_type` placeholders without
    rendering substituted types to strings and reparsing them.
+   Inherited method signature instantiation now has a `TypeRef` receiver path,
+   so generic base/interface methods substitute receiver arguments without
+   reparsing the rendered receiver type.
    TypeRef-backed assignment checks now infer RHS expressions as `TypeRef`
    first, use structured type assignment before compatibility fallback, and
    render only for legacy assignment/literal checks and diagnostics.

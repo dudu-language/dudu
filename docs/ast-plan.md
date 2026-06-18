@@ -224,6 +224,9 @@ Already structured:
 - receiver-template substitution now has a `TypeRef` path, so method and field
   instantiation can substitute `value_type`/`element_type` placeholders without
   rendering substituted types to strings and reparsing them
+- inherited method signature instantiation now has a `TypeRef` receiver path,
+  so generic base/interface methods substitute receiver arguments without
+  reparsing the rendered receiver type
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path

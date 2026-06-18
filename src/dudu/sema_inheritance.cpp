@@ -84,7 +84,7 @@ FunctionSignature inherited_method_signature_without_self(const FunctionDecl& me
 }
 
 FunctionSignature inherited_method_signature_for_class_type(const ClassDecl& owner,
-                                                            const std::string& receiver_type,
+                                                            const TypeRef& receiver_type,
                                                             const FunctionDecl& method) {
     FunctionSignature signature = inherited_method_signature_without_self(method);
     const std::vector<std::string> receiver_args = template_args_from_type(receiver_type);
@@ -105,6 +105,12 @@ FunctionSignature inherited_method_signature_for_class_type(const ClassDecl& own
     signature.return_type_ref = substitute_type_ref(signature.return_type_ref, substitutions);
     signature.return_type = substitute_type_ref_text(signature.return_type_ref, {});
     return signature;
+}
+
+FunctionSignature inherited_method_signature_for_class_type(const ClassDecl& owner,
+                                                            const std::string& receiver_type,
+                                                            const FunctionDecl& method) {
+    return inherited_method_signature_for_class_type(owner, parse_type_text(receiver_type), method);
 }
 
 std::string signature_key(std::string_view name, const FunctionSignature& signature) {
@@ -317,6 +323,12 @@ bool is_abstract_class_type(const Symbols& symbols, const std::string& type) {
 
 FunctionSignature method_signature_without_self(const FunctionDecl& method) {
     return inherited_method_signature_without_self(method);
+}
+
+FunctionSignature inherited_method_signature_for_type(const ClassDecl& owner,
+                                                      const TypeRef& receiver_type,
+                                                      const FunctionDecl& method) {
+    return inherited_method_signature_for_class_type(owner, receiver_type, method);
 }
 
 FunctionSignature inherited_method_signature_for_type(const ClassDecl& owner,

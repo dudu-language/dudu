@@ -12,6 +12,7 @@
 #include "dudu/sema_builtin_methods.hpp"
 #include "dudu/sema_context.hpp"
 #include "dudu/sema_function_type.hpp"
+#include "dudu/sema_inheritance.hpp"
 #include "dudu/sema_method_templates.hpp"
 #include "dudu/type_compat.hpp"
 
@@ -191,6 +192,26 @@ void test_receiver_template_substitution_uses_type_ast() {
     const std::vector<std::string> receiver_args =
         dudu::template_args_from_type(dudu::parse_type_text("dict[str, i32]"));
     assert(receiver_args == std::vector<std::string>({"str", "i32"}));
+}
+
+void test_inherited_method_signature_uses_type_ast() {
+    dudu::ClassDecl owner;
+    owner.name = "Box";
+    owner.generic_params = {"T"};
+
+    dudu::FunctionDecl method;
+    method.name = "replace";
+    method.params.push_back({"self", dudu::parse_type_text("Box[T]"), {}});
+    method.params.push_back({"value", dudu::parse_type_text("T"), {}});
+    method.return_type_ref = dudu::parse_type_text("T");
+
+    const dudu::FunctionSignature signature =
+        dudu::inherited_method_signature_for_type(owner, dudu::parse_type_text("Box[i32]"), method);
+    assert(signature.params == std::vector<std::string>({"i32"}));
+    assert(signature.param_type_refs.size() == 1);
+    assert(dudu::substitute_type_ref_text(signature.param_type_refs[0], {}) == "i32");
+    assert(signature.return_type == "i32");
+    assert(dudu::substitute_type_ref_text(signature.return_type_ref, {}) == "i32");
 }
 
 void test_native_semantic_tokens() {
@@ -913,6 +934,7 @@ int main() {
         test_builtin_method_signature_uses_type_ast();
         test_native_header_types_split_cpp_templates();
         test_receiver_template_substitution_uses_type_ast();
+        test_inherited_method_signature_uses_type_ast();
         test_native_semantic_tokens();
         test_ast_constructor_assignment_compatibility();
         test_ast_index_receiver_type_inference();
