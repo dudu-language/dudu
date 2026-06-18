@@ -48,9 +48,6 @@ bool pointer_cast_type_ref_like(const TypeRef& type) {
     if (is_builtin_cast_call(name)) {
         return true;
     }
-    if (!type.text.empty() && starts_with(trim_copy(type.text), "struct ")) {
-        return true;
-    }
     switch (type.kind) {
     case TypeKind::Template:
     case TypeKind::Qualified:

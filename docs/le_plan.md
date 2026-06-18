@@ -1901,3 +1901,6 @@ push. They are not release packaging work.
    for `std.vector`, `std.map`, `std.optional`, `std.atomic`, and related
    containers instead of rendering the receiver type and searching for C++
    spelling fragments.
+   Pointer-cast C++ emission no longer has a raw `TypeRef.text` special case
+   for `struct Foo` cast targets; it recognizes the parsed type shape carried
+   by the call expression.
