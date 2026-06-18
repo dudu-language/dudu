@@ -1254,6 +1254,13 @@ push. They are not release packaging work.
    compatibility mirrors, and delete every compiler-internal one that is no
    longer an explicit native/C++ boundary.
 
+   `resolve_alias_ref_with_legacy_fallback` is explicitly temporary. It exists
+   only while old string aliases and new `TypeRef` aliases coexist during the
+   migration. The final alias resolver should consume structured `TypeRef`
+   alias metadata directly; once all alias producers populate that metadata,
+   delete the legacy fallback helper and every caller rather than preserving it
+   as a permanent alias-resolution path.
+
    Definition of done: no semantic, codegen, lint, LSP, formatter, or test
    discovery path may keep a fallback callback that accepts rendered source or
    rendered type strings when structured `Stmt`, `Expr`, `TypeRef`, tokens, or
@@ -1473,3 +1480,6 @@ push. They are not release packaging work.
    Function signatures now expose explicit text-boundary setters for parameter
    and return type spellings; native substitution refresh uses those APIs
    rather than parsing and assigning mirror fields itself.
+   Explicit and bound native template substitution now routes transformed
+   parameter and return types through the signature setters directly; the old
+   local refresh helper has been deleted.

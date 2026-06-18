@@ -135,11 +135,6 @@ explicit_template_bindings(const std::vector<std::string>& names,
     return out;
 }
 
-void refresh_signature_type_refs(FunctionSignature& signature) {
-    set_signature_param_type_texts(signature, signature.params);
-    set_signature_return_type_text(signature, signature.return_type);
-}
-
 std::string join_types(const std::vector<std::string>& types) {
     std::string out;
     for (size_t i = 0; i < types.size(); ++i) {
@@ -273,36 +268,41 @@ FunctionSignature substitute_explicit_template_signature(FunctionSignature signa
                                                ? native_signature_placeholders(signature)
                                                : signature.template_params;
     const std::map<std::string, std::string> bindings = explicit_template_bindings(names, args);
-    for (size_t i = 0; i < signature.params.size(); ++i) {
+    std::vector<TypeRef> param_types;
+    param_types.reserve(signature_param_count(signature));
+    for (size_t i = 0; i < signature_param_count(signature); ++i) {
         if (i < signature.param_type_refs.size() && has_type_ref(signature.param_type_refs[i])) {
-            signature.param_type_refs[i] =
-                substitute_type_ref(signature.param_type_refs[i], bindings);
-            signature.params[i] = substitute_type_ref_text(signature.param_type_refs[i], {});
+            param_types.push_back(substitute_type_ref(signature.param_type_refs[i], bindings));
         } else {
-            signature.params[i] =
-                replace_explicit_template_args(std::move(signature.params[i]), names, args);
+            const std::string param_text =
+                i < signature.params.size()
+                    ? replace_explicit_template_args(signature.params[i], names, args)
+                    : std::string{};
+            param_types.push_back(parse_type_text(param_text));
         }
     }
+    set_signature_param_types(signature, std::move(param_types));
     if (has_type_ref(signature.return_type_ref)) {
-        signature.return_type_ref = substitute_type_ref(signature.return_type_ref, bindings);
-        signature.return_type = substitute_type_ref_text(signature.return_type_ref, {});
+        set_signature_return_type(signature,
+                                  substitute_type_ref(signature.return_type_ref, bindings));
     } else {
-        signature.return_type =
-            replace_explicit_template_args(std::move(signature.return_type), names, args);
+        set_signature_return_type_text(
+            signature, replace_explicit_template_args(signature.return_type, names, args));
     }
-    refresh_signature_type_refs(signature);
     return signature;
 }
 
 FunctionSignature substitute_bound_template_signature(FunctionSignature signature,
                                                       const NativeTemplateBindings& bindings,
                                                       const NativePackBindingMap& pack_bindings) {
-    for (std::string& param : signature.params) {
-        param = replace_template_bindings(std::move(param), bindings, pack_bindings);
+    std::vector<std::string> params;
+    params.reserve(signature.params.size());
+    for (const std::string& param : signature.params) {
+        params.push_back(replace_template_bindings(param, bindings, pack_bindings));
     }
-    signature.return_type =
-        replace_template_bindings(std::move(signature.return_type), bindings, pack_bindings);
-    refresh_signature_type_refs(signature);
+    set_signature_param_type_texts(signature, params);
+    set_signature_return_type_text(
+        signature, replace_template_bindings(signature.return_type, bindings, pack_bindings));
     return signature;
 }
 
