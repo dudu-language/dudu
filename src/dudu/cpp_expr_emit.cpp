@@ -175,6 +175,14 @@ std::string cpp_binary_operator(const std::string& op) {
     return op;
 }
 
+std::string parsed_literal_value(const Expr& expr, std::string_view name) {
+    if (expr.value.empty()) {
+        throw CompileError(expr.location, "malformed " + std::string(name) +
+                                              " literal node: missing parsed value");
+    }
+    return expr.value;
+}
+
 std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases,
                        const CppLocalContext& locals, const Symbols* symbols,
                        const CppEmitOptions& options) {
@@ -193,14 +201,15 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
     }
     switch (expr.kind) {
     case ExprKind::BoolLiteral: {
-        const std::string value = expr.value.empty() ? expr.text : expr.value;
+        const std::string value = parsed_literal_value(expr, "bool");
         return value == "True" ? "true" : "false";
     }
     case ExprKind::NoneLiteral:
         return "nullptr";
     case ExprKind::IntLiteral:
     case ExprKind::FloatLiteral:
-        return lower_numeric_separators(expr.value.empty() ? expr.text : expr.value);
+        return lower_numeric_separators(
+            parsed_literal_value(expr, expr.kind == ExprKind::IntLiteral ? "integer" : "float"));
     case ExprKind::Name:
         if (expr.name == "class") {
             if (!locals.current_class.empty()) {

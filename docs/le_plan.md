@@ -1798,3 +1798,7 @@ push. They are not release packaging work.
    text-comparison compatibility helper now receives already-normalized
    `TypeRef` nodes from its caller and uses those for structural checks instead
    of reparsing normalized expected/got strings.
+   C++ expression emission and build-flag integer evaluation now require parsed
+   literal value fields for boolean and numeric literals instead of falling
+   back to raw expression text. Raw literal spelling remains available for LSP
+   display and string literal emission only.
