@@ -268,11 +268,10 @@ bool is_value_from_const(const TypeRef& expected, const TypeRef& got) {
     return inner.has_value() && type_ref_equivalent(expected, *inner);
 }
 
-bool text_type_assignment_allowed(const std::string& expected, const std::string& got) {
-    const std::string normalized_expected = normalize_cpp_type_artifacts(expected);
-    const std::string normalized_got = normalize_cpp_type_artifacts(got);
-    const TypeRef expected_ref = parse_type_text(normalized_expected);
-    const TypeRef got_ref = parse_type_text(normalized_got);
+bool normalized_text_type_assignment_allowed(const std::string& normalized_expected,
+                                             const TypeRef& expected_ref,
+                                             const std::string& normalized_got,
+                                             const TypeRef& got_ref) {
     if (!normalized_expected.empty() && !normalized_got.empty() &&
         structural_type_assignment_allowed(expected_ref, got_ref)) {
         return true;
@@ -311,7 +310,8 @@ bool type_assignment_allowed(const TypeRef& expected, const TypeRef& got) {
            is_value_from_reference(expected, got) || is_value_from_const(expected, got) ||
            is_native_function_pointer(expected, got) ||
            is_cpp_associated_type_binding(expected, got) ||
-           text_type_assignment_allowed(normalized_expected, normalized_got);
+           normalized_text_type_assignment_allowed(normalized_expected, normalized_expected_ref,
+                                                   normalized_got, normalized_got_ref);
 }
 
 bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const TypeRef& got) {

@@ -1794,3 +1794,7 @@ push. They are not release packaging work.
    `TypeRef.text`. The raw string type-lowering overload remains the explicit
    boundary for imported/native spellings, while structured lowering requires
    structured children.
+   Type compatibility no longer calls the type parser at all. The final
+   text-comparison compatibility helper now receives already-normalized
+   `TypeRef` nodes from its caller and uses those for structural checks instead
+   of reparsing normalized expected/got strings.
