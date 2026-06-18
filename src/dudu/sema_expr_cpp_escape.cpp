@@ -161,15 +161,15 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
                 return signature_return_type_text(signature);
             }
             const std::string receiver_type = cpp_escape_member_path_type(scope, nullptr, receiver);
+            const TypeRef receiver_type_ref =
+                parse_type_text(receiver_type, location == nullptr ? SourceLocation{} : *location);
             if (scope.local_type_refs.contains(receiver) &&
-                foreign_cpp_type_name(scope.symbols, resolve_alias(scope.symbols, receiver_type))) {
+                foreign_cpp_type_name(scope.symbols, receiver_type_ref)) {
                 for (const Expr& arg : args) {
                     (void)infer_expr_type_ast(scope, arg, location);
                 }
                 return "auto";
             }
-            const TypeRef receiver_type_ref =
-                parse_type_text(receiver_type, location == nullptr ? SourceLocation{} : *location);
             if (method_signature_for_type(scope.symbols, receiver_type_ref, method_name, signature,
                                           location)) {
                 const std::vector<FunctionSignature> signatures =
@@ -178,8 +178,7 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
                     check_call_args_ast(scope, callee, *match, args, location);
                     return signature_return_type_text(*match);
                 }
-                if (foreign_cpp_type_name(scope.symbols,
-                                          resolve_alias(scope.symbols, receiver_type))) {
+                if (foreign_cpp_type_name(scope.symbols, receiver_type_ref)) {
                     for (const Expr& arg : args) {
                         (void)infer_expr_type_ast(scope, arg, location);
                     }
@@ -194,7 +193,6 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
             const std::string method_name = trim(callee.substr(method_dot + 1));
             const TypeRef prefix_type_ref =
                 local_type_ref(scope, prefix, location == nullptr ? SourceLocation{} : *location);
-            const std::string prefix_type = substitute_type_ref_text(prefix_type_ref, {});
             if (has_type_ref(prefix_type_ref)) {
                 FunctionSignature signature;
                 if (method_signature_for_type(scope.symbols, prefix_type_ref, method_name,
@@ -204,7 +202,7 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
                 }
             }
             if (has_type_ref(prefix_type_ref) &&
-                foreign_cpp_type_name(scope.symbols, resolve_alias(scope.symbols, prefix_type))) {
+                foreign_cpp_type_name(scope.symbols, prefix_type_ref)) {
                 for (const Expr& arg : args) {
                     (void)infer_expr_type_ast(scope, arg, location);
                 }
