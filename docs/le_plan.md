@@ -1963,6 +1963,9 @@ push. They are not release packaging work.
    the duplicate raw string allocation inference fallback has been deleted.
    Parsed `cpp(...)` pointer casts now reuse the parser-attached target
    `TypeRef` instead of slicing the callee spelling to recover the type.
+   Parsed `cpp(...)` calls now carry a structured callee `TypeRef`, so
+   constructor/type-name checks can use parsed name/template data instead of
+   reparsing the callee spelling.
    LSP semantic type-token collection now uses `TypeRef` helper APIs for type
    heads and rendered spellings instead of reading `name`/`text` fields
    directly.

@@ -13,6 +13,7 @@ namespace dudu {
 struct EscapeCall {
     std::string callee;
     Expr callee_expr;
+    TypeRef callee_type_ref;
     std::vector<Expr> args;
 };
 

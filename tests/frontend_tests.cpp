@@ -14,6 +14,7 @@
 #include "dudu/project_config.hpp"
 #include "dudu/sema.hpp"
 #include "dudu/sema_alloc.hpp"
+#include "dudu/sema_expr_cpp_escape_calls.hpp"
 #include "dudu/sema_expr_internal.hpp"
 #include "dudu/sema_function_type.hpp"
 #include "dudu/sema_index.hpp"
@@ -627,6 +628,12 @@ void test_allocation_type_ref_diagnostics() {
     assert(dudu::substitute_type_ref_text(*allocation, {}) == "*list[i32]");
     assert(dudu::infer_cpp_escape_expr(scope, "new[list[i32]]()", &location) == "*list[i32]");
     assert(dudu::infer_cpp_escape_expr(scope, "*struct State(None)", &location) == "*struct State");
+    const std::optional<dudu::EscapeCall> parsed_template_call =
+        dudu::parsed_escape_call(dudu::parse_expr_text("Box[i32](7)", location));
+    assert(parsed_template_call.has_value());
+    assert(parsed_template_call->callee == "Box");
+    assert(parsed_template_call->callee_type_ref.kind == dudu::TypeKind::Template);
+    assert(dudu::substitute_type_ref_text(parsed_template_call->callee_type_ref, {}) == "Box[i32]");
 
     bool rejected = false;
     try {

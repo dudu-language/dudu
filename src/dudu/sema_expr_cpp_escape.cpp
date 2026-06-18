@@ -14,11 +14,12 @@ TypeRef cpp_escape_member_path_type_ref(const FunctionScope& scope, const Source
 TypeRef cpp_escape_member_expr_type_ref(const FunctionScope& scope, const SourceLocation* location,
                                         const Expr& expr);
 
-bool known_cpp_escape_type_spelling(const Symbols& symbols, const std::string& type) {
-    if (starts_with(trim(type), "fn(")) {
+bool known_cpp_escape_type_ref(const Symbols& symbols, const TypeRef& type,
+                               const std::string& spelling) {
+    if (starts_with(trim(spelling), "fn(")) {
         return true;
     }
-    return known_type_ref(symbols, parse_type_text(type));
+    return known_type_ref(symbols, type);
 }
 
 std::string render_type(const TypeRef& type) {
@@ -237,8 +238,8 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
                                      : "") +
                    "]";
         }
-        if (const ClassDecl* klass =
-                class_for_receiver_type(scope.symbols, parse_type_text(callee))) {
+        const TypeRef callee_type_ref = call_info->callee_type_ref;
+        if (const ClassDecl* klass = class_for_receiver_type(scope.symbols, callee_type_ref)) {
             check_constructor_args_ast(scope, *klass, args, location);
             return callee;
         }
@@ -255,7 +256,7 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
             return signature_return_type_text(*signature);
         }
         if (!is_local_member_call(scope, callee) && callee.find('.') == std::string::npos &&
-            known_cpp_escape_type_spelling(scope.symbols, callee)) {
+            known_cpp_escape_type_ref(scope.symbols, callee_type_ref, callee)) {
             return callee;
         }
         if (scope.local_type_refs.contains(callee)) {
@@ -372,7 +373,8 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
         }
         if (location != nullptr && callee.find('.') == std::string::npos &&
             callee.find('[') == std::string::npos && is_plain_identifier(callee) &&
-            !known_cpp_escape_type_spelling(scope.symbols, callee) && !is_builtin_call(callee)) {
+            !known_cpp_escape_type_ref(scope.symbols, callee_type_ref, callee) &&
+            !is_builtin_call(callee)) {
             if (is_dudu_all_caps(callee))
                 return "auto";
             sema_expr_fail(*location, "unknown function: " + callee);
