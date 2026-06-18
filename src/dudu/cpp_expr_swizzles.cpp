@@ -4,6 +4,7 @@
 #include "dudu/cpp_expr_emit.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/sema_methods.hpp"
+#include "dudu/sema_scope.hpp"
 
 #include <cctype>
 #include <optional>
@@ -67,14 +68,12 @@ lower_local_swizzle_expr(const Expr& expr, const std::vector<std::string>& alias
     if (local == locals.end()) {
         return std::nullopt;
     }
-    const auto typed = local_type_refs.find(receiver);
-    const TypeRef receiver_type = typed == local_type_refs.end()
-                                      ? parse_type_text(local->second, expr.location)
-                                      : typed->second;
-    if (!looks_like_local_dudu_class_type(type_ref_text(receiver_type))) {
+    if (symbols == nullptr) {
         return std::nullopt;
     }
-    if (symbols == nullptr) {
+    const TypeRef receiver_type =
+        local_type_ref(*symbols, locals, local_type_refs, receiver, expr.location);
+    if (!looks_like_local_dudu_class_type(type_ref_text(receiver_type))) {
         return std::nullopt;
     }
     const auto result_type = swizzle_type_ref_for_type(*symbols, receiver_type, expr.name);

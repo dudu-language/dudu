@@ -138,6 +138,8 @@ Already structured:
   strings
 - assignment-target and local callback signature semantic lookup also enter
   through the same typed-first local `TypeRef` helper
+- local swizzle C++ emission uses the shared typed-first local lookup instead
+  of reparsing rendered local type strings before codegen
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path
