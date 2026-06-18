@@ -1263,3 +1263,5 @@ declarations safely.
    mirrors directly.
    Function scopes no longer carry a rendered local type string map; semantic
    checks and LSP local lookup bind locals through `TypeRef` metadata only.
+   Assignment target semantic typing exposes only the structured `TypeRef`
+   helper; the old string-returning wrapper has been removed.

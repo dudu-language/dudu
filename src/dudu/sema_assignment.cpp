@@ -128,9 +128,4 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt,
     sema_fail(target_location, "unsupported assignment target: " + display_expr(stmt.target_expr));
 }
 
-std::string assignment_target_type(FunctionScope& scope, const Stmt& stmt,
-                                   const BodyCheckCallbacks& callbacks) {
-    return substitute_type_ref_text(assignment_target_type_ref(scope, stmt, callbacks), {});
-}
-
 } // namespace dudu

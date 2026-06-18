@@ -1996,6 +1996,8 @@ LSP source edits are also moving to AST-owned ranges:
 - Function scopes no longer carry a rendered local type string map; sema and
   LSP local bindings record `TypeRef` metadata only and render strings at
   display or native compatibility boundaries.
+- Assignment target semantic typing now exposes only the structured `TypeRef`
+  API; the old string-returning wrapper has been removed.
 
 Expression parsing has moved onto the lexer/token stream:
 
