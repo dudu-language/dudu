@@ -120,10 +120,11 @@ std::vector<std::string> native_operator_names_for_type(const std::string& type,
 }
 
 std::optional<FunctionSignature>
-native_operator_signature(const Symbols& symbols, const std::string& op, const std::string& left,
-                          const Expr* right_expr, const std::string& right) {
-    const std::string value_left = unwrap_value_type(symbols, left);
-    const std::string value_right = unwrap_value_type(symbols, right);
+native_operator_signature(const Symbols& symbols, const std::string& op, const TypeRef& left,
+                          const Expr* right_expr, const TypeRef& right) {
+    const TypeRef value_left_ref = unwrap_value_type_ref(symbols, left);
+    const TypeRef value_right_ref = unwrap_value_type_ref(symbols, right);
+    const std::string value_left = substitute_type_ref_text(value_left_ref, {});
     for (const std::string& name : native_operator_names_for_type(value_left, op)) {
         const auto found = symbols.native_function_signatures.find(name);
         if (found == symbols.native_function_signatures.end()) {
@@ -132,12 +133,12 @@ native_operator_signature(const Symbols& symbols, const std::string& op, const s
         for (FunctionSignature signature : found->second) {
             if (signature.params.size() < 2 ||
                 !type_assignment_allowed(signature_param_type_ref(signature, 0),
-                                         parse_type_text(value_left))) {
+                                         value_left_ref)) {
                 continue;
             }
             if (right_expr != nullptr &&
                 !assignment_type_allowed(signature_param_type_ref(signature, 1), *right_expr,
-                                         value_right)) {
+                                         value_right_ref)) {
                 continue;
             }
             signature.params.erase(signature.params.begin());
@@ -181,13 +182,14 @@ dudu_operator_signature(const Symbols& symbols, const std::string& op, const std
 
 std::optional<FunctionSignature> dudu_binary_operator_signature(const Symbols& symbols,
                                                                 const std::string& op,
-                                                                const std::string& left,
+                                                                const TypeRef& left,
                                                                 const Expr& right_expr,
-                                                                const std::string& right) {
+                                                                const TypeRef& right) {
     if (!is_supported_dudu_operator(op)) {
         return std::nullopt;
     }
-    const auto klass = symbols.classes.find(unwrap_value_type(symbols, left));
+    const std::string type = substitute_type_ref_text(unwrap_value_type_ref(symbols, left), {});
+    const auto klass = symbols.classes.find(type);
     if (klass == symbols.classes.end()) {
         return std::nullopt;
     }
@@ -213,8 +215,8 @@ std::optional<FunctionSignature> dudu_binary_operator_signature(const Symbols& s
 }
 
 std::optional<FunctionSignature>
-binary_operator_signature(const Symbols& symbols, const std::string& op, const std::string& left,
-                          const Expr& right_expr, const std::string& right) {
+binary_operator_signature(const Symbols& symbols, const std::string& op, const TypeRef& left,
+                          const Expr& right_expr, const TypeRef& right) {
     if (const auto signature =
             dudu_binary_operator_signature(symbols, op, left, right_expr, right)) {
         return signature;

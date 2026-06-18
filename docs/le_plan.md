@@ -1302,3 +1302,6 @@ declarations safely.
    Binary and comparison RHS validation now expose parsed `TypeRef` APIs; they
    unwrap aliases through structured type nodes and render strings only for
    native/foreign compatibility checks and diagnostics.
+   Binary operator signature lookup now accepts parsed operand `TypeRef` nodes;
+   Dudu operator matching and native operator argument checks no longer reparse
+   rendered left/right operand type strings.

@@ -142,7 +142,8 @@ std::optional<TypeRef> binary_expr_type_ref(const FunctionScope& scope, const Ex
             return named_type_ref("bool", expr.location);
         }
         if (const auto signature =
-                binary_operator_signature(scope.symbols, expr.op, left, expr.children[1], right)) {
+                binary_operator_signature(scope.symbols, expr.op, left_ref, expr.children[1],
+                                          right_ref)) {
             if (location != nullptr) {
                 if (signature->params.size() != 1) {
                     sema_expr_fail(*location, "operator " + expr.op + " expects 1 argument, got " +
@@ -174,7 +175,8 @@ std::optional<TypeRef> binary_expr_type_ref(const FunctionScope& scope, const Ex
         }
     }
     if (const auto signature =
-            binary_operator_signature(scope.symbols, expr.op, left, expr.children[1], right)) {
+            binary_operator_signature(scope.symbols, expr.op, left_ref, expr.children[1],
+                                      right_ref)) {
         if (location != nullptr) {
             check_call_args_ast(scope, expr.op, *signature, std::vector<Expr>{expr.children[1]},
                                 location);
