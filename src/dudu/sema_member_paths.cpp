@@ -60,6 +60,18 @@ TypeRef static_member_type_ref(const Symbols& symbols, const SourceLocation* loc
     return {};
 }
 
+TypeRef local_type_ref_from_maps(const std::map<std::string, std::string>& locals,
+                                 const std::map<std::string, TypeRef>& local_type_refs,
+                                 const std::string& name, SourceLocation location) {
+    if (const auto local = local_type_refs.find(name); local != local_type_refs.end()) {
+        return local->second;
+    }
+    if (const auto local = locals.find(name); local != locals.end()) {
+        return parse_type_text(local->second, location);
+    }
+    return {};
+}
+
 } // namespace
 
 std::string unwrap_receiver_type(const Symbols& symbols, std::string type) {
@@ -138,11 +150,10 @@ TypeRef member_expr_type_ref(const Symbols& symbols,
             }
             return {};
         }
-        if (const auto local = local_type_refs.find(expr.name); local != local_type_refs.end()) {
-            return local->second;
-        }
-        if (const auto local = locals.find(expr.name); local != locals.end()) {
-            return parse_type_text(local->second, type_location);
+        if (const TypeRef local =
+                local_type_ref_from_maps(locals, local_type_refs, expr.name, type_location);
+            has_type_ref(local)) {
+            return local;
         }
         if (symbols.classes.contains(expr.name)) {
             return parse_type_text(expr.name, expr.location);

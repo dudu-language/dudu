@@ -1788,6 +1788,9 @@ LSP source edits are also moving to AST-owned ranges:
   and direct indexed-local inference ask a shared helper for parsed local
   `TypeRef` metadata first, with the rendered local type string kept as a
   named compatibility fallback.
+- Member expression type lookup now uses the same typed-first local lookup
+  shape, so local member-path sema asks parsed `TypeRef` metadata before the
+  legacy local type string mirror.
 - Native value symbols now store parsed `TypeRef` metadata beside their C++
   spelling strings, and normal name/member expression sema reads those refs
   directly for imported constants, build flags, shader/native values, and class
