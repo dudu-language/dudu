@@ -322,6 +322,34 @@ void test_swizzle_lookup_uses_type_ast_receiver() {
     assert(dudu::substitute_type_ref_text(*swizzle, {}) == "Vec2");
 }
 
+void test_method_signature_lookup_uses_type_ast_receiver() {
+    dudu::ClassDecl box;
+    box.name = "Box";
+    box.generic_params = {"T"};
+
+    dudu::FunctionDecl method;
+    method.name = "replace";
+    method.params.push_back({"self", dudu::parse_type_text("Box[T]"), {}});
+    method.params.push_back({"value", dudu::parse_type_text("T"), {}});
+    method.return_type_ref = dudu::parse_type_text("T");
+    box.methods.push_back(method);
+
+    dudu::ClassDecl wrapper;
+    wrapper.name = "Wrapper";
+    wrapper.base_class_refs.push_back({dudu::parse_type_text("Box[f32]"), {}});
+
+    dudu::Symbols symbols;
+    symbols.classes.emplace("Box", &box);
+    symbols.classes.emplace("Wrapper", &wrapper);
+
+    dudu::FunctionSignature signature;
+    assert(dudu::method_signature_for_type(symbols, dudu::parse_type_text("Wrapper"), "replace",
+                                           signature, nullptr));
+    assert(signature.params == std::vector<std::string>({"f32"}));
+    assert(signature.return_type == "f32");
+    assert(dudu::substitute_type_ref_text(signature.return_type_ref, {}) == "f32");
+}
+
 void test_native_semantic_tokens() {
     dudu::ModuleAst module =
         dudu::parse_source("import c \"native.h\"\n"
@@ -1049,6 +1077,7 @@ int main() {
         test_unwrap_receiver_uses_type_ast();
         test_inherited_field_lookup_uses_type_ast_receiver();
         test_swizzle_lookup_uses_type_ast_receiver();
+        test_method_signature_lookup_uses_type_ast_receiver();
         test_native_semantic_tokens();
         test_ast_constructor_assignment_compatibility();
         test_ast_index_receiver_type_inference();

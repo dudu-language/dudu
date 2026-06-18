@@ -239,6 +239,9 @@ Already structured:
 - receiver unwrapping now accepts parsed `TypeRef` nodes, and inherited field
   lookup plus swizzle lookup use that path when the receiver/base type is
   already structured
+- instance method signature lookup now accepts parsed receiver `TypeRef` nodes,
+  and inherited method recursion walks parsed base-class references instead of
+  rendering base types before lookup
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path

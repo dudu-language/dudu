@@ -698,6 +698,9 @@ push. They are not release packaging work.
    Receiver unwrapping now accepts parsed `TypeRef` nodes, and inherited field
    lookup plus swizzle lookup use that path when the receiver/base type is
    already structured.
+   Instance method signature lookup now accepts parsed receiver `TypeRef`
+   nodes, and inherited method recursion walks parsed base-class references
+   instead of rendering base types before lookup.
    TypeRef-backed assignment checks now infer RHS expressions as `TypeRef`
    first, use structured type assignment before compatibility fallback, and
    render only for legacy assignment/literal checks and diagnostics.

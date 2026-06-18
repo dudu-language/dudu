@@ -80,15 +80,16 @@ std::vector<std::string> type_ref_texts(const std::vector<TypeRef>& types) {
     return out;
 }
 
-bool method_signature_for_type(const Symbols& symbols, std::string receiver_type,
+bool method_signature_for_type(const Symbols& symbols, const TypeRef& receiver_type,
                                const std::string& method_name, FunctionSignature& signature,
                                const SourceLocation* location) {
-    if (builtin_cpp_method_signature(symbols, receiver_type, method_name, signature)) {
+    const std::string receiver_type_text = substitute_type_ref_text(receiver_type, {});
+    if (builtin_cpp_method_signature(symbols, receiver_type_text, method_name, signature)) {
         return true;
     }
-    const std::string templated_receiver = receiver_template_type(symbols, receiver_type);
+    const std::string templated_receiver = receiver_template_type(symbols, receiver_type_text);
     const std::vector<std::string> receiver_args = template_args_from_type(templated_receiver);
-    const std::string type = unwrap_receiver_type(symbols, std::move(receiver_type));
+    const std::string type = unwrap_receiver_type(symbols, receiver_type);
     const std::string lookup_name = template_method_name(method_name);
     const std::vector<std::string> method_args = template_method_args(method_name);
     const auto klass = symbols.classes.find(type);
@@ -113,8 +114,8 @@ bool method_signature_for_type(const Symbols& symbols, std::string receiver_type
         return true;
     }
     for (const BaseClassDecl& base_decl : klass->second->base_class_refs) {
-        const std::string base = type_ref_text(base_decl.type_ref);
-        if (method_signature_for_type(symbols, base, method_name, signature, nullptr)) {
+        if (method_signature_for_type(symbols, base_decl.type_ref, method_name, signature,
+                                      nullptr)) {
             return true;
         }
     }
@@ -122,6 +123,13 @@ bool method_signature_for_type(const Symbols& symbols, std::string receiver_type
         sema_fail(*location, "unknown method: " + type + "." + method_name);
     }
     return false;
+}
+
+bool method_signature_for_type(const Symbols& symbols, std::string receiver_type,
+                               const std::string& method_name, FunctionSignature& signature,
+                               const SourceLocation* location) {
+    return method_signature_for_type(symbols, parse_type_text(receiver_type), method_name,
+                                     signature, location);
 }
 
 std::optional<FunctionSignature> inferred_generic_method_signature_for_type(

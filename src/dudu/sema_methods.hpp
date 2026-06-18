@@ -41,6 +41,9 @@ std::optional<TypeRef> swizzle_assignment_type_ref_for_type(const Symbols& symbo
                                                             const TypeRef& receiver_type,
                                                             const std::string& swizzle);
 
+bool method_signature_for_type(const Symbols& symbols, const TypeRef& receiver_type,
+                               const std::string& method_name, FunctionSignature& signature,
+                               const SourceLocation* location);
 bool method_signature_for_type(const Symbols& symbols, std::string receiver_type,
                                const std::string& method_name, FunctionSignature& signature,
                                const SourceLocation* location);
