@@ -808,6 +808,8 @@ push. They are not release packaging work.
    Builtin C++ method signature matching now normalizes receiver aliases and
    pointer/reference wrappers through parsed `TypeRef` metadata before deriving
    container/optional/atomic method signatures.
+   Native overload candidate diagnostics render parameter and return types
+   through signature `TypeRef` helpers rather than raw string mirrors.
    The duplicate string-only indexed type implementation has been removed;
    public string index queries parse the receiver once and delegate to the
    structured `TypeRef` indexing implementation.
