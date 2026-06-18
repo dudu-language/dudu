@@ -2096,6 +2096,9 @@ LSP source edits are also moving to AST-owned ranges:
   structured `TypeRef` nodes. Header scanning/import code is responsible for
   carrying structured metadata; missing native metadata degrades to `auto` or a
   simple named type instead of hidden reparsing.
+- Pointer-cast C++ emission now uses the parsed `Expr::type_ref` carried by the
+  pointer-cast call node instead of reparsing the callee spelling during
+  codegen.
 
 Expression parsing has moved onto the lexer/token stream:
 

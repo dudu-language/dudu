@@ -76,17 +76,14 @@ bool pointer_cast_type_ref_like(const TypeRef& type) {
     return false;
 }
 
-std::optional<TypeRef> pointer_cast_pointee_type_ref(const std::string& type,
-                                                     SourceLocation location) {
-    const std::string trimmed = trim_copy(type);
-    if (trimmed.empty()) {
+std::optional<TypeRef> pointer_cast_pointee_type_ref(const Expr& expr) {
+    if (!has_type_ref(expr.type_ref)) {
         return std::nullopt;
     }
-    TypeRef parsed = parse_type_text(trimmed, location);
-    if (!pointer_cast_type_ref_like(parsed)) {
+    if (!pointer_cast_type_ref_like(expr.type_ref)) {
         return std::nullopt;
     }
-    return parsed;
+    return expr.type_ref;
 }
 
 TypeRef pointer_type_ref_from_pointee(TypeRef type, SourceLocation location) {
@@ -311,17 +308,13 @@ lower_pointer_cast_expr(const Expr& expr, const std::vector<std::string>& aliase
         return std::nullopt;
     }
     const Expr& call = expr.children.front();
-    const std::optional<ExprPath> path = call_callee_path(call);
-    if (!path.has_value()) {
-        return std::nullopt;
-    }
-    const std::string type_name = render_expr_path(*path);
-    const std::optional<TypeRef> pointee = pointer_cast_pointee_type_ref(type_name, expr.location);
+    const std::optional<TypeRef> pointee = pointer_cast_pointee_type_ref(call);
     if (!pointee) {
         return std::nullopt;
     }
     return "reinterpret_cast<" +
-           lower_cpp_type(pointer_type_ref_from_pointee(*pointee, expr.location), aliases, options) +
+           lower_cpp_type(pointer_type_ref_from_pointee(*pointee, expr.location), aliases,
+                          options) +
            ">(" +
            join_lowered_exprs(call.children, aliases, locals, local_type_refs, ", ", symbols,
                               options) +
@@ -361,9 +354,7 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
     }
     const std::string callee_name = direct_callee_name(expr);
     if (starts_with(callee_name, "*")) {
-        const std::string type = trim_copy(callee_name.substr(1));
-        if (const std::optional<TypeRef> pointee =
-                pointer_cast_pointee_type_ref(type, expr.location)) {
+        if (const std::optional<TypeRef> pointee = pointer_cast_pointee_type_ref(expr)) {
             return "reinterpret_cast<" +
                    lower_cpp_type(pointer_type_ref_from_pointee(*pointee, expr.location), aliases,
                                   options) +
