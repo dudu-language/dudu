@@ -391,11 +391,11 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
                    join_lowered_exprs(expr.children, aliases, locals, ", ", symbols, options) + ")";
         }
     }
-    if (expr.name == "len" && expr.children.size() == 1) {
+    if (callee_name == "len" && expr.children.size() == 1) {
         return "(" + lower_expr(expr.children.front(), aliases, locals, symbols, options) +
                ").size()";
     }
-    if (expr.name == "str" && expr.children.size() == 1) {
+    if (callee_name == "str" && expr.children.size() == 1) {
         if (expr.children.front().kind == ExprKind::StringLiteral) {
             return "std::string(" +
                    lower_expr(expr.children.front(), aliases, locals, symbols, options) + ")";
@@ -403,16 +403,16 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
         return "std::to_string(" +
                lower_expr(expr.children.front(), aliases, locals, symbols, options) + ")";
     }
-    if ((expr.name == "Ok" || expr.name == "Err") && expr.children.size() == 1) {
-        return "dudu::" + expr.name + "(" +
+    if ((callee_name == "Ok" || callee_name == "Err") && expr.children.size() == 1) {
+        return "dudu::" + callee_name + "(" +
                join_lowered_exprs(expr.children, aliases, locals, ", ", symbols, options) + ")";
     }
-    if (expr.name == "cstr" && expr.children.size() == 1) {
+    if (callee_name == "cstr" && expr.children.size() == 1) {
         return "reinterpret_cast<const char*>(" +
                lower_expr(expr.children.front(), aliases, locals, symbols, options) + ")";
     }
-    if (is_builtin_cast_call(expr.name)) {
-        return lower_cpp_type(expr.name, aliases) + "(" +
+    if (is_builtin_cast_call(callee_name)) {
+        return lower_cpp_type(callee_name, aliases) + "(" +
                join_lowered_exprs(expr.children, aliases, locals, ", ", symbols, options) + ")";
     }
     std::string callee = lower_callee_expr(expr, aliases, locals, symbols, options);

@@ -1,5 +1,6 @@
 #include "dudu/language_server_ast_lints.hpp"
 
+#include "dudu/ast_expr.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/language_server_support.hpp"
@@ -124,15 +125,16 @@ void lint_suspicious_cast_expr(const Expr& expr, const Document& doc,
     if (expr.kind == ExprKind::Unknown) {
         return;
     }
-    if (expr.kind == ExprKind::Call && numeric_type_name(expr.name) && expr.children.size() == 1 &&
+    const std::string callee = direct_callee_name(expr);
+    if (expr.kind == ExprKind::Call && numeric_type_name(callee) && expr.children.size() == 1 &&
         expr.children.front().kind == ExprKind::Name &&
         same_source_file(expr.location.file, doc.path)) {
         const std::string& source_name = expr.children.front().name;
         const std::string source_type = visible_local_type(active_decls, source_name);
-        if (!source_type.empty() && is_suspicious_numeric_cast(expr.name, source_type)) {
+        if (!source_type.empty() && is_suspicious_numeric_cast(callee, source_type)) {
             out.push_back({.location = expr.location,
-                           .message = "suspicious narrowing cast: " + expr.name + "(" +
-                                      source_name + ") from " + source_type,
+                           .message = "suspicious narrowing cast: " + callee + "(" + source_name +
+                                      ") from " + source_type,
                            .source = "dudu/lint",
                            .severity = 2,
                            .code = "dudu.lint.suspicious_cast",

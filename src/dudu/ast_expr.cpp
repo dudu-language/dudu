@@ -136,6 +136,13 @@ std::string call_callee_text(const Expr& expr) {
     return path ? render_expr_path(*path) : trim_copy(expr.name);
 }
 
+std::string direct_callee_name(const Expr& expr) {
+    if (expr.kind != ExprKind::Call && expr.kind != ExprKind::TemplateCall) {
+        return {};
+    }
+    return call_callee_text(expr);
+}
+
 std::string join_display_exprs(const std::vector<Expr>& exprs, std::string_view separator) {
     std::ostringstream out;
     for (size_t i = 0; i < exprs.size(); ++i) {

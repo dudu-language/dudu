@@ -1,3 +1,4 @@
+#include "dudu/ast_expr.hpp"
 #include "dudu/ast_parse_utils.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/sema_expr_internal.hpp"
@@ -6,7 +7,8 @@ namespace dudu {
 namespace {
 
 TypeRef template_pointee_type_ref_from_expr(const Expr& expr, std::vector<TypeRef> type_args) {
-    const std::string name = trim(expr.name.substr(1));
+    const std::string callee = direct_callee_name(expr);
+    const std::string name = callee.size() > 1 ? trim(callee.substr(1)) : "";
     const TypeKind wrapper = wrapper_type_kind(name);
     TypeRef pointee;
     pointee.kind =
@@ -60,7 +62,8 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
     const ScopedCallee scoped_callee = scoped_call_callee(scope, expr, location);
     const std::string& callee_base = scoped_callee.key;
 
-    if (starts_with(expr.name, "*")) {
+    const std::string direct_callee = direct_callee_name(expr);
+    if (starts_with(direct_callee, "*")) {
         const std::vector<TypeRef> type_args = template_type_refs(expr);
         const size_t arg_count = type_args.size();
         if (location != nullptr && arg_count == 0) {
@@ -85,7 +88,7 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
         return "*" + substitute_type_ref_text(pointee_ref, {});
     }
 
-    const auto allocation = infer_allocation_call(scope.symbols, location, expr.name,
+    const auto allocation = infer_allocation_call(scope.symbols, location, direct_callee,
                                                   template_type_refs(expr), expr.children.size());
     if (allocation) {
         for (const Expr& arg : expr.children) {
@@ -93,23 +96,24 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
         }
         return *allocation;
     }
-    if (expr.name == "sizeof" || expr.name == "alignof") {
+    if (direct_callee == "sizeof" || direct_callee == "alignof") {
         const std::vector<TypeRef> type_args = template_type_refs(expr);
         const size_t arg_count = type_args.size();
         if (location != nullptr && arg_count != 1) {
-            sema_expr_fail(*location, expr.name + " expects 1 type argument, got " +
+            sema_expr_fail(*location, direct_callee + " expects 1 type argument, got " +
                                           std::to_string(arg_count));
         }
         if (arg_count == 1 && location != nullptr) {
             if (const auto unknown = unknown_type_ref(scope.symbols, type_args.front())) {
                 const SourceLocation type_location =
                     unknown->second.line > 0 ? unknown->second : type_args.front().location;
-                sema_expr_fail(type_location, "unknown " + expr.name + " type: " + unknown->first);
+                sema_expr_fail(type_location,
+                               "unknown " + direct_callee + " type: " + unknown->first);
             }
         }
         return "usize";
     }
-    if (expr.name == "offsetof") {
+    if (direct_callee == "offsetof") {
         const std::vector<TypeRef> type_args = template_type_refs(expr);
         const size_t arg_count = type_args.size();
         if (location != nullptr && arg_count != 1) {

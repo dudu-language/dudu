@@ -129,10 +129,11 @@ Expr ExprTokenParser::parse_call(Expr callee, std::initializer_list<TokenKind> s
     std::vector<Expr> args = parse_arg_list(TokenKind::RParen);
     match(TokenKind::RParen);
     Expr call = make_node(ExprKind::Call, begin, cursor_);
-    call.name = callee.text;
+    const std::optional<ExprPath> path = expr_path_from_expr(callee);
+    const std::string callee_name = path ? render_expr_path(*path) : trim_string(callee.text);
     call.callee.push_back(std::move(callee));
     call.children = std::move(args);
-    if (call.name == "cpp") {
+    if (callee_name == "cpp") {
         call.kind = ExprKind::CppEscape;
         call.value = cpp_escape_body(call.text);
     }
@@ -151,7 +152,6 @@ Expr ExprTokenParser::parse_template_call(Expr indexed_callee,
     std::vector<Expr> args = parse_arg_list(TokenKind::RParen);
     match(TokenKind::RParen);
     Expr call = make_node(ExprKind::TemplateCall, begin, cursor_);
-    call.name = callee.text;
     call.callee.push_back(std::move(callee));
     if (expr_missing(template_expr)) {
         call.template_args.clear();
@@ -174,7 +174,6 @@ Expr ExprTokenParser::parse_template_call_from_brackets(Expr callee, size_t begi
     match(TokenKind::RParen);
 
     Expr call = make_node(ExprKind::TemplateCall, begin, cursor_);
-    call.name = callee.text;
     call.callee.push_back(std::move(callee));
     call.template_type_args = parse_type_list_span(template_begin, template_end);
     Expr template_expr = parse_expr_span(template_begin, template_end);
@@ -362,7 +361,6 @@ Expr ExprTokenParser::parse_pointer_cast_call() {
     Expr callee = make_node(ExprKind::Name, begin, type_end);
     callee.name = callee_text;
     Expr call = make_node(ExprKind::Call, begin, cursor_);
-    call.name = callee_text;
     call.callee.push_back(std::move(callee));
     call.children = std::move(args);
 
@@ -379,7 +377,7 @@ Expr ExprTokenParser::parse_pointer_cast_call() {
         const size_t args_begin = bracket_token + 1;
         const size_t args_end = type_end - 1;
         call.kind = ExprKind::TemplateCall;
-        call.name = "*" + trim_string(text_between(type_begin, bracket_token));
+        call.callee.front().name = "*" + trim_string(text_between(type_begin, bracket_token));
         call.template_args.push_back(parse_expr_span(args_begin, args_end));
         call.template_type_args = parse_type_list_span(args_begin, args_end);
     }

@@ -1,4 +1,5 @@
 #include "dudu/array_shape.hpp"
+#include "dudu/ast_expr.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_emit.hpp"
 #include "dudu/cpp_lower.hpp"
@@ -357,11 +358,11 @@ void test_unsupported_dynamic_call_ast_shape() {
     const dudu::FunctionDecl& main = module.functions.front();
     assert(main.statements.size() == 3);
     assert(main.statements[0].value_expr.kind == dudu::ExprKind::Call);
-    assert(main.statements[0].value_expr.name == "eval");
+    assert(dudu::direct_callee_name(main.statements[0].value_expr) == "eval");
     assert(main.statements[1].expr.kind == dudu::ExprKind::Call);
-    assert(main.statements[1].expr.name == "exec");
+    assert(dudu::direct_callee_name(main.statements[1].expr) == "exec");
     assert(main.statements[2].value_expr.kind == dudu::ExprKind::Call);
-    assert(main.statements[2].value_expr.name == "getattr");
+    assert(dudu::direct_callee_name(main.statements[2].value_expr) == "getattr");
 }
 
 void test_expression_ast_shape() {
@@ -387,7 +388,7 @@ void test_expression_ast_shape() {
     const dudu::Stmt& answer = main.statements[0];
     assert(answer.kind == dudu::StmtKind::VarDecl);
     assert(answer.value_expr.kind == dudu::ExprKind::Call);
-    assert(answer.value_expr.name == "add");
+    assert(dudu::direct_callee_name(answer.value_expr) == "add");
     assert(answer.value_expr.callee.size() == 1);
     assert(answer.value_expr.callee[0].kind == dudu::ExprKind::Name);
     assert(answer.value_expr.callee[0].name == "add");
@@ -424,7 +425,7 @@ void test_expression_ast_shape() {
     assert(assign.target_expr.name == "name");
     assert(assign.target_expr.children[0].kind == dudu::ExprKind::Index);
     assert(assign.value_expr.kind == dudu::ExprKind::TemplateCall);
-    assert(assign.value_expr.name == "Vec4");
+    assert(dudu::direct_callee_name(assign.value_expr) == "Vec4");
     assert(assign.value_expr.callee.size() == 1);
     assert(assign.value_expr.callee[0].kind == dudu::ExprKind::Name);
     assert(assign.value_expr.callee[0].name == "Vec4");
@@ -514,7 +515,7 @@ void test_expression_ast_shape() {
     assert(pending.value_expr.kind == dudu::ExprKind::Await);
     assert(pending.value_expr.children.size() == 1);
     assert(pending.value_expr.children[0].kind == dudu::ExprKind::Call);
-    assert(pending.value_expr.children[0].name == "fetch");
+    assert(dudu::direct_callee_name(pending.value_expr.children[0]) == "fetch");
     assert(pending.value_expr.children[0].range.start.column >
            pending.value_expr.range.start.column);
 
@@ -562,16 +563,16 @@ void test_dereference_postfix_expression_shape() {
 
     const dudu::Expr cast = dudu::parse_expr_text("*struct State(user_data)");
     assert(cast.kind == dudu::ExprKind::Call);
-    assert(cast.name == "*struct State");
+    assert(dudu::direct_callee_name(cast) == "*struct State");
 
     const dudu::Expr template_cast = dudu::parse_expr_text("*list[MissingType](ptr)");
     assert(template_cast.kind == dudu::ExprKind::TemplateCall);
-    assert(template_cast.name == "*list");
+    assert(dudu::direct_callee_name(template_cast) == "*list");
     assert(template_cast.template_type_args.size() == 1);
 
     const dudu::Expr qualified_template_cast = dudu::parse_expr_text("*std.vector[i32](raw_data)");
     assert(qualified_template_cast.kind == dudu::ExprKind::TemplateCall);
-    assert(qualified_template_cast.name == "*std.vector");
+    assert(dudu::direct_callee_name(qualified_template_cast) == "*std.vector");
     assert(qualified_template_cast.template_args.size() == 1);
     assert(qualified_template_cast.template_args[0].text == "i32");
     assert(qualified_template_cast.template_type_args.size() == 1);
@@ -599,7 +600,7 @@ void test_decorator_expression_ast_shape() {
     assert(module.functions[0].decorators.size() == 1);
     const dudu::Expr& section = module.functions[0].decorators[0].expr;
     assert(section.kind == dudu::ExprKind::Call);
-    assert(section.name == "section");
+    assert(dudu::direct_callee_name(section) == "section");
     assert(section.range.start.line == 1);
     assert(section.range.start.column == 2);
     assert(section.children.size() == 1);
@@ -611,7 +612,7 @@ void test_decorator_expression_ast_shape() {
     assert(module.classes[0].methods[0].decorators.size() == 1);
     const dudu::Expr& op = module.classes[0].methods[0].decorators[0].expr;
     assert(op.kind == dudu::ExprKind::Call);
-    assert(op.name == "operator");
+    assert(dudu::direct_callee_name(op) == "operator");
     assert(op.children.size() == 1);
     assert(op.children[0].kind == dudu::ExprKind::StringLiteral);
     assert(op.children[0].value == "+");

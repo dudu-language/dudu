@@ -1,6 +1,7 @@
 #include "dudu/sema_index.hpp"
 
 #include "dudu/array_shape.hpp"
+#include "dudu/ast_expr.hpp"
 #include "dudu/ast_parse_utils.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
@@ -471,7 +472,7 @@ void check_iterable_binding(const Symbols& symbols,
                             const std::map<std::string, TypeRef>& local_type_refs,
                             const SourceLocation& location, const TypeRef& binding_type,
                             const Expr& iterable) {
-    if (iterable.kind == ExprKind::Call && iterable.name == "range") {
+    if (direct_callee_name(iterable) == "range") {
         return;
     }
     if (iterable.kind != ExprKind::Name) {

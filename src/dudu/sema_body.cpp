@@ -213,7 +213,7 @@ std::optional<TypeRef> infer_for_binding_type(FunctionScope& scope, const Stmt& 
         return std::nullopt;
     }
     const SourceLocation& location = node_location(stmt.location, stmt.iterable_expr);
-    if (stmt.iterable_expr.kind == ExprKind::Call && stmt.iterable_expr.name == "range") {
+    if (direct_callee_name(stmt.iterable_expr) == "range") {
         for (const Expr& arg : stmt.iterable_expr.children) {
             (void)callbacks.infer_expr_type(scope, arg, &location);
         }

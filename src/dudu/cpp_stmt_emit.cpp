@@ -411,7 +411,7 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
             locals[stmt.name] = substitute_type_ref_text(stmt.type_ref, {});
             local_type_refs[stmt.name] = stmt.type_ref;
         }
-        if (stmt.iterable_expr.kind == ExprKind::Call && stmt.iterable_expr.name == "range") {
+        if (direct_callee_name(stmt.iterable_expr) == "range") {
             const std::vector<Expr>& args = stmt.iterable_expr.children;
             const std::string start =
                 args.size() == 1 ? "0" : lower_expr(args.at(0), aliases, locals, symbols, options);

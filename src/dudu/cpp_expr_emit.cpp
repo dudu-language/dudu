@@ -152,7 +152,9 @@ TypeRef template_type_ref_from_expr(const Expr& expr, std::string name) {
 }
 
 TypeRef pointer_template_type_ref_from_expr(const Expr& expr) {
-    TypeRef pointee = template_type_ref_from_expr(expr, trim_copy(expr.name.substr(1)));
+    const std::string callee = direct_callee_name(expr);
+    TypeRef pointee =
+        template_type_ref_from_expr(expr, callee.size() > 1 ? trim_copy(callee.substr(1)) : "");
 
     TypeRef pointer;
     pointer.kind = TypeKind::Pointer;
@@ -238,36 +240,37 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
             join_lowered_type_args(expr.template_type_args, aliases, options);
         const std::string lowered_call_args =
             join_lowered_exprs(expr.children, aliases, locals, ", ", symbols, options);
-        if (expr.name == "new") {
+        const std::string callee = direct_callee_name(expr);
+        if (callee == "new") {
             return "new " + lowered_template_args + "(" + lowered_call_args + ")";
         }
-        if (expr.name == "malloc") {
+        if (callee == "malloc") {
             const std::string type = lowered_template_args;
             return "static_cast<" + type + "*>(std::malloc(sizeof(" + type + ") * (" +
                    lowered_call_args + ")))";
         }
-        if (starts_with(expr.name, "*")) {
+        if (starts_with(callee, "*")) {
             return "reinterpret_cast<" +
                    lower_cpp_type(pointer_template_type_ref_from_expr(expr), aliases, options) +
                    ">(" + lowered_call_args + ")";
         }
-        if (expr.name == "sizeof" || expr.name == "alignof") {
-            return expr.name + "(" + lowered_template_args + ")";
+        if (callee == "sizeof" || callee == "alignof") {
+            return callee + "(" + lowered_template_args + ")";
         }
-        if (expr.name == "offsetof" && expr.children.size() == 1) {
+        if (callee == "offsetof" && expr.children.size() == 1) {
             return "offsetof(" + lowered_template_args + ", " +
                    lower_offsetof_field(expr.children.front(), aliases, locals, symbols, options) +
                    ")";
         }
-        if ((expr.name == "std.function" || expr.name == "std::function") &&
+        if ((callee == "std.function" || callee == "std::function") &&
             expr.template_type_args.size() == 1) {
             const std::string type =
-                lower_cpp_type(template_type_ref_from_expr(expr, expr.name), aliases, options);
+                lower_cpp_type(template_type_ref_from_expr(expr, callee), aliases, options);
             return expr.children.empty() ? type + "{}" : type + "(" + lowered_call_args + ")";
         }
-        if (is_builtin_template_constructor(expr.name)) {
+        if (is_builtin_template_constructor(callee)) {
             const std::string type =
-                lower_cpp_type(template_type_ref_from_expr(expr, expr.name), aliases, options);
+                lower_cpp_type(template_type_ref_from_expr(expr, callee), aliases, options);
             return expr.children.empty() ? type + "{}" : type + "(" + lowered_call_args + ")";
         }
         return lower_callee_expr(expr, aliases, locals, symbols, options) + "<" +

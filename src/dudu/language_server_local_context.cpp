@@ -1,6 +1,7 @@
 #include "dudu/language_server_local_context.hpp"
 
 #include "dudu/array_shape.hpp"
+#include "dudu/ast_expr.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/language_server_json.hpp"
@@ -127,7 +128,7 @@ std::optional<TypeRef> infer_lsp_for_binding_type(FunctionScope& scope, const St
     if (!sema_has_expr(stmt.iterable_expr)) {
         return std::nullopt;
     }
-    if (stmt.iterable_expr.kind == ExprKind::Call && stmt.iterable_expr.name == "range") {
+    if (direct_callee_name(stmt.iterable_expr) == "range") {
         return parse_type_text("i32", stmt.iterable_expr.location);
     }
     if (stmt.iterable_expr.kind == ExprKind::Name) {
