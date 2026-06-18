@@ -155,13 +155,20 @@ Until this is complete, prefer no lint diagnostic over a noisy wrong lint
 diagnostic. Compiler correctness diagnostics are more important than clever
 editor warnings.
 
-Status: AST lint traversal now uses shared AST expression walkers instead of
-hand-maintained statement expression slot lists. The unreachable-code lint also
-uses structured control-flow shape for `if`/`elif`/`else` chains and reports
-only the first unreachable statement in a block, reducing noisy cascades while
-keeping the quick fix anchored to a concrete AST statement. Suspicious-cast
-lint scope state now carries structured `TypeRef` locals and renders type text
-only at the diagnostic message boundary.
+Status: diagnostics now parse/analyze the project tree before linting, and the
+lint entry point consumes `ModuleAst` plus `Document` rather than raw source
+lines. AST lint traversal uses shared AST expression walkers instead of
+hand-maintained statement expression slot lists. Suspicious casts, raw
+`cpp(...)` warnings, shadowing, unused locals, and unreachable-code checks all
+walk structured statement/expression nodes. The unreachable-code lint uses
+structured control-flow shape for `if`/`elif`/`else` chains, reports only the
+first unreachable statement in a block, and now lives in a focused AST-backed
+pass with shared source-file identity handling. Suspicious-cast lint scope
+state carries structured `TypeRef` locals and renders type text only at the
+diagnostic message boundary. Remaining work is to keep splitting mixed
+lint/code-action logic, move any residual edit construction onto concrete
+AST/token ranges, and add more false-positive fixtures for realistic
+project/module cases.
 
 ## Critical Module Import Blocker
 
