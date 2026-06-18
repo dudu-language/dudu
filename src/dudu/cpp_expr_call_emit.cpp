@@ -344,7 +344,10 @@ std::optional<std::string> lower_pointer_cast_expr(const Expr& expr,
     }
     const Expr& call = expr.children.front();
     const std::optional<ExprPath> path = call_callee_path(call);
-    const std::string type_name = path ? render_expr_path(*path) : trim_copy(call.name);
+    if (!path.has_value()) {
+        return std::nullopt;
+    }
+    const std::string type_name = render_expr_path(*path);
     if (!is_pointer_cast_type_like(type_name)) {
         return std::nullopt;
     }
