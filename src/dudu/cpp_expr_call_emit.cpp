@@ -40,13 +40,18 @@ bool is_builtin_cast_call(std::string_view name) {
     return std::find(types.begin(), types.end(), name) != types.end();
 }
 
-bool is_pointer_cast_type_like(const std::string& type) {
-    const std::string trimmed = trim_copy(type);
-    if (is_builtin_cast_call(trimmed) || starts_with(trimmed, "struct ")) {
+bool pointer_cast_type_ref_like(const TypeRef& type) {
+    if (type_ref_is_name(type, "struct")) {
         return true;
     }
-    const TypeRef parsed = parse_type_text(trimmed);
-    switch (parsed.kind) {
+    const std::string name = type_ref_head_name(type);
+    if (is_builtin_cast_call(name)) {
+        return true;
+    }
+    if (!type.text.empty() && starts_with(trim_copy(type.text), "struct ")) {
+        return true;
+    }
+    switch (type.kind) {
     case TypeKind::Template:
     case TypeKind::Qualified:
     case TypeKind::FixedArray:
@@ -60,8 +65,8 @@ bool is_pointer_cast_type_like(const std::string& type) {
     case TypeKind::Function:
         return true;
     case TypeKind::Named:
-        return !parsed.name.empty() &&
-               std::isupper(static_cast<unsigned char>(parsed.name.front())) != 0;
+        return !type.name.empty() &&
+               std::isupper(static_cast<unsigned char>(type.name.front())) != 0;
     case TypeKind::Pointer:
     case TypeKind::Reference:
     case TypeKind::Value:
@@ -71,8 +76,21 @@ bool is_pointer_cast_type_like(const std::string& type) {
     return false;
 }
 
-TypeRef pointer_type_ref_from_pointee_text(std::string_view type, SourceLocation location) {
-    return wrapped_type_ref(TypeKind::Pointer, parse_type_text(type, location), location);
+std::optional<TypeRef> pointer_cast_pointee_type_ref(const std::string& type,
+                                                     SourceLocation location) {
+    const std::string trimmed = trim_copy(type);
+    if (trimmed.empty()) {
+        return std::nullopt;
+    }
+    TypeRef parsed = parse_type_text(trimmed, location);
+    if (!pointer_cast_type_ref_like(parsed)) {
+        return std::nullopt;
+    }
+    return parsed;
+}
+
+TypeRef pointer_type_ref_from_pointee(TypeRef type, SourceLocation location) {
+    return wrapped_type_ref(TypeKind::Pointer, std::move(type), location);
 }
 
 std::string lower_call_args_for_signature(const std::vector<Expr>& args, const FunctionSignature&,
@@ -298,12 +316,12 @@ lower_pointer_cast_expr(const Expr& expr, const std::vector<std::string>& aliase
         return std::nullopt;
     }
     const std::string type_name = render_expr_path(*path);
-    if (!is_pointer_cast_type_like(type_name)) {
+    const std::optional<TypeRef> pointee = pointer_cast_pointee_type_ref(type_name, expr.location);
+    if (!pointee) {
         return std::nullopt;
     }
     return "reinterpret_cast<" +
-           lower_cpp_type(pointer_type_ref_from_pointee_text(type_name, expr.location), aliases,
-                          options) +
+           lower_cpp_type(pointer_type_ref_from_pointee(*pointee, expr.location), aliases, options) +
            ">(" +
            join_lowered_exprs(call.children, aliases, locals, local_type_refs, ", ", symbols,
                               options) +
@@ -344,9 +362,10 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
     const std::string callee_name = direct_callee_name(expr);
     if (starts_with(callee_name, "*")) {
         const std::string type = trim_copy(callee_name.substr(1));
-        if (is_pointer_cast_type_like(type)) {
+        if (const std::optional<TypeRef> pointee =
+                pointer_cast_pointee_type_ref(type, expr.location)) {
             return "reinterpret_cast<" +
-                   lower_cpp_type(pointer_type_ref_from_pointee_text(type, expr.location), aliases,
+                   lower_cpp_type(pointer_type_ref_from_pointee(*pointee, expr.location), aliases,
                                   options) +
                    ">(" +
                    join_lowered_exprs(expr.children, aliases, locals, local_type_refs, ", ",

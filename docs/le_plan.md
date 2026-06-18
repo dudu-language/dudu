@@ -1690,3 +1690,7 @@ push. They are not release packaging work.
    string helper APIs have been removed.
    The dead rendered-string alias resolver has been deleted; alias resolution
    now goes through `resolve_alias_ref` and structured `TypeRef` metadata.
+   Pointer-cast C++ emission now parses candidate pointee types once into
+   `TypeRef` nodes and reuses those nodes for lowering, rather than rendering
+   a type-like callee and reparsing it through separate predicate/lowering
+   helpers.
