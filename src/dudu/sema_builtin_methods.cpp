@@ -4,6 +4,7 @@
 #include "dudu/sema_function_type.hpp"
 
 #include <optional>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -26,8 +27,31 @@ std::optional<TypeRef> first_type_arg_ref(const TypeRef& type) {
     return std::nullopt;
 }
 
-bool single_template_type_arg(const TypeRef& type, std::string_view name) {
-    return template_type_arg_refs(type, name).size() == 1;
+bool template_head_is(const TypeRef& type, std::initializer_list<std::string_view> names) {
+    if (type.kind != TypeKind::Template) {
+        return false;
+    }
+    for (std::string_view name : names) {
+        if (type.name == name) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool single_template_type_arg_named(const TypeRef& type,
+                                    std::initializer_list<std::string_view> names) {
+    return template_head_is(type, names) && type.children.size() == 1;
+}
+
+bool type_head_is(const TypeRef& type, std::initializer_list<std::string_view> names) {
+    const std::string head = type_ref_head_name(type);
+    for (std::string_view name : names) {
+        if (head == name) {
+            return true;
+        }
+    }
+    return false;
 }
 
 void set_return_type(FunctionSignature& signature, const std::string& type) {
@@ -66,10 +90,12 @@ TypeRef receiver_template_type_ref(const Symbols& symbols, TypeRef type) {
 bool builtin_cpp_method_signature(const Symbols& symbols, const TypeRef& receiver_type,
                                   const std::string& method_name, FunctionSignature& signature) {
     TypeRef templated_ref = receiver_template_type_ref(symbols, receiver_type);
-    std::string templated = substitute_type_ref_text(templated_ref, {});
-    if (templated == "str" || templated == "string" || templated == "string_view" ||
-        templated == "std.string" || templated == "std.string_view" || templated == "std::string" ||
-        templated == "std::string_view" || templated.find("basic_string") != std::string::npos) {
+    const std::string templated_head = type_ref_head_name(templated_ref);
+    const bool is_string =
+        type_head_is(templated_ref, {"str", "string", "string_view", "std.string",
+                                     "std.string_view", "std::string", "std::string_view"}) ||
+        templated_head.find("basic_string") != std::string::npos;
+    if (is_string) {
         if (method_name == "size" || method_name == "length") {
             set_return_type(signature, "usize");
             return true;
@@ -83,8 +109,7 @@ bool builtin_cpp_method_signature(const Symbols& symbols, const TypeRef& receive
             return true;
         }
     }
-    if (single_template_type_arg(templated_ref, "list") ||
-        templated.find("vector<") != std::string::npos) {
+    if (single_template_type_arg_named(templated_ref, {"list", "std.vector", "std::vector"})) {
         const TypeRef item = first_type_arg_ref(templated_ref).value_or(auto_type_ref());
         if (method_name == "push_back" || method_name == "append") {
             set_param_types(signature, {item});
@@ -117,9 +142,9 @@ bool builtin_cpp_method_signature(const Symbols& symbols, const TypeRef& receive
             return true;
         }
     }
-    if (single_template_type_arg(templated_ref, "set") ||
-        templated.find("unordered_set<") != std::string::npos ||
-        templated.find("std::set<") != std::string::npos || templated.find("set<") == 0) {
+    if (single_template_type_arg_named(
+            templated_ref,
+            {"set", "std.set", "std::set", "std.unordered_set", "std::unordered_set"})) {
         const TypeRef value_type = first_type_arg_ref(templated_ref).value_or(auto_type_ref());
         if (method_name == "contains") {
             set_param_types(signature, {value_type});
@@ -140,9 +165,8 @@ bool builtin_cpp_method_signature(const Symbols& symbols, const TypeRef& receive
             return true;
         }
     }
-    if ((templated_ref.kind == TypeKind::Template && templated_ref.name == "dict") ||
-        templated.find("unordered_map<") != std::string::npos ||
-        templated.find("std::map<") != std::string::npos || templated.find("map<") == 0) {
+    if (template_head_is(templated_ref, {"dict", "std.map", "std::map", "std.unordered_map",
+                                         "std::unordered_map"})) {
         const TypeRef key_type = first_type_arg_ref(templated_ref).value_or(auto_type_ref());
         if (method_name == "contains") {
             set_param_types(signature, {key_type});
@@ -158,9 +182,8 @@ bool builtin_cpp_method_signature(const Symbols& symbols, const TypeRef& receive
             return true;
         }
     }
-    if (single_template_type_arg(templated_ref, "Option") ||
-        single_template_type_arg(templated_ref, "std.optional") ||
-        templated.find("optional<") != std::string::npos) {
+    if (single_template_type_arg_named(templated_ref,
+                                       {"Option", "std.optional", "std::optional"})) {
         const TypeRef item = first_type_arg_ref(templated_ref).value_or(auto_type_ref());
         if (method_name == "has_value") {
             set_return_type(signature, "bool");
@@ -172,7 +195,7 @@ bool builtin_cpp_method_signature(const Symbols& symbols, const TypeRef& receive
         }
     }
     if (unary_type_child_ref(templated_ref, TypeKind::Atomic) ||
-        templated.find("atomic<") != std::string::npos) {
+        single_template_type_arg_named(templated_ref, {"std.atomic", "std::atomic"})) {
         const TypeRef value_type = first_type_arg_ref(templated_ref).value_or(auto_type_ref());
         if (method_name == "load") {
             set_return_type(signature, value_type);

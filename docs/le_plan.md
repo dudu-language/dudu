@@ -1853,3 +1853,7 @@ push. They are not release packaging work.
    Structured `new[T]`/`malloc[T]` allocation inference no longer renders the
    allocated type before validation; it renders only when emitting an abstract
    allocation diagnostic.
+   Builtin C++ method signature inference now recognizes parsed template heads
+   for `std.vector`, `std.map`, `std.optional`, `std.atomic`, and related
+   containers instead of rendering the receiver type and searching for C++
+   spelling fragments.
