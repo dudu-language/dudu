@@ -72,13 +72,6 @@ lower_expected_generic_method_call(const TypeRef& expected_type, const Expr& exp
     std::vector<TypeRef> arg_types;
     arg_types.reserve(expr.children.size());
     for (const Expr& arg : expr.children) {
-        if (arg.kind == ExprKind::Name) {
-            if (const auto local_type = local_type_refs.find(arg.name);
-                local_type != local_type_refs.end()) {
-                arg_types.push_back(local_type->second);
-                continue;
-            }
-        }
         const TypeRef arg_type =
             infer_emitted_local_type_ref(arg, locals, local_type_refs, function_returns);
         if (!has_type_ref(arg_type) || type_ref_text(arg_type) == "auto") {
