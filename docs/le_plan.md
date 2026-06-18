@@ -1927,3 +1927,6 @@ push. They are not release packaging work.
    named/qualified/template/value nodes from parsed `name` or `value` fields
    only, leaving raw text rendering to `Unknown` and malformed wrapper
    fallback cases.
+   LSP semantic type-token collection now uses `TypeRef` helper APIs for type
+   heads and rendered spellings instead of reading `name`/`text` fields
+   directly.

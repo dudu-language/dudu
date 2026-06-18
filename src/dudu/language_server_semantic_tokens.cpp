@@ -1,6 +1,7 @@
 #include "dudu/language_server_semantic_tokens.hpp"
 
 #include "dudu/ast_expr.hpp"
+#include "dudu/ast_type.hpp"
 
 #include <algorithm>
 #include <optional>
@@ -125,9 +126,8 @@ void collect_type_tokens(const TypeRef& type, std::vector<SemanticToken>& tokens
                          const NativeSemanticIndex* native_index) {
     if (type.kind == TypeKind::Named || type.kind == TypeKind::Qualified ||
         type.kind == TypeKind::Template) {
-        const std::string_view label = type.name.empty() ? type.text : type.name;
-        const std::string label_text(label);
-        const std::string full = type.text.empty() ? std::string(label) : type.text;
+        const std::string label_text = type_ref_head_name(type);
+        const std::string full = type_ref_text(type);
         const bool native_class =
             native_index != nullptr &&
             (native_index->classes.contains(full) || native_index->classes.contains(label_text));
@@ -135,11 +135,11 @@ void collect_type_tokens(const TypeRef& type, std::vector<SemanticToken>& tokens
             native_index != nullptr &&
             (native_index->types.contains(full) || native_index->types.contains(label_text));
         if (native_class) {
-            add_native_semantic_token(tokens, type.location, label, token_class);
+            add_native_semantic_token(tokens, type.location, label_text, token_class);
         } else if (native_type) {
-            add_native_semantic_token(tokens, type.location, label, token_type);
+            add_native_semantic_token(tokens, type.location, label_text, token_type);
         } else {
-            add_semantic_token(tokens, type.location, label, token_type);
+            add_semantic_token(tokens, type.location, label_text, token_type);
         }
     }
     for (const TypeRef& child : type.children) {
