@@ -153,6 +153,8 @@ Already structured:
   resolve local type aliases before parsing compatibility local type strings
 - index expression semantic checks use typed local lookup when resolving `[]`
   operator signatures
+- indexed-assignment semantic checks use typed local lookup when resolving
+  `[]=` operator signatures
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path
