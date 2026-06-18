@@ -13,6 +13,14 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
     const SourceLocation type_location =
         location == nullptr ? node_location(expr.location, expr) : node_location(*location, expr);
     switch (expr.kind) {
+    case ExprKind::Unknown:
+        if (trim(expr.text).empty()) {
+            return {};
+        }
+        if (location != nullptr) {
+            sema_expr_fail(*location, "unsupported expression: " + trim(expr.text));
+        }
+        return {};
     case ExprKind::BoolLiteral:
         return parse_type_text("bool", type_location);
     case ExprKind::IntLiteral:
@@ -65,7 +73,14 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
             native != scope.symbols.native_function_signatures.end() && !native->second.empty()) {
             return function_type_ref(native->second.front(), type_location);
         }
-        break;
+        if (is_dudu_all_caps(expr.name)) {
+            return parse_type_text("i32", type_location);
+        }
+        if (location != nullptr) {
+            throw CompileError(*location, "unknown identifier: " + expr.name,
+                               "dudu.sema.unknown_identifier", expr.name);
+        }
+        return {};
     case ExprKind::TupleLiteral: {
         TypeRef tuple;
         tuple.kind = TypeKind::Template;
@@ -83,12 +98,19 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
         if (const auto call_type = direct_call_type_ref(scope, expr, location)) {
             return *call_type;
         }
-        break;
+        if (const std::string inferred = infer_call_ast(scope, expr, location); !inferred.empty()) {
+            return parse_type_text(inferred, type_location);
+        }
+        return {};
     case ExprKind::TemplateCall:
         if (const auto call_type = direct_template_call_type_ref(scope, expr, location)) {
             return *call_type;
         }
-        break;
+        if (const std::string inferred = infer_template_call_ast(scope, expr, location);
+            !inferred.empty()) {
+            return parse_type_text(inferred, type_location);
+        }
+        return {};
     case ExprKind::Unary:
         if (const auto unary_type = unary_expr_type_ref(scope, expr, location)) {
             return *unary_type;
@@ -140,7 +162,7 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
         if (const auto member_type = member_expr_direct_type_ref(scope, expr, location)) {
             return *member_type;
         }
-        break;
+        return {};
     case ExprKind::DefExpression:
         if (location != nullptr) {
             sema_expr_fail(*location, "unsupported Python feature: def expressions");
@@ -151,12 +173,40 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
             sema_expr_fail(*location, "unsupported Python feature: comprehensions");
         }
         return {};
-    default:
-        break;
+    case ExprKind::Lambda:
+        if (location != nullptr) {
+            sema_expr_fail(
+                *location,
+                "unsupported Python feature: lambda; declare a named function and pass the "
+                "function name");
+        }
+        return {};
+    case ExprKind::Conditional:
+        if (location != nullptr) {
+            sema_expr_fail(
+                *location,
+                "unsupported Python feature: conditional expressions; use an explicit if "
+                "statement");
+        }
+        return {};
+    case ExprKind::Await:
+        if (location != nullptr) {
+            sema_expr_fail(*location, "unsupported Python feature: async");
+        }
+        return {};
+    case ExprKind::Yield:
+        if (location != nullptr) {
+            sema_expr_fail(*location, "unsupported Python feature: generators");
+        }
+        return {};
+    case ExprKind::CppEscape:
+        if (const std::string inferred = infer_cpp_escape_expr(scope, expr.value, location);
+            !inferred.empty()) {
+            return parse_type_text(inferred, type_location);
+        }
+        return {};
     }
-
-    const std::string inferred = infer_expr_ast(scope, expr, location);
-    return inferred.empty() ? TypeRef{} : parse_type_text(inferred, type_location);
+    return {};
 }
 
 void check_expr_ast(const FunctionScope& scope, const Expr& expr, const SourceLocation* location) {

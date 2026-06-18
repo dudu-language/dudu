@@ -376,6 +376,9 @@ Already structured:
 - member-call receiver typing and C++ escape `Ok`/`Err` rendering now use
   structured `TypeRef` inference, leaving `infer_expr_ast` as the central legacy
   string-rendering fallback rather than a dependency of normal call inference
+- expression `TypeRef` inference now has explicit cases for all expression
+  kinds; the old generic fallback into `infer_expr_ast` is gone, with remaining
+  string compatibility isolated to call/template-call paths that still need it
 - LSP local variable/parameter type collection for hover, member completion,
   and member definition now walks parsed function/method bodies and reuses
   semantic expression inference instead of regexing source lines
