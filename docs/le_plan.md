@@ -1526,6 +1526,9 @@ push. They are not release packaging work.
    Swizzle result matching and native generic inference conflict checks now use
    `type_ref_equivalent` for semantic type equality; rendering remains only for
    diagnostics and template substitution text boundaries.
+   Binary and comparison operator validation now checks unknown/auto,
+   foreign-type sameness, generic-parameter sameness, string, numeric, and
+   integer predicates from `TypeRef` helpers instead of rendered type strings.
    Native value type inference now reads `native_value_type_refs` directly.
    The `native_values` string map remains only as a display/native-boundary
    mirror populated from structured `TypeRef` data during symbol collection.
