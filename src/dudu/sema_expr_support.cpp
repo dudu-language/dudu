@@ -43,7 +43,7 @@ bool is_local_member_call(const FunctionScope& scope, const std::string& callee)
     const size_t dot = callee.find('.');
     return dot != std::string::npos && scope.local_type_refs.contains(trim(callee.substr(0, dot)));
 }
-void reject_abstract_construction(const Symbols& symbols, const std::string& type,
+void reject_abstract_construction(const Symbols& symbols, const TypeRef& type,
                                   const SourceLocation* location) {
     if (location == nullptr) {
         return;
@@ -52,8 +52,9 @@ void reject_abstract_construction(const Symbols& symbols, const std::string& typ
     if (missing.empty()) {
         return;
     }
+    const std::string type_text = substitute_type_ref_text(type, {});
     std::ostringstream out;
-    out << "cannot construct abstract class: " << type << "; missing ";
+    out << "cannot construct abstract class: " << type_text << "; missing ";
     for (size_t i = 0; i < missing.size(); ++i) {
         if (i > 0) {
             out << ", ";

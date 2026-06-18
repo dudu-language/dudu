@@ -292,7 +292,8 @@ std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Ex
     if (known_template_constructor_type(scope, callee)) {
         if (const auto klass = scope.symbols.classes.find(resolve_alias(scope.symbols, callee));
             klass != scope.symbols.classes.end()) {
-            reject_abstract_construction(scope.symbols, callee, location);
+            reject_abstract_construction(scope.symbols, named_type_ref(callee, expr.location),
+                                         location);
             check_constructor_args_ast(
                 scope, *klass->second, expr.children, location, infer_expr_type_ast,
                 [&](const TypeRef& expected, const Expr& value, const TypeRef& got) {
@@ -392,13 +393,14 @@ std::optional<TypeRef> direct_template_call_type_ref(const FunctionScope& scope,
             }
         }
         const ClassDecl instantiated = instantiate_generic_class(*klass->second, type_args, callee);
-        reject_abstract_construction(scope.symbols, callee_base, location);
+        const TypeRef constructor_type = template_constructor_type_ref(expr, callee_base, type_args);
+        reject_abstract_construction(scope.symbols, constructor_type, location);
         check_constructor_args_ast(
             scope, instantiated, expr.children, location, infer_expr_type_ast,
             [&](const TypeRef& expected, const Expr& value, const TypeRef& got) {
                 return can_assign_ast(scope, expected, value, got);
             });
-        return template_constructor_type_ref(expr, callee_base, type_args);
+        return constructor_type;
     }
     if (const auto signature = native_signature_for_call(
             scope, callee, expr.children, location, infer_expr_type_ast,

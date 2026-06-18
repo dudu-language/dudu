@@ -77,7 +77,7 @@ bool can_assign_ast(const FunctionScope& scope, const TypeRef& expected, const E
                     const TypeRef& got);
 bool is_builtin_call(const std::string& callee);
 bool is_local_member_call(const FunctionScope& scope, const std::string& callee);
-void reject_abstract_construction(const Symbols& symbols, const std::string& type,
+void reject_abstract_construction(const Symbols& symbols, const TypeRef& type,
                                   const SourceLocation* location);
 bool is_comparison_op(const std::string& op);
 bool is_arithmetic_op(const std::string& op);

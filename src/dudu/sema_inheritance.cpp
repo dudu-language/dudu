@@ -19,10 +19,6 @@ namespace {
 
 std::string unwrap_type(const Symbols& symbols, const TypeRef& type);
 
-std::string unwrap_type(const Symbols& symbols, std::string type) {
-    return unwrap_type(symbols, parse_type_text(std::move(type)));
-}
-
 std::string unwrap_type(const Symbols& symbols, const TypeRef& type) {
     TypeRef current = type;
     while (true) {
@@ -122,12 +118,6 @@ FunctionSignature inherited_method_signature_for_class_type(const ClassDecl& own
                               substitute_type_ref(signature_return_type_ref(signature),
                                                   substitutions));
     return signature;
-}
-
-FunctionSignature inherited_method_signature_for_class_type(const ClassDecl& owner,
-                                                            const std::string& receiver_type,
-                                                            const FunctionDecl& method) {
-    return inherited_method_signature_for_class_type(owner, parse_type_text(receiver_type), method);
 }
 
 std::string signature_key(std::string_view name, const FunctionSignature& signature) {
@@ -294,23 +284,13 @@ std::vector<std::string> unresolved_abstract_methods_impl(const Symbols& symbols
 
 } // namespace
 
-bool type_derives_from(const Symbols& symbols, const std::string& derived,
-                       const std::string& base) {
-    std::set<std::string> seen;
-    return derives_from_impl(symbols, parse_type_text(derived), unwrap_type(symbols, base), seen);
-}
-
 bool native_base_assignable(const Symbols& symbols, const TypeRef& expected, const TypeRef& got) {
     if (!ref_like(expected) && !ref_like(got))
         return false;
     const std::string base = unwrap_type(symbols, expected);
     const std::string derived = unwrap_type(symbols, got);
-    return base != derived && type_derives_from(symbols, derived, base);
-}
-
-bool native_base_assignable(const Symbols& symbols, const std::string& expected,
-                            const std::string& got) {
-    return native_base_assignable(symbols, parse_type_text(expected), parse_type_text(got));
+    std::set<std::string> seen;
+    return base != derived && derives_from_impl(symbols, got, base, seen);
 }
 
 bool class_type_has_instance_storage(const Symbols& symbols, const TypeRef& type) {
@@ -325,18 +305,10 @@ bool class_type_has_instance_storage(const Symbols& symbols, const TypeRef& type
                        });
 }
 
-bool class_type_has_instance_storage(const Symbols& symbols, const std::string& type) {
-    return class_type_has_instance_storage(symbols, parse_type_text(type));
-}
-
 std::vector<std::string> unimplemented_abstract_methods(const Symbols& symbols,
-                                                        const std::string& type) {
+                                                        const TypeRef& type) {
     std::set<std::string> seen;
-    return unresolved_abstract_methods_impl(symbols, parse_type_text(type), seen);
-}
-
-bool is_abstract_class_type(const Symbols& symbols, const std::string& type) {
-    return !unimplemented_abstract_methods(symbols, type).empty();
+    return unresolved_abstract_methods_impl(symbols, type, seen);
 }
 
 FunctionSignature method_signature_without_self(const FunctionDecl& method) {
@@ -345,12 +317,6 @@ FunctionSignature method_signature_without_self(const FunctionDecl& method) {
 
 FunctionSignature inherited_method_signature_for_type(const ClassDecl& owner,
                                                       const TypeRef& receiver_type,
-                                                      const FunctionDecl& method) {
-    return inherited_method_signature_for_class_type(owner, receiver_type, method);
-}
-
-FunctionSignature inherited_method_signature_for_type(const ClassDecl& owner,
-                                                      const std::string& receiver_type,
                                                       const FunctionDecl& method) {
     return inherited_method_signature_for_class_type(owner, receiver_type, method);
 }
@@ -378,11 +344,6 @@ std::optional<InheritedMethod> find_inherited_method(const Symbols& symbols, con
     return std::nullopt;
 }
 
-std::optional<InheritedMethod>
-find_inherited_method(const Symbols& symbols, const std::string& type, const std::string& name) {
-    return find_inherited_method(symbols, parse_type_text(type), name);
-}
-
 const FunctionDecl* find_method_decl(const Symbols& symbols, const TypeRef& type,
                                      const std::string& name) {
     const auto klass = symbols.classes.find(unwrap_type(symbols, type));
@@ -400,11 +361,6 @@ const FunctionDecl* find_method_decl(const Symbols& symbols, const TypeRef& type
         }
     }
     return nullptr;
-}
-
-const FunctionDecl* find_method_decl(const Symbols& symbols, const std::string& type,
-                                     const std::string& name) {
-    return find_method_decl(symbols, parse_type_text(type), name);
 }
 
 bool same_signature(const FunctionSignature& a, const FunctionSignature& b) {

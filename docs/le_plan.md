@@ -1384,3 +1384,7 @@ push. They are not release packaging work.
    General base-type queries now expose a parsed `TypeRef` API; the old public
    raw-string helper has been removed, and remaining callers parse only at
    explicit text/native boundaries.
+   Inheritance and abstract-construction checks now expose parsed `TypeRef`
+   APIs for native base assignability, instance-storage queries, inherited
+   method lookup, and unimplemented abstract method checks; the former public
+   string overloads and string reparsing wrappers have been deleted.
