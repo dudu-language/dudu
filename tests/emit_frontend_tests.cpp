@@ -186,6 +186,24 @@ void test_inferred_auto_assignment_is_not_redeclared() {
            std::string::npos);
 }
 
+void test_expected_generic_method_emission_uses_type_ast_receiver() {
+    const dudu::ModuleAst module = dudu::parse_source("class Box[T]:\n"
+                                                      "    def make[U](self) -> U:\n"
+                                                      "        return U()\n"
+                                                      "\n"
+                                                      "class Wrapper(Box[f32]):\n"
+                                                      "    tag: i32\n"
+                                                      "\n"
+                                                      "\n"
+                                                      "def use(wrapper: Wrapper) -> str:\n"
+                                                      "    text: str = wrapper.make()\n"
+                                                      "    return text\n",
+                                                      "expected_generic_method_type_ast_emit.dd");
+    dudu::analyze_module(module, {.check_bodies = false});
+    const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find("std::string text = wrapper.make<std::string>();") != std::string::npos);
+}
+
 } // namespace
 
 int main() {
@@ -201,6 +219,7 @@ int main() {
         test_array_literal_scalar_ast_emission();
         test_typed_literal_initializers_use_type_ast();
         test_inferred_auto_assignment_is_not_redeclared();
+        test_expected_generic_method_emission_uses_type_ast_receiver();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;

@@ -714,6 +714,9 @@ push. They are not release packaging work.
    `TypeRef` nodes, so contextual return inference for inherited generic
    methods walks parsed base-class references without rendering base types
    before recursion.
+   Expected-type generic method C++ emission now keeps receiver inference as
+   parsed `TypeRef` metadata and walks inherited base-class references without
+   rendering receiver/base types before template argument inference.
    TypeRef-backed assignment checks now infer RHS expressions as `TypeRef`
    first, use structured type assignment before compatibility fallback, and
    render only for legacy assignment/literal checks and diagnostics.

@@ -16,7 +16,7 @@ namespace dudu {
 namespace {
 
 std::optional<std::vector<TypeRef>> infer_expected_method_type_args(
-    const Symbols& symbols, const std::string& receiver_type, const std::string& method_name,
+    const Symbols& symbols, const TypeRef& receiver_type, const std::string& method_name,
     const std::vector<TypeRef>& arg_types, const TypeRef& expected_type) {
     const std::string type = unwrap_receiver_type(symbols, receiver_type);
     const auto klass = symbols.classes.find(type);
@@ -33,9 +33,8 @@ std::optional<std::vector<TypeRef>> infer_expected_method_type_args(
             method, type + "." + method_name, arg_types, first_param, expected_type, nullptr);
     }
     for (const BaseClassDecl& base_decl : klass->second->base_class_refs) {
-        const std::string base = type_ref_text(base_decl.type_ref);
-        if (const auto inferred = infer_expected_method_type_args(symbols, base, method_name,
-                                                                  arg_types, expected_type)) {
+        if (const auto inferred = infer_expected_method_type_args(
+                symbols, base_decl.type_ref, method_name, arg_types, expected_type)) {
             return inferred;
         }
     }
@@ -63,9 +62,8 @@ lower_expected_generic_method_call(const TypeRef& expected_type, const Expr& exp
     if (!has_type_ref(receiver_type_ref)) {
         receiver_type_ref = member_expr_type_ref(*symbols, local_type_refs, nullptr, receiver);
     }
-    const std::string receiver_type =
-        has_type_ref(receiver_type_ref) ? type_ref_text(receiver_type_ref) : std::string{};
-    if (receiver_type.empty() || receiver_type == "auto") {
+    if (!has_type_ref(receiver_type_ref) ||
+        substitute_type_ref_text(receiver_type_ref, {}) == "auto") {
         return std::nullopt;
     }
     std::vector<TypeRef> arg_types;
@@ -78,7 +76,7 @@ lower_expected_generic_method_call(const TypeRef& expected_type, const Expr& exp
         }
         arg_types.push_back(arg_type);
     }
-    const auto type_args = infer_expected_method_type_args(*symbols, receiver_type, member.name,
+    const auto type_args = infer_expected_method_type_args(*symbols, receiver_type_ref, member.name,
                                                            arg_types, expected_type);
     if (!type_args) {
         return std::nullopt;
