@@ -631,6 +631,9 @@ push. They are not release packaging work.
    compatibility fallback. Pointer type C++ emission helpers and pointer-cast
    call emission now wrap parsed pointee types in explicit `TypeRef::Pointer`
    nodes instead of concatenating `*` onto type text and reparsing it.
+   Shared `TypeRef` wrapper construction now builds pointer, reference, and
+   const wrapper nodes structurally across sema and codegen, with text rendering
+   kept at explicit C++/diagnostic boundaries.
    Templated pointer-cast semantic inference also builds the pointee from
    parsed template `TypeRef` arguments instead of reconstructing `Name[...]`
    text and reparsing it. Inferred array literal shapes now carry a
