@@ -84,11 +84,10 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
     if (stmt.kind == StmtKind::Match) {
         check_match_stmt(
             scope, stmt, return_type_ref, loop_depth,
-            {.infer_expr_type = infer_expr_type_ast,
-             .check_block = [&](FunctionScope& nested, const std::vector<Stmt>& body,
+            {.check_block = [&](FunctionScope& nested, const std::vector<Stmt>& body,
                                 const TypeRef& nested_return_type, int nested_loop_depth) {
-                 check_block(nested, body, nested_return_type, nested_loop_depth);
-             }});
+                check_block(nested, body, nested_return_type, nested_loop_depth);
+            }});
         return;
     }
     if (stmt.kind == StmtKind::Case) {

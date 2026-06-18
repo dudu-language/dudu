@@ -10,10 +10,7 @@
 namespace dudu {
 
 struct MatchCheckCallbacks {
-    std::function<TypeRef(const FunctionScope&, const Expr&, const SourceLocation*)>
-        infer_expr_type;
-    std::function<void(FunctionScope&, const std::vector<Stmt>&, const TypeRef&, int)>
-        check_block;
+    std::function<void(FunctionScope&, const std::vector<Stmt>&, const TypeRef&, int)> check_block;
 };
 
 void check_match_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_type,

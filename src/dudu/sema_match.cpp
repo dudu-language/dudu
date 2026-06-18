@@ -5,6 +5,7 @@
 #include "dudu/match_patterns.hpp"
 #include "dudu/sema_common.hpp"
 #include "dudu/sema_enum.hpp"
+#include "dudu/sema_expr.hpp"
 
 #include <algorithm>
 #include <optional>
@@ -132,7 +133,7 @@ bool check_wrapper_match(FunctionScope& scope, const Stmt& stmt, const TypeRef& 
         FunctionScope nested = scope;
         bind_wrapper_case(nested, wrapper, child.pattern_expr, child.location);
         if (sema_has_expr(child.guard_expr)) {
-            const TypeRef guard_ref = callbacks.infer_expr_type(
+            const TypeRef guard_ref = infer_expr_type_ast(
                 nested, child.guard_expr, &node_location(child.location, child.guard_expr));
             const std::string guard_type = substitute_type_ref_text(guard_ref, {});
             if (guard_type != "bool") {
@@ -220,7 +221,7 @@ void check_enum_match(FunctionScope& scope, const Stmt& stmt, const TypeRef& ret
             }
         }
         if (sema_has_expr(child.guard_expr)) {
-            const TypeRef guard_ref = callbacks.infer_expr_type(
+            const TypeRef guard_ref = infer_expr_type_ast(
                 nested, child.guard_expr, &node_location(child.location, child.guard_expr));
             const std::string guard_type = substitute_type_ref_text(guard_ref, {});
             if (guard_type != "bool") {
@@ -241,8 +242,7 @@ void check_enum_match(FunctionScope& scope, const Stmt& stmt, const TypeRef& ret
 void check_match_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_type,
                       int loop_depth, const MatchCheckCallbacks& callbacks) {
     const SourceLocation& subject_location = node_location(stmt.location, stmt.condition_expr);
-    const TypeRef subject_ref =
-        callbacks.infer_expr_type(scope, stmt.condition_expr, &subject_location);
+    const TypeRef subject_ref = infer_expr_type_ast(scope, stmt.condition_expr, &subject_location);
     const std::string subject_type = substitute_type_ref_text(subject_ref, {});
     const WrapperMatchType wrapper = wrapper_match_type(subject_ref);
     if (wrapper.kind != WrapperMatchKind::None) {

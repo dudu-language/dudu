@@ -1579,6 +1579,9 @@ push. They are not release packaging work.
    `SuperCheckCallbacks` has been deleted entirely; `super` method validation
    now calls structured constructor checking, overload matching, argument
    checking, and return-type access directly.
+   Match checking no longer accepts an expression-inference callback; match
+   subjects and guards now use the normal structured expression inference path
+   directly, leaving only the recursive block-check hook for nested case bodies.
    Index-result inference now detects foreign/qualified indexable receivers from
    `TypeRef` head/kind metadata instead of rendering the receiver type to search
    for namespace separators.
