@@ -54,8 +54,7 @@ std::optional<TypeRef> member_expr_direct_type_ref(const FunctionScope& scope, c
     if (const auto swizzle = swizzle_type_ref_for_type(scope.symbols, receiver_ref, expr.name)) {
         return *swizzle;
     }
-    if (foreign_cpp_type_name(
-            scope.symbols, resolve_alias_ref_with_legacy_fallback(scope.symbols, receiver_ref))) {
+    if (foreign_cpp_type_name(scope.symbols, receiver_ref)) {
         return named_member_type_ref("auto", expr.location);
     }
     if (location != nullptr) {

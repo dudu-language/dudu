@@ -32,9 +32,16 @@ bool foreign_cpp_type_name(const Symbols& symbols, const std::string& type) {
 }
 
 bool foreign_cpp_type_name(const Symbols& symbols, const TypeRef& type) {
-    const std::string head = type_ref_head_name(type);
+    TypeRef resolved_type = resolve_alias_ref(symbols, type);
+    while (const auto inner = unary_type_child_ref(
+               resolved_type,
+               {TypeKind::Pointer, TypeKind::Reference, TypeKind::Const, TypeKind::Volatile,
+                TypeKind::Atomic, TypeKind::Storage, TypeKind::Shared, TypeKind::Device})) {
+        resolved_type = resolve_alias_ref(symbols, *inner);
+    }
+    const std::string head = type_ref_head_name(resolved_type);
     return head.find('.') != std::string::npos || head.find("::") != std::string::npos ||
-           symbols.native_types.contains(base_type(type));
+           symbols.native_types.contains(base_type(resolved_type));
 }
 
 bool native_import_path_prefix(const Symbols& symbols, const std::string& path) {

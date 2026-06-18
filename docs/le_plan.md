@@ -1462,6 +1462,10 @@ push. They are not release packaging work.
    Inheritance/base assignability unwrapping also uses structured alias
    resolution plus `type_ref_equivalent`; pointer/reference base checks no
    longer route through the legacy alias fallback helper.
+   Foreign C++ type detection now resolves `TypeRef` aliases internally and
+   unwraps unary pointer/reference/qualifier wrappers structurally, so member
+   and member-call inference pass receiver `TypeRef`s directly instead of
+   wrapping each call with the legacy alias fallback helper.
    Function signatures now expose `signature_param_count`, and regular call
    checking, function-type construction/rendering, and native overload arity
    diagnostics use it instead of reading the legacy parameter string vector

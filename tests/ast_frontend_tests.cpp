@@ -18,6 +18,7 @@
 #include "dudu/sema_method_templates.hpp"
 #include "dudu/sema_methods.hpp"
 #include "dudu/sema_methods_internal.hpp"
+#include "dudu/sema_native.hpp"
 #include "dudu/type_compat.hpp"
 
 #include <cassert>
@@ -356,6 +357,18 @@ void test_native_base_assignable_resolves_alias_type_refs() {
                                         dudu::parse_type_text("*DerivedAlias")));
     assert(dudu::native_base_assignable(symbols, dudu::parse_type_text("*const[BaseAlias]"),
                                         dudu::parse_type_text("*const[DerivedAlias]")));
+}
+
+void test_foreign_cpp_type_name_resolves_alias_type_refs() {
+    dudu::Symbols symbols;
+    symbols.native_types.insert("std.vector");
+    symbols.aliases["VecAlias"] = "std.vector";
+    symbols.alias_type_refs["VecAlias"] = dudu::parse_type_text("std.vector");
+    symbols.aliases["ConstVecAlias"] = "const[VecAlias]";
+    symbols.alias_type_refs["ConstVecAlias"] = dudu::parse_type_text("const[VecAlias]");
+
+    assert(dudu::foreign_cpp_type_name(symbols, dudu::parse_type_text("VecAlias")));
+    assert(dudu::foreign_cpp_type_name(symbols, dudu::parse_type_text("ConstVecAlias")));
 }
 
 void test_unwrap_receiver_uses_type_ast() {
@@ -1329,6 +1342,7 @@ int main() {
         test_instance_storage_uses_type_ast_receiver();
         test_native_base_assignable_uses_type_ast();
         test_native_base_assignable_resolves_alias_type_refs();
+        test_foreign_cpp_type_name_resolves_alias_type_refs();
         test_unwrap_receiver_uses_type_ast();
         test_inherited_field_lookup_uses_type_ast_receiver();
         test_result_field_lookup_resolves_alias_type_refs();
