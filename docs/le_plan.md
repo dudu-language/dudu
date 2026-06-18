@@ -1847,3 +1847,6 @@ push. They are not release packaging work.
    the diagnostic branch instead of rendering every checked argument eagerly.
    Constructor argument semantic checks now also defer inferred argument type
    rendering until a constructor mismatch diagnostic is actually emitted.
+   `@extern_c` ABI checking now classifies pointer-to-`struct`/`union`/`enum`
+   types from parsed `TypeRef` head names instead of rendering child types and
+   checking source-text prefixes.

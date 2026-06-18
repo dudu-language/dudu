@@ -123,6 +123,12 @@ bool is_c_abi_primitive(const std::string& type, bool allow_void) {
     return primitives.contains(type);
 }
 
+bool is_c_tagged_type_ref(const TypeRef& type) {
+    const std::string head = type_ref_head_name(type);
+    return starts_with(head, "struct ") || starts_with(head, "union ") ||
+           starts_with(head, "enum ");
+}
+
 bool is_c_abi_type_ref(const TypeRef& type, bool allow_void) {
     if (!has_type_ref(type)) {
         return false;
@@ -132,8 +138,7 @@ bool is_c_abi_type_ref(const TypeRef& type, bool allow_void) {
     }
     if (type.kind == TypeKind::Pointer && type.children.size() == 1) {
         const TypeRef& child = type.children.front();
-        return is_c_abi_type_ref(child, false) ||
-               starts_with(trim(substitute_type_ref_text(child, {})), "struct ");
+        return is_c_abi_type_ref(child, false) || is_c_tagged_type_ref(child);
     }
     const std::string name = type_ref_head_name(type);
     if (name == "str" || name.find('.') != std::string::npos) {
