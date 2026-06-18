@@ -172,14 +172,7 @@ bool bind_native_template_type_ast(const TypeRef& expected, const TypeRef& got,
 
 bool bind_native_template_type_ast(const Symbols& symbols, const TypeRef& expected,
                                    const TypeRef& got, NativeTemplateBindings& bindings) {
-    TypeRef resolved_got = resolve_alias_ref(symbols, got);
-    if (substitute_type_ref_text(resolved_got, {}) == substitute_type_ref_text(got, {})) {
-        const std::string got_text = substitute_type_ref_text(got, {});
-        const std::string resolved = resolve_alias(symbols, got_text);
-        if (resolved != got_text) {
-            resolved_got = parse_type_text(resolved, got.location);
-        }
-    }
+    TypeRef resolved_got = resolve_alias_ref_with_legacy_fallback(symbols, got);
     return bind_template_type_ref(expected, resolved_got, bindings);
 }
 

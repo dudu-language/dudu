@@ -1420,3 +1420,7 @@ push. They are not release packaging work.
    Native template compatibility now recognizes `basic_string[char]` through a
    structured `TypeRef` child-name check instead of rendering the child type to
    compare it with `char`.
+   Legacy string alias fallback after structured alias resolution is now
+   centralized in `resolve_alias_ref_with_legacy_fallback`; native template
+   matching and inheritance unwrapping no longer duplicate that render/compare
+   fallback logic locally.

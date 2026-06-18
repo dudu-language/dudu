@@ -216,6 +216,16 @@ TypeRef resolve_alias_ref(const Symbols& symbols, TypeRef type) {
     return type;
 }
 
+TypeRef resolve_alias_ref_with_legacy_fallback(const Symbols& symbols, const TypeRef& type) {
+    TypeRef resolved = resolve_alias_ref(symbols, type);
+    if (type_ref_text(resolved) != type_ref_text(type)) {
+        return resolved;
+    }
+    const std::string type_text = substitute_type_ref_text(type, {});
+    const std::string legacy_resolved = resolve_alias(symbols, type_text);
+    return legacy_resolved == type_text ? resolved : parse_type_text(legacy_resolved, type.location);
+}
+
 std::vector<std::string> split_top_level(std::string text) {
     std::vector<std::string> out;
     int depth = 0;

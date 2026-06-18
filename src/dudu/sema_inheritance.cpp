@@ -23,13 +23,7 @@ std::string unwrap_type(const Symbols& symbols, const TypeRef& type) {
     TypeRef current = type;
     while (true) {
         const std::string rendered = type_ref_text(current);
-        TypeRef resolved = resolve_alias_ref(symbols, current);
-        if (type_ref_text(resolved) == rendered) {
-            const std::string legacy_resolved = resolve_alias(symbols, rendered);
-            if (legacy_resolved != rendered) {
-                resolved = parse_type_text(legacy_resolved, current.location);
-            }
-        }
+        TypeRef resolved = resolve_alias_ref_with_legacy_fallback(symbols, current);
         if (type_ref_text(resolved) != rendered) {
             current = resolved;
             continue;
