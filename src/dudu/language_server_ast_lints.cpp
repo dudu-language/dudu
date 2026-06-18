@@ -122,7 +122,7 @@ void lint_suspicious_cast_stmt(const Stmt& stmt, const Document& doc,
 void lint_suspicious_cast_expr(const Expr& expr, const Document& doc,
                                const std::vector<AstLintLocal>& active_decls,
                                std::vector<Diagnostic>& out) {
-    if (expr.kind == ExprKind::Unknown) {
+    if (expr_missing(expr)) {
         return;
     }
     const std::string callee = direct_callee_name(expr);
@@ -224,7 +224,7 @@ void lint_cpp_escape_stmt(const Stmt& stmt, const Document& doc,
 
 void lint_cpp_escape_expr(const Expr& expr, const Document& doc,
                           std::set<std::pair<int, int>>& seen, std::vector<Diagnostic>& out) {
-    if (expr.kind == ExprKind::Unknown) {
+    if (expr_missing(expr)) {
         return;
     }
     if (expr.kind == ExprKind::CppEscape && same_source_file(expr.location.file, doc.path) &&
@@ -360,7 +360,7 @@ void lint_unreachable_module(const ModuleAst& module, const Document& doc,
 
 void collect_name_uses_expr(const Expr& expr, const Document& doc,
                             std::map<std::string, std::vector<SourceLocation>>& uses) {
-    if (expr.kind == ExprKind::Unknown) {
+    if (expr_missing(expr)) {
         return;
     }
     if (expr.kind == ExprKind::Name && same_source_file(expr.location.file, doc.path)) {

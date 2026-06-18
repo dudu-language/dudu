@@ -154,7 +154,7 @@ enum class ExprKind {
 };
 
 struct Expr {
-    ExprKind kind = ExprKind::Unknown;
+    ExprKind kind = ExprKind::Missing;
     std::string text;
     std::string name;
     std::string value;

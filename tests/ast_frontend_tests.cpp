@@ -852,7 +852,7 @@ void test_match_case_ast_shape() {
     const dudu::Stmt& wildcard = match.children[2];
     assert(wildcard.kind == dudu::StmtKind::Case);
     assert(wildcard.pattern_expr.text == "_");
-    assert(wildcard.guard_expr.kind == dudu::ExprKind::Unknown);
+    assert(wildcard.guard_expr.kind == dudu::ExprKind::Missing);
     assert(wildcard.pattern_expr.kind == dudu::ExprKind::Name);
 }
 
