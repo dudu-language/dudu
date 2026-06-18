@@ -1850,3 +1850,6 @@ push. They are not release packaging work.
    `@extern_c` ABI checking now classifies pointer-to-`struct`/`union`/`enum`
    types from parsed `TypeRef` head names instead of rendering child types and
    checking source-text prefixes.
+   Structured `new[T]`/`malloc[T]` allocation inference no longer renders the
+   allocated type before validation; it renders only when emitting an abstract
+   allocation diagnostic.

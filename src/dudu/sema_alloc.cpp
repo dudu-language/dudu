@@ -65,7 +65,6 @@ std::optional<TypeRef> infer_allocation_call_type_ref_from_type_args(
                                           std::to_string(type_args.size()));
     }
     const TypeRef type_ref = type_args.size() == 1 ? type_args.front() : TypeRef{};
-    const std::string type = has_type_ref(type_ref) ? substitute_type_ref_text(type_ref, {}) : "";
     if (location != nullptr && type_args.size() == 1) {
         if (const auto unknown = unknown_type_ref(symbols, type_ref)) {
             const SourceLocation error_location =
@@ -80,7 +79,8 @@ std::optional<TypeRef> infer_allocation_call_type_ref_from_type_args(
     if (location != nullptr && callee == "new" && type_args.size() == 1) {
         const std::vector<std::string> missing = unimplemented_abstract_methods(symbols, type_ref);
         if (!missing.empty()) {
-            throw CompileError(*location, "cannot allocate abstract class: " + type);
+            throw CompileError(*location,
+                               "cannot allocate abstract class: " + type_ref_text(type_ref));
         }
     }
     return has_type_ref(type_ref) ? pointer_type_ref_from_pointee(type_ref) : TypeRef{};
