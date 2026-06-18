@@ -3,6 +3,7 @@
 #include "dudu/ast_parse_utils.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/decorators.hpp"
+#include "dudu/sema_function_type.hpp"
 #include "dudu/sema_method_templates.hpp"
 
 #include <algorithm>
@@ -135,9 +136,9 @@ std::string signature_key(std::string_view name, const FunctionSignature& signat
         if (i > 0) {
             out << ", ";
         }
-        out << signature.params[i];
+        out << substitute_type_ref_text(signature_param_type_ref(signature, i), {});
     }
-    out << ") -> " << signature.return_type;
+    out << ") -> " << signature_return_type_text(signature);
     return out.str();
 }
 
@@ -406,7 +407,17 @@ const FunctionDecl* find_method_decl(const Symbols& symbols, const std::string& 
 }
 
 bool same_signature(const FunctionSignature& a, const FunctionSignature& b) {
-    return a.return_type == b.return_type && a.params == b.params;
+    if (signature_return_type_text(a) != signature_return_type_text(b) ||
+        a.params.size() != b.params.size()) {
+        return false;
+    }
+    for (size_t i = 0; i < a.params.size(); ++i) {
+        if (substitute_type_ref_text(signature_param_type_ref(a, i), {}) !=
+            substitute_type_ref_text(signature_param_type_ref(b, i), {})) {
+            return false;
+        }
+    }
+    return true;
 }
 
 void check_multiple_inheritance_rules(const Symbols& symbols, const ClassDecl& klass) {

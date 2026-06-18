@@ -1990,6 +1990,9 @@ LSP source edits are also moving to AST-owned ranges:
 - LSP hover, member completion, and member definition lookup now use
   `local_type_ref_before_cursor`; rendered local type strings are produced only
   at hover/completion/member-candidate display boundaries.
+- Inheritance override keys and signature equality now render parameter and
+  return types through `FunctionSignature` `TypeRef` helpers instead of reading
+  the signature string mirrors directly.
 
 Expression parsing has moved onto the lexer/token stream:
 

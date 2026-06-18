@@ -1255,3 +1255,6 @@ declarations safely.
    Hover, member completion, and member definition lookup now use
    `local_type_ref_before_cursor`, leaving rendered local type strings at the
    UI/member-candidate display boundary.
+   Inheritance override keys and signature equality now render through
+   `FunctionSignature` `TypeRef` helpers instead of comparing signature string
+   mirrors directly.
