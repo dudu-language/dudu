@@ -1646,6 +1646,10 @@ LSP source edits are also moving to AST-owned ranges:
   inferred generic method calls now returns parsed `FunctionSignature` result
   metadata directly; the duplicate string-returning method-call fallback has
   been removed.
+- Typed expression inference for explicit template member calls, native
+  explicit template calls, and templated known constructors now returns parsed
+  `TypeRef` metadata directly; the corresponding string-returning template-call
+  fallback branches have been removed.
 - Condition and comparison-operator semantic checks now validate operator
   return types through parsed `signature_return_type_ref` metadata instead of
   comparing rendered signature return strings.

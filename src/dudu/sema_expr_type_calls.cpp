@@ -233,6 +233,68 @@ std::optional<TypeRef> direct_member_call_type_ref(const FunctionScope& scope, c
     return std::nullopt;
 }
 
+std::optional<TypeRef> direct_template_member_call_type_ref(const FunctionScope& scope,
+                                                            const Expr& expr,
+                                                            const std::string& callee,
+                                                            const SourceLocation* location) {
+    if (expr.callee.empty() || expr.callee.front().kind != ExprKind::Member ||
+        expr.callee.front().children.size() != 1) {
+        return std::nullopt;
+    }
+    const Expr& member = expr.callee.front();
+    const Expr& receiver_expr = member.children.front();
+    const std::string method_name = member.name + "[" + template_args_lookup_text(expr) + "]";
+    FunctionSignature signature;
+    if (receiver_expr.kind == ExprKind::Name && receiver_expr.name == "class" &&
+        !scope.current_class.empty() &&
+        static_method_signature_for_type(scope.symbols, scope.current_class, method_name, signature,
+                                         location)) {
+        check_call_args_ast(scope, callee, signature, expr.children, location);
+        return signature_return_type_ref(signature);
+    }
+    if (receiver_expr.kind == ExprKind::Name && receiver_expr.name != "class" &&
+        !scope.locals.contains(receiver_expr.name) &&
+        scope.symbols.classes.contains(receiver_expr.name) &&
+        static_method_signature_for_type(scope.symbols, receiver_expr.name, method_name, signature,
+                                         location)) {
+        check_call_args_ast(scope, callee, signature, expr.children, location);
+        return signature_return_type_ref(signature);
+    }
+    const bool bare_nonlocal_receiver =
+        receiver_expr.kind == ExprKind::Name && !scope.locals.contains(receiver_expr.name);
+    if (bare_nonlocal_receiver) {
+        return std::nullopt;
+    }
+    const TypeRef receiver_type_ref = infer_expr_type_ast(scope, receiver_expr, location);
+    const std::string receiver_type = substitute_type_ref_text(receiver_type_ref, {});
+    if (receiver_type.empty() || receiver_type == "auto") {
+        for (const Expr& arg : expr.children) {
+            check_expr_ast(scope, arg, location);
+        }
+        return named_type_ref("auto", expr.location);
+    }
+    const bool foreign_receiver =
+        foreign_cpp_type_name(scope.symbols, resolve_alias(scope.symbols, receiver_type));
+    if (method_signature_for_type(scope.symbols, receiver_type, method_name, signature,
+                                  foreign_receiver ? nullptr : location)) {
+        const std::vector<FunctionSignature> signatures =
+            method_signatures_for_type(scope.symbols, receiver_type, method_name);
+        if (const auto match = matching_signature_ast(scope, signatures, expr.children)) {
+            check_call_args_ast(scope, callee, *match, expr.children, location);
+            return signature_return_type_ref(*match);
+        }
+        check_call_args_ast(scope, callee, signature, expr.children, location);
+        return signature_return_type_ref(signature);
+    }
+    if (foreign_receiver) {
+        for (const Expr& arg : expr.children) {
+            check_expr_ast(scope, arg, location);
+        }
+        return named_type_ref("auto", expr.location);
+    }
+    return std::nullopt;
+}
+
 } // namespace
 
 std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Expr& expr,
@@ -403,6 +465,23 @@ std::optional<TypeRef> direct_template_call_type_ref(const FunctionScope& scope,
                 return can_assign_ast(scope, expected, value, got);
             });
         return template_constructor_type_ref(expr, callee_base, type_args);
+    }
+    if (const auto signature = native_signature_for_call(
+            scope, callee, expr.children, location, infer_expr_type_ast,
+            [&](const std::string& expected, const Expr& value, const std::string& got) {
+                return can_assign_ast(scope, expected, value, got);
+            })) {
+        return signature_return_type_ref(*signature);
+    }
+    if (const auto method_type =
+            direct_template_member_call_type_ref(scope, expr, callee, location)) {
+        return *method_type;
+    }
+    if (known_template_constructor_type(scope, callee)) {
+        for (const Expr& arg : expr.children) {
+            (void)infer_expr_type_ast(scope, arg, location);
+        }
+        return named_type_ref(callee, expr.location);
     }
     return std::nullopt;
 }
