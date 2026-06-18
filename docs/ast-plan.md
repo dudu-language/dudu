@@ -1263,6 +1263,8 @@ source text that must be diagnosed rather than interpreted.
 Default-constructed `Expr` values are `Missing`, so optional AST slots stay
 absent unless the parser explicitly fills them with real source structure or an
 unsupported `Unknown` node.
+`expr_missing()` now recognizes only `Missing`; even an empty `Unknown` is an
+unsupported expression node, not an absence marker.
 
 The old raw-text compound-assignment normalization fallback has been removed.
 Compound assignment is emitted only through the parsed `CompoundAssign` node;
