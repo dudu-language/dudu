@@ -275,13 +275,13 @@ std::string lower_top_level_const_type(const TypeRef& type,
 } // namespace
 
 std::string lower_cpp_type(const TypeRef& type) {
-    if (type.text.empty()) {
+    if (!has_type_ref(type)) {
         return "void";
     }
     switch (type.kind) {
     case TypeKind::Named:
     case TypeKind::Qualified:
-        return lower_cpp_type(type.text);
+        return lower_cpp_type(type_ref_head_name(type));
     case TypeKind::Value:
         return type_ref_head_name(type);
     case TypeKind::Template:
@@ -321,13 +321,13 @@ std::string lower_cpp_type(const TypeRef& type, const std::vector<std::string>& 
     if (namespace_aliases.empty()) {
         return lower_cpp_type(type);
     }
-    if (type.text.empty()) {
+    if (!has_type_ref(type)) {
         return "void";
     }
     switch (type.kind) {
     case TypeKind::Named:
     case TypeKind::Qualified:
-        return lower_cpp_type(type.text, namespace_aliases);
+        return lower_cpp_type(type_ref_head_name(type), namespace_aliases);
     case TypeKind::Value:
         return type_ref_head_name(type);
     case TypeKind::Template:
@@ -377,13 +377,13 @@ std::string lower_cpp_type(const TypeRef& type, const std::vector<std::string>& 
     if (!options.use_generated_names && options.generated_type_names.empty()) {
         return lower_cpp_type(type, namespace_aliases);
     }
-    if (type.text.empty()) {
+    if (!has_type_ref(type)) {
         return "void";
     }
     switch (type.kind) {
     case TypeKind::Named:
     case TypeKind::Qualified:
-        return lower_cpp_type(type.text, namespace_aliases, options);
+        return lower_cpp_type(type_ref_head_name(type), namespace_aliases, options);
     case TypeKind::Value:
         return type_ref_head_name(type);
     case TypeKind::Template:

@@ -1192,6 +1192,10 @@ void test_type_ast_shape() {
            "const int32_t* const");
     assert(dudu::lower_cpp_type(dudu::parse_type_text("&const[Player]")) == "const Player&");
     assert(dudu::lower_cpp_type(dudu::parse_type_text("const[&Player]")) == "Player&");
+    dudu::TypeRef structured_named;
+    structured_named.kind = dudu::TypeKind::Named;
+    structured_named.name = "Player";
+    assert(dudu::lower_cpp_type(structured_named) == "Player");
     assert(dudu::lower_cpp_type("*const[i32]") == "const int32_t*");
     assert(dudu::lower_cpp_type("const[*i32]") == "int32_t* const");
     assert(dudu::lower_cpp_type(dudu::parse_type_text("fn(i32, f32) -> bool")) ==
