@@ -1470,3 +1470,6 @@ push. They are not release packaging work.
    but its refresh step now reparses the substituted strings through
    `set_signature_param_types` and `set_signature_return_type` instead of
    manually synchronizing the string and `TypeRef` mirrors.
+   Function signatures now expose explicit text-boundary setters for parameter
+   and return type spellings; native substitution refresh uses those APIs
+   rather than parsing and assigning mirror fields itself.

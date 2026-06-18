@@ -10,7 +10,12 @@ namespace dudu {
 std::string function_type(const FunctionSignature& signature);
 TypeRef function_type_ref(const FunctionSignature& signature, SourceLocation location = {});
 void set_signature_param_types(FunctionSignature& signature, std::vector<TypeRef> types);
+void set_signature_param_type_texts(FunctionSignature& signature,
+                                    const std::vector<std::string>& types,
+                                    SourceLocation location = {});
 void set_signature_return_type(FunctionSignature& signature, TypeRef type);
+void set_signature_return_type_text(FunctionSignature& signature, const std::string& type,
+                                    SourceLocation location = {});
 size_t signature_param_count(const FunctionSignature& signature);
 TypeRef signature_param_type_ref(const FunctionSignature& signature, size_t index);
 TypeRef signature_return_type_ref(const FunctionSignature& signature);

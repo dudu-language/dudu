@@ -136,15 +136,8 @@ explicit_template_bindings(const std::vector<std::string>& names,
 }
 
 void refresh_signature_type_refs(FunctionSignature& signature) {
-    std::vector<TypeRef> param_types;
-    param_types.reserve(signature.params.size());
-    for (const std::string& param : signature.params) {
-        param_types.push_back(parse_type_text(param));
-    }
-    const TypeRef return_type =
-        signature.return_type.empty() ? TypeRef{} : parse_type_text(signature.return_type);
-    set_signature_param_types(signature, std::move(param_types));
-    set_signature_return_type(signature, return_type);
+    set_signature_param_type_texts(signature, signature.params);
+    set_signature_return_type_text(signature, signature.return_type);
 }
 
 std::string join_types(const std::vector<std::string>& types) {
