@@ -315,7 +315,6 @@ TypeRef native_template_binding_type_ref(std::string_view text, SourceLocation l
         TypeRef type;
         type.kind = TypeKind::Value;
         type.value = trimmed;
-        type.text = trimmed;
         type.location = location;
         return type;
     }

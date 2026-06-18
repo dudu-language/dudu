@@ -1917,3 +1917,6 @@ push. They are not release packaging work.
    Native template placeholder binding now reads parsed `TypeRef` head/value
    metadata through `type_ref_head_name` instead of falling back to raw
    `TypeRef.text` for named/template/value placeholders.
+   Numeric native template arguments now build structured `Value` `TypeRef`
+   nodes with `value` metadata only, without duplicating the number into
+   `TypeRef.text`.
