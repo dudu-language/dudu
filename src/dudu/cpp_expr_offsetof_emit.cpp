@@ -7,22 +7,9 @@
 
 namespace dudu {
 
-namespace {
-
-std::string unquoted_string_literal(std::string text) {
-    text = trim_copy(std::move(text));
-    if (text.size() >= 2 && ((text.front() == '"' && text.back() == '"') ||
-                             (text.front() == '\'' && text.back() == '\''))) {
-        return text.substr(1, text.size() - 2);
-    }
-    return text;
-}
-
-} // namespace
-
 std::string lower_offsetof_field(const Expr& expr, const std::vector<std::string>& aliases,
-                                 const CppLocalContext& locals,
-                                 const Symbols* symbols, const CppEmitOptions& options) {
+                                 const CppLocalContext& locals, const Symbols* symbols,
+                                 const CppEmitOptions& options) {
     return lower_offsetof_field(expr, aliases, locals, {}, symbols, options);
 }
 
@@ -34,7 +21,11 @@ std::string lower_offsetof_field(const Expr& expr, const std::vector<std::string
         return expr.name;
     }
     if (expr.kind == ExprKind::StringLiteral) {
-        return expr.value.empty() ? unquoted_string_literal(expr.text) : expr.value;
+        if (expr.value.empty()) {
+            throw CompileError(expr.location,
+                               "malformed string literal node: missing parsed value");
+        }
+        return expr.value;
     }
     if (expr.kind == ExprKind::Member) {
         if (const std::optional<ExprPath> path = expr_path_from_expr(expr)) {
@@ -45,8 +36,7 @@ std::string lower_offsetof_field(const Expr& expr, const std::vector<std::string
 }
 
 std::string lower_offsetof_field(const Expr& expr, const std::vector<std::string>& aliases,
-                                 const CppLocalContext& locals,
-                                 const Symbols* symbols) {
+                                 const CppLocalContext& locals, const Symbols* symbols) {
     return lower_offsetof_field(expr, aliases, locals, symbols, {});
 }
 

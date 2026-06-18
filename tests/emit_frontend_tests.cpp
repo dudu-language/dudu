@@ -1,6 +1,8 @@
 #include "dudu/cpp_emit.hpp"
+#include "dudu/cpp_expr_call_emit.hpp"
 #include "dudu/parser.hpp"
 #include "dudu/sema.hpp"
+#include "dudu/source.hpp"
 
 #include <cassert>
 #include <exception>
@@ -141,6 +143,22 @@ void test_offsetof_field_emission() {
     assert(cpp.find("FLAGS_OFFSET_STR = offsetof(Packet, flags);") != std::string::npos);
 }
 
+void test_offsetof_string_field_requires_parsed_value() {
+    dudu::Expr malformed;
+    malformed.kind = dudu::ExprKind::StringLiteral;
+    malformed.text = "\"flags\"";
+    malformed.location =
+        dudu::SourceLocation{.file = "synthetic_offsetof.dd", .line = 1, .column = 1};
+
+    bool threw = false;
+    try {
+        (void)dudu::lower_offsetof_field(malformed, {}, {});
+    } catch (const dudu::CompileError& error) {
+        threw = std::string(error.what()).find("missing parsed value") != std::string::npos;
+    }
+    assert(threw);
+}
+
 void test_array_literal_scalar_ast_emission() {
     const dudu::ModuleAst module = dudu::parse_source("def values() -> i32:\n"
                                                       "    xs: array[i32] = [1_000, 2]\n"
@@ -216,6 +234,7 @@ int main() {
         test_template_pointer_cast_type_detection_uses_type_ast();
         test_pointer_to_const_binding_emission();
         test_offsetof_field_emission();
+        test_offsetof_string_field_requires_parsed_value();
         test_array_literal_scalar_ast_emission();
         test_typed_literal_initializers_use_type_ast();
         test_inferred_auto_assignment_is_not_redeclared();
