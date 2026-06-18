@@ -87,12 +87,11 @@ NativeArgType native_arg_type(const FunctionScope& scope, const Expr& arg,
 
 bool native_arg_assignable(const FunctionSignature& signature, size_t index, const Expr& arg,
                            const NativeArgType& got, const NativeCanAssignAstFn& can_assign) {
-    TypeRef expected_ref = signature_param_ref(signature, index);
-    if (!has_type_ref(expected_ref)) {
-        expected_ref = parse_type_text(signature_param_text(signature, index));
+    const TypeRef expected_ref = signature_param_ref(signature, index);
+    if (!has_type_ref(expected_ref) || !has_type_ref(got.ref)) {
+        return false;
     }
-    if (has_type_ref(expected_ref) && has_type_ref(got.ref) &&
-        type_assignment_allowed(expected_ref, got.ref)) {
+    if (type_assignment_allowed(expected_ref, got.ref)) {
         return true;
     }
     return can_assign(expected_ref, arg, got.ref);
