@@ -52,9 +52,9 @@ TypeRef resolve_type_ref_alias(const Symbols& symbols, const TypeRef& raw_type) 
 }
 
 bool foreign_or_auto_indexable_type(const TypeRef& type) {
-    const std::string rendered = substitute_type_ref_text(type, {});
+    const std::string head = type_ref_head_name(type);
     return !has_type_ref(type) || type_ref_is_auto(type) || type.kind == TypeKind::Qualified ||
-           rendered.find('.') != std::string::npos || rendered.find("::") != std::string::npos;
+           head.find('.') != std::string::npos || head.find("::") != std::string::npos;
 }
 
 } // namespace

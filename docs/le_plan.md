@@ -1520,6 +1520,9 @@ push. They are not release packaging work.
    Override signature matching now compares parameter and return `TypeRef`
    structure through `type_ref_equivalent` instead of rendering signatures to
    strings for semantic equality.
+   Index-result inference now detects foreign/qualified indexable receivers from
+   `TypeRef` head/kind metadata instead of rendering the receiver type to search
+   for namespace separators.
    Native value type inference now reads `native_value_type_refs` directly.
    The `native_values` string map remains only as a display/native-boundary
    mirror populated from structured `TypeRef` data during symbol collection.
