@@ -66,10 +66,36 @@ bool is_string_type(const std::string& type) {
     return compact == "str" || compact == "std.string" || compact == "std::string";
 }
 
-bool is_explicit_cast_to(const std::string& expected, const Expr& expr) {
-    const std::string callee = direct_callee_name(expr);
-    return (expr.kind == ExprKind::Call || expr.kind == ExprKind::TemplateCall) &&
-           compact_type(callee) == compact_type(expected);
+std::optional<TypeRef> call_target_type_ref(const Expr& expr) {
+    if (expr.kind != ExprKind::Call && expr.kind != ExprKind::TemplateCall) {
+        return std::nullopt;
+    }
+    const std::optional<ExprPath> path = call_callee_path(expr);
+    if (!path) {
+        return std::nullopt;
+    }
+    const std::string callee = render_expr_path(*path);
+    if (callee.empty()) {
+        return std::nullopt;
+    }
+    if (expr.kind == ExprKind::TemplateCall && !expr.template_type_args.empty()) {
+        TypeRef type;
+        type.kind = TypeKind::Template;
+        type.name = callee;
+        type.children = expr.template_type_args;
+        type.location = expr.location;
+        return type;
+    }
+    return named_type_ref(callee, expr.location);
+}
+
+bool is_explicit_cast_to(const TypeRef& expected, const Expr& expr) {
+    const std::optional<TypeRef> target = call_target_type_ref(expr);
+    if (!target) {
+        return false;
+    }
+    return type_ref_equivalent(normalize_cpp_type_artifacts_ref(*target),
+                               normalize_cpp_type_artifacts_ref(expected));
 }
 
 std::string simple_literal_type(const Expr& expr) {
@@ -347,7 +373,7 @@ bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const Ty
             return true;
         }
     }
-    return normalized_expected == "auto" || is_explicit_cast_to(normalized_expected, expr) ||
+    return normalized_expected == "auto" || is_explicit_cast_to(normalized_expected_ref, expr) ||
            (!is_container_literal_expr(expr) && normalized_got.empty()) ||
            normalized_got == "auto" || normalized_got == normalized_expected ||
            compact_type(normalized_expected) == compact_type(normalized_got) ||

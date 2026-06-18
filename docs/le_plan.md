@@ -1983,6 +1983,9 @@ push. They are not release packaging work.
    all-or-nothing: structured parameters and returns stay on `TypeRef`
    substitution even when a different field still needs native artifact
    fallback text.
+   Explicit cast assignment compatibility now compares the parsed call target
+   as a normalized `TypeRef` instead of rendering the expected type and
+   comparing it to callee spelling.
    LSP semantic type-token collection now uses `TypeRef` helper APIs for type
    heads and rendered spellings instead of reading `name`/`text` fields
    directly.

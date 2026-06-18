@@ -159,6 +159,12 @@ void test_type_compat_uses_type_ast_for_pointers() {
     assert(!dudu::assignment_type_allowed(dudu::parse_type_text("Option[i32]"),
                                           dudu::parse_expr_text("\"bad\""),
                                           dudu::parse_type_text("str")));
+    assert(dudu::assignment_type_allowed(dudu::parse_type_text("f32"),
+                                         dudu::parse_expr_text("f32(1)"),
+                                         dudu::parse_type_text("i32")));
+    assert(dudu::assignment_type_allowed(dudu::parse_type_text("list[i32]"),
+                                         dudu::parse_expr_text("list[i32](raw)"),
+                                         dudu::parse_type_text("auto")));
 }
 
 void test_can_assign_resolves_alias_type_refs() {
