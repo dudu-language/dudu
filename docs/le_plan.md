@@ -530,6 +530,9 @@ push. They are not release packaging work.
    normal/static member call sema no longer falls back to splitting
    reconstructed dotted callee strings for Dudu-owned calls. Reconstructed
    dotted callees remain only at native import prefix boundaries.
+   Parsed call and template-call expressions no longer receive a parser-filled
+   callee-name mirror; sema, codegen, lints, and AST tests read direct call
+   identity through the structured callee expression.
    `super.init(...)` recognition in sema and class emission now checks parsed
    member-callee shape instead of reconstructed callee text. Type
    compatibility exposes parsed `TypeRef`
