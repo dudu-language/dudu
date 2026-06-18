@@ -1625,3 +1625,6 @@ push. They are not release packaging work.
    Native value type inference now reads `native_value_type_refs` directly.
    The `native_values` string map remains only as a display/native-boundary
    mirror populated from structured `TypeRef` data during symbol collection.
+   C++ associated-type assignment compatibility, such as iterator/value_type
+   aliases from imported native templates, now checks structured `TypeRef`
+   names before falling back to native spelling compatibility.

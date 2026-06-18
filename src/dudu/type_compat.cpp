@@ -224,32 +224,43 @@ bool is_pointer_to_reference_value(const TypeRef& expected, const TypeRef& got) 
                                                        wrapped_type_arg_ref(*got_reference_target));
 }
 
-bool is_cpp_associated_type_binding(std::string expected, std::string got) {
-    expected = trim_copy(std::move(expected));
-    got = trim_copy(std::move(got));
-    if (expected == got) {
+std::string type_ref_spelling(const TypeRef& type) {
+    return trim_copy(!type.name.empty() ? type.name : substitute_type_ref_text(type, {}));
+}
+
+std::string type_ref_tail_name(const TypeRef& type) {
+    std::string name = type_ref_spelling(type);
+    const size_t dot = name.find_last_of(".:");
+    if (dot != std::string::npos) {
+        name = name.substr(dot + 1);
+    }
+    return name;
+}
+
+bool type_ref_ends_with_name(const TypeRef& type, const std::string& name) {
+    const std::string spelling = type_ref_spelling(type);
+    return spelling == name || spelling.ends_with("." + name) || spelling.ends_with("::" + name);
+}
+
+bool is_cpp_associated_type_binding(const TypeRef& expected, const TypeRef& got) {
+    if (type_ref_equivalent(expected, got)) {
         return true;
     }
     static const std::set<std::string> associated = {
         "iterator", "const_iterator", "reference", "const_reference", "value_type",
         "pointer",  "const_pointer",  "size_type", "difference_type"};
-    std::string expected_name = expected;
-    const size_t dot = expected_name.find_last_of(".:");
-    if (dot != std::string::npos) {
-        expected_name = expected_name.substr(dot + 1);
-    }
+    const std::string expected_name = type_ref_tail_name(expected);
     if (!associated.contains(expected_name)) {
         return false;
     }
     if ((expected_name == "size_type" || expected_name == "difference_type") &&
-        is_numeric_type(wrapped_type_arg(got))) {
+        is_numeric_type(wrapped_type_arg(type_ref_spelling(got)))) {
         return true;
     }
-    if (got == expected || got.ends_with("." + expected_name) ||
-        got.ends_with("::" + expected_name)) {
+    if (type_ref_ends_with_name(got, expected_name)) {
         return true;
     }
-    return expected_name == "const_iterator" && (got == "iterator" || got.ends_with(".iterator"));
+    return expected_name == "const_iterator" && type_ref_ends_with_name(got, "iterator");
 }
 
 std::string normalize_function_type(std::string type) {
@@ -371,7 +382,8 @@ bool text_type_assignment_allowed(const std::string& expected, const std::string
            is_function_type_match(normalized_expected, normalized_got) ||
            is_native_function_pointer(normalized_expected, normalized_got) ||
            is_native_internal_template_result(normalized_expected, normalized_got) ||
-           is_cpp_associated_type_binding(normalized_expected, normalized_got);
+           is_cpp_associated_type_binding(parse_type_text(normalized_expected),
+                                          parse_type_text(normalized_got));
 }
 
 } // namespace
@@ -389,6 +401,7 @@ bool type_assignment_allowed(const TypeRef& expected, const TypeRef& got) {
            is_pointer_to_reference_value(expected, got) || is_reference_binding(expected, got) ||
            is_value_from_reference(expected, got) || is_value_from_const(expected, got) ||
            is_native_function_pointer(expected, got) ||
+           is_cpp_associated_type_binding(expected, got) ||
            text_type_assignment_allowed(normalized_expected, normalized_got);
 }
 
@@ -421,7 +434,8 @@ bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const Ty
             is_reference_binding(normalized_expected_ref, normalized_got_ref) ||
             is_value_from_reference(normalized_expected_ref, normalized_got_ref) ||
             is_value_from_const(normalized_expected_ref, normalized_got_ref) ||
-            is_native_function_pointer(normalized_expected_ref, normalized_got_ref)) {
+            is_native_function_pointer(normalized_expected_ref, normalized_got_ref) ||
+            is_cpp_associated_type_binding(normalized_expected_ref, normalized_got_ref)) {
             return true;
         }
     }
@@ -443,7 +457,7 @@ bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const Ty
            is_function_type_match(normalized_expected, normalized_got) ||
            is_native_function_pointer(normalized_expected, normalized_got) ||
            is_native_internal_template_result(normalized_expected, normalized_got) ||
-           is_cpp_associated_type_binding(normalized_expected, normalized_got) ||
+           is_cpp_associated_type_binding(normalized_expected_ref, normalized_got_ref) ||
            (normalized_expected == "cstr" && normalized_got == "str" &&
             expr.kind == ExprKind::StringLiteral) ||
            (is_numeric_type(wrapped_type_arg(normalized_expected)) &&
