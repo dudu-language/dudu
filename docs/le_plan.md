@@ -1095,4 +1095,6 @@ declarations safely.
    `cpp(...)` escape boundary, native C/C++ spelling compatibility, or the
    intentionally narrow direct-backend merged translation unit. No active
    dunder/operator compatibility path or stale inline-function-literal path was
-   found in the implementation.
+   found in the implementation. Optional expression holes now use a dedicated
+   `Missing` expression kind; `Unknown` is reserved for unsupported source text
+   that should be diagnosed rather than interpreted.

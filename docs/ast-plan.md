@@ -1256,6 +1256,11 @@ calling the old raw expression inference path. Unknown expressions also no
 longer lower as raw C++ text during C++ emission. Use `cpp(...)` for explicit
 native escape hatches.
 
+Optional expression holes now use a dedicated `Missing` expression kind instead
+of overloading empty `Unknown` nodes. Parser, sema, codegen, and LSP/lint
+helpers should treat `Missing` as absence and reserve `Unknown` for unsupported
+source text that must be diagnosed rather than interpreted.
+
 The old raw-text compound-assignment normalization fallback has been removed.
 Compound assignment is emitted only through the parsed `CompoundAssign` node;
 the statement catch-all no longer emits raw statement text for `Unknown`
