@@ -1456,3 +1456,7 @@ push. They are not release packaging work.
    diagnostics use it instead of reading the legacy parameter string vector
    directly. Native pack-placeholder handling still reads the final parameter
    spelling at the native text boundary.
+   Operator and inheritance signature checks now use `signature_param_count`
+   for arity and inherited signature construction, leaving direct
+   `signature.params` access mostly in native signature substitution/pack
+   spelling boundaries and the legacy fallback accessors.

@@ -100,24 +100,23 @@ FunctionSignature inherited_method_signature_for_class_type(const ClassDecl& own
     const std::map<std::string, std::string> substitutions =
         class_type_substitutions(owner, receiver_args);
     std::vector<TypeRef> param_types;
-    param_types.reserve(signature.params.size());
-    for (size_t i = 0; i < signature.params.size(); ++i) {
-        TypeRef param_type = i < signature.param_type_refs.size()
-                                 ? signature.param_type_refs[i]
-                                 : parse_type_text(signature.params[i], method.location);
+    const size_t param_count = signature_param_count(signature);
+    param_types.reserve(param_count);
+    for (size_t i = 0; i < param_count; ++i) {
+        TypeRef param_type = signature_param_type_ref(signature, i);
         param_types.push_back(substitute_type_ref(param_type, substitutions));
     }
     set_signature_param_types(signature, std::move(param_types));
-    set_signature_return_type(signature,
-                              substitute_type_ref(signature_return_type_ref(signature),
-                                                  substitutions));
+    set_signature_return_type(
+        signature, substitute_type_ref(signature_return_type_ref(signature), substitutions));
     return signature;
 }
 
 std::string signature_key(std::string_view name, const FunctionSignature& signature) {
     std::ostringstream out;
     out << name << '(';
-    for (size_t i = 0; i < signature.params.size(); ++i) {
+    const size_t param_count = signature_param_count(signature);
+    for (size_t i = 0; i < param_count; ++i) {
         if (i > 0) {
             out << ", ";
         }
@@ -359,10 +358,10 @@ const FunctionDecl* find_method_decl(const Symbols& symbols, const TypeRef& type
 
 bool same_signature(const FunctionSignature& a, const FunctionSignature& b) {
     if (signature_return_type_text(a) != signature_return_type_text(b) ||
-        a.params.size() != b.params.size()) {
+        signature_param_count(a) != signature_param_count(b)) {
         return false;
     }
-    for (size_t i = 0; i < a.params.size(); ++i) {
+    for (size_t i = 0; i < signature_param_count(a); ++i) {
         if (substitute_type_ref_text(signature_param_type_ref(a, i), {}) !=
             substitute_type_ref_text(signature_param_type_ref(b, i), {})) {
             return false;

@@ -37,9 +37,9 @@ TypeRef unwrap_value_type_ref(const Symbols& symbols, TypeRef type) {
     type = resolve_alias_ref(symbols, std::move(type));
     while (true) {
         type = resolve_alias_ref(symbols, std::move(type));
-        if (const auto inner = unary_type_child_ref(type, {TypeKind::Const, TypeKind::Volatile,
-                                                           TypeKind::Storage, TypeKind::Shared,
-                                                           TypeKind::Device})) {
+        if (const auto inner =
+                unary_type_child_ref(type, {TypeKind::Const, TypeKind::Volatile, TypeKind::Storage,
+                                            TypeKind::Shared, TypeKind::Device})) {
             type = *inner;
             continue;
         }
@@ -118,9 +118,8 @@ native_operator_signature(const Symbols& symbols, const std::string& op, const T
             continue;
         }
         for (FunctionSignature signature : found->second) {
-            if (signature.params.size() < 2 ||
-                !type_assignment_allowed(signature_param_type_ref(signature, 0),
-                                         value_left_ref)) {
+            if (signature_param_count(signature) < 2 ||
+                !type_assignment_allowed(signature_param_type_ref(signature, 0), value_left_ref)) {
                 continue;
             }
             if (right_expr != nullptr &&
@@ -169,11 +168,9 @@ dudu_operator_signature(const Symbols& symbols, const std::string& op, const Typ
     return std::nullopt;
 }
 
-std::optional<FunctionSignature> dudu_binary_operator_signature(const Symbols& symbols,
-                                                                const std::string& op,
-                                                                const TypeRef& left,
-                                                                const Expr& right_expr,
-                                                                const TypeRef& right) {
+std::optional<FunctionSignature>
+dudu_binary_operator_signature(const Symbols& symbols, const std::string& op, const TypeRef& left,
+                               const Expr& right_expr, const TypeRef& right) {
     if (!is_supported_dudu_operator(op)) {
         return std::nullopt;
     }
@@ -196,7 +193,7 @@ std::optional<FunctionSignature> dudu_binary_operator_signature(const Symbols& s
         }
         set_signature_param_types(signature, std::move(param_types));
         set_signature_return_type(signature, function_return_type_ref(method));
-        if (signature.params.empty() ||
+        if (signature_param_count(signature) == 0 ||
             assignment_type_allowed(signature_param_type_ref(signature, 0), right_expr, right)) {
             return signature;
         }
@@ -237,8 +234,7 @@ bool binary_rhs_allowed(const Symbols& symbols, const std::string& op, const Typ
         return assignment_type_allowed(value_left_ref, right_expr, value_right_ref);
     }
     if (op == "+" || op == "-") {
-        return (resolved_left.kind == TypeKind::Pointer &&
-                is_integer_type(value_right)) ||
+        return (resolved_left.kind == TypeKind::Pointer && is_integer_type(value_right)) ||
                numeric_operand_allowed(value_left_ref, right_expr, value_right_ref);
     }
     if (op == "*" || op == "/") {
