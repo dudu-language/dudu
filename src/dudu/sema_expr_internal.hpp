@@ -73,12 +73,6 @@ void check_call_args_ast(const FunctionScope& scope, const std::string& callee,
 std::optional<FunctionSignature>
 matching_signature_ast(const FunctionScope& scope, const std::vector<FunctionSignature>& options,
                        const std::vector<Expr>& args);
-bool can_assign_ast(const FunctionScope& scope, const std::string& expected, const Expr& expr,
-                    const std::string& got);
-bool can_assign_ast(const FunctionScope& scope, const TypeRef& expected, const Expr& expr,
-                    const std::string& got);
-bool can_assign_ast(const FunctionScope& scope, const std::string& expected, const Expr& expr,
-                    const TypeRef& got);
 bool can_assign_ast(const FunctionScope& scope, const TypeRef& expected, const Expr& expr,
                     const TypeRef& got);
 bool is_builtin_call(const std::string& callee);

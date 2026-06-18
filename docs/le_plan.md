@@ -1294,3 +1294,6 @@ declarations safely.
    Built-in `min`/`max` and contextual numeric binary inference now pass
    inferred `TypeRef` operands into assignment compatibility instead of calling
    through rendered argument-type strings.
+   Body expression assignment checking now exposes only the parsed
+   `TypeRef`/`TypeRef` `can_assign_ast` API; the string and mixed string
+   overloads have been deleted.

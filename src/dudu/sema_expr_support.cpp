@@ -21,44 +21,6 @@ bool is_native_enum_value_expr(const FunctionScope& scope, const Expr& expr,
 }
 
 } // namespace
-bool can_assign_ast(const FunctionScope& scope, const std::string& expected, const Expr& expr,
-                    const std::string& got) {
-    if (is_native_enum_value_expr(scope, expr, expected)) {
-        return true;
-    }
-    return assignment_type_allowed(expected, expr, got) ||
-           assignment_type_allowed(resolve_alias(scope.symbols, expected), expr,
-                                   resolve_alias(scope.symbols, got)) ||
-           native_base_assignable(scope.symbols, expected, got);
-}
-
-bool can_assign_ast(const FunctionScope& scope, const TypeRef& expected, const Expr& expr,
-                    const std::string& got) {
-    const TypeRef resolved_expected = resolve_alias_ref(scope.symbols, expected);
-    const TypeRef got_ref = parse_type_text(got);
-    const TypeRef resolved_got = resolve_alias_ref(scope.symbols, got_ref);
-    const std::string expected_text = substitute_type_ref_text(resolved_expected, {});
-    if (is_native_enum_value_expr(scope, expr, expected_text)) {
-        return true;
-    }
-    return assignment_type_allowed(expected, expr, got_ref) ||
-           assignment_type_allowed(resolved_expected, expr, resolved_got) ||
-           native_base_assignable(scope.symbols, expected, got_ref);
-}
-
-bool can_assign_ast(const FunctionScope& scope, const std::string& expected, const Expr& expr,
-                    const TypeRef& got) {
-    const TypeRef expected_ref = parse_type_text(expected);
-    const TypeRef resolved_expected = resolve_alias_ref(scope.symbols, expected_ref);
-    const TypeRef resolved_got = resolve_alias_ref(scope.symbols, got);
-    if (is_native_enum_value_expr(scope, expr, expected)) {
-        return true;
-    }
-    return assignment_type_allowed(expected_ref, expr, got) ||
-           assignment_type_allowed(resolved_expected, expr, resolved_got) ||
-           native_base_assignable(scope.symbols, expected_ref, got);
-}
-
 bool can_assign_ast(const FunctionScope& scope, const TypeRef& expected, const Expr& expr,
                     const TypeRef& got) {
     const TypeRef resolved_expected = resolve_alias_ref(scope.symbols, expected);
