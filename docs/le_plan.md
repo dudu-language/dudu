@@ -1659,6 +1659,9 @@ push. They are not release packaging work.
    once into `TypeRef`s and reuses the structured pointer/reference/const,
    function-pointer, internal-template, and associated-type helpers. The
    duplicate string overloads for those checks have been deleted.
+   Assignment compatibility now detects whether native normalization changed a
+   type through `TypeRef` equivalence instead of rendering the original type
+   and comparing text.
    Native overload template matching no longer retries failed argument binding
    through a rendered-string template binder. The structured binder now handles
    native C++ pack-expansion artifacts inside template types, and the old

@@ -319,7 +319,7 @@ bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const Ty
     const TypeRef normalized_got_ref = normalize_cpp_type_artifacts_ref(got);
     const std::string normalized_expected = substitute_type_ref_text(normalized_expected_ref, {});
     const std::string normalized_got = substitute_type_ref_text(normalized_got_ref, {});
-    if (normalized_expected != substitute_type_ref_text(expected, {})) {
+    if (!type_ref_equivalent(normalized_expected_ref, expected)) {
         return assignment_type_allowed(normalized_expected_ref, expr, normalized_got_ref);
     }
     if (!normalized_got.empty() && normalized_got != "auto") {
