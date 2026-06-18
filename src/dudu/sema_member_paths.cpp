@@ -89,13 +89,10 @@ std::optional<TypeRef> field_type_ref_for_class(const Symbols& symbols, const Cl
     const std::string receiver_type_text = substitute_type_ref_text(receiver_type, {});
     for (const FieldDecl& decl : klass.fields) {
         if (decl.name == field) {
-            const std::vector<std::string> receiver_args =
-                template_args_from_type(receiver_type_text);
+            const std::vector<std::string> receiver_args = template_args_from_type(receiver_type);
             TypeRef type = substitute_type_ref(
                 decl.type_ref, type_substitutions(klass.generic_params, receiver_args));
-            const std::string receiver_substituted = substitute_receiver_template_type(
-                substitute_type_ref_text(type, {}), receiver_args);
-            return parse_type_text(receiver_substituted, decl.location);
+            return substitute_receiver_template_type(type, receiver_args);
         }
     }
     for (const BaseClassDecl& base_decl : klass.base_class_refs) {

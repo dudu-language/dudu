@@ -182,6 +182,15 @@ void test_receiver_template_substitution_uses_type_ast() {
            "fn(f32) -> f32");
     assert(dudu::substitute_receiver_template_type("std::vector<value_type>", {"i32"}) ==
            "std::vector<i32>");
+
+    const dudu::TypeRef vector_type = dudu::parse_type_text("std::vector<value_type>");
+    const dudu::TypeRef vector_substituted =
+        dudu::substitute_receiver_template_type(vector_type, {"i32"});
+    assert(dudu::substitute_type_ref_text(vector_substituted, {}) == "std::vector<i32>");
+
+    const std::vector<std::string> receiver_args =
+        dudu::template_args_from_type(dudu::parse_type_text("dict[str, i32]"));
+    assert(receiver_args == std::vector<std::string>({"str", "i32"}));
 }
 
 void test_native_semantic_tokens() {

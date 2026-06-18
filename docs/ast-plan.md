@@ -221,6 +221,9 @@ Already structured:
   `std::vector<std::string>` as structured `Template` `TypeRef` nodes, and
   builtin method inference uses those parsed children instead of owning a
   separate native-template substring splitter
+- receiver-template substitution now has a `TypeRef` path, so method and field
+  instantiation can substitute `value_type`/`element_type` placeholders without
+  rendering substituted types to strings and reparsing them
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path

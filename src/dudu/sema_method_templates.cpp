@@ -74,17 +74,30 @@ substitute_native_type_identifiers(std::string type,
 
 } // namespace
 
-std::vector<std::string> template_args_from_type(const std::string& type) {
-    const TypeRef parsed = parse_type_text(type);
-    if (parsed.kind != TypeKind::Template) {
+std::vector<std::string> template_args_from_type(const TypeRef& type) {
+    if (type.kind != TypeKind::Template) {
         return {};
     }
     std::vector<std::string> out;
-    out.reserve(parsed.children.size());
-    for (const TypeRef& child : parsed.children) {
+    out.reserve(type.children.size());
+    for (const TypeRef& child : type.children) {
         out.push_back(substitute_type_ref_text(child, {}));
     }
     return out;
+}
+
+std::vector<std::string> template_args_from_type(const std::string& type) {
+    return template_args_from_type(parse_type_text(type));
+}
+
+TypeRef substitute_receiver_template_type(const TypeRef& type,
+                                          const std::vector<std::string>& receiver_args) {
+    const std::map<std::string, std::string> substitutions =
+        receiver_template_substitutions(receiver_args);
+    if (substitutions.empty()) {
+        return type;
+    }
+    return substitute_type_ref(type, substitutions);
 }
 
 std::string substitute_receiver_template_type(std::string type,
@@ -95,8 +108,8 @@ std::string substitute_receiver_template_type(std::string type,
         return type;
     }
     const TypeRef parsed = parse_type_text(type);
-    if (parsed.kind != TypeKind::Unknown) {
-        return substitute_type_ref_text(parsed, substitutions);
+    if (has_type_ref(parsed)) {
+        return substitute_type_ref_text(substitute_type_ref(parsed, substitutions), {});
     }
     return substitute_native_type_identifiers(std::move(type), substitutions);
 }

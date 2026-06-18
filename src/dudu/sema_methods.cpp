@@ -45,9 +45,7 @@ TypeRef instantiate_method_type_ref(const ClassDecl& klass, const FunctionDecl& 
                                     const std::vector<std::string>& method_args) {
     TypeRef out = substitute_type_ref(type, type_substitutions(method.generic_params, method_args));
     out = substitute_type_ref(out, type_substitutions(klass.generic_params, receiver_args));
-    const std::string receiver_substituted =
-        substitute_receiver_template_type(substitute_type_ref_text(out, {}), receiver_args);
-    return parse_type_text(receiver_substituted, type.location);
+    return substitute_receiver_template_type(out, receiver_args);
 }
 
 } // namespace
