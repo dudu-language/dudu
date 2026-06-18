@@ -1952,6 +1952,9 @@ push. They are not release packaging work.
    C++ associated-type compatibility now checks parsed `TypeRef` head names for
    iterator/value_type-style aliases instead of rendering whole type nodes for
    suffix matching.
+   Native overload numeric-promotion matching now uses parsed parameter/argument
+   `TypeRef` head names only; rendered strings remain only in mismatch
+   diagnostics.
    LSP semantic type-token collection now uses `TypeRef` helper APIs for type
    heads and rendered spellings instead of reading `name`/`text` fields
    directly.
