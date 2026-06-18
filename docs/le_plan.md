@@ -1395,3 +1395,6 @@ push. They are not release packaging work.
    parameter types as `TypeRef` nodes for assignability and tuple-indexed
    return handling; rendered argument type strings remain only for diagnostics
    and native template fallback binding.
+   Void return checks now use an AST-level `type_ref_is_void` helper, and
+   module entry-point emission no longer renders a function return type string
+   just to compare it with `void`.

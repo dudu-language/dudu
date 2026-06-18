@@ -174,7 +174,7 @@ void emit_entry_point(std::ostringstream& out, const ModuleAst& unit,
         }
         out << "int main() {\n";
         const std::string call = emitted_name(fn, options) + "()";
-        if (function_return_type_text(fn) == "void") {
+        if (type_ref_is_void(function_return_type_ref(fn))) {
             out << "    " << call << ";\n"
                 << "    return 0;\n";
         } else {

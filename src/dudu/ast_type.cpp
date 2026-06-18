@@ -178,6 +178,10 @@ bool has_type_ref(const TypeRef& type) {
            !type.children.empty();
 }
 
+bool type_ref_is_void(const TypeRef& type) {
+    return type.kind == TypeKind::Named && type_ref_head_name(type) == "void";
+}
+
 TypeRef void_type_ref(SourceLocation location) {
     return parse_type_text("void", location);
 }

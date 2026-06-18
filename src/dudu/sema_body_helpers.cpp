@@ -90,10 +90,6 @@ bool function_has_decorator(const FunctionDecl& fn, std::string_view name) {
     return dudu::has_decorator(fn.decorators, name);
 }
 
-bool type_ref_is_void(const TypeRef& type) {
-    return type_ref_is_name(type, "void");
-}
-
 void check_type_ref_match(FunctionScope& scope, const TypeRef& expected, const Expr& expr,
                           const SourceLocation& location, const BodyCheckCallbacks& callbacks,
                           std::string_view mismatch_label) {
