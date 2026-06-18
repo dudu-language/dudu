@@ -1710,3 +1710,7 @@ push. They are not release packaging work.
    the rendered callee string.
    C++ emission-side call type probing now builds named `TypeRef` metadata for
    type-like constructor calls instead of reparsing the callee string.
+   Literal, container-literal, all-caps constant, range-loop binding, and
+   emission-side literal inference now construct built-in `TypeRef` nodes
+   directly instead of invoking the type-text parser for names like `i32`,
+   `bool`, or `auto`.

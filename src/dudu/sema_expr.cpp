@@ -30,25 +30,25 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
         }
         return {};
     case ExprKind::BoolLiteral:
-        return parse_type_text("bool", type_location);
+        return named_type_ref("bool", type_location);
     case ExprKind::IntLiteral:
-        return parse_type_text("i32", type_location);
+        return named_type_ref("i32", type_location);
     case ExprKind::FloatLiteral:
-        return parse_type_text("f64", type_location);
+        return named_type_ref("f64", type_location);
     case ExprKind::StringLiteral:
-        return parse_type_text("str", type_location);
+        return named_type_ref("str", type_location);
     case ExprKind::NoneLiteral:
-        return parse_type_text("None", type_location);
+        return named_type_ref("None", type_location);
     case ExprKind::ListLiteral:
-        return parse_type_text("list", type_location);
+        return named_type_ref("list", type_location);
     case ExprKind::DictLiteral:
-        return parse_type_text("dict", type_location);
+        return named_type_ref("dict", type_location);
     case ExprKind::DictEntry:
-        return parse_type_text("auto", type_location);
+        return named_type_ref("auto", type_location);
     case ExprKind::NamedArg:
         return expr.children.size() == 1
                    ? infer_expr_type_ast(scope, expr.children.front(), location)
-                   : parse_type_text("auto", type_location);
+                   : named_type_ref("auto", type_location);
     case ExprKind::Slice:
         if (location != nullptr) {
             sema_expr_fail(*location, "slice expression must be used inside an index");
@@ -58,9 +58,9 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
                 check_expr_ast(scope, child, location);
             }
         }
-        return parse_type_text("slice", type_location);
+        return named_type_ref("slice", type_location);
     case ExprKind::SetLiteral:
-        return parse_type_text("set", type_location);
+        return named_type_ref("set", type_location);
     case ExprKind::Name:
         if (const TypeRef local = local_type_ref(scope, expr.name, type_location);
             has_type_ref(local)) {
@@ -79,7 +79,7 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
             return function_type_ref(native->second.front(), type_location);
         }
         if (is_dudu_all_caps(expr.name)) {
-            return parse_type_text("i32", type_location);
+            return named_type_ref("i32", type_location);
         }
         if (location != nullptr) {
             throw CompileError(*location, "unknown identifier: " + expr.name,
@@ -166,15 +166,14 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
             const TypeRef receiver_member_type = member_expr_type_ref(
                 scope.symbols, scope.local_type_refs, location, receiver, {}, scope.current_class);
             if (has_type_ref(receiver_member_type)) {
-                return indexed_type_ref_from_type(
-                    scope.symbols, index_location, receiver_member_type, expr.children[1],
-                    index_receiver_label(receiver));
+                return indexed_type_ref_from_type(scope.symbols, index_location,
+                                                  receiver_member_type, expr.children[1],
+                                                  index_receiver_label(receiver));
             }
             const TypeRef receiver_type = infer_expr_type_ast(scope, receiver, location);
             if (has_type_ref(receiver_type)) {
-                return indexed_type_ref_from_type(
-                    scope.symbols, index_location, receiver_type, expr.children[1],
-                    index_receiver_label(receiver));
+                return indexed_type_ref_from_type(scope.symbols, index_location, receiver_type,
+                                                  expr.children[1], index_receiver_label(receiver));
             }
         }
         if (location != nullptr) {

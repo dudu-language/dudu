@@ -157,7 +157,7 @@ std::optional<TypeRef> infer_for_binding_type(FunctionScope& scope, const Stmt& 
         for (const Expr& arg : stmt.iterable_expr.children) {
             (void)infer_expr_type_ast(scope, arg, &location);
         }
-        return parse_type_text("i32", location);
+        return named_type_ref("i32", location);
     }
     if (stmt.iterable_expr.kind == ExprKind::Name) {
         const std::optional<TypeRef> element =

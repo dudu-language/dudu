@@ -118,7 +118,7 @@ TypeRef infer_binary_expr_type_ref(const Expr& expr,
     }
     if (expr.op == "and" || expr.op == "or" || expr.op == "==" || expr.op == "!=" ||
         expr.op == "<" || expr.op == "<=" || expr.op == ">" || expr.op == ">=") {
-        return parse_type_text("bool", expr.location);
+        return named_type_ref("bool", expr.location);
     }
     const TypeRef left_ref =
         infer_emitted_local_type_ref(expr.children[0], local_type_refs, function_returns, symbols);
@@ -132,12 +132,12 @@ TypeRef infer_binary_expr_type_ref(const Expr& expr,
     }
     if ((type_ref_is_name(left_ref, "f64") || type_ref_is_name(right_ref, "f64")) &&
         is_numeric_type(left_ref) && is_numeric_type(right_ref)) {
-        return parse_type_text("f64", expr.location);
+        return named_type_ref("f64", expr.location);
     }
     if ((type_ref_is_name(left_ref, "f32") || type_ref_is_name(right_ref, "f32")) &&
         (type_ref_is_name(left_ref, "f32") || type_ref_is_name(left_ref, "i32")) &&
         (type_ref_is_name(right_ref, "f32") || type_ref_is_name(right_ref, "i32"))) {
-        return parse_type_text("f32", expr.location);
+        return named_type_ref("f32", expr.location);
     }
     return {};
 }
@@ -150,15 +150,15 @@ TypeRef infer_emitted_local_type_ref(const Expr& expr,
                                      const Symbols* symbols) {
     switch (expr.kind) {
     case ExprKind::BoolLiteral:
-        return parse_type_text("bool", expr.location);
+        return named_type_ref("bool", expr.location);
     case ExprKind::IntLiteral:
-        return parse_type_text("i32", expr.location);
+        return named_type_ref("i32", expr.location);
     case ExprKind::FloatLiteral:
-        return parse_type_text("f64", expr.location);
+        return named_type_ref("f64", expr.location);
     case ExprKind::StringLiteral:
-        return parse_type_text("str", expr.location);
+        return named_type_ref("str", expr.location);
     case ExprKind::NoneLiteral:
-        return parse_type_text("None", expr.location);
+        return named_type_ref("None", expr.location);
     case ExprKind::Name:
         return emitted_local_type_ref(local_type_refs, expr.name, expr.location);
     case ExprKind::Unary:
@@ -166,7 +166,7 @@ TypeRef infer_emitted_local_type_ref(const Expr& expr,
             return {};
         }
         if (expr.op == "not") {
-            return parse_type_text("bool", expr.location);
+            return named_type_ref("bool", expr.location);
         }
         if (expr.op == "&") {
             const TypeRef child = infer_emitted_local_type_ref(
