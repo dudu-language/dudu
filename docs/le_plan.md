@@ -789,13 +789,13 @@ push. They are not release packaging work.
    paths, and binds native template placeholders from parsed argument types
    when available. Explicit native template placeholder discovery now walks
    parsed return and parameter `TypeRef` nodes before falling back to native
-   spelling scans. Explicit native template substitution now rewrites parsed
-   parameter and return `TypeRef` nodes first, then renders compatibility
-   strings from those nodes; raw text replacement remains only for signature
-   pieces without parsed type metadata. Numeric promotion now checks parsed
-   parameter and argument `TypeRef` nodes before falling back to rendered
-   native spelling. The native signature matcher no longer accepts a string
-   expression inference callback.
+   spelling scans. Explicit native template substitution rewrites parsed
+   parameter and return `TypeRef` nodes first when the signature has ordinary
+   template placeholders; native C++ pack/decay spellings stay on the explicit
+   native spelling path until the pack has been matched. Numeric promotion now
+   checks parsed parameter and argument `TypeRef` nodes before falling back to
+   rendered native spelling. The native signature matcher no longer accepts a
+   string expression inference callback.
    Generic function and method inference no longer accepts a string expression
    inference callback; all inference inputs cross that boundary as `TypeRef`
    nodes.
@@ -1674,3 +1674,7 @@ push. They are not release packaging work.
    Explicit method template arguments now parse into `TypeRef`s before method
    signature instantiation, and the old string receiver-template substitution
    helper has been deleted.
+   Bound native template substitution now uses structured `TypeRef`
+   substitution for non-pack signatures with ordinary bindings. Native C++
+   variadic packs and decay artifacts remain at the native spelling boundary
+   because those are foreign signature encodings, not Dudu AST syntax.
