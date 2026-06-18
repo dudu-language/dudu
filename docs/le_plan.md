@@ -1291,3 +1291,6 @@ declarations safely.
    Receiver template argument extraction now accepts parsed `TypeRef` only; the
    unused string overload that reparsed rendered receiver types has been
    removed.
+   Built-in `min`/`max` and contextual numeric binary inference now pass
+   inferred `TypeRef` operands into assignment compatibility instead of calling
+   through rendered argument-type strings.

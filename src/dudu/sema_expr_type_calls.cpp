@@ -134,7 +134,7 @@ std::optional<TypeRef> direct_builtin_call_type_ref(const FunctionScope& scope, 
         for (size_t i = 1; i < expr.children.size(); ++i) {
             const TypeRef got_ref = infer_expr_type_ast(scope, expr.children[i], location);
             const std::string got = substitute_type_ref_text(got_ref, {});
-            if (location != nullptr && !can_assign_ast(scope, first, expr.children[i], got)) {
+            if (location != nullptr && !can_assign_ast(scope, first, expr.children[i], got_ref)) {
                 sema_expr_fail(*location, std::string(callee) + " argument " +
                                               std::to_string(i + 1) + " expects " +
                                               substitute_type_ref_text(first, {}) + ", got " + got);

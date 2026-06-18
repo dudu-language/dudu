@@ -46,18 +46,20 @@ bool is_arithmetic_op(const std::string& op) {
     return ops.contains(op);
 }
 
-std::optional<std::string> contextual_numeric_binary_type(const FunctionScope& scope,
-                                                          const Expr& left_expr,
-                                                          const std::string& left,
-                                                          const Expr& right_expr,
-                                                          const std::string& right) {
+std::optional<TypeRef> contextual_numeric_binary_type(const FunctionScope& scope,
+                                                      const Expr& left_expr,
+                                                      const TypeRef& left_ref,
+                                                      const Expr& right_expr,
+                                                      const TypeRef& right_ref) {
+    const std::string left = substitute_type_ref_text(left_ref, {});
+    const std::string right = substitute_type_ref_text(right_ref, {});
     if (is_numeric_literal_expr(left_expr) && is_numeric_type_name(scope.symbols, right) &&
-        can_assign_ast(scope, right, left_expr, left)) {
-        return right;
+        can_assign_ast(scope, right_ref, left_expr, left_ref)) {
+        return right_ref;
     }
     if (is_numeric_literal_expr(right_expr) && is_numeric_type_name(scope.symbols, left) &&
-        can_assign_ast(scope, left, right_expr, right)) {
-        return left;
+        can_assign_ast(scope, left_ref, right_expr, right_ref)) {
+        return left_ref;
     }
     return std::nullopt;
 }
@@ -135,8 +137,8 @@ std::optional<TypeRef> binary_expr_type_ref(const FunctionScope& scope, const Ex
         return named_type_ref("bool", expr.location);
     }
     if (is_comparison_op(expr.op)) {
-        if (contextual_numeric_binary_type(scope, expr.children[0], left, expr.children[1],
-                                           right)) {
+        if (contextual_numeric_binary_type(scope, expr.children[0], left_ref, expr.children[1],
+                                           right_ref)) {
             return named_type_ref("bool", expr.location);
         }
         if (const auto signature =
@@ -145,8 +147,8 @@ std::optional<TypeRef> binary_expr_type_ref(const FunctionScope& scope, const Ex
                 if (signature->params.size() != 1) {
                     sema_expr_fail(*location, "operator " + expr.op + " expects 1 argument, got " +
                                                   std::to_string(signature->params.size()));
-                } else if (!can_assign_ast(scope, signature->params.front(), expr.children[1],
-                                           right)) {
+                } else if (!can_assign_ast(scope, signature_param_type_ref(*signature, 0),
+                                           expr.children[1], right_ref)) {
                     sema_expr_fail(*location, "operator " + expr.op + " expects " +
                                                   signature->params.front() + ", got " + right);
                 }
@@ -165,15 +167,9 @@ std::optional<TypeRef> binary_expr_type_ref(const FunctionScope& scope, const Ex
         return named_type_ref("bool", expr.location);
     }
     if (is_arithmetic_op(expr.op)) {
-        if (const auto contextual = contextual_numeric_binary_type(scope, expr.children[0], left,
-                                                                   expr.children[1], right)) {
-            if (*contextual == left) {
-                return left_ref;
-            }
-            if (*contextual == right) {
-                return right_ref;
-            }
-            return parse_type_text(*contextual, expr.location);
+        if (const auto contextual = contextual_numeric_binary_type(
+                scope, expr.children[0], left_ref, expr.children[1], right_ref)) {
+            return *contextual;
         }
     }
     if (const auto signature =
