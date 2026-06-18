@@ -1,5 +1,6 @@
 #include "dudu/ast_type.hpp"
 #include "dudu/sema_expr_internal.hpp"
+#include "dudu/sema_methods_internal.hpp"
 
 namespace dudu {
 namespace {
@@ -119,9 +120,9 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
                                      : "") +
                    "]";
         }
-        if (const auto klass = scope.symbols.classes.find(resolve_alias(scope.symbols, callee));
-            klass != scope.symbols.classes.end()) {
-            check_constructor_args_ast(scope, *klass->second, args, location);
+        if (const ClassDecl* klass =
+                class_for_receiver_type(scope.symbols, parse_type_text(callee))) {
+            check_constructor_args_ast(scope, *klass, args, location);
             return callee;
         }
         if (const auto fn = scope.symbols.function_signatures.find(callee);

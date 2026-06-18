@@ -5,6 +5,7 @@
 #include "dudu/decorators.hpp"
 #include "dudu/sema_function_type.hpp"
 #include "dudu/sema_method_templates.hpp"
+#include "dudu/sema_methods_internal.hpp"
 
 #include <algorithm>
 #include <map>
@@ -17,30 +18,8 @@
 namespace dudu {
 namespace {
 
-std::string unwrap_type(const Symbols& symbols, const TypeRef& type);
-
 std::string unwrap_type(const Symbols& symbols, const TypeRef& type) {
-    TypeRef current = type;
-    while (true) {
-        TypeRef resolved = resolve_alias_ref(symbols, current);
-        if (!type_ref_equivalent(resolved, current)) {
-            current = resolved;
-            continue;
-        }
-        if (const auto inner =
-                unary_type_child_ref(current, {TypeKind::Pointer, TypeKind::Reference})) {
-            current = *inner;
-            continue;
-        }
-        if (const auto inner = unary_type_child_ref(
-                current, {TypeKind::Const, TypeKind::Volatile, TypeKind::Atomic, TypeKind::Storage,
-                          TypeKind::Shared, TypeKind::Device})) {
-            current = *inner;
-            continue;
-        }
-        const std::string head = type_ref_head_name(current);
-        return head.empty() ? trim(type_ref_text(current)) : head;
-    }
+    return unwrap_receiver_type(symbols, type);
 }
 
 bool ref_like(const TypeRef& type) {
@@ -142,8 +121,7 @@ std::string method_key_without_self(const FunctionDecl& method) {
 }
 
 const ClassDecl* dudu_class_for_base(const Symbols& symbols, const TypeRef& base) {
-    const auto found = symbols.classes.find(unwrap_type(symbols, base));
-    return found == symbols.classes.end() ? nullptr : found->second;
+    return class_for_receiver_type(symbols, base);
 }
 
 bool class_has_instance_storage(const Symbols& symbols, const ClassDecl& klass,
