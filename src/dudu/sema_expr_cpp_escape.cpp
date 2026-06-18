@@ -29,6 +29,7 @@ std::vector<Expr> call_arg_exprs(std::string expr, size_t open, SourceLocation l
 
 struct EscapeCall {
     std::string callee;
+    Expr callee_expr;
     std::vector<Expr> args;
 };
 
@@ -40,7 +41,9 @@ std::optional<EscapeCall> parsed_escape_call(const Expr& parsed) {
     if (callee.empty()) {
         return std::nullopt;
     }
-    return EscapeCall{.callee = std::move(callee), .args = parsed.children};
+    return EscapeCall{.callee = std::move(callee),
+                      .callee_expr = parsed.callee.empty() ? Expr{} : parsed.callee.front(),
+                      .args = parsed.children};
 }
 
 std::optional<EscapeCall> escape_call_from_text(const std::string& expr, size_t open,
@@ -49,7 +52,29 @@ std::optional<EscapeCall> escape_call_from_text(const std::string& expr, size_t 
         return std::nullopt;
     }
     return EscapeCall{.callee = trim(expr.substr(0, open)),
+                      .callee_expr = Expr{},
                       .args = call_arg_exprs(expr, open, location)};
+}
+
+struct EscapeMemberCall {
+    std::string receiver;
+    std::string method;
+    Expr receiver_expr;
+};
+
+std::optional<EscapeMemberCall> parsed_member_call(const EscapeCall& call) {
+    if (call.callee_expr.kind != ExprKind::Member || call.callee_expr.children.size() != 1 ||
+        call.callee_expr.name.empty()) {
+        return std::nullopt;
+    }
+    const Expr& receiver = call.callee_expr.children.front();
+    const auto path = expr_path_from_expr(receiver);
+    if (!path) {
+        return std::nullopt;
+    }
+    return EscapeMemberCall{.receiver = render_expr_path(*path),
+                            .method = call.callee_expr.name,
+                            .receiver_expr = receiver};
 }
 
 std::optional<std::string> infer_parsed_index_escape(const FunctionScope& scope,
@@ -75,15 +100,13 @@ std::optional<std::string> infer_parsed_index_escape(const FunctionScope& scope,
     }
     if (const auto path = expr_path_from_expr(receiver)) {
         const std::string name = render_expr_path(*path);
-        if (is_member_path(name)) {
-            const std::string receiver_type = cpp_escape_member_expr_type(scope, location, receiver);
-            if (!receiver_type.empty()) {
-                return substitute_type_ref_text(
-                    indexed_type_ref_from_type(scope.symbols, *location,
-                                               parse_type_text(receiver_type, *location),
-                                               index_expr, name),
-                    {});
-            }
+        const std::string receiver_type = cpp_escape_member_expr_type(scope, location, receiver);
+        if (!receiver_type.empty()) {
+            return substitute_type_ref_text(
+                indexed_type_ref_from_type(scope.symbols, *location,
+                                           parse_type_text(receiver_type, *location), index_expr,
+                                           name),
+                {});
         }
     }
     return std::nullopt;
@@ -202,12 +225,10 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
         return "void";
     const SourceLocation parse_location = location == nullptr ? SourceLocation{} : *location;
     const Expr parsed_expr = parse_expr_text(expr, parse_location);
-    if (parsed_expr.kind == ExprKind::DictLiteral) {
+    if (parsed_expr.kind == ExprKind::DictLiteral)
         return "dict";
-    }
-    if (parsed_expr.kind == ExprKind::SetLiteral) {
+    if (parsed_expr.kind == ExprKind::SetLiteral)
         return "set";
-    }
     if (starts_with(expr, "{") && expr.back() == '}') {
         for (const std::string& entry : split_top_level(expr.substr(1, expr.size() - 2))) {
             if (find_top_level_char(entry, ':') != std::string::npos)
@@ -282,6 +303,44 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
         if (scope.local_type_refs.contains(callee)) {
             FunctionSignature signature;
             if (parse_local_function_type(scope, callee, signature)) {
+                check_call_args_ast(scope, callee, signature, args, location);
+                return signature_return_type_text(signature);
+            }
+        }
+        if (const auto member = parsed_member_call(*call_info)) {
+            FunctionSignature signature;
+            if (!scope.local_type_refs.contains(member->receiver) &&
+                scope.symbols.classes.contains(member->receiver) &&
+                static_method_signature_for_type(scope.symbols, parse_type_text(member->receiver),
+                                                 member->method, signature, location)) {
+                check_call_args_ast(scope, callee, signature, args, location);
+                return signature_return_type_text(signature);
+            }
+            const std::string receiver_type =
+                cpp_escape_member_expr_type(scope, nullptr, member->receiver_expr);
+            const TypeRef receiver_type_ref =
+                parse_type_text(receiver_type, location == nullptr ? SourceLocation{} : *location);
+            if (scope.local_type_refs.contains(member->receiver) &&
+                foreign_cpp_type_name(scope.symbols, receiver_type_ref)) {
+                for (const Expr& arg : args) {
+                    (void)infer_expr_type_ast(scope, arg, location);
+                }
+                return "auto";
+            }
+            if (method_signature_for_type(scope.symbols, receiver_type_ref, member->method,
+                                          signature, location)) {
+                const std::vector<FunctionSignature> signatures =
+                    method_signatures_for_type(scope.symbols, receiver_type_ref, member->method);
+                if (const auto match = matching_signature_ast(scope, signatures, args)) {
+                    check_call_args_ast(scope, callee, *match, args, location);
+                    return signature_return_type_text(*match);
+                }
+                if (foreign_cpp_type_name(scope.symbols, receiver_type_ref)) {
+                    for (const Expr& arg : args) {
+                        (void)infer_expr_type_ast(scope, arg, location);
+                    }
+                    return "auto";
+                }
                 check_call_args_ast(scope, callee, signature, args, location);
                 return signature_return_type_text(signature);
             }
@@ -377,12 +436,10 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
         out << "]";
         return out.str();
     }
-    if (parsed_expr.kind == ExprKind::BoolLiteral) {
+    if (parsed_expr.kind == ExprKind::BoolLiteral)
         return "bool";
-    }
-    if (parsed_expr.kind == ExprKind::StringLiteral) {
+    if (parsed_expr.kind == ExprKind::StringLiteral)
         return "str";
-    }
     if (parsed_expr.kind == ExprKind::IntLiteral) {
         return "i32";
     }
