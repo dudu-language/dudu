@@ -63,7 +63,7 @@ TypeRef static_member_type_ref(const Symbols& symbols, const SourceLocation* loc
 
 } // namespace
 
-std::string unwrap_receiver_type(const Symbols& symbols, const TypeRef& type) {
+TypeRef unwrap_receiver_type_ref(const Symbols& symbols, const TypeRef& type) {
     TypeRef current = type;
     while (true) {
         const TypeRef resolved = resolve_alias_ref(symbols, current);
@@ -82,9 +82,19 @@ std::string unwrap_receiver_type(const Symbols& symbols, const TypeRef& type) {
             current = *inner;
             continue;
         }
-        const std::string head = type_ref_head_name(current);
-        return strip_c_type_tag(head.empty() ? substitute_type_ref_text(current, {}) : head);
+        return current;
     }
+}
+
+std::string unwrap_receiver_type(const Symbols& symbols, const TypeRef& type) {
+    const TypeRef current = unwrap_receiver_type_ref(symbols, type);
+    const std::string head = type_ref_head_name(current);
+    return strip_c_type_tag(head.empty() ? substitute_type_ref_text(current, {}) : head);
+}
+
+const ClassDecl* class_for_receiver_type(const Symbols& symbols, const TypeRef& type) {
+    const auto klass = symbols.classes.find(unwrap_receiver_type(symbols, type));
+    return klass == symbols.classes.end() ? nullptr : klass->second;
 }
 
 std::optional<TypeRef> field_type_ref_for_class(const Symbols& symbols, const ClassDecl& klass,
@@ -99,13 +109,12 @@ std::optional<TypeRef> field_type_ref_for_class(const Symbols& symbols, const Cl
         }
     }
     for (const BaseClassDecl& base_decl : klass.base_class_refs) {
-        const auto base_class =
-            symbols.classes.find(unwrap_receiver_type(symbols, base_decl.type_ref));
-        if (base_class == symbols.classes.end()) {
+        const ClassDecl* base_class = class_for_receiver_type(symbols, base_decl.type_ref);
+        if (base_class == nullptr) {
             continue;
         }
         if (const auto found =
-                field_type_ref_for_class(symbols, *base_class->second, base_decl.type_ref, field)) {
+                field_type_ref_for_class(symbols, *base_class, base_decl.type_ref, field)) {
             return found;
         }
     }
@@ -231,11 +240,11 @@ std::optional<TypeRef> field_type_ref_for_type(const Symbols& symbols, const Typ
             return result_args[1];
         }
     }
-    const auto klass = symbols.classes.find(unwrap_receiver_type(symbols, receiver_type));
-    if (klass == symbols.classes.end()) {
+    const ClassDecl* klass = class_for_receiver_type(symbols, receiver_type);
+    if (klass == nullptr) {
         return std::nullopt;
     }
-    return field_type_ref_for_class(symbols, *klass->second, receiver_type, field);
+    return field_type_ref_for_class(symbols, *klass, receiver_type, field);
 }
 
 } // namespace dudu

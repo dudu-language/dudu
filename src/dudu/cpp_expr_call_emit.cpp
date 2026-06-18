@@ -8,6 +8,7 @@
 #include "dudu/sema_enum.hpp"
 #include "dudu/sema_function_type.hpp"
 #include "dudu/sema_methods.hpp"
+#include "dudu/sema_methods_internal.hpp"
 #include "dudu/sema_scope.hpp"
 #include "dudu/source.hpp"
 
@@ -117,23 +118,13 @@ std::string decorator_arg(const FunctionDecl& fn, std::string_view name) {
     return {};
 }
 
-std::optional<std::string> dudu_operator_method_name(const Symbols& symbols, std::string type,
+std::optional<std::string> dudu_operator_method_name(const Symbols& symbols, const TypeRef& type,
                                                      std::string_view op) {
-    type = trim_copy(resolve_alias(symbols, std::move(type)));
-    while (true) {
-        const TypeRef parsed = parse_type_text(type);
-        if (const auto inner = unary_type_child_ref(
-                parsed, {TypeKind::Const, TypeKind::Pointer, TypeKind::Reference})) {
-            type = substitute_type_ref_text(*inner, {});
-            continue;
-        }
-        break;
-    }
-    const auto klass = symbols.classes.find(type);
-    if (klass == symbols.classes.end()) {
+    const ClassDecl* klass = class_for_receiver_type(symbols, type);
+    if (klass == nullptr) {
         return std::nullopt;
     }
-    for (const FunctionDecl& method : klass->second->methods) {
+    for (const FunctionDecl& method : klass->methods) {
         if (decorator_arg(method, "operator") == op) {
             return method.name;
         }
@@ -179,8 +170,8 @@ bool is_builtin_template_constructor(std::string_view name) {
 }
 
 std::string lower_callee_expr(const Expr& expr, const std::vector<std::string>& aliases,
-                              const CppLocalContext& locals,
-                              const Symbols* symbols, const CppEmitOptions& options) {
+                              const CppLocalContext& locals, const Symbols* symbols,
+                              const CppEmitOptions& options) {
     return lower_callee_expr(expr, aliases, locals, {}, symbols, options);
 }
 
@@ -211,8 +202,7 @@ std::string lower_callee_expr(const Expr& expr, const std::vector<std::string>& 
 }
 
 std::string lower_callee_expr(const Expr& expr, const std::vector<std::string>& aliases,
-                              const CppLocalContext& locals,
-                              const Symbols* symbols) {
+                              const CppLocalContext& locals, const Symbols* symbols) {
     return lower_callee_expr(expr, aliases, locals, symbols, {});
 }
 
@@ -228,8 +218,8 @@ bool enum_has_payloads(const EnumDecl& en) {
 std::string lower_enum_variant_constructor(const EnumDecl& en, const EnumValueDecl& value,
                                            const std::vector<Expr>& args,
                                            const std::vector<std::string>& aliases,
-                                           const CppLocalContext& locals,
-                                           const Symbols* symbols, const CppEmitOptions& options) {
+                                           const CppLocalContext& locals, const Symbols* symbols,
+                                           const CppEmitOptions& options) {
     return lower_enum_variant_constructor(en, value, args, aliases, locals, {}, symbols, options);
 }
 
@@ -261,8 +251,7 @@ std::string lower_enum_variant_constructor(const EnumDecl& en, const EnumValueDe
 std::string lower_enum_variant_constructor(const EnumDecl& en, const EnumValueDecl& value,
                                            const std::vector<Expr>& args,
                                            const std::vector<std::string>& aliases,
-                                           const CppLocalContext& locals,
-                                           const Symbols* symbols) {
+                                           const CppLocalContext& locals, const Symbols* symbols) {
     return lower_enum_variant_constructor(en, value, args, aliases, locals, symbols, {});
 }
 
@@ -281,8 +270,7 @@ lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& al
     if (receiver_type == local_type_refs.end()) {
         return std::nullopt;
     }
-    const std::string receiver_type_text = substitute_type_ref_text(receiver_type->second, {});
-    const auto method = dudu_operator_method_name(*symbols, receiver_type_text, "[]=");
+    const auto method = dudu_operator_method_name(*symbols, receiver_type->second, "[]=");
     if (!method) {
         return std::nullopt;
     }
@@ -335,8 +323,8 @@ std::optional<std::string> lower_pointer_cast_expr(const Expr& expr,
 }
 
 std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& aliases,
-                            const CppLocalContext& locals,
-                            const Symbols* symbols, const CppEmitOptions& options) {
+                            const CppLocalContext& locals, const Symbols* symbols,
+                            const CppEmitOptions& options) {
     return lower_call_expr(expr, aliases, locals, {}, symbols, options);
 }
 
@@ -428,8 +416,7 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
 }
 
 std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& aliases,
-                            const CppLocalContext& locals,
-                            const Symbols* symbols) {
+                            const CppLocalContext& locals, const Symbols* symbols) {
     return lower_call_expr(expr, aliases, locals, symbols, {});
 }
 

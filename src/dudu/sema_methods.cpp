@@ -92,11 +92,11 @@ bool method_signature_for_type(const Symbols& symbols, const TypeRef& receiver_t
     const std::string lookup_name = template_method_name(method_name);
     const std::vector<TypeRef> method_args =
         template_method_args(method_name, receiver_type.location);
-    const auto klass = symbols.classes.find(type);
-    if (klass == symbols.classes.end()) {
+    const ClassDecl* klass = class_for_receiver_type(symbols, receiver_type);
+    if (klass == nullptr) {
         return false;
     }
-    for (const FunctionDecl& method : klass->second->methods) {
+    for (const FunctionDecl& method : klass->methods) {
         if (method.name != lookup_name) {
             continue;
         }
@@ -109,11 +109,10 @@ bool method_signature_for_type(const Symbols& symbols, const TypeRef& receiver_t
             }
             return false;
         }
-        signature =
-            instantiate_method_signature(*klass->second, method, receiver_args, method_args);
+        signature = instantiate_method_signature(*klass, method, receiver_args, method_args);
         return true;
     }
-    for (const BaseClassDecl& base_decl : klass->second->base_class_refs) {
+    for (const BaseClassDecl& base_decl : klass->base_class_refs) {
         if (method_signature_for_type(symbols, base_decl.type_ref, method_name, signature,
                                       nullptr)) {
             return true;
@@ -131,11 +130,11 @@ std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
     const TypeRef templated_receiver = receiver_template_type_ref(scope.symbols, receiver_type);
     const std::vector<TypeRef> receiver_args = template_arg_refs_from_type(templated_receiver);
     const std::string type = unwrap_receiver_type(scope.symbols, receiver_type);
-    const auto klass = scope.symbols.classes.find(type);
-    if (klass == scope.symbols.classes.end()) {
+    const ClassDecl* klass = class_for_receiver_type(scope.symbols, receiver_type);
+    if (klass == nullptr) {
         return std::nullopt;
     }
-    for (const FunctionDecl& method : klass->second->methods) {
+    for (const FunctionDecl& method : klass->methods) {
         if (method.name != method_name || method.generic_params.empty()) {
             continue;
         }
@@ -146,9 +145,9 @@ std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
         if (!inferred) {
             return std::nullopt;
         }
-        return instantiate_method_signature(*klass->second, method, receiver_args, *inferred);
+        return instantiate_method_signature(*klass, method, receiver_args, *inferred);
     }
-    for (const BaseClassDecl& base_decl : klass->second->base_class_refs) {
+    for (const BaseClassDecl& base_decl : klass->base_class_refs) {
         if (const auto signature = inferred_generic_method_signature_for_type(
                 scope, base_decl.type_ref, method_name, args, nullptr)) {
             return signature;
@@ -164,11 +163,11 @@ std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
     const TypeRef templated_receiver = receiver_template_type_ref(scope.symbols, receiver_type);
     const std::vector<TypeRef> receiver_args = template_arg_refs_from_type(templated_receiver);
     const std::string type = unwrap_receiver_type(scope.symbols, receiver_type);
-    const auto klass = scope.symbols.classes.find(type);
-    if (klass == scope.symbols.classes.end()) {
+    const ClassDecl* klass = class_for_receiver_type(scope.symbols, receiver_type);
+    if (klass == nullptr) {
         return std::nullopt;
     }
-    for (const FunctionDecl& method : klass->second->methods) {
+    for (const FunctionDecl& method : klass->methods) {
         if (method.name != method_name || method.generic_params.empty()) {
             continue;
         }
@@ -184,9 +183,9 @@ std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
         if (!inferred) {
             return std::nullopt;
         }
-        return instantiate_method_signature(*klass->second, method, receiver_args, *inferred);
+        return instantiate_method_signature(*klass, method, receiver_args, *inferred);
     }
-    for (const BaseClassDecl& base_decl : klass->second->base_class_refs) {
+    for (const BaseClassDecl& base_decl : klass->base_class_refs) {
         if (const auto signature = inferred_generic_method_signature_for_type(
                 scope, base_decl.type_ref, method_name, args, expected_return, nullptr)) {
             return signature;
@@ -209,21 +208,20 @@ std::vector<FunctionSignature> method_signatures_for_type(const Symbols& symbols
     const std::string lookup_name = template_method_name(method_name);
     const std::vector<TypeRef> method_args =
         template_method_args(method_name, receiver_type.location);
-    const auto klass = symbols.classes.find(type);
-    if (klass == symbols.classes.end()) {
+    const ClassDecl* klass = class_for_receiver_type(symbols, receiver_type);
+    if (klass == nullptr) {
         return out;
     }
-    for (const FunctionDecl& method : klass->second->methods) {
+    for (const FunctionDecl& method : klass->methods) {
         if (method.name != lookup_name) {
             continue;
         }
         if (method.generic_params.size() != method_args.size()) {
             continue;
         }
-        out.push_back(
-            instantiate_method_signature(*klass->second, method, receiver_args, method_args));
+        out.push_back(instantiate_method_signature(*klass, method, receiver_args, method_args));
     }
-    for (const BaseClassDecl& base_decl : klass->second->base_class_refs) {
+    for (const BaseClassDecl& base_decl : klass->base_class_refs) {
         std::vector<FunctionSignature> base_signatures =
             method_signatures_for_type(symbols, base_decl.type_ref, method_name);
         out.insert(out.end(), base_signatures.begin(), base_signatures.end());
@@ -239,11 +237,11 @@ bool static_method_signature_for_type(const Symbols& symbols, const TypeRef& typ
     const std::string type = unwrap_receiver_type(symbols, type_name);
     const std::string lookup_name = template_method_name(method_name);
     const std::vector<TypeRef> method_args = template_method_args(method_name, type_name.location);
-    const auto klass = symbols.classes.find(type);
-    if (klass == symbols.classes.end()) {
+    const ClassDecl* klass = class_for_receiver_type(symbols, type_name);
+    if (klass == nullptr) {
         return false;
     }
-    for (const FunctionDecl& method : klass->second->methods) {
+    for (const FunctionDecl& method : klass->methods) {
         if (method.name != lookup_name || !method_is_static(method)) {
             continue;
         }
@@ -256,11 +254,10 @@ bool static_method_signature_for_type(const Symbols& symbols, const TypeRef& typ
             }
             return false;
         }
-        signature =
-            instantiate_method_signature(*klass->second, method, receiver_args, method_args);
+        signature = instantiate_method_signature(*klass, method, receiver_args, method_args);
         return true;
     }
-    for (const BaseClassDecl& base_decl : klass->second->base_class_refs) {
+    for (const BaseClassDecl& base_decl : klass->base_class_refs) {
         if (static_method_signature_for_type(symbols, base_decl.type_ref, method_name, signature,
                                              nullptr)) {
             return true;
