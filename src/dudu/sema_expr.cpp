@@ -121,7 +121,7 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
             const ScopedCallee scoped_callee = scoped_call_callee(scope, expr, location);
             const std::string& callee_base = scoped_callee.key;
             if (callee_base.find('.') == std::string::npos && is_plain_identifier(callee_base) &&
-                !known_type(scope.symbols, callee_base)) {
+                !known_type_ref(scope.symbols, named_type_ref(callee_base, expr.location))) {
                 sema_expr_fail(*location, "unknown function: " + callee);
             }
             if (callee_base.rfind('.') != std::string::npos) {

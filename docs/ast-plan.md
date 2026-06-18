@@ -2015,6 +2015,10 @@ LSP source edits are also moving to AST-owned ranges:
   unused string-returning wrappers have been removed.
 - Member-expression typing now exposes the parsed `TypeRef` API only; the
   explicit C++ escape boundary renders the result locally.
+- Template-call unknown-type diagnostics now build a named `TypeRef` directly
+  for plain callees instead of reparsing the callee string. The remaining
+  `known_type` string callers are confined to explicit `cpp(...)` escape
+  inference.
 
 Expression parsing has moved onto the lexer/token stream:
 
