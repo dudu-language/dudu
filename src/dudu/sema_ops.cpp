@@ -4,6 +4,7 @@
 #include "dudu/ast_type.hpp"
 #include "dudu/decorators.hpp"
 #include "dudu/sema_function_type.hpp"
+#include "dudu/sema_methods_internal.hpp"
 #include "dudu/type_compat.hpp"
 
 #include <set>
@@ -45,13 +46,6 @@ TypeRef unwrap_value_type_ref(const Symbols& symbols, TypeRef type) {
 
 bool is_numeric_type(const TypeRef& type) {
     return is_numeric_type(type_ref_head_name(type));
-}
-
-const ClassDecl* dudu_class_for_type(const Symbols& symbols, const TypeRef& type) {
-    const TypeRef value_type = unwrap_value_type_ref(symbols, type);
-    const std::string name = type_ref_head_name(value_type);
-    const auto klass = symbols.classes.find(name);
-    return klass == symbols.classes.end() ? nullptr : klass->second;
 }
 
 bool unknown_or_auto(const TypeRef& type) {
@@ -153,7 +147,7 @@ dudu_operator_signature(const Symbols& symbols, const std::string& op, const Typ
     if (!is_supported_dudu_operator(op)) {
         return std::nullopt;
     }
-    const ClassDecl* klass = dudu_class_for_type(symbols, left);
+    const ClassDecl* klass = class_for_receiver_type(symbols, left);
     if (klass == nullptr) {
         return std::nullopt;
     }
@@ -182,7 +176,7 @@ dudu_binary_operator_signature(const Symbols& symbols, const std::string& op, co
     if (!is_supported_dudu_operator(op)) {
         return std::nullopt;
     }
-    const ClassDecl* klass = dudu_class_for_type(symbols, left);
+    const ClassDecl* klass = class_for_receiver_type(symbols, left);
     if (klass == nullptr) {
         return std::nullopt;
     }
