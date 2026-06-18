@@ -170,8 +170,7 @@ void attach_statement_source(Stmt& stmt, const Parser::JoinedTokens& joined) {
     if (joined.has_tokens) {
         stmt.range = joined.range;
     } else {
-        const std::string text = joined.source_text.empty() ? joined.text : joined.source_text;
-        stmt.range = range_for_text(stmt.location, text);
+        stmt.range = range_for_text(stmt.location, joined.text);
     }
 }
 

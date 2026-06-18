@@ -232,7 +232,7 @@ ImportDecl Parser::parse_import(const Token& start) {
         import.alias = consume_identifier("expected alias after as").text;
     }
     const JoinedTokens source = join_tokens(statement_begin, cursor_);
-    import.source_text = source.source_text;
+    import.source_text = source_text_for_tokens(statement_begin, cursor_);
     import.range = source.range;
     consume(TokenKind::Newline, "expected newline after import");
     return import;
@@ -256,7 +256,7 @@ ImportDecl Parser::parse_foreign_import(const Token& start, ImportKind kind,
         import.alias = consume_identifier("expected alias after as").text;
     }
     const JoinedTokens source = join_tokens(statement_begin, cursor_);
-    import.source_text = source.source_text;
+    import.source_text = source_text_for_tokens(statement_begin, cursor_);
     import.range = source.range;
     consume(TokenKind::Newline, "expected newline after foreign import");
     return import;
@@ -276,7 +276,7 @@ ImportDecl Parser::parse_from_import(const Token& start) {
         import.alias = consume_identifier("expected alias after as").text;
     }
     const JoinedTokens source = join_tokens(statement_begin, cursor_);
-    import.source_text = source.source_text;
+    import.source_text = source_text_for_tokens(statement_begin, cursor_);
     import.range = source.range;
     consume(TokenKind::Newline, "expected newline after from import");
     return import;
@@ -295,8 +295,6 @@ Parser::JoinedTokens Parser::join_until_with_range(std::initializer_list<TokenKi
     JoinedTokens joined;
     joined.begin = cursor_;
     std::ostringstream out;
-    std::ostringstream source_out;
-    SourceLocation source_cursor;
     bool first = true;
     TokenKind previous_kind = TokenKind::End;
     int bracket_depth = 0;
@@ -321,11 +319,9 @@ Parser::JoinedTokens Parser::join_until_with_range(std::initializer_list<TokenKi
         const Token& token = current();
         if (!joined.has_tokens) {
             joined.range.start = token.location;
-            source_cursor = token.location;
             joined.has_tokens = true;
         }
         joined.range.end = token_end_location(token);
-        append_source_token(source_out, source_cursor, token);
         if (!first && parser_needs_space_between(previous_kind, current().kind)) {
             out << ' ';
         }
@@ -349,7 +345,6 @@ Parser::JoinedTokens Parser::join_until_with_range(std::initializer_list<TokenKi
     }
     joined.end = cursor_;
     joined.text = out.str();
-    joined.source_text = source_out.str();
     return joined;
 }
 
@@ -358,19 +353,15 @@ Parser::JoinedTokens Parser::join_tokens(size_t begin, size_t end) const {
     joined.begin = begin;
     joined.end = std::min(end, tokens_.size());
     std::ostringstream out;
-    std::ostringstream source_out;
-    SourceLocation source_cursor;
     bool first = true;
     TokenKind previous_kind = TokenKind::End;
     for (size_t index = begin; index < end && index < tokens_.size(); ++index) {
         const Token& token = tokens_[index];
         if (!joined.has_tokens) {
             joined.range.start = token.location;
-            source_cursor = token.location;
             joined.has_tokens = true;
         }
         joined.range.end = token_end_location(token);
-        append_source_token(source_out, source_cursor, token);
         if (!first && parser_needs_space_between(previous_kind, token.kind)) {
             out << ' ';
         }
@@ -379,8 +370,22 @@ Parser::JoinedTokens Parser::join_tokens(size_t begin, size_t end) const {
         previous_kind = token.kind;
     }
     joined.text = out.str();
-    joined.source_text = source_out.str();
     return joined;
+}
+
+std::string Parser::source_text_for_tokens(size_t begin, size_t end) const {
+    std::ostringstream out;
+    SourceLocation source_cursor;
+    bool has_tokens = false;
+    for (size_t index = begin; index < end && index < tokens_.size(); ++index) {
+        const Token& token = tokens_[index];
+        if (!has_tokens) {
+            source_cursor = token.location;
+            has_tokens = true;
+        }
+        append_source_token(out, source_cursor, token);
+    }
+    return out.str();
 }
 
 Expr Parser::parse_expr_piece(const JoinedTokens& piece) const {

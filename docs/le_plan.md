@@ -1277,6 +1277,10 @@ declarations safely.
    AST type child helper APIs no longer expose string-returning template or
    unary child accessors; callers must consume `TypeRef` children and render
    only at explicit display, native compatibility, or C++ emission boundaries.
+   Parser token spans no longer carry duplicate exact source text for
+   statement/expression parsing; exact source reconstruction is isolated to
+   import declarations where LSP import-code actions need to preserve the
+   original line.
    Indexing type inference exposes only parsed `TypeRef` receiver APIs; the old
    string receiver and string result wrappers have been removed, with
    `cpp(...)` escape inference rendering only at its boundary.

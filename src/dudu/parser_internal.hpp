@@ -15,7 +15,6 @@ class Parser {
 
     struct JoinedTokens {
         std::string text;
-        std::string source_text;
         SourceRange range;
         size_t begin = 0;
         size_t end = 0;
@@ -64,6 +63,7 @@ class Parser {
     Stmt parse_statement(std::vector<Stmt> children, size_t statement_end);
     JoinedTokens join_until_with_range(std::initializer_list<TokenKind> stops);
     JoinedTokens join_tokens(size_t begin, size_t end) const;
+    std::string source_text_for_tokens(size_t begin, size_t end) const;
     Expr parse_expr_piece(const JoinedTokens& piece) const;
     TypeRef parse_type_piece(const JoinedTokens& piece) const;
     std::vector<JoinedTokens> split_top_level_comma_pieces(const JoinedTokens& piece) const;
