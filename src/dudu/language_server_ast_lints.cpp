@@ -281,24 +281,84 @@ void lint_suspicious_cast_module(const ModuleAst& module, const Document& doc,
 }
 
 void lint_unreachable_statement_sequence(const std::vector<Stmt>& statements, const Document& doc,
+                                         std::vector<Diagnostic>& out);
+
+bool statement_sequence_exits(const std::vector<Stmt>& statements);
+
+bool statement_exits(const std::vector<Stmt>& statements, size_t index, size_t& consumed_until) {
+    const Stmt& stmt = statements[index];
+    consumed_until = index;
+    if (stmt.kind == StmtKind::Return || stmt.kind == StmtKind::Raise ||
+        stmt.kind == StmtKind::Break || stmt.kind == StmtKind::Continue) {
+        return true;
+    }
+    if (stmt.kind != StmtKind::If) {
+        return false;
+    }
+
+    bool saw_else = false;
+    bool all_branches_exit = true;
+    size_t cursor = index;
+    while (cursor < statements.size()) {
+        const StmtKind kind = statements[cursor].kind;
+        if (cursor == index) {
+            if (kind != StmtKind::If) {
+                break;
+            }
+        } else if (kind != StmtKind::Elif && kind != StmtKind::Else) {
+            break;
+        }
+        if (kind == StmtKind::Else) {
+            saw_else = true;
+        }
+        all_branches_exit =
+            all_branches_exit && statement_sequence_exits(statements[cursor].children);
+        consumed_until = cursor;
+        ++cursor;
+        if (kind == StmtKind::Else) {
+            break;
+        }
+    }
+    return saw_else && all_branches_exit;
+}
+
+bool statement_sequence_exits(const std::vector<Stmt>& statements) {
+    for (size_t i = 0; i < statements.size(); ++i) {
+        size_t consumed_until = i;
+        if (statement_exits(statements, i, consumed_until)) {
+            return true;
+        }
+        i = consumed_until;
+    }
+    return false;
+}
+
+void lint_unreachable_statement_sequence(const std::vector<Stmt>& statements, const Document& doc,
                                          std::vector<Diagnostic>& out) {
-    bool after_return = false;
-    for (const Stmt& stmt : statements) {
+    bool after_terminator = false;
+    bool reported_after_terminator = false;
+    for (size_t i = 0; i < statements.size(); ++i) {
+        const Stmt& stmt = statements[i];
         const bool in_document = same_source_file(stmt.location.file, doc.path);
-        if (after_return && in_document) {
+        if (after_terminator && !reported_after_terminator && in_document) {
             out.push_back({.location = stmt.location,
-                           .message = "unreachable statement after return",
+                           .message = "unreachable statement after terminating statement",
                            .source = "dudu/lint",
                            .severity = 2,
                            .code = "dudu.lint.unreachable",
                            .data_name = ""});
+            reported_after_terminator = true;
         }
-        if (!stmt.children.empty()) {
-            lint_unreachable_statement_sequence(stmt.children, doc, out);
+
+        size_t consumed_until = i;
+        const bool exits = statement_exits(statements, i, consumed_until);
+        for (size_t child_index = i; child_index <= consumed_until; ++child_index) {
+            lint_unreachable_statement_sequence(statements[child_index].children, doc, out);
         }
-        if (stmt.kind == StmtKind::Return && in_document) {
-            after_return = true;
+        if (exits && in_document) {
+            after_terminator = true;
         }
+        i = consumed_until;
     }
 }
 

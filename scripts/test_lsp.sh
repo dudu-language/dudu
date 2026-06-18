@@ -827,7 +827,7 @@ messages = [
                             },
                             "source": "dudu/lint",
                             "code": "dudu.lint.unreachable",
-                            "message": "unreachable statement after return",
+                            "message": "unreachable statement after terminating statement",
                         }
                     ]
                 },
@@ -1294,7 +1294,7 @@ lint_diagnostics = next(
 lint_diag = next(
     item
     for item in lint_diagnostics["params"]["diagnostics"]
-    if item["message"] == "unreachable statement after return"
+    if item["message"] == "unreachable statement after terminating statement"
 )
 assert lint_diag["source"] == "dudu/lint"
 assert lint_diag["severity"] == 2

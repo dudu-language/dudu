@@ -502,6 +502,29 @@ void test_lsp_diagnostic_sources_are_structured() {
     assert(sema_diags.front().code.starts_with("dudu.sema."));
 }
 
+void test_lsp_unreachable_lint_uses_branch_structure() {
+    const dudu::Document doc{.uri = "",
+                             .path = "lint_unreachable.dd",
+                             .text = "def choose(x: i32) -> i32:\n"
+                                     "    if x < 0:\n"
+                                     "        return -1\n"
+                                     "    elif x == 0:\n"
+                                     "        return 0\n"
+                                     "    else:\n"
+                                     "        return 1\n"
+                                     "    value: i32 = 4\n"
+                                     "    return value\n"};
+    const std::vector<dudu::Diagnostic> diags = dudu::diagnostics_for_document(doc);
+    int unreachable_count = 0;
+    for (const dudu::Diagnostic& diag : diags) {
+        if (diag.code == "dudu.lint.unreachable") {
+            ++unreachable_count;
+            assert(diag.location.line == 8);
+        }
+    }
+    assert(unreachable_count == 1);
+}
+
 void test_allocation_type_ref_diagnostics() {
     dudu::Symbols symbols;
     const dudu::SourceLocation location{.file = "cpp_escape_alloc.dd", .line = 7, .column = 12};
@@ -929,6 +952,7 @@ int main() {
         test_header_emission();
         test_semantic_diagnostics();
         test_lsp_diagnostic_sources_are_structured();
+        test_lsp_unreachable_lint_uses_branch_structure();
         test_allocation_type_ref_diagnostics();
         test_emitted_local_index_type_inference();
         test_index_type_inference_uses_type_ast();
