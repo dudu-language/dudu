@@ -314,7 +314,10 @@ TypeRef native_function_return_type_ref(const NativeFunctionDecl& fn) {
     if (has_type_ref(fn.return_type_ref)) {
         return fn.return_type_ref;
     }
-    return parse_type_text(fn.return_type.empty() ? "auto" : fn.return_type, fn.location);
+    if (fn.return_type.empty()) {
+        return named_type_ref("auto", fn.location);
+    }
+    return parse_type_text(fn.return_type, fn.location);
 }
 
 TypeRef native_type_alias_type_ref(const NativeTypeDecl& type) {

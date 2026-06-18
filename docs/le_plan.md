@@ -1760,3 +1760,5 @@ push. They are not release packaging work.
    unless they are explicitly handling complex native fallback text.
    Native header prefixing now builds direct named `TypeRef` metadata for simple
    scanned type names instead of reparsing those names after prefix adjustment.
+   Native function return fallback now constructs `auto` directly as a `TypeRef`
+   when no native return spelling exists instead of parsing synthesized text.
