@@ -19,6 +19,10 @@ std::string lower_callee_expr(const Expr& expr, const std::vector<std::string>& 
 std::string lower_callee_expr(const Expr& expr, const std::vector<std::string>& aliases,
                               const std::map<std::string, std::string>& locals,
                               const Symbols* symbols, const CppEmitOptions& options);
+std::string lower_callee_expr(const Expr& expr, const std::vector<std::string>& aliases,
+                              const std::map<std::string, std::string>& locals,
+                              const std::map<std::string, TypeRef>& local_type_refs,
+                              const Symbols* symbols, const CppEmitOptions& options);
 bool is_pointer_receiver_expr(const Expr& expr, const std::map<std::string, std::string>& locals);
 std::string lower_enum_variant_constructor(const EnumDecl& en, const EnumValueDecl& value,
                                            const std::vector<Expr>& args,
@@ -63,6 +67,10 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
                             const Symbols* symbols);
 std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& aliases,
                             const std::map<std::string, std::string>& locals,
+                            const Symbols* symbols, const CppEmitOptions& options);
+std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& aliases,
+                            const std::map<std::string, std::string>& locals,
+                            const std::map<std::string, TypeRef>& local_type_refs,
                             const Symbols* symbols, const CppEmitOptions& options);
 
 } // namespace dudu

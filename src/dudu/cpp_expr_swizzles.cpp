@@ -96,6 +96,15 @@ std::optional<std::string> lower_swizzle_expr(const Expr& expr,
                                               const std::map<std::string, std::string>& locals,
                                               const Symbols* symbols,
                                               const CppEmitOptions& options) {
+    return lower_swizzle_expr(expr, aliases, locals, {}, symbols, options);
+}
+
+std::optional<std::string> lower_swizzle_expr(const Expr& expr,
+                                              const std::vector<std::string>& aliases,
+                                              const std::map<std::string, std::string>& locals,
+                                              const std::map<std::string, TypeRef>& local_type_refs,
+                                              const Symbols* symbols,
+                                              const CppEmitOptions& options) {
     if (const auto local = lower_local_swizzle_expr(expr, aliases, locals, symbols, options)) {
         return local;
     }
@@ -106,7 +115,7 @@ std::optional<std::string> lower_swizzle_expr(const Expr& expr,
     std::optional<TypeRef> result_type;
     if (symbols != nullptr) {
         const TypeRef receiver_type =
-            member_expr_type_ref(*symbols, locals, {}, nullptr, expr.children.front());
+            member_expr_type_ref(*symbols, locals, local_type_refs, nullptr, expr.children.front());
         if (has_type_ref(receiver_type)) {
             result_type = swizzle_type_ref_for_type(*symbols, receiver_type, expr.name);
         }
@@ -116,7 +125,7 @@ std::optional<std::string> lower_swizzle_expr(const Expr& expr,
         return std::nullopt;
     }
     const std::string receiver =
-        lower_expr(expr.children.front(), aliases, locals, symbols, options);
+        lower_expr(expr.children.front(), aliases, locals, local_type_refs, symbols, options);
     if (receiver.empty()) {
         return std::nullopt;
     }

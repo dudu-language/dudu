@@ -81,13 +81,14 @@ TypeRef pointer_type_ref_from_pointee_text(std::string_view type, SourceLocation
 std::string lower_call_args_for_signature(const std::vector<Expr>& args, const FunctionSignature&,
                                           const std::vector<std::string>& aliases,
                                           const std::map<std::string, std::string>& locals,
+                                          const std::map<std::string, TypeRef>& local_type_refs,
                                           const Symbols* symbols, const CppEmitOptions& options) {
     std::ostringstream out;
     for (size_t i = 0; i < args.size(); ++i) {
         if (i > 0) {
             out << ", ";
         }
-        out << lower_expr(args[i], aliases, locals, symbols, options);
+        out << lower_expr(args[i], aliases, locals, local_type_refs, symbols, options);
     }
     return out.str();
 }
@@ -111,6 +112,7 @@ bool is_pointer_list_type(std::string type) {
 }
 
 bool expression_has_pointer_type(const Expr& expr, const std::map<std::string, std::string>& locals,
+                                 const std::map<std::string, TypeRef>& local_type_refs,
                                  const Symbols* symbols) {
     if (is_pointer_receiver_expr(expr, locals)) {
         return true;
@@ -118,7 +120,7 @@ bool expression_has_pointer_type(const Expr& expr, const std::map<std::string, s
     if (symbols == nullptr) {
         return false;
     }
-    const TypeRef type = member_expr_type_ref(*symbols, locals, {}, nullptr, expr);
+    const TypeRef type = member_expr_type_ref(*symbols, locals, local_type_refs, nullptr, expr);
     return is_pointer_type_ref(type);
 }
 
@@ -174,19 +176,21 @@ std::vector<Expr> index_arg_exprs(const Expr& index_expr) {
 
 std::string lower_named_argument_call(const Expr& expr, const std::vector<std::string>& aliases,
                                       const std::map<std::string, std::string>& locals,
+                                      const std::map<std::string, TypeRef>& local_type_refs,
                                       const Symbols* symbols, const CppEmitOptions& options) {
     std::ostringstream out;
-    out << lower_callee_expr(expr, aliases, locals, symbols, options) << "{";
+    out << lower_callee_expr(expr, aliases, locals, local_type_refs, symbols, options) << "{";
     for (size_t i = 0; i < expr.children.size(); ++i) {
         if (i > 0) {
             out << ", ";
         }
         if (expr.children[i].kind == ExprKind::NamedArg && expr.children[i].children.size() == 1) {
             out << "." << expr.children[i].name << " = "
-                << lower_expr(expr.children[i].children.front(), aliases, locals, symbols, options);
+                << lower_expr(expr.children[i].children.front(), aliases, locals, local_type_refs,
+                              symbols, options);
             continue;
         }
-        out << lower_expr(expr.children[i], aliases, locals, symbols, options);
+        out << lower_expr(expr.children[i], aliases, locals, local_type_refs, symbols, options);
     }
     out << "}";
     return out.str();
@@ -203,6 +207,13 @@ bool is_builtin_template_constructor(std::string_view name) {
 std::string lower_callee_expr(const Expr& expr, const std::vector<std::string>& aliases,
                               const std::map<std::string, std::string>& locals,
                               const Symbols* symbols, const CppEmitOptions& options) {
+    return lower_callee_expr(expr, aliases, locals, {}, symbols, options);
+}
+
+std::string lower_callee_expr(const Expr& expr, const std::vector<std::string>& aliases,
+                              const std::map<std::string, std::string>& locals,
+                              const std::map<std::string, TypeRef>& local_type_refs,
+                              const Symbols* symbols, const CppEmitOptions& options) {
     if (!expr.callee.empty()) {
         const Expr& callee = expr.callee.front();
         if (callee.kind == ExprKind::Member && callee.children.size() == 1 &&
@@ -213,13 +224,15 @@ std::string lower_callee_expr(const Expr& expr, const std::vector<std::string>& 
             }
         }
         if (callee.kind == ExprKind::Member && callee.children.size() == 1 &&
-            expression_has_pointer_type(callee.children.front(), locals, symbols)) {
-            return lower_expr(callee.children.front(), aliases, locals, symbols, options) + "->" +
-                   callee.name;
+            expression_has_pointer_type(callee.children.front(), locals, local_type_refs,
+                                        symbols)) {
+            return lower_expr(callee.children.front(), aliases, locals, local_type_refs, symbols,
+                              options) +
+                   "->" + callee.name;
         }
     }
     if (!expr.callee.empty()) {
-        return lower_expr(expr.callee.front(), aliases, locals, symbols, options);
+        return lower_expr(expr.callee.front(), aliases, locals, local_type_refs, symbols, options);
     }
     return locals.contains(expr.name) ? expr.name : emitted_value_name(expr.name, options);
 }
@@ -383,6 +396,13 @@ std::optional<std::string> lower_pointer_cast_expr(const Expr& expr,
 std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& aliases,
                             const std::map<std::string, std::string>& locals,
                             const Symbols* symbols, const CppEmitOptions& options) {
+    return lower_call_expr(expr, aliases, locals, {}, symbols, options);
+}
+
+std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& aliases,
+                            const std::map<std::string, std::string>& locals,
+                            const std::map<std::string, TypeRef>& local_type_refs,
+                            const Symbols* symbols, const CppEmitOptions& options) {
     if (!expr.callee.empty()) {
         if (symbols != nullptr) {
             if (const auto variant = enum_variant_from_expr(*symbols, expr.callee.front())) {
@@ -395,7 +415,7 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
         }
     }
     if (has_named_argument_shape(expr.children)) {
-        return lower_named_argument_call(expr, aliases, locals, symbols, options);
+        return lower_named_argument_call(expr, aliases, locals, local_type_refs, symbols, options);
     }
     const std::string callee_name = direct_callee_name(expr);
     if (starts_with(callee_name, "*")) {
@@ -409,16 +429,22 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
         }
     }
     if (callee_name == "len" && expr.children.size() == 1) {
-        return "(" + lower_expr(expr.children.front(), aliases, locals, symbols, options) +
+        return "(" +
+               lower_expr(expr.children.front(), aliases, locals, local_type_refs, symbols,
+                          options) +
                ").size()";
     }
     if (callee_name == "str" && expr.children.size() == 1) {
         if (expr.children.front().kind == ExprKind::StringLiteral) {
             return "std::string(" +
-                   lower_expr(expr.children.front(), aliases, locals, symbols, options) + ")";
+                   lower_expr(expr.children.front(), aliases, locals, local_type_refs, symbols,
+                              options) +
+                   ")";
         }
         return "std::to_string(" +
-               lower_expr(expr.children.front(), aliases, locals, symbols, options) + ")";
+               lower_expr(expr.children.front(), aliases, locals, local_type_refs, symbols,
+                          options) +
+               ")";
     }
     if ((callee_name == "Ok" || callee_name == "Err") && expr.children.size() == 1) {
         return "dudu::" + callee_name + "(" +
@@ -426,13 +452,16 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
     }
     if (callee_name == "cstr" && expr.children.size() == 1) {
         return "reinterpret_cast<const char*>(" +
-               lower_expr(expr.children.front(), aliases, locals, symbols, options) + ")";
+               lower_expr(expr.children.front(), aliases, locals, local_type_refs, symbols,
+                          options) +
+               ")";
     }
     if (is_builtin_cast_call(callee_name)) {
         return lower_cpp_type(callee_name, aliases) + "(" +
                join_lowered_exprs(expr.children, aliases, locals, ", ", symbols, options) + ")";
     }
-    std::string callee = lower_callee_expr(expr, aliases, locals, symbols, options);
+    std::string callee =
+        lower_callee_expr(expr, aliases, locals, local_type_refs, symbols, options);
     if (ends_with(callee, ".append")) {
         callee.replace(callee.size() - 7, 7, ".push_back");
     }
@@ -441,7 +470,7 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
             signature != symbols->function_signatures.end()) {
             return callee + "(" +
                    lower_call_args_for_signature(expr.children, signature->second, aliases, locals,
-                                                 symbols, options) +
+                                                 local_type_refs, symbols, options) +
                    ")";
         }
     }

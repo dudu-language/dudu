@@ -1759,6 +1759,10 @@ LSP source edits are also moving to AST-owned ranges:
   lowering, array literal recursion, and `[]=` operator hook lookup can use
   structured local metadata instead of relying only on rendered local type
   strings.
+- The typed expression-emission path now reaches call, callee, swizzle, and
+  matrix/slice helper recursion, so nested lowering preserves `local_type_refs`
+  through method-call receiver decisions, swizzle receiver typing, and sliced
+  index expressions.
 - Native value symbols now store parsed `TypeRef` metadata beside their C++
   spelling strings, and normal name/member expression sema reads those refs
   directly for imported constants, build flags, shader/native values, and class

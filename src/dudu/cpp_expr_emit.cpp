@@ -244,7 +244,7 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
     case ExprKind::Yield:
         throw CompileError(expr.location, "unsupported Python feature: generators");
     case ExprKind::Call:
-        return lower_call_expr(expr, aliases, locals, symbols, options);
+        return lower_call_expr(expr, aliases, locals, local_type_refs, symbols, options);
     case ExprKind::TemplateCall: {
         if (expr.template_type_args.empty()) {
             throw CompileError(expr.location,
@@ -300,7 +300,8 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
                     }
                 }
             }
-            if (const auto swizzle = lower_swizzle_expr(expr, aliases, locals, symbols, options)) {
+            if (const auto swizzle =
+                    lower_swizzle_expr(expr, aliases, locals, local_type_refs, symbols, options)) {
                 return *swizzle;
             }
             if (is_pointer_receiver_expr(expr.children.front(), locals)) {
@@ -361,16 +362,19 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
                 return "std::span(&(" + out + ")[" + start + "], (" + end + ") - (" + start + "))";
             }
             if (expr.children[1].kind == ExprKind::TupleLiteral) {
-                if (const auto channel_slice = lower_channel_slice_expr(
-                        expr.children[0], expr.children[1], aliases, locals, symbols, options)) {
+                if (const auto channel_slice =
+                        lower_channel_slice_expr(expr.children[0], expr.children[1], aliases,
+                                                 locals, local_type_refs, symbols, options)) {
                     return *channel_slice;
                 }
-                if (const auto column_slice = lower_column_slice_expr(
-                        expr.children[0], expr.children[1], aliases, locals, symbols, options)) {
+                if (const auto column_slice =
+                        lower_column_slice_expr(expr.children[0], expr.children[1], aliases, locals,
+                                                local_type_refs, symbols, options)) {
                     return *column_slice;
                 }
-                if (const auto slice = lower_trailing_full_slice_expr(
-                        expr.children[0], expr.children[1], aliases, locals, symbols, options)) {
+                if (const auto slice =
+                        lower_trailing_full_slice_expr(expr.children[0], expr.children[1], aliases,
+                                                       locals, local_type_refs, symbols, options)) {
                     return *slice;
                 }
                 for (const Expr& index : expr.children[1].children) {

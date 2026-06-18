@@ -19,16 +19,27 @@ lower_trailing_full_slice_expr(const Expr& base, const Expr& index,
                                const std::vector<std::string>& aliases,
                                const std::map<std::string, std::string>& locals,
                                const Symbols* symbols, const CppEmitOptions& options) {
+    return lower_trailing_full_slice_expr(base, index, aliases, locals, {}, symbols, options);
+}
+
+std::optional<std::string>
+lower_trailing_full_slice_expr(const Expr& base, const Expr& index,
+                               const std::vector<std::string>& aliases,
+                               const std::map<std::string, std::string>& locals,
+                               const std::map<std::string, TypeRef>& local_type_refs,
+                               const Symbols* symbols, const CppEmitOptions& options) {
     if (index.kind != ExprKind::TupleLiteral || index.children.empty() ||
         !is_full_slice_expr(index.children.back())) {
         return std::nullopt;
     }
-    std::string row = lower_expr(base, aliases, locals, symbols, options);
+    std::string row = lower_expr(base, aliases, locals, local_type_refs, symbols, options);
     for (size_t i = 0; i + 1 < index.children.size(); ++i) {
         if (index.children[i].kind == ExprKind::Slice) {
             return std::nullopt;
         }
-        row += "[" + lower_expr(index.children[i], aliases, locals, symbols, options) + "]";
+        row += "[" +
+               lower_expr(index.children[i], aliases, locals, local_type_refs, symbols, options) +
+               "]";
     }
     return "std::span(&(" + row + ")[0], (" + row + ").size())";
 }
@@ -44,6 +55,15 @@ std::optional<std::string> lower_column_slice_expr(const Expr& base, const Expr&
                                                    const std::map<std::string, std::string>& locals,
                                                    const Symbols* symbols,
                                                    const CppEmitOptions& options) {
+    return lower_column_slice_expr(base, index, aliases, locals, {}, symbols, options);
+}
+
+std::optional<std::string>
+lower_column_slice_expr(const Expr& base, const Expr& index,
+                        const std::vector<std::string>& aliases,
+                        const std::map<std::string, std::string>& locals,
+                        const std::map<std::string, TypeRef>& local_type_refs,
+                        const Symbols* symbols, const CppEmitOptions& options) {
     (void)symbols;
     if (base.kind != ExprKind::Name || index.kind != ExprKind::TupleLiteral ||
         index.children.size() != 2 || !is_full_slice_expr(index.children[0]) ||
@@ -58,8 +78,10 @@ std::optional<std::string> lower_column_slice_expr(const Expr& base, const Expr&
     if (shape.size() != 2) {
         return std::nullopt;
     }
-    const std::string lowered_base = lower_expr(base, aliases, locals, symbols, options);
-    const std::string column = lower_expr(index.children[1], aliases, locals, symbols, options);
+    const std::string lowered_base =
+        lower_expr(base, aliases, locals, local_type_refs, symbols, options);
+    const std::string column =
+        lower_expr(index.children[1], aliases, locals, local_type_refs, symbols, options);
     return "dudu::StridedSpan{" + lowered_base + ".data()->data() + (" + column + "), " +
            std::to_string(shape[0]) + ", " + std::to_string(shape[1]) + "}";
 }
@@ -71,11 +93,20 @@ std::optional<std::string> lower_column_slice_expr(const Expr& base, const Expr&
     return lower_column_slice_expr(base, index, aliases, locals, symbols, {});
 }
 
-std::optional<std::string> lower_channel_slice_expr(const Expr& base, const Expr& index,
-                                                    const std::vector<std::string>& aliases,
-                                                    const std::map<std::string, std::string>& locals,
-                                                    const Symbols* symbols,
-                                                    const CppEmitOptions& options) {
+std::optional<std::string>
+lower_channel_slice_expr(const Expr& base, const Expr& index,
+                         const std::vector<std::string>& aliases,
+                         const std::map<std::string, std::string>& locals, const Symbols* symbols,
+                         const CppEmitOptions& options) {
+    return lower_channel_slice_expr(base, index, aliases, locals, {}, symbols, options);
+}
+
+std::optional<std::string>
+lower_channel_slice_expr(const Expr& base, const Expr& index,
+                         const std::vector<std::string>& aliases,
+                         const std::map<std::string, std::string>& locals,
+                         const std::map<std::string, TypeRef>& local_type_refs,
+                         const Symbols* symbols, const CppEmitOptions& options) {
     (void)symbols;
     if (base.kind != ExprKind::Name || index.kind != ExprKind::TupleLiteral ||
         index.children.size() != 3 || !is_full_slice_expr(index.children[0]) ||
@@ -90,15 +121,18 @@ std::optional<std::string> lower_channel_slice_expr(const Expr& base, const Expr
     if (shape.size() != 3) {
         return std::nullopt;
     }
-    const std::string lowered_base = lower_expr(base, aliases, locals, symbols, options);
-    const std::string channel = lower_expr(index.children[2], aliases, locals, symbols, options);
-    return "dudu::StridedSpan{" + lowered_base + ".data()->data()->data() + (" + channel +
-           "), " + std::to_string(shape[0] * shape[1]) + ", " + std::to_string(shape[2]) + "}";
+    const std::string lowered_base =
+        lower_expr(base, aliases, locals, local_type_refs, symbols, options);
+    const std::string channel =
+        lower_expr(index.children[2], aliases, locals, local_type_refs, symbols, options);
+    return "dudu::StridedSpan{" + lowered_base + ".data()->data()->data() + (" + channel + "), " +
+           std::to_string(shape[0] * shape[1]) + ", " + std::to_string(shape[2]) + "}";
 }
 
-std::optional<std::string> lower_channel_slice_expr(
-    const Expr& base, const Expr& index, const std::vector<std::string>& aliases,
-    const std::map<std::string, std::string>& locals, const Symbols* symbols) {
+std::optional<std::string>
+lower_channel_slice_expr(const Expr& base, const Expr& index,
+                         const std::vector<std::string>& aliases,
+                         const std::map<std::string, std::string>& locals, const Symbols* symbols) {
     return lower_channel_slice_expr(base, index, aliases, locals, symbols, {});
 }
 
