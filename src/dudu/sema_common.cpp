@@ -89,11 +89,6 @@ std::optional<ExprPath> scoped_call_callee_path(const FunctionScope& scope, cons
     if (!expr.callee.empty()) {
         return scoped_expr_path_from_expr(scope, expr.callee.front(), location);
     }
-    if (!trim_copy(expr.name).empty()) {
-        return ExprPath{.segments = {{.kind = ExprPathSegmentKind::Name,
-                                      .text = trim_copy(expr.name),
-                                      .location = expr.location}}};
-    }
     return std::nullopt;
 }
 
@@ -101,7 +96,7 @@ ScopedCallee scoped_call_callee(const FunctionScope& scope, const Expr& expr,
                                 const SourceLocation* location) {
     ScopedCallee out;
     out.path = scoped_call_callee_path(scope, expr, location);
-    out.key = out.path ? render_expr_path(*out.path) : trim_copy(expr.name);
+    out.key = out.path ? render_expr_path(*out.path) : "";
     return out;
 }
 
