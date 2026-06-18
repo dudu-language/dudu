@@ -1429,3 +1429,7 @@ push. They are not release packaging work.
    `ImportDecl::source_text` has been removed; the LSP organize-imports action
    now renders canonical import lines from structured `ImportDecl` fields
    instead of storing a raw source-line mirror in the AST.
+   Statement AST shape tests now assert structured expression nodes for normal
+   statements and match cases instead of treating raw expression text as the
+   canonical AST contract; raw text checks remain only for source-spelling
+   cases such as numeric literal spelling and explicit `cpp(...)` escapes.

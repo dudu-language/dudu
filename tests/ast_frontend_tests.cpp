@@ -652,27 +652,40 @@ void test_statement_ast_shape() {
     assert(main.statements[0].kind == dudu::StmtKind::VarDecl);
     assert(main.statements[0].name == "total");
     assert(dudu::substitute_type_ref_text(main.statements[0].type_ref, {}) == "i32");
-    assert(main.statements[0].value_expr.text == "0");
+    assert(main.statements[0].value_expr.kind == dudu::ExprKind::IntLiteral);
+    assert(main.statements[0].value_expr.value == "0");
     assert(main.statements[1].kind == dudu::StmtKind::For);
     assert(main.statements[1].name == "item");
     assert(dudu::substitute_type_ref_text(main.statements[1].type_ref, {}) == "i32");
-    assert(main.statements[1].iterable_expr.text == "values");
+    assert(main.statements[1].iterable_expr.kind == dudu::ExprKind::Name);
+    assert(main.statements[1].iterable_expr.name == "values");
     assert(main.statements[1].children.size() == 1);
     assert(main.statements[1].children[0].kind == dudu::StmtKind::CompoundAssign);
-    assert(main.statements[1].children[0].target_expr.text == "total");
+    assert(main.statements[1].children[0].target_expr.kind == dudu::ExprKind::Name);
+    assert(main.statements[1].children[0].target_expr.name == "total");
     assert(main.statements[1].children[0].compound_op == dudu::CompoundAssignOp::Add);
-    assert(main.statements[1].children[0].value_expr.text == "item");
+    assert(main.statements[1].children[0].value_expr.kind == dudu::ExprKind::Name);
+    assert(main.statements[1].children[0].value_expr.name == "item");
     assert(main.statements[2].kind == dudu::StmtKind::If);
-    assert(main.statements[2].condition_expr.text == "total == 0");
+    assert(main.statements[2].condition_expr.kind == dudu::ExprKind::Binary);
+    assert(main.statements[2].condition_expr.op == "==");
+    assert(main.statements[2].condition_expr.children.size() == 2);
+    assert(main.statements[2].condition_expr.children[0].kind == dudu::ExprKind::Name);
+    assert(main.statements[2].condition_expr.children[0].name == "total");
+    assert(main.statements[2].condition_expr.children[1].kind == dudu::ExprKind::IntLiteral);
+    assert(main.statements[2].condition_expr.children[1].value == "0");
     assert(main.statements[2].children.size() == 1);
     assert(main.statements[2].children[0].kind == dudu::StmtKind::CompoundAssign);
     assert(main.statements[3].kind == dudu::StmtKind::Else);
     assert(main.statements[3].children.size() == 1);
     assert(main.statements[3].children[0].kind == dudu::StmtKind::Assign);
-    assert(main.statements[3].children[0].target_expr.text == "total");
-    assert(main.statements[3].children[0].value_expr.text == "1");
+    assert(main.statements[3].children[0].target_expr.kind == dudu::ExprKind::Name);
+    assert(main.statements[3].children[0].target_expr.name == "total");
+    assert(main.statements[3].children[0].value_expr.kind == dudu::ExprKind::IntLiteral);
+    assert(main.statements[3].children[0].value_expr.value == "1");
     assert(main.statements[4].kind == dudu::StmtKind::Return);
-    assert(main.statements[4].value_expr.text == "total");
+    assert(main.statements[4].value_expr.kind == dudu::ExprKind::Name);
+    assert(main.statements[4].value_expr.name == "total");
 }
 
 void test_var_decl_name_must_be_identifier() {
@@ -987,9 +1000,11 @@ void test_dereference_postfix_expression_shape() {
     assert(qualified_template_cast.kind == dudu::ExprKind::TemplateCall);
     assert(dudu::direct_callee_name(qualified_template_cast) == "*std.vector");
     assert(qualified_template_cast.template_args.size() == 1);
-    assert(qualified_template_cast.template_args[0].text == "i32");
+    assert(qualified_template_cast.template_args[0].kind == dudu::ExprKind::Name);
+    assert(qualified_template_cast.template_args[0].name == "i32");
     assert(qualified_template_cast.template_type_args.size() == 1);
-    assert(qualified_template_cast.template_type_args[0].text == "i32");
+    assert(dudu::substitute_type_ref_text(qualified_template_cast.template_type_args[0], {}) ==
+           "i32");
 }
 
 void test_decorator_expression_ast_shape() {
@@ -1240,30 +1255,42 @@ void test_match_case_ast_shape() {
     assert(handle.statements.size() == 1);
     const dudu::Stmt& match = handle.statements[0];
     assert(match.kind == dudu::StmtKind::Match);
-    assert(match.condition_expr.text == "msg");
     assert(match.condition_expr.kind == dudu::ExprKind::Name);
+    assert(match.condition_expr.name == "msg");
     assert(match.children.size() == 3);
 
     const dudu::Stmt& quit = match.children[0];
     assert(quit.kind == dudu::StmtKind::Case);
-    assert(quit.pattern_expr.text == "Message.Quit");
     assert(quit.pattern_expr.kind == dudu::ExprKind::Member);
+    assert(quit.pattern_expr.name == "Quit");
+    assert(quit.pattern_expr.children.size() == 1);
+    assert(quit.pattern_expr.children[0].kind == dudu::ExprKind::Name);
+    assert(quit.pattern_expr.children[0].name == "Message");
     assert(quit.children.size() == 1);
     assert(quit.children[0].kind == dudu::StmtKind::Return);
 
     const dudu::Stmt& move = match.children[1];
     assert(move.kind == dudu::StmtKind::Case);
-    assert(move.pattern_expr.text == "Message.Move(x, y)");
-    assert(move.guard_expr.text == "x > 0");
     assert(move.pattern_expr.kind == dudu::ExprKind::Call);
+    assert(dudu::direct_callee_name(move.pattern_expr) == "Message.Move");
+    assert(move.pattern_expr.children.size() == 2);
+    assert(move.pattern_expr.children[0].kind == dudu::ExprKind::Name);
+    assert(move.pattern_expr.children[0].name == "x");
+    assert(move.pattern_expr.children[1].kind == dudu::ExprKind::Name);
+    assert(move.pattern_expr.children[1].name == "y");
     assert(move.guard_expr.kind == dudu::ExprKind::Binary);
     assert(move.guard_expr.op == ">");
+    assert(move.guard_expr.children.size() == 2);
+    assert(move.guard_expr.children[0].kind == dudu::ExprKind::Name);
+    assert(move.guard_expr.children[0].name == "x");
+    assert(move.guard_expr.children[1].kind == dudu::ExprKind::IntLiteral);
+    assert(move.guard_expr.children[1].value == "0");
 
     const dudu::Stmt& wildcard = match.children[2];
     assert(wildcard.kind == dudu::StmtKind::Case);
-    assert(wildcard.pattern_expr.text == "_");
     assert(wildcard.guard_expr.kind == dudu::ExprKind::Missing);
     assert(wildcard.pattern_expr.kind == dudu::ExprKind::Name);
+    assert(wildcard.pattern_expr.name == "_");
 }
 
 void test_wrapper_match_type_uses_type_ast() {
