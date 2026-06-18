@@ -39,9 +39,12 @@ std::string
 infer_emitted_local_type_text(std::string_view expr_text,
                               const std::map<std::string, std::string>& locals,
                               const std::map<std::string, dudu::TypeRef>& function_returns) {
-    static const std::map<std::string, dudu::TypeRef> no_local_type_refs;
+    std::map<std::string, dudu::TypeRef> local_type_refs;
+    for (const auto& [name, type] : locals) {
+        local_type_refs[name] = dudu::parse_type_text(type);
+    }
     const dudu::TypeRef inferred = dudu::infer_emitted_local_type_ref(
-        dudu::parse_expr_text(expr_text), locals, no_local_type_refs, function_returns);
+        dudu::parse_expr_text(expr_text), locals, local_type_refs, function_returns);
     return dudu::has_type_ref(inferred) ? dudu::substitute_type_ref_text(inferred, {})
                                         : std::string{};
 }

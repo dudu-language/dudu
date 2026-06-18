@@ -78,19 +78,14 @@ TypeRef infer_call_type_ref(const std::string& callee,
     return {};
 }
 
-TypeRef emitted_local_type_ref(const std::map<std::string, std::string>& locals,
-                               const std::map<std::string, TypeRef>& local_type_refs,
-                               const std::string& name, SourceLocation location,
-                               const Symbols* symbols) {
+TypeRef emitted_local_type_ref(const std::map<std::string, TypeRef>& local_type_refs,
+                               const std::string& name, SourceLocation location) {
     if (const auto local = local_type_refs.find(name); local != local_type_refs.end()) {
         return local->second;
     }
-    if (const auto local = locals.find(name); local != locals.end()) {
-        const std::string type =
-            symbols == nullptr ? local->second : resolve_alias(*symbols, local->second);
-        return parse_type_text(type, location);
-    }
-    return {};
+    TypeRef unknown;
+    unknown.location = location;
+    return unknown;
 }
 
 TypeRef infer_call_type_ref(const Expr& expr, const std::map<std::string, std::string>& locals,
@@ -175,7 +170,7 @@ TypeRef infer_emitted_local_type_ref(const Expr& expr,
     case ExprKind::NoneLiteral:
         return parse_type_text("None", expr.location);
     case ExprKind::Name:
-        return emitted_local_type_ref(locals, local_type_refs, expr.name, expr.location, symbols);
+        return emitted_local_type_ref(local_type_refs, expr.name, expr.location);
     case ExprKind::Unary:
         if (expr.children.size() != 1) {
             return {};
@@ -215,9 +210,8 @@ TypeRef infer_emitted_local_type_ref(const Expr& expr,
     case ExprKind::Index:
         if (expr.children.size() == 2) {
             if (expr.children[0].kind == ExprKind::Name) {
-                const TypeRef local_type =
-                    emitted_local_type_ref(locals, local_type_refs, expr.children[0].name,
-                                           expr.children[0].location, symbols);
+                const TypeRef local_type = emitted_local_type_ref(
+                    local_type_refs, expr.children[0].name, expr.children[0].location);
                 if (const TypeRef indexed_type =
                         indexed_local_type_ref(local_type, expr.children[1]);
                     has_type_ref(indexed_type)) {
