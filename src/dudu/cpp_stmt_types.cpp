@@ -3,8 +3,8 @@
 #include "dudu/ast_expr.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
-#include "dudu/sema_index_type_ref.hpp"
 #include "dudu/sema_context.hpp"
+#include "dudu/sema_index_type_ref.hpp"
 #include "dudu/sema_scan.hpp"
 
 #include <cctype>
@@ -74,6 +74,18 @@ TypeRef infer_call_type_ref(const std::string& callee,
     }
     if (looks_like_dudu_type(callee)) {
         return parse_type_text(callee, location);
+    }
+    return {};
+}
+
+TypeRef emitted_local_type_ref(const std::map<std::string, std::string>& locals,
+                               const std::map<std::string, TypeRef>& local_type_refs,
+                               const std::string& name, SourceLocation location) {
+    if (const auto local = local_type_refs.find(name); local != local_type_refs.end()) {
+        return local->second;
+    }
+    if (const auto local = locals.find(name); local != locals.end()) {
+        return parse_type_text(local->second, location);
     }
     return {};
 }
@@ -157,13 +169,7 @@ TypeRef infer_emitted_local_type_ref(const Expr& expr,
     case ExprKind::NoneLiteral:
         return parse_type_text("None", expr.location);
     case ExprKind::Name:
-        if (const auto local = local_type_refs.find(expr.name); local != local_type_refs.end()) {
-            return local->second;
-        }
-        if (const auto local = locals.find(expr.name); local != locals.end()) {
-            return parse_type_text(local->second, expr.location);
-        }
-        return {};
+        return emitted_local_type_ref(locals, local_type_refs, expr.name, expr.location);
     case ExprKind::Unary:
         if (expr.children.size() != 1) {
             return {};
@@ -203,13 +209,12 @@ TypeRef infer_emitted_local_type_ref(const Expr& expr,
     case ExprKind::Index:
         if (expr.children.size() == 2) {
             if (expr.children[0].kind == ExprKind::Name) {
-                if (const auto local = local_type_refs.find(expr.children[0].name);
-                    local != local_type_refs.end()) {
-                    if (const TypeRef indexed_type =
-                            indexed_local_type_ref(local->second, expr.children[1]);
-                        has_type_ref(indexed_type)) {
-                        return indexed_type;
-                    }
+                const TypeRef local_type = emitted_local_type_ref(
+                    locals, local_type_refs, expr.children[0].name, expr.children[0].location);
+                if (const TypeRef indexed_type =
+                        indexed_local_type_ref(local_type, expr.children[1]);
+                    has_type_ref(indexed_type)) {
+                    return indexed_type;
                 }
             }
             const TypeRef receiver_type = infer_emitted_local_type_ref(

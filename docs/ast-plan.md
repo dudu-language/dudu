@@ -1784,6 +1784,10 @@ LSP source edits are also moving to AST-owned ranges:
   prefers parsed local metadata and names the old local string map as an
   explicit compatibility fallback. Normal expression sema and explicit
   `cpp(...)` pointer/address escape inference now use it.
+- Statement-codegen local type inference now has the same shape: local names
+  and direct indexed-local inference ask a shared helper for parsed local
+  `TypeRef` metadata first, with the rendered local type string kept as a
+  named compatibility fallback.
 - Native value symbols now store parsed `TypeRef` metadata beside their C++
   spelling strings, and normal name/member expression sema reads those refs
   directly for imported constants, build flags, shader/native values, and class
