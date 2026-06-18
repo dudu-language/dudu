@@ -98,7 +98,9 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt,
             type_ref != scope.local_type_refs.end()) {
             return type_ref->second;
         }
-        return parse_type_text(local->second, target_location);
+        TypeRef unknown;
+        unknown.location = target_location;
+        return unknown;
     }
     if (stmt.target_expr.kind == ExprKind::Member) {
         if (stmt.target_expr.children.size() == 1 && is_swizzle_name(stmt.target_expr.name)) {
