@@ -1268,3 +1268,5 @@ declarations safely.
    Indexing type inference exposes only parsed `TypeRef` receiver APIs; the old
    string receiver and string result wrappers have been removed, with
    `cpp(...)` escape inference rendering only at its boundary.
+   Array shape inference and fixed-array introspection now accept parsed
+   `TypeRef` declarations only; dead string overloads have been removed.

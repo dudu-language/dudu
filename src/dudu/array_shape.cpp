@@ -139,18 +139,9 @@ ArrayShapeInference infer_array_literal_shape_type(const TypeRef& declared_type,
             .shape = *shape};
 }
 
-ArrayShapeInference infer_array_literal_shape_type(const std::string& declared_type,
-                                                   const Expr& value) {
-    return infer_array_literal_shape_type(parse_type_text(declared_type), value);
-}
-
 std::vector<size_t> explicit_array_shape(const TypeRef& declared_type) {
     const auto info = explicit_array_type_info(declared_type);
     return info ? info->second : std::vector<size_t>{};
-}
-
-std::vector<size_t> explicit_array_shape(const std::string& declared_type) {
-    return explicit_array_shape(parse_type_text(declared_type));
 }
 
 std::string explicit_array_element_type(const TypeRef& declared_type) {
@@ -168,10 +159,6 @@ TypeRef explicit_array_element_type_ref(const TypeRef& declared_type) {
         return {};
     }
     return storage.children.front();
-}
-
-std::string explicit_array_element_type(const std::string& declared_type) {
-    return explicit_array_element_type(parse_type_text(declared_type));
 }
 
 } // namespace dudu
