@@ -1573,6 +1573,12 @@ push. They are not release packaging work.
    method inference now use the normal structured expression inference path
    directly, and tests set up real scope type facts instead of callback-only
    fake inference.
+   Constructor argument checking no longer accepts expression-inference or
+   assignment callbacks; constructor call sites, including `super.init`, now
+   use the structured expression and assignment paths directly.
+   `SuperCheckCallbacks` has been deleted entirely; `super` method validation
+   now calls structured constructor checking, overload matching, argument
+   checking, and return-type access directly.
    Index-result inference now detects foreign/qualified indexable receivers from
    `TypeRef` head/kind metadata instead of rendering the receiver type to search
    for namespace separators.

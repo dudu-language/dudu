@@ -121,11 +121,7 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
         }
         if (const auto klass = scope.symbols.classes.find(resolve_alias(scope.symbols, callee));
             klass != scope.symbols.classes.end()) {
-            check_constructor_args_ast(
-                scope, *klass->second, args, location, infer_expr_type_ast,
-                [&](const TypeRef& expected, const Expr& value, const TypeRef& got) {
-                    return can_assign_ast(scope, expected, value, got);
-                });
+            check_constructor_args_ast(scope, *klass->second, args, location);
             return callee;
         }
         if (const auto fn = scope.symbols.function_signatures.find(callee);

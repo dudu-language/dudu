@@ -91,8 +91,7 @@ bool is_super_init_stmt(const Stmt& stmt) {
 }
 
 TypeRef infer_super_call_type_ref(const FunctionScope& scope, const Expr& expr,
-                                  const std::string& callee, const SourceLocation* location,
-                                  const SuperCheckCallbacks& callbacks) {
+                                  const std::string& callee, const SourceLocation* location) {
     const size_t dot = callee.find('.');
     if (dot == std::string::npos) {
         if (location != nullptr) {
@@ -127,11 +126,7 @@ TypeRef infer_super_call_type_ref(const FunctionScope& scope, const Expr& expr,
             }
             return {};
         }
-        check_constructor_args_ast(
-            scope, *base_class->second, expr.children, location, callbacks.infer_expr_type,
-            [&](const TypeRef& expected, const Expr& value, const TypeRef& got) {
-                return callbacks.can_assign(scope, expected, value, got);
-            });
+        check_constructor_args_ast(scope, *base_class->second, expr.children, location);
         return void_type_ref(expr.location);
     }
     const TypeRef base = super_base_type(scope, location);
@@ -144,7 +139,7 @@ TypeRef infer_super_call_type_ref(const FunctionScope& scope, const Expr& expr,
     }
     const std::vector<FunctionSignature> signatures =
         method_signatures_for_type(scope.symbols, base, method_name);
-    if (const auto match = callbacks.matching_signature(scope, signatures, expr.children)) {
+    if (const auto match = matching_signature_ast(scope, signatures, expr.children)) {
         check_call_args_ast(scope, callee, *match, expr.children, location);
         return signature_return_type_ref(*match);
     }

@@ -201,21 +201,7 @@ std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Ex
         return *pointer_cast;
     }
     if (is_super_call(callee)) {
-        return infer_super_call_type_ref(
-            scope, expr, callee, location,
-            {.infer_expr_type =
-                 [](const FunctionScope& nested, const Expr& arg,
-                    const SourceLocation* arg_location) {
-                     return infer_expr_type_ast(nested, arg, arg_location);
-                 },
-             .can_assign =
-                 [](const FunctionScope& nested, const TypeRef& expected, const Expr& value,
-                    const TypeRef& got) { return can_assign_ast(nested, expected, value, got); },
-             .matching_signature =
-                 [](const FunctionScope& nested, const std::vector<FunctionSignature>& options,
-                    const std::vector<Expr>& args) {
-                     return matching_signature_ast(nested, options, args);
-                 }});
+        return infer_super_call_type_ref(scope, expr, callee, location);
     }
     if (const auto variant = enum_variant_from_path(scope.symbols, callee)) {
         check_enum_variant_args_ast(scope, *variant->first, *variant->second, expr.children,
@@ -276,11 +262,7 @@ std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Ex
             klass != scope.symbols.classes.end()) {
             reject_abstract_construction(scope.symbols, named_type_ref(callee, expr.location),
                                          location);
-            check_constructor_args_ast(
-                scope, *klass->second, expr.children, location, infer_expr_type_ast,
-                [&](const TypeRef& expected, const Expr& value, const TypeRef& got) {
-                    return can_assign_ast(scope, expected, value, got);
-                });
+            check_constructor_args_ast(scope, *klass->second, expr.children, location);
         } else {
             for (const Expr& arg : expr.children) {
                 (void)infer_expr_type_ast(scope, arg, location);
@@ -378,11 +360,7 @@ std::optional<TypeRef> direct_template_call_type_ref(const FunctionScope& scope,
         const TypeRef constructor_type =
             template_constructor_type_ref(expr, callee_base, type_args);
         reject_abstract_construction(scope.symbols, constructor_type, location);
-        check_constructor_args_ast(
-            scope, instantiated, expr.children, location, infer_expr_type_ast,
-            [&](const TypeRef& expected, const Expr& value, const TypeRef& got) {
-                return can_assign_ast(scope, expected, value, got);
-            });
+        check_constructor_args_ast(scope, instantiated, expr.children, location);
         return constructor_type;
     }
     if (const auto signature = native_signature_for_call(
