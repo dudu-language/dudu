@@ -113,7 +113,7 @@ void bind_statement(FunctionScope& scope, const Stmt& stmt) {
             return;
         }
         if (stmt.target_expr.kind == ExprKind::Name &&
-            !scope.locals.contains(stmt.target_expr.name)) {
+            !scope.local_type_refs.contains(stmt.target_expr.name)) {
             lsp_bind_inferred_local(scope, stmt.target_expr.name, stmt.value_expr);
         }
     }
@@ -149,7 +149,7 @@ void collect_block_locals(FunctionScope& scope, const std::vector<Stmt>& stateme
                           int cursor_line);
 
 void collect_for_body_locals(FunctionScope scope, const Stmt& stmt, int cursor_line,
-                             std::map<std::string, std::string>& out) {
+                             std::map<std::string, TypeRef>& out) {
     if (!stmt.name.empty()) {
         TypeRef binding_type = stmt.type_ref;
         if (!has_type_ref(binding_type)) {
@@ -162,7 +162,7 @@ void collect_for_body_locals(FunctionScope scope, const Stmt& stmt, int cursor_l
         lsp_bind_local(scope, stmt.name, type.empty() ? "auto" : type, binding_type);
     }
     collect_block_locals(scope, stmt.children, cursor_line);
-    out = scope.locals;
+    out = scope.local_type_refs;
 }
 
 void collect_block_locals(FunctionScope& scope, const std::vector<Stmt>& statements,
@@ -176,10 +176,14 @@ void collect_block_locals(FunctionScope& scope, const std::vector<Stmt>& stateme
             continue;
         }
         if (stmt.kind == StmtKind::For) {
-            std::map<std::string, std::string> nested;
+            std::map<std::string, TypeRef> nested;
             collect_for_body_locals(scope, stmt, cursor_line, nested);
             if (cursor_line != std::numeric_limits<int>::max()) {
-                scope.locals = std::move(nested);
+                scope.local_type_refs = std::move(nested);
+                scope.locals.clear();
+                for (const auto& [name, type_ref] : scope.local_type_refs) {
+                    scope.locals[name] = substitute_type_ref_text(type_ref, {});
+                }
             }
             continue;
         }
@@ -261,20 +265,29 @@ std::optional<std::string> member_completion_target(const Document& doc, const J
 
 std::string local_type_before_cursor(const Document& doc, const std::string& name,
                                      const Json* params) {
-    const std::map<std::string, std::string> locals = local_types_before_cursor(doc, params);
+    const std::map<std::string, TypeRef> locals = local_type_refs_before_cursor(doc, params);
     const auto found = locals.find(name);
-    return found == locals.end() ? std::string{} : found->second;
+    return found == locals.end() ? std::string{} : substitute_type_ref_text(found->second, {});
 }
 
-std::map<std::string, std::string> local_types_before_cursor(const Document& doc,
+std::map<std::string, TypeRef> local_type_refs_before_cursor(const Document& doc,
                                                              const Json* params) {
     try {
         if (const std::optional<FunctionScope> scope = local_scope_before_cursor(doc, params)) {
-            return scope->locals;
+            return scope->local_type_refs;
         }
     } catch (const std::exception&) {
     }
     return {};
+}
+
+std::map<std::string, std::string> local_types_before_cursor(const Document& doc,
+                                                             const Json* params) {
+    std::map<std::string, std::string> out;
+    for (const auto& [name, type_ref] : local_type_refs_before_cursor(doc, params)) {
+        out[name] = substitute_type_ref_text(type_ref, {});
+    }
+    return out;
 }
 
 std::set<std::string> member_candidate_types(const ModuleAst& module, const std::string& type) {

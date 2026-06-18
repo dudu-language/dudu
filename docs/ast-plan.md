@@ -202,6 +202,9 @@ Already structured:
   local type map
 - enum payload match bindings now go through the shared local-binding helper
   instead of writing rendered and structured local maps by hand
+- LSP local-context collection now keeps local `TypeRef` metadata as the primary
+  result and renders string types only at hover/completion compatibility
+  boundaries
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path
