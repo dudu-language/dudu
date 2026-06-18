@@ -575,10 +575,16 @@ void test_emitted_local_index_type_inference() {
 void test_index_type_inference_uses_type_ast() {
     dudu::Symbols symbols;
     const dudu::SourceLocation location{.file = "index_types.dd", .line = 1, .column = 1};
+    symbols.aliases["Ints"] = "list[i32]";
+    symbols.alias_type_refs["Ints"] = dudu::parse_type_text("list[i32]", location);
     assert(dudu::indexed_type_from_type(symbols, location, "*const[Item]",
                                         dudu::parse_expr_text("0", location), "items") == "Item");
     assert(dudu::indexed_type_from_type(symbols, location, "Bag[Item]",
                                         dudu::parse_expr_text("0", location), "bag") == "Item");
+    const dudu::TypeRef aliased_list_item =
+        dudu::indexed_type_ref_from_type(symbols, location, dudu::parse_type_text("Ints", location),
+                                         dudu::parse_expr_text("0", location), "ints");
+    assert(dudu::substitute_type_ref_text(aliased_list_item, {}) == "i32");
 
     const dudu::TypeRef matrix_type = dudu::parse_type_text("array[list[i32]][3, 4]");
     const dudu::TypeRef row_type = dudu::indexed_type_ref_from_type(

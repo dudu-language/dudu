@@ -48,6 +48,10 @@ TypeRef named_type_ref(std::string name, const SourceLocation& location) {
 }
 
 TypeRef resolve_type_ref_alias(const Symbols& symbols, const TypeRef& raw_type) {
+    const TypeRef resolved_ref = resolve_alias_ref(symbols, raw_type);
+    if (substitute_type_ref_text(resolved_ref, {}) != substitute_type_ref_text(raw_type, {})) {
+        return resolved_ref;
+    }
     if ((raw_type.kind == TypeKind::Named || raw_type.kind == TypeKind::Qualified ||
          raw_type.kind == TypeKind::Unknown) &&
         !type_ref_head_name(raw_type).empty()) {
@@ -78,11 +82,9 @@ TypeRef array_element_template_type_ref(const SourceLocation& location, const Ty
     return type;
 }
 
-std::optional<TypeRef>
-indexed_type_ref_from_type_ref_with_count(const Symbols& symbols, const SourceLocation& location,
-                                          const TypeRef& raw_type,
-                                          const size_t index_count, const bool is_slice,
-                                          const bool has_step, const std::string& label) {
+std::optional<TypeRef> indexed_type_ref_from_type_ref_with_count(
+    const Symbols& symbols, const SourceLocation& location, const TypeRef& raw_type,
+    const size_t index_count, const bool is_slice, const bool has_step, const std::string& label) {
     const TypeRef resolved_type = resolve_type_ref_alias(symbols, raw_type);
     const TypeRef* type = &resolved_type;
     while ((type->kind == TypeKind::Reference || type->kind == TypeKind::Const) &&
@@ -140,8 +142,8 @@ indexed_type_ref_from_type_ref_with_count(const Symbols& symbols, const SourceLo
     if (type->kind == TypeKind::Template && type->children.size() == 1) {
         return type->children.front();
     }
-    if (const auto signature = dudu_operator_signature(symbols, "[]",
-                                                       substitute_type_ref_text(*type, {}))) {
+    if (const auto signature =
+            dudu_operator_signature(symbols, "[]", substitute_type_ref_text(*type, {}))) {
         return signature_return_type_ref(*signature);
     }
     if (foreign_or_auto_indexable_type(*type)) {

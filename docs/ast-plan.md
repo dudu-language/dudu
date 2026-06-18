@@ -1945,6 +1945,9 @@ LSP source edits are also moving to AST-owned ranges:
 - Member-path receiver unwrapping and `Result[...]` field lookup now resolve
   aliases through parsed `TypeRef` metadata first, with the old alias string map
   used only as a compatibility fallback.
+- Indexed type inference now also resolves aliases through parsed `TypeRef`
+  metadata before unwrapping pointer/reference/container/array shapes, keeping
+  aliases to list/span/array-like types off the string-only path.
 
 Expression parsing has moved onto the lexer/token stream:
 
