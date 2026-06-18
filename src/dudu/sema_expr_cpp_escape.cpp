@@ -324,6 +324,9 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
             sema_expr_fail(*location, "unknown function: " + callee);
         }
     }
+    if (parsed_expr.kind == ExprKind::TupleLiteral) {
+        return substitute_type_ref_text(infer_expr_type_ast(scope, parsed_expr, location), {});
+    }
     const std::vector<std::string> tuple_parts = split_top_level(expr);
     if (tuple_parts.size() > 1) {
         std::ostringstream out;
