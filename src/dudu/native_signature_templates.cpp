@@ -172,7 +172,7 @@ bool bind_native_template_type_ast(const TypeRef& expected, const TypeRef& got,
 
 bool bind_native_template_type_ast(const Symbols& symbols, const TypeRef& expected,
                                    const TypeRef& got, NativeTemplateBindings& bindings) {
-    TypeRef resolved_got = resolve_alias_ref_with_legacy_fallback(symbols, got);
+    TypeRef resolved_got = resolve_alias_ref(symbols, got);
     return bind_template_type_ref(expected, resolved_got, bindings);
 }
 

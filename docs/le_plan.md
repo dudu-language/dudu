@@ -1254,12 +1254,10 @@ push. They are not release packaging work.
    compatibility mirrors, and delete every compiler-internal one that is no
    longer an explicit native/C++ boundary.
 
-   `resolve_alias_ref_with_legacy_fallback` is explicitly temporary. It exists
-   only while old string aliases and new `TypeRef` aliases coexist during the
-   migration. The final alias resolver should consume structured `TypeRef`
-   alias metadata directly; once all alias producers populate that metadata,
-   delete the legacy fallback helper and every caller rather than preserving it
-   as a permanent alias-resolution path.
+   The old `resolve_alias_ref_with_legacy_fallback` migration helper has been
+   deleted. Alias resolution must consume structured `TypeRef` alias metadata
+   directly; do not reintroduce rendered string alias fallback as a permanent
+   alias-resolution path.
 
    Definition of done: no semantic, codegen, lint, LSP, formatter, or test
    discovery path may keep a fallback callback that accepts rendered source or
@@ -1427,12 +1425,11 @@ push. They are not release packaging work.
    Native template compatibility now recognizes `basic_string[char]` through a
    structured `TypeRef` child-name check instead of rendering the child type to
    compare it with `char`.
-   Legacy string alias fallback after structured alias resolution is now
-   centralized in `resolve_alias_ref_with_legacy_fallback`; native template
-   matching and inheritance unwrapping no longer duplicate that render/compare
-   fallback logic locally.
-   Member-path alias resolution now uses that same centralized migration
-   helper, removing another local render/compare/reparse fallback copy.
+   Legacy string alias fallback after structured alias resolution has been
+   removed. Native template matching, inheritance unwrapping, member-path
+   alias resolution, Result field lookup, and index inference now consume
+   structured `TypeRef` aliases directly instead of rendering and reparsing
+   type spellings.
    `ImportDecl::source_text` has been removed; the LSP organize-imports action
    now renders canonical import lines from structured `ImportDecl` fields
    instead of storing a raw source-line mirror in the AST.
