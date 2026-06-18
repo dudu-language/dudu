@@ -1408,3 +1408,6 @@ push. They are not release packaging work.
    Function-type parsing now uses the AST-level `type_ref_is_void` helper when
    recognizing chained function type syntax instead of inspecting a child
    type's raw text field.
+   Named-type checks now use a shared AST-level `type_ref_is_name` helper;
+   declaration and body semantic helpers no longer carry duplicate local
+   implementations.

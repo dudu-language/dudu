@@ -109,10 +109,6 @@ bool is_destructor_method(const FunctionDecl& method) {
     return method.name == "drop";
 }
 
-bool type_ref_is_name(const TypeRef& type, std::string_view name) {
-    return type.kind == TypeKind::Named && type_ref_head_name(type) == name;
-}
-
 bool function_returns(const FunctionDecl& fn, std::string_view name) {
     return type_ref_is_name(function_return_type_ref(fn), name);
 }

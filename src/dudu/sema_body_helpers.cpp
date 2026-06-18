@@ -18,10 +18,6 @@
 namespace dudu {
 namespace {
 
-bool type_ref_is_name(const TypeRef& type, std::string_view name) {
-    return type.kind == TypeKind::Named && type_ref_head_name(type) == name;
-}
-
 bool callback_can_assign_type(const BodyCheckCallbacks& callbacks, const FunctionScope& scope,
                               const TypeRef& expected, const Expr& expr, const TypeRef& got) {
     return callbacks.can_assign_type(scope, expected, expr, got);

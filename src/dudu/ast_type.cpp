@@ -178,12 +178,16 @@ bool has_type_ref(const TypeRef& type) {
            !type.children.empty();
 }
 
+bool type_ref_is_name(const TypeRef& type, std::string_view name) {
+    return type.kind == TypeKind::Named && type_ref_head_name(type) == name;
+}
+
 bool type_ref_is_auto(const TypeRef& type) {
-    return type.kind == TypeKind::Named && type_ref_head_name(type) == "auto";
+    return type_ref_is_name(type, "auto");
 }
 
 bool type_ref_is_void(const TypeRef& type) {
-    return type.kind == TypeKind::Named && type_ref_head_name(type) == "void";
+    return type_ref_is_name(type, "void");
 }
 
 TypeRef void_type_ref(SourceLocation location) {
