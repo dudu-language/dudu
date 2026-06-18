@@ -48,19 +48,7 @@ TypeRef named_type_ref(std::string name, const SourceLocation& location) {
 }
 
 TypeRef resolve_type_ref_alias(const Symbols& symbols, const TypeRef& raw_type) {
-    const TypeRef resolved_ref = resolve_alias_ref(symbols, raw_type);
-    if (substitute_type_ref_text(resolved_ref, {}) != substitute_type_ref_text(raw_type, {})) {
-        return resolved_ref;
-    }
-    if ((raw_type.kind == TypeKind::Named || raw_type.kind == TypeKind::Qualified ||
-         raw_type.kind == TypeKind::Unknown) &&
-        !type_ref_head_name(raw_type).empty()) {
-        const std::string resolved = resolve_alias(symbols, substitute_type_ref_text(raw_type, {}));
-        if (resolved != substitute_type_ref_text(raw_type, {})) {
-            return parse_type_text(resolved, raw_type.location);
-        }
-    }
-    return raw_type;
+    return resolve_alias_ref_with_legacy_fallback(symbols, raw_type);
 }
 
 bool foreign_or_auto_indexable_type(const TypeRef& type) {

@@ -1448,3 +1448,6 @@ push. They are not release packaging work.
    Local function type parsing and function-type missing-return checks now also
    use `has_type_ref`; the remaining raw text presence checks are confined to
    parser/type rendering, LSP display, and the helper implementation itself.
+   Indexed-type alias resolution now also uses the centralized
+   `resolve_alias_ref_with_legacy_fallback` helper instead of carrying a local
+   render/resolve/reparse fallback copy.
