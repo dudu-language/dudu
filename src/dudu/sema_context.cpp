@@ -343,7 +343,6 @@ Symbols collect_symbols(const ModuleAst& module) {
         const TypeRef value_type = has_type_ref(value.type_ref)
                                        ? value.type_ref
                                        : parse_type_text(value.type, value.location);
-        symbols.native_values[value.name] = substitute_type_ref_text(value_type, {});
         symbols.native_value_type_refs[value.name] = value_type;
         if (value.enum_constant) {
             symbols.native_enum_values.insert(value.name);
@@ -358,7 +357,6 @@ Symbols collect_symbols(const ModuleAst& module) {
     for (const auto& [name, value] : build_values) {
         const std::string symbol_name = "build." + name;
         const TypeRef value_type = parse_type_text(build_value_type(value));
-        symbols.native_values[symbol_name] = substitute_type_ref_text(value_type, {});
         symbols.native_value_type_refs[symbol_name] = value_type;
     }
     symbols.native_import_prefixes.insert("build");
@@ -376,7 +374,6 @@ Symbols collect_symbols(const ModuleAst& module) {
         symbols.classes[klass.name] = &klass;
         for (const ConstDecl& constant : klass.constants) {
             const std::string symbol_name = klass.name + "." + constant.name;
-            symbols.native_values[symbol_name] = substitute_type_ref_text(constant.type_ref, {});
             symbols.native_value_type_refs[symbol_name] = constant.type_ref;
         }
     }

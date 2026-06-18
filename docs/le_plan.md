@@ -1511,6 +1511,9 @@ push. They are not release packaging work.
    The duplicate `Symbols::aliases` rendered string map has been deleted.
    Alias resolution now uses `alias_type_refs` as the single source of truth
    and renders only at string-returning compatibility call sites.
+   The dead `Symbols::native_values` rendered string map has been deleted;
+   semantic lookup uses `native_value_type_refs` directly, while
+   `ModuleAst::native_values` remains the declaration list for code emission.
    Operator and condition semantic diagnostics now use `FunctionSignature`
    accessors for parameter counts and parameter type text instead of reading
    the legacy signature string vector directly.
