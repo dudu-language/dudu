@@ -236,6 +236,9 @@ Already structured:
 - native base assignability now accepts parsed expected/got `TypeRef` nodes, so
   typed assignment checks can validate derived-to-base pointer/reference
   assignments without rendering both sides first
+- receiver unwrapping now accepts parsed `TypeRef` nodes, and inherited field
+  lookup plus swizzle lookup use that path when the receiver/base type is
+  already structured
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path

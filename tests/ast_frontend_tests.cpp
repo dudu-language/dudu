@@ -14,6 +14,8 @@
 #include "dudu/sema_function_type.hpp"
 #include "dudu/sema_inheritance.hpp"
 #include "dudu/sema_method_templates.hpp"
+#include "dudu/sema_methods.hpp"
+#include "dudu/sema_methods_internal.hpp"
 #include "dudu/type_compat.hpp"
 
 #include <cassert>
@@ -274,6 +276,50 @@ void test_native_base_assignable_uses_type_ast() {
                                         dudu::parse_type_text("&Derived")));
     assert(!dudu::native_base_assignable(symbols, dudu::parse_type_text("Base"),
                                          dudu::parse_type_text("Derived")));
+}
+
+void test_unwrap_receiver_uses_type_ast() {
+    dudu::Symbols symbols;
+    symbols.aliases["AliasBox"] = "Box[i32]";
+
+    assert(dudu::unwrap_receiver_type(symbols, dudu::parse_type_text("*const[AliasBox]")) == "Box");
+    assert(dudu::unwrap_receiver_type(symbols, dudu::parse_type_text("&struct sqlite3")) ==
+           "sqlite3");
+}
+
+void test_inherited_field_lookup_uses_type_ast_receiver() {
+    dudu::ClassDecl box;
+    box.name = "Box";
+    box.generic_params = {"T"};
+    box.fields.push_back({"value", dudu::parse_type_text("T"), {}, {}});
+
+    dudu::ClassDecl wrapper;
+    wrapper.name = "Wrapper";
+    wrapper.base_class_refs.push_back({dudu::parse_type_text("Box[f32]"), {}});
+
+    dudu::Symbols symbols;
+    symbols.classes.emplace("Box", &box);
+    symbols.classes.emplace("Wrapper", &wrapper);
+
+    const std::optional<dudu::TypeRef> field =
+        dudu::field_type_ref_for_class(symbols, wrapper, dudu::parse_type_text("Wrapper"), "value");
+    assert(field);
+    assert(dudu::substitute_type_ref_text(*field, {}) == "f32");
+}
+
+void test_swizzle_lookup_uses_type_ast_receiver() {
+    dudu::ClassDecl vec2;
+    vec2.name = "Vec2";
+    vec2.fields.push_back({"x", dudu::parse_type_text("f32"), {}, {}});
+    vec2.fields.push_back({"y", dudu::parse_type_text("f32"), {}, {}});
+
+    dudu::Symbols symbols;
+    symbols.classes.emplace("Vec2", &vec2);
+
+    const std::optional<dudu::TypeRef> swizzle =
+        dudu::swizzle_type_ref_for_type(symbols, dudu::parse_type_text("*const[Vec2]"), "xy");
+    assert(swizzle);
+    assert(dudu::substitute_type_ref_text(*swizzle, {}) == "Vec2");
 }
 
 void test_native_semantic_tokens() {
@@ -1000,6 +1046,9 @@ int main() {
         test_find_inherited_method_uses_type_ast_receiver();
         test_instance_storage_uses_type_ast_receiver();
         test_native_base_assignable_uses_type_ast();
+        test_unwrap_receiver_uses_type_ast();
+        test_inherited_field_lookup_uses_type_ast_receiver();
+        test_swizzle_lookup_uses_type_ast_receiver();
         test_native_semantic_tokens();
         test_ast_constructor_assignment_compatibility();
         test_ast_index_receiver_type_inference();

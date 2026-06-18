@@ -695,6 +695,9 @@ push. They are not release packaging work.
    Native base assignability now accepts parsed expected/got `TypeRef` nodes,
    so typed assignment checks can validate derived-to-base pointer/reference
    assignments without rendering both sides first.
+   Receiver unwrapping now accepts parsed `TypeRef` nodes, and inherited field
+   lookup plus swizzle lookup use that path when the receiver/base type is
+   already structured.
    TypeRef-backed assignment checks now infer RHS expressions as `TypeRef`
    first, use structured type assignment before compatibility fallback, and
    render only for legacy assignment/literal checks and diagnostics.

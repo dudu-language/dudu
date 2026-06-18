@@ -64,29 +64,37 @@ TypeRef static_member_type_ref(const Symbols& symbols, const SourceLocation* loc
 } // namespace
 
 std::string unwrap_receiver_type(const Symbols& symbols, std::string type) {
-    type = resolve_alias(symbols, std::move(type));
+    return unwrap_receiver_type(symbols, parse_type_text(resolve_alias(symbols, std::move(type))));
+}
+
+std::string unwrap_receiver_type(const Symbols& symbols, const TypeRef& type) {
+    TypeRef current = type;
     while (true) {
-        type = trim(std::move(type));
-        const TypeRef parsed = parse_type_text(type);
+        const std::string rendered = substitute_type_ref_text(current, {});
+        const std::string resolved = resolve_alias(symbols, rendered);
+        if (resolved != rendered) {
+            current = parse_type_text(resolved, current.location);
+            continue;
+        }
         if (const auto inner =
-                unary_type_child_text(parsed, {TypeKind::Pointer, TypeKind::Reference})) {
-            type = *inner;
+                unary_type_child_ref(current, {TypeKind::Pointer, TypeKind::Reference})) {
+            current = *inner;
             continue;
         }
-        if (const auto inner = unary_type_child_text(
-                parsed, {TypeKind::Const, TypeKind::Volatile, TypeKind::Atomic, TypeKind::Storage,
-                         TypeKind::Shared, TypeKind::Device})) {
-            type = *inner;
+        if (const auto inner = unary_type_child_ref(
+                current, {TypeKind::Const, TypeKind::Volatile, TypeKind::Atomic, TypeKind::Storage,
+                          TypeKind::Shared, TypeKind::Device})) {
+            current = *inner;
             continue;
         }
-        return base_type(strip_c_type_tag(type));
+        const std::string head = type_ref_head_name(current);
+        return strip_c_type_tag(head.empty() ? substitute_type_ref_text(current, {}) : head);
     }
 }
 
 std::optional<TypeRef> field_type_ref_for_class(const Symbols& symbols, const ClassDecl& klass,
                                                 const TypeRef& receiver_type,
                                                 const std::string& field) {
-    const std::string receiver_type_text = substitute_type_ref_text(receiver_type, {});
     for (const FieldDecl& decl : klass.fields) {
         if (decl.name == field) {
             const std::vector<std::string> receiver_args = template_args_from_type(receiver_type);
@@ -96,8 +104,8 @@ std::optional<TypeRef> field_type_ref_for_class(const Symbols& symbols, const Cl
         }
     }
     for (const BaseClassDecl& base_decl : klass.base_class_refs) {
-        const std::string base = type_ref_text(base_decl.type_ref);
-        const auto base_class = symbols.classes.find(unwrap_receiver_type(symbols, base));
+        const auto base_class =
+            symbols.classes.find(unwrap_receiver_type(symbols, base_decl.type_ref));
         if (base_class == symbols.classes.end()) {
             continue;
         }
@@ -252,7 +260,7 @@ std::optional<TypeRef> field_type_ref_for_type(const Symbols& symbols, const Typ
             return result_args[1];
         }
     }
-    const auto klass = symbols.classes.find(unwrap_receiver_type(symbols, receiver_type_text));
+    const auto klass = symbols.classes.find(unwrap_receiver_type(symbols, receiver_type));
     if (klass == symbols.classes.end()) {
         return std::nullopt;
     }
