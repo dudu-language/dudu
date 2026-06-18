@@ -1683,6 +1683,10 @@ push. They are not release packaging work.
    Native overload matching now detects variadic template pack parameters from
    the signature parameter `TypeRef`, keeping raw spelling fallback inside the
    native template helper for malformed C++ artifact nodes.
+   Native template substitution now decides whether structured substitution is
+   safe by walking signature and binding `TypeRef` nodes, consulting raw node
+   spelling only for native artifact markers instead of rendering whole
+   signature types first.
    `substitute_type_ref` now has a structured `TypeRef` substitution overload.
    Receiver generic substitution for fields, methods, inherited methods, and
    inferred generic method signatures uses parsed receiver template arguments

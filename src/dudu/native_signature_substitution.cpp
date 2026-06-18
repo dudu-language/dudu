@@ -257,10 +257,25 @@ bool structured_binding_text(std::string_view type) {
            trimmed.find("__decay_and_strip") == std::string::npos;
 }
 
+bool structured_binding_type_ref(const TypeRef& type) {
+    if (!has_type_ref(type)) {
+        return false;
+    }
+    if (!structured_binding_text(type.text)) {
+        return false;
+    }
+    for (const TypeRef& child : type.children) {
+        if (!structured_binding_type_ref(child)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool structured_binding_texts(const NativeTemplateBindings& bindings) {
     for (const auto& [name, type] : bindings) {
         (void)name;
-        if (!structured_binding_text(substitute_type_ref_text(type, {}))) {
+        if (!structured_binding_type_ref(type)) {
             return false;
         }
     }
@@ -268,12 +283,12 @@ bool structured_binding_texts(const NativeTemplateBindings& bindings) {
 }
 
 bool structured_signature_texts(const FunctionSignature& signature) {
-    if (!structured_binding_text(signature_return_type_text(signature))) {
+    if (!structured_binding_type_ref(signature_return_type_ref(signature))) {
         return false;
     }
     const size_t param_count = signature_param_count(signature);
     for (size_t i = 0; i < param_count; ++i) {
-        if (!structured_binding_text(signature_param_type_text(signature, i))) {
+        if (!structured_binding_type_ref(signature_param_type_ref(signature, i))) {
             return false;
         }
     }
