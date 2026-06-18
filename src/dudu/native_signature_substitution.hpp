@@ -22,6 +22,8 @@ native_template_call_base(const std::string& callee);
 
 FunctionSignature substitute_explicit_template_signature(FunctionSignature signature,
                                                          const std::vector<std::string>& args);
+FunctionSignature substitute_explicit_template_signature(FunctionSignature signature,
+                                                         const std::vector<TypeRef>& args);
 
 FunctionSignature substitute_bound_template_signature(FunctionSignature signature,
                                                       const NativeTemplateBindings& bindings,

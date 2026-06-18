@@ -1670,6 +1670,10 @@ push. They are not release packaging work.
    through a rendered-string template binder. The structured binder now handles
    native C++ pack-expansion artifacts inside template types, and the old
    string binder API has been deleted.
+   Explicit native template call substitution now has a parsed `TypeRef`
+   argument overload. The callee-string entry point converts explicit template
+   arguments to `TypeRef`s once at the boundary, and the obsolete text binding
+   map has been deleted.
    `substitute_type_ref` now has a structured `TypeRef` substitution overload.
    Receiver generic substitution for fields, methods, inherited methods, and
    inferred generic method signatures uses parsed receiver template arguments

@@ -120,16 +120,30 @@ std::string replace_explicit_template_args(std::string type, const std::vector<s
     return type;
 }
 
-std::map<std::string, std::string>
-explicit_template_bindings(const std::vector<std::string>& names,
-                           const std::vector<std::string>& args) {
-    std::map<std::string, std::string> out;
+std::string explicit_template_arg_text(const TypeRef& arg) {
+    return substitute_type_ref_text(arg, {});
+}
+
+std::vector<std::string> explicit_template_arg_texts(const std::vector<TypeRef>& args) {
+    std::vector<std::string> out;
+    out.reserve(args.size());
+    for (const TypeRef& arg : args) {
+        out.push_back(explicit_template_arg_text(arg));
+    }
+    return out;
+}
+
+std::map<std::string, TypeRef>
+explicit_template_type_ref_bindings(const std::vector<std::string>& names,
+                                    const std::vector<TypeRef>& args) {
+    std::map<std::string, TypeRef> out;
     size_t arg_index = 0;
     for (const std::string& name : names) {
         if (arg_index >= args.size()) {
             break;
         }
-        if (native_index_placeholder(name) && !numeric_template_arg(args[arg_index])) {
+        const std::string arg_text = explicit_template_arg_text(args[arg_index]);
+        if (native_index_placeholder(name) && !numeric_template_arg(arg_text)) {
             continue;
         }
         out.emplace(name, args[arg_index]);
@@ -138,20 +152,11 @@ explicit_template_bindings(const std::vector<std::string>& names,
     return out;
 }
 
-std::map<std::string, TypeRef>
-explicit_template_type_ref_bindings(const std::vector<std::string>& names,
-                                    const std::vector<std::string>& args) {
-    std::map<std::string, TypeRef> out;
-    size_t arg_index = 0;
-    for (const std::string& name : names) {
-        if (arg_index >= args.size()) {
-            break;
-        }
-        if (native_index_placeholder(name) && !numeric_template_arg(args[arg_index])) {
-            continue;
-        }
-        out.emplace(name, native_template_binding_type_ref(args[arg_index]));
-        ++arg_index;
+std::vector<TypeRef> explicit_template_type_refs(const std::vector<std::string>& args) {
+    std::vector<TypeRef> out;
+    out.reserve(args.size());
+    for (const std::string& arg : args) {
+        out.push_back(native_template_binding_type_ref(arg));
     }
     return out;
 }
@@ -346,12 +351,18 @@ native_template_call_base(const std::string& callee) {
 
 FunctionSignature substitute_explicit_template_signature(FunctionSignature signature,
                                                          const std::vector<std::string>& args) {
+    return substitute_explicit_template_signature(std::move(signature),
+                                                  explicit_template_type_refs(args));
+}
+
+FunctionSignature substitute_explicit_template_signature(FunctionSignature signature,
+                                                         const std::vector<TypeRef>& args) {
     const std::vector<std::string> names = signature.template_params.empty()
                                                ? native_signature_placeholders(signature)
                                                : signature.template_params;
-    const std::map<std::string, std::string> bindings = explicit_template_bindings(names, args);
     const std::map<std::string, TypeRef> ref_bindings =
         explicit_template_type_ref_bindings(names, args);
+    const std::vector<std::string> arg_texts = explicit_template_arg_texts(args);
     std::vector<TypeRef> param_types;
     param_types.reserve(signature_param_count(signature));
     for (size_t i = 0; i < signature_param_count(signature); ++i) {
@@ -360,7 +371,7 @@ FunctionSignature substitute_explicit_template_signature(FunctionSignature signa
             param_types.push_back(substitute_type_ref(param_type, ref_bindings));
         } else {
             const std::string param_text = replace_explicit_template_args(
-                signature_param_type_text(signature, i), names, args);
+                signature_param_type_text(signature, i), names, arg_texts);
             param_types.push_back(parse_type_text(param_text));
         }
     }
@@ -371,7 +382,7 @@ FunctionSignature substitute_explicit_template_signature(FunctionSignature signa
     } else {
         set_signature_return_type(
             signature, parse_type_text(replace_explicit_template_args(
-                                           signature_return_type_text(signature), names, args),
+                                           signature_return_type_text(signature), names, arg_texts),
                                        return_type.location));
     }
     return signature;
