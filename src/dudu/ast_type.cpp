@@ -29,6 +29,19 @@ std::string substitute_wrapper(std::string_view name, const TypeRef& type,
            "]";
 }
 
+std::string substitution_lookup_key(const TypeRef& type) {
+    switch (type.kind) {
+    case TypeKind::Named:
+    case TypeKind::Qualified:
+    case TypeKind::Template:
+        return trim_copy(type.name);
+    case TypeKind::Unknown:
+        return trim_copy(type.text);
+    default:
+        return {};
+    }
+}
+
 } // namespace
 
 std::vector<TypeRef> template_type_arg_refs(const TypeRef& type, std::string_view name) {
@@ -113,9 +126,11 @@ bool type_ref_contains_kind(const TypeRef& type, TypeKind kind) {
 
 std::string substitute_type_ref_text(const TypeRef& type,
                                      const std::map<std::string, std::string>& substitutions) {
-    const std::string name = trim_copy(type.name.empty() ? type.text : type.name);
-    if (const auto found = substitutions.find(name); found != substitutions.end()) {
-        return found->second;
+    const std::string key = substitution_lookup_key(type);
+    if (!key.empty()) {
+        if (const auto found = substitutions.find(key); found != substitutions.end()) {
+            return found->second;
+        }
     }
 
     switch (type.kind) {
@@ -317,9 +332,18 @@ std::string native_value_type_text(const NativeValueDecl& value) {
 
 TypeRef substitute_type_ref(const TypeRef& type,
                             const std::map<std::string, std::string>& substitutions) {
-    const std::string name = trim_copy(type.name.empty() ? type.text : type.name);
-    if (const auto found = substitutions.find(name); found != substitutions.end()) {
-        return parse_type_text(found->second, type.location);
+    const std::string key = substitution_lookup_key(type);
+    if (!key.empty()) {
+        if (const auto found = substitutions.find(key); found != substitutions.end()) {
+            return parse_type_text(found->second, type.location);
+        }
+    }
+
+    if (type.kind == TypeKind::Unknown && key.empty()) {
+        const std::string rendered = trim_copy(type.text);
+        if (const auto found = substitutions.find(rendered); found != substitutions.end()) {
+            return parse_type_text(found->second, type.location);
+        }
     }
 
     TypeRef out = type;

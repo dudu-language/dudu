@@ -1590,6 +1590,10 @@ push. They are not release packaging work.
    Native type aliases and values now expose structured accessor helpers as
    well. Symbol collection and LSP native symbol/local context code use those
    helpers instead of open-coding `type_ref`-or-rendered-string fallback logic.
+   Type substitution now uses a structured lookup key from `TypeRef` kind/name
+   metadata, falling back to raw text only for unknown/raw type refs. This
+   removes another general-purpose dependency on rendering whole types before
+   applying substitutions.
    Index-result inference now detects foreign/qualified indexable receivers from
    `TypeRef` head/kind metadata instead of rendering the receiver type to search
    for namespace separators.
