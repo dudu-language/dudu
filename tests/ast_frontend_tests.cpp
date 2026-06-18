@@ -208,7 +208,8 @@ void test_native_template_binding_resolves_alias_type_refs() {
     symbols.aliases["FloatList"] = "list[f32]";
     symbols.alias_type_refs["FloatList"] = dudu::parse_type_text("list[f32]");
     dudu::NativeTemplateBindings bindings;
-    assert(dudu::bind_native_template_type_ast(symbols, "list[T]", "FloatList", bindings));
+    assert(dudu::bind_native_template_type_ast(symbols, dudu::parse_type_text("list[T]"),
+                                               dudu::parse_type_text("FloatList"), bindings));
     assert(bindings.at("T") == "f32");
 }
 

@@ -16,7 +16,7 @@ bool bind_native_template_type(std::string expected, std::string got,
                                NativeTemplateBindings& bindings);
 bool bind_native_template_type_ast(const TypeRef& expected, const TypeRef& got,
                                    NativeTemplateBindings& bindings);
-bool bind_native_template_type_ast(const Symbols& symbols, const std::string& expected,
-                                   const std::string& got, NativeTemplateBindings& bindings);
+bool bind_native_template_type_ast(const Symbols& symbols, const TypeRef& expected,
+                                   const TypeRef& got, NativeTemplateBindings& bindings);
 
 } // namespace dudu

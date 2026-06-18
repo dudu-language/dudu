@@ -1978,6 +1978,9 @@ LSP source edits are also moving to AST-owned ranges:
 - Array literal shape inference no longer stores duplicate rendered array or
   element type strings beside the inferred `TypeRef` nodes. Sema and C++
   emission render the inferred shape type only at binding/emission edges.
+- Native template binding no longer reparses expected/got strings for the
+  alias-aware path. The symbol-aware binder accepts parsed expected and actual
+  `TypeRef` nodes and resolves aliases before binding placeholders.
 
 Expression parsing has moved onto the lexer/token stream:
 

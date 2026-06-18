@@ -1242,5 +1242,6 @@ declarations safely.
    `TypeRef` pairs. Constructor parameter checking no longer stores a duplicate
    rendered type string beside `TypeRef`, and array shape inference no longer
    stores duplicate rendered array or element type strings beside its inferred
-   `TypeRef` nodes. The remaining compatibility callbacks and mirrors should
-   be removed rather than normalized into permanent API.
+   `TypeRef` nodes. Native template binding no longer reparses expected/got
+   strings for its alias-aware path. The remaining compatibility callbacks and
+   mirrors should be removed rather than normalized into permanent API.

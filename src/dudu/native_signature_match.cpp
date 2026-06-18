@@ -290,9 +290,7 @@ match_signature_ast(const FunctionScope& scope, const FunctionSignature& signatu
             !native_numeric_promotion(expected_ref, got.ref) &&
             !native_numeric_promotion(signature_param_text(signature, i), got.text) &&
             !(has_type_ref(expected_ref) && has_type_ref(got.ref) &&
-              bind_native_template_type_ast(expected_ref, got.ref, bindings)) &&
-            !bind_native_template_type_ast(scope.symbols, signature_param_text(signature, i),
-                                           got.text, bindings) &&
+              bind_native_template_type_ast(scope.symbols, expected_ref, got.ref, bindings)) &&
             !bind_native_template_type(signature_param_text(signature, i), got.text, bindings)) {
             return std::nullopt;
         }
