@@ -107,14 +107,11 @@ bool same_native_template_name(const std::string& expected, const std::string& g
 
 bool bind_template_type_ref(const TypeRef& expected, const TypeRef& got,
                             NativeTemplateBindings& bindings) {
-    const std::string expected_name =
-        expected.name.empty() ? trim_copy(expected.text) : trim_copy(expected.name);
+    const std::string expected_name = type_ref_head_name(expected);
     if ((expected.kind == TypeKind::Named || expected.kind == TypeKind::Qualified ||
          expected.kind == TypeKind::Value) &&
-        native_template_placeholder(expected_name.empty() ? trim_copy(expected.value)
-                                                          : expected_name)) {
-        return bind_template_placeholder(
-            expected_name.empty() ? trim_copy(expected.value) : expected_name, got, bindings);
+        native_template_placeholder(expected_name)) {
+        return bind_template_placeholder(expected_name, got, bindings);
     }
     if (expected.kind == TypeKind::Pointer) {
         return got.kind == TypeKind::Pointer && expected.children.size() == 1 &&

@@ -1914,3 +1914,6 @@ push. They are not release packaging work.
    Structural type compatibility now compares parsed head names and value
    fields for named/template/value nodes instead of falling back to raw
    `TypeRef.text`; raw text comparison remains confined to `Unknown` nodes.
+   Native template placeholder binding now reads parsed `TypeRef` head/value
+   metadata through `type_ref_head_name` instead of falling back to raw
+   `TypeRef.text` for named/template/value placeholders.
