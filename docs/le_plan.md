@@ -1701,3 +1701,6 @@ push. They are not release packaging work.
    for plain callees instead of reparsing the callee string. The remaining
    string spelling helper is named `known_type_spelling` and is confined to
    explicit `cpp(...)` escape inference.
+   `named_type_ref` now preserves qualified-name shape for dotted or `::`
+   names, and template-constructor recognition accepts parsed `TypeRef`
+   metadata instead of reparsing a rendered callee string.

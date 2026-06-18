@@ -261,7 +261,9 @@ bool type_ref_equivalent(const TypeRef& left, const TypeRef& right) {
 
 TypeRef named_type_ref(std::string name, SourceLocation location) {
     TypeRef type;
-    type.kind = TypeKind::Named;
+    type.kind = name.find('.') == std::string::npos && name.find("::") == std::string::npos
+                    ? TypeKind::Named
+                    : TypeKind::Qualified;
     type.name = std::move(name);
     type.location = location;
     return type;

@@ -293,8 +293,7 @@ std::string template_method_name(const Expr& expr, const std::string& callee_bas
     return out.str();
 }
 
-bool known_template_constructor_type(const FunctionScope& scope, const std::string& callee) {
-    const TypeRef callee_type = parse_type_text(callee);
+bool known_template_constructor_type(const FunctionScope& scope, const TypeRef& callee_type) {
     const std::string base = base_type(callee_type);
     if (base.find('.') != std::string::npos || base.find("::") != std::string::npos) {
         return scope.symbols.types.contains(base) || scope.symbols.native_classes.contains(base) ||

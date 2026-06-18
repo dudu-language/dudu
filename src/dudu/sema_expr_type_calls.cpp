@@ -238,18 +238,18 @@ std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Ex
     if (is_builtin_call(callee)) {
         return direct_builtin_call_type_ref(scope, expr, callee, location);
     }
-    if (known_template_constructor_type(scope, callee)) {
+    const TypeRef callee_type = named_type_ref(callee, expr.location);
+    if (known_template_constructor_type(scope, callee_type)) {
         if (const ClassDecl* klass =
-                class_for_receiver_type(scope.symbols, named_type_ref(callee, expr.location))) {
-            reject_abstract_construction(scope.symbols, named_type_ref(callee, expr.location),
-                                         location);
+                class_for_receiver_type(scope.symbols, callee_type)) {
+            reject_abstract_construction(scope.symbols, callee_type, location);
             check_constructor_args_ast(scope, *klass, expr.children, location);
         } else {
             for (const Expr& arg : expr.children) {
                 (void)infer_expr_type_ast(scope, arg, location);
             }
         }
-        return named_type_ref(callee, expr.location);
+        return callee_type;
     }
     if (const auto method_type = direct_member_call_type_ref(scope, expr, callee, location)) {
         return *method_type;
@@ -356,11 +356,13 @@ std::optional<TypeRef> direct_template_call_type_ref(const FunctionScope& scope,
             direct_template_member_call_type_ref(scope, expr, callee, location)) {
         return *method_type;
     }
-    if (known_template_constructor_type(scope, callee)) {
+    const TypeRef constructor_type =
+        template_constructor_type_ref(expr, callee_base, template_type_refs(expr));
+    if (known_template_constructor_type(scope, constructor_type)) {
         for (const Expr& arg : expr.children) {
             (void)infer_expr_type_ast(scope, arg, location);
         }
-        return named_type_ref(callee, expr.location);
+        return constructor_type;
     }
     return std::nullopt;
 }
