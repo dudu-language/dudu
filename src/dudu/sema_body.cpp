@@ -122,7 +122,7 @@ void check_type_ref_match(FunctionScope& scope, const TypeRef& expected, const E
     const TypeRef got_ref = callbacks.infer_expr_type(scope, expr, &location);
     const std::string got = substitute_type_ref_text(got_ref, {});
     if (!type_assignment_allowed(expected, got_ref) &&
-        !assignment_type_allowed(expected, expr, got) &&
+        !assignment_type_allowed(expected, expr, got_ref) &&
         !callback_can_assign_type(callbacks, scope, expected, expr, got)) {
         if (!mismatch_label.empty()) {
             sema_fail(location,

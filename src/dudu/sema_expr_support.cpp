@@ -63,7 +63,18 @@ bool can_assign_ast(const FunctionScope& scope, const std::string& expected, con
 
 bool can_assign_ast(const FunctionScope& scope, const TypeRef& expected, const Expr& expr,
                     const TypeRef& got) {
-    return can_assign_ast(scope, expected, expr, substitute_type_ref_text(got, {}));
+    const std::string expected_text = substitute_type_ref_text(expected, {});
+    const std::string got_text = substitute_type_ref_text(got, {});
+    if (is_integer_type(expected_text)) {
+        if (const std::optional<std::string> path = member_path_from_expr(expr);
+            path && scope.symbols.native_enum_values.contains(*path)) {
+            return true;
+        }
+    }
+    return assignment_type_allowed(expected, expr, got) ||
+           assignment_type_allowed(resolve_alias(scope.symbols, expected_text), expr,
+                                   resolve_alias(scope.symbols, got_text)) ||
+           native_base_assignable(scope.symbols, expected_text, got_text);
 }
 
 bool is_builtin_call(const std::string& callee) {
