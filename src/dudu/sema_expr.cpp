@@ -160,8 +160,8 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
                                             index_arg_exprs(expr.children[1]), location);
                     }
                 }
-                return indexed_value_type_ref(scope.symbols, scope.locals, scope.local_type_refs,
-                                              index_location, receiver.name, expr.children[1],
+                return indexed_value_type_ref(scope.symbols, scope.local_type_refs, index_location,
+                                              receiver.name, expr.children[1],
                                               "indexed access to unknown local: ");
             }
             const TypeRef receiver_member_type =

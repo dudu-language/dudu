@@ -71,8 +71,7 @@ lower_local_swizzle_expr(const Expr& expr, const std::vector<std::string>& alias
     if (symbols == nullptr) {
         return std::nullopt;
     }
-    const TypeRef receiver_type =
-        local_type_ref(*symbols, locals, local_type_refs, receiver, expr.location);
+    const TypeRef receiver_type = local_type_ref(local_type_refs, receiver, expr.location);
     if (!looks_like_local_dudu_class_type(type_ref_text(receiver_type))) {
         return std::nullopt;
     }

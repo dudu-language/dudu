@@ -44,7 +44,7 @@ infer_emitted_local_type_text(std::string_view expr_text,
         local_type_refs[name] = dudu::parse_type_text(type);
     }
     const dudu::TypeRef inferred = dudu::infer_emitted_local_type_ref(
-        dudu::parse_expr_text(expr_text), locals, local_type_refs, function_returns);
+        dudu::parse_expr_text(expr_text), local_type_refs, function_returns);
     return dudu::has_type_ref(inferred) ? dudu::substitute_type_ref_text(inferred, {})
                                         : std::string{};
 }
@@ -605,14 +605,11 @@ void test_index_type_inference_uses_type_ast() {
     assert(row_span_type.name == "span");
     assert(dudu::substitute_type_ref_text(row_span_type, {}) == "span[i32]");
 
-    const std::map<std::string, std::string> locals = {
-        {"bag", "Bag[Item]"},
-    };
     const std::map<std::string, dudu::TypeRef> local_type_refs = {
         {"bag", dudu::parse_type_text("Bag[Item]", location)},
     };
     const std::optional<dudu::TypeRef> bag_item =
-        dudu::iterable_value_type_ref(symbols, locals, local_type_refs, "bag");
+        dudu::iterable_value_type_ref(local_type_refs, "bag");
     assert(bag_item);
     assert(dudu::substitute_type_ref_text(*bag_item, {}) == "Item");
 

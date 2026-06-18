@@ -201,8 +201,8 @@ std::optional<TypeRef> infer_for_binding_type(FunctionScope& scope, const Stmt& 
         return parse_type_text("i32", location);
     }
     if (stmt.iterable_expr.kind == ExprKind::Name) {
-        const std::optional<TypeRef> element = iterable_value_type_ref(
-            scope.symbols, scope.locals, scope.local_type_refs, stmt.iterable_expr.name);
+        const std::optional<TypeRef> element =
+            iterable_value_type_ref(scope.local_type_refs, stmt.iterable_expr.name);
         if (element) {
             return *element;
         }

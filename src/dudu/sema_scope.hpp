@@ -32,12 +32,8 @@ inline TypeRef local_type_ref(const FunctionScope& scope, const std::string& nam
     return unknown;
 }
 
-inline TypeRef local_type_ref(const Symbols& symbols,
-                              const std::map<std::string, std::string>& locals,
-                              const std::map<std::string, TypeRef>& local_type_refs,
+inline TypeRef local_type_ref(const std::map<std::string, TypeRef>& local_type_refs,
                               const std::string& name, SourceLocation location = {}) {
-    (void)symbols;
-    (void)locals;
     if (const auto local = local_type_refs.find(name); local != local_type_refs.end()) {
         return local->second;
     }

@@ -214,7 +214,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                 const std::string value = lower_emitted_expr(stmt.value_expr, aliases, locals,
                                                              local_type_refs, symbols, options);
                 const TypeRef inferred_ref = infer_emitted_local_type_ref(
-                    stmt.value_expr, locals, local_type_refs, function_returns, symbols);
+                    stmt.value_expr, local_type_refs, function_returns, symbols);
                 const std::string inferred = substitute_type_ref_text(inferred_ref, {});
                 locals.emplace(lhs, inferred.empty() ? "auto" : inferred);
                 if (has_type_ref(inferred_ref)) {

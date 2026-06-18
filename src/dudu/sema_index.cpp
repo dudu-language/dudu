@@ -269,13 +269,9 @@ indexed_type_from_type_ref_with_count(const SourceLocation& location, const Type
 
 } // namespace
 
-std::string indexed_value_type(const Symbols& symbols,
-                               const std::map<std::string, std::string>& locals,
-                               const std::map<std::string, TypeRef>& local_type_refs,
+std::string indexed_value_type(const std::map<std::string, TypeRef>& local_type_refs,
                                const SourceLocation& location, const std::string& name,
                                const Expr& index_expr, std::string_view unknown_message) {
-    (void)symbols;
-    (void)locals;
     const auto type_ref = local_type_refs.find(name);
     if (type_ref == local_type_refs.end()) {
         throw CompileError(location, std::string(unknown_message) + name);
@@ -311,11 +307,10 @@ std::string indexed_value_type(const Symbols& symbols,
 }
 
 TypeRef indexed_value_type_ref(const Symbols& symbols,
-                               const std::map<std::string, std::string>& locals,
                                const std::map<std::string, TypeRef>& local_type_refs,
                                const SourceLocation& location, const std::string& name,
                                const Expr& index_expr, std::string_view unknown_message) {
-    const TypeRef type_ref = local_type_ref(symbols, locals, local_type_refs, name, location);
+    const TypeRef type_ref = local_type_ref(local_type_refs, name, location);
     if (type_ref.kind == TypeKind::Unknown) {
         throw CompileError(location, std::string(unknown_message) + name);
     }

@@ -139,8 +139,8 @@ TypeRef member_expr_type_ref(const Symbols& symbols,
             }
             return {};
         }
-        if (const TypeRef local =
-                local_type_ref(symbols, locals, local_type_refs, expr.name, type_location);
+        (void)locals;
+        if (const TypeRef local = local_type_ref(local_type_refs, expr.name, type_location);
             has_type_ref(local)) {
             return local;
         }

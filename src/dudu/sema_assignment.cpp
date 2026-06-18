@@ -70,8 +70,8 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt,
                 return {};
             }
         }
-        return indexed_value_type_ref(scope.symbols, scope.locals, scope.local_type_refs,
-                                      target_location, name, stmt.target_expr.children[1],
+        return indexed_value_type_ref(scope.symbols, scope.local_type_refs, target_location, name,
+                                      stmt.target_expr.children[1],
                                       "indexed assignment to unknown local: ");
     }
     if (stmt.target_expr.kind == ExprKind::Index && stmt.target_expr.children.size() == 2) {

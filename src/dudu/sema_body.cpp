@@ -162,7 +162,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
             } else {
                 check_known_type_ref(scope.symbols, node_location(stmt.location, stmt.type_ref),
                                      stmt.type_ref, "unknown loop binding type: ");
-                check_iterable_binding(scope.symbols, scope.locals, scope.local_type_refs,
+                check_iterable_binding(scope.symbols, scope.local_type_refs,
                                        node_location(stmt.location, stmt.iterable_expr),
                                        binding_type, stmt.iterable_expr);
             }

@@ -69,28 +69,24 @@ std::optional<std::string> iterable_type_from_type(TypeRef type) {
 }
 
 std::optional<TypeRef>
-iterable_value_type_ref(const Symbols& symbols, const std::map<std::string, std::string>& locals,
-                        const std::map<std::string, TypeRef>& local_type_refs,
+iterable_value_type_ref(const std::map<std::string, TypeRef>& local_type_refs,
                         const std::string& name) {
-    const TypeRef type_ref = local_type_ref(symbols, locals, local_type_refs, name);
+    const TypeRef type_ref = local_type_ref(local_type_refs, name);
     if (type_ref.kind == TypeKind::Unknown) {
         return std::nullopt;
     }
     return iterable_type_ref_from_type(type_ref);
 }
 
-std::string iterable_value_type(const Symbols& symbols,
-                                const std::map<std::string, std::string>& locals,
-                                const std::map<std::string, TypeRef>& local_type_refs,
+std::string iterable_value_type(const std::map<std::string, TypeRef>& local_type_refs,
                                 const std::string& name) {
-    if (const auto element = iterable_value_type_ref(symbols, locals, local_type_refs, name)) {
+    if (const auto element = iterable_value_type_ref(local_type_refs, name)) {
         return substitute_type_ref_text(*element, {});
     }
     return {};
 }
 
 void check_iterable_binding(const Symbols& symbols,
-                            const std::map<std::string, std::string>& locals,
                             const std::map<std::string, TypeRef>& local_type_refs,
                             const SourceLocation& location, const TypeRef& binding_type,
                             const Expr& iterable) {
@@ -101,11 +97,10 @@ void check_iterable_binding(const Symbols& symbols,
         return;
     }
     const std::string& name = iterable.name;
-    if (!locals.contains(name)) {
+    if (!local_type_refs.contains(name)) {
         throw CompileError(location, "iteration over unknown local: " + name);
     }
-    const std::optional<TypeRef> element_type =
-        iterable_value_type_ref(symbols, locals, local_type_refs, name);
+    const std::optional<TypeRef> element_type = iterable_value_type_ref(local_type_refs, name);
     if (!element_type) {
         throw CompileError(location, "cannot iterate non-container: " + name);
     }

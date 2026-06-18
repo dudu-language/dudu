@@ -524,7 +524,11 @@ push. They are not release packaging work.
    a member path string first. Nested expression emission preserves symbol
    context through callee, member, dict-entry, named-argument, index,
    collection literal, tuple, template-call argument, swizzle, pointer-cast,
-   and fixed-array literal children. Enum variant recognition now uses a shared
+   and fixed-array literal children. Iterable/indexed-local helpers now accept
+   local `TypeRef` metadata directly instead of carrying rendered local type
+   strings through APIs that no longer read them, and emitted-local type
+   inference no longer accepts the rendered local type map. Enum variant
+   recognition now uses a shared
    structural expression helper in sema, codegen, and match patterns instead of
    duplicate dotted-string reconstruction. Native import member type lookup now
    walks parsed member expressions inside `sema_native` before crossing into
