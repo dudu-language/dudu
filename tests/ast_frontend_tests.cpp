@@ -120,12 +120,13 @@ void test_type_compat_uses_type_ast_for_pointers() {
 
     const dudu::Expr name_expr = dudu::parse_expr_text("value");
     assert(dudu::assignment_type_allowed(dudu::parse_type_text("array[list[i32]][4]"), name_expr,
-                                         "array[list[i32]][4]"));
+                                         dudu::parse_type_text("array[list[i32]][4]")));
     assert(!dudu::assignment_type_allowed(dudu::parse_type_text("array[list[i32]][4]"), name_expr,
-                                          "array[list[str]][4]"));
+                                          dudu::parse_type_text("array[list[str]][4]")));
     assert(dudu::assignment_type_allowed(dudu::parse_type_text("std.unique_ptr[Node]"), name_expr,
-                                         "__detail.__unique_ptr_t[Node]"));
-    assert(!dudu::assignment_type_allowed(dudu::parse_type_text("f32"), name_expr, "__m128"));
+                                         dudu::parse_type_text("__detail.__unique_ptr_t[Node]")));
+    assert(!dudu::assignment_type_allowed(dudu::parse_type_text("f32"), name_expr,
+                                          dudu::parse_type_text("__m128")));
 
     assert(dudu::assignment_type_allowed(dudu::parse_type_text("Result[i32, str]"),
                                          dudu::parse_expr_text("Ok(7)"),

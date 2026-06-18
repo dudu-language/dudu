@@ -1502,6 +1502,9 @@ push. They are not release packaging work.
    entry point; the last string overload in that layer has been deleted, with
    any remaining string compatibility parsing kept at the outer
    `assignment_type_allowed` boundary.
+   The public `assignment_type_allowed` API now accepts only structured
+   `TypeRef` got-types; its string overload and the dependent wrapper/variant
+   helper paths have been removed rather than preserved for tests.
    Operator and condition semantic diagnostics now use `FunctionSignature`
    accessors for parameter counts and parameter type text instead of reading
    the legacy signature string vector directly.

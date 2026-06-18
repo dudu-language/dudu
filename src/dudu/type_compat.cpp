@@ -149,14 +149,12 @@ bool is_value_from_reference(const TypeRef& expected, const TypeRef& got) {
     return false;
 }
 
-bool is_value_wrapper_assignment(std::string expected, const Expr& expr, std::string got) {
-    expected = trim_copy(std::move(expected));
-    got = trim_copy(std::move(got));
-    const std::string inner = wrapped_type_arg(expected);
-    if (inner == expected) {
+bool is_value_wrapper_assignment(const TypeRef& expected, const Expr& expr, const TypeRef& got) {
+    const TypeRef inner = wrapped_type_arg_ref(expected);
+    if (type_ref_equivalent(inner, expected)) {
         return false;
     }
-    return assignment_type_allowed(parse_type_text(inner, expr.location), expr, got);
+    return assignment_type_allowed(inner, expr, got);
 }
 
 bool is_null_pointer(std::string expected, const Expr& expr, std::string got) {
@@ -290,7 +288,7 @@ std::string normalize_c_tags(std::string type) {
     return type;
 }
 
-bool is_variant_value(const TypeRef& expected, const Expr& expr, const std::string& got) {
+bool is_variant_value(const TypeRef& expected, const Expr& expr, const TypeRef& got) {
     if (expected.kind != TypeKind::Template || expected.name != "variant" ||
         expected.children.empty()) {
         return false;
@@ -414,7 +412,7 @@ bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const Ty
                                                    normalized_got_ref)) {
         return true;
     }
-    if (is_variant_value(normalized_expected_ref, expr, normalized_got)) {
+    if (is_variant_value(normalized_expected_ref, expr, normalized_got_ref)) {
         return true;
     }
     if (!normalized_got.empty() && normalized_got != "auto") {
@@ -435,7 +433,7 @@ bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const Ty
            compact_type(normalize_c_tags(normalized_expected)) ==
                compact_type(normalize_c_tags(normalized_got)) ||
            (is_string_type(normalized_expected) && is_string_type(normalized_got)) ||
-           is_value_wrapper_assignment(normalized_expected, expr, normalized_got) ||
+           is_value_wrapper_assignment(normalized_expected_ref, expr, normalized_got_ref) ||
            is_null_pointer(normalized_expected, expr, normalized_got) ||
            is_void_pointer_target(normalized_expected, normalized_got) ||
            is_const_pointer_binding(normalized_expected, normalized_got) ||
@@ -449,25 +447,6 @@ bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const Ty
            is_cpp_associated_type_binding(normalized_expected, normalized_got) ||
            (normalized_expected == "cstr" && normalized_got == "str" &&
             expr.kind == ExprKind::StringLiteral) ||
-           (is_numeric_type(wrapped_type_arg(normalized_expected)) &&
-            simple_literal_type(expr) == "number");
-}
-
-bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const std::string& got) {
-    const std::string normalized_got = normalize_cpp_type_artifacts(got);
-    if (!normalized_got.empty() && normalized_got != "auto") {
-        return assignment_type_allowed(expected, expr, parse_type_text(normalized_got));
-    }
-    const std::string normalized_expected = normalize_cpp_type_artifacts(expected);
-    const TypeRef normalized_expected_ref = parse_type_text(normalized_expected, expected.location);
-    if (parsed_expected_literal_assignment_allowed(
-            normalized_expected_ref, expr,
-            normalized_got.empty() ? TypeRef{} : parse_type_text(normalized_got, expr.location))) {
-        return true;
-    }
-    return normalized_expected == "auto" || is_explicit_cast_to(normalized_expected, expr) ||
-           (!is_container_literal_expr(expr) && normalized_got.empty()) ||
-           normalized_got == "auto" ||
            (is_numeric_type(wrapped_type_arg(normalized_expected)) &&
             simple_literal_type(expr) == "number");
 }
