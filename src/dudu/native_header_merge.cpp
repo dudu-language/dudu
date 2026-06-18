@@ -8,10 +8,11 @@ namespace dudu {
 
 std::string native_function_key(const NativeFunctionDecl& fn) {
     std::string key = fn.name + "(";
-    for (const std::string& param : native_function_param_type_texts(fn)) {
-        key += param + ",";
+    for (const TypeRef& param : native_function_param_type_refs(fn)) {
+        key += type_ref_text(param) + ",";
     }
-    return key + (fn.variadic ? "..." : "") + ")->" + native_function_return_type_text(fn) + "/" +
+    return key + (fn.variadic ? "..." : "") + ")->" +
+           type_ref_text(native_function_return_type_ref(fn)) + "/" +
            std::to_string(fn.min_params);
 }
 

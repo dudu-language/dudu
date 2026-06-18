@@ -48,12 +48,12 @@ std::string native_macro_detail(const NativeMacroDecl& macro) {
 std::string native_function_detail(const NativeFunctionDecl& fn) {
     std::ostringstream out;
     out << fn.name << "(";
-    const std::vector<std::string> params = native_function_param_type_texts(fn);
+    const std::vector<TypeRef> params = native_function_param_type_refs(fn);
     for (size_t i = 0; i < params.size(); ++i) {
         if (i > 0) {
             out << ", ";
         }
-        out << params[i];
+        out << type_ref_text(params[i]);
     }
     if (fn.variadic) {
         if (!params.empty()) {
@@ -61,7 +61,7 @@ std::string native_function_detail(const NativeFunctionDecl& fn) {
         }
         out << "...";
     }
-    out << ") -> " << native_function_return_type_text(fn);
+    out << ") -> " << type_ref_text(native_function_return_type_ref(fn));
     return out.str();
 }
 

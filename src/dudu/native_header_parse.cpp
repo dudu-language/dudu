@@ -77,7 +77,7 @@ std::string method_key(const FunctionDecl& fn) {
     std::string key = fn.name + "(";
     for (const ParamDecl& param : fn.params)
         key += type_ref_text(param.type_ref) + ",";
-    return key + ")->" + function_return_type_text(fn);
+    return key + ")->" + type_ref_text(function_return_type_ref(fn));
 }
 
 void add_base_class(ClassDecl& klass, std::string base, const SourceLocation& location) {

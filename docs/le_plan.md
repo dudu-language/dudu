@@ -1685,3 +1685,6 @@ push. They are not release packaging work.
    Enum declaration lookup, foreign C++ type detection, and pointer type
    lowering no longer expose unused raw-string overloads that only parsed text
    and delegated to structured `TypeRef` implementations.
+   Native function display and merge-key code now renders directly from
+   `TypeRef` parameter/return helpers, and the public native/function return
+   string helper APIs have been removed.

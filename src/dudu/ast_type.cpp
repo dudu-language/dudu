@@ -296,10 +296,6 @@ TypeRef function_return_type_ref(const FunctionDecl& fn) {
     return function_has_return_type(fn) ? fn.return_type_ref : void_type_ref(fn.location);
 }
 
-std::string function_return_type_text(const FunctionDecl& fn) {
-    return type_ref_text(function_return_type_ref(fn));
-}
-
 std::vector<TypeRef> native_function_param_type_refs(const NativeFunctionDecl& fn) {
     if (!fn.param_type_refs.empty()) {
         return fn.param_type_refs;
@@ -317,20 +313,6 @@ TypeRef native_function_return_type_ref(const NativeFunctionDecl& fn) {
         return fn.return_type_ref;
     }
     return parse_type_text(fn.return_type.empty() ? "auto" : fn.return_type, fn.location);
-}
-
-std::vector<std::string> native_function_param_type_texts(const NativeFunctionDecl& fn) {
-    const std::vector<TypeRef> params = native_function_param_type_refs(fn);
-    std::vector<std::string> out;
-    out.reserve(params.size());
-    for (const TypeRef& param : params) {
-        out.push_back(type_ref_text(param));
-    }
-    return out;
-}
-
-std::string native_function_return_type_text(const NativeFunctionDecl& fn) {
-    return type_ref_text(native_function_return_type_ref(fn));
 }
 
 TypeRef native_type_alias_type_ref(const NativeTypeDecl& type) {
