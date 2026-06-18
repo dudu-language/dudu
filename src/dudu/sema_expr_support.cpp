@@ -82,7 +82,7 @@ bool parse_local_function_type(const FunctionScope& scope, const std::string& na
         return alias != scope.symbols.alias_type_refs.end() && parse_ref(alias->second);
     };
     const TypeRef local_type = local_type_ref(scope, name);
-    if (local_type.kind != TypeKind::Unknown && parse_ref(local_type)) {
+    if (has_type_ref(local_type) && parse_ref(local_type)) {
         return true;
     }
     return false;

@@ -1445,3 +1445,6 @@ push. They are not release packaging work.
    function signature return access, and generic return binding now use
    `has_type_ref` rather than open-coding `TypeKind::Unknown` plus raw text
    checks.
+   Local function type parsing and function-type missing-return checks now also
+   use `has_type_ref`; the remaining raw text presence checks are confined to
+   parser/type rendering, LSP display, and the helper implementation itself.

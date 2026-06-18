@@ -10,7 +10,7 @@ namespace dudu {
 namespace {
 
 bool missing_type_ref(const TypeRef& type) {
-    return type.kind == TypeKind::Unknown && trim_copy(type.text).empty();
+    return !has_type_ref(type);
 }
 
 } // namespace
