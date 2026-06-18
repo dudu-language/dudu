@@ -156,14 +156,16 @@ std::optional<TypeRef> binary_expr_type_ref(const FunctionScope& scope, const Ex
         if (const auto signature = binary_operator_signature(scope.symbols, expr.op, left_ref,
                                                              expr.children[1], right_ref)) {
             if (location != nullptr) {
-                if (signature->params.size() != 1) {
-                    sema_expr_fail(*location, "operator " + expr.op + " expects 1 argument, got " +
-                                                  std::to_string(signature->params.size()));
+                if (signature_param_count(*signature) != 1) {
+                    sema_expr_fail(*location,
+                                   "operator " + expr.op + " expects 1 argument, got " +
+                                       std::to_string(signature_param_count(*signature)));
                 } else if (!can_assign_ast(scope, signature_param_type_ref(*signature, 0),
                                            expr.children[1], right_ref)) {
                     const std::string right = substitute_type_ref_text(right_ref, {});
                     sema_expr_fail(*location, "operator " + expr.op + " expects " +
-                                                  signature->params.front() + ", got " + right);
+                                                  signature_param_type_text(*signature, 0) +
+                                                  ", got " + right);
                 }
                 if (!type_ref_is_name(signature_return_type_ref(*signature), "bool")) {
                     sema_expr_fail(*location,

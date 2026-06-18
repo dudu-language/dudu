@@ -169,7 +169,7 @@ void check_condition_type(FunctionScope& scope, const Stmt& stmt,
     const TypeRef got_ref = callbacks.infer_expr_type(scope, stmt.condition_expr, &location);
     if (has_type_ref(got_ref) && !type_ref_is_name(got_ref, "bool") && !type_ref_is_auto(got_ref)) {
         if (const auto signature = dudu_operator_signature(scope.symbols, "bool", got_ref);
-            signature && signature->params.empty() &&
+            signature && signature_param_count(*signature) == 0 &&
             type_ref_is_name(signature_return_type_ref(*signature), "bool")) {
             return;
         }
