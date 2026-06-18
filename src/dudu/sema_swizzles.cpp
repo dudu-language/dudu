@@ -1,5 +1,6 @@
 #include "dudu/sema_methods.hpp"
 
+#include "dudu/ast_type.hpp"
 #include "dudu/sema_common.hpp"
 #include "dudu/sema_methods_internal.hpp"
 
@@ -98,6 +99,24 @@ std::optional<std::string> swizzle_assignment_type_for_type(const Symbols& symbo
         }
     }
     return swizzle_type_for_type(symbols, receiver_type, swizzle);
+}
+
+std::optional<TypeRef> swizzle_assignment_type_ref_for_type(const Symbols& symbols,
+                                                            const SourceLocation& location,
+                                                            const TypeRef& receiver_type,
+                                                            const std::string& swizzle) {
+    const auto type =
+        swizzle_assignment_type_for_type(symbols, location,
+                                         substitute_type_ref_text(receiver_type, {}), swizzle);
+    if (!type) {
+        return std::nullopt;
+    }
+    TypeRef result;
+    result.kind = TypeKind::Named;
+    result.name = *type;
+    result.text = *type;
+    result.location = location;
+    return result;
 }
 
 } // namespace dudu

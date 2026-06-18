@@ -123,6 +123,26 @@ std::optional<std::string> unary_type_child_text(std::string_view type,
     return unary_type_child_text(parse_type_text(type), kinds);
 }
 
+std::optional<TypeRef> unary_type_child_ref(const TypeRef& type, TypeKind kind) {
+    if (type.kind != kind || type.children.size() != 1) {
+        return std::nullopt;
+    }
+    return type.children.front();
+}
+
+std::optional<TypeRef> unary_type_child_ref(const TypeRef& type,
+                                            std::initializer_list<TypeKind> kinds) {
+    if (type.children.size() != 1) {
+        return std::nullopt;
+    }
+    for (const TypeKind kind : kinds) {
+        if (type.kind == kind) {
+            return type.children.front();
+        }
+    }
+    return std::nullopt;
+}
+
 std::string type_ref_head_name(const TypeRef& type) {
     switch (type.kind) {
     case TypeKind::Named:

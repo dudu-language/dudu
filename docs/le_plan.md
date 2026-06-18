@@ -569,7 +569,10 @@ push. They are not release packaging work.
    reparsing it. Iterable inference now follows the same direction: the
    `TypeRef` result path extracts local iterable element types directly from
    parsed local metadata or one parsed declared local type, instead of calling
-   the string-result helper and parsing the rendered element type.
+   the string-result helper and parsing the rendered element type. Assignment
+   target inference now peels pointer pointee types and swizzle assignment
+   result types as `TypeRef` nodes instead of parsing rendered target type
+   strings.
    Native C++ type-artifact normalization now has a parsed `TypeRef` entry
    point, so tuple-element and non-array template cleanup no longer require
    parsed callers to stringify only to reparse immediately.

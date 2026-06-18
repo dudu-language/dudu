@@ -1733,6 +1733,9 @@ LSP source edits are also moving to AST-owned ranges:
   parsed local metadata or one parsed declared local type, instead of routing
   through the older string-returning iterable helper and reparsing the rendered
   element type.
+- Assignment target inference now exposes parsed wrapper-child helpers and a
+  swizzle assignment `TypeRef` path, so pointer dereference and swizzle write
+  targets no longer parse rendered target type strings.
 - Member-path type inference now resolves local names, class static members,
   recursive member fields, indexed member receivers, inherited fields,
   `Result` helper fields, and Dudu swizzles through parsed `TypeRef` metadata

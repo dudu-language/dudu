@@ -49,14 +49,11 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt,
         if (type_text.empty() || type_text == "auto") {
             return {};
         }
-        const auto pointee_type = unary_type_child_text(type, TypeKind::Pointer);
+        const auto pointee_type = unary_type_child_ref(type, TypeKind::Pointer);
         if (!pointee_type) {
             sema_fail(target_location, "cannot dereference non-pointer: " + type_text);
         }
-        if (type.kind == TypeKind::Pointer && type.children.size() == 1) {
-            return type.children.front();
-        }
-        return parse_type_text(*pointee_type, target_location);
+        return *pointee_type;
     }
     if (stmt.target_expr.kind == ExprKind::Index && stmt.target_expr.children.size() == 2 &&
         stmt.target_expr.children[0].kind == ExprKind::Name) {
@@ -107,10 +104,9 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt,
             const Expr& receiver = stmt.target_expr.children.front();
             const TypeRef receiver_type_ref =
                 callbacks.infer_expr_type(scope, receiver, &target_location);
-            const std::string receiver_type = substitute_type_ref_text(receiver_type_ref, {});
-            if (const auto swizzle = swizzle_assignment_type_for_type(
-                    scope.symbols, target_location, receiver_type, stmt.target_expr.name)) {
-                return parse_type_text(*swizzle, target_location);
+            if (const auto swizzle = swizzle_assignment_type_ref_for_type(
+                    scope.symbols, target_location, receiver_type_ref, stmt.target_expr.name)) {
+                return *swizzle;
             }
         }
         if (const TypeRef type =

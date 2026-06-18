@@ -29,6 +29,9 @@ std::optional<std::string> unary_type_child_text(const TypeRef& type,
                                                  std::initializer_list<TypeKind> kinds);
 std::optional<std::string> unary_type_child_text(std::string_view type,
                                                  std::initializer_list<TypeKind> kinds);
+std::optional<TypeRef> unary_type_child_ref(const TypeRef& type, TypeKind kind);
+std::optional<TypeRef> unary_type_child_ref(const TypeRef& type,
+                                            std::initializer_list<TypeKind> kinds);
 bool type_ref_contains_kind(const TypeRef& type, TypeKind kind);
 std::string type_ref_head_name(const TypeRef& type);
 std::string type_ref_text(const TypeRef& type);
