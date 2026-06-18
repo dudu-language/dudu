@@ -15,8 +15,7 @@ bool sema_has_expr(const Expr& expr);
 bool missing_expr(const Expr& expr);
 const SourceLocation& node_location(const SourceLocation& fallback, const Expr& expr);
 const SourceLocation& node_location(const SourceLocation& fallback, const TypeRef& type);
-void bind_local(FunctionScope& scope, const std::string& name, const std::string& type,
-                const TypeRef& type_ref = {});
+void bind_local(FunctionScope& scope, const std::string& name, const TypeRef& type_ref);
 std::vector<Expr> index_arg_exprs(const Expr& index_expr);
 struct ScopedCallee {
     std::optional<ExprPath> path;

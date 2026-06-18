@@ -65,7 +65,7 @@ bool bind_payload_case(FunctionScope& nested, const EnumValueDecl& value, const 
         if (binding_name->kind != ExprKind::Name || binding_name->name.empty()) {
             sema_fail(binding.location, "payload case bindings must be names");
         }
-        bind_local(nested, binding_name->name, type_ref_text(field->type_ref), field->type_ref);
+        bind_local(nested, binding_name->name, field->type_ref);
     }
     return true;
 }
@@ -82,20 +82,17 @@ void bind_wrapper_case(FunctionScope& nested, const WrapperMatchType& wrapper, c
     }
     if (wrapper.kind == WrapperMatchKind::Option && *name == "Some" && wrapper.args.size() == 1 &&
         wrapper.arg_refs.size() == 1) {
-        bind_local(nested, pattern.children.front().name, trim(wrapper.args[0]),
-                   wrapper.arg_refs[0]);
+        bind_local(nested, pattern.children.front().name, wrapper.arg_refs[0]);
         return;
     }
     if (wrapper.kind == WrapperMatchKind::Result && wrapper.args.size() == 2 &&
         wrapper.arg_refs.size() == 2) {
         if (*name == "Ok") {
-            bind_local(nested, pattern.children.front().name, trim(wrapper.args[0]),
-                       wrapper.arg_refs[0]);
+            bind_local(nested, pattern.children.front().name, wrapper.arg_refs[0]);
             return;
         }
         if (*name == "Err") {
-            bind_local(nested, pattern.children.front().name, trim(wrapper.args[1]),
-                       wrapper.arg_refs[1]);
+            bind_local(nested, pattern.children.front().name, wrapper.arg_refs[1]);
             return;
         }
     }

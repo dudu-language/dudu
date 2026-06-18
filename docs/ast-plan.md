@@ -1993,6 +1993,9 @@ LSP source edits are also moving to AST-owned ranges:
 - Inheritance override keys and signature equality now render parameter and
   return types through `FunctionSignature` `TypeRef` helpers instead of reading
   the signature string mirrors directly.
+- Function scopes no longer carry a rendered local type string map; sema and
+  LSP local bindings record `TypeRef` metadata only and render strings at
+  display or native compatibility boundaries.
 
 Expression parsing has moved onto the lexer/token stream:
 

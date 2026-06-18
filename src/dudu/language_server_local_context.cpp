@@ -60,12 +60,14 @@ bool function_contains_line(const FunctionDecl& fn, int cursor_line) {
     return fn.location.line <= cursor_line && cursor_line <= std::max(fn.location.line, end);
 }
 
-void lsp_bind_local(FunctionScope& scope, const std::string& name, const std::string& type,
-                    const TypeRef& type_ref = {}) {
-    if (name.empty() || type.empty()) {
+void lsp_bind_local(FunctionScope& scope, const std::string& name, TypeRef type_ref) {
+    if (name.empty()) {
         return;
     }
-    bind_local(scope, name, type, type_ref);
+    if (!has_type_ref(type_ref)) {
+        type_ref = parse_type_text("auto");
+    }
+    bind_local(scope, name, type_ref);
 }
 
 TypeRef infer_lsp_expr_type(FunctionScope& scope, const Expr& expr) {
@@ -75,8 +77,7 @@ TypeRef infer_lsp_expr_type(FunctionScope& scope, const Expr& expr) {
 
 void lsp_bind_inferred_local(FunctionScope& scope, const std::string& name, const Expr& expr) {
     const TypeRef inferred = infer_lsp_expr_type(scope, expr);
-    const std::string inferred_text = substitute_type_ref_text(inferred, {});
-    lsp_bind_local(scope, name, inferred_text.empty() ? "auto" : inferred_text, inferred);
+    lsp_bind_local(scope, name, inferred);
 }
 
 void bind_tuple_names(FunctionScope& scope, const Stmt& stmt) {
@@ -90,7 +91,7 @@ void bind_tuple_names(FunctionScope& scope, const Stmt& stmt) {
         return;
     }
     for (size_t i = 0; i < names.size(); ++i) {
-        lsp_bind_local(scope, names[i], substitute_type_ref_text(types[i], {}), types[i]);
+        lsp_bind_local(scope, names[i], types[i]);
     }
 }
 
@@ -101,7 +102,7 @@ void bind_statement(FunctionScope& scope, const Stmt& stmt) {
                 infer_array_literal_shape_type(stmt.type_ref, stmt.value_expr);
             const TypeRef type_ref =
                 inferred.status == ArrayShapeStatus::Inferred ? inferred.type_ref : stmt.type_ref;
-            lsp_bind_local(scope, stmt.name, substitute_type_ref_text(type_ref, {}), type_ref);
+            lsp_bind_local(scope, stmt.name, type_ref);
             return;
         }
         lsp_bind_inferred_local(scope, stmt.name, stmt.value_expr);
@@ -118,9 +119,7 @@ void bind_statement(FunctionScope& scope, const Stmt& stmt) {
         }
     }
     if (stmt.kind == StmtKind::Except && !stmt.name.empty()) {
-        const std::string type =
-            has_type_ref(stmt.type_ref) ? substitute_type_ref_text(stmt.type_ref, {}) : "auto";
-        lsp_bind_local(scope, stmt.name, type, stmt.type_ref);
+        lsp_bind_local(scope, stmt.name, stmt.type_ref);
     }
 }
 
@@ -157,9 +156,7 @@ void collect_for_body_locals(FunctionScope scope, const Stmt& stmt, int cursor_l
                 binding_type = *inferred;
             }
         }
-        const std::string type =
-            has_type_ref(binding_type) ? substitute_type_ref_text(binding_type, {}) : "auto";
-        lsp_bind_local(scope, stmt.name, type.empty() ? "auto" : type, binding_type);
+        lsp_bind_local(scope, stmt.name, binding_type);
     }
     collect_block_locals(scope, stmt.children, cursor_line);
     out = scope.local_type_refs;
@@ -180,10 +177,6 @@ void collect_block_locals(FunctionScope& scope, const std::vector<Stmt>& stateme
             collect_for_body_locals(scope, stmt, cursor_line, nested);
             if (cursor_line != std::numeric_limits<int>::max()) {
                 scope.local_type_refs = std::move(nested);
-                scope.locals.clear();
-                for (const auto& [name, type_ref] : scope.local_type_refs) {
-                    scope.locals[name] = substitute_type_ref_text(type_ref, {});
-                }
             }
             continue;
         }
@@ -195,7 +188,7 @@ void collect_block_locals(FunctionScope& scope, const std::vector<Stmt>& stateme
 
 void collect_function_locals(FunctionScope& scope, const FunctionDecl& fn, int cursor_line) {
     for (const ParamDecl& param : fn.params) {
-        lsp_bind_local(scope, param.name, type_ref_text(param.type_ref), param.type_ref);
+        lsp_bind_local(scope, param.name, param.type_ref);
     }
     collect_block_locals(scope, fn.statements, cursor_line);
 }

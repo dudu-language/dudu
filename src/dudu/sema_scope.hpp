@@ -13,7 +13,6 @@ struct FunctionScope {
     }
 
     const Symbols& symbols;
-    std::map<std::string, std::string> locals;
     std::set<std::string> constants;
     std::string target_mode = "hosted";
     std::string current_class;

@@ -1235,7 +1235,10 @@ declarations safely.
    `TypeRef` map is authoritative, and parser helpers that reparse text that
    was already tokenized. Explicit user escape hatches such as `cpp(...)` may
    remain, but compiler-internal fallback APIs should be deleted once their
-   callers have structured equivalents.
+   callers have structured equivalents. In particular, fallback string
+   callbacks are migration scaffolding only: after the structured AST path
+   owns a behavior, the matching callback must be removed rather than kept as
+   a parallel implementation or quiet recovery path.
 
    Status: in progress. Body, generic, constructor, and native assignment
    paths are being migrated from rendered string type pairs to parsed
@@ -1258,3 +1261,5 @@ declarations safely.
    Inheritance override keys and signature equality now render through
    `FunctionSignature` `TypeRef` helpers instead of comparing signature string
    mirrors directly.
+   Function scopes no longer carry a rendered local type string map; semantic
+   checks and LSP local lookup bind locals through `TypeRef` metadata only.

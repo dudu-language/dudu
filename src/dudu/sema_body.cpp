@@ -137,7 +137,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
             check_known_type_ref(scope.symbols, node_location(stmt.location, stmt.type_ref),
                                  stmt.type_ref, "unknown catch type: ");
             TypeRef catch_type = const_reference_type_ref(stmt.type_ref);
-            bind_local(nested, stmt.name, substitute_type_ref_text(catch_type, {}), catch_type);
+            bind_local(nested, stmt.name, catch_type);
         }
         check_block(nested, stmt.children, return_type_ref, loop_depth, callbacks);
         return;
@@ -166,7 +166,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
                                        node_location(stmt.location, stmt.iterable_expr),
                                        binding_type, stmt.iterable_expr);
             }
-            bind_local(nested, stmt.name, substitute_type_ref_text(binding_type, {}), binding_type);
+            bind_local(nested, stmt.name, binding_type);
         }
         check_block(nested, stmt.children, return_type_ref, loop_depth + 1, callbacks);
         return;
@@ -236,7 +236,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
                                      node_location(stmt.location, stmt.value_expr), callbacks);
             }
         }
-        bind_local(scope, stmt.name, type.text, type.ref);
+        bind_local(scope, stmt.name, type.ref);
         if (is_dudu_all_caps(stmt.name)) {
             scope.constants.insert(stmt.name);
         }
@@ -254,7 +254,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
             }
             check_destructure_bindings(stmt.location, names, scope.local_type_refs);
             for (size_t i = 0; i < names.size(); ++i) {
-                bind_local(scope, names[i], substitute_type_ref_text(types[i], {}), types[i]);
+                bind_local(scope, names[i], types[i]);
             }
             return;
         }
@@ -268,8 +268,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
             check_local_binding_name(node_location(stmt.location, stmt.target_expr), name);
             const TypeRef inferred = callbacks.infer_expr_type(
                 scope, stmt.value_expr, &node_location(stmt.location, stmt.value_expr));
-            const std::string inferred_text = substitute_type_ref_text(inferred, {});
-            bind_local(scope, name, inferred_text.empty() ? "auto" : inferred_text, inferred);
+            bind_local(scope, name, inferred);
             if (is_dudu_all_caps(name)) {
                 scope.constants.insert(name);
             }
@@ -294,7 +293,6 @@ Symbols with_generic_params(Symbols symbols, const std::vector<std::string>& par
 }
 
 void copy_base_scope_state(FunctionScope& dst, const FunctionScope& src) {
-    dst.locals = src.locals;
     dst.constants = src.constants;
     dst.target_mode = src.target_mode;
     dst.current_class = src.current_class;
@@ -317,7 +315,7 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols,
         }
     }
     for (const ConstDecl& constant : module.constants) {
-        bind_local(base, constant.name, type_ref_text(constant.type_ref), constant.type_ref);
+        bind_local(base, constant.name, constant.type_ref);
         base.constants.insert(constant.name);
     }
     for (const ClassDecl& klass : module.classes) {
@@ -333,7 +331,7 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols,
             scope.allow_super_init = method.name == "init";
             scope.return_type_ref = function_return_type_ref(method);
             for (const ParamDecl& param : method.params) {
-                bind_local(scope, param.name, type_ref_text(param.type_ref), param.type_ref);
+                bind_local(scope, param.name, param.type_ref);
             }
             const TypeRef return_type_ref = function_return_type_ref(method);
             const std::string return_type = substitute_type_ref_text(return_type_ref, {});
@@ -350,7 +348,7 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols,
         copy_base_scope_state(scope, base);
         scope.return_type_ref = function_return_type_ref(fn);
         for (const ParamDecl& param : fn.params) {
-            bind_local(scope, param.name, type_ref_text(param.type_ref), param.type_ref);
+            bind_local(scope, param.name, param.type_ref);
         }
         const TypeRef return_type_ref = function_return_type_ref(fn);
         check_block(scope, fn.statements, return_type_ref, 0, callbacks);

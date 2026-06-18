@@ -26,9 +26,7 @@ const SourceLocation& node_location(const SourceLocation& fallback, const TypeRe
     return type.range.end.column > type.range.start.column ? type.location : fallback;
 }
 
-void bind_local(FunctionScope& scope, const std::string& name, const std::string& type,
-                const TypeRef& type_ref) {
-    scope.locals[name] = type;
+void bind_local(FunctionScope& scope, const std::string& name, const TypeRef& type_ref) {
     if (type_ref.kind != TypeKind::Unknown || !type_ref.text.empty()) {
         scope.local_type_refs[name] = type_ref;
     } else {
