@@ -320,6 +320,12 @@ std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Ex
 
 std::optional<TypeRef> direct_template_call_type_ref(const FunctionScope& scope, const Expr& expr,
                                                      const SourceLocation* location) {
+    if (expr.template_args.empty() && expr.template_type_args.empty()) {
+        if (location != nullptr) {
+            sema_expr_fail(*location, "template call expects at least 1 type argument");
+        }
+        return std::nullopt;
+    }
     const std::string direct_callee = direct_callee_name(expr);
     if (direct_callee.starts_with("*")) {
         const std::vector<TypeRef> type_args = template_type_refs(expr);

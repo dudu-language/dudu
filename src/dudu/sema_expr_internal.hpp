@@ -100,8 +100,6 @@ void check_enum_variant_args_ast(const FunctionScope& scope, const EnumDecl& en,
 std::string template_call_callee(const FunctionScope& scope, const Expr& expr,
                                  const SourceLocation* location);
 bool is_offsetof_field_expr(const Expr& expr);
-std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr,
-                                    const SourceLocation* location);
 std::optional<FunctionSignature> explicit_generic_function_signature_ast(
     const FunctionScope& scope, const Expr& expr, const std::string& callee_base,
     const std::string& emitted_callee, const SourceLocation* location);

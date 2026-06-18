@@ -1656,6 +1656,11 @@ LSP source edits are also moving to AST-owned ranges:
   generic functions, local function values, native calls, native-prefix
   fallbacks, methods, and `super`; the old string-returning ordinary call
   inferencer and its unused helper branches have been deleted.
+- Template-call inference now stays on the typed direct-template-call path for
+  pointer casts, allocation, shape built-ins, explicit generic functions,
+  generic constructors, native explicit template calls, template methods, and
+  native-prefix fallbacks; the old string-returning template-call inferencer has
+  been deleted, with unsupported/unknown diagnostics owned by expression sema.
 - Condition and comparison-operator semantic checks now validate operator
   return types through parsed `signature_return_type_ref` metadata instead of
   comparing rendered signature return strings.

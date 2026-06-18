@@ -114,9 +114,22 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
         if (const auto call_type = direct_template_call_type_ref(scope, expr, location)) {
             return *call_type;
         }
-        if (const std::string inferred = infer_template_call_ast(scope, expr, location);
-            !inferred.empty()) {
-            return parse_type_text(inferred, type_location);
+        if (location != nullptr) {
+            const std::string callee = template_call_callee(scope, expr, location);
+            const ScopedCallee scoped_callee = scoped_call_callee(scope, expr, location);
+            const std::string& callee_base = scoped_callee.key;
+            if (callee_base.find('.') == std::string::npos && is_plain_identifier(callee_base) &&
+                !known_type(scope.symbols, callee_base)) {
+                sema_expr_fail(*location, "unknown function: " + callee);
+            }
+            if (callee_base.rfind('.') != std::string::npos) {
+                sema_expr_fail(*location, "unknown function: " + callee);
+            }
+            if (!expr.callee.empty() && expr.callee.front().kind != ExprKind::Name &&
+                expr.callee.front().kind != ExprKind::Member) {
+                sema_expr_fail(*location, "unsupported template call expression: " + callee_base);
+            }
+            sema_expr_fail(*location, "unknown template call: " + callee);
         }
         return {};
     case ExprKind::Unary:
