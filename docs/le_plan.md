@@ -1806,3 +1806,7 @@ push. They are not release packaging work.
    sema treats as bindings: typed declarations, first-assignment name targets,
    tuple destructuring, loop bindings, and catch bindings. Unused/shadow
    diagnostics no longer depend only on `VarDecl` statements.
+   LSP symbol-at-cursor and reference collection now use the same structured
+   binding forms for assignment-created locals and tuple destructuring targets.
+   Find-references/rename no longer treats inferred local definitions as plain
+   expression text while only typed declarations count as bindings.

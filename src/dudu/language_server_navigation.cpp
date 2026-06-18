@@ -70,6 +70,29 @@ SourceLocation expr_name_location(const Expr& expr) {
     return expr.location;
 }
 
+template <typename Add> void visit_stmt_binding_names(const Stmt& stmt, Add add) {
+    if ((stmt.kind == StmtKind::VarDecl || stmt.kind == StmtKind::For ||
+         stmt.kind == StmtKind::Except) &&
+        !stmt.name.empty()) {
+        add(stmt.name, stmt.location);
+        return;
+    }
+    if (stmt.kind != StmtKind::Assign) {
+        return;
+    }
+    if (stmt.target_expr.kind == ExprKind::Name && !stmt.target_expr.name.empty()) {
+        add(stmt.target_expr.name, stmt.target_expr.location);
+        return;
+    }
+    if (stmt.target_expr.kind == ExprKind::TupleLiteral) {
+        for (const Expr& child : stmt.target_expr.children) {
+            if (child.kind == ExprKind::Name && !child.name.empty()) {
+                add(child.name, child.location);
+            }
+        }
+    }
+}
+
 std::optional<std::string> ast_symbol_at_impl(const Document& doc, const Json* params,
                                               bool prefer_member_path) {
     const LspPosition position = lsp_position(params);
@@ -115,10 +138,7 @@ std::optional<std::string> ast_symbol_at_impl(const Document& doc, const Json* p
     const std::function<void(const std::vector<Stmt>&)> visit_stmts =
         [&](const std::vector<Stmt>& statements) {
             for (const Stmt& stmt : statements) {
-                if (stmt.kind == StmtKind::VarDecl || stmt.kind == StmtKind::For ||
-                    stmt.kind == StmtKind::Except) {
-                    set_if_hit(stmt.name, stmt.location);
-                }
+                visit_stmt_binding_names(stmt, set_if_hit);
                 visit_stmt_expressions(stmt, visit_expr);
                 visit_stmts(stmt.children);
             }
@@ -328,10 +348,7 @@ std::vector<ReferenceLocation> references_in(const Document& doc, const std::str
     const std::function<void(const std::vector<Stmt>&)> visit_stmts =
         [&](const std::vector<Stmt>& statements) {
             for (const Stmt& stmt : statements) {
-                if (stmt.kind == StmtKind::VarDecl || stmt.kind == StmtKind::For ||
-                    stmt.kind == StmtKind::Except) {
-                    add(stmt.name, stmt.location);
-                }
+                visit_stmt_binding_names(stmt, add);
                 visit_stmt_expressions(stmt, visit_expr);
                 visit_stmts(stmt.children);
             }
