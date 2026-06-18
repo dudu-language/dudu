@@ -1951,6 +1951,9 @@ LSP source edits are also moving to AST-owned ranges:
 - Native template signature binding now resolves compatibility `got` types
   through parsed alias `TypeRef` metadata before binding placeholders, with the
   string alias map retained only as a fallback for older callers.
+- Public string-index type queries now parse their receiver once and delegate to
+  the structured `TypeRef` indexing implementation. The older duplicate
+  string-only indexing implementation has been removed.
 
 Expression parsing has moved onto the lexer/token stream:
 

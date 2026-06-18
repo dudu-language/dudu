@@ -581,6 +581,8 @@ void test_index_type_inference_uses_type_ast() {
                                         dudu::parse_expr_text("0", location), "items") == "Item");
     assert(dudu::indexed_type_from_type(symbols, location, "Bag[Item]",
                                         dudu::parse_expr_text("0", location), "bag") == "Item");
+    assert(dudu::indexed_type_from_type(symbols, location, "dict[str, Item]",
+                                        dudu::parse_expr_text("key", location), "items") == "Item");
     const dudu::TypeRef aliased_list_item =
         dudu::indexed_type_ref_from_type(symbols, location, dudu::parse_type_text("Ints", location),
                                          dudu::parse_expr_text("0", location), "ints");
