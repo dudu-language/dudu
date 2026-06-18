@@ -1517,6 +1517,9 @@ push. They are not release packaging work.
    `alias_type_refs`; the string-alias overload of
    `template_type_arg_refs_resolved` remains only as compatibility coverage until
    the legacy alias map is deleted.
+   Override signature matching now compares parameter and return `TypeRef`
+   structure through `type_ref_equivalent` instead of rendering signatures to
+   strings for semantic equality.
    Native value type inference now reads `native_value_type_refs` directly.
    The `native_values` string map remains only as a display/native-boundary
    mirror populated from structured `TypeRef` data during symbol collection.

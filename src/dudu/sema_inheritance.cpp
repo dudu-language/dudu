@@ -357,13 +357,12 @@ const FunctionDecl* find_method_decl(const Symbols& symbols, const TypeRef& type
 }
 
 bool same_signature(const FunctionSignature& a, const FunctionSignature& b) {
-    if (signature_return_type_text(a) != signature_return_type_text(b) ||
+    if (!type_ref_equivalent(signature_return_type_ref(a), signature_return_type_ref(b)) ||
         signature_param_count(a) != signature_param_count(b)) {
         return false;
     }
     for (size_t i = 0; i < signature_param_count(a); ++i) {
-        if (substitute_type_ref_text(signature_param_type_ref(a, i), {}) !=
-            substitute_type_ref_text(signature_param_type_ref(b, i), {})) {
+        if (!type_ref_equivalent(signature_param_type_ref(a, i), signature_param_type_ref(b, i))) {
             return false;
         }
     }

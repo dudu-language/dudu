@@ -146,6 +146,10 @@ void test_core_type_helpers_use_type_ast() {
     assert(dudu::substitute_type_ref_text(
                dudu::explicit_array_element_type_ref(dudu::parse_type_text("array[list[i32]][4]")),
                {}) == "list[i32]");
+    assert(dudu::type_ref_equivalent(dudu::parse_type_text("fn(list[i32]) -> tuple[i32, f32]"),
+                                     dudu::parse_type_text("fn(list[i32]) -> tuple[i32, f32]")));
+    assert(!dudu::type_ref_equivalent(dudu::parse_type_text("fn(list[i32]) -> tuple[i32, f32]"),
+                                      dudu::parse_type_text("fn(list[f32]) -> tuple[i32, f32]")));
 
     const std::vector<dudu::TypeRef> tuple =
         dudu::template_type_arg_refs(dudu::parse_type_text("tuple[i32, list[str]]"), "tuple");

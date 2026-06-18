@@ -205,6 +205,57 @@ bool type_ref_is_void(const TypeRef& type) {
     return type_ref_is_name(type, "void");
 }
 
+bool type_ref_equivalent(const TypeRef& left, const TypeRef& right) {
+    if (left.kind != right.kind || left.children.size() != right.children.size()) {
+        return false;
+    }
+
+    switch (left.kind) {
+    case TypeKind::Named:
+    case TypeKind::Qualified:
+    case TypeKind::Template:
+        if (trim_copy(left.name.empty() ? left.text : left.name) !=
+            trim_copy(right.name.empty() ? right.text : right.name)) {
+            return false;
+        }
+        break;
+    case TypeKind::Value:
+        if (trim_copy(left.value.empty() ? left.text : left.value) !=
+            trim_copy(right.value.empty() ? right.text : right.value)) {
+            return false;
+        }
+        break;
+    case TypeKind::FixedArray:
+        if (trim_copy(left.value) != trim_copy(right.value)) {
+            return false;
+        }
+        break;
+    case TypeKind::Pointer:
+    case TypeKind::Reference:
+    case TypeKind::Const:
+    case TypeKind::Volatile:
+    case TypeKind::Atomic:
+    case TypeKind::Device:
+    case TypeKind::Storage:
+    case TypeKind::Shared:
+    case TypeKind::Static:
+    case TypeKind::Function:
+        break;
+    case TypeKind::Unknown:
+        if (trim_copy(left.text) != trim_copy(right.text)) {
+            return false;
+        }
+        break;
+    }
+
+    for (size_t i = 0; i < left.children.size(); ++i) {
+        if (!type_ref_equivalent(left.children[i], right.children[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
 TypeRef void_type_ref(SourceLocation location) {
     return parse_type_text("void", location);
 }
