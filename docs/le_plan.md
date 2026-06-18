@@ -636,7 +636,8 @@ push. They are not release packaging work.
    kept at explicit C++/diagnostic boundaries. Named, tuple, function,
    fixed-array, slice/span, result-wrapper, and native tuple-index return types
    now rely on structured `TypeRef` fields instead of prefilled rendered text
-   mirrors.
+   mirrors. Remaining `TypeRef.text` writes are confined to explicit
+   substitution helpers rather than ordinary sema/codegen type construction.
    Templated pointer-cast semantic inference also builds the pointee from
    parsed template `TypeRef` arguments instead of reconstructing `Name[...]`
    text and reparsing it. Inferred array literal shapes now carry a
