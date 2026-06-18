@@ -3,10 +3,11 @@
 #include "dudu/ast_expr.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
+#include "dudu/language_server_lint_common.hpp"
+#include "dudu/language_server_lint_unreachable.hpp"
 #include "dudu/language_server_support.hpp"
 #include "dudu/sema_common.hpp"
 
-#include <filesystem>
 #include <map>
 #include <optional>
 #include <set>
@@ -60,22 +61,6 @@ bool is_suspicious_numeric_cast(const std::string& target, std::string source) {
     return false;
 }
 
-bool same_source_file(const std::filesystem::path& lhs, const std::filesystem::path& rhs) {
-    if (lhs.empty() || rhs.empty()) {
-        return lhs == rhs;
-    }
-    std::error_code error;
-    const std::filesystem::path lhs_canonical = std::filesystem::weakly_canonical(lhs, error);
-    if (error) {
-        return lhs.lexically_normal() == rhs.lexically_normal();
-    }
-    const std::filesystem::path rhs_canonical = std::filesystem::weakly_canonical(rhs, error);
-    if (error) {
-        return lhs.lexically_normal() == rhs.lexically_normal();
-    }
-    return lhs_canonical == rhs_canonical;
-}
-
 std::optional<TypeRef> visible_local_type_ref(const std::vector<AstLintLocal>& active_decls,
                                               const std::string& name) {
     for (auto it = active_decls.rbegin(); it != active_decls.rend(); ++it) {
@@ -98,7 +83,7 @@ void lint_suspicious_cast_statement_sequence(const std::vector<Stmt>& statements
 void lint_suspicious_cast_stmt(const Stmt& stmt, const Document& doc,
                                std::vector<AstLintLocal>& active_decls,
                                std::vector<Diagnostic>& out) {
-    if (!same_source_file(stmt.location.file, doc.path)) {
+    if (!lint_same_source_file(stmt.location.file, doc.path)) {
         return;
     }
     visit_stmt_expressions(stmt, [&](const Expr& expr) {
@@ -125,7 +110,7 @@ void lint_suspicious_cast_expr(const Expr& expr, const Document& doc,
         const std::string callee = direct_callee_name(node);
         if (node.kind == ExprKind::Call && numeric_type_name(callee) && node.children.size() == 1 &&
             node.children.front().kind == ExprKind::Name &&
-            same_source_file(node.location.file, doc.path)) {
+            lint_same_source_file(node.location.file, doc.path)) {
             const std::string& source_name = node.children.front().name;
             const std::optional<TypeRef> source_type_ref =
                 visible_local_type_ref(active_decls, source_name);
@@ -186,7 +171,7 @@ void lint_cpp_escape_expr(const Expr& expr, const Document& doc,
 
 void lint_cpp_escape_stmt(const Stmt& stmt, const Document& doc,
                           std::set<std::pair<int, int>>& seen, std::vector<Diagnostic>& out) {
-    if (!same_source_file(stmt.location.file, doc.path)) {
+    if (!lint_same_source_file(stmt.location.file, doc.path)) {
         return;
     }
     if (stmt.kind == StmtKind::CppEscape &&
@@ -211,7 +196,8 @@ void lint_cpp_escape_expr(const Expr& expr, const Document& doc,
         if (expr_missing(node)) {
             return;
         }
-        if (node.kind == ExprKind::CppEscape && same_source_file(node.location.file, doc.path) &&
+        if (node.kind == ExprKind::CppEscape &&
+            lint_same_source_file(node.location.file, doc.path) &&
             seen.insert({node.location.line, node.location.column}).second) {
             out.push_back({.location = node.location,
                            .message = "native interop hazard: raw cpp escape hatch",
@@ -284,117 +270,10 @@ void lint_suspicious_cast_module(const ModuleAst& module, const Document& doc,
     }
 }
 
-void lint_unreachable_statement_sequence(const std::vector<Stmt>& statements, const Document& doc,
-                                         std::vector<Diagnostic>& out);
-
-bool statement_sequence_exits(const std::vector<Stmt>& statements);
-
-bool statement_exits(const std::vector<Stmt>& statements, size_t index, size_t& consumed_until) {
-    const Stmt& stmt = statements[index];
-    consumed_until = index;
-    if (stmt.kind == StmtKind::Return || stmt.kind == StmtKind::Raise ||
-        stmt.kind == StmtKind::Break || stmt.kind == StmtKind::Continue) {
-        return true;
-    }
-    if (stmt.kind != StmtKind::If) {
-        return false;
-    }
-
-    bool saw_else = false;
-    bool all_branches_exit = true;
-    size_t cursor = index;
-    while (cursor < statements.size()) {
-        const StmtKind kind = statements[cursor].kind;
-        if (cursor == index) {
-            if (kind != StmtKind::If) {
-                break;
-            }
-        } else if (kind != StmtKind::Elif && kind != StmtKind::Else) {
-            break;
-        }
-        if (kind == StmtKind::Else) {
-            saw_else = true;
-        }
-        all_branches_exit =
-            all_branches_exit && statement_sequence_exits(statements[cursor].children);
-        consumed_until = cursor;
-        ++cursor;
-        if (kind == StmtKind::Else) {
-            break;
-        }
-    }
-    return saw_else && all_branches_exit;
-}
-
-bool statement_sequence_exits(const std::vector<Stmt>& statements) {
-    for (size_t i = 0; i < statements.size(); ++i) {
-        size_t consumed_until = i;
-        if (statement_exits(statements, i, consumed_until)) {
-            return true;
-        }
-        i = consumed_until;
-    }
-    return false;
-}
-
-void lint_unreachable_statement_sequence(const std::vector<Stmt>& statements, const Document& doc,
-                                         std::vector<Diagnostic>& out) {
-    bool after_terminator = false;
-    bool reported_after_terminator = false;
-    for (size_t i = 0; i < statements.size(); ++i) {
-        const Stmt& stmt = statements[i];
-        const bool in_document = same_source_file(stmt.location.file, doc.path);
-        if (after_terminator && !reported_after_terminator && in_document) {
-            out.push_back({.location = stmt.location,
-                           .message = "unreachable statement after terminating statement",
-                           .source = "dudu/lint",
-                           .severity = 2,
-                           .code = "dudu.lint.unreachable",
-                           .data_name = ""});
-            reported_after_terminator = true;
-        }
-
-        size_t consumed_until = i;
-        const bool exits = statement_exits(statements, i, consumed_until);
-        for (size_t child_index = i; child_index <= consumed_until; ++child_index) {
-            lint_unreachable_statement_sequence(statements[child_index].children, doc, out);
-        }
-        if (exits && in_document) {
-            after_terminator = true;
-        }
-        i = consumed_until;
-    }
-}
-
-void lint_unreachable_function(const FunctionDecl& fn, const Document& doc,
-                               std::vector<Diagnostic>& out) {
-    lint_unreachable_statement_sequence(fn.statements, doc, out);
-}
-
-void lint_unreachable_class(const ClassDecl& klass, const Document& doc,
-                            std::vector<Diagnostic>& out) {
-    for (const FunctionDecl& method : klass.methods) {
-        lint_unreachable_function(method, doc, out);
-    }
-}
-
-void lint_unreachable_module(const ModuleAst& module, const Document& doc,
-                             std::vector<Diagnostic>& out) {
-    for (const FunctionDecl& fn : module.functions) {
-        lint_unreachable_function(fn, doc, out);
-    }
-    for (const ClassDecl& klass : module.classes) {
-        lint_unreachable_class(klass, doc, out);
-    }
-    for (const ModuleAst& unit : module.module_units) {
-        lint_unreachable_module(unit, doc, out);
-    }
-}
-
 void collect_name_uses_stmt(const Stmt& stmt, const Document& doc,
                             std::map<std::string, std::vector<SourceLocation>>& uses) {
     visit_stmt_tree_expressions(stmt, [&](const Expr& expr) {
-        if (expr.kind == ExprKind::Name && same_source_file(expr.location.file, doc.path)) {
+        if (expr.kind == ExprKind::Name && lint_same_source_file(expr.location.file, doc.path)) {
             uses[expr.name].push_back(expr.location);
         }
     });
@@ -406,7 +285,7 @@ void collect_scope_lints_stmt_sequence(const std::vector<Stmt>& statements, cons
                                        std::vector<Diagnostic>& out) {
     for (const Stmt& stmt : statements) {
         if (stmt.kind == StmtKind::VarDecl && !stmt.name.empty() &&
-            same_source_file(stmt.location.file, doc.path)) {
+            lint_same_source_file(stmt.location.file, doc.path)) {
             for (const AstLocalDecl& outer : active_decls) {
                 if (outer.name == stmt.name) {
                     out.push_back({.location = stmt.location,
