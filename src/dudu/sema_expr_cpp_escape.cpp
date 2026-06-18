@@ -21,6 +21,31 @@ std::vector<Expr> call_arg_exprs(std::string expr, size_t open, SourceLocation l
         args.empty() ? std::vector<std::string>{} : split_top_level_args(args), location);
 }
 
+struct EscapeCall {
+    std::string callee;
+    std::vector<Expr> args;
+};
+
+std::optional<EscapeCall> parsed_escape_call(const Expr& parsed) {
+    if (parsed.kind != ExprKind::Call) {
+        return std::nullopt;
+    }
+    std::string callee = direct_callee_name(parsed);
+    if (callee.empty()) {
+        return std::nullopt;
+    }
+    return EscapeCall{.callee = std::move(callee), .args = parsed.children};
+}
+
+std::optional<EscapeCall> escape_call_from_text(const std::string& expr, size_t open,
+                                                SourceLocation location) {
+    if (find_call_close(expr, open) != expr.size() - 1) {
+        return std::nullopt;
+    }
+    return EscapeCall{.callee = trim(expr.substr(0, open)),
+                      .args = call_arg_exprs(expr, open, location)};
+}
+
 std::string cpp_escape_member_path_type(const FunctionScope& scope, const SourceLocation* location,
                                         const std::string& path) {
     const SourceLocation parse_location = location == nullptr ? SourceLocation{} : *location;
@@ -115,11 +140,17 @@ std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
     if (const auto type = infer_parsed_unary_escape(scope, parsed_expr, location)) {
         return *type;
     }
-    const size_t call = find_call_open(expr);
-    if (call != std::string::npos && find_call_close(expr, call) == expr.size() - 1) {
-        const std::string callee = trim(expr.substr(0, call));
-        const std::vector<Expr> args =
-            call_arg_exprs(expr, call, location == nullptr ? SourceLocation{} : *location);
+    std::optional<EscapeCall> call_info = parsed_escape_call(parsed_expr);
+    if (!call_info) {
+        const size_t call = find_call_open(expr);
+        if (call != std::string::npos) {
+            call_info = escape_call_from_text(
+                expr, call, location == nullptr ? SourceLocation{} : *location);
+        }
+    }
+    if (call_info) {
+        const std::string& callee = call_info->callee;
+        const std::vector<Expr>& args = call_info->args;
         if (const auto type =
                 infer_cpp_escape_allocation_call(scope.symbols, location, callee, args))
             return *type;
