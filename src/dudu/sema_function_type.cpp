@@ -34,28 +34,11 @@ void set_signature_param_types(FunctionSignature& signature, std::vector<TypeRef
     signature.param_type_refs = std::move(types);
 }
 
-void set_signature_param_type_texts(FunctionSignature& signature,
-                                    const std::vector<std::string>& types,
-                                    SourceLocation location) {
-    std::vector<TypeRef> refs;
-    refs.reserve(types.size());
-    for (const std::string& type : types) {
-        refs.push_back(parse_type_text(type, location));
-    }
-    set_signature_param_types(signature, std::move(refs));
-}
-
 void set_signature_return_type(FunctionSignature& signature, TypeRef type) {
     if (!has_type_ref(type)) {
         type = parse_type_text("void");
     }
     signature.return_type_ref = std::move(type);
-}
-
-void set_signature_return_type_text(FunctionSignature& signature, const std::string& type,
-                                    SourceLocation location) {
-    set_signature_return_type(signature,
-                              type.empty() ? TypeRef{} : parse_type_text(type, location));
 }
 
 size_t signature_param_count(const FunctionSignature& signature) {

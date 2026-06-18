@@ -287,9 +287,10 @@ FunctionSignature substitute_explicit_template_signature(FunctionSignature signa
     if (has_type_ref(return_type)) {
         set_signature_return_type(signature, substitute_type_ref(return_type, bindings));
     } else {
-        set_signature_return_type_text(
-            signature,
-            replace_explicit_template_args(signature_return_type_text(signature), names, args));
+        set_signature_return_type(
+            signature, parse_type_text(replace_explicit_template_args(
+                                           signature_return_type_text(signature), names, args),
+                                       return_type.location));
     }
     return signature;
 }
@@ -297,16 +298,21 @@ FunctionSignature substitute_explicit_template_signature(FunctionSignature signa
 FunctionSignature substitute_bound_template_signature(FunctionSignature signature,
                                                       const NativeTemplateBindings& bindings,
                                                       const NativePackBindingMap& pack_bindings) {
-    std::vector<std::string> params;
+    std::vector<TypeRef> params;
     params.reserve(signature_param_count(signature));
     for (size_t i = 0; i < signature_param_count(signature); ++i) {
-        params.push_back(replace_template_bindings(signature_param_type_text(signature, i),
-                                                   bindings, pack_bindings));
+        const TypeRef param_type = signature_param_type_ref(signature, i);
+        params.push_back(
+            parse_type_text(replace_template_bindings(signature_param_type_text(signature, i),
+                                                      bindings, pack_bindings),
+                            param_type.location));
     }
-    set_signature_param_type_texts(signature, params);
-    set_signature_return_type_text(
-        signature,
-        replace_template_bindings(signature_return_type_text(signature), bindings, pack_bindings));
+    set_signature_param_types(signature, std::move(params));
+    const TypeRef return_type = signature_return_type_ref(signature);
+    set_signature_return_type(
+        signature, parse_type_text(replace_template_bindings(signature_return_type_text(signature),
+                                                             bindings, pack_bindings),
+                                   return_type.location));
     return signature;
 }
 
