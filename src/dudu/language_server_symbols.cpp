@@ -114,10 +114,11 @@ std::vector<Symbol> symbols_for_document(const Document& doc, bool include_nativ
             return out;
         }
         for (const NativeTypeDecl& type : module.native_types) {
+            const bool alias_type = has_type_ref(type.type_ref) || !type.type.empty();
             out.push_back({.name = type.name,
-                           .detail = type.type.empty()
-                                         ? "native type"
-                                         : "native type = " + native_type_alias_type_text(type),
+                           .detail = alias_type
+                                         ? "native type = " + native_type_alias_type_text(type)
+                                         : "native type",
                            .location = type.location,
                            .kind = 23});
         }

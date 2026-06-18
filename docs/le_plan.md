@@ -1699,6 +1699,11 @@ push. They are not release packaging work.
    with `TypeRef` parameter and return nodes only, without also materializing
    rendered `params` or `return_type` string mirrors. C++ header imports keep
    their native text mirrors at the foreign boundary.
+   Dudu-origin imported type aliases, enum/class aliases, and constant aliases
+   now also keep native alias metadata in structured `TypeRef` fields without
+   materializing rendered native `type` mirrors. Symbol collection and LSP
+   display treat `TypeRef` presence as the alias signal while C++ header imports
+   may still use native text mirrors at the foreign boundary.
    `substitute_type_ref` now has a structured `TypeRef` substitution overload.
    Receiver generic substitution for fields, methods, inherited methods, and
    inferred generic method signatures uses parsed receiver template arguments
