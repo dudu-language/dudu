@@ -268,10 +268,6 @@ void test_receiver_template_substitution_uses_type_ast() {
         dudu::template_arg_refs_from_type(dudu::parse_type_text("dict[str, list[i32]]"));
     assert(receiver_arg_refs.size() == 2);
     assert(dudu::substitute_type_ref_text(receiver_arg_refs[1], {}) == "list[i32]");
-
-    const std::vector<std::string> receiver_args =
-        dudu::template_args_from_type(dudu::parse_type_text("dict[str, i32]"));
-    assert(receiver_args == std::vector<std::string>({"str", "i32"}));
 }
 
 void test_inherited_method_signature_uses_type_ast() {

@@ -26,19 +26,15 @@ std::string template_method_name(const std::string& method_name) {
     return open == std::string::npos ? method_name : method_name.substr(0, open);
 }
 
-std::vector<std::string> template_method_args(const std::string& method_name) {
+std::vector<TypeRef> template_method_args(const std::string& method_name, SourceLocation location) {
     const size_t open = method_name.find('[');
     if (open == std::string::npos || method_name.back() != ']') {
         return {};
     }
-    return split_top_level_args(method_name.substr(open + 1, method_name.size() - open - 2));
-}
-
-std::map<std::string, std::string> type_substitutions(const std::vector<std::string>& params,
-                                                      const std::vector<std::string>& args) {
-    std::map<std::string, std::string> out;
-    for (size_t i = 0; i < params.size() && i < args.size(); ++i) {
-        out.emplace(params[i], trim_copy(args[i]));
+    std::vector<TypeRef> out;
+    for (const std::string& arg :
+         split_top_level_args(method_name.substr(open + 1, method_name.size() - open - 2))) {
+        out.push_back(parse_type_text(arg, location));
     }
     return out;
 }
@@ -54,14 +50,6 @@ std::map<std::string, TypeRef> type_ref_substitutions(const std::vector<std::str
 
 TypeRef instantiate_method_type_ref(const ClassDecl& klass, const FunctionDecl& method,
                                     const TypeRef& type, const std::vector<TypeRef>& receiver_args,
-                                    const std::vector<std::string>& method_args) {
-    TypeRef out = substitute_type_ref(type, type_substitutions(method.generic_params, method_args));
-    out = substitute_type_ref(out, type_ref_substitutions(klass.generic_params, receiver_args));
-    return substitute_receiver_template_type(out, receiver_args);
-}
-
-TypeRef instantiate_method_type_ref(const ClassDecl& klass, const FunctionDecl& method,
-                                    const TypeRef& type, const std::vector<TypeRef>& receiver_args,
                                     const std::vector<TypeRef>& method_args) {
     TypeRef out =
         substitute_type_ref(type, type_ref_substitutions(method.generic_params, method_args));
@@ -70,27 +58,6 @@ TypeRef instantiate_method_type_ref(const ClassDecl& klass, const FunctionDecl& 
 }
 
 } // namespace
-
-FunctionSignature instantiate_method_signature(const ClassDecl& klass, const FunctionDecl& method,
-                                               const std::vector<TypeRef>& receiver_args,
-                                               const std::vector<std::string>& method_args) {
-    FunctionSignature signature;
-    const size_t first_param =
-        !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
-    std::vector<TypeRef> param_types;
-    param_types.reserve(method.params.size() - first_param);
-    for (size_t i = first_param; i < method.params.size(); ++i) {
-        param_types.push_back(instantiate_method_type_ref(klass, method, method.params[i].type_ref,
-                                                          receiver_args, method_args));
-    }
-    set_signature_param_types(signature, std::move(param_types));
-    set_signature_return_type(
-        signature, function_has_return_type(method)
-                       ? instantiate_method_type_ref(klass, method, method.return_type_ref,
-                                                     receiver_args, method_args)
-                       : void_type_ref(method.location));
-    return signature;
-}
 
 FunctionSignature instantiate_method_signature(const ClassDecl& klass, const FunctionDecl& method,
                                                const std::vector<TypeRef>& receiver_args,
@@ -123,7 +90,8 @@ bool method_signature_for_type(const Symbols& symbols, const TypeRef& receiver_t
     const std::vector<TypeRef> receiver_args = template_arg_refs_from_type(templated_receiver);
     const std::string type = unwrap_receiver_type(symbols, receiver_type);
     const std::string lookup_name = template_method_name(method_name);
-    const std::vector<std::string> method_args = template_method_args(method_name);
+    const std::vector<TypeRef> method_args =
+        template_method_args(method_name, receiver_type.location);
     const auto klass = symbols.classes.find(type);
     if (klass == symbols.classes.end()) {
         return false;
@@ -239,7 +207,8 @@ std::vector<FunctionSignature> method_signatures_for_type(const Symbols& symbols
     const std::vector<TypeRef> receiver_args = template_arg_refs_from_type(templated_receiver);
     const std::string type = unwrap_receiver_type(symbols, receiver_type);
     const std::string lookup_name = template_method_name(method_name);
-    const std::vector<std::string> method_args = template_method_args(method_name);
+    const std::vector<TypeRef> method_args =
+        template_method_args(method_name, receiver_type.location);
     const auto klass = symbols.classes.find(type);
     if (klass == symbols.classes.end()) {
         return out;
@@ -269,7 +238,7 @@ bool static_method_signature_for_type(const Symbols& symbols, const TypeRef& typ
     const std::vector<TypeRef> receiver_args = template_arg_refs_from_type(templated_receiver);
     const std::string type = unwrap_receiver_type(symbols, type_name);
     const std::string lookup_name = template_method_name(method_name);
-    const std::vector<std::string> method_args = template_method_args(method_name);
+    const std::vector<TypeRef> method_args = template_method_args(method_name, type_name.location);
     const auto klass = symbols.classes.find(type);
     if (klass == symbols.classes.end()) {
         return false;

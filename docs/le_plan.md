@@ -1647,3 +1647,6 @@ push. They are not release packaging work.
    substitutions as `TypeRef` maps. Imported aliases, class shapes, constants,
    and function signatures preserve structured type data through import
    rewriting and render only their native mirror fields after substitution.
+   Explicit method template arguments now parse into `TypeRef`s before method
+   signature instantiation, and the old string receiver-template substitution
+   helper has been deleted.
