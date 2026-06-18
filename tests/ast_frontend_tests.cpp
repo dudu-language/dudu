@@ -56,17 +56,18 @@ bool has_semantic_token(const std::vector<int>& data, int type, int modifier) {
 }
 
 void test_ast_assignment_display_types() {
-    assert(dudu::assignment_error("bool", dudu::parse_expr_text("123"), "") ==
+    const dudu::TypeRef bool_type = dudu::parse_type_text("bool");
+    assert(dudu::assignment_error(bool_type, dudu::parse_expr_text("123"), "") ==
            "cannot assign number to bool without an explicit cast");
-    assert(dudu::assignment_error("bool", dudu::parse_expr_text("\"hi\""), "") ==
+    assert(dudu::assignment_error(bool_type, dudu::parse_expr_text("\"hi\""), "") ==
            "cannot assign str to bool without an explicit cast");
-    assert(dudu::assignment_error("bool", dudu::parse_expr_text("value"), "") ==
+    assert(dudu::assignment_error(bool_type, dudu::parse_expr_text("value"), "") ==
            "cannot assign  to bool without an explicit cast");
 
     dudu::Expr unknown;
     unknown.kind = dudu::ExprKind::Unknown;
     unknown.text = "123";
-    assert(dudu::assignment_error("bool", unknown, "") ==
+    assert(dudu::assignment_error(bool_type, unknown, "") ==
            "cannot assign  to bool without an explicit cast");
 }
 

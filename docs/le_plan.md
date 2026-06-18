@@ -1314,3 +1314,5 @@ declarations safely.
    Expression-aware assignment compatibility no longer exposes an
    expected-type string overload; value-wrapper recursion parses its inner type
    before re-entering the structured assignment path.
+   Assignment diagnostics now expose only the parsed expected-`TypeRef` API;
+   string formatting is kept private to the diagnostic renderer.

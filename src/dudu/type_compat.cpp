@@ -475,14 +475,18 @@ std::string display_type(const Expr& expr, const std::string& got) {
     return got.empty() ? simple_literal_type(expr) : got;
 }
 
-std::string assignment_error(const std::string& expected, const Expr& expr,
-                             const std::string& got) {
+namespace {
+
+std::string assignment_error_text(const std::string& expected, const Expr& expr,
+                                  const std::string& got) {
     return "cannot assign " + display_type(expr, got) + " to " + expected +
            " without an explicit cast";
 }
 
+} // namespace
+
 std::string assignment_error(const TypeRef& expected, const Expr& expr, const std::string& got) {
-    return assignment_error(substitute_type_ref_text(expected, {}), expr, got);
+    return assignment_error_text(substitute_type_ref_text(expected, {}), expr, got);
 }
 
 } // namespace dudu

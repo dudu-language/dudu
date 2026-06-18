@@ -72,7 +72,7 @@ void check_type_match(FunctionScope& scope, const TypeRef& expected_ref, const E
             sema_fail(location,
                       std::string(mismatch_label) + ": expected " + expected + ", got " + got);
         }
-        sema_fail(location, assignment_error(expected, expr, got));
+        sema_fail(location, assignment_error(expected_ref, expr, got));
     }
 }
 
