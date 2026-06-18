@@ -21,14 +21,14 @@ void check_local_binding_name(const SourceLocation& location, const std::string&
 
 void check_destructure_bindings(const SourceLocation& location,
                                 const std::vector<std::string>& names,
-                                const std::map<std::string, std::string>& locals) {
+                                const std::map<std::string, TypeRef>& local_type_refs) {
     std::set<std::string> seen;
     for (const std::string& name : names) {
         check_local_binding_name(location, name);
         if (!seen.insert(name).second) {
             fail(location, "duplicate destructuring binding: " + name);
         }
-        if (locals.contains(name)) {
+        if (local_type_refs.contains(name)) {
             fail(location, "destructuring binding shadows local: " + name);
         }
     }

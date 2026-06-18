@@ -252,7 +252,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
             if (names.size() != types.size()) {
                 sema_fail(value_location, "tuple destructuring count mismatch");
             }
-            check_destructure_bindings(stmt.location, names, scope.locals);
+            check_destructure_bindings(stmt.location, names, scope.local_type_refs);
             for (size_t i = 0; i < names.size(); ++i) {
                 bind_local(scope, names[i], substitute_type_ref_text(types[i], {}), types[i]);
             }
@@ -263,7 +263,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
                       "tuple destructuring targets must be names");
         }
         if (stmt.target_expr.kind == ExprKind::Name &&
-            !scope.locals.contains(stmt.target_expr.name)) {
+            !scope.local_type_refs.contains(stmt.target_expr.name)) {
             const std::string& name = stmt.target_expr.name;
             check_local_binding_name(node_location(stmt.location, stmt.target_expr), name);
             const TypeRef inferred = callbacks.infer_expr_type(
