@@ -30,6 +30,7 @@ add_library(dudu_frontend
     src/dudu/cpp_emit_enums.cpp
     src/dudu/cpp_emit_modules.cpp
     src/dudu/cpp_emit_prelude.cpp
+    src/dudu/cpp_emit_tests.cpp
     src/dudu/cpp_expr_call_emit.cpp
     src/dudu/cpp_expr_emit.cpp
     src/dudu/cpp_expr_builtins.cpp

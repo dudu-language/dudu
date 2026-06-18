@@ -3,6 +3,7 @@
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_emit_classes.hpp"
 #include "dudu/cpp_emit_enums.hpp"
+#include "dudu/cpp_emit_internal.hpp"
 #include "dudu/cpp_emit_prelude.hpp"
 #include "dudu/cpp_expr_emit.hpp"
 #include "dudu/cpp_lower.hpp"
@@ -27,11 +28,13 @@ void emit_aliases(std::ostringstream& out, const ModuleAst& module, const CppEmi
     }
 }
 
-bool function_has_decorator(const FunctionDecl& fn, std::string_view name) {
+} // namespace
+
+bool cpp_emit_function_has_decorator(const FunctionDecl& fn, std::string_view name) {
     return has_decorator(fn.decorators, name);
 }
 
-bool function_is_test(const FunctionDecl& fn) {
+bool cpp_emit_function_is_test(const FunctionDecl& fn) {
     for (const Decorator& decorator : fn.decorators) {
         if (decorator_matches(decorator, "test") || decorator_matches(decorator, "test.ignore") ||
             decorator_matches(decorator, "test.should_panic") ||
@@ -42,7 +45,7 @@ bool function_is_test(const FunctionDecl& fn) {
     return false;
 }
 
-std::string cpp_string_literal(std::string text) {
+std::string cpp_emit_string_literal(std::string text) {
     std::string out = "\"";
     for (const char c : text) {
         if (c == '"' || c == '\\') {
@@ -54,7 +57,7 @@ std::string cpp_string_literal(std::string text) {
     return out;
 }
 
-std::string function_decorator_arg(const FunctionDecl& fn, std::string_view name) {
+std::string cpp_emit_function_decorator_arg(const FunctionDecl& fn, std::string_view name) {
     for (const Decorator& decorator : fn.decorators) {
         if (const auto arg = decorator_first_string_literal_arg(decorator, name)) {
             return *arg;
@@ -63,7 +66,9 @@ std::string function_decorator_arg(const FunctionDecl& fn, std::string_view name
     return {};
 }
 
-std::string function_decorator_args(const FunctionDecl& fn, std::string_view name) {
+namespace {
+
+std::string cpp_emit_function_decorator_args(const FunctionDecl& fn, std::string_view name) {
     for (const Decorator& decorator : fn.decorators) {
         if (const std::optional<std::string> args = decorator_arg_list_text(decorator, name)) {
             return *args;
@@ -77,11 +82,11 @@ bool visible_in_header(Visibility visibility) {
 }
 
 bool visible_function_in_header(const FunctionDecl& fn) {
-    return visible_in_header(fn.visibility) && !function_is_test(fn);
+    return visible_in_header(fn.visibility) && !cpp_emit_function_is_test(fn);
 }
 
 bool emit_before_constants(const FunctionDecl& fn) {
-    return function_has_decorator(fn, "constexpr");
+    return cpp_emit_function_has_decorator(fn, "constexpr");
 }
 
 void emit_template_params(std::ostringstream& out, const std::vector<std::string>& params) {
@@ -145,33 +150,33 @@ void emit_static_asserts(std::ostringstream& out, const ModuleAst& module,
 void emit_function_signature(std::ostringstream& out, const FunctionDecl& fn,
                              const std::vector<std::string>& aliases,
                              const CppEmitOptions& options = {}) {
-    if (function_has_decorator(fn, "extern_c")) {
+    if (cpp_emit_function_has_decorator(fn, "extern_c")) {
         out << "extern \"C\" ";
     }
-    if (function_has_decorator(fn, "cuda.global")) {
+    if (cpp_emit_function_has_decorator(fn, "cuda.global")) {
         out << "DUDU_CUDA_GLOBAL ";
     }
-    if (function_has_decorator(fn, "cuda.device")) {
+    if (cpp_emit_function_has_decorator(fn, "cuda.device")) {
         out << "DUDU_CUDA_DEVICE ";
     }
-    if (function_has_decorator(fn, "cuda.host")) {
+    if (cpp_emit_function_has_decorator(fn, "cuda.host")) {
         out << "DUDU_CUDA_HOST ";
     }
-    if (function_has_decorator(fn, "shader.compute")) {
+    if (cpp_emit_function_has_decorator(fn, "shader.compute")) {
         out << "DUDU_SHADER_COMPUTE ";
     }
-    const std::string section = function_decorator_arg(fn, "section");
+    const std::string section = cpp_emit_function_decorator_arg(fn, "section");
     if (!section.empty()) {
-        out << "__attribute__((section(" << cpp_string_literal(section) << "))) ";
+        out << "__attribute__((section(" << cpp_emit_string_literal(section) << "))) ";
     }
-    const std::string workgroup = function_decorator_args(fn, "workgroup_size");
+    const std::string workgroup = cpp_emit_function_decorator_args(fn, "workgroup_size");
     if (!workgroup.empty()) {
         out << "DUDU_WORKGROUP_SIZE(" << workgroup << ") ";
     }
-    if (function_has_decorator(fn, "inline")) {
+    if (cpp_emit_function_has_decorator(fn, "inline")) {
         out << "inline ";
     }
-    if (function_has_decorator(fn, "constexpr")) {
+    if (cpp_emit_function_has_decorator(fn, "constexpr")) {
         out << "constexpr ";
     }
     out << lower_cpp_type(function_return_type_ref(fn), aliases, options) << ' '
@@ -256,117 +261,6 @@ void emit_early_functions(std::ostringstream& out, const ModuleAst& module,
     }
 }
 
-void emit_test_harness(std::ostringstream& out, const ModuleAst& module, const std::string& filter,
-                       bool capture_output) {
-    out << "namespace dudu_test {\n"
-           "struct Capture {\n"
-           "    bool enabled = false;\n"
-           "    std::ostringstream stream;\n"
-           "    std::streambuf* previous = nullptr;\n"
-           "    explicit Capture(bool active) : enabled(active) {\n"
-           "        if (enabled) { previous = std::cout.rdbuf(stream.rdbuf()); }\n"
-           "    }\n"
-           "    ~Capture() { restore(); }\n"
-           "    void restore() {\n"
-           "        if (previous != nullptr) { std::cout.rdbuf(previous); previous = nullptr; }\n"
-           "    }\n"
-           "    std::string text() const { return stream.str(); }\n"
-           "};\n"
-           "void print_captured(const std::string& text) {\n"
-           "    if (!text.empty()) { std::cout << text; }\n"
-           "}\n"
-           "template <typename F> bool run_one(const char* name, F fn) {\n"
-           "    Capture capture("
-        << (capture_output ? "true" : "false")
-        << ");\n"
-           "    try {\n"
-           "        bool ok = true;\n"
-           "        using R = decltype(fn());\n"
-           "        if constexpr (std::is_same_v<R, void>) {\n"
-           "            fn();\n"
-           "        } else if constexpr (std::is_same_v<R, bool>) {\n"
-           "            ok = fn();\n"
-           "        } else {\n"
-           "            ok = fn() == 0;\n"
-           "        }\n"
-           "        capture.restore();\n"
-           "        if (!ok) {\n"
-           "            print_captured(capture.text());\n"
-           "            std::cout << \"FAILED \" << name << \"\\n\";\n"
-           "            return false;\n"
-           "        }\n"
-           "        std::cout << \"ok \" << name << \"\\n\";\n"
-           "        return true;\n"
-           "    } catch (const std::exception& error) {\n"
-           "        capture.restore();\n"
-           "        print_captured(capture.text());\n"
-           "        std::cout << \"FAILED \" << name << \": \" << error.what() << \"\\n\";\n"
-           "        return false;\n"
-           "    }\n"
-           "}\n"
-           "template <typename F> bool run_should_panic(const char* name, F fn, "
-           "std::string_view expected) {\n"
-           "    Capture capture("
-        << (capture_output ? "true" : "false")
-        << ");\n"
-           "    try {\n"
-           "        fn();\n"
-           "    } catch (const std::exception& error) {\n"
-           "        capture.restore();\n"
-           "        const std::string_view message = error.what();\n"
-           "        if (!expected.empty() && message.find(expected) == std::string_view::npos) {\n"
-           "            print_captured(capture.text());\n"
-           "            std::cout << \"FAILED \" << name << \": expected panic containing \"\n"
-           "                      << expected << \", got \" << message << \"\\n\";\n"
-           "            return false;\n"
-           "        }\n"
-           "        std::cout << \"ok \" << name << \"\\n\";\n"
-           "        return true;\n"
-           "    }\n"
-           "    capture.restore();\n"
-           "    print_captured(capture.text());\n"
-           "    std::cout << \"FAILED \" << name << \": expected panic\\n\";\n"
-           "    return false;\n"
-           "}\n"
-           "} // namespace dudu_test\n\n"
-           "int main() {\n"
-           "    int total = 0;\n"
-           "    int passed = 0;\n"
-           "    int ignored = 0;\n";
-    for (const FunctionDecl& fn : module.functions) {
-        if (!function_is_test(fn)) {
-            continue;
-        }
-        if (!filter.empty() && fn.name.find(filter) == std::string::npos) {
-            continue;
-        }
-        if (function_has_decorator(fn, "test.ignore")) {
-            out << "    ++ignored;\n"
-                << "    std::cout << \"ignored " << fn.name << "\\n\";\n";
-        } else if (function_has_decorator(fn, "test.should_panic") ||
-                   !function_decorator_arg(fn, "test.should_panic").empty()) {
-            const std::string expected = function_decorator_arg(fn, "test.should_panic");
-            out << "    ++total;\n"
-                << "    if (dudu_test::run_should_panic(" << cpp_string_literal(fn.name) << ", "
-                << fn.name << ", " << cpp_string_literal(expected) << ")) { ++passed; }\n";
-        } else {
-            out << "    ++total;\n"
-                << "    if (dudu_test::run_one(" << cpp_string_literal(fn.name) << ", " << fn.name
-                << ")) { ++passed; }\n";
-        }
-    }
-    out << "    if (total == 0 && ignored == 0) {\n"
-           "        std::cout << \"running 0 tests\\n\"\n"
-           "                     \"test result: ok. 0 passed; 0 failed; 0 filtered out\\n\";\n"
-           "        return 0;\n"
-           "    }\n"
-           "    std::cout << passed << \"/\" << total << \" tests passed\";\n"
-           "    if (ignored > 0) { std::cout << \"; \" << ignored << \" ignored\"; }\n"
-           "    std::cout << \"\\n\";\n"
-           "    return passed == total ? 0 : 1;\n"
-           "}\n";
-}
-
 } // namespace
 
 std::string emit_cpp_header(const ModuleAst& module, const CppEmitOptions& options) {
@@ -416,7 +310,7 @@ std::string emit_c_header(const ModuleAst& module) {
         << "extern \"C\" {\n"
         << "#endif\n\n";
     for (const FunctionDecl& fn : module.functions) {
-        if (!function_has_decorator(fn, "extern_c") || !visible_function_in_header(fn)) {
+        if (!cpp_emit_function_has_decorator(fn, "extern_c") || !visible_function_in_header(fn)) {
             continue;
         }
         out << lower_cpp_type(function_return_type_ref(fn)) << ' ' << fn.name << '(';
