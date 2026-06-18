@@ -1737,3 +1737,6 @@ push. They are not release packaging work.
    string-to-type parse for `cpp(...)` expression inference is confined inside
    the explicit escape-boundary implementation instead of happening in the
    ordinary expression sema path.
+   Parsed method receiver declarations and synthetic `build.*` value symbols now
+   construct `TypeRef` nodes directly instead of rendering simple type names and
+   reparsing them during parser/sema setup.

@@ -2054,6 +2054,9 @@ LSP source edits are also moving to AST-owned ranges:
   string-to-type parse for `cpp(...)` expression inference is confined inside
   the explicit escape-boundary implementation instead of happening in the
   ordinary expression sema path.
+- Parsed method receiver declarations and synthetic `build.*` value symbols now
+  construct `TypeRef` nodes directly instead of rendering simple type names and
+  reparsing them during parser/sema setup.
 
 Expression parsing has moved onto the lexer/token stream:
 

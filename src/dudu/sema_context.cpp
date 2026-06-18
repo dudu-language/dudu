@@ -37,15 +37,15 @@ std::string build_literal(const std::string& value) {
     return '"' + value + '"';
 }
 
-std::string build_value_type(const std::string& value) {
+TypeRef build_value_type_ref(const std::string& value) {
     const std::string literal = build_literal(value);
     if (literal == "true" || literal == "false") {
-        return "bool";
+        return named_type_ref("bool");
     }
     if (!literal.empty() && literal.front() == '"') {
-        return "str";
+        return named_type_ref("str");
     }
-    return "i32";
+    return named_type_ref("i32");
 }
 
 std::string strip_c_type_tag(std::string type) {
@@ -359,8 +359,7 @@ Symbols collect_symbols(const ModuleAst& module) {
     }
     for (const auto& [name, value] : build_values) {
         const std::string symbol_name = "build." + name;
-        const TypeRef value_type = parse_type_text(build_value_type(value));
-        symbols.native_value_type_refs[symbol_name] = value_type;
+        symbols.native_value_type_refs[symbol_name] = build_value_type_ref(value);
     }
     symbols.native_import_prefixes.insert("build");
     for (const NativeNamespaceDecl& ns : module.native_namespaces) {

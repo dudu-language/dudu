@@ -216,13 +216,13 @@ FunctionDecl Parser::parse_function(const Token& start, Visibility visibility,
     SourceLocation name_location = name.location;
     fn.name = name.text;
     if (receiver_type.empty() && match(TokenKind::Dot)) {
-        fn.receiver_type_ref = parse_type_text(fn.name, name.location);
+        fn.receiver_type_ref = named_type_ref(fn.name, name.location);
         const Token& method_name = consume_identifier("expected method name after .");
         name_location = method_name.location;
         fn.name = method_name.text;
     } else {
         if (!receiver_type.empty()) {
-            fn.receiver_type_ref = parse_type_text(std::string(receiver_type), name.location);
+            fn.receiver_type_ref = named_type_ref(std::string(receiver_type), name.location);
         }
     }
     fn.location = name_location;
