@@ -20,12 +20,25 @@
 namespace dudu {
 namespace {
 
+struct CodeActionEdit {
+    std::string title;
+    std::string kind;
+    TextEdit edit;
+};
+
 std::optional<ModuleAst> parsed_document(const Document& doc) {
     try {
         return parse_source(doc.text, doc.path);
     } catch (const std::exception&) {
         return std::nullopt;
     }
+}
+
+std::string code_action_json(const Document& doc, const CodeActionEdit& action) {
+    return "{\"title\":\"" + json_escape(action.title) + "\",\"kind\":\"" +
+           json_escape(action.kind) + "\",\"edit\":{\"changes\":{\"" + json_escape(doc.uri) +
+           "\":[{\"range\":" + action.edit.range + ",\"newText\":\"" +
+           json_escape(action.edit.new_text) + "\"}]}}}";
 }
 
 std::optional<TextEdit> organize_imports_edit(const Document& doc, const ModuleAst& module) {
@@ -76,26 +89,18 @@ std::optional<TextEdit> organize_imports_edit(const Document& doc, const ModuleA
                     .new_text = replacement.str()};
 }
 
-std::optional<std::string> remove_line_action(const Document& doc, int line,
-                                              const std::string& title) {
-    std::vector<std::string> lines;
-    std::istringstream in(doc.text);
-    std::string text_line;
-    while (std::getline(in, text_line)) {
-        lines.push_back(text_line);
-    }
+std::optional<TextEdit> remove_line_edit(const Document& doc, int line) {
+    const std::vector<std::string> lines = document_lines(doc.text);
     if (line < 0 || line >= static_cast<int>(lines.size())) {
         return std::nullopt;
     }
     const bool has_next = line + 1 <= document_line_count(doc.text);
-    const std::string range =
-        has_next
-            ? range_json(line, 0, line + 1, 0)
-            : range_json(line, 0, line, static_cast<int>(lines[static_cast<size_t>(line)].size()));
-    return "{\"title\":\"" + json_escape(title) +
-           "\",\"kind\":\"quickfix\","
-           "\"edit\":{\"changes\":{\"" +
-           json_escape(doc.uri) + "\":[{\"range\":" + range + ",\"newText\":\"\"}]}}}";
+    return TextEdit{
+        .range =
+            has_next
+                ? range_json(line, 0, line + 1, 0)
+                : range_json(line, 0, line, static_cast<int>(lines[static_cast<size_t>(line)].size())),
+        .new_text = ""};
 }
 
 bool importable_symbol_kind(int kind) {
@@ -167,9 +172,9 @@ std::optional<std::string> module_path_for_import(const std::filesystem::path& b
     return out.str();
 }
 
-std::optional<std::string> missing_import_action(const Document& doc, const std::string& name,
-                                                 const ModuleAst& module,
-                                                 const std::map<std::string, Document>& workspace) {
+std::optional<CodeActionEdit> missing_import_action(
+    const Document& doc, const std::string& name, const ModuleAst& module,
+    const std::map<std::string, Document>& workspace) {
     std::optional<Document> match_doc;
     std::optional<Symbol> match_symbol;
     for (const auto& [uri, candidate] : workspace) {
@@ -198,10 +203,10 @@ std::optional<std::string> missing_import_action(const Document& doc, const std:
     }
     const int line = static_cast<int>(import_insertion_line(doc, module));
     const std::string edit_text = "from " + *module_path + " import " + name + "\n";
-    return "{\"title\":\"Import " + json_escape(name) + " from " + json_escape(*module_path) +
-           "\",\"kind\":\"quickfix\",\"edit\":{\"changes\":{\"" + json_escape(doc.uri) +
-           "\":[{\"range\":" + range_json(line, 0, line, 0) + ",\"newText\":\"" +
-           json_escape(edit_text) + "\"}]}}}";
+    return CodeActionEdit{.title = "Import " + name + " from " + *module_path,
+                          .kind = "quickfix",
+                          .edit = TextEdit{.range = range_json(line, 0, line, 0),
+                                           .new_text = edit_text}};
 }
 
 std::vector<std::string> missing_import_actions(const Document& doc, const Json* params,
@@ -227,10 +232,10 @@ std::vector<std::string> missing_import_actions(const Document& doc, const Json*
         if (!valid_identifier(name) || !seen.insert(name).second) {
             continue;
         }
-        const std::optional<std::string> action =
+        const std::optional<CodeActionEdit> action =
             missing_import_action(doc, name, *module, workspace);
         if (action) {
-            out.push_back(*action);
+            out.push_back(code_action_json(doc, *action));
         }
     }
     return out;
@@ -263,8 +268,9 @@ std::vector<std::string> lint_actions(const Document& doc, const Json* params) {
         }
         const std::string title =
             unused_local ? "Remove unused local" : "Remove unreachable statement";
-        if (const std::optional<std::string> action = remove_line_action(doc, line, title)) {
-            out.push_back(*action);
+        if (const std::optional<TextEdit> edit = remove_line_edit(doc, line)) {
+            out.push_back(code_action_json(
+                doc, CodeActionEdit{.title = title, .kind = "quickfix", .edit = *edit}));
         }
     }
     return out;
@@ -281,10 +287,10 @@ std::string code_actions_json(const Document& doc, const Json* params,
                       "\"command\":\"editor.action.formatDocument\"}}");
     if (module) {
         if (const std::optional<TextEdit> edit = organize_imports_edit(doc, *module)) {
-            actions.push_back("{\"title\":\"Organize imports\",\"kind\":\"source.organizeImports\","
-                              "\"edit\":{\"changes\":{\"" +
-                              json_escape(doc.uri) + "\":[{\"range\":" + edit->range +
-                              ",\"newText\":\"" + json_escape(edit->new_text) + "\"}]}}}");
+            actions.push_back(code_action_json(
+                doc, CodeActionEdit{.title = "Organize imports",
+                                    .kind = "source.organizeImports",
+                                    .edit = *edit}));
         }
     }
     for (const std::string& action :
