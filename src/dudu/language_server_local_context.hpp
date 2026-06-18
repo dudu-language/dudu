@@ -17,6 +17,6 @@ TypeRef local_type_ref_before_cursor(const Document& doc, const std::string& nam
                                      const Json* params = nullptr);
 std::map<std::string, TypeRef> local_type_refs_before_cursor(const Document& doc,
                                                              const Json* params);
-std::set<std::string> member_candidate_types(const ModuleAst& module, const std::string& type);
+std::set<std::string> member_candidate_types(const ModuleAst& module, const TypeRef& type);
 
 } // namespace dudu

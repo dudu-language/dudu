@@ -139,23 +139,21 @@ std::optional<std::string> header_definition_json(const Document& doc, const Jso
 
 std::optional<std::string> member_definition_json(const Document& doc, const ExprPath& path,
                                                   const Json* params) {
-    if (path.segments.size() < 2 ||
-        path.segments.front().kind != ExprPathSegmentKind::Name ||
+    if (path.segments.size() < 2 || path.segments.front().kind != ExprPathSegmentKind::Name ||
         path.segments.back().kind != ExprPathSegmentKind::Name) {
         return std::nullopt;
     }
     const std::string& receiver = path.segments.front().text;
     const std::string& member = path.segments.back().text;
     const TypeRef type_ref = local_type_ref_before_cursor(doc, receiver, params);
-    const std::string type = substitute_type_ref_text(type_ref, {});
-    if (type.empty()) {
+    if (!has_type_ref(type_ref)) {
         return std::nullopt;
     }
     try {
         ModuleAst module = parse_source(doc.text, doc.path);
         const ProjectConfig config = config_for_file(doc.path);
         merge_native_header_types(module, {.config = config, .source_dir = doc.path.parent_path()});
-        const std::set<std::string> candidate_types = member_candidate_types(module, type);
+        const std::set<std::string> candidate_types = member_candidate_types(module, type_ref);
         const auto find_member =
             [&](const std::vector<ClassDecl>& classes) -> std::optional<std::string> {
             for (const ClassDecl& klass : classes) {

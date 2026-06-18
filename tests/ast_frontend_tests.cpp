@@ -30,6 +30,7 @@
 #include <exception>
 #include <iostream>
 #include <optional>
+#include <set>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -1402,6 +1403,30 @@ void test_member_completion_target_uses_tokens() {
     assert(dudu::member_completion_target(doc, &params) == "player");
 }
 
+void test_member_candidate_types_use_type_refs() {
+    dudu::ModuleAst module;
+    module.aliases.push_back(dudu::TypeAliasDecl{.name = "ViewCamera",
+                                                 .cpp_name = "",
+                                                 .type_ref = dudu::named_type_ref("Camera"),
+                                                 .origin_module = "",
+                                                 .location = {}});
+    module.native_types.push_back(
+        dudu::NativeTypeDecl{.name = "NativeView",
+                             .type = "",
+                             .type_ref = dudu::named_type_ref("NativeCamera"),
+                             .location = {}});
+
+    const std::set<std::string> dudu_candidates =
+        dudu::member_candidate_types(module, dudu::named_type_ref("ViewCamera"));
+    assert(dudu_candidates.contains("ViewCamera"));
+    assert(dudu_candidates.contains("Camera"));
+
+    const std::set<std::string> native_candidates =
+        dudu::member_candidate_types(module, dudu::named_type_ref("NativeView"));
+    assert(native_candidates.contains("NativeView"));
+    assert(native_candidates.contains("NativeCamera"));
+}
+
 void test_signature_help_call_site_uses_tokens() {
     const std::string source = "def add(a: i32, b: i32) -> i32:\n"
                                "    return a + b\n"
@@ -1487,6 +1512,7 @@ int main() {
         test_match_case_ast_shape();
         test_wrapper_match_type_uses_type_ast();
         test_member_completion_target_uses_tokens();
+        test_member_candidate_types_use_type_refs();
         test_signature_help_call_site_uses_tokens();
         test_ast_expr_path_at_cursor();
     } catch (const std::exception& error) {

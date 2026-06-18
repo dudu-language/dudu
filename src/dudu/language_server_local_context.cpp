@@ -318,22 +318,43 @@ std::map<std::string, TypeRef> local_type_refs_before_cursor(const Document& doc
     return {};
 }
 
-std::set<std::string> member_candidate_types(const ModuleAst& module, const std::string& type) {
-    std::set<std::string> out{type};
+std::set<std::string> type_candidate_names(const TypeRef& type) {
+    std::set<std::string> out;
+    if (!has_type_ref(type)) {
+        return out;
+    }
+    if (const std::string head = type_ref_head_name(type); !head.empty()) {
+        out.insert(head);
+    }
+    if (const std::string rendered = type_ref_text(type); !rendered.empty()) {
+        out.insert(rendered);
+    }
+    return out;
+}
+
+std::set<std::string> member_candidate_types(const ModuleAst& module, const TypeRef& type) {
+    std::set<std::string> out = type_candidate_names(type);
     bool changed = true;
     while (changed) {
         changed = false;
         for (const NativeTypeDecl& alias : module.native_types) {
-            const std::string alias_type =
-                alias.type.empty() ? std::string{} : native_type_alias_type_text(alias);
-            if (!alias_type.empty() && out.contains(alias.name) && out.insert(alias_type).second) {
-                changed = true;
+            if (!out.contains(alias.name)) {
+                continue;
+            }
+            for (const std::string& alias_type : type_candidate_names(alias.type_ref)) {
+                if (out.insert(alias_type).second) {
+                    changed = true;
+                }
             }
         }
         for (const TypeAliasDecl& alias : module.aliases) {
-            const std::string alias_type = type_ref_text(alias.type_ref);
-            if (!alias_type.empty() && out.contains(alias.name) && out.insert(alias_type).second) {
-                changed = true;
+            if (!out.contains(alias.name)) {
+                continue;
+            }
+            for (const std::string& alias_type : type_candidate_names(alias.type_ref)) {
+                if (out.insert(alias_type).second) {
+                    changed = true;
+                }
             }
         }
     }

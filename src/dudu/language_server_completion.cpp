@@ -115,8 +115,7 @@ std::string member_completion_json(const Document& doc, const std::string& targe
         return *module_result;
     }
     const TypeRef type_ref = local_type_ref_before_cursor(doc, target, params);
-    const std::string type = substitute_type_ref_text(type_ref, {});
-    if (type.empty()) {
+    if (!has_type_ref(type_ref)) {
         return "[]";
     }
     std::ostringstream out;
@@ -134,7 +133,7 @@ std::string member_completion_json(const Document& doc, const std::string& targe
         ModuleAst module = parse_source(doc.text, doc.path);
         const ProjectConfig config = config_for_file(doc.path);
         merge_native_header_types(module, {.config = config, .source_dir = doc.path.parent_path()});
-        const std::set<std::string> candidate_types = member_candidate_types(module, type);
+        const std::set<std::string> candidate_types = member_candidate_types(module, type_ref);
         for (const ClassDecl& klass : module.classes) {
             if (!candidate_types.contains(klass.name)) {
                 continue;

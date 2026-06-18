@@ -1813,3 +1813,7 @@ push. They are not release packaging work.
    `offsetof[Type]("field")` C++ emission now requires the parsed string
    literal value carried by the AST instead of unquoting raw expression text as
    a malformed-node fallback.
+   LSP member completion/definition candidate discovery now accepts the
+   receiver's structured `TypeRef` directly and expands Dudu/native aliases
+   from typed metadata instead of requiring callers to render the receiver type
+   into a string first.
