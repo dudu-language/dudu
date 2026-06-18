@@ -396,8 +396,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
         stmt.kind = StmtKind::CppEscape;
         join_until_with_range({TokenKind::Newline});
         const JoinedTokens source = join_tokens(begin, cursor_);
-        stmt.cpp_body = cpp_escape_body(source.text);
-        stmt.cpp_lines = cpp_escape_lines(stmt.cpp_body);
+        stmt.cpp_lines = cpp_escape_lines(cpp_escape_body(source.text));
         attach_statement_source(stmt, source);
         return stmt;
     }

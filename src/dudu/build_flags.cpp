@@ -169,7 +169,9 @@ void check_expr(const std::set<std::string>& names, const Expr& expr) {
 
 void check_stmt(const std::set<std::string>& names, const Stmt& stmt) {
     if (stmt.kind == StmtKind::CppEscape) {
-        check_text(names, stmt.location, stmt.cpp_body);
+        for (const std::string& line : stmt.cpp_lines) {
+            check_text(names, stmt.location, line);
+        }
         return;
     }
     check_expr(names, stmt.expr);

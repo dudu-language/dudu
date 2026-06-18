@@ -182,7 +182,6 @@ struct FieldDecl {
 struct Stmt {
     StmtKind kind = StmtKind::Unknown;
     std::string name;
-    std::string cpp_body;
     std::vector<std::string> cpp_lines;
     TypeRef type_ref;
     CompoundAssignOp compound_op = CompoundAssignOp::None;
