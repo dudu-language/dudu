@@ -3,21 +3,27 @@
 #include "dudu/ast_type.hpp"
 #include "dudu/sema_function_type.hpp"
 
+#include <optional>
 #include <utility>
 #include <vector>
 
 namespace dudu {
 namespace {
-std::string first_type_arg(const TypeRef& type) {
+
+TypeRef auto_type_ref() {
+    return parse_type_text("auto");
+}
+
+std::optional<TypeRef> first_type_arg_ref(const TypeRef& type) {
     if (const auto arg =
             unary_type_child_ref(type, {TypeKind::Atomic, TypeKind::Const, TypeKind::Volatile,
                                         TypeKind::Device, TypeKind::Storage, TypeKind::Shared})) {
-        return substitute_type_ref_text(*arg, {});
+        return *arg;
     }
     if (type.kind == TypeKind::Template && !type.children.empty()) {
-        return substitute_type_ref_text(type.children.front(), {});
+        return type.children.front();
     }
-    return "";
+    return std::nullopt;
 }
 
 bool single_template_type_arg(const TypeRef& type, std::string_view name) {
@@ -28,11 +34,15 @@ void set_return_type(FunctionSignature& signature, const std::string& type) {
     set_signature_return_type(signature, parse_type_text(type));
 }
 
-void set_param_types(FunctionSignature& signature, std::initializer_list<std::string> types) {
+void set_return_type(FunctionSignature& signature, TypeRef type) {
+    set_signature_return_type(signature, std::move(type));
+}
+
+void set_param_types(FunctionSignature& signature, std::initializer_list<TypeRef> types) {
     std::vector<TypeRef> refs;
     refs.reserve(types.size());
-    for (const std::string& type : types) {
-        refs.push_back(parse_type_text(type));
+    for (TypeRef type : types) {
+        refs.push_back(std::move(type));
     }
     set_signature_param_types(signature, std::move(refs));
 }
@@ -75,14 +85,14 @@ bool builtin_cpp_method_signature(const Symbols& symbols, const TypeRef& receive
     }
     if (single_template_type_arg(templated_ref, "list") ||
         templated.find("vector<") != std::string::npos) {
-        const std::string item = first_type_arg(templated_ref);
+        const TypeRef item = first_type_arg_ref(templated_ref).value_or(auto_type_ref());
         if (method_name == "push_back" || method_name == "append") {
-            set_param_types(signature, {item.empty() ? "auto" : item});
+            set_param_types(signature, {item});
             set_return_type(signature, "void");
             return true;
         }
         if (method_name == "resize" || method_name == "reserve") {
-            set_param_types(signature, {"auto"});
+            set_param_types(signature, {auto_type_ref()});
             set_return_type(signature, "void");
             return true;
         }
@@ -91,7 +101,7 @@ bool builtin_cpp_method_signature(const Symbols& symbols, const TypeRef& receive
             return true;
         }
         if (method_name == "back" || method_name == "front") {
-            set_return_type(signature, item.empty() ? "auto" : item);
+            set_return_type(signature, item);
             return true;
         }
         if (method_name == "pop_back") {
@@ -110,8 +120,7 @@ bool builtin_cpp_method_signature(const Symbols& symbols, const TypeRef& receive
     if (single_template_type_arg(templated_ref, "set") ||
         templated.find("unordered_set<") != std::string::npos ||
         templated.find("std::set<") != std::string::npos || templated.find("set<") == 0) {
-        const std::string item = first_type_arg(templated_ref);
-        const std::string value_type = item.empty() ? "auto" : item;
+        const TypeRef value_type = first_type_arg_ref(templated_ref).value_or(auto_type_ref());
         if (method_name == "contains") {
             set_param_types(signature, {value_type});
             set_return_type(signature, "bool");
@@ -134,9 +143,9 @@ bool builtin_cpp_method_signature(const Symbols& symbols, const TypeRef& receive
     if ((templated_ref.kind == TypeKind::Template && templated_ref.name == "dict") ||
         templated.find("unordered_map<") != std::string::npos ||
         templated.find("std::map<") != std::string::npos || templated.find("map<") == 0) {
-        const std::string key_type = first_type_arg(templated_ref);
+        const TypeRef key_type = first_type_arg_ref(templated_ref).value_or(auto_type_ref());
         if (method_name == "contains") {
-            set_param_types(signature, {key_type.empty() ? "auto" : key_type});
+            set_param_types(signature, {key_type});
             set_return_type(signature, "bool");
             return true;
         }
@@ -152,20 +161,19 @@ bool builtin_cpp_method_signature(const Symbols& symbols, const TypeRef& receive
     if (single_template_type_arg(templated_ref, "Option") ||
         single_template_type_arg(templated_ref, "std.optional") ||
         templated.find("optional<") != std::string::npos) {
-        const std::string item = first_type_arg(templated_ref);
+        const TypeRef item = first_type_arg_ref(templated_ref).value_or(auto_type_ref());
         if (method_name == "has_value") {
             set_return_type(signature, "bool");
             return true;
         }
         if (method_name == "value") {
-            set_return_type(signature, item.empty() ? "auto" : item);
+            set_return_type(signature, item);
             return true;
         }
     }
     if (unary_type_child_ref(templated_ref, TypeKind::Atomic) ||
         templated.find("atomic<") != std::string::npos) {
-        const std::string item = first_type_arg(templated_ref);
-        const std::string value_type = item.empty() ? "auto" : item;
+        const TypeRef value_type = first_type_arg_ref(templated_ref).value_or(auto_type_ref());
         if (method_name == "load") {
             set_return_type(signature, value_type);
             return true;

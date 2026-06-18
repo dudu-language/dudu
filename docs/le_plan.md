@@ -1488,3 +1488,6 @@ push. They are not release packaging work.
    leaving direct access to the legacy parameter/return string mirrors confined
    to `sema_function_type.cpp`, where the temporary mirror boundary is
    implemented.
+   Builtin container/optional/atomic method signatures now carry extracted
+   item, key, and value types as `TypeRef` nodes instead of rendering template
+   children to strings and reparsing them when constructing signatures.
