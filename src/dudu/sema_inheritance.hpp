@@ -9,6 +9,7 @@
 namespace dudu {
 
 bool type_derives_from(const Symbols& symbols, const std::string& derived, const std::string& base);
+bool native_base_assignable(const Symbols& symbols, const TypeRef& expected, const TypeRef& got);
 bool native_base_assignable(const Symbols& symbols, const std::string& expected,
                             const std::string& got);
 bool class_type_has_instance_storage(const Symbols& symbols, const TypeRef& type);

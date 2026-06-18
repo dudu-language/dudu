@@ -45,10 +45,8 @@ std::string unwrap_type(const Symbols& symbols, const TypeRef& type) {
     }
 }
 
-bool ref_like(std::string type) {
-    type = trim(std::move(type));
-    const TypeRef parsed = parse_type_text(type);
-    return parsed.kind == TypeKind::Pointer || parsed.kind == TypeKind::Reference;
+bool ref_like(const TypeRef& type) {
+    return type.kind == TypeKind::Pointer || type.kind == TypeKind::Reference;
 }
 
 bool derives_from_impl(const Symbols& symbols, const std::string& derived, const std::string& base,
@@ -300,13 +298,17 @@ bool type_derives_from(const Symbols& symbols, const std::string& derived,
                              seen);
 }
 
-bool native_base_assignable(const Symbols& symbols, const std::string& expected,
-                            const std::string& got) {
+bool native_base_assignable(const Symbols& symbols, const TypeRef& expected, const TypeRef& got) {
     if (!ref_like(expected) && !ref_like(got))
         return false;
     const std::string base = unwrap_type(symbols, expected);
     const std::string derived = unwrap_type(symbols, got);
     return base != derived && type_derives_from(symbols, derived, base);
+}
+
+bool native_base_assignable(const Symbols& symbols, const std::string& expected,
+                            const std::string& got) {
+    return native_base_assignable(symbols, parse_type_text(expected), parse_type_text(got));
 }
 
 bool class_type_has_instance_storage(const Symbols& symbols, const TypeRef& type) {

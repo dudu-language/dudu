@@ -41,12 +41,19 @@ bool can_assign_ast(const FunctionScope& scope, const TypeRef& expected, const E
     return assignment_type_allowed(expected, expr, got) ||
            assignment_type_allowed(resolve_alias(scope.symbols, expected_text), expr,
                                    resolve_alias(scope.symbols, got)) ||
-           native_base_assignable(scope.symbols, expected_text, got);
+           native_base_assignable(scope.symbols, expected, parse_type_text(got));
 }
 
 bool can_assign_ast(const FunctionScope& scope, const std::string& expected, const Expr& expr,
                     const TypeRef& got) {
-    return can_assign_ast(scope, expected, expr, substitute_type_ref_text(got, {}));
+    const std::string got_text = substitute_type_ref_text(got, {});
+    if (is_native_enum_value_expr(scope, expr, expected)) {
+        return true;
+    }
+    return assignment_type_allowed(expected, expr, got_text) ||
+           assignment_type_allowed(resolve_alias(scope.symbols, expected), expr,
+                                   resolve_alias(scope.symbols, got_text)) ||
+           native_base_assignable(scope.symbols, parse_type_text(expected), got);
 }
 
 bool can_assign_ast(const FunctionScope& scope, const TypeRef& expected, const Expr& expr,
@@ -59,7 +66,7 @@ bool can_assign_ast(const FunctionScope& scope, const TypeRef& expected, const E
     return assignment_type_allowed(expected, expr, got) ||
            assignment_type_allowed(resolve_alias(scope.symbols, expected_text), expr,
                                    resolve_alias(scope.symbols, got_text)) ||
-           native_base_assignable(scope.symbols, expected_text, got_text);
+           native_base_assignable(scope.symbols, expected, got);
 }
 
 bool is_builtin_call(const std::string& callee) {

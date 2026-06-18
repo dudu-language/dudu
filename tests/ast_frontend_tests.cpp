@@ -256,6 +256,26 @@ void test_instance_storage_uses_type_ast_receiver() {
     assert(dudu::class_type_has_instance_storage(symbols, dudu::parse_type_text("Wrapper")));
 }
 
+void test_native_base_assignable_uses_type_ast() {
+    dudu::ClassDecl base;
+    base.name = "Base";
+
+    dudu::ClassDecl derived;
+    derived.name = "Derived";
+    derived.base_class_refs.push_back({dudu::parse_type_text("Base"), {}});
+
+    dudu::Symbols symbols;
+    symbols.classes.emplace("Base", &base);
+    symbols.classes.emplace("Derived", &derived);
+
+    assert(dudu::native_base_assignable(symbols, dudu::parse_type_text("*Base"),
+                                        dudu::parse_type_text("*Derived")));
+    assert(dudu::native_base_assignable(symbols, dudu::parse_type_text("&Base"),
+                                        dudu::parse_type_text("&Derived")));
+    assert(!dudu::native_base_assignable(symbols, dudu::parse_type_text("Base"),
+                                         dudu::parse_type_text("Derived")));
+}
+
 void test_native_semantic_tokens() {
     dudu::ModuleAst module =
         dudu::parse_source("import c \"native.h\"\n"
@@ -979,6 +999,7 @@ int main() {
         test_inherited_method_signature_uses_type_ast();
         test_find_inherited_method_uses_type_ast_receiver();
         test_instance_storage_uses_type_ast_receiver();
+        test_native_base_assignable_uses_type_ast();
         test_native_semantic_tokens();
         test_ast_constructor_assignment_compatibility();
         test_ast_index_receiver_type_inference();

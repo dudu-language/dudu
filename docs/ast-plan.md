@@ -233,6 +233,9 @@ Already structured:
 - class instance-storage queries now accept parsed `TypeRef` receivers, so
   super/base-class emission can inspect generic base storage without rendering
   base types first
+- native base assignability now accepts parsed expected/got `TypeRef` nodes, so
+  typed assignment checks can validate derived-to-base pointer/reference
+  assignments without rendering both sides first
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path
