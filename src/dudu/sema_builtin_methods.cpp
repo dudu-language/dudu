@@ -53,26 +53,10 @@ TypeRef receiver_template_type_ref(const Symbols& symbols, TypeRef type) {
     return type;
 }
 
-std::string receiver_template_type(const Symbols& symbols, std::string type) {
-    TypeRef type_ref = parse_type_text(type);
-    type_ref = receiver_template_type_ref(symbols, std::move(type_ref));
-    if (substitute_type_ref_text(type_ref, {}) == type) {
-        const std::string resolved = resolve_alias(symbols, std::move(type));
-        if (resolved != substitute_type_ref_text(type_ref, {})) {
-            type_ref = receiver_template_type_ref(symbols, parse_type_text(resolved));
-        }
-    }
-    return trim(substitute_type_ref_text(type_ref, {}));
-}
-
-bool builtin_cpp_method_signature(const Symbols& symbols, std::string receiver_type,
+bool builtin_cpp_method_signature(const Symbols& symbols, const TypeRef& receiver_type,
                                   const std::string& method_name, FunctionSignature& signature) {
-    TypeRef templated_ref = receiver_template_type_ref(symbols, parse_type_text(receiver_type));
+    TypeRef templated_ref = receiver_template_type_ref(symbols, receiver_type);
     std::string templated = substitute_type_ref_text(templated_ref, {});
-    if (templated == receiver_type) {
-        templated = receiver_template_type(symbols, std::move(receiver_type));
-        templated_ref = parse_type_text(templated);
-    }
     if (templated == "str" || templated == "string" || templated == "string_view" ||
         templated == "std.string" || templated == "std.string_view" || templated == "std::string" ||
         templated == "std::string_view" || templated.find("basic_string") != std::string::npos) {

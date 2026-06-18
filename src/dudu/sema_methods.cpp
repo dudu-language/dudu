@@ -87,8 +87,7 @@ std::vector<std::string> type_ref_texts(const std::vector<TypeRef>& types) {
 bool method_signature_for_type(const Symbols& symbols, const TypeRef& receiver_type,
                                const std::string& method_name, FunctionSignature& signature,
                                const SourceLocation* location) {
-    const std::string receiver_type_text = substitute_type_ref_text(receiver_type, {});
-    if (builtin_cpp_method_signature(symbols, receiver_type_text, method_name, signature)) {
+    if (builtin_cpp_method_signature(symbols, receiver_type, method_name, signature)) {
         return true;
     }
     const TypeRef templated_receiver = receiver_template_type_ref(symbols, receiver_type);
@@ -212,9 +211,8 @@ std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
 std::vector<FunctionSignature> method_signatures_for_type(const Symbols& symbols,
                                                           const TypeRef& receiver_type,
                                                           const std::string& method_name) {
-    const std::string receiver_type_text = substitute_type_ref_text(receiver_type, {});
     FunctionSignature builtin;
-    if (builtin_cpp_method_signature(symbols, receiver_type_text, method_name, builtin)) {
+    if (builtin_cpp_method_signature(symbols, receiver_type, method_name, builtin)) {
         return {builtin};
     }
     std::vector<FunctionSignature> out;

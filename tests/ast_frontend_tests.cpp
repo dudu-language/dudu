@@ -188,13 +188,15 @@ void test_builtin_method_signature_uses_type_ast() {
     symbols.aliases["Players"] = "list[*Player]";
     symbols.alias_type_refs["Players"] = dudu::parse_type_text("list[*Player]");
     dudu::FunctionSignature signature;
-    assert(dudu::builtin_cpp_method_signature(symbols, "list[*Player]", "append", signature));
+    assert(dudu::builtin_cpp_method_signature(symbols, dudu::parse_type_text("list[*Player]"),
+                                              "append", signature));
     assert(signature.params.size() == 1);
     assert(signature.params[0] == "*Player");
     assert(signature.return_type == "void");
 
     signature = {};
-    assert(dudu::builtin_cpp_method_signature(symbols, "Players", "append", signature));
+    assert(dudu::builtin_cpp_method_signature(symbols, dudu::parse_type_text("Players"), "append",
+                                              signature));
     assert(signature.params.size() == 1);
     assert(signature.params[0] == "*Player");
     assert(signature.param_type_refs.size() == 1);
@@ -202,14 +204,15 @@ void test_builtin_method_signature_uses_type_ast() {
     assert(signature.return_type == "void");
 
     signature = {};
-    assert(dudu::builtin_cpp_method_signature(symbols, "std::vector<std::string>", "push_back",
-                                              signature));
+    assert(dudu::builtin_cpp_method_signature(
+        symbols, dudu::parse_type_text("std::vector<std::string>"), "push_back", signature));
     assert(signature.params.size() == 1);
     assert(signature.params[0] == "std::string");
     assert(signature.return_type == "void");
 
     signature = {};
-    assert(dudu::builtin_cpp_method_signature(symbols, "std::atomic<uint64_t>", "load", signature));
+    assert(dudu::builtin_cpp_method_signature(
+        symbols, dudu::parse_type_text("std::atomic<uint64_t>"), "load", signature));
     assert(signature.return_type == "uint64_t");
 }
 

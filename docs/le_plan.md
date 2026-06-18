@@ -1388,3 +1388,6 @@ push. They are not release packaging work.
    APIs for native base assignability, instance-storage queries, inherited
    method lookup, and unimplemented abstract method checks; the former public
    string overloads and string reparsing wrappers have been deleted.
+   Built-in C++ method signature lookup now accepts parsed receiver `TypeRef`
+   nodes; the old public rendered receiver-type API and receiver template
+   string helper have been deleted.
