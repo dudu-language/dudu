@@ -27,10 +27,11 @@ struct NativeArgType {
 }
 
 bool arity_matches(const FunctionSignature& signature, size_t arg_count) {
-    const size_t min_params = signature.min_params < 0 ? signature.params.size()
-                                                       : static_cast<size_t>(signature.min_params);
+    const size_t param_count = signature_param_count(signature);
+    const size_t min_params =
+        signature.min_params < 0 ? param_count : static_cast<size_t>(signature.min_params);
     return signature.variadic ? arg_count >= min_params
-                              : arg_count >= min_params && arg_count <= signature.params.size();
+                              : arg_count >= min_params && arg_count <= param_count;
 }
 
 bool native_numeric_promotion(const std::string& expected, const std::string& got) {
@@ -59,18 +60,18 @@ std::string signature_param_text(const FunctionSignature& signature, size_t inde
 std::string signature_text(const std::string& callee, const FunctionSignature& signature) {
     std::ostringstream out;
     out << callee << "(";
-    for (size_t i = 0; i < signature.params.size(); ++i) {
+    const size_t param_count = signature_param_count(signature);
+    for (size_t i = 0; i < param_count; ++i) {
         if (i > 0)
             out << ", ";
         out << signature_param_text(signature, i);
     }
     if (signature.variadic) {
-        if (!signature.params.empty())
+        if (param_count != 0)
             out << ", ";
         out << "...";
     }
-    if (signature.min_params >= 0 &&
-        static_cast<size_t>(signature.min_params) < signature.params.size()) {
+    if (signature.min_params >= 0 && static_cast<size_t>(signature.min_params) < param_count) {
         out << "; min " << signature.min_params;
     }
     out << ") -> " << signature_return_type_text(signature);
@@ -196,22 +197,22 @@ std::string mismatch_reason_ast(const FunctionScope& scope, const FunctionSignat
     if (!arity_matches(signature, args.size())) {
         std::ostringstream out;
         out << "arity expects ";
+        const size_t param_count = signature_param_count(signature);
         if (signature.variadic) {
-            const size_t min_params = signature.min_params < 0
-                                          ? signature.params.size()
-                                          : static_cast<size_t>(signature.min_params);
+            const size_t min_params =
+                signature.min_params < 0 ? param_count : static_cast<size_t>(signature.min_params);
             out << "at least " << min_params;
         } else if (signature.min_params >= 0 &&
-                   static_cast<size_t>(signature.min_params) < signature.params.size()) {
-            out << signature.min_params << " to " << signature.params.size();
+                   static_cast<size_t>(signature.min_params) < param_count) {
+            out << signature.min_params << " to " << param_count;
         } else {
-            out << signature.params.size();
+            out << param_count;
         }
         out << " arguments, got " << args.size();
         return out.str();
     }
 
-    const size_t fixed_params = std::min(signature.params.size(), args.size());
+    const size_t fixed_params = std::min(signature_param_count(signature), args.size());
     for (size_t i = 0; i < fixed_params; ++i) {
         const NativeArgType got = native_arg_type(scope, args[i], location, infer_expr_type);
         const TypeRef expected_ref = signature_param_ref(signature, i);
@@ -268,14 +269,14 @@ match_signature_ast(const FunctionScope& scope, const FunctionSignature& signatu
         native_template_pack_placeholder(signature.params.back()).has_value();
     FunctionSignature arity_signature = signature;
     if (has_pack_param &&
-        arity_signature.min_params >= static_cast<int>(arity_signature.params.size())) {
+        arity_signature.min_params >= static_cast<int>(signature_param_count(arity_signature))) {
         --arity_signature.min_params;
     }
     if (!arity_matches(arity_signature, args.size())) {
         return std::nullopt;
     }
     const size_t fixed_params =
-        has_pack_param ? signature.params.size() - 1 : signature.params.size();
+        has_pack_param ? signature_param_count(signature) - 1 : signature_param_count(signature);
     const size_t provided_fixed = std::min(fixed_params, args.size());
     for (size_t i = 0; i < provided_fixed; ++i) {
         const NativeArgType got = native_arg_type(scope, args[i], location, infer_expr_type);

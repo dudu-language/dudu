@@ -1451,3 +1451,8 @@ push. They are not release packaging work.
    Indexed-type alias resolution now also uses the centralized
    `resolve_alias_ref_with_legacy_fallback` helper instead of carrying a local
    render/resolve/reparse fallback copy.
+   Function signatures now expose `signature_param_count`, and regular call
+   checking, function-type construction/rendering, and native overload arity
+   diagnostics use it instead of reading the legacy parameter string vector
+   directly. Native pack-placeholder handling still reads the final parameter
+   spelling at the native text boundary.

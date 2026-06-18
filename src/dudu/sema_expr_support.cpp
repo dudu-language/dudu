@@ -93,13 +93,13 @@ void check_call_args_ast(const FunctionScope& scope, const std::string& callee,
                          const SourceLocation* location) {
     if (location == nullptr)
         return;
-    if ((!signature.variadic && args.size() != signature.params.size()) ||
-        (signature.variadic && args.size() < signature.params.size())) {
-        sema_expr_fail(*location, "function " + callee + " expects " +
-                                      std::to_string(signature.params.size()) + " arguments, got " +
-                                      std::to_string(args.size()));
+    const size_t param_count = signature_param_count(signature);
+    if ((!signature.variadic && args.size() != param_count) ||
+        (signature.variadic && args.size() < param_count)) {
+        sema_expr_fail(*location, "function " + callee + " expects " + std::to_string(param_count) +
+                                      " arguments, got " + std::to_string(args.size()));
     }
-    for (size_t i = 0; i < signature.params.size(); ++i) {
+    for (size_t i = 0; i < param_count; ++i) {
         const TypeRef expected = signature_param_type_ref(signature, i);
         const std::string expected_text = substitute_type_ref_text(expected, {});
         const TypeRef got_ref = infer_expr_type_ast(scope, args[i], location);
@@ -155,11 +155,12 @@ void check_enum_variant_args_ast(const FunctionScope& scope, const EnumDecl& en,
 
 bool call_args_match_ast(const FunctionScope& scope, const FunctionSignature& signature,
                          const std::vector<Expr>& args) {
-    if ((!signature.variadic && args.size() != signature.params.size()) ||
-        (signature.variadic && args.size() < signature.params.size())) {
+    const size_t param_count = signature_param_count(signature);
+    if ((!signature.variadic && args.size() != param_count) ||
+        (signature.variadic && args.size() < param_count)) {
         return false;
     }
-    for (size_t i = 0; i < signature.params.size(); ++i) {
+    for (size_t i = 0; i < param_count; ++i) {
         const TypeRef got = infer_expr_type_ast(scope, args[i], nullptr);
         if (!can_assign_ast(scope, signature_param_type_ref(signature, i), args[i], got)) {
             return false;

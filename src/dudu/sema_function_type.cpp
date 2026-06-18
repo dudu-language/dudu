@@ -20,9 +20,10 @@ TypeRef function_type_ref(const FunctionSignature& signature, SourceLocation loc
     out.kind = TypeKind::Function;
     out.name = "fn";
     out.location = location;
-    out.children.reserve(signature.params.size() + 1);
+    const size_t param_count = signature_param_count(signature);
+    out.children.reserve(param_count + 1);
     out.children.push_back(signature_return_type_ref(signature));
-    for (size_t i = 0; i < signature.params.size(); ++i) {
+    for (size_t i = 0; i < param_count; ++i) {
         out.children.push_back(signature_param_type_ref(signature, i));
     }
     out.text = substitute_type_ref_text(out, {});
@@ -44,6 +45,11 @@ void set_signature_return_type(FunctionSignature& signature, TypeRef type) {
     }
     signature.return_type_ref = std::move(type);
     signature.return_type = substitute_type_ref_text(signature.return_type_ref, {});
+}
+
+size_t signature_param_count(const FunctionSignature& signature) {
+    return !signature.param_type_refs.empty() ? signature.param_type_refs.size()
+                                              : signature.params.size();
 }
 
 TypeRef signature_param_type_ref(const FunctionSignature& signature, size_t index) {
@@ -71,7 +77,8 @@ std::string signature_return_type_text(const FunctionSignature& signature) {
 std::string function_type(const FunctionSignature& signature) {
     std::ostringstream out;
     out << "fn(";
-    for (size_t i = 0; i < signature.params.size(); ++i) {
+    const size_t param_count = signature_param_count(signature);
+    for (size_t i = 0; i < param_count; ++i) {
         if (i > 0) {
             out << ", ";
         }
