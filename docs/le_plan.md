@@ -1246,6 +1246,13 @@ declarations safely.
    compatibility mirrors, and delete every compiler-internal one that is no
    longer an explicit native/C++ boundary.
 
+   Definition of done: no semantic, codegen, lint, LSP, formatter, or test
+   discovery path may keep a fallback callback that accepts rendered source or
+   rendered type strings when structured `Stmt`, `Expr`, `TypeRef`, tokens, or
+   symbol-table facts are available. These APIs should fail loudly during the
+   migration if a caller has not been ported yet; they should not silently
+   preserve the old string path.
+
    Status: in progress. Body, generic, constructor, and native assignment
    paths are being migrated from rendered string type pairs to parsed
    `TypeRef` pairs. Constructor parameter checking no longer stores a duplicate
@@ -1321,6 +1328,12 @@ declarations safely.
    Built-in `min`/`max` and contextual numeric binary inference now pass
    inferred `TypeRef` operands into assignment compatibility instead of calling
    through rendered argument-type strings.
+   Dudu-owned `FunctionSignature` construction now uses centralized
+   `TypeRef` setters for parameter and return types; rendered signature strings
+   are derived at that assignment boundary instead of being hand-maintained by
+   function, method, generic, inheritance, operator, and builtin-method
+   builders. Native C++ signatures keep their spelling strings as an explicit
+   imported-library boundary.
    Body expression assignment checking now exposes only the parsed
    `TypeRef`/`TypeRef` `can_assign_ast` API; the string and mixed string
    overloads have been deleted.

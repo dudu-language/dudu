@@ -7,6 +7,8 @@
 #include "dudu/type_compat.hpp"
 
 #include <set>
+#include <utility>
+#include <vector>
 
 namespace dudu {
 namespace {} // namespace
@@ -155,12 +157,13 @@ dudu_operator_signature(const Symbols& symbols, const std::string& op, const Typ
         FunctionSignature signature;
         const size_t first_param =
             !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
+        std::vector<TypeRef> param_types;
+        param_types.reserve(method.params.size() - first_param);
         for (size_t i = first_param; i < method.params.size(); ++i) {
-            signature.params.push_back(type_ref_text(method.params[i].type_ref));
-            signature.param_type_refs.push_back(method.params[i].type_ref);
+            param_types.push_back(method.params[i].type_ref);
         }
-        signature.return_type = function_return_type_text(method);
-        signature.return_type_ref = function_return_type_ref(method);
+        set_signature_param_types(signature, std::move(param_types));
+        set_signature_return_type(signature, function_return_type_ref(method));
         return signature;
     }
     return std::nullopt;
@@ -186,12 +189,13 @@ std::optional<FunctionSignature> dudu_binary_operator_signature(const Symbols& s
         FunctionSignature signature;
         const size_t first_param =
             !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
+        std::vector<TypeRef> param_types;
+        param_types.reserve(method.params.size() - first_param);
         for (size_t i = first_param; i < method.params.size(); ++i) {
-            signature.params.push_back(type_ref_text(method.params[i].type_ref));
-            signature.param_type_refs.push_back(method.params[i].type_ref);
+            param_types.push_back(method.params[i].type_ref);
         }
-        signature.return_type = function_return_type_text(method);
-        signature.return_type_ref = function_return_type_ref(method);
+        set_signature_param_types(signature, std::move(param_types));
+        set_signature_return_type(signature, function_return_type_ref(method));
         if (signature.params.empty() ||
             assignment_type_allowed(signature_param_type_ref(signature, 0), right_expr, right)) {
             return signature;

@@ -1,6 +1,10 @@
 #include "dudu/sema_builtin_methods.hpp"
 
 #include "dudu/ast_type.hpp"
+#include "dudu/sema_function_type.hpp"
+
+#include <utility>
+#include <vector>
 
 namespace dudu {
 namespace {
@@ -21,17 +25,16 @@ bool single_template_type_arg(const TypeRef& type, std::string_view name) {
 }
 
 void set_return_type(FunctionSignature& signature, const std::string& type) {
-    signature.return_type = type;
-    signature.return_type_ref = parse_type_text(type);
+    set_signature_return_type(signature, parse_type_text(type));
 }
 
 void set_param_types(FunctionSignature& signature, std::initializer_list<std::string> types) {
-    signature.params.assign(types.begin(), types.end());
-    signature.param_type_refs.clear();
-    signature.param_type_refs.reserve(signature.params.size());
-    for (const std::string& type : signature.params) {
-        signature.param_type_refs.push_back(parse_type_text(type));
+    std::vector<TypeRef> refs;
+    refs.reserve(types.size());
+    for (const std::string& type : types) {
+        refs.push_back(parse_type_text(type));
     }
+    set_signature_param_types(signature, std::move(refs));
 }
 
 } // namespace

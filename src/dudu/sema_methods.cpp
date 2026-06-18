@@ -4,11 +4,14 @@
 #include "dudu/cpp_lower.hpp"
 #include "dudu/sema_builtin_methods.hpp"
 #include "dudu/sema_common.hpp"
+#include "dudu/sema_function_type.hpp"
 #include "dudu/sema_method_templates.hpp"
 #include "dudu/sema_methods_internal.hpp"
 
 #include <map>
 #include <optional>
+#include <utility>
+#include <vector>
 
 namespace dudu {
 namespace {
@@ -56,18 +59,19 @@ FunctionSignature instantiate_method_signature(const ClassDecl& klass, const Fun
     FunctionSignature signature;
     const size_t first_param =
         !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
+    std::vector<TypeRef> param_types;
+    param_types.reserve(method.params.size() - first_param);
     for (size_t i = first_param; i < method.params.size(); ++i) {
-        TypeRef param_type = instantiate_method_type_ref(klass, method, method.params[i].type_ref,
-                                                         receiver_args, method_args);
-        signature.params.push_back(substitute_type_ref_text(param_type, {}));
-        signature.param_type_refs.push_back(std::move(param_type));
+        param_types.push_back(instantiate_method_type_ref(klass, method, method.params[i].type_ref,
+                                                          receiver_args, method_args));
     }
-    signature.return_type_ref =
+    set_signature_param_types(signature, std::move(param_types));
+    set_signature_return_type(
+        signature,
         function_has_return_type(method)
             ? instantiate_method_type_ref(klass, method, method.return_type_ref, receiver_args,
                                           method_args)
-            : void_type_ref(method.location);
-    signature.return_type = substitute_type_ref_text(signature.return_type_ref, {});
+            : void_type_ref(method.location));
     return signature;
 }
 

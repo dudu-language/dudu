@@ -4,6 +4,7 @@
 #include "dudu/cpp_lower.hpp"
 
 #include <sstream>
+#include <utility>
 
 namespace dudu {
 namespace {
@@ -26,6 +27,23 @@ TypeRef function_type_ref(const FunctionSignature& signature, SourceLocation loc
     }
     out.text = substitute_type_ref_text(out, {});
     return out;
+}
+
+void set_signature_param_types(FunctionSignature& signature, std::vector<TypeRef> types) {
+    signature.param_type_refs = std::move(types);
+    signature.params.clear();
+    signature.params.reserve(signature.param_type_refs.size());
+    for (const TypeRef& type : signature.param_type_refs) {
+        signature.params.push_back(substitute_type_ref_text(type, {}));
+    }
+}
+
+void set_signature_return_type(FunctionSignature& signature, TypeRef type) {
+    if (!has_type_ref(type)) {
+        type = parse_type_text("void");
+    }
+    signature.return_type_ref = std::move(type);
+    signature.return_type = substitute_type_ref_text(signature.return_type_ref, {});
 }
 
 TypeRef signature_param_type_ref(const FunctionSignature& signature, size_t index) {

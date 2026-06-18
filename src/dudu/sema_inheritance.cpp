@@ -11,6 +11,8 @@
 #include <set>
 #include <sstream>
 #include <string_view>
+#include <utility>
+#include <vector>
 
 namespace dudu {
 namespace {
@@ -90,12 +92,13 @@ FunctionSignature inherited_method_signature_without_self(const FunctionDecl& me
     FunctionSignature signature;
     const size_t first_param =
         !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
+    std::vector<TypeRef> param_types;
+    param_types.reserve(method.params.size() - first_param);
     for (size_t i = first_param; i < method.params.size(); ++i) {
-        signature.params.push_back(type_ref_text(method.params[i].type_ref));
-        signature.param_type_refs.push_back(method.params[i].type_ref);
+        param_types.push_back(method.params[i].type_ref);
     }
-    signature.return_type = function_return_type_text(method);
-    signature.return_type_ref = function_return_type_ref(method);
+    set_signature_param_types(signature, std::move(param_types));
+    set_signature_return_type(signature, function_return_type_ref(method));
     return signature;
 }
 
@@ -106,20 +109,18 @@ FunctionSignature inherited_method_signature_for_class_type(const ClassDecl& own
     const std::vector<std::string> receiver_args = template_args_from_type(receiver_type);
     const std::map<std::string, std::string> substitutions =
         class_type_substitutions(owner, receiver_args);
+    std::vector<TypeRef> param_types;
+    param_types.reserve(signature.params.size());
     for (size_t i = 0; i < signature.params.size(); ++i) {
         TypeRef param_type = i < signature.param_type_refs.size()
                                  ? signature.param_type_refs[i]
                                  : parse_type_text(signature.params[i], method.location);
-        param_type = substitute_type_ref(param_type, substitutions);
-        signature.params[i] = substitute_type_ref_text(param_type, {});
-        if (i < signature.param_type_refs.size()) {
-            signature.param_type_refs[i] = std::move(param_type);
-        } else {
-            signature.param_type_refs.push_back(std::move(param_type));
-        }
+        param_types.push_back(substitute_type_ref(param_type, substitutions));
     }
-    signature.return_type_ref = substitute_type_ref(signature.return_type_ref, substitutions);
-    signature.return_type = substitute_type_ref_text(signature.return_type_ref, {});
+    set_signature_param_types(signature, std::move(param_types));
+    set_signature_return_type(signature,
+                              substitute_type_ref(signature_return_type_ref(signature),
+                                                  substitutions));
     return signature;
 }
 

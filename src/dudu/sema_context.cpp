@@ -2,6 +2,7 @@
 
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
+#include "dudu/sema_function_type.hpp"
 #include "dudu/sema_inheritance.hpp"
 #include "dudu/source.hpp"
 
@@ -379,12 +380,13 @@ Symbols collect_symbols(const ModuleAst& module) {
     for (const FunctionDecl& fn : module.functions) {
         add_name(names, fn.name, fn.location);
         FunctionSignature signature;
+        std::vector<TypeRef> param_types;
+        param_types.reserve(fn.params.size());
         for (const ParamDecl& param : fn.params) {
-            signature.params.push_back(type_ref_text(param.type_ref));
-            signature.param_type_refs.push_back(param.type_ref);
+            param_types.push_back(param.type_ref);
         }
-        signature.return_type = function_return_type_text(fn);
-        signature.return_type_ref = function_return_type_ref(fn);
+        set_signature_param_types(signature, std::move(param_types));
+        set_signature_return_type(signature, function_return_type_ref(fn));
         symbols.function_signatures[fn.name] = std::move(signature);
         symbols.function_decls[fn.name] = &fn;
     }

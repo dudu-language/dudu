@@ -2,11 +2,13 @@
 
 #include "dudu/ast_type.hpp"
 #include "dudu/sema_common.hpp"
+#include "dudu/sema_function_type.hpp"
 
 #include <algorithm>
 #include <map>
 #include <sstream>
 #include <utility>
+#include <vector>
 
 namespace dudu {
 
@@ -249,15 +251,15 @@ FunctionSignature instantiate_generic_signature(const FunctionDecl& fn,
     const std::map<std::string, std::string> substitutions =
         generic_substitutions(fn.generic_params, args);
     FunctionSignature signature;
-    signature.return_type_ref = function_has_return_type(fn)
-                                    ? substitute_type_ref(fn.return_type_ref, substitutions)
-                                    : void_type_ref(fn.location);
-    signature.return_type = substitute_type_ref_text(signature.return_type_ref, {});
+    set_signature_return_type(signature, function_has_return_type(fn)
+                                             ? substitute_type_ref(fn.return_type_ref, substitutions)
+                                             : void_type_ref(fn.location));
+    std::vector<TypeRef> param_types;
+    param_types.reserve(fn.params.size());
     for (const ParamDecl& param : fn.params) {
-        TypeRef param_type = substitute_type_ref(param.type_ref, substitutions);
-        signature.params.push_back(substitute_type_ref_text(param_type, {}));
-        signature.param_type_refs.push_back(std::move(param_type));
+        param_types.push_back(substitute_type_ref(param.type_ref, substitutions));
     }
+    set_signature_param_types(signature, std::move(param_types));
     return signature;
 }
 
