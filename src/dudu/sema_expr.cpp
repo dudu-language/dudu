@@ -149,8 +149,7 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
             const SourceLocation& index_location = location != nullptr ? *location : expr.location;
             const Expr& receiver = expr.children[0];
             if (receiver.kind == ExprKind::Name) {
-                if (const auto local = scope.locals.find(receiver.name);
-                    local != scope.locals.end()) {
+                if (scope.local_type_refs.contains(receiver.name)) {
                     const TypeRef receiver_type =
                         local_type_ref(scope, receiver.name, index_location);
                     const std::string receiver_type_text =

@@ -59,7 +59,7 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt,
     if (stmt.target_expr.kind == ExprKind::Index && stmt.target_expr.children.size() == 2 &&
         stmt.target_expr.children[0].kind == ExprKind::Name) {
         const std::string& name = stmt.target_expr.children[0].name;
-        if (const auto local = scope.locals.find(name); local != scope.locals.end()) {
+        if (scope.local_type_refs.contains(name)) {
             const TypeRef receiver_type = local_type_ref(scope, name, target_location);
             const std::string receiver_type_text = substitute_type_ref_text(receiver_type, {});
             if (const auto signature =
@@ -90,8 +90,7 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt,
         if (scope.constants.contains(name)) {
             sema_fail(target_location, "cannot assign to constant: " + name);
         }
-        const auto local = scope.locals.find(name);
-        if (local == scope.locals.end()) {
+        if (!scope.local_type_refs.contains(name)) {
             sema_fail(target_location, "assignment to unknown local: " + name);
         }
         TypeRef type_ref = local_type_ref(scope, name, target_location);
