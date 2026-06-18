@@ -1562,6 +1562,9 @@ push. They are not release packaging work.
    `BodyCheckCallbacks` no longer carries a call-argument checking callback;
    sema body helpers and assignment target checks call the structured
    `check_call_args_ast` path directly.
+   `SuperCheckCallbacks` likewise no longer carries a call-argument checking
+   callback; `super` method validation now calls the structured checker
+   directly after overload selection.
    Index-result inference now detects foreign/qualified indexable receivers from
    `TypeRef` head/kind metadata instead of rendering the receiver type to search
    for namespace separators.

@@ -19,9 +19,6 @@ struct SuperCheckCallbacks {
     std::function<std::optional<FunctionSignature>(
         const FunctionScope&, const std::vector<FunctionSignature>&, const std::vector<Expr>&)>
         matching_signature;
-    std::function<void(const FunctionScope&, const std::string&, const FunctionSignature&,
-                       const std::vector<Expr>&, const SourceLocation*)>
-        check_call_args;
 };
 
 bool is_super_call(const std::string& callee);

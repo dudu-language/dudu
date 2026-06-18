@@ -4,6 +4,7 @@
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/sema_constructors.hpp"
+#include "dudu/sema_expr_internal.hpp"
 #include "dudu/sema_function_type.hpp"
 #include "dudu/sema_inheritance.hpp"
 #include "dudu/sema_methods.hpp"
@@ -144,10 +145,10 @@ TypeRef infer_super_call_type_ref(const FunctionScope& scope, const Expr& expr,
     const std::vector<FunctionSignature> signatures =
         method_signatures_for_type(scope.symbols, base, method_name);
     if (const auto match = callbacks.matching_signature(scope, signatures, expr.children)) {
-        callbacks.check_call_args(scope, callee, *match, expr.children, location);
+        check_call_args_ast(scope, callee, *match, expr.children, location);
         return signature_return_type_ref(*match);
     }
-    callbacks.check_call_args(scope, callee, signature, expr.children, location);
+    check_call_args_ast(scope, callee, signature, expr.children, location);
     return signature_return_type_ref(signature);
 }
 
