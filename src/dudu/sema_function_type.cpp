@@ -118,21 +118,15 @@ bool parse_function_type(const TypeRef& type, FunctionSignature& out) {
     if (function->kind != TypeKind::Function || function->children.empty()) {
         return false;
     }
-    out.params.clear();
-    out.param_type_refs.clear();
-    out.return_type = missing_type_ref(function->children.front())
-                          ? "void"
-                          : substitute_type_ref_text(function->children.front(), {});
-    out.return_type_ref = missing_type_ref(function->children.front())
-                              ? parse_type_text("void", type.location)
-                              : function->children.front();
+    set_signature_return_type(out, missing_type_ref(function->children.front())
+                                       ? parse_type_text("void", type.location)
+                                       : function->children.front());
+    std::vector<TypeRef> param_types;
+    param_types.reserve(function->children.size() - 1);
     for (size_t i = 1; i < function->children.size(); ++i) {
-        out.params.push_back(substitute_type_ref_text(function->children[i], {}));
-        out.param_type_refs.push_back(function->children[i]);
+        param_types.push_back(function->children[i]);
     }
-    if (out.return_type.empty()) {
-        out.return_type = "void";
-    }
+    set_signature_param_types(out, std::move(param_types));
     return true;
 }
 
