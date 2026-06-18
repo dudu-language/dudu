@@ -537,7 +537,9 @@ push. They are not release packaging work.
    now go through the shared local-binding helper instead of writing rendered
    and structured local maps by hand. LSP local-context collection now keeps
    local `TypeRef` metadata as the primary result and renders string types only
-   at hover/completion compatibility boundaries. Enum variant recognition now
+   at hover/completion compatibility boundaries. Slice/swizzle and pointer-call
+   emission helpers now avoid unused rendered local type parameters when the
+   decision comes from local `TypeRef` metadata. Enum variant recognition now
    uses a shared structural expression helper in sema, codegen, and match
    patterns instead of
    duplicate dotted-string reconstruction. Native import member type lookup now

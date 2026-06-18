@@ -94,10 +94,9 @@ std::string lower_call_args_for_signature(const std::vector<Expr>& args, const F
     return out.str();
 }
 
-bool expression_has_pointer_type(const Expr& expr, const std::map<std::string, std::string>& locals,
+bool expression_has_pointer_type(const Expr& expr,
                                  const std::map<std::string, TypeRef>& local_type_refs,
                                  const Symbols* symbols) {
-    (void)locals;
     if (is_pointer_receiver_expr(expr, local_type_refs)) {
         return true;
     }
@@ -199,8 +198,7 @@ std::string lower_callee_expr(const Expr& expr, const std::vector<std::string>& 
             }
         }
         if (callee.kind == ExprKind::Member && callee.children.size() == 1 &&
-            expression_has_pointer_type(callee.children.front(), locals, local_type_refs,
-                                        symbols)) {
+            expression_has_pointer_type(callee.children.front(), local_type_refs, symbols)) {
             return lower_expr(callee.children.front(), aliases, locals, local_type_refs, symbols,
                               options) +
                    "->" + callee.name;

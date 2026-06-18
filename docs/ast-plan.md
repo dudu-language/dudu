@@ -205,6 +205,8 @@ Already structured:
 - LSP local-context collection now keeps local `TypeRef` metadata as the primary
   result and renders string types only at hover/completion compatibility
   boundaries
+- slice/swizzle and pointer-call emission helpers now avoid unused rendered
+  local type parameters when the decision comes from local `TypeRef` metadata
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path
