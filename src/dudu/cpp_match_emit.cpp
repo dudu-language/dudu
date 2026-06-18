@@ -61,7 +61,9 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                                         std::to_string(stmt.location.column);
             const std::string matched = subject + "_matched";
             out << indent(depth) << "auto&& " << subject << " = "
-                << lower_expr(stmt.condition_expr, aliases, locals, symbols, options) << ";\n";
+                << lower_expr(stmt.condition_expr, aliases, locals, local_type_refs, symbols,
+                              options)
+                << ";\n";
             out << indent(depth) << "bool " << matched << " = false;\n";
             for (const Stmt& child : stmt.children) {
                 if (child.kind != StmtKind::Case) {
@@ -106,7 +108,8 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                 }
                 if (has_expr(child.guard_expr)) {
                     out << indent(depth + 1) << "if ("
-                        << lower_expr(child.guard_expr, aliases, nested, symbols, options)
+                        << lower_expr(child.guard_expr, aliases, nested, nested_type_refs, symbols,
+                                      options)
                         << ") {\n";
                     out << indent(depth + 2) << matched << " = true;\n";
                     emit_block(out, child.children, depth + 2, aliases, nested, nested_type_refs,
@@ -131,7 +134,9 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                                         std::to_string(stmt.location.column);
             const std::string matched = subject + "_matched";
             out << indent(depth) << "auto&& " << subject << " = "
-                << lower_expr(stmt.condition_expr, aliases, locals, symbols, options) << ";\n";
+                << lower_expr(stmt.condition_expr, aliases, locals, local_type_refs, symbols,
+                              options)
+                << ";\n";
             out << indent(depth) << "bool " << matched << " = false;\n";
             for (const Stmt& child : stmt.children) {
                 if (child.kind != StmtKind::Case) {
@@ -177,7 +182,8 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                 }
                 if (has_expr(child.guard_expr)) {
                     out << indent(depth + 1) << "if ("
-                        << lower_expr(child.guard_expr, aliases, nested, symbols, options)
+                        << lower_expr(child.guard_expr, aliases, nested, nested_type_refs, symbols,
+                                      options)
                         << ") {\n";
                     out << indent(depth + 2) << matched << " = true;\n";
                     emit_block(out, child.children, depth + 2, aliases, nested, nested_type_refs,
@@ -197,7 +203,8 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         }
     }
     out << indent(depth) << "switch ("
-        << lower_expr(stmt.condition_expr, aliases, locals, symbols, options) << ") {\n";
+        << lower_expr(stmt.condition_expr, aliases, locals, local_type_refs, symbols, options)
+        << ") {\n";
     for (const Stmt& child : stmt.children) {
         if (child.kind != StmtKind::Case) {
             continue;
@@ -206,7 +213,9 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
             out << indent(depth) << "default:\n";
         } else {
             out << indent(depth) << "case "
-                << lower_expr(child.pattern_expr, aliases, locals, symbols, options) << ":\n";
+                << lower_expr(child.pattern_expr, aliases, locals, local_type_refs, symbols,
+                              options)
+                << ":\n";
         }
         out << indent(depth + 1) << "{\n";
         emit_block(out, child.children, depth + 2, aliases, locals, local_type_refs,
