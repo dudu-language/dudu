@@ -13,7 +13,6 @@
 namespace dudu {
 
 struct EffectiveStmtType {
-    std::string text;
     TypeRef ref;
 };
 

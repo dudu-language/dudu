@@ -1284,6 +1284,9 @@ declarations safely.
    Native overload matching no longer caches a rendered argument type beside
    the inferred `TypeRef`; diagnostics and remaining native-template fallback
    bindings render on demand at their boundary.
+   C++ statement emission effective local type calculation no longer stores a
+   rendered type string beside `TypeRef`; the legacy string locals map is
+   populated by rendering at the emission boundary only.
    Indexing type inference exposes only parsed `TypeRef` receiver APIs; the old
    string receiver and string result wrappers have been removed, with
    `cpp(...)` escape inference rendering only at its boundary.

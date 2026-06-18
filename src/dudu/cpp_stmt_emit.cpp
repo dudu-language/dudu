@@ -135,7 +135,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         const ArrayShapeInference inferred =
             infer_array_literal_shape_type(stmt.type_ref, stmt.value_expr);
         const EffectiveStmtType type = effective_stmt_type(stmt, inferred);
-        locals[name] = type.text;
+        locals[name] = substitute_type_ref_text(type.ref, {});
         local_type_refs[name] = type.ref;
         out << indent(depth) << lower_declared_stmt_type(type.ref, aliases, options) << ' ' << name;
         if (has_expr(stmt.value_expr)) {
