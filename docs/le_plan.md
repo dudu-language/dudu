@@ -1628,3 +1628,7 @@ push. They are not release packaging work.
    C++ associated-type assignment compatibility, such as iterator/value_type
    aliases from imported native templates, now checks structured `TypeRef`
    names before falling back to native spelling compatibility.
+   The final type-compatibility fallback now parses normalized native spellings
+   once into `TypeRef`s and reuses the structured pointer/reference/const,
+   function-pointer, internal-template, and associated-type helpers. The
+   duplicate string overloads for those checks have been deleted.

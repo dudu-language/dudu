@@ -42,12 +42,6 @@ TypeRef wrapped_type_arg_ref(const TypeRef& type) {
     return type;
 }
 
-std::optional<std::string> unary_child(std::string type, TypeKind kind) {
-    type = trim_copy(std::move(type));
-    const auto child = unary_type_child_ref(parse_type_text(type), kind);
-    return child ? std::optional<std::string>{substitute_type_ref_text(*child, {})} : std::nullopt;
-}
-
 std::optional<TypeRef> unary_child_ref(const TypeRef& type, TypeKind kind) {
     if (type.kind != kind || type.children.size() != 1) {
         return std::nullopt;
@@ -55,16 +49,8 @@ std::optional<TypeRef> unary_child_ref(const TypeRef& type, TypeKind kind) {
     return type.children.front();
 }
 
-std::optional<std::string> pointer_pointee(std::string type) {
-    return unary_child(std::move(type), TypeKind::Pointer);
-}
-
 std::optional<TypeRef> pointer_pointee_ref(const TypeRef& type) {
     return unary_child_ref(type, TypeKind::Pointer);
-}
-
-std::optional<std::string> reference_target(std::string type) {
-    return unary_child(std::move(type), TypeKind::Reference);
 }
 
 std::optional<TypeRef> reference_target_ref(const TypeRef& type) {
@@ -119,25 +105,9 @@ bool is_container_literal_expr(const Expr& expr) {
            expr.kind == ExprKind::DictLiteral;
 }
 
-bool is_reference_binding(std::string expected, std::string got) {
-    got = trim_copy(std::move(got));
-    if (const auto target = reference_target(std::move(expected))) {
-        return wrapped_type_arg(*target) == got;
-    }
-    return false;
-}
-
 bool is_reference_binding(const TypeRef& expected, const TypeRef& got) {
     if (const auto target = reference_target_ref(expected)) {
         return type_ref_equivalent(wrapped_type_arg_ref(*target), got);
-    }
-    return false;
-}
-
-bool is_value_from_reference(std::string expected, std::string got) {
-    expected = trim_copy(std::move(expected));
-    if (const auto target = reference_target(std::move(got))) {
-        return expected == wrapped_type_arg(*target);
     }
     return false;
 }
@@ -162,16 +132,6 @@ bool is_null_pointer(const TypeRef& expected, const Expr& expr, const TypeRef& g
            type_ref_is_name(got, "None");
 }
 
-bool is_void_pointer_target(std::string expected, std::string got) {
-    const auto expected_pointee = pointer_pointee(std::move(expected));
-    const auto got_pointee = pointer_pointee(std::move(got));
-    if (!expected_pointee || !got_pointee) {
-        return false;
-    }
-    return wrapped_type_arg(*expected_pointee) == "void" ||
-           wrapped_type_arg(*expected_pointee) == "const[void]";
-}
-
 bool is_void_pointer_target(const TypeRef& expected, const TypeRef& got) {
     const auto expected_pointee = pointer_pointee_ref(expected);
     const auto got_pointee = pointer_pointee_ref(got);
@@ -179,16 +139,6 @@ bool is_void_pointer_target(const TypeRef& expected, const TypeRef& got) {
         return false;
     }
     return type_ref_is_void(wrapped_type_arg_ref(*expected_pointee));
-}
-
-bool is_const_pointer_binding(std::string expected, std::string got) {
-    const auto expected_pointee = pointer_pointee(std::move(expected));
-    const auto got_pointee = pointer_pointee(std::move(got));
-    if (!expected_pointee || !got_pointee) {
-        return false;
-    }
-    const auto expected_const_inner = unary_child(*expected_pointee, TypeKind::Const);
-    return expected_const_inner && wrapped_type_arg(*got_pointee) == *expected_const_inner;
 }
 
 bool is_const_pointer_binding(const TypeRef& expected, const TypeRef& got) {
@@ -200,17 +150,6 @@ bool is_const_pointer_binding(const TypeRef& expected, const TypeRef& got) {
     const auto expected_const_inner = unary_child_ref(*expected_pointee, TypeKind::Const);
     return expected_const_inner &&
            type_ref_equivalent(wrapped_type_arg_ref(*got_pointee), *expected_const_inner);
-}
-
-bool is_pointer_to_reference_value(std::string expected, std::string got) {
-    const auto expected_pointee = pointer_pointee(std::move(expected));
-    const auto got_pointee = pointer_pointee(std::move(got));
-    if (!expected_pointee || !got_pointee) {
-        return false;
-    }
-    const auto got_reference_target = reference_target(*got_pointee);
-    return got_reference_target &&
-           wrapped_type_arg(*expected_pointee) == wrapped_type_arg(*got_reference_target);
 }
 
 bool is_pointer_to_reference_value(const TypeRef& expected, const TypeRef& got) {
@@ -261,24 +200,6 @@ bool is_cpp_associated_type_binding(const TypeRef& expected, const TypeRef& got)
         return true;
     }
     return expected_name == "const_iterator" && type_ref_ends_with_name(got, "iterator");
-}
-
-std::string normalize_function_type(std::string type) {
-    type = trim_copy(std::move(type));
-    const TypeRef parsed = parse_type_text(type);
-    return parsed.kind == TypeKind::Function ? substitute_type_ref_text(parsed, {}) : type;
-}
-
-bool is_function_type_match(std::string expected, std::string got) {
-    expected = normalize_function_type(std::move(expected));
-    got = normalize_function_type(std::move(got));
-    return starts_with(expected, "fn(") && expected == got;
-}
-
-bool is_native_function_pointer(std::string expected, std::string got) {
-    expected = trim_copy(std::move(expected));
-    got = trim_copy(std::move(got));
-    return expected == "*void" && starts_with(normalize_function_type(std::move(got)), "fn(");
 }
 
 bool is_native_function_pointer(const TypeRef& expected, const TypeRef& got) {
@@ -341,17 +262,11 @@ bool is_internal_cpp_template_artifact(const TypeRef& type) {
            has_internal_cpp_identifier(type.name);
 }
 
-bool is_native_internal_template_result(std::string expected, std::string got) {
-    const TypeRef expected_ref = parse_type_text(std::move(expected));
-    if (expected_ref.kind != TypeKind::Template) {
+bool is_native_internal_template_result(const TypeRef& expected, const TypeRef& got) {
+    if (expected.kind != TypeKind::Template) {
         return false;
     }
-    return is_internal_cpp_template_artifact(parse_type_text(std::move(got)));
-}
-
-bool is_value_from_const(std::string expected, std::string got) {
-    const auto inner = unary_child(std::move(got), TypeKind::Const);
-    return inner.has_value() && compact_type(expected) == compact_type(*inner);
+    return is_internal_cpp_template_artifact(got);
 }
 
 bool is_value_from_const(const TypeRef& expected, const TypeRef& got) {
@@ -362,9 +277,10 @@ bool is_value_from_const(const TypeRef& expected, const TypeRef& got) {
 bool text_type_assignment_allowed(const std::string& expected, const std::string& got) {
     const std::string normalized_expected = normalize_cpp_type_artifacts(expected);
     const std::string normalized_got = normalize_cpp_type_artifacts(got);
+    const TypeRef expected_ref = parse_type_text(normalized_expected);
+    const TypeRef got_ref = parse_type_text(normalized_got);
     if (!normalized_expected.empty() && !normalized_got.empty() &&
-        structural_type_assignment_allowed(parse_type_text(normalized_expected),
-                                           parse_type_text(normalized_got))) {
+        structural_type_assignment_allowed(expected_ref, got_ref)) {
         return true;
     }
     return normalized_expected == "auto" || normalized_got.empty() || normalized_got == "auto" ||
@@ -373,17 +289,15 @@ bool text_type_assignment_allowed(const std::string& expected, const std::string
            compact_type(normalize_c_tags(normalized_expected)) ==
                compact_type(normalize_c_tags(normalized_got)) ||
            (is_string_type(normalized_expected) && is_string_type(normalized_got)) ||
-           is_void_pointer_target(normalized_expected, normalized_got) ||
-           is_const_pointer_binding(normalized_expected, normalized_got) ||
-           is_pointer_to_reference_value(normalized_expected, normalized_got) ||
-           is_reference_binding(normalized_expected, normalized_got) ||
-           is_value_from_reference(normalized_expected, normalized_got) ||
-           is_value_from_const(normalized_expected, normalized_got) ||
-           is_function_type_match(normalized_expected, normalized_got) ||
-           is_native_function_pointer(normalized_expected, normalized_got) ||
-           is_native_internal_template_result(normalized_expected, normalized_got) ||
-           is_cpp_associated_type_binding(parse_type_text(normalized_expected),
-                                          parse_type_text(normalized_got));
+           is_void_pointer_target(expected_ref, got_ref) ||
+           is_const_pointer_binding(expected_ref, got_ref) ||
+           is_pointer_to_reference_value(expected_ref, got_ref) ||
+           is_reference_binding(expected_ref, got_ref) ||
+           is_value_from_reference(expected_ref, got_ref) ||
+           is_value_from_const(expected_ref, got_ref) ||
+           is_native_function_pointer(expected_ref, got_ref) ||
+           is_native_internal_template_result(expected_ref, got_ref) ||
+           is_cpp_associated_type_binding(expected_ref, got_ref);
 }
 
 } // namespace
@@ -448,15 +362,14 @@ bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const Ty
            (is_string_type(normalized_expected) && is_string_type(normalized_got)) ||
            is_value_wrapper_assignment(normalized_expected_ref, expr, normalized_got_ref) ||
            is_null_pointer(normalized_expected_ref, expr, normalized_got_ref) ||
-           is_void_pointer_target(normalized_expected, normalized_got) ||
-           is_const_pointer_binding(normalized_expected, normalized_got) ||
-           is_pointer_to_reference_value(normalized_expected, normalized_got) ||
-           is_reference_binding(normalized_expected, normalized_got) ||
-           is_value_from_reference(normalized_expected, normalized_got) ||
-           is_value_from_const(normalized_expected, normalized_got) ||
-           is_function_type_match(normalized_expected, normalized_got) ||
-           is_native_function_pointer(normalized_expected, normalized_got) ||
-           is_native_internal_template_result(normalized_expected, normalized_got) ||
+           is_void_pointer_target(normalized_expected_ref, normalized_got_ref) ||
+           is_const_pointer_binding(normalized_expected_ref, normalized_got_ref) ||
+           is_pointer_to_reference_value(normalized_expected_ref, normalized_got_ref) ||
+           is_reference_binding(normalized_expected_ref, normalized_got_ref) ||
+           is_value_from_reference(normalized_expected_ref, normalized_got_ref) ||
+           is_value_from_const(normalized_expected_ref, normalized_got_ref) ||
+           is_native_function_pointer(normalized_expected_ref, normalized_got_ref) ||
+           is_native_internal_template_result(normalized_expected_ref, normalized_got_ref) ||
            is_cpp_associated_type_binding(normalized_expected_ref, normalized_got_ref) ||
            (normalized_expected == "cstr" && normalized_got == "str" &&
             expr.kind == ExprKind::StringLiteral) ||
