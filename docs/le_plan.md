@@ -1536,6 +1536,11 @@ push. They are not release packaging work.
    Structural type compatibility now ignores C `struct`/`class`/`union`/`enum`
    tags through recursive `TypeRef` comparison instead of rendering whole types
    and stripping tag text.
+   Unary, boolean, contextual numeric, comparison, and binary expression checks
+   now use `TypeRef` predicates for bool/auto/integer/numeric decisions and
+   render type text only inside diagnostic branches.
+   Loop iterable binding checks now also keep the success path structured and
+   render binding/element type text only when reporting a mismatch.
    Native value type inference now reads `native_value_type_refs` directly.
    The `native_values` string map remains only as a display/native-boundary
    mirror populated from structured `TypeRef` data during symbol collection.
