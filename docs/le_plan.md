@@ -633,7 +633,10 @@ push. They are not release packaging work.
    nodes instead of concatenating `*` onto type text and reparsing it.
    Shared `TypeRef` wrapper construction now builds pointer, reference, and
    const wrapper nodes structurally across sema and codegen, with text rendering
-   kept at explicit C++/diagnostic boundaries.
+   kept at explicit C++/diagnostic boundaries. Named, tuple, function,
+   fixed-array, slice/span, result-wrapper, and native tuple-index return types
+   now rely on structured `TypeRef` fields instead of prefilled rendered text
+   mirrors.
    Templated pointer-cast semantic inference also builds the pointee from
    parsed template `TypeRef` arguments instead of reconstructing `Name[...]`
    text and reparsing it. Inferred array literal shapes now carry a
