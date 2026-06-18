@@ -33,8 +33,19 @@ bool numeric_type_name(const std::string& name) {
     return types.contains(name);
 }
 
-bool is_suspicious_numeric_cast(const std::string& target, std::string source) {
-    source = trim_copy(std::move(source));
+std::optional<std::string> numeric_type_ref_name(const TypeRef& type) {
+    const std::string name = type_ref_head_name(type);
+    return numeric_type_name(name) ? std::optional<std::string>{name} : std::nullopt;
+}
+
+bool is_suspicious_numeric_cast(const TypeRef& target_ref, const TypeRef& source_ref) {
+    const std::optional<std::string> target_name = numeric_type_ref_name(target_ref);
+    const std::optional<std::string> source_name = numeric_type_ref_name(source_ref);
+    if (!target_name || !source_name) {
+        return false;
+    }
+    const std::string& target = *target_name;
+    const std::string& source = *source_name;
     if (target == source) {
         return false;
     }
@@ -113,9 +124,9 @@ void lint_suspicious_cast_expr(const Expr& expr, const Document& doc,
             const std::string& source_name = node.children.front().name;
             const std::optional<TypeRef> source_type_ref =
                 visible_local_type_ref(active_decls, source_name);
-            const std::string source_type =
-                source_type_ref ? substitute_type_ref_text(*source_type_ref, {}) : "";
-            if (source_type_ref && is_suspicious_numeric_cast(callee, source_type)) {
+            const TypeRef target_type_ref = named_type_ref(callee, node.location);
+            if (source_type_ref && is_suspicious_numeric_cast(target_type_ref, *source_type_ref)) {
+                const std::string source_type = substitute_type_ref_text(*source_type_ref, {});
                 out.push_back({.location = node.location,
                                .message = "suspicious narrowing cast: " + callee + "(" +
                                           source_name + ") from " + source_type,

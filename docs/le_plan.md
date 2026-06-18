@@ -1986,6 +1986,9 @@ push. They are not release packaging work.
    Explicit cast assignment compatibility now compares the parsed call target
    as a normalized `TypeRef` instead of rendering the expected type and
    comparing it to callee spelling.
+   The suspicious numeric-cast lint now classifies source and target numeric
+   types through `TypeRef` head names, rendering only the final diagnostic
+   message.
    LSP semantic type-token collection now uses `TypeRef` helper APIs for type
    heads and rendered spellings instead of reading `name`/`text` fields
    directly.

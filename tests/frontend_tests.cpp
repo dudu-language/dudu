@@ -594,6 +594,24 @@ void test_lsp_scope_lint_tracks_inferred_assignment_locals() {
     assert(unused_count == 1);
 }
 
+void test_lsp_suspicious_cast_lint_uses_type_refs() {
+    const dudu::Document doc{.uri = "",
+                             .path = "lint_suspicious_cast.dd",
+                             .text = "def main() -> i32:\n"
+                                     "    wide: f64 = 1.0\n"
+                                     "    narrow = f32(wide)\n"
+                                     "    return i32(narrow)\n"};
+    const std::vector<dudu::Diagnostic> diags = dudu::diagnostics_for_document(doc);
+    int cast_count = 0;
+    for (const dudu::Diagnostic& diag : diags) {
+        if (diag.code == "dudu.lint.suspicious_cast") {
+            ++cast_count;
+            assert(diag.location.line == 3);
+        }
+    }
+    assert(cast_count == 1);
+}
+
 void test_lsp_references_track_assignment_bindings() {
     const dudu::Document doc{.uri = "file:///refs.dd",
                              .path = "refs.dd",
@@ -1099,6 +1117,7 @@ int main() {
         test_lsp_diagnostic_sources_are_structured();
         test_lsp_unreachable_lint_uses_branch_structure();
         test_lsp_scope_lint_tracks_inferred_assignment_locals();
+        test_lsp_suspicious_cast_lint_uses_type_refs();
         test_lsp_references_track_assignment_bindings();
         test_allocation_type_ref_diagnostics();
         test_emitted_local_index_type_inference();
