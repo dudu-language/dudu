@@ -1636,3 +1636,7 @@ push. They are not release packaging work.
    through a rendered-string template binder. The structured binder now handles
    native C++ pack-expansion artifacts inside template types, and the old
    string binder API has been deleted.
+   `substitute_type_ref` now has a structured `TypeRef` substitution overload.
+   Receiver generic substitution for fields, methods, inherited methods, and
+   inferred generic method signatures uses parsed receiver template arguments
+   directly instead of rendering them to strings and reparsing them.

@@ -20,11 +20,11 @@ bool is_indexed_local_segment(const std::string& text) {
            is_plain_identifier(trim(text.substr(0, index)));
 }
 
-std::map<std::string, std::string> type_substitutions(const std::vector<std::string>& params,
-                                                      const std::vector<std::string>& args) {
-    std::map<std::string, std::string> out;
+std::map<std::string, TypeRef> type_ref_substitutions(const std::vector<std::string>& params,
+                                                      const std::vector<TypeRef>& args) {
+    std::map<std::string, TypeRef> out;
     for (size_t i = 0; i < params.size() && i < args.size(); ++i) {
-        out.emplace(params[i], trim(args[i]));
+        out.emplace(params[i], args[i]);
     }
     return out;
 }
@@ -92,9 +92,9 @@ std::optional<TypeRef> field_type_ref_for_class(const Symbols& symbols, const Cl
                                                 const std::string& field) {
     for (const FieldDecl& decl : klass.fields) {
         if (decl.name == field) {
-            const std::vector<std::string> receiver_args = template_args_from_type(receiver_type);
+            const std::vector<TypeRef> receiver_args = template_arg_refs_from_type(receiver_type);
             TypeRef type = substitute_type_ref(
-                decl.type_ref, type_substitutions(klass.generic_params, receiver_args));
+                decl.type_ref, type_ref_substitutions(klass.generic_params, receiver_args));
             return substitute_receiver_template_type(type, receiver_args);
         }
     }

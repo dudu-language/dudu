@@ -42,6 +42,8 @@ std::string native_type_alias_type_text(const NativeTypeDecl& type);
 std::string native_value_type_text(const NativeValueDecl& value);
 TypeRef substitute_type_ref(const TypeRef& type,
                             const std::map<std::string, std::string>& substitutions);
+TypeRef substitute_type_ref(const TypeRef& type,
+                            const std::map<std::string, TypeRef>& substitutions);
 std::string substitute_type_ref_text(const TypeRef& type,
                                      const std::map<std::string, std::string>& substitutions);
 

@@ -248,19 +248,26 @@ void test_native_template_binding_resolves_alias_type_refs() {
 }
 
 void test_receiver_template_substitution_uses_type_ast() {
-    auto substitute = [](std::string_view type, std::vector<std::string> receiver_args) {
+    auto substitute = [](std::string_view type, std::vector<dudu::TypeRef> receiver_args) {
         return dudu::substitute_type_ref_text(
             dudu::substitute_receiver_template_type(dudu::parse_type_text(type), receiver_args),
             {});
     };
-    assert(substitute("list[value_type]", {"i32"}) == "list[i32]");
-    assert(substitute("fn(value_type) -> element_type", {"f32"}) == "fn(f32) -> f32");
-    assert(substitute("std::vector<value_type>", {"i32"}) == "std::vector<i32>");
+    assert(substitute("list[value_type]", {dudu::parse_type_text("i32")}) == "list[i32]");
+    assert(substitute("fn(value_type) -> element_type", {dudu::parse_type_text("f32")}) ==
+           "fn(f32) -> f32");
+    assert(substitute("std::vector<value_type>", {dudu::parse_type_text("i32")}) ==
+           "std::vector<i32>");
 
     const dudu::TypeRef vector_type = dudu::parse_type_text("std::vector<value_type>");
     const dudu::TypeRef vector_substituted =
-        dudu::substitute_receiver_template_type(vector_type, {"i32"});
+        dudu::substitute_receiver_template_type(vector_type, {dudu::parse_type_text("i32")});
     assert(dudu::substitute_type_ref_text(vector_substituted, {}) == "std::vector<i32>");
+
+    const std::vector<dudu::TypeRef> receiver_arg_refs =
+        dudu::template_arg_refs_from_type(dudu::parse_type_text("dict[str, list[i32]]"));
+    assert(receiver_arg_refs.size() == 2);
+    assert(dudu::substitute_type_ref_text(receiver_arg_refs[1], {}) == "list[i32]");
 
     const std::vector<std::string> receiver_args =
         dudu::template_args_from_type(dudu::parse_type_text("dict[str, i32]"));

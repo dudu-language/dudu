@@ -68,11 +68,11 @@ bool has_decorator(const FunctionDecl& fn, std::string_view name) {
     return dudu::has_decorator(fn.decorators, name);
 }
 
-std::map<std::string, std::string> class_type_substitutions(const ClassDecl& owner,
-                                                            const std::vector<std::string>& args) {
-    std::map<std::string, std::string> substitutions;
+std::map<std::string, TypeRef> class_type_ref_substitutions(const ClassDecl& owner,
+                                                            const std::vector<TypeRef>& args) {
+    std::map<std::string, TypeRef> substitutions;
     for (size_t i = 0; i < owner.generic_params.size() && i < args.size(); ++i) {
-        substitutions.emplace(owner.generic_params[i], trim(args[i]));
+        substitutions.emplace(owner.generic_params[i], args[i]);
     }
     return substitutions;
 }
@@ -95,9 +95,9 @@ FunctionSignature inherited_method_signature_for_class_type(const ClassDecl& own
                                                             const TypeRef& receiver_type,
                                                             const FunctionDecl& method) {
     FunctionSignature signature = inherited_method_signature_without_self(method);
-    const std::vector<std::string> receiver_args = template_args_from_type(receiver_type);
-    const std::map<std::string, std::string> substitutions =
-        class_type_substitutions(owner, receiver_args);
+    const std::vector<TypeRef> receiver_args = template_arg_refs_from_type(receiver_type);
+    const std::map<std::string, TypeRef> substitutions =
+        class_type_ref_substitutions(owner, receiver_args);
     std::vector<TypeRef> param_types;
     const size_t param_count = signature_param_count(signature);
     param_types.reserve(param_count);

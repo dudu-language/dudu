@@ -355,4 +355,32 @@ TypeRef substitute_type_ref(const TypeRef& type,
     return out;
 }
 
+TypeRef substitute_type_ref(const TypeRef& type,
+                            const std::map<std::string, TypeRef>& substitutions) {
+    const std::string key = substitution_lookup_key(type);
+    if (!key.empty()) {
+        if (const auto found = substitutions.find(key); found != substitutions.end()) {
+            TypeRef out = found->second;
+            out.location = type.location;
+            return out;
+        }
+    }
+
+    if (type.kind == TypeKind::Unknown && key.empty()) {
+        const std::string rendered = trim_copy(type.text);
+        if (const auto found = substitutions.find(rendered); found != substitutions.end()) {
+            TypeRef out = found->second;
+            out.location = type.location;
+            return out;
+        }
+    }
+
+    TypeRef out = type;
+    for (TypeRef& child : out.children) {
+        child = substitute_type_ref(child, substitutions);
+    }
+    out.text = type_ref_text(out);
+    return out;
+}
+
 } // namespace dudu
