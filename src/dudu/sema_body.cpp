@@ -37,7 +37,7 @@ void check_block(FunctionScope& scope, const std::vector<Stmt>& body,
 
 void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_type_ref,
                 int loop_depth, const BodyCheckCallbacks& callbacks) {
-    check_local_address_escape(stmt, scope.locals);
+    check_local_address_escape(stmt, scope.local_type_refs);
     const std::string return_type = substitute_type_ref_text(return_type_ref, {});
     if (stmt.kind == StmtKind::Return) {
         const SourceLocation& value_location = node_location(stmt.location, stmt.value_expr);

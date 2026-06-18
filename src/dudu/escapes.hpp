@@ -8,6 +8,6 @@
 namespace dudu {
 
 void check_local_address_escape(const Stmt& stmt,
-                                const std::map<std::string, std::string>& locals);
+                                const std::map<std::string, TypeRef>& local_type_refs);
 
 } // namespace dudu

@@ -527,8 +527,10 @@ push. They are not release packaging work.
    and fixed-array literal children. Iterable/indexed-local helpers now accept
    local `TypeRef` metadata directly instead of carrying rendered local type
    strings through APIs that no longer read them, and emitted-local type
-   inference no longer accepts the rendered local type map. Enum variant
-   recognition now uses a shared
+   inference no longer accepts the rendered local type map. Address-escape
+   semantic checks now classify local storage from `TypeRef` metadata instead
+   of reparsing rendered local type strings. Enum variant recognition now uses a
+   shared
    structural expression helper in sema, codegen, and match patterns instead of
    duplicate dotted-string reconstruction. Native import member type lookup now
    walks parsed member expressions inside `sema_native` before crossing into

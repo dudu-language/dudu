@@ -192,6 +192,8 @@ Already structured:
 - emitted-local type inference now accepts only local `TypeRef` metadata,
   function return `TypeRef`s, and symbol context; the old rendered local type
   map parameter was removed from that inference path
+- address-escape semantic checks now classify local storage from `TypeRef`
+  metadata instead of reparsing rendered local type strings
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path
