@@ -39,6 +39,16 @@ std::string strip_c_type_tag(std::string type) {
     return type;
 }
 
+TypeRef resolve_alias_ref_with_fallback(const Symbols& symbols, const TypeRef& type) {
+    const TypeRef resolved_ref = resolve_alias_ref(symbols, type);
+    const std::string rendered = substitute_type_ref_text(type, {});
+    if (substitute_type_ref_text(resolved_ref, {}) != rendered) {
+        return resolved_ref;
+    }
+    const std::string resolved = resolve_alias(symbols, rendered);
+    return resolved == rendered ? type : parse_type_text(resolved, type.location);
+}
+
 TypeRef static_member_type_ref(const Symbols& symbols, const SourceLocation* location,
                                const std::string& type_name, const std::string& member) {
     const auto klass = symbols.classes.find(type_name);
@@ -64,16 +74,16 @@ TypeRef static_member_type_ref(const Symbols& symbols, const SourceLocation* loc
 } // namespace
 
 std::string unwrap_receiver_type(const Symbols& symbols, std::string type) {
-    return unwrap_receiver_type(symbols, parse_type_text(resolve_alias(symbols, std::move(type))));
+    return unwrap_receiver_type(symbols, parse_type_text(std::move(type)));
 }
 
 std::string unwrap_receiver_type(const Symbols& symbols, const TypeRef& type) {
     TypeRef current = type;
     while (true) {
         const std::string rendered = substitute_type_ref_text(current, {});
-        const std::string resolved = resolve_alias(symbols, rendered);
-        if (resolved != rendered) {
-            current = parse_type_text(resolved, current.location);
+        const TypeRef resolved = resolve_alias_ref_with_fallback(symbols, current);
+        if (substitute_type_ref_text(resolved, {}) != rendered) {
+            current = resolved;
             continue;
         }
         if (const auto inner =
@@ -245,10 +255,8 @@ std::optional<std::string> field_type_for_type(const Symbols& symbols,
 
 std::optional<TypeRef> field_type_ref_for_type(const Symbols& symbols, const TypeRef& receiver_type,
                                                const std::string& field) {
-    const std::string receiver_type_text = substitute_type_ref_text(receiver_type, {});
-    const std::string resolved = resolve_alias(symbols, receiver_type_text);
-    const std::vector<TypeRef> result_args =
-        template_type_arg_refs(parse_type_text(resolved), "Result");
+    const TypeRef resolved_type = resolve_alias_ref_with_fallback(symbols, receiver_type);
+    const std::vector<TypeRef> result_args = template_type_arg_refs(resolved_type, "Result");
     if (!result_args.empty()) {
         if (field == "ok") {
             return parse_type_text("bool", receiver_type.location);

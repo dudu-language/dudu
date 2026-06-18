@@ -294,6 +294,7 @@ void test_native_base_assignable_uses_type_ast() {
 void test_unwrap_receiver_uses_type_ast() {
     dudu::Symbols symbols;
     symbols.aliases["AliasBox"] = "Box[i32]";
+    symbols.alias_type_refs["AliasBox"] = dudu::parse_type_text("Box[i32]");
 
     assert(dudu::unwrap_receiver_type(symbols, dudu::parse_type_text("*const[AliasBox]")) == "Box");
     assert(dudu::unwrap_receiver_type(symbols, dudu::parse_type_text("&struct sqlite3")) ==
@@ -318,6 +319,21 @@ void test_inherited_field_lookup_uses_type_ast_receiver() {
         dudu::field_type_ref_for_class(symbols, wrapper, dudu::parse_type_text("Wrapper"), "value");
     assert(field);
     assert(dudu::substitute_type_ref_text(*field, {}) == "f32");
+}
+
+void test_result_field_lookup_resolves_alias_type_refs() {
+    dudu::Symbols symbols;
+    symbols.aliases["Parsed"] = "Result[i32, str]";
+    symbols.alias_type_refs["Parsed"] = dudu::parse_type_text("Result[i32, str]");
+
+    const std::optional<dudu::TypeRef> value =
+        dudu::field_type_ref_for_type(symbols, dudu::parse_type_text("Parsed"), "value");
+    const std::optional<dudu::TypeRef> err =
+        dudu::field_type_ref_for_type(symbols, dudu::parse_type_text("Parsed"), "err");
+    assert(value);
+    assert(err);
+    assert(dudu::substitute_type_ref_text(*value, {}) == "i32");
+    assert(dudu::substitute_type_ref_text(*err, {}) == "str");
 }
 
 void test_swizzle_lookup_uses_type_ast_receiver() {
@@ -1217,6 +1233,7 @@ int main() {
         test_native_base_assignable_uses_type_ast();
         test_unwrap_receiver_uses_type_ast();
         test_inherited_field_lookup_uses_type_ast_receiver();
+        test_result_field_lookup_resolves_alias_type_refs();
         test_swizzle_lookup_uses_type_ast_receiver();
         test_method_signature_lookup_uses_type_ast_receiver();
         test_method_signature_list_uses_type_ast_receiver();

@@ -1942,6 +1942,9 @@ LSP source edits are also moving to AST-owned ranges:
 - AST assignment compatibility now resolves aliases through parsed `TypeRef`
   metadata when either side is already structured. The pure string overload is
   kept as a named compatibility boundary for older callers.
+- Member-path receiver unwrapping and `Result[...]` field lookup now resolve
+  aliases through parsed `TypeRef` metadata first, with the old alias string map
+  used only as a compatibility fallback.
 
 Expression parsing has moved onto the lexer/token stream:
 
