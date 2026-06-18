@@ -100,8 +100,14 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
         if (const auto call_type = direct_call_type_ref(scope, expr, location)) {
             return *call_type;
         }
-        if (const std::string inferred = infer_call_ast(scope, expr, location); !inferred.empty()) {
-            return parse_type_text(inferred, type_location);
+        if (location != nullptr) {
+            const ScopedCallee scoped_callee = scoped_call_callee(scope, expr, location);
+            const std::string& callee = scoped_callee.key;
+            if (!expr.callee.empty() && expr.callee.front().kind != ExprKind::Name &&
+                expr.callee.front().kind != ExprKind::Member) {
+                sema_expr_fail(*location, "unsupported call expression: " + callee);
+            }
+            sema_expr_fail(*location, "unknown function: " + callee);
         }
         return {};
     case ExprKind::TemplateCall:

@@ -189,6 +189,12 @@ std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Ex
     const ScopedCallee scoped_callee = scoped_call_callee(scope, expr, location);
     const std::string& callee = scoped_callee.key;
     if (callee.empty()) {
+        if (!expr.callee.empty() && expr.callee.front().kind == ExprKind::Member) {
+            if (const auto method_type = direct_member_call_type_ref(
+                    scope, expr, display_expr(expr.callee.front()), location)) {
+                return *method_type;
+            }
+        }
         return std::nullopt;
     }
     if (const auto pointer_cast = direct_pointer_cast_type_ref(scope, expr, callee, location)) {
@@ -301,6 +307,13 @@ std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Ex
     }
     if (const auto method_type = direct_member_call_type_ref(scope, expr, callee, location)) {
         return *method_type;
+    }
+    if (callee.rfind('.') != std::string::npos &&
+        native_import_path_prefix(scope.symbols, callee)) {
+        for (const Expr& arg : expr.children) {
+            (void)infer_expr_type_ast(scope, arg, location);
+        }
+        return named_type_ref("auto", expr.location);
     }
     return std::nullopt;
 }

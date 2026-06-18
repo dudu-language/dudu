@@ -105,7 +105,4 @@ std::string infer_template_call_ast(const FunctionScope& scope, const Expr& expr
 std::optional<FunctionSignature> explicit_generic_function_signature_ast(
     const FunctionScope& scope, const Expr& expr, const std::string& callee_base,
     const std::string& emitted_callee, const SourceLocation* location);
-std::string infer_call_ast(const FunctionScope& scope, const Expr& expr,
-                           const SourceLocation* location);
-
 } // namespace dudu
