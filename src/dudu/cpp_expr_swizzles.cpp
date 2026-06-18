@@ -1,5 +1,6 @@
 #include "dudu/cpp_expr_swizzles.hpp"
 
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_expr_emit.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/sema_methods.hpp"
@@ -71,7 +72,8 @@ lower_local_swizzle_expr(const Expr& expr, const std::vector<std::string>& alias
     if (symbols == nullptr) {
         return std::nullopt;
     }
-    const auto result_type = swizzle_type_for_type(*symbols, local->second, expr.name);
+    const auto result_type = swizzle_type_ref_for_type(*symbols, parse_type_text(local->second),
+                                                       expr.name);
     if (!result_type) {
         return std::nullopt;
     }
@@ -101,12 +103,12 @@ std::optional<std::string> lower_swizzle_expr(const Expr& expr,
         !is_supported_swizzle(expr.name)) {
         return std::nullopt;
     }
-    std::optional<std::string> result_type;
+    std::optional<TypeRef> result_type;
     if (symbols != nullptr) {
-        const std::string receiver_type =
-            member_expr_type(*symbols, locals, nullptr, expr.children.front());
-        if (!receiver_type.empty()) {
-            result_type = swizzle_type_for_type(*symbols, receiver_type, expr.name);
+        const TypeRef receiver_type =
+            member_expr_type_ref(*symbols, locals, {}, nullptr, expr.children.front());
+        if (has_type_ref(receiver_type)) {
+            result_type = swizzle_type_ref_for_type(*symbols, receiver_type, expr.name);
         }
     }
     if (expr.children.front().kind == ExprKind::Name &&

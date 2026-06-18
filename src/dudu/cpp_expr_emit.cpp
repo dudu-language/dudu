@@ -297,10 +297,10 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
                        expr.name;
             }
             if (symbols != nullptr) {
-                const std::string receiver_type =
-                    member_expr_type(*symbols, locals, nullptr, expr.children.front());
-                if (!receiver_type.empty() &&
-                    field_type_for_type(*symbols, receiver_type, expr.name)) {
+                const TypeRef receiver_type =
+                    member_expr_type_ref(*symbols, locals, {}, nullptr, expr.children.front());
+                if (has_type_ref(receiver_type) &&
+                    field_type_ref_for_type(*symbols, receiver_type, expr.name)) {
                     return lower_expr(expr.children.front(), aliases, locals, symbols, options) +
                            "." + expr.name;
                 }

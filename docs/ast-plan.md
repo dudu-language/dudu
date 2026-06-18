@@ -1748,6 +1748,9 @@ LSP source edits are also moving to AST-owned ranges:
 - Direct member expression typing now asks field and swizzle helpers for
   structured `TypeRef` results, removing the previous string result and
   immediate reparse step for `value.field` and `value.xy` style expressions.
+- C++ expression emission now also uses structured member and swizzle type
+  helpers for deciding Dudu field access and swizzle result construction,
+  instead of querying those semantics through rendered type strings.
 - Native value symbols now store parsed `TypeRef` metadata beside their C++
   spelling strings, and normal name/member expression sema reads those refs
   directly for imported constants, build flags, shader/native values, and class
