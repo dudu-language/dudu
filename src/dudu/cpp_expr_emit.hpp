@@ -58,10 +58,6 @@ lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& al
                             const std::map<std::string, std::string>& locals,
                             const std::map<std::string, TypeRef>& local_type_refs,
                             const Symbols* symbols, const CppEmitOptions& options);
-std::optional<std::string>
-lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& aliases,
-                            const std::map<std::string, std::string>& locals,
-                            const Symbols* symbols);
 bool enum_has_payloads(const EnumDecl& en);
 
 } // namespace dudu

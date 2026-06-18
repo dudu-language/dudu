@@ -271,13 +271,6 @@ std::string lower_enum_variant_constructor(const EnumDecl& en, const EnumValueDe
 std::optional<std::string>
 lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& aliases,
                             const std::map<std::string, std::string>& locals,
-                            const Symbols* symbols, const CppEmitOptions& options) {
-    return lower_index_assignment_hook(stmt, aliases, locals, {}, symbols, options);
-}
-
-std::optional<std::string>
-lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& aliases,
-                            const std::map<std::string, std::string>& locals,
                             const std::map<std::string, TypeRef>& local_type_refs,
                             const Symbols* symbols, const CppEmitOptions& options) {
     if (symbols == nullptr || stmt.target_expr.kind != ExprKind::Index ||
@@ -286,14 +279,12 @@ lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& al
         return std::nullopt;
     }
     const std::string& receiver = stmt.target_expr.children[0].name;
-    const auto local = locals.find(receiver);
-    if (local == locals.end()) {
+    const auto receiver_type = local_type_refs.find(receiver);
+    if (receiver_type == local_type_refs.end()) {
         return std::nullopt;
     }
-    const TypeRef receiver_type_ref =
-        local_type_ref(*symbols, locals, local_type_refs, receiver, stmt.target_expr.location);
-    const std::string receiver_type = substitute_type_ref_text(receiver_type_ref, {});
-    const auto method = dudu_operator_method_name(*symbols, receiver_type, "[]=");
+    const std::string receiver_type_text = substitute_type_ref_text(receiver_type->second, {});
+    const auto method = dudu_operator_method_name(*symbols, receiver_type_text, "[]=");
     if (!method) {
         return std::nullopt;
     }
@@ -301,13 +292,6 @@ lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& al
     args.push_back(stmt.value_expr);
     return receiver + "." + *method + "(" +
            join_lowered_exprs(args, aliases, locals, local_type_refs, ", ", symbols, options) + ")";
-}
-
-std::optional<std::string>
-lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& aliases,
-                            const std::map<std::string, std::string>& locals,
-                            const Symbols* symbols) {
-    return lower_index_assignment_hook(stmt, aliases, locals, symbols, {});
 }
 
 std::optional<std::string> lower_pointer_cast_expr(const Expr& expr,

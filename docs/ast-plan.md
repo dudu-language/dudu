@@ -177,6 +177,8 @@ Already structured:
   metadata only instead of reparsing compatibility local type strings
 - indexed local string inference now requires local `TypeRef` metadata and no
   longer falls back to reparsing compatibility local type strings
+- index assignment hook emission now requires receiver `TypeRef` metadata and
+  the no-`TypeRef` hook overloads were removed
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path
