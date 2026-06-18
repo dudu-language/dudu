@@ -75,7 +75,7 @@ ClassDecl Parser::parse_class(const Token& start, Visibility visibility,
         require_no_decorators(member_decorators, "field");
         FieldDecl field = parse_field();
         if (field.type_ref.kind == TypeKind::Static) {
-            if (field.value_expr.kind == ExprKind::Unknown) {
+            if (expr_missing(field.value_expr)) {
                 throw CompileError(field.location, "static field requires an initializer");
             }
             ConstDecl static_field;

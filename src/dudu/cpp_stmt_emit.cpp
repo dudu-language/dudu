@@ -297,7 +297,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
             }
             return;
         }
-        if (stmt.target_expr.kind != ExprKind::Unknown) {
+        if (expr_present(stmt.target_expr)) {
             if (const auto swizzle =
                     lower_swizzle_assignment(stmt, aliases, locals, symbols, options)) {
                 out << indent(depth) << *swizzle << ";\n";

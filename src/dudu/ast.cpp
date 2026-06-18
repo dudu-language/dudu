@@ -115,6 +115,8 @@ std::string_view unsupported_feature_name(UnsupportedFeature feature) {
 
 std::string_view expression_kind_name(ExprKind kind) {
     switch (kind) {
+    case ExprKind::Missing:
+        return "missing";
     case ExprKind::Unknown:
         return "unknown";
     case ExprKind::Name:

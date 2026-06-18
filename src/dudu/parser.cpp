@@ -385,7 +385,7 @@ Parser::JoinedTokens Parser::join_tokens(size_t begin, size_t end) const {
 
 Expr Parser::parse_expr_piece(const JoinedTokens& piece) const {
     if (!piece.has_tokens) {
-        return make_expr(ExprKind::Unknown, piece.text, piece.range.start);
+        return make_expr(ExprKind::Missing, "", piece.range.start);
     }
     std::vector<Token> tokens =
         syntax_piece_tokens(tokens_.subspan(piece.begin, piece.end - piece.begin));

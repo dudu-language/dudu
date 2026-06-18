@@ -34,7 +34,7 @@ bool expression_token(const Token& token) {
 Expr parse_expr_text(std::string_view text, SourceLocation location) {
     text = trim_view_with_location(text, location);
     if (text.empty()) {
-        return make_expr(ExprKind::Unknown, text, location);
+        return make_expr(ExprKind::Missing, "", location);
     }
     std::vector<Token> tokens = lex_source(text, location.file);
     shift_token_locations(tokens, location);

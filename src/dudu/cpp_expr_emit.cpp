@@ -178,6 +178,9 @@ std::string cpp_binary_operator(const std::string& op) {
 std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases,
                        const std::map<std::string, std::string>& locals, const Symbols* symbols,
                        const CppEmitOptions& options) {
+    if (expr.kind == ExprKind::Missing) {
+        return {};
+    }
     if (expr.text.empty()) {
         return {};
     }
@@ -382,6 +385,8 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
         throw CompileError(expr.location,
                            "unsupported Python feature: lambda; declare a named function and "
                            "pass the function name");
+    case ExprKind::Missing:
+        return {};
     case ExprKind::Unknown:
         throw CompileError(expr.location, "unsupported expression: " + trim_copy(expr.text));
     }

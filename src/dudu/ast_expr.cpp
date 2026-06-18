@@ -81,7 +81,8 @@ std::string render_expr_path(const ExprPath& path) {
 }
 
 bool expr_missing(const Expr& expr) {
-    return expr.text.empty() || (expr.kind == ExprKind::Unknown && trim_copy(expr.text).empty());
+    return expr.kind == ExprKind::Missing ||
+           (expr.kind == ExprKind::Unknown && trim_copy(expr.text).empty());
 }
 
 bool expr_present(const Expr& expr) {
@@ -221,6 +222,8 @@ std::string display_expr(const Expr& expr) {
     case ExprKind::NamedArg:
         return expr.children.size() == 1 ? expr.name + "=" + display_expr(expr.children.front())
                                          : trim_copy(expr.text);
+    case ExprKind::Missing:
+        return "";
     case ExprKind::Slice:
         if (expr.children.empty()) {
             return ":";

@@ -123,6 +123,7 @@ enum class UnsupportedFeature {
 };
 
 enum class ExprKind {
+    Missing,
     Unknown,
     Name,
     BoolLiteral,

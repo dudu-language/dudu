@@ -223,6 +223,7 @@ TypeRef infer_emitted_local_type_ref(const Expr& expr,
         return {};
     case ExprKind::Binary:
         return infer_binary_expr_type_ref(expr, locals, local_type_refs, function_returns);
+    case ExprKind::Missing:
     case ExprKind::Conditional:
     case ExprKind::Await:
     case ExprKind::Yield:

@@ -13,6 +13,8 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
     const SourceLocation type_location =
         location == nullptr ? node_location(expr.location, expr) : node_location(*location, expr);
     switch (expr.kind) {
+    case ExprKind::Missing:
+        return {};
     case ExprKind::Unknown:
         if (trim(expr.text).empty()) {
             return {};

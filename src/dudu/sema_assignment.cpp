@@ -125,7 +125,7 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt,
         (void)callbacks.infer_expr_type(scope, stmt.target_expr, &target_location);
         return {};
     }
-    if (stmt.target_expr.kind != ExprKind::Unknown) {
+    if (expr_present(stmt.target_expr)) {
         sema_fail(target_location,
                   "unsupported assignment target: " + display_expr(stmt.target_expr));
     }

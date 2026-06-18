@@ -201,7 +201,7 @@ std::vector<Expr> ExprTokenParser::parse_arg_list(TokenKind close) {
 
 Expr ExprTokenParser::parse_index_argument() {
     if (at(TokenKind::RBracket)) {
-        return make_expr(ExprKind::Unknown, "", current().location);
+        return make_expr(ExprKind::Missing, "", current().location);
     }
     return parse_comma_expr({TokenKind::RBracket});
 }
