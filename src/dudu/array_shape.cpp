@@ -121,26 +121,20 @@ ArrayShapeInference infer_array_literal_shape_type(const TypeRef& declared_type,
     }
     if (value.children.empty()) {
         return {.status = ArrayShapeStatus::EmptyLiteral,
-                .type = {},
                 .type_ref = {},
-                .element_type = element_type_text,
                 .element_type_ref = *element_type,
                 .shape = {}};
     }
     const auto shape = literal_shape(value);
     if (!shape) {
         return {.status = ArrayShapeStatus::RaggedLiteral,
-                .type = {},
                 .type_ref = {},
-                .element_type = element_type_text,
                 .element_type_ref = *element_type,
                 .shape = {}};
     }
     const std::string type_text = shaped_array_type(element_type_text, *shape);
     return {.status = ArrayShapeStatus::Inferred,
-            .type = type_text,
             .type_ref = shaped_array_type_ref(declared_type, type_text, *shape),
-            .element_type = element_type_text,
             .element_type_ref = *element_type,
             .shape = *shape};
 }

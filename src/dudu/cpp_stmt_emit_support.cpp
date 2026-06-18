@@ -50,7 +50,7 @@ std::string_view compound_assign_op_text(CompoundAssignOp op) {
 
 EffectiveStmtType effective_stmt_type(const Stmt& stmt, const ArrayShapeInference& inferred) {
     if (inferred.status == ArrayShapeStatus::Inferred) {
-        return {.text = inferred.type, .ref = inferred.type_ref};
+        return {.text = substitute_type_ref_text(inferred.type_ref, {}), .ref = inferred.type_ref};
     }
     return {.text = substitute_type_ref_text(stmt.type_ref, {}), .ref = stmt.type_ref};
 }

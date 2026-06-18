@@ -1975,6 +1975,9 @@ LSP source edits are also moving to AST-owned ranges:
 - Constructor parameter checking no longer stores a duplicate rendered type
   string beside `TypeRef`; diagnostics render from the parsed type metadata at
   the edge.
+- Array literal shape inference no longer stores duplicate rendered array or
+  element type strings beside the inferred `TypeRef` nodes. Sema and C++
+  emission render the inferred shape type only at binding/emission edges.
 
 Expression parsing has moved onto the lexer/token stream:
 
