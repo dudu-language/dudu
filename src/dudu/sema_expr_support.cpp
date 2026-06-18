@@ -228,8 +228,12 @@ matching_signature_ast(const FunctionScope& scope, const std::vector<FunctionSig
 std::string template_call_callee(const FunctionScope& scope, const Expr& expr,
                                  const SourceLocation* location) {
     std::ostringstream out;
-    out << scoped_call_callee_text(scope, expr, location) << "[" << template_args_lookup_text(expr)
-        << "]";
+    if (const std::optional<ExprPath> path = scoped_call_callee_path(scope, expr, location)) {
+        out << render_expr_path(*path);
+    } else {
+        out << trim_copy(expr.name);
+    }
+    out << "[" << template_args_lookup_text(expr) << "]";
     return out.str();
 }
 

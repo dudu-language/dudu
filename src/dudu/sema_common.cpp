@@ -91,13 +91,23 @@ std::optional<std::string> scoped_member_path_from_expr(const FunctionScope& sco
     return path ? std::optional<std::string>{render_expr_path(*path)} : std::nullopt;
 }
 
+std::optional<ExprPath> scoped_call_callee_path(const FunctionScope& scope, const Expr& expr,
+                                                const SourceLocation* location) {
+    if (!expr.callee.empty()) {
+        return scoped_expr_path_from_expr(scope, expr.callee.front(), location);
+    }
+    if (!trim_copy(expr.name).empty()) {
+        return ExprPath{.segments = {{.kind = ExprPathSegmentKind::Name,
+                                      .text = trim_copy(expr.name),
+                                      .location = expr.location}}};
+    }
+    return std::nullopt;
+}
+
 std::string scoped_call_callee_text(const FunctionScope& scope, const Expr& expr,
                                     const SourceLocation* location) {
-    if (!expr.callee.empty()) {
-        if (const std::optional<std::string> path =
-                scoped_member_path_from_expr(scope, expr.callee.front(), location)) {
-            return *path;
-        }
+    if (const std::optional<ExprPath> path = scoped_call_callee_path(scope, expr, location)) {
+        return render_expr_path(*path);
     }
     return trim_copy(expr.name);
 }

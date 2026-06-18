@@ -23,6 +23,8 @@ std::optional<ExprPath> scoped_expr_path_from_expr(const FunctionScope& scope, c
 std::optional<std::string> scoped_member_path_from_expr(const FunctionScope& scope,
                                                         const Expr& expr,
                                                         const SourceLocation* location);
+std::optional<ExprPath> scoped_call_callee_path(const FunctionScope& scope, const Expr& expr,
+                                                const SourceLocation* location);
 std::string scoped_call_callee_text(const FunctionScope& scope, const Expr& expr,
                                     const SourceLocation* location);
 
