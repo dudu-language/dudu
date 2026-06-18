@@ -308,10 +308,9 @@ match_signature_ast(const FunctionScope& scope, const FunctionSignature& signatu
     }
     if (has_pack_param) {
         const std::string pack_name = *native_template_pack_placeholder(pack_param_text);
-        std::vector<std::string> types;
+        std::vector<TypeRef> types;
         for (size_t i = fixed_params; i < args.size(); ++i) {
-            types.push_back(substitute_type_ref_text(
-                native_arg_type(scope, args[i], location, infer_expr_type).ref, {}));
+            types.push_back(native_arg_type(scope, args[i], location, infer_expr_type).ref);
         }
         pack_bindings[pack_name] = std::move(types);
     }

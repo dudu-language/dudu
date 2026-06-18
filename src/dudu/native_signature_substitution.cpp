@@ -161,13 +161,13 @@ std::vector<TypeRef> explicit_template_type_refs(const std::vector<std::string>&
     return out;
 }
 
-std::string join_types(const std::vector<std::string>& types) {
+std::string join_type_refs(const std::vector<TypeRef>& types) {
     std::string out;
     for (size_t i = 0; i < types.size(); ++i) {
         if (i > 0) {
             out += ", ";
         }
-        out += types[i];
+        out += substitute_type_ref_text(types[i], {});
     }
     return out;
 }
@@ -182,8 +182,8 @@ std::string replace_all(std::string text, const std::string& needle, const std::
 }
 
 std::string replace_pack_binding(std::string type, const std::string& name,
-                                 const std::vector<std::string>& args) {
-    const std::string joined = join_types(args);
+                                 const std::vector<TypeRef>& args) {
+    const std::string joined = join_type_refs(args);
     type =
         replace_all(std::move(type), "typename __decay_and_strip<" + name + ">::__type...", joined);
     type =

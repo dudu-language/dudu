@@ -1674,6 +1674,9 @@ push. They are not release packaging work.
    argument overload. The callee-string entry point converts explicit template
    arguments to `TypeRef`s once at the boundary, and the obsolete text binding
    map has been deleted.
+   Native variadic pack bindings now store `TypeRef` argument nodes during
+   overload matching and render only when feeding the remaining native-artifact
+   text replacement boundary.
    `substitute_type_ref` now has a structured `TypeRef` substitution overload.
    Receiver generic substitution for fields, methods, inherited methods, and
    inferred generic method signatures uses parsed receiver template arguments

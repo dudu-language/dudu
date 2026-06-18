@@ -11,7 +11,7 @@
 
 namespace dudu {
 
-using NativePackBindingMap = std::map<std::string, std::vector<std::string>>;
+using NativePackBindingMap = std::map<std::string, std::vector<TypeRef>>;
 
 bool native_index_placeholder(const std::string& name);
 bool numeric_template_arg(std::string_view arg);
