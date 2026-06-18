@@ -4,6 +4,7 @@
 #include "dudu/cpp_lower.hpp"
 #include "dudu/sema_common.hpp"
 #include "dudu/sema_index.hpp"
+#include "dudu/sema_scope.hpp"
 #include "dudu/type_compat.hpp"
 
 #include <optional>
@@ -86,16 +87,11 @@ std::optional<TypeRef>
 iterable_value_type_ref(const Symbols& symbols, const std::map<std::string, std::string>& locals,
                         const std::map<std::string, TypeRef>& local_type_refs,
                         const std::string& name) {
-    if (const auto type_ref = local_type_refs.find(name); type_ref != local_type_refs.end()) {
-        return iterable_type_ref_from_type(type_ref->second);
-    }
-    const auto local = locals.find(name);
-    if (local == locals.end()) {
+    const TypeRef type_ref = local_type_ref(symbols, locals, local_type_refs, name);
+    if (type_ref.kind == TypeKind::Unknown) {
         return std::nullopt;
     }
-    const TypeRef type =
-        unwrap_reference_and_const(parse_type_text(resolve_alias(symbols, local->second)));
-    return iterable_type_ref_from_type(type);
+    return iterable_type_ref_from_type(type_ref);
 }
 
 std::string iterable_value_type(const Symbols& symbols,

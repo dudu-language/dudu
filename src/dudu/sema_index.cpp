@@ -9,6 +9,7 @@
 #include "dudu/sema_function_type.hpp"
 #include "dudu/sema_index_type_ref.hpp"
 #include "dudu/sema_ops.hpp"
+#include "dudu/sema_scope.hpp"
 #include "dudu/type_compat.hpp"
 
 #include <optional>
@@ -325,14 +326,11 @@ TypeRef indexed_value_type_ref(const Symbols& symbols,
                                const std::map<std::string, TypeRef>& local_type_refs,
                                const SourceLocation& location, const std::string& name,
                                const Expr& index_expr, std::string_view unknown_message) {
-    const auto local = locals.find(name);
-    if (local == locals.end()) {
+    const TypeRef type_ref = local_type_ref(symbols, locals, local_type_refs, name, location);
+    if (type_ref.kind == TypeKind::Unknown) {
         throw CompileError(location, std::string(unknown_message) + name);
     }
-    if (const auto type_ref = local_type_refs.find(name); type_ref != local_type_refs.end()) {
-        return indexed_type_ref_from_type(symbols, location, type_ref->second, index_expr, name);
-    }
-    return indexed_type_ref_from_type(symbols, location, local->second, index_expr, name);
+    return indexed_type_ref_from_type(symbols, location, type_ref, index_expr, name);
 }
 
 std::string indexed_type_from_type(const Symbols& symbols, const SourceLocation& location,
@@ -398,8 +396,8 @@ TypeRef indexed_type_ref_from_type(const Symbols& symbols, const SourceLocation&
         }
     }
     if (const auto indexed_ref = indexed_type_ref_from_type_ref_with_count(
-            symbols, location, raw_type, index_count_from_expr(index_expr), is_slice_expr(index_expr),
-            has_step_slice(index_expr), label)) {
+            symbols, location, raw_type, index_count_from_expr(index_expr),
+            is_slice_expr(index_expr), has_step_slice(index_expr), label)) {
         return *indexed_ref;
     }
     throw CompileError(location, "cannot index non-container: " + label);

@@ -133,6 +133,9 @@ Already structured:
 - local scopes preserve parsed `TypeRef` nodes for declared parameters,
   constants, locals, catch bindings, and typed loop bindings, so function
   pointer calls can check signatures without reparsing declared type text
+- indexed-local and iterable-local semantic lookup now enters through the shared
+  typed-first local `TypeRef` helper before touching compatibility local type
+  strings
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path
