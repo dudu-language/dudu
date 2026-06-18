@@ -721,6 +721,9 @@ push. They are not release packaging work.
    resolution, inherited field/method collection, storage checks, and method
    declaration lookup now walk parsed base-class `TypeRef` nodes instead of
    rendering base types before recursion.
+   `super` method and `super.init` inference now keep selected base classes as
+   parsed `TypeRef` nodes, passing structured receiver types into constructor
+   and method checks and rendering only for diagnostics.
    TypeRef-backed assignment checks now infer RHS expressions as `TypeRef`
    first, use structured type assignment before compatibility fallback, and
    render only for legacy assignment/literal checks and diagnostics.

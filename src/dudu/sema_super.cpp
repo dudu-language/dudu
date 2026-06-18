@@ -7,6 +7,7 @@
 #include "dudu/sema_function_type.hpp"
 #include "dudu/sema_inheritance.hpp"
 #include "dudu/sema_methods.hpp"
+#include "dudu/sema_methods_internal.hpp"
 #include "dudu/source.hpp"
 
 namespace dudu {
@@ -17,7 +18,7 @@ namespace {
     throw CompileError(location, message);
 }
 
-std::string super_base_type(const FunctionScope& scope, const SourceLocation* location) {
+TypeRef super_base_type(const FunctionScope& scope, const SourceLocation* location) {
     if (scope.current_class.empty()) {
         if (location != nullptr) {
             fail(*location, "super access outside class method");
@@ -40,10 +41,10 @@ std::string super_base_type(const FunctionScope& scope, const SourceLocation* lo
         }
         return {};
     }
-    return type_ref_text(klass->second->base_class_refs.front().type_ref);
+    return klass->second->base_class_refs.front().type_ref;
 }
 
-std::string super_init_base_type(const FunctionScope& scope, const SourceLocation* location) {
+TypeRef super_init_base_type(const FunctionScope& scope, const SourceLocation* location) {
     if (scope.current_class.empty()) {
         if (location != nullptr) {
             fail(*location, "super access outside class method");
@@ -61,13 +62,12 @@ std::string super_init_base_type(const FunctionScope& scope, const SourceLocatio
         return {};
     }
     if (klass->second->base_class_refs.size() == 1) {
-        return type_ref_text(klass->second->base_class_refs.front().type_ref);
+        return klass->second->base_class_refs.front().type_ref;
     }
-    std::vector<std::string> storage_bases;
+    std::vector<TypeRef> storage_bases;
     for (const BaseClassDecl& base_decl : klass->second->base_class_refs) {
-        const std::string base = type_ref_text(base_decl.type_ref);
         if (class_type_has_instance_storage(scope.symbols, base_decl.type_ref)) {
-            storage_bases.push_back(base);
+            storage_bases.push_back(base_decl.type_ref);
         }
     }
     if (storage_bases.size() == 1) {
@@ -113,14 +113,16 @@ TypeRef infer_super_call_type_ref(const FunctionScope& scope, const Expr& expr,
             }
             return {};
         }
-        const std::string base = super_init_base_type(scope, location);
-        if (base.empty()) {
+        const TypeRef base = super_init_base_type(scope, location);
+        if (!has_type_ref(base)) {
             return {};
         }
-        const auto base_class = scope.symbols.classes.find(base_type(base));
+        const std::string base_name = unwrap_receiver_type(scope.symbols, base);
+        const auto base_class = scope.symbols.classes.find(base_name);
         if (base_class == scope.symbols.classes.end()) {
             if (location != nullptr) {
-                fail(*location, "unknown base constructor type: " + base);
+                fail(*location,
+                     "unknown base constructor type: " + substitute_type_ref_text(base, {}));
             }
             return {};
         }
@@ -131,8 +133,8 @@ TypeRef infer_super_call_type_ref(const FunctionScope& scope, const Expr& expr,
             });
         return void_type_ref(expr.location);
     }
-    const std::string base = super_base_type(scope, location);
-    if (base.empty()) {
+    const TypeRef base = super_base_type(scope, location);
+    if (!has_type_ref(base)) {
         return {};
     }
     FunctionSignature signature;

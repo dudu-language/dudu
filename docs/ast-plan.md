@@ -262,6 +262,9 @@ Already structured:
   resolution, inherited field/method collection, storage checks, and method
   declaration lookup now walk parsed base-class `TypeRef` nodes instead of
   rendering base types before recursion
+- `super` method and `super.init` inference now keep selected base classes as
+  parsed `TypeRef` nodes, passing structured receiver types into constructor
+  and method checks and rendering only for diagnostics
 - type aliases preserve parsed `TypeRef` nodes in the symbol table, allowing
   local callback aliases such as `type Visit = fn(...)` to resolve through the
   structured type path
