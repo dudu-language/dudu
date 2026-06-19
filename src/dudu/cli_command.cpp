@@ -206,10 +206,12 @@ ModuleAst checked_module(const CliOptions& options, const std::string& source, b
         unit.target_mode_explicit = module.target_mode_explicit;
         merge_native_header_types(unit, native_header_options);
     }
-    if (options.emit_modules || config.build_backend == "cmake") {
+    const bool merged_cpp_output = options.emit_cpp || options.header_output.has_value() ||
+                                   options.c_header_output.has_value();
+    if (!merged_cpp_output && (options.emit_modules || config.build_backend == "cmake")) {
         analyze_module_tree(module, {.check_bodies = check_bodies});
     } else {
-        reject_direct_backend_module_conflicts(module);
+        reject_merged_output_module_conflicts(module);
         analyze_module(module, {.check_bodies = check_bodies});
     }
     return module;

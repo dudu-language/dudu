@@ -289,9 +289,12 @@ an imported module's private selective imports, such as
 generated C++ as unknown native calls. The direct backend
 still uses the compatibility merged output and remains intentionally narrower
 until semantic lookup and direct codegen fully move to module namespaces, but it
-now rejects cross-module declaration-name collisions with a backend-aware
-diagnostic that points users at `[build] backend = "cmake"` or
-`duc emit-modules` instead of surfacing generic duplicate-declaration fallout.
+now rejects cross-module declaration-name collisions with a merged-output
+diagnostic that points users at `[build] backend = "cmake"` through
+`dudu build` or `duc emit-modules` instead of surfacing generic
+duplicate-declaration fallout. The same guard also applies to explicit merged
+`--emit-cpp`/header output, even when the project manifest uses the CMake
+backend.
 
 ## Feature Validation Bar
 

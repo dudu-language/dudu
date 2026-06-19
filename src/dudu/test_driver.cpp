@@ -81,7 +81,7 @@ ModuleAst checked_module(const TestDriverOptions& options, const std::string& so
     if (config.build_backend == "cmake") {
         analyze_module_tree(module, {.check_bodies = true});
     } else {
-        reject_direct_backend_module_conflicts(module);
+        reject_merged_output_module_conflicts(module);
         analyze_module(module, {.check_bodies = true});
     }
     return module;

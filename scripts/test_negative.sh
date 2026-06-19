@@ -323,7 +323,7 @@ if "$repo_root/build/dudu" \
     echo "bad_direct_module_namespace unexpectedly passed" >&2
     exit 1
 fi
-grep -q "duplicate declaration: Box" \
+grep -q "merged C++ output cannot combine Dudu modules that both declare 'Box'" \
     "$repo_root/build/bad_direct_module_namespace.err"
 
 if (

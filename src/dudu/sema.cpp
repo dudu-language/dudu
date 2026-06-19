@@ -22,8 +22,9 @@ void add_direct_name(std::map<std::string, std::pair<std::string, SourceLocation
             return;
         }
         throw CompileError(location,
-                           "direct backend cannot merge Dudu modules that both declare '" + name +
-                               "'; use [build] backend = \"cmake\" or `duc emit-modules`");
+                           "merged C++ output cannot combine Dudu modules that both declare '" +
+                               name + "'; use [build] backend = \"cmake\" through `dudu build` "
+                                      "or emit per-module artifacts with `duc emit-modules`");
     }
     names.emplace(name, std::pair{module_path, location});
 }
@@ -42,7 +43,7 @@ void analyze_module(const ModuleAst& module, SemanticOptions options) {
     }
 }
 
-void reject_direct_backend_module_conflicts(const ModuleAst& module) {
+void reject_merged_output_module_conflicts(const ModuleAst& module) {
     if (module.module_units.empty()) {
         return;
     }
