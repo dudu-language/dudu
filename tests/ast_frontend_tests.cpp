@@ -1074,6 +1074,43 @@ void test_unsupported_dynamic_call_ast_shape() {
     assert(dudu::direct_callee_name(main.statements[2].value_expr) == "getattr");
 }
 
+void test_unsupported_python_diagnostics_include_guidance() {
+    struct Case {
+        std::string source;
+        std::string expected;
+    };
+    const std::vector<Case> cases = {
+        {"def main():\n"
+         "    with open(\"data\"):\n"
+         "        pass\n",
+         "rely on RAII object lifetime"},
+        {"def main():\n"
+         "    def helper():\n"
+         "        pass\n",
+         "move the function to top-level or class scope"},
+        {"def main():\n"
+         "    values = [x for x in items]\n",
+         "use an explicit loop"},
+        {"def main():\n"
+         "    return getattr(value, \"x\")\n",
+         "use statically known fields or methods"},
+        {"def main():\n"
+         "    yield 1\n",
+         "explicit iterator/state type or callback"},
+    };
+    for (const Case& item : cases) {
+        bool rejected = false;
+        try {
+            const dudu::ModuleAst module =
+                dudu::parse_source(item.source, "unsupported_guidance.dd");
+            dudu::analyze_module(module, {.check_bodies = true});
+        } catch (const dudu::CompileError& error) {
+            rejected = std::string(error.what()).find(item.expected) != std::string::npos;
+        }
+        assert(rejected);
+    }
+}
+
 void test_literal_ast_values() {
     const dudu::ModuleAst module = dudu::parse_source("def main() -> i32:\n"
                                                       "    enabled = True\n"
@@ -1841,6 +1878,7 @@ int main() {
         test_unsupported_def_expression_ast_shape();
         test_unsupported_comprehension_ast_shape();
         test_unsupported_dynamic_call_ast_shape();
+        test_unsupported_python_diagnostics_include_guidance();
         test_literal_ast_values();
         test_expression_ast_shape();
         test_cpp_escape_ast_payloads();
