@@ -1397,7 +1397,9 @@ push. They are not release packaging work.
    The project-driver front door now streams native compiler, CMake, and CTest
    output for `dudu build`, `dudu run`, and `dudu test` while keeping full
    command lines behind `--verbose`; cached direct builds also print an explicit
-   `up-to-date` outcome by default. `--quiet` suppresses project-driver
+   `up-to-date` outcome by default. `dudu build` reports the final artifact path
+   with an `output` line for both direct and generated-CMake backends.
+   `--quiet` suppresses project-driver
    progress output for scripts. `dudu check` now prints `check` and `ok` lines
    on successful validation unless `--quiet` is set, while `duc check` remains
    quiet for direct compiler-driver scripts. `dudu fmt` formats either the

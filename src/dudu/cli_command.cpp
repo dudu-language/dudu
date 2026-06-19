@@ -244,12 +244,14 @@ int run_build_command(const CliOptions& options, char* executable) {
     if (config.build_backend == "cmake") {
         print_project_step(project_output, "cmake", cmake_backend_log_source(config));
         print_project_step(project_output, "build", cmake_backend_log_build_dir(config));
-        (void)build_cmake_project({.config = config,
-                                   .input = options.input,
-                                   .output = options.output,
-                                   .dudu_executable = dudu_executable,
-                                   .stream_output = project_output,
-                                   .verbose = options.verbose});
+        const std::filesystem::path bin =
+            build_cmake_project({.config = config,
+                                 .input = options.input,
+                                 .output = options.output,
+                                 .dudu_executable = dudu_executable,
+                                 .stream_output = project_output,
+                                 .verbose = options.verbose});
+        print_project_step(project_output, "output", bin);
         return 0;
     }
     const std::string source = read_text_file(options.input);
@@ -262,6 +264,7 @@ int run_build_command(const CliOptions& options, char* executable) {
                             .stream_output = project_output,
                             .verbose = options.verbose},
                            emit_cpp_source(checked_module(options, source, true)));
+    print_project_step(project_output, "output", output);
     return 0;
 }
 
