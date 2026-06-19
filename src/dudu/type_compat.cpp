@@ -61,9 +61,29 @@ std::string compact_type(std::string type) {
     return out;
 }
 
+std::string normalize_c_tags(std::string type);
+
 bool is_string_type(const TypeRef& type) {
     const std::string head = type_ref_head_name(normalize_cpp_type_artifacts_ref(type));
     return head == "str" || head == "std.string" || head == "std::string";
+}
+
+bool is_cstr_type(const TypeRef& type) {
+    return type_ref_head_name(normalize_cpp_type_artifacts_ref(type)) == "cstr";
+}
+
+bool needs_rendered_type_fallback(const TypeRef& expected, const TypeRef& got) {
+    return !has_type_ref(expected) || !has_type_ref(got) || expected.kind == TypeKind::Unknown ||
+           got.kind == TypeKind::Unknown;
+}
+
+bool rendered_type_fallback_allowed(const TypeRef& expected_ref, const std::string& expected,
+                                    const TypeRef& got_ref, const std::string& got) {
+    if (!needs_rendered_type_fallback(expected_ref, got_ref)) {
+        return false;
+    }
+    return got == expected || compact_type(expected) == compact_type(got) ||
+           compact_type(normalize_c_tags(expected)) == compact_type(normalize_c_tags(got));
 }
 
 std::optional<TypeRef> call_target_type_ref(const Expr& expr) {
@@ -303,11 +323,9 @@ bool normalized_text_type_assignment_allowed(const std::string& normalized_expec
         structural_type_assignment_allowed(expected_ref, got_ref)) {
         return true;
     }
-    return normalized_expected == "auto" || normalized_got.empty() || normalized_got == "auto" ||
-           normalized_got == normalized_expected ||
-           compact_type(normalized_expected) == compact_type(normalized_got) ||
-           compact_type(normalize_c_tags(normalized_expected)) ==
-               compact_type(normalize_c_tags(normalized_got)) ||
+    return type_ref_is_auto(expected_ref) || !has_type_ref(got_ref) || type_ref_is_auto(got_ref) ||
+           rendered_type_fallback_allowed(expected_ref, normalized_expected, got_ref,
+                                          normalized_got) ||
            (is_string_type(expected_ref) && is_string_type(got_ref)) ||
            is_void_pointer_target(expected_ref, got_ref) ||
            is_const_pointer_binding(expected_ref, got_ref) ||
@@ -373,12 +391,12 @@ bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const Ty
             return true;
         }
     }
-    return normalized_expected == "auto" || is_explicit_cast_to(normalized_expected_ref, expr) ||
+    return type_ref_is_auto(normalized_expected_ref) ||
+           is_explicit_cast_to(normalized_expected_ref, expr) ||
            (!is_container_literal_expr(expr) && normalized_got.empty()) ||
-           normalized_got == "auto" || normalized_got == normalized_expected ||
-           compact_type(normalized_expected) == compact_type(normalized_got) ||
-           compact_type(normalize_c_tags(normalized_expected)) ==
-               compact_type(normalize_c_tags(normalized_got)) ||
+           type_ref_is_auto(normalized_got_ref) ||
+           rendered_type_fallback_allowed(normalized_expected_ref, normalized_expected,
+                                          normalized_got_ref, normalized_got) ||
            (is_string_type(normalized_expected_ref) && is_string_type(normalized_got_ref)) ||
            is_value_wrapper_assignment(normalized_expected_ref, expr, normalized_got_ref) ||
            is_null_pointer(normalized_expected_ref, expr, normalized_got_ref) ||
@@ -391,7 +409,7 @@ bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const Ty
            is_native_function_pointer(normalized_expected_ref, normalized_got_ref) ||
            is_native_internal_template_result(normalized_expected_ref, normalized_got_ref) ||
            is_cpp_associated_type_binding(normalized_expected_ref, normalized_got_ref) ||
-           (normalized_expected == "cstr" && normalized_got == "str" &&
+           (is_cstr_type(normalized_expected_ref) && is_string_type(normalized_got_ref) &&
             expr.kind == ExprKind::StringLiteral) ||
            (is_numeric_type(normalized_expected_ref) && simple_literal_type(expr) == "number");
 }

@@ -145,6 +145,9 @@ void test_type_compat_uses_type_ast_for_pointers() {
     const dudu::Expr name_expr = dudu::parse_expr_text("value");
     assert(dudu::assignment_type_allowed(dudu::parse_type_text("str"), name_expr,
                                          dudu::parse_type_text("std.string")));
+    assert(dudu::assignment_type_allowed(dudu::parse_type_text("cstr"),
+                                         dudu::parse_expr_text("\"hello\""),
+                                         dudu::parse_type_text("str")));
     assert(dudu::assignment_type_allowed(dudu::parse_type_text("array[list[i32]][4]"), name_expr,
                                          dudu::parse_type_text("array[list[i32]][4]")));
     assert(!dudu::assignment_type_allowed(dudu::parse_type_text("array[list[i32]][4]"), name_expr,

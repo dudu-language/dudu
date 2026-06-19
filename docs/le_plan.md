@@ -2004,3 +2004,7 @@ push. They are not release packaging work.
    String compatibility now classifies normalized `TypeRef` heads instead of
    rendering normalized type strings for the `str` / `std.string` /
    `std::string` equivalence rule.
+   Final assignment compatibility now treats `auto`, missing RHS type, C string
+   literal compatibility, and normal structured type equivalence through
+   `TypeRef` metadata first; rendered type equality is restricted to missing or
+   explicit `Unknown` native-boundary nodes.
