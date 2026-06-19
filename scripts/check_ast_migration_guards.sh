@@ -14,6 +14,8 @@ forbidden=(
     "lower_cpp_type\\(type_ref_head_name"
     "lower_function_signature_type"
     "lower_cpp_type\\(type\\.substr"
+    "lower_template_arg_type"
+    "lower_template_type\\(std::string_view"
 )
 
 for pattern in "${forbidden[@]}"; do

@@ -2125,3 +2125,9 @@ push. They are not release packaging work.
    template roots now parse into `TypeRef` and use the structured type lowerer
    instead of duplicating the built-in template semantics with raw bracket
    splitting.
+   The remaining raw bracket-template spelling path now also parses arbitrary
+   `Name[...]` type strings into structured `TypeRef` nodes after fixed-array
+   detection, so `Box[list[i32]]` and `Box[list[i32]][3]` share the same
+   template/fixed-array lowering as parsed source. The old raw
+   `lower_template_arg_type` and `lower_template_type(std::string_view, ...)`
+   helpers are guarded against reintroduction.

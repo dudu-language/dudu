@@ -64,6 +64,14 @@ std::optional<std::string> lower_parsed_known_template_type(const std::string& t
     return lower_cpp_type(parsed);
 }
 
+std::optional<std::string> lower_parsed_template_type(const std::string& type) {
+    const TypeRef parsed = parse_type_text(type);
+    if (parsed.kind != TypeKind::Template) {
+        return std::nullopt;
+    }
+    return lower_cpp_type(parsed);
+}
+
 std::optional<std::string> lower_parsed_fixed_array_type(const std::string& type) {
     const TypeRef parsed = parse_type_text(type);
     if (parsed.kind != TypeKind::FixedArray) {
@@ -88,114 +96,6 @@ std::optional<std::string> lower_parsed_wrapper_type(const std::string& type) {
     default:
         return std::nullopt;
     }
-}
-
-std::string lower_template_arg_type(const std::string& type) {
-    const std::string trimmed = trim_copy(type);
-    if (starts_with(trimmed, "fn(")) {
-        return lower_cpp_type(parse_type_text(trimmed));
-    }
-    return lower_cpp_type(trimmed);
-}
-
-std::string lower_template_type(std::string_view name, const std::string& args) {
-    if (name == "list") {
-        return "std::vector<" + lower_template_arg_type(args) + ">";
-    }
-    if (name == "span") {
-        return "std::span<" + lower_template_arg_type(args) + ">";
-    }
-    if (name == "strided_span") {
-        return "dudu::StridedSpan<" + lower_template_arg_type(args) + ">";
-    }
-    if (name == "dict") {
-        std::ostringstream out;
-        out << "std::unordered_map<";
-        const std::vector<std::string> parts = split_top_level_args(args);
-        for (size_t i = 0; i < parts.size(); ++i) {
-            if (i > 0) {
-                out << ", ";
-            }
-            out << lower_template_arg_type(parts[i]);
-        }
-        out << ">";
-        return out.str();
-    }
-    if (name == "set") {
-        return "std::unordered_set<" + lower_template_arg_type(args) + ">";
-    }
-    if (name == "Option") {
-        return "std::optional<" + lower_template_arg_type(args) + ">";
-    }
-    if (name == "Result") {
-        std::ostringstream out;
-        out << "dudu::Result<";
-        const std::vector<std::string> parts = split_top_level_args(args);
-        for (size_t i = 0; i < parts.size(); ++i) {
-            if (i > 0) {
-                out << ", ";
-            }
-            out << lower_template_arg_type(parts[i]);
-        }
-        out << ">";
-        return out.str();
-    }
-    if (name == "tuple") {
-        std::ostringstream out;
-        const std::vector<std::string> parts = split_top_level_args(args);
-        out << "dudu::Tuple" << parts.size() << "<";
-        for (size_t i = 0; i < parts.size(); ++i) {
-            if (i > 0) {
-                out << ", ";
-            }
-            out << lower_template_arg_type(parts[i]);
-        }
-        out << ">";
-        return out.str();
-    }
-    if (name == "variant") {
-        std::ostringstream out;
-        out << "std::variant<";
-        const std::vector<std::string> parts = split_top_level_args(args);
-        for (size_t i = 0; i < parts.size(); ++i) {
-            if (i > 0) {
-                out << ", ";
-            }
-            out << lower_template_arg_type(parts[i]);
-        }
-        out << ">";
-        return out.str();
-    }
-    if (name == "const") {
-        const TypeRef parsed = parse_type_text(args);
-        if (parsed.kind == TypeKind::Pointer && !parsed.children.empty()) {
-            return lower_cpp_type(parsed.children.front()) + "* const";
-        }
-        if (parsed.kind == TypeKind::Reference) {
-            return lower_cpp_type(parsed);
-        }
-        return "const " + lower_template_arg_type(args);
-    }
-    if (name == "atomic") {
-        return "std::atomic<" + lower_template_arg_type(args) + ">";
-    }
-    if (name == "volatile") {
-        return "volatile " + lower_template_arg_type(args);
-    }
-    if (name == "device" || name == "storage" || name == "shared") {
-        return lower_template_arg_type(args);
-    }
-    std::ostringstream out;
-    out << replace_dots(std::string(name)) << "<";
-    const std::vector<std::string> parts = split_top_level_args(args);
-    for (size_t i = 0; i < parts.size(); ++i) {
-        if (i > 0) {
-            out << ", ";
-        }
-        out << lower_template_arg_type(parts[i]);
-    }
-    out << ">";
-    return out.str();
 }
 
 std::vector<std::string> fixed_array_dimensions(const std::string& type) {
@@ -344,14 +244,9 @@ std::string lower_cpp_type(const std::string& raw_type) {
 
     const size_t open = type.find('[');
     if (open != std::string::npos && ends_with(type, "]")) {
-        const std::string name = type.substr(0, open);
-        const std::string args = type.substr(open + 1, type.size() - open - 2);
-        if (is_decimal_number(args) && name != "list" && name != "dict" && name != "set" &&
-            name != "Option" && name != "Result" && name != "tuple" && name != "variant" &&
-            name != "const" && name != "atomic" && name != "volatile") {
-            return lower_cpp_type(name) + "[" + args + "]";
+        if (const auto template_type = lower_parsed_template_type(type)) {
+            return *template_type;
         }
-        return lower_template_type(name, args);
     }
     return lower_cpp_type_name(type);
 }

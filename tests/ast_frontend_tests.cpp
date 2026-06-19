@@ -1411,6 +1411,9 @@ void test_type_ast_shape() {
            "std::vector<std::add_pointer_t<bool(int32_t)>>>");
     assert(dudu::lower_cpp_type("std.function[fn(i32) -> bool]") ==
            "std::function<bool(int32_t)>");
+    assert(dudu::lower_cpp_type("Box[list[i32]]") == "Box<std::vector<int32_t>>");
+    assert(dudu::lower_cpp_type("Box[list[i32]][3]") ==
+           "std::array<Box<std::vector<int32_t>>, 3>");
     assert(dudu::lower_template_call_arg("fn(i32) -> bool", {}) == "bool(int32_t)");
     dudu::FunctionSignature signature;
     assert(dudu::parse_function_type(dudu::parse_type_text("fn(i32, f32) -> bool"), signature));
