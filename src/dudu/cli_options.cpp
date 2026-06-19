@@ -79,6 +79,10 @@ CliOptions parse_cli_options(int argc, char** argv, bool project_driver) {
     for (int i = first_arg; i < argc; ++i) {
         const std::string arg = argv[i];
         if (options.bench) {
+            if (!project_driver) {
+                options.command_args.push_back(arg);
+                continue;
+            }
             if (arg == "--") {
                 while (++i < argc) {
                     options.command_args.push_back(argv[i]);

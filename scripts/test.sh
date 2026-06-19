@@ -323,11 +323,17 @@ grep -q "dudu bench" "$repo_root/build/dudu_bench_help.out"
 (
     cd "$repo_root/tests/fixtures/project_delegated_command/subdir"
     "$repo_root/build/dudu" bench >"$repo_root/build/project_delegated_bench.out"
+    "$repo_root/build/dudu" bench -- --user-flag \
+        >"$repo_root/build/project_delegated_bench_args.out"
+    "$repo_root/build/duc" bench --quiet \
+        >"$repo_root/build/project_delegated_duc_bench_args.out"
     "$repo_root/build/dudu" bench --quiet >"$repo_root/build/project_delegated_bench_quiet.out" \
         2>"$repo_root/build/project_delegated_bench_quiet.err"
     "$repo_root/build/dudu" test >"$repo_root/build/project_delegated_test.out"
 )
 grep -q "bench-from-project" "$repo_root/build/project_delegated_bench.out"
+grep -q "bench-from-project --user-flag" "$repo_root/build/project_delegated_bench_args.out"
+grep -q "bench-from-project --quiet" "$repo_root/build/project_delegated_duc_bench_args.out"
 grep -q "bench-from-project" "$repo_root/build/project_delegated_bench_quiet.out"
 test ! -s "$repo_root/build/project_delegated_bench_quiet.err"
 grep -q "test-from-project" "$repo_root/build/project_delegated_test.out"
