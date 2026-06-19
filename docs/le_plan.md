@@ -2131,3 +2131,8 @@ push. They are not release packaging work.
    template/fixed-array lowering as parsed source. The old raw
    `lower_template_arg_type` and `lower_template_type(std::string_view, ...)`
    helpers are guarded against reintroduction.
+   Legacy fixed-array shorthand lowering for spellings such as `Player[3][4]`
+   and `Pixel[BUFFER_SIZE]` now parses the spelling into `TypeRef`, converts
+   value-only bracket arguments into a structured `FixedArray` node, and lowers
+   that node. The previous `find/substr` helpers for `fixed_array_dimensions`
+   and `fixed_array_base` are guarded against reintroduction.

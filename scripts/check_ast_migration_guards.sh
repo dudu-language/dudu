@@ -16,6 +16,8 @@ forbidden=(
     "lower_cpp_type\\(type\\.substr"
     "lower_template_arg_type"
     "lower_template_type\\(std::string_view"
+    "fixed_array_dimensions"
+    "fixed_array_base"
 )
 
 for pattern in "${forbidden[@]}"; do

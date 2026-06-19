@@ -7,6 +7,7 @@
 #include <map>
 #include <optional>
 #include <sstream>
+#include <utility>
 
 namespace dudu {
 namespace {
@@ -37,6 +38,27 @@ bool is_constant_name(std::string_view text) {
 
 bool is_array_dimension(std::string_view text) {
     return is_decimal_number(text) || is_constant_name(text);
+}
+
+std::optional<std::string> array_dimension_text(const TypeRef& type) {
+    if (type.kind == TypeKind::Value && is_array_dimension(type.value)) {
+        return type.value;
+    }
+    if (type.kind == TypeKind::Named && type.name.size() > 1 && is_constant_name(type.name)) {
+        return type.name;
+    }
+    return std::nullopt;
+}
+
+std::string join_array_dimensions(const std::vector<std::string>& dims) {
+    std::ostringstream out;
+    for (size_t i = 0; i < dims.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << dims[i];
+    }
+    return out.str();
 }
 
 bool known_structured_template_root(std::string_view name) {
@@ -72,6 +94,65 @@ std::optional<std::string> lower_parsed_template_type(const std::string& type) {
     return lower_cpp_type(parsed);
 }
 
+struct ArrayShorthand {
+    TypeRef element;
+    std::vector<std::string> dims;
+};
+
+std::optional<ArrayShorthand> collect_array_shorthand(const TypeRef& type) {
+    if (type.kind == TypeKind::Template && type.name != "array" && !type.children.empty()) {
+        std::vector<std::string> dims;
+        for (const TypeRef& child : type.children) {
+            std::optional<std::string> dim = array_dimension_text(child);
+            if (!dim) {
+                return std::nullopt;
+            }
+            dims.push_back(*dim);
+        }
+        TypeRef element;
+        element.kind = type.name.find('.') == std::string::npos &&
+                               type.name.find("::") == std::string::npos
+                           ? TypeKind::Named
+                           : TypeKind::Qualified;
+        element.name = type.name;
+        element.text = type.name;
+        element.location = type.location;
+        element.range = type.range;
+        return ArrayShorthand{.element = std::move(element), .dims = std::move(dims)};
+    }
+
+    if (type.kind == TypeKind::FixedArray && !type.children.empty()) {
+        std::vector<std::string> dims = split_top_level_args(type.value);
+        if (dims.empty() ||
+            !std::all_of(dims.begin(), dims.end(),
+                         [](const std::string& dim) { return is_array_dimension(dim); })) {
+            return std::nullopt;
+        }
+        if (std::optional<ArrayShorthand> inner = collect_array_shorthand(type.children.front())) {
+            inner->dims.insert(inner->dims.end(), dims.begin(), dims.end());
+            return inner;
+        }
+        return ArrayShorthand{.element = type.children.front(), .dims = std::move(dims)};
+    }
+
+    return std::nullopt;
+}
+
+std::optional<std::string> lower_array_shorthand_type(const std::string& type) {
+    const TypeRef parsed = parse_type_text(type);
+    std::optional<ArrayShorthand> shorthand = collect_array_shorthand(parsed);
+    if (!shorthand) {
+        return std::nullopt;
+    }
+    TypeRef fixed;
+    fixed.kind = TypeKind::FixedArray;
+    fixed.children.push_back(std::move(shorthand->element));
+    fixed.value = join_array_dimensions(shorthand->dims);
+    fixed.location = parsed.location;
+    fixed.range = parsed.range;
+    return lower_cpp_type(fixed);
+}
+
 std::optional<std::string> lower_parsed_fixed_array_type(const std::string& type) {
     const TypeRef parsed = parse_type_text(type);
     if (parsed.kind != TypeKind::FixedArray) {
@@ -96,29 +177,6 @@ std::optional<std::string> lower_parsed_wrapper_type(const std::string& type) {
     default:
         return std::nullopt;
     }
-}
-
-std::vector<std::string> fixed_array_dimensions(const std::string& type) {
-    std::vector<std::string> dims;
-    size_t open = type.find('[');
-    while (open != std::string::npos) {
-        const size_t close = type.find(']', open + 1);
-        if (close == std::string::npos) {
-            return {};
-        }
-        const std::string dim = type.substr(open + 1, close - open - 1);
-        if (!is_array_dimension(dim)) {
-            return {};
-        }
-        dims.push_back(dim);
-        open = type.find('[', close + 1);
-    }
-    return dims;
-}
-
-std::string fixed_array_base(const std::string& type) {
-    const size_t open = type.find('[');
-    return open == std::string::npos ? type : type.substr(0, open);
 }
 
 } // namespace
@@ -230,16 +288,12 @@ std::string lower_cpp_type(const std::string& raw_type) {
         return *template_type;
     }
 
-    if (const auto array_type = lower_parsed_fixed_array_type(type)) {
-        return *array_type;
+    if (const auto array_shorthand = lower_array_shorthand_type(type)) {
+        return *array_shorthand;
     }
 
-    if (const std::vector<std::string> dims = fixed_array_dimensions(type); !dims.empty()) {
-        std::string out = lower_cpp_type(fixed_array_base(type));
-        for (auto it = dims.rbegin(); it != dims.rend(); ++it) {
-            out = "std::array<" + out + ", " + *it + ">";
-        }
-        return out;
+    if (const auto array_type = lower_parsed_fixed_array_type(type)) {
+        return *array_type;
     }
 
     const size_t open = type.find('[');
