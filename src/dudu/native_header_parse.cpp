@@ -25,23 +25,40 @@ NativeSymbolId native_identity(std::string canonical_path) {
     return id;
 }
 
+TypeRef normalize_native_type_ref(TypeRef type);
+
 TypeRef parse_native_type_text(std::string text, const SourceLocation& location) {
     text = trim_copy(std::move(text));
     if (text.ends_with("...")) {
-        return pack_expansion_type_ref(
-            parse_type_text(trim_copy(text.substr(0, text.size() - 3)), location), location);
+        return pack_expansion_type_ref(normalize_native_type_ref(parse_type_text(
+                                           trim_copy(text.substr(0, text.size() - 3)), location)),
+                                       location);
     }
-    TypeRef type = parse_type_text(text, location);
+    return normalize_native_type_ref(parse_type_text(text, location));
+}
+
+bool childless_native_wrapper(const TypeRef& type) {
     if ((type.kind == TypeKind::Const || type.kind == TypeKind::Volatile ||
          type.kind == TypeKind::Atomic || type.kind == TypeKind::Storage ||
          type.kind == TypeKind::Shared || type.kind == TypeKind::Device ||
          type.kind == TypeKind::Static || type.kind == TypeKind::Pointer ||
          type.kind == TypeKind::Reference || type.kind == TypeKind::PackExpansion) &&
         type.children.empty()) {
+        return true;
+    }
+    return false;
+}
+
+bool native_dot_marker_type(const TypeRef& type) {
+    return type.kind == TypeKind::Named && type.name == ".";
+}
+
+TypeRef normalize_native_type_ref(TypeRef type) {
+    if (childless_native_wrapper(type)) {
         return TypeRef{};
     }
     for (TypeRef& child : type.children) {
-        child = parse_native_type_text(type_ref_text(child), child.location);
+        child = normalize_native_type_ref(std::move(child));
     }
     if (type.kind == TypeKind::Template && type.children.size() >= 2) {
         std::string pack_name = type_ref_head_name(type.children.front());
@@ -50,7 +67,7 @@ TypeRef parse_native_type_text(std::string text, const SourceLocation& location)
         }
         bool marker_tail = !pack_name.empty();
         for (size_t i = 1; i < type.children.size(); ++i) {
-            marker_tail = marker_tail && type_ref_text(type.children[i]) == ".";
+            marker_tail = marker_tail && native_dot_marker_type(type.children[i]);
         }
         if (marker_tail) {
             TypeRef pack_child = named_type_ref(pack_name, type.children.front().location);

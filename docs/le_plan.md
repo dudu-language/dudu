@@ -2157,6 +2157,9 @@ push. They are not release packaging work.
    native-type normalizer used for free functions, so imported declaration
    metadata receives structured pack-expansion and nested native type cleanup
    at the boundary instead of leaving direct raw `parse_type_text` holes.
+   Native header type cleanup now recursively normalizes parsed child
+   `TypeRef` nodes directly; the old `parse_native_type_text(type_ref_text(...))`
+   render/reparse loop has been deleted and guarded.
    Bound native template substitution now actually applies structured
    substitution per parameter/return field: a messy unrelated native binding
    no longer disables `TypeRef` substitution or pack expansion for clean
