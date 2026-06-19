@@ -2068,3 +2068,7 @@ push. They are not release packaging work.
    malformed type nodes must be rejected explicitly.
    C++ type lowering from structured `TypeRef` nodes now rejects `Unknown`
    nodes instead of lowering their raw text through the string type lowerer.
+   Generic/type alias substitution no longer treats raw `Unknown.text` as a
+   placeholder lookup key; substitutions now require structured named,
+   qualified, or template type nodes, so malformed unknown type text cannot
+   quietly participate in semantic rewriting.

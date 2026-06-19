@@ -38,8 +38,6 @@ std::string substitution_lookup_key(const TypeRef& type) {
     case TypeKind::Qualified:
     case TypeKind::Template:
         return trim_copy(type.name);
-    case TypeKind::Unknown:
-        return trim_copy(type.text);
     default:
         return {};
     }
@@ -369,15 +367,6 @@ TypeRef substitute_type_ref(const TypeRef& type,
     const std::string key = substitution_lookup_key(type);
     if (!key.empty()) {
         if (const auto found = substitutions.find(key); found != substitutions.end()) {
-            TypeRef out = found->second;
-            out.location = type.location;
-            return out;
-        }
-    }
-
-    if (type.kind == TypeKind::Unknown && key.empty()) {
-        const std::string rendered = trim_copy(type.text);
-        if (const auto found = substitutions.find(rendered); found != substitutions.end()) {
             TypeRef out = found->second;
             out.location = type.location;
             return out;

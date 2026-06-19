@@ -1398,6 +1398,13 @@ void test_type_ast_shape() {
     const dudu::TypeRef nested = dudu::substitute_type_ref(
         dudu::parse_type_text("fn(list[T]) -> T"), {{"T", dudu::named_type_ref("f32")}});
     assert(dudu::substitute_type_ref_text(nested, {}) == "fn(list[f32]) -> f32");
+    dudu::TypeRef malformed_placeholder;
+    malformed_placeholder.kind = dudu::TypeKind::Unknown;
+    malformed_placeholder.text = "T";
+    const dudu::TypeRef malformed_substituted =
+        dudu::substitute_type_ref(malformed_placeholder, {{"T", dudu::named_type_ref("f32")}});
+    assert(malformed_substituted.kind == dudu::TypeKind::Unknown);
+    assert(malformed_substituted.text == "T");
     assert(dudu::lower_cpp_type(player.fields[0].type_ref) ==
            "std::array<std::array<float, 4>, 4>");
     const dudu::ArrayShapeInference inferred_array = dudu::infer_array_literal_shape_type(
