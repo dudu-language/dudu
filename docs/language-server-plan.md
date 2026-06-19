@@ -368,7 +368,9 @@ Hover for typed locals and simple inferred locals is covered.
 Hover for Dudu declaration doc comments is covered.
 Hover for Dudu symbols imported through module aliases is covered.
 Format and organize-imports code actions are covered.
-Missing-import quick fixes are covered using an unopened workspace file.
+Missing-import quick fixes are covered using an unopened workspace file, with
+an ambiguity guard that suppresses the fix when more than one workspace module
+exports the missing name.
 Native config quick fixes are covered with a fixture `dudu.toml` edit for a
 known missing native header package.
 Missing `pkg-config` package diagnostics are covered with a fixture

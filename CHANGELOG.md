@@ -91,6 +91,8 @@
 - Made declaration-anchored LSP references skip unrelated same-named
   redeclarations while preserving workspace references through imported module
   paths.
+- Covered ambiguous LSP missing-import candidates so quick fixes stay limited
+  to unambiguous workspace symbols.
 - Added project-driver output for successful `dudu check`, documented
   `dudu bench` in help, and made `dudu bench --quiet`/`--help` behave as
   project-driver flags while preserving benchmark arguments after `--`.

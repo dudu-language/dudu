@@ -1,0 +1,2 @@
+def ambiguous_helper() -> i32:
+    return 2

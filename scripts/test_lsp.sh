@@ -61,6 +61,7 @@ scope_uri = "file:///tmp/dudu_lsp_scope.dd"
 direct_native_uri = f"file://{repo_root}/tests/fixtures/dudu_lsp_direct_native.dd"
 from_import_uri = f"file://{repo_root}/tests/fixtures/dudu_lsp_from_import.dd"
 lsp_include_uri = f"file://{repo_root}/tests/fixtures/lsp_include_project/src/main.dd"
+ambiguous_import_uri = "file:///tmp/dudu_lsp_ambiguous_import.dd"
 source = "\n".join(
     [
         "class Player:",
@@ -1268,6 +1269,54 @@ messages = [
     packet(
         {
             "jsonrpc": "2.0",
+            "method": "textDocument/didOpen",
+            "params": {
+                "textDocument": {
+                    "uri": ambiguous_import_uri,
+                    "languageId": "dudu",
+                    "version": 1,
+                    "text": "\n".join(
+                        [
+                            "def main() -> i32:",
+                            "    return ambiguous_helper()",
+                            "",
+                        ]
+                    ),
+                }
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 64,
+            "method": "textDocument/codeAction",
+            "params": {
+                "textDocument": {"uri": ambiguous_import_uri},
+                "range": {
+                    "start": {"line": 1, "character": 11},
+                    "end": {"line": 1, "character": 27},
+                },
+                "context": {
+                    "diagnostics": [
+                        {
+                            "range": {
+                                "start": {"line": 1, "character": 11},
+                                "end": {"line": 1, "character": 27},
+                            },
+                            "source": "dudu/sema",
+                            "code": "dudu.sema.unknown_identifier",
+                            "data": {"name": "ambiguous_helper"},
+                            "message": "unknown identifier: ambiguous_helper",
+                        }
+                    ]
+                },
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
             "id": 18,
             "method": "textDocument/references",
             "params": {
@@ -1793,6 +1842,12 @@ assert missing_import["kind"] == "quickfix"
 assert missing_import_edit["range"]["start"]["line"] == 3
 assert missing_import_edit["range"]["end"]["line"] == 3
 assert missing_import_edit["newText"] == "from lsp_import_target import missing_helper\n"
+
+ambiguous_import_actions = next(item for item in responses if item.get("id") == 64)
+assert not any(
+    item["title"].startswith("Import ambiguous_helper ")
+    for item in ambiguous_import_actions["result"]
+)
 
 native_config_actions = next(item for item in responses if item.get("id") == 27)
 assert not any(
