@@ -2039,3 +2039,6 @@ push. They are not release packaging work.
    Match emission no longer renders the subject `TypeRef` into an unused text
    mirror before wrapper/enum dispatch; codegen uses the structured
    `TypeRef` directly.
+   Type assignment compatibility now keeps normalized assignment checks on
+   structured `TypeRef`s and only renders spellings inside the explicit
+   missing/`Unknown` native-boundary fallback.

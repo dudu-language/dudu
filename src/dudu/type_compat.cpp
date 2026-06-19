@@ -77,11 +77,12 @@ bool needs_rendered_type_fallback(const TypeRef& expected, const TypeRef& got) {
            got.kind == TypeKind::Unknown;
 }
 
-bool rendered_type_fallback_allowed(const TypeRef& expected_ref, const std::string& expected,
-                                    const TypeRef& got_ref, const std::string& got) {
+bool rendered_type_fallback_allowed(const TypeRef& expected_ref, const TypeRef& got_ref) {
     if (!needs_rendered_type_fallback(expected_ref, got_ref)) {
         return false;
     }
+    const std::string expected = substitute_type_ref_text(expected_ref, {});
+    const std::string got = substitute_type_ref_text(got_ref, {});
     return got == expected || compact_type(expected) == compact_type(got) ||
            compact_type(normalize_c_tags(expected)) == compact_type(normalize_c_tags(got));
 }
@@ -319,17 +320,13 @@ bool is_value_from_const(const TypeRef& expected, const TypeRef& got) {
     return inner.has_value() && type_ref_equivalent(expected, *inner);
 }
 
-bool normalized_text_type_assignment_allowed(const std::string& normalized_expected,
-                                             const TypeRef& expected_ref,
-                                             const std::string& normalized_got,
-                                             const TypeRef& got_ref) {
-    if (!normalized_expected.empty() && !normalized_got.empty() &&
+bool normalized_type_assignment_allowed(const TypeRef& expected_ref, const TypeRef& got_ref) {
+    if (has_type_ref(expected_ref) && has_type_ref(got_ref) &&
         structural_type_assignment_allowed(expected_ref, got_ref)) {
         return true;
     }
     return type_ref_is_auto(expected_ref) || !has_type_ref(got_ref) || type_ref_is_auto(got_ref) ||
-           rendered_type_fallback_allowed(expected_ref, normalized_expected, got_ref,
-                                          normalized_got) ||
+           rendered_type_fallback_allowed(expected_ref, got_ref) ||
            (is_string_type(expected_ref) && is_string_type(got_ref)) ||
            is_void_pointer_target(expected_ref, got_ref) ||
            is_const_pointer_binding(expected_ref, got_ref) ||
@@ -347,9 +344,7 @@ bool normalized_text_type_assignment_allowed(const std::string& normalized_expec
 bool type_assignment_allowed(const TypeRef& expected, const TypeRef& got) {
     const TypeRef normalized_expected_ref = normalize_cpp_type_artifacts_ref(expected);
     const TypeRef normalized_got_ref = normalize_cpp_type_artifacts_ref(got);
-    const std::string normalized_expected = substitute_type_ref_text(normalized_expected_ref, {});
-    const std::string normalized_got = substitute_type_ref_text(normalized_got_ref, {});
-    if (!normalized_expected.empty() && !normalized_got.empty() &&
+    if (has_type_ref(normalized_expected_ref) && has_type_ref(normalized_got_ref) &&
         structural_type_assignment_allowed(normalized_expected_ref, normalized_got_ref)) {
         return true;
     }
@@ -359,19 +354,16 @@ bool type_assignment_allowed(const TypeRef& expected, const TypeRef& got) {
            is_value_from_reference(expected, got) || is_value_from_const(expected, got) ||
            is_native_function_pointer(expected, got) ||
            is_cpp_associated_type_binding(expected, got) ||
-           normalized_text_type_assignment_allowed(normalized_expected, normalized_expected_ref,
-                                                   normalized_got, normalized_got_ref);
+           normalized_type_assignment_allowed(normalized_expected_ref, normalized_got_ref);
 }
 
 bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const TypeRef& got) {
     const TypeRef normalized_expected_ref = normalize_cpp_type_artifacts_ref(expected);
     const TypeRef normalized_got_ref = normalize_cpp_type_artifacts_ref(got);
-    const std::string normalized_expected = substitute_type_ref_text(normalized_expected_ref, {});
-    const std::string normalized_got = substitute_type_ref_text(normalized_got_ref, {});
     if (!type_ref_equivalent(normalized_expected_ref, expected)) {
         return assignment_type_allowed(normalized_expected_ref, expr, normalized_got_ref);
     }
-    if (!normalized_got.empty() && normalized_got != "auto") {
+    if (has_type_ref(normalized_got_ref) && !type_ref_is_auto(normalized_got_ref)) {
         if (structural_type_assignment_allowed(normalized_expected_ref, normalized_got_ref)) {
             return true;
         }
@@ -383,7 +375,7 @@ bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const Ty
     if (is_variant_value(normalized_expected_ref, expr, normalized_got_ref)) {
         return true;
     }
-    if (!normalized_got.empty() && normalized_got != "auto") {
+    if (has_type_ref(normalized_got_ref) && !type_ref_is_auto(normalized_got_ref)) {
         if (is_void_pointer_target(normalized_expected_ref, normalized_got_ref) ||
             is_const_pointer_binding(normalized_expected_ref, normalized_got_ref) ||
             is_pointer_to_reference_value(normalized_expected_ref, normalized_got_ref) ||
@@ -397,10 +389,9 @@ bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const Ty
     }
     return type_ref_is_auto(normalized_expected_ref) ||
            is_explicit_cast_to(normalized_expected_ref, expr) ||
-           (!is_container_literal_expr(expr) && normalized_got.empty()) ||
+           (!is_container_literal_expr(expr) && !has_type_ref(normalized_got_ref)) ||
            type_ref_is_auto(normalized_got_ref) ||
-           rendered_type_fallback_allowed(normalized_expected_ref, normalized_expected,
-                                          normalized_got_ref, normalized_got) ||
+           rendered_type_fallback_allowed(normalized_expected_ref, normalized_got_ref) ||
            (is_string_type(normalized_expected_ref) && is_string_type(normalized_got_ref)) ||
            is_value_wrapper_assignment(normalized_expected_ref, expr, normalized_got_ref) ||
            is_null_pointer(normalized_expected_ref, expr, normalized_got_ref) ||
