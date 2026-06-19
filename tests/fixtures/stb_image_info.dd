@@ -1,0 +1,25 @@
+import c "stb_image.h" as stb
+
+
+def main() -> i32:
+    png: array[u8] = [
+        137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82,
+        0, 0, 0, 1, 0, 0, 0, 1, 8, 2, 0, 0, 0, 144, 119, 83, 222,
+        0, 0, 0, 12, 73, 68, 65, 84, 8, 215, 99, 248, 207, 192, 0, 0,
+        3, 1, 1, 0, 24, 221, 141, 176, 0, 0, 0, 0, 73, 69, 78, 68,
+        174, 66, 96, 130,
+    ]
+    width: i32 = 0
+    height: i32 = 0
+    components: i32 = 0
+
+    ok = stb.stbi_info_from_memory(&png[0], i32(len(png)), &width, &height, &components)
+    if ok == 0:
+        return 1
+    if width != 1:
+        return 2
+    if height != 1:
+        return 3
+    if components != 3:
+        return 4
+    return 42

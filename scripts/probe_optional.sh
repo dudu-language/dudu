@@ -261,6 +261,27 @@ probe_spdlog() {
     echo "ok spdlog"
 }
 
+probe_stb() {
+    if ! pkg-config --exists stb; then
+        echo "skip stb: pkg-config package not found"
+        return
+    fi
+
+    local cpp="$repo_root/build/probe_stb_image_info.cpp"
+    local bin="$repo_root/build/probe_stb_image_info"
+    "$repo_root/build/duc" emit "$repo_root/tests/fixtures/stb_image_info.dd" -o "$cpp"
+    "${CXX:-c++}" -std=c++20 "$cpp" $(pkg-config --cflags --libs stb) -o "$bin"
+    set +e
+    "$bin"
+    local status=$?
+    set -e
+    if [[ "$status" -ne 42 ]]; then
+        echo "stb probe returned $status, expected 42" >&2
+        exit 1
+    fi
+    echo "ok stb"
+}
+
 probe_threading() {
     local cpp="$repo_root/build/probe_threading_atomics.cpp"
     local bin="$repo_root/build/probe_threading_atomics"
@@ -431,6 +452,7 @@ probe_fmt
 probe_eigen
 probe_openblas
 probe_spdlog
+probe_stb
 probe_threading
 probe_posix_mmap
 probe_posix_threads
