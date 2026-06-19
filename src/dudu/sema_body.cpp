@@ -35,6 +35,17 @@ void check_block(FunctionScope& scope, const std::vector<Stmt>& body,
     scope.allow_super_init = false;
 }
 
+void check_known_scoped_type_ref(const FunctionScope& scope, const SourceLocation& location,
+                                 const TypeRef& type, const std::string& message) {
+    if (const auto unknown = unknown_type_ref(scope.symbols, type)) {
+        const SourceLocation error_location = unknown->second.line > 0 ? unknown->second : location;
+        if (scope.local_type_refs.contains(unknown->first)) {
+            sema_fail(error_location, "value used as a type: " + unknown->first);
+        }
+        sema_fail(error_location, message + unknown->first);
+    }
+}
+
 void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_type_ref,
                 int loop_depth) {
     check_local_address_escape(stmt, scope.local_type_refs);
@@ -132,8 +143,8 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
         }
         if (!stmt.name.empty()) {
             check_local_binding_name(stmt.location, stmt.name);
-            check_known_type_ref(scope.symbols, node_location(stmt.location, stmt.type_ref),
-                                 stmt.type_ref, "unknown catch type: ");
+            check_known_scoped_type_ref(scope, node_location(stmt.location, stmt.type_ref),
+                                        stmt.type_ref, "unknown catch type: ");
             TypeRef catch_type = const_reference_type_ref(stmt.type_ref);
             bind_local(nested, stmt.name, catch_type);
         }
@@ -158,8 +169,8 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
                 }
                 binding_type = *inferred;
             } else {
-                check_known_type_ref(scope.symbols, node_location(stmt.location, stmt.type_ref),
-                                     stmt.type_ref, "unknown loop binding type: ");
+                check_known_scoped_type_ref(scope, node_location(stmt.location, stmt.type_ref),
+                                            stmt.type_ref, "unknown loop binding type: ");
                 check_iterable_binding(scope.symbols, scope.local_type_refs,
                                        node_location(stmt.location, stmt.iterable_expr),
                                        binding_type, stmt.iterable_expr);
@@ -210,11 +221,11 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
         }
         const EffectiveVarType type = effective_var_type(stmt, inferred);
         if (!type.inferred) {
-            check_known_type_ref(scope.symbols, node_location(stmt.location, stmt.type_ref),
-                                 stmt.type_ref, "unknown local type: ");
+            check_known_scoped_type_ref(scope, node_location(stmt.location, stmt.type_ref),
+                                        stmt.type_ref, "unknown local type: ");
         } else {
-            check_known_type_ref(scope.symbols, node_location(stmt.location, type.ref), type.ref,
-                                 "unknown local type: ");
+            check_known_scoped_type_ref(scope, node_location(stmt.location, type.ref), type.ref,
+                                        "unknown local type: ");
         }
         if (sema_has_expr(stmt.value_expr)) {
             if (inferred.status == ArrayShapeStatus::Inferred &&

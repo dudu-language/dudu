@@ -99,6 +99,8 @@ substitute receiver member types through the declared class generic parameter
 names.
 Bare type parameters in value position, such as `return T`, are rejected with a
 targeted diagnostic. Generic default construction remains `T()`.
+In-scope values used as type annotations, such as `other: value`, are rejected
+with a targeted diagnostic instead of being reported as merely unknown types.
 
 Unsupported operations on `T` should produce useful diagnostics that mention:
 
@@ -319,7 +321,7 @@ Required generic diagnostics:
 - missing template argument
 - too many template arguments
 - type parameter used as a value: done
-- value parameter used as a type
+- value parameter used as a type: done
 - cannot infer type parameter
 - conflicting inferred type parameter
 - operation unsupported for instantiated type

@@ -534,6 +534,37 @@ void test_semantic_diagnostics() {
     }
     assert(bad_generic_value);
 
+    bool bad_value_as_type = false;
+    try {
+        const dudu::ModuleAst module = dudu::parse_source("def bad_value_as_type(value: i32):\n"
+                                                          "    other: value = 1\n",
+                                                          "bad_value_as_type.dd");
+        dudu::analyze_module(module, {.check_bodies = true});
+    } catch (const dudu::CompileError& error) {
+        assert(error.location().line == 2);
+        assert(error.location().column > 5);
+        assert(std::string(error.what()).find("value used as a type: value") !=
+               std::string::npos);
+        bad_value_as_type = true;
+    }
+    assert(bad_value_as_type);
+
+    bool bad_prior_local_as_type = false;
+    try {
+        const dudu::ModuleAst module = dudu::parse_source("def bad_prior_local_as_type():\n"
+                                                          "    value: i32 = 1\n"
+                                                          "    other: value = 2\n",
+                                                          "bad_prior_local_as_type.dd");
+        dudu::analyze_module(module, {.check_bodies = true});
+    } catch (const dudu::CompileError& error) {
+        assert(error.location().line == 3);
+        assert(error.location().column > 5);
+        assert(std::string(error.what()).find("value used as a type: value") !=
+               std::string::npos);
+        bad_prior_local_as_type = true;
+    }
+    assert(bad_prior_local_as_type);
+
     for (const std::string type : {"int", "float", "double"}) {
         bool rejected = false;
         try {
