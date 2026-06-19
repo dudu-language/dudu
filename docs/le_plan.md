@@ -250,10 +250,13 @@ Status: the module loader now canonicalizes physical `.dd` files and appends
 each loaded module once in dependency-first order, so the same source reached
 through multiple import routes no longer duplicates declarations. `from ...
 import Name as Alias` also materializes Dudu-native aliases for types,
-constants, and functions. Stricter Python-shaped namespace boundaries and
-intentional re-export semantics remain unfinished; the current backend still
-uses a merged module model rather than per-module symbol namespaces. Qualified
-Dudu module imports such as `import camera as cam` and
+constants, and functions. Python-shaped namespace boundaries now reject
+transitive dependency leakage and private selective-import leakage; modules
+only expose their own declarations through qualified imports unless a facade
+defines an explicit public wrapper. The direct backend still uses a merged
+module model rather than per-module symbol namespaces, so it remains narrower
+than the generated-CMake module backend. Qualified Dudu module imports such as
+`import camera as cam` and
 `import renderer.camera` now bind `cam.Type`, `cam.function`,
 `renderer.camera.Type`, and `renderer.camera.function` through non-emitted
 module metadata. Distinct modules that declare the same unqualified Dudu type
