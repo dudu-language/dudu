@@ -2042,3 +2042,6 @@ push. They are not release packaging work.
    Type assignment compatibility now keeps normalized assignment checks on
    structured `TypeRef`s and only renders spellings inside the explicit
    missing/`Unknown` native-boundary fallback.
+   C++ escape type recognition now detects function types from structured
+   `TypeRef` nodes instead of checking whether the raw callee spelling starts
+   with `fn(`.
