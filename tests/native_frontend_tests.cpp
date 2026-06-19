@@ -155,6 +155,27 @@ void test_native_header_type_scan(const std::filesystem::path& root) {
     assert(std::filesystem::exists(config.build_dir / "dudu-header-cache"));
 }
 
+void test_cxx_import_scans_c_globals_but_emits_plain_include(const std::filesystem::path& root) {
+    dudu::ModuleAst module =
+        dudu::parse_source("import cxx \"native_headers/simple_c.h\" as native\n"
+                           "\n"
+                           "def main() -> i32:\n"
+                           "    return native.dudu_native_add(20, 22)\n",
+                           root / "tests/fixtures/native_cxx_import.dd");
+    dudu::ProjectConfig config;
+    config.build_dir = root / "build" / "native-cxx-header-test-cache";
+    std::filesystem::remove_all(config.build_dir);
+    dudu::merge_native_header_types(module,
+                                    {.config = config, .source_dir = root / "tests/fixtures"});
+    dudu::analyze_module(module, {.check_bodies = true});
+    const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find("#include \"native_headers/simple_c.h\"") != std::string::npos);
+    assert(cpp.find("extern \"C\" {\n#include \"native_headers/simple_c.h\"") ==
+           std::string::npos);
+    assert(cpp.find("return dudu_native_add(20, 22);") != std::string::npos);
+    assert(cpp.find("native::dudu_native_add") == std::string::npos);
+}
+
 void test_native_header_alias_preserves_identity(const std::filesystem::path& root) {
     dudu::ModuleAst module =
         dudu::parse_source("import cpp \"native_headers/simple_cpp.hpp\" as native\n"
@@ -528,6 +549,7 @@ int main() {
         const std::filesystem::path root = DUDU_REPO_ROOT;
         test_native_type_declaration_emission();
         test_native_header_type_scan(root);
+        test_cxx_import_scans_c_globals_but_emits_plain_include(root);
         test_native_header_alias_preserves_identity(root);
         test_native_identity_edge_cases(root);
         test_native_identity_name_collision_is_rejected(root);

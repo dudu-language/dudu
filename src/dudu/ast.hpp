@@ -20,6 +20,7 @@ enum class ImportKind {
     Module,
     From,
     ForeignC,
+    ForeignCxx,
     ForeignCpp,
 };
 

@@ -93,11 +93,14 @@ void test_value_member_emission() {
 
 void test_c_imports_emit_c_linkage() {
     const dudu::ModuleAst module = dudu::parse_source("import c \"math.h\"\n"
+                                                      "import cxx \"libxml/parser.h\"\n"
                                                       "import cpp \"vector\"\n",
                                                       "c_import_linkage.dd");
     const std::string cpp = dudu::emit_cpp_source(module);
     assert(cpp.find("extern \"C\" {\n#include \"math.h\"\n}\n") != std::string::npos);
+    assert(cpp.find("#include \"libxml/parser.h\"") != std::string::npos);
     assert(cpp.find("#include \"vector\"") != std::string::npos);
+    assert(cpp.find("extern \"C\" {\n#include \"libxml/parser.h\"") == std::string::npos);
     assert(cpp.find("extern \"C\" {\n#include \"vector\"") == std::string::npos);
 }
 

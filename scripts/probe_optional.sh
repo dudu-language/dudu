@@ -177,6 +177,27 @@ probe_libevent() {
     echo "ok libevent"
 }
 
+probe_libxml2() {
+    if ! pkg-config --exists libxml-2.0; then
+        echo "skip libxml2: pkg-config package not found"
+        return
+    fi
+
+    local cpp="$repo_root/build/probe_libxml_parse_memory.cpp"
+    local bin="$repo_root/build/probe_libxml_parse_memory"
+    "$repo_root/build/duc" emit "$repo_root/tests/fixtures/libxml_parse_memory.dd" -o "$cpp"
+    "${CXX:-c++}" -std=c++20 "$cpp" $(pkg-config --cflags --libs libxml-2.0) -o "$bin"
+    set +e
+    "$bin"
+    local status=$?
+    set -e
+    if [[ "$status" -ne 42 ]]; then
+        echo "libxml2 probe returned $status, expected 42" >&2
+        exit 1
+    fi
+    echo "ok libxml2"
+}
+
 probe_fmt() {
     if ! pkg-config --exists fmt; then
         echo "skip fmt: pkg-config package not found"
@@ -544,6 +565,7 @@ probe_curl
 probe_libpng
 probe_openssl
 probe_libevent
+probe_libxml2
 probe_fmt
 probe_eigen
 probe_openblas

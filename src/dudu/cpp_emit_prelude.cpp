@@ -103,7 +103,8 @@ std::vector<std::string> namespace_aliases(const ModuleAst& module) {
                                       has_prefixed_native_symbol(module, import.alias)
                                   ? "!" + import.alias
                                   : import.alias);
-        } else if (import.kind == ImportKind::ForeignC && !import.alias.empty()) {
+        } else if ((import.kind == ImportKind::ForeignC || import.kind == ImportKind::ForeignCxx) &&
+                   !import.alias.empty()) {
             aliases.push_back("!" + import.alias);
         }
     }
@@ -160,7 +161,7 @@ void emit_includes(std::ostringstream& out, const ModuleAst& module) {
             out << "extern \"C\" {\n"
                 << "#include " << include_path(import) << '\n'
                 << "}\n";
-        } else if (import.kind == ImportKind::ForeignCpp) {
+        } else if (import.kind == ImportKind::ForeignCxx || import.kind == ImportKind::ForeignCpp) {
             out << "#include " << include_path(import) << '\n';
         }
     }

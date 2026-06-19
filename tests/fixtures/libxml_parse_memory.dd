@@ -1,0 +1,24 @@
+import cxx "libxml/parser.h" as xml
+
+
+def main() -> i32:
+    doc = xml.xmlReadMemory("<root><item>ok</item></root>", 28, "memory.xml", None, 0)
+    if doc == None:
+        return 1
+
+    root: *struct _xmlNode = xml.xmlDocGetRootElement(doc)
+    if root == None:
+        xml.xmlFreeDoc(doc)
+        return 2
+
+    content = xml.xmlNodeGetContent(root)
+    if content == None:
+        xml.xmlFreeDoc(doc)
+        return 3
+
+    content_len = xml.xmlStrlen(content)
+    xml.xmlFree(content)
+    xml.xmlFreeDoc(doc)
+    if content_len == 2:
+        return 42
+    return content_len

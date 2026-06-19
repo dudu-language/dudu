@@ -77,6 +77,8 @@ std::string render_import_decl(const ImportDecl& import) {
         out << "import ";
         if (import.kind == ImportKind::ForeignC) {
             out << "c ";
+        } else if (import.kind == ImportKind::ForeignCxx) {
+            out << "cxx ";
         } else if (import.kind == ImportKind::ForeignCpp) {
             out << "cpp ";
         }

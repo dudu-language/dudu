@@ -301,7 +301,8 @@ void add_native_path_prefix(Symbols& symbols, const std::string& name) {
 Symbols collect_symbols(const ModuleAst& module) {
     Symbols symbols;
     for (const ImportDecl& import : module.imports) {
-        if ((import.kind == ImportKind::ForeignC || import.kind == ImportKind::ForeignCpp) &&
+        if ((import.kind == ImportKind::ForeignC || import.kind == ImportKind::ForeignCxx ||
+             import.kind == ImportKind::ForeignCpp) &&
             !import.alias.empty()) {
             symbols.native_import_prefixes.insert(import.alias);
         }

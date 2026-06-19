@@ -6,6 +6,7 @@ The active interop plan is in
 Interop requirements:
 
 - `import c "header.h" as alias`
+- `import cxx "header.h" as alias`
 - `import cpp "header.hpp" as alias`
 - generated `.hpp`/`.cpp` files for C++ consumers
 - generated `.h` files for `@extern_c` C ABI exports
@@ -25,6 +26,19 @@ The native header scanner plan is
 
 Dudu code imports Dudu modules directly. Foreign headers are the boundary to
 the C and C++ ecosystem, not the normal Dudu module interface.
+
+Foreign import modes are explicit because C and C++ headers need different
+generated include shapes:
+
+- `import c "header.h" as alias` scans C-style globals and emits an
+  `extern "C"` include block for C headers that need C linkage in generated C++.
+- `import cxx "header.h" as alias` scans C-style globals but emits a plain
+  C++ include for C API headers that manage their own linkage internally.
+  Libxml2-style headers use this path.
+- `import cpp "header.hpp" as alias` imports C++ namespace, class, overload,
+  member, and template semantics.
+
+The quoted path is the C/C++ header spelling. It is not a Dudu module path.
 
 Known imported macros are callable when the scanner can determine their arity.
 Variadic macros enforce their fixed leading parameters and pass through extra

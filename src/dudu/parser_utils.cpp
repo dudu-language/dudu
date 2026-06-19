@@ -9,7 +9,8 @@ namespace dudu {
 namespace {
 
 bool is_foreign_import(const ImportDecl& import) {
-    return import.kind == ImportKind::ForeignC || import.kind == ImportKind::ForeignCpp;
+    return import.kind == ImportKind::ForeignC || import.kind == ImportKind::ForeignCxx ||
+           import.kind == ImportKind::ForeignCpp;
 }
 
 } // namespace

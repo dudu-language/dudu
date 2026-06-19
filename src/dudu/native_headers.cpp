@@ -20,7 +20,8 @@
 namespace dudu {
 namespace {
 bool is_foreign(const ImportDecl& import) {
-    return import.kind == ImportKind::ForeignC || import.kind == ImportKind::ForeignCpp;
+    return import.kind == ImportKind::ForeignC || import.kind == ImportKind::ForeignCxx ||
+           import.kind == ImportKind::ForeignCpp;
 }
 bool direct_import(const ImportDecl& import) {
     return import.alias.empty();

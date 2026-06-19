@@ -233,6 +233,9 @@ ImportDecl Parser::parse_import(const Token& start) {
     if (match_identifier("c")) {
         return parse_foreign_import(start, ImportKind::ForeignC, statement_begin);
     }
+    if (match_identifier("cxx")) {
+        return parse_foreign_import(start, ImportKind::ForeignCxx, statement_begin);
+    }
     if (match_identifier("cpp")) {
         return parse_foreign_import(start, ImportKind::ForeignCpp, statement_begin);
     }

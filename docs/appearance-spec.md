@@ -122,11 +122,16 @@ but they should stay visually close:
 
 ```python
 import c "stdio.h" as c
+import cxx "libxml/parser.h" as xml
 import cpp "raylib.h" as rl
 import cpp "glm/glm.hpp" as glm
 ```
 
 The quoted path is a header spelling, not a Dudu module name.
+Use `import c` for C headers that need an `extern "C"` include wrapper in
+generated C++. Use `import cxx` for C API headers that already manage their own
+C++ linkage and must be included normally. Use `import cpp` for C++ namespace,
+class, overload, member, and template semantics.
 
 Dudu source files are the source of truth. The compiler emits generated
 `.hpp`/`.cpp` files for C++ consumers and generated `.h` files for C ABI
@@ -1263,6 +1268,7 @@ operators are `==`, `!=`, `<`, `<=`, `>`, and `>=`. Operator methods take
 
 ```python
 import c "stdio.h" as c
+import cxx "libxml/parser.h" as xml
 
 
 def main() -> i32:
@@ -1271,8 +1277,8 @@ def main() -> i32:
 ```
 
 C structs, enums, functions, constants, and macros come through generated C++
-includes first. The C++ compiler validates final call shapes until Dudu has a
-real header importer.
+includes. `import c` emits an `extern "C"` include block. `import cxx` emits a
+plain C++ include while still exposing C-style globals through the alias.
 
 ## C++ Interop
 

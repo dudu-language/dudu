@@ -122,7 +122,8 @@ std::optional<std::string> header_definition_json(const Document& doc, const Jso
         return std::nullopt;
     }
     for (const ImportDecl& import : module.imports) {
-        if (import.kind != ImportKind::ForeignC && import.kind != ImportKind::ForeignCpp) {
+        if (import.kind != ImportKind::ForeignC && import.kind != ImportKind::ForeignCxx &&
+            import.kind != ImportKind::ForeignCpp) {
             continue;
         }
         if (!range_contains_position(import.module_range, position.line, position.character)) {

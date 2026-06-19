@@ -38,6 +38,7 @@ Last local probe run: 2026-06-19 with `scripts/probe_optional.sh`.
 | curl | network | C API, constants, pointer returns, struct field reads, link | pass | `scripts/probe_optional.sh` / `curl_version_info.dd` | no |
 | OpenSSL | crypto / TLS | C API, const byte input, output buffers, link flags | pass | `scripts/probe_optional.sh` / `openssl_sha256.dd` | no |
 | libevent | event loop / network | C API, opaque pointers, config/base lifecycle, `cstr` return | pass | `scripts/probe_optional.sh` / `libevent_base.dd` | no |
+| libxml2 | XML | `import cxx`, C-style globals from a C++-aware C header, parser lifecycle, returned buffers, link flags | pass | `scripts/probe_optional.sh` / `libxml_parse_memory.dd` | no |
 | libpng | image | C API, typedef aliases, byte buffers, signature checks, link | pass | `scripts/probe_optional.sh` / `libpng_signature.dd` | no |
 | stb headers | media / utility | packaged single-header C API, byte buffers, output params, link | pass | `scripts/probe_optional.sh` / `stb_image_info.dd` | no |
 | fmt | C++ utility | variadic templates, runtime format strings, `std::string` return | pass | `scripts/probe_optional.sh` / `fmt_format.dd` | no |
@@ -63,7 +64,6 @@ compiler matures.
 | API / Library | Domain | Target Coverage | Status | Notes |
 | --- | --- | --- | --- | --- |
 | CUDA / CUBLAS | GPU / ML | host API, device buffers, BLAS-like calls | skip | Needs NVIDIA tooling/hardware. |
-| C++-aware C headers | native interop | C-style globals from headers that must be emitted as normal C++ includes | planned | libxml2 is the motivating fixture; current `import c` emits C-linkage include blocks, while `import cpp` treats aliases as C++ namespace handles. |
 | platform APIs | OS | Win32, Cocoa subsets | planned | Platform-specific; X11 and Wayland have Linux probes. |
 
 ## Rules

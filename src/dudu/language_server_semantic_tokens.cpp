@@ -327,8 +327,9 @@ void collect_stmt_tokens(const std::vector<Stmt>& statements, std::vector<Semant
 void collect_semantic_tokens(const ModuleAst& module, std::vector<SemanticToken>& tokens,
                              const NativeSemanticIndex* native_index) {
     for (const ImportDecl& import : module.imports) {
-        const bool native_import =
-            import.kind == ImportKind::ForeignC || import.kind == ImportKind::ForeignCpp;
+        const bool native_import = import.kind == ImportKind::ForeignC ||
+                                   import.kind == ImportKind::ForeignCxx ||
+                                   import.kind == ImportKind::ForeignCpp;
         add_semantic_token(tokens, shifted_location(import.location, 7), bound_import_name(import),
                            token_namespace, native_import ? mod_native : 0);
     }
