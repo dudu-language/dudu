@@ -99,8 +99,10 @@ Status: native type-definition, hover, completion, document-symbol detail, and
 semantic token classification now index scanned native classes by Dudu binding
 name and `NativeSymbolId`. Imported type aliases use identity when the scanner
 provides enough metadata and otherwise follow their structured alias target
-`TypeRef` head to the real class declaration. Broader native references still
-need to move from name-set lookup toward the same canonical identity model.
+`TypeRef` head to the real class declaration. References now also handle
+path-qualified member uses such as an imported native class constructor call
+matching the same qualified type annotation. Broader native references still
+need to move from name-set lookup toward a canonical identity index.
 
 ## Architecture
 

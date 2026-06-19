@@ -351,8 +351,8 @@ std::vector<ReferenceLocation> references_in(const Document& doc, const std::str
         return out;
     }
     std::set<std::pair<int, int>> seen;
-    const auto add = [&](const std::string& name, const SourceLocation& location) {
-        if (name != query || location.line <= 0 || location.column <= 0) {
+    const auto add_matched = [&](const std::string& name, const SourceLocation& location) {
+        if (name.empty() || location.line <= 0 || location.column <= 0) {
             return;
         }
         const auto key = std::pair{location.line, location.column};
@@ -363,6 +363,12 @@ std::vector<ReferenceLocation> references_in(const Document& doc, const std::str
         const int start = location.column - 1;
         out.push_back({uri_for_location(location, doc),
                        range_json(line, start, start + static_cast<int>(name.size()))});
+    };
+    const auto add = [&](const std::string& name, const SourceLocation& location) {
+        if (name != query) {
+            return;
+        }
+        add_matched(name, location);
     };
     const std::function<void(const TypeRef&)> visit_type = [&](const TypeRef& type) {
         if (!has_type_ref(type)) {
@@ -376,6 +382,12 @@ std::vector<ReferenceLocation> references_in(const Document& doc, const std::str
     const std::function<void(const Expr&)> visit_expr = [&](const Expr& expr) {
         if (expr.kind == ExprKind::Name || expr.kind == ExprKind::Member) {
             add(expr.name, expr_name_location(expr));
+            if (expr.kind == ExprKind::Member) {
+                if (const std::optional<ExprPath> path = expr_path_from_expr(expr);
+                    path.has_value() && render_expr_path(*path) == query) {
+                    add_matched(expr.name, expr_name_location(expr));
+                }
+            }
         }
         for (const Expr& callee : expr.callee) {
             visit_expr(callee);

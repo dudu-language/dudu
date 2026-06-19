@@ -106,15 +106,16 @@ In progress.
   document-symbol detail, and semantic token classification now share an
   indexed native class definition map keyed by Dudu binding name and
   `NativeSymbolId`; they prefer identity when alias metadata is rich enough
-  before falling back to the structured alias target `TypeRef` head.
+  before falling back to the structured alias target `TypeRef` head. References
+  now handle source-level qualified member paths, so an imported native class
+  annotation and constructor call are found together.
 
 Still missing:
 
 - Clang USR collection.
 - Identity-aware symbol maps as the primary sema key.
 - Identity-aware type compatibility when both sides carry native identity facts.
-- Broader LSP indexing keyed directly by canonical native identity for
-  references.
+- Broader LSP reference indexing keyed directly by canonical native identity.
 
 ## Definition Of Done
 
