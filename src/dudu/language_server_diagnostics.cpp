@@ -10,7 +10,6 @@
 #include "dudu/parser.hpp"
 #include "dudu/sema.hpp"
 
-#include <algorithm>
 #include <cstdlib>
 #include <filesystem>
 #include <optional>
@@ -46,12 +45,6 @@ std::optional<std::string> missing_pkg_config_package(const ProjectConfig& confi
     return std::nullopt;
 }
 
-bool has_module_imports(const ModuleAst& module) {
-    return std::any_of(module.imports.begin(), module.imports.end(), [](const ImportDecl& import) {
-        return import.kind == ImportKind::Module || import.kind == ImportKind::From;
-    });
-}
-
 } // namespace
 
 std::vector<Diagnostic> diagnostics_for_document(const Document& doc) {
@@ -75,26 +68,8 @@ std::vector<Diagnostic> diagnostics_for_document(const Document& doc) {
                      .code = "",
                      .data_name = ""}};
         }
-        ModuleAst parsed = parse_source(doc.text, doc.path);
-        const bool saved_tree =
-            std::filesystem::exists(doc.path) && source_tree_files(doc.path).size() > 1;
-        const bool project_tree = saved_tree || has_module_imports(parsed);
-        ModuleAst module = project_tree && std::filesystem::exists(doc.path)
-                               ? load_source_tree(doc.path, doc.text)
-                               : std::move(parsed);
-        module.build_values = config.build_values;
-        module.build_values["TARGET_KIND"] = '"' + config.target_kind + '"';
-        module.build_values["TARGET_MODE"] = '"' + config.target_mode + '"';
-        module.target_mode_explicit = config.target_mode_explicit;
-        const NativeHeaderOptions native_options{.config = config,
-                                                 .source_dir = doc.path.parent_path()};
-        merge_native_header_types(module, native_options);
-        for (ModuleAst& unit : module.module_units) {
-            unit.build_values = module.build_values;
-            unit.target_mode_explicit = module.target_mode_explicit;
-            merge_native_header_types(unit, native_options);
-        }
-        if (project_tree || config.build_backend == "cmake") {
+        ModuleAst module = module_for_document(doc, true);
+        if (!module.module_units.empty() || config.build_backend == "cmake") {
             analyze_module_tree(module, {.check_bodies = true});
         } else {
             analyze_module(module, {.check_bodies = true});

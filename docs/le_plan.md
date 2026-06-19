@@ -1251,7 +1251,11 @@ push. They are not release packaging work.
    keep workspace search. LSP diagnostics now load multi-file module trees with
    the open editor buffer as the entry source, so unsaved fixes to imports or
    entry code are analyzed consistently with the saved dependency modules
-   instead of rereading a stale entry file from disk.
+   instead of rereading a stale entry file from disk. Member completion,
+   member-definition lookup, and native alias hover now use the same shared LSP
+   module view, including imported Dudu module shapes and native headers, so
+   fields and methods on imported classes such as `from vec3 import Vec3` are
+   visible to the editor.
 
 14. Project Driver Polish
 

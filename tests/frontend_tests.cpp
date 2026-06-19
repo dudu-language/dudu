@@ -6,7 +6,9 @@
 #include "dudu/cpp_stmt_types.hpp"
 #include "dudu/format.hpp"
 #include "dudu/format_path.hpp"
+#include "dudu/language_server_completion.hpp"
 #include "dudu/language_server_diagnostics.hpp"
+#include "dudu/language_server_json.hpp"
 #include "dudu/language_server_navigation.hpp"
 #include "dudu/lexer.hpp"
 #include "dudu/module_loader.hpp"
@@ -622,6 +624,32 @@ void test_lsp_diagnostics_use_open_buffer_for_module_entry() {
         assert(diag.source != "dudu/sema");
         assert(diag.message.find("helper") == std::string::npos);
     }
+}
+
+void test_lsp_member_completion_uses_imported_module_shapes() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_imported_member_completion_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "vec3.dd", "class Vec3:\n"
+                                "    x: f32\n"
+                                "    y: f32\n");
+    write_file(dir / "main.dd", "def main() -> i32:\n"
+                                "    return 0\n");
+
+    const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
+                             .path = dir / "main.dd",
+                             .text = "from vec3 import Vec3\n"
+                                     "\n"
+                                     "def main() -> i32:\n"
+                                     "    v: Vec3 = Vec3(x=1.0, y=2.0)\n"
+                                     "    v.x\n"
+                                     "    return 0\n"};
+    dudu::Json params =
+        dudu::JsonParser("{\"position\":{\"line\":4,\"character\":6}}").parse();
+    const std::string completions = dudu::completion_json(&doc, &params);
+    assert(completions.find("\"label\":\"x\"") != std::string::npos);
+    assert(completions.find("\"label\":\"y\"") != std::string::npos);
 }
 
 void test_lsp_unreachable_lint_uses_branch_structure() {
@@ -1314,6 +1342,7 @@ int main() {
         test_semantic_diagnostics();
         test_lsp_diagnostic_sources_are_structured();
         test_lsp_diagnostics_use_open_buffer_for_module_entry();
+        test_lsp_member_completion_uses_imported_module_shapes();
         test_lsp_unreachable_lint_uses_branch_structure();
         test_lsp_unreachable_lint_does_not_flag_partial_branch_return();
         test_lsp_scope_lint_tracks_inferred_assignment_locals();

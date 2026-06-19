@@ -151,9 +151,7 @@ std::optional<std::string> member_definition_json(const Document& doc, const Exp
         return std::nullopt;
     }
     try {
-        ModuleAst module = parse_source(doc.text, doc.path);
-        const ProjectConfig config = config_for_file(doc.path);
-        merge_native_header_types(module, {.config = config, .source_dir = doc.path.parent_path()});
+        ModuleAst module = module_for_document(doc, true);
         const std::set<std::string> candidate_types = member_candidate_types(module, type_ref);
         const auto find_member =
             [&](const std::vector<ClassDecl>& classes) -> std::optional<std::string> {
@@ -260,9 +258,7 @@ std::optional<std::string> native_type_target_definition_json(const Document& do
         return std::nullopt;
     }
     try {
-        ModuleAst module = parse_source(doc.text, doc.path);
-        const ProjectConfig config = config_for_file(doc.path);
-        merge_native_header_types(module, {.config = config, .source_dir = doc.path.parent_path()});
+        ModuleAst module = module_for_document(doc, true);
         if (const std::optional<NativeClassDefinition> definition =
                 native_alias_target_class_definition(module, word)) {
             return location_json(uri_for_location(definition->location, doc),

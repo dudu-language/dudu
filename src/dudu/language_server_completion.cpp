@@ -130,9 +130,7 @@ std::string member_completion_json(const Document& doc, const std::string& targe
             << json_escape(detail) << "\"}";
     };
     try {
-        ModuleAst module = parse_source(doc.text, doc.path);
-        const ProjectConfig config = config_for_file(doc.path);
-        merge_native_header_types(module, {.config = config, .source_dir = doc.path.parent_path()});
+        ModuleAst module = module_for_document(doc, true);
         const std::set<std::string> candidate_types = member_candidate_types(module, type_ref);
         for (const ClassDecl& klass : module.classes) {
             if (!candidate_types.contains(klass.name)) {

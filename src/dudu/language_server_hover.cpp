@@ -120,9 +120,7 @@ std::optional<std::string> native_alias_hover_json(const Document& doc, const st
         return std::nullopt;
     }
     try {
-        ModuleAst module = parse_source(doc.text, doc.path);
-        const ProjectConfig config = config_for_file(doc.path);
-        merge_native_header_types(module, {.config = config, .source_dir = doc.path.parent_path()});
+        ModuleAst module = module_for_document(doc, true);
         const auto build_hover = [&](const NativeTypeDecl& type) -> std::optional<std::string> {
             const std::optional<NativeClassDefinition> target =
                 native_alias_target_class_definition(module, type);

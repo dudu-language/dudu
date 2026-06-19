@@ -1,5 +1,9 @@
 #include "dudu/language_server_support.hpp"
 
+#include "dudu/module_loader.hpp"
+#include "dudu/native_headers.hpp"
+#include "dudu/parser.hpp"
+
 #include <algorithm>
 #include <filesystem>
 #include <sstream>
@@ -52,6 +56,41 @@ ProjectConfig config_for_file(const std::filesystem::path& file) {
     absolutize(parsed.include_dirs);
     absolutize(parsed.lib_dirs);
     return parsed;
+}
+
+bool module_has_dudu_imports(const ModuleAst& module) {
+    return std::any_of(module.imports.begin(), module.imports.end(), [](const ImportDecl& import) {
+        return import.kind == ImportKind::Module || import.kind == ImportKind::From;
+    });
+}
+
+void apply_project_context(ModuleAst& module, const ProjectConfig& config) {
+    module.build_values = config.build_values;
+    module.build_values["TARGET_KIND"] = '"' + config.target_kind + '"';
+    module.build_values["TARGET_MODE"] = '"' + config.target_mode + '"';
+    module.target_mode_explicit = config.target_mode_explicit;
+}
+
+ModuleAst module_for_document(const Document& doc, bool include_native_headers) {
+    const ProjectConfig config = config_for_file(doc.path);
+    ModuleAst parsed = parse_source(doc.text, doc.path);
+    const bool saved_tree =
+        std::filesystem::exists(doc.path) && source_tree_files(doc.path).size() > 1;
+    const bool project_tree = saved_tree || module_has_dudu_imports(parsed);
+    ModuleAst module = project_tree && std::filesystem::exists(doc.path)
+                           ? load_source_tree(doc.path, doc.text)
+                           : std::move(parsed);
+    apply_project_context(module, config);
+    if (!include_native_headers) {
+        return module;
+    }
+    const NativeHeaderOptions native_options{.config = config, .source_dir = doc.path.parent_path()};
+    merge_native_header_types(module, native_options);
+    for (ModuleAst& unit : module.module_units) {
+        apply_project_context(unit, config);
+        merge_native_header_types(unit, native_options);
+    }
+    return module;
 }
 
 int leading_spaces(const std::string& line) {
