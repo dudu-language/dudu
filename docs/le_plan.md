@@ -1361,6 +1361,11 @@ push. They are not release packaging work.
    exact symbols and only use suffix matches when unambiguous; receiver-aware
    member definition and hover run before suffix fallback, so same-named native
    methods resolve through the expression receiver type instead of scan order.
+   Find-references keeps unresolved member expressions as dotted queries instead
+   of falling back to the bare member name, so unrelated same-named member calls
+   are not reported together. Module-qualified references now also include the
+   declaration in the target module by searching that module with the unqualified
+   imported member name.
 
 14. Project Driver Polish
 

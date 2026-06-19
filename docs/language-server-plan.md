@@ -115,6 +115,11 @@ to suffix matching when the suffix is unambiguous. Receiver-aware member
 definition and hover run before suffix fallback, so native classes with
 same-named methods resolve through the expression receiver type instead of
 whichever method appears first in the scanned symbol list.
+Find-references keeps unresolved member expressions as dotted queries instead
+of falling back to the bare member name, so unrelated same-named member calls
+are not reported together. Module-qualified references include the declaration
+inside the target module by searching that module with the unqualified imported
+member name.
 
 ## Architecture
 

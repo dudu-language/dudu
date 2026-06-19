@@ -8,6 +8,7 @@
 #include "dudu/language_server_native_lookup.hpp"
 #include "dudu/language_server_symbols.hpp"
 #include "dudu/language_server_support.hpp"
+#include "dudu/module_names.hpp"
 #include "dudu/parser.hpp"
 
 #include <algorithm>
@@ -18,6 +19,7 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <system_error>
 #include <vector>
 
 namespace dudu {
@@ -219,6 +221,11 @@ std::string dotted_head(const std::string& query) {
     return dot == std::string::npos ? query : query.substr(0, dot);
 }
 
+std::string dotted_tail(const std::string& query) {
+    const size_t dot = query.rfind('.');
+    return dot == std::string::npos ? query : query.substr(dot + 1);
+}
+
 std::optional<std::string> module_import_target_key(const Document& doc,
                                                     const std::string& dotted_query) {
     if (dotted_query.find('.') == std::string::npos) {
@@ -236,6 +243,14 @@ std::optional<std::string> module_import_target_key(const Document& doc,
                 return imported->source_path.empty() ? imported->module_path
                                                      : imported->source_path.string();
             }
+            std::error_code error;
+            const std::filesystem::path base =
+                current.source_path.empty() ? doc.path : current.source_path;
+            const std::filesystem::path resolved = std::filesystem::weakly_canonical(
+                module_path_to_file(base.parent_path(), import.module_path), error);
+            if (!error) {
+                return resolved.string();
+            }
         }
     } catch (const std::exception&) {
         return std::nullopt;
@@ -245,12 +260,14 @@ std::optional<std::string> module_import_target_key(const Document& doc,
 
 std::string reference_query_at(const Document& doc, const Json* params) {
     const std::string name = ast_symbol_at(doc, params).value_or("");
+    std::optional<std::string> expression_path;
     std::vector<std::string> paths;
     if (const std::optional<std::string> path = ast_symbol_path_at(doc, params)) {
         paths.push_back(*path);
     }
     if (const std::optional<ExprPath> path = ast_expr_path_at(doc, params)) {
-        paths.push_back(render_expr_path(*path));
+        expression_path = render_expr_path(*path);
+        paths.push_back(*expression_path);
     }
     if (const std::optional<std::string> path = dotted_source_symbol_at(doc, params)) {
         paths.push_back(*path);
@@ -293,6 +310,9 @@ std::string reference_query_at(const Document& doc, const Json* params) {
         }
     } catch (const std::exception&) {
         return name;
+    }
+    if (expression_path.has_value() && expression_path->find('.') != std::string::npos) {
+        return *expression_path;
     }
     return name;
 }
@@ -359,11 +379,21 @@ std::string references_json(const Document& doc, const Json* params,
             document_declares_renameable_symbol(candidate, query)) {
             continue;
         }
-        if (module_target.has_value() && candidate.uri != doc.uri &&
+        std::error_code path_error;
+        const std::filesystem::path candidate_path =
+            candidate.path.empty()
+                ? std::filesystem::path{}
+                : std::filesystem::weakly_canonical(candidate.path, path_error);
+        const bool target_module_document = module_target.has_value() && !candidate.path.empty() &&
+                                            !path_error &&
+                                            candidate_path.string() == *module_target;
+        if (module_target.has_value() && candidate.uri != doc.uri && !target_module_document &&
             module_import_target_key(candidate, query) != module_target) {
             continue;
         }
-        for (const ReferenceLocation& location : references_in(candidate, query)) {
+        const std::string candidate_query =
+            target_module_document ? dotted_tail(query) : query;
+        for (const ReferenceLocation& location : references_in(candidate, candidate_query)) {
             if (!first) {
                 out << ",";
             }

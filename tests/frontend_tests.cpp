@@ -844,6 +844,44 @@ void test_lsp_hover_uses_receiver_for_ambiguous_native_methods() {
     assert(hover.find("shared() -> i32") == std::string::npos);
 }
 
+void test_lsp_references_keep_unbound_member_query_dotted() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_member_reference_query_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "native_methods.hpp",
+               "namespace left {\n"
+               "struct Thing {\n"
+               "    int shared() const {\n"
+               "        return 1;\n"
+               "    }\n"
+               "};\n"
+               "}\n"
+               "\n"
+               "namespace right {\n"
+               "struct Thing {\n"
+               "    int shared() const {\n"
+               "        return 2;\n"
+               "    }\n"
+               "};\n"
+               "}\n");
+
+    const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
+                             .path = dir / "main.dd",
+                             .text = "import cpp \"./native_methods.hpp\"\n"
+                                     "\n"
+                                     "def main() -> i32:\n"
+                                     "    first: left.Thing\n"
+                                     "    second: right.Thing\n"
+                                     "    return second.shared() + first.shared()\n"};
+    const std::map<std::string, dudu::Document> workspace{{doc.uri, doc}};
+    dudu::Json params =
+        dudu::JsonParser("{\"position\":{\"line\":5,\"character\":20}}").parse();
+    const std::string refs = dudu::references_json(doc, &params, workspace);
+    assert(refs.find("\"start\":{\"line\":5,\"character\":18}") != std::string::npos);
+    assert(refs.find("\"start\":{\"line\":5,\"character\":35}") == std::string::npos);
+}
+
 void test_lsp_hover_uses_loaded_module_units() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_lsp_module_hover_unit_test";
@@ -1018,6 +1056,34 @@ void test_lsp_module_reference_filters_alias_target() {
     assert(refs.find(dudu::file_uri(dir / "main.dd")) != std::string::npos);
     assert(refs.find(dudu::file_uri(dir / "same.dd")) != std::string::npos);
     assert(refs.find(dudu::file_uri(dir / "other.dd")) == std::string::npos);
+}
+
+void test_lsp_module_references_include_target_declaration() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_module_reference_declaration_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "helper.dd", "def answer() -> i32:\n"
+                                  "    return 42\n");
+    write_file(dir / "main.dd", "import helper as h\n"
+                                "\n"
+                                "def main() -> i32:\n"
+                                "    return h.answer()\n");
+
+    const dudu::Document main_doc{.uri = dudu::file_uri(dir / "main.dd"),
+                                  .path = dir / "main.dd",
+                                  .text = read_file(dir / "main.dd")};
+    const dudu::Document helper_doc{.uri = dudu::file_uri(dir / "helper.dd"),
+                                    .path = dir / "helper.dd",
+                                    .text = read_file(dir / "helper.dd")};
+    const std::map<std::string, dudu::Document> workspace{{main_doc.uri, main_doc},
+                                                          {helper_doc.uri, helper_doc}};
+    dudu::Json params =
+        dudu::JsonParser("{\"position\":{\"line\":3,\"character\":15}}").parse();
+    const std::string refs = dudu::references_json(main_doc, &params, workspace);
+    assert(refs.find(dudu::file_uri(dir / "main.dd")) != std::string::npos);
+    assert(refs.find(dudu::file_uri(dir / "helper.dd")) != std::string::npos);
+    assert(refs.find("\"start\":{\"line\":0,\"character\":4}") != std::string::npos);
 }
 
 void test_allocation_type_ref_diagnostics() {
@@ -1626,6 +1692,7 @@ int main() {
         test_lsp_definition_jumps_to_native_header_type();
         test_lsp_definition_uses_receiver_for_ambiguous_native_methods();
         test_lsp_hover_uses_receiver_for_ambiguous_native_methods();
+        test_lsp_references_keep_unbound_member_query_dotted();
         test_lsp_hover_uses_loaded_module_units();
         test_lsp_unreachable_lint_uses_branch_structure();
         test_lsp_unreachable_lint_does_not_flag_partial_branch_return();
@@ -1634,6 +1701,7 @@ int main() {
         test_lsp_references_track_assignment_bindings();
         test_lsp_references_track_qualified_type_refs();
         test_lsp_module_reference_filters_alias_target();
+        test_lsp_module_references_include_target_declaration();
         test_allocation_type_ref_diagnostics();
         test_emitted_local_index_type_inference();
         test_index_type_inference_uses_type_ast();
