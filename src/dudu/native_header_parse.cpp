@@ -210,6 +210,9 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                 line.find("CXXRecordDecl") != std::string::npos) &&
                std::regex_search(line, match, record_decl)) {
         const std::string raw_name = match[3].str();
+        if (raw_name == "definition") {
+            return;
+        }
         const std::string name = class_name(scan, namespaces, classes, raw_name);
         if (!starts_with(raw_name, "__")) {
             scan.types.push_back({.name = name,

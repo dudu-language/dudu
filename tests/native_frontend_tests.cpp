@@ -414,6 +414,25 @@ void test_native_header_pointer_diagnostics(const std::filesystem::path& root) {
     assert(failed);
 }
 
+void test_native_scan_ignores_anonymous_record_definitions() {
+    dudu::NativeHeaderScan scan;
+    dudu::parse_ast_dump(scan,
+                         "|-CXXRecordDecl 0x1 <test.hpp:10:5, line:13:5> line:10:5 union "
+                         "definition\n"
+                         "|-CXXRecordDecl 0x2 <test.hpp:20:5, line:23:5> line:20:5 struct "
+                         "definition\n"
+                         "|-CXXRecordDecl 0x3 <test.hpp:30:1, line:32:1> line:30:8 struct "
+                         "NamedThing definition\n",
+                         {.file = "native_anonymous.dd", .line = 1, .column = 1});
+    scan = dudu::dedupe_scan(std::move(scan));
+    bool saw_named = false;
+    for (const dudu::NativeTypeDecl& type : scan.types) {
+        assert(type.name != "definition");
+        saw_named = saw_named || type.name == "NamedThing";
+    }
+    assert(saw_named);
+}
+
 } // namespace
 
 int main() {
@@ -430,6 +449,7 @@ int main() {
         test_native_header_collision(root);
         test_native_header_cache_invalidates_local_header(root);
         test_native_header_pointer_diagnostics(root);
+        test_native_scan_ignores_anonymous_record_definitions();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;
