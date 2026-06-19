@@ -356,7 +356,8 @@ class Math:
 
 ## 4. Harden Native Header Awareness
 
-Primary plan: [Native Header Awareness Plan](header-awareness-plan.md).
+Primary plans: [Native Header Awareness Plan](header-awareness-plan.md) and
+[Native Identity Plan](native-identity-plan.md).
 
 The C/C++ interop promise depends on imported headers feeling reliable.
 
@@ -376,6 +377,7 @@ Important areas:
 - templates
 - overloads
 - namespaces
+- canonical native identities instead of raw C/C++ spelling equality
 - inherited C++ classes
 - diagnostics when Clang tooling or include paths are wrong
 
@@ -1040,9 +1042,13 @@ push. They are not release packaging work.
 
 9. Native Header Hardening
 
+   Identity plan: [Native Identity Plan](native-identity-plan.md).
+
    Improve overload diagnostics, const/reference modeling, explicit C++
    template calls, template-heavy library behavior, header cache invalidation,
-   cache cleanup, and scanner failure UX.
+   cache cleanup, scanner failure UX, and canonical native identity modeling.
+   Native spelling is display/emission metadata; semantic identity should come
+   from canonical native declaration metadata when available.
 
    Status: overload diagnostics, explicit native C++ template function calls
    including multi-argument calls, local-header cache invalidation, cache
