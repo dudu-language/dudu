@@ -1427,7 +1427,41 @@ push. They are not release packaging work.
    `Missing` expression kind; `Unknown` is reserved for unsupported source text
    that should be diagnosed rather than interpreted.
 
-18. Polish Unsupported Syntax Diagnostics
+18. Compiler Readability And Style Pass
+
+   Do a deliberate readability pass after the major compiler behavior is green.
+   Rapid language work leaves behind small local oddities that are not exactly
+   compatibility cruft but still make the compiler harder to trust and maintain.
+
+   Audit for:
+
+   - one-line wrapper functions that only obscure the real operation
+   - generic helpers that exist only to return a constant or route one special
+     case through template machinery
+   - duplicate helper logic that should live in one shared file
+   - stale names that describe an old implementation instead of current
+     behavior
+   - over-broad utility functions used in only one narrow place
+   - accidental abstractions introduced while keeping intermediate commits green
+   - long files that should be split along real compiler phases or ownership
+     boundaries
+   - comments that narrate obvious code instead of explaining non-obvious
+     compiler behavior
+   - confusing "temporary", "fallback", or "legacy" language that should either
+     become an explicit boundary or be deleted
+
+   This pass is not a license for broad cosmetic churn. Each cleanup should make
+   code easier to reason about, reduce duplication, remove misleading
+   abstraction, or make a compiler boundary more explicit. Keep behavior
+   unchanged unless the cleanup exposes a real bug, then add a regression test.
+
+   Examples from recent work: a generic `compatible_native_redeclaration(...)`
+   fallback that always returned `false` was replaced with an explicit
+   `if constexpr` native-type check and a shared
+   `native_type_redeclarations_compatible(...)` helper. That kind of silly
+   rapid-iteration artifact should be cleaned up whenever it is spotted.
+
+19. Polish Unsupported Syntax Diagnostics
 
    Deliberately unsupported Python-looking syntax should fail hard with
    specific guidance. These are not compatibility paths and they should not
@@ -1459,7 +1493,7 @@ push. They are not release packaging work.
    `getattr`, `setattr`, and rejected OOP decorators, with diagnostics that name
    the Dudu-shaped replacement where one exists.
 
-19. Delete AST Migration Fallbacks
+20. Delete AST Migration Fallbacks
 
    After each language form has structured parser, semantic, codegen,
    diagnostic, lint, LSP, and formatter coverage, remove the compatibility
