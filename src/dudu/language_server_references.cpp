@@ -5,6 +5,7 @@
 #include "dudu/language_server_json.hpp"
 #include "dudu/language_server_local_context.hpp"
 #include "dudu/language_server_navigation.hpp"
+#include "dudu/language_server_native_lookup.hpp"
 #include "dudu/language_server_symbols.hpp"
 #include "dudu/parser.hpp"
 
@@ -152,6 +153,84 @@ bool selected_call_callee(const Document& doc, const Json* params, const std::st
     return matched;
 }
 
+bool document_has_type_symbol(const Document& doc, const std::string& name) {
+    for (const Symbol& symbol : symbols_for_document(doc)) {
+        if (symbol.name == name &&
+            (symbol.kind == lsp_symbol_kind::Class || symbol.kind == lsp_symbol_kind::Struct)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+std::optional<std::string> dotted_source_symbol_at(const Document& doc, const Json* params) {
+    const LspPosition position = lsp_position(params);
+    int line = 0;
+    size_t line_start = 0;
+    while (line < position.line) {
+        const size_t newline = doc.text.find('\n', line_start);
+        if (newline == std::string::npos) {
+            return std::nullopt;
+        }
+        line_start = newline + 1;
+        ++line;
+    }
+    const size_t line_end = doc.text.find('\n', line_start);
+    const std::string_view text = std::string_view(doc.text).substr(
+        line_start, line_end == std::string::npos ? std::string::npos : line_end - line_start);
+    if (position.character < 0 || static_cast<size_t>(position.character) > text.size()) {
+        return std::nullopt;
+    }
+    size_t start = static_cast<size_t>(position.character);
+    while (start > 0 && symbol_char(text[start - 1])) {
+        --start;
+    }
+    size_t end = static_cast<size_t>(position.character);
+    while (end < text.size() && symbol_char(text[end])) {
+        ++end;
+    }
+    if (start >= end) {
+        return std::nullopt;
+    }
+    return std::string(text.substr(start, end - start));
+}
+
+std::string reference_query_at(const Document& doc, const Json* params) {
+    const std::string name = ast_symbol_at(doc, params).value_or("");
+    std::vector<std::string> paths;
+    if (const std::optional<std::string> path = ast_symbol_path_at(doc, params)) {
+        paths.push_back(*path);
+    }
+    if (const std::optional<ExprPath> path = ast_expr_path_at(doc, params)) {
+        paths.push_back(render_expr_path(*path));
+    }
+    if (const std::optional<std::string> path = dotted_source_symbol_at(doc, params)) {
+        paths.push_back(*path);
+    }
+    try {
+        const ModuleAst module = parse_source(doc.text, doc.path);
+        for (const std::string& path : paths) {
+            if (path.empty() || path == name || path.find('.') == std::string::npos) {
+                continue;
+            }
+            if (native_alias_target_class_definition(module, path).has_value()) {
+                return path;
+            }
+            for (const ClassDecl& klass : module.native_classes) {
+                if (klass.name == path) {
+                    return path;
+                }
+            }
+            if (document_has_type_symbol(doc, path)) {
+                return path;
+            }
+        }
+    } catch (const std::exception&) {
+        return name;
+    }
+    return name;
+}
+
 RenameScope rename_scope_at(const Document& doc, const Json* params, const std::string& name) {
     if (declaration_at_position(doc, params, name).has_value()) {
         return RenameScope::Workspace;
@@ -192,7 +271,7 @@ ReferenceScope reference_scope_at(const Document& doc, const Json* params,
 
 std::string references_json(const Document& doc, const Json* params,
                             const std::map<std::string, Document>& workspace) {
-    const std::string query = ast_symbol_at(doc, params).value_or("");
+    const std::string query = reference_query_at(doc, params);
     const ReferenceScope scope = reference_scope_at(doc, params, query);
     if (scope == ReferenceScope::None) {
         return "[]";

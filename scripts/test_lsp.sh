@@ -1248,6 +1248,17 @@ messages = [
     packet(
         {
             "jsonrpc": "2.0",
+            "id": 68,
+            "method": "textDocument/references",
+            "params": {
+                "textDocument": {"uri": native_uri},
+                "position": {"line": 5, "character": 45},
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
             "id": 66,
             "method": "textDocument/semanticTokens/full",
             "params": {"textDocument": {"uri": native_uri}},
@@ -1868,6 +1879,18 @@ native_type_reference_ranges = {
 }
 assert (5, 12, 29) in native_type_reference_ranges
 assert (5, 43, 49) in native_type_reference_ranges
+
+native_constructor_references = next(item for item in responses if item.get("id") == 68)
+native_constructor_reference_ranges = {
+    (
+        item["range"]["start"]["line"],
+        item["range"]["start"]["character"],
+        item["range"]["end"]["character"],
+    )
+    for item in native_constructor_references["result"]
+    if item["uri"] == native_uri
+}
+assert native_constructor_reference_ranges == native_type_reference_ranges
 
 native_semantic_tokens = next(item for item in responses if item.get("id") == 66)
 native_decoded = []
