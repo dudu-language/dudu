@@ -1140,6 +1140,8 @@ push. They are not release packaging work.
 
 10. Real Library Stress Tests
 
+   Compatibility matrix: [Native Compatibility Matrix](native-compatibility-matrix.md).
+
    Keep proving SDL3, ImGui, raylib, glm, sqlite, POSIX, OpenCL, Vulkan, GLFW,
    and FFmpeg style APIs with normal imports and minimal wrapper code.
 
