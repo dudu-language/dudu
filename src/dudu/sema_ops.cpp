@@ -232,6 +232,9 @@ bool binary_rhs_allowed(const Symbols& symbols, const std::string& op, const Typ
 
 bool comparison_rhs_allowed(const Symbols& symbols, const std::string& op, const TypeRef& left,
                             const Expr& right_expr, const TypeRef& right) {
+    if ((op == "==" || op == "!=") && same_or_assignable(left, right_expr, right)) {
+        return true;
+    }
     const TypeRef value_left_ref = unwrap_value_type_ref(symbols, left);
     const TypeRef value_right_ref = unwrap_value_type_ref(symbols, right);
     if (unknown_or_auto(left) || unknown_or_auto(right) || unknown_or_auto(value_left_ref) ||

@@ -41,10 +41,15 @@ bool is_builtin_cast_call(std::string_view name) {
 }
 
 bool pointer_cast_type_ref_like(const TypeRef& type) {
+    const std::string name = type_ref_head_name(type);
+    for (std::string_view tag : {"struct ", "class ", "union ", "enum "}) {
+        if (name.starts_with(tag)) {
+            return true;
+        }
+    }
     if (type_ref_is_name(type, "struct")) {
         return true;
     }
-    const std::string name = type_ref_head_name(type);
     if (is_builtin_cast_call(name)) {
         return true;
     }

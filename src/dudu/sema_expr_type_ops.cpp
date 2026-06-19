@@ -144,7 +144,11 @@ std::optional<TypeRef> binary_expr_type_ref(const FunctionScope& scope, const Ex
                                    "operator " + expr.op + " expects 1 argument, got " +
                                        std::to_string(signature_param_count(*signature)));
                 } else if (!can_assign_ast(scope, signature_param_type_ref(*signature, 0),
-                                           expr.children[1], right_ref)) {
+                                           expr.children[1], right_ref) &&
+                           !assignment_type_allowed(signature_param_type_ref(*signature, 0),
+                                                    expr.children[1], right_ref) &&
+                           !comparison_rhs_allowed(scope.symbols, expr.op, left_ref,
+                                                   expr.children[1], right_ref)) {
                     const std::string right = substitute_type_ref_text(right_ref, {});
                     sema_expr_fail(*location, "operator " + expr.op + " expects " +
                                                   signature_param_type_text(*signature, 0) +

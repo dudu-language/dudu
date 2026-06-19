@@ -83,6 +83,25 @@ bool type_traits_template_name(const std::string& name) {
            name == "std::remove_reference";
 }
 
+std::optional<TypeKind> builtin_wrapper_template_kind(const std::string& name) {
+    if (name == "atomic" || name == "std.atomic" || name == "std::atomic") {
+        return TypeKind::Atomic;
+    }
+    if (name == "volatile") {
+        return TypeKind::Volatile;
+    }
+    if (name == "storage") {
+        return TypeKind::Storage;
+    }
+    if (name == "shared") {
+        return TypeKind::Shared;
+    }
+    if (name == "device") {
+        return TypeKind::Device;
+    }
+    return std::nullopt;
+}
+
 std::string normalize_cpp_primitive_type(std::string type) {
     type = trim_copy(std::move(type));
     const size_t qualifier = type.find_last_of(".:");
@@ -148,6 +167,10 @@ TypeRef normalize_cpp_primitive_type_ref(const TypeRef& type) {
     }
 
     if (out.kind == TypeKind::Template) {
+        if (const std::optional<TypeKind> wrapper = builtin_wrapper_template_kind(out.name);
+            wrapper.has_value() && out.children.size() == 1) {
+            return wrapped_type_ref(*wrapper, out.children.front(), out.location);
+        }
         if ((out.name == "basic_string" || out.name == "std.basic_string" ||
              out.name == "std::basic_string") &&
             !out.children.empty() && type_ref_is_native_char(out.children.front())) {

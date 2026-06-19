@@ -263,7 +263,9 @@ Expr ExprTokenParser::parse_binary(int min_precedence, std::initializer_list<Tok
         }
         const std::string op = current().text;
         ++cursor_;
-        Expr rhs = parse_binary(precedence + 1, stops);
+        Expr rhs = (stop_at(stops) || at_end())
+                       ? make_expr(ExprKind::Missing, "", current().location)
+                       : parse_binary(precedence + 1, stops);
         Expr binary = make_node(ExprKind::Binary, begin, cursor_);
         binary.op = op;
         binary.children.push_back(std::move(lhs));
@@ -364,7 +366,11 @@ Expr ExprTokenParser::parse_unary(std::string op, size_t begin,
                                   std::initializer_list<TokenKind> stops) {
     Expr expr = make_node(ExprKind::Unary, begin, cursor_);
     expr.op = std::move(op);
-    expr.children.push_back(parse_prefix(stops));
+    if (stop_at(stops) || at_end()) {
+        expr.children.push_back(make_expr(ExprKind::Missing, "", current().location));
+    } else {
+        expr.children.push_back(parse_prefix(stops));
+    }
     expr.range = range_between(begin, cursor_);
     return expr;
 }

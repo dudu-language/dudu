@@ -108,7 +108,8 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
             const std::string& callee = scoped_callee.key;
             if (!expr.callee.empty() && expr.callee.front().kind != ExprKind::Name &&
                 expr.callee.front().kind != ExprKind::Member) {
-                sema_expr_fail(*location, "unsupported call expression: " + callee);
+                sema_expr_fail(*location,
+                               "unsupported call expression: " + expr_label(expr.callee.front()));
             }
             sema_expr_fail(*location, "unknown function: " + callee);
         }
@@ -130,7 +131,8 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
             }
             if (!expr.callee.empty() && expr.callee.front().kind != ExprKind::Name &&
                 expr.callee.front().kind != ExprKind::Member) {
-                sema_expr_fail(*location, "unsupported template call expression: " + callee_base);
+                sema_expr_fail(*location, "unsupported template call expression: " +
+                                              expr_label(expr.callee.front()));
             }
             sema_expr_fail(*location, "unknown template call: " + callee);
         }
@@ -146,6 +148,13 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
         }
         break;
     case ExprKind::Index:
+        if (expr.children.size() != 2 || missing_expr(expr.children[0]) ||
+            missing_expr(expr.children[1])) {
+            if (location != nullptr) {
+                sema_expr_fail(*location, "index expression expects receiver and index");
+            }
+            return {};
+        }
         if (expr.children.size() == 2 && !missing_expr(expr.children[0]) &&
             !missing_expr(expr.children[1])) {
             const SourceLocation& index_location = location != nullptr ? *location : expr.location;

@@ -66,10 +66,16 @@ TypeRef static_member_type_ref(const Symbols& symbols, const SourceLocation* loc
 TypeRef unwrap_receiver_type_ref(const Symbols& symbols, const TypeRef& type) {
     TypeRef current = type;
     while (true) {
-        const TypeRef resolved = resolve_alias_ref(symbols, current);
-        if (!type_ref_same_shape(resolved, current)) {
-            current = resolved;
-            continue;
+        const std::string head = type_ref_head_name(current);
+        const bool native_qualified =
+            head.find('.') != std::string::npos || head.find("::") != std::string::npos;
+        const bool exact_alias = symbols.alias_type_refs.contains(head);
+        if (!native_qualified || exact_alias) {
+            const TypeRef resolved = resolve_alias_ref(symbols, current);
+            if (!type_ref_same_shape(resolved, current)) {
+                current = resolved;
+                continue;
+            }
         }
         if (const auto inner =
                 unary_type_child_ref(current, {TypeKind::Pointer, TypeKind::Reference})) {

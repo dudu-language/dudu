@@ -140,7 +140,14 @@ size_t ExprTokenParser::expr_token_end(const Expr& expr) const {
 Expr ExprTokenParser::parse_call(Expr callee, std::initializer_list<TokenKind> stops) {
     (void)stops;
     const size_t begin = expr_token_begin(callee);
+    const size_t open = cursor_;
     match(TokenKind::LParen);
+    const size_t body_begin = cursor_;
+    const size_t close = matching_close(open, TokenKind::LParen, TokenKind::RParen);
+    if (close < tokens_.size() && span_has_top_level_identifier(body_begin, close, "for")) {
+        cursor_ = close + 1;
+        return make_node(ExprKind::Comprehension, begin, cursor_);
+    }
     std::vector<Expr> args = parse_arg_list(TokenKind::RParen);
     match(TokenKind::RParen);
     Expr call = make_node(ExprKind::Call, begin, cursor_);

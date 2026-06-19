@@ -1,3 +1,4 @@
+#include "dudu/ast_expr.hpp"
 #include "dudu/ast_expr_token_parser.hpp"
 #include "dudu/ast_parse_utils.hpp"
 #include "dudu/ast_type.hpp"
@@ -384,7 +385,15 @@ Expr Parser::parse_expr_piece(const JoinedTokens& piece) const {
     std::vector<Token> tokens =
         syntax_piece_tokens(tokens_.subspan(piece.begin, piece.end - piece.begin));
     ExprTokenParser parser(tokens);
-    return parser.parse();
+    Expr expr = parser.parse();
+    if (expr.kind == ExprKind::Unknown) {
+        const std::string spelling = trim_string(source_text_for_tokens(piece.begin, piece.end));
+        throw CompileError(expr.location,
+                           "unsupported expression: " +
+                               (spelling.empty() ? display_expr(expr) : spelling),
+                           "dudu.parser.unsupported_expression");
+    }
+    return expr;
 }
 
 TypeRef Parser::parse_type_piece(const JoinedTokens& piece) const {

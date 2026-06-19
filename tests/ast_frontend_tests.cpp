@@ -158,6 +158,13 @@ void test_type_compat_uses_type_ast_for_pointers() {
                                          dudu::parse_type_text("basic_string[char]")));
     assert(dudu::assignment_type_allowed(dudu::parse_type_text("str"), name_expr,
                                          dudu::parse_type_text("basic_string[i8]")));
+    dudu::TypeRef atomic_template;
+    atomic_template.kind = dudu::TypeKind::Template;
+    atomic_template.name = "atomic";
+    atomic_template.children.push_back(dudu::parse_type_text("i32"));
+    assert(dudu::type_assignment_allowed(dudu::parse_type_text("atomic[i32]"), atomic_template));
+    assert(dudu::assignment_type_allowed(dudu::parse_type_text("difference_type"), name_expr,
+                                         dudu::parse_type_text("i32")));
     assert(dudu::assignment_type_allowed(dudu::parse_type_text("cstr"),
                                          dudu::parse_expr_text("\"hello\""),
                                          dudu::parse_type_text("str")));
@@ -326,6 +333,8 @@ void test_native_header_types_split_cpp_templates() {
            "&std.remove_reference[_Tp]");
     assert(dudu::dudu_type("tuple<typename __decay_and_strip<_Elements>::__type...>") ==
            "tuple[__decay_and_strip[_Elements]...]");
+    assert(dudu::dudu_type("typename iterator_traits<_IIter>::difference_type") ==
+           "difference_type");
     assert(dudu::signature_params("T (const vec<L, T, Q> &, const vec<L, T, Q> &)") ==
            std::vector<std::string>({"&const[vec[L, T, Q]]", "&const[vec[L, T, Q]]"}));
 }

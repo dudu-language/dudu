@@ -116,6 +116,35 @@ std::string collapse_type_trait_associated_type(std::string type) {
     return trim_copy(type.substr(0, close + 1));
 }
 
+std::string collapse_template_associated_type(std::string type) {
+    constexpr std::string_view typename_prefix = "typename ";
+    if (starts_with(type, typename_prefix)) {
+        type = trim_copy(type.substr(typename_prefix.size()));
+    }
+    const size_t open = type.find('<');
+    if (open == std::string::npos) {
+        return type;
+    }
+    const size_t close = matching_angle(type, open);
+    if (close == std::string::npos) {
+        return type;
+    }
+    std::string suffix = trim_copy(type.substr(close + 1));
+    if (suffix.starts_with("::")) {
+        suffix = trim_copy(suffix.substr(2));
+    } else if (suffix.starts_with(".")) {
+        suffix = trim_copy(suffix.substr(1));
+    } else {
+        return type;
+    }
+    if (suffix.empty() || suffix.find_first_not_of(
+                              "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_") !=
+                              std::string::npos) {
+        return type;
+    }
+    return suffix;
+}
+
 std::vector<std::string> split_cpp_top_level_args(std::string_view args) {
     std::vector<std::string> out;
     int paren_depth = 0;
@@ -212,6 +241,7 @@ std::string dudu_type(std::string type) {
         }
     }
     type = collapse_type_trait_associated_type(std::move(type));
+    type = collapse_template_associated_type(std::move(type));
     bool is_const = false;
     while (starts_with(type, "const ") || ends_with(type, " const")) {
         is_const = true;

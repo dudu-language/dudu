@@ -9,8 +9,10 @@
 #include <algorithm>
 #include <cctype>
 #include <optional>
+#include <set>
 #include <sstream>
 #include <utility>
+#include <vector>
 
 namespace dudu {
 namespace {
@@ -192,21 +194,35 @@ void check_known_type_ref(const Symbols& symbols, const SourceLocation& location
     }
 }
 
-TypeRef resolve_alias_ref(const Symbols& symbols, TypeRef type) {
-    for (size_t guard = 0; guard < symbols.alias_type_refs.size(); ++guard) {
+TypeRef resolve_alias_ref_impl(const Symbols& symbols, TypeRef type, std::set<std::string>& seen) {
+    std::vector<std::string> inserted_names;
+    while (true) {
         if (type.kind != TypeKind::Named && type.kind != TypeKind::Qualified) {
             break;
         }
-        const auto found = symbols.alias_type_refs.find(type.name);
+        const std::string name = type.name;
+        if (!seen.insert(name).second) {
+            break;
+        }
+        inserted_names.push_back(name);
+        const auto found = symbols.alias_type_refs.find(name);
         if (found == symbols.alias_type_refs.end()) {
             break;
         }
         type = found->second;
     }
     for (TypeRef& child : type.children) {
-        child = resolve_alias_ref(symbols, std::move(child));
+        child = resolve_alias_ref_impl(symbols, std::move(child), seen);
+    }
+    for (const std::string& name : inserted_names) {
+        seen.erase(name);
     }
     return type;
+}
+
+TypeRef resolve_alias_ref(const Symbols& symbols, TypeRef type) {
+    std::set<std::string> seen;
+    return resolve_alias_ref_impl(symbols, std::move(type), seen);
 }
 
 std::vector<std::string> split_top_level(std::string text) {
