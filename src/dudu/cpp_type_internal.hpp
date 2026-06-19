@@ -25,6 +25,13 @@ std::string lower_cpp_function_type(const TypeRef& type, bool pointer,
                                     const std::vector<std::string>& namespace_aliases,
                                     const CppEmitOptions& options);
 
+std::string lower_template_type(const TypeRef& type);
+std::string lower_template_type(const TypeRef& type,
+                                const std::vector<std::string>& namespace_aliases);
+std::string lower_template_type(const TypeRef& type,
+                                const std::vector<std::string>& namespace_aliases,
+                                const CppEmitOptions& options);
+
 std::string lower_fixed_array_type(const TypeRef& type);
 std::string lower_fixed_array_type(const TypeRef& type,
                                    const std::vector<std::string>& namespace_aliases);

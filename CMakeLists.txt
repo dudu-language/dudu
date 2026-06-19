@@ -56,6 +56,7 @@ add_library(dudu_frontend
     src/dudu/cpp_type.cpp
     src/dudu/cpp_type_arrays.cpp
     src/dudu/cpp_type_ref.cpp
+    src/dudu/cpp_type_templates.cpp
     src/dudu/decorators.cpp
     src/dudu/escapes.cpp
     src/dudu/format.cpp

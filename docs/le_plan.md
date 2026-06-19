@@ -1645,6 +1645,9 @@ push. They are not release packaging work.
    branch instead of carrying duplicated tiny generic compatibility lambdas.
    Generic-parameter symbol extension now lives in `sema_common.*` instead of
    separate declaration/body-sema copies, so generic scope setup has one owner.
+   C++ template type lowering has been split out of `cpp_type_ref.cpp` into
+   `cpp_type_templates.*`, keeping template-name mapping separate from the
+   core `TypeRef` dispatcher.
 
 19. Polish Unsupported Syntax Diagnostics
 
