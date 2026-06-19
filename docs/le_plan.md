@@ -2109,6 +2109,10 @@ push. They are not release packaging work.
    C++ associated-type assignment matching now uses structured `TypeRef` head
    names only; missing/unknown raw type text no longer participates by rendered
    fallback.
+   Native C++ artifact normalization now exposes only the structured
+   `normalize_cpp_type_artifacts_ref` API. The unused string-returning
+   `normalize_cpp_type_artifacts(TypeRef)` wrapper and its rendered pointer-cv
+   cleanup path have been deleted and guarded.
    Wrapper match metadata no longer stores rendered template argument mirrors;
    Option/Result pattern binding uses the parsed `TypeRef` argument list only.
    Native template placeholder rebinding no longer accepts matching rendered

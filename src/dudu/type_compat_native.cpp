@@ -195,26 +195,10 @@ TypeRef normalize_cpp_primitive_type_ref(const TypeRef& type) {
     return out;
 }
 
-std::string strip_cpp_pointer_cv_artifacts(std::string type) {
-    for (const std::string_view marker : {"* const[", "& const[", "* volatile[", "& volatile["}) {
-        size_t pos = type.find(marker);
-        while (pos != std::string::npos) {
-            type.erase(pos + 1, 1);
-            pos = type.find(marker, pos + 1);
-        }
-    }
-    return type;
-}
-
 } // namespace
 
 TypeRef normalize_cpp_type_artifacts_ref(const TypeRef& type) {
     return normalize_cpp_primitive_type_ref(normalize_tuple_element(type));
-}
-
-std::string normalize_cpp_type_artifacts(const TypeRef& type) {
-    return strip_cpp_pointer_cv_artifacts(
-        substitute_type_ref_text(normalize_cpp_type_artifacts_ref(type), {}));
 }
 
 bool native_associated_type_assignment_allowed(const TypeRef& expected, const TypeRef& got) {

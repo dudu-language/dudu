@@ -31,6 +31,7 @@ forbidden=(
     "is_integer_type\\(type_ref_head_name"
     "bool is_integer_type\\(std::string"
     "normalize_cpp_type_artifacts\\(std::string"
+    "std::string normalize_cpp_type_artifacts\\(const TypeRef&"
     "infer_cpp_escape_expr\\("
     "assignment_error\\(const TypeRef& expected, const Expr& expr, const std::string"
     "type_ref_text\\(type\\) == \"\\.\\.\\.\""
