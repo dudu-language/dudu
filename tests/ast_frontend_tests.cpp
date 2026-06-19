@@ -1392,22 +1392,23 @@ void test_type_ast_shape() {
     spelled_pointer_type.kind = dudu::TypeKind::Pointer;
     spelled_pointer_type.children.push_back(dudu::named_type_ref("Player"));
     assert(dudu::lower_cpp_type(spelled_pointer_type) == "Player*");
-    assert(dudu::lower_cpp_type("*const[i32]") == "const int32_t*");
-    assert(dudu::lower_cpp_type("const[*i32]") == "int32_t* const");
+    assert(dudu::lower_cpp_type_spelling("*const[i32]") == "const int32_t*");
+    assert(dudu::lower_cpp_type_spelling("const[*i32]") == "int32_t* const");
     assert(dudu::lower_cpp_type(dudu::parse_type_text("fn(i32, f32) -> bool")) ==
            "std::add_pointer_t<bool(int32_t, float)>");
     assert(dudu::lower_cpp_type(dudu::parse_type_text("fn(i32)")) ==
            "std::add_pointer_t<void(int32_t)>");
-    assert(dudu::lower_cpp_type("fn(i32, f32) -> bool") ==
+    assert(dudu::lower_cpp_type_spelling("fn(i32, f32) -> bool") ==
            "std::add_pointer_t<bool(int32_t, float)>");
-    assert(dudu::lower_cpp_type("list[fn(i32) -> bool]") ==
+    assert(dudu::lower_cpp_type_spelling("list[fn(i32) -> bool]") ==
            "std::vector<std::add_pointer_t<bool(int32_t)>>");
-    assert(dudu::lower_cpp_type("dict[str, list[fn(i32) -> bool]]") ==
+    assert(dudu::lower_cpp_type_spelling("dict[str, list[fn(i32) -> bool]]") ==
            "std::unordered_map<std::string, "
            "std::vector<std::add_pointer_t<bool(int32_t)>>>");
-    assert(dudu::lower_cpp_type("std.function[fn(i32) -> bool]") == "std::function<bool(int32_t)>");
-    assert(dudu::lower_cpp_type("Box[list[i32]]") == "Box<std::vector<int32_t>>");
-    assert(dudu::lower_cpp_type("array[Box[list[i32]]][3]") ==
+    assert(dudu::lower_cpp_type_spelling("std.function[fn(i32) -> bool]") ==
+           "std::function<bool(int32_t)>");
+    assert(dudu::lower_cpp_type_spelling("Box[list[i32]]") == "Box<std::vector<int32_t>>");
+    assert(dudu::lower_cpp_type_spelling("array[Box[list[i32]]][3]") ==
            "std::array<Box<std::vector<int32_t>>, 3>");
     assert(dudu::parse_type_text("Player[3][4]").kind == dudu::TypeKind::Unknown);
     assert(dudu::parse_type_text("Box[list[i32]][3]").kind == dudu::TypeKind::Unknown);
@@ -1469,8 +1470,9 @@ void test_type_ast_shape() {
            "std::array<std::array<int32_t, 2>, 2>");
     assert(dudu::lower_cpp_type(dudu::parse_type_text("array[f32][4, 4]")) ==
            "std::array<std::array<float, 4>, 4>");
-    assert(dudu::lower_cpp_type("array[i32][3]") == "std::array<int32_t, 3>");
-    assert(dudu::lower_cpp_type("array[f32][4, 4]") == "std::array<std::array<float, 4>, 4>");
+    assert(dudu::lower_cpp_type_spelling("array[i32][3]") == "std::array<int32_t, 3>");
+    assert(dudu::lower_cpp_type_spelling("array[f32][4, 4]") ==
+           "std::array<std::array<float, 4>, 4>");
 }
 
 void test_malformed_static_field_type_is_rejected() {

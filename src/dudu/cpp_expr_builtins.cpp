@@ -62,7 +62,7 @@ std::string lower_generic_type_constructor(std::string expr) {
         const std::string type = expr.substr(name_start, close - name_start + 1);
         const std::string args = expr.substr(close + 2, cursor - close - 3);
         const std::string replacement =
-            lower_cpp_type(type) + "(" + lower_raw_cpp_escape_expr(args) + ")";
+            lower_cpp_type_spelling(type) + "(" + lower_raw_cpp_escape_expr(args) + ")";
         expr.replace(name_start, cursor - name_start, replacement);
         open = expr.find('[', name_start + replacement.size());
     }
@@ -206,8 +206,8 @@ std::string lower_pointer_cast_calls(std::string expr) {
             continue;
         }
         const std::string arg = expr.substr(name_end + 1, cursor - name_end - 2);
-        const std::string replacement = "reinterpret_cast<" + lower_cpp_type("*" + type) + ">(" +
-                                        lower_raw_cpp_escape_expr(arg) + ")";
+        const std::string replacement = "reinterpret_cast<" + lower_cpp_type_spelling("*" + type) +
+                                        ">(" + lower_raw_cpp_escape_expr(arg) + ")";
         expr.replace(pos, cursor - pos, replacement);
         pos = expr.find('*', pos + replacement.size());
     }

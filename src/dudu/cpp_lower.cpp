@@ -113,7 +113,7 @@ std::string lower_template_call_arg(const std::string& arg,
     if (starts_with(trimmed, "fn(")) {
         return lower_cpp_function_type(parse_type_text(trimmed), false, namespace_aliases);
     }
-    return lower_cpp_type(trimmed, namespace_aliases);
+    return lower_cpp_type_spelling(trimmed, namespace_aliases);
 }
 
 std::vector<std::string> split_top_level_args(const std::string& args) {

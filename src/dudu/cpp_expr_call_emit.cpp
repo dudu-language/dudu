@@ -393,7 +393,7 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
                ")";
     }
     if (is_builtin_cast_call(callee_name)) {
-        return lower_cpp_type(callee_name, aliases) + "(" +
+        return lower_cpp_type(named_type_ref(callee_name), aliases) + "(" +
                join_lowered_exprs(expr.children, aliases, locals, local_type_refs, ", ", symbols,
                                   options) +
                ")";

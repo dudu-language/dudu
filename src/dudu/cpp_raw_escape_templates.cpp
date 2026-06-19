@@ -1,6 +1,5 @@
-#include "dudu/cpp_raw_escape_internal.hpp"
-
 #include "dudu/cpp_lower.hpp"
+#include "dudu/cpp_raw_escape_internal.hpp"
 
 #include <cctype>
 #include <sstream>
@@ -84,9 +83,9 @@ std::string lower_template_alloc_call(std::string expr, std::string_view name) {
         const std::string args = expr.substr(args_start, cursor - args_start - 1);
         std::string replacement;
         if (name == "new") {
-            replacement = "new " + lower_cpp_type(type) + "(" + args + ")";
+            replacement = "new " + lower_cpp_type_spelling(type) + "(" + args + ")";
         } else {
-            const std::string lowered = lower_cpp_type(type);
+            const std::string lowered = lower_cpp_type_spelling(type);
             replacement = "static_cast<" + lowered + "*>(std::malloc(sizeof(" + lowered + ") * (" +
                           args + ")))";
         }
@@ -108,7 +107,7 @@ std::string lower_template_value_call(std::string expr, std::string_view name) {
             continue;
         }
         const std::string type = expr.substr(pos, args_end - pos + 1);
-        const std::string replacement = lower_cpp_type(type) + "{}";
+        const std::string replacement = lower_cpp_type_spelling(type) + "{}";
         expr.replace(pos, args_end + 3 - pos, replacement);
         pos = expr.find(marker, pos + replacement.size());
     }
@@ -127,7 +126,8 @@ std::string lower_type_operator_call(std::string expr, std::string_view name) {
             continue;
         }
         const std::string type = expr.substr(type_start, type_end - type_start);
-        const std::string replacement = std::string(name) + "(" + lower_cpp_type(type) + ")";
+        const std::string replacement =
+            std::string(name) + "(" + lower_cpp_type_spelling(type) + ")";
         expr.replace(pos, type_end + 3 - pos, replacement);
         pos = expr.find(marker, pos + replacement.size());
     }
@@ -152,7 +152,8 @@ std::string lower_offsetof_call(std::string expr) {
         }
         const std::string type = expr.substr(type_start, type_end - type_start);
         const std::string field = trim_copy(expr.substr(field_start, field_end - field_start));
-        const std::string replacement = "offsetof(" + lower_cpp_type(type) + ", " + field + ")";
+        const std::string replacement =
+            "offsetof(" + lower_cpp_type_spelling(type) + ", " + field + ")";
         expr.replace(pos, field_end + 1 - pos, replacement);
         pos = expr.find(marker, pos + replacement.size());
     }

@@ -219,7 +219,12 @@ reintroducing `compound_assign_pos`, `find_top_level_logical`,
 `find_top_level_comparison`, and `top_level_comparison_text`. The remaining
 `sema_scan` helpers are still used by explicit `cpp(...)` escape parsing and
 local member-path segment validation, so they stay in the allowed string
-boundary for now.
+boundary for now. The string overloads of `lower_cpp_type` have also been
+removed; normal codegen must lower structured `TypeRef` values, while
+`cpp(...)` escape rewriting and explicit spelling tests use
+`lower_cpp_type_spelling` to make the raw type-text boundary visible at the
+call site. The guard rejects reintroducing `lower_cpp_type(std::string)` or
+`lower_cpp_type(const std::string&)`.
 
 ## Goal 6: Separate Module Outputs Without Re-Flattening
 

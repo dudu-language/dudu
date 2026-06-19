@@ -26,6 +26,8 @@ forbidden=(
     "find_top_level_logical"
     "find_top_level_comparison"
     "top_level_comparison_text"
+    "lower_cpp_type\\(const std::string"
+    "lower_cpp_type\\(std::string"
 )
 
 for pattern in "${forbidden[@]}"; do
