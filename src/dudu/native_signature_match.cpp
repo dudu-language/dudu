@@ -240,10 +240,12 @@ std::optional<TypeRef> explicit_type_return_ref(const TypeRef& return_type,
     return substituted;
 }
 
-std::string mismatch_reason_ast(const FunctionScope& scope, const FunctionSignature& signature,
-                                const std::vector<Expr>& args, const SourceLocation* location,
-                                const NativeInferExprTypeAstFn& infer_expr_type,
-                                const NativeCanAssignAstFn& can_assign) {
+std::vector<std::string> mismatch_reasons_ast(const FunctionScope& scope,
+                                              const FunctionSignature& signature,
+                                              const std::vector<Expr>& args,
+                                              const SourceLocation* location,
+                                              const NativeInferExprTypeAstFn& infer_expr_type,
+                                              const NativeCanAssignAstFn& can_assign) {
     if (!arity_matches(signature, args.size())) {
         std::ostringstream out;
         out << "arity expects ";
@@ -258,9 +260,10 @@ std::string mismatch_reason_ast(const FunctionScope& scope, const FunctionSignat
             out << param_count;
         }
         out << " arguments, got " << args.size();
-        return out.str();
+        return {out.str()};
     }
 
+    std::vector<std::string> reasons;
     const size_t fixed_params = std::min(signature_param_count(signature), args.size());
     for (size_t i = 0; i < fixed_params; ++i) {
         const NativeArgType got = native_arg_type(scope, args[i], location, infer_expr_type);
@@ -271,10 +274,10 @@ std::string mismatch_reason_ast(const FunctionScope& scope, const FunctionSignat
             std::ostringstream out;
             out << "parameter " << (i + 1) << " expects " << signature_param_text(signature, i)
                 << ", got " << got_text;
-            return out.str();
+            reasons.push_back(out.str());
         }
     }
-    return {};
+    return reasons;
 }
 
 std::string native_overload_message_ast(const FunctionScope& scope, const std::string& callee,
@@ -296,9 +299,8 @@ std::string native_overload_message_ast(const FunctionScope& scope, const std::s
     }
     for (const FunctionSignature& candidate : candidates) {
         out << "\ncandidate: " << signature_text(callee, candidate);
-        if (const std::string reason =
-                mismatch_reason_ast(scope, candidate, args, location, infer_expr_type, can_assign);
-            !reason.empty()) {
+        for (const std::string& reason :
+             mismatch_reasons_ast(scope, candidate, args, location, infer_expr_type, can_assign)) {
             out << "\n  reason: " << reason;
         }
     }

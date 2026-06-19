@@ -233,8 +233,9 @@ It also allows Dudu to infer return types from imported calls instead of
 falling back to loose expression typing.
 
 Status: native overload failures list argument types, candidate signatures, and
-per-candidate reasons for arity or the first parameter mismatch, such as
-`reason: parameter 2 expects *f32, got *i32`.
+per-candidate reasons for arity or every mismatched fixed parameter, such as
+`reason: parameter 2 expects *f32, got *i32`. Multi-argument mismatch fixtures
+guard against hiding later bad arguments behind the first failed parameter.
 
 ## Remaining Deep C++ Work
 

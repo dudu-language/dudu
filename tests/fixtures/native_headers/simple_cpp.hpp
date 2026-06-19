@@ -91,6 +91,14 @@ inline int overloaded(int value) {
 inline float overloaded(float value) {
     return value;
 }
+
+inline int overloaded_pair(int first, float second) {
+    return first + static_cast<int>(second);
+}
+
+inline int overloaded_pair(float first, int second) {
+    return static_cast<int>(first) + second;
+}
 } // namespace dudu_native
 
 using DuduWidgetAlias = dudu_native::Widget;
