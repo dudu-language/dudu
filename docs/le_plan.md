@@ -2048,3 +2048,6 @@ push. They are not release packaging work.
    Fast validation now includes `scripts/check_ast_migration_guards.sh`, which
    rejects reintroducing the old `statement_from_text` path or raw statement
    semantic fields under `src/dudu`.
+   Emitted expression type inference no longer guesses symbol-less constructor
+   calls from uppercase spelling; constructor inference now requires real
+   `Symbols` class/native/type metadata.

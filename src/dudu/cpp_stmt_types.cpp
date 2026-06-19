@@ -7,7 +7,6 @@
 #include "dudu/sema_index_type_ref.hpp"
 #include "dudu/sema_scan.hpp"
 
-#include <cctype>
 #include <cstddef>
 #include <vector>
 
@@ -56,11 +55,6 @@ TypeRef indexed_local_type_ref(const TypeRef& receiver_type, const Expr& index_e
     return indexed ? *indexed : TypeRef{};
 }
 
-bool looks_like_dudu_type(const std::string& name) {
-    return !name.empty() && name.find('.') == std::string::npos &&
-           std::isupper(static_cast<unsigned char>(name.front())) != 0;
-}
-
 TypeRef infer_call_type_ref(const std::string& callee,
                             const std::map<std::string, TypeRef>& function_returns,
                             const Symbols* symbols, const SourceLocation& location) {
@@ -70,9 +64,6 @@ TypeRef infer_call_type_ref(const std::string& callee,
     if (symbols != nullptr &&
         (symbols->classes.contains(callee) || symbols->native_classes.contains(callee) ||
          symbols->types.contains(callee))) {
-        return named_type_ref(callee, location);
-    }
-    if (symbols == nullptr && looks_like_dudu_type(callee)) {
         return named_type_ref(callee, location);
     }
     return {};
