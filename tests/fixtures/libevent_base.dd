@@ -1,0 +1,23 @@
+import c "event2/event.h" as event
+import c "string.h" as c
+
+
+def main() -> i32:
+    config = event.event_config_new()
+    if config == None:
+        return 1
+
+    base = event.event_base_new_with_config(config)
+    event.event_config_free(config)
+    if base == None:
+        return 2
+
+    method_len = c.strlen(event.event_base_get_method(base))
+    features = event.event_base_get_features(base)
+    event.event_base_free(base)
+
+    if method_len == 0:
+        return 3
+    if features < 0:
+        return 4
+    return 42
