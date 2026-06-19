@@ -411,6 +411,10 @@ Current implementation reality:
   not leak raw escape backslashes into the driver. Invalid or unfinished
   quoted-string escapes are rejected as manifest errors instead of being
   guessed.
+- The stale `[cmake] enabled` manifest key has been removed. CMake behavior is
+  selected through `[build] backend = "cmake"` plus `[cmake] source`/`target`
+  when using a user-owned CMake project, or through `dudu cmake` when emitting
+  an inspectable generated CMake artifact.
 
 The next build-driver work should close that gap without changing the front
 door: users should still type `dudu build`, `dudu run`, and `dudu test`.

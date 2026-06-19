@@ -1496,7 +1496,10 @@ push. They are not release packaging work.
    strings decode common TOML escapes such as `\"`, `\\`, and `\n`, including
    inside string arrays, so command strings and native paths do not leak raw
    escape backslashes into the driver. Invalid or unfinished quoted-string
-   escapes are rejected as manifest errors instead of being guessed.
+   escapes are rejected as manifest errors instead of being guessed. The stale
+   `[cmake] enabled` key has been removed; CMake behavior is selected through
+   `[build] backend = "cmake"` plus `[cmake] source`/`target` for user-owned
+   CMake projects, or through `dudu cmake` for inspectable CMake emission.
 
 15. Freestanding And Embedded Assert Policy
 

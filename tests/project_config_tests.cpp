@@ -83,6 +83,20 @@ void test_build_backend_selection(const std::filesystem::path& root) {
     const dudu::ProjectConfig implicit = dudu::parse_project_config(project / "dudu.toml");
     assert(implicit.build_backend == "direct");
     assert(!implicit.build_backend_explicit);
+
+    write_text(project / "dudu.toml", "name = \"backend_probe\"\n"
+                                      "entry = \"src/main.dd\"\n"
+                                      "\n"
+                                      "[cmake]\n"
+                                      "enabled = true\n");
+    bool stale_enabled_rejected = false;
+    try {
+        (void)dudu::parse_project_config(project / "dudu.toml");
+    } catch (const std::runtime_error& error) {
+        stale_enabled_rejected =
+            std::string(error.what()).find("unknown [cmake] entry") != std::string::npos;
+    }
+    assert(stale_enabled_rejected);
 }
 
 void test_quoted_manifest_strings(const std::filesystem::path& root) {

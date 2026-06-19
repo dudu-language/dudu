@@ -102,17 +102,6 @@ std::string unquote(const std::filesystem::path& path, const std::string& line, 
     return value;
 }
 
-bool parse_bool_value(const std::filesystem::path& path, const std::string& line,
-                      const std::string& value) {
-    if (value == "true") {
-        return true;
-    }
-    if (value == "false") {
-        return false;
-    }
-    fail(path, "expected boolean", line);
-}
-
 std::vector<std::string> parse_string_array(const std::filesystem::path& path,
                                             const std::string& line, std::string value) {
     value = trim_copy(std::move(value));
@@ -380,8 +369,6 @@ ProjectConfig parse_project_config(const std::filesystem::path& path) {
             config.build_backend = unquote(path, line, value);
             config.build_backend_explicit = true;
             validate_one_of(path, line, "backend", config.build_backend, {"direct", "cmake"});
-        } else if (section == "cmake" && name == "enabled") {
-            config.cmake_enabled = parse_bool_value(path, line, value);
         } else if (section == "cmake" && name == "source") {
             config.cmake_source = unquote(path, line, value);
         } else if (section == "cmake" && name == "target") {
