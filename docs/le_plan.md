@@ -943,7 +943,11 @@ push. They are not release packaging work.
    assignment hooks work for library-style tensor wrappers, and indexed member
    paths such as `self.values[i]` type-check. One-dimensional fixed-array step
    slices such as `values[start:end:step]` produce `strided_span[T]` views.
-   General multidimensional slices and richer tensor-library metadata remain.
+   This is enough to play with fixed arrays, row/column views, channel views,
+   basic step slices, and library indexing hooks, but it is not full NumPy-style
+   indexing yet. General multidimensional slice combinations, advanced
+   gather/scatter indexing, broadcasting rules, shape metadata for library
+   tensors, and GPU-backed tensor-library hooks remain.
    Same-width Dudu-native `xyzw`, `rgba`, and `stpq` read swizzles are
    implemented for local class receivers and expression receivers. Same-width
    Dudu-native write swizzles are implemented for assignable receivers and
@@ -1109,6 +1113,35 @@ push. They are not release packaging work.
 
    Keep proving SDL3, ImGui, raylib, glm, sqlite, POSIX, OpenCL, Vulkan, GLFW,
    and FFmpeg style APIs with normal imports and minimal wrapper code.
+
+   Add and maintain a C/C++ ecosystem compatibility matrix. This should track
+   common libraries by domain, with a short status for each library:
+
+   - import/header scan
+   - function calls
+   - structs/classes/fields
+   - macros/constants
+   - overloads/templates/operators
+   - build/link through `dudu build` and generated CMake
+   - tiny real executable example
+   - wrapper header needed, and why
+
+   Start with roughly the top 100 useful C/C++ libraries and APIs across:
+
+   - C/POSIX/libc/pthreads and the C++ standard library
+   - SDL3, raylib, GLFW, Dear ImGui, OpenGL, Vulkan
+   - glm, Eigen, BLAS/LAPACK-style numeric libraries
+   - sqlite, zlib, libpng, stb, curl
+   - fmt, spdlog, Boost subsets
+   - OpenCV, FFmpeg
+   - OpenCL, CUDA/CUBLAS when hardware/tooling is available
+   - common platform APIs used by games, tools, embedded, and systems code
+
+   Failures in this matrix should become compiler/language issues when the
+   library is doing normal C/C++ work. Wrapper headers are acceptable only when
+   the library relies on macro-generated declarations, token-pasting,
+   partial-syntax macros, or platform setup that C/C++ users also normally hide
+   behind an adapter.
 
    Current optional probes pass for glm, OpenCV, sqlite, threading, POSIX mmap,
    POSIX pthread, raylib, SDL3, GLFW, OpenCL, Vulkan, and FFmpeg on this

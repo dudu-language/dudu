@@ -1,22 +1,13 @@
 #include "dudu/language_server_native_lookup.hpp"
 
 #include "dudu/ast_type.hpp"
+#include "dudu/native_header_identity.hpp"
 
 #include <map>
 #include <utility>
 
 namespace dudu {
 namespace {
-
-std::string native_symbol_identity_key(const NativeSymbolId& identity) {
-    if (!identity.usr.empty()) {
-        return "usr:" + identity.usr;
-    }
-    if (!identity.canonical_path.empty()) {
-        return "path:" + identity.canonical_path;
-    }
-    return {};
-}
 
 struct NativeClassDefinitionIndex {
     std::map<std::string, NativeClassDefinition> by_name;

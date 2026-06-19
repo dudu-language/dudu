@@ -21,4 +21,22 @@ inline NativeSymbolId native_identity(std::string canonical_path, const std::str
     return id;
 }
 
+inline std::string native_symbol_identity_key(const NativeSymbolId& identity) {
+    if (!identity.usr.empty()) {
+        return "usr:" + identity.usr;
+    }
+    if (!identity.canonical_path.empty()) {
+        return "path:" + identity.canonical_path;
+    }
+    return {};
+}
+
+template <typename T> std::string native_decl_identity_key(const T& decl) {
+    std::string key = native_symbol_identity_key(decl.identity);
+    if (key.empty()) {
+        key = "name:" + decl.name;
+    }
+    return key;
+}
+
 } // namespace dudu

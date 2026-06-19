@@ -1,6 +1,7 @@
 #include "dudu/native_header_merge.hpp"
 
 #include "dudu/ast_type.hpp"
+#include "dudu/native_header_identity.hpp"
 #include "dudu/source.hpp"
 
 #include <algorithm>
@@ -9,24 +10,6 @@
 
 namespace dudu {
 namespace {
-
-std::string native_symbol_identity_key(const NativeSymbolId& identity) {
-    if (!identity.usr.empty()) {
-        return "usr:" + identity.usr;
-    }
-    if (!identity.canonical_path.empty()) {
-        return "path:" + identity.canonical_path;
-    }
-    return {};
-}
-
-template <typename T> std::string native_decl_identity_key(const T& decl) {
-    std::string key = native_symbol_identity_key(decl.identity);
-    if (key.empty()) {
-        key = "name:" + decl.name;
-    }
-    return key;
-}
 
 bool actionable_native_name_collision(const std::string& name) {
     if (name.rfind("_", 0) == 0) {

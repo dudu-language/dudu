@@ -99,6 +99,9 @@ In progress.
 - Native scan deduplication uses the same identity-aware rule before metadata
   reaches module merge, so a single scan cannot hide an unqualified collision
   by name-only dedupe.
+- Native header merge, scan dedupe, and LSP native lookup now share the same
+  identity-key helper instead of carrying separate `usr`/canonical-path/name
+  fallback implementations.
 - LSP definition lookup for imported native type annotations follows
   structured native type-alias metadata to the scanned native class declaration
   when available, so aliases such as `native.Widget` can jump to the C++ class
