@@ -111,3 +111,19 @@ awk '
     }
     END { exit bad ? 1 : 0 }
 ' "$repo_root/src/dudu/ast.hpp"
+
+awk '
+    /struct ClassDecl/ {
+        in_class = 1
+        has_identity = 0
+    }
+    in_class && /NativeSymbolId identity/ { has_identity = 1 }
+    in_class && /^};/ {
+        if (!has_identity) {
+            print FILENAME ":" FNR ": ClassDecl must carry NativeSymbolId identity for native class imports"
+            bad = 1
+        }
+        in_class = 0
+    }
+    END { exit bad ? 1 : 0 }
+' "$repo_root/src/dudu/ast.hpp"
