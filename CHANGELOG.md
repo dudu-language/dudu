@@ -130,6 +130,9 @@
 - Relaxed the LSP smoke-test subprocess guard from 5s to 10s so the dense
   JSON-RPC batch does not fail on normal timing variance while still catching
   hangs quickly.
+- Documented the broader C++ standard-library interop fixture in the native
+  compatibility matrix, including `std.function`, smart pointers, span, and
+  container coverage.
 
 ### Fixed
 

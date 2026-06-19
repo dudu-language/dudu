@@ -1154,6 +1154,11 @@ push. They are not release packaging work.
    `native.Widget` from a global using alias lowers to `Widget`.
    The standard-library algorithms fixture now validates representative
    containers, algorithms, pairs, tuples, and `std.get` without wrapper headers.
+   The broader standard-library interop fixture covers `std.optional`,
+   `std.array`, `std.span`, `std.map`, `std.unordered_set`, `std.function`,
+   smart pointers, and mutex guard construction; it remains fixture-level
+   coverage rather than fast-loop codegen because scanning that many standard
+   headers is intentionally heavier.
    Native overload failure diagnostics list argument types, candidate
    signatures, and per-candidate arity or all mismatched fixed-parameter
    reasons. Native overload matching accepts Dudu string literals for native
