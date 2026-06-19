@@ -102,6 +102,7 @@ add_library(dudu_frontend
     src/dudu/naming.cpp
     src/dudu/parser.cpp
     src/dudu/parser_decls.cpp
+    src/dudu/parser_statement_ops.cpp
     src/dudu/parser_statements.cpp
     src/dudu/parser_utils.cpp
     src/dudu/project_config.cpp
