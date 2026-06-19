@@ -409,7 +409,9 @@ Local completion scope filtering is covered so deeper-block locals do not leak
 into outer-block completions.
 Optional LSP probes cover real `sqlite3` and `raylib` headers through
 `pkg-config`, plus `SDL3` and `GLFW` when installed, including diagnostics,
-completion, signature help, and definition.
+completion, signature help, and definition. They are part of `scripts/test_full.sh`
+so the broad developer sweep exercises real-header editor behavior as well as
+native compile/run probes.
 
 ## Non-Goals
 

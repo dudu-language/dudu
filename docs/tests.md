@@ -54,7 +54,8 @@ Use optional native probes when changing real-library interop:
 ```
 
 Those probes skip missing packages. Compiler developers who want the widest
-local signal can run both tiers:
+local signal can run both tiers. The full sweep runs core validation, native
+compile/run probes, and optional real-header LSP probes:
 
 ```sh
 ./scripts/test_full.sh
