@@ -104,6 +104,17 @@ Definition of done:
 - migration guard rejects raw `TypeRef.text` semantic reads outside native or
   display helpers
 
+Status: complete. `TypeRef` no longer has a raw source payload field. Parsed
+Dudu types carry structured names, values, children, ranges, and a `malformed`
+flag that distinguishes bad type syntax from a missing type annotation.
+Malformed delimiter syntax such as `Bad[` now produces a malformed type node
+instead of a string-backed unknown type. Suffix pack expansion such as `T...`
+parses as `TypeKind::PackExpansion`, which removed a native variadic-template
+dependency on child raw text. Native header parsing now drops impossible bare
+wrapper artifacts such as childless `const` rather than letting them escape into
+normal Dudu type semantics. The migration guard rejects reintroducing
+`TypeRef.text` and field-style type text reads.
+
 ## Goal 4: Isolate Native C/C++ Spelling Metadata
 
 Objective:

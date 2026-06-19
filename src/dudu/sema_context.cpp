@@ -179,10 +179,7 @@ std::optional<std::pair<std::string, SourceLocation>> unknown_type_ref(const Sym
         }
         return std::nullopt;
     case TypeKind::Unknown:
-        if (!has_type_ref(type)) {
-            return std::nullopt;
-        }
-        return std::pair{type.text, type.location};
+        return std::nullopt;
     }
     return std::nullopt;
 }

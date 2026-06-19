@@ -174,12 +174,9 @@ void test_type_compat_uses_type_ast_for_pointers() {
                                          dudu::parse_expr_text("list[i32](raw)"),
                                          dudu::parse_type_text("auto")));
 
-    dudu::TypeRef malformed_expected;
-    malformed_expected.kind = dudu::TypeKind::Unknown;
-    malformed_expected.text = "Bad[";
-    dudu::TypeRef malformed_got = malformed_expected;
-    assert(!dudu::type_assignment_allowed(malformed_expected, malformed_got));
-
+    dudu::TypeRef malformed_expected = dudu::parse_type_text("Bad[");
+    assert(malformed_expected.kind == dudu::TypeKind::Unknown);
+    assert(malformed_expected.malformed);
     bool malformed_lower_failed = false;
     try {
         (void)dudu::lower_cpp_type(malformed_expected);
@@ -215,7 +212,6 @@ void test_core_type_helpers_use_type_ast() {
     assert(dudu::type_ref_head_name(dudu::parse_type_text("array[f32][4, 4]")) == "array");
     dudu::TypeRef malformed_pointer;
     malformed_pointer.kind = dudu::TypeKind::Pointer;
-    malformed_pointer.text = "*Player";
     assert(dudu::base_type(malformed_pointer).empty());
     bool malformed_pointer_render_failed = false;
     try {
@@ -226,17 +222,14 @@ void test_core_type_helpers_use_type_ast() {
     assert(malformed_pointer_render_failed);
     dudu::TypeRef malformed_reference;
     malformed_reference.kind = dudu::TypeKind::Reference;
-    malformed_reference.text = "&Player";
     assert(dudu::base_type(malformed_reference).empty());
     dudu::TypeRef malformed_array;
     malformed_array.kind = dudu::TypeKind::FixedArray;
-    malformed_array.text = "Player[4]";
     assert(dudu::base_type(malformed_array).empty());
     dudu::TypeRef malformed_named;
     malformed_named.kind = dudu::TypeKind::Unknown;
-    malformed_named.text = "i32";
     assert(dudu::base_type(malformed_named).empty());
-    assert(!dudu::known_type_ref(dudu::Symbols{}, malformed_named));
+    assert(!dudu::has_type_ref(malformed_named));
     assert(dudu::substitute_type_ref_text(
                dudu::explicit_array_element_type_ref(dudu::parse_type_text("array[list[i32]][4]")),
                {}) == "list[i32]");
@@ -368,9 +361,8 @@ void test_bound_native_template_substitution_is_per_field() {
     dudu::set_signature_return_type(signature, dudu::parse_type_text("tuple[T]"));
 
     dudu::NativeTemplateBindings bindings;
-    dudu::TypeRef messy_native_binding;
-    messy_native_binding.kind = dudu::TypeKind::Unknown;
-    messy_native_binding.text = "typename __decay_and_strip<U>::__type";
+    const dudu::TypeRef messy_native_binding =
+        dudu::native_template_binding_type_ref("typename __decay_and_strip<U>::__type");
     bindings["U"] = messy_native_binding;
 
     dudu::NativePackBindingMap packs;
@@ -400,9 +392,7 @@ void test_explicit_native_template_value_args_use_type_refs() {
     assert(dudu::signature_return_type_ref(substituted).name == "i32");
 
     dudu::FunctionSignature malformed_signature;
-    dudu::TypeRef malformed_placeholder;
-    malformed_placeholder.kind = dudu::TypeKind::Unknown;
-    malformed_placeholder.text = "tuple[T]";
+    dudu::TypeRef malformed_placeholder = dudu::parse_type_text("tuple[");
     dudu::set_signature_param_types(malformed_signature, {malformed_placeholder});
     dudu::set_signature_return_type(malformed_signature, dudu::parse_type_text("void"));
     const dudu::FunctionSignature malformed_substituted =
@@ -1452,11 +1442,10 @@ void test_type_ast_shape() {
     assert(dudu::substitute_type_ref_text(nested, {}) == "fn(list[f32]) -> f32");
     dudu::TypeRef malformed_placeholder;
     malformed_placeholder.kind = dudu::TypeKind::Unknown;
-    malformed_placeholder.text = "T";
     const dudu::TypeRef malformed_substituted =
         dudu::substitute_type_ref(malformed_placeholder, {{"T", dudu::named_type_ref("f32")}});
     assert(malformed_substituted.kind == dudu::TypeKind::Unknown);
-    assert(malformed_substituted.text == "T");
+    assert(!dudu::has_type_ref(malformed_substituted));
     assert(dudu::lower_cpp_type(player.fields[0].type_ref) ==
            "std::array<std::array<float, 4>, 4>");
     const dudu::ArrayShapeInference inferred_array = dudu::infer_array_literal_shape_type(

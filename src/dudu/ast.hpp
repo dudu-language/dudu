@@ -63,7 +63,7 @@ enum class TypeKind {
 
 struct TypeRef {
     TypeKind kind = TypeKind::Unknown;
-    std::string text;
+    bool malformed = false;
     std::string name;
     std::string value;
     std::vector<TypeRef> children;

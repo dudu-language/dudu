@@ -34,7 +34,6 @@ TypeRef TypeTokenParser::parse() {
     if (!at_end()) {
         return make_node(TypeKind::Unknown, begin, tokens_.size() - 1);
     }
-    type.text = text_between(begin, cursor_);
     type.range = range_between(begin, cursor_);
     return type;
 }
@@ -61,6 +60,12 @@ bool TypeTokenParser::at_operator(std::string_view op) const {
 
 bool TypeTokenParser::at_identifier(std::string_view text) const {
     return !at_end() && current().kind == TokenKind::Identifier && current().text == text;
+}
+
+bool TypeTokenParser::at_ellipsis() const {
+    return cursor_ + 2 < tokens_.size() && tokens_[cursor_].kind == TokenKind::Dot &&
+           tokens_[cursor_ + 1].kind == TokenKind::Dot &&
+           tokens_[cursor_ + 2].kind == TokenKind::Dot;
 }
 
 bool TypeTokenParser::stop_at(std::initializer_list<TokenKind> stops) const {
@@ -100,6 +105,9 @@ bool TypeTokenParser::match_identifier(std::string_view text) {
 }
 
 bool TypeTokenParser::match_scope_separator() {
+    if (at_ellipsis()) {
+        return false;
+    }
     if (match(TokenKind::Dot)) {
         return true;
     }
@@ -109,6 +117,14 @@ bool TypeTokenParser::match_scope_separator() {
         return true;
     }
     return false;
+}
+
+bool TypeTokenParser::match_ellipsis() {
+    if (!at_ellipsis()) {
+        return false;
+    }
+    cursor_ += 3;
+    return true;
 }
 
 SourceRange TypeTokenParser::range_between(size_t begin, size_t end) const {
@@ -150,7 +166,7 @@ std::string TypeTokenParser::text_between(size_t begin, size_t end) const {
 TypeRef TypeTokenParser::make_node(TypeKind kind, size_t begin, size_t end) const {
     TypeRef type;
     type.kind = kind;
-    type.text = text_between(begin, end);
+    type.malformed = kind == TypeKind::Unknown;
     type.location = begin < tokens_.size() ? tokens_[begin].location : SourceLocation{};
     type.range = range_between(begin, end);
     return type;
@@ -159,9 +175,15 @@ TypeRef TypeTokenParser::make_node(TypeKind kind, size_t begin, size_t end) cons
 TypeRef TypeTokenParser::parse_type(std::initializer_list<TokenKind> stops) {
     const size_t begin = cursor_;
     TypeRef type = parse_prefix(stops);
+    if (!stop_at(stops) && match_ellipsis()) {
+        TypeRef out = make_node(TypeKind::PackExpansion, begin, cursor_);
+        out.children.push_back(std::move(type));
+        out.range = range_between(begin, cursor_);
+        return out;
+    }
     if (!stop_at(stops) && match(TokenKind::Arrow)) {
         std::vector<TypeRef> params;
-        if (type.kind == TypeKind::Unknown && type.text.empty()) {
+        if (type.kind == TypeKind::Unknown && !has_type_ref(type)) {
             params = {};
         } else if (type.kind == TypeKind::Function && !type.children.empty() &&
                    type_ref_is_void(type.children.front())) {
@@ -170,7 +192,6 @@ TypeRef TypeTokenParser::parse_type(std::initializer_list<TokenKind> stops) {
             params.push_back(std::move(type));
         }
         TypeRef out = parse_function_type(begin, std::move(params));
-        out.text = text_between(begin, cursor_);
         out.range = range_between(begin, cursor_);
         return out;
     }
@@ -182,14 +203,12 @@ TypeRef TypeTokenParser::parse_prefix(std::initializer_list<TokenKind> stops) {
     if (match_operator("*")) {
         TypeRef type = make_node(TypeKind::Pointer, begin, cursor_);
         type.children.push_back(parse_type(stops));
-        type.text = text_between(begin, cursor_);
         type.range = range_between(begin, cursor_);
         return type;
     }
     if (match_operator("&")) {
         TypeRef type = make_node(TypeKind::Reference, begin, cursor_);
         type.children.push_back(parse_type(stops));
-        type.text = text_between(begin, cursor_);
         type.range = range_between(begin, cursor_);
         return type;
     }
@@ -236,7 +255,6 @@ TypeRef TypeTokenParser::parse_function_type(size_t begin, std::vector<TypeRef> 
     type.children.push_back(parse_type({}));
     type.children.insert(type.children.end(), std::make_move_iterator(params.begin()),
                          std::make_move_iterator(params.end()));
-    type.text = text_between(begin, cursor_);
     type.range = range_between(begin, cursor_);
     return type;
 }
@@ -244,7 +262,9 @@ TypeRef TypeTokenParser::parse_function_type(size_t begin, std::vector<TypeRef> 
 TypeRef TypeTokenParser::parse_fn_type(size_t begin) {
     match(TokenKind::LParen);
     std::vector<TypeRef> params = parse_list_until(TokenKind::RParen);
-    match(TokenKind::RParen);
+    if (!match(TokenKind::RParen)) {
+        return make_node(TypeKind::Unknown, begin, cursor_);
+    }
     if (match(TokenKind::Arrow)) {
         return parse_function_type(begin, std::move(params));
     }
@@ -252,7 +272,6 @@ TypeRef TypeTokenParser::parse_fn_type(size_t begin) {
     type.children.push_back(void_type_ref(type.location));
     type.children.insert(type.children.end(), std::make_move_iterator(params.begin()),
                          std::make_move_iterator(params.end()));
-    type.text = text_between(begin, cursor_);
     type.range = range_between(begin, cursor_);
     return type;
 }
@@ -260,13 +279,14 @@ TypeRef TypeTokenParser::parse_fn_type(size_t begin) {
 TypeRef TypeTokenParser::parse_paren_or_function(size_t begin,
                                                  std::initializer_list<TokenKind> stops) {
     std::vector<TypeRef> params = parse_list_until(TokenKind::RParen);
-    match(TokenKind::RParen);
+    if (!match(TokenKind::RParen)) {
+        return make_node(TypeKind::Unknown, begin, cursor_);
+    }
     if (match(TokenKind::Arrow)) {
         return parse_function_type(begin, std::move(params));
     }
     if (params.size() == 1) {
         TypeRef type = std::move(params.front());
-        type.text = text_between(begin, cursor_);
         type.range = range_between(begin, cursor_);
         return type;
     }
@@ -312,7 +332,9 @@ TypeRef TypeTokenParser::parse_name_or_template(size_t begin) {
         const size_t inner_begin = cursor_;
         std::vector<TypeRef> args = parse_list_until(TokenKind::RBracket);
         const size_t inner_end = cursor_;
-        match(TokenKind::RBracket);
+        if (!match(TokenKind::RBracket)) {
+            return make_node(TypeKind::Unknown, begin, cursor_);
+        }
         const TypeKind wrapper = wrapper_type_kind(type.name);
         if (wrapper != TypeKind::Unknown && type.kind != TypeKind::Template) {
             TypeRef wrapped = make_node(wrapper, begin, cursor_);
@@ -341,8 +363,9 @@ TypeRef TypeTokenParser::parse_name_or_template(size_t begin) {
         TypeRef templ = make_node(TypeKind::Template, begin, cursor_);
         templ.name = type.name;
         templ.children = parse_angle_template_args();
-        match_operator(">");
-        templ.text = text_between(begin, cursor_);
+        if (!match_operator(">")) {
+            return make_node(TypeKind::Unknown, begin, cursor_);
+        }
         templ.range = range_between(begin, cursor_);
         type = std::move(templ);
     }

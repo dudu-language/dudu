@@ -34,3 +34,13 @@ if rg -n "expr\\.text" "$repo_root/src/dudu"; then
     echo "Expr.text has been removed; use structured Expr fields and source ranges" >&2
     exit 1
 fi
+
+if rg -n "type\\.text|left\\.text|right\\.text" "$repo_root/src/dudu"; then
+    echo "TypeRef.text has been removed; use structured TypeRef fields and source ranges" >&2
+    exit 1
+fi
+
+if rg -n "std::string text;" "$repo_root/src/dudu/ast.hpp"; then
+    echo "raw text payload fields do not belong in the core Dudu AST" >&2
+    exit 1
+fi

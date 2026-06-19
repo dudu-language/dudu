@@ -214,9 +214,14 @@ TypeRef make_type(TypeKind kind, std::string_view text, SourceLocation location)
     }
     TypeRef type;
     type.kind = kind;
-    type.text = trim_string(text);
+    const std::string value = trim_string(text);
+    if (kind == TypeKind::Named || kind == TypeKind::Qualified || kind == TypeKind::Template) {
+        type.name = value;
+    } else if (kind == TypeKind::Value || kind == TypeKind::FixedArray) {
+        type.value = value;
+    }
     type.location = location;
-    type.range = range_for_text(location, type.text);
+    type.range = range_for_text(location, value);
     return type;
 }
 

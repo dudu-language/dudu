@@ -26,11 +26,13 @@ class TypeTokenParser {
     bool at(TokenKind kind) const;
     bool at_operator(std::string_view op) const;
     bool at_identifier(std::string_view text) const;
+    bool at_ellipsis() const;
     bool stop_at(std::initializer_list<TokenKind> stops) const;
     bool match(TokenKind kind);
     bool match_operator(std::string_view op);
     bool match_identifier(std::string_view text);
     bool match_scope_separator();
+    bool match_ellipsis();
 
     SourceRange range_between(size_t begin, size_t end) const;
     std::string text_between(size_t begin, size_t end) const;

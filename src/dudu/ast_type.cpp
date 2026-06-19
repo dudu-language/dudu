@@ -121,7 +121,7 @@ std::string type_ref_head_name(const TypeRef& type) {
     case TypeKind::PackExpansion:
         return "...";
     case TypeKind::Unknown:
-        return trim_copy(type.text);
+        return {};
     }
     return {};
 }
@@ -209,9 +209,9 @@ std::string substitute_type_ref_text(const TypeRef& type,
     case TypeKind::Qualified:
         return trim_copy(type.name);
     case TypeKind::Unknown:
-        return trim_copy(type.text);
+        return {};
     }
-    return trim_copy(type.text);
+    return {};
 }
 
 std::string type_ref_text(const TypeRef& type) {
@@ -219,8 +219,8 @@ std::string type_ref_text(const TypeRef& type) {
 }
 
 bool has_type_ref(const TypeRef& type) {
-    return type.kind != TypeKind::Unknown || !trim_copy(type.text).empty() ||
-           !trim_copy(type.name).empty() || !trim_copy(type.value).empty() ||
+    return type.kind != TypeKind::Unknown || type.malformed || !trim_copy(type.name).empty() ||
+           !trim_copy(type.value).empty() ||
            !type.children.empty();
 }
 
@@ -238,7 +238,7 @@ bool type_ref_is_void(const TypeRef& type) {
 
 bool type_ref_same_shape(const TypeRef& left, const TypeRef& right) {
     if (left.kind != right.kind || left.children.size() != right.children.size() ||
-        left.name != right.name || left.value != right.value || left.text != right.text) {
+        left.malformed != right.malformed || left.name != right.name || left.value != right.value) {
         return false;
     }
     for (size_t i = 0; i < left.children.size(); ++i) {

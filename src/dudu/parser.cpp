@@ -41,7 +41,7 @@ void append_source_token(std::ostringstream& out, SourceLocation& cursor, const 
 }
 
 const TypeRef* malformed_type_node(const TypeRef& type) {
-    if (type.kind == TypeKind::Unknown) {
+    if (type.kind == TypeKind::Unknown && type.malformed) {
         return &type;
     }
     for (const TypeRef& child : type.children) {
@@ -396,10 +396,7 @@ TypeRef Parser::parse_type_piece(const JoinedTokens& piece) const {
     TypeTokenParser parser(tokens);
     TypeRef type = parser.parse();
     if (const TypeRef* malformed = malformed_type_node(type)) {
-        std::string spelling = trim_string(malformed->text);
-        if (spelling.empty()) {
-            spelling = trim_string(type.text);
-        }
+        std::string spelling = trim_string(source_text_for_tokens(piece.begin, piece.end));
         const std::string message =
             spelling.empty() ? "malformed type syntax" : "malformed type syntax: " + spelling;
         throw CompileError(malformed->location.line > 0 ? malformed->location : type.location,

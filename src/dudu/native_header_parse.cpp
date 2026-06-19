@@ -26,6 +26,14 @@ TypeRef parse_native_type_text(std::string text, const SourceLocation& location)
             parse_type_text(trim_copy(text.substr(0, text.size() - 3)), location), location);
     }
     TypeRef type = parse_type_text(text, location);
+    if ((type.kind == TypeKind::Const || type.kind == TypeKind::Volatile ||
+         type.kind == TypeKind::Atomic || type.kind == TypeKind::Storage ||
+         type.kind == TypeKind::Shared || type.kind == TypeKind::Device ||
+         type.kind == TypeKind::Static || type.kind == TypeKind::Pointer ||
+         type.kind == TypeKind::Reference || type.kind == TypeKind::PackExpansion) &&
+        type.children.empty()) {
+        return TypeRef{};
+    }
     for (TypeRef& child : type.children) {
         child = parse_native_type_text(type_ref_text(child), child.location);
     }
