@@ -102,15 +102,18 @@ In progress.
 - LSP definition lookup for imported native type annotations follows
   structured native type-alias metadata to the scanned native class declaration
   when available, so aliases such as `native.Widget` can jump to the C++ class
-  rather than stopping at a `using` declaration.
+  rather than stopping at a `using` declaration. That lookup now builds an
+  indexed native class definition map keyed by Dudu binding name and
+  `NativeSymbolId`, and it prefers identity when alias metadata is rich enough
+  before falling back to the structured alias target `TypeRef` head.
 
 Still missing:
 
 - Clang USR collection.
 - Identity-aware symbol maps as the primary sema key.
 - Identity-aware type compatibility when both sides carry native identity facts.
-- LSP indexing keyed directly by canonical native identity rather than
-  request-time alias target lookup.
+- Broader LSP indexing keyed directly by canonical native identity for hover,
+  completion, references, and semantic token classification.
 
 ## Definition Of Done
 
