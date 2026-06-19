@@ -45,6 +45,7 @@ forbidden=(
     "bases\\.insert\\(type_ref_text"
     "native_function_key"
     "method_key\\("
+    "template_method_name"
 )
 
 for pattern in "${forbidden[@]}"; do

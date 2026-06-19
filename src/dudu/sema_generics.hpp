@@ -29,8 +29,6 @@ FunctionSignature instantiate_generic_signature(const FunctionDecl& fn,
                                                 const std::vector<TypeRef>& args);
 ClassDecl instantiate_generic_class(ClassDecl klass, const std::vector<TypeRef>& args,
                                     const std::string& instantiated_name);
-std::string template_method_name(const Expr& expr, const std::string& callee_base,
-                                 size_t method_dot);
 bool known_template_constructor_type(const FunctionScope& scope, const TypeRef& callee_type);
 
 } // namespace dudu

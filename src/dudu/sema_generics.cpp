@@ -286,14 +286,6 @@ ClassDecl instantiate_generic_class(ClassDecl klass, const std::vector<TypeRef>&
     return klass;
 }
 
-std::string template_method_name(const Expr& expr, const std::string& callee_base,
-                                 size_t method_dot) {
-    std::ostringstream out;
-    out << trim(callee_base.substr(method_dot + 1)) << "[" << template_args_lookup_text(expr)
-        << "]";
-    return out.str();
-}
-
 bool known_template_constructor_type(const FunctionScope& scope, const TypeRef& callee_type) {
     const std::string base = base_type(callee_type);
     if (base.find('.') != std::string::npos || base.find("::") != std::string::npos) {

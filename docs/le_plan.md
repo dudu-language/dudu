@@ -2185,6 +2185,9 @@ push. They are not release packaging work.
    metadata, return `TypeRef`, and parameter `TypeRef` nodes structurally. The
    old rendered `native_function_key` and `method_key` helpers have been
    deleted and guarded.
+   The dead rendered `template_method_name` helper has been deleted as well;
+   template method sema now uses parsed member names and `TypeRef` template
+   argument lists directly.
    C++ type lowering from structured named and qualified `TypeRef` nodes now
    goes through a name-only lowering helper instead of rendering the type name
    and sending it back through the raw string type parser. Raw type-string
