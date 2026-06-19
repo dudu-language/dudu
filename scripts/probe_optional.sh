@@ -135,6 +135,27 @@ probe_libpng() {
     echo "ok libpng"
 }
 
+probe_libjpeg() {
+    if ! pkg-config --exists libjpeg; then
+        echo "skip libjpeg: pkg-config package not found"
+        return
+    fi
+
+    local cpp="$repo_root/build/probe_libjpeg_compress_setup.cpp"
+    local bin="$repo_root/build/probe_libjpeg_compress_setup"
+    "$repo_root/build/duc" emit "$repo_root/tests/fixtures/libjpeg_compress_setup.dd" -o "$cpp"
+    "${CXX:-c++}" -std=c++20 "$cpp" $(pkg-config --cflags --libs libjpeg) -o "$bin"
+    set +e
+    "$bin"
+    local status=$?
+    set -e
+    if [[ "$status" -ne 42 ]]; then
+        echo "libjpeg probe returned $status, expected 42" >&2
+        exit 1
+    fi
+    echo "ok libjpeg"
+}
+
 probe_openssl() {
     if ! pkg-config --exists openssl; then
         echo "skip openssl: pkg-config package not found"
@@ -626,6 +647,7 @@ probe_sqlite
 probe_zlib
 probe_curl
 probe_libpng
+probe_libjpeg
 probe_openssl
 probe_libevent
 probe_libxml2

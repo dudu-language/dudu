@@ -1213,9 +1213,10 @@ push. They are not release packaging work.
    behind an adapter.
 
    Current optional probes pass for glm, Eigen, OpenBLAS, OpenCV, sqlite, zlib,
-   curl, OpenSSL, libevent, libxml2, Cairo, libpng, stb, fmt, spdlog, Boost filesystem,
-   threading, POSIX mmap, POSIX pthread, raylib, SDL3, GLFW, Dear ImGui, X11,
-   Wayland, OpenCL, Vulkan, and FFmpeg on this machine. Optional
+   curl, OpenSSL, libevent, libxml2, Expat, Cairo, FreeType, libpng, libjpeg,
+   stb, fmt, spdlog, Boost filesystem, threading, POSIX mmap, POSIX pthread,
+   raylib, SDL3, GLFW, Dear ImGui, X11, Wayland, OpenCL, Vulkan, and FFmpeg on
+   this machine. Optional
    dev-only
    dependencies can be installed into the ignored `third_party/install` prefix
    with `scripts/setup_dev_deps.sh`; the main Dudu build does not require them.
@@ -1227,6 +1228,9 @@ push. They are not release packaging work.
    `extern "C"` wrapper pattern, such as FFmpeg's `libavcodec/packet.h`.
    `import cxx` covers C++-aware C headers that own their own linkage blocks
    but expose C-style globals; libxml2 imports directly through that path.
+   libjpeg coverage found a scanner hardening target: fields introduced through
+   C preprocessor struct-member macros, such as `jpeg_common_fields`, are not
+   modeled yet.
 
    This matrix is not part of the always-on fast loop. Keep fast compiler
    validation small, and run the real-library/example matrix periodically, when

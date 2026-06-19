@@ -44,6 +44,7 @@ Last local probe run: 2026-06-19 with `scripts/probe_optional.sh`.
 | Cairo | 2D graphics | C API, opaque drawing context/surface pointers, enum constants, image buffer inspection, lifecycle | pass | `scripts/probe_optional.sh` / `cairo_image_surface.dd` | no |
 | FreeType | font / text | C API, typedefed opaque pointer, output params, version query, lifecycle | pass | `scripts/probe_optional.sh` / `freetype_version.dd` | no |
 | libpng | image | C API, typedef aliases, byte buffers, signature checks, link | pass | `scripts/probe_optional.sh` / `libpng_signature.dd` | no |
+| libjpeg | image | C API, local C struct, address passing, C enum constants, setup function, link | pass | `scripts/probe_optional.sh` / `libjpeg_compress_setup.dd` | no |
 | stb headers | media / utility | packaged single-header C API, byte buffers, output params, link | pass | `scripts/probe_optional.sh` / `stb_image_info.dd` | no |
 | fmt | C++ utility | variadic templates, runtime format strings, `std::string` return | pass | `scripts/probe_optional.sh` / `fmt_format.dd` | no |
 | spdlog | logging | template-heavy header stack, formatted logging call, link | pass | `scripts/probe_optional.sh` / `spdlog_basic.dd` | no |
@@ -69,6 +70,7 @@ compiler matures.
 | --- | --- | --- | --- | --- |
 | CUDA / CUBLAS | GPU / ML | host API, device buffers, BLAS-like calls | skip | Needs NVIDIA tooling/hardware. |
 | platform APIs | OS | Win32, Cocoa subsets | planned | Platform-specific; X11 and Wayland have Linux probes. |
+| macro-expanded C struct fields | C interop | fields introduced through C preprocessor member macros | planned | Found while probing libjpeg: `jpeg_compress_struct.err` comes from `jpeg_common_fields`, and Dudu's scanner does not model that field yet. |
 
 ## Rules
 
