@@ -207,6 +207,37 @@ void test_module_loader_rejects_duplicate_from_aliases() {
     assert(failed);
 }
 
+void test_merged_output_rejects_same_named_module_declarations() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_merged_output_collision_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "left.dd", "def score() -> i32:\n"
+                                "    return 20\n");
+    write_file(dir / "right.dd", "def score() -> i32:\n"
+                                 "    return 22\n");
+    write_file(dir / "main.dd", "import left as l\n"
+                                "import right as r\n"
+                                "\n"
+                                "def main() -> i32:\n"
+                                "    return l.score() + r.score()\n");
+
+    const dudu::ModuleAst module = dudu::load_source_tree(dir / "main.dd");
+    dudu::analyze_module_tree(module, {.check_bodies = true});
+
+    bool rejected = false;
+    try {
+        dudu::reject_merged_output_module_conflicts(module);
+    } catch (const dudu::CompileError& error) {
+        const std::string message = error.what();
+        rejected = message.find("merged C++ output cannot combine Dudu modules") !=
+                       std::string::npos &&
+                   message.find("[build] backend = \"cmake\"") != std::string::npos &&
+                   message.find("duc emit-modules") != std::string::npos;
+    }
+    assert(rejected);
+}
+
 void test_module_loader_qualified_module_imports() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_module_qualified_import_test";
@@ -1747,6 +1778,7 @@ int main() {
         test_import_bindings();
         test_module_loader_canonicalizes_physical_modules();
         test_module_loader_rejects_duplicate_from_aliases();
+        test_merged_output_rejects_same_named_module_declarations();
         test_module_loader_qualified_module_imports();
         test_module_loader_preserves_declaration_origins();
         test_cpp_module_artifacts_preserve_module_boundaries();

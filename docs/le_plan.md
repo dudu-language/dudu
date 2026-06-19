@@ -307,7 +307,9 @@ diagnostic that points users at `[build] backend = "cmake"` through
 `dudu build` or `duc emit-modules` instead of surfacing generic
 duplicate-declaration fallout. The same guard also applies to explicit merged
 `--emit-cpp`/header output, even when the project manifest uses the CMake
-backend.
+backend. A focused frontend regression proves the module tree can analyze
+successfully while the merged-output compatibility backend rejects the same
+named declarations with that backend guidance.
 
 ## Feature Validation Bar
 
