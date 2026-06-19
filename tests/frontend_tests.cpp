@@ -577,6 +577,20 @@ void test_lsp_unreachable_lint_uses_branch_structure() {
     assert(unreachable_count == 1);
 }
 
+void test_lsp_unreachable_lint_does_not_flag_partial_branch_return() {
+    const dudu::Document doc{.uri = "",
+                             .path = "lint_partial_branch_return.dd",
+                             .text = "def choose(x: i32) -> i32:\n"
+                                     "    if x < 0:\n"
+                                     "        return -1\n"
+                                     "    value: i32 = x + 1\n"
+                                     "    return value\n"};
+    const std::vector<dudu::Diagnostic> diags = dudu::diagnostics_for_document(doc);
+    for (const dudu::Diagnostic& diag : diags) {
+        assert(diag.code != "dudu.lint.unreachable");
+    }
+}
+
 void test_lsp_scope_lint_tracks_inferred_assignment_locals() {
     const dudu::Document doc{.uri = "",
                              .path = "lint_inferred_locals.dd",
@@ -1192,6 +1206,7 @@ int main() {
         test_semantic_diagnostics();
         test_lsp_diagnostic_sources_are_structured();
         test_lsp_unreachable_lint_uses_branch_structure();
+        test_lsp_unreachable_lint_does_not_flag_partial_branch_return();
         test_lsp_scope_lint_tracks_inferred_assignment_locals();
         test_lsp_suspicious_cast_lint_uses_type_refs();
         test_lsp_references_track_assignment_bindings();
