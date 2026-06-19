@@ -532,6 +532,10 @@ push. They are not release packaging work.
    function return types and out-of-line method receiver types now live as
    `TypeRef` nodes; string return signatures remain only at native/import
    compatibility boundaries such as scanned C++ header functions.
+   Out-of-line method attachment now compares the receiver's structured
+   `TypeRef` head name directly; the old `function_receiver_type_text` helper
+   that rendered the receiver type only to compare it with class names has been
+   deleted and guarded.
    `struct stat`.
    Normal template-call emission lowers bracket arguments from parsed
    `TypeRef` nodes, including non-type value arguments, instead of falling back

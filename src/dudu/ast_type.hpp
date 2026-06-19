@@ -32,7 +32,6 @@ TypeRef void_type_ref(SourceLocation location = {});
 TypeRef wrapped_type_ref(TypeKind kind, TypeRef child, SourceLocation location = {});
 TypeRef pack_expansion_type_ref(TypeRef child, SourceLocation location = {});
 bool function_has_receiver_type(const FunctionDecl& fn);
-std::string function_receiver_type_text(const FunctionDecl& fn);
 bool function_has_return_type(const FunctionDecl& fn);
 TypeRef function_return_type_ref(const FunctionDecl& fn);
 std::vector<TypeRef> native_function_param_type_refs(const NativeFunctionDecl& fn);

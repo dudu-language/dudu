@@ -326,10 +326,6 @@ bool function_has_receiver_type(const FunctionDecl& fn) {
     return has_type_ref(fn.receiver_type_ref);
 }
 
-std::string function_receiver_type_text(const FunctionDecl& fn) {
-    return function_has_receiver_type(fn) ? type_ref_text(fn.receiver_type_ref) : std::string{};
-}
-
 bool function_has_return_type(const FunctionDecl& fn) {
     return has_type_ref(fn.return_type_ref);
 }

@@ -54,7 +54,7 @@ const TypeRef* malformed_type_node(const TypeRef& type) {
 }
 
 void attach_out_of_line_method(ModuleAst& module, FunctionDecl method) {
-    const std::string receiver_type = function_receiver_type_text(method);
+    const std::string receiver_type = type_ref_head_name(method.receiver_type_ref);
     for (ClassDecl& klass : module.classes) {
         if (klass.name == receiver_type) {
             klass.methods.push_back(std::move(method));
