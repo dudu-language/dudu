@@ -21,7 +21,6 @@ enum class WrapperMatchKind {
 
 struct WrapperMatchType {
     WrapperMatchKind kind = WrapperMatchKind::None;
-    std::vector<std::string> args;
     std::vector<TypeRef> arg_refs;
 };
 

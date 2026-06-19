@@ -1520,15 +1520,18 @@ void test_wrapper_match_type_uses_type_ast() {
     const dudu::WrapperMatchType result =
         dudu::wrapper_match_type(dudu::parse_type_text("Result[list[i32], Option[str]]"));
     assert(result.kind == dudu::WrapperMatchKind::Result);
-    assert(result.args.size() == 2);
-    assert(result.args[0] == "list[i32]");
-    assert(result.args[1] == "Option[str]");
+    assert(result.arg_refs.size() == 2);
+    assert(result.arg_refs[0].kind == dudu::TypeKind::Template);
+    assert(result.arg_refs[0].name == "list");
+    assert(result.arg_refs[1].kind == dudu::TypeKind::Template);
+    assert(result.arg_refs[1].name == "Option");
 
     const dudu::WrapperMatchType option =
         dudu::wrapper_match_type(dudu::parse_type_text("Option[Result[i32, str]]"));
     assert(option.kind == dudu::WrapperMatchKind::Option);
-    assert(option.args.size() == 1);
-    assert(option.args[0] == "Result[i32, str]");
+    assert(option.arg_refs.size() == 1);
+    assert(option.arg_refs[0].kind == dudu::TypeKind::Template);
+    assert(option.arg_refs[0].name == "Result");
 }
 
 void test_member_completion_target_uses_tokens() {

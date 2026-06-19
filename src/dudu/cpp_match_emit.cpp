@@ -82,20 +82,17 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                 if (case_name &&
                     (*case_name == "Some" || *case_name == "Ok" || *case_name == "Err")) {
                     if (const auto binding = wrapper_case_binding_name(child.pattern_expr)) {
-                        if (*case_name == "Some" && wrapper.args.size() == 1 &&
-                            wrapper.arg_refs.size() == 1) {
+                        if (*case_name == "Some" && wrapper.arg_refs.size() == 1) {
                             nested.bind(*binding);
                             nested_type_refs[*binding] = wrapper.arg_refs[0];
                             out << indent(depth + 1) << "auto&& " << *binding << " = " << subject
                                 << ".value();\n";
-                        } else if (*case_name == "Ok" && wrapper.args.size() == 2 &&
-                                   wrapper.arg_refs.size() == 2) {
+                        } else if (*case_name == "Ok" && wrapper.arg_refs.size() == 2) {
                             nested.bind(*binding);
                             nested_type_refs[*binding] = wrapper.arg_refs[0];
                             out << indent(depth + 1) << "auto&& " << *binding << " = " << subject
                                 << ".value;\n";
-                        } else if (*case_name == "Err" && wrapper.args.size() == 2 &&
-                                   wrapper.arg_refs.size() == 2) {
+                        } else if (*case_name == "Err" && wrapper.arg_refs.size() == 2) {
                             nested.bind(*binding);
                             nested_type_refs[*binding] = wrapper.arg_refs[1];
                             out << indent(depth + 1) << "auto&& " << *binding << " = " << subject

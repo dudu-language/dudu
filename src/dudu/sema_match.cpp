@@ -81,13 +81,12 @@ void bind_wrapper_case(FunctionScope& nested, const WrapperMatchType& wrapper, c
         pattern.children.front().kind != ExprKind::Name || pattern.children.front().name.empty()) {
         sema_fail(location, "wrapper payload case expects one binding name");
     }
-    if (wrapper.kind == WrapperMatchKind::Option && *name == "Some" && wrapper.args.size() == 1 &&
+    if (wrapper.kind == WrapperMatchKind::Option && *name == "Some" &&
         wrapper.arg_refs.size() == 1) {
         bind_local(nested, pattern.children.front().name, wrapper.arg_refs[0]);
         return;
     }
-    if (wrapper.kind == WrapperMatchKind::Result && wrapper.args.size() == 2 &&
-        wrapper.arg_refs.size() == 2) {
+    if (wrapper.kind == WrapperMatchKind::Result && wrapper.arg_refs.size() == 2) {
         if (*name == "Ok") {
             bind_local(nested, pattern.children.front().name, wrapper.arg_refs[0]);
             return;

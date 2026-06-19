@@ -2057,3 +2057,5 @@ push. They are not release packaging work.
    C++ associated-type assignment matching now uses structured `TypeRef` head
    names only; missing/unknown raw type text no longer participates by rendered
    fallback.
+   Wrapper match metadata no longer stores rendered template argument mirrors;
+   Option/Result pattern binding uses the parsed `TypeRef` argument list only.
