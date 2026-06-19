@@ -89,17 +89,17 @@ std::string ast_concrete_source_file(const std::string& line) {
     return file == "line" || file == "col" ? std::string{} : file;
 }
 
-SourceLocation ast_source_location(const std::string& line, const SourceLocation& fallback,
+SourceLocation ast_source_location(const std::string& line, const SourceLocation& context_location,
                                    const std::string& current_file) {
     static const std::regex expansion(R"( <([^<>:]+):([0-9]+):([0-9]+)[,>])");
     static const std::regex spelling(R"( col:([0-9]+))");
     std::smatch match;
     if (!std::regex_search(line, match, expansion)) {
-        return fallback;
+        return context_location;
     }
     const std::string file = match[1].str();
     if ((file == "line" || file == "col") && current_file.empty()) {
-        return fallback;
+        return context_location;
     }
     SourceLocation out;
     out.file = file == "line" || file == "col" ? current_file : file;
