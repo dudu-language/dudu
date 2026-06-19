@@ -1,0 +1,16 @@
+import c "expat.h" as expat
+
+
+def main() -> i32:
+    parser = expat.XML_ParserCreate(None)
+    if parser == None:
+        return 1
+
+    text: str = "<root><item>dudu</item></root>"
+    ok = expat.XML_Parse(parser, text.c_str(), i32(len(text)), 1)
+    if ok == expat.XML_STATUS_ERROR:
+        expat.XML_ParserFree(parser)
+        return 2
+
+    expat.XML_ParserFree(parser)
+    return 42

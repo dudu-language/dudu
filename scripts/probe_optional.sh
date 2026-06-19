@@ -198,6 +198,27 @@ probe_libxml2() {
     echo "ok libxml2"
 }
 
+probe_expat() {
+    if ! pkg-config --exists expat; then
+        echo "skip expat: pkg-config package not found"
+        return
+    fi
+
+    local cpp="$repo_root/build/probe_expat_parse.cpp"
+    local bin="$repo_root/build/probe_expat_parse"
+    "$repo_root/build/duc" emit "$repo_root/tests/fixtures/expat_parse.dd" -o "$cpp"
+    "${CXX:-c++}" -std=c++20 "$cpp" $(pkg-config --cflags --libs expat) -o "$bin"
+    set +e
+    "$bin"
+    local status=$?
+    set -e
+    if [[ "$status" -ne 42 ]]; then
+        echo "expat probe returned $status, expected 42" >&2
+        exit 1
+    fi
+    echo "ok expat"
+}
+
 probe_cairo() {
     if ! pkg-config --exists cairo; then
         echo "skip cairo: pkg-config package not found"
@@ -608,6 +629,7 @@ probe_libpng
 probe_openssl
 probe_libevent
 probe_libxml2
+probe_expat
 probe_cairo
 probe_freetype
 probe_fmt

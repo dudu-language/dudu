@@ -1599,6 +1599,11 @@ push. They are not release packaging work.
    an earlier implementation was awkward, either delete it immediately or add a
    concrete cleanup note here with the file/function name.
 
+   Apply the same bar to examples, fixtures, and dogfood repos used to validate
+   Dudu. If a sample has pass-through functions, fake abstractions, redundant
+   getters, unnecessary namespace noise, or old workaround shapes, clean it up
+   instead of treating the awkward code as a language limitation.
+
    Audit for:
 
    - repo-wide silly artifacts found by targeted searches for one-line helper
