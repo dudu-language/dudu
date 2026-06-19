@@ -2096,6 +2096,11 @@ push. They are not release packaging work.
    native-type normalizer used for free functions, so imported declaration
    metadata receives structured pack-expansion and nested native type cleanup
    at the boundary instead of leaving direct raw `parse_type_text` holes.
+   Bound native template substitution now actually applies structured
+   substitution per parameter/return field: a messy unrelated native binding
+   no longer disables `TypeRef` substitution or pack expansion for clean
+   fields in the same overload. The remaining text replacement is reserved for
+   the specific field that needs native-artifact fallback.
    C++ type lowering from structured named and qualified `TypeRef` nodes now
    goes through a name-only lowering helper instead of rendering the type name
    and sending it back through the raw string type parser. Raw type-string

@@ -182,10 +182,6 @@ std::string replace_template_bindings(std::string type, const NativeTemplateBind
     return collapse_decay_and_strip(std::move(type));
 }
 
-std::map<std::string, TypeRef> type_ref_bindings(const NativeTemplateBindings& bindings) {
-    return bindings;
-}
-
 TypeRef require_signature_type_ref(const TypeRef& type, std::string_view context) {
     if (has_type_ref(type)) {
         return type;
@@ -212,10 +208,33 @@ bool structured_binding_type_ref(const TypeRef& type) {
     return true;
 }
 
-bool structured_binding_texts(const NativeTemplateBindings& bindings) {
+std::map<std::string, TypeRef> structured_type_ref_bindings(
+    const NativeTemplateBindings& bindings) {
+    std::map<std::string, TypeRef> out;
     for (const auto& [name, type] : bindings) {
-        (void)name;
-        if (!structured_binding_type_ref(type)) {
+        if (structured_binding_type_ref(type)) {
+            out.emplace(name, type);
+        }
+    }
+    return out;
+}
+
+bool structured_substitution_allowed(const TypeRef& type,
+                                     const NativeTemplateBindings& bindings) {
+    if (!structured_binding_type_ref(type)) {
+        return false;
+    }
+    if (type_ref_contains_kind(type, TypeKind::PackExpansion)) {
+        return false;
+    }
+
+    std::vector<std::string> placeholders;
+    std::set<std::string> seen;
+    append_placeholders(placeholders, seen, type, true);
+    append_placeholders(placeholders, seen, type, false);
+    for (const std::string& placeholder : placeholders) {
+        const auto found = bindings.find(placeholder);
+        if (found != bindings.end() && !structured_binding_type_ref(found->second)) {
             return false;
         }
     }
@@ -323,20 +342,18 @@ FunctionSignature substitute_explicit_template_signature(FunctionSignature signa
 FunctionSignature substitute_bound_template_signature(FunctionSignature signature,
                                                       const NativeTemplateBindings& bindings,
                                                       const NativePackBindingMap& pack_bindings) {
-    const bool structured_bindings = structured_binding_texts(bindings);
-    const std::map<std::string, TypeRef> refs =
-        structured_bindings ? type_ref_bindings(bindings) : std::map<std::string, TypeRef>{};
+    const std::map<std::string, TypeRef> refs = structured_type_ref_bindings(bindings);
 
     std::vector<TypeRef> params;
     params.reserve(signature_param_count(signature));
     for (size_t i = 0; i < signature_param_count(signature); ++i) {
         const TypeRef param_type = signature_param_type_ref(signature, i);
-        if (structured_bindings && structured_binding_type_ref(param_type)) {
-            if (const std::optional<std::vector<TypeRef>> expanded =
-                    structured_pack_expansion(param_type, pack_bindings)) {
-                params.insert(params.end(), expanded->begin(), expanded->end());
-                continue;
-            }
+        if (const std::optional<std::vector<TypeRef>> expanded =
+                structured_pack_expansion(param_type, pack_bindings)) {
+            params.insert(params.end(), expanded->begin(), expanded->end());
+            continue;
+        }
+        if (structured_substitution_allowed(param_type, bindings)) {
             params.push_back(substitute_type_ref(param_type, refs));
             continue;
         }
@@ -348,7 +365,7 @@ FunctionSignature substitute_bound_template_signature(FunctionSignature signatur
     set_signature_param_types(signature, std::move(params));
 
     const TypeRef return_type = signature_return_type_ref(signature);
-    if (structured_bindings && structured_binding_type_ref(return_type)) {
+    if (structured_substitution_allowed(return_type, bindings)) {
         set_signature_return_type(signature, substitute_type_ref(return_type, refs));
         return signature;
     }
