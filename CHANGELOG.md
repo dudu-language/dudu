@@ -86,6 +86,9 @@
 
 ### Changed
 
+- Expanded `docs/le_plan.md` with explicit prototype-cruft cleanup rules for
+  vacuous helpers, one-line wrappers, temporary compile-shape branches, and
+  behavior-preserving style passes.
 - Made LSP rename declaration-anchored across the workspace and allowed
   current-document edits from an unqualified call site when the call resolves
   to one renameable Dudu declaration in that document.

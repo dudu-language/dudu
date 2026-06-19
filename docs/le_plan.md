@@ -51,11 +51,16 @@ explicit cleanup pass for that work, not just feature implementation.
 Required cleanup behavior:
 
 - delete one-line wrappers that do not encode a real abstraction or boundary
+- delete vacuous helpers such as generic functions that always return a
+  constant value, wrappers that only forward arguments unchanged, and helpers
+  whose only purpose was to satisfy a temporary call shape
 - merge duplicate helpers into one clearly owned implementation
 - split files that violate the project style rules or mix unrelated compiler
   phases
 - remove stale compatibility paths for unreleased syntax instead of preserving
   them for nonexistent users
+- remove "make it compile" branches once the real parser, module resolver,
+  type checker, or native-boundary model owns the behavior
 - rename helpers so `fallback`, `legacy`, `compat`, and `raw` only appear at
   intentional native-boundary or migration-boundary APIs
 - move reusable logic out of ad hoc local lambdas when it has become a compiler
@@ -64,6 +69,8 @@ Required cleanup behavior:
   language feature exists
 - prefer a hard diagnostic over silently accepting a malformed internal state
   that would make later phases guess
+- keep cleanup commits behavior-preserving unless the cleanup exposes a bug;
+  when it exposes a bug, add the regression fixture in the same slice
 
 This pass should run after each major architecture slice and before claiming a
 phase complete. The goal is not cosmetic churn. The goal is to keep Dudu from
