@@ -1335,9 +1335,12 @@ push. They are not release packaging work.
    `up-to-date` outcome by default. `--quiet` suppresses project-driver
    progress output for scripts. `dudu check` now prints `check` and `ok` lines
    on successful validation unless `--quiet` is set, while `duc check` remains
-   quiet for direct compiler-driver scripts. `dudu bench` is documented in
-   help and parses project-driver flags such as `--quiet`/`--help`, with
-   benchmark command arguments still available after `--`.
+   quiet for direct compiler-driver scripts. `dudu fmt` formats either the
+   current project tree or an explicit file in place by default, while `duc fmt`
+   keeps the direct stdout-oriented formatter behavior. `dudu bench` is
+   documented in help and parses project-driver flags such as
+   `--quiet`/`--help`, with benchmark command arguments still available after
+   `--`.
    The generated CMake test backend now uses `duc emit-test-modules` to emit
    per-module test-mode `.hpp/.cpp` artifacts plus a small generated
    `test_harness.cpp`; generated module sources suppress normal executable

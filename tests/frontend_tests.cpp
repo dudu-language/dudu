@@ -5,6 +5,7 @@
 #include "dudu/cpp_lower.hpp"
 #include "dudu/cpp_stmt_types.hpp"
 #include "dudu/format.hpp"
+#include "dudu/format_path.hpp"
 #include "dudu/language_server_diagnostics.hpp"
 #include "dudu/language_server_navigation.hpp"
 #include "dudu/lexer.hpp"
@@ -939,6 +940,22 @@ void test_formatter() {
     assert(tabs == "def main() -> i32:\n"
                    "    value: str = \"\\tkept\"\n"
                    "    return 0\n");
+
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_format_path_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir / "src");
+    std::filesystem::create_directories(dir / "build");
+    write_file(dir / "src" / "main.dd", "def main() -> i32:   \n\treturn 0\n");
+    write_file(dir / "build" / "generated.dd", "def generated() -> i32:   \n\treturn 1\n");
+
+    dudu::format_path_in_place(dir / "src" / "main.dd");
+    assert(read_file(dir / "src" / "main.dd") == "def main() -> i32:\n"
+                                                 "    return 0\n");
+
+    dudu::format_path_in_place(dir, {.excluded_dirs = {dir / "build"}});
+    assert(read_file(dir / "build" / "generated.dd") == "def generated() -> i32:   \n"
+                                                        "\treturn 1\n");
 }
 
 void test_list_iterator_methods() {

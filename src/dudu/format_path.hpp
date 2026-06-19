@@ -13,6 +13,8 @@ struct FormatPathOptions {
 
 bool check_formatted_path(const std::filesystem::path& path,
                           const FormatPathOptions& options = {});
+void format_path_in_place(const std::filesystem::path& path,
+                          const FormatPathOptions& options = {});
 void format_path(const std::filesystem::path& path,
                  const std::optional<std::filesystem::path>& output, std::ostream& stream,
                  const FormatPathOptions& options = {});

@@ -353,6 +353,10 @@ int run_cli(int argc, char** argv) {
         if (options.check) {
             return check_formatted_path(options.input, format_options) ? 0 : 1;
         }
+        if (options.project_driver && !options.output.has_value()) {
+            format_path_in_place(options.input, format_options);
+            return 0;
+        }
         format_path(options.input, options.output, std::cout, format_options);
         return 0;
     }

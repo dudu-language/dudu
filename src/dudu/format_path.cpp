@@ -106,6 +106,25 @@ bool check_formatted_path(const std::filesystem::path& path, const FormatPathOpt
     return ok;
 }
 
+void format_path_in_place(const std::filesystem::path& path, const FormatPathOptions& options) {
+    if (!std::filesystem::is_directory(path)) {
+        format_file_in_place(path);
+        return;
+    }
+    const std::vector<std::filesystem::path> excluded_dirs = normalized_excludes(options);
+    for (auto it = std::filesystem::recursive_directory_iterator(path);
+         it != std::filesystem::recursive_directory_iterator(); ++it) {
+        const std::filesystem::directory_entry& entry = *it;
+        if (entry.is_directory() && excluded_dir(entry.path(), excluded_dirs)) {
+            it.disable_recursion_pending();
+            continue;
+        }
+        if (is_dudu_file(entry)) {
+            format_file_in_place(entry.path());
+        }
+    }
+}
+
 void format_path(const std::filesystem::path& path,
                  const std::optional<std::filesystem::path>& output, std::ostream& stream,
                  const FormatPathOptions& options) {
@@ -121,18 +140,7 @@ void format_path(const std::filesystem::path& path,
     if (output.has_value() && !output->empty()) {
         throw std::runtime_error("cannot format a directory to one output file");
     }
-    const std::vector<std::filesystem::path> excluded_dirs = normalized_excludes(options);
-    for (auto it = std::filesystem::recursive_directory_iterator(path);
-         it != std::filesystem::recursive_directory_iterator(); ++it) {
-        const std::filesystem::directory_entry& entry = *it;
-        if (entry.is_directory() && excluded_dir(entry.path(), excluded_dirs)) {
-            it.disable_recursion_pending();
-            continue;
-        }
-        if (is_dudu_file(entry)) {
-            format_file_in_place(entry.path());
-        }
-    }
+    format_path_in_place(path, options);
 }
 
 } // namespace dudu

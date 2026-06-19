@@ -392,8 +392,10 @@ Current implementation reality:
   changing `duc check` script behavior.
 - `dudu fmt` with no input formats the project tree from the current directory
   while skipping generated/build directories such as `.git`, `build`, and the
-  configured `[build] dir`. `duc fmt <dir>` remains the direct recursive
-  formatter for an explicit directory.
+  configured `[build] dir`. `dudu fmt path/to/file.dd` formats that file in
+  place without printing the formatted source to stdout. `duc fmt <file>`
+  remains the direct formatter that prints formatted text unless an explicit
+  output is requested.
 - `dudu bench` is documented in help. `--quiet`, `--verbose`, `--help`, and
   `--version` are parsed as project-driver flags; benchmark command arguments
   that look like flags can still be passed after `--`.
