@@ -1231,7 +1231,11 @@ push. They are not release packaging work.
    output for `dudu build`, `dudu run`, and `dudu test` while keeping full
    command lines behind `--verbose`; cached direct builds also print an explicit
    `up-to-date` outcome by default. `--quiet` suppresses project-driver
-   progress output for scripts.
+   progress output for scripts. `dudu check` now prints `check` and `ok` lines
+   on successful validation unless `--quiet` is set, while `duc check` remains
+   quiet for direct compiler-driver scripts. `dudu bench` is documented in
+   help and parses project-driver flags such as `--quiet`/`--help`, with
+   benchmark command arguments still available after `--`.
    The generated CMake test backend still emits one generated harness
    translation unit; true per-module tests need test-mode module artifacts that
    expose test functions to the harness and suppress normal executable entry

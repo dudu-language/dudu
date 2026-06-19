@@ -83,6 +83,9 @@
 
 ### Changed
 
+- Added project-driver output for successful `dudu check`, documented
+  `dudu bench` in help, and made `dudu bench --quiet`/`--help` behave as
+  project-driver flags while preserving benchmark arguments after `--`.
 - Improved native overload diagnostics to show argument types and candidate
   signatures.
 - Included local header path, size, and mtime in native-header cache keys so

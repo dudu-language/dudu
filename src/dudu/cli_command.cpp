@@ -103,11 +103,9 @@ int run_project_benchmarks(const CliOptions& options) {
     if (command.empty()) {
         fail("missing [bench] command and scripts/bench.sh");
     }
-    return std::system(
-               project_shell_command(config, append_command_args(command, options.command_args))
-                   .c_str()) == 0
-               ? 0
-               : 1;
+    const std::string effective_command = append_command_args(command, options.command_args);
+    print_project_step(options.project_driver && !options.quiet, "bench", effective_command);
+    return std::system(project_shell_command(config, effective_command).c_str()) == 0 ? 0 : 1;
 }
 
 ProjectConfig config_for_input(const std::filesystem::path& input) {
@@ -339,7 +337,9 @@ int run_cli(int argc, char** argv) {
         return 0;
     }
     if (options.check) {
+        print_project_step(options.project_driver && !options.quiet, "check", options.input);
         (void)check_source_path(options);
+        print_project_step(options.project_driver && !options.quiet, "ok", options.input);
         return 0;
     }
     if (options.cmake) {

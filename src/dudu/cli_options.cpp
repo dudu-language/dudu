@@ -79,6 +79,28 @@ CliOptions parse_cli_options(int argc, char** argv, bool project_driver) {
     for (int i = first_arg; i < argc; ++i) {
         const std::string arg = argv[i];
         if (options.bench) {
+            if (arg == "--") {
+                while (++i < argc) {
+                    options.command_args.push_back(argv[i]);
+                }
+                break;
+            }
+            if (arg == "-h" || arg == "--help") {
+                print_cli_usage(project_driver);
+                std::exit(0);
+            }
+            if (arg == "--version") {
+                print_cli_version();
+                std::exit(0);
+            }
+            if (arg == "--verbose") {
+                options.verbose = true;
+                continue;
+            }
+            if (arg == "--quiet") {
+                options.quiet = true;
+                continue;
+            }
             options.command_args.push_back(arg);
             continue;
         }

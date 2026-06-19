@@ -309,16 +309,27 @@ grep -q "inline constexpr bool DEBUG = false;" "$repo_root/build/package_build_o
     cd "$repo_root/tests/fixtures/project_mode"
     "$repo_root/build/duc" check .
     "$repo_root/build/duc" check
+    "$repo_root/build/dudu" check 2>"$repo_root/build/project_mode_check.err"
+    "$repo_root/build/dudu" check --quiet 2>"$repo_root/build/project_mode_check_quiet.err"
     "$repo_root/build/duc" emit -o "$repo_root/build/project_mode.cpp"
     "$repo_root/build/duc" bench 1000
     "$repo_root/build/duc" test -o "$repo_root/build/project_mode_tests"
 )
+grep -q "check .*project_mode/main.dd" "$repo_root/build/project_mode_check.err"
+grep -q "ok .*project_mode/main.dd" "$repo_root/build/project_mode_check.err"
+test ! -s "$repo_root/build/project_mode_check_quiet.err"
+"$repo_root/build/dudu" bench --help >"$repo_root/build/dudu_bench_help.out"
+grep -q "dudu bench" "$repo_root/build/dudu_bench_help.out"
 (
     cd "$repo_root/tests/fixtures/project_delegated_command/subdir"
     "$repo_root/build/dudu" bench >"$repo_root/build/project_delegated_bench.out"
+    "$repo_root/build/dudu" bench --quiet >"$repo_root/build/project_delegated_bench_quiet.out" \
+        2>"$repo_root/build/project_delegated_bench_quiet.err"
     "$repo_root/build/dudu" test >"$repo_root/build/project_delegated_test.out"
 )
 grep -q "bench-from-project" "$repo_root/build/project_delegated_bench.out"
+grep -q "bench-from-project" "$repo_root/build/project_delegated_bench_quiet.out"
+test ! -s "$repo_root/build/project_delegated_bench_quiet.err"
 grep -q "test-from-project" "$repo_root/build/project_delegated_test.out"
 (
     cd "$repo_root/tests/fixtures/project_targets"

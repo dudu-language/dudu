@@ -388,6 +388,12 @@ Current implementation reality:
   command lines stay behind `--verbose`, cached direct builds print an explicit
   `up-to-date` outcome, and `--quiet` suppresses project-driver progress output
   for scripts.
+- `dudu check` prints `check` and `ok` progress lines on success unless
+  `--quiet` is set, so successful validation is visible to humans without
+  changing `duc check` script behavior.
+- `dudu bench` is documented in help. `--quiet`, `--verbose`, `--help`, and
+  `--version` are parsed as project-driver flags; benchmark command arguments
+  that look like flags can still be passed after `--`.
 - Delegated `[test]` and `[bench]` commands, plus fallback `scripts/test.sh`
   and `scripts/bench.sh`, execute from the manifest directory so running Dudu
   from a project subdirectory does not change command-relative paths.
