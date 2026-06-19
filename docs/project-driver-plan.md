@@ -372,9 +372,11 @@ Current implementation reality:
   generated translation unit. The generated CMake backend is implemented for
   `dudu build`, `dudu run`, and `dudu test`; it emits an internal CMake project
   and drives `cmake -S/-B` plus `cmake --build`.
-- The direct backend supports useful native inputs: include paths, library
-  paths, libraries, compile flags, link flags, pkg-config packages, and extra
-  C/C++ sources.
+- The direct and generated-CMake backends support useful native inputs:
+  include paths, library paths, libraries, compile flags, link flags,
+  pkg-config packages, and extra C/C++ sources. The generated-CMake fixtures
+  cover linking an extra C source into both the app target and generated Dudu
+  test harness.
 - `dudu cmake` emits CMake for inspection or handoff.
 - User-owned CMake project integration is implemented for `dudu build`,
   `dudu run`, and `dudu test` when `[build] backend = "cmake"` and
