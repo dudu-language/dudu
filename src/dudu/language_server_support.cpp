@@ -84,13 +84,32 @@ ModuleAst module_for_document(const Document& doc, bool include_native_headers) 
     if (!include_native_headers) {
         return module;
     }
-    const NativeHeaderOptions native_options{.config = config, .source_dir = doc.path.parent_path()};
+    const NativeHeaderOptions native_options{.config = config,
+                                             .source_dir = doc.path.parent_path()};
     merge_native_header_types(module, native_options);
     for (ModuleAst& unit : module.module_units) {
         apply_project_context(unit, config);
         merge_native_header_types(unit, native_options);
     }
     return module;
+}
+
+const ModuleAst& visible_module_unit(const ModuleAst& module, const std::filesystem::path& path) {
+    if (module.module_units.empty()) {
+        return module;
+    }
+    const std::filesystem::path target =
+        std::filesystem::exists(path) ? std::filesystem::weakly_canonical(path) : path;
+    for (const ModuleAst& unit : module.module_units) {
+        const std::filesystem::path unit_path =
+            std::filesystem::exists(unit.source_path)
+                ? std::filesystem::weakly_canonical(unit.source_path)
+                : unit.source_path;
+        if (unit_path == target) {
+            return unit;
+        }
+    }
+    return module.module_units.back();
 }
 
 int leading_spaces(const std::string& line) {

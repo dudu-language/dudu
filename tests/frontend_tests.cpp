@@ -652,6 +652,50 @@ void test_lsp_member_completion_uses_imported_module_shapes() {
     assert(completions.find("\"label\":\"y\"") != std::string::npos);
 }
 
+void test_lsp_completion_uses_visible_imported_functions() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_imported_function_completion_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "helper.dd", "def helper(value: i32) -> i32:\n"
+                                  "    return value + 1\n");
+    write_file(dir / "main.dd", "def main() -> i32:\n"
+                                "    return 0\n");
+
+    const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
+                             .path = dir / "main.dd",
+                             .text = "from helper import helper\n"
+                                     "\n"
+                                     "def main() -> i32:\n"
+                                     "    return hel\n"};
+    dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":3,\"character\":14}}").parse();
+    const std::string completions = dudu::completion_json(&doc, &params);
+    assert(completions.find("\"label\":\"helper\"") != std::string::npos);
+    assert(completions.find("helper(i32) -> i32") != std::string::npos);
+}
+
+void test_lsp_signature_help_uses_visible_imported_functions() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_imported_function_signature_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "helper.dd", "def helper(value: i32, amount: i32) -> i32:\n"
+                                  "    return value + amount\n");
+    write_file(dir / "main.dd", "def main() -> i32:\n"
+                                "    return 0\n");
+
+    const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
+                             .path = dir / "main.dd",
+                             .text = "from helper import helper\n"
+                                     "\n"
+                                     "def main() -> i32:\n"
+                                     "    return helper(1, 2)\n"};
+    dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":3,\"character\":22}}").parse();
+    const std::string help = dudu::signature_help_json(&doc, &params);
+    assert(help.find("helper(i32, i32) -> i32") != std::string::npos);
+    assert(help.find("\"activeParameter\":1") != std::string::npos);
+}
+
 void test_lsp_unreachable_lint_uses_branch_structure() {
     const dudu::Document doc{.uri = "",
                              .path = "lint_unreachable.dd",
@@ -1343,6 +1387,8 @@ int main() {
         test_lsp_diagnostic_sources_are_structured();
         test_lsp_diagnostics_use_open_buffer_for_module_entry();
         test_lsp_member_completion_uses_imported_module_shapes();
+        test_lsp_completion_uses_visible_imported_functions();
+        test_lsp_signature_help_uses_visible_imported_functions();
         test_lsp_unreachable_lint_uses_branch_structure();
         test_lsp_unreachable_lint_does_not_flag_partial_branch_return();
         test_lsp_scope_lint_tracks_inferred_assignment_locals();

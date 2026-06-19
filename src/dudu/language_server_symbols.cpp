@@ -79,8 +79,92 @@ std::string native_type_detail(const ModuleAst& module, const NativeTypeDecl& ty
     return detail;
 }
 
-std::vector<Symbol> symbols_for_document(const Document& doc, bool include_native) {
+std::vector<Symbol> symbols_for_module(const ModuleAst& module, bool include_native) {
     std::vector<Symbol> out;
+    for (const ClassDecl& klass : module.classes) {
+        out.push_back({.name = klass.name,
+                       .detail = "class " + klass.name,
+                       .location = klass.location,
+                       .kind = lsp_symbol_kind::Class});
+        for (const FieldDecl& field : klass.fields) {
+            out.push_back({.name = field.name,
+                           .detail = field.name + ": " + type_ref_text(field.type_ref),
+                           .location = field.location,
+                           .kind = lsp_symbol_kind::Field});
+        }
+        for (const FunctionDecl& method : klass.methods) {
+            out.push_back({.name = method.name,
+                           .detail = function_detail(method),
+                           .location = method.location,
+                           .kind = is_constructor_method_name(method.name)
+                                       ? lsp_symbol_kind::Constructor
+                                       : lsp_symbol_kind::Method});
+        }
+    }
+    for (const EnumDecl& en : module.enums) {
+        out.push_back({.name = en.name,
+                       .detail = "enum " + en.name,
+                       .location = en.location,
+                       .kind = lsp_symbol_kind::Enum});
+    }
+    for (const ConstDecl& constant : module.constants) {
+        out.push_back({.name = constant.name,
+                       .detail = constant.name + ": " + type_ref_text(constant.type_ref),
+                       .location = constant.location,
+                       .kind = lsp_symbol_kind::Constant});
+    }
+    for (const FunctionDecl& fn : module.functions) {
+        out.push_back({.name = fn.name,
+                       .detail = function_detail(fn),
+                       .location = fn.location,
+                       .kind = lsp_symbol_kind::Function});
+    }
+    if (!include_native) {
+        return out;
+    }
+    for (const NativeTypeDecl& type : module.native_types) {
+        out.push_back({.name = type.name,
+                       .detail = native_type_detail(module, type),
+                       .location = type.location,
+                       .kind = lsp_symbol_kind::Struct});
+    }
+    for (const NativeValueDecl& value : module.native_values) {
+        out.push_back({.name = value.name,
+                       .detail = value.name + ": " + native_value_type_text(value),
+                       .location = value.location,
+                       .kind = lsp_symbol_kind::Constant});
+    }
+    for (const NativeMacroDecl& macro : module.native_macros) {
+        out.push_back(
+            {.name = macro.name,
+             .detail = native_macro_detail(macro),
+             .location = macro.location,
+             .kind = macro.function_like ? lsp_symbol_kind::Namespace : lsp_symbol_kind::Constant});
+    }
+    for (const NativeFunctionDecl& fn : module.native_functions) {
+        out.push_back({.name = fn.name,
+                       .detail = native_function_detail(fn),
+                       .location = fn.location,
+                       .kind = lsp_symbol_kind::Function});
+    }
+    for (const ClassDecl& klass : module.native_classes) {
+        out.push_back({.name = klass.name,
+                       .detail = "native class " + klass.name,
+                       .location = klass.location,
+                       .kind = lsp_symbol_kind::Class});
+        for (const FunctionDecl& method : klass.methods) {
+            out.push_back({.name = klass.name + "." + method.name,
+                           .detail = function_detail(method),
+                           .location = method.location,
+                           .kind = is_constructor_method_name(method.name)
+                                       ? lsp_symbol_kind::Constructor
+                                       : lsp_symbol_kind::Method});
+        }
+    }
+    return out;
+}
+
+std::vector<Symbol> symbols_for_document(const Document& doc, bool include_native) {
     try {
         ModuleAst module = parse_source(doc.text, doc.path);
         if (include_native) {
@@ -88,89 +172,10 @@ std::vector<Symbol> symbols_for_document(const Document& doc, bool include_nativ
             merge_native_header_types(module,
                                       {.config = config, .source_dir = doc.path.parent_path()});
         }
-        for (const ClassDecl& klass : module.classes) {
-            out.push_back({.name = klass.name,
-                           .detail = "class " + klass.name,
-                           .location = klass.location,
-                           .kind = lsp_symbol_kind::Class});
-            for (const FieldDecl& field : klass.fields) {
-                out.push_back({.name = field.name,
-                               .detail = field.name + ": " + type_ref_text(field.type_ref),
-                               .location = field.location,
-                               .kind = lsp_symbol_kind::Field});
-            }
-            for (const FunctionDecl& method : klass.methods) {
-                out.push_back({.name = method.name,
-                               .detail = function_detail(method),
-                               .location = method.location,
-                               .kind = is_constructor_method_name(method.name)
-                                           ? lsp_symbol_kind::Constructor
-                                           : lsp_symbol_kind::Method});
-            }
-        }
-        for (const EnumDecl& en : module.enums) {
-            out.push_back({.name = en.name,
-                           .detail = "enum " + en.name,
-                           .location = en.location,
-                           .kind = lsp_symbol_kind::Enum});
-        }
-        for (const ConstDecl& constant : module.constants) {
-            out.push_back({.name = constant.name,
-                           .detail = constant.name + ": " + type_ref_text(constant.type_ref),
-                           .location = constant.location,
-                           .kind = lsp_symbol_kind::Constant});
-        }
-        for (const FunctionDecl& fn : module.functions) {
-            out.push_back({.name = fn.name,
-                           .detail = function_detail(fn),
-                           .location = fn.location,
-                           .kind = lsp_symbol_kind::Function});
-        }
-        if (!include_native) {
-            return out;
-        }
-        for (const NativeTypeDecl& type : module.native_types) {
-            out.push_back({.name = type.name,
-                           .detail = native_type_detail(module, type),
-                           .location = type.location,
-                           .kind = lsp_symbol_kind::Struct});
-        }
-        for (const NativeValueDecl& value : module.native_values) {
-            out.push_back({.name = value.name,
-                           .detail = value.name + ": " + native_value_type_text(value),
-                           .location = value.location,
-                           .kind = lsp_symbol_kind::Constant});
-        }
-        for (const NativeMacroDecl& macro : module.native_macros) {
-            out.push_back({.name = macro.name,
-                           .detail = native_macro_detail(macro),
-                           .location = macro.location,
-                           .kind = macro.function_like ? lsp_symbol_kind::Namespace
-                                                       : lsp_symbol_kind::Constant});
-        }
-        for (const NativeFunctionDecl& fn : module.native_functions) {
-            out.push_back({.name = fn.name,
-                           .detail = native_function_detail(fn),
-                           .location = fn.location,
-                           .kind = lsp_symbol_kind::Function});
-        }
-        for (const ClassDecl& klass : module.native_classes) {
-            out.push_back({.name = klass.name,
-                           .detail = "native class " + klass.name,
-                           .location = klass.location,
-                           .kind = lsp_symbol_kind::Class});
-            for (const FunctionDecl& method : klass.methods) {
-                out.push_back({.name = klass.name + "." + method.name,
-                               .detail = function_detail(method),
-                               .location = method.location,
-                               .kind = is_constructor_method_name(method.name)
-                                           ? lsp_symbol_kind::Constructor
-                                           : lsp_symbol_kind::Method});
-            }
-        }
+        return symbols_for_module(module, include_native);
     } catch (const std::exception&) {
     }
-    return out;
+    return {};
 }
 
 } // namespace dudu

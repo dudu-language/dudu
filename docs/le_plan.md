@@ -1281,10 +1281,12 @@ push. They are not release packaging work.
    the open editor buffer as the entry source, so unsaved fixes to imports or
    entry code are analyzed consistently with the saved dependency modules
    instead of rereading a stale entry file from disk. Member completion,
-   member-definition lookup, and native alias hover now use the same shared LSP
-   module view, including imported Dudu module shapes and native headers, so
-   fields and methods on imported classes such as `from vec3 import Vec3` are
-   visible to the editor.
+   member-definition lookup, native alias hover, top-level completion, and
+   signature help now use the same shared LSP module view, including imported
+   Dudu module shapes, visible imported functions, and native headers. Fields
+   and methods on imported classes such as `from vec3 import Vec3` are visible
+   to the editor, and selectively imported functions participate in completion
+   and call signature help.
 
 14. Project Driver Polish
 

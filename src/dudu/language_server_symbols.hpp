@@ -8,6 +8,7 @@
 
 namespace dudu {
 
+std::vector<Symbol> symbols_for_module(const ModuleAst& module, bool include_native = true);
 std::vector<Symbol> symbols_for_document(const Document& doc, bool include_native = true);
 bool is_constructor_method_name(const std::string& name);
 std::string function_detail(const FunctionDecl& fn);

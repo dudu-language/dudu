@@ -109,6 +109,15 @@ std::optional<std::string> module_completion_json(const Document& doc, const std
     return std::nullopt;
 }
 
+std::vector<Symbol> visible_symbols_for_document(const Document& doc) {
+    try {
+        const ModuleAst module = module_for_document(doc, true);
+        return symbols_for_module(visible_module_unit(module, doc.path), true);
+    } catch (const std::exception&) {
+        return symbols_for_document(doc);
+    }
+}
+
 std::string member_completion_json(const Document& doc, const std::string& target,
                                    const Json* params) {
     if (const std::optional<std::string> module_result = module_completion_json(doc, target)) {
@@ -295,7 +304,7 @@ std::string completion_json(const Document* doc, const Json* params) {
         for (const auto& [name, type_ref] : local_type_refs_before_cursor(*doc, params)) {
             add(name, 6, name + ": " + substitute_type_ref_text(type_ref, {}));
         }
-        for (const Symbol& symbol : symbols_for_document(*doc)) {
+        for (const Symbol& symbol : visible_symbols_for_document(*doc)) {
             add(symbol.name, completion_kind(symbol.kind), symbol.detail);
         }
     }
@@ -337,7 +346,7 @@ std::string signature_help_json(const Document* doc, const Json* params) {
         return "{\"signatures\":[],\"activeSignature\":0,\"activeParameter\":0}";
     }
     std::vector<std::string> signatures;
-    for (const Symbol& symbol : symbols_for_document(*doc)) {
+    for (const Symbol& symbol : visible_symbols_for_document(*doc)) {
         if (symbol_matches(symbol.name, call.name) &&
             (symbol.kind == lsp_symbol_kind::Function || symbol.kind == lsp_symbol_kind::Method)) {
             signatures.push_back(symbol.detail);
