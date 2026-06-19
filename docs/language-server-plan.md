@@ -381,7 +381,9 @@ module file. Go-to-definition for `from module import symbol` aliases is
 covered with an unopened module file. Hover, definition, and completion for
 unaliased nested module imports are covered with a vendored module fixture.
 Go-to-definition for native C++ member methods is covered with a local fixture
-header.
+header. Go-to-definition for imported native type annotations also follows a
+structured native type alias to its scanned class declaration when that target
+is available.
 Go-to-definition for imported C/C++ headers respects manifest-relative
 `[include] paths`, matching the project-driver path contract.
 Native overloaded function signature help is covered with a local fixture

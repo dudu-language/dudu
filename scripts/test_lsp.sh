@@ -1114,6 +1114,17 @@ messages = [
     packet(
         {
             "jsonrpc": "2.0",
+            "id": 60,
+            "method": "textDocument/definition",
+            "params": {
+                "textDocument": {"uri": native_uri},
+                "position": {"line": 5, "character": 25},
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
             "id": 25,
             "method": "textDocument/codeAction",
             "params": {
@@ -1622,6 +1633,10 @@ assert from_import_definition["result"]["range"]["start"]["line"] == 0
 native_member_definition = next(item for item in responses if item.get("id") == 31)
 assert native_member_definition["result"]["uri"].endswith("/tests/fixtures/native_headers/simple_cpp.hpp")
 assert native_member_definition["result"]["range"]["start"]["line"] == 9
+
+native_type_definition = next(item for item in responses if item.get("id") == 60)
+assert native_type_definition["result"]["uri"].endswith("/tests/fixtures/native_headers/simple_cpp.hpp")
+assert native_type_definition["result"]["range"]["start"]["line"] == 3
 
 native_code_actions = next(item for item in responses if item.get("id") == 25)
 organize_imports = next(

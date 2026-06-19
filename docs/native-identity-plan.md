@@ -99,13 +99,18 @@ In progress.
 - Native scan deduplication uses the same identity-aware rule before metadata
   reaches module merge, so a single scan cannot hide an unqualified collision
   by name-only dedupe.
+- LSP definition lookup for imported native type annotations follows
+  structured native type-alias metadata to the scanned native class declaration
+  when available, so aliases such as `native.Widget` can jump to the C++ class
+  rather than stopping at a `using` declaration.
 
 Still missing:
 
 - Clang USR collection.
 - Identity-aware symbol maps as the primary sema key.
 - Identity-aware type compatibility when both sides carry native identity facts.
-- LSP go-to-definition through canonical native identity.
+- LSP indexing keyed directly by canonical native identity rather than
+  request-time alias target lookup.
 
 ## Definition Of Done
 

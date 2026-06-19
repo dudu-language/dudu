@@ -1,6 +1,7 @@
 #include "dudu/language_server_navigation.hpp"
 
 #include "dudu/ast_expr.hpp"
+#include "dudu/ast_type.hpp"
 #include "dudu/language_server_json.hpp"
 #include "dudu/parser.hpp"
 
@@ -114,6 +115,15 @@ std::optional<std::string> ast_symbol_at_impl(const Document& doc, const Json* p
             result = name;
         }
     };
+    const std::function<void(const TypeRef&)> visit_type = [&](const TypeRef& type) {
+        if (result || !has_type_ref(type)) {
+            return;
+        }
+        set_if_hit(type_ref_text(type), type.location);
+        for (const TypeRef& child : type.children) {
+            visit_type(child);
+        }
+    };
     const std::function<void(const Expr&)> visit_expr = [&](const Expr& expr) {
         if (expr.kind == ExprKind::Name || expr.kind == ExprKind::Member) {
             std::string name = expr.name;
@@ -133,6 +143,10 @@ std::optional<std::string> ast_symbol_at_impl(const Document& doc, const Json* p
         for (const Expr& arg : expr.template_args) {
             visit_expr(arg);
         }
+        for (const TypeRef& arg : expr.template_type_args) {
+            visit_type(arg);
+        }
+        visit_type(expr.type_ref);
         for (const Expr& child : expr.children) {
             visit_expr(child);
         }
@@ -141,6 +155,7 @@ std::optional<std::string> ast_symbol_at_impl(const Document& doc, const Json* p
         [&](const std::vector<Stmt>& statements) {
             for (const Stmt& stmt : statements) {
                 visit_stmt_binding_names(stmt, set_if_hit);
+                visit_type(stmt.type_ref);
                 visit_stmt_expressions(stmt, visit_expr);
                 visit_stmts(stmt.children);
             }
@@ -153,44 +168,63 @@ std::optional<std::string> ast_symbol_at_impl(const Document& doc, const Json* p
         }
         for (const TypeAliasDecl& alias : module.aliases) {
             set_if_hit(alias.name, alias.location);
+            visit_type(alias.type_ref);
         }
         for (const ConstDecl& constant : module.constants) {
             set_if_hit(constant.name, constant.location);
+            visit_type(constant.type_ref);
             visit_expr(constant.value_expr);
         }
         for (const EnumDecl& en : module.enums) {
             set_if_hit(en.name, en.location);
+            visit_type(en.underlying_type_ref);
             for (const EnumValueDecl& value : en.values) {
                 set_if_hit(value.name, value.location);
+                for (const EnumPayloadField& field : value.payload_fields) {
+                    set_if_hit(field.name, field.location);
+                    visit_type(field.type_ref);
+                }
                 visit_expr(value.value_expr);
             }
         }
         for (const ClassDecl& klass : module.classes) {
             set_if_hit(klass.name, klass.location);
+            for (const BaseClassDecl& base : klass.base_class_refs) {
+                visit_type(base.type_ref);
+            }
             for (const FieldDecl& field : klass.fields) {
                 set_if_hit(field.name, field.location);
+                visit_type(field.type_ref);
                 visit_expr(field.value_expr);
             }
             for (const ConstDecl& constant : klass.constants) {
                 set_if_hit(constant.name, constant.location);
+                visit_type(constant.type_ref);
                 visit_expr(constant.value_expr);
             }
             for (const ConstDecl& field : klass.static_fields) {
                 set_if_hit(field.name, field.location);
+                visit_type(field.type_ref);
                 visit_expr(field.value_expr);
             }
             for (const FunctionDecl& method : klass.methods) {
                 set_if_hit(method.name, method.location);
+                visit_type(method.receiver_type_ref);
+                visit_type(method.return_type_ref);
                 for (const ParamDecl& param : method.params) {
                     set_if_hit(param.name, param.location);
+                    visit_type(param.type_ref);
                 }
                 visit_stmts(method.statements);
             }
         }
         for (const FunctionDecl& fn : module.functions) {
             set_if_hit(fn.name, fn.location);
+            visit_type(fn.receiver_type_ref);
+            visit_type(fn.return_type_ref);
             for (const ParamDecl& param : fn.params) {
                 set_if_hit(param.name, param.location);
+                visit_type(param.type_ref);
             }
             visit_stmts(fn.statements);
         }

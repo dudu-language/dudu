@@ -253,6 +253,36 @@ std::optional<std::string> import_definition_json(const Document& doc, const std
     return std::nullopt;
 }
 
+std::optional<std::string> native_type_target_definition_json(const Document& doc,
+                                                              const std::string& word) {
+    if (word.empty()) {
+        return std::nullopt;
+    }
+    try {
+        ModuleAst module = parse_source(doc.text, doc.path);
+        const ProjectConfig config = config_for_file(doc.path);
+        merge_native_header_types(module, {.config = config, .source_dir = doc.path.parent_path()});
+        std::optional<std::string> target_name;
+        for (const NativeTypeDecl& type : module.native_types) {
+            if (type.name == word && has_type_ref(type.type_ref)) {
+                target_name = type_ref_text(native_type_alias_type_ref(type));
+                break;
+            }
+        }
+        if (!target_name || *target_name == word) {
+            return std::nullopt;
+        }
+        for (const ClassDecl& klass : module.native_classes) {
+            if (klass.name == *target_name) {
+                return location_json(uri_for_location(klass.location, doc),
+                                     range_json(klass.location));
+            }
+        }
+    } catch (const std::exception&) {
+    }
+    return std::nullopt;
+}
+
 } // namespace
 
 std::string definition_json(const Document& doc, const Json* params) {
@@ -263,13 +293,27 @@ std::string definition_json(const Document& doc, const Json* params) {
     if (word.empty()) {
         return "null";
     }
+    if (const std::optional<std::string> native_type_target =
+            native_type_target_definition_json(doc, word)) {
+        return *native_type_target;
+    }
+    std::optional<Symbol> matched_symbol;
     for (const Symbol& symbol : symbols_for_document(doc)) {
         if (symbol_matches(symbol.name, word)) {
-            std::ostringstream out;
-            out << "{\"uri\":\"" << json_escape(uri_for_location(symbol.location, doc))
-                << "\",\"range\":" << range_json(symbol.location) << "}";
-            return out.str();
+            if (symbol.kind == 5) {
+                matched_symbol = symbol;
+                break;
+            }
+            if (!matched_symbol) {
+                matched_symbol = symbol;
+            }
         }
+    }
+    if (matched_symbol) {
+        std::ostringstream out;
+        out << "{\"uri\":\"" << json_escape(uri_for_location(matched_symbol->location, doc))
+            << "\",\"range\":" << range_json(matched_symbol->location) << "}";
+        return out.str();
     }
     const std::optional<ExprPath> path = ast_expr_path_at(doc, params);
     if (path && path->segments.size() >= 2) {
