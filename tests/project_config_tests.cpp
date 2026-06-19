@@ -1,3 +1,4 @@
+#include "dudu/cli_options.hpp"
 #include "dudu/project_config.hpp"
 
 #include <cassert>
@@ -84,12 +85,61 @@ void test_build_backend_selection(const std::filesystem::path& root) {
     assert(!implicit.build_backend_explicit);
 }
 
+void test_project_driver_resolves_manifest_relative_entries(const std::filesystem::path& root) {
+    const std::filesystem::path project = root / "build" / "project-config-entry-resolution";
+    const std::filesystem::path outside = root / "build" / "project-config-entry-outside";
+    std::filesystem::remove_all(project);
+    std::filesystem::remove_all(outside);
+    std::filesystem::create_directories(outside);
+    write_text(project / "dudu.toml", "name = \"entry_probe\"\n"
+                                      "entry = \"src/main.dd\"\n"
+                                      "\n"
+                                      "[targets.tool]\n"
+                                      "entry = \"tools/tool.dd\"\n");
+    write_text(project / "src" / "main.dd", "def main() -> i32:\n    return 0\n");
+    write_text(project / "tools" / "tool.dd", "def main() -> i32:\n    return 0\n");
+
+    const std::filesystem::path original_cwd = std::filesystem::current_path();
+    try {
+        std::filesystem::current_path(outside);
+        dudu::CliOptions by_directory;
+        by_directory.project_driver = true;
+        by_directory.build = true;
+        by_directory.input = project;
+        by_directory = dudu::resolve_project_input(std::move(by_directory));
+        assert(by_directory.input.lexically_normal() ==
+               (project / "src" / "main.dd").lexically_normal());
+
+        std::filesystem::current_path(project);
+        dudu::CliOptions by_target;
+        by_target.project_driver = true;
+        by_target.build = true;
+        by_target.input = "tool";
+        by_target = dudu::resolve_project_input(std::move(by_target));
+        assert(by_target.target_name == "tool");
+        assert(by_target.input.lexically_normal() ==
+               (project / "tools" / "tool.dd").lexically_normal());
+
+        dudu::CliOptions by_default;
+        by_default.project_driver = true;
+        by_default.run = true;
+        by_default = dudu::resolve_project_input(std::move(by_default));
+        assert(by_default.input.lexically_normal() ==
+               (project / "src" / "main.dd").lexically_normal());
+    } catch (...) {
+        std::filesystem::current_path(original_cwd);
+        throw;
+    }
+    std::filesystem::current_path(original_cwd);
+}
+
 } // namespace
 
 int main() {
     try {
         test_manifest_relative_paths(DUDU_REPO_ROOT);
         test_build_backend_selection(DUDU_REPO_ROOT);
+        test_project_driver_resolves_manifest_relative_entries(DUDU_REPO_ROOT);
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;

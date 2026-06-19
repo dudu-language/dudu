@@ -200,16 +200,28 @@ CliOptions resolve_project_input(CliOptions options) {
                                                   ? std::filesystem::path("dudu.toml")
                                                   : build_config_path(options.input);
     const ProjectConfig project = parse_project_config(config_path);
+    const bool command_uses_project_entry =
+        options.build || options.run || options.cmake || options.emit_cpp || options.emit_modules;
     if (!options.input.empty()) {
         const std::string input = options.input.string();
         if (!std::filesystem::exists(options.input) && options.input.extension() != ".dd" &&
             project.targets.contains(input)) {
             options.target_name = input;
-            options.input = apply_project_target(project, input).main;
+            options.input = project_path(project, apply_project_target(project, input).main);
             if (options.input.empty()) {
                 fail("target has no entry: " + input);
             }
         } else if (std::filesystem::exists(options.input)) {
+            if (std::filesystem::is_directory(options.input) && command_uses_project_entry) {
+                if (project.main.empty()) {
+                    if ((options.build || options.run) && uses_user_cmake_backend(project)) {
+                        return options;
+                    }
+                    fail("missing input file and dudu.toml main");
+                }
+                options.input = project_path(project, project.main);
+                return options;
+            }
             const std::filesystem::path normalized_input = options.input.lexically_normal();
             for (const auto& [name, target] : project.targets) {
                 const std::filesystem::path target_input =
@@ -230,7 +242,7 @@ CliOptions resolve_project_input(CliOptions options) {
         }
         fail("missing input file and dudu.toml main");
     }
-    options.input = project.main;
+    options.input = project_path(project, project.main);
     return options;
 }
 

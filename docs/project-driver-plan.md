@@ -173,6 +173,11 @@ Path resolution:
 - Running `dudu` from another working directory must not change behavior when
   it finds the same manifest.
 
+Status: project-driver entry and target resolution uses manifest-relative paths
+for default entries, named targets, and project-directory build/run/CMake
+commands. This is covered by project-config tests and a command-level
+`dudu build <project-dir>` smoke.
+
 ## Targets
 
 Support one target first:
