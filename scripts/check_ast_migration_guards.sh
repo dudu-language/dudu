@@ -28,6 +28,8 @@ forbidden=(
     "top_level_comparison_text"
     "lower_cpp_type\\(const std::string"
     "lower_cpp_type\\(std::string"
+    "is_integer_type\\(type_ref_head_name"
+    "bool is_integer_type\\(std::string"
 )
 
 for pattern in "${forbidden[@]}"; do

@@ -13,23 +13,7 @@
 #include <vector>
 
 namespace dudu {
-namespace {} // namespace
-
-bool is_integer_type(std::string type) {
-    type = trim(std::move(type));
-    static const std::set<std::string> integers = {"i8",  "i16", "i32", "i64",   "u8",
-                                                   "u16", "u32", "u64", "usize", "isize"};
-    return integers.contains(type);
-}
-
 namespace {
-
-bool is_numeric_type(std::string type) {
-    type = trim(std::move(type));
-    static const std::set<std::string> numeric = {"i8",  "i16", "i32", "i64", "u8",    "u16",
-                                                  "u32", "u64", "f32", "f64", "usize", "isize"};
-    return numeric.contains(type);
-}
 
 TypeRef unwrap_value_type_ref(const Symbols& symbols, TypeRef type) {
     type = resolve_alias_ref(symbols, std::move(type));
@@ -46,7 +30,8 @@ TypeRef unwrap_value_type_ref(const Symbols& symbols, TypeRef type) {
 }
 
 bool is_numeric_type(const TypeRef& type) {
-    return is_numeric_type(type_ref_head_name(type));
+    return type_ref_is_integer(type) || type_ref_is_name(type, "f32") ||
+           type_ref_is_name(type, "f64");
 }
 
 bool unknown_or_auto(const TypeRef& type) {
@@ -231,17 +216,16 @@ bool binary_rhs_allowed(const Symbols& symbols, const std::string& op, const Typ
         return assignment_type_allowed(value_left_ref, right_expr, value_right_ref);
     }
     if (op == "+" || op == "-") {
-        return (resolved_left.kind == TypeKind::Pointer &&
-                is_integer_type(type_ref_head_name(value_right_ref))) ||
+        return (resolved_left.kind == TypeKind::Pointer && type_ref_is_integer(value_right_ref)) ||
                numeric_operand_allowed(value_left_ref, right_expr, value_right_ref);
     }
     if (op == "*" || op == "/") {
         return numeric_operand_allowed(value_left_ref, right_expr, value_right_ref);
     }
     if (op == "%" || op == "^" || op == "&" || op == "|" || op == "<<" || op == ">>") {
-        return is_integer_type(type_ref_head_name(value_left_ref)) &&
+        return type_ref_is_integer(value_left_ref) &&
                (assignment_type_allowed(value_left_ref, right_expr, value_right_ref) ||
-                is_integer_type(type_ref_head_name(value_right_ref)));
+                type_ref_is_integer(value_right_ref));
     }
     return false;
 }

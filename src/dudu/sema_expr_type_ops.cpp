@@ -1,5 +1,6 @@
 #include "dudu/ast_type.hpp"
 #include "dudu/sema_expr_internal.hpp"
+#include "dudu/type_compat.hpp"
 
 #include <set>
 #include <utility>
@@ -77,7 +78,7 @@ std::optional<TypeRef> unary_expr_type_ref(const FunctionScope& scope, const Exp
     }
     if (expr.op == "~") {
         if (location != nullptr && type_ref_known_non_auto(got_ref) &&
-            !is_integer_type(type_ref_head_name(resolve_alias_ref(scope.symbols, got_ref)))) {
+            !type_ref_is_integer(resolve_alias_ref(scope.symbols, got_ref))) {
             const std::string got = substitute_type_ref_text(got_ref, {});
             sema_expr_fail(*location, "~ expects integer, got " + got);
         }

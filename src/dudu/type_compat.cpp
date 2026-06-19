@@ -23,6 +23,12 @@ bool is_numeric_type_name(const std::string& type) {
     return numeric.contains(type);
 }
 
+bool is_integer_type_name(const std::string& type) {
+    static const std::set<std::string> integers = {"i8",  "i16", "i32", "i64",   "u8",
+                                                   "u16", "u32", "u64", "usize", "isize"};
+    return integers.contains(type);
+}
+
 TypeRef wrapped_type_arg_ref(const TypeRef& type) {
     if (const auto inner =
             unary_type_child_ref(type, {TypeKind::Const, TypeKind::Atomic, TypeKind::Volatile,
@@ -261,6 +267,11 @@ bool normalized_type_assignment_allowed(const TypeRef& expected_ref, const TypeR
 }
 
 } // namespace
+
+bool type_ref_is_integer(const TypeRef& type) {
+    const TypeRef normalized = normalize_cpp_type_artifacts_ref(wrapped_type_arg_ref(type));
+    return is_integer_type_name(type_ref_head_name(normalized));
+}
 
 bool type_assignment_allowed(const TypeRef& expected, const TypeRef& got) {
     const TypeRef normalized_expected_ref = normalize_cpp_type_artifacts_ref(expected);

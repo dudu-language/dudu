@@ -2,6 +2,7 @@
 #include "dudu/sema_expr_internal.hpp"
 #include "dudu/sema_function_type.hpp"
 #include "dudu/sema_scope.hpp"
+#include "dudu/type_compat.hpp"
 
 namespace dudu {
 namespace {
@@ -13,7 +14,7 @@ std::optional<std::string> expr_path_key(const Expr& expr) {
 
 bool is_native_enum_value_expr(const FunctionScope& scope, const Expr& expr,
                                const TypeRef& expected) {
-    if (!is_integer_type(type_ref_head_name(resolve_alias_ref(scope.symbols, expected)))) {
+    if (!type_ref_is_integer(resolve_alias_ref(scope.symbols, expected))) {
         return false;
     }
     const std::optional<std::string> path = expr_path_key(expr);

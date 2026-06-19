@@ -224,7 +224,10 @@ removed; normal codegen must lower structured `TypeRef` values, while
 `cpp(...)` escape rewriting and explicit spelling tests use
 `lower_cpp_type_spelling` to make the raw type-text boundary visible at the
 call site. The guard rejects reintroducing `lower_cpp_type(std::string)` or
-`lower_cpp_type(const std::string&)`.
+`lower_cpp_type(const std::string&)`. Raw string integer predicates in
+`sema_ops` have also been removed; semantic integer checks now use
+`type_ref_is_integer(const TypeRef&)`, and the guard rejects the old
+`is_integer_type(type_ref_head_name(...))` shape.
 
 ## Goal 6: Separate Module Outputs Without Re-Flattening
 
