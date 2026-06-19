@@ -27,14 +27,11 @@ void append_unique_native_decls(std::vector<T>& target, const std::vector<T>& so
             target.push_back(item);
             continue;
         }
-        const bool compatible = [&]() {
-            if constexpr (std::is_same_v<T, NativeTypeDecl>) {
-                return native_type_redeclarations_compatible(existing->second, item);
-            }
-            return false;
-        }();
-        if (native_decl_identity_key(existing->second) != identity && !compatible &&
-            native_decl_collision_is_error(item.name, item.location)) {
+        bool collision = native_decl_identity_key(existing->second) != identity;
+        if constexpr (std::is_same_v<T, NativeTypeDecl>) {
+            collision = collision && !native_type_redeclarations_compatible(existing->second, item);
+        }
+        if (collision && native_decl_collision_is_error(item.name, item.location)) {
             throw CompileError(item.location,
                                "native " + std::string(kind) + " name collision: " + item.name);
         }

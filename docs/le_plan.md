@@ -1588,7 +1588,9 @@ push. They are not release packaging work.
    a duplicate module-path resolver. Index and slice expression emission has
    been split out of `cpp_expr_emit.cpp` into `cpp_expr_index.*`, bringing the
    main expression dispatcher back under the project file-size rule while
-   preserving one owner for indexing behavior.
+   preserving one owner for indexing behavior. Native header dedupe and merge
+   now spell the opaque native type redeclaration rule directly at the collision
+   branch instead of carrying duplicated tiny generic compatibility lambdas.
 
 19. Polish Unsupported Syntax Diagnostics
 
