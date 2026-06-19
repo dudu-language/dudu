@@ -1219,6 +1219,10 @@ push. They are not release packaging work.
    declare `[cmake] source` and `[cmake] target`; the driver configures and
    builds the existing CMake project under the Dudu build directory, and runs
    CTest when no Dudu test entry or explicit delegated test command is present.
+   The project-driver front door now streams native compiler/CMake output for
+   `dudu build`, `dudu run`, and `dudu test` while keeping full command lines
+   behind `--verbose`; cached direct builds also print an explicit
+   `up-to-date` outcome by default.
    The generated CMake test backend still emits one generated harness
    translation unit; true per-module tests need test-mode module artifacts that
    expose test functions to the harness and suppress normal executable entry

@@ -226,14 +226,18 @@ int run_one_test_entry(TestDriverOptions options) {
                                .cmake_lists = emit_cmake_cpp_project(config, target, cpp_path),
                                .target = target,
                                .dudu_executable = options.dudu_executable,
+                               .stream_output = options.project_driver,
                                .verbose = options.verbose});
         print_project_step(options.project_driver, "test", bin);
         return std::system(shell_quote_path(bin).c_str()) == 0 ? 0 : 1;
     }
     print_project_step(options.project_driver, "emit", output.string() + ".cpp");
     print_project_step(options.project_driver, "test", output);
-    const std::filesystem::path bin =
-        build_executable({.output = output, .config = config, .verbose = options.verbose}, harness);
+    const std::filesystem::path bin = build_executable({.output = output,
+                                                        .config = config,
+                                                        .stream_output = options.project_driver,
+                                                        .verbose = options.verbose},
+                                                       harness);
     const std::filesystem::path command =
         bin.is_relative() && bin.parent_path().empty() ? std::filesystem::path(".") / bin : bin;
     return std::system(shell_quote_path(command).c_str()) == 0 ? 0 : 1;

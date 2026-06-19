@@ -228,7 +228,10 @@ int run_build_command(const CliOptions& options, char* executable) {
         options.output.value_or(default_build_output(config, options.input));
     print_project_step(options.project_driver, "emit", output.string() + ".cpp");
     print_project_step(options.project_driver, "build", output);
-    (void)build_executable({.output = output, .config = config, .verbose = options.verbose},
+    (void)build_executable({.output = output,
+                            .config = config,
+                            .stream_output = options.project_driver,
+                            .verbose = options.verbose},
                            emit_cpp_source(checked_module(options, source, true)));
     return 0;
 }
@@ -260,7 +263,10 @@ int run_run_command(const CliOptions& options, char* executable) {
     print_project_step(options.project_driver, "emit", output.string() + ".cpp");
     print_project_step(options.project_driver, "build", output);
     const std::filesystem::path bin =
-        build_executable({.output = output, .config = config, .verbose = options.verbose},
+        build_executable({.output = output,
+                          .config = config,
+                          .stream_output = options.project_driver,
+                          .verbose = options.verbose},
                          emit_cpp_source(checked_module(options, source, true)));
     const std::filesystem::path command =
         bin.is_relative() && bin.parent_path().empty() ? std::filesystem::path(".") / bin : bin;

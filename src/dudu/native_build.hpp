@@ -11,6 +11,7 @@ namespace dudu {
 struct NativeBuildOptions {
     std::filesystem::path output;
     ProjectConfig config;
+    bool stream_output = false;
     bool verbose = false;
 };
 

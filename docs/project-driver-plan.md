@@ -378,6 +378,10 @@ Current implementation reality:
   configures/builds the declared `[cmake] target` under the configured Dudu
   build directory, and `dudu test` runs CTest when there is no Dudu test entry
   or explicit delegated test command.
+- `dudu build`, `dudu run`, and `dudu test` stream native compiler/CMake output
+  by default through the project-driver front door. Full native command lines
+  stay behind `--verbose`, and cached direct builds print an explicit
+  `up-to-date` outcome.
 
 The next build-driver work should close that gap without changing the front
 door: users should still type `dudu build`, `dudu run`, and `dudu test`.

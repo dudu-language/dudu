@@ -408,7 +408,7 @@ std::filesystem::path build_executable(const NativeBuildOptions& options, const 
     }
     write_compile_commands(output, cpp_path, options.config, command);
     if (build_is_up_to_date(output, cpp_path, options.config, command, cpp_changed)) {
-        if (options.verbose) {
+        if (options.stream_output || options.verbose) {
             std::cerr << "up-to-date " << output.string() << '\n';
         }
         return output;
@@ -417,7 +417,10 @@ std::filesystem::path build_executable(const NativeBuildOptions& options, const 
         std::cerr << command << '\n';
     }
     const std::filesystem::path compile_log = output.string() + ".compile.log";
-    if (run_shell_command(command, compile_log) != 0) {
+    const int compile_status = options.stream_output
+                                   ? run_shell_command_streaming(command, compile_log)
+                                   : run_shell_command(command, compile_log);
+    if (compile_status != 0) {
         fail(native_failure_message("C++ build", cpp_path, command, compile_log));
     }
     if (options.config.target_kind == "library") {
@@ -429,7 +432,10 @@ std::filesystem::path build_executable(const NativeBuildOptions& options, const 
             std::cerr << archive_command << '\n';
         }
         const std::filesystem::path archive_log = output.string() + ".archive.log";
-        if (run_shell_command(archive_command, archive_log) != 0) {
+        const int archive_status = options.stream_output
+                                       ? run_shell_command_streaming(archive_command, archive_log)
+                                       : run_shell_command(archive_command, archive_log);
+        if (archive_status != 0) {
             fail(
                 native_failure_message("archive build", object_path, archive_command, archive_log));
         }

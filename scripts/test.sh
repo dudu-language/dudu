@@ -130,7 +130,7 @@ rm -rf "$clean_smoke"
     cd "$clean_smoke"
     "$repo_root/build/dudu" run >/dev/null 2>"$repo_root/build/dudu_run_steps.err"
     test -d build
-    "$repo_root/build/dudu" build --verbose >/dev/null 2>"$repo_root/build/dudu_build_cached.err"
+    "$repo_root/build/dudu" build >/dev/null 2>"$repo_root/build/dudu_build_cached.err"
     "$repo_root/build/dudu" clean 2>"$repo_root/build/dudu_clean.err"
     test ! -e build
 )
