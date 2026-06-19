@@ -2014,3 +2014,6 @@ push. They are not release packaging work.
    rendering a receiver type and checking uppercase spelling; it resolves the
    receiver `TypeRef` through `Symbols` and checks known non-native classes
    directly.
+   Class definition emission order now walks field and base-class `TypeRef`
+   trees to find dependencies instead of rendering field types and doing
+   substring class-name searches.

@@ -222,6 +222,20 @@ void test_expected_generic_method_emission_uses_type_ast_receiver() {
     assert(cpp.find("std::string text = wrapper.make<std::string>();") != std::string::npos);
 }
 
+void test_class_emit_order_uses_type_ast_fields() {
+    const dudu::ModuleAst module = dudu::parse_source("class Holder:\n"
+                                                      "    items: list[Node]\n"
+                                                      "\n"
+                                                      "class Node:\n"
+                                                      "    value: i32\n",
+                                                      "class_emit_order_type_ast.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+    const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find("\nstruct Node {") != std::string::npos);
+    assert(cpp.find("\nstruct Holder {") != std::string::npos);
+    assert(cpp.find("\nstruct Node {") < cpp.find("\nstruct Holder {"));
+}
+
 } // namespace
 
 int main() {
@@ -239,6 +253,7 @@ int main() {
         test_typed_literal_initializers_use_type_ast();
         test_inferred_auto_assignment_is_not_redeclared();
         test_expected_generic_method_emission_uses_type_ast_receiver();
+        test_class_emit_order_uses_type_ast_fields();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;

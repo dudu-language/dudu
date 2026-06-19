@@ -9,7 +9,6 @@
 #include "dudu/sema_context.hpp"
 #include "dudu/sema_inheritance.hpp"
 
-#include <cctype>
 #include <set>
 #include <sstream>
 #include <string_view>
@@ -17,20 +16,14 @@
 namespace dudu {
 namespace {
 
-bool contains_type_name(const std::string& type, const std::string& name) {
-    size_t pos = type.find(name);
-    while (pos != std::string::npos) {
-        const bool left_ok =
-            pos == 0 ||
-            (std::isalnum(static_cast<unsigned char>(type[pos - 1])) == 0 && type[pos - 1] != '_');
-        const size_t end = pos + name.size();
-        const bool right_ok =
-            end == type.size() ||
-            (std::isalnum(static_cast<unsigned char>(type[end])) == 0 && type[end] != '_');
-        if (left_ok && right_ok) {
+bool type_ref_mentions_class(const TypeRef& type, const std::string& name) {
+    if (type_ref_head_name(type) == name) {
+        return true;
+    }
+    for (const TypeRef& child : type.children) {
+        if (type_ref_mentions_class(child, name)) {
             return true;
         }
-        pos = type.find(name, pos + 1);
     }
     return false;
 }
@@ -43,9 +36,8 @@ void visit_class(const std::vector<ClassDecl>& classes, size_t index, std::set<s
     visiting.insert(index);
 
     for (const BaseClassDecl& base_decl : classes[index].base_class_refs) {
-        const std::string base = type_ref_text(base_decl.type_ref);
         for (size_t dep = 0; dep < classes.size(); ++dep) {
-            if (dep != index && base == classes[dep].name) {
+            if (dep != index && type_ref_mentions_class(base_decl.type_ref, classes[dep].name)) {
                 visit_class(classes, dep, visiting, emitted, order);
             }
         }
@@ -53,8 +45,7 @@ void visit_class(const std::vector<ClassDecl>& classes, size_t index, std::set<s
 
     for (const FieldDecl& field : classes[index].fields) {
         for (size_t dep = 0; dep < classes.size(); ++dep) {
-            if (dep != index &&
-                contains_type_name(type_ref_text(field.type_ref), classes[dep].name)) {
+            if (dep != index && type_ref_mentions_class(field.type_ref, classes[dep].name)) {
                 visit_class(classes, dep, visiting, emitted, order);
             }
         }
