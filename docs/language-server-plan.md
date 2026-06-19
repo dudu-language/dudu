@@ -95,12 +95,12 @@ Native jumps should prefer real header locations. If a symbol is synthesized or
 only available through macro expansion, the server should say that clearly in
 hover/diagnostics instead of jumping to generated C++.
 
-Status: native type-definition and hover lookup now index scanned native
-classes by Dudu binding name and `NativeSymbolId`. Imported type aliases use
-identity when the scanner provides enough metadata and otherwise follow their
-structured alias target `TypeRef` head to the real class declaration. Broader
-native completion, references, and semantic token paths still need to move from
-name-set lookup toward the same canonical identity model.
+Status: native type-definition, hover, completion, and document-symbol detail
+now index scanned native classes by Dudu binding name and `NativeSymbolId`.
+Imported type aliases use identity when the scanner provides enough metadata
+and otherwise follow their structured alias target `TypeRef` head to the real
+class declaration. Broader native references and semantic token paths still
+need to move from name-set lookup toward the same canonical identity model.
 
 ## Architecture
 

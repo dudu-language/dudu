@@ -1,6 +1,7 @@
 #include "dudu/language_server_symbols.hpp"
 
 #include "dudu/ast_type.hpp"
+#include "dudu/language_server_native_lookup.hpp"
 #include "dudu/language_server_support.hpp"
 #include "dudu/native_headers.hpp"
 #include "dudu/parser.hpp"
@@ -65,6 +66,19 @@ std::string native_function_detail(const NativeFunctionDecl& fn) {
     return out.str();
 }
 
+std::string native_type_detail(const ModuleAst& module, const NativeTypeDecl& type) {
+    const bool alias_type = has_type_ref(type.type_ref) || !type.native_spelling.empty();
+    if (!alias_type) {
+        return "native type";
+    }
+    std::string detail = "native type = " + native_type_alias_type_text(type);
+    if (const std::optional<NativeClassDefinition> target =
+            native_alias_target_class_definition(module, type)) {
+        detail += " resolves to native class " + target->name;
+    }
+    return detail;
+}
+
 std::vector<Symbol> symbols_for_document(const Document& doc, bool include_native) {
     std::vector<Symbol> out;
     try {
@@ -116,11 +130,8 @@ std::vector<Symbol> symbols_for_document(const Document& doc, bool include_nativ
             return out;
         }
         for (const NativeTypeDecl& type : module.native_types) {
-            const bool alias_type = has_type_ref(type.type_ref) || !type.native_spelling.empty();
             out.push_back({.name = type.name,
-                           .detail = alias_type
-                                         ? "native type = " + native_type_alias_type_text(type)
-                                         : "native type",
+                           .detail = native_type_detail(module, type),
                            .location = type.location,
                            .kind = lsp_symbol_kind::Struct});
         }
