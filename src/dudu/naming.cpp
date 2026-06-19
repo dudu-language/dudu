@@ -9,10 +9,6 @@
 namespace dudu {
 namespace {
 
-bool starts_with(std::string_view text, std::string_view prefix) {
-    return text.substr(0, prefix.size()) == prefix;
-}
-
 bool is_pascal_case(const std::string& name) {
     if (name.empty() || std::isupper(static_cast<unsigned char>(name.front())) == 0) {
         return false;
@@ -26,7 +22,7 @@ bool is_pascal_case(const std::string& name) {
 }
 
 bool is_reserved_dunder_name(const std::string& name) {
-    return name.size() > 4 && starts_with(name, "__") && name.ends_with("__");
+    return name.size() > 4 && name.starts_with("__") && name.ends_with("__");
 }
 
 [[noreturn]] void fail_naming(const SourceLocation& location, std::string_view rule,

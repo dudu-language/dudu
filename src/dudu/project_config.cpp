@@ -160,10 +160,6 @@ void validate_one_of(const std::filesystem::path& path, const std::string& line,
     }
 }
 
-bool starts_with(std::string_view text, std::string_view prefix) {
-    return text.size() >= prefix.size() && text.substr(0, prefix.size()) == prefix;
-}
-
 void append_all(std::vector<std::string>& target, const std::vector<std::string>& source) {
     target.insert(target.end(), source.begin(), source.end());
 }
@@ -281,7 +277,7 @@ ProjectConfig parse_project_config(const std::filesystem::path& path) {
         }
         const std::string name = trim_copy(std::string_view(line).substr(0, equal));
         std::string value = trim_copy(std::string_view(line).substr(equal + 1));
-        if (starts_with(value, "[") && !array_is_closed(value)) {
+        if (value.starts_with("[") && !array_is_closed(value)) {
             std::string continuation;
             while (std::getline(file, continuation)) {
                 continuation = trim_copy(strip_comment(std::move(continuation)));
@@ -294,7 +290,7 @@ ProjectConfig parse_project_config(const std::filesystem::path& path) {
         if (name.empty() || value.empty()) {
             fail(path, section == "build" ? "invalid [build] entry" : "invalid entry", line);
         }
-        if (starts_with(section, "targets.")) {
+        if (section.starts_with("targets.")) {
             std::string target_name = section.substr(8);
             std::string target_section;
             if (const size_t dot = target_name.find('.'); dot != std::string::npos) {
