@@ -601,6 +601,29 @@ void test_lsp_diagnostic_sources_are_structured() {
     assert(sema_diags.front().code.starts_with("dudu.sema."));
 }
 
+void test_lsp_diagnostics_use_open_buffer_for_module_entry() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_open_buffer_module_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "helper.dd", "def helper() -> i32:\n"
+                                  "    return 7\n");
+    write_file(dir / "main.dd", "def main() -> i32:\n"
+                                "    return helper()\n");
+
+    const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
+                             .path = dir / "main.dd",
+                             .text = "from helper import helper\n"
+                                     "\n"
+                                     "def main() -> i32:\n"
+                                     "    return helper()\n"};
+    const std::vector<dudu::Diagnostic> diags = dudu::diagnostics_for_document(doc);
+    for (const dudu::Diagnostic& diag : diags) {
+        assert(diag.source != "dudu/sema");
+        assert(diag.message.find("helper") == std::string::npos);
+    }
+}
+
 void test_lsp_unreachable_lint_uses_branch_structure() {
     const dudu::Document doc{.uri = "",
                              .path = "lint_unreachable.dd",
@@ -1290,6 +1313,7 @@ int main() {
         test_header_emission();
         test_semantic_diagnostics();
         test_lsp_diagnostic_sources_are_structured();
+        test_lsp_diagnostics_use_open_buffer_for_module_entry();
         test_lsp_unreachable_lint_uses_branch_structure();
         test_lsp_unreachable_lint_does_not_flag_partial_branch_return();
         test_lsp_scope_lint_tracks_inferred_assignment_locals();

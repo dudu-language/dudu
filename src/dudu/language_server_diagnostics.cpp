@@ -10,6 +10,7 @@
 #include "dudu/parser.hpp"
 #include "dudu/sema.hpp"
 
+#include <algorithm>
 #include <cstdlib>
 #include <filesystem>
 #include <optional>
@@ -45,6 +46,12 @@ std::optional<std::string> missing_pkg_config_package(const ProjectConfig& confi
     return std::nullopt;
 }
 
+bool has_module_imports(const ModuleAst& module) {
+    return std::any_of(module.imports.begin(), module.imports.end(), [](const ImportDecl& import) {
+        return import.kind == ImportKind::Module || import.kind == ImportKind::From;
+    });
+}
+
 } // namespace
 
 std::vector<Diagnostic> diagnostics_for_document(const Document& doc) {
@@ -68,10 +75,13 @@ std::vector<Diagnostic> diagnostics_for_document(const Document& doc) {
                      .code = "",
                      .data_name = ""}};
         }
-        const bool project_tree =
+        ModuleAst parsed = parse_source(doc.text, doc.path);
+        const bool saved_tree =
             std::filesystem::exists(doc.path) && source_tree_files(doc.path).size() > 1;
-        ModuleAst module =
-            project_tree ? load_source_tree(doc.path) : parse_source(doc.text, doc.path);
+        const bool project_tree = saved_tree || has_module_imports(parsed);
+        ModuleAst module = project_tree && std::filesystem::exists(doc.path)
+                               ? load_source_tree(doc.path, doc.text)
+                               : std::move(parsed);
         module.build_values = config.build_values;
         module.build_values["TARGET_KIND"] = '"' + config.target_kind + '"';
         module.build_values["TARGET_MODE"] = '"' + config.target_mode + '"';

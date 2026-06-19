@@ -10,8 +10,10 @@
 #include <cctype>
 #include <fstream>
 #include <map>
+#include <optional>
 #include <set>
 #include <sstream>
+#include <string_view>
 #include <vector>
 
 namespace dudu {
@@ -405,6 +407,8 @@ void add_from_import_aliases(ModuleAst& module) {
 }
 
 const ModuleAst& load_one(const std::filesystem::path& path, const std::filesystem::path& root,
+                          const std::filesystem::path& entry,
+                          std::optional<std::string_view> entry_source,
                           std::vector<std::filesystem::path>& stack,
                           std::map<std::filesystem::path, ModuleAst>& loaded,
                           std::vector<std::filesystem::path>& ordered) {
@@ -418,7 +422,9 @@ const ModuleAst& load_one(const std::filesystem::path& path, const std::filesyst
     }
     stack.push_back(canonical);
 
-    ModuleAst parsed = parse_source(read_text_file(path), path);
+    const bool use_entry_source = canonical == entry && entry_source.has_value();
+    ModuleAst parsed =
+        parse_source(use_entry_source ? std::string(*entry_source) : read_text_file(path), path);
     stamp_module_origin(parsed, canonical, module_name_from_file(root, canonical));
     for (const ImportDecl& import : parsed.imports) {
         if (import.kind != ImportKind::Module && import.kind != ImportKind::From) {
@@ -432,7 +438,8 @@ const ModuleAst& load_one(const std::filesystem::path& path, const std::filesyst
             throw CompileError(import.location,
                                module_cycle_message(root, stack, canonical_dependency));
         }
-        const ModuleAst& dependency_module = load_one(dependency, root, stack, loaded, ordered);
+        const ModuleAst& dependency_module =
+            load_one(dependency, root, entry, entry_source, stack, loaded, ordered);
         parsed.dependencies.push_back({.kind = import.kind,
                                        .import_module_path = import.module_path,
                                        .resolved_module_path = dependency_module.module_path,
@@ -486,13 +493,13 @@ void collect_files(const std::filesystem::path& path, std::vector<std::filesyste
 
 } // namespace
 
-ModuleAst load_source_tree(const std::filesystem::path& entry) {
+ModuleAst load_source_tree(const std::filesystem::path& entry, std::string_view entry_source) {
     const std::filesystem::path canonical_entry = std::filesystem::weakly_canonical(entry);
     const std::filesystem::path root = canonical_entry.parent_path();
     std::vector<std::filesystem::path> stack;
     std::map<std::filesystem::path, ModuleAst> loaded;
     std::vector<std::filesystem::path> ordered;
-    (void)load_one(canonical_entry, root, stack, loaded, ordered);
+    (void)load_one(canonical_entry, root, canonical_entry, entry_source, stack, loaded, ordered);
 
     ModuleAst merged;
     merged.source_path = canonical_entry;
@@ -506,6 +513,10 @@ ModuleAst load_source_tree(const std::filesystem::path& entry) {
     }
     add_from_import_aliases(merged);
     return merged;
+}
+
+ModuleAst load_source_tree(const std::filesystem::path& entry) {
+    return load_source_tree(entry, read_text_file(entry));
 }
 
 std::vector<std::filesystem::path> source_tree_files(const std::filesystem::path& entry) {

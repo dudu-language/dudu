@@ -1248,7 +1248,10 @@ push. They are not release packaging work.
    remain rejected until symbol identity is strong enough to avoid editing
    unrelated same-named locals. Declaration-anchored references use the same
    conservative redeclaration filter, while imported module/member references
-   keep workspace search.
+   keep workspace search. LSP diagnostics now load multi-file module trees with
+   the open editor buffer as the entry source, so unsaved fixes to imports or
+   entry code are analyzed consistently with the saved dependency modules
+   instead of rereading a stale entry file from disk.
 
 14. Project Driver Polish
 
