@@ -66,6 +66,7 @@ bool pointer_cast_type_ref_like(const TypeRef& type) {
                std::isupper(static_cast<unsigned char>(type.name.front())) != 0;
     case TypeKind::Pointer:
     case TypeKind::Reference:
+    case TypeKind::PackExpansion:
     case TypeKind::Value:
     case TypeKind::Unknown:
         return false;

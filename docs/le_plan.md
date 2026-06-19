@@ -2072,3 +2072,10 @@ push. They are not release packaging work.
    placeholder lookup key; substitutions now require structured named,
    qualified, or template type nodes, so malformed unknown type text cannot
    quietly participate in semantic rewriting.
+   Native variadic template parameters now use a structured
+   `TypeKind::PackExpansion` node instead of mutating `TypeRef.text` to hold
+   spellings like `T...`; native header scan normalizes trailing and nested
+   C++ template ellipsis at the import boundary, and signature expansion
+   consumes the structured pack node directly. The old nested pack matcher
+   that manufactured an `Unknown.text` node containing a joined type list has
+   been removed.

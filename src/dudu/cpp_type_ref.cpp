@@ -333,6 +333,8 @@ std::string lower_cpp_type(const TypeRef& type) {
         return lower_fixed_array_type(type);
     case TypeKind::Function:
         return lower_function_type(type, true);
+    case TypeKind::PackExpansion:
+        malformed_type_ref(type);
     case TypeKind::Unknown:
         malformed_type_ref(type);
     }
@@ -395,6 +397,8 @@ std::string lower_cpp_type(const TypeRef& type, const std::vector<std::string>& 
         return lower_fixed_array_type(type, namespace_aliases);
     case TypeKind::Function:
         return lower_function_type(type, true, namespace_aliases);
+    case TypeKind::PackExpansion:
+        malformed_type_ref(type);
     case TypeKind::Unknown:
         malformed_type_ref(type);
     }
@@ -462,6 +466,8 @@ std::string lower_cpp_type(const TypeRef& type, const std::vector<std::string>& 
         return lower_fixed_array_type(type, namespace_aliases, options);
     case TypeKind::Function:
         return lower_function_type(type, true, namespace_aliases, options);
+    case TypeKind::PackExpansion:
+        malformed_type_ref(type);
     case TypeKind::Unknown:
         malformed_type_ref(type);
     }

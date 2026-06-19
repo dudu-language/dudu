@@ -264,6 +264,8 @@ std::string_view type_kind_name(TypeKind kind) {
         return "fixed_array";
     case TypeKind::Function:
         return "function";
+    case TypeKind::PackExpansion:
+        return "pack_expansion";
     }
     return "unknown";
 }

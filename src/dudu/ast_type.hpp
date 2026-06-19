@@ -30,6 +30,7 @@ bool type_ref_equivalent(const TypeRef& left, const TypeRef& right);
 TypeRef named_type_ref(std::string name, SourceLocation location = {});
 TypeRef void_type_ref(SourceLocation location = {});
 TypeRef wrapped_type_ref(TypeKind kind, TypeRef child, SourceLocation location = {});
+TypeRef pack_expansion_type_ref(TypeRef child, SourceLocation location = {});
 bool function_has_receiver_type(const FunctionDecl& fn);
 std::string function_receiver_type_text(const FunctionDecl& fn);
 bool function_has_return_type(const FunctionDecl& fn);

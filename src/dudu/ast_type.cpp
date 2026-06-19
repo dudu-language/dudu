@@ -118,6 +118,8 @@ std::string type_ref_head_name(const TypeRef& type) {
         return "static";
     case TypeKind::FixedArray:
         return "array";
+    case TypeKind::PackExpansion:
+        return "...";
     case TypeKind::Unknown:
         return trim_copy(type.text);
     }
@@ -194,6 +196,13 @@ std::string substitute_type_ref_text(const TypeRef& type,
                                        : substitute_type_ref_text(type.children[0], substitutions);
         return "fn(" + join_substituted_types(type.children, 1, substitutions) + ") -> " + result;
     }
+    case TypeKind::PackExpansion:
+        if (type.children.size() != 1) {
+            throw CompileError(
+                type.location,
+                "malformed structured type node: pack_expansion is missing its child type");
+        }
+        return substitute_type_ref_text(type.children[0], substitutions) + "...";
     case TypeKind::Value:
         return trim_copy(type.value);
     case TypeKind::Named:
@@ -273,6 +282,7 @@ bool type_ref_equivalent(const TypeRef& left, const TypeRef& right) {
     case TypeKind::Shared:
     case TypeKind::Static:
     case TypeKind::Function:
+    case TypeKind::PackExpansion:
         break;
     case TypeKind::Unknown:
         return false;
@@ -307,6 +317,10 @@ TypeRef wrapped_type_ref(TypeKind kind, TypeRef child, SourceLocation location) 
     type.range = child.range;
     type.children.push_back(std::move(child));
     return type;
+}
+
+TypeRef pack_expansion_type_ref(TypeRef child, SourceLocation location) {
+    return wrapped_type_ref(TypeKind::PackExpansion, std::move(child), location);
 }
 
 bool function_has_receiver_type(const FunctionDecl& fn) {

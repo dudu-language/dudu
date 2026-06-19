@@ -50,6 +50,7 @@ bool type_refs_equivalent_ignoring_c_tags(const TypeRef& expected, const TypeRef
     case TypeKind::Shared:
     case TypeKind::Static:
     case TypeKind::Function:
+    case TypeKind::PackExpansion:
         break;
     case TypeKind::Unknown:
         return false;

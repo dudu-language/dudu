@@ -19,6 +19,33 @@ struct TemplateContext {
     std::vector<std::string> params;
 };
 
+TypeRef parse_native_type_text(std::string text, const SourceLocation& location) {
+    text = trim_copy(std::move(text));
+    if (text.ends_with("...")) {
+        return pack_expansion_type_ref(
+            parse_type_text(trim_copy(text.substr(0, text.size() - 3)), location), location);
+    }
+    TypeRef type = parse_type_text(text, location);
+    for (TypeRef& child : type.children) {
+        child = parse_native_type_text(type_ref_text(child), child.location);
+    }
+    if (type.kind == TypeKind::Template && type.children.size() >= 2) {
+        std::string pack_name = type_ref_head_name(type.children.front());
+        while (!pack_name.empty() && pack_name.back() == '.') {
+            pack_name.pop_back();
+        }
+        bool marker_tail = !pack_name.empty();
+        for (size_t i = 1; i < type.children.size(); ++i) {
+            marker_tail = marker_tail && type_ref_text(type.children[i]) == ".";
+        }
+        if (marker_tail) {
+            TypeRef pack_child = named_type_ref(pack_name, type.children.front().location);
+            type.children = {pack_expansion_type_ref(std::move(pack_child), type.location)};
+        }
+    }
+    return type;
+}
+
 int ast_depth(const std::string& line) {
     const size_t branch = line.find("|-");
     const size_t last = line.find("`-");
@@ -243,9 +270,9 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         fn.return_type = qualify_scoped_type(scan, namespaces, signature_return_type(signature));
         fn.param_type_refs.reserve(fn.params.size());
         for (const std::string& param : fn.params) {
-            fn.param_type_refs.push_back(parse_type_text(param, decl_location));
+            fn.param_type_refs.push_back(parse_native_type_text(param, decl_location));
         }
-        fn.return_type_ref = parse_type_text(fn.return_type, decl_location);
+        fn.return_type_ref = parse_native_type_text(fn.return_type, decl_location);
         fn.min_params = static_cast<int>(fn.params.size());
         fn.variadic = signature.find("...") != std::string::npos;
         fn.location = decl_location;

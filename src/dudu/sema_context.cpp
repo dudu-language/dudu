@@ -98,6 +98,7 @@ std::string compute_base_type(const TypeRef& type) {
     case TypeKind::Static:
         return "static";
     case TypeKind::FixedArray:
+    case TypeKind::PackExpansion:
         if (!type.children.empty()) {
             return compute_base_type(type.children.front());
         }
@@ -170,6 +171,7 @@ std::optional<std::pair<std::string, SourceLocation>> unknown_type_ref(const Sym
     case TypeKind::Static:
     case TypeKind::FixedArray:
     case TypeKind::Function:
+    case TypeKind::PackExpansion:
         for (const TypeRef& child : type.children) {
             if (const auto unknown = unknown_type_ref(symbols, child)) {
                 return unknown;

@@ -250,6 +250,9 @@ bool structured_binding_type_ref(const TypeRef& type) {
     if (type.kind == TypeKind::Unknown) {
         return structured_binding_text(type.text);
     }
+    if (type.kind == TypeKind::PackExpansion) {
+        return type.children.size() == 1 && structured_binding_type_ref(type.children.front());
+    }
     for (const TypeRef& child : type.children) {
         if (!structured_binding_type_ref(child)) {
             return false;

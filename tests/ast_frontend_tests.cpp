@@ -342,8 +342,8 @@ void test_bound_native_template_pack_substitution_uses_type_refs() {
     signature.template_params = {"T"};
     signature.variadic = true;
     signature.min_params = 0;
-    dudu::TypeRef pack_param = dudu::parse_type_text("T");
-    pack_param.text = "T...";
+    dudu::TypeRef pack_param =
+        dudu::pack_expansion_type_ref(dudu::parse_type_text("T"), {});
     dudu::set_signature_param_types(signature, {pack_param});
     dudu::set_signature_return_type(signature, dudu::parse_type_text("tuple[T]"));
 
