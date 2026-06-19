@@ -7,12 +7,12 @@
 #include "dudu/language_server_navigation.hpp"
 #include "dudu/language_server_support.hpp"
 #include "dudu/language_server_symbols.hpp"
+#include "dudu/module_loader.hpp"
 #include "dudu/native_headers.hpp"
 #include "dudu/parser.hpp"
 
 #include <algorithm>
 #include <filesystem>
-#include <fstream>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -44,66 +44,49 @@ std::string doc_comment_before(const Document& doc, int one_based_line) {
     return out.str();
 }
 
-std::optional<Document> imported_document(const Document& doc, const ImportDecl& import) {
-    const std::filesystem::path file =
-        module_path_to_file(doc.path.parent_path(), import.module_path);
-    std::error_code error;
-    if (!std::filesystem::exists(file, error) || error) {
-        return std::nullopt;
-    }
-    std::ifstream input(file);
-    if (!input) {
-        return std::nullopt;
-    }
-    const std::string text{std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
-    return Document{.uri = file_uri(file), .path = file, .text = text};
-}
-
 std::optional<std::string> imported_symbol_hover_json(const Document& doc,
                                                       const std::string& word) {
     if (word.empty()) {
         return std::nullopt;
     }
     try {
-        const ModuleAst module = parse_source(doc.text, doc.path);
-        for (const ImportDecl& import : module.imports) {
+        const ModuleAst module = module_for_document(doc, false);
+        const ModuleAst& current = visible_module_unit(module, doc.path);
+        for (const ImportDecl& import : current.imports) {
+            std::string target;
             if (import.kind == ImportKind::Module) {
                 const std::string bound = bound_import_name(import);
                 const std::vector<std::string> prefixes =
                     import.alias.empty() ? std::vector<std::string>{import.module_path, bound}
                                          : std::vector<std::string>{bound};
-                std::string imported_name;
                 for (const std::string& prefix : prefixes) {
                     if (word.rfind(prefix + ".", 0) == 0) {
-                        imported_name = word.substr(prefix.size() + 1);
+                        target = word.substr(prefix.size() + 1);
                         break;
                     }
                 }
-                if (imported_name.empty()) {
+                if (target.empty()) {
                     continue;
                 }
-                const std::optional<Document> imported = imported_document(doc, import);
-                if (!imported) {
-                    continue;
-                }
-                for (const Symbol& symbol : symbols_for_document(*imported, false)) {
-                    if (symbol.name != imported_name) {
-                        continue;
-                    }
-                    return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"`" +
-                           json_escape(symbol.detail) + "`\"}}";
-                }
+            } else if (import.kind == ImportKind::From && bound_import_name(import) == word) {
+                target = import.imported_name;
+            } else {
                 continue;
             }
-            if (import.kind != ImportKind::From || bound_import_name(import) != word) {
+            const std::filesystem::path file =
+                module_path_to_file(doc.path.parent_path(), import.module_path);
+            std::error_code error;
+            if (!std::filesystem::exists(file, error) || error) {
                 continue;
             }
-            const std::optional<Document> imported = imported_document(doc, import);
-            if (!imported) {
-                continue;
+            const ModuleAst* imported = imported_module_unit(module, current, import);
+            ModuleAst loaded_imported;
+            if (imported == nullptr) {
+                loaded_imported = load_source_tree(file);
+                imported = &visible_module_unit(loaded_imported, file);
             }
-            for (const Symbol& symbol : symbols_for_document(*imported, false)) {
-                if (symbol.name != import.imported_name) {
+            for (const Symbol& symbol : symbols_for_module(*imported, false)) {
+                if (symbol.name != target) {
                     continue;
                 }
                 return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"`" +

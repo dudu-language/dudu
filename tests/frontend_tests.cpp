@@ -9,6 +9,7 @@
 #include "dudu/language_server_completion.hpp"
 #include "dudu/language_server_diagnostics.hpp"
 #include "dudu/language_server_definition.hpp"
+#include "dudu/language_server_hover.hpp"
 #include "dudu/language_server_json.hpp"
 #include "dudu/language_server_navigation.hpp"
 #include "dudu/lexer.hpp"
@@ -744,6 +745,26 @@ void test_lsp_definition_uses_loaded_module_units() {
     assert(definition.find("\"line\":0") != std::string::npos);
 }
 
+void test_lsp_hover_uses_loaded_module_units() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_module_hover_unit_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "maths.dd", "def inc(value: i32) -> i32:\n"
+                                 "    return value + 1\n");
+    write_file(dir / "main.dd", "def main() -> i32:\n"
+                                "    return 0\n");
+
+    const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
+                             .path = dir / "main.dd",
+                             .text = "import maths\n"
+                                     "\n"
+                                     "def main() -> i32:\n"
+                                     "    return maths.inc(1)\n"};
+    const std::string hover = dudu::hover_json(doc, "maths.inc", "");
+    assert(hover.find("def inc(value: i32) -> i32") != std::string::npos);
+}
+
 void test_lsp_unreachable_lint_uses_branch_structure() {
     const dudu::Document doc{.uri = "",
                              .path = "lint_unreachable.dd",
@@ -1439,6 +1460,7 @@ int main() {
         test_lsp_signature_help_uses_visible_imported_functions();
         test_lsp_module_completion_uses_loaded_module_units();
         test_lsp_definition_uses_loaded_module_units();
+        test_lsp_hover_uses_loaded_module_units();
         test_lsp_unreachable_lint_uses_branch_structure();
         test_lsp_unreachable_lint_does_not_flag_partial_branch_return();
         test_lsp_scope_lint_tracks_inferred_assignment_locals();

@@ -1286,9 +1286,9 @@ push. They are not release packaging work.
    Dudu module shapes, visible imported functions, and native headers. Fields
    and methods on imported classes such as `from vec3 import Vec3` are visible
    to the editor, selectively imported functions participate in completion and
-   call signature help, and `module.` completion plus import go-to-definition
-   resolve through loaded module units instead of manually reparsing imported
-   files.
+   call signature help, and `module.` completion, imported hover, plus import
+   go-to-definition resolve through loaded module units instead of manually
+   reparsing imported files.
 
 14. Project Driver Polish
 
