@@ -645,8 +645,12 @@ void test_allocation_type_ref_diagnostics() {
     assert(allocation->children.size() == 1);
     assert(allocation->children.front().kind == dudu::TypeKind::Template);
     assert(dudu::substitute_type_ref_text(*allocation, {}) == "*list[i32]");
-    assert(dudu::infer_cpp_escape_expr(scope, "new[list[i32]]()", &location) == "*list[i32]");
-    assert(dudu::infer_cpp_escape_expr(scope, "*struct State(None)", &location) == "*struct State");
+    assert(dudu::substitute_type_ref_text(
+               dudu::infer_cpp_escape_expr_ref(scope, "new[list[i32]]()", &location), {}) ==
+           "*list[i32]");
+    assert(dudu::substitute_type_ref_text(
+               dudu::infer_cpp_escape_expr_ref(scope, "*struct State(None)", &location), {}) ==
+           "*struct State");
     const std::optional<dudu::EscapeCall> parsed_template_call =
         dudu::parsed_escape_call(dudu::parse_expr_text("Box[i32](7)", location));
     assert(parsed_template_call.has_value());
@@ -656,7 +660,7 @@ void test_allocation_type_ref_diagnostics() {
 
     bool rejected = false;
     try {
-        (void)dudu::infer_cpp_escape_expr(scope, "new[list[MissingType]]()", &location);
+        (void)dudu::infer_cpp_escape_expr_ref(scope, "new[list[MissingType]]()", &location);
     } catch (const dudu::CompileError& error) {
         assert(error.location().line == 7);
         assert(error.location().column > location.column);

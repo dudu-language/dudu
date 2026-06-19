@@ -229,7 +229,10 @@ call site. The guard rejects reintroducing `lower_cpp_type(std::string)` or
 `type_ref_is_integer(const TypeRef&)`, and the guard rejects the old
 `is_integer_type(type_ref_head_name(...))` shape. The unused string overload of
 `normalize_cpp_type_artifacts` was deleted as well, leaving the native artifact
-normalizer on structured `TypeRef` input only.
+normalizer on structured `TypeRef` input only. The string-returning
+`infer_cpp_escape_expr` test wrapper was removed; explicit `cpp(...)` escape
+inference exposes `infer_cpp_escape_expr_ref` and display rendering happens only
+at diagnostics or tests.
 
 ## Goal 6: Separate Module Outputs Without Re-Flattening
 

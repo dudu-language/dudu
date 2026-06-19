@@ -31,6 +31,8 @@ forbidden=(
     "is_integer_type\\(type_ref_head_name"
     "bool is_integer_type\\(std::string"
     "normalize_cpp_type_artifacts\\(std::string"
+    "infer_cpp_escape_expr\\("
+    "render_type\\(const TypeRef"
 )
 
 for pattern in "${forbidden[@]}"; do

@@ -29,10 +29,6 @@ bool known_cpp_escape_type_ref(const Symbols& symbols, const TypeRef& type) {
     return known_type_ref(symbols, type);
 }
 
-std::string render_type(const TypeRef& type) {
-    return has_type_ref(type) ? substitute_type_ref_text(type, {}) : std::string{};
-}
-
 std::optional<TypeRef> infer_parsed_index_escape_ref(const FunctionScope& scope, const Expr& parsed,
                                                      const SourceLocation* location) {
     if (location == nullptr || parsed.kind != ExprKind::Index || parsed.children.size() != 2) {
@@ -471,11 +467,6 @@ TypeRef infer_cpp_escape_expr_ref(const FunctionScope& scope, std::string expr,
                            expr);
     }
     return {};
-}
-
-std::string infer_cpp_escape_expr(const FunctionScope& scope, std::string expr,
-                                  const SourceLocation* location) {
-    return render_type(infer_cpp_escape_expr_ref(scope, std::move(expr), location));
 }
 
 } // namespace dudu
