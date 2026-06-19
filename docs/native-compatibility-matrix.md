@@ -63,6 +63,7 @@ compiler matures.
 | API / Library | Domain | Target Coverage | Status | Notes |
 | --- | --- | --- | --- | --- |
 | CUDA / CUBLAS | GPU / ML | host API, device buffers, BLAS-like calls | skip | Needs NVIDIA tooling/hardware. |
+| C++-aware C headers | native interop | C-style globals from headers that must be emitted as normal C++ includes | planned | libxml2 is the motivating fixture; current `import c` emits C-linkage include blocks, while `import cpp` treats aliases as C++ namespace handles. |
 | platform APIs | OS | Win32, Cocoa subsets | planned | Platform-specific; X11 and Wayland have Linux probes. |
 
 ## Rules

@@ -1183,18 +1183,21 @@ push. They are not release packaging work.
    partial-syntax macros, or platform setup that C/C++ users also normally hide
    behind an adapter.
 
-   Current optional probes pass for glm, Eigen, OpenBLAS, OpenCV, sqlite, zlib, curl, OpenSSL,
-   libevent, libpng, stb, fmt, spdlog, Boost filesystem, threading, POSIX mmap, POSIX pthread, raylib, SDL3, GLFW, Dear ImGui, X11, Wayland, OpenCL, Vulkan, and FFmpeg on this
-   machine. Optional dev-only dependencies can be installed into the ignored
-   `third_party/install` prefix with `scripts/setup_dev_deps.sh`; the main Dudu
-   build does not require them.
+   Current optional probes pass for glm, Eigen, OpenBLAS, OpenCV, sqlite, zlib,
+   curl, OpenSSL, libevent, libpng, stb, fmt, spdlog, Boost filesystem,
+   threading, POSIX mmap, POSIX pthread, raylib, SDL3, GLFW, Dear ImGui, X11,
+   Wayland, OpenCL, Vulkan, and FFmpeg on this machine. Optional dev-only
+   dependencies can be installed into the ignored `third_party/install` prefix
+   with `scripts/setup_dev_deps.sh`; the main Dudu build does not require them.
 
    POSIX pthread coverage now imports `pthread.h` directly and exercises
    `pthread_create` with a Dudu function pointer callback plus native mutex
    operations, without the old helper wrapper header.
-   C imports now emit C-linkage include blocks in generated C++, so FFmpeg's
-   `libavcodec/packet.h` can be imported directly without an `extern "C"`
-   wrapper header.
+   C imports emit C-linkage include blocks for headers that need the normal C++
+   `extern "C"` wrapper pattern, such as FFmpeg's `libavcodec/packet.h`.
+   C++-aware C headers that own their own linkage blocks but expose C-style
+   globals need an explicit import-mode design; libxml2 is the motivating
+   compatibility target.
 
    This matrix is not part of the always-on fast loop. Keep fast compiler
    validation small, and run the real-library/example matrix periodically, when
