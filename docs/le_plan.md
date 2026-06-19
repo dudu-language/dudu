@@ -1415,6 +1415,9 @@ push. They are not release packaging work.
    command lines behind `--verbose`; cached direct builds also print an explicit
    `up-to-date` outcome by default. `dudu build` reports the final artifact path
    with an `output` line for both direct and generated-CMake backends.
+   Direct `dudu build` and `dudu run` report Dudu-side `analyze`, generated C++
+   `emit`, native `compile`, and final `output`/`run` stages separately so
+   normal builds show where time is going.
    `--quiet` suppresses project-driver
    progress output for scripts. `dudu check` now prints `check` and `ok` lines
    on successful validation unless `--quiet` is set, while `duc check` remains

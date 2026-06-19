@@ -257,13 +257,16 @@ int run_build_command(const CliOptions& options, char* executable) {
     const std::string source = read_text_file(options.input);
     const std::filesystem::path output =
         options.output.value_or(default_build_output(config, options.input));
+    print_project_step(project_output, "analyze", options.input);
+    const ModuleAst module = checked_module(options, source, true);
     print_project_step(project_output, "emit", output.string() + ".cpp");
-    print_project_step(project_output, "build", output);
+    const std::string cpp = emit_cpp_source(module);
+    print_project_step(project_output, "compile", output);
     (void)build_executable({.output = output,
                             .config = config,
                             .stream_output = project_output,
                             .verbose = options.verbose},
-                           emit_cpp_source(checked_module(options, source, true)));
+                           cpp);
     print_project_step(project_output, "output", output);
     return 0;
 }
@@ -292,14 +295,17 @@ int run_run_command(const CliOptions& options, char* executable) {
     const std::string source = read_text_file(options.input);
     const std::filesystem::path output =
         options.output.value_or(default_build_output(config, options.input));
+    print_project_step(project_output, "analyze", options.input);
+    const ModuleAst module = checked_module(options, source, true);
     print_project_step(project_output, "emit", output.string() + ".cpp");
-    print_project_step(project_output, "build", output);
+    const std::string cpp = emit_cpp_source(module);
+    print_project_step(project_output, "compile", output);
     const std::filesystem::path bin =
         build_executable({.output = output,
                           .config = config,
                           .stream_output = project_output,
                           .verbose = options.verbose},
-                         emit_cpp_source(checked_module(options, source, true)));
+                         cpp);
     const std::filesystem::path command =
         bin.is_relative() && bin.parent_path().empty() ? std::filesystem::path(".") / bin : bin;
     print_project_step(project_output, "run", command);
