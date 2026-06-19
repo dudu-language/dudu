@@ -127,3 +127,10 @@ awk '
     }
     END { exit bad ? 1 : 0 }
 ' "$repo_root/src/dudu/ast.hpp"
+
+allowed_lower_cpp_type_spelling='src/dudu/cpp_expr_builtins.cpp|src/dudu/cpp_lower.cpp|src/dudu/cpp_raw_escape_templates.cpp|src/dudu/cpp_type.cpp|src/dudu/cpp_lower.hpp'
+if rg -n "lower_cpp_type_spelling" "$repo_root/src/dudu" |
+    grep -Ev "$allowed_lower_cpp_type_spelling"; then
+    echo "lower_cpp_type_spelling is only allowed at explicit raw C++ escape/native spelling boundaries" >&2
+    exit 1
+fi
