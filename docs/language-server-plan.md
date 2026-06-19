@@ -102,6 +102,8 @@ provides enough metadata and otherwise follow their structured alias target
 `TypeRef` head to the real class declaration. References now also handle
 path-qualified member uses such as an imported native class constructor call
 matching the same qualified type annotation, from either cursor position.
+Frontend tests cover go-to-definition from a Dudu native type annotation to the
+source location of a real scanned local C header declaration.
 Broader native references still need to move from name-set lookup toward a
 canonical identity index.
 

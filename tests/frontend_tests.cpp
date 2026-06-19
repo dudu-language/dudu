@@ -746,6 +746,30 @@ void test_lsp_definition_uses_loaded_module_units() {
     assert(definition.find("\"line\":0") != std::string::npos);
 }
 
+void test_lsp_definition_jumps_to_native_header_type() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_native_definition_unit_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "native_point.h", "typedef struct NativePoint {\n"
+                                       "    int x;\n"
+                                       "    int y;\n"
+                                       "} NativePoint;\n");
+
+    const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
+                             .path = dir / "main.dd",
+                             .text = "import c \"native_point.h\"\n"
+                                     "\n"
+                                     "def main() -> i32:\n"
+                                     "    point: NativePoint\n"
+                                     "    return point.x\n"};
+    dudu::Json params =
+        dudu::JsonParser("{\"position\":{\"line\":3,\"character\":16}}").parse();
+    const std::string definition = dudu::definition_json(doc, &params);
+    assert(definition.find(dudu::file_uri(dir / "native_point.h")) != std::string::npos);
+    assert(definition.find("\"line\":0") != std::string::npos);
+}
+
 void test_lsp_hover_uses_loaded_module_units() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_lsp_module_hover_unit_test";
@@ -1505,6 +1529,7 @@ int main() {
         test_lsp_signature_help_uses_visible_imported_functions();
         test_lsp_module_completion_uses_loaded_module_units();
         test_lsp_definition_uses_loaded_module_units();
+        test_lsp_definition_jumps_to_native_header_type();
         test_lsp_hover_uses_loaded_module_units();
         test_lsp_unreachable_lint_uses_branch_structure();
         test_lsp_unreachable_lint_does_not_flag_partial_branch_return();
