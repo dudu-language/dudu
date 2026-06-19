@@ -1,3 +1,4 @@
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_emit.hpp"
 #include "dudu/native_headers.hpp"
 #include "dudu/parser.hpp"
@@ -184,6 +185,53 @@ void test_native_header_alias_preserves_identity(const std::filesystem::path& ro
     assert(saw_prefixed_function);
 }
 
+void test_native_identity_edge_cases(const std::filesystem::path& root) {
+    const std::filesystem::path source_dir = root / "build" / "native-identity-edge-cases";
+    const std::filesystem::path header = source_dir / "native_identity_cases.hpp";
+    std::filesystem::remove_all(source_dir);
+    std::filesystem::create_directories(source_dir);
+    {
+        std::ofstream out(header);
+        out << "#pragma once\n"
+               "namespace left { struct Thing {}; inline int value(Thing*) { return 1; } }\n"
+               "namespace right { struct Thing {}; inline int value(Thing*) { return 2; } }\n"
+               "namespace outer { inline namespace v1 { struct InlineThing {}; } }\n"
+               "using LeftThing = left::Thing;\n";
+    }
+
+    dudu::ModuleAst module =
+        dudu::parse_source("import cpp \"./native_identity_cases.hpp\"\n", source_dir / "main.dd");
+    dudu::ProjectConfig config;
+    config.project_dir = source_dir;
+    config.build_dir = source_dir / "build";
+    dudu::merge_native_header_types(module, {.config = config, .source_dir = source_dir});
+
+    bool saw_left = false;
+    bool saw_right = false;
+    bool saw_alias = false;
+    bool saw_inline = false;
+    for (const dudu::NativeTypeDecl& type : module.native_types) {
+        if (type.name == "left.Thing") {
+            assert(type.identity.canonical_path == "left.Thing");
+            saw_left = true;
+        } else if (type.name == "right.Thing") {
+            assert(type.identity.canonical_path == "right.Thing");
+            saw_right = true;
+        } else if (type.name == "LeftThing") {
+            assert(type.identity.canonical_path == "LeftThing");
+            assert(dudu::type_ref_head_name(type.type_ref) == "left.Thing");
+            saw_alias = true;
+        } else if (type.name == "outer.InlineThing") {
+            assert(type.identity.canonical_path == "outer.InlineThing");
+            saw_inline = true;
+        }
+    }
+    assert(saw_left);
+    assert(saw_right);
+    assert(saw_alias);
+    assert(saw_inline);
+}
+
 void test_native_single_underscore_function_macros(const std::filesystem::path& root) {
     const std::filesystem::path source_dir = root / "build" / "native-macro-scan";
     const std::filesystem::path header_dir = root / "build" / "native-macro-include";
@@ -319,6 +367,7 @@ int main() {
         test_native_type_declaration_emission();
         test_native_header_type_scan(root);
         test_native_header_alias_preserves_identity(root);
+        test_native_identity_edge_cases(root);
         test_native_single_underscore_function_macros(root);
         test_native_call_arity(root);
         test_native_header_collision(root);

@@ -82,6 +82,9 @@ In progress.
   declarations.
 - Aliased header imports preserve canonical identity while adding the
   user-facing prefixed binding path.
+- Inline namespace declarations are transparent in the scanner path, so an
+  imported `outer::inline_namespace::Type` can expose the public Dudu path
+  `outer.Type` instead of treating `inline` as a namespace name.
 - Dudu-module import shims that currently live in native metadata containers
   also populate `identity.canonical_path`.
 - Fast migration guards reject native declaration structs that drop
