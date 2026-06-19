@@ -1,0 +1,5 @@
+def rename_target() -> i32:
+    return 99
+
+def use_local_target() -> i32:
+    return rename_target()

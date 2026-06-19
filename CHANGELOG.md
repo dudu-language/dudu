@@ -86,6 +86,8 @@
 - Made LSP rename declaration-anchored across the workspace and allowed
   current-document edits from an unqualified call site when the call resolves
   to one renameable Dudu declaration in that document.
+- Made declaration-anchored LSP workspace rename skip files that declare their
+  own same-named Dudu symbol until full cross-file symbol identity is available.
 - Added project-driver output for successful `dudu check`, documented
   `dudu bench` in help, and made `dudu bench --quiet`/`--help` behave as
   project-driver flags while preserving benchmark arguments after `--`.

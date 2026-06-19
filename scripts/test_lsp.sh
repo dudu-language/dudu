@@ -41,6 +41,7 @@ native_pkg_uri = f"file://{repo_root}/tests/fixtures/lsp_pkg_project/main.dd"
 native_pkg_config_uri = f"file://{repo_root}/tests/fixtures/lsp_pkg_project/dudu.toml"
 rename_uri = f"file://{repo_root}/tests/fixtures/lsp_rename_main.dd"
 rename_user_uri = f"file://{repo_root}/tests/fixtures/lsp_rename_user.dd"
+rename_unrelated_uri = f"file://{repo_root}/tests/fixtures/lsp_rename_unrelated.dd"
 rename_ast_uri = "file:///tmp/dudu_lsp_rename_ast.dd"
 rename_ast_unrelated_uri = "file:///tmp/dudu_lsp_rename_ast_unrelated.dd"
 lint_uri = "file:///tmp/dudu_lsp_lint.dd"
@@ -112,6 +113,29 @@ messages = [
                     "languageId": "dudu",
                     "version": 1,
                     "text": source,
+                }
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "method": "textDocument/didOpen",
+            "params": {
+                "textDocument": {
+                    "uri": rename_unrelated_uri,
+                    "languageId": "dudu",
+                    "version": 1,
+                    "text": "\n".join(
+                        [
+                            "def rename_target() -> i32:",
+                            "    return 99",
+                            "",
+                            "def use_local_target() -> i32:",
+                            "    return rename_target()",
+                            "",
+                        ]
+                    ),
                 }
             },
         }
@@ -1737,6 +1761,7 @@ assert not any(
 workspace_rename = next(item for item in responses if item.get("id") == 28)
 assert rename_uri in workspace_rename["result"]["changes"]
 assert rename_user_uri in workspace_rename["result"]["changes"]
+assert rename_unrelated_uri not in workspace_rename["result"]["changes"]
 workspace_rename_user_edits = workspace_rename["result"]["changes"][rename_user_uri]
 assert any(
     edit["range"]["start"]["line"] == 1

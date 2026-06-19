@@ -1159,11 +1159,13 @@ push. They are not release packaging work.
    `import vendor.helper` now resolve through their full dotted path for hover,
    go-to-definition, and member completion, matching the compiler's
    Python-shaped module binding behavior. Rename is declaration-anchored across
-   open and unopened workspace files. Current-document unqualified call-site
-   rename is allowed when the call resolves to one renameable Dudu declaration
-   in that document and no visible local type binding shadows it; ambiguous
-   use-sites remain rejected until symbol identity is strong enough to avoid
-   editing unrelated same-named locals.
+   open and unopened workspace files, but skips files that declare their own
+   same-named Dudu symbol until cross-file symbol identity is strong enough to
+   prove those edits are related. Current-document unqualified call-site rename
+   is allowed when the call resolves to one renameable Dudu declaration in that
+   document and no visible local type binding shadows it; ambiguous use-sites
+   remain rejected until symbol identity is strong enough to avoid editing
+   unrelated same-named locals.
 
 13. Project Driver Polish
 
