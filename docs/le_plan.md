@@ -902,8 +902,7 @@ push. They are not release packaging work.
    ranges instead of shifting by compatibility expression text width. Shared
    Direct unaliased native symbols from C/C++ headers now participate in
    current-document reference lookup once the native scanner proves the symbol
-   exists in the document's imports, covering direct native function calls and
-   direct native type annotations.
+   exists in the document's imports, covering direct native function calls.
    AST traversal helpers now own expression-tree and statement-expression
    walking, and the AST lint, unsupported-feature, build-flag, and navigation
    passes use those helpers instead of maintaining hand-written expression-slot

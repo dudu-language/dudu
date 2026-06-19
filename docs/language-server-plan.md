@@ -395,7 +395,8 @@ known missing native header package.
 Missing `pkg-config` package diagnostics are covered with a fixture
 `dudu.toml`.
 Direct native imports without aliases are covered for completion, signature
-help, definition, and current-document references with a local fixture header.
+help, definition, and current-document references for functions with a local
+fixture header.
 Native enum values from scanned headers are covered in symbol and completion
 results.
 Workspace rename is covered across an open definition file and an unopened
