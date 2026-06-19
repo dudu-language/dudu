@@ -300,7 +300,7 @@ generic compound arithmetic with generic default construction through `T()`.
 
 ```python
 class SmallVec[T, N]:
-    items: T[N]
+    items: array[T][N]
     count: usize
 ```
 

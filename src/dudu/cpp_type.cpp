@@ -6,60 +6,9 @@
 #include <cctype>
 #include <map>
 #include <optional>
-#include <sstream>
-#include <utility>
 
 namespace dudu {
 namespace {
-
-bool is_decimal_number(std::string_view text) {
-    return !text.empty() && std::all_of(text.begin(), text.end(), [](char c) {
-        return std::isdigit(static_cast<unsigned char>(c)) != 0;
-    });
-}
-
-bool is_constant_name(std::string_view text) {
-    if (text.empty() || std::isalpha(static_cast<unsigned char>(text.front())) == 0) {
-        return false;
-    }
-    bool has_upper = false;
-    for (const char c : text) {
-        if (std::isupper(static_cast<unsigned char>(c)) != 0) {
-            has_upper = true;
-            continue;
-        }
-        if (std::isdigit(static_cast<unsigned char>(c)) != 0 || c == '_') {
-            continue;
-        }
-        return false;
-    }
-    return has_upper;
-}
-
-bool is_array_dimension(std::string_view text) {
-    return is_decimal_number(text) || is_constant_name(text);
-}
-
-std::optional<std::string> array_dimension_text(const TypeRef& type) {
-    if (type.kind == TypeKind::Value && is_array_dimension(type.value)) {
-        return type.value;
-    }
-    if (type.kind == TypeKind::Named && type.name.size() > 1 && is_constant_name(type.name)) {
-        return type.name;
-    }
-    return std::nullopt;
-}
-
-std::string join_array_dimensions(const std::vector<std::string>& dims) {
-    std::ostringstream out;
-    for (size_t i = 0; i < dims.size(); ++i) {
-        if (i > 0) {
-            out << ", ";
-        }
-        out << dims[i];
-    }
-    return out.str();
-}
 
 bool known_structured_template_root(std::string_view name) {
     return name == "list" || name == "span" || name == "strided_span" || name == "dict" ||
@@ -92,65 +41,6 @@ std::optional<std::string> lower_parsed_template_type(const std::string& type) {
         return std::nullopt;
     }
     return lower_cpp_type(parsed);
-}
-
-struct ArrayShorthand {
-    TypeRef element;
-    std::vector<std::string> dims;
-};
-
-std::optional<ArrayShorthand> collect_array_shorthand(const TypeRef& type) {
-    if (type.kind == TypeKind::Template && type.name != "array" && !type.children.empty()) {
-        std::vector<std::string> dims;
-        for (const TypeRef& child : type.children) {
-            std::optional<std::string> dim = array_dimension_text(child);
-            if (!dim) {
-                return std::nullopt;
-            }
-            dims.push_back(*dim);
-        }
-        TypeRef element;
-        element.kind = type.name.find('.') == std::string::npos &&
-                               type.name.find("::") == std::string::npos
-                           ? TypeKind::Named
-                           : TypeKind::Qualified;
-        element.name = type.name;
-        element.text = type.name;
-        element.location = type.location;
-        element.range = type.range;
-        return ArrayShorthand{.element = std::move(element), .dims = std::move(dims)};
-    }
-
-    if (type.kind == TypeKind::FixedArray && !type.children.empty()) {
-        std::vector<std::string> dims = split_top_level_args(type.value);
-        if (dims.empty() ||
-            !std::all_of(dims.begin(), dims.end(),
-                         [](const std::string& dim) { return is_array_dimension(dim); })) {
-            return std::nullopt;
-        }
-        if (std::optional<ArrayShorthand> inner = collect_array_shorthand(type.children.front())) {
-            inner->dims.insert(inner->dims.end(), dims.begin(), dims.end());
-            return inner;
-        }
-        return ArrayShorthand{.element = type.children.front(), .dims = std::move(dims)};
-    }
-
-    return std::nullopt;
-}
-
-std::optional<std::string> lower_array_shorthand_type(const std::string& type) {
-    const TypeRef parsed = parse_type_text(type);
-    std::optional<ArrayShorthand> shorthand = collect_array_shorthand(parsed);
-    if (!shorthand) {
-        return std::nullopt;
-    }
-    TypeRef fixed;
-    fixed.kind = TypeKind::FixedArray;
-    fixed.children.push_back(std::move(shorthand->element));
-    fixed.value = join_array_dimensions(shorthand->dims);
-    fixed.location = parsed.location;
-    fixed.range = parsed.range;
-    return lower_cpp_type(fixed);
 }
 
 std::optional<std::string> lower_parsed_fixed_array_type(const std::string& type) {
@@ -286,10 +176,6 @@ std::string lower_cpp_type(const std::string& raw_type) {
 
     if (const auto template_type = lower_parsed_known_template_type(type)) {
         return *template_type;
-    }
-
-    if (const auto array_shorthand = lower_array_shorthand_type(type)) {
-        return *array_shorthand;
     }
 
     if (const auto array_type = lower_parsed_fixed_array_type(type)) {

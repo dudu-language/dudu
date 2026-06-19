@@ -566,8 +566,8 @@ Already structured:
   type came from source syntax, leaving parsing only for inferred synthetic
   array types
 - raw-string C++ type lowering delegates Dudu fixed-array forms such as
-  `array[T][N]` to parsed `TypeRef::FixedArray`, leaving only C-style
-  `T[N]` fallback parsing in the string path
+  `array[T][N]` to parsed `TypeRef::FixedArray`; legacy shorthand forms such
+  as `T[N]` and `T[N][M]` are not Dudu array syntax
 - member field inference for `Result[T, E]` reads parsed `TypeRef` template
   children for `.value` and `.err` instead of re-splitting the result type text
 - shared AST type helpers own common parsed template-child and unary-wrapper

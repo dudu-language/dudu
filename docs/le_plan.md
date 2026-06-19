@@ -2126,13 +2126,12 @@ push. They are not release packaging work.
    instead of duplicating the built-in template semantics with raw bracket
    splitting.
    The remaining raw bracket-template spelling path now also parses arbitrary
-   `Name[...]` type strings into structured `TypeRef` nodes after fixed-array
-   detection, so `Box[list[i32]]` and `Box[list[i32]][3]` share the same
-   template/fixed-array lowering as parsed source. The old raw
+   `Name[...]` type strings into structured `TypeRef` nodes, so
+   `Box[list[i32]]` shares the same template lowering as parsed source. The old raw
    `lower_template_arg_type` and `lower_template_type(std::string_view, ...)`
    helpers are guarded against reintroduction.
-   Legacy fixed-array shorthand lowering for spellings such as `Player[3][4]`
-   and `Pixel[BUFFER_SIZE]` now parses the spelling into `TypeRef`, converts
-   value-only bracket arguments into a structured `FixedArray` node, and lowers
-   that node. The previous `find/substr` helpers for `fixed_array_dimensions`
-   and `fixed_array_base` are guarded against reintroduction.
+   Legacy fixed-array shorthand spellings such as `Player[3][4]`,
+   `Box[list[i32]][3]`, and `Pixel[BUFFER_SIZE]` are not Dudu syntax. The
+   parser only forms fixed arrays from canonical `array[T][shape]`, and the
+   previous `find/substr` helpers for `fixed_array_dimensions` and
+   `fixed_array_base` are guarded against reintroduction.

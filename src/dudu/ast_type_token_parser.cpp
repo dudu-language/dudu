@@ -322,12 +322,15 @@ TypeRef TypeTokenParser::parse_name_or_template(size_t begin) {
             type = std::move(wrapped);
             continue;
         }
-        if (type.kind != TypeKind::Named && type.kind != TypeKind::Qualified) {
+        if (type.kind == TypeKind::Template && type.name == "array") {
             TypeRef fixed = make_node(TypeKind::FixedArray, begin, cursor_);
             fixed.children.push_back(std::move(type));
             fixed.value = trim_string(text_between(inner_begin, inner_end));
             type = std::move(fixed);
             continue;
+        }
+        if (type.kind != TypeKind::Named && type.kind != TypeKind::Qualified) {
+            return make_node(TypeKind::Unknown, begin, cursor_);
         }
         TypeRef templ = make_node(TypeKind::Template, begin, cursor_);
         templ.name = type.name;
