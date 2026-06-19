@@ -115,8 +115,14 @@ printf '%s\n' "$direct_build_output" | grep -Eq '^analyze .*/simple_program\.dd$
 printf '%s\n' "$direct_build_output" | grep -Eq '^emit .*/direct_output_smoke\.cpp$'
 printf '%s\n' "$direct_build_output" | grep -Eq '^compile .*/direct_output_smoke$'
 printf '%s\n' "$direct_build_output" | grep -Eq '^output .*/direct_output_smoke$'
-"$repo_root/build/dudu" build "$repo_root/tests/fixtures/project_backend_cmake" 2>&1 \
-    | grep -Eq '^output .*/backend_cmake$'
+cmake_build_output="$("$repo_root/build/dudu" build \
+    "$repo_root/tests/fixtures/project_backend_cmake" 2>&1)"
+printf '%s\n' "$cmake_build_output" | grep -Eq '^backend cmake$'
+printf '%s\n' "$cmake_build_output" | grep -Eq '^cmake .*/build/project_backend_cmake/cmake-backend/source/CMakeLists\.txt$'
+printf '%s\n' "$cmake_build_output" | grep -Eq '^generate .*/build/project_backend_cmake/cmake-backend/source/CMakeLists\.txt$'
+printf '%s\n' "$cmake_build_output" | grep -Eq '^configure .*/build/project_backend_cmake/cmake-backend/build$'
+printf '%s\n' "$cmake_build_output" | grep -Eq '^compile .*/build/project_backend_cmake/cmake-backend/build$'
+printf '%s\n' "$cmake_build_output" | grep -Eq '^output .*/backend_cmake$'
 "$repo_root/build/duc" fmt "$repo_root/tests/fixtures/simple_program.dd" --check
 "$repo_root/scripts/test_lsp.sh"
 
