@@ -104,8 +104,8 @@ std::vector<std::string> cpp_escape_lines(std::string body_text) {
     return lines;
 }
 
-std::string lower_template_call_arg(const std::string& arg,
-                                    const std::vector<std::string>& namespace_aliases) {
+std::string lower_raw_template_call_arg(const std::string& arg,
+                                        const std::vector<std::string>& namespace_aliases) {
     const std::string trimmed = trim_copy(arg);
     if (is_non_type_template_arg(trimmed)) {
         return trimmed;

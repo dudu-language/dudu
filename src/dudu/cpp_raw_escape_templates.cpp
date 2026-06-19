@@ -196,7 +196,8 @@ std::string lower_dotted_template_call(std::string expr,
             if (i > 0) {
                 lowered_template_args << ", ";
             }
-            lowered_template_args << lower_template_call_arg(template_args[i], namespace_aliases);
+            lowered_template_args << lower_raw_template_call_arg(template_args[i],
+                                                                 namespace_aliases);
         }
         const std::string lowered_template =
             (namespace_qualified_name(name, namespace_aliases) ? replace_dots(name) : name) + "<" +

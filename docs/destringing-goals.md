@@ -232,7 +232,9 @@ call site. The guard rejects reintroducing `lower_cpp_type(std::string)` or
 normalizer on structured `TypeRef` input only. The string-returning
 `infer_cpp_escape_expr` test wrapper was removed; explicit `cpp(...)` escape
 inference exposes `infer_cpp_escape_expr_ref` and display rendering happens only
-at diagnostics or tests.
+at diagnostics or tests. Raw template-call argument lowering for `cpp(...)`
+escape rewriting has been renamed to `lower_raw_template_call_arg` so ordinary
+template lowering cannot accidentally accept text.
 
 ## Goal 6: Separate Module Outputs Without Re-Flattening
 

@@ -32,8 +32,8 @@ std::string lower_len_calls(std::string expr);
 std::string lower_numeric_separators(std::string expr);
 std::string lower_pointer_cast_calls(std::string expr);
 std::string lower_str_calls(std::string expr);
-std::string lower_template_call_arg(const std::string& arg,
-                                    const std::vector<std::string>& namespace_aliases);
+std::string lower_raw_template_call_arg(const std::string& arg,
+                                        const std::vector<std::string>& namespace_aliases);
 std::string qualify_namespace_aliases(std::string expr,
                                       const std::vector<std::string>& namespace_aliases);
 std::string replace_all(std::string text, std::string_view from, std::string_view to);

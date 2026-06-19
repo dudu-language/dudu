@@ -33,6 +33,7 @@ forbidden=(
     "normalize_cpp_type_artifacts\\(std::string"
     "infer_cpp_escape_expr\\("
     "render_type\\(const TypeRef"
+    "lower_template_call_arg\\("
 )
 
 for pattern in "${forbidden[@]}"; do
