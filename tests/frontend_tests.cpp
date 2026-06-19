@@ -519,6 +519,21 @@ void test_semantic_diagnostics() {
     }
     assert(bad_local_type);
 
+    bool bad_generic_value = false;
+    try {
+        const dudu::ModuleAst module = dudu::parse_source("def bad_generic_value[T]() -> i32:\n"
+                                                          "    return T\n",
+                                                          "bad_generic_value.dd");
+        dudu::analyze_module(module, {.check_bodies = true});
+    } catch (const dudu::CompileError& error) {
+        assert(error.location().line == 2);
+        assert(error.location().column > 5);
+        assert(std::string(error.what()).find("type parameter used as a value: T") !=
+               std::string::npos);
+        bad_generic_value = true;
+    }
+    assert(bad_generic_value);
+
     for (const std::string type : {"int", "float", "double"}) {
         bool rejected = false;
         try {

@@ -63,6 +63,13 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
     case ExprKind::SetLiteral:
         return named_type_ref("set", type_location);
     case ExprKind::Name:
+        if (scope.symbols.generic_params.contains(expr.name)) {
+            if (location != nullptr) {
+                throw CompileError(*location, "type parameter used as a value: " + expr.name,
+                                   "dudu.sema.generic_value", expr.name);
+            }
+            return {};
+        }
         if (const TypeRef local = local_type_ref(scope, expr.name, type_location);
             has_type_ref(local)) {
             return local;
