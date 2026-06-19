@@ -277,9 +277,11 @@ std::string display_expr(const Expr& expr) {
     case ExprKind::Lambda:
     case ExprKind::Await:
     case ExprKind::Yield:
+        return "<unsupported " + std::string(expression_kind_name(expr.kind)) + " expression>";
     case ExprKind::CppEscape:
+        return "cpp(...)";
     case ExprKind::Unknown:
-        return trim_copy(expr.text);
+        return malformed_expr_display("unknown");
     }
     return malformed_expr_display("unknown");
 }

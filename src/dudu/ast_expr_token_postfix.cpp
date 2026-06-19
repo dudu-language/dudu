@@ -145,12 +145,14 @@ Expr ExprTokenParser::parse_call(Expr callee, std::initializer_list<TokenKind> s
     match(TokenKind::RParen);
     Expr call = make_node(ExprKind::Call, begin, cursor_);
     const std::optional<ExprPath> path = expr_path_from_expr(callee);
-    const std::string callee_name = path ? render_expr_path(*path) : trim_string(callee.text);
+    const std::string callee_name = path ? render_expr_path(*path) : display_expr(callee);
     call.callee.push_back(std::move(callee));
     call.children = std::move(args);
     if (callee_name == "cpp") {
         call.kind = ExprKind::CppEscape;
-        call.value = cpp_escape_body(call.text);
+        if (call.children.size() == 1 && call.children.front().kind == ExprKind::StringLiteral) {
+            call.value = call.children.front().value;
+        }
     }
     return call;
 }

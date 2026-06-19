@@ -29,3 +29,10 @@ for pattern in "${forbidden[@]}"; do
         exit 1
     fi
 done
+
+if rg -n "expr\\.text" "$repo_root/src/dudu" \
+    --glob '!ast_expr_token_core.cpp' \
+    --glob '!ast_parse_utils.cpp'; then
+    echo "Expr.text is parser construction metadata only; semantic consumers must use structured Expr fields" >&2
+    exit 1
+fi

@@ -68,6 +68,19 @@ void add_native_semantic_token(std::vector<SemanticToken>& tokens, const SourceL
     add_semantic_token(tokens, loc, text, type, modifiers | mod_native);
 }
 
+void add_semantic_token_range(std::vector<SemanticToken>& tokens, const SourceRange& range,
+                              int type, int modifiers = 0) {
+    if (range.start.line <= 0 || range.start.column <= 0 || range.end.line != range.start.line ||
+        range.end.column <= range.start.column) {
+        return;
+    }
+    tokens.push_back({.line = range.start.line - 1,
+                      .column = range.start.column - 1,
+                      .length = range.end.column - range.start.column,
+                      .type = type,
+                      .modifiers = modifiers});
+}
+
 SourceLocation shifted_location(SourceLocation loc, int columns) {
     loc.column += columns;
     return loc;
@@ -246,7 +259,7 @@ void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
         }
         break;
     case ExprKind::StringLiteral:
-        add_semantic_token(tokens, expr.location, expr.text, token_string);
+        add_semantic_token_range(tokens, expr.range, token_string);
         break;
     default:
         break;

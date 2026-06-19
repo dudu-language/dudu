@@ -1,3 +1,4 @@
+#include "dudu/ast_expr.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/parser.hpp"
 
@@ -14,8 +15,10 @@ void test_statement_source_range_uses_token_span() {
                                                       "statement_range.dd");
     const dudu::FunctionDecl& main = module.functions.front();
     const dudu::Stmt& assign = main.statements.front();
-    assert(assign.target_expr.text == "value");
-    assert(assign.value_expr.text == "add(1, 2)");
+    assert(assign.target_expr.kind == dudu::ExprKind::Name);
+    assert(assign.target_expr.name == "value");
+    assert(assign.value_expr.kind == dudu::ExprKind::Call);
+    assert(dudu::display_expr(assign.value_expr) == "add(1, 2)");
     assert(assign.range.start.line == 2);
     assert(assign.range.start.column == 5);
     assert(assign.range.end.line == 2);
@@ -50,7 +53,7 @@ void test_keyword_statements_keep_token_ranges() {
 
     const dudu::Stmt& branch = main.statements[0];
     assert(branch.kind == dudu::StmtKind::If);
-    assert(branch.condition_expr.text == "ready(value)");
+    assert(dudu::display_expr(branch.condition_expr) == "ready(value)");
     assert(branch.range.start.column == 5);
     assert(branch.range.end.column == 23);
     assert(branch.condition_expr.kind == dudu::ExprKind::Call);
@@ -62,16 +65,19 @@ void test_keyword_statements_keep_token_ranges() {
     assert(loop.kind == dudu::StmtKind::For);
     assert(loop.name == "item");
     assert(dudu::substitute_type_ref_text(loop.type_ref, {}) == "i32");
-    assert(loop.iterable_expr.text == "values");
+    assert(loop.iterable_expr.kind == dudu::ExprKind::Name);
+    assert(loop.iterable_expr.name == "values");
     assert(loop.iterable_expr.range.start.column == 22);
     assert(loop.children.front().kind == dudu::StmtKind::DebugAssert);
-    assert(loop.children.front().condition_expr.text == "item > 0");
-    assert(loop.children.front().message_expr.text == "\"positive\"");
+    assert(dudu::display_expr(loop.children.front().condition_expr) == "item > 0");
+    assert(loop.children.front().message_expr.kind == dudu::ExprKind::StringLiteral);
+    assert(loop.children.front().message_expr.value == "positive");
     const dudu::Stmt& call_assert = loop.children[1];
     assert(call_assert.kind == dudu::StmtKind::DebugAssert);
     assert(call_assert.condition_expr.kind == dudu::ExprKind::Call);
     assert(call_assert.condition_expr.children.size() == 3);
-    assert(call_assert.message_expr.text == "\"in range\"");
+    assert(call_assert.message_expr.kind == dudu::ExprKind::StringLiteral);
+    assert(call_assert.message_expr.value == "in range");
 }
 
 } // namespace

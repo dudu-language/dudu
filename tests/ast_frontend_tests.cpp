@@ -1169,7 +1169,7 @@ void test_expression_ast_shape() {
     const dudu::Stmt& hex_mask = main.statements[6];
     assert(hex_mask.kind == dudu::StmtKind::VarDecl);
     assert(hex_mask.value_expr.kind == dudu::ExprKind::IntLiteral);
-    assert(hex_mask.value_expr.text == "0x80");
+    assert(hex_mask.value_expr.value == "0x80");
 
     const dudu::Stmt& view = main.statements[7];
     assert(view.kind == dudu::StmtKind::VarDecl);
@@ -1217,7 +1217,6 @@ void test_cpp_escape_ast_payloads() {
     const dudu::Stmt& value = main.statements[0];
     assert(value.kind == dudu::StmtKind::VarDecl);
     assert(value.value_expr.kind == dudu::ExprKind::CppEscape);
-    assert(value.value_expr.text == "cpp(\"19\")");
     assert(value.value_expr.value == "19");
 
     const dudu::Stmt& statement_escape = main.statements[1];
