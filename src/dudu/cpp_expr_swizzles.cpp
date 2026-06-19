@@ -6,7 +6,6 @@
 #include "dudu/sema_methods.hpp"
 #include "dudu/sema_scope.hpp"
 
-#include <cctype>
 #include <optional>
 #include <sstream>
 #include <string_view>
@@ -47,11 +46,10 @@ std::optional<std::string_view> swizzle_component_order(const std::string& swizz
     return std::nullopt;
 }
 
-bool looks_like_local_dudu_class_type(const std::string& type) {
-    const std::string trimmed = trim_copy(type);
-    return !trimmed.empty() && trimmed.find('.') == std::string::npos &&
-           trimmed.find("::") == std::string::npos &&
-           std::isupper(static_cast<unsigned char>(trimmed.front())) != 0;
+bool is_local_dudu_class_type(const Symbols& symbols, TypeRef type) {
+    type = resolve_alias_ref(symbols, std::move(type));
+    const std::string head = type_ref_head_name(type);
+    return !head.empty() && symbols.classes.contains(head) && !symbols.native_classes.contains(head);
 }
 
 std::optional<std::string>
@@ -70,7 +68,7 @@ lower_local_swizzle_expr(const Expr& expr, const std::vector<std::string>& alias
         return std::nullopt;
     }
     const TypeRef receiver_type = local_type_ref(local_type_refs, receiver, expr.location);
-    if (!looks_like_local_dudu_class_type(type_ref_text(receiver_type))) {
+    if (!is_local_dudu_class_type(*symbols, receiver_type)) {
         return std::nullopt;
     }
     const auto result_type = swizzle_type_ref_for_type(*symbols, receiver_type, expr.name);

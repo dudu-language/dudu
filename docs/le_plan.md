@@ -2010,3 +2010,7 @@ push. They are not release packaging work.
    explicit `Unknown` native-boundary nodes.
    Numeric literal assignment compatibility now checks `ExprKind` directly
    instead of comparing a rendered literal category string such as `number`.
+   C++ swizzle emission no longer guesses local Dudu class receivers by
+   rendering a receiver type and checking uppercase spelling; it resolves the
+   receiver `TypeRef` through `Symbols` and checks known non-native classes
+   directly.
