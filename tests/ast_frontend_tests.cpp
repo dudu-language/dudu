@@ -225,6 +225,11 @@ void test_core_type_helpers_use_type_ast() {
     malformed_array.kind = dudu::TypeKind::FixedArray;
     malformed_array.text = "Player[4]";
     assert(dudu::base_type(malformed_array).empty());
+    dudu::TypeRef malformed_named;
+    malformed_named.kind = dudu::TypeKind::Unknown;
+    malformed_named.text = "i32";
+    assert(dudu::base_type(malformed_named).empty());
+    assert(!dudu::known_type_ref(dudu::Symbols{}, malformed_named));
     assert(dudu::substitute_type_ref_text(
                dudu::explicit_array_element_type_ref(dudu::parse_type_text("array[list[i32]][4]")),
                {}) == "list[i32]");

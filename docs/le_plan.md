@@ -2063,3 +2063,6 @@ push. They are not release packaging work.
    Native template placeholder rebinding no longer accepts matching rendered
    type strings as semantic equality; repeated bindings compare normalized
    structured `TypeRef`s and structural compatibility instead.
+   `base_type`/`known_type_ref` no longer treat non-empty `Unknown.text` as a
+   valid type name; empty `Unknown` remains the missing-type sentinel, while
+   malformed type nodes must be rejected explicitly.

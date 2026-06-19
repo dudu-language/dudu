@@ -107,9 +107,9 @@ std::string compute_base_type(const TypeRef& type) {
     case TypeKind::Value:
         return type_ref_head_name(type);
     case TypeKind::Unknown:
-        return trim(type.text);
+        return {};
     }
-    return trim(type.text);
+    return {};
 }
 
 } // namespace
@@ -130,7 +130,7 @@ std::string base_type(const TypeRef& type) {
 
 bool known_type_ref(const Symbols& symbols, const TypeRef& type) {
     const std::string base = base_type(type);
-    return base.empty() || is_builtin_type(base) || symbols.types.contains(base) ||
+    return !has_type_ref(type) || is_builtin_type(base) || symbols.types.contains(base) ||
            base.find('.') != std::string::npos || starts_with(base, "struct ") || base == "list" ||
            base == "array" || base == "span" || base == "strided_span" || base == "dict" ||
            base == "set" || base == "tuple" || base == "variant" || base == "Result" ||
@@ -177,10 +177,10 @@ std::optional<std::pair<std::string, SourceLocation>> unknown_type_ref(const Sym
         }
         return std::nullopt;
     case TypeKind::Unknown:
-        return known_type_ref(symbols, type)
-                   ? std::nullopt
-                   : std::optional<std::pair<std::string, SourceLocation>>{
-                         std::pair{type.text, type.location}};
+        if (!has_type_ref(type)) {
+            return std::nullopt;
+        }
+        return std::pair{type.text, type.location};
     }
     return std::nullopt;
 }
