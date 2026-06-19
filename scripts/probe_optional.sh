@@ -198,6 +198,27 @@ probe_fmt() {
     echo "ok fmt"
 }
 
+probe_eigen() {
+    if ! pkg-config --exists eigen3; then
+        echo "skip eigen3: pkg-config package not found"
+        return
+    fi
+
+    local cpp="$repo_root/build/probe_eigen_vector.cpp"
+    local bin="$repo_root/build/probe_eigen_vector"
+    "$repo_root/build/duc" emit "$repo_root/tests/fixtures/eigen_vector.dd" -o "$cpp"
+    "${CXX:-c++}" -std=c++20 "$cpp" $(pkg-config --cflags eigen3) -o "$bin"
+    set +e
+    "$bin"
+    local status=$?
+    set -e
+    if [[ "$status" -ne 42 ]]; then
+        echo "eigen3 probe returned $status, expected 42" >&2
+        exit 1
+    fi
+    echo "ok eigen3"
+}
+
 probe_threading() {
     local cpp="$repo_root/build/probe_threading_atomics.cpp"
     local bin="$repo_root/build/probe_threading_atomics"
@@ -365,6 +386,7 @@ probe_libpng
 probe_openssl
 probe_libevent
 probe_fmt
+probe_eigen
 probe_threading
 probe_posix_mmap
 probe_posix_threads

@@ -30,6 +30,7 @@ Last local probe run: 2026-06-19 with `scripts/probe_optional.sh`.
 | C++ standard library algorithms | C++ stdlib | containers, algorithms, pairs, tuples, `std.get` | pass | `scripts/probe_cpp_stdlib_algorithms.sh` | no |
 | C++ standard library variants | C++ stdlib | `std.variant`, `std.holds_alternative`, `std.get` | fixture | `tests/fixtures/cpp_std_variant.dd` | no |
 | glm | math | header import, constructors, functions such as `glm.dot` | pass | `scripts/probe_optional.sh` / `glm_math.dd` | no |
+| Eigen | math | header-only templates, vector constructors, methods, operators | pass | `scripts/probe_optional.sh` / `eigen_vector.dd` | no |
 | OpenCV | image / CV | generated C++ build and tiny image write smoke | pass | `scripts/probe_optional.sh` / `examples/image_filter.dd` | no |
 | sqlite3 | database | C API, pointers, result types, prepare/step/finalize | pass | `scripts/probe_optional.sh` / `sqlite_crud.dd` | no |
 | zlib | compression | C API, buffers, typedefs, constants, pointer output params | pass | `scripts/probe_optional.sh` / `zlib_roundtrip.dd` | no |
@@ -55,7 +56,6 @@ compiler matures.
 | API / Library | Domain | Target Coverage | Status | Notes |
 | --- | --- | --- | --- | --- |
 | Dear ImGui | UI | C++ namespace API, backends, frame loop | planned | Prefer direct ImGui headers; wrappers only for backend/platform glue users normally write in C++. |
-| Eigen | math | templates, matrices, expression templates | planned | Good stress test for template-heavy header-only C++. |
 | BLAS / LAPACK / CBLAS | numeric | C ABI calls, contiguous arrays, link behavior | planned | Useful for future Dudu matrix/tensor library work. |
 | stb headers | media / utility | single-header C, macro configuration | planned | May require explicit macro configuration policy. |
 | spdlog | logging | templates, sinks, macros | planned | Tests normal C++ library ergonomics. |
