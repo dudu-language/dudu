@@ -219,6 +219,27 @@ probe_eigen() {
     echo "ok eigen3"
 }
 
+probe_openblas() {
+    if ! pkg-config --exists openblas; then
+        echo "skip openblas: pkg-config package not found"
+        return
+    fi
+
+    local cpp="$repo_root/build/probe_openblas_ddot.cpp"
+    local bin="$repo_root/build/probe_openblas_ddot"
+    "$repo_root/build/duc" emit "$repo_root/tests/fixtures/openblas_ddot.dd" -o "$cpp"
+    "${CXX:-c++}" -std=c++20 "$cpp" $(pkg-config --cflags --libs openblas) -o "$bin"
+    set +e
+    "$bin"
+    local status=$?
+    set -e
+    if [[ "$status" -ne 42 ]]; then
+        echo "openblas probe returned $status, expected 42" >&2
+        exit 1
+    fi
+    echo "ok openblas"
+}
+
 probe_threading() {
     local cpp="$repo_root/build/probe_threading_atomics.cpp"
     local bin="$repo_root/build/probe_threading_atomics"
@@ -387,6 +408,7 @@ probe_openssl
 probe_libevent
 probe_fmt
 probe_eigen
+probe_openblas
 probe_threading
 probe_posix_mmap
 probe_posix_threads
