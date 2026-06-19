@@ -7,6 +7,7 @@
 #include "dudu/native_headers.hpp"
 #include "dudu/parser.hpp"
 
+#include <optional>
 #include <sstream>
 
 namespace dudu {
@@ -86,6 +87,26 @@ std::optional<std::string> native_identity_key(const NativeSymbolId& identity) {
         return std::nullopt;
     }
     return key;
+}
+
+bool suffix_symbol_match(const std::string& symbol, const std::string& query) {
+    if (symbol == query) {
+        return false;
+    }
+    const size_t dot = symbol.rfind('.');
+    return dot != std::string::npos && symbol.substr(dot + 1) == query;
+}
+
+std::optional<Symbol> preferred_symbol_match(const std::vector<Symbol>& matches) {
+    if (matches.empty()) {
+        return std::nullopt;
+    }
+    for (const Symbol& symbol : matches) {
+        if (symbol.kind == lsp_symbol_kind::Class) {
+            return symbol;
+        }
+    }
+    return matches.front();
 }
 
 std::vector<Symbol> symbols_for_module(const ModuleAst& module, bool include_native) {
@@ -183,6 +204,31 @@ std::vector<Symbol> symbols_for_module(const ModuleAst& module, bool include_nat
         }
     }
     return out;
+}
+
+std::optional<Symbol> exact_symbol_match(const std::vector<Symbol>& symbols,
+                                         const std::string& query) {
+    std::vector<Symbol> matches;
+    for (const Symbol& symbol : symbols) {
+        if (symbol.name == query) {
+            matches.push_back(symbol);
+        }
+    }
+    return preferred_symbol_match(matches);
+}
+
+std::optional<Symbol> unambiguous_suffix_symbol_match(const std::vector<Symbol>& symbols,
+                                                      const std::string& query) {
+    std::vector<Symbol> matches;
+    for (const Symbol& symbol : symbols) {
+        if (suffix_symbol_match(symbol.name, query)) {
+            matches.push_back(symbol);
+        }
+    }
+    if (matches.size() != 1) {
+        return std::nullopt;
+    }
+    return matches.front();
 }
 
 std::vector<Symbol> symbols_for_document(const Document& doc, bool include_native) {

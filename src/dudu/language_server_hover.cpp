@@ -132,6 +132,18 @@ std::optional<std::string> native_alias_hover_json(const Document& doc, const st
     return std::nullopt;
 }
 
+std::string symbol_hover_json(const Document& doc, const Symbol& symbol) {
+    std::string markdown = "`" + symbol.detail + "`";
+    if (uri_for_location(symbol.location, doc) == doc.uri) {
+        if (const std::string docs = doc_comment_before(doc, symbol.location.line);
+            !docs.empty()) {
+            markdown += "\n\n" + docs;
+        }
+    }
+    return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"" + json_escape(markdown) +
+           "\"},\"range\":" + range_json(symbol.location) + "}";
+}
+
 } // namespace
 
 std::string hover_json(const Document& doc, const std::string& word,
@@ -139,21 +151,15 @@ std::string hover_json(const Document& doc, const std::string& word,
     if (const std::optional<std::string> native_alias = native_alias_hover_json(doc, word)) {
         return *native_alias;
     }
-    for (const Symbol& symbol : symbols_for_document(doc)) {
-        if (symbol_matches(symbol.name, word)) {
-            std::string markdown = "`" + symbol.detail + "`";
-            if (uri_for_location(symbol.location, doc) == doc.uri) {
-                if (const std::string docs = doc_comment_before(doc, symbol.location.line);
-                    !docs.empty()) {
-                    markdown += "\n\n" + docs;
-                }
-            }
-            return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"" + json_escape(markdown) +
-                   "\"},\"range\":" + range_json(symbol.location) + "}";
-        }
+    const std::vector<Symbol> symbols = symbols_for_document(doc);
+    if (const std::optional<Symbol> exact = exact_symbol_match(symbols, word)) {
+        return symbol_hover_json(doc, *exact);
     }
     if (const std::optional<std::string> imported = imported_symbol_hover_json(doc, word)) {
         return *imported;
+    }
+    if (const std::optional<Symbol> suffix = unambiguous_suffix_symbol_match(symbols, word)) {
+        return symbol_hover_json(doc, *suffix);
     }
     if (!local_type.empty()) {
         return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"`" + json_escape(word) + ": " +

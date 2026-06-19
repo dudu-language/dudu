@@ -1357,7 +1357,10 @@ push. They are not release packaging work.
    reference lookup. LSP symbols now carry native identity keys for scanned
    native declarations, including C++ class methods, preserving canonical
    native identity at the editor boundary so native references can move away
-   from plain name matching.
+   from plain name matching. Definition and hover symbol lookup now prefer
+   exact symbols and only use suffix matches when unambiguous; receiver-aware
+   member definition runs before suffix fallback, so same-named native methods
+   resolve through the expression receiver type instead of scan order.
 
 14. Project Driver Polish
 

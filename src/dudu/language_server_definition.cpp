@@ -268,6 +268,10 @@ std::optional<std::string> native_type_target_definition_json(const Document& do
     return std::nullopt;
 }
 
+std::string symbol_definition_json(const Symbol& symbol, const Document& doc) {
+    return location_json(uri_for_location(symbol.location, doc), range_json(symbol.location));
+}
+
 } // namespace
 
 std::string definition_json(const Document& doc, const Json* params) {
@@ -282,23 +286,9 @@ std::string definition_json(const Document& doc, const Json* params) {
             native_type_target_definition_json(doc, word)) {
         return *native_type_target;
     }
-    std::optional<Symbol> matched_symbol;
-    for (const Symbol& symbol : symbols_for_document(doc)) {
-        if (symbol_matches(symbol.name, word)) {
-            if (symbol.kind == lsp_symbol_kind::Class) {
-                matched_symbol = symbol;
-                break;
-            }
-            if (!matched_symbol) {
-                matched_symbol = symbol;
-            }
-        }
-    }
-    if (matched_symbol) {
-        std::ostringstream out;
-        out << "{\"uri\":\"" << json_escape(uri_for_location(matched_symbol->location, doc))
-            << "\",\"range\":" << range_json(matched_symbol->location) << "}";
-        return out.str();
+    const std::vector<Symbol> symbols = symbols_for_document(doc);
+    if (const std::optional<Symbol> exact = exact_symbol_match(symbols, word)) {
+        return symbol_definition_json(*exact, doc);
     }
     const std::optional<ExprPath> path = ast_expr_path_at(doc, params);
     if (path && path->segments.size() >= 2) {
@@ -306,6 +296,9 @@ std::string definition_json(const Document& doc, const Json* params) {
                 member_definition_json(doc, *path, params)) {
             return *member_definition;
         }
+    }
+    if (const std::optional<Symbol> suffix = unambiguous_suffix_symbol_match(symbols, word)) {
+        return symbol_definition_json(*suffix, doc);
     }
     if (const std::optional<std::string> import_definition = import_definition_json(doc, word)) {
         return *import_definition;
