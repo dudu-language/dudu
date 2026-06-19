@@ -1,5 +1,6 @@
 #include "dudu/cli_command.hpp"
 
+#include "dudu/build_backend_select.hpp"
 #include "dudu/cli_options.hpp"
 #include "dudu/cmake_backend.hpp"
 #include "dudu/cmake_emit.hpp"
@@ -139,11 +140,7 @@ ProjectConfig config_for_options(const CliOptions& options) {
 
 ProjectConfig build_config_for_options(const CliOptions& options) {
     ProjectConfig config = config_for_options(options);
-    if (!config.build_backend_explicit && config.build_backend == "direct" &&
-        source_tree_files(options.input).size() > 1) {
-        config.build_backend = "cmake";
-    }
-    return config;
+    return select_build_backend(std::move(config), options.input);
 }
 
 FormatPathOptions format_options_for_project(const CliOptions& options) {

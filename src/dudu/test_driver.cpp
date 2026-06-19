@@ -1,5 +1,6 @@
 #include "dudu/test_driver.hpp"
 
+#include "dudu/build_backend_select.hpp"
 #include "dudu/cmake_backend.hpp"
 #include "dudu/cmake_emit.hpp"
 #include "dudu/cpp_emit.hpp"
@@ -54,11 +55,7 @@ ProjectConfig config_for_options(const TestDriverOptions& options) {
 
 ProjectConfig build_config_for_options(const TestDriverOptions& options) {
     ProjectConfig config = config_for_options(options);
-    if (!config.build_backend_explicit && config.build_backend == "direct" &&
-        !options.input.empty() && source_tree_files(options.input).size() > 1) {
-        config.build_backend = "cmake";
-    }
-    return config;
+    return select_build_backend(std::move(config), options.input);
 }
 
 std::filesystem::path source_dir_for_input(const std::filesystem::path& input) {
