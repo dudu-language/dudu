@@ -1223,6 +1223,15 @@ push. They are not release packaging work.
    trade compiler architecture, diagnostics, or import correctness for a
    premature lines-per-second win.
 
+   Status: `scripts/bench_compiler.sh` exists as an explicit developer
+   benchmark outside the fast correctness loop. It emits CSV plus a readable
+   summary and currently measures representative frontend check, C++ emission,
+   native header cold/cache check, direct build, and generated-CMake module
+   build cases. It records source line/file counts with each sample. This is a
+   baseline harness, not a pass/fail gate; thresholds, memory tracking, LSP
+   latency, larger synthetic corpora, and deeper clean/no-op/one-file-changed
+   generated-CMake measurements remain later benchmark expansions.
+
 12. Incremental Build Strategy
 
    Move beyond generated-one-file builds where needed. Generate C++ per Dudu
