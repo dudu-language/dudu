@@ -282,6 +282,27 @@ probe_stb() {
     echo "ok stb"
 }
 
+probe_x11() {
+    if ! pkg-config --exists x11; then
+        echo "skip x11: pkg-config package not found"
+        return
+    fi
+
+    local cpp="$repo_root/build/probe_x11_display.cpp"
+    local bin="$repo_root/build/probe_x11_display"
+    "$repo_root/build/duc" emit "$repo_root/tests/fixtures/x11_display_probe.dd" -o "$cpp"
+    "${CXX:-c++}" -std=c++20 "$cpp" $(pkg-config --cflags --libs x11) -o "$bin"
+    set +e
+    "$bin"
+    local status=$?
+    set -e
+    if [[ "$status" -ne 42 ]]; then
+        echo "x11 probe returned $status, expected 42" >&2
+        exit 1
+    fi
+    echo "ok x11"
+}
+
 probe_threading() {
     local cpp="$repo_root/build/probe_threading_atomics.cpp"
     local bin="$repo_root/build/probe_threading_atomics"
@@ -453,6 +474,7 @@ probe_eigen
 probe_openblas
 probe_spdlog
 probe_stb
+probe_x11
 probe_threading
 probe_posix_mmap
 probe_posix_threads

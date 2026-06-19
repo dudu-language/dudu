@@ -45,6 +45,7 @@ Last local probe run: 2026-06-19 with `scripts/probe_optional.sh`.
 | raylib | game / media | window/game example, audio synth build | pass | `scripts/probe_optional.sh` / `examples/raylib_game.dd` | no |
 | SDL3 | windowing | window example build through pkg-config | pass | `scripts/probe_optional.sh` / `examples/sdl3_window.dd` | no |
 | GLFW | windowing | OpenGL triangle host build | pass | `scripts/probe_optional.sh` / `examples/glfw_opengl_triangle.dd` | no |
+| X11 | platform / windowing | C API, nullable `cstr`, opaque display pointer, XID return | pass | `scripts/probe_optional.sh` / `x11_display_probe.dd` | no |
 | OpenCL | compute | host API, kernel setup, run result | pass | `scripts/probe_optional.sh` / `examples/opencl_kernel_host.dd` | no |
 | Vulkan | graphics | header import, object setup smoke, link | pass | `scripts/probe_optional.sh` / `examples/vulkan_triangle.dd` | no |
 | FFmpeg libavcodec | media | header import, package link, probe/decode smoke | pass | `scripts/probe_optional.sh` / `examples/ffmpeg_probe_decode.dd` | small wrapper for normal FFmpeg include shape |
@@ -61,7 +62,7 @@ compiler matures.
 | Dear ImGui | UI | C++ namespace API, backends, frame loop | planned | Prefer direct ImGui headers; wrappers only for backend/platform glue users normally write in C++. |
 | Boost subset | C++ utility | selected non-huge components | planned | Avoid trying all of Boost at once. |
 | CUDA / CUBLAS | GPU / ML | host API, device buffers, BLAS-like calls | skip | Needs NVIDIA tooling/hardware. |
-| platform APIs | OS | Win32, Cocoa, X11/Wayland subsets | planned | Platform-specific; keep optional. |
+| platform APIs | OS | Win32, Cocoa, Wayland subsets | planned | Platform-specific; X11 has a Linux probe. |
 
 ## Rules
 

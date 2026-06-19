@@ -1137,7 +1137,9 @@ push. They are not release packaging work.
    signatures, and per-candidate arity or all mismatched fixed-parameter
    reasons. Native overload matching accepts Dudu string literals for native
    `string_view`/`basic_string_view` parameters, matching normal C++ call
-   ergonomics for APIs such as `fmt.runtime(...)`.
+   ergonomics for APIs such as `fmt.runtime(...)`. `None` is accepted for
+   nullable native `cstr` parameters, matching common C APIs such as
+   `XOpenDisplay(nullptr)`.
    Broader template-heavy library behavior remains the main hardening area.
 
 10. Real Library Stress Tests
@@ -1177,7 +1179,7 @@ push. They are not release packaging work.
    behind an adapter.
 
    Current optional probes pass for glm, Eigen, OpenBLAS, OpenCV, sqlite, zlib, curl, OpenSSL,
-   libevent, libpng, stb, fmt, spdlog, threading, POSIX mmap, POSIX pthread, raylib, SDL3, GLFW, OpenCL, Vulkan, and FFmpeg on this
+   libevent, libpng, stb, fmt, spdlog, threading, POSIX mmap, POSIX pthread, raylib, SDL3, GLFW, X11, OpenCL, Vulkan, and FFmpeg on this
    machine. Optional dev-only dependencies can be installed into the ignored
    `third_party/install` prefix with `scripts/setup_dev_deps.sh`; the main Dudu
    build does not require them.
