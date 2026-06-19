@@ -1177,7 +1177,7 @@ push. They are not release packaging work.
    behind an adapter.
 
    Current optional probes pass for glm, Eigen, OpenBLAS, OpenCV, sqlite, zlib, curl, OpenSSL,
-   libevent, libpng, fmt, threading, POSIX mmap, POSIX pthread, raylib, SDL3, GLFW, OpenCL, Vulkan, and FFmpeg on this
+   libevent, libpng, fmt, spdlog, threading, POSIX mmap, POSIX pthread, raylib, SDL3, GLFW, OpenCL, Vulkan, and FFmpeg on this
    machine. Optional dev-only dependencies can be installed into the ignored
    `third_party/install` prefix with `scripts/setup_dev_deps.sh`; the main Dudu
    build does not require them.

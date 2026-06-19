@@ -240,6 +240,27 @@ probe_openblas() {
     echo "ok openblas"
 }
 
+probe_spdlog() {
+    if ! pkg-config --exists spdlog; then
+        echo "skip spdlog: pkg-config package not found"
+        return
+    fi
+
+    local cpp="$repo_root/build/probe_spdlog_basic.cpp"
+    local bin="$repo_root/build/probe_spdlog_basic"
+    "$repo_root/build/duc" emit "$repo_root/tests/fixtures/spdlog_basic.dd" -o "$cpp"
+    "${CXX:-c++}" -std=c++20 "$cpp" $(pkg-config --cflags --libs spdlog) -o "$bin"
+    set +e
+    "$bin" >/dev/null
+    local status=$?
+    set -e
+    if [[ "$status" -ne 42 ]]; then
+        echo "spdlog probe returned $status, expected 42" >&2
+        exit 1
+    fi
+    echo "ok spdlog"
+}
+
 probe_threading() {
     local cpp="$repo_root/build/probe_threading_atomics.cpp"
     local bin="$repo_root/build/probe_threading_atomics"
@@ -409,6 +430,7 @@ probe_libevent
 probe_fmt
 probe_eigen
 probe_openblas
+probe_spdlog
 probe_threading
 probe_posix_mmap
 probe_posix_threads

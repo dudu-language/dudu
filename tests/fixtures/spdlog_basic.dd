@@ -1,0 +1,6 @@
+import cpp "spdlog/spdlog.h" as spdlog
+
+
+def main() -> i32:
+    spdlog.info("dudu spdlog smoke")
+    return 42
