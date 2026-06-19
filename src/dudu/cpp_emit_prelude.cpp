@@ -156,7 +156,11 @@ void emit_includes(std::ostringstream& out, const ModuleAst& module) {
     }
 
     for (const ImportDecl& import : module.imports) {
-        if (import.kind == ImportKind::ForeignC || import.kind == ImportKind::ForeignCpp) {
+        if (import.kind == ImportKind::ForeignC) {
+            out << "extern \"C\" {\n"
+                << "#include " << include_path(import) << '\n'
+                << "}\n";
+        } else if (import.kind == ImportKind::ForeignCpp) {
             out << "#include " << include_path(import) << '\n';
         }
     }

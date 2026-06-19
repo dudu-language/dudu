@@ -523,7 +523,7 @@ probe_ffmpeg() {
     local cpp="$repo_root/build/probe_ffmpeg_probe_decode.cpp"
     local bin="$repo_root/build/probe_ffmpeg_probe_decode"
     "$repo_root/build/duc" emit "$repo_root/examples/ffmpeg_probe_decode.dd" -o "$cpp"
-    "${CXX:-c++}" -std=c++20 -I"$repo_root" "$cpp" \
+    "${CXX:-c++}" -std=c++20 "$cpp" \
         $(pkg-config --cflags --libs libavcodec) -o "$bin"
     set +e
     "$bin"

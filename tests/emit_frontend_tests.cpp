@@ -91,6 +91,16 @@ void test_value_member_emission() {
     assert(cpp.find("return player.health;") != std::string::npos);
 }
 
+void test_c_imports_emit_c_linkage() {
+    const dudu::ModuleAst module = dudu::parse_source("import c \"math.h\"\n"
+                                                      "import cpp \"vector\"\n",
+                                                      "c_import_linkage.dd");
+    const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find("extern \"C\" {\n#include \"math.h\"\n}\n") != std::string::npos);
+    assert(cpp.find("#include \"vector\"") != std::string::npos);
+    assert(cpp.find("extern \"C\" {\n#include \"vector\"") == std::string::npos);
+}
+
 void test_templated_pointer_cast_emission() {
     const dudu::ModuleAst module =
         dudu::parse_source("def read_i32(left: *const[void]) -> const[i32]:\n"
@@ -262,6 +272,7 @@ int main() {
         test_image_filter_emission(root);
         test_pointer_member_emission(root);
         test_value_member_emission();
+        test_c_imports_emit_c_linkage();
         test_templated_pointer_cast_emission();
         test_template_pointer_cast_type_detection_uses_type_ast();
         test_pointer_to_const_binding_emission();

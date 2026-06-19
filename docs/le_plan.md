@@ -1192,6 +1192,9 @@ push. They are not release packaging work.
    POSIX pthread coverage now imports `pthread.h` directly and exercises
    `pthread_create` with a Dudu function pointer callback plus native mutex
    operations, without the old helper wrapper header.
+   C imports now emit C-linkage include blocks in generated C++, so FFmpeg's
+   `libavcodec/packet.h` can be imported directly without an `extern "C"`
+   wrapper header.
 
    This matrix is not part of the always-on fast loop. Keep fast compiler
    validation small, and run the real-library/example matrix periodically, when

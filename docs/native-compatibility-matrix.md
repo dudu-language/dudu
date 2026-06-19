@@ -51,7 +51,7 @@ Last local probe run: 2026-06-19 with `scripts/probe_optional.sh`.
 | Wayland client | platform / windowing | C API, nullable `cstr`, opaque display pointer, link | pass | `scripts/probe_optional.sh` / `wayland_display_probe.dd` | no |
 | OpenCL | compute | host API, kernel setup, run result | pass | `scripts/probe_optional.sh` / `examples/opencl_kernel_host.dd` | no |
 | Vulkan | graphics | header import, object setup smoke, link | pass | `scripts/probe_optional.sh` / `examples/vulkan_triangle.dd` | no |
-| FFmpeg libavcodec | media | header import, package link, probe/decode smoke | pass | `scripts/probe_optional.sh` / `examples/ffmpeg_probe_decode.dd` | small wrapper for normal FFmpeg include shape |
+| FFmpeg libavcodec | media | direct C header import, package link, packet alloc/free smoke | pass | `scripts/probe_optional.sh` / `examples/ffmpeg_probe_decode.dd` | no |
 | C macros | C/C++ preprocessor | constants, function-like macros, variadics, lowercase macros | fixture | `cpp_macro_bomb.dd`, `c_macro_constants.dd` | no |
 | Native C++ templates | C++ templates | explicit template calls, method templates, dependent returns | fixture | `native_template_function.dd`, `cpp_template_member.dd`, `native_dependent_template_return.dd` | no |
 
