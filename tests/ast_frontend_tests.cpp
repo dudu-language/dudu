@@ -1402,6 +1402,10 @@ void test_type_ast_shape() {
            "std::add_pointer_t<bool(int32_t, float)>");
     assert(dudu::lower_cpp_type(dudu::parse_type_text("fn(i32)")) ==
            "std::add_pointer_t<void(int32_t)>");
+    assert(dudu::lower_cpp_type("fn(i32, f32) -> bool") ==
+           "std::add_pointer_t<bool(int32_t, float)>");
+    assert(dudu::lower_cpp_type("list[fn(i32) -> bool]") ==
+           "std::vector<std::add_pointer_t<bool(int32_t)>>");
     dudu::FunctionSignature signature;
     assert(dudu::parse_function_type(dudu::parse_type_text("fn(i32, f32) -> bool"), signature));
     assert(dudu::signature_param_count(signature) == 2);

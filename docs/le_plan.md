@@ -2108,3 +2108,8 @@ push. They are not release packaging work.
    and tests that exercise that boundary.
    The AST migration guard now rejects `lower_cpp_type(type_ref_head_name(...))`
    so structured type-name codegen cannot silently re-enter the raw type parser.
+   Raw string C++ type lowering no longer has its own hand-written function
+   type splitter for `fn(...)` spellings. Those spellings now go through
+   `parse_type_text` and structured `TypeRef` function lowering, with a guard
+   preventing the deleted `lower_function_signature_type` helper from coming
+   back.

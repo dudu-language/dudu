@@ -58,36 +58,10 @@ std::optional<std::string> lower_parsed_fixed_array_type(const std::string& type
     return lower_cpp_type(parsed);
 }
 
-std::string lower_function_signature_type(const std::string& type, bool pointer) {
-    const size_t open = type.find('(');
-    const size_t close = type.find(')', open);
-    if (open == std::string::npos || close == std::string::npos) {
-        return replace_dots(type);
-    }
-    const std::string args = type.substr(open + 1, close - open - 1);
-    std::string result = "void";
-    const size_t arrow = type.find("->", close);
-    if (arrow != std::string::npos) {
-        result = lower_cpp_type(type.substr(arrow + 2));
-    }
-
-    std::ostringstream signature;
-    signature << result << '(';
-    const std::vector<std::string> parts = split_top_level_args(args);
-    for (size_t i = 0; i < parts.size(); ++i) {
-        if (i > 0) {
-            signature << ", ";
-        }
-        signature << lower_cpp_type(parts[i]);
-    }
-    signature << ')';
-    return pointer ? "std::add_pointer_t<" + signature.str() + ">" : signature.str();
-}
-
 std::string lower_template_arg_type(const std::string& type) {
     const std::string trimmed = trim_copy(type);
     if (starts_with(trimmed, "fn(")) {
-        return lower_function_signature_type(trimmed, false);
+        return lower_cpp_type(parse_type_text(trimmed));
     }
     return lower_cpp_type(trimmed);
 }
@@ -190,10 +164,6 @@ std::string lower_template_type(std::string_view name, const std::string& args) 
     }
     out << ">";
     return out.str();
-}
-
-std::string lower_function_type(const std::string& type) {
-    return lower_function_signature_type(type, true);
 }
 
 std::vector<std::string> fixed_array_dimensions(const std::string& type) {
@@ -314,7 +284,7 @@ std::string lower_cpp_type(const std::string& raw_type) {
         return "std::monostate";
     }
     if (starts_with(type, "fn(")) {
-        return lower_function_type(type);
+        return lower_cpp_type(parse_type_text(type));
     }
     if (const auto found = builtin_cpp_type_names().find(type);
         found != builtin_cpp_type_names().end()) {
