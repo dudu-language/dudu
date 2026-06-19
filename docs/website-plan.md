@@ -60,6 +60,18 @@ This is guerrilla marketing, not a language-design joke. The page should be
 memorable enough that people share it, but clear enough that a visitor can tell
 within seconds that Dudu is meant to be a real native language project.
 
+The most direct reference point is `mojolang.org`: Dudu's site should read as
+a humorous brown/poo-themed answer to the same public-language-site category.
+The joke is visual and tonal, not technical. Mojo has fire and heat; Dudu has
+ground, dirt, brown, and a dumb name. Mojo talks about Python-shaped speed;
+Dudu talks about Python-shaped native C/C++ interop. The page can be
+shamelessly weird because the compiler underneath is serious.
+
+Call this guerrilla marketing, or gorilla marketing if the typo is funnier in
+the moment. The important rule is that the attention hook must lead quickly to
+real artifacts: source code, docs, examples, generated C++, editor tooling,
+interop tests, and an honest roadmap.
+
 ## Visual Direction
 
 - Brown, tan, amber, off-white, and near-black palette.
