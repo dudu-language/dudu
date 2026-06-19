@@ -2174,6 +2174,10 @@ push. They are not release packaging work.
    `native_template_call_base` path decoded `std.get[0]`-style arguments by
    reparsing the rendered callee string; that parser has been deleted and the
    migration guard rejects reintroducing it.
+   The now-unused `native_template_binding_type_ref` helper has also been
+   deleted. Tests that need messy native type metadata build the same boundary
+   shape with `parse_type_text`, while live native template matching consumes
+   `TypeRef` arguments produced by parsing/scanning rather than strings.
    C++ type lowering from structured named and qualified `TypeRef` nodes now
    goes through a name-only lowering helper instead of rendering the type name
    and sending it back through the raw string type parser. Raw type-string

@@ -41,6 +41,7 @@ forbidden=(
     "lower_template_call_arg\\("
     "native_template_call_base"
     "native_template_type_refs"
+    "native_template_binding_type_ref"
 )
 
 for pattern in "${forbidden[@]}"; do

@@ -282,28 +282,6 @@ bool numeric_template_arg(std::string_view arg) {
     return !arg.empty() && arg.find_first_not_of("0123456789") == std::string::npos;
 }
 
-TypeRef native_template_binding_type_ref(std::string_view text, SourceLocation location) {
-    const std::string trimmed = trim_copy(std::string(text));
-    if (numeric_template_arg(trimmed)) {
-        TypeRef type;
-        type.kind = TypeKind::Value;
-        type.value = trimmed;
-        type.location = location;
-        return type;
-    }
-
-    const bool name_like =
-        !trimmed.empty() && std::all_of(trimmed.begin(), trimmed.end(), [](char c) {
-            return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_' || c == '.' ||
-                   c == ':';
-        });
-    if (name_like) {
-        return named_type_ref(trimmed, location);
-    }
-
-    return parse_type_text(trimmed, location);
-}
-
 FunctionSignature substitute_explicit_template_signature(FunctionSignature signature,
                                                          const std::vector<TypeRef>& args) {
     const std::vector<std::string> names = signature.template_params.empty()

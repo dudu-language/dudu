@@ -391,7 +391,7 @@ void test_bound_native_template_substitution_is_per_field() {
 
     dudu::NativeTemplateBindings bindings;
     const dudu::TypeRef messy_native_binding =
-        dudu::native_template_binding_type_ref("typename __decay_and_strip<U>::__type");
+        dudu::parse_type_text("typename __decay_and_strip<U>::__type");
     bindings["U"] = messy_native_binding;
 
     dudu::NativePackBindingMap packs;

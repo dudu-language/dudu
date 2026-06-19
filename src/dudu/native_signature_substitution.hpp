@@ -15,7 +15,6 @@ using NativePackBindingMap = std::map<std::string, std::vector<TypeRef>>;
 
 bool native_index_placeholder(const std::string& name);
 bool numeric_template_arg(std::string_view arg);
-TypeRef native_template_binding_type_ref(std::string_view text, SourceLocation location = {});
 
 FunctionSignature substitute_explicit_template_signature(FunctionSignature signature,
                                                          const std::vector<TypeRef>& args);
