@@ -35,6 +35,14 @@ void bind_local(FunctionScope& scope, const std::string& name, const TypeRef& ty
     }
 }
 
+Symbols with_generic_params(Symbols symbols, const std::vector<std::string>& params) {
+    for (const std::string& param : params) {
+        symbols.types.insert(param);
+        symbols.generic_params.insert(param);
+    }
+    return symbols;
+}
+
 std::vector<Expr> index_arg_exprs(const Expr& index_expr) {
     if (index_expr.kind == ExprKind::TupleLiteral) {
         return index_expr.children;

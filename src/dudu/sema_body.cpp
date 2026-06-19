@@ -291,14 +291,6 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
     (void)infer_expr_type_ast(scope, stmt.expr, &stmt.location);
 }
 
-Symbols with_generic_params(Symbols symbols, const std::vector<std::string>& params) {
-    for (const std::string& param : params) {
-        symbols.types.insert(param);
-        symbols.generic_params.insert(param);
-    }
-    return symbols;
-}
-
 void copy_base_scope_state(FunctionScope& dst, const FunctionScope& src) {
     dst.constants = src.constants;
     dst.target_mode = src.target_mode;

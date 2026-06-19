@@ -1632,6 +1632,8 @@ push. They are not release packaging work.
    preserving one owner for indexing behavior. Native header dedupe and merge
    now spell the opaque native type redeclaration rule directly at the collision
    branch instead of carrying duplicated tiny generic compatibility lambdas.
+   Generic-parameter symbol extension now lives in `sema_common.*` instead of
+   separate declaration/body-sema copies, so generic scope setup has one owner.
 
 19. Polish Unsupported Syntax Diagnostics
 

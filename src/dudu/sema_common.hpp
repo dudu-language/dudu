@@ -16,6 +16,7 @@ bool missing_expr(const Expr& expr);
 const SourceLocation& node_location(const SourceLocation& fallback, const Expr& expr);
 const SourceLocation& node_location(const SourceLocation& fallback, const TypeRef& type);
 void bind_local(FunctionScope& scope, const std::string& name, const TypeRef& type_ref);
+Symbols with_generic_params(Symbols symbols, const std::vector<std::string>& params);
 std::vector<Expr> index_arg_exprs(const Expr& index_expr);
 struct ScopedCallee {
     std::optional<ExprPath> path;
