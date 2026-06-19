@@ -49,7 +49,8 @@ std::string strip_comment(std::string line) {
     return line;
 }
 
-std::string unescape_basic_string(std::string_view value) {
+std::string unescape_basic_string(const std::filesystem::path& path, const std::string& line,
+                                  std::string_view value) {
     std::string out;
     bool escaped = false;
     for (const char c : value) {
@@ -75,8 +76,7 @@ std::string unescape_basic_string(std::string_view value) {
                 out.push_back(c);
                 break;
             default:
-                out.push_back(c);
-                break;
+                fail(path, "invalid string escape", line);
             }
             escaped = false;
             continue;
@@ -88,15 +88,16 @@ std::string unescape_basic_string(std::string_view value) {
         out.push_back(c);
     }
     if (escaped) {
-        out.push_back('\\');
+        fail(path, "unterminated string escape", line);
     }
     return out;
 }
 
-std::string unquote(std::string value) {
+std::string unquote(const std::filesystem::path& path, const std::string& line, std::string value) {
     value = trim_copy(value);
     if (value.size() >= 2 && value.front() == '"' && value.back() == '"') {
-        return unescape_basic_string(std::string_view(value).substr(1, value.size() - 2));
+        return unescape_basic_string(path, line,
+                                     std::string_view(value).substr(1, value.size() - 2));
     }
     return value;
 }
@@ -144,7 +145,7 @@ std::vector<std::string> parse_string_array(const std::filesystem::path& path,
         }
         const std::string item = trim_copy(value.substr(start, cursor - start));
         if (!item.empty()) {
-            out.push_back(unquote(item));
+            out.push_back(unquote(path, line, item));
         }
         start = cursor + 1;
     }
@@ -309,13 +310,13 @@ ProjectConfig parse_project_config(const std::filesystem::path& path) {
                     fail(path, "unknown [" + section + "] entry", line);
                 }
             } else if (name == "entry" || name == "main") {
-                target.main = unquote(value);
+                target.main = unquote(path, line, value);
             } else if (name == "kind") {
-                target.target_kind = unquote(value);
+                target.target_kind = unquote(path, line, value);
                 validate_one_of(path, line, "kind", target.target_kind,
                                 {"executable", "library", "shared_library"});
             } else if (name == "mode") {
-                target.target_mode = unquote(value);
+                target.target_mode = unquote(path, line, value);
                 target.target_mode_explicit = true;
                 validate_one_of(path, line, "mode", target.target_mode,
                                 {"hosted", "freestanding", "embedded", "cuda", "shader"});
@@ -323,32 +324,32 @@ ProjectConfig parse_project_config(const std::filesystem::path& path) {
                 fail(path, "unknown [" + section + "] entry", line);
             }
         } else if (section.empty() && name == "name") {
-            config.name = unquote(value);
+            config.name = unquote(path, line, value);
         } else if (section.empty() && (name == "main" || name == "entry")) {
-            config.main = unquote(value);
+            config.main = unquote(path, line, value);
         } else if (section.empty() && name == "build_dir") {
-            config.build_dir = unquote(value);
+            config.build_dir = unquote(path, line, value);
         } else if (section.empty() && name == "cpp_std") {
-            config.cpp_std = unquote(value);
+            config.cpp_std = unquote(path, line, value);
         } else if (section == "cxx" && name == "standard") {
-            config.cpp_std = unquote(value);
+            config.cpp_std = unquote(path, line, value);
         } else if (section == "cxx" && name == "compiler") {
-            config.compiler = unquote(value);
+            config.compiler = unquote(path, line, value);
         } else if (section == "target" && name == "kind") {
-            config.target_kind = unquote(value);
+            config.target_kind = unquote(path, line, value);
             validate_one_of(path, line, "kind", config.target_kind,
                             {"executable", "library", "shared_library"});
         } else if (section == "target" && name == "mode") {
-            config.target_mode = unquote(value);
+            config.target_mode = unquote(path, line, value);
             config.target_mode_explicit = true;
             validate_one_of(path, line, "mode", config.target_mode,
                             {"hosted", "freestanding", "embedded", "cuda", "shader"});
         } else if (section == "bench" && name == "command") {
-            config.bench_command = unquote(value);
+            config.bench_command = unquote(path, line, value);
         } else if (section == "test" && name == "command") {
-            config.test_command = unquote(value);
+            config.test_command = unquote(path, line, value);
         } else if (section == "cc" && name == "compiler") {
-            config.compiler = unquote(value);
+            config.compiler = unquote(path, line, value);
         } else if (section == "cc" && name == "include_dirs") {
             config.include_dirs = parse_string_array(path, line, value);
         } else if (section == "include" && name == "paths") {
@@ -378,21 +379,21 @@ ProjectConfig parse_project_config(const std::filesystem::path& path) {
         } else if ((section == "pkg_config" || section == "pkg") && name == "paths") {
             config.pkg_config_paths = parse_string_array(path, line, value);
         } else if (section == "build" && name == "dir") {
-            config.build_dir = unquote(value);
+            config.build_dir = unquote(path, line, value);
         } else if (section == "build" && name == "backend") {
-            config.build_backend = unquote(value);
+            config.build_backend = unquote(path, line, value);
             config.build_backend_explicit = true;
             validate_one_of(path, line, "backend", config.build_backend, {"direct", "cmake"});
         } else if (section == "cmake" && name == "enabled") {
             config.cmake_enabled = parse_bool_value(path, line, value);
         } else if (section == "cmake" && name == "source") {
-            config.cmake_source = unquote(value);
+            config.cmake_source = unquote(path, line, value);
         } else if (section == "cmake" && name == "target") {
-            config.cmake_target = unquote(value);
+            config.cmake_target = unquote(path, line, value);
         } else if (section == "cmake" && name == "config") {
-            config.cmake_config = unquote(value);
+            config.cmake_config = unquote(path, line, value);
         } else if (section == "cmake" && name == "generator") {
-            config.cmake_generator = unquote(value);
+            config.cmake_generator = unquote(path, line, value);
         } else if (section == "build") {
             config.build_values[name] = value;
         } else {

@@ -399,7 +399,9 @@ Current implementation reality:
   from a project subdirectory does not change command-relative paths.
 - Quoted manifest strings decode common TOML escapes such as `\"`, `\\`, and
   `\n`, including inside string arrays, so command strings and native paths do
-  not leak raw escape backslashes into the driver.
+  not leak raw escape backslashes into the driver. Invalid or unfinished
+  quoted-string escapes are rejected as manifest errors instead of being
+  guessed.
 
 The next build-driver work should close that gap without changing the front
 door: users should still type `dudu build`, `dudu run`, and `dudu test`.

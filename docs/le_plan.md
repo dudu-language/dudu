@@ -1262,7 +1262,8 @@ push. They are not release packaging work.
    accidentally depend on the caller's current directory. Quoted manifest
    strings decode common TOML escapes such as `\"`, `\\`, and `\n`, including
    inside string arrays, so command strings and native paths do not leak raw
-   escape backslashes into the driver.
+   escape backslashes into the driver. Invalid or unfinished quoted-string
+   escapes are rejected as manifest errors instead of being guessed.
 
 14. Freestanding And Embedded Assert Policy
 

@@ -106,6 +106,48 @@ void test_quoted_manifest_strings(const std::filesystem::path& root) {
     assert(config.include_dirs[1] == "include/with\"quote");
 }
 
+void test_invalid_manifest_string_escapes(const std::filesystem::path& root) {
+    const std::filesystem::path project = root / "build" / "project-config-invalid-escapes";
+    std::filesystem::remove_all(project);
+    write_text(project / "src" / "main.dd", "def main() -> i32:\n    return 0\n");
+
+    write_text(project / "dudu.toml", "name = \"bad\\qescape\"\n"
+                                      "entry = \"src/main.dd\"\n");
+    bool rejected_scalar = false;
+    try {
+        (void)dudu::parse_project_config(project / "dudu.toml");
+    } catch (const std::runtime_error& error) {
+        rejected_scalar =
+            std::string(error.what()).find("invalid string escape") != std::string::npos;
+    }
+    assert(rejected_scalar);
+
+    write_text(project / "dudu.toml", "name = \"bad_array_escape\"\n"
+                                      "entry = \"src/main.dd\"\n"
+                                      "\n"
+                                      "[include]\n"
+                                      "paths = [\"ok\", \"bad\\qpath\"]\n");
+    bool rejected_array = false;
+    try {
+        (void)dudu::parse_project_config(project / "dudu.toml");
+    } catch (const std::runtime_error& error) {
+        rejected_array =
+            std::string(error.what()).find("invalid string escape") != std::string::npos;
+    }
+    assert(rejected_array);
+
+    write_text(project / "dudu.toml", "name = \"bad_trailing_escape\\\"\n"
+                                      "entry = \"src/main.dd\"\n");
+    bool rejected_trailing = false;
+    try {
+        (void)dudu::parse_project_config(project / "dudu.toml");
+    } catch (const std::runtime_error& error) {
+        rejected_trailing =
+            std::string(error.what()).find("unterminated string escape") != std::string::npos;
+    }
+    assert(rejected_trailing);
+}
+
 void test_project_driver_resolves_manifest_relative_entries(const std::filesystem::path& root) {
     const std::filesystem::path project = root / "build" / "project-config-entry-resolution";
     const std::filesystem::path outside = root / "build" / "project-config-entry-outside";
@@ -161,6 +203,7 @@ int main() {
         test_manifest_relative_paths(DUDU_REPO_ROOT);
         test_build_backend_selection(DUDU_REPO_ROOT);
         test_quoted_manifest_strings(DUDU_REPO_ROOT);
+        test_invalid_manifest_string_escapes(DUDU_REPO_ROOT);
         test_project_driver_resolves_manifest_relative_entries(DUDU_REPO_ROOT);
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';

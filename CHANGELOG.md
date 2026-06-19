@@ -104,6 +104,8 @@
 
 - Decoded common escaped characters in quoted `dudu.toml` strings, including
   escaped quotes and backslashes in scalar fields and arrays.
+- Rejected invalid or unfinished escapes in quoted `dudu.toml` strings instead
+  of silently dropping the backslash.
 - Kept `duc bench` argument forwarding transparent while reserving
   `--quiet`/`--help` project-driver parsing for `dudu bench`.
 - Fixed delegated `[test]` and `[bench]` project commands so they run from the
