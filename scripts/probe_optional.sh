@@ -198,6 +198,27 @@ probe_libxml2() {
     echo "ok libxml2"
 }
 
+probe_cairo() {
+    if ! pkg-config --exists cairo; then
+        echo "skip cairo: pkg-config package not found"
+        return
+    fi
+
+    local cpp="$repo_root/build/probe_cairo_image_surface.cpp"
+    local bin="$repo_root/build/probe_cairo_image_surface"
+    "$repo_root/build/duc" emit "$repo_root/tests/fixtures/cairo_image_surface.dd" -o "$cpp"
+    "${CXX:-c++}" -std=c++20 "$cpp" $(pkg-config --cflags --libs cairo) -o "$bin"
+    set +e
+    "$bin"
+    local status=$?
+    set -e
+    if [[ "$status" -ne 42 ]]; then
+        echo "cairo probe returned $status, expected 42" >&2
+        exit 1
+    fi
+    echo "ok cairo"
+}
+
 probe_fmt() {
     if ! pkg-config --exists fmt; then
         echo "skip fmt: pkg-config package not found"
@@ -566,6 +587,7 @@ probe_libpng
 probe_openssl
 probe_libevent
 probe_libxml2
+probe_cairo
 probe_fmt
 probe_eigen
 probe_openblas

@@ -1,0 +1,39 @@
+import c "cairo.h" as cairo
+
+
+def main() -> i32:
+    surface = cairo.cairo_image_surface_create(cairo.CAIRO_FORMAT_ARGB32, 2, 2)
+    if surface == None:
+        return 1
+    if cairo.cairo_surface_status(surface) != cairo.CAIRO_STATUS_SUCCESS:
+        cairo.cairo_surface_destroy(surface)
+        return 2
+
+    cr = cairo.cairo_create(surface)
+    if cr == None:
+        cairo.cairo_surface_destroy(surface)
+        return 3
+    if cairo.cairo_status(cr) != cairo.CAIRO_STATUS_SUCCESS:
+        cairo.cairo_destroy(cr)
+        cairo.cairo_surface_destroy(surface)
+        return 4
+
+    cairo.cairo_set_source_rgb(cr, 1.0, 0.0, 0.0)
+    cairo.cairo_paint(cr)
+    cairo.cairo_destroy(cr)
+    cairo.cairo_surface_flush(surface)
+
+    data = cairo.cairo_image_surface_get_data(surface)
+    stride = cairo.cairo_image_surface_get_stride(surface)
+    if data == None:
+        cairo.cairo_surface_destroy(surface)
+        return 5
+    if stride < 8:
+        cairo.cairo_surface_destroy(surface)
+        return 6
+
+    total: i32 = i32(data[2]) + i32(data[6])
+    cairo.cairo_surface_destroy(surface)
+    if total == 510:
+        return 42
+    return total
