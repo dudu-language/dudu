@@ -1274,7 +1274,33 @@ push. They are not release packaging work.
    `Missing` expression kind; `Unknown` is reserved for unsupported source text
    that should be diagnosed rather than interpreted.
 
-17. Delete AST Migration Fallbacks
+17. Polish Unsupported Syntax Diagnostics
+
+   Deliberately unsupported Python-looking syntax should fail hard with
+   specific guidance. These are not compatibility paths and they should not
+   lower, but diagnostics should explain the Dudu-shaped replacement instead of
+   only saying "unsupported".
+
+   Required diagnostic coverage:
+
+   - `lambda`: declare a named function and pass the function name
+   - RHS/local `def`: move the function to top-level or class scope, then pass
+     the function name as a value
+   - ternary conditional expressions: use an explicit `if` statement
+   - comprehensions: use an explicit loop and append/insert into a declared
+     container
+   - `yield` and generators: use an explicit iterator/state type or callback
+   - `with`: rely on RAII object lifetime or write the lifetime explicitly
+   - `eval` and `exec`: dynamic execution is not part of Dudu
+   - `getattr` and `setattr`: use statically known fields or methods
+   - rejected OOP decorators such as `@staticmethod`, `@classmethod`, and
+     `@property`: use Dudu's class rules instead
+
+   The parser may keep narrow recognition for these forms only to produce these
+   diagnostics. It must not preserve alternate syntax, hidden lowering, or
+   partial semantic support for them.
+
+18. Delete AST Migration Fallbacks
 
    After each language form has structured parser, semantic, codegen,
    diagnostic, lint, LSP, and formatter coverage, remove the compatibility
