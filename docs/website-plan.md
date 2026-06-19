@@ -72,6 +72,29 @@ the moment. The important rule is that the attention hook must lead quickly to
 real artifacts: source code, docs, examples, generated C++, editor tooling,
 interop tests, and an honest roadmap.
 
+## Humorous Clone Rule
+
+The target is a humorous clone of the public language-launch-page vibe, not a
+source clone of another site's implementation. The page can deliberately rhyme
+with `mojolang.org` at the level of category, pacing, and contrast:
+
+- big confident language name
+- immediate "Python shape, native speed" pitch
+- install command near the top
+- code example before too much explanation
+- performance and interop claims framed as engineering goals
+- roadmap/status links where a serious developer expects them
+
+The actual text, layout, assets, screenshots, animations, logos, and section
+composition must be original. The joke is "what if the fire language marketing
+page had an earthy brown sewer cousin," not "copy the page and recolor it."
+
+This distinction matters because Dudu is not satire as a compiler. The site is
+satirical advertising around a sincere tool. If a visitor laughs and then
+immediately finds real docs, examples, build instructions, and limitations, the
+site is doing its job. If a visitor cannot tell whether the compiler is real,
+the joke has gone too far.
+
 ## Visual Direction
 
 - Brown, tan, amber, off-white, and near-black palette.
