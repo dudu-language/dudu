@@ -107,9 +107,14 @@ compile_and_expect native_scan_local 42
 "$repo_root/build/dudu" check "$repo_root/tests/fixtures/project_import_metadata/main.dd"
 "$repo_root/build/dudu" --version | grep -q '^dudu 0\.1\.0$'
 "$repo_root/build/dudu" bench compiler --quiet -- --help | grep -q 'bench_compiler.sh'
-"$repo_root/build/dudu" build "$repo_root/tests/fixtures/simple_program.dd" \
-    -o "$repo_root/build/direct_output_smoke" 2>&1 \
-    | grep -Eq '^output .*/direct_output_smoke$'
+direct_build_output="$("$repo_root/build/dudu" build "$repo_root/tests/fixtures/simple_program.dd" \
+    -o "$repo_root/build/direct_output_smoke" 2>&1)"
+printf '%s\n' "$direct_build_output" | grep -Eq '^backend direct$'
+printf '%s\n' "$direct_build_output" | grep -Eq '^entry .*/simple_program\.dd$'
+printf '%s\n' "$direct_build_output" | grep -Eq '^analyze .*/simple_program\.dd$'
+printf '%s\n' "$direct_build_output" | grep -Eq '^emit .*/direct_output_smoke\.cpp$'
+printf '%s\n' "$direct_build_output" | grep -Eq '^compile .*/direct_output_smoke$'
+printf '%s\n' "$direct_build_output" | grep -Eq '^output .*/direct_output_smoke$'
 "$repo_root/build/dudu" build "$repo_root/tests/fixtures/project_backend_cmake" 2>&1 \
     | grep -Eq '^output .*/backend_cmake$'
 "$repo_root/build/duc" fmt "$repo_root/tests/fixtures/simple_program.dd" --check
