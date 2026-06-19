@@ -46,6 +46,25 @@ Status: request handlers now return JSON-RPC error responses when a request
 throws after an ID is known. The LSP smoke suite covers a bad-project-config
 definition request that previously could leave the editor waiting.
 
+## JSON-RPC Request Validation
+
+Required LSP protocol fields must fail loudly when they are missing or have the
+wrong type. The server should return a JSON-RPC error for malformed requests
+instead of silently substituting default values. Silent defaults can send the
+cursor to line zero, query the wrong document, or hide client/protocol bugs.
+
+Examples of required fields:
+
+- request `method`
+- `textDocument.uri`
+- `position.line`
+- `position.character`
+
+Optional protocol fields may still use explicit defaults when the LSP spec
+defines them as optional. Helper names should make that distinction obvious:
+prefer required accessors for required fields and optional/default accessors
+only for optional fields.
+
 ## Native Header Navigation
 
 The language server should use the same Clang-backed native header awareness as
