@@ -1,4 +1,4 @@
-# Website Plan
+# Dudulang.org Website Plan
 
 Dudu should have a GitHub Pages site intended for `dudulang.org`.
 
@@ -13,7 +13,8 @@ developer marketing is easier to remember than a bland feature matrix.
 
 This is deliberate guerrilla marketing: the site gets attention with a dumb,
 memorable visual joke, then immediately backs it with real code, real interop,
-real performance goals, and an honest roadmap.
+real performance goals, and an honest roadmap. Dudu should not be presented as
+a joke language. The site is the joke wrapper around a sincere compiler.
 
 ## Tone
 
@@ -46,6 +47,8 @@ spoof," not trademark-confusing clone.
 
 - Brown, tan, amber, off-white, and near-black palette.
 - Sharp UI, not bubbly toy UI.
+- Brown and poo-themed, but not visually gross enough to make docs unpleasant
+  to read.
 - The first viewport should feel recognizably related to the modern
   Python-but-fast compiler landing-page genre, while being visually inverted:
   brown instead of red, ground instead of fire, native pragmatism instead of
@@ -59,6 +62,11 @@ spoof," not trademark-confusing clone.
   ground, dirt, terminal grit, native toolchain pragmatism.
 - Use code examples and real screenshots early. The joke gets attention; the
   compiler behavior earns the click.
+
+The broad target is "humorous clone of the language-marketing genre," not a
+pixel copy of any single site. A visitor should recognize the riff immediately,
+but the implementation should be original enough that the Dudu site stands on
+its own.
 
 ## Parody Boundaries
 
@@ -131,6 +139,26 @@ Preferred shape:
 - Published artifact goes to GitHub Pages.
 
 Keep it static, cheap, and boring. The site should not require a backend.
+
+`dudulang.org` should point at GitHub Pages with the normal Pages custom domain
+flow. The repository should keep any required `CNAME` file or Pages metadata in
+the site source so deployment is reproducible.
+
+## Implementation Checklist
+
+- Pick a static site stack that is easy to maintain and deploy on GitHub Pages.
+- Build a brown/poo-themed visual identity that still leaves code readable.
+- Add a home page with install/run commands, a small language example, and a
+  direct GitHub link.
+- Add docs pages or generated links for language syntax, interop, project
+  driver commands, and roadmap.
+- Add a examples page that shows real Dudu snippets and generated/native
+  behavior.
+- Add a status badge or short status block that says the compiler is
+  experimental.
+- Add GitHub Actions deployment.
+- Configure `dudulang.org` as the Pages custom domain.
+- Keep the site static and free of backend requirements.
 
 ## Content Requirements
 
