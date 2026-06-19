@@ -1243,12 +1243,15 @@ push. They are not release packaging work.
    benchmark outside the fast correctness loop, and `dudu bench compiler`
    dispatches to it when run from a checkout containing that script. It emits
    CSV plus a readable summary and currently measures representative frontend
-   check, C++ emission, native header cold/cache check, direct build, and
-   generated-CMake module build cases. It records source line/file counts with
-   each sample. This is a baseline harness, not a pass/fail gate; thresholds,
-   memory tracking, LSP latency, larger synthetic corpora, and deeper
-   clean/no-op/one-file-changed generated-CMake measurements remain later
-   benchmark expansions.
+   check, C++ emission, native header cold/cache check, direct build,
+   generated-CMake module build, generated-CMake no-op rebuild, and
+   generated-CMake one-Dudu-file-changed rebuild cases. The changed-file case
+   runs against a copied fixture under `build/bench_compiler` so benchmarks do
+   not mutate checked-in examples. It records source line/file counts with each
+   sample. This is a baseline harness, not a pass/fail gate; thresholds, memory
+   tracking, LSP latency, larger synthetic corpora, and deeper clean/no-op/
+   one-file-changed generated-CMake breakdowns remain later benchmark
+   expansions.
 
 12. Incremental Build Strategy
 

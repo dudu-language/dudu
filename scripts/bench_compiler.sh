@@ -82,16 +82,18 @@ file_count() {
     fi
 }
 
-run_case() {
+run_case_prepared() {
     local name="$1"
     local phase="$2"
     local source_path="$3"
-    shift 3
+    local prepare_fn="$4"
+    shift 4
     local lines files
     lines="$(line_count "$source_path")"
     files="$(file_count "$source_path")"
 
     for ((sample = 1; sample <= samples; ++sample)); do
+        "$prepare_fn" "$sample"
         local stdout="$bench_dir/${name}_${sample}.out"
         local stderr="$bench_dir/${name}_${sample}.err"
         local start end status
@@ -115,10 +117,47 @@ run_case() {
     done
 }
 
+bench_noop() {
+    :
+}
+
+run_case() {
+    local name="$1"
+    local phase="$2"
+    local source_path="$3"
+    shift 3
+    run_case_prepared "$name" "$phase" "$source_path" bench_noop "$@"
+}
+
 simple="$repo_root/tests/fixtures/simple_program.dd"
 native_header="$repo_root/tests/fixtures/array_c_handoff.dd"
 multi_project="$repo_root/tests/fixtures/project_backend_auto_modules_native"
 multi_entry="$multi_project/main.dd"
+incremental_project="$bench_dir/incremental_project"
+incremental_entry="$incremental_project/main.dd"
+
+prepare_incremental_project() {
+    rm -rf "$incremental_project"
+    mkdir -p "$incremental_project"
+    cp "$multi_project"/*.dd "$multi_project"/*.hpp "$incremental_project"/
+    cat >"$incremental_project/dudu.toml" <<'EOF'
+name = "bench_incremental_modules"
+entry = "main.dd"
+build_dir = "build"
+
+[cc]
+include_dirs = ["."]
+EOF
+}
+
+touch_incremental_dep() {
+    local sample="$1"
+    if ((sample % 2 == 1)); then
+        perl -0pi -e 's/native\.add\(20, 22\)/native.add(21, 21)/g' "$incremental_project/dep.dd"
+    else
+        perl -0pi -e 's/native\.add\(21, 21\)/native.add(20, 22)/g' "$incremental_project/dep.dd"
+    fi
+}
 
 run_case "duc_check_simple" "frontend_check" "$simple" \
     "$repo_root/build/duc" check "$simple"
@@ -138,6 +177,16 @@ run_case "dudu_build_direct" "direct_build" "$simple" \
 
 run_case "dudu_build_cmake_modules" "cmake_build" "$multi_project" \
     "$repo_root/build/dudu" build "$multi_entry" --quiet
+
+prepare_incremental_project
+"$repo_root/build/dudu" build "$incremental_entry" --quiet >/dev/null
+
+run_case "dudu_build_cmake_modules_noop" "cmake_noop_build" "$incremental_project" \
+    "$repo_root/build/dudu" build "$incremental_entry" --quiet
+
+run_case_prepared "dudu_build_cmake_modules_changed" "cmake_one_file_changed_build" \
+    "$incremental_project" touch_incremental_dep \
+    "$repo_root/build/dudu" build "$incremental_entry" --quiet
 
 echo
 echo "summary:"
