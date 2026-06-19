@@ -223,7 +223,8 @@ realistic project/module cases. Import organization in the formatter and LSP cod
 actions now shares structured leading-import block organization and parsed
 `ImportDecl` rendering instead of carrying duplicate import sorting/string
 builders, and generic document line helpers live in LSP support instead of
-inside code actions.
+individual action files. A multi-module lint fixture guards against reporting a
+dependency module's unused local in the entry document's diagnostics.
 
 ## Critical Module Import Blocker
 

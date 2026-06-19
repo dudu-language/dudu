@@ -629,6 +629,28 @@ void test_lsp_diagnostics_use_open_buffer_for_module_entry() {
     }
 }
 
+void test_lsp_lints_do_not_leak_from_dependency_modules() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_dependency_lint_scope_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "helper.dd", "def helper() -> i32:\n"
+                                  "    unused = 9\n"
+                                  "    return 7\n");
+    write_file(dir / "main.dd", "from helper import helper\n"
+                                "\n"
+                                "def main() -> i32:\n"
+                                "    return helper()\n");
+
+    const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
+                             .path = dir / "main.dd",
+                             .text = read_file(dir / "main.dd")};
+    const std::vector<dudu::Diagnostic> diags = dudu::diagnostics_for_document(doc);
+    for (const dudu::Diagnostic& diag : diags) {
+        assert(diag.code != "dudu.lint.unused");
+    }
+}
+
 void test_lsp_member_completion_uses_imported_module_shapes() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_lsp_imported_member_completion_test";
@@ -1734,6 +1756,7 @@ int main() {
         test_semantic_diagnostics();
         test_lsp_diagnostic_sources_are_structured();
         test_lsp_diagnostics_use_open_buffer_for_module_entry();
+        test_lsp_lints_do_not_leak_from_dependency_modules();
         test_lsp_member_completion_uses_imported_module_shapes();
         test_lsp_completion_uses_visible_imported_functions();
         test_lsp_signature_help_uses_visible_imported_functions();
