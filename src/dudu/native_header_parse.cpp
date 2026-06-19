@@ -6,6 +6,7 @@
 #include "dudu/native_header_scope.hpp"
 #include "dudu/native_header_types.hpp"
 
+#include <algorithm>
 #include <cctype>
 #include <regex>
 #include <set>
@@ -145,13 +146,15 @@ void add_base_class(ClassDecl& klass, std::string base, const SourceLocation& lo
     klass.base_class_refs.push_back(std::move(decl));
 }
 
+bool has_equivalent_base_class(const ClassDecl& klass, const TypeRef& type) {
+    return std::ranges::any_of(klass.base_class_refs, [&](const BaseClassDecl& base) {
+        return type_ref_equivalent(base.type_ref, type);
+    });
+}
+
 void merge_class(ClassDecl& target, const ClassDecl& source) {
-    std::set<std::string> bases;
-    for (const BaseClassDecl& base : target.base_class_refs) {
-        bases.insert(type_ref_text(base.type_ref));
-    }
     for (const BaseClassDecl& base : source.base_class_refs) {
-        if (bases.insert(type_ref_text(base.type_ref)).second) {
+        if (!has_equivalent_base_class(target, base.type_ref)) {
             target.base_class_refs.push_back(base);
         }
     }

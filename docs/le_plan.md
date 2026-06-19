@@ -2178,6 +2178,9 @@ push. They are not release packaging work.
    deleted. Tests that need messy native type metadata build the same boundary
    shape with `parse_type_text`, while live native template matching consumes
    `TypeRef` arguments produced by parsing/scanning rather than strings.
+   Native header class merging now dedupes imported base classes with
+   `type_ref_equivalent` over parsed `TypeRef` nodes. The previous merge key
+   rendered base types to strings and inserted them into a set.
    C++ type lowering from structured named and qualified `TypeRef` nodes now
    goes through a name-only lowering helper instead of rendering the type name
    and sending it back through the raw string type parser. Raw type-string
