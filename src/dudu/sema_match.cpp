@@ -126,8 +126,13 @@ bool check_wrapper_match(FunctionScope& scope, const Stmt& stmt, const TypeRef& 
             if (!sema_has_expr(child.guard_expr)) {
                 wildcard = true;
             }
-        } else if (!sema_has_expr(child.guard_expr) && !covered.insert(*name).second) {
-            sema_fail(child.location, "unreachable duplicate case: " + *name);
+        } else {
+            if (covered.contains(*name)) {
+                sema_fail(child.location, "unreachable duplicate case: " + *name);
+            }
+            if (!sema_has_expr(child.guard_expr)) {
+                covered.insert(*name);
+            }
         }
         FunctionScope nested = scope;
         bind_wrapper_case(nested, wrapper, child.pattern_expr, child.location);
@@ -206,9 +211,12 @@ void check_enum_match(FunctionScope& scope, const Stmt& stmt, const TypeRef& ret
                 sema_fail(child.location,
                           "unknown enum variant in pattern: " + en.name + "." + *variant);
             }
-            if (!sema_has_expr(child.guard_expr) && !covered.insert(*variant).second) {
+            if (covered.contains(*variant)) {
                 sema_fail(child.location,
                           "unreachable duplicate case: " + en.name + "." + *variant);
+            }
+            if (!sema_has_expr(child.guard_expr)) {
+                covered.insert(*variant);
             }
         }
         FunctionScope nested = scope;

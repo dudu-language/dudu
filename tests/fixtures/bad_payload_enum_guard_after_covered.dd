@@ -1,0 +1,16 @@
+enum Message:
+    Quit
+
+    Move:
+        x: i32
+        y: i32
+
+
+def value(msg: Message) -> i32:
+    match msg:
+        case Message.Move(x, y):
+            return x + y
+        case Message.Move(x, y) if x > 0:
+            return y - x
+        case Message.Quit:
+            return 0

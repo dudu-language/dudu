@@ -1008,8 +1008,10 @@ push. They are not release packaging work.
    and supports assignment from exactly one matching alternative, which covers
    explicit mixed containers such as `list[variant[i32, str]]`. Unreachable
    diagnostics reject duplicate unguarded cases, wildcard cases after
-   exhaustive coverage, and later cases after an unguarded wildcard. Broader
-   pattern-subsumption diagnostics remain.
+   exhaustive coverage, later cases after an unguarded wildcard, and guarded
+   cases that appear after an earlier unguarded case for the same variant.
+   Richer subsumption only matters if the pattern language grows nested
+   alternatives or range-like patterns.
 
 7. Native Inheritance
 

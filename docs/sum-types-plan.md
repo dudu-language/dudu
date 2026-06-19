@@ -220,16 +220,18 @@ classes declared in the same module. The emitter forward-declares enums,
 emits classes, then emits full enum definitions so class payloads such as
 `Command.Move(dir: Vec2)` compile without wrapper ordering tricks.
 
-Unreachable wildcard diagnostics reject an unguarded `_` case after all enum or
-wrapper cases are already covered, and reject later cases after an unguarded
-wildcard has already covered the rest of the match.
+Unreachable diagnostics reject an unguarded `_` case after all enum or wrapper
+cases are already covered, reject later cases after an unguarded wildcard has
+already covered the rest of the match, and reject guarded or unguarded variant
+cases that appear after an earlier unguarded case for the same variant.
 
 Anonymous `variant[...]` is implemented as a native Dudu type form that lowers
 to `std::variant<...>`. Assignment is allowed only when the value matches
 exactly one alternative. This supports explicit mixed containers such as
 `list[variant[i32, str]]` without adding dynamic `Any`.
 
-Still remaining: broader pattern-subsumption diagnostics.
+Open work: richer subsumption only matters when the pattern language gains
+nested alternatives or range-like patterns.
 
 ## Recursive Data
 
