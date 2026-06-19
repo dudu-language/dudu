@@ -70,6 +70,7 @@ add_library(dudu_frontend
     src/dudu/language_server_local_context.cpp
     src/dudu/language_server_navigation.cpp
     src/dudu/language_server_native_lookup.cpp
+    src/dudu/language_server_reference_collect.cpp
     src/dudu/language_server_references.cpp
     src/dudu/language_server_semantic_tokens.cpp
     src/dudu/language_server_symbols.cpp
