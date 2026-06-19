@@ -144,32 +144,6 @@ std::string_view statement_kind_name(StmtKind kind) {
     return "unknown";
 }
 
-std::string_view unsupported_feature_name(UnsupportedFeature feature) {
-    switch (feature) {
-    case UnsupportedFeature::None:
-        return "";
-    case UnsupportedFeature::Exceptions:
-        return "exceptions";
-    case UnsupportedFeature::Generators:
-        return "generators";
-    case UnsupportedFeature::Async:
-        return "async";
-    case UnsupportedFeature::ContextManagers:
-        return "context managers";
-    case UnsupportedFeature::GlobalRebinding:
-        return "global rebinding";
-    case UnsupportedFeature::NonlocalRebinding:
-        return "nonlocal rebinding";
-    case UnsupportedFeature::DynamicDeletion:
-        return "dynamic deletion";
-    case UnsupportedFeature::LocalFunctionDeclarations:
-        return "local function declarations";
-    case UnsupportedFeature::LocalImports:
-        return "local imports";
-    }
-    return "";
-}
-
 std::string_view expression_kind_name(ExprKind kind) {
     switch (kind) {
     case ExprKind::Missing:
