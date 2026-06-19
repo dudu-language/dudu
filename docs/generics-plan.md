@@ -101,6 +101,8 @@ Bare type parameters in value position, such as `return T`, are rejected with a
 targeted diagnostic. Generic default construction remains `T()`.
 In-scope values used as type annotations, such as `other: value`, are rejected
 with a targeted diagnostic instead of being reported as merely unknown types.
+Missing template arguments, too many template arguments, generic inference
+failure, and conflicting inferred type arguments are reported in Dudu source.
 
 Unsupported operations on `T` should produce useful diagnostics that mention:
 
@@ -318,12 +320,12 @@ Required generic diagnostics:
 
 - unknown type parameter
 - duplicate type parameter
-- missing template argument
-- too many template arguments
+- missing template argument: done
+- too many template arguments: done
 - type parameter used as a value: done
 - value parameter used as a type: done
-- cannot infer type parameter
-- conflicting inferred type parameter
+- cannot infer type parameter: done
+- conflicting inferred type parameter: done
 - operation unsupported for instantiated type
 
 Example:
