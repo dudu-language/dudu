@@ -2079,3 +2079,7 @@ push. They are not release packaging work.
    consumes the structured pack node directly. The old nested pack matcher
    that manufactured an `Unknown.text` node containing a joined type list has
    been removed.
+   Native template placeholder discovery now walks structured `TypeRef` heads,
+   values, and children only; it no longer scans raw `Unknown.text` for names
+   such as `T`, so malformed native type text cannot create implicit template
+   bindings.

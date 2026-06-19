@@ -36,45 +36,6 @@ std::string replace_type_identifier(std::string type, const std::string& name,
     return type;
 }
 
-std::vector<std::string> native_placeholders_in(std::string_view text) {
-    std::vector<std::string> out;
-    std::set<std::string> seen;
-    size_t pos = 0;
-    while (pos < text.size()) {
-        if (std::isalnum(static_cast<unsigned char>(text[pos])) == 0 && text[pos] != '_') {
-            ++pos;
-            continue;
-        }
-        const size_t start = pos;
-        while (pos < text.size() &&
-               (std::isalnum(static_cast<unsigned char>(text[pos])) != 0 || text[pos] == '_')) {
-            ++pos;
-        }
-        std::string name(text.substr(start, pos - start));
-        if (native_template_placeholder(name) && seen.insert(name).second) {
-            out.push_back(std::move(name));
-        }
-    }
-    return out;
-}
-
-void append_placeholders(std::vector<std::string>& out, std::set<std::string>& seen,
-                         const std::vector<std::string>& names, bool only_index) {
-    for (std::string name : names) {
-        if (native_index_placeholder(name) != only_index) {
-            continue;
-        }
-        if (seen.insert(name).second) {
-            out.push_back(std::move(name));
-        }
-    }
-}
-
-void append_placeholders_from_text(std::vector<std::string>& out, std::set<std::string>& seen,
-                                   std::string_view text, bool only_index) {
-    append_placeholders(out, seen, native_placeholders_in(text), only_index);
-}
-
 void append_placeholder(std::vector<std::string>& out, std::set<std::string>& seen,
                         const std::string& name, bool only_index) {
     if (!native_template_placeholder(name) || native_index_placeholder(name) != only_index) {
@@ -93,9 +54,6 @@ void append_placeholders(std::vector<std::string>& out, std::set<std::string>& s
     append_placeholder(out, seen, type_ref_head_name(type), only_index);
     if (!type.value.empty()) {
         append_placeholder(out, seen, type.value, only_index);
-    }
-    if (type.kind == TypeKind::Unknown && !type.text.empty()) {
-        append_placeholders_from_text(out, seen, type.text, only_index);
     }
     for (const TypeRef& child : type.children) {
         append_placeholders(out, seen, child, only_index);

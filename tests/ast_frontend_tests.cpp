@@ -372,6 +372,19 @@ void test_explicit_native_template_value_args_use_type_refs() {
            "tuple[i32]");
     assert(dudu::signature_return_type_ref(substituted).kind == dudu::TypeKind::Named);
     assert(dudu::signature_return_type_ref(substituted).name == "i32");
+
+    dudu::FunctionSignature malformed_signature;
+    dudu::TypeRef malformed_placeholder;
+    malformed_placeholder.kind = dudu::TypeKind::Unknown;
+    malformed_placeholder.text = "tuple[T]";
+    dudu::set_signature_param_types(malformed_signature, {malformed_placeholder});
+    dudu::set_signature_return_type(malformed_signature, dudu::parse_type_text("void"));
+    const dudu::FunctionSignature malformed_substituted =
+        dudu::substitute_explicit_template_signature(malformed_signature,
+                                                     {dudu::parse_type_text("f32")});
+    assert(dudu::signature_param_type_ref(malformed_substituted, 0).kind ==
+           dudu::TypeKind::Unknown);
+    assert(dudu::signature_return_type_ref(malformed_substituted).name == "void");
 }
 
 void test_receiver_template_substitution_uses_type_ast() {
