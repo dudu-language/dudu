@@ -303,6 +303,29 @@ probe_x11() {
     echo "ok x11"
 }
 
+probe_boost_filesystem() {
+    if [[ ! -f /usr/include/boost/filesystem.hpp ||
+          ! -f /usr/lib/x86_64-linux-gnu/libboost_filesystem.so ||
+          ! -f /usr/lib/x86_64-linux-gnu/libboost_system.so ]]; then
+        echo "skip boost filesystem: headers or libraries not found"
+        return
+    fi
+
+    local cpp="$repo_root/build/probe_boost_filesystem.cpp"
+    local bin="$repo_root/build/probe_boost_filesystem"
+    "$repo_root/build/duc" emit "$repo_root/tests/fixtures/boost_filesystem.dd" -o "$cpp"
+    "${CXX:-c++}" -std=c++20 "$cpp" -lboost_filesystem -lboost_system -o "$bin"
+    set +e
+    "$bin"
+    local status=$?
+    set -e
+    if [[ "$status" -ne 42 ]]; then
+        echo "boost filesystem probe returned $status, expected 42" >&2
+        exit 1
+    fi
+    echo "ok boost filesystem"
+}
+
 probe_threading() {
     local cpp="$repo_root/build/probe_threading_atomics.cpp"
     local bin="$repo_root/build/probe_threading_atomics"
@@ -475,6 +498,7 @@ probe_openblas
 probe_spdlog
 probe_stb
 probe_x11
+probe_boost_filesystem
 probe_threading
 probe_posix_mmap
 probe_posix_threads

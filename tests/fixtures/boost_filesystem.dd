@@ -1,0 +1,10 @@
+import cpp "boost/filesystem.hpp" as boost
+
+
+def main() -> i32:
+    path = boost.filesystem.path("/tmp/dudu_probe.txt")
+    if not path.has_filename():
+        return 1
+    if not path.has_extension():
+        return 2
+    return 42

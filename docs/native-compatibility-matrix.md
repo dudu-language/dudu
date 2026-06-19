@@ -42,6 +42,7 @@ Last local probe run: 2026-06-19 with `scripts/probe_optional.sh`.
 | stb headers | media / utility | packaged single-header C API, byte buffers, output params, link | pass | `scripts/probe_optional.sh` / `stb_image_info.dd` | no |
 | fmt | C++ utility | variadic templates, runtime format strings, `std::string` return | pass | `scripts/probe_optional.sh` / `fmt_format.dd` | no |
 | spdlog | logging | template-heavy header stack, formatted logging call, link | pass | `scripts/probe_optional.sh` / `spdlog_basic.dd` | no |
+| Boost filesystem | C++ utility | namespace import, path construction, member methods, link | pass | `scripts/probe_optional.sh` / `boost_filesystem.dd` | no; deeper Boost string aliases still need hardening |
 | raylib | game / media | window/game example, audio synth build | pass | `scripts/probe_optional.sh` / `examples/raylib_game.dd` | no |
 | SDL3 | windowing | window example build through pkg-config | pass | `scripts/probe_optional.sh` / `examples/sdl3_window.dd` | no |
 | GLFW | windowing | OpenGL triangle host build | pass | `scripts/probe_optional.sh` / `examples/glfw_opengl_triangle.dd` | no |
@@ -60,7 +61,6 @@ compiler matures.
 | API / Library | Domain | Target Coverage | Status | Notes |
 | --- | --- | --- | --- | --- |
 | Dear ImGui | UI | C++ namespace API, backends, frame loop | planned | Prefer direct ImGui headers; wrappers only for backend/platform glue users normally write in C++. |
-| Boost subset | C++ utility | selected non-huge components | planned | Avoid trying all of Boost at once. |
 | CUDA / CUBLAS | GPU / ML | host API, device buffers, BLAS-like calls | skip | Needs NVIDIA tooling/hardware. |
 | platform APIs | OS | Win32, Cocoa, Wayland subsets | planned | Platform-specific; X11 has a Linux probe. |
 
