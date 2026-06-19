@@ -2033,3 +2033,6 @@ push. They are not release packaging work.
    Duplicate base-class validation now resolves aliases and compares
    structured `TypeRef` trees; rendered base text is only used for the final
    diagnostic label.
+   Inheritance ambiguity and abstract-method tracking now build method
+   identities from function names plus alias-normalized `FunctionSignature`
+   `TypeRef`s; rendered signatures are labels only, not semantic map keys.

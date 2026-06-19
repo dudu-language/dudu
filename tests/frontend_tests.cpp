@@ -817,8 +817,8 @@ void test_emitted_local_expression_type_inference() {
                                                       "    value: i32\n",
                                                       "lowercase_constructor_type.dd");
     const dudu::Symbols symbols = dudu::collect_symbols(module);
-    const dudu::TypeRef constructed = dudu::infer_emitted_local_type_ref(
-        dudu::parse_expr_text("lowercase(1)"), {}, {}, &symbols);
+    const dudu::TypeRef constructed =
+        dudu::infer_emitted_local_type_ref(dudu::parse_expr_text("lowercase(1)"), {}, {}, &symbols);
     assert(dudu::type_ref_text(constructed) == "lowercase");
 }
 
@@ -986,8 +986,52 @@ void test_duplicate_base_check_resolves_type_aliases() {
                                                           "duplicate_base_alias.dd");
         dudu::analyze_module(module, {.check_bodies = true});
     } catch (const dudu::CompileError& error) {
-        rejected = std::string(error.what()).find("duplicate base class: BaseAlias") !=
-                   std::string::npos;
+        rejected =
+            std::string(error.what()).find("duplicate base class: BaseAlias") != std::string::npos;
+    }
+    assert(rejected);
+}
+
+void test_inherited_method_identity_resolves_type_aliases() {
+    bool rejected = false;
+    try {
+        const dudu::ModuleAst module =
+            dudu::parse_source("class Node:\n"
+                               "    id: i32\n"
+                               "\n"
+                               "class Payload:\n"
+                               "    value: i32\n"
+                               "\n"
+                               "type PayloadAlias = Payload\n"
+                               "\n"
+                               "class Named:\n"
+                               "    @abstract\n"
+                               "    def name(self) -> str:\n"
+                               "\n"
+                               "    def label(self, payload: Payload) -> str:\n"
+                               "        return self.name()\n"
+                               "\n"
+                               "class Titled:\n"
+                               "    @abstract\n"
+                               "    def title(self) -> str:\n"
+                               "\n"
+                               "    def label(self, payload: PayloadAlias) -> str:\n"
+                               "        return self.title()\n"
+                               "\n"
+                               "class Sprite(Node, Named, Titled):\n"
+                               "    @override\n"
+                               "    def name(self) -> str:\n"
+                               "        return \"sprite\"\n"
+                               "\n"
+                               "    @override\n"
+                               "    def title(self) -> str:\n"
+                               "        return \"sprite\"\n",
+                               "ambiguous_inherited_alias_signature.dd");
+        dudu::analyze_module(module, {.check_bodies = true});
+    } catch (const dudu::CompileError& error) {
+        rejected =
+            std::string(error.what()).find("ambiguous inherited concrete method: label(Payload)") !=
+            std::string::npos;
     }
     assert(rejected);
 }
@@ -1161,6 +1205,7 @@ int main() {
         test_pointer_arithmetic_uses_type_ast();
         test_base_pointer_assignment_uses_type_ast();
         test_duplicate_base_check_resolves_type_aliases();
+        test_inherited_method_identity_resolves_type_aliases();
         test_bare_void_return();
         test_typed_for_emission();
         test_class_field_defaults_and_static_fields();

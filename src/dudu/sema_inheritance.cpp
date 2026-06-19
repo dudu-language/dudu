@@ -90,7 +90,55 @@ FunctionSignature inherited_method_signature_for_class_type(const ClassDecl& own
     return signature;
 }
 
-std::string signature_key(std::string_view name, const FunctionSignature& signature) {
+bool signatures_equivalent(const FunctionSignature& a, const FunctionSignature& b) {
+    if (!type_ref_equivalent(signature_return_type_ref(a), signature_return_type_ref(b)) ||
+        signature_param_count(a) != signature_param_count(b)) {
+        return false;
+    }
+    for (size_t i = 0; i < signature_param_count(a); ++i) {
+        if (!type_ref_equivalent(signature_param_type_ref(a, i), signature_param_type_ref(b, i))) {
+            return false;
+        }
+    }
+    return true;
+}
+
+struct MethodIdentity {
+    std::string name;
+    FunctionSignature signature;
+};
+
+struct MethodRecord {
+    MethodIdentity identity;
+    std::string owner;
+    std::string label;
+};
+
+bool same_method_identity(const MethodIdentity& a, const MethodIdentity& b) {
+    return a.name == b.name && signatures_equivalent(a.signature, b.signature);
+}
+
+FunctionSignature resolve_signature_aliases(const Symbols& symbols, FunctionSignature signature) {
+    std::vector<TypeRef> params;
+    const size_t param_count = signature_param_count(signature);
+    params.reserve(param_count);
+    for (size_t i = 0; i < param_count; ++i) {
+        params.push_back(resolve_alias_ref(symbols, signature_param_type_ref(signature, i)));
+    }
+    set_signature_param_types(signature, std::move(params));
+    set_signature_return_type(signature,
+                              resolve_alias_ref(symbols, signature_return_type_ref(signature)));
+    return signature;
+}
+
+bool contains_method_identity(const std::vector<MethodIdentity>& identities,
+                              const MethodIdentity& candidate) {
+    return std::any_of(identities.begin(), identities.end(), [&](const MethodIdentity& identity) {
+        return same_method_identity(identity, candidate);
+    });
+}
+
+std::string method_signature_label(std::string_view name, const FunctionSignature& signature) {
     std::ostringstream out;
     out << name << '(';
     const size_t param_count = signature_param_count(signature);
@@ -104,20 +152,22 @@ std::string signature_key(std::string_view name, const FunctionSignature& signat
     return out.str();
 }
 
-std::string abstract_key(const ClassDecl& owner, const TypeRef& receiver_type,
-                         const FunctionDecl& method) {
-    return signature_key(method.name,
-                         inherited_method_signature_for_class_type(owner, receiver_type, method));
+MethodRecord method_record_for_class_type(const Symbols& symbols, const ClassDecl& owner,
+                                          const TypeRef& receiver_type,
+                                          const FunctionDecl& method) {
+    MethodRecord record;
+    record.identity.name = method.name;
+    record.identity.signature = resolve_signature_aliases(
+        symbols, inherited_method_signature_for_class_type(owner, receiver_type, method));
+    record.owner = owner.name;
+    record.label = method_signature_label(record.identity.name, record.identity.signature);
+    return record;
 }
 
-std::string method_key_without_self(const ClassDecl& owner, const TypeRef& receiver_type,
-                                    const FunctionDecl& method) {
-    return signature_key(method.name,
-                         inherited_method_signature_for_class_type(owner, receiver_type, method));
-}
-
-std::string method_key_without_self(const FunctionDecl& method) {
-    return signature_key(method.name, inherited_method_signature_without_self(method));
+MethodIdentity method_identity_without_self(const Symbols& symbols, const FunctionDecl& method) {
+    return MethodIdentity{.name = method.name,
+                          .signature = resolve_signature_aliases(
+                              symbols, inherited_method_signature_without_self(method))};
 }
 
 const ClassDecl* dudu_class_for_base(const Symbols& symbols, const TypeRef& base) {
@@ -193,8 +243,7 @@ void collect_inherited_fields(const Symbols& symbols, const ClassDecl& klass,
 }
 
 void collect_concrete_methods(const Symbols& symbols, const ClassDecl& klass,
-                              const TypeRef& receiver_type,
-                              std::map<std::string, std::string>& methods,
+                              const TypeRef& receiver_type, std::vector<MethodRecord>& methods,
                               std::set<std::string>& seen) {
     if (!seen.insert(klass.name).second) {
         return;
@@ -202,7 +251,7 @@ void collect_concrete_methods(const Symbols& symbols, const ClassDecl& klass,
     for (const FunctionDecl& method : klass.methods) {
         const bool is_static = method.params.empty() || method.params.front().name != "self";
         if (!is_static && !has_decorator(method, "abstract")) {
-            methods.emplace(method_key_without_self(klass, receiver_type, method), klass.name);
+            methods.push_back(method_record_for_class_type(symbols, klass, receiver_type, method));
         }
     }
     for (const BaseClassDecl& base_decl : klass.base_class_refs) {
@@ -212,9 +261,9 @@ void collect_concrete_methods(const Symbols& symbols, const ClassDecl& klass,
     }
 }
 
-std::vector<std::string> unresolved_abstract_methods_impl(const Symbols& symbols,
-                                                          const TypeRef& type,
-                                                          std::set<std::string>& seen) {
+std::vector<MethodRecord> unresolved_abstract_method_records_impl(const Symbols& symbols,
+                                                                  const TypeRef& type,
+                                                                  std::set<std::string>& seen) {
     const std::string unwrapped = unwrap_type(symbols, type);
     if (!seen.insert(unwrapped).second) {
         return {};
@@ -224,12 +273,18 @@ std::vector<std::string> unresolved_abstract_methods_impl(const Symbols& symbols
         return {};
     }
 
-    std::map<std::string, std::string> unresolved;
+    std::vector<MethodRecord> unresolved;
     for (const BaseClassDecl& base_decl : klass->base_class_refs) {
         std::set<std::string> branch_seen = seen;
-        for (const std::string& method :
-             unresolved_abstract_methods_impl(symbols, base_decl.type_ref, branch_seen)) {
-            unresolved[method] = method;
+        for (const MethodRecord& method :
+             unresolved_abstract_method_records_impl(symbols, base_decl.type_ref, branch_seen)) {
+            const auto existing =
+                std::find_if(unresolved.begin(), unresolved.end(), [&](const MethodRecord& entry) {
+                    return same_method_identity(entry.identity, method.identity);
+                });
+            if (existing == unresolved.end()) {
+                unresolved.push_back(method);
+            }
         }
     }
 
@@ -237,19 +292,26 @@ std::vector<std::string> unresolved_abstract_methods_impl(const Symbols& symbols
         if (method.params.empty() || method.params.front().name != "self") {
             continue;
         }
-        const std::string key = abstract_key(*klass, type, method);
+        const MethodRecord record = method_record_for_class_type(symbols, *klass, type, method);
         if (has_decorator(method, "abstract")) {
-            unresolved[key] = key;
+            const auto existing =
+                std::find_if(unresolved.begin(), unresolved.end(), [&](const MethodRecord& entry) {
+                    return same_method_identity(entry.identity, record.identity);
+                });
+            if (existing == unresolved.end()) {
+                unresolved.push_back(record);
+            }
         } else {
-            unresolved.erase(key);
+            unresolved.erase(std::remove_if(unresolved.begin(), unresolved.end(),
+                                            [&](const MethodRecord& entry) {
+                                                return same_method_identity(entry.identity,
+                                                                            record.identity);
+                                            }),
+                             unresolved.end());
         }
     }
 
-    std::vector<std::string> out;
-    for (const auto& [_, method] : unresolved) {
-        out.push_back(method);
-    }
-    return out;
+    return unresolved;
 }
 
 } // namespace
@@ -275,10 +337,21 @@ bool class_type_has_instance_storage(const Symbols& symbols, const TypeRef& type
                        });
 }
 
+bool same_signature(const FunctionSignature& a, const FunctionSignature& b) {
+    return signatures_equivalent(a, b);
+}
+
 std::vector<std::string> unimplemented_abstract_methods(const Symbols& symbols,
                                                         const TypeRef& type) {
     std::set<std::string> seen;
-    return unresolved_abstract_methods_impl(symbols, type, seen);
+    const std::vector<MethodRecord> records =
+        unresolved_abstract_method_records_impl(symbols, type, seen);
+    std::vector<std::string> out;
+    out.reserve(records.size());
+    for (const MethodRecord& record : records) {
+        out.push_back(record.label);
+    }
+    return out;
 }
 
 FunctionSignature method_signature_without_self(const FunctionDecl& method) {
@@ -332,30 +405,17 @@ const FunctionDecl* find_method_decl(const Symbols& symbols, const TypeRef& type
     return nullptr;
 }
 
-bool same_signature(const FunctionSignature& a, const FunctionSignature& b) {
-    if (!type_ref_equivalent(signature_return_type_ref(a), signature_return_type_ref(b)) ||
-        signature_param_count(a) != signature_param_count(b)) {
-        return false;
-    }
-    for (size_t i = 0; i < signature_param_count(a); ++i) {
-        if (!type_ref_equivalent(signature_param_type_ref(a, i), signature_param_type_ref(b, i))) {
-            return false;
-        }
-    }
-    return true;
-}
-
 void check_multiple_inheritance_rules(const Symbols& symbols, const ClassDecl& klass) {
     if (klass.base_class_refs.size() <= 1) {
         return;
     }
     size_t storage_bases = 0;
     std::map<std::string, std::string> inherited_fields;
-    std::map<std::string, std::string> inherited_concrete_methods;
-    std::set<std::string> derived_overrides;
+    std::vector<MethodRecord> inherited_concrete_methods;
+    std::vector<MethodIdentity> derived_overrides;
     for (const FunctionDecl& method : klass.methods) {
         if (has_decorator(method, "override")) {
-            derived_overrides.insert(method_key_without_self(method));
+            derived_overrides.push_back(method_identity_without_self(symbols, method));
         }
     }
 
@@ -389,16 +449,23 @@ void check_multiple_inheritance_rules(const Symbols& symbols, const ClassDecl& k
             inherited_fields.emplace(name, owner);
         }
 
-        std::map<std::string, std::string> methods;
+        std::vector<MethodRecord> methods;
         std::set<std::string> method_seen;
         collect_concrete_methods(symbols, *parent, base_decl.type_ref, methods, method_seen);
-        for (const auto& [key, owner] : methods) {
-            if (const auto existing = inherited_concrete_methods.find(key);
-                existing != inherited_concrete_methods.end() && existing->second != owner &&
-                !derived_overrides.contains(key)) {
-                throw CompileError(klass.location, "ambiguous inherited concrete method: " + key);
+        for (const MethodRecord& method : methods) {
+            const auto existing =
+                std::find_if(inherited_concrete_methods.begin(), inherited_concrete_methods.end(),
+                             [&](const MethodRecord& entry) {
+                                 return same_method_identity(entry.identity, method.identity);
+                             });
+            if (existing != inherited_concrete_methods.end() && existing->owner != method.owner &&
+                !contains_method_identity(derived_overrides, method.identity)) {
+                throw CompileError(klass.location,
+                                   "ambiguous inherited concrete method: " + method.label);
             }
-            inherited_concrete_methods.emplace(key, owner);
+            if (existing == inherited_concrete_methods.end()) {
+                inherited_concrete_methods.push_back(method);
+            }
         }
     }
 }
