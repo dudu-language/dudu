@@ -1091,7 +1091,8 @@ push. They are not release packaging work.
    The standard-library algorithms fixture now validates representative
    containers, algorithms, pairs, tuples, and `std.get` without wrapper headers.
    Native overload failure diagnostics list argument types, candidate
-   signatures, and per-candidate arity or first-mismatched-parameter reasons.
+   signatures, and per-candidate arity or all mismatched fixed-parameter
+   reasons.
    Broader template-heavy library behavior remains the main hardening area.
 
 10. Real Library Stress Tests
@@ -1221,9 +1222,9 @@ push. They are not release packaging work.
    declare `[cmake] source` and `[cmake] target`; the driver configures and
    builds the existing CMake project under the Dudu build directory, and runs
    CTest when no Dudu test entry or explicit delegated test command is present.
-   The project-driver front door now streams native compiler/CMake output for
-   `dudu build`, `dudu run`, and `dudu test` while keeping full command lines
-   behind `--verbose`; cached direct builds also print an explicit
+   The project-driver front door now streams native compiler, CMake, and CTest
+   output for `dudu build`, `dudu run`, and `dudu test` while keeping full
+   command lines behind `--verbose`; cached direct builds also print an explicit
    `up-to-date` outcome by default. `--quiet` suppresses project-driver
    progress output for scripts.
    The generated CMake test backend still emits one generated harness

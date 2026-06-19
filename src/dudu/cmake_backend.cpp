@@ -208,10 +208,14 @@ int run_user_cmake_tests(const UserCMakeBackendOptions& options) {
     if (options.verbose) {
         std::cerr << test_command << '\n';
     }
-    if (run_shell_command(test_command, test_log) != 0) {
+    const int status = options.stream_output ? run_shell_command_streaming(test_command, test_log)
+                                             : run_shell_command(test_command, test_log);
+    if (status != 0) {
         fail(command_failure_message("CTest", test_command, test_log));
     }
-    std::cout << read_text_file(test_log);
+    if (!options.stream_output) {
+        std::cout << read_text_file(test_log);
+    }
     return 0;
 }
 

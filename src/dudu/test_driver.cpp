@@ -162,7 +162,10 @@ int run_user_owned_cmake_project_tests(const ProjectConfig& config,
     print_project_step(project_output, "cmake", cmake_backend_log_source(config));
     print_project_step(project_output, "build", cmake_backend_log_build_dir(config));
     print_project_step(project_output, "test", cmake_backend_log_build_dir(config));
-    return run_user_cmake_tests({.config = config, .root = root, .verbose = options.verbose});
+    return run_user_cmake_tests({.config = config,
+                                 .root = root,
+                                 .stream_output = project_output,
+                                 .verbose = options.verbose});
 }
 
 uint64_t fnv1a(std::string_view text) {

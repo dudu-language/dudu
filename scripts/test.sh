@@ -469,7 +469,11 @@ grep -Eq "run .*project_user_cmake/cmake-user/build/user_cmake_tool" \
 grep -q "user cmake backend" "$repo_root/build/project_user_cmake_run.out"
 grep -Eq "test .*project_user_cmake/cmake-user/build" \
     "$repo_root/build/project_user_cmake_test.err"
-grep -q "100% tests passed" "$repo_root/build/project_user_cmake_test.out"
+grep -q "100% tests passed" "$repo_root/build/project_user_cmake_test.err"
+if [[ -s "$repo_root/build/project_user_cmake_test.out" ]]; then
+    echo "project_user_cmake test output should stream through stderr" >&2
+    exit 1
+fi
 rm -f "$repo_root/build/project_linker_script_bin" "$repo_root/build/project_linker_script_bin.cpp"
 (
     cd "$repo_root/tests/fixtures/project_linker_script"
