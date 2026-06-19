@@ -28,6 +28,11 @@ bool type_ref_mentions_class(const TypeRef& type, const std::string& name) {
     return false;
 }
 
+std::string class_lookup_name(const Symbols& symbols, TypeRef type) {
+    type = resolve_alias_ref(symbols, std::move(type));
+    return type_ref_head_name(type);
+}
+
 void visit_class(const std::vector<ClassDecl>& classes, size_t index, std::set<size_t>& visiting,
                  std::set<size_t>& emitted, std::vector<size_t>& order) {
     if (emitted.contains(index) || visiting.contains(index)) {
@@ -213,7 +218,7 @@ bool class_is_polymorphic(const Symbols& symbols, const ClassDecl& klass,
         }
     }
     for (const BaseClassDecl& base_decl : klass.base_class_refs) {
-        const auto parent = symbols.classes.find(base_type(base_decl.type_ref));
+        const auto parent = symbols.classes.find(class_lookup_name(symbols, base_decl.type_ref));
         if (parent != symbols.classes.end() &&
             class_is_polymorphic(symbols, *parent->second, seen)) {
             return true;
@@ -298,7 +303,8 @@ void emit_method(std::ostringstream& out, const std::string& class_name,
     local_type_refs["class"] = named_type_ref(class_name, method.location);
     const auto klass = symbols.classes.find(source_class_name);
     if (klass != symbols.classes.end() && klass->second->base_class_refs.size() == 1) {
-        locals.super_class = type_ref_text(klass->second->base_class_refs.front().type_ref);
+        locals.super_class =
+            lower_cpp_type(klass->second->base_class_refs.front().type_ref, aliases, options);
         local_type_refs["super"] = klass->second->base_class_refs.front().type_ref;
     }
     if (first_param == 1) {

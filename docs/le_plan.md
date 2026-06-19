@@ -2017,3 +2017,7 @@ push. They are not release packaging work.
    Class definition emission order now walks field and base-class `TypeRef`
    trees to find dependencies instead of rendering field types and doing
    substring class-name searches.
+   Class codegen now resolves base-class lookup through structured `TypeRef`
+   heads for polymorphic parent checks, and emits `super` call scopes by
+   lowering the base `TypeRef` at the C++ spelling boundary instead of storing
+   rendered Dudu type text.
