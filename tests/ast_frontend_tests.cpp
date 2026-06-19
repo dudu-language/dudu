@@ -822,7 +822,7 @@ void test_native_semantic_tokens() {
     assert(has_semantic_token(data, 10, native_modifier));
 }
 
-void test_ast_constructor_assignment_compatibility() {
+void test_ast_constructor_assignment_aliases() {
     const dudu::ModuleAst module = dudu::parse_source("type Scores = dict[str, i32]\n"
                                                       "type Values = list[i32]\n"
                                                       "\n"
@@ -1749,7 +1749,7 @@ int main() {
         test_auto_member_call_receiver_uses_type_ast();
         test_auto_member_expr_receiver_uses_type_ast();
         test_native_semantic_tokens();
-        test_ast_constructor_assignment_compatibility();
+        test_ast_constructor_assignment_aliases();
         test_ast_index_receiver_type_inference();
         test_statement_ast_shape();
         test_var_decl_name_must_be_identifier();
