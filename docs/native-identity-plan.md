@@ -103,10 +103,10 @@ In progress.
   structured native type-alias metadata to the scanned native class declaration
   when available, so aliases such as `native.Widget` can jump to the C++ class
   rather than stopping at a `using` declaration. Definition, hover, completion,
-  and document-symbol detail now share an indexed native class definition map
-  keyed by Dudu binding name and `NativeSymbolId`; they prefer identity when
-  alias metadata is rich enough before falling back to the structured alias
-  target `TypeRef` head.
+  document-symbol detail, and semantic token classification now share an
+  indexed native class definition map keyed by Dudu binding name and
+  `NativeSymbolId`; they prefer identity when alias metadata is rich enough
+  before falling back to the structured alias target `TypeRef` head.
 
 Still missing:
 
@@ -114,7 +114,7 @@ Still missing:
 - Identity-aware symbol maps as the primary sema key.
 - Identity-aware type compatibility when both sides carry native identity facts.
 - Broader LSP indexing keyed directly by canonical native identity for
-  references and semantic token classification.
+  references.
 
 ## Definition Of Done
 

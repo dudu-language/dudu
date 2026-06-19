@@ -1237,6 +1237,14 @@ messages = [
     packet(
         {
             "jsonrpc": "2.0",
+            "id": 66,
+            "method": "textDocument/semanticTokens/full",
+            "params": {"textDocument": {"uri": native_uri}},
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
             "id": 25,
             "method": "textDocument/codeAction",
             "params": {
@@ -1836,6 +1844,19 @@ assert native_type_definition["result"]["range"]["start"]["line"] == 3
 native_type_hover = next(item for item in responses if item.get("id") == 65)
 assert "native type = dudu_native.Widget" in native_type_hover["result"]["contents"]["value"]
 assert "resolves to `native class dudu_native.Widget`" in native_type_hover["result"]["contents"]["value"]
+
+native_semantic_tokens = next(item for item in responses if item.get("id") == 66)
+native_decoded = []
+line = 0
+character = 0
+for i in range(0, len(native_semantic_tokens["result"]["data"]), 5):
+    delta_line, delta_start, length, token_type, modifiers = native_semantic_tokens["result"][
+        "data"
+    ][i : i + 5]
+    line += delta_line
+    character = character + delta_start if delta_line == 0 else delta_start
+    native_decoded.append((line, character, length, legend[token_type], modifiers))
+assert (5, 12, 17, "class", 16) in native_decoded
 
 native_code_actions = next(item for item in responses if item.get("id") == 25)
 organize_imports = next(

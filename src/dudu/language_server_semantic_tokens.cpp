@@ -2,6 +2,7 @@
 
 #include "dudu/ast_expr.hpp"
 #include "dudu/ast_type.hpp"
+#include "dudu/language_server_native_lookup.hpp"
 
 #include <algorithm>
 #include <optional>
@@ -43,6 +44,7 @@ constexpr int mod_native = 16;
 struct NativeSemanticIndex {
     std::set<std::string> types;
     std::set<std::string> classes;
+    std::set<std::string> class_aliases;
     std::set<std::string> values;
     std::set<std::string> functions;
     std::set<std::string> macros;
@@ -102,6 +104,9 @@ NativeSemanticIndex native_semantic_index(const ModuleAst& module) {
     NativeSemanticIndex out;
     for (const NativeTypeDecl& type : module.native_types) {
         add_native_name(out.types, type.name);
+        if (native_alias_target_class_definition(module, type).has_value()) {
+            add_native_name(out.class_aliases, type.name);
+        }
     }
     for (const NativeValueDecl& value : module.native_values) {
         add_native_name(out.values, value.name);
@@ -141,7 +146,8 @@ void collect_type_tokens(const TypeRef& type, std::vector<SemanticToken>& tokens
         type.kind == TypeKind::Template) {
         const std::string label_text = type_ref_head_name(type);
         const bool native_class =
-            native_index != nullptr && native_index->classes.contains(label_text);
+            native_index != nullptr && (native_index->classes.contains(label_text) ||
+                                        native_index->class_aliases.contains(label_text));
         const bool native_type =
             native_index != nullptr && native_index->types.contains(label_text);
         if (native_class) {
@@ -201,7 +207,8 @@ void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
                          const NativeSemanticIndex* native_index) {
     switch (expr.kind) {
     case ExprKind::Name:
-        if (native_index != nullptr && native_index->classes.contains(expr.name)) {
+        if (native_index != nullptr && (native_index->classes.contains(expr.name) ||
+                                        native_index->class_aliases.contains(expr.name))) {
             add_native_semantic_token(tokens, expr.location, expr.name, token_class);
         } else if (native_index != nullptr && native_index->types.contains(expr.name)) {
             add_native_semantic_token(tokens, expr.location, expr.name, token_type);
@@ -235,7 +242,9 @@ void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
         }
         const SourceLocation member_location = member_name_location(expr);
         const std::optional<std::string> path = expr_path_key(expr);
-        if (native_index != nullptr && path && native_index->classes.contains(*path)) {
+        if (native_index != nullptr && path &&
+            (native_index->classes.contains(*path) ||
+             native_index->class_aliases.contains(*path))) {
             add_native_semantic_token(tokens, member_location, expr.name, token_class);
         } else if (native_index != nullptr && path && native_index->types.contains(*path)) {
             add_native_semantic_token(tokens, member_location, expr.name, token_type);
