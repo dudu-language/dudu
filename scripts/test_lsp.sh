@@ -176,6 +176,18 @@ messages = [
     packet(
         {
             "jsonrpc": "2.0",
+            "id": 62,
+            "method": "textDocument/rename",
+            "params": {
+                "textDocument": {"uri": rename_ast_uri},
+                "position": {"line": 6, "character": 15},
+                "newName": "callsite_rename",
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
             "id": 56,
             "method": "textDocument/references",
             "params": {
@@ -1549,6 +1561,9 @@ assert ast_rename_starts == {
     (0, 4, "unique_ref_renamed"),
     (6, 11, "unique_ref_renamed"),
 }
+
+ast_use_rename = next(item for item in responses if item.get("id") == 62)
+assert ast_use_rename["result"] is None
 
 ast_string_references = next(item for item in responses if item.get("id") == 56)
 assert ast_string_references["result"] == []

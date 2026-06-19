@@ -307,10 +307,12 @@ available; broader real-library coverage can continue in that optional suite.
   project config suggests the fix
 - optional warnings and lint code actions
 
-Status: conservative `textDocument/rename` is implemented for Dudu symbols
-across open documents and unopened `.dd` workspace files, and is wired into the
-VS Code extension. It validates the replacement as an identifier and refuses
-dotted/native symbols. Initial
+Status: conservative `textDocument/rename` is implemented for Dudu declaration
+symbols across open documents and unopened `.dd` workspace files, and is wired
+into the VS Code extension. It validates the replacement as an identifier,
+refuses dotted/native symbols, and currently requires the cursor to be on the
+declaration being renamed so same-spelled local bindings in unrelated scopes
+are not edited by accident. Initial
 `textDocument/codeAction` support is implemented with a format-document source
 action wired into VS Code. Organize-imports code actions are implemented for the
 leading import block and return a WorkspaceEdit through the VS Code adapter.
@@ -371,6 +373,8 @@ Native enum values from scanned headers are covered in symbol and completion
 results.
 Workspace rename is covered across an open definition file and an unopened
 sibling use file.
+Rename from a use-site is intentionally rejected until the LSP has resolved
+symbol identity for use-site-triggered edits.
 Unreachable-statement lint diagnostics and remove-line quick fixes are covered.
 Unused-local lint diagnostics and remove-line quick fixes are covered.
 Local-shadowing lint diagnostics are covered.

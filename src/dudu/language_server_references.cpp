@@ -13,12 +13,24 @@
 namespace dudu {
 namespace {
 
-bool renameable_symbol(const Document& doc, const std::string& name) {
+bool renameable_symbol_at(const Document& doc, const Json* params, const std::string& name) {
     if (name.empty() || name.find('.') != std::string::npos) {
         return false;
     }
+    const LspPosition position = lsp_position(params);
+    const int target_line = position.line + 1;
+    const int target_column = position.character + 1;
+    const auto contains = [&](const SourceLocation& location) {
+        if (location.line != target_line || location.column <= 0) {
+            return false;
+        }
+        const int start = location.column;
+        const int end = start + static_cast<int>(name.size());
+        return target_column >= start && target_column <= end;
+    };
     for (const Symbol& symbol : symbols_for_document(doc)) {
         if (symbol.name == name && std::filesystem::path(symbol.location.file) == doc.path &&
+            contains(symbol.location) &&
             (symbol.kind == 5 || symbol.kind == 6 || symbol.kind == 8 || symbol.kind == 10 ||
              symbol.kind == 12 || symbol.kind == 14)) {
             return true;
@@ -57,7 +69,7 @@ std::string rename_json(const Document& doc, const Json* params,
     const std::string old_name = ast_symbol_at(doc, params).value_or("");
     const std::string new_name =
         params == nullptr ? std::string{} : string_value(params->get("newName"));
-    if (!valid_identifier(new_name) || !renameable_symbol(doc, old_name)) {
+    if (!valid_identifier(new_name) || !renameable_symbol_at(doc, params, old_name)) {
         return "null";
     }
     std::ostringstream out;
