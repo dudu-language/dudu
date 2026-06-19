@@ -7,6 +7,7 @@
 #include "dudu/language_server_navigation.hpp"
 #include "dudu/language_server_native_lookup.hpp"
 #include "dudu/language_server_symbols.hpp"
+#include "dudu/language_server_support.hpp"
 #include "dudu/parser.hpp"
 
 #include <algorithm>
@@ -195,6 +196,35 @@ std::optional<std::string> dotted_source_symbol_at(const Document& doc, const Js
     return std::string(text.substr(start, end - start));
 }
 
+std::string dotted_head(const std::string& query) {
+    const size_t dot = query.find('.');
+    return dot == std::string::npos ? query : query.substr(0, dot);
+}
+
+std::optional<std::string> module_import_target_key(const Document& doc,
+                                                    const std::string& dotted_query) {
+    if (dotted_query.find('.') == std::string::npos) {
+        return std::nullopt;
+    }
+    const std::string head = dotted_head(dotted_query);
+    try {
+        const ModuleAst module = module_for_document(doc, false);
+        const ModuleAst& current = visible_module_unit(module, doc.path);
+        for (const ImportDecl& import : current.imports) {
+            if (import.kind != ImportKind::Module || bound_import_name(import) != head) {
+                continue;
+            }
+            if (const ModuleAst* imported = imported_module_unit(module, current, import)) {
+                return imported->source_path.empty() ? imported->module_path
+                                                     : imported->source_path.string();
+            }
+        }
+    } catch (const std::exception&) {
+        return std::nullopt;
+    }
+    return std::nullopt;
+}
+
 std::string reference_query_at(const Document& doc, const Json* params) {
     const std::string name = ast_symbol_at(doc, params).value_or("");
     std::vector<std::string> paths;
@@ -214,6 +244,9 @@ std::string reference_query_at(const Document& doc, const Json* params) {
                 continue;
             }
             if (native_alias_target_class_definition(module, path).has_value()) {
+                return path;
+            }
+            if (module_import_target_key(doc, path).has_value()) {
                 return path;
             }
             for (const ClassDecl& klass : module.native_classes) {
@@ -276,6 +309,8 @@ std::string references_json(const Document& doc, const Json* params,
     if (scope == ReferenceScope::None) {
         return "[]";
     }
+    const std::optional<std::string> module_target =
+        scope == ReferenceScope::Workspace ? module_import_target_key(doc, query) : std::nullopt;
     std::ostringstream out;
     out << "[";
     bool first = true;
@@ -286,6 +321,10 @@ std::string references_json(const Document& doc, const Json* params,
         }
         if (scope == ReferenceScope::WorkspaceSkipRedeclarations && candidate.uri != doc.uri &&
             document_declares_renameable_symbol(candidate, query)) {
+            continue;
+        }
+        if (module_target.has_value() && candidate.uri != doc.uri &&
+            module_import_target_key(candidate, query) != module_target) {
             continue;
         }
         for (const ReferenceLocation& location : references_in(candidate, query)) {

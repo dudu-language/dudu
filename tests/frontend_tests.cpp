@@ -12,6 +12,7 @@
 #include "dudu/language_server_hover.hpp"
 #include "dudu/language_server_json.hpp"
 #include "dudu/language_server_navigation.hpp"
+#include "dudu/language_server_references.hpp"
 #include "dudu/lexer.hpp"
 #include "dudu/module_loader.hpp"
 #include "dudu/native_headers.hpp"
@@ -857,6 +858,50 @@ void test_lsp_references_track_assignment_bindings() {
     assert(right_refs.size() == 2);
 }
 
+void test_lsp_module_reference_filters_alias_target() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_module_reference_target_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "left.dd", "def answer() -> i32:\n"
+                                "    return 1\n");
+    write_file(dir / "right.dd", "def answer() -> i32:\n"
+                                 "    return 2\n");
+    write_file(dir / "main.dd", "import left as m\n"
+                                "\n"
+                                "def main() -> i32:\n"
+                                "    return m.answer()\n");
+    write_file(dir / "same.dd", "import left as m\n"
+                                "\n"
+                                "def same() -> i32:\n"
+                                "    return m.answer()\n");
+    write_file(dir / "other.dd", "import right as m\n"
+                                 "\n"
+                                 "def other() -> i32:\n"
+                                 "    return m.answer()\n");
+
+    const dudu::Document main_doc{.uri = dudu::file_uri(dir / "main.dd"),
+                                  .path = dir / "main.dd",
+                                  .text = read_file(dir / "main.dd")};
+    const std::map<std::string, dudu::Document> workspace{
+        {main_doc.uri, main_doc},
+        {dudu::file_uri(dir / "same.dd"),
+         {.uri = dudu::file_uri(dir / "same.dd"),
+          .path = dir / "same.dd",
+          .text = read_file(dir / "same.dd")}},
+        {dudu::file_uri(dir / "other.dd"),
+         {.uri = dudu::file_uri(dir / "other.dd"),
+          .path = dir / "other.dd",
+          .text = read_file(dir / "other.dd")}},
+    };
+    dudu::Json params =
+        dudu::JsonParser("{\"position\":{\"line\":3,\"character\":15}}").parse();
+    const std::string refs = dudu::references_json(main_doc, &params, workspace);
+    assert(refs.find(dudu::file_uri(dir / "main.dd")) != std::string::npos);
+    assert(refs.find(dudu::file_uri(dir / "same.dd")) != std::string::npos);
+    assert(refs.find(dudu::file_uri(dir / "other.dd")) == std::string::npos);
+}
+
 void test_allocation_type_ref_diagnostics() {
     dudu::Symbols symbols;
     const dudu::FunctionScope scope(symbols);
@@ -1466,6 +1511,7 @@ int main() {
         test_lsp_scope_lint_tracks_inferred_assignment_locals();
         test_lsp_suspicious_cast_lint_uses_type_refs();
         test_lsp_references_track_assignment_bindings();
+        test_lsp_module_reference_filters_alias_target();
         test_allocation_type_ref_diagnostics();
         test_emitted_local_index_type_inference();
         test_index_type_inference_uses_type_ast();

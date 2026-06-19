@@ -1290,7 +1290,10 @@ push. They are not release packaging work.
    to the editor, selectively imported functions participate in completion and
    call signature help, and `module.` completion, imported hover, plus import
    go-to-definition resolve through loaded module units instead of manually
-   reparsing imported files.
+   reparsing imported files. Module-qualified reference searches such as
+   `m.answer` now resolve the module alias target before searching the
+   workspace, so unrelated files that reuse the same alias for a different
+   module are not reported as references.
 
 14. Project Driver Polish
 
