@@ -123,6 +123,8 @@ printf '%s\n' "$cmake_build_output" | grep -Eq '^generate .*/build/project_backe
 printf '%s\n' "$cmake_build_output" | grep -Eq '^configure .*/build/project_backend_cmake/cmake-backend/build$'
 printf '%s\n' "$cmake_build_output" | grep -Eq '^compile .*/build/project_backend_cmake/cmake-backend/build$'
 printf '%s\n' "$cmake_build_output" | grep -Eq '^output .*/backend_cmake$'
+"$repo_root/build/dudu" build \
+    "$repo_root/tests/fixtures/project_backend_cmake_function_namespaces" --quiet
 "$repo_root/build/duc" fmt "$repo_root/tests/fixtures/simple_program.dd" --check
 "$repo_root/scripts/test_lsp.sh"
 

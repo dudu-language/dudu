@@ -283,7 +283,9 @@ own semantic scope, and per-unit imports materialize qualified/selective
 symbols without pulling dependency declarations into the current module. The
 generated CMake backend has a regression fixture with two modules that both
 declare `Box`, `make`, and `score`; those compile as separate generated C++
-artifacts with distinct generated names. A CMake-backend negative fixture now
+artifacts with distinct generated names. A separate fixture covers same-named
+functions without same-named types, proving both the generated-CMake success
+path and the merged-output rejection path. A CMake-backend negative fixture now
 rejects transitive import leakage, so importing a facade module does not let the
 importer use the facade's private dependencies by accident. Qualified Dudu
 module prefixes are also tracked separately from opaque native C++ prefixes, so

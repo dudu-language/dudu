@@ -148,3 +148,6 @@
   through manifest-relative `[include] paths`.
 - Rejected unsafe merged C++ output for Dudu modules that declare the same
   module-local type name, including explicit `--emit-cpp` and header emission.
+- Added regression coverage that generated-CMake module builds allow
+  same-named functions in different modules while merged C++ output rejects
+  that unsafe shape.

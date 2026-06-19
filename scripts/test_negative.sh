@@ -326,6 +326,16 @@ fi
 grep -q "merged C++ output cannot combine Dudu modules that both declare 'Box'" \
     "$repo_root/build/bad_direct_module_namespace.err"
 
+if "$repo_root/build/dudu" \
+    "$repo_root/tests/fixtures/project_backend_cmake_function_namespaces/main.dd" \
+    --emit-cpp "$repo_root/build/bad_direct_module_function_namespace.cpp" \
+    2>"$repo_root/build/bad_direct_module_function_namespace.err"; then
+    echo "bad_direct_module_function_namespace unexpectedly passed" >&2
+    exit 1
+fi
+grep -q "merged C++ output cannot combine Dudu modules that both declare 'score'" \
+    "$repo_root/build/bad_direct_module_function_namespace.err"
+
 if (
     cd "$repo_root/tests/fixtures/bad_project_transitive_import_leak"
     "$repo_root/build/dudu" build

@@ -1,0 +1,6 @@
+name = "backend_cmake_function_namespaces"
+entry = "main.dd"
+build_dir = "../../../build/project_backend_cmake_function_namespaces"
+
+[build]
+backend = "cmake"

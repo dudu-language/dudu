@@ -1,0 +1,2 @@
+def score() -> i32:
+    return 10

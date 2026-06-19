@@ -1,0 +1,8 @@
+import left as l
+import right as r
+
+
+def main() -> i32:
+    if l.score() + r.score() == 42:
+        return 0
+    return 1
