@@ -1294,6 +1294,18 @@ push. They are not release packaging work.
    `dudu build` gives up. It is one of the serious native backends because
    CMake is where a large part of the C/C++ ecosystem already lives.
 
+   Near-term distribution should stay in the dev/source-install lane until the
+   CLI and compiler pipeline are boring. Add a real local install path first:
+   CMake install targets, `cmake --install`/`make install` support where the
+   generator provides it, and a `scripts/install-local.sh` that works on Linux
+   and macOS, including Apple Silicon Macs. That script should install or link
+   `dudu`, `duc`, the language server, runtime/prelude headers, editor support,
+   and any required CMake/toolchain integration files from a checkout without
+   pretending to be a package manager. Tagged GitHub releases can then ship
+   source tarballs and maybe Linux/macOS binaries. Homebrew, AUR, apt, winget,
+   and similar package-manager distribution should wait until command behavior,
+   versioning, changelog practice, and dependency requirements are stable.
+
    Status: `dudu build` and `dudu run` use the direct backend by default for
    single-module inputs. If no backend is explicitly selected and the source
    tree imports multiple Dudu modules, `dudu build` and `dudu run` select the
