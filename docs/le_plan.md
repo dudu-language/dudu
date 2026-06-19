@@ -2083,3 +2083,7 @@ push. They are not release packaging work.
    values, and children only; it no longer scans raw `Unknown.text` for names
    such as `T`, so malformed native type text cannot create implicit template
    bindings.
+   Native template binding classification no longer treats selected
+   `Unknown.text` spellings as structured bindings; unknown native binding
+   values now stay on the explicit native-artifact fallback path instead of
+   entering structured substitution.

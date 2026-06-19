@@ -194,19 +194,12 @@ TypeRef require_signature_type_ref(const TypeRef& type, std::string_view context
                                           std::string(context) + " type metadata");
 }
 
-bool structured_binding_text(std::string_view type) {
-    const std::string trimmed = trim_copy(std::string(type));
-    return trimmed != "." && trimmed.find(".,") == std::string::npos &&
-           trimmed.find(", .") == std::string::npos && trimmed.find("...") == std::string::npos &&
-           trimmed.find("__decay_and_strip") == std::string::npos;
-}
-
 bool structured_binding_type_ref(const TypeRef& type) {
     if (!has_type_ref(type)) {
         return false;
     }
     if (type.kind == TypeKind::Unknown) {
-        return structured_binding_text(type.text);
+        return false;
     }
     if (type.kind == TypeKind::PackExpansion) {
         return type.children.size() == 1 && structured_binding_type_ref(type.children.front());
