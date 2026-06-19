@@ -6,9 +6,11 @@
 #include "dudu/cpp_lower.hpp"
 #include "dudu/cpp_stmt_types.hpp"
 #include "dudu/sema_context.hpp"
+#include "dudu/sema_function_type.hpp"
 #include "dudu/sema_generics.hpp"
 #include "dudu/sema_methods.hpp"
 #include "dudu/sema_methods_internal.hpp"
+#include "dudu/type_compat.hpp"
 
 #include <sstream>
 
@@ -41,15 +43,37 @@ std::optional<std::vector<TypeRef>> infer_expected_method_type_args(
     return std::nullopt;
 }
 
+bool concrete_method_matches_expected(const Symbols& symbols, const TypeRef& receiver_type,
+                                      const std::string& method_name,
+                                      const std::vector<TypeRef>& arg_types,
+                                      const TypeRef& expected_type) {
+    for (const FunctionSignature& signature :
+         method_signatures_for_type(symbols, receiver_type, method_name)) {
+        if (signature_param_count(signature) != arg_types.size()) {
+            continue;
+        }
+        bool args_match = true;
+        for (size_t i = 0; i < arg_types.size(); ++i) {
+            if (!type_assignment_allowed(signature_param_type_ref(signature, i), arg_types[i])) {
+                args_match = false;
+                break;
+            }
+        }
+        if (args_match &&
+            type_assignment_allowed(expected_type, signature_return_type_ref(signature))) {
+            return true;
+        }
+    }
+    return false;
+}
+
 } // namespace
 
-std::optional<std::string>
-lower_expected_generic_method_call(const TypeRef& expected_type, const Expr& expr,
-                                   const std::vector<std::string>& aliases,
-                                   const CppLocalContext& locals,
-                                   const std::map<std::string, TypeRef>& local_type_refs,
-                                   const std::map<std::string, TypeRef>& function_returns,
-                                   const Symbols* symbols, const CppEmitOptions& options) {
+std::optional<std::string> lower_expected_generic_method_call(
+    const TypeRef& expected_type, const Expr& expr, const std::vector<std::string>& aliases,
+    const CppLocalContext& locals, const std::map<std::string, TypeRef>& local_type_refs,
+    const std::map<std::string, TypeRef>& function_returns, const Symbols* symbols,
+    const CppEmitOptions& options) {
     if (symbols == nullptr || !has_type_ref(expected_type) || expr.kind != ExprKind::Call ||
         expr.callee.empty() || expr.callee.front().kind != ExprKind::Member ||
         expr.callee.front().children.size() != 1) {
@@ -74,6 +98,10 @@ lower_expected_generic_method_call(const TypeRef& expected_type, const Expr& exp
             return std::nullopt;
         }
         arg_types.push_back(arg_type);
+    }
+    if (concrete_method_matches_expected(*symbols, receiver_type_ref, member.name, arg_types,
+                                         expected_type)) {
+        return std::nullopt;
     }
     const auto type_args = infer_expected_method_type_args(*symbols, receiver_type_ref, member.name,
                                                            arg_types, expected_type);

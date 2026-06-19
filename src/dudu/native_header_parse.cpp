@@ -271,6 +271,9 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                std::regex_search(line, match, method_decl)) {
         FunctionDecl method;
         method.name = match[1].str();
+        if (!templates.empty()) {
+            method.generic_params = templates.back().params;
+        }
         method.return_type_ref = parse_native_type_text(
             qualify_scoped_type(scan, namespaces, signature_return_type(match[2].str())),
             decl_location);

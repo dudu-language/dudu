@@ -152,14 +152,20 @@ bool is_container_literal_expr(const Expr& expr) {
 
 bool is_reference_binding(const TypeRef& expected, const TypeRef& got) {
     if (const auto target = reference_target_ref(expected)) {
-        return type_ref_equivalent(wrapped_type_arg_ref(*target), got);
+        const TypeRef target_value = wrapped_type_arg_ref(*target);
+        return type_ref_equivalent(normalize_cpp_type_artifacts_ref(target_value),
+                                   normalize_cpp_type_artifacts_ref(got)) ||
+               (is_string_type(target_value) && is_string_type(got));
     }
     return false;
 }
 
 bool is_value_from_reference(const TypeRef& expected, const TypeRef& got) {
     if (const auto target = reference_target_ref(got)) {
-        return type_ref_equivalent(expected, wrapped_type_arg_ref(*target));
+        const TypeRef target_value = wrapped_type_arg_ref(*target);
+        return type_ref_equivalent(normalize_cpp_type_artifacts_ref(expected),
+                                   normalize_cpp_type_artifacts_ref(target_value)) ||
+               (is_string_type(expected) && is_string_type(target_value));
     }
     return false;
 }

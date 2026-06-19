@@ -1141,9 +1141,10 @@ push. They are not release packaging work.
    nullable native `cstr` parameters, matching common C APIs such as
    `XOpenDisplay(nullptr)`. Dear ImGui core namespace APIs work through
    ordinary unaliased C++ imports when the project provides the normal include
-   metadata. Boost filesystem path construction and boolean member calls work
-   without wrappers; deeper Boost string alias normalization remains a
-   hardening target.
+   metadata. Boost filesystem path construction, boolean member calls, and
+   string-returning overloads work without wrappers; native C++ method
+   templates preserve scanned template parameter metadata so unresolved method
+   templates do not mask concrete overloads.
    Broader template-heavy library behavior remains the main hardening area.
 
 10. Real Library Stress Tests
@@ -1510,6 +1511,12 @@ push. They are not release packaging work.
    that were useful during a milestone but should not survive in the real
    compiler.
 
+   Also clean these up opportunistically when they are discovered during other
+   work. Do not leave obviously silly artifacts in place just because the
+   current feature passes. If a helper, branch, or wrapper only exists because
+   an earlier implementation was awkward, either delete it immediately or add a
+   concrete cleanup note here with the file/function name.
+
    Audit for:
 
    - one-line wrapper functions that only obscure the real operation
@@ -1526,6 +1533,10 @@ push. They are not release packaging work.
      compiler behavior
    - confusing "temporary", "fallback", or "legacy" language that should either
      become an explicit boundary or be deleted
+   - single-call wrappers around generated-code, native-scanner, or sema paths
+     that only hide ownership or phase boundaries
+   - old test fixtures that pass by leaning on obsolete syntax or accidental
+     permissiveness instead of the current language rules
 
    This pass is not a license for broad cosmetic churn. Each cleanup should make
    code easier to reason about, reduce duplication, remove misleading

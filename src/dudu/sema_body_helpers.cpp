@@ -29,6 +29,18 @@ void check_type_match(FunctionScope& scope, const TypeRef& expected_ref, const E
             receiver.kind == ExprKind::Name && !scope.local_type_refs.contains(receiver.name);
         if (!receiver_is_bare_path) {
             const TypeRef receiver_ref = infer_expr_type_ast(scope, receiver, &location);
+            const std::vector<FunctionSignature> signatures =
+                method_signatures_for_type(scope.symbols, receiver_ref, member.name);
+            if (const auto signature = matching_signature_ast(scope, signatures, expr.children)) {
+                const TypeRef signature_return = signature_return_type_ref(*signature);
+                if (type_assignment_allowed(expected_ref, signature_return) ||
+                    can_assign_ast(scope, expected_ref, expr, signature_return)) {
+                    const ScopedCallee scoped_callee = scoped_call_callee(scope, expr, &location);
+                    check_call_args_ast(scope, scoped_callee.key, *signature, expr.children,
+                                        &location);
+                    return;
+                }
+            }
             if (const auto signature = inferred_generic_method_signature_for_type(
                     scope, receiver_ref, member.name, expr.children,
                     std::optional<TypeRef>{expected_ref}, &location)) {

@@ -4,6 +4,7 @@
 #include "dudu/native_headers.hpp"
 #include "dudu/parser.hpp"
 #include "dudu/sema.hpp"
+#include "dudu/type_compat.hpp"
 
 #include <cassert>
 #include <exception>
@@ -441,6 +442,66 @@ void test_native_header_pointer_diagnostics(const std::filesystem::path& root) {
     assert(failed);
 }
 
+void test_native_method_templates_do_not_mask_concrete_overloads(
+    const std::filesystem::path& root) {
+    const std::filesystem::path source_dir = root / "build" / "native-method-template-overload";
+    const std::filesystem::path header = source_dir / "method_template_overload.hpp";
+    std::filesystem::remove_all(source_dir);
+    std::filesystem::create_directories(source_dir);
+    {
+        std::ofstream out(header);
+        out << "#pragma once\n"
+               "#include <string>\n"
+               "struct Holder {\n"
+               "    template <typename String>\n"
+               "    String text() const { return String{}; }\n"
+               "    const std::string& text() const { static std::string value = \"ok\"; return "
+               "value; }\n"
+               "};\n";
+    }
+
+    dudu::ModuleAst module = dudu::parse_source("import cpp \"./method_template_overload.hpp\"\n"
+                                                "\n"
+                                                "def main() -> i32:\n"
+                                                "    holder = Holder()\n"
+                                                "    text: str = holder.text()\n"
+                                                "    if len(text) == 2:\n"
+                                                "        return 42\n"
+                                                "    return 1\n",
+                                                source_dir / "main.dd");
+    dudu::ProjectConfig config;
+    config.project_dir = source_dir;
+    config.build_dir = source_dir / "build";
+    dudu::merge_native_header_types(module, {.config = config, .source_dir = source_dir});
+
+    bool saw_template = false;
+    bool saw_concrete = false;
+    for (const dudu::ClassDecl& klass : module.native_classes) {
+        if (klass.name != "Holder") {
+            continue;
+        }
+        for (const dudu::FunctionDecl& method : klass.methods) {
+            if (method.name != "text") {
+                continue;
+            }
+            if (!method.generic_params.empty()) {
+                saw_template = method.generic_params.front() == "String";
+            }
+            if (method.generic_params.empty() &&
+                dudu::type_assignment_allowed(dudu::parse_type_text("str"),
+                                              dudu::function_return_type_ref(method))) {
+                saw_concrete = true;
+            }
+        }
+    }
+    assert(saw_template);
+    assert(saw_concrete);
+
+    dudu::analyze_module(module, {.check_bodies = true});
+    const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find("std::string text = holder.text();") != std::string::npos);
+}
+
 void test_native_scan_ignores_anonymous_record_definitions() {
     dudu::NativeHeaderScan scan;
     dudu::parse_ast_dump(scan,
@@ -477,6 +538,7 @@ int main() {
         test_native_header_collision(root);
         test_native_header_cache_invalidates_local_header(root);
         test_native_header_pointer_diagnostics(root);
+        test_native_method_templates_do_not_mask_concrete_overloads(root);
         test_native_scan_ignores_anonymous_record_definitions();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';

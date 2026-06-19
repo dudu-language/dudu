@@ -3,6 +3,9 @@ import cpp "boost/filesystem.hpp" as boost
 
 def main() -> i32:
     path = boost.filesystem.path("/tmp/dudu_probe.txt")
+    text: str = path.string()
+    if len(text) == 0:
+        return 3
     if not path.has_filename():
         return 1
     if not path.has_extension():
