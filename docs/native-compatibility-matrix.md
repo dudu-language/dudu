@@ -48,6 +48,7 @@ Last local probe run: 2026-06-19 with `scripts/probe_optional.sh`.
 | GLFW | windowing | OpenGL triangle host build | pass | `scripts/probe_optional.sh` / `examples/glfw_opengl_triangle.dd` | no |
 | Dear ImGui | UI | C++ namespace API, context lifecycle, version query, link | pass | `scripts/probe_optional.sh` / `imgui_context.dd` | no; import alias currently matches real namespace |
 | X11 | platform / windowing | C API, nullable `cstr`, opaque display pointer, XID return | pass | `scripts/probe_optional.sh` / `x11_display_probe.dd` | no |
+| Wayland client | platform / windowing | C API, nullable `cstr`, opaque display pointer, link | pass | `scripts/probe_optional.sh` / `wayland_display_probe.dd` | no |
 | OpenCL | compute | host API, kernel setup, run result | pass | `scripts/probe_optional.sh` / `examples/opencl_kernel_host.dd` | no |
 | Vulkan | graphics | header import, object setup smoke, link | pass | `scripts/probe_optional.sh` / `examples/vulkan_triangle.dd` | no |
 | FFmpeg libavcodec | media | header import, package link, probe/decode smoke | pass | `scripts/probe_optional.sh` / `examples/ffmpeg_probe_decode.dd` | small wrapper for normal FFmpeg include shape |
@@ -62,7 +63,7 @@ compiler matures.
 | API / Library | Domain | Target Coverage | Status | Notes |
 | --- | --- | --- | --- | --- |
 | CUDA / CUBLAS | GPU / ML | host API, device buffers, BLAS-like calls | skip | Needs NVIDIA tooling/hardware. |
-| platform APIs | OS | Win32, Cocoa, Wayland subsets | planned | Platform-specific; X11 has a Linux probe. |
+| platform APIs | OS | Win32, Cocoa subsets | planned | Platform-specific; X11 and Wayland have Linux probes. |
 
 ## Rules
 

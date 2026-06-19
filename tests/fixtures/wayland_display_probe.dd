@@ -1,0 +1,10 @@
+import c "wayland-client-core.h" as wayland
+
+
+def main() -> i32:
+    display = wayland.wl_display_connect(None)
+    if display == None:
+        return 42
+
+    wayland.wl_display_disconnect(display)
+    return 42

@@ -347,6 +347,27 @@ probe_imgui() {
     echo "ok imgui"
 }
 
+probe_wayland() {
+    if ! pkg-config --exists wayland-client; then
+        echo "skip wayland-client: pkg-config package not found"
+        return
+    fi
+
+    local cpp="$repo_root/build/probe_wayland_display.cpp"
+    local bin="$repo_root/build/probe_wayland_display"
+    "$repo_root/build/duc" emit "$repo_root/tests/fixtures/wayland_display_probe.dd" -o "$cpp"
+    "${CXX:-c++}" -std=c++20 "$cpp" $(pkg-config --cflags --libs wayland-client) -o "$bin"
+    set +e
+    "$bin"
+    local status=$?
+    set -e
+    if [[ "$status" -ne 42 ]]; then
+        echo "wayland probe returned $status, expected 42" >&2
+        exit 1
+    fi
+    echo "ok wayland-client"
+}
+
 probe_threading() {
     local cpp="$repo_root/build/probe_threading_atomics.cpp"
     local bin="$repo_root/build/probe_threading_atomics"
@@ -521,6 +542,7 @@ probe_stb
 probe_x11
 probe_boost_filesystem
 probe_imgui
+probe_wayland
 probe_threading
 probe_posix_mmap
 probe_posix_threads
