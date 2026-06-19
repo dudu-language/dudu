@@ -91,6 +91,24 @@ void test_native_header_type_scan(const std::filesystem::path& root) {
     assert(cpp.find("nested.doubled()") != std::string::npos);
     assert(cpp.find("dudu_native::use_base_widget((&derived))") != std::string::npos);
     assert(cpp.find("dudu_native::read_const_ref(namespaced)") != std::string::npos);
+    bool saw_pack_holder = false;
+    for (const dudu::ClassDecl& klass : module.native_classes) {
+        if (klass.name != "dudu_native.PackHolder") {
+            continue;
+        }
+        for (const dudu::FunctionDecl& method : klass.methods) {
+            if (method.name != "accept" || method.params.empty()) {
+                continue;
+            }
+            const dudu::TypeRef& param = method.params.front().type_ref;
+            assert(param.kind == dudu::TypeKind::Template);
+            assert(param.name == "dudu_native.PackValue");
+            assert(param.children.size() == 1);
+            assert(param.children.front().kind == dudu::TypeKind::PackExpansion);
+            saw_pack_holder = true;
+        }
+    }
+    assert(saw_pack_holder);
     assert(std::filesystem::exists(config.build_dir / "dudu-header-cache"));
 }
 

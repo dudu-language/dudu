@@ -109,7 +109,7 @@ std::string method_key(const FunctionDecl& fn) {
 
 void add_base_class(ClassDecl& klass, std::string base, const SourceLocation& location) {
     BaseClassDecl decl;
-    decl.type_ref = parse_type_text(std::move(base), location);
+    decl.type_ref = parse_native_type_text(std::move(base), location);
     decl.location = location;
     klass.base_class_refs.push_back(std::move(decl));
 }
@@ -224,7 +224,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         const bool useful_alias = lowered_type != name;
         if (!starts_with(name, "__") || useful_alias) {
             const TypeRef type_ref =
-                useful_alias ? parse_type_text(lowered_type, decl_location) : TypeRef{};
+                useful_alias ? parse_native_type_text(lowered_type, decl_location) : TypeRef{};
             scan.types.push_back({.name = name,
                                   .type = useful_alias ? lowered_type : "",
                                   .type_ref = type_ref,
@@ -282,14 +282,14 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                std::regex_search(line, match, method_decl)) {
         FunctionDecl method;
         method.name = match[1].str();
-        method.return_type_ref = parse_type_text(
+        method.return_type_ref = parse_native_type_text(
             qualify_scoped_type(scan, namespaces, signature_return_type(match[2].str())),
             decl_location);
         for (const std::string& param : signature_params(match[2].str())) {
             ParamDecl decl;
             decl.name = "arg" + std::to_string(method.params.size());
             decl.type_ref =
-                parse_type_text(qualify_scoped_type(scan, namespaces, param), decl_location);
+                parse_native_type_text(qualify_scoped_type(scan, namespaces, param), decl_location);
             decl.location = decl_location;
             method.params.push_back(std::move(decl));
         }
@@ -304,7 +304,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         for (const std::string& param : params) {
             ParamDecl decl;
             decl.name = "arg" + std::to_string(ctor.params.size());
-            decl.type_ref = parse_type_text(param, decl_location);
+            decl.type_ref = parse_native_type_text(param, decl_location);
             decl.location = decl_location;
             ctor.params.push_back(std::move(decl));
         }
@@ -315,7 +315,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         const std::string type = qualify_scoped_type(scan, namespaces, dudu_type(match[2].str()));
         scan.classes[classes.back().second].fields.push_back(
             {.name = match[1].str(),
-             .type_ref = parse_type_text(type, decl_location),
+             .type_ref = parse_native_type_text(type, decl_location),
              .value_expr = {},
              .location = decl_location});
     } else if (!classes.empty() &&
@@ -335,7 +335,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                                          : (enums.empty() ? "i32" : enums.back().second);
             scan.values.push_back({.name = name,
                                    .type = type,
-                                   .type_ref = parse_type_text(type, decl_location),
+                                   .type_ref = parse_native_type_text(type, decl_location),
                                    .enum_constant = true,
                                    .location = decl_location});
         }
@@ -347,7 +347,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
             const std::string type = dudu_type(match[2].str());
             scan.values.push_back({.name = name,
                                    .type = type,
-                                   .type_ref = parse_type_text(type, decl_location),
+                                   .type_ref = parse_native_type_text(type, decl_location),
                                    .location = decl_location});
         }
     }

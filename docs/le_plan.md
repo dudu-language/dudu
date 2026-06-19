@@ -2091,3 +2091,8 @@ push. They are not release packaging work.
    for missing type metadata; compatibility is decided by structured `TypeRef`
    rules, explicit missing-type rules, literals, and diagnostics may still
    render type labels for messages.
+   Native header parsing now routes aliases, base classes, C++ methods,
+   constructors, fields, enum constants, and globals through the same
+   native-type normalizer used for free functions, so imported declaration
+   metadata receives structured pack-expansion and nested native type cleanup
+   at the boundary instead of leaving direct raw `parse_type_text` holes.

@@ -47,6 +47,15 @@ class Outer {
     };
 };
 
+template <typename... T> class PackValue {};
+
+class PackHolder {
+  public:
+    template <typename... T> void accept(PackValue<T...> value) {
+        (void)value;
+    }
+};
+
 inline int use_base_widget(const BaseWidget* widget) {
     return widget->base_value;
 }
