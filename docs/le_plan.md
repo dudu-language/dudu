@@ -2198,8 +2198,11 @@ push. They are not release packaging work.
    namespaces, and native class shapes when deciding whether a repeated Dudu
    binding is the same native declaration. Unqualified same-name/different-
    identity imports are rejected instead of being silently deduped by spelling;
-   qualified scanner-collapsed C++ associated artifacts remain tracked by the
-   native identity plan.
+   scanner-collapsed C++ system-header artifacts such as `_Up`, `iterator`,
+   `value_type`, and `type` remain tracked by the native identity plan.
+   Native scan dedupe now applies the same identity-aware rule before merge, so
+   scanner output cannot lose unqualified same-name/different-identity
+   declarations through a name-only set.
    The AST migration guard now rejects `lower_cpp_type(type_ref_head_name(...))`
    so structured type-name codegen cannot silently re-enter the raw type parser.
    Raw string C++ type lowering no longer has its own hand-written function

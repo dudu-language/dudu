@@ -43,6 +43,23 @@ verbatim. It can parody the category and contrast against the fire/red visual
 language with its own brown/poo-themed identity. Think "recognizable genre
 spoof," not trademark-confusing clone.
 
+## Dudulang.org Target
+
+`dudulang.org` should feel like someone took the modern "Python, but systems
+and accelerators" language landing-page template and made the dumbest possible
+earthy version of it without making the underlying compiler fake.
+
+The intentional gag:
+
+- red/fire energy becomes brown/dirt/poo energy
+- polished accelerator hype becomes blunt C/C++ interop pragmatism
+- startup seriousness becomes weird dev humor
+- the code examples and roadmap stay sincere
+
+This is guerrilla marketing, not a language-design joke. The page should be
+memorable enough that people share it, but clear enough that a visitor can tell
+within seconds that Dudu is meant to be a real native language project.
+
 ## Visual Direction
 
 - Brown, tan, amber, off-white, and near-black palette.

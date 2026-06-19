@@ -92,9 +92,13 @@ In progress.
 - Native header merging now deduplicates native types, values, macros,
   namespaces, and classes by the Dudu binding plus `NativeSymbolId`;
   unqualified same-named bindings with different native identities are compile
-  errors instead of silently keeping the first declaration. Qualified C++
-  associated artifacts such as `std.iterator` still need deeper scanner
-  modeling before every same-name/different-identity case can be rejected.
+  errors instead of silently keeping the first declaration. C++ system-header
+  artifacts such as `_Up`, `iterator`, `value_type`, `type`, and other
+  libstdc++ internals still need deeper scanner modeling before every
+  same-name/different-identity case can be rejected.
+- Native scan deduplication uses the same identity-aware rule before metadata
+  reaches module merge, so a single scan cannot hide an unqualified collision
+  by name-only dedupe.
 
 Still missing:
 

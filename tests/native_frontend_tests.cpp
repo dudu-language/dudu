@@ -1,5 +1,6 @@
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_emit.hpp"
+#include "dudu/native_header_parse.hpp"
 #include "dudu/native_headers.hpp"
 #include "dudu/parser.hpp"
 #include "dudu/sema.hpp"
@@ -263,6 +264,29 @@ void test_native_identity_name_collision_is_rejected(const std::filesystem::path
     assert(failed);
 }
 
+void test_native_scan_dedupe_rejects_identity_collision() {
+    dudu::NativeHeaderScan scan;
+    dudu::NativeTypeDecl left;
+    left.name = "Thing";
+    left.identity.canonical_path = "left.Thing";
+    left.location = {.file = "left.hpp", .line = 1, .column = 8};
+    scan.types.push_back(std::move(left));
+    dudu::NativeTypeDecl right;
+    right.name = "Thing";
+    right.identity.canonical_path = "right.Thing";
+    right.location = {.file = "right.hpp", .line = 1, .column = 8};
+    scan.types.push_back(std::move(right));
+
+    bool failed = false;
+    try {
+        (void)dudu::dedupe_scan(std::move(scan));
+    } catch (const dudu::CompileError& error) {
+        failed = std::string(error.what()).find("native type name collision: Thing") !=
+                 std::string::npos;
+    }
+    assert(failed);
+}
+
 void test_native_single_underscore_function_macros(const std::filesystem::path& root) {
     const std::filesystem::path source_dir = root / "build" / "native-macro-scan";
     const std::filesystem::path header_dir = root / "build" / "native-macro-include";
@@ -400,6 +424,7 @@ int main() {
         test_native_header_alias_preserves_identity(root);
         test_native_identity_edge_cases(root);
         test_native_identity_name_collision_is_rejected(root);
+        test_native_scan_dedupe_rejects_identity_collision();
         test_native_single_underscore_function_macros(root);
         test_native_call_arity(root);
         test_native_header_collision(root);
