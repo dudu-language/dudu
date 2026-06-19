@@ -380,8 +380,8 @@ Current implementation reality:
   or explicit delegated test command.
 - `dudu build`, `dudu run`, and `dudu test` stream native compiler/CMake output
   by default through the project-driver front door. Full native command lines
-  stay behind `--verbose`, and cached direct builds print an explicit
-  `up-to-date` outcome.
+  stay behind `--verbose`, cached direct builds print an explicit `up-to-date`
+  outcome, and `--quiet` suppresses project-driver progress output for scripts.
 
 The next build-driver work should close that gap without changing the front
 door: users should still type `dudu build`, `dudu run`, and `dudu test`.

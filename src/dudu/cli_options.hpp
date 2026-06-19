@@ -31,6 +31,7 @@ struct CliOptions {
     bool new_project = false;
     bool no_capture = false;
     bool project_driver = false;
+    bool quiet = false;
     bool run = false;
     bool test = false;
     bool verbose = false;

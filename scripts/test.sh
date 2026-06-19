@@ -131,6 +131,7 @@ rm -rf "$clean_smoke"
     "$repo_root/build/dudu" run >/dev/null 2>"$repo_root/build/dudu_run_steps.err"
     test -d build
     "$repo_root/build/dudu" build >/dev/null 2>"$repo_root/build/dudu_build_cached.err"
+    "$repo_root/build/dudu" build --quiet >/dev/null 2>"$repo_root/build/dudu_build_quiet.err"
     "$repo_root/build/dudu" clean 2>"$repo_root/build/dudu_clean.err"
     test ! -e build
 )
@@ -138,6 +139,7 @@ grep -Eq "emit .*clean_smoke/build/clean_smoke.cpp" "$repo_root/build/dudu_run_s
 grep -Eq "build .*clean_smoke/build/clean_smoke" "$repo_root/build/dudu_run_steps.err"
 grep -Eq "run .*clean_smoke/build/clean_smoke" "$repo_root/build/dudu_run_steps.err"
 grep -Eq "up-to-date .*clean_smoke/build/clean_smoke" "$repo_root/build/dudu_build_cached.err"
+test ! -s "$repo_root/build/dudu_build_quiet.err"
 grep -q "clean ./build" "$repo_root/build/dudu_clean.err"
 cache_smoke="$repo_root/build/clean_cache_smoke"
 rm -rf "$cache_smoke"

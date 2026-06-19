@@ -16,6 +16,7 @@ struct TestDriverOptions {
     std::string test_filter;
     bool no_capture = false;
     bool project_driver = false;
+    bool quiet = false;
     bool verbose = false;
 };
 

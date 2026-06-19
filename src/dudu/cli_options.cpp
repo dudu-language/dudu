@@ -94,6 +94,10 @@ CliOptions parse_cli_options(int argc, char** argv, bool project_driver) {
             options.verbose = true;
             continue;
         }
+        if (arg == "--quiet") {
+            options.quiet = true;
+            continue;
+        }
         if (arg == "--filter") {
             if (i + 1 >= argc) {
                 fail("--filter requires text");

@@ -210,27 +210,28 @@ bool check_source_path(const CliOptions& options) {
 int run_build_command(const CliOptions& options, char* executable) {
     const ProjectConfig config = build_config_for_options(options);
     const std::filesystem::path dudu_executable = executable_path(executable);
-    print_project_step(options.project_driver, "backend", config.build_backend);
-    print_project_step(options.project_driver, "entry", options.input);
+    const bool project_output = options.project_driver && !options.quiet;
+    print_project_step(project_output, "backend", config.build_backend);
+    print_project_step(project_output, "entry", options.input);
     if (config.build_backend == "cmake") {
-        print_project_step(options.project_driver, "cmake", cmake_backend_log_source(config));
-        print_project_step(options.project_driver, "build", cmake_backend_log_build_dir(config));
+        print_project_step(project_output, "cmake", cmake_backend_log_source(config));
+        print_project_step(project_output, "build", cmake_backend_log_build_dir(config));
         (void)build_cmake_project({.config = config,
                                    .input = options.input,
                                    .output = options.output,
                                    .dudu_executable = dudu_executable,
-                                   .stream_output = options.project_driver,
+                                   .stream_output = project_output,
                                    .verbose = options.verbose});
         return 0;
     }
     const std::string source = read_text_file(options.input);
     const std::filesystem::path output =
         options.output.value_or(default_build_output(config, options.input));
-    print_project_step(options.project_driver, "emit", output.string() + ".cpp");
-    print_project_step(options.project_driver, "build", output);
+    print_project_step(project_output, "emit", output.string() + ".cpp");
+    print_project_step(project_output, "build", output);
     (void)build_executable({.output = output,
                             .config = config,
-                            .stream_output = options.project_driver,
+                            .stream_output = project_output,
                             .verbose = options.verbose},
                            emit_cpp_source(checked_module(options, source, true)));
     return 0;
@@ -242,35 +243,35 @@ int run_run_command(const CliOptions& options, char* executable) {
     if (config.target_kind != "executable") {
         fail("cannot run target kind: " + config.target_kind);
     }
-    print_project_step(options.project_driver, "backend", config.build_backend);
-    print_project_step(options.project_driver, "entry", options.input);
+    const bool project_output = options.project_driver && !options.quiet;
+    print_project_step(project_output, "backend", config.build_backend);
+    print_project_step(project_output, "entry", options.input);
     if (config.build_backend == "cmake") {
-        print_project_step(options.project_driver, "cmake", cmake_backend_log_source(config));
-        print_project_step(options.project_driver, "build", cmake_backend_log_build_dir(config));
-        const std::filesystem::path bin =
-            build_cmake_project({.config = config,
-                                 .input = options.input,
-                                 .output = options.output,
-                                 .dudu_executable = dudu_executable,
-                                 .stream_output = options.project_driver,
-                                 .verbose = options.verbose});
-        print_project_step(options.project_driver, "run", bin);
+        print_project_step(project_output, "cmake", cmake_backend_log_source(config));
+        print_project_step(project_output, "build", cmake_backend_log_build_dir(config));
+        const std::filesystem::path bin = build_cmake_project({.config = config,
+                                                               .input = options.input,
+                                                               .output = options.output,
+                                                               .dudu_executable = dudu_executable,
+                                                               .stream_output = project_output,
+                                                               .verbose = options.verbose});
+        print_project_step(project_output, "run", bin);
         return std::system(shell_quote_path(bin).c_str()) == 0 ? 0 : 1;
     }
     const std::string source = read_text_file(options.input);
     const std::filesystem::path output =
         options.output.value_or(default_build_output(config, options.input));
-    print_project_step(options.project_driver, "emit", output.string() + ".cpp");
-    print_project_step(options.project_driver, "build", output);
+    print_project_step(project_output, "emit", output.string() + ".cpp");
+    print_project_step(project_output, "build", output);
     const std::filesystem::path bin =
         build_executable({.output = output,
                           .config = config,
-                          .stream_output = options.project_driver,
+                          .stream_output = project_output,
                           .verbose = options.verbose},
                          emit_cpp_source(checked_module(options, source, true)));
     const std::filesystem::path command =
         bin.is_relative() && bin.parent_path().empty() ? std::filesystem::path(".") / bin : bin;
-    print_project_step(options.project_driver, "run", command);
+    print_project_step(project_output, "run", command);
     return std::system(shell_quote_path(command).c_str()) == 0 ? 0 : 1;
 }
 
@@ -301,13 +302,17 @@ int run_cli(int argc, char** argv) {
     if (options.clean) {
         const std::filesystem::path cleaned =
             clean_project(options.input.empty() ? std::filesystem::path(".") : options.input);
-        std::cerr << "clean " << cleaned.string() << '\n';
+        if (!options.quiet) {
+            std::cerr << "clean " << cleaned.string() << '\n';
+        }
         return 0;
     }
     if (options.clean_cache) {
         const std::filesystem::path cleaned =
             clean_native_header_cache(native_header_options_for_clean_cache(options));
-        std::cerr << "clean-cache " << cleaned.string() << '\n';
+        if (!options.quiet) {
+            std::cerr << "clean-cache " << cleaned.string() << '\n';
+        }
         return 0;
     }
     if (options.test) {
@@ -319,6 +324,7 @@ int run_cli(int argc, char** argv) {
                                   .test_filter = options.test_filter,
                                   .no_capture = options.no_capture,
                                   .project_driver = options.project_driver,
+                                  .quiet = options.quiet,
                                   .verbose = options.verbose});
     }
     if (options.format) {
@@ -334,7 +340,7 @@ int run_cli(int argc, char** argv) {
     }
     if (options.cmake) {
         const ProjectConfig config = config_for_options(options);
-        print_project_step(options.project_driver, "cmake",
+        print_project_step(options.project_driver && !options.quiet, "cmake",
                            options.output.value_or("CMakeLists.txt"));
         write_text_output(options.output, emit_cmake_project(config, options.input));
         return 0;
@@ -361,9 +367,10 @@ int run_cli(int argc, char** argv) {
         if (!options.output.has_value()) {
             fail("emit-modules requires -o <directory>");
         }
-        print_project_step(options.project_driver, "analyze", options.input);
+        const bool project_output = options.project_driver && !options.quiet;
+        print_project_step(project_output, "analyze", options.input);
         const ModuleAst module = checked_module(options, source, true);
-        print_project_step(options.project_driver, "emit", *options.output);
+        print_project_step(project_output, "emit", *options.output);
         write_cpp_module_artifacts(*options.output, module);
         return 0;
     }

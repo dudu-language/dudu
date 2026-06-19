@@ -1222,7 +1222,8 @@ push. They are not release packaging work.
    The project-driver front door now streams native compiler/CMake output for
    `dudu build`, `dudu run`, and `dudu test` while keeping full command lines
    behind `--verbose`; cached direct builds also print an explicit
-   `up-to-date` outcome by default.
+   `up-to-date` outcome by default. `--quiet` suppresses project-driver
+   progress output for scripts.
    The generated CMake test backend still emits one generated harness
    translation unit; true per-module tests need test-mode module artifacts that
    expose test functions to the harness and suppress normal executable entry
