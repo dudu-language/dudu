@@ -42,8 +42,8 @@ void print_cli_usage(bool project_driver) {
            "[--emit-cpp <path|->] [-DNAME=value] [--verbose]\n";
 }
 
-void print_cli_version() {
-    std::cout << "duc 0.1.0\n";
+void print_cli_version(bool project_driver) {
+    std::cout << (project_driver ? "dudu" : "duc") << " 0.1.0\n";
 }
 
 } // namespace dudu

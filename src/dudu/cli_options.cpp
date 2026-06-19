@@ -97,7 +97,7 @@ CliOptions parse_cli_options(int argc, char** argv, bool project_driver) {
                 std::exit(0);
             }
             if (arg == "--version") {
-                print_cli_version();
+                print_cli_version(project_driver);
                 std::exit(0);
             }
             if (arg == "--verbose") {
@@ -116,7 +116,7 @@ CliOptions parse_cli_options(int argc, char** argv, bool project_driver) {
             std::exit(0);
         }
         if (arg == "--version") {
-            print_cli_version();
+            print_cli_version(project_driver);
             std::exit(0);
         }
         if (arg == "--verbose") {
