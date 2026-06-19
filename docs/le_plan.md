@@ -1354,7 +1354,9 @@ push. They are not release packaging work.
    workspace, so unrelated files that reuse the same alias for a different
    module are not reported as references. Aliased native function references
    such as `dudu_native.dudu_native_add` keep the full native path during
-   reference lookup.
+   reference lookup. LSP symbols now carry native identity keys for scanned
+   native declarations, preserving canonical native identity at the editor
+   boundary so native references can move away from plain name matching.
 
 14. Project Driver Polish
 

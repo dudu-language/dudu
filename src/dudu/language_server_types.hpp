@@ -3,6 +3,7 @@
 #include "dudu/source.hpp"
 
 #include <filesystem>
+#include <optional>
 #include <string>
 
 namespace dudu {
@@ -42,6 +43,7 @@ struct Symbol {
     std::string detail;
     SourceLocation location;
     int kind = lsp_symbol_kind::Variable;
+    std::optional<std::string> native_identity_key;
 };
 
 struct ReferenceLocation {

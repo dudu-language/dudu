@@ -3,6 +3,7 @@
 #include "dudu/ast_type.hpp"
 #include "dudu/language_server_native_lookup.hpp"
 #include "dudu/language_server_support.hpp"
+#include "dudu/native_header_identity.hpp"
 #include "dudu/native_headers.hpp"
 #include "dudu/parser.hpp"
 
@@ -79,18 +80,28 @@ std::string native_type_detail(const ModuleAst& module, const NativeTypeDecl& ty
     return detail;
 }
 
+std::optional<std::string> native_identity_key(const NativeSymbolId& identity) {
+    const std::string key = native_symbol_identity_key(identity);
+    if (key.empty()) {
+        return std::nullopt;
+    }
+    return key;
+}
+
 std::vector<Symbol> symbols_for_module(const ModuleAst& module, bool include_native) {
     std::vector<Symbol> out;
     for (const ClassDecl& klass : module.classes) {
         out.push_back({.name = klass.name,
                        .detail = "class " + klass.name,
                        .location = klass.location,
-                       .kind = lsp_symbol_kind::Class});
+                       .kind = lsp_symbol_kind::Class,
+                       .native_identity_key = std::nullopt});
         for (const FieldDecl& field : klass.fields) {
             out.push_back({.name = field.name,
                            .detail = field.name + ": " + type_ref_text(field.type_ref),
                            .location = field.location,
-                           .kind = lsp_symbol_kind::Field});
+                           .kind = lsp_symbol_kind::Field,
+                           .native_identity_key = std::nullopt});
         }
         for (const FunctionDecl& method : klass.methods) {
             out.push_back({.name = method.name,
@@ -98,26 +109,30 @@ std::vector<Symbol> symbols_for_module(const ModuleAst& module, bool include_nat
                            .location = method.location,
                            .kind = is_constructor_method_name(method.name)
                                        ? lsp_symbol_kind::Constructor
-                                       : lsp_symbol_kind::Method});
+                                       : lsp_symbol_kind::Method,
+                           .native_identity_key = std::nullopt});
         }
     }
     for (const EnumDecl& en : module.enums) {
         out.push_back({.name = en.name,
                        .detail = "enum " + en.name,
                        .location = en.location,
-                       .kind = lsp_symbol_kind::Enum});
+                       .kind = lsp_symbol_kind::Enum,
+                       .native_identity_key = std::nullopt});
     }
     for (const ConstDecl& constant : module.constants) {
         out.push_back({.name = constant.name,
                        .detail = constant.name + ": " + type_ref_text(constant.type_ref),
                        .location = constant.location,
-                       .kind = lsp_symbol_kind::Constant});
+                       .kind = lsp_symbol_kind::Constant,
+                       .native_identity_key = std::nullopt});
     }
     for (const FunctionDecl& fn : module.functions) {
         out.push_back({.name = fn.name,
                        .detail = function_detail(fn),
                        .location = fn.location,
-                       .kind = lsp_symbol_kind::Function});
+                       .kind = lsp_symbol_kind::Function,
+                       .native_identity_key = std::nullopt});
     }
     if (!include_native) {
         return out;
@@ -126,39 +141,45 @@ std::vector<Symbol> symbols_for_module(const ModuleAst& module, bool include_nat
         out.push_back({.name = type.name,
                        .detail = native_type_detail(module, type),
                        .location = type.location,
-                       .kind = lsp_symbol_kind::Struct});
+                       .kind = lsp_symbol_kind::Struct,
+                       .native_identity_key = native_identity_key(type.identity)});
     }
     for (const NativeValueDecl& value : module.native_values) {
         out.push_back({.name = value.name,
                        .detail = value.name + ": " + native_value_type_text(value),
                        .location = value.location,
-                       .kind = lsp_symbol_kind::Constant});
+                       .kind = lsp_symbol_kind::Constant,
+                       .native_identity_key = native_identity_key(value.identity)});
     }
     for (const NativeMacroDecl& macro : module.native_macros) {
         out.push_back(
             {.name = macro.name,
              .detail = native_macro_detail(macro),
              .location = macro.location,
-             .kind = macro.function_like ? lsp_symbol_kind::Namespace : lsp_symbol_kind::Constant});
+             .kind = macro.function_like ? lsp_symbol_kind::Namespace : lsp_symbol_kind::Constant,
+             .native_identity_key = native_identity_key(macro.identity)});
     }
     for (const NativeFunctionDecl& fn : module.native_functions) {
         out.push_back({.name = fn.name,
                        .detail = native_function_detail(fn),
                        .location = fn.location,
-                       .kind = lsp_symbol_kind::Function});
+                       .kind = lsp_symbol_kind::Function,
+                       .native_identity_key = native_identity_key(fn.identity)});
     }
     for (const ClassDecl& klass : module.native_classes) {
         out.push_back({.name = klass.name,
                        .detail = "native class " + klass.name,
                        .location = klass.location,
-                       .kind = lsp_symbol_kind::Class});
+                       .kind = lsp_symbol_kind::Class,
+                       .native_identity_key = native_identity_key(klass.identity)});
         for (const FunctionDecl& method : klass.methods) {
             out.push_back({.name = klass.name + "." + method.name,
                            .detail = function_detail(method),
                            .location = method.location,
                            .kind = is_constructor_method_name(method.name)
                                        ? lsp_symbol_kind::Constructor
-                                       : lsp_symbol_kind::Method});
+                                       : lsp_symbol_kind::Method,
+                           .native_identity_key = std::nullopt});
         }
     }
     return out;

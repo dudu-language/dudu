@@ -1,5 +1,6 @@
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_emit.hpp"
+#include "dudu/language_server_symbols.hpp"
 #include "dudu/native_header_parse.hpp"
 #include "dudu/native_headers.hpp"
 #include "dudu/parser.hpp"
@@ -32,6 +33,10 @@ void test_native_type_declaration_emission() {
     assert(cpp.find("#include \"SDL3/SDL.h\"") != std::string::npos);
     assert(cpp.find("SDL_Event event{};") != std::string::npos);
     assert(cpp.find("struct SDL_Event") == std::string::npos);
+}
+
+bool identity_key_ends_with(const std::optional<std::string>& key, const std::string& suffix) {
+    return key.has_value() && key->ends_with(suffix);
 }
 
 void test_native_header_type_scan(const std::filesystem::path& root) {
@@ -152,6 +157,33 @@ void test_native_header_type_scan(const std::filesystem::path& root) {
     assert(saw_function_identity);
     assert(saw_value_identity);
     assert(saw_macro_identity);
+    bool saw_lsp_type_identity = false;
+    bool saw_lsp_function_identity = false;
+    bool saw_lsp_value_identity = false;
+    bool saw_lsp_macro_identity = false;
+    for (const dudu::Symbol& symbol : dudu::symbols_for_module(module)) {
+        if (symbol.name == "DuduWidgetAlias") {
+            assert(identity_key_ends_with(symbol.native_identity_key,
+                                          "native_headers/simple_cpp.hpp::DuduWidgetAlias"));
+            saw_lsp_type_identity = true;
+        } else if (symbol.name == "dudu_native.add") {
+            assert(identity_key_ends_with(symbol.native_identity_key,
+                                          "native_headers/simple_cpp.hpp::dudu_native.add"));
+            saw_lsp_function_identity = true;
+        } else if (symbol.name == "DUDU_NATIVE_MAGIC") {
+            assert(symbol.native_identity_key == "path:DUDU_NATIVE_MAGIC" ||
+                   identity_key_ends_with(symbol.native_identity_key,
+                                          "native_headers/simple_c.h::DUDU_NATIVE_MAGIC"));
+            saw_lsp_value_identity = true;
+        } else if (symbol.name == "DUDU_NATIVE_CHECK") {
+            assert(symbol.native_identity_key == "path:DUDU_NATIVE_CHECK");
+            saw_lsp_macro_identity = true;
+        }
+    }
+    assert(saw_lsp_type_identity);
+    assert(saw_lsp_function_identity);
+    assert(saw_lsp_value_identity);
+    assert(saw_lsp_macro_identity);
     assert(std::filesystem::exists(config.build_dir / "dudu-header-cache"));
 }
 
