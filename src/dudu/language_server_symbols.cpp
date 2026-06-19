@@ -78,37 +78,39 @@ std::vector<Symbol> symbols_for_document(const Document& doc, bool include_nativ
             out.push_back({.name = klass.name,
                            .detail = "class " + klass.name,
                            .location = klass.location,
-                           .kind = 5});
+                           .kind = lsp_symbol_kind::Class});
             for (const FieldDecl& field : klass.fields) {
                 out.push_back({.name = field.name,
                                .detail = field.name + ": " + type_ref_text(field.type_ref),
                                .location = field.location,
-                               .kind = 8});
+                               .kind = lsp_symbol_kind::Field});
             }
             for (const FunctionDecl& method : klass.methods) {
                 out.push_back({.name = method.name,
                                .detail = function_detail(method),
                                .location = method.location,
-                               .kind = is_constructor_method_name(method.name) ? 9 : 6});
+                               .kind = is_constructor_method_name(method.name)
+                                           ? lsp_symbol_kind::Constructor
+                                           : lsp_symbol_kind::Method});
             }
         }
         for (const EnumDecl& en : module.enums) {
             out.push_back({.name = en.name,
                            .detail = "enum " + en.name,
                            .location = en.location,
-                           .kind = 10});
+                           .kind = lsp_symbol_kind::Enum});
         }
         for (const ConstDecl& constant : module.constants) {
             out.push_back({.name = constant.name,
                            .detail = constant.name + ": " + type_ref_text(constant.type_ref),
                            .location = constant.location,
-                           .kind = 14});
+                           .kind = lsp_symbol_kind::Constant});
         }
         for (const FunctionDecl& fn : module.functions) {
             out.push_back({.name = fn.name,
                            .detail = function_detail(fn),
                            .location = fn.location,
-                           .kind = 12});
+                           .kind = lsp_symbol_kind::Function});
         }
         if (!include_native) {
             return out;
@@ -120,36 +122,39 @@ std::vector<Symbol> symbols_for_document(const Document& doc, bool include_nativ
                                          ? "native type = " + native_type_alias_type_text(type)
                                          : "native type",
                            .location = type.location,
-                           .kind = 23});
+                           .kind = lsp_symbol_kind::Struct});
         }
         for (const NativeValueDecl& value : module.native_values) {
             out.push_back({.name = value.name,
                            .detail = value.name + ": " + native_value_type_text(value),
                            .location = value.location,
-                           .kind = 14});
+                           .kind = lsp_symbol_kind::Constant});
         }
         for (const NativeMacroDecl& macro : module.native_macros) {
             out.push_back({.name = macro.name,
                            .detail = native_macro_detail(macro),
                            .location = macro.location,
-                           .kind = macro.function_like ? 3 : 14});
+                           .kind = macro.function_like ? lsp_symbol_kind::Namespace
+                                                       : lsp_symbol_kind::Constant});
         }
         for (const NativeFunctionDecl& fn : module.native_functions) {
             out.push_back({.name = fn.name,
                            .detail = native_function_detail(fn),
                            .location = fn.location,
-                           .kind = 12});
+                           .kind = lsp_symbol_kind::Function});
         }
         for (const ClassDecl& klass : module.native_classes) {
             out.push_back({.name = klass.name,
                            .detail = "native class " + klass.name,
                            .location = klass.location,
-                           .kind = 5});
+                           .kind = lsp_symbol_kind::Class});
             for (const FunctionDecl& method : klass.methods) {
                 out.push_back({.name = klass.name + "." + method.name,
                                .detail = function_detail(method),
                                .location = method.location,
-                               .kind = is_constructor_method_name(method.name) ? 9 : 6});
+                               .kind = is_constructor_method_name(method.name)
+                                           ? lsp_symbol_kind::Constructor
+                                           : lsp_symbol_kind::Method});
             }
         }
     } catch (const std::exception&) {

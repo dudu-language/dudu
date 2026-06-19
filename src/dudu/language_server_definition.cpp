@@ -300,7 +300,7 @@ std::string definition_json(const Document& doc, const Json* params) {
     std::optional<Symbol> matched_symbol;
     for (const Symbol& symbol : symbols_for_document(doc)) {
         if (symbol_matches(symbol.name, word)) {
-            if (symbol.kind == 5) {
+            if (symbol.kind == lsp_symbol_kind::Class) {
                 matched_symbol = symbol;
                 break;
             }

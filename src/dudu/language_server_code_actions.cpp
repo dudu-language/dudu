@@ -103,7 +103,9 @@ std::optional<TextEdit> remove_line_edit(const Document& doc, int line) {
 }
 
 bool importable_symbol_kind(int kind) {
-    return kind == 5 || kind == 10 || kind == 12 || kind == 14 || kind == 23;
+    return kind == lsp_symbol_kind::Class || kind == lsp_symbol_kind::Enum ||
+           kind == lsp_symbol_kind::Function || kind == lsp_symbol_kind::Constant ||
+           kind == lsp_symbol_kind::Struct;
 }
 
 size_t import_insertion_line(const Document& doc, const ModuleAst& module) {

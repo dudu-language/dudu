@@ -28,7 +28,9 @@ enum class RenameScope {
 };
 
 bool renameable_symbol_kind(const int kind) {
-    return kind == 5 || kind == 6 || kind == 8 || kind == 10 || kind == 12 || kind == 14;
+    return kind == lsp_symbol_kind::Class || kind == lsp_symbol_kind::Method ||
+           kind == lsp_symbol_kind::Field || kind == lsp_symbol_kind::Enum ||
+           kind == lsp_symbol_kind::Function || kind == lsp_symbol_kind::Constant;
 }
 
 std::string symbol_range_key(const std::string& uri, const std::string& range) {

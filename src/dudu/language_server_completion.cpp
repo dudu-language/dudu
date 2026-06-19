@@ -340,7 +340,8 @@ std::string signature_help_json(const Document* doc, const Json* params) {
     }
     std::vector<std::string> signatures;
     for (const Symbol& symbol : symbols_for_document(*doc)) {
-        if (symbol_matches(symbol.name, call.name) && (symbol.kind == 12 || symbol.kind == 6)) {
+        if (symbol_matches(symbol.name, call.name) &&
+            (symbol.kind == lsp_symbol_kind::Function || symbol.kind == lsp_symbol_kind::Method)) {
             signatures.push_back(symbol.detail);
         }
     }
