@@ -2045,3 +2045,6 @@ push. They are not release packaging work.
    C++ escape type recognition now detects function types from structured
    `TypeRef` nodes instead of checking whether the raw callee spelling starts
    with `fn(`.
+   Fast validation now includes `scripts/check_ast_migration_guards.sh`, which
+   rejects reintroducing the old `statement_from_text` path or raw statement
+   semantic fields under `src/dudu`.
