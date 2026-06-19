@@ -1,0 +1,6 @@
+class Thing:
+    value: i32
+
+
+def bad(thing: Thing):
+    setattr(thing, "value", 42)

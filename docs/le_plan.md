@@ -1327,6 +1327,12 @@ push. They are not release packaging work.
    diagnostics. It must not preserve alternate syntax, hidden lowering, or
    partial semantic support for them.
 
+   Status: implemented for the documented unsupported Python surface. Negative
+   fixtures cover `lambda`, RHS/local `def`, ternary conditional expressions,
+   list/dict/set/generator comprehensions, `yield`, `with`, `eval`, `exec`,
+   `getattr`, `setattr`, and rejected OOP decorators, with diagnostics that name
+   the Dudu-shaped replacement where one exists.
+
 18. Delete AST Migration Fallbacks
 
    After each language form has structured parser, semantic, codegen,
@@ -1368,17 +1374,13 @@ push. They are not release packaging work.
    parsed again. Remove every compiler-internal instance unless it is an
    explicit native/C++ boundary or user-authored escape hatch.
 
-   Status: in progress. Body, generic, constructor, and native assignment
-   paths are being migrated from rendered string type pairs to parsed
-   `TypeRef` pairs. Constructor parameter checking no longer stores a duplicate
-   rendered type string beside `TypeRef`, and array shape inference no longer
-   stores duplicate rendered array or element type strings beside its inferred
-   `TypeRef` nodes. Native template binding no longer reparses expected/got
-   strings for its alias-aware path. Enum payload checking and operator
-   overload matching now use parsed expected-side `TypeRef` metadata for
-   assignment compatibility instead of rendered type strings. The remaining
-   compatibility callbacks and mirrors should be removed rather than normalized
-   into permanent API.
+   Status: complete for the migration-safety definition above. The codebase
+   audit and `scripts/check_ast_migration_guards.sh` show no compiler-internal
+   callback or public semantic API that accepts rendered Dudu source/type text
+   when structured `Stmt`, `Expr`, `TypeRef`, token, or symbol-table facts are
+   available. Remaining string use is confined to identifiers, literal/operator
+   spelling, diagnostics/display, formatter trivia, explicit `cpp(...)` escape
+   payloads, emitted C++, and explicitly named native C/C++ boundary metadata.
 
    LSP local completion now consumes `local_type_refs_before_cursor` directly
    and renders completion detail text at the UI boundary; the rendered
