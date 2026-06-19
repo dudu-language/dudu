@@ -78,8 +78,10 @@ Native single inheritance should require that the base layout is known.
 Status: Dudu parses Python-style base lists, validates base type names and
 duplicate bases, emits native classes as C++ public inheritance, orders base
 classes before derived classes in generated C++, and resolves inherited fields
-and methods for normal member access. Base constructor calls, `super`, and
-the deeper inheritance rules remain separate inheritance work.
+and methods for normal member access. Base constructor calls through
+`super.init(...)`, `super.method(...)`, virtual/abstract/override checking,
+strict multiple inheritance, virtual destructor policy, generic native bases,
+and current-class static access are implemented in the later sections below.
 
 ## Constructors
 
@@ -600,4 +602,5 @@ field declaration where possible.
   `native_imported_base`.
 - Generic Dudu-native base classes substitute type parameters during override
   checks.
-- Static fields use `static[T]`, and `class.name` works inside class scope.
+- Static fields use `static[T]`, `class.name` works inside class scope, and
+  `self.name` does not fall back to static fields.
