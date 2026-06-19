@@ -118,6 +118,10 @@ bool is_explicit_cast_to(const TypeRef& expected, const Expr& expr) {
                                normalize_cpp_type_artifacts_ref(expected));
 }
 
+bool is_numeric_literal_expr(const Expr& expr) {
+    return expr.kind == ExprKind::IntLiteral || expr.kind == ExprKind::FloatLiteral;
+}
+
 std::string simple_literal_type(const Expr& expr) {
     switch (expr.kind) {
     case ExprKind::BoolLiteral:
@@ -411,7 +415,7 @@ bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const Ty
            is_cpp_associated_type_binding(normalized_expected_ref, normalized_got_ref) ||
            (is_cstr_type(normalized_expected_ref) && is_string_type(normalized_got_ref) &&
             expr.kind == ExprKind::StringLiteral) ||
-           (is_numeric_type(normalized_expected_ref) && simple_literal_type(expr) == "number");
+           (is_numeric_type(normalized_expected_ref) && is_numeric_literal_expr(expr));
 }
 
 std::string display_type(const Expr& expr, const std::string& got) {

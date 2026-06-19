@@ -2008,3 +2008,5 @@ push. They are not release packaging work.
    literal compatibility, and normal structured type equivalence through
    `TypeRef` metadata first; rendered type equality is restricted to missing or
    explicit `Unknown` native-boundary nodes.
+   Numeric literal assignment compatibility now checks `ExprKind` directly
+   instead of comparing a rendered literal category string such as `number`.
