@@ -1158,10 +1158,12 @@ push. They are not release packaging work.
    Status: unaliased nested Dudu module imports such as
    `import vendor.helper` now resolve through their full dotted path for hover,
    go-to-definition, and member completion, matching the compiler's
-   Python-shaped module binding behavior. Rename is declaration-anchored for
-   now: it works for Dudu declarations across open and unopened workspace files,
-   but use-site-triggered rename is rejected until the LSP can prove symbol
-   identity well enough to avoid editing unrelated same-named locals.
+   Python-shaped module binding behavior. Rename is declaration-anchored across
+   open and unopened workspace files. Same-document unqualified call-site
+   rename is allowed when the call resolves to one renameable Dudu declaration
+   and no visible local type binding shadows it; ambiguous use-sites remain
+   rejected until symbol identity is strong enough to avoid editing unrelated
+   same-named locals.
 
 13. Project Driver Polish
 

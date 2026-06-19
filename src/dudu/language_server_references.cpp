@@ -1,11 +1,19 @@
 #include "dudu/language_server_references.hpp"
 
+#include "dudu/ast_expr.hpp"
+#include "dudu/ast_type.hpp"
 #include "dudu/language_server_json.hpp"
+#include "dudu/language_server_local_context.hpp"
 #include "dudu/language_server_navigation.hpp"
 #include "dudu/language_server_symbols.hpp"
+#include "dudu/parser.hpp"
 
+#include <algorithm>
 #include <filesystem>
+#include <functional>
 #include <map>
+#include <optional>
+#include <set>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -13,30 +21,127 @@
 namespace dudu {
 namespace {
 
-bool renameable_symbol_at(const Document& doc, const Json* params, const std::string& name) {
-    if (name.empty() || name.find('.') != std::string::npos) {
-        return false;
-    }
+bool renameable_symbol_kind(const int kind) {
+    return kind == 5 || kind == 6 || kind == 8 || kind == 10 || kind == 12 || kind == 14;
+}
+
+std::string symbol_range_key(const std::string& uri, const std::string& range) {
+    return uri + "|" + range;
+}
+
+std::string symbol_range_key(const Symbol& symbol, const Document& doc) {
+    const int line = std::max(0, symbol.location.line - 1);
+    const int column = std::max(0, symbol.location.column - 1);
+    return symbol_range_key(
+        uri_for_location(symbol.location, doc),
+        range_json(line, column, column + static_cast<int>(symbol.name.size())));
+}
+
+bool position_contains_name(const Json* params, const std::string& name,
+                            const SourceLocation& location) {
     const LspPosition position = lsp_position(params);
     const int target_line = position.line + 1;
     const int target_column = position.character + 1;
-    const auto contains = [&](const SourceLocation& location) {
-        if (location.line != target_line || location.column <= 0) {
-            return false;
-        }
-        const int start = location.column;
-        const int end = start + static_cast<int>(name.size());
-        return target_column >= start && target_column <= end;
-    };
+    if (location.line != target_line || location.column <= 0) {
+        return false;
+    }
+    const int start = location.column;
+    const int end = start + static_cast<int>(name.size());
+    return target_column >= start && target_column <= end;
+}
+
+std::optional<Symbol> declaration_at_position(const Document& doc, const Json* params,
+                                              const std::string& name) {
     for (const Symbol& symbol : symbols_for_document(doc)) {
-        if (symbol.name == name && std::filesystem::path(symbol.location.file) == doc.path &&
-            contains(symbol.location) &&
-            (symbol.kind == 5 || symbol.kind == 6 || symbol.kind == 8 || symbol.kind == 10 ||
-             symbol.kind == 12 || symbol.kind == 14)) {
-            return true;
+        if (symbol.name == name && renameable_symbol_kind(symbol.kind) &&
+            std::filesystem::path(symbol.location.file) == doc.path &&
+            position_contains_name(params, name, symbol.location)) {
+            return symbol;
         }
     }
-    return false;
+    return std::nullopt;
+}
+
+std::optional<Symbol> unique_document_declaration_for_references(const Document& doc,
+                                                                 const std::string& name) {
+    if (name.empty() || name.find('.') != std::string::npos) {
+        return std::nullopt;
+    }
+    std::set<std::string> reference_ranges;
+    for (const ReferenceLocation& location : references_in(doc, name)) {
+        reference_ranges.insert(symbol_range_key(location.uri, location.range));
+    }
+    std::optional<Symbol> declaration;
+    for (const Symbol& symbol : symbols_for_document(doc)) {
+        if (symbol.name != name || !renameable_symbol_kind(symbol.kind)) {
+            continue;
+        }
+        if (!reference_ranges.contains(symbol_range_key(symbol, doc))) {
+            continue;
+        }
+        if (declaration.has_value()) {
+            return std::nullopt;
+        }
+        declaration = symbol;
+    }
+    return declaration;
+}
+
+bool selected_call_callee(const Document& doc, const Json* params, const std::string& name) {
+    if (name.empty()) {
+        return false;
+    }
+    bool matched = false;
+    const auto visit_expr = [&](const Expr& expr) {
+        if (matched || (expr.kind != ExprKind::Call && expr.kind != ExprKind::TemplateCall) ||
+            expr.callee.size() != 1) {
+            return;
+        }
+        const Expr& callee = expr.callee.front();
+        if (callee.kind != ExprKind::Name || callee.name != name) {
+            return;
+        }
+        if (position_contains_name(params, name, callee.location)) {
+            matched = true;
+        }
+    };
+    const std::function<void(const std::vector<Stmt>&)> visit_stmts =
+        [&](const std::vector<Stmt>& statements) {
+            for (const Stmt& stmt : statements) {
+                visit_stmt_tree_expressions(stmt, visit_expr);
+            }
+        };
+    try {
+        const ModuleAst module = parse_source(doc.text, doc.path);
+        for (const ClassDecl& klass : module.classes) {
+            for (const FunctionDecl& method : klass.methods) {
+                visit_stmts(method.statements);
+            }
+        }
+        for (const FunctionDecl& fn : module.functions) {
+            visit_stmts(fn.statements);
+        }
+    } catch (const std::exception&) {
+        return false;
+    }
+    return matched;
+}
+
+bool renameable_symbol_at(const Document& doc, const Json* params, const std::string& name,
+                          const std::map<std::string, Document>& workspace) {
+    (void)workspace;
+    if (declaration_at_position(doc, params, name).has_value()) {
+        return true;
+    }
+    const std::optional<Symbol> declaration = unique_document_declaration_for_references(doc, name);
+    if (!declaration.has_value()) {
+        return false;
+    }
+    if (has_type_ref(local_type_ref_before_cursor(doc, name, params))) {
+        return false;
+    }
+    return ast_symbol_at(doc, params).value_or("") == name &&
+           selected_call_callee(doc, params, name);
 }
 
 } // namespace
@@ -69,7 +174,7 @@ std::string rename_json(const Document& doc, const Json* params,
     const std::string old_name = ast_symbol_at(doc, params).value_or("");
     const std::string new_name =
         params == nullptr ? std::string{} : string_value(params->get("newName"));
-    if (!valid_identifier(new_name) || !renameable_symbol_at(doc, params, old_name)) {
+    if (!valid_identifier(new_name) || !renameable_symbol_at(doc, params, old_name, workspace)) {
         return "null";
     }
     std::ostringstream out;

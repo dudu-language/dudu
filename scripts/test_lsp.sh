@@ -1563,7 +1563,15 @@ assert ast_rename_starts == {
 }
 
 ast_use_rename = next(item for item in responses if item.get("id") == 62)
-assert ast_use_rename["result"] is None
+ast_use_rename_edits = ast_use_rename["result"]["changes"][rename_ast_uri]
+ast_use_rename_starts = {
+    (item["range"]["start"]["line"], item["range"]["start"]["character"], item["newText"])
+    for item in ast_use_rename_edits
+}
+assert ast_use_rename_starts == {
+    (0, 4, "callsite_rename"),
+    (6, 11, "callsite_rename"),
+}
 
 ast_string_references = next(item for item in responses if item.get("id") == 56)
 assert ast_string_references["result"] == []

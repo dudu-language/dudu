@@ -83,8 +83,9 @@
 
 ### Changed
 
-- Made LSP rename declaration-anchored so use-site requests do not rename
-  unrelated same-spelled locals before full symbol-identity rename is available.
+- Made LSP rename declaration-anchored across the workspace and allowed
+  same-document unqualified call-site rename when the call resolves to one
+  renameable Dudu declaration.
 - Added project-driver output for successful `dudu check`, documented
   `dudu bench` in help, and made `dudu bench --quiet`/`--help` behave as
   project-driver flags while preserving benchmark arguments after `--`.
