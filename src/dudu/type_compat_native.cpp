@@ -44,68 +44,6 @@ bool native_type_head_ends_with_name(const TypeRef& type, const std::string& nam
     return spelling == name || spelling.ends_with("." + name) || spelling.ends_with("::" + name);
 }
 
-size_t matching_angle(const std::string& text, const size_t open) {
-    int depth = 0;
-    for (size_t i = open; i < text.size(); ++i) {
-        if (text[i] == '<') {
-            ++depth;
-        } else if (text[i] == '>') {
-            --depth;
-            if (depth == 0) {
-                return i;
-            }
-        }
-    }
-    return std::string::npos;
-}
-
-std::string normalize_type_traits(std::string type) {
-    type = trim_copy(std::move(type));
-    const std::vector<std::string> prefixes = {"typename __decay_and_strip<",
-                                               "typename std.remove_reference<",
-                                               "typename std::remove_reference<"};
-    size_t search_start = 0;
-    while (search_start < type.size()) {
-        size_t pos = std::string::npos;
-        std::string prefix;
-        for (const std::string& candidate : prefixes) {
-            const size_t candidate_pos = type.find(candidate, search_start);
-            if (candidate_pos != std::string::npos &&
-                (pos == std::string::npos || candidate_pos < pos)) {
-                pos = candidate_pos;
-                prefix = candidate;
-            }
-        }
-        if (pos == std::string::npos) {
-            break;
-        }
-        const size_t open = pos + prefix.size() - 1;
-        const size_t close = matching_angle(type, open);
-        if (close == std::string::npos) {
-            return type;
-        }
-        size_t suffix_end = close + 1;
-        std::string suffix;
-        if (type.compare(suffix_end, 7, ".__type") == 0) {
-            suffix = ".__type";
-        } else if (type.compare(suffix_end, 8, "::__type") == 0) {
-            suffix = "::__type";
-        } else if (type.compare(suffix_end, 5, ".type") == 0) {
-            suffix = ".type";
-        } else if (type.compare(suffix_end, 6, "::type") == 0) {
-            suffix = "::type";
-        } else {
-            search_start = close + 1;
-            continue;
-        }
-        suffix_end += suffix.size();
-        const std::string inner = trim_copy(type.substr(pos + prefix.size(), close - open - 1));
-        type.replace(pos, suffix_end - pos, inner);
-        search_start = pos + inner.size();
-    }
-    return trim_copy(type);
-}
-
 TypeRef normalize_tuple_element(const TypeRef& type) {
     if (type.kind == TypeKind::Reference && type.children.size() == 1) {
         TypeRef out = type;
@@ -254,15 +192,6 @@ TypeRef normalize_cpp_type_artifacts_ref(const TypeRef& type) {
 std::string normalize_cpp_type_artifacts(const TypeRef& type) {
     return strip_cpp_pointer_cv_artifacts(
         substitute_type_ref_text(normalize_cpp_type_artifacts_ref(type), {}));
-}
-
-std::string normalize_cpp_type_artifacts(std::string type) {
-    type = normalize_type_traits(std::move(type));
-    const TypeRef parsed = parse_type_text(type);
-    if (parsed.kind == TypeKind::Unknown) {
-        return strip_cpp_pointer_cv_artifacts(normalize_cpp_primitive_type(type));
-    }
-    return normalize_cpp_type_artifacts(parsed);
 }
 
 bool native_associated_type_assignment_allowed(const TypeRef& expected, const TypeRef& got) {

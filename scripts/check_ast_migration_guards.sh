@@ -30,6 +30,7 @@ forbidden=(
     "lower_cpp_type\\(std::string"
     "is_integer_type\\(type_ref_head_name"
     "bool is_integer_type\\(std::string"
+    "normalize_cpp_type_artifacts\\(std::string"
 )
 
 for pattern in "${forbidden[@]}"; do
