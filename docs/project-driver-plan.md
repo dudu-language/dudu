@@ -388,6 +388,9 @@ Current implementation reality:
   command lines stay behind `--verbose`, cached direct builds print an explicit
   `up-to-date` outcome, and `--quiet` suppresses project-driver progress output
   for scripts.
+- Delegated `[test]` and `[bench]` commands, plus fallback `scripts/test.sh`
+  and `scripts/bench.sh`, execute from the manifest directory so running Dudu
+  from a project subdirectory does not change command-relative paths.
 
 The next build-driver work should close that gap without changing the front
 door: users should still type `dudu build`, `dudu run`, and `dudu test`.

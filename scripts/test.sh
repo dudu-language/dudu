@@ -314,6 +314,13 @@ grep -q "inline constexpr bool DEBUG = false;" "$repo_root/build/package_build_o
     "$repo_root/build/duc" test -o "$repo_root/build/project_mode_tests"
 )
 (
+    cd "$repo_root/tests/fixtures/project_delegated_command/subdir"
+    "$repo_root/build/dudu" bench >"$repo_root/build/project_delegated_bench.out"
+    "$repo_root/build/dudu" test >"$repo_root/build/project_delegated_test.out"
+)
+grep -q "bench-from-project" "$repo_root/build/project_delegated_bench.out"
+grep -q "test-from-project" "$repo_root/build/project_delegated_test.out"
+(
     cd "$repo_root/tests/fixtures/project_targets"
     "$repo_root/build/dudu" check tool
     "$repo_root/build/dudu" build tool 2>"$repo_root/build/project_targets_build.err"

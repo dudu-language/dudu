@@ -97,6 +97,8 @@
 
 ### Fixed
 
+- Fixed delegated `[test]` and `[bench]` project commands so they run from the
+  manifest directory, including when invoked from a project subdirectory.
 - Sped up native header AST parsing so standard-library imports no longer hang
   `test_codegen_shapes.sh`.
 - Added explicit diagnostics for selective Dudu imports that collide with local

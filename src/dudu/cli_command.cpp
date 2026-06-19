@@ -97,13 +97,17 @@ void write_text_output(const std::optional<std::filesystem::path>& path, const s
 int run_project_benchmarks(const CliOptions& options) {
     const ProjectConfig config = parse_project_config(build_config_path(options.input));
     std::string command = config.bench_command;
-    if (command.empty() && std::filesystem::exists("scripts/bench.sh")) {
+    if (command.empty() && std::filesystem::exists(project_path(config, "scripts/bench.sh"))) {
         command = "./scripts/bench.sh";
     }
     if (command.empty()) {
         fail("missing [bench] command and scripts/bench.sh");
     }
-    return std::system(append_command_args(command, options.command_args).c_str()) == 0 ? 0 : 1;
+    return std::system(
+               project_shell_command(config, append_command_args(command, options.command_args))
+                   .c_str()) == 0
+               ? 0
+               : 1;
 }
 
 ProjectConfig config_for_input(const std::filesystem::path& input) {

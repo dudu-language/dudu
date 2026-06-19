@@ -147,12 +147,12 @@ bool has_project_test_script(const ProjectConfig& config) {
 int run_delegated_project_tests(const ProjectConfig& config) {
     std::string command = config.test_command;
     if (command.empty() && has_project_test_script(config)) {
-        command = shell_quote_path(project_path(config, "scripts/test.sh"));
+        command = "./scripts/test.sh";
     }
     if (command.empty()) {
         fail("missing test entry and no [test] command or scripts/test.sh");
     }
-    return std::system(command.c_str()) == 0 ? 0 : 1;
+    return std::system(project_shell_command(config, command).c_str()) == 0 ? 0 : 1;
 }
 
 int run_user_owned_cmake_project_tests(const ProjectConfig& config,

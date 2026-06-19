@@ -225,6 +225,12 @@ std::string append_command_args(std::string command, const std::vector<std::stri
     return command;
 }
 
+std::string project_shell_command(const ProjectConfig& config, const std::string& command) {
+    const std::filesystem::path root =
+        config.project_dir.empty() ? std::filesystem::current_path() : config.project_dir;
+    return "cd " + shell_quote_path(root) + " && " + command;
+}
+
 int run_shell_command(const std::string& command, const std::filesystem::path& log_path) {
     return std::system((command + " > " + shell_quote_path(log_path) + " 2>&1").c_str());
 }

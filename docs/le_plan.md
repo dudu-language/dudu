@@ -1250,6 +1250,9 @@ push. They are not release packaging work.
    lists are relative to the directory containing `dudu.toml`. Explicit local
    imports remain source-file relative. Invoking `dudu` from a different working
    directory must not change behavior when it finds the same manifest.
+   Delegated `[test]` and `[bench]` commands, plus fallback project scripts,
+   now run from the manifest directory so project-relative shell commands do not
+   accidentally depend on the caller's current directory.
 
 14. Freestanding And Embedded Assert Policy
 

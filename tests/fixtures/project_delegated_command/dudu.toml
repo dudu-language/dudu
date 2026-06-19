@@ -1,0 +1,7 @@
+name = "project_delegated_command"
+
+[bench]
+command = "test -f marker.txt && printf bench-from-project"
+
+[test]
+command = "test -f marker.txt && printf test-from-project"
