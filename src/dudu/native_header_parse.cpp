@@ -234,7 +234,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
             const TypeRef type_ref =
                 useful_alias ? parse_native_type_text(lowered_type, decl_location) : TypeRef{};
             scan.types.push_back({.name = name,
-                                  .type = useful_alias ? lowered_type : "",
+                                  .native_spelling = useful_alias ? lowered_type : "",
                                   .type_ref = type_ref,
                                   .location = decl_location});
         }
@@ -245,7 +245,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         const std::string name = class_name(scan, namespaces, classes, raw_name);
         if (!starts_with(raw_name, "__")) {
             scan.types.push_back(
-                {.name = name, .type = "", .type_ref = {}, .location = decl_location});
+                {.name = name, .native_spelling = "", .type_ref = {}, .location = decl_location});
             if (line.find(" definition") != std::string::npos) {
                 ClassDecl klass;
                 klass.name = name;
@@ -259,7 +259,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         const std::string name = match[1].str();
         if (!starts_with(name, "__")) {
             scan.types.push_back(
-                {.name = name, .type = "", .type_ref = {}, .location = decl_location});
+                {.name = name, .native_spelling = "", .type_ref = {}, .location = decl_location});
             enums.push_back({depth, name});
         }
     } else if (line.find("FunctionDecl") != std::string::npos &&
@@ -274,14 +274,16 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         if (!templates.empty()) {
             fn.template_params = templates.back().params;
         }
-        fn.params = qualify_scoped_types(scan, namespaces, signature_params(signature));
-        fn.return_type = qualify_scoped_type(scan, namespaces, signature_return_type(signature));
-        fn.param_type_refs.reserve(fn.params.size());
-        for (const std::string& param : fn.params) {
+        fn.param_native_spellings =
+            qualify_scoped_types(scan, namespaces, signature_params(signature));
+        fn.return_native_spelling =
+            qualify_scoped_type(scan, namespaces, signature_return_type(signature));
+        fn.param_type_refs.reserve(fn.param_native_spellings.size());
+        for (const std::string& param : fn.param_native_spellings) {
             fn.param_type_refs.push_back(parse_native_type_text(param, decl_location));
         }
-        fn.return_type_ref = parse_native_type_text(fn.return_type, decl_location);
-        fn.min_params = static_cast<int>(fn.params.size());
+        fn.return_type_ref = parse_native_type_text(fn.return_native_spelling, decl_location);
+        fn.min_params = static_cast<int>(fn.param_native_spellings.size());
         fn.variadic = signature.find("...") != std::string::npos;
         fn.location = decl_location;
         scan.functions.push_back(std::move(fn));
@@ -342,7 +344,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                                          ? dudu_type(match[2].str())
                                          : (enums.empty() ? "i32" : enums.back().second);
             scan.values.push_back({.name = name,
-                                   .type = type,
+                                   .native_spelling = type,
                                    .type_ref = parse_native_type_text(type, decl_location),
                                    .enum_constant = true,
                                    .location = decl_location});
@@ -354,7 +356,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         if (!starts_with(name, "__")) {
             const std::string type = dudu_type(match[2].str());
             scan.values.push_back({.name = name,
-                                   .type = type,
+                                   .native_spelling = type,
                                    .type_ref = parse_native_type_text(type, decl_location),
                                    .location = decl_location});
         }
@@ -426,10 +428,11 @@ void parse_macro_dump(NativeHeaderScan& scan, const std::string& dump,
             scan.functions.push_back(
                 {.name = name,
                  .template_params = {},
-                 .params = std::vector<std::string>(static_cast<size_t>(params.arity), "auto"),
+                 .param_native_spellings =
+                     std::vector<std::string>(static_cast<size_t>(params.arity), "auto"),
                  .param_type_refs = std::vector<TypeRef>(static_cast<size_t>(params.arity),
                                                          named_type_ref("auto", location)),
-                 .return_type = "auto",
+                 .return_native_spelling = "auto",
                  .return_type_ref = named_type_ref("auto", location),
                  .min_params = params.arity,
                  .variadic = params.variadic,
@@ -441,7 +444,7 @@ void parse_macro_dump(NativeHeaderScan& scan, const std::string& dump,
             }
             scan.macros.push_back({.name = name, .function_like = false, .location = location});
             scan.values.push_back({.name = name,
-                                   .type = "auto",
+                                   .native_spelling = "auto",
                                    .type_ref = named_type_ref("auto", location),
                                    .location = location});
         }

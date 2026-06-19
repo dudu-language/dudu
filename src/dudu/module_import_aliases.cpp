@@ -18,8 +18,10 @@ TypeRef module_qualified_type_ref(const std::string& prefix, const std::string& 
 
 void add_module_type_alias(ModuleAst& module, const std::string& prefix, const std::string& name,
                            const TypeRef& type, const SourceLocation& location) {
-    module.native_types.push_back(
-        {.name = prefix + "." + name, .type = "", .type_ref = type, .location = location});
+    module.native_types.push_back({.name = prefix + "." + name,
+                                   .native_spelling = "",
+                                   .type_ref = type,
+                                   .location = location});
 }
 
 std::map<std::string, TypeRef> qualified_type_substitutions(const ModuleAst& dependency,
@@ -62,7 +64,7 @@ std::map<std::string, TypeRef> selective_type_substitutions(const ModuleAst& dep
     }
     for (const NativeTypeDecl& type : dependency.native_types) {
         if (type.name.find('.') == std::string::npos &&
-            (has_type_ref(type.type_ref) || !type.type.empty())) {
+            (has_type_ref(type.type_ref) || !type.native_spelling.empty())) {
             out[type.name] = native_type_alias_type_ref(type);
         }
     }
@@ -148,7 +150,7 @@ void add_qualified_module_symbols(ModuleAst& module, const ModuleAst& dependency
     for (const ConstDecl& constant : dependency.constants) {
         const TypeRef value_type = substitute_type_ref(constant.type_ref, type_substitutions);
         module.native_values.push_back({.name = prefix + "." + constant.name,
-                                        .type = "",
+                                        .native_spelling = "",
                                         .type_ref = value_type,
                                         .location = import.location});
     }
@@ -185,7 +187,7 @@ void add_selective_module_symbol(ModuleAst& module, const ModuleAst& dependency,
         if (alias.name == import.imported_name) {
             const TypeRef alias_type = substitute_type_ref(alias.type_ref, type_substitutions);
             module.native_types.push_back({.name = exposed_name,
-                                           .type = "",
+                                           .native_spelling = "",
                                            .type_ref = alias_type,
                                            .location = import.location});
             return;
@@ -194,7 +196,7 @@ void add_selective_module_symbol(ModuleAst& module, const ModuleAst& dependency,
     for (const EnumDecl& en : dependency.enums) {
         if (en.name == import.imported_name) {
             module.native_types.push_back({.name = exposed_name,
-                                           .type = "",
+                                           .native_spelling = "",
                                            .type_ref = module_qualified_type_ref(
                                                import.module_path, en.name, import.location),
                                            .location = import.location});
@@ -208,7 +210,7 @@ void add_selective_module_symbol(ModuleAst& module, const ModuleAst& dependency,
     for (const ClassDecl& klass : dependency.classes) {
         if (klass.name == import.imported_name) {
             module.native_types.push_back({.name = exposed_name,
-                                           .type = "",
+                                           .native_spelling = "",
                                            .type_ref = module_qualified_type_ref(
                                                import.module_path, klass.name, import.location),
                                            .location = import.location});
@@ -227,7 +229,7 @@ void add_selective_module_symbol(ModuleAst& module, const ModuleAst& dependency,
         if (constant.name == import.imported_name) {
             const TypeRef value_type = substitute_type_ref(constant.type_ref, type_substitutions);
             module.native_values.push_back({.name = exposed_name,
-                                            .type = "",
+                                            .native_spelling = "",
                                             .type_ref = value_type,
                                             .location = import.location});
             return;

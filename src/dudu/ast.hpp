@@ -219,14 +219,14 @@ struct TypeAliasDecl {
 
 struct NativeTypeDecl {
     std::string name;
-    std::string type;
+    std::string native_spelling;
     TypeRef type_ref;
     SourceLocation location;
 };
 
 struct NativeValueDecl {
     std::string name;
-    std::string type;
+    std::string native_spelling;
     TypeRef type_ref;
     bool enum_constant = false;
     SourceLocation location;
@@ -235,9 +235,9 @@ struct NativeValueDecl {
 struct NativeFunctionDecl {
     std::string name;
     std::vector<std::string> template_params;
-    std::vector<std::string> params;
+    std::vector<std::string> param_native_spellings;
     std::vector<TypeRef> param_type_refs;
-    std::string return_type;
+    std::string return_native_spelling;
     TypeRef return_type_ref;
     int min_params = -1;
     bool variadic = false;

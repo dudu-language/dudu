@@ -322,9 +322,9 @@ void test_native_template_binding_resolves_alias_type_refs() {
     assert(dudu::substitute_type_ref_text(bindings.at("T"), {}) == "f32");
 
     bindings.clear();
-    assert(dudu::bind_native_template_type_ast(dudu::parse_type_text("Pair[T, T]"),
-                                               dudu::parse_type_text("Pair[struct sqlite3, sqlite3]"),
-                                               bindings));
+    assert(dudu::bind_native_template_type_ast(
+        dudu::parse_type_text("Pair[T, T]"), dudu::parse_type_text("Pair[struct sqlite3, sqlite3]"),
+        bindings));
     assert(bindings.at("T").kind == dudu::TypeKind::Named);
     assert(bindings.at("T").name == "struct sqlite3");
 }
@@ -334,8 +334,7 @@ void test_bound_native_template_pack_substitution_uses_type_refs() {
     signature.template_params = {"T"};
     signature.variadic = true;
     signature.min_params = 0;
-    dudu::TypeRef pack_param =
-        dudu::pack_expansion_type_ref(dudu::parse_type_text("T"), {});
+    dudu::TypeRef pack_param = dudu::pack_expansion_type_ref(dudu::parse_type_text("T"), {});
     dudu::set_signature_param_types(signature, {pack_param});
     dudu::set_signature_return_type(signature, dudu::parse_type_text("tuple[T]"));
 
@@ -784,19 +783,19 @@ void test_native_semantic_tokens() {
                            "native_semantic_tokens.dd");
     dudu::ModuleAst native_symbols = module;
     native_symbols.native_types.push_back({.name = "DuduNativeEvent",
-                                           .type = "DuduNativeEvent",
+                                           .native_spelling = "DuduNativeEvent",
                                            .type_ref = dudu::parse_type_text("DuduNativeEvent"),
                                            .location = {}});
     native_symbols.native_values.push_back({.name = "DUDU_NATIVE_MAGIC",
-                                            .type = "i32",
+                                            .native_spelling = "i32",
                                             .type_ref = dudu::parse_type_text("i32"),
                                             .location = {}});
     native_symbols.native_functions.push_back(
         {.name = "dudu_native_add",
          .template_params = {},
-         .params = {"i32", "i32"},
+         .param_native_spellings = {"i32", "i32"},
          .param_type_refs = {dudu::parse_type_text("i32"), dudu::parse_type_text("i32")},
-         .return_type = "i32",
+         .return_native_spelling = "i32",
          .return_type_ref = dudu::parse_type_text("i32"),
          .location = {}});
     native_symbols.native_macros.push_back(
@@ -1396,8 +1395,7 @@ void test_type_ast_shape() {
     assert(dudu::lower_cpp_type("dict[str, list[fn(i32) -> bool]]") ==
            "std::unordered_map<std::string, "
            "std::vector<std::add_pointer_t<bool(int32_t)>>>");
-    assert(dudu::lower_cpp_type("std.function[fn(i32) -> bool]") ==
-           "std::function<bool(int32_t)>");
+    assert(dudu::lower_cpp_type("std.function[fn(i32) -> bool]") == "std::function<bool(int32_t)>");
     assert(dudu::lower_cpp_type("Box[list[i32]]") == "Box<std::vector<int32_t>>");
     assert(dudu::lower_cpp_type("array[Box[list[i32]]][3]") ==
            "std::array<Box<std::vector<int32_t>>, 3>");
@@ -1639,12 +1637,12 @@ void test_member_candidate_types_use_type_refs() {
                                                  .location = {}});
     module.native_types.push_back(
         dudu::NativeTypeDecl{.name = "NativeView",
-                             .type = "",
+                             .native_spelling = "",
                              .type_ref = dudu::named_type_ref("NativeCamera"),
                              .location = {}});
     module.native_types.push_back(
         dudu::NativeTypeDecl{.name = "TaggedView",
-                             .type = "",
+                             .native_spelling = "",
                              .type_ref = dudu::named_type_ref("struct NativeTaggedCamera"),
                              .location = {}});
 

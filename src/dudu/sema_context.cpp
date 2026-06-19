@@ -313,7 +313,7 @@ Symbols collect_symbols(const ModuleAst& module) {
         symbols.types.insert(type.name);
         symbols.native_types.insert(type.name);
         add_native_path_prefix(symbols, type.name);
-        if ((has_type_ref(type.type_ref) || !type.type.empty()) &&
+        if ((has_type_ref(type.type_ref) || !type.native_spelling.empty()) &&
             !symbols.alias_type_refs.contains(type.name)) {
             symbols.alias_type_refs[type.name] = native_type_alias_type_ref(type);
         }

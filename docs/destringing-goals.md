@@ -10,6 +10,29 @@ where practical, and remove old paths instead of preserving compatibility.
 Dudu is unreleased, so accidental accepted syntax and prototype internals should
 be deleted.
 
+## Meta Goal
+
+Use this as the execution goal for the whole destringing slice:
+
+```text
+Execute Coding/GameDev/dudu/docs/destringing-goals.md in order until all six
+goals are complete. Treat this as the top-priority architecture slice of
+Coding/GameDev/dudu/docs/le_plan.md: get Dudu off raw source/string semantics
+and onto structured AST, semantic facts, module metadata, and explicitly named
+native-boundary metadata. Do not preserve compatibility syntax or fallback
+compiler paths; Dudu has no released users. Strings are allowed only for
+identifiers, literal values, operator spellings, source display, diagnostics,
+formatter trivia, explicit cpp(...) escape payloads, emitted C++, and native
+C/C++ boundary metadata whose field names make that boundary explicit.
+
+For each goal, delete the old string path, add focused guards/tests that prevent
+it from coming back, keep validation fast, commit and push stable green
+milestones, and update this document when implementation discoveries tighten the
+spec. Avoid getting stuck behind one slow or hanging validation case; isolate
+slow tests from the fast loop and keep moving on the architectural goal. When
+all six goals are complete, resume Coding/GameDev/dudu/docs/le_plan.md.
+```
+
 ## Goal 1: Lock Statement AST To Structured Nodes
 
 Objective:
@@ -141,6 +164,19 @@ Definition of done:
   clearly named native-boundary helpers
 - tests cover direct imports, aliased imports, typedefs, namespaces with same
   tail names, and inline namespace artifacts
+
+Status: in progress. Native declaration string fields have been renamed to
+make the boundary explicit: `NativeTypeDecl::native_spelling`,
+`NativeValueDecl::native_spelling`,
+`NativeFunctionDecl::param_native_spellings`, and
+`NativeFunctionDecl::return_native_spelling`. Call sites now use structured
+`TypeRef` metadata first and render native display/detail text through the
+native declaration accessors. The AST migration guard rejects reintroducing the
+old ambiguous native declaration fields `type`, `params`, and `return_type`.
+Remaining work is the harder identity cleanup: ordinary compatibility should
+stop leaning on raw spelling comparisons when structured/native identity facts
+exist, and suffix-name native heuristics should either be replaced or isolated
+behind clearly named native-boundary helpers.
 
 ## Goal 5: Delete String Fallback APIs And Add Final Guards
 

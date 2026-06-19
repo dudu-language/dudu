@@ -44,3 +44,21 @@ if rg -n "std::string text;" "$repo_root/src/dudu/ast.hpp"; then
     echo "raw text payload fields do not belong in the core Dudu AST" >&2
     exit 1
 fi
+
+awk '
+    /struct Native(Type|Value|Function)Decl/ { in_native = 1 }
+    in_native && /std::string type;/ {
+        print FILENAME ":" FNR ": native declarations must use native_spelling"
+        bad = 1
+    }
+    in_native && /std::vector<std::string> params;/ {
+        print FILENAME ":" FNR ": native functions must use param_native_spellings"
+        bad = 1
+    }
+    in_native && /std::string return_type;/ {
+        print FILENAME ":" FNR ": native functions must use return_native_spelling"
+        bad = 1
+    }
+    in_native && /^};/ { in_native = 0 }
+    END { exit bad ? 1 : 0 }
+' "$repo_root/src/dudu/ast.hpp"

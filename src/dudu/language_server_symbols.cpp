@@ -114,7 +114,7 @@ std::vector<Symbol> symbols_for_document(const Document& doc, bool include_nativ
             return out;
         }
         for (const NativeTypeDecl& type : module.native_types) {
-            const bool alias_type = has_type_ref(type.type_ref) || !type.type.empty();
+            const bool alias_type = has_type_ref(type.type_ref) || !type.native_spelling.empty();
             out.push_back({.name = type.name,
                            .detail = alias_type
                                          ? "native type = " + native_type_alias_type_text(type)

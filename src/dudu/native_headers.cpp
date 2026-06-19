@@ -252,8 +252,8 @@ std::vector<NativeTypeDecl> prefixed_type_names(const std::vector<NativeTypeDecl
         if (!starts_with(item.name, prefix + ".")) {
             item.name = prefix + "." + item.name;
         }
-        if (item.type.empty()) {
-            item.type = original;
+        if (item.native_spelling.empty()) {
+            item.native_spelling = original;
             item.type_ref = named_type_ref(original, item.location);
         }
         out.push_back(std::move(item));

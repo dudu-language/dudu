@@ -44,8 +44,9 @@ proper phase instead of adding more cross-phase patching.
 
 Destringing sequence: [Destringing Goals](destringing-goals.md).
 
-This is the next architecture priority. Dudu must stop treating raw statement
-text as semantic data.
+This is the next architecture priority. Execute the meta goal in
+[Destringing Goals](destringing-goals.md) before continuing the rest of this
+roadmap. Dudu must stop treating raw statement text as semantic data.
 
 The clean compiler split is:
 
@@ -125,6 +126,16 @@ interfaces:
 The current merged-output model is a compatibility backend, not the long-term
 shape of the compiler. A real AST, module graph, symbol/export model, and CMake
 backend are the path to clean separate-file output.
+
+## Website And Public Face
+
+Website plan: [Website Plan](website-plan.md).
+
+Dudu should have a GitHub Pages site for `dudulang.org`. The site should make
+the project understandable and memorable without pretending the compiler is more
+finished than it is. The public tone can be satirical and brown/poo-themed as a
+parody of modern language marketing, but the language docs, install commands,
+examples, and roadmap must stay technically honest.
 
 ## Diagnostic And Lint Cleanup
 
@@ -1662,14 +1673,16 @@ push. They are not release packaging work.
    Match checking no longer accepts an expression-inference callback; match
    subjects and guards now use the normal structured expression inference path
    directly, leaving only the recursive block-check hook for nested case bodies.
-   Native function signatures now expose structured accessor helpers for
-   parameter and return `TypeRef`s plus rendered display text. Symbol
-   collection, native function deduplication, and LSP symbol details use those
-   accessors instead of open-coding `NativeFunctionDecl::params` /
-   `return_type` fallback logic.
+   Native function declarations now name imported spelling fields explicitly:
+   `param_native_spellings` and `return_native_spelling`. They also expose
+   structured accessor helpers for parameter and return `TypeRef`s plus
+   rendered display text. Symbol collection, native function deduplication, and
+   LSP symbol details use those accessors instead of open-coding native
+   spelling fallback logic.
    Native type aliases and values now expose structured accessor helpers as
-   well. Symbol collection and LSP native symbol/local context code use those
-   helpers instead of open-coding `type_ref`-or-rendered-string fallback logic.
+   well. Their raw imported spelling is explicitly named `native_spelling`, and
+   symbol collection plus LSP native symbol/local context code use the accessors
+   instead of open-coding `type_ref`-or-rendered-string fallback logic.
    Type substitution now uses a structured lookup key from `TypeRef` kind/name
    metadata, falling back to raw text only for unknown/raw type refs. This
    removes another general-purpose dependency on rendering whole types before
