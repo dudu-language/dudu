@@ -34,6 +34,7 @@ Last local probe run: 2026-06-19 with `scripts/probe_optional.sh`.
 | sqlite3 | database | C API, pointers, result types, prepare/step/finalize | pass | `scripts/probe_optional.sh` / `sqlite_crud.dd` | no |
 | zlib | compression | C API, buffers, typedefs, constants, pointer output params | pass | `scripts/probe_optional.sh` / `zlib_roundtrip.dd` | no |
 | curl | network | C API, constants, pointer returns, struct field reads, link | pass | `scripts/probe_optional.sh` / `curl_version_info.dd` | no |
+| libpng | image | C API, typedef aliases, byte buffers, signature checks, link | pass | `scripts/probe_optional.sh` / `libpng_signature.dd` | no |
 | raylib | game / media | window/game example, audio synth build | pass | `scripts/probe_optional.sh` / `examples/raylib_game.dd` | no |
 | SDL3 | windowing | window example build through pkg-config | pass | `scripts/probe_optional.sh` / `examples/sdl3_window.dd` | no |
 | GLFW | windowing | OpenGL triangle host build | pass | `scripts/probe_optional.sh` / `examples/glfw_opengl_triangle.dd` | no |
@@ -53,7 +54,6 @@ compiler matures.
 | Dear ImGui | UI | C++ namespace API, backends, frame loop | planned | Prefer direct ImGui headers; wrappers only for backend/platform glue users normally write in C++. |
 | Eigen | math | templates, matrices, expression templates | planned | Good stress test for template-heavy header-only C++. |
 | BLAS / LAPACK / CBLAS | numeric | C ABI calls, contiguous arrays, link behavior | planned | Useful for future Dudu matrix/tensor library work. |
-| libpng | image | C API, structs, pointer output params | planned | Useful for real file IO and pointer-heavy C. |
 | stb headers | media / utility | single-header C, macro configuration | planned | May require explicit macro configuration policy. |
 | fmt | C++ utility | variadic templates, formatting functions | planned | Template-heavy but common. |
 | spdlog | logging | templates, sinks, macros | planned | Tests normal C++ library ergonomics. |

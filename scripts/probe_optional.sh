@@ -114,6 +114,27 @@ probe_curl() {
     echo "ok libcurl"
 }
 
+probe_libpng() {
+    if ! pkg-config --exists libpng; then
+        echo "skip libpng: pkg-config package not found"
+        return
+    fi
+
+    local cpp="$repo_root/build/probe_libpng_signature.cpp"
+    local bin="$repo_root/build/probe_libpng_signature"
+    "$repo_root/build/duc" emit "$repo_root/tests/fixtures/libpng_signature.dd" -o "$cpp"
+    "${CXX:-c++}" -std=c++20 "$cpp" $(pkg-config --cflags --libs libpng) -o "$bin"
+    set +e
+    "$bin"
+    local status=$?
+    set -e
+    if [[ "$status" -ne 42 ]]; then
+        echo "libpng probe returned $status, expected 42" >&2
+        exit 1
+    fi
+    echo "ok libpng"
+}
+
 probe_threading() {
     local cpp="$repo_root/build/probe_threading_atomics.cpp"
     local bin="$repo_root/build/probe_threading_atomics"
@@ -277,6 +298,7 @@ probe_opencv
 probe_sqlite
 probe_zlib
 probe_curl
+probe_libpng
 probe_threading
 probe_posix_mmap
 probe_posix_threads

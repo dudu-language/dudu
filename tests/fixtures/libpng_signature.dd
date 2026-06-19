@@ -1,0 +1,13 @@
+import c "png.h" as png
+
+
+def main() -> i32:
+    signature: array[u8] = [137, 80, 78, 71, 13, 10, 26, 10]
+    if png.png_sig_cmp(&signature[0], 0, len(signature)) != 0:
+        return 1
+
+    broken: array[u8] = [137, 80, 78, 71, 13, 10, 26, 11]
+    if png.png_sig_cmp(&broken[0], 0, len(broken)) == 0:
+        return 2
+
+    return 42
