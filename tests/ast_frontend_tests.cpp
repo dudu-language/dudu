@@ -26,6 +26,7 @@
 #include "dudu/sema_methods_internal.hpp"
 #include "dudu/sema_native.hpp"
 #include "dudu/type_compat.hpp"
+#include "dudu/type_compat_native.hpp"
 
 #include <cassert>
 #include <cctype>
@@ -138,6 +139,9 @@ void test_type_compat_uses_type_ast_for_pointers() {
                                          dudu::parse_type_text("std.vector.iterator")));
     assert(!dudu::type_assignment_allowed(dudu::parse_type_text("std.vector.iterator"),
                                           dudu::parse_type_text("i32")));
+    assert(dudu::native_associated_operator_operand_is_dependent(
+        dudu::parse_type_text("std.vector.const_reference")));
+    assert(!dudu::native_associated_operator_operand_is_dependent(dudu::parse_type_text("i32")));
     assert(!dudu::type_assignment_allowed(dudu::parse_type_text("list[i32]"),
                                           dudu::parse_type_text("list[str]")));
     assert(dudu::type_assignment_allowed(dudu::parse_type_text("array[list[i32]][4]"),

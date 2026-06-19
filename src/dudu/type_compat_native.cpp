@@ -291,4 +291,11 @@ bool native_associated_type_assignment_allowed(const TypeRef& expected, const Ty
            native_type_head_ends_with_name(normalized_got, "iterator");
 }
 
+bool native_associated_operator_operand_is_dependent(const TypeRef& type) {
+    static const std::set<std::string> operator_dependent = {"reference", "const_reference",
+                                                             "iterator", "const_iterator"};
+    return operator_dependent.contains(
+        native_type_tail_name(normalize_cpp_type_artifacts_ref(type)));
+}
+
 } // namespace dudu

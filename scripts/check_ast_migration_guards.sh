@@ -41,6 +41,12 @@ if rg -n "type\\.text|left\\.text|right\\.text" "$repo_root/src/dudu"; then
     exit 1
 fi
 
+if rg -n "ends_with\\(\"\\.(reference|const_reference|iterator|const_iterator)\"\\)" \
+    "$repo_root/src/dudu/sema_ops.cpp"; then
+    echo "native associated operator suffix checks belong in type_compat_native" >&2
+    exit 1
+fi
+
 if rg -n "std::string text;" "$repo_root/src/dudu/ast.hpp"; then
     echo "raw text payload fields do not belong in the core Dudu AST" >&2
     exit 1

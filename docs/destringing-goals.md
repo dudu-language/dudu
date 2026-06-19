@@ -177,11 +177,14 @@ C++ associated-type suffix matching for imported native templates, such as
 `iterator`, `const_iterator`, `value_type`, and `size_type`, now lives behind
 the explicit native-boundary helper
 `native_associated_type_assignment_allowed` instead of ordinary type
-compatibility owning that spelling rule directly. Remaining work is the harder
-identity cleanup: ordinary compatibility should stop leaning on raw spelling
-comparisons when structured/native identity facts exist, and any remaining
-suffix-name native heuristics should either be replaced or isolated behind
-clearly named native-boundary helpers.
+compatibility owning that spelling rule directly. C++ associated operand
+loosening for operator sema, such as `.reference` and `.iterator`, now lives
+behind `native_associated_operator_operand_is_dependent`; the guard rejects
+putting that suffix check back into `sema_ops.cpp`. Remaining work is the
+harder identity cleanup: ordinary compatibility should stop leaning on raw
+spelling comparisons when structured/native identity facts exist, and any
+remaining suffix-name native heuristics should either be replaced or isolated
+behind clearly named native-boundary helpers.
 
 ## Goal 5: Delete String Fallback APIs And Add Final Guards
 

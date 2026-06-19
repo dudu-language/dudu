@@ -6,6 +6,7 @@
 #include "dudu/sema_function_type.hpp"
 #include "dudu/sema_methods_internal.hpp"
 #include "dudu/type_compat.hpp"
+#include "dudu/type_compat_native.hpp"
 
 #include <set>
 #include <utility>
@@ -49,11 +50,8 @@ bool is_numeric_type(const TypeRef& type) {
 }
 
 bool unknown_or_auto(const TypeRef& type) {
-    const std::string head = type_ref_head_name(type);
-    return !has_type_ref(type) || type_ref_is_auto(type) || head == "reference" ||
-           head == "const_reference" || head == "iterator" || head == "const_iterator" ||
-           head.ends_with(".reference") || head.ends_with(".const_reference") ||
-           head.ends_with(".iterator") || head.ends_with(".const_iterator");
+    return !has_type_ref(type) || type_ref_is_auto(type) ||
+           native_associated_operator_operand_is_dependent(type);
 }
 
 bool same_foreign_cpp_type(const TypeRef& left, const TypeRef& right) {
