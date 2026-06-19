@@ -146,6 +146,24 @@ ProjectConfig build_config_for_options(const CliOptions& options) {
     return config;
 }
 
+FormatPathOptions format_options_for_project(const CliOptions& options) {
+    FormatPathOptions out;
+    if (!options.project_driver || !std::filesystem::is_directory(options.input)) {
+        return out;
+    }
+    const std::filesystem::path config_path = build_config_path(options.input);
+    if (config_path.empty() || !std::filesystem::exists(config_path)) {
+        return out;
+    }
+    const ProjectConfig config = parse_project_config(config_path);
+    out.excluded_dirs.push_back(project_path(config, ".git"));
+    out.excluded_dirs.push_back(project_path(config, "build"));
+    if (!config.build_dir.empty()) {
+        out.excluded_dirs.push_back(project_path(config, config.build_dir));
+    }
+    return out;
+}
+
 std::filesystem::path default_build_output(const ProjectConfig& config,
                                            const std::filesystem::path& input) {
     if (config.name.empty() && config.build_dir.empty()) {
@@ -331,10 +349,11 @@ int run_cli(int argc, char** argv) {
                                   .verbose = options.verbose});
     }
     if (options.format) {
+        const FormatPathOptions format_options = format_options_for_project(options);
         if (options.check) {
-            return check_formatted_path(options.input) ? 0 : 1;
+            return check_formatted_path(options.input, format_options) ? 0 : 1;
         }
-        format_path(options.input, options.output, std::cout);
+        format_path(options.input, options.output, std::cout, format_options);
         return 0;
     }
     if (options.check) {
