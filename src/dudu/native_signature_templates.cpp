@@ -36,6 +36,9 @@ std::string strip_forwarding_suffix(std::string type) {
     while (!type.empty() && type.back() == '&') {
         type = trim(type.substr(0, type.size() - 1));
     }
+    while (!type.empty() && (type.front() == '&' || type.front() == '*')) {
+        type = trim(type.substr(1));
+    }
     return type;
 }
 
@@ -130,7 +133,7 @@ bool native_template_placeholder(const std::string& type) {
     if (simple.contains(type)) {
         return true;
     }
-    if (type.size() == 1 && std::isupper(static_cast<unsigned char>(type.front())) != 0) {
+    if (!type.empty() && std::isupper(static_cast<unsigned char>(type.front())) != 0) {
         return true;
     }
     return type.size() > 1 && type.front() == '_' &&
@@ -139,6 +142,10 @@ bool native_template_placeholder(const std::string& type) {
 
 std::optional<std::string> native_template_pack_placeholder(std::string type) {
     type = strip_forwarding_suffix(std::move(type));
+    if (type.ends_with("...")) {
+        type.erase(type.size() - 3);
+        type = trim_copy(type);
+    }
     if (native_template_placeholder(type)) {
         return type;
     }
@@ -147,6 +154,22 @@ std::optional<std::string> native_template_pack_placeholder(std::string type) {
 
 std::optional<std::string> native_template_pack_placeholder(const TypeRef& type) {
     if (type.kind == TypeKind::PackExpansion && type.children.size() == 1) {
+        return native_template_pack_placeholder(type.children.front());
+    }
+    if (type.kind == TypeKind::Named) {
+        return native_template_pack_placeholder(type.name);
+    }
+    if (type.kind == TypeKind::Template &&
+        (type.name == "__decay_and_strip" || type.name == "std.remove_reference" ||
+         type.name == "std::remove_reference") &&
+        type.children.size() == 1) {
+        return native_template_pack_placeholder(type.children.front());
+    }
+    if ((type.kind == TypeKind::Pointer || type.kind == TypeKind::Reference ||
+         type.kind == TypeKind::Const || type.kind == TypeKind::Volatile ||
+         type.kind == TypeKind::Atomic || type.kind == TypeKind::Storage ||
+         type.kind == TypeKind::Shared || type.kind == TypeKind::Device) &&
+        type.children.size() == 1) {
         return native_template_pack_placeholder(type.children.front());
     }
     if (const std::optional<std::string> placeholder =

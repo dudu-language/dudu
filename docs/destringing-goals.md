@@ -211,7 +211,7 @@ Definition of done:
 - fast validation plus representative native/library probes pass
 - docs describe the remaining legitimate string boundaries
 
-Status: in progress. Prototype-era raw `sema_scan` helpers for compound
+Status: complete. Prototype-era raw `sema_scan` helpers for compound
 assignment, top-level logical detection, top-level comparison detection, and
 comparison text extraction have been deleted. Those forms are parsed through
 structured statement/expression AST now. The migration guard rejects
@@ -219,7 +219,7 @@ reintroducing `compound_assign_pos`, `find_top_level_logical`,
 `find_top_level_comparison`, and `top_level_comparison_text`. The remaining
 `sema_scan` helpers are still used by explicit `cpp(...)` escape parsing and
 local member-path segment validation, so they stay in the allowed string
-boundary for now. The string overloads of `lower_cpp_type` have also been
+boundary. The string overloads of `lower_cpp_type` have also been
 removed; normal codegen must lower structured `TypeRef` values, while
 `cpp(...)` escape rewriting and explicit spelling tests use
 `lower_cpp_type_spelling` to make the raw type-text boundary visible at the
@@ -234,7 +234,16 @@ normalizer on structured `TypeRef` input only. The string-returning
 inference exposes `infer_cpp_escape_expr_ref` and display rendering happens only
 at diagnostics or tests. Raw template-call argument lowering for `cpp(...)`
 escape rewriting has been renamed to `lower_raw_template_call_arg` so ordinary
-template lowering cannot accidentally accept text.
+template lowering cannot accidentally accept text. Native variadic-template
+matching now detects pack parameters structurally, accounts for fixed
+parameters before a pack, binds placeholder types before assignability checks
+short-circuit, and expands nested pack use in return types such as tuple
+factory signatures. Native C++ type-trait artifacts including
+`std::remove_reference` and `__decay_and_strip` are collapsed at the native
+boundary before structured substitution, and `basic_string[char]` /
+`basic_string[i8]` normalize to Dudu `str`. The migration guard,
+`probe_cpp_stdlib_algorithms.sh`, `test_codegen_shapes.sh`, and
+`test_fast.sh` pass for this milestone.
 
 ## Goal 6: Separate Module Outputs Without Re-Flattening
 

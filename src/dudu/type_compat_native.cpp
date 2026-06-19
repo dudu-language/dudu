@@ -13,7 +13,7 @@ namespace dudu {
 namespace {
 
 bool type_ref_is_native_char(const TypeRef& type) {
-    return type_ref_is_name(type, "char");
+    return type_ref_is_name(type, "char") || type_ref_is_name(type, "i8");
 }
 
 bool is_native_numeric_type_name(const std::string& type) {

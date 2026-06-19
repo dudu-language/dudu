@@ -87,6 +87,35 @@ size_t matching_angle(std::string_view text, size_t open) {
     return std::string::npos;
 }
 
+bool cpp_type_trait_template(std::string_view name) {
+    return name == "__decay_and_strip" || name == "std::remove_reference" ||
+           name == "std.remove_reference";
+}
+
+std::string collapse_type_trait_associated_type(std::string type) {
+    constexpr std::string_view typename_prefix = "typename ";
+    if (starts_with(type, typename_prefix)) {
+        type = trim_copy(type.substr(typename_prefix.size()));
+    }
+    const size_t open = type.find('<');
+    if (open == std::string::npos) {
+        return type;
+    }
+    const size_t close = matching_angle(type, open);
+    if (close == std::string::npos) {
+        return type;
+    }
+    const std::string suffix = trim_copy(type.substr(close + 1));
+    if (suffix != "::type" && suffix != "::__type" && suffix != ".type" && suffix != ".__type") {
+        return type;
+    }
+    const std::string name = trim_copy(type.substr(0, open));
+    if (!cpp_type_trait_template(name)) {
+        return type;
+    }
+    return trim_copy(type.substr(0, close + 1));
+}
+
 std::vector<std::string> split_cpp_top_level_args(std::string_view args) {
     std::vector<std::string> out;
     int paren_depth = 0;
@@ -161,6 +190,9 @@ std::string dudu_type(std::string type) {
     type = erase_all(std::move(type), "__restrict");
     type = erase_all(std::move(type), " restrict");
     type = trim_copy(std::move(type));
+    if (type.ends_with("...")) {
+        return dudu_type(trim_copy(type.substr(0, type.size() - 3))) + "...";
+    }
     if (type == "char *" || type == "const char *")
         return "cstr";
     if (type.find("(*)") != std::string::npos || type.find("(*") != std::string::npos) {
@@ -179,6 +211,7 @@ std::string dudu_type(std::string type) {
             break;
         }
     }
+    type = collapse_type_trait_associated_type(std::move(type));
     bool is_const = false;
     while (starts_with(type, "const ") || ends_with(type, " const")) {
         is_const = true;

@@ -26,10 +26,50 @@ struct NativeArgType {
     throw CompileError(location, message);
 }
 
+bool native_variadic_pack_param(const TypeRef& type) {
+    if (native_template_pack_placeholder(type)) {
+        return true;
+    }
+    return type_ref_text(type) == "...";
+}
+
+size_t native_variadic_pack_start(const FunctionSignature& signature) {
+    if (!signature.variadic) {
+        return signature_param_count(signature);
+    }
+    size_t start = signature_param_count(signature);
+    while (start > 0 &&
+           native_variadic_pack_param(signature_param_type_ref(signature, start - 1))) {
+        --start;
+    }
+    return start;
+}
+
+std::optional<std::string> native_variadic_pack_placeholder(const FunctionSignature& signature,
+                                                            size_t pack_start) {
+    for (size_t i = pack_start; i < signature_param_count(signature); ++i) {
+        if (const std::optional<std::string> pack =
+                native_template_pack_placeholder(signature_param_type_ref(signature, i))) {
+            return pack;
+        }
+    }
+    return std::nullopt;
+}
+
+size_t minimum_runtime_params(const FunctionSignature& signature) {
+    const size_t param_count = signature_param_count(signature);
+    size_t minimum =
+        signature.min_params < 0 ? param_count : static_cast<size_t>(signature.min_params);
+    const size_t pack_start = native_variadic_pack_start(signature);
+    if (pack_start < param_count) {
+        minimum = std::min(minimum, pack_start);
+    }
+    return minimum;
+}
+
 bool arity_matches(const FunctionSignature& signature, size_t arg_count) {
     const size_t param_count = signature_param_count(signature);
-    const size_t min_params =
-        signature.min_params < 0 ? param_count : static_cast<size_t>(signature.min_params);
+    const size_t min_params = minimum_runtime_params(signature);
     return signature.variadic ? arg_count >= min_params
                               : arg_count >= min_params && arg_count <= param_count;
 }
@@ -219,8 +259,7 @@ std::string mismatch_reason_ast(const FunctionScope& scope, const FunctionSignat
         out << "arity expects ";
         const size_t param_count = signature_param_count(signature);
         if (signature.variadic) {
-            const size_t min_params =
-                signature.min_params < 0 ? param_count : static_cast<size_t>(signature.min_params);
+            const size_t min_params = minimum_runtime_params(signature);
             out << "at least " << min_params;
         } else if (signature.min_params >= 0 &&
                    static_cast<size_t>(signature.min_params) < param_count) {
@@ -284,34 +323,31 @@ match_signature_ast(const FunctionScope& scope, const FunctionSignature& signatu
     NativeTemplateBindings bindings;
     NativePackBindingMap pack_bindings;
     const size_t param_count = signature_param_count(signature);
-    const TypeRef pack_param_ref =
-        param_count == 0 ? TypeRef{} : signature_param_type_ref(signature, param_count - 1);
+    const size_t pack_start = native_variadic_pack_start(signature);
+    const bool has_pack_param = pack_start < param_count;
     const std::optional<std::string> pack_param_placeholder =
-        signature.variadic && param_count != 0 ? native_template_pack_placeholder(pack_param_ref)
-                                               : std::nullopt;
-    const bool has_pack_param = pack_param_placeholder.has_value();
+        has_pack_param ? native_variadic_pack_placeholder(signature, pack_start) : std::nullopt;
     FunctionSignature arity_signature = signature;
-    if (has_pack_param &&
-        arity_signature.min_params >= static_cast<int>(signature_param_count(arity_signature))) {
-        --arity_signature.min_params;
+    if (has_pack_param) {
+        arity_signature.min_params = static_cast<int>(pack_start);
     }
     if (!arity_matches(arity_signature, args.size())) {
         return std::nullopt;
     }
-    const size_t fixed_params =
-        has_pack_param ? signature_param_count(signature) - 1 : signature_param_count(signature);
+    const size_t fixed_params = has_pack_param ? pack_start : signature_param_count(signature);
     const size_t provided_fixed = std::min(fixed_params, args.size());
     for (size_t i = 0; i < provided_fixed; ++i) {
         const NativeArgType got = native_arg_type(scope, args[i], location, infer_expr_type);
         const TypeRef expected_ref = signature_param_ref(signature, i);
+        const bool bound_template =
+            has_type_ref(expected_ref) && has_type_ref(got.ref) &&
+            bind_native_template_type_ast(scope.symbols, expected_ref, got.ref, bindings);
         if (!native_arg_assignable(signature, i, args[i], got, can_assign) &&
-            !native_numeric_promotion(expected_ref, got.ref) &&
-            !(has_type_ref(expected_ref) && has_type_ref(got.ref) &&
-              bind_native_template_type_ast(scope.symbols, expected_ref, got.ref, bindings))) {
+            !native_numeric_promotion(expected_ref, got.ref) && !bound_template) {
             return std::nullopt;
         }
     }
-    if (has_pack_param) {
+    if (pack_param_placeholder) {
         const std::string pack_name = *pack_param_placeholder;
         std::vector<TypeRef> types;
         for (size_t i = fixed_params; i < args.size(); ++i) {

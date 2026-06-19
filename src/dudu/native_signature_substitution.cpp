@@ -208,8 +208,8 @@ bool structured_binding_type_ref(const TypeRef& type) {
     return true;
 }
 
-std::map<std::string, TypeRef> structured_type_ref_bindings(
-    const NativeTemplateBindings& bindings) {
+std::map<std::string, TypeRef>
+structured_type_ref_bindings(const NativeTemplateBindings& bindings) {
     std::map<std::string, TypeRef> out;
     for (const auto& [name, type] : bindings) {
         if (structured_binding_type_ref(type)) {
@@ -219,8 +219,7 @@ std::map<std::string, TypeRef> structured_type_ref_bindings(
     return out;
 }
 
-bool structured_substitution_allowed(const TypeRef& type,
-                                     const NativeTemplateBindings& bindings) {
+bool structured_substitution_allowed(const TypeRef& type, const NativeTemplateBindings& bindings) {
     if (!structured_binding_type_ref(type)) {
         return false;
     }
@@ -252,6 +251,23 @@ structured_pack_expansion(const TypeRef& param_type, const NativePackBindingMap&
         return std::nullopt;
     }
     return found->second;
+}
+
+TypeRef expand_nested_pack_expansions(TypeRef type, const NativePackBindingMap& pack_bindings,
+                                      bool& changed) {
+    std::vector<TypeRef> children;
+    children.reserve(type.children.size());
+    for (TypeRef child : type.children) {
+        if (const std::optional<std::vector<TypeRef>> expanded =
+                structured_pack_expansion(child, pack_bindings)) {
+            children.insert(children.end(), expanded->begin(), expanded->end());
+            changed = true;
+            continue;
+        }
+        children.push_back(expand_nested_pack_expansions(std::move(child), pack_bindings, changed));
+    }
+    type.children = std::move(children);
+    return type;
 }
 
 } // namespace
@@ -365,6 +381,16 @@ FunctionSignature substitute_bound_template_signature(FunctionSignature signatur
     set_signature_param_types(signature, std::move(params));
 
     const TypeRef return_type = signature_return_type_ref(signature);
+    bool expanded_return_pack = false;
+    TypeRef expanded_return =
+        expand_nested_pack_expansions(return_type, pack_bindings, expanded_return_pack);
+    if (expanded_return_pack) {
+        if (structured_substitution_allowed(expanded_return, bindings)) {
+            expanded_return = substitute_type_ref(expanded_return, refs);
+        }
+        set_signature_return_type(signature, std::move(expanded_return));
+        return signature;
+    }
     if (structured_substitution_allowed(return_type, bindings)) {
         set_signature_return_type(signature, substitute_type_ref(return_type, refs));
         return signature;

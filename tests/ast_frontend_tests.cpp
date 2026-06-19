@@ -154,6 +154,10 @@ void test_type_compat_uses_type_ast_for_pointers() {
     const dudu::Expr name_expr = dudu::parse_expr_text("value");
     assert(dudu::assignment_type_allowed(dudu::parse_type_text("str"), name_expr,
                                          dudu::parse_type_text("std.string")));
+    assert(dudu::assignment_type_allowed(dudu::parse_type_text("str"), name_expr,
+                                         dudu::parse_type_text("basic_string[char]")));
+    assert(dudu::assignment_type_allowed(dudu::parse_type_text("str"), name_expr,
+                                         dudu::parse_type_text("basic_string[i8]")));
     assert(dudu::assignment_type_allowed(dudu::parse_type_text("cstr"),
                                          dudu::parse_expr_text("\"hello\""),
                                          dudu::parse_type_text("str")));
@@ -317,6 +321,11 @@ void test_builtin_method_signature_uses_type_ast() {
 
 void test_native_header_types_split_cpp_templates() {
     assert(dudu::dudu_type("const vec<L, T, Q> &") == "&const[vec[L, T, Q]]");
+    assert(dudu::dudu_type("_Args &&...") == "&_Args...");
+    assert(dudu::dudu_type("typename std::remove_reference<_Tp>::type &&") ==
+           "&std.remove_reference[_Tp]");
+    assert(dudu::dudu_type("tuple<typename __decay_and_strip<_Elements>::__type...>") ==
+           "tuple[__decay_and_strip[_Elements]...]");
     assert(dudu::signature_params("T (const vec<L, T, Q> &, const vec<L, T, Q> &)") ==
            std::vector<std::string>({"&const[vec[L, T, Q]]", "&const[vec[L, T, Q]]"}));
 }
@@ -382,8 +391,12 @@ void test_bound_native_template_substitution_is_per_field() {
     assert(dudu::signature_param_count(substituted) == 3);
     assert(dudu::signature_param_type_ref(substituted, 0).name == "i32");
     assert(dudu::signature_param_type_ref(substituted, 1).name == "f32");
-    assert(dudu::signature_return_type_ref(substituted).kind == dudu::TypeKind::Template);
-    assert(dudu::signature_return_type_ref(substituted).children[0].name == "T");
+    const dudu::TypeRef& return_type = dudu::signature_return_type_ref(substituted);
+    assert(return_type.kind == dudu::TypeKind::Template);
+    assert(return_type.name == "tuple");
+    assert(return_type.children.size() == 2);
+    assert(return_type.children[0].name == "i32");
+    assert(return_type.children[1].name == "f32");
 }
 
 void test_explicit_native_template_value_args_use_type_refs() {
@@ -410,6 +423,24 @@ void test_explicit_native_template_value_args_use_type_refs() {
     assert(dudu::signature_param_type_ref(malformed_substituted, 0).kind ==
            dudu::TypeKind::Unknown);
     assert(dudu::signature_return_type_ref(malformed_substituted).name == "void");
+}
+
+void test_explicit_native_template_keeps_unbound_pack_params() {
+    dudu::FunctionSignature signature;
+    signature.template_params = {"T", "Args"};
+    signature.variadic = true;
+    signature.min_params = 1;
+    dudu::TypeRef pack_param = dudu::pack_expansion_type_ref(dudu::parse_type_text("&Args"), {});
+    dudu::set_signature_param_types(signature, {pack_param});
+    dudu::set_signature_return_type(signature, dudu::parse_type_text("Box[T]"));
+
+    const dudu::FunctionSignature substituted =
+        dudu::substitute_explicit_template_signature(signature, {dudu::parse_type_text("Node")});
+    assert(dudu::signature_param_count(substituted) == 1);
+    assert(dudu::signature_param_type_ref(substituted, 0).kind == dudu::TypeKind::PackExpansion);
+    assert(dudu::native_template_pack_placeholder(dudu::signature_param_type_ref(substituted, 0)) ==
+           std::optional<std::string>{"Args"});
+    assert(dudu::signature_return_type_text(substituted) == "Box[Node]");
 }
 
 void test_receiver_template_substitution_uses_type_ast() {
@@ -1726,6 +1757,7 @@ int main() {
         test_bound_native_template_pack_substitution_uses_type_refs();
         test_bound_native_template_substitution_is_per_field();
         test_explicit_native_template_value_args_use_type_refs();
+        test_explicit_native_template_keeps_unbound_pack_params();
         test_receiver_template_substitution_uses_type_ast();
         test_inherited_method_signature_uses_type_ast();
         test_find_inherited_method_uses_type_ast_receiver();
