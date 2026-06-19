@@ -1149,7 +1149,43 @@ push. They are not release packaging work.
    `third_party/install` prefix with `scripts/setup_dev_deps.sh`; the main Dudu
    build does not require them.
 
-11. Incremental Build Strategy
+11. Compiler Throughput And Build Performance
+
+   Treat compiler speed as a first-class language quality metric. Dudu should
+   track its own frontend throughput and native build overhead separately from
+   the speed of generated programs.
+
+   Add a compiler benchmark suite that records:
+
+   - lexer/parser/sema/codegen time in lines per second and files per second
+   - native header scan time, cache hit time, and cache miss time
+   - generated C++ emission time
+   - generated C++ compile and link time
+   - clean build, no-op rebuild, and one-file-changed rebuild time
+   - LSP parse/diagnostic latency
+   - peak memory for large source trees and native-heavy header scans
+
+   Cover several project shapes:
+
+   - tiny single-file script-style program
+   - medium multi-module Dudu project
+   - large synthetic Dudu source corpus for frontend throughput
+   - native-heavy imports such as standard library, SDL3, raylib, glm, sqlite,
+     and POSIX headers
+   - generated CMake backend projects
+
+   `dudu bench compiler` or a dedicated `scripts/bench_compiler.sh` should emit
+   machine-readable JSON or CSV plus a readable summary. Establish local
+   baselines first, then add thresholds once the compiler architecture is stable
+   enough for numbers to mean something.
+
+   Keep compiler-speed benchmarks out of the default fast loop. Fast validation
+   should catch correctness regressions quickly; throughput benchmarks should be
+   explicit so a slow or hung benchmark never blocks normal development. Do not
+   trade compiler architecture, diagnostics, or import correctness for a
+   premature lines-per-second win.
+
+12. Incremental Build Strategy
 
    Move beyond generated-one-file builds where needed. Generate C++ per Dudu
    module so CMake/Ninja can rebuild changed translation units instead of whole
@@ -1183,7 +1219,7 @@ push. They are not release packaging work.
    compatibility single-file output and fails clearly when that merged output
    cannot represent distinct module declarations safely.
 
-12. Language Server And Formatter
+13. Language Server And Formatter
 
    Implement `duc lsp` so editors can show diagnostics, warnings, hover,
    completion, go to definition, find references, rename, formatting, and native
@@ -1207,7 +1243,7 @@ push. They are not release packaging work.
    conservative redeclaration filter, while imported module/member references
    keep workspace search.
 
-13. Project Driver Polish
+14. Project Driver Polish
 
    Keep using `dudu` on real projects and fix friction in native build inputs,
    target selection, diagnostics, generated build files, and examples.
@@ -1309,7 +1345,7 @@ push. They are not release packaging work.
    escape backslashes into the driver. Invalid or unfinished quoted-string
    escapes are rejected as manifest errors instead of being guessed.
 
-14. Freestanding And Embedded Assert Policy
+15. Freestanding And Embedded Assert Policy
 
    Hosted `assert` and `debug_assert` are implemented. Freestanding and
    embedded targets reject runtime `assert` instead of accidentally emitting
@@ -1321,7 +1357,7 @@ push. They are not release packaging work.
    `debug_assert` remains available and lowers to native C/C++ assertion
    behavior.
 
-15. Macro Edge Cases
+16. Macro Edge Cases
 
    Normal imported macros are covered. Keep token-pasting, declaration-
    generating, and partial-syntax macros behind wrapper headers unless a real
@@ -1335,7 +1371,7 @@ push. They are not release packaging work.
    declaration-generating, and partial-syntax macros remain intentionally
    wrapper-header territory.
 
-16. Remove Prototype Cruft
+17. Remove Prototype Cruft
 
    Before calling this language push complete, scan the codebase and docs for
    prototype-era compatibility paths, internal alternate spellings, and legacy
@@ -1372,7 +1408,7 @@ push. They are not release packaging work.
    `Missing` expression kind; `Unknown` is reserved for unsupported source text
    that should be diagnosed rather than interpreted.
 
-17. Polish Unsupported Syntax Diagnostics
+18. Polish Unsupported Syntax Diagnostics
 
    Deliberately unsupported Python-looking syntax should fail hard with
    specific guidance. These are not compatibility paths and they should not
@@ -1404,7 +1440,7 @@ push. They are not release packaging work.
    `getattr`, `setattr`, and rejected OOP decorators, with diagnostics that name
    the Dudu-shaped replacement where one exists.
 
-18. Delete AST Migration Fallbacks
+19. Delete AST Migration Fallbacks
 
    After each language form has structured parser, semantic, codegen,
    diagnostic, lint, LSP, and formatter coverage, remove the compatibility
