@@ -153,3 +153,5 @@
 - Added regression coverage that generated-CMake module builds allow
   same-named functions in different modules while merged C++ output rejects
   that unsafe shape.
+- Improved language-server references for aliased native functions such as
+  `dudu_native.dudu_native_add`.

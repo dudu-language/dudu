@@ -1334,7 +1334,9 @@ push. They are not release packaging work.
    reparsing imported files. Module-qualified reference searches such as
    `m.answer` now resolve the module alias target before searching the
    workspace, so unrelated files that reuse the same alias for a different
-   module are not reported as references.
+   module are not reported as references. Aliased native function references
+   such as `dudu_native.dudu_native_add` keep the full native path during
+   reference lookup.
 
 14. Project Driver Polish
 

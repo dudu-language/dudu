@@ -254,6 +254,21 @@ std::string reference_query_at(const Document& doc, const Json* params) {
                     return path;
                 }
             }
+            for (const NativeFunctionDecl& fn : module.native_functions) {
+                if (fn.name == path) {
+                    return path;
+                }
+            }
+            for (const NativeValueDecl& value : module.native_values) {
+                if (value.name == path) {
+                    return path;
+                }
+            }
+            for (const NativeMacroDecl& macro : module.native_macros) {
+                if (macro.name == path) {
+                    return path;
+                }
+            }
             if (document_has_type_symbol(doc, path)) {
                 return path;
             }

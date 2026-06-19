@@ -1160,6 +1160,17 @@ messages = [
     packet(
         {
             "jsonrpc": "2.0",
+            "id": 69,
+            "method": "textDocument/references",
+            "params": {
+                "textDocument": {"uri": native_uri},
+                "position": {"line": 9, "character": 45},
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
             "id": 15,
             "method": "textDocument/hover",
             "params": {
@@ -1804,6 +1815,18 @@ assert "dudu_native_kind_ok" in direct_native_labels
 native_signature = next(item for item in responses if item.get("id") == 12)
 assert "dudu_native.dudu_native_add(i32, i32) -> i32" in native_signature["result"]["signatures"][0]["label"]
 assert native_signature["result"]["activeParameter"] == 1
+
+native_function_references = next(item for item in responses if item.get("id") == 69)
+native_function_reference_ranges = {
+    (
+        item["range"]["start"]["line"],
+        item["range"]["start"]["character"],
+        item["range"]["end"]["character"],
+    )
+    for item in native_function_references["result"]
+    if item["uri"] == native_uri
+}
+assert native_function_reference_ranges == {(9, 32, 47)}
 
 direct_native_signature = next(item for item in responses if item.get("id") == 36)
 assert "dudu_native_add(i32, i32) -> i32" in direct_native_signature["result"]["signatures"][0]["label"]
