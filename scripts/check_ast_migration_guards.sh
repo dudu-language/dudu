@@ -11,6 +11,7 @@ forbidden=(
     "Stmt::return_type"
     "looks_like_dudu_type"
     "resolve_alias_ref_with_legacy_fallback"
+    "lower_cpp_type\\(type_ref_head_name"
 )
 
 for pattern in "${forbidden[@]}"; do

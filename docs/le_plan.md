@@ -2101,3 +2101,5 @@ push. They are not release packaging work.
    and sending it back through the raw string type parser. Raw type-string
    lowering remains only for explicit native/C++ escape compatibility paths
    and tests that exercise that boundary.
+   The AST migration guard now rejects `lower_cpp_type(type_ref_head_name(...))`
+   so structured type-name codegen cannot silently re-enter the raw type parser.
