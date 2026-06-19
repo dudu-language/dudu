@@ -2021,3 +2021,6 @@ push. They are not release packaging work.
    heads for polymorphic parent checks, and emits `super` call scopes by
    lowering the base `TypeRef` at the C++ spelling boundary instead of storing
    rendered Dudu type text.
+   Emission-side receiver-base inference now unwraps structured wrapper
+   `TypeRef` nodes only; malformed wrapper nodes no longer render fallback type
+   strings to participate in method return lookup.

@@ -26,8 +26,7 @@ std::string receiver_base_type(const TypeRef& type) {
     case TypeKind::Device:
     case TypeKind::Static:
     case TypeKind::FixedArray:
-        return type.children.empty() ? substitute_type_ref_text(type, {})
-                                     : receiver_base_type(type.children.front());
+        return type.children.empty() ? std::string{} : receiver_base_type(type.children.front());
     case TypeKind::Template:
     case TypeKind::Named:
     case TypeKind::Qualified:
