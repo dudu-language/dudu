@@ -1396,8 +1396,10 @@ push. They are not release packaging work.
    generated CMake backend is implemented for `dudu build`, `dudu run`, and
    `dudu test`; it emits an internal CMake project and drives `cmake -S/-B`
    plus `cmake --build`. Native inputs such as include paths, library paths,
-   libraries, flags, pkg-config packages, and extra C/C++ sources are partially
-   implemented and useful. `dudu cmake` still emits CMake for inspection or
+   libraries, flags, pkg-config packages, and extra C/C++ sources are covered
+   by direct and generated-CMake backends for normal project shapes. The
+   generated-CMake fixture links an extra C source into both the app target and
+   generated Dudu test harness. `dudu cmake` still emits CMake for inspection or
    handoff. User-owned CMake build/run/test are implemented for manifests that
    declare `[cmake] source` and `[cmake] target`; the driver configures and
    builds the existing CMake project under the Dudu build directory, and runs

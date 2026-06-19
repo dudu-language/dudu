@@ -5,3 +5,8 @@ build_dir = "../../../build/project_backend_cmake"
 [build]
 backend = "cmake"
 
+[include]
+paths = ["."]
+
+[sources]
+c = ["answer_native.c"]
