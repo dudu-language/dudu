@@ -315,6 +315,9 @@ Symbols collect_symbols(const ModuleAst& module) {
             symbols.native_explicit_template_prefixes.insert(import.alias);
         }
     }
+    for (const std::string& prefix : module.module_import_prefixes) {
+        symbols.module_import_prefixes.insert(prefix);
+    }
     std::map<std::string, SourceLocation> names;
     for (const char* type : {"bool", "i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64", "isize",
                              "usize", "f32", "f64", "void", "str", "cstr"}) {

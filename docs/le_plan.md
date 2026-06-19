@@ -253,7 +253,11 @@ generated CMake backend has a regression fixture with two modules that both
 declare `Box`, `make`, and `score`; those compile as separate generated C++
 artifacts with distinct generated names. A CMake-backend negative fixture now
 rejects transitive import leakage, so importing a facade module does not let the
-importer use the facade's private dependencies by accident. The direct backend
+importer use the facade's private dependencies by accident. Qualified Dudu
+module prefixes are also tracked separately from opaque native C++ prefixes, so
+an imported module's private selective imports, such as
+`facade.hidden_answer`, are rejected by Dudu sema instead of leaking through to
+generated C++ as unknown native calls. The direct backend
 still uses the compatibility merged output and remains intentionally narrower
 until semantic lookup and direct codegen fully move to module namespaces, but it
 now rejects cross-module declaration-name collisions with a backend-aware

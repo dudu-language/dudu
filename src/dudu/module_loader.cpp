@@ -215,6 +215,9 @@ void append_module(ModuleAst& target, const ModuleAst& source) {
     target.module_strip_prefixes.insert(target.module_strip_prefixes.end(),
                                         source.module_strip_prefixes.begin(),
                                         source.module_strip_prefixes.end());
+    target.module_import_prefixes.insert(target.module_import_prefixes.end(),
+                                         source.module_import_prefixes.begin(),
+                                         source.module_import_prefixes.end());
     target.enums.insert(target.enums.end(), source.enums.begin(), source.enums.end());
     target.classes.insert(target.classes.end(), source.classes.begin(), source.classes.end());
     target.constants.insert(target.constants.end(), source.constants.begin(),

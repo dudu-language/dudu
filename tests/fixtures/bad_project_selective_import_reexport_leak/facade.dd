@@ -1,0 +1,5 @@
+from leaf import hidden_answer
+
+
+def public_answer() -> i32:
+    return hidden_answer()

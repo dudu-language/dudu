@@ -144,6 +144,7 @@ void add_qualified_module_symbols(ModuleAst& module, const ModuleAst& dependency
     const std::map<std::string, TypeRef> type_substitutions =
         qualified_type_substitutions(dependency, prefix, import.location);
     module.module_strip_prefixes.push_back(prefix);
+    module.module_import_prefixes.push_back(prefix);
     for (const TypeAliasDecl& alias : dependency.aliases) {
         add_module_type_alias(module, prefix, alias.name,
                               substitute_type_ref(alias.type_ref, type_substitutions),

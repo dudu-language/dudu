@@ -1,0 +1,6 @@
+name = "bad_selective_import_reexport_leak"
+entry = "main.dd"
+build_dir = "../../../build/bad_project_selective_import_reexport_leak"
+
+[build]
+backend = "cmake"
