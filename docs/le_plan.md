@@ -2030,3 +2030,6 @@ push. They are not release packaging work.
    Emission-side call type inference now uses `Symbols` to recognize known
    Dudu/native type constructors in real compiler paths; the old uppercase-name
    constructor heuristic is limited to explicit symbol-less helper calls.
+   Duplicate base-class validation now resolves aliases and compares
+   structured `TypeRef` trees; rendered base text is only used for the final
+   diagnostic label.

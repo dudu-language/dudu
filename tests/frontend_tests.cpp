@@ -973,6 +973,25 @@ void test_base_pointer_assignment_uses_type_ast() {
     dudu::analyze_module(module, {.check_bodies = true});
 }
 
+void test_duplicate_base_check_resolves_type_aliases() {
+    bool rejected = false;
+    try {
+        const dudu::ModuleAst module = dudu::parse_source("class Base:\n"
+                                                          "    id: i32\n"
+                                                          "\n"
+                                                          "type BaseAlias = Base\n"
+                                                          "\n"
+                                                          "class Derived(Base, BaseAlias):\n"
+                                                          "    value: i32\n",
+                                                          "duplicate_base_alias.dd");
+        dudu::analyze_module(module, {.check_bodies = true});
+    } catch (const dudu::CompileError& error) {
+        rejected = std::string(error.what()).find("duplicate base class: BaseAlias") !=
+                   std::string::npos;
+    }
+    assert(rejected);
+}
+
 void test_bare_void_return() {
     const dudu::ModuleAst module = dudu::parse_source("def done():\n"
                                                       "    return\n"
@@ -1141,6 +1160,7 @@ int main() {
         test_extern_c_signature_uses_type_ast();
         test_pointer_arithmetic_uses_type_ast();
         test_base_pointer_assignment_uses_type_ast();
+        test_duplicate_base_check_resolves_type_aliases();
         test_bare_void_return();
         test_typed_for_emission();
         test_class_field_defaults_and_static_fields();

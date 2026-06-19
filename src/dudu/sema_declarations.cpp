@@ -6,9 +6,11 @@
 #include "dudu/sema_inheritance.hpp"
 #include "dudu/source.hpp"
 
+#include <algorithm>
 #include <optional>
 #include <set>
 #include <string_view>
+#include <vector>
 
 namespace dudu {
 namespace {
@@ -45,6 +47,12 @@ bool is_test_decorator(const FunctionDecl& fn) {
 
 bool is_virtual_like(const FunctionDecl& fn) {
     return has_decorator(fn, "virtual") || has_decorator(fn, "abstract");
+}
+
+bool has_equivalent_base(const std::vector<TypeRef>& bases, const TypeRef& candidate) {
+    return std::any_of(bases.begin(), bases.end(), [&](const TypeRef& base) {
+        return type_ref_equivalent(base, candidate);
+    });
 }
 
 std::string decorator_arg(const Decorator& decorator, std::string_view name) {
@@ -272,15 +280,16 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
         for (const Decorator& decorator : klass.decorators) {
             check_class_decorator(decorator);
         }
-        std::set<std::string> bases;
+        std::vector<TypeRef> bases;
         for (const BaseClassDecl& base : klass.base_class_refs) {
             check_supported_type_shape(base.location, base.type_ref);
             check_known_type_ref(class_symbols, base.location, base.type_ref,
                                  "unknown base class: ");
-            const std::string base_text = type_ref_text(base.type_ref);
-            if (!bases.insert(base_text).second) {
-                fail(base.location, "duplicate base class: " + base_text);
+            const TypeRef resolved_base = resolve_alias_ref(class_symbols, base.type_ref);
+            if (has_equivalent_base(bases, resolved_base)) {
+                fail(base.location, "duplicate base class: " + type_ref_text(base.type_ref));
             }
+            bases.push_back(resolved_base);
         }
         check_multiple_inheritance_rules(symbols, klass);
         std::set<std::string> fields;
