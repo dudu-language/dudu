@@ -47,9 +47,12 @@ size_t index_count(const Expr& expr) {
 
 TypeRef indexed_local_type_ref(const TypeRef& receiver_type, const Expr& index_expr) {
     const Symbols symbols;
+    const std::string label = type_ref_head_name(receiver_type).empty()
+                                  ? std::string{"indexed value"}
+                                  : type_ref_head_name(receiver_type);
     const auto indexed = indexed_type_ref_from_type_ref_with_count(
         symbols, index_expr.location, receiver_type, index_count(index_expr), false, false,
-        substitute_type_ref_text(receiver_type, {}));
+        label);
     return indexed ? *indexed : TypeRef{};
 }
 

@@ -2024,3 +2024,6 @@ push. They are not release packaging work.
    Emission-side receiver-base inference now unwraps structured wrapper
    `TypeRef` nodes only; malformed wrapper nodes no longer render fallback type
    strings to participate in method return lookup.
+   Emission-side indexed local inference now labels array index diagnostics
+   from parsed `TypeRef` head metadata instead of rendering the full receiver
+   type during type inference.
