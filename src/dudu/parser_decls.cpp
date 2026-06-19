@@ -19,11 +19,13 @@ Visibility visibility_from_name(Visibility explicit_visibility, const std::strin
 
 ClassDecl Parser::parse_class(const Token& start, Visibility visibility,
                               const std::vector<Decorator>& decorators) {
+    (void)start;
     ClassDecl klass;
     klass.visibility = visibility;
     klass.decorators = decorators;
-    klass.location = start.location;
-    klass.name = consume_identifier("expected class name").text;
+    const Token& name = consume_identifier("expected class name");
+    klass.location = name.location;
+    klass.name = name.text;
     klass.generic_params = parse_generic_params();
     if (match(TokenKind::LParen)) {
         if (!at(TokenKind::RParen)) {
@@ -117,9 +119,11 @@ FieldDecl Parser::parse_field() {
 }
 
 EnumDecl Parser::parse_enum(const Token& start) {
+    (void)start;
     EnumDecl en;
-    en.location = start.location;
-    en.name = consume_identifier("expected enum name").text;
+    const Token& name = consume_identifier("expected enum name");
+    en.location = name.location;
+    en.name = name.text;
     consume(TokenKind::Colon, "expected : after enum name");
     if (!at(TokenKind::Newline)) {
         const JoinedTokens type = join_until_with_range({TokenKind::Newline});
@@ -188,10 +192,11 @@ EnumDecl Parser::parse_enum(const Token& start) {
 }
 
 void Parser::parse_type_decl(const Token& start, ModuleAst& module) {
+    (void)start;
     const Token& name = consume_identifier("expected type name");
     if (match(TokenKind::Assign)) {
         TypeAliasDecl alias;
-        alias.location = start.location;
+        alias.location = name.location;
         alias.name = name.text;
         const JoinedTokens type = join_until_with_range({TokenKind::Newline});
         alias.type_ref = parse_type_piece(type);

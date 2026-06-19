@@ -1518,7 +1518,7 @@ type_reference_starts = {
     (item["range"]["start"]["line"], item["range"]["start"]["character"])
     for item in type_references["result"]
 }
-assert (0, 0) in type_reference_starts
+assert (0, 6) in type_reference_starts
 assert (8, 12) in type_reference_starts
 assert (8, 21) in type_reference_starts
 
