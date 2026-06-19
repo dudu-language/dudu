@@ -364,6 +364,10 @@ FunctionSignature substitute_bound_template_signature(FunctionSignature signatur
     params.reserve(signature_param_count(signature));
     for (size_t i = 0; i < signature_param_count(signature); ++i) {
         const TypeRef param_type = signature_param_type_ref(signature, i);
+        if (param_type.kind == TypeKind::PackExpansion && param_type.children.empty()) {
+            params.push_back(param_type);
+            continue;
+        }
         if (const std::optional<std::vector<TypeRef>> expanded =
                 structured_pack_expansion(param_type, pack_bindings)) {
             params.insert(params.end(), expanded->begin(), expanded->end());

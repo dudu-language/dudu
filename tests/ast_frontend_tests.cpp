@@ -12,6 +12,7 @@
 #include "dudu/language_server_semantic_tokens.hpp"
 #include "dudu/match_patterns.hpp"
 #include "dudu/native_header_types.hpp"
+#include "dudu/native_signature_match.hpp"
 #include "dudu/native_signature_substitution.hpp"
 #include "dudu/native_signature_templates.hpp"
 #include "dudu/parser.hpp"
@@ -407,6 +408,34 @@ void test_bound_native_template_substitution_is_per_field() {
     assert(return_type.children.size() == 2);
     assert(return_type.children[0].name == "i32");
     assert(return_type.children[1].name == "f32");
+}
+
+void test_native_variadic_bare_pack_uses_type_ref_shape() {
+    dudu::Symbols symbols;
+    dudu::FunctionSignature signature;
+    signature.variadic = true;
+    signature.min_params = 1;
+    dudu::TypeRef bare_pack;
+    bare_pack.kind = dudu::TypeKind::PackExpansion;
+    dudu::set_signature_param_types(signature, {dudu::parse_type_text("i32"), bare_pack});
+    dudu::set_signature_return_type(signature, dudu::parse_type_text("i32"));
+    symbols.native_function_signatures["native_printf"] = {signature};
+    dudu::FunctionScope scope(symbols);
+
+    const std::vector<dudu::Expr> args = {dudu::parse_expr_text("1"), dudu::parse_expr_text("2"),
+                                          dudu::parse_expr_text("3")};
+    auto infer = [](const dudu::FunctionScope&, const dudu::Expr&, const dudu::SourceLocation*) {
+        return dudu::parse_type_text("i32");
+    };
+    auto can_assign = [](const dudu::TypeRef& expected, const dudu::Expr&,
+                         const dudu::TypeRef& got) {
+        return dudu::type_assignment_allowed(expected, got);
+    };
+    const std::optional<dudu::FunctionSignature> matched =
+        dudu::match_native_signature(scope, "native_printf", args, nullptr, infer, can_assign);
+    assert(matched.has_value());
+    assert(dudu::signature_param_count(*matched) == 2);
+    assert(dudu::signature_param_type_ref(*matched, 1).kind == dudu::TypeKind::PackExpansion);
 }
 
 void test_explicit_native_template_value_args_use_type_refs() {
@@ -1766,6 +1795,7 @@ int main() {
         test_native_template_binding_resolves_alias_type_refs();
         test_bound_native_template_pack_substitution_uses_type_refs();
         test_bound_native_template_substitution_is_per_field();
+        test_native_variadic_bare_pack_uses_type_ref_shape();
         test_explicit_native_template_value_args_use_type_refs();
         test_explicit_native_template_keeps_unbound_pack_params();
         test_receiver_template_substitution_uses_type_ast();

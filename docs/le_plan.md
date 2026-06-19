@@ -2126,6 +2126,12 @@ push. They are not release packaging work.
    consumes the structured pack node directly. The old nested pack matcher
    that manufactured an `Unknown.text` node containing a joined type list has
    been removed.
+   Bare C variadic `...` parameters in native overload matching are also
+   recognized from the `TypeKind::PackExpansion` shape instead of rendering the
+   parameter to text and comparing against `"..."`; the migration guard rejects
+   reintroducing that rendered check. Native template substitution also passes
+   bare pack parameters through structurally instead of rendering them through
+   `signature_param_type_text`.
    Native template placeholder discovery now walks structured `TypeRef` heads,
    values, and children only; it no longer scans raw `Unknown.text` for names
    such as `T`, so malformed native type text cannot create implicit template
