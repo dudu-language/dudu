@@ -2036,3 +2036,6 @@ push. They are not release packaging work.
    Inheritance ambiguity and abstract-method tracking now build method
    identities from function names plus alias-normalized `FunctionSignature`
    `TypeRef`s; rendered signatures are labels only, not semantic map keys.
+   Match emission no longer renders the subject `TypeRef` into an unused text
+   mirror before wrapper/enum dispatch; codegen uses the structured
+   `TypeRef` directly.

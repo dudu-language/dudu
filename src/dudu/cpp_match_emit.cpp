@@ -52,7 +52,6 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
     const TypeRef subject_type_ref = infer_emitted_local_type_ref(
         stmt.condition_expr, local_type_refs, function_returns, symbols);
     if (has_type_ref(subject_type_ref)) {
-        const std::string subject_type = type_ref_text(subject_type_ref);
         const WrapperMatchType wrapper = wrapper_match_type(subject_type_ref);
         if (wrapper.kind != WrapperMatchKind::None) {
             const std::string subject = "__dudu_match_" + std::to_string(stmt.location.line) + "_" +
