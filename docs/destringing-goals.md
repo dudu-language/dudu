@@ -34,6 +34,15 @@ Definition of done:
 - migration guard rejects reintroducing those names/helpers
 - negative tests cover unsupported statement forms with useful diagnostics
 
+Status: complete. `Stmt` carries structured expression/type fields such as
+`target_expr`, `value_expr`, `condition_expr`, `message_expr`, `iterable_expr`,
+`pattern_expr`, `guard_expr`, `type_ref`, and `children`. The remaining
+statement string storage is `cpp_lines`, which is the explicit C++ escape block
+payload. `scripts/check_ast_migration_guards.sh` rejects reintroducing
+`statement_from_text`, `Stmt::value`, `Stmt::target`, `Stmt::condition`, and
+`Stmt::return_type`. Unsupported statement fixtures cover deliberately rejected
+Python statement forms.
+
 ## Goal 2: Remove Raw Source Payload From Normal Expressions
 
 Objective:
