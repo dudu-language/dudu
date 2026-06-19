@@ -2181,6 +2181,10 @@ push. They are not release packaging work.
    Native header class merging now dedupes imported base classes with
    `type_ref_equivalent` over parsed `TypeRef` nodes. The previous merge key
    rendered base types to strings and inserted them into a set.
+   Native function and C++ method dedupe now compare names, arity, variadic
+   metadata, return `TypeRef`, and parameter `TypeRef` nodes structurally. The
+   old rendered `native_function_key` and `method_key` helpers have been
+   deleted and guarded.
    C++ type lowering from structured named and qualified `TypeRef` nodes now
    goes through a name-only lowering helper instead of rendering the type name
    and sending it back through the raw string type parser. Raw type-string

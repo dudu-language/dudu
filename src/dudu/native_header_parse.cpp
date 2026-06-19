@@ -126,17 +126,27 @@ template <typename T> void add_unique(std::vector<T>& out, std::set<std::string>
     }
 }
 
-void add_unique_function(std::vector<NativeFunctionDecl>& out, std::set<std::string>& seen,
-                         NativeFunctionDecl value) {
-    if (seen.insert(native_function_key(value)).second)
-        out.push_back(std::move(value));
+bool contains_equivalent_method(const std::vector<FunctionDecl>& methods,
+                                const FunctionDecl& candidate) {
+    return std::ranges::any_of(methods, [&](const FunctionDecl& method) {
+        if (method.name != candidate.name ||
+            !type_ref_equivalent(function_return_type_ref(method),
+                                 function_return_type_ref(candidate)) ||
+            method.params.size() != candidate.params.size()) {
+            return false;
+        }
+        for (size_t i = 0; i < method.params.size(); ++i) {
+            if (!type_ref_equivalent(method.params[i].type_ref, candidate.params[i].type_ref)) {
+                return false;
+            }
+        }
+        return true;
+    });
 }
 
-std::string method_key(const FunctionDecl& fn) {
-    std::string key = fn.name + "(";
-    for (const ParamDecl& param : fn.params)
-        key += type_ref_text(param.type_ref) + ",";
-    return key + ")->" + type_ref_text(function_return_type_ref(fn));
+void add_unique_function(std::vector<NativeFunctionDecl>& out, NativeFunctionDecl value) {
+    if (!contains_equivalent_native_function(out, value))
+        out.push_back(std::move(value));
 }
 
 void add_base_class(ClassDecl& klass, std::string base, const SourceLocation& location) {
@@ -164,11 +174,8 @@ void merge_class(ClassDecl& target, const ClassDecl& source) {
     for (const FieldDecl& field : source.fields)
         if (fields.insert(field.name).second)
             target.fields.push_back(field);
-    std::set<std::string> methods;
-    for (const FunctionDecl& method : target.methods)
-        methods.insert(method_key(method));
     for (const FunctionDecl& method : source.methods)
-        if (methods.insert(method_key(method)).second)
+        if (!contains_equivalent_method(target.methods, method))
             target.methods.push_back(method);
 }
 
@@ -503,7 +510,6 @@ NativeHeaderScan dedupe_scan(NativeHeaderScan scan) {
     NativeHeaderScan out;
     std::set<std::string> types;
     std::set<std::string> values;
-    std::set<std::string> functions;
     std::set<std::string> macros;
     std::set<std::string> namespaces;
     std::set<std::string> classes;
@@ -512,7 +518,7 @@ NativeHeaderScan dedupe_scan(NativeHeaderScan scan) {
     for (auto item : scan.values)
         add_unique(out.values, values, std::move(item));
     for (auto item : scan.functions)
-        add_unique_function(out.functions, functions, std::move(item));
+        add_unique_function(out.functions, std::move(item));
     for (auto item : scan.macros)
         add_unique(out.macros, macros, std::move(item));
     for (auto item : scan.namespaces)

@@ -43,6 +43,8 @@ forbidden=(
     "native_template_type_refs"
     "native_template_binding_type_ref"
     "bases\\.insert\\(type_ref_text"
+    "native_function_key"
+    "method_key\\("
 )
 
 for pattern in "${forbidden[@]}"; do

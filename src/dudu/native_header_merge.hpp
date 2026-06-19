@@ -2,12 +2,13 @@
 
 #include "dudu/ast.hpp"
 
-#include <string>
 #include <vector>
 
 namespace dudu {
 
-std::string native_function_key(const NativeFunctionDecl& fn);
+bool native_function_equivalent(const NativeFunctionDecl& lhs, const NativeFunctionDecl& rhs);
+bool contains_equivalent_native_function(const std::vector<NativeFunctionDecl>& functions,
+                                         const NativeFunctionDecl& candidate);
 void append_unique_native_functions(std::vector<NativeFunctionDecl>& target,
                                     const std::vector<NativeFunctionDecl>& source);
 
