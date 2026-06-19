@@ -49,10 +49,54 @@ std::string strip_comment(std::string line) {
     return line;
 }
 
+std::string unescape_basic_string(std::string_view value) {
+    std::string out;
+    bool escaped = false;
+    for (const char c : value) {
+        if (escaped) {
+            switch (c) {
+            case 'b':
+                out.push_back('\b');
+                break;
+            case 't':
+                out.push_back('\t');
+                break;
+            case 'n':
+                out.push_back('\n');
+                break;
+            case 'f':
+                out.push_back('\f');
+                break;
+            case 'r':
+                out.push_back('\r');
+                break;
+            case '"':
+            case '\\':
+                out.push_back(c);
+                break;
+            default:
+                out.push_back(c);
+                break;
+            }
+            escaped = false;
+            continue;
+        }
+        if (c == '\\') {
+            escaped = true;
+            continue;
+        }
+        out.push_back(c);
+    }
+    if (escaped) {
+        out.push_back('\\');
+    }
+    return out;
+}
+
 std::string unquote(std::string value) {
     value = trim_copy(value);
     if (value.size() >= 2 && value.front() == '"' && value.back() == '"') {
-        return value.substr(1, value.size() - 2);
+        return unescape_basic_string(std::string_view(value).substr(1, value.size() - 2));
     }
     return value;
 }

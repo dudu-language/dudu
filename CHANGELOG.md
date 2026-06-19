@@ -102,6 +102,8 @@
 
 ### Fixed
 
+- Decoded common escaped characters in quoted `dudu.toml` strings, including
+  escaped quotes and backslashes in scalar fields and arrays.
 - Kept `duc bench` argument forwarding transparent while reserving
   `--quiet`/`--help` project-driver parsing for `dudu bench`.
 - Fixed delegated `[test]` and `[bench]` project commands so they run from the

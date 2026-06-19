@@ -1259,7 +1259,10 @@ push. They are not release packaging work.
    directory must not change behavior when it finds the same manifest.
    Delegated `[test]` and `[bench]` commands, plus fallback project scripts,
    now run from the manifest directory so project-relative shell commands do not
-   accidentally depend on the caller's current directory.
+   accidentally depend on the caller's current directory. Quoted manifest
+   strings decode common TOML escapes such as `\"`, `\\`, and `\n`, including
+   inside string arrays, so command strings and native paths do not leak raw
+   escape backslashes into the driver.
 
 14. Freestanding And Embedded Assert Policy
 

@@ -85,6 +85,27 @@ void test_build_backend_selection(const std::filesystem::path& root) {
     assert(!implicit.build_backend_explicit);
 }
 
+void test_quoted_manifest_strings(const std::filesystem::path& root) {
+    const std::filesystem::path project = root / "build" / "project-config-quoted-strings";
+    std::filesystem::remove_all(project);
+    write_text(project / "dudu.toml",
+               "name = \"quoted_probe\"\n"
+               "entry = \"src/main.dd\"\n"
+               "\n"
+               "[bench]\n"
+               "command = \"printf \\\"hello\\\" && printf C:\\\\tmp\"\n"
+               "\n"
+               "[include]\n"
+               "paths = [\"include/with\\\\slash\", \"include/with\\\"quote\"]\n");
+    write_text(project / "src" / "main.dd", "def main() -> i32:\n    return 0\n");
+
+    const dudu::ProjectConfig config = dudu::parse_project_config(project / "dudu.toml");
+    assert(config.bench_command == "printf \"hello\" && printf C:\\tmp");
+    assert(config.include_dirs.size() == 2);
+    assert(config.include_dirs[0] == "include/with\\slash");
+    assert(config.include_dirs[1] == "include/with\"quote");
+}
+
 void test_project_driver_resolves_manifest_relative_entries(const std::filesystem::path& root) {
     const std::filesystem::path project = root / "build" / "project-config-entry-resolution";
     const std::filesystem::path outside = root / "build" / "project-config-entry-outside";
@@ -139,6 +160,7 @@ int main() {
     try {
         test_manifest_relative_paths(DUDU_REPO_ROOT);
         test_build_backend_selection(DUDU_REPO_ROOT);
+        test_quoted_manifest_strings(DUDU_REPO_ROOT);
         test_project_driver_resolves_manifest_relative_entries(DUDU_REPO_ROOT);
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
