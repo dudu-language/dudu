@@ -143,7 +143,7 @@ std::optional<std::vector<TypeRef>> infer_generic_call_type_args(const FunctionS
         if (!infer_generic_binding(fn.params[i].type_ref, got, fn.generic_params, bindings,
                                    error)) {
             if (location != nullptr) {
-                sema_fail(node_location(*location, args[i]), error + " for " + callee);
+                sema_fail(diagnostic_location(*location, args[i]), error + " for " + callee);
             }
             return std::nullopt;
         }

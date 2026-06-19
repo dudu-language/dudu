@@ -50,7 +50,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
                 int loop_depth) {
     check_local_address_escape(stmt, scope.local_type_refs);
     if (stmt.kind == StmtKind::Return) {
-        const SourceLocation& value_location = node_location(stmt.location, stmt.value_expr);
+        const SourceLocation& value_location = diagnostic_location(stmt.location, stmt.value_expr);
         if (missing_expr(stmt.value_expr)) {
             if (!type_ref_is_void(return_type_ref)) {
                 const std::string return_type = type_ref_text(return_type_ref);
@@ -80,14 +80,14 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
         check_condition_type(scope, stmt);
         if (sema_has_expr(stmt.message_expr)) {
             (void)infer_expr_type_ast(scope, stmt.message_expr,
-                                      &node_location(stmt.location, stmt.message_expr));
+                                      &diagnostic_location(stmt.location, stmt.message_expr));
         }
         return;
     }
     if (stmt.kind == StmtKind::Raise) {
         if (sema_has_expr(stmt.value_expr)) {
             (void)infer_expr_type_ast(scope, stmt.value_expr,
-                                      &node_location(stmt.location, stmt.value_expr));
+                                      &diagnostic_location(stmt.location, stmt.value_expr));
         }
         return;
     }
@@ -106,7 +106,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
     if (stmt.kind == StmtKind::Delete) {
         std::vector<TypeRef> arg_types;
         auto infer_type = [&](const Expr& expr) {
-            return infer_expr_type_ast(scope, expr, &node_location(stmt.location, expr));
+            return infer_expr_type_ast(scope, expr, &diagnostic_location(stmt.location, expr));
         };
         if (stmt.value_expr.kind == ExprKind::TupleLiteral) {
             for (const Expr& child : stmt.value_expr.children)
@@ -143,7 +143,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
         }
         if (!stmt.name.empty()) {
             check_local_binding_name(stmt.location, stmt.name);
-            check_known_scoped_type_ref(scope, node_location(stmt.location, stmt.type_ref),
+            check_known_scoped_type_ref(scope, diagnostic_location(stmt.location, stmt.type_ref),
                                         stmt.type_ref, "unknown catch type: ");
             TypeRef catch_type = const_reference_type_ref(stmt.type_ref);
             bind_local(nested, stmt.name, catch_type);
@@ -164,15 +164,15 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
             if (!has_type_ref(binding_type)) {
                 const auto inferred = infer_for_binding_type(scope, stmt);
                 if (!inferred) {
-                    sema_fail(node_location(stmt.location, stmt.iterable_expr),
+                    sema_fail(diagnostic_location(stmt.location, stmt.iterable_expr),
                               "cannot infer loop binding type");
                 }
                 binding_type = *inferred;
             } else {
-                check_known_scoped_type_ref(scope, node_location(stmt.location, stmt.type_ref),
+                check_known_scoped_type_ref(scope, diagnostic_location(stmt.location, stmt.type_ref),
                                             stmt.type_ref, "unknown loop binding type: ");
                 check_iterable_binding(scope.symbols, scope.local_type_refs,
-                                       node_location(stmt.location, stmt.iterable_expr),
+                                       diagnostic_location(stmt.location, stmt.iterable_expr),
                                        binding_type, stmt.iterable_expr);
             }
             bind_local(nested, stmt.name, binding_type);
@@ -184,7 +184,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
         const TypeRef target_type = assignment_target_type_ref(scope, stmt);
         if (has_type_ref(target_type)) {
             check_type_ref_match(scope, target_type, stmt.value_expr,
-                                 node_location(stmt.location, stmt.value_expr));
+                                 diagnostic_location(stmt.location, stmt.value_expr));
         }
         return;
     }
@@ -193,11 +193,11 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
         const ArrayShapeInference inferred =
             infer_array_literal_shape_type(stmt.type_ref, stmt.value_expr);
         if (inferred.status == ArrayShapeStatus::EmptyLiteral) {
-            sema_fail(node_location(stmt.location, stmt.value_expr),
+            sema_fail(diagnostic_location(stmt.location, stmt.value_expr),
                       "array shape cannot be inferred from an empty literal");
         }
         if (inferred.status == ArrayShapeStatus::RaggedLiteral) {
-            sema_fail(node_location(stmt.location, stmt.value_expr), "ragged array literal");
+            sema_fail(diagnostic_location(stmt.location, stmt.value_expr), "ragged array literal");
         }
         const std::vector<size_t> explicit_shape = explicit_array_shape(stmt.type_ref);
         const TypeRef explicit_element = explicit_array_element_type_ref(stmt.type_ref);
@@ -205,42 +205,42 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
             const ArrayShapeInference actual =
                 infer_array_literal_shape_type(stmt.type_ref.children.front(), stmt.value_expr);
             if (actual.status == ArrayShapeStatus::RaggedLiteral) {
-                sema_fail(node_location(stmt.location, stmt.value_expr), "ragged array literal");
+                sema_fail(diagnostic_location(stmt.location, stmt.value_expr), "ragged array literal");
             }
             if (actual.status == ArrayShapeStatus::EmptyLiteral &&
                 explicit_shape != std::vector<size_t>{0}) {
-                sema_fail(node_location(stmt.location, stmt.value_expr),
+                sema_fail(diagnostic_location(stmt.location, stmt.value_expr),
                           "array literal shape mismatch: expected " + shape_text(explicit_shape) +
                               ", got [0]");
             }
             if (actual.status == ArrayShapeStatus::Inferred && actual.shape != explicit_shape) {
-                sema_fail(node_location(stmt.location, stmt.value_expr),
+                sema_fail(diagnostic_location(stmt.location, stmt.value_expr),
                           "array literal shape mismatch: expected " + shape_text(explicit_shape) +
                               ", got " + shape_text(actual.shape));
             }
         }
         const EffectiveVarType type = effective_var_type(stmt, inferred);
         if (!type.inferred) {
-            check_known_scoped_type_ref(scope, node_location(stmt.location, stmt.type_ref),
+            check_known_scoped_type_ref(scope, diagnostic_location(stmt.location, stmt.type_ref),
                                         stmt.type_ref, "unknown local type: ");
         } else {
-            check_known_scoped_type_ref(scope, node_location(stmt.location, type.ref), type.ref,
+            check_known_scoped_type_ref(scope, diagnostic_location(stmt.location, type.ref), type.ref,
                                         "unknown local type: ");
         }
         if (sema_has_expr(stmt.value_expr)) {
             if (inferred.status == ArrayShapeStatus::Inferred &&
                 is_array_literal(stmt.value_expr)) {
                 check_array_literal_elements(scope, inferred.element_type_ref, stmt.value_expr,
-                                             node_location(stmt.location, stmt.value_expr));
+                                             diagnostic_location(stmt.location, stmt.value_expr));
             } else if (has_type_ref(explicit_element) && is_array_literal(stmt.value_expr)) {
                 check_array_literal_elements(scope, explicit_element, stmt.value_expr,
-                                             node_location(stmt.location, stmt.value_expr));
+                                             diagnostic_location(stmt.location, stmt.value_expr));
             } else if (!type.inferred) {
                 check_type_ref_match(scope, type.ref, stmt.value_expr,
-                                     node_location(stmt.location, stmt.value_expr));
+                                     diagnostic_location(stmt.location, stmt.value_expr));
             } else {
                 check_type_ref_match(scope, type.ref, stmt.value_expr,
-                                     node_location(stmt.location, stmt.value_expr));
+                                     diagnostic_location(stmt.location, stmt.value_expr));
             }
         }
         bind_local(scope, stmt.name, type.ref);
@@ -252,7 +252,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
     if (stmt.kind == StmtKind::Assign) {
         if (const std::vector<std::string> names = tuple_binding_names(stmt.target_expr);
             !names.empty()) {
-            const SourceLocation& value_location = node_location(stmt.location, stmt.value_expr);
+            const SourceLocation& value_location = diagnostic_location(stmt.location, stmt.value_expr);
             const std::vector<TypeRef> types = template_type_arg_refs_with_aliases(
                 infer_expr_type_ast(scope, stmt.value_expr, &value_location), "tuple",
                 scope.symbols.alias_type_refs);
@@ -266,15 +266,15 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
             return;
         }
         if (stmt.target_expr.kind == ExprKind::TupleLiteral) {
-            sema_fail(node_location(stmt.location, stmt.target_expr),
+            sema_fail(diagnostic_location(stmt.location, stmt.target_expr),
                       "tuple destructuring targets must be names");
         }
         if (stmt.target_expr.kind == ExprKind::Name &&
             !scope.local_type_refs.contains(stmt.target_expr.name)) {
             const std::string& name = stmt.target_expr.name;
-            check_local_binding_name(node_location(stmt.location, stmt.target_expr), name);
+            check_local_binding_name(diagnostic_location(stmt.location, stmt.target_expr), name);
             const TypeRef inferred = infer_expr_type_ast(
-                scope, stmt.value_expr, &node_location(stmt.location, stmt.value_expr));
+                scope, stmt.value_expr, &diagnostic_location(stmt.location, stmt.value_expr));
             bind_local(scope, name, inferred);
             if (is_dudu_all_caps(name)) {
                 scope.constants.insert(name);
@@ -284,7 +284,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
         const TypeRef target_type = assignment_target_type_ref(scope, stmt);
         if (has_type_ref(target_type)) {
             check_type_ref_match(scope, target_type, stmt.value_expr,
-                                 node_location(stmt.location, stmt.value_expr));
+                                 diagnostic_location(stmt.location, stmt.value_expr));
         }
         return;
     }

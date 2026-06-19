@@ -114,7 +114,7 @@ void check_array_literal_elements(FunctionScope& scope, const TypeRef& element_t
         return;
     }
     for (const Expr& child : expr.children) {
-        check_array_literal_elements(scope, element_type, child, node_location(location, child));
+        check_array_literal_elements(scope, element_type, child, diagnostic_location(location, child));
     }
 }
 
@@ -145,7 +145,7 @@ TypeRef const_reference_type_ref(TypeRef type) {
 }
 
 void check_condition_type(FunctionScope& scope, const Stmt& stmt) {
-    const SourceLocation& location = node_location(stmt.location, stmt.condition_expr);
+    const SourceLocation& location = diagnostic_location(stmt.location, stmt.condition_expr);
     const TypeRef got_ref = infer_expr_type_ast(scope, stmt.condition_expr, &location);
     if (has_type_ref(got_ref) && !type_ref_is_name(got_ref, "bool") && !type_ref_is_auto(got_ref)) {
         if (const auto signature = dudu_operator_signature(scope.symbols, "bool", got_ref);
@@ -162,7 +162,7 @@ std::optional<TypeRef> infer_for_binding_type(FunctionScope& scope, const Stmt& 
     if (!sema_has_expr(stmt.iterable_expr)) {
         return std::nullopt;
     }
-    const SourceLocation& location = node_location(stmt.location, stmt.iterable_expr);
+    const SourceLocation& location = diagnostic_location(stmt.location, stmt.iterable_expr);
     if (direct_callee_name(stmt.iterable_expr) == "range") {
         for (const Expr& arg : stmt.iterable_expr.children) {
             (void)infer_expr_type_ast(scope, arg, &location);

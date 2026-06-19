@@ -19,12 +19,12 @@ bool sema_has_expr(const Expr& expr) {
     return expr_present(expr);
 }
 
-const SourceLocation& node_location(const SourceLocation& fallback, const Expr& expr) {
-    return expr.range.end.column > expr.range.start.column ? expr.location : fallback;
+const SourceLocation& diagnostic_location(const SourceLocation& context, const Expr& expr) {
+    return expr.range.end.column > expr.range.start.column ? expr.location : context;
 }
 
-const SourceLocation& node_location(const SourceLocation& fallback, const TypeRef& type) {
-    return type.range.end.column > type.range.start.column ? type.location : fallback;
+const SourceLocation& diagnostic_location(const SourceLocation& context, const TypeRef& type) {
+    return type.range.end.column > type.range.start.column ? type.location : context;
 }
 
 void bind_local(FunctionScope& scope, const std::string& name, const TypeRef& type_ref) {

@@ -138,9 +138,9 @@ bool check_wrapper_match(FunctionScope& scope, const Stmt& stmt, const TypeRef& 
         bind_wrapper_case(nested, wrapper, child.pattern_expr, child.location);
         if (sema_has_expr(child.guard_expr)) {
             const TypeRef guard_ref = infer_expr_type_ast(
-                nested, child.guard_expr, &node_location(child.location, child.guard_expr));
+                nested, child.guard_expr, &diagnostic_location(child.location, child.guard_expr));
             if (!type_ref_is_name(guard_ref, "bool")) {
-                sema_fail(node_location(child.location, child.guard_expr),
+                sema_fail(diagnostic_location(child.location, child.guard_expr),
                           "match guard must be bool, got " + type_ref_text(guard_ref));
             }
         }
@@ -228,9 +228,9 @@ void check_enum_match(FunctionScope& scope, const Stmt& stmt, const TypeRef& ret
         }
         if (sema_has_expr(child.guard_expr)) {
             const TypeRef guard_ref = infer_expr_type_ast(
-                nested, child.guard_expr, &node_location(child.location, child.guard_expr));
+                nested, child.guard_expr, &diagnostic_location(child.location, child.guard_expr));
             if (!type_ref_is_name(guard_ref, "bool")) {
-                sema_fail(node_location(child.location, child.guard_expr),
+                sema_fail(diagnostic_location(child.location, child.guard_expr),
                           "match guard must be bool, got " + type_ref_text(guard_ref));
             }
         }
@@ -246,7 +246,7 @@ void check_enum_match(FunctionScope& scope, const Stmt& stmt, const TypeRef& ret
 
 void check_match_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_type,
                       int loop_depth, const MatchCheckCallbacks& callbacks) {
-    const SourceLocation& subject_location = node_location(stmt.location, stmt.condition_expr);
+    const SourceLocation& subject_location = diagnostic_location(stmt.location, stmt.condition_expr);
     const TypeRef subject_ref = infer_expr_type_ast(scope, stmt.condition_expr, &subject_location);
     const WrapperMatchType wrapper = wrapper_match_type(subject_ref);
     if (wrapper.kind != WrapperMatchKind::None) {

@@ -46,7 +46,7 @@ std::string indexed_assignment_label(const Expr& receiver) {
 } // namespace
 
 TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
-    const SourceLocation& target_location = node_location(stmt.location, stmt.target_expr);
+    const SourceLocation& target_location = diagnostic_location(stmt.location, stmt.target_expr);
     if (stmt.target_expr.kind == ExprKind::Unary && stmt.target_expr.op == "*" &&
         stmt.target_expr.children.size() == 1) {
         const Expr& pointee = stmt.target_expr.children.front();

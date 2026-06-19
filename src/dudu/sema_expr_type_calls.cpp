@@ -48,7 +48,7 @@ std::optional<TypeRef> type_shape_builtin_type_ref(const FunctionScope& scope, c
         }
         if (location != nullptr && expr.children.size() == 1 &&
             !is_offsetof_field_expr(expr.children.front())) {
-            sema_expr_fail(node_location(*location, expr.children.front()),
+            sema_expr_fail(diagnostic_location(*location, expr.children.front()),
                            "offsetof field argument must be a field name");
         }
     }

@@ -142,7 +142,7 @@ void lsp_bind_local(FunctionScope& scope, const std::string& name, TypeRef type_
 }
 
 TypeRef infer_lsp_expr_type(FunctionScope& scope, const Expr& expr) {
-    return infer_expr_type_ast(scope, expr, &node_location(expr.location, expr));
+    return infer_expr_type_ast(scope, expr, &diagnostic_location(expr.location, expr));
 }
 
 void lsp_bind_inferred_local(FunctionScope& scope, const std::string& name, const Expr& expr) {
