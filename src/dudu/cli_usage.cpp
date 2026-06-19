@@ -12,23 +12,23 @@ void print_cli_usage(bool project_driver) {
                      "       dudu run [input.dd|target] [-o output] [--quiet] [--verbose]\n"
                      "       dudu build [input.dd|target] [-o output] [--quiet] [--verbose]\n"
                      "       dudu bench [compiler] [--quiet] [--verbose] [-- args...]\n"
-                     "       dudu check [input.dd|dir]\n"
-                     "       dudu clean [path]\n"
-                     "       dudu clean-cache [path]\n"
+                     "       dudu check [input.dd|dir] [--quiet]\n"
+                     "       dudu clean [path] [--quiet]\n"
+                     "       dudu clean-cache [path] [--quiet]\n"
                      "       dudu fmt [input.dd|dir] [--check]\n"
                      "       dudu lsp\n"
                      "       dudu test [input.dd|target|filter] [--filter text] [--no-capture] "
                      "[--quiet] [--verbose]\n"
-                     "       dudu cmake [input.dd|target] [-o CMakeLists.txt]\n";
+                     "       dudu cmake [input.dd|target] [-o CMakeLists.txt] [--quiet]\n";
         return;
     }
     std::cout
         << "usage: duc bench [args...]\n"
-           "       duc build [input.dd|target] [-o output]\n"
-           "       duc check [input.dd]\n"
-           "       duc clean [path]\n"
-           "       duc clean-cache [input.dd|path]\n"
-           "       duc cmake [input.dd|target] [-o CMakeLists.txt]\n"
+           "       duc build [input.dd|target] [-o output] [--quiet] [--verbose]\n"
+           "       duc check [input.dd] [--quiet]\n"
+           "       duc clean [path] [--quiet]\n"
+           "       duc clean-cache [input.dd|path] [--quiet]\n"
+           "       duc cmake [input.dd|target] [-o CMakeLists.txt] [--quiet]\n"
            "       duc emit [input.dd] [-o output.cpp]\n"
            "       duc emit-modules [input.dd] -o output-dir\n"
            "       duc emit-test-modules [input.dd] -o output-dir [--filter text] "
