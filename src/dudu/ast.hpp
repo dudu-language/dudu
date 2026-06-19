@@ -164,7 +164,6 @@ enum class ExprKind {
 
 struct Expr {
     ExprKind kind = ExprKind::Missing;
-    std::string text;
     std::string name;
     std::string value;
     std::string op;

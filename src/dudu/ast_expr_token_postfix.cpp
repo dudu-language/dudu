@@ -266,7 +266,6 @@ Expr ExprTokenParser::parse_primary(std::initializer_list<TokenKind> stops) {
         }
         Expr inner = parse_comma_expr({TokenKind::RParen});
         match(TokenKind::RParen);
-        inner.text = text_between(begin, cursor_);
         inner.location = tokens_[begin].location;
         inner.range = range_between(begin, cursor_);
         return inner;
@@ -281,7 +280,6 @@ Expr ExprTokenParser::parse_primary(std::initializer_list<TokenKind> stops) {
         Expr list = make_node(ExprKind::ListLiteral, begin, cursor_);
         list.children = parse_arg_list(TokenKind::RBracket);
         match(TokenKind::RBracket);
-        list.text = text_between(begin, cursor_);
         list.range = range_between(begin, cursor_);
         return list;
     }
@@ -308,7 +306,6 @@ Expr ExprTokenParser::parse_brace_literal(size_t begin) {
             Expr entry = make_node(ExprKind::DictEntry, entry_begin, cursor_);
             entry.children.push_back(std::move(key));
             entry.children.push_back(parse_named_or_binary({TokenKind::Comma, TokenKind::RBrace}));
-            entry.text = text_between(entry_begin, cursor_);
             entry.range = range_between(entry_begin, cursor_);
             entries.push_back(std::move(entry));
         } else {

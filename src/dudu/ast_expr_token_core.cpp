@@ -20,7 +20,6 @@ Expr ExprTokenParser::parse() {
     if (!at_end()) {
         return make_node(ExprKind::Unknown, begin, tokens_.size() - 1);
     }
-    expr.text = text_between(begin, cursor_);
     expr.range = range_between(begin, cursor_);
     return expr;
 }
@@ -122,7 +121,6 @@ std::string ExprTokenParser::text_between(size_t begin, size_t end) const {
 Expr ExprTokenParser::make_node(ExprKind kind, size_t begin, size_t end) const {
     Expr expr;
     expr.kind = kind;
-    expr.text = text_between(begin, end);
     expr.location = begin < tokens_.size() ? tokens_[begin].location : SourceLocation{};
     expr.range = range_between(begin, end);
     return expr;
@@ -182,7 +180,6 @@ Expr ExprTokenParser::parse_named_or_binary(std::initializer_list<TokenKind> sto
         expr.children.push_back((stop_at(stops) || at(TokenKind::Comma))
                                     ? make_expr(ExprKind::Missing, "", current().location)
                                     : parse_named_or_binary(stops));
-        expr.text = text_between(begin, cursor_);
         expr.range = range_between(begin, cursor_);
         return expr;
     }
@@ -191,7 +188,6 @@ Expr ExprTokenParser::parse_named_or_binary(std::initializer_list<TokenKind> sto
         Expr expr = make_node(ExprKind::NamedArg, begin, cursor_);
         expr.name = lhs.name;
         expr.children.push_back(parse_comma_expr(stops));
-        expr.text = text_between(begin, cursor_);
         expr.range = range_between(begin, cursor_);
         return expr;
     }
@@ -201,7 +197,6 @@ Expr ExprTokenParser::parse_named_or_binary(std::initializer_list<TokenKind> sto
         expr.children.push_back((stop_at(stops) || at(TokenKind::Comma))
                                     ? make_expr(ExprKind::Missing, "", current().location)
                                     : parse_named_or_binary(stops));
-        expr.text = text_between(begin, cursor_);
         expr.range = range_between(begin, cursor_);
         return expr;
     }
@@ -214,7 +209,6 @@ Expr ExprTokenParser::parse_named_or_binary(std::initializer_list<TokenKind> sto
                                         ? make_expr(ExprKind::Missing, "", current().location)
                                         : parse_named_or_binary(stops));
         }
-        expr.text = text_between(begin, cursor_);
         expr.range = range_between(begin, cursor_);
         return expr;
     }
@@ -296,7 +290,6 @@ Expr ExprTokenParser::parse_prefix(std::initializer_list<TokenKind> stops) {
                 expr.children.push_back(parse_named_or_binary(stops));
             }
         }
-        expr.text = text_between(begin, cursor_);
         expr.range = range_between(begin, cursor_);
         return expr;
     }
@@ -306,14 +299,12 @@ Expr ExprTokenParser::parse_prefix(std::initializer_list<TokenKind> stops) {
     if (match_identifier("await")) {
         Expr expr = make_node(ExprKind::Await, begin, cursor_);
         expr.children.push_back(parse_prefix(stops));
-        expr.text = text_between(begin, cursor_);
         expr.range = range_between(begin, cursor_);
         return expr;
     }
     if (match_identifier("yield")) {
         Expr expr = make_node(ExprKind::Yield, begin, cursor_);
         expr.children.push_back(parse_prefix(stops));
-        expr.text = text_between(begin, cursor_);
         expr.range = range_between(begin, cursor_);
         return expr;
     }
@@ -374,7 +365,6 @@ Expr ExprTokenParser::parse_unary(std::string op, size_t begin,
     Expr expr = make_node(ExprKind::Unary, begin, cursor_);
     expr.op = std::move(op);
     expr.children.push_back(parse_prefix(stops));
-    expr.text = text_between(begin, cursor_);
     expr.range = range_between(begin, cursor_);
     return expr;
 }

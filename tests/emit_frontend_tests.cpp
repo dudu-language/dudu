@@ -146,7 +146,6 @@ void test_offsetof_field_emission() {
 void test_offsetof_string_field_requires_parsed_value() {
     dudu::Expr malformed;
     malformed.kind = dudu::ExprKind::StringLiteral;
-    malformed.text = "\"flags\"";
     malformed.location =
         dudu::SourceLocation{.file = "synthetic_offsetof.dd", .line = 1, .column = 1};
 

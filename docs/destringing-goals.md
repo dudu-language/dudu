@@ -73,6 +73,13 @@ Definition of done:
 - migration guard rejects new `expr.text` semantic reads outside explicitly
   named display/escape/unsupported helpers
 
+Status: complete. `Expr` no longer has a raw source payload field. Parsed
+expressions carry names, literal values, operators, children, and source ranges
+instead. String literal semantic tokens use source ranges, `cpp(...)` escape
+payloads come from the parsed string literal value, and display text is rendered
+from structured expression nodes. `scripts/check_ast_migration_guards.sh`
+rejects reintroducing `expr.text` reads in compiler/test sources.
+
 ## Goal 3: Remove Raw Source Payload From Dudu Type AST
 
 Objective:

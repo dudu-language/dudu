@@ -193,11 +193,17 @@ Expr make_expr(ExprKind kind, std::string_view text, SourceLocation location) {
     if (trim_start != std::string_view::npos) {
         location = advance_columns(std::move(location), trim_start);
     }
+    const std::string value = trim_string(text);
     Expr expr;
     expr.kind = kind;
-    expr.text = trim_string(text);
+    if (kind == ExprKind::Name) {
+        expr.name = value;
+    } else if (kind == ExprKind::BoolLiteral || kind == ExprKind::IntLiteral ||
+               kind == ExprKind::FloatLiteral || kind == ExprKind::StringLiteral) {
+        expr.value = value;
+    }
     expr.location = location;
-    expr.range = range_for_text(location, expr.text);
+    expr.range = range_for_text(location, value);
     return expr;
 }
 

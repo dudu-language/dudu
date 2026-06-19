@@ -88,7 +88,6 @@ void test_ast_assignment_display_types() {
 
     dudu::Expr unknown;
     unknown.kind = dudu::ExprKind::Unknown;
-    unknown.text = "123";
     assert(dudu::assignment_error(bool_type, unknown, "") ==
            "cannot assign  to bool without an explicit cast");
 }
@@ -1034,7 +1033,6 @@ void test_literal_ast_values() {
     assert(dudu::lower_cpp_expr_ast(main.statements[3].value_expr, {}) == "\"line\\nnext\"");
     dudu::Expr malformed_binary;
     malformed_binary.kind = dudu::ExprKind::Binary;
-    malformed_binary.text = "stale + source";
     assert(dudu::display_expr(malformed_binary) == "<malformed binary expression>");
 }
 
