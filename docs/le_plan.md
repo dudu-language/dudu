@@ -131,13 +131,12 @@ backend are the path to clean separate-file output.
 
 Website plan: [Website Plan](website-plan.md).
 
-Dudu should have a GitHub Pages site for `dudulang.org`. The site should make
-the project understandable and memorable without pretending the compiler is more
-finished than it is. The public tone can be satirical and brown/poo-themed as a
-parody of modern language marketing: a humorous answer to the red/fire
-`mojolang.org` style, but brown, dirtier, and deliberately dumb as guerrilla
-marketing. The language docs, install commands, examples, and roadmap must stay
-technically honest.
+Dudu should have a GitHub Pages site for `dudulang.org`. The homepage should
+visually mimic the recognizable `mojolang.org` front page as a brown/poo-themed
+joke: same broad hero/nav/quick-link/feature-card rhythm, but Dudu branding and
+original implementation. Everything beyond that front-page gag, including
+install, docs, examples, roadmap, and technical content, must be Dudu-specific
+and technically honest.
 
 ## Diagnostic And Lint Cleanup
 

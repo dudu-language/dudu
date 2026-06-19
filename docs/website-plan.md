@@ -38,10 +38,11 @@ no ad-copy rhythm, no fake inevitability. It should sound like someone built a
 serious compiler and then made the least tasteful public wrapper that still
 communicates the idea clearly.
 
-The site should not copy Mojo text, logos, illustrations, or layout details
-verbatim. It can parody the category and contrast against the fire/red visual
-language with its own brown/poo-themed identity. Think "recognizable genre
-spoof," not trademark-confusing clone.
+The home page can intentionally mimic the recognizable first-page appearance of
+`mojolang.org`: top nav, big language mark, hero pitch, right-side quick links,
+and a few feature cards. That visual mimicry is the joke. Replace the fire/red
+identity with a brown/poo-themed Dudu identity, replace the copy with Dudu copy,
+and keep the implementation original.
 
 ## Dudulang.org Target
 
@@ -72,22 +73,32 @@ the moment. The important rule is that the attention hook must lead quickly to
 real artifacts: source code, docs, examples, generated C++, editor tooling,
 interop tests, and an honest roadmap.
 
-## Humorous Clone Rule
+## Homepage Mimic Rule
 
-The target is a humorous clone of the public language-launch-page vibe, not a
-source clone of another site's implementation. The page can deliberately rhyme
-with `mojolang.org` at the level of category, pacing, and contrast:
+The homepage should mimic the appearance and composition of the current
+`mojolang.org` front page closely enough that developers who know Mojo get the
+joke immediately. Mojo is well known enough, and divisive enough, that a
+brown/poo-themed Dudu version is funny before the visitor reads a paragraph.
 
-- big confident language name
-- immediate "Python shape, native speed" pitch
-- install command near the top
-- code example before too much explanation
-- performance and interop claims framed as engineering goals
-- roadmap/status links where a serious developer expects them
+The target is the front-page impression:
 
-The actual text, layout, assets, screenshots, animations, logos, and section
-composition must be original. The joke is "what if the fire language marketing
-page had an earthy brown sewer cousin," not "copy the page and recolor it."
+- dark page
+- slim top nav
+- large language logo/name in the hero
+- short "write like Python, run native" style pitch
+- install/quickstart button
+- right-side quick links
+- centered "built different" style section
+- simple feature cards below
+
+The content behind that front page must not match Mojo. Install, docs,
+packages, releases, examples, roadmap, interop notes, and technical writing are
+Dudu's own material. The homepage is the joke wrapper; the rest of the site is
+normal Dudu documentation and project material.
+
+The actual source, assets, screenshots, logo, copy, and implementation must be
+original. The joke is "what if the fire language marketing homepage had an
+earthy brown sewer cousin," not "copy the site and recolor it."
 
 This distinction matters because Dudu is not satire as a compiler. The site is
 satirical advertising around a sincere tool. If a visitor laughs and then
@@ -101,10 +112,9 @@ the joke has gone too far.
 - Sharp UI, not bubbly toy UI.
 - Brown and poo-themed, but not visually gross enough to make docs unpleasant
   to read.
-- The first viewport should feel recognizably related to the modern
-  Python-but-fast compiler landing-page genre, while being visually inverted:
-  brown instead of red, ground instead of fire, native pragmatism instead of
-  heat metaphors.
+- The first viewport should specifically evoke the `mojolang.org` front page:
+  large Dudu mark, short pitch, install button, quick links, and the same broad
+  information rhythm, but with Dudu's brown visual identity and original copy.
 - Logo and mascot work can be silly, but docs and examples stay readable.
 - Hero can be bold and dumb in a good way: Dudu, Python-shaped systems
   programming, C/C++ ecosystem underneath.
@@ -115,10 +125,8 @@ the joke has gone too far.
 - Use code examples and real screenshots early. The joke gets attention; the
   compiler behavior earns the click.
 
-The broad target is "humorous clone of the language-marketing genre," not a
-pixel copy of any single site. A visitor should recognize the riff immediately,
-but the implementation should be original enough that the Dudu site stands on
-its own.
+The broad target for the homepage is "recognizable Mojo-front-page parody."
+The broad target for every other page is "plain useful Dudu docs."
 
 ## Parody Boundaries
 
@@ -126,19 +134,22 @@ Acceptable:
 
 - Similar category structure: hero, install command, docs links, examples,
   roadmap, community/GitHub links.
+- Homepage-only mimicry of the `mojolang.org` front-page layout and visual
+  rhythm.
 - Satirical contrast against fire/speed/AI hype language.
 - A brown visual identity and intentionally dumb copy in a few visible places.
 
 Not acceptable:
 
 - Reusing Mojo's exact copy, screenshots, logos, assets, iconography, or page
-  composition.
+  source.
+- Making install, docs, package, release, or technical content match Mojo.
 - Claiming compatibility or affiliation.
 - Presenting the site as an actual fork, mirror, or official variant of Mojo.
 - Making the joke so heavy that the compiler looks fake.
 - Hiding project status or roadmap uncertainty.
 
-The target is parody of the genre, not a confusing clone. The user should get
+The target is homepage parody, not confusing affiliation. The user should get
 the joke in one second and understand the compiler in ten seconds.
 
 ## Site Structure
