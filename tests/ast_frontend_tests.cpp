@@ -324,6 +324,21 @@ void test_bound_native_template_pack_substitution_uses_type_refs() {
     assert(dudu::signature_param_type_ref(substituted, 1).name == "f32");
 }
 
+void test_explicit_native_template_value_args_use_type_refs() {
+    dudu::FunctionSignature signature;
+    signature.template_params = {"__i", "T"};
+    dudu::set_signature_param_types(signature, {dudu::parse_type_text("tuple[T]")});
+    dudu::set_signature_return_type(signature, dudu::parse_type_text("T"));
+
+    const dudu::FunctionSignature substituted = dudu::substitute_explicit_template_signature(
+        signature, {dudu::parse_type_text("1"), dudu::parse_type_text("i32")});
+    assert(dudu::signature_param_count(substituted) == 1);
+    assert(dudu::substitute_type_ref_text(dudu::signature_param_type_ref(substituted, 0), {}) ==
+           "tuple[i32]");
+    assert(dudu::signature_return_type_ref(substituted).kind == dudu::TypeKind::Named);
+    assert(dudu::signature_return_type_ref(substituted).name == "i32");
+}
+
 void test_receiver_template_substitution_uses_type_ast() {
     auto substitute = [](std::string_view type, std::vector<dudu::TypeRef> receiver_args) {
         return dudu::substitute_type_ref_text(
@@ -1613,6 +1628,7 @@ int main() {
         test_native_header_types_split_cpp_templates();
         test_native_template_binding_resolves_alias_type_refs();
         test_bound_native_template_pack_substitution_uses_type_refs();
+        test_explicit_native_template_value_args_use_type_refs();
         test_receiver_template_substitution_uses_type_ast();
         test_inherited_method_signature_uses_type_ast();
         test_find_inherited_method_uses_type_ast_receiver();

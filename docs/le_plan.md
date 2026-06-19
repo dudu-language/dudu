@@ -1998,3 +1998,6 @@ push. They are not release packaging work.
    LSP member-candidate type expansion now uses parsed `TypeRef` head names
    and C-tag-stripped head aliases instead of adding whole rendered type
    spellings to the candidate set.
+   Explicit native template non-type argument binding now detects numeric
+   value arguments through `TypeRef::Value` metadata instead of rendering
+   template arguments to strings first.

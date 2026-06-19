@@ -114,8 +114,11 @@ std::vector<std::string> native_signature_placeholders(const FunctionSignature& 
     return out;
 }
 
-std::string explicit_template_arg_text(const TypeRef& arg) {
-    return substitute_type_ref_text(arg, {});
+bool numeric_template_arg_ref(const TypeRef& arg) {
+    if (arg.kind == TypeKind::Value) {
+        return numeric_template_arg(arg.value);
+    }
+    return false;
 }
 
 std::map<std::string, TypeRef>
@@ -127,8 +130,7 @@ explicit_template_type_ref_bindings(const std::vector<std::string>& names,
         if (arg_index >= args.size()) {
             break;
         }
-        const std::string arg_text = explicit_template_arg_text(args[arg_index]);
-        if (native_index_placeholder(name) && !numeric_template_arg(arg_text)) {
+        if (native_index_placeholder(name) && !numeric_template_arg_ref(args[arg_index])) {
             continue;
         }
         out.emplace(name, args[arg_index]);
