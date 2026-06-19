@@ -414,7 +414,7 @@ probe_posix_threads() {
     local cpp="$repo_root/build/probe_posix_threads_mutex.cpp"
     local bin="$repo_root/build/probe_posix_threads_mutex"
     "$repo_root/build/duc" emit "$repo_root/tests/fixtures/posix_threads_mutex.dd" -o "$cpp"
-    "${CXX:-c++}" -std=c++20 -I"$repo_root/tests/fixtures" "$cpp" -pthread -o "$bin"
+    "${CXX:-c++}" -std=c++20 "$cpp" -pthread -o "$bin"
     set +e
     "$bin"
     local status=$?

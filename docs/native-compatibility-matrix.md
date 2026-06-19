@@ -26,7 +26,7 @@ Last local probe run: 2026-06-19 with `scripts/probe_optional.sh`.
 | --- | --- | --- | --- | --- | --- |
 | C standard library | libc / systems | callbacks, qsort, malloc/free-style APIs | fixture | `tests/fixtures/c_qsort_callback.dd` | no |
 | POSIX mmap | systems | headers, constants, pointers, file APIs, run | pass | `scripts/probe_optional.sh` / `posix_mmap_hash.dd` | no |
-| POSIX pthread | systems | pthread structs, mutex calls, link flags, run | pass | `scripts/probe_optional.sh` / `posix_threads_mutex.dd` | small helper header for callback shape |
+| POSIX pthread | systems | pthread structs, mutex calls, function pointer callback, link flags, run | pass | `scripts/probe_optional.sh` / `posix_threads_mutex.dd` | no |
 | C++ standard library algorithms | C++ stdlib | containers, algorithms, pairs, tuples, `std.get` | pass | `scripts/probe_cpp_stdlib_algorithms.sh` | no |
 | C++ standard library variants | C++ stdlib | `std.variant`, `std.holds_alternative`, `std.get` | fixture | `tests/fixtures/cpp_std_variant.dd` | no |
 | glm | math | header import, constructors, functions such as `glm.dot` | pass | `scripts/probe_optional.sh` / `glm_math.dd` | no |
