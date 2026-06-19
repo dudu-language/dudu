@@ -4,12 +4,27 @@
 #include "dudu/ast_type.hpp"
 #include "dudu/sema_expr_internal.hpp"
 
+#include <optional>
+
 namespace dudu {
 namespace {
 
 std::string index_receiver_label(const Expr& receiver) {
     const std::string label = expr_label(receiver);
     return label.empty() ? "indexed expression" : label;
+}
+
+std::optional<std::string> unknown_module_function_message(const Symbols& symbols,
+                                                           const std::string& callee) {
+    const size_t dot = callee.find('.');
+    if (dot == std::string::npos || dot == 0 || dot + 1 >= callee.size()) {
+        return std::nullopt;
+    }
+    const std::string prefix = callee.substr(0, dot);
+    if (!symbols.module_import_prefixes.contains(prefix)) {
+        return std::nullopt;
+    }
+    return "module '" + prefix + "' has no exported function '" + callee.substr(dot + 1) + "'";
 }
 
 } // namespace
@@ -118,6 +133,9 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
                 sema_expr_fail(*location,
                                "unsupported call expression: " + expr_label(expr.callee.front()));
             }
+            if (const auto message = unknown_module_function_message(scope.symbols, callee)) {
+                sema_expr_fail(*location, *message);
+            }
             sema_expr_fail(*location, "unknown function: " + callee);
         }
         return {};
@@ -134,6 +152,10 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
                 sema_expr_fail(*location, "unknown function: " + callee);
             }
             if (callee_base.rfind('.') != std::string::npos) {
+                if (const auto message =
+                        unknown_module_function_message(scope.symbols, callee_base)) {
+                    sema_expr_fail(*location, *message);
+                }
                 sema_expr_fail(*location, "unknown function: " + callee);
             }
             if (!expr.callee.empty() && expr.callee.front().kind != ExprKind::Name &&

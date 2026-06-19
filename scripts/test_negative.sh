@@ -343,5 +343,5 @@ if (
     echo "bad_project_selective_import_reexport_leak unexpectedly passed" >&2
     exit 1
 fi
-grep -q "unknown function: facade.hidden_answer" \
+grep -q "module 'facade' has no exported function 'hidden_answer'" \
     "$repo_root/build/bad_project_selective_import_reexport_leak.err"
