@@ -9,6 +9,9 @@ namespace dudu {
 namespace {
 
 bool is_numeric_literal_expr(const Expr& expr) {
+    if (expr.kind == ExprKind::Unary && expr.op == "-" && expr.children.size() == 1) {
+        return is_numeric_literal_expr(expr.children.front());
+    }
     return expr.kind == ExprKind::IntLiteral || expr.kind == ExprKind::FloatLiteral;
 }
 

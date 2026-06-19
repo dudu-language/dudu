@@ -963,6 +963,28 @@ void test_reference_list_indexing() {
     dudu::analyze_module(module, {.check_bodies = true});
 }
 
+void test_negative_numeric_literals_contextualize_as_f32_args() {
+    const dudu::ModuleAst module =
+        dudu::parse_source("def take_f32(x: f32, y: f32):\n"
+                           "    pass\n"
+                           "\n"
+                           "class Player:\n"
+                           "    x: f32\n"
+                           "    y: f32\n"
+                           "\n"
+                           "    def move(self, dx: f32, dy: f32):\n"
+                           "        self.x += dx\n"
+                           "        self.y += dy\n"
+                           "\n"
+                           "def main() -> i32:\n"
+                           "    take_f32(-2.0, -1.0)\n"
+                           "    player = Player(x=1.0, y=2.0)\n"
+                           "    player.move(2.0, -1.0)\n"
+                           "    return 0\n",
+                           "negative_numeric_literal_args.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+}
+
 void test_pointer_dereference_uses_type_ast() {
     const dudu::ModuleAst module = dudu::parse_source("def read(ptr: *const[i32]) -> const[i32]:\n"
                                                       "    return *ptr\n"
@@ -1266,6 +1288,7 @@ int main() {
         test_formatter();
         test_list_iterator_methods();
         test_reference_list_indexing();
+        test_negative_numeric_literals_contextualize_as_f32_args();
         test_pointer_dereference_uses_type_ast();
         test_extern_c_signature_uses_type_ast();
         test_pointer_arithmetic_uses_type_ast();
