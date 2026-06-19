@@ -87,6 +87,7 @@ void write_text_output(const std::optional<std::filesystem::path>& path, const s
         std::cout << text;
         return;
     }
+    std::filesystem::create_directories(path->parent_path().empty() ? "." : path->parent_path());
     std::ofstream out(*path);
     if (!out) {
         fail("could not open output " + path->string());
@@ -376,6 +377,20 @@ int run_cli(int argc, char** argv) {
         const ModuleAst module = checked_module(options, source, true);
         print_project_step(project_output, "emit", *options.output);
         write_cpp_module_artifacts(*options.output, module);
+        return 0;
+    }
+    if (options.emit_test_modules) {
+        if (!options.output.has_value()) {
+            fail("emit-test-modules requires -o <directory>");
+        }
+        const bool project_output = options.project_driver && !options.quiet;
+        print_project_step(project_output, "analyze", options.input);
+        const ModuleAst module = checked_module(options, source, true);
+        print_project_step(project_output, "emit", *options.output);
+        for (const CppModuleArtifact& artifact :
+             emit_cpp_test_module_artifacts(module, options.test_filter, !options.no_capture)) {
+            write_text_output(*options.output / artifact.path, artifact.content);
+        }
         return 0;
     }
     if (options.emit_cpp) {

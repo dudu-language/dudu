@@ -438,7 +438,23 @@ test -f "$repo_root/build/project_backend_cmake/cmake-backend/build/generated/ma
 test -f "$repo_root/build/project_backend_cmake/cmake-backend/build/generated/helper.cpp"
 grep -Eq "cmake .*project_backend_cmake/dudu-tests/main-[0-9a-f]+-cmake/source/CMakeLists.txt" \
     "$repo_root/build/project_backend_cmake_test.err"
-grep -q "1/1 tests passed" "$repo_root/build/project_backend_cmake_test.out"
+grep -q "Dudu emit test modules" "$repo_root/build/project_backend_cmake_test.err"
+grep -q "2/2 tests passed" "$repo_root/build/project_backend_cmake_test.out"
+cmake_test_binary=$(sed -n 's/^test //p' "$repo_root/build/project_backend_cmake_test.err" | tail -1)
+cmake_test_generated_dir="$(dirname "$cmake_test_binary")/generated"
+test -f "$cmake_test_generated_dir/main.cpp"
+test -f "$cmake_test_generated_dir/helper.cpp"
+test -f "$cmake_test_generated_dir/test_harness.cpp"
+(
+    cd "$repo_root/tests/fixtures/project_backend_cmake"
+    "$repo_root/build/dudu" test --filter cmake_backend \
+        >"$repo_root/build/project_backend_cmake_test_filter.out"
+)
+grep -q "1/1 tests passed" "$repo_root/build/project_backend_cmake_test_filter.out"
+if grep -q "ok other_test" "$repo_root/build/project_backend_cmake_test_filter.out"; then
+    echo "cmake backend dudu test filter ran an unfiltered test" >&2
+    exit 1
+fi
 
 (
     cd "$repo_root/tests/fixtures/project_backend_cmake_namespaces"

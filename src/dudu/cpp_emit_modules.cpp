@@ -2,6 +2,7 @@
 
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_emit.hpp"
+#include "dudu/cpp_emit_internal.hpp"
 #include "dudu/cpp_emit_prelude.hpp"
 
 #include <fstream>
@@ -116,10 +117,13 @@ std::string resolved_module_path_for_import(const ModuleAst& unit, const ImportD
 }
 
 CppEmitOptions module_emit_options(const ModuleAst& unit,
-                                   const std::map<std::string, const ModuleAst*>& modules) {
+                                   const std::map<std::string, const ModuleAst*>& modules,
+                                   bool test_source = false) {
     CppEmitOptions options;
     options.emit_prelude = false;
     options.use_generated_names = true;
+    options.test_source = test_source;
+    options.expose_test_functions = test_source;
     add_local_generated_names(options, unit);
     for (const ImportDecl& import : unit.imports) {
         if (import.kind != ImportKind::Module && import.kind != ImportKind::From) {
@@ -142,9 +146,9 @@ std::vector<std::string> module_include_paths(const ModuleAst& unit) {
         if (import.module_path.empty() || import.module_path == unit.module_path) {
             continue;
         }
-        paths.insert(module_artifact_base_for_path(resolved_module_path_for_import(unit, import))
-                         .string() +
-                     ".hpp");
+        paths.insert(
+            module_artifact_base_for_path(resolved_module_path_for_import(unit, import)).string() +
+            ".hpp");
     }
     return {paths.begin(), paths.end()};
 }
@@ -186,35 +190,40 @@ void emit_entry_point(std::ostringstream& out, const ModuleAst& unit,
 }
 
 std::string header_with_module_includes(const ModuleAst& unit,
-                                        const std::map<std::string, const ModuleAst*>& modules) {
+                                        const std::map<std::string, const ModuleAst*>& modules,
+                                        bool test_source = false) {
     std::ostringstream out;
     emit_module_includes(out, unit);
-    out << emit_cpp_header(unit, module_emit_options(unit, modules));
+    out << emit_cpp_header(unit, module_emit_options(unit, modules, test_source));
     return out.str();
 }
 
 std::string source_with_boundary_comment(const ModuleAst& unit,
-                                         const std::map<std::string, const ModuleAst*>& modules) {
+                                         const std::map<std::string, const ModuleAst*>& modules,
+                                         bool test_source = false) {
     std::ostringstream out;
-    const CppEmitOptions options = module_emit_options(unit, modules);
+    const CppEmitOptions options = module_emit_options(unit, modules, test_source);
     out << "// dudu module: " << (unit.module_path.empty() ? "main" : unit.module_path) << "\n";
     emit_module_includes(out, unit);
     out << emit_cpp_source(unit, options);
-    emit_entry_point(out, unit, options);
+    if (!test_source) {
+        emit_entry_point(out, unit, options);
+    }
     return out.str();
 }
 
 void append_artifacts(std::vector<CppModuleArtifact>& out, const ModuleAst& unit,
-                      const std::map<std::string, const ModuleAst*>& modules) {
+                      const std::map<std::string, const ModuleAst*>& modules,
+                      bool test_source = false) {
     const std::filesystem::path base = module_artifact_base(unit);
     out.push_back({.path = base.string() + ".hpp",
                    .module_path = unit.module_path,
                    .kind = CppModuleArtifactKind::Header,
-                   .content = header_with_module_includes(unit, modules)});
+                   .content = header_with_module_includes(unit, modules, test_source)});
     out.push_back({.path = base.string() + ".cpp",
                    .module_path = unit.module_path,
                    .kind = CppModuleArtifactKind::Source,
-                   .content = source_with_boundary_comment(unit, modules)});
+                   .content = source_with_boundary_comment(unit, modules, test_source)});
 }
 
 std::map<std::string, const ModuleAst*> module_map(const std::vector<ModuleAst>& units) {
@@ -223,6 +232,36 @@ std::map<std::string, const ModuleAst*> module_map(const std::vector<ModuleAst>&
         out[unit.module_path] = &unit;
     }
     return out;
+}
+
+ModuleAst test_harness_module(const ModuleAst& module) {
+    ModuleAst out;
+    const std::vector<ModuleAst>& units =
+        module.module_units.empty() ? std::vector<ModuleAst>{module} : module.module_units;
+    for (const ModuleAst& unit : units) {
+        for (const FunctionDecl& fn : unit.functions) {
+            if (cpp_emit_function_is_test(fn)) {
+                out.functions.push_back(fn);
+            }
+        }
+    }
+    return out;
+}
+
+std::string test_harness_source(const ModuleAst& module, const std::string& filter,
+                                bool capture_output) {
+    std::ostringstream out;
+    out << "#include \"dudu_runtime.hpp\"\n";
+    const std::vector<ModuleAst>& units =
+        module.module_units.empty() ? std::vector<ModuleAst>{module} : module.module_units;
+    for (const ModuleAst& unit : units) {
+        out << "#include \"" << module_artifact_base(unit).string() << ".hpp\"\n";
+    }
+    out << '\n';
+    CppEmitOptions options;
+    options.use_generated_names = true;
+    emit_test_harness(out, test_harness_module(module), filter, capture_output, options);
+    return out.str();
 }
 
 } // namespace
@@ -241,6 +280,29 @@ std::vector<CppModuleArtifact> emit_cpp_module_artifacts(const ModuleAst& module
     for (const ModuleAst& unit : module.module_units) {
         append_artifacts(out, unit, modules);
     }
+    return out;
+}
+
+std::vector<CppModuleArtifact> emit_cpp_test_module_artifacts(const ModuleAst& module,
+                                                              const std::string& filter,
+                                                              bool capture_output) {
+    std::vector<CppModuleArtifact> out;
+    out.push_back({.path = "dudu_runtime.hpp",
+                   .module_path = {},
+                   .kind = CppModuleArtifactKind::Header,
+                   .content = runtime_header(module)});
+    if (module.module_units.empty()) {
+        append_artifacts(out, module, {{module.module_path, &module}}, true);
+    } else {
+        const std::map<std::string, const ModuleAst*> modules = module_map(module.module_units);
+        for (const ModuleAst& unit : module.module_units) {
+            append_artifacts(out, unit, modules, true);
+        }
+    }
+    out.push_back({.path = "test_harness.cpp",
+                   .module_path = {},
+                   .kind = CppModuleArtifactKind::Source,
+                   .content = test_harness_source(module, filter, capture_output)});
     return out;
 }
 

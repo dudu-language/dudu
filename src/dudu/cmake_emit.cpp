@@ -91,9 +91,13 @@ void emit_cmake_target(std::ostringstream& out, const ProjectConfig& config,
     out << ")\n";
 }
 
-std::vector<std::filesystem::path> generated_module_sources(const std::filesystem::path& input) {
+std::vector<std::filesystem::path> generated_module_sources(const std::filesystem::path& input,
+                                                            bool test_source = false) {
     std::vector<std::filesystem::path> sources;
-    for (const CppModuleArtifact& artifact : emit_cpp_module_artifacts(load_source_tree(input))) {
+    const ModuleAst module = load_source_tree(input);
+    const std::vector<CppModuleArtifact> artifacts =
+        test_source ? emit_cpp_test_module_artifacts(module) : emit_cpp_module_artifacts(module);
+    for (const CppModuleArtifact& artifact : artifacts) {
         if (artifact.kind == CppModuleArtifactKind::Source) {
             sources.push_back(artifact.path);
         }
@@ -185,26 +189,48 @@ std::string emit_cmake_project(const ProjectConfig& config, const std::filesyste
     return out.str();
 }
 
-std::string emit_cmake_cpp_project(const ProjectConfig& config, const std::string& target,
-                                   const std::filesystem::path& cpp_source) {
-    const std::filesystem::path project_dir =
-        config.project_dir.empty() ? std::filesystem::current_path() : config.project_dir;
+std::string emit_cmake_test_project(const ProjectConfig& config, const std::filesystem::path& input,
+                                    const std::string& target, const std::string& filter,
+                                    bool capture_output) {
+    const std::filesystem::path project_dir = project_dir_for_input(input);
+    const std::string source_path = source_path_for_project(project_dir, input);
+    const std::filesystem::path generated_dir =
+        std::filesystem::path("${CMAKE_CURRENT_BINARY_DIR}") / "generated";
+    const std::vector<std::filesystem::path> generated_sources =
+        generated_module_sources(input, true);
     std::ostringstream out;
     out << "cmake_minimum_required(VERSION 3.20)\n\n"
         << "project(" << target << " LANGUAGES C CXX)\n\n"
         << "set(CMAKE_CXX_STANDARD " << cmake_cpp_standard(config.cpp_std) << ")\n"
-        << "set(CMAKE_CXX_STANDARD_REQUIRED ON)\n\n";
-    emit_pkg_config(out, config);
-    if (config.target_kind == "library") {
-        out << "add_library(" << target << " STATIC\n";
-    } else if (config.target_kind == "shared_library") {
-        out << "add_library(" << target << " SHARED\n";
-    } else {
-        out << "add_executable(" << target << "\n";
+        << "set(CMAKE_CXX_STANDARD_REQUIRED ON)\n"
+        << "set(DUDU_EXECUTABLE duc CACHE FILEPATH \"Path to the duc compiler\")\n"
+        << "set(DUDU_PROJECT_DIR " << cmake_quote(project_dir.string()) << ")\n"
+        << "set(DUDU_SOURCE " << cmake_quote(source_path) << ")\n"
+        << "set(DUDU_GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)\n\n";
+    emit_generated_module_list(out, "DUDU_GENERATED", "${DUDU_GENERATED_DIR}", generated_sources);
+    out << "add_custom_command(\n"
+        << "    OUTPUT ${DUDU_GENERATED}\n"
+        << "    COMMAND ${CMAKE_COMMAND} -E make_directory ${DUDU_GENERATED_DIR}\n"
+        << "    COMMAND ${DUDU_EXECUTABLE} emit-test-modules ${DUDU_PROJECT_DIR}/${DUDU_SOURCE} "
+           "-o ${DUDU_GENERATED_DIR}";
+    if (!filter.empty()) {
+        out << " --filter " << cmake_quote(filter);
     }
-    out << "    " << cmake_quote(cpp_source.string()) << "\n";
+    if (!capture_output) {
+        out << " --no-capture";
+    }
+    out << "\n";
+    emit_cmake_depends(out, source_tree_files(input));
+    out << "    COMMENT \"Dudu emit test modules\"\n"
+        << "    VERBATIM\n"
+        << "    WORKING_DIRECTORY ${DUDU_PROJECT_DIR}\n"
+        << ")\n\n";
+    emit_pkg_config(out, config);
+    out << "add_executable(" << target << "\n"
+        << "    ${DUDU_GENERATED}\n";
     emit_cmake_sources(out, config, project_dir);
     out << ")\n";
+    out << "target_include_directories(" << target << " PRIVATE ${DUDU_GENERATED_DIR})\n";
     emit_cmake_list_values(out, "target_include_directories(" + target + " PRIVATE",
                            config.include_dirs, &project_dir);
     emit_cmake_list_values(out, "target_compile_definitions(" + target + " PRIVATE",

@@ -10,6 +10,8 @@ namespace dudu {
 struct CppEmitOptions {
     bool emit_prelude = true;
     bool use_generated_names = false;
+    bool test_source = false;
+    bool expose_test_functions = false;
     std::map<std::string, std::string> generated_type_names;
     std::map<std::string, std::string> generated_value_names;
 };

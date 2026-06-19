@@ -360,19 +360,18 @@ Current implementation reality:
   plus a shared `dudu_runtime.hpp`.
 - The generated CMake backend uses `duc emit-modules` and compiles the
   generated per-module `.cpp` files.
-- `dudu test` can use the CMake backend, but its generated harness path is
-  still a single generated test translation unit. A true per-module test
-  backend needs test-mode module artifacts: generated headers that expose test
-  functions to the harness and generated module sources that suppress normal
-  executable entry points.
+- `dudu test` can use the generated CMake backend. It uses
+  `duc emit-test-modules` to emit per-module test-mode `.hpp/.cpp` artifacts
+  plus a small generated `test_harness.cpp`; generated module sources suppress
+  normal executable entry points and headers expose test functions to the
+  harness.
 - The direct backend still compiles the compatibility merged `.cpp` output.
 - `[build] backend = "direct"` and `[build] backend = "cmake"` parse from
   `dudu.toml`. The direct backend is selectable explicitly and keeps strict
   merged-output diagnostics when the project cannot be represented by one
-  generated translation unit. The generated
-  CMake backend is implemented for `dudu build`, `dudu run`, and `dudu test`;
-  it emits an internal CMake project and drives `cmake -S/-B` plus
-  `cmake --build`.
+  generated translation unit. The generated CMake backend is implemented for
+  `dudu build`, `dudu run`, and `dudu test`; it emits an internal CMake project
+  and drives `cmake -S/-B` plus `cmake --build`.
 - The direct backend supports useful native inputs: include paths, library
   paths, libraries, compile flags, link flags, pkg-config packages, and extra
   C/C++ sources.

@@ -102,6 +102,8 @@
 
 ### Fixed
 
+- Switched generated-CMake `dudu test` builds to per-module test artifacts
+  plus a small generated harness instead of one merged test translation unit.
 - Decoded common escaped characters in quoted `dudu.toml` strings, including
   escaped quotes and backslashes in scalar fields and arrays.
 - Rejected invalid or unfinished escapes in quoted `dudu.toml` strings instead

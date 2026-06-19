@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dudu/ast.hpp"
+#include "dudu/cpp_emit_options.hpp"
 
 #include <iosfwd>
 #include <string>
@@ -14,6 +15,6 @@ std::string cpp_emit_string_literal(std::string text);
 std::string cpp_emit_function_decorator_arg(const FunctionDecl& fn, std::string_view name);
 
 void emit_test_harness(std::ostringstream& out, const ModuleAst& module, const std::string& filter,
-                       bool capture_output);
+                       bool capture_output, const CppEmitOptions& options = {});
 
 } // namespace dudu

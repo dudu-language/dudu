@@ -9,3 +9,8 @@ def main() -> i32:
 @test
 def cmake_backend_test():
     assert h.answer() == 42
+
+
+@test
+def other_test():
+    assert h.answer() > 0

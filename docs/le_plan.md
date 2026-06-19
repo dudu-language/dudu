@@ -1239,10 +1239,10 @@ push. They are not release packaging work.
    quiet for direct compiler-driver scripts. `dudu bench` is documented in
    help and parses project-driver flags such as `--quiet`/`--help`, with
    benchmark command arguments still available after `--`.
-   The generated CMake test backend still emits one generated harness
-   translation unit; true per-module tests need test-mode module artifacts that
-   expose test functions to the harness and suppress normal executable entry
-   points in generated module sources.
+   The generated CMake test backend now uses `duc emit-test-modules` to emit
+   per-module test-mode `.hpp/.cpp` artifacts plus a small generated
+   `test_harness.cpp`; generated module sources suppress normal executable
+   entry points and headers expose test functions to the harness.
    The serious path is to make these backend choices work behind the same
    front-door commands, not to tell users that real projects must leave
    `dudu build`.

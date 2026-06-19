@@ -36,15 +36,6 @@ std::string read_text_file(const std::filesystem::path& path) {
     return {std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
 }
 
-void write_text_file(const std::filesystem::path& path, const std::string& text) {
-    std::filesystem::create_directories(path.parent_path().empty() ? "." : path.parent_path());
-    std::ofstream out(path);
-    if (!out) {
-        fail("could not open output " + path.string());
-    }
-    out << text;
-}
-
 std::filesystem::path build_config_path(const std::filesystem::path& input) {
     return find_project_config(input);
 }
@@ -213,32 +204,30 @@ int run_one_test_entry(TestDriverOptions options) {
     const ProjectConfig config = config_for_options(options);
     const std::filesystem::path output =
         options.output.value_or(default_test_output(options, config));
-    const std::string harness = emit_cpp_test_source(checked_module(options, source),
-                                                     options.test_filter, !options.no_capture);
     if (config.build_backend == "cmake") {
         const bool project_output = options.project_driver && !options.quiet;
         const std::string target = output.filename().string();
         const std::filesystem::path root =
             output.parent_path() / (output.filename().string() + "-cmake");
-        const std::filesystem::path cpp_path = root / "source" / "test_harness.cpp";
-        write_text_file(cpp_path, harness);
-        print_project_step(project_output, "emit", cpp_path);
         print_project_step(project_output, "cmake", root / "source" / "CMakeLists.txt");
         print_project_step(project_output, "build", root / "build");
-        const std::filesystem::path bin =
-            run_cmake_backend({.config = config,
-                               .root = root,
-                               .cmake_lists = emit_cmake_cpp_project(config, target, cpp_path),
-                               .target = target,
-                               .dudu_executable = options.dudu_executable,
-                               .stream_output = project_output,
-                               .verbose = options.verbose});
+        const std::filesystem::path bin = run_cmake_backend(
+            {.config = config,
+             .root = root,
+             .cmake_lists = emit_cmake_test_project(config, options.input, target,
+                                                    options.test_filter, !options.no_capture),
+             .target = target,
+             .dudu_executable = options.dudu_executable,
+             .stream_output = project_output,
+             .verbose = options.verbose});
         print_project_step(project_output, "test", bin);
         return std::system(shell_quote_path(bin).c_str()) == 0 ? 0 : 1;
     }
     const bool project_output = options.project_driver && !options.quiet;
     print_project_step(project_output, "emit", output.string() + ".cpp");
     print_project_step(project_output, "test", output);
+    const std::string harness = emit_cpp_test_source(checked_module(options, source),
+                                                     options.test_filter, !options.no_capture);
     const std::filesystem::path bin = build_executable({.output = output,
                                                         .config = config,
                                                         .stream_output = project_output,

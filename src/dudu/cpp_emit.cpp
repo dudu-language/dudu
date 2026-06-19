@@ -81,8 +81,9 @@ bool visible_in_header(Visibility visibility) {
     return visibility != Visibility::Private;
 }
 
-bool visible_function_in_header(const FunctionDecl& fn) {
-    return visible_in_header(fn.visibility) && !cpp_emit_function_is_test(fn);
+bool visible_function_in_header(const FunctionDecl& fn, const CppEmitOptions& options = {}) {
+    return visible_in_header(fn.visibility) &&
+           (options.expose_test_functions || !cpp_emit_function_is_test(fn));
 }
 
 bool emit_before_constants(const FunctionDecl& fn) {
@@ -220,7 +221,7 @@ void emit_function_declarations(std::ostringstream& out, const ModuleAst& module
         if (!should_emit_function(fn, test_source)) {
             continue;
         }
-        if (header_only && !visible_function_in_header(fn)) {
+        if (header_only && !visible_function_in_header(fn, options)) {
             continue;
         }
         emit_template_params(out, fn.generic_params);
@@ -254,7 +255,7 @@ void emit_early_functions(std::ostringstream& out, const ModuleAst& module,
         if (!emit_before_constants(fn) || !should_emit_function(fn, test_source)) {
             continue;
         }
-        if (header_only && !visible_function_in_header(fn)) {
+        if (header_only && !visible_function_in_header(fn, options)) {
             continue;
         }
         emit_function_body(out, fn, aliases, function_returns, symbols, options);
@@ -285,7 +286,7 @@ std::string emit_cpp_header(const ModuleAst& module, const CppEmitOptions& optio
         if (emit_before_constants(fn)) {
             continue;
         }
-        if (!visible_function_in_header(fn)) {
+        if (!visible_function_in_header(fn, options)) {
             continue;
         }
         emit_template_params(out, fn.generic_params);
@@ -344,14 +345,15 @@ std::string emit_cpp_source(const ModuleAst& module, const CppEmitOptions& optio
     emit_aliases(out, module, options);
     emit_enum_forward_declarations(out, module, options);
     emit_class_forward_declarations(out, module, options);
-    emit_function_declarations(out, module, aliases, false, false, options);
+    emit_function_declarations(out, module, aliases, false, options.test_source, options);
     emit_classes(out, module, aliases, function_returns, symbols, false, options);
     emit_enums(out, module, aliases, options);
-    emit_early_functions(out, module, aliases, function_returns, symbols, false, false, options);
+    emit_early_functions(out, module, aliases, function_returns, symbols, false,
+                         options.test_source, options);
     emit_constants(out, module, aliases, options);
 
     for (const FunctionDecl& fn : module.functions) {
-        if (emit_before_constants(fn)) {
+        if (emit_before_constants(fn) || !should_emit_function(fn, options.test_source)) {
             continue;
         }
         emit_function_body(out, fn, aliases, function_returns, symbols, options);

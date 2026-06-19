@@ -21,6 +21,9 @@ struct CppModuleArtifact {
 };
 
 std::vector<CppModuleArtifact> emit_cpp_module_artifacts(const ModuleAst& module);
+std::vector<CppModuleArtifact> emit_cpp_test_module_artifacts(const ModuleAst& module,
+                                                              const std::string& filter = {},
+                                                              bool capture_output = true);
 void write_cpp_module_artifacts(const std::filesystem::path& dir, const ModuleAst& module);
 
 } // namespace dudu

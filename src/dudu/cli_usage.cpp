@@ -31,6 +31,8 @@ void print_cli_usage(bool project_driver) {
            "       duc cmake [input.dd|target] [-o CMakeLists.txt]\n"
            "       duc emit [input.dd] [-o output.cpp]\n"
            "       duc emit-modules [input.dd] -o output-dir\n"
+           "       duc emit-test-modules [input.dd] -o output-dir [--filter text] "
+           "[--no-capture]\n"
            "       duc fmt <input.dd|dir> [--check] [-o output.dd]\n"
            "       duc lsp\n"
            "       duc run [input.dd|target] [-o output] [--quiet]\n"

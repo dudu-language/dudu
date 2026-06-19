@@ -62,6 +62,9 @@ CliOptions parse_cli_options(int argc, char** argv, bool project_driver) {
     } else if (argc > 1 && std::string(argv[1]) == "emit-modules") {
         options.emit_modules = true;
         first_arg = 2;
+    } else if (argc > 1 && std::string(argv[1]) == "emit-test-modules") {
+        options.emit_test_modules = true;
+        first_arg = 2;
     } else if (argc > 1 && std::string(argv[1]) == "fmt") {
         options.format = true;
         first_arg = 2;

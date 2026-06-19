@@ -5,7 +5,7 @@
 namespace dudu {
 
 void emit_test_harness(std::ostringstream& out, const ModuleAst& module, const std::string& filter,
-                       bool capture_output) {
+                       bool capture_output, const CppEmitOptions& options) {
     out << "namespace dudu_test {\n"
            "struct Capture {\n"
            "    bool enabled = false;\n"
@@ -96,12 +96,12 @@ void emit_test_harness(std::ostringstream& out, const ModuleAst& module, const s
             const std::string expected = cpp_emit_function_decorator_arg(fn, "test.should_panic");
             out << "    ++total;\n"
                 << "    if (dudu_test::run_should_panic(" << cpp_emit_string_literal(fn.name)
-                << ", " << fn.name << ", " << cpp_emit_string_literal(expected)
+                << ", " << emitted_name(fn, options) << ", " << cpp_emit_string_literal(expected)
                 << ")) { ++passed; }\n";
         } else {
             out << "    ++total;\n"
                 << "    if (dudu_test::run_one(" << cpp_emit_string_literal(fn.name) << ", "
-                << fn.name << ")) { ++passed; }\n";
+                << emitted_name(fn, options) << ")) { ++passed; }\n";
         }
     }
     out << "    if (total == 0 && ignored == 0) {\n"
