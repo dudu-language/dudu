@@ -287,7 +287,7 @@ std::string lower_cpp_type(const TypeRef& type) {
     switch (type.kind) {
     case TypeKind::Named:
     case TypeKind::Qualified:
-        return lower_cpp_type(type_ref_head_name(type));
+        return lower_cpp_type_name(type_ref_head_name(type));
     case TypeKind::Value:
         return type_ref_head_name(type);
     case TypeKind::Template:
@@ -351,7 +351,7 @@ std::string lower_cpp_type(const TypeRef& type, const std::vector<std::string>& 
     switch (type.kind) {
     case TypeKind::Named:
     case TypeKind::Qualified:
-        return lower_cpp_type(type_ref_head_name(type), namespace_aliases);
+        return lower_cpp_type_name(type_ref_head_name(type), namespace_aliases);
     case TypeKind::Value:
         return type_ref_head_name(type);
     case TypeKind::Template:
@@ -420,7 +420,7 @@ std::string lower_cpp_type(const TypeRef& type, const std::vector<std::string>& 
     switch (type.kind) {
     case TypeKind::Named:
     case TypeKind::Qualified:
-        return lower_cpp_type(type_ref_head_name(type), namespace_aliases, options);
+        return lower_cpp_type_name(type_ref_head_name(type), namespace_aliases, options);
     case TypeKind::Value:
         return type_ref_head_name(type);
     case TypeKind::Template:

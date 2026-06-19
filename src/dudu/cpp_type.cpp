@@ -39,6 +39,17 @@ bool is_array_dimension(std::string_view text) {
     return is_decimal_number(text) || is_constant_name(text);
 }
 
+const std::map<std::string, std::string>& builtin_cpp_type_names() {
+    static const std::map<std::string, std::string> builtins = {
+        {"bool", "bool"},       {"i8", "int8_t"},    {"i16", "int16_t"},
+        {"i32", "int32_t"},     {"i64", "int64_t"},  {"u8", "uint8_t"},
+        {"u16", "uint16_t"},    {"u32", "uint32_t"}, {"u64", "uint64_t"},
+        {"isize", "intptr_t"},  {"usize", "size_t"}, {"f32", "float"},
+        {"f64", "double"},      {"void", "void"},    {"str", "std::string"},
+        {"cstr", "const char*"}};
+    return builtins;
+}
+
 std::optional<std::string> lower_parsed_fixed_array_type(const std::string& type) {
     const TypeRef parsed = parse_type_text(type);
     if (parsed.kind != TypeKind::FixedArray) {
@@ -210,6 +221,42 @@ std::string fixed_array_base(const std::string& type) {
 
 } // namespace
 
+std::string lower_cpp_type_name(std::string name) {
+    name = trim_copy(std::move(name));
+    if (name.empty()) {
+        return "void";
+    }
+    if (name == "None") {
+        return "std::monostate";
+    }
+    if (const auto found = builtin_cpp_type_names().find(name);
+        found != builtin_cpp_type_names().end()) {
+        return found->second;
+    }
+    return replace_dots(name);
+}
+
+std::string lower_cpp_type_name(std::string name,
+                                const std::vector<std::string>& namespace_aliases) {
+    return lower_cpp_type_name(strip_c_import_type_aliases(std::move(name), namespace_aliases));
+}
+
+std::string lower_cpp_type_name(std::string name,
+                                const std::vector<std::string>& namespace_aliases,
+                                const CppEmitOptions& options) {
+    name = trim_copy(std::move(name));
+    const std::string emitted = emitted_type_name(name, options);
+    if (emitted != name) {
+        return emitted;
+    }
+    name = strip_c_import_type_aliases(std::move(name), namespace_aliases);
+    const std::string emitted_after_alias_strip = emitted_type_name(name, options);
+    if (emitted_after_alias_strip != name) {
+        return emitted_after_alias_strip;
+    }
+    return lower_cpp_type_name(std::move(name));
+}
+
 std::string strip_c_import_type_aliases(std::string type,
                                         const std::vector<std::string>& namespace_aliases) {
     for (const std::string& alias : namespace_aliases) {
@@ -259,13 +306,6 @@ std::string strip_c_import_type_aliases(std::string type,
 
 std::string lower_cpp_type(const std::string& raw_type) {
     std::string type = trim_copy(raw_type);
-    static const std::map<std::string, std::string> builtins = {
-        {"bool", "bool"},       {"i8", "int8_t"},    {"i16", "int16_t"},
-        {"i32", "int32_t"},     {"i64", "int64_t"},  {"u8", "uint8_t"},
-        {"u16", "uint16_t"},    {"u32", "uint32_t"}, {"u64", "uint64_t"},
-        {"isize", "intptr_t"},  {"usize", "size_t"}, {"f32", "float"},
-        {"f64", "double"},      {"void", "void"},    {"str", "std::string"},
-        {"cstr", "const char*"}};
 
     if (type.empty()) {
         return "void";
@@ -276,7 +316,8 @@ std::string lower_cpp_type(const std::string& raw_type) {
     if (starts_with(type, "fn(")) {
         return lower_function_type(type);
     }
-    if (const auto found = builtins.find(type); found != builtins.end()) {
+    if (const auto found = builtin_cpp_type_names().find(type);
+        found != builtin_cpp_type_names().end()) {
         return found->second;
     }
     if (starts_with(type, "*const[") && ends_with(type, "]")) {
@@ -315,7 +356,7 @@ std::string lower_cpp_type(const std::string& raw_type) {
         }
         return lower_template_type(name, args);
     }
-    return replace_dots(type);
+    return lower_cpp_type_name(type);
 }
 
 std::string lower_cpp_type(const std::string& raw_type, const CppEmitOptions& options) {

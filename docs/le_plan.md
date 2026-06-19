@@ -2096,3 +2096,8 @@ push. They are not release packaging work.
    native-type normalizer used for free functions, so imported declaration
    metadata receives structured pack-expansion and nested native type cleanup
    at the boundary instead of leaving direct raw `parse_type_text` holes.
+   C++ type lowering from structured named and qualified `TypeRef` nodes now
+   goes through a name-only lowering helper instead of rendering the type name
+   and sending it back through the raw string type parser. Raw type-string
+   lowering remains only for explicit native/C++ escape compatibility paths
+   and tests that exercise that boundary.
