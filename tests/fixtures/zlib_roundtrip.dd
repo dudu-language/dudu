@@ -1,0 +1,38 @@
+import c "zlib.h" as zlib
+
+
+def main() -> i32:
+    source: array[u8] = [100, 117, 100, 117, 32, 122, 105, 112]
+    compressed: array[u8][128]
+    compressed_size: zlib.uLongf = zlib.uLongf(len(compressed))
+
+    compress_status = zlib.compress2(
+        &compressed[0],
+        &compressed_size,
+        &source[0],
+        zlib.uLong(len(source)),
+        zlib.Z_BEST_SPEED,
+    )
+    if compress_status != zlib.Z_OK:
+        return 1
+
+    restored: array[u8][32]
+    restored_size: zlib.uLongf = zlib.uLongf(len(restored))
+    uncompress_status = zlib.uncompress(
+        &restored[0],
+        &restored_size,
+        &compressed[0],
+        compressed_size,
+    )
+    if uncompress_status != zlib.Z_OK:
+        return 2
+    if restored_size != zlib.uLongf(len(source)):
+        return 3
+
+    total: i32 = 0
+    for i: usize in range(len(source)):
+        if restored[i] != source[i]:
+            return 4
+        total += i32(restored[i])
+
+    return total - 763

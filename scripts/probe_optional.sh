@@ -72,6 +72,27 @@ probe_sqlite() {
     echo "ok sqlite3"
 }
 
+probe_zlib() {
+    if ! pkg-config --exists zlib; then
+        echo "skip zlib: pkg-config package not found"
+        return
+    fi
+
+    local cpp="$repo_root/build/probe_zlib_roundtrip.cpp"
+    local bin="$repo_root/build/probe_zlib_roundtrip"
+    "$repo_root/build/duc" emit "$repo_root/tests/fixtures/zlib_roundtrip.dd" -o "$cpp"
+    "${CXX:-c++}" -std=c++20 "$cpp" $(pkg-config --cflags --libs zlib) -o "$bin"
+    set +e
+    "$bin"
+    local status=$?
+    set -e
+    if [[ "$status" -ne 42 ]]; then
+        echo "zlib probe returned $status, expected 42" >&2
+        exit 1
+    fi
+    echo "ok zlib"
+}
+
 probe_threading() {
     local cpp="$repo_root/build/probe_threading_atomics.cpp"
     local bin="$repo_root/build/probe_threading_atomics"
@@ -233,6 +254,7 @@ probe_ffmpeg() {
 probe_glm
 probe_opencv
 probe_sqlite
+probe_zlib
 probe_threading
 probe_posix_mmap
 probe_posix_threads
