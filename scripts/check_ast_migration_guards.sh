@@ -13,6 +13,7 @@ forbidden=(
     "resolve_alias_ref_with_legacy_fallback"
     "lower_cpp_type\\(type_ref_head_name"
     "lower_function_signature_type"
+    "lower_cpp_type\\(type\\.substr"
 )
 
 for pattern in "${forbidden[@]}"; do

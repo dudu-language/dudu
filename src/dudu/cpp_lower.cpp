@@ -1,5 +1,8 @@
 #include "dudu/cpp_lower.hpp"
 
+#include "dudu/ast_type.hpp"
+#include "dudu/cpp_type_internal.hpp"
+
 #include <cctype>
 #include <map>
 #include <sstream>
@@ -101,32 +104,6 @@ std::vector<std::string> cpp_escape_lines(std::string body_text) {
     return lines;
 }
 
-std::string lower_function_template_arg(const std::string& type,
-                                        const std::vector<std::string>& namespace_aliases) {
-    const size_t open = type.find('(');
-    const size_t close = type.find(')', open);
-    if (open == std::string::npos || close == std::string::npos) {
-        return replace_dots(type);
-    }
-    std::string result = "void";
-    const size_t arrow = type.find("->", close);
-    if (arrow != std::string::npos) {
-        result = lower_cpp_type(type.substr(arrow + 2), namespace_aliases);
-    }
-    std::ostringstream out;
-    out << result << '(';
-    const std::vector<std::string> args =
-        split_top_level_args(type.substr(open + 1, close - open - 1));
-    for (size_t i = 0; i < args.size(); ++i) {
-        if (i > 0) {
-            out << ", ";
-        }
-        out << lower_cpp_type(args[i], namespace_aliases);
-    }
-    out << ')';
-    return out.str();
-}
-
 std::string lower_template_call_arg(const std::string& arg,
                                     const std::vector<std::string>& namespace_aliases) {
     const std::string trimmed = trim_copy(arg);
@@ -134,7 +111,7 @@ std::string lower_template_call_arg(const std::string& arg,
         return trimmed;
     }
     if (starts_with(trimmed, "fn(")) {
-        return lower_function_template_arg(trimmed, namespace_aliases);
+        return lower_cpp_function_type(parse_type_text(trimmed), false, namespace_aliases);
     }
     return lower_cpp_type(trimmed, namespace_aliases);
 }

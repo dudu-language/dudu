@@ -2113,3 +2113,10 @@ push. They are not release packaging work.
    `parse_type_text` and structured `TypeRef` function lowering, with a guard
    preventing the deleted `lower_function_signature_type` helper from coming
    back.
+   Raw string C++ type lowering also no longer peels pointer/reference/const
+   wrapper spellings with `type.substr(...)`; those wrapper spellings are parsed
+   into `TypeRef` nodes and lowered through the structured path. The guard
+   rejects reintroducing recursive substring wrapper lowering.
+   Raw C++ template-argument lowering now shares the same structured function
+   `TypeRef` lowering for `fn(...)` spellings, preserving non-pointer function
+   signatures for template arguments without a second hand-written parser.

@@ -8,10 +8,6 @@
 namespace dudu {
 namespace {
 
-std::string lower_function_type(const TypeRef& type, bool pointer);
-std::string lower_function_type(const TypeRef& type, bool pointer,
-                                const std::vector<std::string>& namespace_aliases);
-
 [[noreturn]] void malformed_type_ref(const TypeRef& type) {
     throw CompileError(type.location,
                        "malformed structured type node: " + std::string(type_kind_name(type.kind)) +
@@ -59,7 +55,7 @@ std::string lower_template_type(const TypeRef& type) {
     const std::string& name = type.name;
     if ((name == "std.function" || name == "std::function") && type.children.size() == 1 &&
         type.children.front().kind == TypeKind::Function) {
-        return "std::function<" + lower_function_type(type.children.front(), false) + ">";
+        return "std::function<" + lower_cpp_function_type(type.children.front(), false) + ">";
     }
     if (name == "list") {
         return "std::vector<" + join_lowered_type_args(type.children) + ">";
@@ -102,7 +98,7 @@ std::string lower_template_type(const TypeRef& type,
     if ((name == "std.function" || name == "std::function") && type.children.size() == 1 &&
         type.children.front().kind == TypeKind::Function) {
         return "std::function<" +
-               lower_function_type(type.children.front(), false, namespace_aliases) + ">";
+               lower_cpp_function_type(type.children.front(), false, namespace_aliases) + ">";
     }
     if (name == "list") {
         return "std::vector<" + join_lowered_type_args(type.children, namespace_aliases) + ">";
@@ -197,7 +193,9 @@ std::string lower_template_type(const TypeRef& type,
     return out.str();
 }
 
-std::string lower_function_type(const TypeRef& type, bool pointer) {
+} // namespace
+
+std::string lower_cpp_function_type(const TypeRef& type, bool pointer) {
     std::ostringstream signature;
     const std::string result = type.children.empty() ? "void" : lower_cpp_type(type.children[0]);
     signature << result << '(';
@@ -211,8 +209,8 @@ std::string lower_function_type(const TypeRef& type, bool pointer) {
     return pointer ? "std::add_pointer_t<" + signature.str() + ">" : signature.str();
 }
 
-std::string lower_function_type(const TypeRef& type, bool pointer,
-                                const std::vector<std::string>& namespace_aliases) {
+std::string lower_cpp_function_type(const TypeRef& type, bool pointer,
+                                    const std::vector<std::string>& namespace_aliases) {
     std::ostringstream signature;
     const std::string result =
         type.children.empty() ? "void" : lower_cpp_type(type.children[0], namespace_aliases);
@@ -227,9 +225,9 @@ std::string lower_function_type(const TypeRef& type, bool pointer,
     return pointer ? "std::add_pointer_t<" + signature.str() + ">" : signature.str();
 }
 
-std::string lower_function_type(const TypeRef& type, bool pointer,
-                                const std::vector<std::string>& namespace_aliases,
-                                const CppEmitOptions& options) {
+std::string lower_cpp_function_type(const TypeRef& type, bool pointer,
+                                    const std::vector<std::string>& namespace_aliases,
+                                    const CppEmitOptions& options) {
     std::ostringstream signature;
     const std::string result = type.children.empty()
                                    ? "void"
@@ -244,6 +242,8 @@ std::string lower_function_type(const TypeRef& type, bool pointer,
     signature << ')';
     return pointer ? "std::add_pointer_t<" + signature.str() + ">" : signature.str();
 }
+
+namespace {
 
 std::string lower_top_level_const_type(const TypeRef& type) {
     if (type.kind == TypeKind::Pointer && !type.children.empty()) {
@@ -332,7 +332,7 @@ std::string lower_cpp_type(const TypeRef& type) {
     case TypeKind::FixedArray:
         return lower_fixed_array_type(type);
     case TypeKind::Function:
-        return lower_function_type(type, true);
+        return lower_cpp_function_type(type, true);
     case TypeKind::PackExpansion:
         malformed_type_ref(type);
     case TypeKind::Unknown:
@@ -396,7 +396,7 @@ std::string lower_cpp_type(const TypeRef& type, const std::vector<std::string>& 
     case TypeKind::FixedArray:
         return lower_fixed_array_type(type, namespace_aliases);
     case TypeKind::Function:
-        return lower_function_type(type, true, namespace_aliases);
+        return lower_cpp_function_type(type, true, namespace_aliases);
     case TypeKind::PackExpansion:
         malformed_type_ref(type);
     case TypeKind::Unknown:
@@ -465,7 +465,7 @@ std::string lower_cpp_type(const TypeRef& type, const std::vector<std::string>& 
     case TypeKind::FixedArray:
         return lower_fixed_array_type(type, namespace_aliases, options);
     case TypeKind::Function:
-        return lower_function_type(type, true, namespace_aliases, options);
+        return lower_cpp_function_type(type, true, namespace_aliases, options);
     case TypeKind::PackExpansion:
         malformed_type_ref(type);
     case TypeKind::Unknown:

@@ -58,6 +58,24 @@ std::optional<std::string> lower_parsed_fixed_array_type(const std::string& type
     return lower_cpp_type(parsed);
 }
 
+std::optional<std::string> lower_parsed_wrapper_type(const std::string& type) {
+    const TypeRef parsed = parse_type_text(type);
+    switch (parsed.kind) {
+    case TypeKind::Pointer:
+    case TypeKind::Reference:
+    case TypeKind::Const:
+    case TypeKind::Volatile:
+    case TypeKind::Atomic:
+    case TypeKind::Device:
+    case TypeKind::Storage:
+    case TypeKind::Shared:
+    case TypeKind::Static:
+        return lower_cpp_type(parsed);
+    default:
+        return std::nullopt;
+    }
+}
+
 std::string lower_template_arg_type(const std::string& type) {
     const std::string trimmed = trim_copy(type);
     if (starts_with(trimmed, "fn(")) {
@@ -290,17 +308,8 @@ std::string lower_cpp_type(const std::string& raw_type) {
         found != builtin_cpp_type_names().end()) {
         return found->second;
     }
-    if (starts_with(type, "*const[") && ends_with(type, "]")) {
-        return "const " + lower_cpp_type(type.substr(7, type.size() - 8)) + "*";
-    }
-    if (starts_with(type, "&const[") && ends_with(type, "]")) {
-        return "const " + lower_cpp_type(type.substr(7, type.size() - 8)) + "&";
-    }
-    if (starts_with(type, "*")) {
-        return lower_cpp_type(type.substr(1)) + "*";
-    }
-    if (starts_with(type, "&")) {
-        return lower_cpp_type(type.substr(1)) + "&";
+    if (const auto wrapped_type = lower_parsed_wrapper_type(type)) {
+        return *wrapped_type;
     }
 
     if (const auto array_type = lower_parsed_fixed_array_type(type)) {
