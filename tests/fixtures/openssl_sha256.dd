@@ -1,0 +1,20 @@
+import c "openssl/sha.h" as openssl
+
+
+def main() -> i32:
+    input: array[u8] = [97, 98, 99]
+    digest: array[u8][32]
+    result = openssl.SHA256(&input[0], len(input), &digest[0])
+    if result == None:
+        return 1
+
+    if digest[0] != 186:
+        return 2
+    if digest[1] != 120:
+        return 3
+    if digest[2] != 22:
+        return 4
+    if digest[3] != 191:
+        return 5
+
+    return 42

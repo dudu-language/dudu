@@ -135,6 +135,27 @@ probe_libpng() {
     echo "ok libpng"
 }
 
+probe_openssl() {
+    if ! pkg-config --exists openssl; then
+        echo "skip openssl: pkg-config package not found"
+        return
+    fi
+
+    local cpp="$repo_root/build/probe_openssl_sha256.cpp"
+    local bin="$repo_root/build/probe_openssl_sha256"
+    "$repo_root/build/duc" emit "$repo_root/tests/fixtures/openssl_sha256.dd" -o "$cpp"
+    "${CXX:-c++}" -std=c++20 "$cpp" $(pkg-config --cflags --libs openssl) -o "$bin"
+    set +e
+    "$bin"
+    local status=$?
+    set -e
+    if [[ "$status" -ne 42 ]]; then
+        echo "openssl probe returned $status, expected 42" >&2
+        exit 1
+    fi
+    echo "ok openssl"
+}
+
 probe_threading() {
     local cpp="$repo_root/build/probe_threading_atomics.cpp"
     local bin="$repo_root/build/probe_threading_atomics"
@@ -299,6 +320,7 @@ probe_sqlite
 probe_zlib
 probe_curl
 probe_libpng
+probe_openssl
 probe_threading
 probe_posix_mmap
 probe_posix_threads

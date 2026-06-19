@@ -1174,8 +1174,8 @@ push. They are not release packaging work.
    partial-syntax macros, or platform setup that C/C++ users also normally hide
    behind an adapter.
 
-   Current optional probes pass for glm, OpenCV, sqlite, zlib, curl, libpng,
-   threading, POSIX mmap, POSIX pthread, raylib, SDL3, GLFW, OpenCL, Vulkan, and FFmpeg on this
+   Current optional probes pass for glm, OpenCV, sqlite, zlib, curl, OpenSSL,
+   libpng, threading, POSIX mmap, POSIX pthread, raylib, SDL3, GLFW, OpenCL, Vulkan, and FFmpeg on this
    machine. Optional dev-only dependencies can be installed into the ignored
    `third_party/install` prefix with `scripts/setup_dev_deps.sh`; the main Dudu
    build does not require them.
@@ -1495,6 +1495,10 @@ push. They are not release packaging work.
    Do a deliberate readability pass after the major compiler behavior is green.
    Rapid language work leaves behind small local oddities that are not exactly
    compatibility cruft but still make the compiler harder to trust and maintain.
+   This is the pass for silly successful-experiment residue: one-line wrappers,
+   always-false generic helpers, phase-crossing shortcuts, and spaghetti seams
+   that were useful during a milestone but should not survive in the real
+   compiler.
 
    Audit for:
 
