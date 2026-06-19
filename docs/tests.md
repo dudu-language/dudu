@@ -61,6 +61,40 @@ compile/run probes, and optional real-header LSP probes:
 ./scripts/test_full.sh
 ```
 
+## Validation Tiers And Cadence
+
+Keep the normal loop fast. Dudu should have a large compatibility suite, but it
+must not make every compiler edit feel like a release build.
+
+Recommended tiers:
+
+- `scripts/test_fast.sh`: run constantly during normal compiler work. This is
+  the default correctness loop and should stay in the seconds range.
+- `scripts/test.sh`: run when touching broad compiler, project-driver,
+  formatter, LSP, or codegen behavior. This is the core full sweep, but still
+  avoids heavyweight package-SDK examples.
+- `scripts/probe_optional.sh` and `scripts/probe_lsp_optional.sh`: run when
+  changing native header scanning, native overload/template behavior, package
+  config, include paths, or real-library interop. These skip missing packages.
+- `scripts/test_full.sh`: run before version tags, big milestone branches, or
+  "this should be stable" checkpoints. It combines the core and optional local
+  probes.
+- Future `scripts/test_examples.sh`: curated in-repo example builds. These
+  should be mostly headless and reproducible.
+- Future `scripts/test_dogfood.sh`: local-only external repo checks, such as
+  `duduplayground`, `raymarch-dd`, and other real projects when they exist on a
+  developer machine.
+
+Do not put huge SDK/library matrices, windowed demo apps, or external dogfood
+repos in the required fast loop. Run them periodically, when changing the
+relevant subsystem, before large pushes, and before version bumps. CI can keep
+the fast/core path required while running optional native/library matrices on a
+schedule or manual dispatch.
+
+`duduplayground` is intentionally a scratch/user-feel repo. It is useful for
+local dogfooding, but official compatibility examples should live in the Dudu
+repo as curated fixtures or examples with clear dependencies.
+
 ## Test Function Rules
 
 - `@test` is only valid on free functions.

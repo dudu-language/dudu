@@ -1149,6 +1149,13 @@ push. They are not release packaging work.
    `third_party/install` prefix with `scripts/setup_dev_deps.sh`; the main Dudu
    build does not require them.
 
+   This matrix is not part of the always-on fast loop. Keep fast compiler
+   validation small, and run the real-library/example matrix periodically, when
+   touching native interop or build-driver behavior, and before version bumps.
+   `duduplayground`, `raymarch-dd`, and similar external repos are dogfood
+   inputs, not required public fixtures; curated, reproducible examples should
+   live in the Dudu repo when they become official compatibility checks.
+
 11. Compiler Throughput And Build Performance
 
    Treat compiler speed as a first-class language quality metric. Dudu should
