@@ -19,6 +19,12 @@ struct TemplateContext {
     std::vector<std::string> params;
 };
 
+NativeSymbolId native_identity(std::string canonical_path) {
+    NativeSymbolId id;
+    id.canonical_path = std::move(canonical_path);
+    return id;
+}
+
 TypeRef parse_native_type_text(std::string text, const SourceLocation& location) {
     text = trim_copy(std::move(text));
     if (text.ends_with("...")) {
@@ -223,7 +229,8 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
             return;
         }
         namespaces.push_back({depth, name});
-        scan.namespaces.push_back({.name = name, .location = decl_location});
+        scan.namespaces.push_back(
+            {.name = name, .identity = native_identity(name), .location = decl_location});
     } else if ((line.find("TypedefDecl") != std::string::npos ||
                 line.find("TypeAliasDecl") != std::string::npos) &&
                std::regex_search(line, match, typedef_decl)) {
@@ -236,6 +243,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
             scan.types.push_back({.name = name,
                                   .native_spelling = useful_alias ? lowered_type : "",
                                   .type_ref = type_ref,
+                                  .identity = native_identity(name),
                                   .location = decl_location});
         }
     } else if ((line.find("RecordDecl") != std::string::npos ||
@@ -244,8 +252,11 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         const std::string raw_name = match[3].str();
         const std::string name = class_name(scan, namespaces, classes, raw_name);
         if (!starts_with(raw_name, "__")) {
-            scan.types.push_back(
-                {.name = name, .native_spelling = "", .type_ref = {}, .location = decl_location});
+            scan.types.push_back({.name = name,
+                                  .native_spelling = "",
+                                  .type_ref = {},
+                                  .identity = native_identity(name),
+                                  .location = decl_location});
             if (line.find(" definition") != std::string::npos) {
                 ClassDecl klass;
                 klass.name = name;
@@ -258,8 +269,11 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                std::regex_search(line, match, enum_decl)) {
         const std::string name = match[1].str();
         if (!starts_with(name, "__")) {
-            scan.types.push_back(
-                {.name = name, .native_spelling = "", .type_ref = {}, .location = decl_location});
+            scan.types.push_back({.name = name,
+                                  .native_spelling = "",
+                                  .type_ref = {},
+                                  .identity = native_identity(name),
+                                  .location = decl_location});
             enums.push_back({depth, name});
         }
     } else if (line.find("FunctionDecl") != std::string::npos &&
@@ -271,6 +285,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         const std::string signature = match[2].str();
         NativeFunctionDecl fn;
         fn.name = name;
+        fn.identity = native_identity(name);
         if (!templates.empty()) {
             fn.template_params = templates.back().params;
         }
@@ -347,6 +362,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                                    .native_spelling = type,
                                    .type_ref = parse_native_type_text(type, decl_location),
                                    .enum_constant = true,
+                                   .identity = native_identity(name),
                                    .location = decl_location});
         }
     } else if (line.find("VarDecl") != std::string::npos &&
@@ -358,6 +374,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
             scan.values.push_back({.name = name,
                                    .native_spelling = type,
                                    .type_ref = parse_native_type_text(type, decl_location),
+                                   .identity = native_identity(name),
                                    .location = decl_location});
         }
     }
@@ -423,8 +440,11 @@ void parse_macro_dump(NativeHeaderScan& scan, const std::string& dump,
                 continue;
             }
             const MacroParams params = macro_params(match[2].str());
-            scan.macros.push_back(
-                {.name = name, .arity = params.arity, .function_like = true, .location = location});
+            scan.macros.push_back({.name = name,
+                                   .arity = params.arity,
+                                   .function_like = true,
+                                   .identity = native_identity(name),
+                                   .location = location});
             scan.functions.push_back(
                 {.name = name,
                  .template_params = {},
@@ -436,16 +456,21 @@ void parse_macro_dump(NativeHeaderScan& scan, const std::string& dump,
                  .return_type_ref = named_type_ref("auto", location),
                  .min_params = params.arity,
                  .variadic = params.variadic,
+                 .identity = native_identity(name),
                  .location = location});
         } else if (std::regex_search(line, match, object_macro)) {
             const std::string name = match[1].str();
             if (!public_object_macro_name(name)) {
                 continue;
             }
-            scan.macros.push_back({.name = name, .function_like = false, .location = location});
+            scan.macros.push_back({.name = name,
+                                   .function_like = false,
+                                   .identity = native_identity(name),
+                                   .location = location});
             scan.values.push_back({.name = name,
                                    .native_spelling = "auto",
                                    .type_ref = named_type_ref("auto", location),
+                                   .identity = native_identity(name),
                                    .location = location});
         }
     }

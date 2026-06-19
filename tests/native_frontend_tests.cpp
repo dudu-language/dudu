@@ -92,6 +92,41 @@ void test_native_header_type_scan(const std::filesystem::path& root) {
     assert(cpp.find("dudu_native::use_base_widget((&derived))") != std::string::npos);
     assert(cpp.find("dudu_native::read_const_ref(namespaced)") != std::string::npos);
     bool saw_pack_holder = false;
+    bool saw_namespace_identity = false;
+    bool saw_type_identity = false;
+    bool saw_function_identity = false;
+    bool saw_value_identity = false;
+    bool saw_macro_identity = false;
+    for (const dudu::NativeNamespaceDecl& ns : module.native_namespaces) {
+        if (ns.name == "dudu_native") {
+            assert(ns.identity.canonical_path == "dudu_native");
+            saw_namespace_identity = true;
+        }
+    }
+    for (const dudu::NativeTypeDecl& type : module.native_types) {
+        if (type.name == "DuduWidgetAlias") {
+            assert(type.identity.canonical_path == "DuduWidgetAlias");
+            saw_type_identity = true;
+        }
+    }
+    for (const dudu::NativeFunctionDecl& fn : module.native_functions) {
+        if (fn.name == "dudu_native.add") {
+            assert(fn.identity.canonical_path == "dudu_native.add");
+            saw_function_identity = true;
+        }
+    }
+    for (const dudu::NativeValueDecl& value : module.native_values) {
+        if (value.name == "DUDU_NATIVE_MAGIC") {
+            assert(value.identity.canonical_path == "DUDU_NATIVE_MAGIC");
+            saw_value_identity = true;
+        }
+    }
+    for (const dudu::NativeMacroDecl& macro : module.native_macros) {
+        if (macro.name == "DUDU_NATIVE_CHECK") {
+            assert(macro.identity.canonical_path == "DUDU_NATIVE_CHECK");
+            saw_macro_identity = true;
+        }
+    }
     for (const dudu::ClassDecl& klass : module.native_classes) {
         if (klass.name != "dudu_native.PackHolder") {
             continue;
@@ -109,7 +144,44 @@ void test_native_header_type_scan(const std::filesystem::path& root) {
         }
     }
     assert(saw_pack_holder);
+    assert(saw_namespace_identity);
+    assert(saw_type_identity);
+    assert(saw_function_identity);
+    assert(saw_value_identity);
+    assert(saw_macro_identity);
     assert(std::filesystem::exists(config.build_dir / "dudu-header-cache"));
+}
+
+void test_native_header_alias_preserves_identity(const std::filesystem::path& root) {
+    dudu::ModuleAst module =
+        dudu::parse_source("import cpp \"native_headers/simple_cpp.hpp\" as native\n"
+                           "\n"
+                           "def main() -> i32:\n"
+                           "    return native.dudu_native.add(20, 22)\n",
+                           root / "tests/fixtures/native_alias_identity.dd");
+    dudu::ProjectConfig config;
+    config.build_dir = root / "build" / "native-header-alias-identity-cache";
+    std::filesystem::remove_all(config.build_dir);
+    dudu::merge_native_header_types(module,
+                                    {.config = config, .source_dir = root / "tests/fixtures"});
+    dudu::analyze_module(module, {.check_bodies = true});
+
+    bool saw_prefixed_type = false;
+    bool saw_prefixed_function = false;
+    for (const dudu::NativeTypeDecl& type : module.native_types) {
+        if (type.name == "native.DuduWidgetAlias") {
+            assert(type.identity.canonical_path == "DuduWidgetAlias");
+            saw_prefixed_type = true;
+        }
+    }
+    for (const dudu::NativeFunctionDecl& fn : module.native_functions) {
+        if (fn.name == "native.dudu_native.add") {
+            assert(fn.identity.canonical_path == "dudu_native.add");
+            saw_prefixed_function = true;
+        }
+    }
+    assert(saw_prefixed_type);
+    assert(saw_prefixed_function);
 }
 
 void test_native_single_underscore_function_macros(const std::filesystem::path& root) {
@@ -246,6 +318,7 @@ int main() {
         const std::filesystem::path root = DUDU_REPO_ROOT;
         test_native_type_declaration_emission();
         test_native_header_type_scan(root);
+        test_native_header_alias_preserves_identity(root);
         test_native_single_underscore_function_macros(root);
         test_native_call_arity(root);
         test_native_header_collision(root);

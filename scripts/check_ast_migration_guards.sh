@@ -69,3 +69,21 @@ awk '
     in_native && /^};/ { in_native = 0 }
     END { exit bad ? 1 : 0 }
 ' "$repo_root/src/dudu/ast.hpp"
+
+awk '
+    /struct Native(Type|Value|Function|Macro|Namespace)Decl/ {
+        in_native = 1
+        name = $2
+        sub(/\{.*/, "", name)
+        has_identity = 0
+    }
+    in_native && /NativeSymbolId identity/ { has_identity = 1 }
+    in_native && /^};/ {
+        if (!has_identity) {
+            print FILENAME ":" FNR ": " name " must carry NativeSymbolId identity"
+            bad = 1
+        }
+        in_native = 0
+    }
+    END { exit bad ? 1 : 0 }
+' "$repo_root/src/dudu/ast.hpp"

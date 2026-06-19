@@ -173,6 +173,10 @@ make the boundary explicit: `NativeTypeDecl::native_spelling`,
 `TypeRef` metadata first and render native display/detail text through the
 native declaration accessors. The AST migration guard rejects reintroducing the
 old ambiguous native declaration fields `type`, `params`, and `return_type`.
+`NativeSymbolId` is now present on native type, value, function, macro, and
+namespace declarations. Header scanning populates `identity.canonical_path`,
+and aliased header imports preserve that canonical identity while adding the
+user-facing prefixed binding.
 C++ associated-type suffix matching for imported native templates, such as
 `iterator`, `const_iterator`, `value_type`, and `size_type`, now lives behind
 the explicit native-boundary helper

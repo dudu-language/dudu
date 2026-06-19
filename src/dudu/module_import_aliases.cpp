@@ -16,11 +16,19 @@ TypeRef module_qualified_type_ref(const std::string& prefix, const std::string& 
     return module_named_type_ref(prefix + "." + name, location);
 }
 
+NativeSymbolId module_symbol_identity(std::string canonical_path) {
+    NativeSymbolId id;
+    id.canonical_path = std::move(canonical_path);
+    return id;
+}
+
 void add_module_type_alias(ModuleAst& module, const std::string& prefix, const std::string& name,
                            const TypeRef& type, const SourceLocation& location) {
+    const std::string exposed_name = prefix + "." + name;
     module.native_types.push_back({.name = prefix + "." + name,
                                    .native_spelling = "",
                                    .type_ref = type,
+                                   .identity = module_symbol_identity(exposed_name),
                                    .location = location});
 }
 
@@ -77,6 +85,8 @@ void add_function_alias(ModuleAst& module, const FunctionDecl& fn, const std::st
     NativeFunctionDecl alias;
     alias.name = name;
     alias.template_params = fn.generic_params;
+    alias.identity =
+        module_symbol_identity(fn.origin_module.empty() ? name : fn.origin_module + "." + fn.name);
     alias.return_type_ref = function_has_return_type(fn)
                                 ? substitute_type_ref(fn.return_type_ref, type_substitutions)
                                 : void_type_ref(location);
@@ -149,10 +159,14 @@ void add_qualified_module_symbols(ModuleAst& module, const ModuleAst& dependency
     }
     for (const ConstDecl& constant : dependency.constants) {
         const TypeRef value_type = substitute_type_ref(constant.type_ref, type_substitutions);
-        module.native_values.push_back({.name = prefix + "." + constant.name,
-                                        .native_spelling = "",
-                                        .type_ref = value_type,
-                                        .location = import.location});
+        module.native_values.push_back(
+            {.name = prefix + "." + constant.name,
+             .native_spelling = "",
+             .type_ref = value_type,
+             .identity = module_symbol_identity(constant.origin_module.empty()
+                                                    ? prefix + "." + constant.name
+                                                    : constant.origin_module + "." + constant.name),
+             .location = import.location});
     }
     for (const FunctionDecl& fn : dependency.functions) {
         add_function_alias(module, fn, prefix + "." + fn.name, type_substitutions, import.location);
@@ -186,20 +200,28 @@ void add_selective_module_symbol(ModuleAst& module, const ModuleAst& dependency,
     for (const TypeAliasDecl& alias : dependency.aliases) {
         if (alias.name == import.imported_name) {
             const TypeRef alias_type = substitute_type_ref(alias.type_ref, type_substitutions);
-            module.native_types.push_back({.name = exposed_name,
-                                           .native_spelling = "",
-                                           .type_ref = alias_type,
-                                           .location = import.location});
+            module.native_types.push_back(
+                {.name = exposed_name,
+                 .native_spelling = "",
+                 .type_ref = alias_type,
+                 .identity = module_symbol_identity(alias.origin_module.empty()
+                                                        ? exposed_name
+                                                        : alias.origin_module + "." + alias.name),
+                 .location = import.location});
             return;
         }
     }
     for (const EnumDecl& en : dependency.enums) {
         if (en.name == import.imported_name) {
-            module.native_types.push_back({.name = exposed_name,
-                                           .native_spelling = "",
-                                           .type_ref = module_qualified_type_ref(
-                                               import.module_path, en.name, import.location),
-                                           .location = import.location});
+            module.native_types.push_back(
+                {.name = exposed_name,
+                 .native_spelling = "",
+                 .type_ref =
+                     module_qualified_type_ref(import.module_path, en.name, import.location),
+                 .identity = module_symbol_identity(en.origin_module.empty()
+                                                        ? import.module_path + "." + en.name
+                                                        : en.origin_module + "." + en.name),
+                 .location = import.location});
             add_module_type_alias(
                 module, import.module_path, en.name,
                 module_qualified_type_ref(import.module_path, en.name, import.location),
@@ -209,11 +231,15 @@ void add_selective_module_symbol(ModuleAst& module, const ModuleAst& dependency,
     }
     for (const ClassDecl& klass : dependency.classes) {
         if (klass.name == import.imported_name) {
-            module.native_types.push_back({.name = exposed_name,
-                                           .native_spelling = "",
-                                           .type_ref = module_qualified_type_ref(
-                                               import.module_path, klass.name, import.location),
-                                           .location = import.location});
+            module.native_types.push_back(
+                {.name = exposed_name,
+                 .native_spelling = "",
+                 .type_ref =
+                     module_qualified_type_ref(import.module_path, klass.name, import.location),
+                 .identity = module_symbol_identity(klass.origin_module.empty()
+                                                        ? import.module_path + "." + klass.name
+                                                        : klass.origin_module + "." + klass.name),
+                 .location = import.location});
             add_module_type_alias(
                 module, import.module_path, klass.name,
                 module_qualified_type_ref(import.module_path, klass.name, import.location),
@@ -228,10 +254,14 @@ void add_selective_module_symbol(ModuleAst& module, const ModuleAst& dependency,
     for (const ConstDecl& constant : dependency.constants) {
         if (constant.name == import.imported_name) {
             const TypeRef value_type = substitute_type_ref(constant.type_ref, type_substitutions);
-            module.native_values.push_back({.name = exposed_name,
-                                            .native_spelling = "",
-                                            .type_ref = value_type,
-                                            .location = import.location});
+            module.native_values.push_back(
+                {.name = exposed_name,
+                 .native_spelling = "",
+                 .type_ref = value_type,
+                 .identity = module_symbol_identity(
+                     constant.origin_module.empty() ? exposed_name
+                                                    : constant.origin_module + "." + constant.name),
+                 .location = import.location});
             return;
         }
     }

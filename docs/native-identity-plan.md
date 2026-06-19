@@ -72,6 +72,28 @@ field, value, enum, namespace, and macro should have:
    - overloaded template functions and methods
    - LSP go-to-definition through aliased native imports
 
+## Status
+
+In progress.
+
+- `NativeSymbolId` exists and is carried by native type, value, function,
+  macro, and namespace declarations.
+- Header scanning populates `identity.canonical_path` for scanned native
+  declarations.
+- Aliased header imports preserve canonical identity while adding the
+  user-facing prefixed binding path.
+- Dudu-module import shims that currently live in native metadata containers
+  also populate `identity.canonical_path`.
+- Fast migration guards reject native declaration structs that drop
+  `NativeSymbolId identity`.
+
+Still missing:
+
+- Clang USR collection.
+- Identity-aware maps and deduplication as the primary key.
+- Identity-aware type compatibility when both sides carry native identity facts.
+- LSP go-to-definition through canonical native identity.
+
 ## Definition Of Done
 
 - Native identities are visible in the scanner output model.

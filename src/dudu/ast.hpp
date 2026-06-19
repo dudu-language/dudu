@@ -217,10 +217,16 @@ struct TypeAliasDecl {
     SourceLocation location;
 };
 
+struct NativeSymbolId {
+    std::string usr;
+    std::string canonical_path;
+};
+
 struct NativeTypeDecl {
     std::string name;
     std::string native_spelling;
     TypeRef type_ref;
+    NativeSymbolId identity{};
     SourceLocation location;
 };
 
@@ -229,6 +235,7 @@ struct NativeValueDecl {
     std::string native_spelling;
     TypeRef type_ref;
     bool enum_constant = false;
+    NativeSymbolId identity{};
     SourceLocation location;
 };
 
@@ -241,6 +248,7 @@ struct NativeFunctionDecl {
     TypeRef return_type_ref;
     int min_params = -1;
     bool variadic = false;
+    NativeSymbolId identity{};
     SourceLocation location;
 };
 
@@ -248,11 +256,13 @@ struct NativeMacroDecl {
     std::string name;
     int arity = -1;
     bool function_like = false;
+    NativeSymbolId identity{};
     SourceLocation location;
 };
 
 struct NativeNamespaceDecl {
     std::string name;
+    NativeSymbolId identity{};
     SourceLocation location;
 };
 
