@@ -2,8 +2,10 @@
 
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
+#include "dudu/type_compat_structural.hpp"
 
 #include <optional>
+#include <set>
 #include <string_view>
 #include <vector>
 
@@ -12,6 +14,34 @@ namespace {
 
 bool type_ref_is_native_char(const TypeRef& type) {
     return type_ref_is_name(type, "char");
+}
+
+bool is_native_numeric_type_name(const std::string& type) {
+    static const std::set<std::string> numeric = {"i8",  "i16", "i32", "i64", "u8",    "u16",
+                                                  "u32", "u64", "f32", "f64", "usize", "isize"};
+    return numeric.contains(type);
+}
+
+bool is_native_numeric_type(const TypeRef& type) {
+    return is_native_numeric_type_name(type_ref_head_name(normalize_cpp_type_artifacts_ref(type)));
+}
+
+std::string native_type_head_spelling(const TypeRef& type) {
+    return trim_copy(type_ref_head_name(type));
+}
+
+std::string native_type_tail_name(const TypeRef& type) {
+    std::string name = native_type_head_spelling(type);
+    const size_t dot = name.find_last_of(".:");
+    if (dot != std::string::npos) {
+        name = name.substr(dot + 1);
+    }
+    return name;
+}
+
+bool native_type_head_ends_with_name(const TypeRef& type, const std::string& name) {
+    const std::string spelling = native_type_head_spelling(type);
+    return spelling == name || spelling.ends_with("." + name) || spelling.ends_with("::" + name);
 }
 
 size_t matching_angle(const std::string& text, const size_t open) {
@@ -233,6 +263,32 @@ std::string normalize_cpp_type_artifacts(std::string type) {
         return strip_cpp_pointer_cv_artifacts(normalize_cpp_primitive_type(type));
     }
     return normalize_cpp_type_artifacts(parsed);
+}
+
+bool native_associated_type_assignment_allowed(const TypeRef& expected, const TypeRef& got) {
+    const TypeRef normalized_expected = normalize_cpp_type_artifacts_ref(expected);
+    const TypeRef normalized_got = normalize_cpp_type_artifacts_ref(got);
+    if (type_ref_equivalent(normalized_expected, normalized_got) ||
+        structural_type_assignment_allowed(normalized_expected, normalized_got)) {
+        return true;
+    }
+
+    static const std::set<std::string> associated = {
+        "iterator", "const_iterator", "reference", "const_reference", "value_type",
+        "pointer",  "const_pointer",  "size_type", "difference_type"};
+    const std::string expected_name = native_type_tail_name(normalized_expected);
+    if (!associated.contains(expected_name)) {
+        return false;
+    }
+    if ((expected_name == "size_type" || expected_name == "difference_type") &&
+        is_native_numeric_type(normalized_got)) {
+        return true;
+    }
+    if (native_type_head_ends_with_name(normalized_got, expected_name)) {
+        return true;
+    }
+    return expected_name == "const_iterator" &&
+           native_type_head_ends_with_name(normalized_got, "iterator");
 }
 
 } // namespace dudu

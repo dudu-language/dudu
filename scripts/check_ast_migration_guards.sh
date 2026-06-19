@@ -21,6 +21,7 @@ forbidden=(
     "ArrayShorthand"
     "lower_array_shorthand_type"
     "collect_array_shorthand"
+    "is_cpp_associated_type_binding"
 )
 
 for pattern in "${forbidden[@]}"; do

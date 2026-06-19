@@ -173,10 +173,15 @@ make the boundary explicit: `NativeTypeDecl::native_spelling`,
 `TypeRef` metadata first and render native display/detail text through the
 native declaration accessors. The AST migration guard rejects reintroducing the
 old ambiguous native declaration fields `type`, `params`, and `return_type`.
-Remaining work is the harder identity cleanup: ordinary compatibility should
-stop leaning on raw spelling comparisons when structured/native identity facts
-exist, and suffix-name native heuristics should either be replaced or isolated
-behind clearly named native-boundary helpers.
+C++ associated-type suffix matching for imported native templates, such as
+`iterator`, `const_iterator`, `value_type`, and `size_type`, now lives behind
+the explicit native-boundary helper
+`native_associated_type_assignment_allowed` instead of ordinary type
+compatibility owning that spelling rule directly. Remaining work is the harder
+identity cleanup: ordinary compatibility should stop leaning on raw spelling
+comparisons when structured/native identity facts exist, and any remaining
+suffix-name native heuristics should either be replaced or isolated behind
+clearly named native-boundary helpers.
 
 ## Goal 5: Delete String Fallback APIs And Add Final Guards
 
