@@ -180,6 +180,14 @@ void test_type_compat_uses_type_ast_for_pointers() {
     malformed_expected.text = "Bad[";
     dudu::TypeRef malformed_got = malformed_expected;
     assert(!dudu::type_assignment_allowed(malformed_expected, malformed_got));
+
+    bool malformed_lower_failed = false;
+    try {
+        (void)dudu::lower_cpp_type(malformed_expected);
+    } catch (const dudu::CompileError&) {
+        malformed_lower_failed = true;
+    }
+    assert(malformed_lower_failed);
 }
 
 void test_can_assign_resolves_alias_type_refs() {

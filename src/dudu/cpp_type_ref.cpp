@@ -334,7 +334,7 @@ std::string lower_cpp_type(const TypeRef& type) {
     case TypeKind::Function:
         return lower_function_type(type, true);
     case TypeKind::Unknown:
-        return lower_cpp_type(type.text);
+        malformed_type_ref(type);
     }
     malformed_type_ref(type);
 }
@@ -396,7 +396,7 @@ std::string lower_cpp_type(const TypeRef& type, const std::vector<std::string>& 
     case TypeKind::Function:
         return lower_function_type(type, true, namespace_aliases);
     case TypeKind::Unknown:
-        return lower_cpp_type(type.text, namespace_aliases);
+        malformed_type_ref(type);
     }
     malformed_type_ref(type);
 }
@@ -463,7 +463,7 @@ std::string lower_cpp_type(const TypeRef& type, const std::vector<std::string>& 
     case TypeKind::Function:
         return lower_function_type(type, true, namespace_aliases, options);
     case TypeKind::Unknown:
-        return lower_cpp_type(type.text, namespace_aliases, options);
+        malformed_type_ref(type);
     }
     malformed_type_ref(type);
 }

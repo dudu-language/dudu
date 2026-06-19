@@ -2066,3 +2066,5 @@ push. They are not release packaging work.
    `base_type`/`known_type_ref` no longer treat non-empty `Unknown.text` as a
    valid type name; empty `Unknown` remains the missing-type sentinel, while
    malformed type nodes must be rejected explicitly.
+   C++ type lowering from structured `TypeRef` nodes now rejects `Unknown`
+   nodes instead of lowering their raw text through the string type lowerer.
