@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.20)
 
 project(dudu LANGUAGES CXX)
 
+include(GNUInstallDirs)
+
 option(DUDU_STRICT "Enable strict compiler warnings" ON)
 option(DUDU_WARN_AS_ERROR "Treat warnings as errors" OFF)
 option(DUDU_BUILD_TESTS "Build Dudu compiler tests" OFF)
@@ -160,6 +162,29 @@ target_compile_features(dudu PRIVATE cxx_std_20)
 add_executable(duc src/main.cpp)
 target_link_libraries(duc PRIVATE dudu_frontend)
 target_compile_features(duc PRIVATE cxx_std_20)
+
+install(TARGETS dudu duc
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+install(DIRECTORY editors/
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/dudu/editors
+)
+
+install(DIRECTORY docs/
+    DESTINATION ${CMAKE_INSTALL_DOCDIR}/docs
+    FILES_MATCHING PATTERN "*.md"
+)
+
+install(FILES README.md CHANGELOG.md
+    DESTINATION ${CMAKE_INSTALL_DOCDIR}
+)
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/include")
+    install(DIRECTORY include/
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    )
+endif()
 
 if(DUDU_BUILD_TESTS)
     add_executable(dudu_frontend_tests tests/frontend_tests.cpp)

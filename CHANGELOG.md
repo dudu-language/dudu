@@ -81,6 +81,8 @@
 - Shared parsed `TypeRef` index and iterable inference for public string entry
   points before falling back to native/operator boundaries.
 - Added Cairo to the optional native compatibility probe suite.
+- Added CMake install rules and `scripts/install-local.sh` for local source
+  installs of `dudu`, `duc`, docs, and editor support.
 
 ### Changed
 

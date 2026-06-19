@@ -217,6 +217,18 @@ Run the scalar-loop benchmark comparison:
 ./scripts/bench.sh 10000000 --max-ratio 1.10
 ```
 
+Install this checkout locally:
+
+```sh
+./scripts/install-local.sh
+```
+
+By default this installs `dudu` and `duc` under `~/.local/bin`, docs under
+`~/.local/share/doc/dudu`, and editor support under
+`~/.local/share/dudu/editors`. Use
+`./scripts/install-local.sh --prefix /path/to/prefix` to choose a different
+install root.
+
 Editor support lives in:
 
 - `editors/vscode`

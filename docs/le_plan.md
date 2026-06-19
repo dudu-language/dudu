@@ -1399,7 +1399,11 @@ push. They are not release packaging work.
    and similar package-manager distribution should wait until command behavior,
    versioning, changelog practice, and dependency requirements are stable.
 
-   Status: `dudu build` and `dudu run` use the direct backend by default for
+   Status: CMake install targets now install `dudu`, `duc`, docs, and editor
+   support. `scripts/install-local.sh` configures, builds, and installs this
+   checkout to `~/.local` by default or a caller-provided `--prefix`; it uses
+   the same CMake install rules instead of acting as a package manager.
+   `dudu build` and `dudu run` use the direct backend by default for
    single-module inputs. If no backend is explicitly selected and the source
    tree imports multiple Dudu modules, `dudu build`, `dudu run`, and
    `dudu test` select the generated CMake backend so generated C++ stays split

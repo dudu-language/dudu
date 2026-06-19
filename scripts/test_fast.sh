@@ -5,6 +5,7 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$repo_root/scripts/test_helpers.sh"
 
 "$repo_root/scripts/check_ast_migration_guards.sh"
+bash -n "$repo_root/scripts/install-local.sh"
 "$repo_root/scripts/build.sh" >/dev/null
 ctest --test-dir "$repo_root/build" --output-on-failure
 

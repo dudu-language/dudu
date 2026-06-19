@@ -573,6 +573,9 @@ docs. Generated Dudu projects do not get a changelog by default.
     and CTest-enabled projects.
 19. Keep `dudu cmake` as artifact emission for inspection and handoff, not as
     the required workflow for serious native projects.
+20. Add CMake install rules and `scripts/install-local.sh` so source checkouts
+    can install `dudu`, `duc`, docs, and editor support locally without package
+    manager integration.
 
 ## Acceptance Tests
 
