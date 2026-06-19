@@ -1532,6 +1532,12 @@ push. They are not release packaging work.
    that were useful during a milestone but should not survive in the real
    compiler.
 
+   This pass is mandatory because it is a normal part of building a real
+   compiler, not a judgment on any one change. When a project moves quickly,
+   helper functions and local workarounds accumulate around whatever feature was
+   being stabilized that day. After the feature is proven, revisit the shape of
+   the code and remove the scaffolding that no longer carries its own weight.
+
    Also clean these up opportunistically when they are discovered during other
    work. Do not leave obviously silly artifacts in place just because the
    current feature passes. If a helper, branch, or wrapper only exists because
@@ -1548,6 +1554,12 @@ push. They are not release packaging work.
      behavior
    - over-broad utility functions used in only one narrow place
    - accidental abstractions introduced while keeping intermediate commits green
+   - one-line pass-through APIs that were created to keep a change small but do
+     not represent a real compiler phase, ownership boundary, or public surface
+   - helper names that say what the old implementation did instead of what the
+     current compiler concept is
+   - feature-specific plumbing that should become a normal AST, sema, module, or
+     codegen path before more features depend on it
    - long files that should be split along real compiler phases or ownership
      boundaries
    - comments that narrate obvious code instead of explaining non-obvious
@@ -1563,6 +1575,8 @@ push. They are not release packaging work.
    code easier to reason about, reduce duplication, remove misleading
    abstraction, or make a compiler boundary more explicit. Keep behavior
    unchanged unless the cleanup exposes a real bug, then add a regression test.
+   Prefer many small cleanup commits tied to concrete ownership improvements
+   over one giant style rewrite.
 
    Examples from recent work: a generic `compatible_native_redeclaration(...)`
    fallback that always returned `false` was replaced with an explicit
