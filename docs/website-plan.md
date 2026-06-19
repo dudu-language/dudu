@@ -5,11 +5,15 @@ Dudu should have a GitHub Pages site intended for `dudulang.org`.
 The site is marketing and documentation, not the compiler itself. Its job is to
 make the project instantly understandable, memorable, and easy to try.
 
-The basic pitch: make a funny public language site that reads as a brown,
-poo-themed sibling of `mojolang.org` rather than another sterile compiler
-homepage. Dudu is not satire as a language, but the public wrapper can be
-satirical because weird developer marketing is easier to remember than a bland
-feature matrix.
+The basic pitch: make a funny public language site that reads like a brown,
+poo-themed satirical sibling of `mojolang.org` rather than another sterile
+compiler homepage. Dudu is not satire as a language. Dudu is a real systems
+language project. The public wrapper can still be satirical because weird
+developer marketing is easier to remember than a bland feature matrix.
+
+This is deliberate guerrilla marketing: the site gets attention with a dumb,
+memorable visual joke, then immediately backs it with real code, real interop,
+real performance goals, and an honest roadmap.
 
 ## Tone
 
@@ -23,10 +27,15 @@ category. The rough joke is:
   serious native C/C++ interop ambitions.
 
 Dudu itself is not a joke language. The marketing can be weird because modern
-developer tools need a hook. Treat the visual theme as gorilla marketing in the
-stupidest possible spelling: memorable, a little wrong, and still backed by
+developer tools need a hook. Treat the visual theme as guerrilla marketing in
+the stupidest possible spelling: memorable, a little wrong, and still backed by
 real engineering. It should be funny enough to remember and serious enough that
 a developer can still evaluate the language.
+
+The tone should avoid polished startup voice. No grandiose AI-adjacent claims,
+no ad-copy rhythm, no fake inevitability. It should sound like someone built a
+serious compiler and then made the least tasteful public wrapper that still
+communicates the idea clearly.
 
 The site should not copy Mojo text, logos, illustrations, or layout details
 verbatim. It can parody the category and contrast against the fire/red visual
@@ -37,6 +46,10 @@ spoof," not trademark-confusing clone.
 
 - Brown, tan, amber, off-white, and near-black palette.
 - Sharp UI, not bubbly toy UI.
+- The first viewport should feel recognizably related to the modern
+  Python-but-fast compiler landing-page genre, while being visually inverted:
+  brown instead of red, ground instead of fire, native pragmatism instead of
+  heat metaphors.
 - Logo and mascot work can be silly, but docs and examples stay readable.
 - Hero can be bold and dumb in a good way: Dudu, Python-shaped systems
   programming, C/C++ ecosystem underneath.
@@ -61,8 +74,12 @@ Not acceptable:
 - Reusing Mojo's exact copy, screenshots, logos, assets, iconography, or page
   composition.
 - Claiming compatibility or affiliation.
+- Presenting the site as an actual fork, mirror, or official variant of Mojo.
 - Making the joke so heavy that the compiler looks fake.
 - Hiding project status or roadmap uncertainty.
+
+The target is parody of the genre, not a confusing clone. The user should get
+the joke in one second and understand the compiler in ten seconds.
 
 ## Site Structure
 
