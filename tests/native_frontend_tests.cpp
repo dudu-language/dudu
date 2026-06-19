@@ -159,6 +159,7 @@ void test_native_header_type_scan(const std::filesystem::path& root) {
     assert(saw_macro_identity);
     bool saw_lsp_type_identity = false;
     bool saw_lsp_function_identity = false;
+    bool saw_lsp_method_identity = false;
     bool saw_lsp_value_identity = false;
     bool saw_lsp_macro_identity = false;
     for (const dudu::Symbol& symbol : dudu::symbols_for_module(module)) {
@@ -170,6 +171,10 @@ void test_native_header_type_scan(const std::filesystem::path& root) {
             assert(identity_key_ends_with(symbol.native_identity_key,
                                           "native_headers/simple_cpp.hpp::dudu_native.add"));
             saw_lsp_function_identity = true;
+        } else if (symbol.name == "dudu_native.Widget.scaled") {
+            assert(identity_key_ends_with(symbol.native_identity_key,
+                                          "native_headers/simple_cpp.hpp::dudu_native.Widget.scaled"));
+            saw_lsp_method_identity = true;
         } else if (symbol.name == "DUDU_NATIVE_MAGIC") {
             assert(symbol.native_identity_key == "path:DUDU_NATIVE_MAGIC" ||
                    identity_key_ends_with(symbol.native_identity_key,
@@ -182,6 +187,7 @@ void test_native_header_type_scan(const std::filesystem::path& root) {
     }
     assert(saw_lsp_type_identity);
     assert(saw_lsp_function_identity);
+    assert(saw_lsp_method_identity);
     assert(saw_lsp_value_identity);
     assert(saw_lsp_macro_identity);
     assert(std::filesystem::exists(config.build_dir / "dudu-header-cache"));

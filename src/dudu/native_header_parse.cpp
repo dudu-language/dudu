@@ -271,6 +271,10 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                std::regex_search(line, match, method_decl)) {
         FunctionDecl method;
         method.name = match[1].str();
+        method.native_identity =
+            native_identity(scan.classes[classes.back().second].identity.canonical_path + "." +
+                                method.name,
+                            current_file);
         if (!templates.empty()) {
             method.generic_params = templates.back().params;
         }
@@ -293,6 +297,9 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
             qualify_scoped_types(scan, namespaces, signature_params(match[2].str()));
         FunctionDecl ctor;
         ctor.name = "init";
+        ctor.native_identity =
+            native_identity(scan.classes[classes.back().second].identity.canonical_path + ".init",
+                            current_file);
         for (const std::string& param : params) {
             ParamDecl decl;
             decl.name = "arg" + std::to_string(ctor.params.size());

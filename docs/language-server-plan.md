@@ -107,9 +107,9 @@ source location of a real scanned local C header declaration.
 Broader native references still need to move from name-set lookup toward a
 canonical identity index.
 LSP `Symbol` entries now carry native identity keys for scanned native types,
-values, functions, macros, and classes when Clang metadata provides them. That
-keeps identity available at the editor boundary and is the next step toward
-replacing native reference matching by plain source spelling.
+values, functions, macros, classes, and C++ class methods when Clang metadata
+provides them. That keeps identity available at the editor boundary and is the
+next step toward replacing native reference matching by plain source spelling.
 
 ## Architecture
 

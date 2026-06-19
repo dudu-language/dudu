@@ -294,6 +294,7 @@ struct FunctionDecl {
     Visibility visibility = Visibility::Default;
     std::string name;
     std::string cpp_name;
+    NativeSymbolId native_identity{};
     TypeRef receiver_type_ref;
     std::vector<std::string> generic_params;
     std::vector<Decorator> decorators;
