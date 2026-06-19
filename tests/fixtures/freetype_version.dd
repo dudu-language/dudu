@@ -1,0 +1,24 @@
+import c "freetype/freetype.h" as ft
+
+
+def main() -> i32:
+    library: *struct FT_LibraryRec_ = None
+    init_status = ft.FT_Init_FreeType(&library)
+    if init_status != 0:
+        return 1
+    if library == None:
+        return 2
+
+    major: i32 = 0
+    minor: i32 = 0
+    patch: i32 = 0
+    ft.FT_Library_Version(library, &major, &minor, &patch)
+
+    done_status = ft.FT_Done_FreeType(library)
+    if done_status != 0:
+        return 3
+    if major <= 0:
+        return 4
+    if minor < 0 or patch < 0:
+        return 5
+    return 42

@@ -219,6 +219,27 @@ probe_cairo() {
     echo "ok cairo"
 }
 
+probe_freetype() {
+    if ! pkg-config --exists freetype2; then
+        echo "skip freetype2: pkg-config package not found"
+        return
+    fi
+
+    local cpp="$repo_root/build/probe_freetype_version.cpp"
+    local bin="$repo_root/build/probe_freetype_version"
+    "$repo_root/build/duc" emit "$repo_root/tests/fixtures/freetype_version.dd" -o "$cpp"
+    "${CXX:-c++}" -std=c++20 "$cpp" $(pkg-config --cflags --libs freetype2) -o "$bin"
+    set +e
+    "$bin"
+    local status=$?
+    set -e
+    if [[ "$status" -ne 42 ]]; then
+        echo "freetype2 probe returned $status, expected 42" >&2
+        exit 1
+    fi
+    echo "ok freetype2"
+}
+
 probe_fmt() {
     if ! pkg-config --exists fmt; then
         echo "skip fmt: pkg-config package not found"
@@ -588,6 +609,7 @@ probe_openssl
 probe_libevent
 probe_libxml2
 probe_cairo
+probe_freetype
 probe_fmt
 probe_eigen
 probe_openblas
