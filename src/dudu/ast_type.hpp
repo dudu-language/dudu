@@ -25,6 +25,7 @@ bool has_type_ref(const TypeRef& type);
 bool type_ref_is_name(const TypeRef& type, std::string_view name);
 bool type_ref_is_auto(const TypeRef& type);
 bool type_ref_is_void(const TypeRef& type);
+bool type_ref_same_shape(const TypeRef& left, const TypeRef& right);
 bool type_ref_equivalent(const TypeRef& left, const TypeRef& right);
 TypeRef named_type_ref(std::string name, SourceLocation location = {});
 TypeRef void_type_ref(SourceLocation location = {});

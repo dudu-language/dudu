@@ -229,6 +229,19 @@ bool type_ref_is_void(const TypeRef& type) {
     return type_ref_is_name(type, "void");
 }
 
+bool type_ref_same_shape(const TypeRef& left, const TypeRef& right) {
+    if (left.kind != right.kind || left.children.size() != right.children.size() ||
+        left.name != right.name || left.value != right.value || left.text != right.text) {
+        return false;
+    }
+    for (size_t i = 0; i < left.children.size(); ++i) {
+        if (!type_ref_same_shape(left.children[i], right.children[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool type_ref_equivalent(const TypeRef& left, const TypeRef& right) {
     if (left.kind != right.kind || left.children.size() != right.children.size()) {
         return false;
@@ -264,10 +277,7 @@ bool type_ref_equivalent(const TypeRef& left, const TypeRef& right) {
     case TypeKind::Function:
         break;
     case TypeKind::Unknown:
-        if (trim_copy(left.text) != trim_copy(right.text)) {
-            return false;
-        }
-        break;
+        return false;
     }
 
     for (size_t i = 0; i < left.children.size(); ++i) {

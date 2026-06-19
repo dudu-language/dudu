@@ -73,8 +73,7 @@ bool is_cstr_type(const TypeRef& type) {
 }
 
 bool needs_rendered_type_fallback(const TypeRef& expected, const TypeRef& got) {
-    return !has_type_ref(expected) || !has_type_ref(got) || expected.kind == TypeKind::Unknown ||
-           got.kind == TypeKind::Unknown;
+    return !has_type_ref(expected) || !has_type_ref(got);
 }
 
 bool rendered_type_fallback_allowed(const TypeRef& expected_ref, const TypeRef& got_ref) {
@@ -166,7 +165,7 @@ bool is_value_from_reference(const TypeRef& expected, const TypeRef& got) {
 
 bool is_value_wrapper_assignment(const TypeRef& expected, const Expr& expr, const TypeRef& got) {
     const TypeRef inner = wrapped_type_arg_ref(expected);
-    if (type_ref_equivalent(inner, expected)) {
+    if (type_ref_same_shape(inner, expected)) {
         return false;
     }
     return assignment_type_allowed(inner, expr, got);
@@ -359,7 +358,7 @@ bool type_assignment_allowed(const TypeRef& expected, const TypeRef& got) {
 bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const TypeRef& got) {
     const TypeRef normalized_expected_ref = normalize_cpp_type_artifacts_ref(expected);
     const TypeRef normalized_got_ref = normalize_cpp_type_artifacts_ref(got);
-    if (!type_ref_equivalent(normalized_expected_ref, expected)) {
+    if (!type_ref_same_shape(normalized_expected_ref, expected)) {
         return assignment_type_allowed(normalized_expected_ref, expr, normalized_got_ref);
     }
     if (has_type_ref(normalized_got_ref) && !type_ref_is_auto(normalized_got_ref)) {

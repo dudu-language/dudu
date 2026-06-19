@@ -67,7 +67,7 @@ TypeRef unwrap_receiver_type_ref(const Symbols& symbols, const TypeRef& type) {
     TypeRef current = type;
     while (true) {
         const TypeRef resolved = resolve_alias_ref(symbols, current);
-        if (!type_ref_equivalent(resolved, current)) {
+        if (!type_ref_same_shape(resolved, current)) {
             current = resolved;
             continue;
         }

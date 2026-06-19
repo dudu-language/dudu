@@ -174,6 +174,12 @@ void test_type_compat_uses_type_ast_for_pointers() {
     assert(dudu::assignment_type_allowed(dudu::parse_type_text("list[i32]"),
                                          dudu::parse_expr_text("list[i32](raw)"),
                                          dudu::parse_type_text("auto")));
+
+    dudu::TypeRef malformed_expected;
+    malformed_expected.kind = dudu::TypeKind::Unknown;
+    malformed_expected.text = "Bad[";
+    dudu::TypeRef malformed_got = malformed_expected;
+    assert(!dudu::type_assignment_allowed(malformed_expected, malformed_got));
 }
 
 void test_can_assign_resolves_alias_type_refs() {

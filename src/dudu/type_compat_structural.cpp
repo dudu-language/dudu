@@ -52,10 +52,7 @@ bool type_refs_equivalent_ignoring_c_tags(const TypeRef& expected, const TypeRef
     case TypeKind::Function:
         break;
     case TypeKind::Unknown:
-        if (trim_copy(expected.text) != trim_copy(got.text)) {
-            return false;
-        }
-        break;
+        return false;
     }
     for (size_t i = 0; i < expected.children.size(); ++i) {
         if (!type_refs_equivalent_ignoring_c_tags(expected.children[i], got.children[i])) {

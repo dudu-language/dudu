@@ -2040,8 +2040,9 @@ push. They are not release packaging work.
    mirror before wrapper/enum dispatch; codegen uses the structured
    `TypeRef` directly.
    Type assignment compatibility now keeps normalized assignment checks on
-   structured `TypeRef`s and only renders spellings inside the explicit
-   missing/`Unknown` native-boundary fallback.
+   structured `TypeRef`s and no longer treats two raw `Unknown` type spellings
+   as compatible; malformed type nodes must be rejected or modeled
+   structurally instead of accepted by rendered text comparison.
    C++ escape type recognition now detects function types from structured
    `TypeRef` nodes instead of checking whether the raw callee spelling starts
    with `fn(`.
