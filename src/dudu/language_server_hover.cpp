@@ -1,8 +1,10 @@
 #include "dudu/language_server_hover.hpp"
 
+#include "dudu/ast_expr.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/language_server_json.hpp"
+#include "dudu/language_server_local_context.hpp"
 #include "dudu/language_server_native_lookup.hpp"
 #include "dudu/language_server_navigation.hpp"
 #include "dudu/language_server_support.hpp"
@@ -15,6 +17,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <optional>
+#include <set>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -144,10 +147,86 @@ std::string symbol_hover_json(const Document& doc, const Symbol& symbol) {
            "\"},\"range\":" + range_json(symbol.location) + "}";
 }
 
+std::optional<std::string> member_hover_json(const Document& doc, const ExprPath& path,
+                                             const Json* params) {
+    if (params == nullptr || path.segments.size() < 2 ||
+        path.segments.front().kind != ExprPathSegmentKind::Name ||
+        path.segments.back().kind != ExprPathSegmentKind::Name) {
+        return std::nullopt;
+    }
+    const std::string& receiver = path.segments.front().text;
+    const std::string& member = path.segments.back().text;
+    const TypeRef type_ref = local_type_ref_before_cursor(doc, receiver, params);
+    if (!has_type_ref(type_ref)) {
+        return std::nullopt;
+    }
+    try {
+        ModuleAst module = module_for_document(doc, true);
+        const std::set<std::string> candidate_types = member_candidate_types(module, type_ref);
+        const auto find_member =
+            [&](const std::vector<ClassDecl>& classes) -> std::optional<std::string> {
+            for (const ClassDecl& klass : classes) {
+                if (!candidate_types.contains(klass.name)) {
+                    continue;
+                }
+                for (const FieldDecl& field : klass.fields) {
+                    if (field.name == member) {
+                        return symbol_hover_json(
+                            doc, {.name = field.name,
+                                  .detail = field.name + ": " + type_ref_text(field.type_ref),
+                                  .location = field.location,
+                                  .kind = lsp_symbol_kind::Field,
+                                  .native_identity_key = std::nullopt});
+                    }
+                }
+                for (const ConstDecl& constant : klass.constants) {
+                    if (constant.name == member) {
+                        return symbol_hover_json(
+                            doc, {.name = constant.name,
+                                  .detail = constant.name + ": " + type_ref_text(constant.type_ref),
+                                  .location = constant.location,
+                                  .kind = lsp_symbol_kind::Constant,
+                                  .native_identity_key = std::nullopt});
+                    }
+                }
+                for (const ConstDecl& field : klass.static_fields) {
+                    if (field.name == member) {
+                        return symbol_hover_json(
+                            doc, {.name = field.name,
+                                  .detail = field.name + ": " + type_ref_text(field.type_ref),
+                                  .location = field.location,
+                                  .kind = lsp_symbol_kind::Field,
+                                  .native_identity_key = std::nullopt});
+                    }
+                }
+                for (const FunctionDecl& method : klass.methods) {
+                    if (method.name == member) {
+                        return symbol_hover_json(
+                            doc, {.name = method.name,
+                                  .detail = function_detail(method),
+                                  .location = method.location,
+                                  .kind = is_constructor_method_name(method.name)
+                                              ? lsp_symbol_kind::Constructor
+                                              : lsp_symbol_kind::Method,
+                                  .native_identity_key = std::nullopt});
+                    }
+                }
+            }
+            return std::nullopt;
+        };
+        if (const std::optional<std::string> native = find_member(module.native_classes)) {
+            return native;
+        }
+        return find_member(module.classes);
+    } catch (const std::exception&) {
+    }
+    return std::nullopt;
+}
+
 } // namespace
 
 std::string hover_json(const Document& doc, const std::string& word,
-                       const std::string& local_type) {
+                       const std::string& local_type, const Json* params) {
     if (const std::optional<std::string> native_alias = native_alias_hover_json(doc, word)) {
         return *native_alias;
     }
@@ -157,6 +236,12 @@ std::string hover_json(const Document& doc, const std::string& word,
     }
     if (const std::optional<std::string> imported = imported_symbol_hover_json(doc, word)) {
         return *imported;
+    }
+    if (const std::optional<ExprPath> path = params == nullptr ? std::nullopt
+                                                               : ast_expr_path_at(doc, params)) {
+        if (const std::optional<std::string> member_hover = member_hover_json(doc, *path, params)) {
+            return *member_hover;
+        }
     }
     if (const std::optional<Symbol> suffix = unambiguous_suffix_symbol_match(symbols, word)) {
         return symbol_hover_json(doc, *suffix);

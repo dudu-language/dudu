@@ -1359,8 +1359,8 @@ push. They are not release packaging work.
    native identity at the editor boundary so native references can move away
    from plain name matching. Definition and hover symbol lookup now prefer
    exact symbols and only use suffix matches when unambiguous; receiver-aware
-   member definition runs before suffix fallback, so same-named native methods
-   resolve through the expression receiver type instead of scan order.
+   member definition and hover run before suffix fallback, so same-named native
+   methods resolve through the expression receiver type instead of scan order.
 
 14. Project Driver Polish
 
@@ -1462,7 +1462,6 @@ push. They are not release packaging work.
    quiet for direct compiler-driver scripts. `dudu fmt` formats either the
    current project tree or an explicit file in place by default, while `duc fmt`
    keeps the direct stdout-oriented formatter behavior. `dudu bench` is
-   documented in help, `dudu bench compiler` runs the compiler-throughput
    benchmark from a checkout, and benchmark command arguments remain available
    after `--`.
    The generated CMake test backend now uses `duc emit-test-modules` to emit
@@ -1582,8 +1581,13 @@ push. They are not release packaging work.
    Audit for:
 
    - one-line wrapper functions that only obscure the real operation
+   - one-line functions whose body is just another function call with the same
+     arguments, unless they define a public API, phase boundary, or native
+     boundary
    - generic helpers that exist only to return a constant or route one special
      case through template machinery
+   - generic helpers that do not use their template parameter for real generic
+     behavior
    - duplicate helper logic that should live in one shared file
    - stale names that describe an old implementation instead of current
      behavior
@@ -1605,6 +1609,8 @@ push. They are not release packaging work.
      that only hide ownership or phase boundaries
    - old test fixtures that pass by leaning on obsolete syntax or accidental
      permissiveness instead of the current language rules
+   - examples with hand-written workaround code that should be deleted once the
+     language feature or header-awareness path supports the direct form
 
    This pass is not a license for broad cosmetic churn. Each cleanup should make
    code easier to reason about, reduce duplication, remove misleading

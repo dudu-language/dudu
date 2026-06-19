@@ -807,6 +807,43 @@ void test_lsp_definition_uses_receiver_for_ambiguous_native_methods() {
     assert(definition.find("\"line\":10") != std::string::npos);
 }
 
+void test_lsp_hover_uses_receiver_for_ambiguous_native_methods() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_native_method_hover_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "native_methods.hpp",
+               "namespace left {\n"
+               "struct Thing {\n"
+               "    int shared() const {\n"
+               "        return 1;\n"
+               "    }\n"
+               "};\n"
+               "}\n"
+               "\n"
+               "namespace right {\n"
+               "struct Thing {\n"
+               "    float shared() const {\n"
+               "        return 2.0f;\n"
+               "    }\n"
+               "};\n"
+               "}\n");
+
+    const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
+                             .path = dir / "main.dd",
+                             .text = "import cpp \"./native_methods.hpp\"\n"
+                                     "\n"
+                                     "def main() -> i32:\n"
+                                     "    first: left.Thing\n"
+                                     "    second: right.Thing\n"
+                                     "    return i32(second.shared())\n"};
+    dudu::Json params =
+        dudu::JsonParser("{\"position\":{\"line\":5,\"character\":24}}").parse();
+    const std::string hover = dudu::hover_json(doc, "second.shared", "", &params);
+    assert(hover.find("shared() -> f32") != std::string::npos);
+    assert(hover.find("shared() -> i32") == std::string::npos);
+}
+
 void test_lsp_hover_uses_loaded_module_units() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_lsp_module_hover_unit_test";
@@ -1588,6 +1625,7 @@ int main() {
         test_lsp_definition_uses_loaded_module_units();
         test_lsp_definition_jumps_to_native_header_type();
         test_lsp_definition_uses_receiver_for_ambiguous_native_methods();
+        test_lsp_hover_uses_receiver_for_ambiguous_native_methods();
         test_lsp_hover_uses_loaded_module_units();
         test_lsp_unreachable_lint_uses_branch_structure();
         test_lsp_unreachable_lint_does_not_flag_partial_branch_return();

@@ -6,7 +6,9 @@
 
 namespace dudu {
 
+struct Json;
+
 std::string hover_json(const Document& doc, const std::string& word,
-                       const std::string& local_type);
+                       const std::string& local_type, const Json* params = nullptr);
 
 } // namespace dudu

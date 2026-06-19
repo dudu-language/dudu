@@ -407,7 +407,8 @@ class LanguageServer {
         const std::string word = ast_symbol_path_at(*doc, params).value_or("");
         return hover_json(*doc, word,
                           substitute_type_ref_text(
-                              local_type_ref_before_cursor(*doc, word, params), {}));
+                              local_type_ref_before_cursor(*doc, word, params), {}),
+                          params);
     }
 
     std::string completion_result(const Json* params) const {

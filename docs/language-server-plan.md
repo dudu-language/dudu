@@ -112,9 +112,9 @@ provides them. That keeps identity available at the editor boundary and is the
 next step toward replacing native reference matching by plain source spelling.
 Definition and hover symbol lookup now prefer exact symbols, and only fall back
 to suffix matching when the suffix is unambiguous. Receiver-aware member
-definition runs before suffix fallback, so native classes with same-named
-methods resolve through the expression receiver type instead of whichever
-method appears first in the scanned symbol list.
+definition and hover run before suffix fallback, so native classes with
+same-named methods resolve through the expression receiver type instead of
+whichever method appears first in the scanned symbol list.
 
 ## Architecture
 
