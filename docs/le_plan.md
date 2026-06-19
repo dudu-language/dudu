@@ -42,6 +42,8 @@ proper phase instead of adding more cross-phase patching.
 
 ## Proper AST And Compiler Pipeline
 
+Destringing sequence: [Destringing Goals](destringing-goals.md).
+
 This is the next architecture priority. Dudu must stop treating raw statement
 text as semantic data.
 
