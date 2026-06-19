@@ -965,6 +965,14 @@ messages = [
     packet(
         {
             "jsonrpc": "2.0",
+            "id": 61,
+            "method": "textDocument/references",
+            "params": {"textDocument": {"uri": uri}, "position": {"line": 8, "character": 13}},
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
             "id": 16,
             "method": "textDocument/rename",
             "params": {
@@ -1504,6 +1512,15 @@ reference_starts = {
 }
 assert (3, 4) in reference_starts
 assert (7, 17) in reference_starts
+
+type_references = next(item for item in responses if item.get("id") == 61)
+type_reference_starts = {
+    (item["range"]["start"]["line"], item["range"]["start"]["character"])
+    for item in type_references["result"]
+}
+assert (0, 0) in type_reference_starts
+assert (8, 12) in type_reference_starts
+assert (8, 21) in type_reference_starts
 
 rename = next(item for item in responses if item.get("id") == 16)
 rename_edits = rename["result"]["changes"][uri]
