@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <vector>
 
 namespace {
 
@@ -16,6 +17,15 @@ void write_text(const std::filesystem::path& path, const std::string& text) {
         throw std::runtime_error("could not write " + path.string());
     }
     out << text;
+}
+
+std::vector<char*> argv_for(std::vector<std::string>& args) {
+    std::vector<char*> out;
+    out.reserve(args.size());
+    for (std::string& arg : args) {
+        out.push_back(arg.data());
+    }
+    return out;
 }
 
 void test_manifest_relative_paths(const std::filesystem::path& root) {
@@ -210,6 +220,57 @@ void test_project_driver_resolves_manifest_relative_entries(const std::filesyste
     std::filesystem::current_path(original_cwd);
 }
 
+void test_project_driver_command_defaults(const std::filesystem::path& root) {
+    const std::filesystem::path project = root / "build" / "project-config-command-defaults";
+    const std::filesystem::path outside = root / "build" / "project-config-command-outside";
+    std::filesystem::remove_all(project);
+    std::filesystem::remove_all(outside);
+    std::filesystem::create_directories(outside);
+    write_text(project / "dudu.toml", "name = \"defaults_probe\"\n"
+                                      "entry = \"src/main.dd\"\n"
+                                      "\n"
+                                      "[build]\n"
+                                      "dir = \"out\"\n");
+    write_text(project / "src" / "main.dd", "def main() -> i32:\n    return 0\n");
+
+    const std::filesystem::path original_cwd = std::filesystem::current_path();
+    try {
+        std::filesystem::current_path(project);
+
+        std::vector<std::string> fmt_args = {"dudu", "fmt"};
+        std::vector<char*> fmt_argv = argv_for(fmt_args);
+        dudu::CliOptions fmt =
+            dudu::parse_cli_options(static_cast<int>(fmt_argv.size()), fmt_argv.data(), true);
+        fmt = dudu::resolve_project_input(std::move(fmt));
+        assert(fmt.project_driver);
+        assert(fmt.format);
+        assert(fmt.input == ".");
+
+        std::vector<std::string> check_args = {"dudu", "check"};
+        std::vector<char*> check_argv = argv_for(check_args);
+        dudu::CliOptions check =
+            dudu::parse_cli_options(static_cast<int>(check_argv.size()), check_argv.data(), true);
+        check = dudu::resolve_project_input(std::move(check));
+        assert(check.project_driver);
+        assert(check.check);
+        assert(check.input.lexically_normal() == (project / "src" / "main.dd").lexically_normal());
+
+        std::filesystem::current_path(outside);
+        std::vector<std::string> build_args = {"dudu", "build", project.string()};
+        std::vector<char*> build_argv = argv_for(build_args);
+        dudu::CliOptions build =
+            dudu::parse_cli_options(static_cast<int>(build_argv.size()), build_argv.data(), true);
+        build = dudu::resolve_project_input(std::move(build));
+        assert(build.project_driver);
+        assert(build.build);
+        assert(build.input.lexically_normal() == (project / "src" / "main.dd").lexically_normal());
+    } catch (...) {
+        std::filesystem::current_path(original_cwd);
+        throw;
+    }
+    std::filesystem::current_path(original_cwd);
+}
+
 } // namespace
 
 int main() {
@@ -219,6 +280,7 @@ int main() {
         test_quoted_manifest_strings(DUDU_REPO_ROOT);
         test_invalid_manifest_string_escapes(DUDU_REPO_ROOT);
         test_project_driver_resolves_manifest_relative_entries(DUDU_REPO_ROOT);
+        test_project_driver_command_defaults(DUDU_REPO_ROOT);
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;

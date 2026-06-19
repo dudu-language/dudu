@@ -398,6 +398,9 @@ Current implementation reality:
   place without printing the formatted source to stdout. `duc fmt <file>`
   remains the direct formatter that prints formatted text unless an explicit
   output is requested.
+- Regression coverage locks in the project-driver defaults for `dudu fmt`,
+  `dudu check`, and `dudu build <project-dir>` so those front-door commands do
+  not drift back toward direct compiler-driver behavior.
 - `dudu bench` is documented in help. `dudu bench compiler` runs the
   compiler-throughput benchmark from a checkout that contains
   `scripts/bench_compiler.sh`. `--quiet`, `--verbose`, `--help`, and
