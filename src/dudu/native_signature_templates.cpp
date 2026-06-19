@@ -2,6 +2,8 @@
 
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
+#include "dudu/type_compat_native.hpp"
+#include "dudu/type_compat_structural.hpp"
 
 #include <cctype>
 #include <set>
@@ -9,13 +11,15 @@
 namespace dudu {
 namespace {
 
-std::string type_ref_binding_text(const TypeRef& type) {
-    return substitute_type_ref_text(type, {});
+bool binding_equivalent(const TypeRef& left, const TypeRef& right) {
+    const TypeRef normalized_left = normalize_cpp_type_artifacts_ref(left);
+    const TypeRef normalized_right = normalize_cpp_type_artifacts_ref(right);
+    return type_ref_equivalent(normalized_left, normalized_right) ||
+           structural_type_assignment_allowed(normalized_left, normalized_right);
 }
 
-bool binding_equivalent(const TypeRef& left, const TypeRef& right) {
-    return type_ref_equivalent(left, right) ||
-           type_ref_binding_text(left) == type_ref_binding_text(right);
+std::string type_ref_binding_text(const TypeRef& type) {
+    return substitute_type_ref_text(type, {});
 }
 
 bool bind_template_placeholder(const std::string& name, TypeRef got,

@@ -2060,3 +2060,6 @@ push. They are not release packaging work.
    fallback.
    Wrapper match metadata no longer stores rendered template argument mirrors;
    Option/Result pattern binding uses the parsed `TypeRef` argument list only.
+   Native template placeholder rebinding no longer accepts matching rendered
+   type strings as semantic equality; repeated bindings compare normalized
+   structured `TypeRef`s and structural compatibility instead.
