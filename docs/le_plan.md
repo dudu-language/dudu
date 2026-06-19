@@ -2120,3 +2120,8 @@ push. They are not release packaging work.
    Raw C++ template-argument lowering now shares the same structured function
    `TypeRef` lowering for `fn(...)` spellings, preserving non-pointer function
    signatures for template arguments without a second hand-written parser.
+   Raw known Dudu template spellings such as `list[...]`, `dict[...]`,
+   `tuple[...]`, `variant[...]`, `std.function[...]`, and related built-in
+   template roots now parse into `TypeRef` and use the structured type lowerer
+   instead of duplicating the built-in template semantics with raw bracket
+   splitting.

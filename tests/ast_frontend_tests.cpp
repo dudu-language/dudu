@@ -1406,6 +1406,11 @@ void test_type_ast_shape() {
            "std::add_pointer_t<bool(int32_t, float)>");
     assert(dudu::lower_cpp_type("list[fn(i32) -> bool]") ==
            "std::vector<std::add_pointer_t<bool(int32_t)>>");
+    assert(dudu::lower_cpp_type("dict[str, list[fn(i32) -> bool]]") ==
+           "std::unordered_map<std::string, "
+           "std::vector<std::add_pointer_t<bool(int32_t)>>>");
+    assert(dudu::lower_cpp_type("std.function[fn(i32) -> bool]") ==
+           "std::function<bool(int32_t)>");
     assert(dudu::lower_template_call_arg("fn(i32) -> bool", {}) == "bool(int32_t)");
     dudu::FunctionSignature signature;
     assert(dudu::parse_function_type(dudu::parse_type_text("fn(i32, f32) -> bool"), signature));

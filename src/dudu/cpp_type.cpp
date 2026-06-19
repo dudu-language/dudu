@@ -39,6 +39,12 @@ bool is_array_dimension(std::string_view text) {
     return is_decimal_number(text) || is_constant_name(text);
 }
 
+bool known_structured_template_root(std::string_view name) {
+    return name == "list" || name == "span" || name == "strided_span" || name == "dict" ||
+           name == "set" || name == "Option" || name == "Result" || name == "tuple" ||
+           name == "variant" || name == "std.function" || name == "std::function";
+}
+
 const std::map<std::string, std::string>& builtin_cpp_type_names() {
     static const std::map<std::string, std::string> builtins = {
         {"bool", "bool"},       {"i8", "int8_t"},    {"i16", "int16_t"},
@@ -48,6 +54,14 @@ const std::map<std::string, std::string>& builtin_cpp_type_names() {
         {"f64", "double"},      {"void", "void"},    {"str", "std::string"},
         {"cstr", "const char*"}};
     return builtins;
+}
+
+std::optional<std::string> lower_parsed_known_template_type(const std::string& type) {
+    const TypeRef parsed = parse_type_text(type);
+    if (parsed.kind != TypeKind::Template || !known_structured_template_root(parsed.name)) {
+        return std::nullopt;
+    }
+    return lower_cpp_type(parsed);
 }
 
 std::optional<std::string> lower_parsed_fixed_array_type(const std::string& type) {
@@ -310,6 +324,10 @@ std::string lower_cpp_type(const std::string& raw_type) {
     }
     if (const auto wrapped_type = lower_parsed_wrapper_type(type)) {
         return *wrapped_type;
+    }
+
+    if (const auto template_type = lower_parsed_known_template_type(type)) {
+        return *template_type;
     }
 
     if (const auto array_type = lower_parsed_fixed_array_type(type)) {
