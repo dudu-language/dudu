@@ -93,6 +93,27 @@ probe_zlib() {
     echo "ok zlib"
 }
 
+probe_curl() {
+    if ! pkg-config --exists libcurl; then
+        echo "skip libcurl: pkg-config package not found"
+        return
+    fi
+
+    local cpp="$repo_root/build/probe_curl_version_info.cpp"
+    local bin="$repo_root/build/probe_curl_version_info"
+    "$repo_root/build/duc" emit "$repo_root/tests/fixtures/curl_version_info.dd" -o "$cpp"
+    "${CXX:-c++}" -std=c++20 "$cpp" $(pkg-config --cflags --libs libcurl) -o "$bin"
+    set +e
+    "$bin"
+    local status=$?
+    set -e
+    if [[ "$status" -ne 42 ]]; then
+        echo "curl probe returned $status, expected 42" >&2
+        exit 1
+    fi
+    echo "ok libcurl"
+}
+
 probe_threading() {
     local cpp="$repo_root/build/probe_threading_atomics.cpp"
     local bin="$repo_root/build/probe_threading_atomics"
@@ -255,6 +276,7 @@ probe_glm
 probe_opencv
 probe_sqlite
 probe_zlib
+probe_curl
 probe_threading
 probe_posix_mmap
 probe_posix_threads

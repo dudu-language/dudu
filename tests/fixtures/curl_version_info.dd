@@ -1,0 +1,10 @@
+import c "curl/curl.h" as curl
+
+
+def main() -> i32:
+    info = curl.curl_version_info(curl.CURLVERSION_NOW)
+    if info == None:
+        return 1
+    if info.version_num <= 0:
+        return 2
+    return 42

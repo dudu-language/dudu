@@ -1,5 +1,6 @@
 #include "dudu/cpp_emit.hpp"
 #include "dudu/cpp_expr_call_emit.hpp"
+#include "dudu/native_headers.hpp"
 #include "dudu/parser.hpp"
 #include "dudu/sema.hpp"
 #include "dudu/source.hpp"
@@ -203,6 +204,24 @@ void test_inferred_auto_assignment_is_not_redeclared() {
            std::string::npos);
 }
 
+void test_inferred_native_pointer_member_emission_uses_type_ast(const std::filesystem::path& root) {
+    const dudu::ModuleAst module =
+        dudu::parse_source("import c \"native_headers/pointer_return.h\" as ptr\n"
+                           "\n"
+                           "def read() -> i32:\n"
+                           "    info = ptr.dudu_pointer_info_get()\n"
+                           "    return info.value\n",
+                           root / "tests" / "fixtures" / "inferred_native_pointer_member.dd");
+    dudu::ModuleAst checked = module;
+    dudu::merge_native_header_types(
+        checked,
+        dudu::NativeHeaderOptions{.config = {}, .source_dir = root / "tests" / "fixtures"});
+    dudu::analyze_module(checked, {.check_bodies = true});
+    const std::string cpp = dudu::emit_cpp_source(checked);
+    assert(cpp.find("auto info = dudu_pointer_info_get();") != std::string::npos);
+    assert(cpp.find("info->value") != std::string::npos);
+}
+
 void test_expected_generic_method_emission_uses_type_ast_receiver() {
     const dudu::ModuleAst module = dudu::parse_source("class Box[T]:\n"
                                                       "    def make[U](self) -> U:\n"
@@ -251,6 +270,7 @@ int main() {
         test_array_literal_scalar_ast_emission();
         test_typed_literal_initializers_use_type_ast();
         test_inferred_auto_assignment_is_not_redeclared();
+        test_inferred_native_pointer_member_emission_uses_type_ast(root);
         test_expected_generic_method_emission_uses_type_ast_receiver();
         test_class_emit_order_uses_type_ast_fields();
     } catch (const std::exception& error) {

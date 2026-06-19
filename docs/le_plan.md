@@ -1174,7 +1174,7 @@ push. They are not release packaging work.
    partial-syntax macros, or platform setup that C/C++ users also normally hide
    behind an adapter.
 
-   Current optional probes pass for glm, OpenCV, sqlite, zlib, threading,
+   Current optional probes pass for glm, OpenCV, sqlite, zlib, curl, threading,
    POSIX mmap, POSIX pthread, raylib, SDL3, GLFW, OpenCL, Vulkan, and FFmpeg on this
    machine. Optional dev-only dependencies can be installed into the ignored
    `third_party/install` prefix with `scripts/setup_dev_deps.sh`; the main Dudu

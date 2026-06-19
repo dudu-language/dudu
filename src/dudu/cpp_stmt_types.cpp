@@ -4,8 +4,12 @@
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/sema_context.hpp"
+#include "dudu/sema_function_type.hpp"
+#include "dudu/sema_generics.hpp"
 #include "dudu/sema_index_type_ref.hpp"
+#include "dudu/sema_native.hpp"
 #include "dudu/sema_scan.hpp"
+#include "dudu/type_compat.hpp"
 
 #include <cstddef>
 #include <vector>
@@ -51,8 +55,7 @@ TypeRef indexed_local_type_ref(const TypeRef& receiver_type, const Expr& index_e
                                   ? std::string{"indexed value"}
                                   : type_ref_head_name(receiver_type);
     const auto indexed = indexed_type_ref_from_type_ref_with_count(
-        symbols, index_expr.location, receiver_type, index_count(index_expr), false, false,
-        label);
+        symbols, index_expr.location, receiver_type, index_count(index_expr), false, false, label);
     return indexed ? *indexed : TypeRef{};
 }
 
@@ -98,6 +101,21 @@ TypeRef infer_call_type_ref(const Expr& expr, const std::map<std::string, TypeRe
             if (const auto method = function_returns.find(key); method != function_returns.end()) {
                 return method->second;
             }
+        }
+    }
+    if (symbols != nullptr) {
+        FunctionScope scope{*symbols};
+        scope.local_type_refs = local_type_refs;
+        if (const auto signature = native_signature_for_call(
+                scope, direct_callee_name(expr), template_type_refs(expr), expr.children, nullptr,
+                [&](const FunctionScope&, const Expr& value, const SourceLocation*) {
+                    return infer_emitted_local_type_ref(value, local_type_refs, function_returns,
+                                                        symbols);
+                },
+                [](const TypeRef& expected, const Expr& value, const TypeRef& got) {
+                    return assignment_type_allowed(expected, value, got);
+                })) {
+            return signature_return_type_ref(*signature);
         }
     }
     return {};
@@ -215,6 +233,13 @@ TypeRef infer_emitted_local_type_ref(const Expr& expr,
         return {};
     case ExprKind::Binary:
         return infer_binary_expr_type_ref(expr, local_type_refs, function_returns, symbols);
+    case ExprKind::Member:
+        if (symbols != nullptr) {
+            if (const auto native = native_member_expr_type_ref(*symbols, expr, expr.location)) {
+                return *native;
+            }
+        }
+        return {};
     case ExprKind::Missing:
     case ExprKind::Conditional:
     case ExprKind::Await:
@@ -227,7 +252,6 @@ TypeRef infer_emitted_local_type_ref(const Expr& expr,
     case ExprKind::DictLiteral:
     case ExprKind::Lambda:
     case ExprKind::ListLiteral:
-    case ExprKind::Member:
     case ExprKind::NamedArg:
     case ExprKind::SetLiteral:
     case ExprKind::Slice:
