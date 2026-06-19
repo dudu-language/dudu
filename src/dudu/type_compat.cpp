@@ -51,18 +51,6 @@ std::optional<TypeRef> reference_target_ref(const TypeRef& type) {
     return unary_child_ref(type, TypeKind::Reference);
 }
 
-std::string compact_type(std::string type) {
-    std::string out;
-    for (const char c : type) {
-        if (std::isspace(static_cast<unsigned char>(c)) == 0) {
-            out.push_back(c);
-        }
-    }
-    return out;
-}
-
-std::string normalize_c_tags(std::string type);
-
 bool is_string_type(const TypeRef& type) {
     const std::string head = type_ref_head_name(normalize_cpp_type_artifacts_ref(type));
     return head == "str" || head == "std.string" || head == "std::string";
@@ -70,20 +58,6 @@ bool is_string_type(const TypeRef& type) {
 
 bool is_cstr_type(const TypeRef& type) {
     return type_ref_head_name(normalize_cpp_type_artifacts_ref(type)) == "cstr";
-}
-
-bool needs_rendered_type_fallback(const TypeRef& expected, const TypeRef& got) {
-    return !has_type_ref(expected) || !has_type_ref(got);
-}
-
-bool rendered_type_fallback_allowed(const TypeRef& expected_ref, const TypeRef& got_ref) {
-    if (!needs_rendered_type_fallback(expected_ref, got_ref)) {
-        return false;
-    }
-    const std::string expected = substitute_type_ref_text(expected_ref, {});
-    const std::string got = substitute_type_ref_text(got_ref, {});
-    return got == expected || compact_type(expected) == compact_type(got) ||
-           compact_type(normalize_c_tags(expected)) == compact_type(normalize_c_tags(got));
 }
 
 std::optional<TypeRef> call_target_type_ref(const Expr& expr) {
@@ -252,17 +226,6 @@ bool is_native_function_pointer(const TypeRef& expected, const TypeRef& got) {
            got.kind == TypeKind::Function;
 }
 
-std::string normalize_c_tags(std::string type) {
-    for (std::string_view tag : {"struct ", "class ", "union ", "enum "}) {
-        size_t pos = type.find(tag);
-        while (pos != std::string::npos) {
-            type.erase(pos, tag.size());
-            pos = type.find(tag, pos);
-        }
-    }
-    return type;
-}
-
 bool is_variant_value(const TypeRef& expected, const Expr& expr, const TypeRef& got) {
     if (expected.kind != TypeKind::Template || expected.name != "variant" ||
         expected.children.empty()) {
@@ -324,7 +287,6 @@ bool normalized_type_assignment_allowed(const TypeRef& expected_ref, const TypeR
         return true;
     }
     return type_ref_is_auto(expected_ref) || !has_type_ref(got_ref) || type_ref_is_auto(got_ref) ||
-           rendered_type_fallback_allowed(expected_ref, got_ref) ||
            (is_string_type(expected_ref) && is_string_type(got_ref)) ||
            is_void_pointer_target(expected_ref, got_ref) ||
            is_const_pointer_binding(expected_ref, got_ref) ||
@@ -389,7 +351,6 @@ bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const Ty
            is_explicit_cast_to(normalized_expected_ref, expr) ||
            (!is_container_literal_expr(expr) && !has_type_ref(normalized_got_ref)) ||
            type_ref_is_auto(normalized_got_ref) ||
-           rendered_type_fallback_allowed(normalized_expected_ref, normalized_got_ref) ||
            (is_string_type(normalized_expected_ref) && is_string_type(normalized_got_ref)) ||
            is_value_wrapper_assignment(normalized_expected_ref, expr, normalized_got_ref) ||
            is_null_pointer(normalized_expected_ref, expr, normalized_got_ref) ||

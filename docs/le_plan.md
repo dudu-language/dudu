@@ -2087,3 +2087,7 @@ push. They are not release packaging work.
    `Unknown.text` spellings as structured bindings; unknown native binding
    values now stay on the explicit native-artifact fallback path instead of
    entering structured substitution.
+   Assignment compatibility no longer has a rendered-string equality fallback
+   for missing type metadata; compatibility is decided by structured `TypeRef`
+   rules, explicit missing-type rules, literals, and diagnostics may still
+   render type labels for messages.
