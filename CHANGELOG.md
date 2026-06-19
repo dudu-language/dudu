@@ -125,6 +125,11 @@
 - Made direct unaliased native C/C++ functions participate in current-document
   LSP reference lookup once the native scanner proves the symbol exists in the
   document's imports.
+- Kept Dudu-owned LSP declaration/reference scope checks on Dudu-only symbols
+  so ordinary references avoid native-header scanner work.
+- Relaxed the LSP smoke-test subprocess guard from 5s to 10s so the dense
+  JSON-RPC batch does not fail on normal timing variance while still catching
+  hangs quickly.
 
 ### Fixed
 

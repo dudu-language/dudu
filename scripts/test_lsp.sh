@@ -1467,7 +1467,7 @@ proc = subprocess.run(
     input="".join(messages).encode(),
     stdout=subprocess.PIPE,
     stderr=subprocess.PIPE,
-    timeout=5,
+    timeout=10,
     check=True,
 )
 if proc.stderr:

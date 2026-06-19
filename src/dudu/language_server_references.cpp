@@ -69,7 +69,7 @@ bool position_contains_name(const Json* params, const std::string& name,
 
 std::optional<Symbol> declaration_at_position(const Document& doc, const Json* params,
                                               const std::string& name) {
-    for (const Symbol& symbol : symbols_for_document(doc)) {
+    for (const Symbol& symbol : symbols_for_document(doc, false)) {
         if (symbol.name == name && renameable_symbol_kind(symbol.kind) &&
             std::filesystem::path(symbol.location.file) == doc.path &&
             position_contains_name(params, name, symbol.location)) {
@@ -99,7 +99,7 @@ std::optional<Symbol> unique_document_declaration_for_references(const Document&
         reference_ranges.insert(symbol_range_key(location.uri, location.range));
     }
     std::optional<Symbol> declaration;
-    for (const Symbol& symbol : symbols_for_document(doc)) {
+    for (const Symbol& symbol : symbols_for_document(doc, false)) {
         if (symbol.name != name || !renameable_symbol_kind(symbol.kind)) {
             continue;
         }

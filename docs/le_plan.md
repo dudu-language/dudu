@@ -903,6 +903,9 @@ push. They are not release packaging work.
    Direct unaliased native symbols from C/C++ headers now participate in
    current-document reference lookup once the native scanner proves the symbol
    exists in the document's imports, covering direct native function calls.
+   Dudu-owned declaration and unique-reference scope checks now use Dudu-only
+   document symbols, keeping ordinary references off the native-header scanner
+   path unless the selected symbol is explicitly native.
    AST traversal helpers now own expression-tree and statement-expression
    walking, and the AST lint, unsupported-feature, build-flag, and navigation
    passes use those helpers instead of maintaining hand-written expression-slot

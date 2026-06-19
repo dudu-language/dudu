@@ -377,6 +377,9 @@ reference collector and the public references request path.
 Aliased native function references such as `dudu_native.dudu_native_add` now
 keep the full native path during reference lookup instead of collapsing to the
 member name.
+Dudu-owned declaration and unique-reference scope checks use Dudu-only document
+symbols, so ordinary references do not trigger native header scanning unless
+the selected symbol is an explicit native import.
 Imported Dudu module completion is covered with an unopened sibling module.
 Completion resolve, snippets, and typed local completions are covered.
 Common-form snippets for functions, classes, control flow, imports, enums, and
