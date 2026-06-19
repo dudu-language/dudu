@@ -26,7 +26,8 @@ namespace {
 
 int target_line(const Json* params) {
     const Json* position = params == nullptr ? nullptr : params->get("position");
-    return position == nullptr ? std::numeric_limits<int>::max() : int_value(position->get("line"));
+    return position == nullptr ? std::numeric_limits<int>::max()
+                               : optional_int_value(position->get("line"));
 }
 
 int one_based_cursor_line(const Json* params) {

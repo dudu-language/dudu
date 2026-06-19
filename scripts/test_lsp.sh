@@ -118,6 +118,16 @@ messages = [
     packet(
         {
             "jsonrpc": "2.0",
+            "id": 59,
+            "method": "textDocument/definition",
+            "params": {
+                "textDocument": {"uri": uri},
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
             "method": "textDocument/didOpen",
             "params": {
                 "textDocument": {
@@ -1252,6 +1262,13 @@ assert initialize["result"]["capabilities"]["workspaceSymbolProvider"] is True
 semantic_provider = initialize["result"]["capabilities"]["semanticTokensProvider"]
 assert semantic_provider["full"] is True
 assert "class" in semantic_provider["legend"]["tokenTypes"]
+
+missing_position_definition = next(item for item in responses if item.get("id") == 59)
+assert "error" in missing_position_definition, missing_position_definition
+assert missing_position_definition["error"]["code"] == -32603, missing_position_definition
+assert "position.line" in missing_position_definition["error"]["message"], (
+    missing_position_definition
+)
 
 diagnostics = next(item for item in responses if item.get("method") == "textDocument/publishDiagnostics")
 diag = diagnostics["params"]["diagnostics"][0]

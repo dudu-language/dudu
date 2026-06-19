@@ -48,6 +48,7 @@ class JsonParser {
 
 std::string json_escape(std::string_view text);
 std::string string_value(const Json* json);
-int int_value(const Json* json, int fallback = 0);
+int optional_int_value(const Json* json, int default_value = 0);
+int required_int_value(const Json* json, std::string_view field_name);
 
 } // namespace dudu

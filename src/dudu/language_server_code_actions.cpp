@@ -96,10 +96,9 @@ std::optional<TextEdit> remove_line_edit(const Document& doc, int line) {
     }
     const bool has_next = line + 1 <= document_line_count(doc.text);
     return TextEdit{
-        .range =
-            has_next
-                ? range_json(line, 0, line + 1, 0)
-                : range_json(line, 0, line, static_cast<int>(lines[static_cast<size_t>(line)].size())),
+        .range = has_next ? range_json(line, 0, line + 1, 0)
+                          : range_json(line, 0, line,
+                                       static_cast<int>(lines[static_cast<size_t>(line)].size())),
         .new_text = ""};
 }
 
@@ -172,9 +171,9 @@ std::optional<std::string> module_path_for_import(const std::filesystem::path& b
     return out.str();
 }
 
-std::optional<CodeActionEdit> missing_import_action(
-    const Document& doc, const std::string& name, const ModuleAst& module,
-    const std::map<std::string, Document>& workspace) {
+std::optional<CodeActionEdit>
+missing_import_action(const Document& doc, const std::string& name, const ModuleAst& module,
+                      const std::map<std::string, Document>& workspace) {
     std::optional<Document> match_doc;
     std::optional<Symbol> match_symbol;
     for (const auto& [uri, candidate] : workspace) {
@@ -203,10 +202,10 @@ std::optional<CodeActionEdit> missing_import_action(
     }
     const int line = static_cast<int>(import_insertion_line(doc, module));
     const std::string edit_text = "from " + *module_path + " import " + name + "\n";
-    return CodeActionEdit{.title = "Import " + name + " from " + *module_path,
-                          .kind = "quickfix",
-                          .edit = TextEdit{.range = range_json(line, 0, line, 0),
-                                           .new_text = edit_text}};
+    return CodeActionEdit{
+        .title = "Import " + name + " from " + *module_path,
+        .kind = "quickfix",
+        .edit = TextEdit{.range = range_json(line, 0, line, 0), .new_text = edit_text}};
 }
 
 std::vector<std::string> missing_import_actions(const Document& doc, const Json* params,
@@ -262,7 +261,7 @@ std::vector<std::string> lint_actions(const Document& doc, const Json* params) {
         }
         const Json* range = diagnostic.get("range");
         const Json* start = range == nullptr ? nullptr : range->get("start");
-        const int line = int_value(start == nullptr ? nullptr : start->get("line"), -1);
+        const int line = optional_int_value(start == nullptr ? nullptr : start->get("line"), -1);
         if (line < 0 || !seen_lines.insert(line).second) {
             continue;
         }
@@ -287,10 +286,9 @@ std::string code_actions_json(const Document& doc, const Json* params,
                       "\"command\":\"editor.action.formatDocument\"}}");
     if (module) {
         if (const std::optional<TextEdit> edit = organize_imports_edit(doc, *module)) {
-            actions.push_back(code_action_json(
-                doc, CodeActionEdit{.title = "Organize imports",
-                                    .kind = "source.organizeImports",
-                                    .edit = *edit}));
+            actions.push_back(code_action_json(doc, CodeActionEdit{.title = "Organize imports",
+                                                                   .kind = "source.organizeImports",
+                                                                   .edit = *edit}));
         }
     }
     for (const std::string& action :

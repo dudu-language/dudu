@@ -45,6 +45,10 @@ waiting.
 Status: request handlers now return JSON-RPC error responses when a request
 throws after an ID is known. The LSP smoke suite covers a bad-project-config
 definition request that previously could leave the editor waiting.
+Cursor-position parsing for definition, references, hover, completion, and
+other position-based requests now rejects missing or non-numeric
+`position.line` / `position.character` with a JSON-RPC error instead of
+silently defaulting to the start of the file.
 
 ## JSON-RPC Request Validation
 
@@ -64,6 +68,10 @@ Optional protocol fields may still use explicit defaults when the LSP spec
 defines them as optional. Helper names should make that distinction obvious:
 prefer required accessors for required fields and optional/default accessors
 only for optional fields.
+
+Status: required integer fields use explicit required accessors; optional
+integer fields use `optional_*` helpers with named default values. A smoke
+fixture covers a malformed definition request with a missing position.
 
 ## Native Header Navigation
 

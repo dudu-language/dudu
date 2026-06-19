@@ -239,14 +239,22 @@ std::string string_value(const Json* json) {
     return text == nullptr ? std::string{} : *text;
 }
 
-int int_value(const Json* json, int fallback) {
+int optional_int_value(const Json* json, int default_value) {
     if (json == nullptr) {
-        return fallback;
+        return default_value;
     }
     if (const double* number = std::get_if<double>(&json->value)) {
         return static_cast<int>(*number);
     }
-    return fallback;
+    return default_value;
+}
+
+int required_int_value(const Json* json, std::string_view field_name) {
+    if (const double* number = json == nullptr ? nullptr : std::get_if<double>(&json->value)) {
+        return static_cast<int>(*number);
+    }
+    throw std::runtime_error("missing or invalid required LSP integer field: " +
+                             std::string(field_name));
 }
 
 } // namespace dudu

@@ -308,7 +308,7 @@ std::string completion_json(const Document* doc, const Json* params) {
 std::string completion_resolve_json(const Json* params) {
     const std::string label =
         params == nullptr ? std::string{} : string_value(params->get("label"));
-    const int kind = int_value(params == nullptr ? nullptr : params->get("kind"));
+    const int kind = optional_int_value(params == nullptr ? nullptr : params->get("kind"));
     const std::string detail =
         params == nullptr ? std::string{} : string_value(params->get("detail"));
     std::ostringstream out;
@@ -321,7 +321,7 @@ std::string completion_resolve_json(const Json* params) {
         out << ",\"insertText\":\"" << json_escape(*insert_text->string()) << "\"";
     }
     if (const int insert_format =
-            int_value(params == nullptr ? nullptr : params->get("insertTextFormat"));
+            optional_int_value(params == nullptr ? nullptr : params->get("insertTextFormat"));
         insert_format != 0) {
         out << ",\"insertTextFormat\":" << insert_format;
     }

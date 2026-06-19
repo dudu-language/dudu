@@ -33,8 +33,10 @@ std::string range_json(int start_line, int start_character, int end_line, int en
 
 LspPosition lsp_position(const Json* params) {
     const Json* position = params == nullptr ? nullptr : params->get("position");
-    return {.line = int_value(position == nullptr ? nullptr : position->get("line")),
-            .character = int_value(position == nullptr ? nullptr : position->get("character"))};
+    return {.line = required_int_value(position == nullptr ? nullptr : position->get("line"),
+                                       "position.line"),
+            .character = required_int_value(
+                position == nullptr ? nullptr : position->get("character"), "position.character")};
 }
 
 std::string location_json(const std::string& uri, const std::string& range) {
