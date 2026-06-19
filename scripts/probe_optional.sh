@@ -332,10 +332,20 @@ probe_imgui() {
         return
     fi
 
-    local cpp="$repo_root/build/probe_imgui_context.cpp"
-    local bin="$repo_root/build/probe_imgui_context"
-    "$repo_root/build/duc" emit "$repo_root/tests/fixtures/imgui_context.dd" -o "$cpp"
-    "${CXX:-c++}" -std=c++20 "$cpp" $(pkg-config --cflags --libs imgui) -o "$bin"
+    local project="$repo_root/build/probe_imgui_context_project"
+    local bin="$project/build/probe_imgui_context"
+    rm -rf "$project"
+    mkdir -p "$project"
+    cp "$repo_root/tests/fixtures/imgui_context.dd" "$project/main.dd"
+    cat >"$project/dudu.toml" <<'EOF'
+name = "probe_imgui_context"
+main = "main.dd"
+build_dir = "build"
+
+[pkg]
+libs = ["imgui"]
+EOF
+    "$repo_root/build/dudu" build "$project" --quiet
     set +e
     "$bin"
     local status=$?

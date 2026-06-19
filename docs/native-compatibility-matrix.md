@@ -46,7 +46,7 @@ Last local probe run: 2026-06-19 with `scripts/probe_optional.sh`.
 | raylib | game / media | window/game example, audio synth build | pass | `scripts/probe_optional.sh` / `examples/raylib_game.dd` | no |
 | SDL3 | windowing | window example build through pkg-config | pass | `scripts/probe_optional.sh` / `examples/sdl3_window.dd` | no |
 | GLFW | windowing | OpenGL triangle host build | pass | `scripts/probe_optional.sh` / `examples/glfw_opengl_triangle.dd` | no |
-| Dear ImGui | UI | C++ namespace API, context lifecycle, version query, link | pass | `scripts/probe_optional.sh` / `imgui_context.dd` | no; import alias currently matches real namespace |
+| Dear ImGui | UI | C++ namespace API, unaliased namespace visibility, context lifecycle, version query, link | pass | `scripts/probe_optional.sh` / `imgui_context.dd` | no |
 | X11 | platform / windowing | C API, nullable `cstr`, opaque display pointer, XID return | pass | `scripts/probe_optional.sh` / `x11_display_probe.dd` | no |
 | Wayland client | platform / windowing | C API, nullable `cstr`, opaque display pointer, link | pass | `scripts/probe_optional.sh` / `wayland_display_probe.dd` | no |
 | OpenCL | compute | host API, kernel setup, run result | pass | `scripts/probe_optional.sh` / `examples/opencl_kernel_host.dd` | no |

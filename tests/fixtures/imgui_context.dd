@@ -1,4 +1,4 @@
-import cpp "imgui.h" as ImGui
+import cpp "imgui.h"
 import c "string.h" as c
 
 

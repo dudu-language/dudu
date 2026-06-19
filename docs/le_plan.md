@@ -1139,11 +1139,11 @@ push. They are not release packaging work.
    `string_view`/`basic_string_view` parameters, matching normal C++ call
    ergonomics for APIs such as `fmt.runtime(...)`. `None` is accepted for
    nullable native `cstr` parameters, matching common C APIs such as
-   `XOpenDisplay(nullptr)`. Boost filesystem path construction and boolean
-   member calls work without wrappers; deeper Boost string alias normalization
-   remains a hardening target. Dear ImGui core namespace APIs work when the
-   import alias matches the real C++ namespace; friendlier unaliased namespace
-   visibility remains a native import polish target.
+   `XOpenDisplay(nullptr)`. Dear ImGui core namespace APIs work through
+   ordinary unaliased C++ imports when the project provides the normal include
+   metadata. Boost filesystem path construction and boolean member calls work
+   without wrappers; deeper Boost string alias normalization remains a
+   hardening target.
    Broader template-heavy library behavior remains the main hardening area.
 
 10. Real Library Stress Tests
