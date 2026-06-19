@@ -84,8 +84,8 @@
 ### Changed
 
 - Made LSP rename declaration-anchored across the workspace and allowed
-  same-document unqualified call-site rename when the call resolves to one
-  renameable Dudu declaration.
+  current-document edits from an unqualified call site when the call resolves
+  to one renameable Dudu declaration in that document.
 - Added project-driver output for successful `dudu check`, documented
   `dudu bench` in help, and made `dudu bench --quiet`/`--help` behave as
   project-driver flags while preserving benchmark arguments after `--`.

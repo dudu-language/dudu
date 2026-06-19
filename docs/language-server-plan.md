@@ -310,11 +310,12 @@ available; broader real-library coverage can continue in that optional suite.
 Status: conservative `textDocument/rename` is implemented for Dudu declaration
 symbols across open documents and unopened `.dd` workspace files, and is wired
 into the VS Code extension. It validates the replacement as an identifier,
-refuses dotted/native symbols, and allows use-site-triggered rename only for a
-same-document unqualified call expression that resolves to one renameable Dudu
-declaration with no visible local type binding shadowing it. Other use-site
-rename requests stay rejected until the LSP can prove symbol identity strongly
-enough to avoid editing unrelated same-named locals. Initial
+refuses dotted/native symbols, and allows use-site-triggered rename edits only
+inside the current document for an unqualified call expression that resolves to
+one renameable Dudu declaration in that document with no visible local type
+binding shadowing it. Other use-site rename requests stay rejected until the
+LSP can prove symbol identity strongly enough to avoid editing unrelated
+same-named locals. Initial
 `textDocument/codeAction` support is implemented with a format-document source
 action wired into VS Code. Organize-imports code actions are implemented for the
 leading import block and return a WorkspaceEdit through the VS Code adapter.
@@ -375,8 +376,10 @@ Native enum values from scanned headers are covered in symbol and completion
 results.
 Workspace rename is covered across an open definition file and an unopened
 sibling use file.
-Same-document unqualified call-site rename is covered for calls that resolve to
-one declaration; ambiguous use-sites remain intentionally rejected.
+Current-document unqualified call-site rename is covered for calls that resolve
+to one declaration, including a guard that an unrelated same-named symbol in
+another open document is not edited; ambiguous use-sites remain intentionally
+rejected.
 Unreachable-statement lint diagnostics and remove-line quick fixes are covered.
 Unused-local lint diagnostics and remove-line quick fixes are covered.
 Local-shadowing lint diagnostics are covered.

@@ -21,6 +21,12 @@
 namespace dudu {
 namespace {
 
+enum class RenameScope {
+    None,
+    Workspace,
+    CurrentDocument,
+};
+
 bool renameable_symbol_kind(const int kind) {
     return kind == 5 || kind == 6 || kind == 8 || kind == 10 || kind == 12 || kind == 14;
 }
@@ -127,21 +133,22 @@ bool selected_call_callee(const Document& doc, const Json* params, const std::st
     return matched;
 }
 
-bool renameable_symbol_at(const Document& doc, const Json* params, const std::string& name,
-                          const std::map<std::string, Document>& workspace) {
-    (void)workspace;
+RenameScope rename_scope_at(const Document& doc, const Json* params, const std::string& name) {
     if (declaration_at_position(doc, params, name).has_value()) {
-        return true;
+        return RenameScope::Workspace;
     }
     const std::optional<Symbol> declaration = unique_document_declaration_for_references(doc, name);
     if (!declaration.has_value()) {
-        return false;
+        return RenameScope::None;
     }
     if (has_type_ref(local_type_ref_before_cursor(doc, name, params))) {
-        return false;
+        return RenameScope::None;
     }
-    return ast_symbol_at(doc, params).value_or("") == name &&
-           selected_call_callee(doc, params, name);
+    if (ast_symbol_at(doc, params).value_or("") == name &&
+        selected_call_callee(doc, params, name)) {
+        return RenameScope::CurrentDocument;
+    }
+    return RenameScope::None;
 }
 
 } // namespace
@@ -174,7 +181,8 @@ std::string rename_json(const Document& doc, const Json* params,
     const std::string old_name = ast_symbol_at(doc, params).value_or("");
     const std::string new_name =
         params == nullptr ? std::string{} : string_value(params->get("newName"));
-    if (!valid_identifier(new_name) || !renameable_symbol_at(doc, params, old_name, workspace)) {
+    const RenameScope scope = rename_scope_at(doc, params, old_name);
+    if (!valid_identifier(new_name) || scope == RenameScope::None) {
         return "null";
     }
     std::ostringstream out;
@@ -182,6 +190,9 @@ std::string rename_json(const Document& doc, const Json* params,
     bool first_doc = true;
     for (const auto& [uri, candidate] : workspace) {
         (void)uri;
+        if (scope == RenameScope::CurrentDocument && candidate.uri != doc.uri) {
+            continue;
+        }
         const std::vector<ReferenceLocation> locations = references_in(candidate, old_name);
         if (locations.empty()) {
             continue;

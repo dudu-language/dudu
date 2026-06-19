@@ -42,6 +42,7 @@ native_pkg_config_uri = f"file://{repo_root}/tests/fixtures/lsp_pkg_project/dudu
 rename_uri = f"file://{repo_root}/tests/fixtures/lsp_rename_main.dd"
 rename_user_uri = f"file://{repo_root}/tests/fixtures/lsp_rename_user.dd"
 rename_ast_uri = "file:///tmp/dudu_lsp_rename_ast.dd"
+rename_ast_unrelated_uri = "file:///tmp/dudu_lsp_rename_ast_unrelated.dd"
 lint_uri = "file:///tmp/dudu_lsp_lint.dd"
 unused_uri = "file:///tmp/dudu_lsp_unused.dd"
 shadow_uri = "file:///tmp/dudu_lsp_shadow.dd"
@@ -170,6 +171,29 @@ messages = [
                 "textDocument": {"uri": rename_ast_uri},
                 "position": {"line": 0, "character": 5},
                 "newName": "unique_ref_renamed",
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "method": "textDocument/didOpen",
+            "params": {
+                "textDocument": {
+                    "uri": rename_ast_unrelated_uri,
+                    "languageId": "dudu",
+                    "version": 1,
+                    "text": "\n".join(
+                        [
+                            "def unique_ref_target() -> i32:",
+                            "    return 7",
+                            "",
+                            "def main() -> i32:",
+                            "    return unique_ref_target()",
+                            "",
+                        ]
+                    ),
+                }
             },
         }
     ),
@@ -1564,6 +1588,7 @@ assert ast_rename_starts == {
 
 ast_use_rename = next(item for item in responses if item.get("id") == 62)
 ast_use_rename_edits = ast_use_rename["result"]["changes"][rename_ast_uri]
+assert rename_ast_unrelated_uri not in ast_use_rename["result"]["changes"]
 ast_use_rename_starts = {
     (item["range"]["start"]["line"], item["range"]["start"]["character"], item["newText"])
     for item in ast_use_rename_edits
