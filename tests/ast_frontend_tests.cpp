@@ -1482,6 +1482,21 @@ void test_type_ast_shape() {
            "std::array<Box<std::vector<int32_t>>, 3>");
     assert(dudu::parse_type_text("Player[3][4]").kind == dudu::TypeKind::Unknown);
     assert(dudu::parse_type_text("Box[list[i32]][3]").kind == dudu::TypeKind::Unknown);
+    bool rejected_array_shorthand = false;
+    try {
+        const dudu::ModuleAst bad_array =
+            dudu::parse_source("class Player:\n"
+                               "    hp: i32\n"
+                               "\n"
+                               "def bad():\n"
+                               "    players: Player[3][4]\n",
+                               "bad_array_shorthand.dd");
+        dudu::analyze_module(bad_array, {.check_bodies = true});
+    } catch (const dudu::CompileError& error) {
+        rejected_array_shorthand =
+            std::string(error.what()).find("malformed type syntax") != std::string::npos;
+    }
+    assert(rejected_array_shorthand);
     assert(dudu::lower_raw_template_call_arg("fn(i32) -> bool", {}) == "bool(int32_t)");
     dudu::FunctionSignature signature;
     assert(dudu::parse_function_type(dudu::parse_type_text("fn(i32, f32) -> bool"), signature));
