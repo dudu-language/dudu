@@ -66,6 +66,24 @@ bool is_cstr_type(const TypeRef& type) {
     return type_ref_head_name(normalize_cpp_type_artifacts_ref(type)) == "cstr";
 }
 
+std::string type_tail_name(const TypeRef& type) {
+    std::string name = trim_copy(type_ref_head_name(normalize_cpp_type_artifacts_ref(type)));
+    const size_t dot = name.find_last_of(".:");
+    if (dot != std::string::npos && dot + 1 < name.size()) {
+        name = name.substr(dot + 1);
+    }
+    return name;
+}
+
+bool is_native_string_view_type(const TypeRef& type) {
+    const TypeRef normalized = normalize_cpp_type_artifacts_ref(type);
+    const std::string tail = type_tail_name(normalized);
+    if (tail == "string_view") {
+        return true;
+    }
+    return normalized.kind == TypeKind::Template && tail == "basic_string_view";
+}
+
 std::optional<TypeRef> call_target_type_ref(const Expr& expr) {
     if (expr.kind != ExprKind::Call && expr.kind != ExprKind::TemplateCall) {
         return std::nullopt;
@@ -339,6 +357,8 @@ bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const Ty
            is_native_function_pointer(normalized_expected_ref, normalized_got_ref) ||
            is_native_internal_template_result(normalized_expected_ref, normalized_got_ref) ||
            native_associated_type_assignment_allowed(normalized_expected_ref, normalized_got_ref) ||
+           (is_native_string_view_type(normalized_expected_ref) &&
+            expr.kind == ExprKind::StringLiteral) ||
            (is_cstr_type(normalized_expected_ref) && is_string_type(normalized_got_ref) &&
             expr.kind == ExprKind::StringLiteral) ||
            (is_numeric_type(normalized_expected_ref) && is_numeric_literal_expr(expr));

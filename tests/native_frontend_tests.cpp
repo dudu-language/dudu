@@ -186,6 +186,23 @@ void test_native_header_alias_preserves_identity(const std::filesystem::path& ro
     assert(saw_prefixed_function);
 }
 
+void test_native_string_literal_to_string_view(const std::filesystem::path& root) {
+    dudu::ModuleAst module =
+        dudu::parse_source("import cpp \"native_headers/string_view_accept.hpp\" as native\n"
+                           "\n"
+                           "def main() -> i32:\n"
+                           "    return native.dudu_native_string.size_of(\"dudu\")\n",
+                           root / "tests/fixtures/native_string_view.dd");
+    dudu::ProjectConfig config;
+    config.build_dir = root / "build" / "native-string-view-cache";
+    std::filesystem::remove_all(config.build_dir);
+    dudu::merge_native_header_types(module,
+                                    {.config = config, .source_dir = root / "tests/fixtures"});
+    dudu::analyze_module(module, {.check_bodies = true});
+    const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find("dudu_native_string::size_of(\"dudu\")") != std::string::npos);
+}
+
 void test_native_identity_edge_cases(const std::filesystem::path& root) {
     const std::filesystem::path source_dir = root / "build" / "native-identity-edge-cases";
     const std::filesystem::path header = source_dir / "native_identity_cases.hpp";
@@ -468,6 +485,7 @@ int main() {
         test_native_type_declaration_emission();
         test_native_header_type_scan(root);
         test_native_header_alias_preserves_identity(root);
+        test_native_string_literal_to_string_view(root);
         test_native_identity_edge_cases(root);
         test_native_identity_name_collision_is_rejected(root);
         test_native_scan_dedupe_allows_opaque_redeclarations();

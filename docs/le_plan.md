@@ -1135,7 +1135,9 @@ push. They are not release packaging work.
    containers, algorithms, pairs, tuples, and `std.get` without wrapper headers.
    Native overload failure diagnostics list argument types, candidate
    signatures, and per-candidate arity or all mismatched fixed-parameter
-   reasons.
+   reasons. Native overload matching accepts Dudu string literals for native
+   `string_view`/`basic_string_view` parameters, matching normal C++ call
+   ergonomics for APIs such as `fmt.runtime(...)`.
    Broader template-heavy library behavior remains the main hardening area.
 
 10. Real Library Stress Tests
@@ -1175,7 +1177,7 @@ push. They are not release packaging work.
    behind an adapter.
 
    Current optional probes pass for glm, OpenCV, sqlite, zlib, curl, OpenSSL,
-   libevent, libpng, threading, POSIX mmap, POSIX pthread, raylib, SDL3, GLFW, OpenCL, Vulkan, and FFmpeg on this
+   libevent, libpng, fmt, threading, POSIX mmap, POSIX pthread, raylib, SDL3, GLFW, OpenCL, Vulkan, and FFmpeg on this
    machine. Optional dev-only dependencies can be installed into the ignored
    `third_party/install` prefix with `scripts/setup_dev_deps.sh`; the main Dudu
    build does not require them.

@@ -177,6 +177,27 @@ probe_libevent() {
     echo "ok libevent"
 }
 
+probe_fmt() {
+    if ! pkg-config --exists fmt; then
+        echo "skip fmt: pkg-config package not found"
+        return
+    fi
+
+    local cpp="$repo_root/build/probe_fmt_format.cpp"
+    local bin="$repo_root/build/probe_fmt_format"
+    "$repo_root/build/duc" emit "$repo_root/tests/fixtures/fmt_format.dd" -o "$cpp"
+    "${CXX:-c++}" -std=c++20 "$cpp" $(pkg-config --cflags --libs fmt) -o "$bin"
+    set +e
+    "$bin"
+    local status=$?
+    set -e
+    if [[ "$status" -ne 42 ]]; then
+        echo "fmt probe returned $status, expected 42" >&2
+        exit 1
+    fi
+    echo "ok fmt"
+}
+
 probe_threading() {
     local cpp="$repo_root/build/probe_threading_atomics.cpp"
     local bin="$repo_root/build/probe_threading_atomics"
@@ -343,6 +364,7 @@ probe_curl
 probe_libpng
 probe_openssl
 probe_libevent
+probe_fmt
 probe_threading
 probe_posix_mmap
 probe_posix_threads

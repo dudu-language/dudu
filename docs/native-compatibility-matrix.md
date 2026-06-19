@@ -37,6 +37,7 @@ Last local probe run: 2026-06-19 with `scripts/probe_optional.sh`.
 | OpenSSL | crypto / TLS | C API, const byte input, output buffers, link flags | pass | `scripts/probe_optional.sh` / `openssl_sha256.dd` | no |
 | libevent | event loop / network | C API, opaque pointers, config/base lifecycle, `cstr` return | pass | `scripts/probe_optional.sh` / `libevent_base.dd` | no |
 | libpng | image | C API, typedef aliases, byte buffers, signature checks, link | pass | `scripts/probe_optional.sh` / `libpng_signature.dd` | no |
+| fmt | C++ utility | variadic templates, runtime format strings, `std::string` return | pass | `scripts/probe_optional.sh` / `fmt_format.dd` | no |
 | raylib | game / media | window/game example, audio synth build | pass | `scripts/probe_optional.sh` / `examples/raylib_game.dd` | no |
 | SDL3 | windowing | window example build through pkg-config | pass | `scripts/probe_optional.sh` / `examples/sdl3_window.dd` | no |
 | GLFW | windowing | OpenGL triangle host build | pass | `scripts/probe_optional.sh` / `examples/glfw_opengl_triangle.dd` | no |
@@ -57,7 +58,6 @@ compiler matures.
 | Eigen | math | templates, matrices, expression templates | planned | Good stress test for template-heavy header-only C++. |
 | BLAS / LAPACK / CBLAS | numeric | C ABI calls, contiguous arrays, link behavior | planned | Useful for future Dudu matrix/tensor library work. |
 | stb headers | media / utility | single-header C, macro configuration | planned | May require explicit macro configuration policy. |
-| fmt | C++ utility | variadic templates, formatting functions | planned | Template-heavy but common. |
 | spdlog | logging | templates, sinks, macros | planned | Tests normal C++ library ergonomics. |
 | Boost subset | C++ utility | selected non-huge components | planned | Avoid trying all of Boost at once. |
 | CUDA / CUBLAS | GPU / ML | host API, device buffers, BLAS-like calls | skip | Needs NVIDIA tooling/hardware. |

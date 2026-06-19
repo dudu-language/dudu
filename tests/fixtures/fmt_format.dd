@@ -1,0 +1,8 @@
+import cpp "fmt/core.h" as fmt
+
+
+def main() -> i32:
+    text = fmt.format(fmt.runtime("dudu {} {}"), 4, 2)
+    if text != "dudu 4 2":
+        return 1
+    return 42
