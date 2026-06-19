@@ -80,16 +80,17 @@ dudu::Json completion_params(int line, int character) {
 
 void test_ast_assignment_display_types() {
     const dudu::TypeRef bool_type = dudu::parse_type_text("bool");
-    assert(dudu::assignment_error(bool_type, dudu::parse_expr_text("123"), "") ==
+    const dudu::TypeRef missing_type;
+    assert(dudu::assignment_error(bool_type, dudu::parse_expr_text("123"), missing_type) ==
            "cannot assign number to bool without an explicit cast");
-    assert(dudu::assignment_error(bool_type, dudu::parse_expr_text("\"hi\""), "") ==
+    assert(dudu::assignment_error(bool_type, dudu::parse_expr_text("\"hi\""), missing_type) ==
            "cannot assign str to bool without an explicit cast");
-    assert(dudu::assignment_error(bool_type, dudu::parse_expr_text("value"), "") ==
+    assert(dudu::assignment_error(bool_type, dudu::parse_expr_text("value"), missing_type) ==
            "cannot assign  to bool without an explicit cast");
 
     dudu::Expr unknown;
     unknown.kind = dudu::ExprKind::Unknown;
-    assert(dudu::assignment_error(bool_type, unknown, "") ==
+    assert(dudu::assignment_error(bool_type, unknown, missing_type) ==
            "cannot assign  to bool without an explicit cast");
 }
 

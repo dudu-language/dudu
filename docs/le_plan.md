@@ -2138,6 +2138,10 @@ push. They are not release packaging work.
    for missing type metadata; compatibility is decided by structured `TypeRef`
    rules, explicit missing-type rules, literals, and diagnostics may still
    render type labels for messages.
+   Assignment diagnostic helpers now also expose only the structured
+   `assignment_error(TypeRef, Expr, TypeRef)` API. The old string overload used
+   by tests to pass an empty "got type" display value has been deleted, and the
+   AST migration guard rejects reintroducing it.
    Native header parsing now routes aliases, base classes, C++ methods,
    constructors, fields, enum constants, and globals through the same
    native-type normalizer used for free functions, so imported declaration

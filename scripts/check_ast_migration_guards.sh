@@ -32,6 +32,7 @@ forbidden=(
     "bool is_integer_type\\(std::string"
     "normalize_cpp_type_artifacts\\(std::string"
     "infer_cpp_escape_expr\\("
+    "assignment_error\\(const TypeRef& expected, const Expr& expr, const std::string"
     "render_type\\(const TypeRef"
     "lower_template_call_arg\\("
 )
