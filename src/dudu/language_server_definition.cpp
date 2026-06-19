@@ -5,6 +5,7 @@
 #include "dudu/cpp_lower.hpp"
 #include "dudu/language_server_json.hpp"
 #include "dudu/language_server_local_context.hpp"
+#include "dudu/language_server_native_lookup.hpp"
 #include "dudu/language_server_navigation.hpp"
 #include "dudu/language_server_support.hpp"
 #include "dudu/language_server_symbols.hpp"
@@ -16,7 +17,6 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
-#include <map>
 #include <optional>
 #include <set>
 #include <sstream>
@@ -254,35 +254,6 @@ std::optional<std::string> import_definition_json(const Document& doc, const std
     return std::nullopt;
 }
 
-std::string native_symbol_identity_key(const NativeSymbolId& identity) {
-    if (!identity.usr.empty()) {
-        return "usr:" + identity.usr;
-    }
-    if (!identity.canonical_path.empty()) {
-        return "path:" + identity.canonical_path;
-    }
-    return {};
-}
-
-struct NativeClassDefinitionIndex {
-    std::map<std::string, SourceLocation> by_name;
-    std::map<std::string, SourceLocation> by_identity;
-};
-
-NativeClassDefinitionIndex native_class_definition_index(const ModuleAst& module) {
-    NativeClassDefinitionIndex out;
-    for (const ClassDecl& klass : module.native_classes) {
-        if (!klass.name.empty()) {
-            out.by_name.emplace(klass.name, klass.location);
-        }
-        const std::string identity = native_symbol_identity_key(klass.identity);
-        if (!identity.empty()) {
-            out.by_identity.emplace(identity, klass.location);
-        }
-    }
-    return out;
-}
-
 std::optional<std::string> native_type_target_definition_json(const Document& doc,
                                                               const std::string& word) {
     if (word.empty()) {
@@ -292,31 +263,10 @@ std::optional<std::string> native_type_target_definition_json(const Document& do
         ModuleAst module = parse_source(doc.text, doc.path);
         const ProjectConfig config = config_for_file(doc.path);
         merge_native_header_types(module, {.config = config, .source_dir = doc.path.parent_path()});
-        const NativeClassDefinitionIndex class_index = native_class_definition_index(module);
-        for (const NativeTypeDecl& type : module.native_types) {
-            if (type.name != word || !has_type_ref(type.type_ref)) {
-                continue;
-            }
-
-            const std::string identity = native_symbol_identity_key(type.identity);
-            if (!identity.empty()) {
-                if (const auto found = class_index.by_identity.find(identity);
-                    found != class_index.by_identity.end()) {
-                    return location_json(uri_for_location(found->second, doc),
-                                         range_json(found->second));
-                }
-            }
-
-            const std::string target_name = type_ref_head_name(native_type_alias_type_ref(type));
-            if (target_name.empty() || target_name == word) {
-                return std::nullopt;
-            }
-            if (const auto found = class_index.by_name.find(target_name);
-                found != class_index.by_name.end()) {
-                return location_json(uri_for_location(found->second, doc),
-                                     range_json(found->second));
-            }
-            return std::nullopt;
+        if (const std::optional<NativeClassDefinition> definition =
+                native_alias_target_class_definition(module, word)) {
+            return location_json(uri_for_location(definition->location, doc),
+                                 range_json(definition->location));
         }
     } catch (const std::exception&) {
     }

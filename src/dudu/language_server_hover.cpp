@@ -1,10 +1,13 @@
 #include "dudu/language_server_hover.hpp"
 
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/language_server_json.hpp"
+#include "dudu/language_server_native_lookup.hpp"
 #include "dudu/language_server_navigation.hpp"
 #include "dudu/language_server_support.hpp"
 #include "dudu/language_server_symbols.hpp"
+#include "dudu/native_headers.hpp"
 #include "dudu/parser.hpp"
 
 #include <algorithm>
@@ -112,10 +115,48 @@ std::optional<std::string> imported_symbol_hover_json(const Document& doc,
     return std::nullopt;
 }
 
+std::optional<std::string> native_alias_hover_json(const Document& doc, const std::string& word) {
+    if (word.empty()) {
+        return std::nullopt;
+    }
+    try {
+        ModuleAst module = parse_source(doc.text, doc.path);
+        const ProjectConfig config = config_for_file(doc.path);
+        merge_native_header_types(module, {.config = config, .source_dir = doc.path.parent_path()});
+        const auto build_hover = [&](const NativeTypeDecl& type) -> std::optional<std::string> {
+            const std::optional<NativeClassDefinition> target =
+                native_alias_target_class_definition(module, type);
+            if (!target) {
+                return std::nullopt;
+            }
+            const std::string markdown = "`native type = " + native_type_alias_type_text(type) +
+                                         "`\n\nresolves to `" + "native class " + target->name +
+                                         "`";
+            return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"" + json_escape(markdown) +
+                   "\"},\"range\":" + range_json(type.location) + "}";
+        };
+        for (const NativeTypeDecl& type : module.native_types) {
+            if (type.name == word) {
+                return build_hover(type);
+            }
+        }
+        for (const NativeTypeDecl& type : module.native_types) {
+            if (symbol_matches(type.name, word)) {
+                return build_hover(type);
+            }
+        }
+    } catch (const std::exception&) {
+    }
+    return std::nullopt;
+}
+
 } // namespace
 
 std::string hover_json(const Document& doc, const std::string& word,
                        const std::string& local_type) {
+    if (const std::optional<std::string> native_alias = native_alias_hover_json(doc, word)) {
+        return *native_alias;
+    }
     for (const Symbol& symbol : symbols_for_document(doc)) {
         if (symbol_matches(symbol.name, word)) {
             std::string markdown = "`" + symbol.detail + "`";
