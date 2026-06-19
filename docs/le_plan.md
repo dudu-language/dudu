@@ -40,6 +40,35 @@ goal is to keep working features moving while steadily separating the compiler
 into boring, traceable phases. New work should push responsibilities into the
 proper phase instead of adding more cross-phase patching.
 
+## Prototype Cruft And Style Pass
+
+Fast compiler work leaves sediment: one-line wrapper functions, duplicated
+helpers, vague fallback names, overgrown files, compatibility branches for
+syntax that should never ship, and small local patches that were reasonable for
+one milestone but are silly once the architecture catches up. Dudu needs an
+explicit cleanup pass for that work, not just feature implementation.
+
+Required cleanup behavior:
+
+- delete one-line wrappers that do not encode a real abstraction or boundary
+- merge duplicate helpers into one clearly owned implementation
+- split files that violate the project style rules or mix unrelated compiler
+  phases
+- remove stale compatibility paths for unreleased syntax instead of preserving
+  them for nonexistent users
+- rename helpers so `fallback`, `legacy`, `compat`, and `raw` only appear at
+  intentional native-boundary or migration-boundary APIs
+- move reusable logic out of ad hoc local lambdas when it has become a compiler
+  concept
+- delete dead fixtures, unused options, and workaround examples once the real
+  language feature exists
+- prefer a hard diagnostic over silently accepting a malformed internal state
+  that would make later phases guess
+
+This pass should run after each major architecture slice and before claiming a
+phase complete. The goal is not cosmetic churn. The goal is to keep Dudu from
+turning into a compiler made of successful experiments glued together forever.
+
 ## Proper AST And Compiler Pipeline
 
 Destringing sequence: [Destringing Goals](destringing-goals.md).
