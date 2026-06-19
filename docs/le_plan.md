@@ -1365,7 +1365,10 @@ push. They are not release packaging work.
    of falling back to the bare member name, so unrelated same-named member calls
    are not reported together. Module-qualified references now also include the
    declaration in the target module by searching that module with the unqualified
-   imported member name.
+   imported member name. Selective `from module import name as alias`
+   references now use the same resolved module target, include the original
+   declaration, and exclude other files that reuse the alias for a different
+   module.
 
 14. Project Driver Polish
 

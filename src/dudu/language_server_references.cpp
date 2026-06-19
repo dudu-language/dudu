@@ -226,6 +226,53 @@ std::string dotted_tail(const std::string& query) {
     return dot == std::string::npos ? query : query.substr(dot + 1);
 }
 
+struct ImportReferenceTarget {
+    std::string source_key;
+    std::string member_name;
+};
+
+bool same_import_reference_target(const std::optional<ImportReferenceTarget>& lhs,
+                                  const std::optional<ImportReferenceTarget>& rhs) {
+    if (!lhs.has_value() || !rhs.has_value()) {
+        return lhs.has_value() == rhs.has_value();
+    }
+    return lhs->source_key == rhs->source_key && lhs->member_name == rhs->member_name;
+}
+
+std::optional<ImportReferenceTarget> selective_import_target(const Document& doc,
+                                                             const std::string& query) {
+    if (query.empty() || query.find('.') != std::string::npos) {
+        return std::nullopt;
+    }
+    try {
+        const ModuleAst module = module_for_document(doc, false);
+        const ModuleAst& current = visible_module_unit(module, doc.path);
+        for (const ImportDecl& import : current.imports) {
+            if (import.kind != ImportKind::From || bound_import_name(import) != query) {
+                continue;
+            }
+            if (const ModuleAst* imported = imported_module_unit(module, current, import)) {
+                return ImportReferenceTarget{
+                    .source_key = imported->source_path.empty() ? imported->module_path
+                                                               : imported->source_path.string(),
+                    .member_name = import.imported_name};
+            }
+            std::error_code error;
+            const std::filesystem::path base =
+                current.source_path.empty() ? doc.path : current.source_path;
+            const std::filesystem::path resolved = std::filesystem::weakly_canonical(
+                module_path_to_file(base.parent_path(), import.module_path), error);
+            if (!error) {
+                return ImportReferenceTarget{.source_key = resolved.string(),
+                                             .member_name = import.imported_name};
+            }
+        }
+    } catch (const std::exception&) {
+        return std::nullopt;
+    }
+    return std::nullopt;
+}
+
 std::optional<std::string> module_import_target_key(const Document& doc,
                                                     const std::string& dotted_query) {
     if (dotted_query.find('.') == std::string::npos) {
@@ -347,6 +394,9 @@ ReferenceScope reference_scope_at(const Document& doc, const Json* params,
         path.has_value() && path->find('.') != std::string::npos) {
         return ReferenceScope::Workspace;
     }
+    if (selective_import_target(doc, name).has_value()) {
+        return ReferenceScope::Workspace;
+    }
     if (unique_document_declaration_for_references(doc, name).has_value()) {
         return ReferenceScope::CurrentDocument;
     }
@@ -367,6 +417,8 @@ std::string references_json(const Document& doc, const Json* params,
     }
     const std::optional<std::string> module_target =
         scope == ReferenceScope::Workspace ? module_import_target_key(doc, query) : std::nullopt;
+    const std::optional<ImportReferenceTarget> selective_target =
+        scope == ReferenceScope::Workspace ? selective_import_target(doc, query) : std::nullopt;
     std::ostringstream out;
     out << "[";
     bool first = true;
@@ -387,12 +439,23 @@ std::string references_json(const Document& doc, const Json* params,
         const bool target_module_document = module_target.has_value() && !candidate.path.empty() &&
                                             !path_error &&
                                             candidate_path.string() == *module_target;
+        const bool target_selective_document = selective_target.has_value() &&
+                                               !candidate.path.empty() && !path_error &&
+                                               candidate_path.string() ==
+                                                   selective_target->source_key;
         if (module_target.has_value() && candidate.uri != doc.uri && !target_module_document &&
             module_import_target_key(candidate, query) != module_target) {
             continue;
         }
+        if (selective_target.has_value() && candidate.uri != doc.uri && !target_selective_document &&
+            !same_import_reference_target(selective_import_target(candidate, query),
+                                          selective_target)) {
+            continue;
+        }
         const std::string candidate_query =
-            target_module_document ? dotted_tail(query) : query;
+            target_module_document      ? dotted_tail(query)
+            : target_selective_document ? selective_target->member_name
+                                        : query;
         for (const ReferenceLocation& location : references_in(candidate, candidate_query)) {
             if (!first) {
                 out << ",";
