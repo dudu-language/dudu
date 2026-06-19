@@ -83,8 +83,10 @@ add_library(dudu_frontend
     src/dudu/module_loader.cpp
     src/dudu/native_build.cpp
     src/dudu/native_header_cache.cpp
+    src/dudu/native_header_dedupe.cpp
     src/dudu/native_header_merge.cpp
     src/dudu/native_header_parse.cpp
+    src/dudu/native_header_parse_macros.cpp
     src/dudu/native_header_scope.cpp
     src/dudu/native_header_types.cpp
     src/dudu/native_headers.cpp
