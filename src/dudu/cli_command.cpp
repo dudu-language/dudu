@@ -98,6 +98,16 @@ void write_text_output(const std::optional<std::filesystem::path>& path, const s
 
 int run_project_benchmarks(const CliOptions& options) {
     const ProjectConfig config = parse_project_config(build_config_path(options.input));
+    if (!options.command_args.empty() && options.command_args.front() == "compiler") {
+        const std::filesystem::path script = project_path(config, "scripts/bench_compiler.sh");
+        if (!std::filesystem::exists(script)) {
+            fail("missing scripts/bench_compiler.sh for compiler benchmark");
+        }
+        std::vector<std::string> args(options.command_args.begin() + 1, options.command_args.end());
+        const std::string command = append_command_args(shell_quote_path(script), args);
+        print_project_step(options.project_driver && !options.quiet, "bench", command);
+        return std::system(project_shell_command(config, command).c_str()) == 0 ? 0 : 1;
+    }
     std::string command = config.bench_command;
     if (command.empty() && std::filesystem::exists(project_path(config, "scripts/bench.sh"))) {
         command = "./scripts/bench.sh";

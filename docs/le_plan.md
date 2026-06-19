@@ -1224,13 +1224,15 @@ push. They are not release packaging work.
    premature lines-per-second win.
 
    Status: `scripts/bench_compiler.sh` exists as an explicit developer
-   benchmark outside the fast correctness loop. It emits CSV plus a readable
-   summary and currently measures representative frontend check, C++ emission,
-   native header cold/cache check, direct build, and generated-CMake module
-   build cases. It records source line/file counts with each sample. This is a
-   baseline harness, not a pass/fail gate; thresholds, memory tracking, LSP
-   latency, larger synthetic corpora, and deeper clean/no-op/one-file-changed
-   generated-CMake measurements remain later benchmark expansions.
+   benchmark outside the fast correctness loop, and `dudu bench compiler`
+   dispatches to it when run from a checkout containing that script. It emits
+   CSV plus a readable summary and currently measures representative frontend
+   check, C++ emission, native header cold/cache check, direct build, and
+   generated-CMake module build cases. It records source line/file counts with
+   each sample. This is a baseline harness, not a pass/fail gate; thresholds,
+   memory tracking, LSP latency, larger synthetic corpora, and deeper
+   clean/no-op/one-file-changed generated-CMake measurements remain later
+   benchmark expansions.
 
 12. Incremental Build Strategy
 
@@ -1393,9 +1395,9 @@ push. They are not release packaging work.
    quiet for direct compiler-driver scripts. `dudu fmt` formats either the
    current project tree or an explicit file in place by default, while `duc fmt`
    keeps the direct stdout-oriented formatter behavior. `dudu bench` is
-   documented in help and parses project-driver flags such as
-   `--quiet`/`--help`, with benchmark command arguments still available after
-   `--`.
+   documented in help, `dudu bench compiler` runs the compiler-throughput
+   benchmark from a checkout, and benchmark command arguments remain available
+   after `--`.
    The generated CMake test backend now uses `duc emit-test-modules` to emit
    per-module test-mode `.hpp/.cpp` artifacts plus a small generated
    `test_harness.cpp`; generated module sources suppress normal executable

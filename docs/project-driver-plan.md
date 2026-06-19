@@ -396,7 +396,9 @@ Current implementation reality:
   place without printing the formatted source to stdout. `duc fmt <file>`
   remains the direct formatter that prints formatted text unless an explicit
   output is requested.
-- `dudu bench` is documented in help. `--quiet`, `--verbose`, `--help`, and
+- `dudu bench` is documented in help. `dudu bench compiler` runs the
+  compiler-throughput benchmark from a checkout that contains
+  `scripts/bench_compiler.sh`. `--quiet`, `--verbose`, `--help`, and
   `--version` are parsed as project-driver flags; benchmark command arguments
   that look like flags can still be passed after `--`.
 - Delegated `[test]` and `[bench]` commands, plus fallback `scripts/test.sh`

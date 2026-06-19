@@ -11,7 +11,7 @@ void print_cli_usage(bool project_driver) {
                      "       dudu new <name>\n"
                      "       dudu run [input.dd|target] [-o output] [--quiet]\n"
                      "       dudu build [input.dd|target] [-o output] [--quiet]\n"
-                     "       dudu bench [--quiet] [-- args...]\n"
+                     "       dudu bench [compiler] [--quiet] [-- args...]\n"
                      "       dudu check [input.dd|dir]\n"
                      "       dudu clean [path]\n"
                      "       dudu clean-cache [path]\n"
