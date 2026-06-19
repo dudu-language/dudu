@@ -165,7 +165,7 @@ Definition of done:
 - tests cover direct imports, aliased imports, typedefs, namespaces with same
   tail names, and inline namespace artifacts
 
-Status: in progress. Native declaration string fields have been renamed to
+Status: complete. Native declaration string fields have been renamed to
 make the boundary explicit: `NativeTypeDecl::native_spelling`,
 `NativeValueDecl::native_spelling`,
 `NativeFunctionDecl::param_native_spellings`, and
@@ -185,11 +185,11 @@ the explicit native-boundary helper
 compatibility owning that spelling rule directly. C++ associated operand
 loosening for operator sema, such as `.reference` and `.iterator`, now lives
 behind `native_associated_operator_operand_is_dependent`; the guard rejects
-putting that suffix check back into `sema_ops.cpp`. Remaining work is the
-harder identity cleanup: ordinary compatibility should stop leaning on raw
-spelling comparisons when structured/native identity facts exist, and any
-remaining suffix-name native heuristics should either be replaced or isolated
-behind clearly named native-boundary helpers.
+putting that suffix check back into `sema_ops.cpp`. Direct, aliased, typedef,
+same-tail namespace, and inline namespace scanner cases are covered by native
+frontend tests. Deeper USR collection and identity-aware map keys remain in the
+[Native Identity Plan](native-identity-plan.md), but the raw-spelling boundary
+required for this destringing goal is now explicit and guarded.
 
 ## Goal 5: Delete String Fallback APIs And Add Final Guards
 
@@ -210,6 +210,16 @@ Definition of done:
 - final guard script rejects known deleted helpers and raw semantic fields
 - fast validation plus representative native/library probes pass
 - docs describe the remaining legitimate string boundaries
+
+Status: in progress. Prototype-era raw `sema_scan` helpers for compound
+assignment, top-level logical detection, top-level comparison detection, and
+comparison text extraction have been deleted. Those forms are parsed through
+structured statement/expression AST now. The migration guard rejects
+reintroducing `compound_assign_pos`, `find_top_level_logical`,
+`find_top_level_comparison`, and `top_level_comparison_text`. The remaining
+`sema_scan` helpers are still used by explicit `cpp(...)` escape parsing and
+local member-path segment validation, so they stay in the allowed string
+boundary for now.
 
 ## Goal 6: Separate Module Outputs Without Re-Flattening
 

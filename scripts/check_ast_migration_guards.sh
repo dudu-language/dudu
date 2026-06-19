@@ -22,6 +22,10 @@ forbidden=(
     "lower_array_shorthand_type"
     "collect_array_shorthand"
     "is_cpp_associated_type_binding"
+    "compound_assign_pos"
+    "find_top_level_logical"
+    "find_top_level_comparison"
+    "top_level_comparison_text"
 )
 
 for pattern in "${forbidden[@]}"; do
