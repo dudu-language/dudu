@@ -2054,3 +2054,6 @@ push. They are not release packaging work.
    The fast AST migration guard now also rejects reintroducing the deleted
    uppercase constructor spelling heuristic or the legacy alias-resolution
    fallback helper.
+   C++ associated-type assignment matching now uses structured `TypeRef` head
+   names only; missing/unknown raw type text no longer participates by rendered
+   fallback.
