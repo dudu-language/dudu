@@ -87,7 +87,7 @@ expect_fail bad_init_arg_type --emit-cpp "constructor Counter argument 1 expects
 expect_fail bad_from_import_missing --emit-cpp "module 'bad_from_import_helper' has no symbol 'missing'"
 expect_fail bad_from_import_collision_local --emit-cpp "from import name 'Thing' collides with an existing declaration; use 'as' to choose a unique local name"
 expect_fail bad_from_import_collision_imports --emit-cpp "import name 'Thing' collides with an earlier direct import; use 'as' to choose a unique local name"
-expect_fail bad_cycle_a --emit-cpp "cyclic module import"
+expect_fail bad_cycle_a --emit-cpp "cyclic module import: bad_cycle_a -> bad_cycle_b -> bad_cycle_a"
 expect_fail bad_unknown_type --emit-cpp "unknown local type: MissingType"
 expect_fail bad_nested_type --check "unknown parameter type: MissingType"
 expect_fail bad_nested_local_type --emit-cpp "unknown local type: MissingType"

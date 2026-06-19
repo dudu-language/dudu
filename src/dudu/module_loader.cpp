@@ -56,6 +56,48 @@ std::string module_name_from_file(const std::filesystem::path& root,
     return out.str();
 }
 
+std::string module_path_for_cycle(const std::filesystem::path& root,
+                                  const std::filesystem::path& file) {
+    std::error_code error;
+    const std::filesystem::path relative = std::filesystem::relative(file, root, error);
+    if (!error && !relative.empty() && relative.native().front() != '.') {
+        std::filesystem::path module = relative;
+        module.replace_extension();
+        std::ostringstream out;
+        for (const std::filesystem::path& part : module) {
+            if (!out.str().empty()) {
+                out << '.';
+            }
+            out << part.string();
+        }
+        if (!out.str().empty()) {
+            return out.str();
+        }
+    }
+    return file.stem().string();
+}
+
+std::string module_cycle_message(const std::filesystem::path& root,
+                                 const std::vector<std::filesystem::path>& stack,
+                                 const std::filesystem::path& repeated) {
+    std::ostringstream out;
+    out << "cyclic module import: ";
+    const auto begin = std::find(stack.begin(), stack.end(), repeated);
+    bool first = true;
+    for (auto it = begin == stack.end() ? stack.begin() : begin; it != stack.end(); ++it) {
+        if (!first) {
+            out << " -> ";
+        }
+        first = false;
+        out << module_path_for_cycle(root, *it);
+    }
+    if (!first) {
+        out << " -> ";
+    }
+    out << module_path_for_cycle(root, repeated);
+    return out.str();
+}
+
 std::string cpp_name_piece(const std::string& text, bool pascal) {
     std::string out;
     bool upper_next = pascal;
@@ -360,17 +402,18 @@ void add_from_import_aliases(ModuleAst& module) {
 }
 
 const ModuleAst& load_one(const std::filesystem::path& path, const std::filesystem::path& root,
-                          std::set<std::filesystem::path>& loading,
+                          std::vector<std::filesystem::path>& stack,
                           std::map<std::filesystem::path, ModuleAst>& loaded,
                           std::vector<std::filesystem::path>& ordered) {
     const std::filesystem::path canonical = std::filesystem::weakly_canonical(path);
     if (loaded.contains(canonical)) {
         return loaded.at(canonical);
     }
-    if (loading.contains(canonical)) {
-        throw CompileError({.file = path, .line = 1, .column = 1}, "cyclic module import");
+    if (std::find(stack.begin(), stack.end(), canonical) != stack.end()) {
+        throw CompileError({.file = path, .line = 1, .column = 1},
+                           module_cycle_message(root, stack, canonical));
     }
-    loading.insert(canonical);
+    stack.push_back(canonical);
 
     ModuleAst parsed = parse_source(read_text_file(path), path);
     stamp_module_origin(parsed, canonical, module_name_from_file(root, canonical));
@@ -380,7 +423,13 @@ const ModuleAst& load_one(const std::filesystem::path& path, const std::filesyst
         }
         const std::filesystem::path dependency =
             module_path_to_file(path.parent_path(), import.module_path);
-        const ModuleAst& dependency_module = load_one(dependency, root, loading, loaded, ordered);
+        const std::filesystem::path canonical_dependency =
+            std::filesystem::weakly_canonical(dependency);
+        if (std::find(stack.begin(), stack.end(), canonical_dependency) != stack.end()) {
+            throw CompileError(import.location,
+                               module_cycle_message(root, stack, canonical_dependency));
+        }
+        const ModuleAst& dependency_module = load_one(dependency, root, stack, loaded, ordered);
         parsed.dependencies.push_back({.kind = import.kind,
                                        .import_module_path = import.module_path,
                                        .resolved_module_path = dependency_module.module_path,
@@ -394,31 +443,42 @@ const ModuleAst& load_one(const std::filesystem::path& path, const std::filesyst
         }
     }
 
-    loading.erase(canonical);
+    stack.pop_back();
     loaded.emplace(canonical, std::move(parsed));
     ordered.push_back(canonical);
     return loaded.at(canonical);
 }
 
-void collect_files(const std::filesystem::path& path, std::set<std::filesystem::path>& loading,
+void collect_files(const std::filesystem::path& path, std::vector<std::filesystem::path>& stack,
                    std::vector<std::filesystem::path>& out) {
     const std::filesystem::path canonical = std::filesystem::weakly_canonical(path);
-    if (loading.contains(canonical)) {
-        throw CompileError({.file = path, .line = 1, .column = 1}, "cyclic module import");
+    const std::filesystem::path root = stack.empty() ? canonical.parent_path()
+                                                     : stack.front().parent_path();
+    if (std::find(stack.begin(), stack.end(), canonical) != stack.end()) {
+        throw CompileError({.file = path, .line = 1, .column = 1},
+                           module_cycle_message(root, stack, canonical));
     }
     if (std::find(out.begin(), out.end(), canonical) != out.end()) {
         return;
     }
-    loading.insert(canonical);
+    stack.push_back(canonical);
     out.push_back(canonical);
     const ModuleAst parsed = parse_source(read_text_file(path), path);
     for (const ImportDecl& import : parsed.imports) {
         if (import.kind != ImportKind::Module && import.kind != ImportKind::From) {
             continue;
         }
-        collect_files(module_path_to_file(path.parent_path(), import.module_path), loading, out);
+        const std::filesystem::path dependency =
+            module_path_to_file(path.parent_path(), import.module_path);
+        const std::filesystem::path canonical_dependency =
+            std::filesystem::weakly_canonical(dependency);
+        if (std::find(stack.begin(), stack.end(), canonical_dependency) != stack.end()) {
+            throw CompileError(import.location,
+                               module_cycle_message(root, stack, canonical_dependency));
+        }
+        collect_files(dependency, stack, out);
     }
-    loading.erase(canonical);
+    stack.pop_back();
 }
 
 } // namespace
@@ -426,10 +486,10 @@ void collect_files(const std::filesystem::path& path, std::set<std::filesystem::
 ModuleAst load_source_tree(const std::filesystem::path& entry) {
     const std::filesystem::path canonical_entry = std::filesystem::weakly_canonical(entry);
     const std::filesystem::path root = canonical_entry.parent_path();
-    std::set<std::filesystem::path> loading;
+    std::vector<std::filesystem::path> stack;
     std::map<std::filesystem::path, ModuleAst> loaded;
     std::vector<std::filesystem::path> ordered;
-    (void)load_one(canonical_entry, root, loading, loaded, ordered);
+    (void)load_one(canonical_entry, root, stack, loaded, ordered);
 
     ModuleAst merged;
     merged.source_path = canonical_entry;
@@ -446,9 +506,9 @@ ModuleAst load_source_tree(const std::filesystem::path& entry) {
 }
 
 std::vector<std::filesystem::path> source_tree_files(const std::filesystem::path& entry) {
-    std::set<std::filesystem::path> loading;
+    std::vector<std::filesystem::path> stack;
     std::vector<std::filesystem::path> out;
-    collect_files(entry, loading, out);
+    collect_files(entry, stack, out);
     return out;
 }
 

@@ -237,6 +237,8 @@ Selective `from module import Name` bindings now reject collisions with local
 declarations or earlier selective imports at import materialization time, with
 a source diagnostic that tells the user to add `as` for a unique local name.
 Parser-level duplicate direct import checks use the same aliasing guidance.
+Cycle diagnostics now report the module graph path that closes the cycle, for
+example `a -> b -> a`, at the import statement that introduced the cycle.
 Same-name declarations now also carry stable generated C++ names derived from
 their owning module, but the direct backend and semantic lookup still need to
 switch to those names coherently before they can coexist through normal

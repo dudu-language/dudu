@@ -101,6 +101,8 @@
   `test_codegen_shapes.sh`.
 - Added explicit diagnostics for selective Dudu imports that collide with local
   declarations or earlier selective imports.
+- Improved cyclic Dudu module import diagnostics to show the module path that
+  closes the cycle.
 - Rejected runtime `assert` in freestanding and embedded target modes instead
   of emitting hosted exception machinery.
 - Fixed native signature parsing for signatures with suffixes such as
