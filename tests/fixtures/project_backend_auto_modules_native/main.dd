@@ -1,0 +1,12 @@
+import dep
+
+
+def main() -> i32:
+    if dep.answer() == 42:
+        return 0
+    return 1
+
+
+@test
+def dependency_native_import_test():
+    assert dep.answer() == 42

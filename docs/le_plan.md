@@ -1387,7 +1387,10 @@ push. They are not release packaging work.
    The generated CMake test backend now uses `duc emit-test-modules` to emit
    per-module test-mode `.hpp/.cpp` artifacts plus a small generated
    `test_harness.cpp`; generated module sources suppress normal executable
-   entry points and headers expose test functions to the harness.
+   entry points and headers expose test functions to the harness. Regression
+   fixtures cover generated CMake run/test for a multi-module project whose
+   dependency module imports and calls a native C++ header through normal Dudu
+   header awareness.
    The serious path is to make these backend choices work behind the same
    front-door commands, not to tell users that real projects must leave
    `dudu build`.

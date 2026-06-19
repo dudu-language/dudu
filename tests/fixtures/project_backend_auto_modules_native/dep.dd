@@ -1,0 +1,5 @@
+import cpp "native_dep.hpp" as native
+
+
+def answer() -> i32:
+    return native.add(20, 22)

@@ -1,0 +1,6 @@
+name = "backend_auto_modules_native"
+entry = "main.dd"
+build_dir = "../../../build/project_backend_auto_modules_native"
+
+[cc]
+include_dirs = ["."]
