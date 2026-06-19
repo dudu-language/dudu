@@ -2,6 +2,7 @@
 
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
+#include "dudu/native_header_collision.hpp"
 #include "dudu/native_header_identity.hpp"
 #include "dudu/native_header_merge.hpp"
 #include "dudu/source.hpp"
@@ -13,27 +14,6 @@
 
 namespace dudu {
 namespace {
-
-bool actionable_native_name_collision(const std::string& name) {
-    if (starts_with(name, "_")) {
-        return false;
-    }
-    static const std::set<std::string> associated_artifacts = {
-        "iterator", "const_iterator", "reference", "const_reference", "value_type",
-        "pointer",  "const_pointer",  "size_type", "difference_type", "type"};
-    if (associated_artifacts.contains(name)) {
-        return false;
-    }
-    return name.find('.') == std::string::npos && name.find("::") == std::string::npos;
-}
-
-bool non_actionable_native_collision_location(const SourceLocation& location) {
-    const std::string& file = location.file;
-    if (file.empty() || file.ends_with(".dd")) {
-        return true;
-    }
-    return file.rfind("/usr/", 0) == 0 || file.rfind("/opt/", 0) == 0;
-}
 
 template <typename T>
 void add_unique_native_decl(std::vector<T>& out, std::map<std::string, T>& seen, T value,
@@ -52,8 +32,7 @@ void add_unique_native_decl(std::vector<T>& out, std::map<std::string, T>& seen,
         return false;
     }();
     if (native_decl_identity_key(existing->second) != identity && !compatible &&
-        actionable_native_name_collision(value.name) &&
-        !non_actionable_native_collision_location(value.location)) {
+        native_decl_collision_is_error(value.name, value.location)) {
         throw CompileError(value.location,
                            "native " + std::string(kind) + " name collision: " + value.name);
     }
@@ -69,8 +48,7 @@ void add_unique_native_decl(std::vector<T>& out, std::map<std::string, std::stri
         out.push_back(std::move(value));
         return;
     }
-    if (existing->second != identity && actionable_native_name_collision(value.name) &&
-        !non_actionable_native_collision_location(value.location)) {
+    if (existing->second != identity && native_decl_collision_is_error(value.name, value.location)) {
         throw CompileError(value.location,
                            "native " + std::string(kind) + " name collision: " + value.name);
     }
@@ -137,8 +115,7 @@ void add_unique_class(std::vector<ClassDecl>& out, std::map<std::string, std::st
         out.push_back(std::move(value));
         return;
     }
-    if (existing->second != identity && actionable_native_name_collision(value.name) &&
-        !non_actionable_native_collision_location(value.location)) {
+    if (existing->second != identity && native_decl_collision_is_error(value.name, value.location)) {
         throw CompileError(value.location, "native class name collision: " + value.name);
     }
     for (ClassDecl& klass : out) {

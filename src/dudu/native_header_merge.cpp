@@ -1,37 +1,16 @@
 #include "dudu/native_header_merge.hpp"
 
 #include "dudu/ast_type.hpp"
+#include "dudu/native_header_collision.hpp"
 #include "dudu/native_header_identity.hpp"
 #include "dudu/source.hpp"
 
 #include <algorithm>
 #include <map>
-#include <set>
 #include <type_traits>
 
 namespace dudu {
 namespace {
-
-bool actionable_native_name_collision(const std::string& name) {
-    if (name.rfind("_", 0) == 0) {
-        return false;
-    }
-    static const std::set<std::string> associated_artifacts = {
-        "iterator", "const_iterator", "reference", "const_reference", "value_type",
-        "pointer",  "const_pointer",  "size_type", "difference_type", "type"};
-    if (associated_artifacts.contains(name)) {
-        return false;
-    }
-    return name.find('.') == std::string::npos && name.find("::") == std::string::npos;
-}
-
-bool non_actionable_native_collision_location(const SourceLocation& location) {
-    const std::string& file = location.file;
-    if (file.empty() || file.ends_with(".dd")) {
-        return true;
-    }
-    return file.rfind("/usr/", 0) == 0 || file.rfind("/opt/", 0) == 0;
-}
 
 template <typename T>
 void append_unique_native_decls(std::vector<T>& target, const std::vector<T>& source,
@@ -55,8 +34,7 @@ void append_unique_native_decls(std::vector<T>& target, const std::vector<T>& so
             return false;
         }();
         if (native_decl_identity_key(existing->second) != identity && !compatible &&
-            actionable_native_name_collision(item.name) &&
-            !non_actionable_native_collision_location(item.location)) {
+            native_decl_collision_is_error(item.name, item.location)) {
             throw CompileError(item.location,
                                "native " + std::string(kind) + " name collision: " + item.name);
         }
