@@ -326,6 +326,27 @@ probe_boost_filesystem() {
     echo "ok boost filesystem"
 }
 
+probe_imgui() {
+    if ! pkg-config --exists imgui; then
+        echo "skip imgui: pkg-config package not found"
+        return
+    fi
+
+    local cpp="$repo_root/build/probe_imgui_context.cpp"
+    local bin="$repo_root/build/probe_imgui_context"
+    "$repo_root/build/duc" emit "$repo_root/tests/fixtures/imgui_context.dd" -o "$cpp"
+    "${CXX:-c++}" -std=c++20 "$cpp" $(pkg-config --cflags --libs imgui) -o "$bin"
+    set +e
+    "$bin"
+    local status=$?
+    set -e
+    if [[ "$status" -ne 42 ]]; then
+        echo "imgui probe returned $status, expected 42" >&2
+        exit 1
+    fi
+    echo "ok imgui"
+}
+
 probe_threading() {
     local cpp="$repo_root/build/probe_threading_atomics.cpp"
     local bin="$repo_root/build/probe_threading_atomics"
@@ -499,6 +520,7 @@ probe_spdlog
 probe_stb
 probe_x11
 probe_boost_filesystem
+probe_imgui
 probe_threading
 probe_posix_mmap
 probe_posix_threads

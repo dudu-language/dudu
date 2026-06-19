@@ -1141,7 +1141,9 @@ push. They are not release packaging work.
    nullable native `cstr` parameters, matching common C APIs such as
    `XOpenDisplay(nullptr)`. Boost filesystem path construction and boolean
    member calls work without wrappers; deeper Boost string alias normalization
-   remains a hardening target.
+   remains a hardening target. Dear ImGui core namespace APIs work when the
+   import alias matches the real C++ namespace; friendlier unaliased namespace
+   visibility remains a native import polish target.
    Broader template-heavy library behavior remains the main hardening area.
 
 10. Real Library Stress Tests
@@ -1181,7 +1183,7 @@ push. They are not release packaging work.
    behind an adapter.
 
    Current optional probes pass for glm, Eigen, OpenBLAS, OpenCV, sqlite, zlib, curl, OpenSSL,
-   libevent, libpng, stb, fmt, spdlog, Boost filesystem, threading, POSIX mmap, POSIX pthread, raylib, SDL3, GLFW, X11, OpenCL, Vulkan, and FFmpeg on this
+   libevent, libpng, stb, fmt, spdlog, Boost filesystem, threading, POSIX mmap, POSIX pthread, raylib, SDL3, GLFW, Dear ImGui, X11, OpenCL, Vulkan, and FFmpeg on this
    machine. Optional dev-only dependencies can be installed into the ignored
    `third_party/install` prefix with `scripts/setup_dev_deps.sh`; the main Dudu
    build does not require them.

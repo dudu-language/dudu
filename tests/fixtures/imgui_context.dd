@@ -1,0 +1,15 @@
+import cpp "imgui.h" as ImGui
+import c "string.h" as c
+
+
+def main() -> i32:
+    context = ImGui.CreateContext(None)
+    if context == None:
+        return 1
+
+    version_len = c.strlen(ImGui.GetVersion())
+    ImGui.DestroyContext(context)
+
+    if version_len == 0:
+        return 2
+    return 42
