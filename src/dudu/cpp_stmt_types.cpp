@@ -63,11 +63,16 @@ bool looks_like_dudu_type(const std::string& name) {
 
 TypeRef infer_call_type_ref(const std::string& callee,
                             const std::map<std::string, TypeRef>& function_returns,
-                            const SourceLocation& location) {
+                            const Symbols* symbols, const SourceLocation& location) {
     if (const auto fn = function_returns.find(callee); fn != function_returns.end()) {
         return fn->second;
     }
-    if (looks_like_dudu_type(callee)) {
+    if (symbols != nullptr &&
+        (symbols->classes.contains(callee) || symbols->native_classes.contains(callee) ||
+         symbols->types.contains(callee))) {
+        return named_type_ref(callee, location);
+    }
+    if (symbols == nullptr && looks_like_dudu_type(callee)) {
         return named_type_ref(callee, location);
     }
     return {};
@@ -87,11 +92,11 @@ TypeRef infer_call_type_ref(const Expr& expr, const std::map<std::string, TypeRe
                             const std::map<std::string, TypeRef>& function_returns,
                             const Symbols* symbols) {
     if (expr.callee.empty()) {
-        return infer_call_type_ref(expr.name, function_returns, expr.location);
+        return infer_call_type_ref(expr.name, function_returns, symbols, expr.location);
     }
     const Expr& callee = expr.callee.front();
     if (callee.kind == ExprKind::Name) {
-        return infer_call_type_ref(callee.name, function_returns, callee.location);
+        return infer_call_type_ref(callee.name, function_returns, symbols, callee.location);
     }
     if (callee.kind == ExprKind::Member && callee.children.size() == 1) {
         const TypeRef receiver_type = infer_emitted_local_type_ref(

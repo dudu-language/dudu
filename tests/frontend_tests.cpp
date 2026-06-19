@@ -812,6 +812,14 @@ void test_emitted_local_expression_type_inference() {
     assert(infer_emitted_local_type_text("queue.pop()", locals, functions) == "i32");
     assert(infer_emitted_local_type_text("make_values()[0]", locals, functions) == "i32");
     assert(infer_emitted_local_type_text("make_matrix()[1][0]", locals, functions) == "i32");
+
+    const dudu::ModuleAst module = dudu::parse_source("class lowercase:\n"
+                                                      "    value: i32\n",
+                                                      "lowercase_constructor_type.dd");
+    const dudu::Symbols symbols = dudu::collect_symbols(module);
+    const dudu::TypeRef constructed = dudu::infer_emitted_local_type_ref(
+        dudu::parse_expr_text("lowercase(1)"), {}, {}, &symbols);
+    assert(dudu::type_ref_text(constructed) == "lowercase");
 }
 
 void test_tuple_expression_inference_uses_type_ast() {

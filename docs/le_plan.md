@@ -2027,3 +2027,6 @@ push. They are not release packaging work.
    Emission-side indexed local inference now labels array index diagnostics
    from parsed `TypeRef` head metadata instead of rendering the full receiver
    type during type inference.
+   Emission-side call type inference now uses `Symbols` to recognize known
+   Dudu/native type constructors in real compiler paths; the old uppercase-name
+   constructor heuristic is limited to explicit symbol-less helper calls.
