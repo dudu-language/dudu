@@ -372,6 +372,8 @@ file, imported modules from a skipped `vendor` directory, plus Dudu-native and
 native C++ member completion.
 Declaration-anchored references skip unrelated same-named Dudu declarations,
 while imported module/member references still search the workspace.
+Qualified type references such as `rl.Vector2` are covered through both the AST
+reference collector and the public references request path.
 Imported Dudu module completion is covered with an unopened sibling module.
 Completion resolve, snippets, and typed local completions are covered.
 Common-form snippets for functions, classes, control flow, imports, enums, and

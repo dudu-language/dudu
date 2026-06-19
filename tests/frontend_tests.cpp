@@ -882,6 +882,26 @@ void test_lsp_references_track_assignment_bindings() {
     assert(right_refs.size() == 2);
 }
 
+void test_lsp_references_track_qualified_type_refs() {
+    const dudu::Document doc{.uri = "file:///qualified_type_refs.dd",
+                             .path = "qualified_type_refs.dd",
+                             .text = "import cpp \"raylib.h\" as rl\n"
+                                     "\n"
+                                     "def length(value: rl.Vector2) -> f32:\n"
+                                     "    other: rl.Vector2\n"
+                                     "    return value.x + other.x\n"};
+
+    const std::vector<dudu::ReferenceLocation> refs = dudu::references_in(doc, "rl.Vector2");
+    assert(refs.size() == 2);
+
+    const std::map<std::string, dudu::Document> workspace{{doc.uri, doc}};
+    dudu::Json params =
+        dudu::JsonParser("{\"position\":{\"line\":2,\"character\":23}}").parse();
+    const std::string refs_json = dudu::references_json(doc, &params, workspace);
+    assert(refs_json.find("\"start\":{\"line\":2,\"character\":18}") != std::string::npos);
+    assert(refs_json.find("\"start\":{\"line\":3,\"character\":11}") != std::string::npos);
+}
+
 void test_lsp_module_reference_filters_alias_target() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_lsp_module_reference_target_test";
@@ -1536,6 +1556,7 @@ int main() {
         test_lsp_scope_lint_tracks_inferred_assignment_locals();
         test_lsp_suspicious_cast_lint_uses_type_refs();
         test_lsp_references_track_assignment_bindings();
+        test_lsp_references_track_qualified_type_refs();
         test_lsp_module_reference_filters_alias_target();
         test_allocation_type_ref_diagnostics();
         test_emitted_local_index_type_inference();
