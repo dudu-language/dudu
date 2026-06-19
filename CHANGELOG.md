@@ -80,6 +80,7 @@
 - Removed obsolete string-based Dudu method/class template substitution helpers.
 - Shared parsed `TypeRef` index and iterable inference for public string entry
   points before falling back to native/operator boundaries.
+- Added Cairo to the optional native compatibility probe suite.
 
 ### Changed
 
@@ -112,6 +113,10 @@
   `duc` focused on explicit compiler-driver workflows.
 - Documented `dudu build`, `dudu run`, and `dudu test` as the stable project
   front door, with direct and CMake backends as implementation details.
+- Made direct `dudu build` and `dudu run` print separate `analyze`, `emit`,
+  `compile`, and final `output`/`run` stages.
+- Clarified native-header redeclaration collision handling by spelling the
+  opaque native type exception at the collision branches.
 
 ### Fixed
 
@@ -141,3 +146,5 @@
 - Rejected Python-style dunder names on free functions as well as methods.
 - Fixed language-server go-to-definition for imported C/C++ headers found
   through manifest-relative `[include] paths`.
+- Rejected unsafe merged C++ output for Dudu modules that declare the same
+  module-local type name, including explicit `--emit-cpp` and header emission.
