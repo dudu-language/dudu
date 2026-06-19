@@ -61,9 +61,9 @@ std::string compact_type(std::string type) {
     return out;
 }
 
-bool is_string_type(const std::string& type) {
-    const std::string compact = compact_type(normalize_cpp_type_artifacts(type));
-    return compact == "str" || compact == "std.string" || compact == "std::string";
+bool is_string_type(const TypeRef& type) {
+    const std::string head = type_ref_head_name(normalize_cpp_type_artifacts_ref(type));
+    return head == "str" || head == "std.string" || head == "std::string";
 }
 
 std::optional<TypeRef> call_target_type_ref(const Expr& expr) {
@@ -308,7 +308,7 @@ bool normalized_text_type_assignment_allowed(const std::string& normalized_expec
            compact_type(normalized_expected) == compact_type(normalized_got) ||
            compact_type(normalize_c_tags(normalized_expected)) ==
                compact_type(normalize_c_tags(normalized_got)) ||
-           (is_string_type(normalized_expected) && is_string_type(normalized_got)) ||
+           (is_string_type(expected_ref) && is_string_type(got_ref)) ||
            is_void_pointer_target(expected_ref, got_ref) ||
            is_const_pointer_binding(expected_ref, got_ref) ||
            is_pointer_to_reference_value(expected_ref, got_ref) ||
@@ -379,7 +379,7 @@ bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const Ty
            compact_type(normalized_expected) == compact_type(normalized_got) ||
            compact_type(normalize_c_tags(normalized_expected)) ==
                compact_type(normalize_c_tags(normalized_got)) ||
-           (is_string_type(normalized_expected) && is_string_type(normalized_got)) ||
+           (is_string_type(normalized_expected_ref) && is_string_type(normalized_got_ref)) ||
            is_value_wrapper_assignment(normalized_expected_ref, expr, normalized_got_ref) ||
            is_null_pointer(normalized_expected_ref, expr, normalized_got_ref) ||
            is_void_pointer_target(normalized_expected_ref, normalized_got_ref) ||

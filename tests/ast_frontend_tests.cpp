@@ -129,6 +129,10 @@ void test_type_compat_uses_type_ast_for_pointers() {
                                          dudu::parse_type_text("list[i32]")));
     assert(dudu::type_assignment_allowed(dudu::parse_type_text("list[fn(i32)]"),
                                          dudu::parse_type_text("list[fn(i32) -> void]")));
+    assert(dudu::type_assignment_allowed(dudu::parse_type_text("str"),
+                                         dudu::parse_type_text("std.string")));
+    assert(dudu::type_assignment_allowed(dudu::parse_type_text("std.string"),
+                                         dudu::parse_type_text("std::string")));
     assert(!dudu::type_assignment_allowed(dudu::parse_type_text("list[i32]"),
                                           dudu::parse_type_text("list[str]")));
     assert(dudu::type_assignment_allowed(dudu::parse_type_text("array[list[i32]][4]"),
@@ -139,6 +143,8 @@ void test_type_compat_uses_type_ast_for_pointers() {
                                           dudu::parse_type_text("array[list[i32]][8]")));
 
     const dudu::Expr name_expr = dudu::parse_expr_text("value");
+    assert(dudu::assignment_type_allowed(dudu::parse_type_text("str"), name_expr,
+                                         dudu::parse_type_text("std.string")));
     assert(dudu::assignment_type_allowed(dudu::parse_type_text("array[list[i32]][4]"), name_expr,
                                          dudu::parse_type_text("array[list[i32]][4]")));
     assert(!dudu::assignment_type_allowed(dudu::parse_type_text("array[list[i32]][4]"), name_expr,

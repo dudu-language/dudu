@@ -2001,3 +2001,6 @@ push. They are not release packaging work.
    Explicit native template non-type argument binding now detects numeric
    value arguments through `TypeRef::Value` metadata instead of rendering
    template arguments to strings first.
+   String compatibility now classifies normalized `TypeRef` heads instead of
+   rendering normalized type strings for the `str` / `std.string` /
+   `std::string` equivalence rule.
