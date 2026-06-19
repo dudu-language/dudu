@@ -46,7 +46,9 @@ void validate_import_bindings(const std::vector<ImportDecl>& imports) {
                 continue;
             }
             throw CompileError(import.location,
-                               "import name '" + name + "' collides with an earlier direct import");
+                               "import name '" + name +
+                                   "' collides with an earlier direct import; use 'as' to choose "
+                                   "a unique local name");
         }
     }
 }

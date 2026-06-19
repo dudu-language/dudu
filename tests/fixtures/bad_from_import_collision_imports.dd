@@ -1,0 +1,7 @@
+from bad_from_import_collision_left import Thing
+from bad_from_import_collision_right import Thing
+
+
+def main() -> i32:
+    item = Thing(42)
+    return item.value

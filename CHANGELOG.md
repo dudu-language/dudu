@@ -99,6 +99,8 @@
 
 - Sped up native header AST parsing so standard-library imports no longer hang
   `test_codegen_shapes.sh`.
+- Added explicit diagnostics for selective Dudu imports that collide with local
+  declarations or earlier selective imports.
 - Rejected runtime `assert` in freestanding and embedded target modes instead
   of emitting hosted exception machinery.
 - Fixed native signature parsing for signatures with suffixes such as

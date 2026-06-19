@@ -1,0 +1,6 @@
+class Thing:
+    value: i32
+
+
+def make() -> Thing:
+    return Thing(1)

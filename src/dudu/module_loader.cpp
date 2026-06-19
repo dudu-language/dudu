@@ -206,6 +206,41 @@ bool has_merged_symbol(const ModuleAst& module, const std::string& name) {
     return has_module_symbol(module, name);
 }
 
+bool has_native_binding(const ModuleAst& module, const std::string& name) {
+    for (const NativeTypeDecl& type : module.native_types)
+        if (type.name == name)
+            return true;
+    for (const NativeValueDecl& value : module.native_values)
+        if (value.name == name)
+            return true;
+    for (const NativeFunctionDecl& fn : module.native_functions)
+        if (fn.name == name)
+            return true;
+    for (const ClassDecl& klass : module.native_classes)
+        if (klass.name == name)
+            return true;
+    return false;
+}
+
+bool has_binding(const ModuleAst& module, const std::string& name) {
+    return has_module_symbol(module, name) || has_native_binding(module, name);
+}
+
+std::string selective_import_name(const ImportDecl& import) {
+    return import.alias.empty() ? import.imported_name : import.alias;
+}
+
+void reject_selective_import_collision(const ModuleAst& module, const ImportDecl& import) {
+    const std::string name = selective_import_name(import);
+    if (!has_binding(module, name)) {
+        return;
+    }
+    throw CompileError(import.location,
+                       "from import name '" + name +
+                           "' collides with an existing declaration; use 'as' to choose a "
+                           "unique local name");
+}
+
 void add_import_aliases_for_unit(ModuleAst& module, const std::filesystem::path& module_path,
                                  const std::map<std::filesystem::path, ModuleAst>& loaded) {
     for (const ImportDecl& import : module.imports) {
@@ -221,6 +256,7 @@ void add_import_aliases_for_unit(ModuleAst& module, const std::filesystem::path&
         if (import.kind == ImportKind::Module) {
             add_qualified_module_symbols(module, dependency->second, import);
         } else {
+            reject_selective_import_collision(module, import);
             add_selective_module_symbol(module, dependency->second, import);
         }
     }
