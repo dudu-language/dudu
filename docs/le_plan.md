@@ -134,8 +134,10 @@ Website plan: [Website Plan](website-plan.md).
 Dudu should have a GitHub Pages site for `dudulang.org`. The site should make
 the project understandable and memorable without pretending the compiler is more
 finished than it is. The public tone can be satirical and brown/poo-themed as a
-parody of modern language marketing, but the language docs, install commands,
-examples, and roadmap must stay technically honest.
+parody of modern language marketing: a humorous answer to the red/fire
+`mojolang.org` style, but brown, dirtier, and deliberately dumb as guerrilla
+marketing. The language docs, install commands, examples, and roadmap must stay
+technically honest.
 
 ## Diagnostic And Lint Cleanup
 
