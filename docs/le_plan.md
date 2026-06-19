@@ -1577,6 +1577,13 @@ push. They are not release packaging work.
    that were useful during a milestone but should not survive in the real
    compiler.
 
+   Treat this as a real cleanup phase, not a casual refactor bucket. After a
+   project has been worked hard for a while, even good feature work leaves
+   behind code that only made sense for the day it was written: tiny forwarding
+   helpers, duplicated near-identical checks, old names, "just make it pass"
+   branches, and local abstractions that do not describe a real compiler
+   concept. Those should be found deliberately and removed deliberately.
+
    This pass is mandatory because it is a normal part of building a real
    compiler, not a judgment on any one change. When a project moves quickly,
    helper functions and local workarounds accumulate around whatever feature was
@@ -1591,6 +1598,9 @@ push. They are not release packaging work.
 
    Audit for:
 
+   - repo-wide silly artifacts found by targeted searches for one-line helper
+     bodies, constant-return helpers, compatibility wording, and stale phase
+     names
    - one-line wrapper functions that only obscure the real operation
    - one-line functions whose body is just another function call with the same
      arguments, unless they define a public API, phase boundary, or native
@@ -1618,6 +1628,10 @@ push. They are not release packaging work.
      become an explicit boundary or be deleted
    - single-call wrappers around generated-code, native-scanner, or sema paths
      that only hide ownership or phase boundaries
+   - "template-looking" code that is not actually generic and should be a normal
+     typed helper or a direct branch
+   - impossible branches and placeholder defaults that quietly return a generic
+     value instead of making the compiler invariant visible
    - old test fixtures that pass by leaning on obsolete syntax or accidental
      permissiveness instead of the current language rules
    - examples with hand-written workaround code that should be deleted once the
