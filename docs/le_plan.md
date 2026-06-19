@@ -1565,7 +1565,10 @@ push. They are not release packaging work.
    rapid-iteration artifact should be cleaned up whenever it is spotted.
    Module path/name generation has also been split out of `module_loader.cpp`
    into `module_names.*`, and the LSP now shares that helper instead of carrying
-   a duplicate module-path resolver.
+   a duplicate module-path resolver. Index and slice expression emission has
+   been split out of `cpp_expr_emit.cpp` into `cpp_expr_index.*`, bringing the
+   main expression dispatcher back under the project file-size rule while
+   preserving one owner for indexing behavior.
 
 19. Polish Unsupported Syntax Diagnostics
 

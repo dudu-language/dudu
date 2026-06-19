@@ -35,6 +35,7 @@ add_library(dudu_frontend
     src/dudu/cpp_expr_call_emit.cpp
     src/dudu/cpp_expr_escape_emit.cpp
     src/dudu/cpp_expr_emit.cpp
+    src/dudu/cpp_expr_index.cpp
     src/dudu/cpp_expr_offsetof_emit.cpp
     src/dudu/cpp_expr_pointer_receiver.cpp
     src/dudu/cpp_expr_builtins.cpp
