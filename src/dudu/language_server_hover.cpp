@@ -8,6 +8,7 @@
 #include "dudu/language_server_support.hpp"
 #include "dudu/language_server_symbols.hpp"
 #include "dudu/module_loader.hpp"
+#include "dudu/module_names.hpp"
 #include "dudu/native_headers.hpp"
 #include "dudu/parser.hpp"
 

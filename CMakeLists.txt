@@ -82,6 +82,7 @@ add_library(dudu_frontend
     src/dudu/match_patterns.cpp
     src/dudu/module_import_aliases.cpp
     src/dudu/module_loader.cpp
+    src/dudu/module_names.cpp
     src/dudu/native_build.cpp
     src/dudu/native_header_cache.cpp
     src/dudu/native_header_collision.cpp

@@ -41,8 +41,6 @@ std::vector<ReferenceLocation> references_in(const Document& doc, const std::str
 
 bool same_path(const std::filesystem::path& lhs, const std::filesystem::path& rhs);
 bool skip_workspace_dir(const std::string& name);
-std::filesystem::path module_path_to_file(const std::filesystem::path& base,
-                                          const std::string& module_path);
 
 std::string lower_copy(std::string value);
 

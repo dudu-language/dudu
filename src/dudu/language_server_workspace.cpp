@@ -2,6 +2,7 @@
 
 #include "dudu/language_server_navigation.hpp"
 #include "dudu/language_server_support.hpp"
+#include "dudu/module_names.hpp"
 #include "dudu/parser.hpp"
 
 #include <filesystem>

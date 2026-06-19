@@ -342,23 +342,6 @@ bool skip_workspace_dir(const std::string& name) {
            name == "vendor" || name == "third_party";
 }
 
-std::filesystem::path module_path_to_file(const std::filesystem::path& base,
-                                          const std::string& module_path) {
-    std::filesystem::path out = base;
-    size_t start = 0;
-    while (start < module_path.size()) {
-        const size_t dot = module_path.find('.', start);
-        const size_t end = dot == std::string::npos ? module_path.size() : dot;
-        out /= module_path.substr(start, end - start);
-        if (dot == std::string::npos) {
-            break;
-        }
-        start = dot + 1;
-    }
-    out += ".dd";
-    return out;
-}
-
 std::string lower_copy(std::string value) {
     std::transform(value.begin(), value.end(), value.begin(),
                    [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
