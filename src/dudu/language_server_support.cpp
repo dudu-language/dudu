@@ -112,6 +112,31 @@ const ModuleAst& visible_module_unit(const ModuleAst& module, const std::filesys
     return module.module_units.back();
 }
 
+const ModuleAst* imported_module_unit(const ModuleAst& module, const ModuleAst& current,
+                                      const ImportDecl& import) {
+    std::string resolved_module_path = import.module_path;
+    std::filesystem::path resolved_source_path;
+    for (const ModuleDependency& dependency : current.dependencies) {
+        if (dependency.import_module_path == import.module_path) {
+            resolved_module_path = dependency.resolved_module_path;
+            resolved_source_path = dependency.source_path;
+            break;
+        }
+    }
+    for (const ModuleAst& unit : module.module_units) {
+        if (!resolved_source_path.empty() && unit.source_path == resolved_source_path) {
+            return &unit;
+        }
+        if (unit.module_path == resolved_module_path) {
+            return &unit;
+        }
+    }
+    if (module.module_path == resolved_module_path) {
+        return &module;
+    }
+    return nullptr;
+}
+
 int leading_spaces(const std::string& line) {
     int out = 0;
     while (out < static_cast<int>(line.size()) && line[static_cast<size_t>(out)] == ' ') {

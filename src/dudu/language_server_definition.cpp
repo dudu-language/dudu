@@ -9,6 +9,7 @@
 #include "dudu/language_server_navigation.hpp"
 #include "dudu/language_server_support.hpp"
 #include "dudu/language_server_symbols.hpp"
+#include "dudu/module_loader.hpp"
 #include "dudu/native_build.hpp"
 #include "dudu/native_headers.hpp"
 #include "dudu/parser.hpp"
@@ -16,7 +17,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
-#include <fstream>
 #include <optional>
 #include <set>
 #include <sstream>
@@ -188,15 +188,16 @@ std::optional<std::string> import_definition_json(const Document& doc, const std
         return std::nullopt;
     }
     try {
-        const ModuleAst module = parse_source(doc.text, doc.path);
-        for (const ImportDecl& import : module.imports) {
+        const ModuleAst module = module_for_document(doc, false);
+        const ModuleAst& current = visible_module_unit(module, doc.path);
+        for (const ImportDecl& import : current.imports) {
             if (import.kind != ImportKind::Module && import.kind != ImportKind::From) {
                 continue;
             }
             if (import.kind == ImportKind::From && bound_import_name(import) != word) {
                 continue;
             }
-            std::string imported_symbol;
+            std::string target;
             if (import.kind == ImportKind::Module) {
                 const std::string bound = bound_import_name(import);
                 const std::vector<std::string> prefixes =
@@ -209,7 +210,7 @@ std::optional<std::string> import_definition_json(const Document& doc, const std
                         break;
                     }
                     if (word.rfind(prefix + ".", 0) == 0) {
-                        imported_symbol = word.substr(prefix.size() + 1);
+                        target = word.substr(prefix.size() + 1);
                         matched = true;
                         break;
                     }
@@ -224,25 +225,21 @@ std::optional<std::string> import_definition_json(const Document& doc, const std
             if (!std::filesystem::exists(file, error) || error) {
                 continue;
             }
-            if (import.kind == ImportKind::Module) {
+            if (import.kind == ImportKind::Module && target.empty()) {
                 return location_json(file_uri(file), range_json(0, 0, 0));
             }
-            std::ifstream input(file);
-            if (!input) {
-                continue;
+            const ModuleAst* imported = imported_module_unit(module, current, import);
+            ModuleAst loaded_imported;
+            if (imported == nullptr) {
+                loaded_imported = load_source_tree(file);
+                imported = &visible_module_unit(loaded_imported, file);
             }
-            const std::string text{std::istreambuf_iterator<char>(input),
-                                   std::istreambuf_iterator<char>()};
-            const Document imported{
-                .uri = file_uri(file),
-                .path = file,
-                .text = text,
-            };
-            const std::string target =
-                import.kind == ImportKind::Module ? imported_symbol : import.imported_name;
-            for (const Symbol& symbol : symbols_for_document(imported, false)) {
+            if (import.kind == ImportKind::From) {
+                target = import.imported_name;
+            }
+            for (const Symbol& symbol : symbols_for_module(*imported, false)) {
                 if (symbol.name == target) {
-                    return location_json(uri_for_location(symbol.location, imported),
+                    return location_json(uri_for_location(symbol.location, doc),
                                          range_json(symbol.location));
                 }
             }

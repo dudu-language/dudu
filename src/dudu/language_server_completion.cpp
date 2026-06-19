@@ -60,31 +60,6 @@ std::string completion_documentation(const std::string& label, const std::string
     return label;
 }
 
-const ModuleAst* find_module_unit(const ModuleAst& module, const ModuleAst& current,
-                                  const ImportDecl& import) {
-    std::string resolved_module_path = import.module_path;
-    std::filesystem::path resolved_source_path;
-    for (const ModuleDependency& dependency : current.dependencies) {
-        if (dependency.import_module_path == import.module_path) {
-            resolved_module_path = dependency.resolved_module_path;
-            resolved_source_path = dependency.source_path;
-            break;
-        }
-    }
-    for (const ModuleAst& unit : module.module_units) {
-        if (!resolved_source_path.empty() && unit.source_path == resolved_source_path) {
-            return &unit;
-        }
-        if (unit.module_path == resolved_module_path) {
-            return &unit;
-        }
-    }
-    if (module.module_path == resolved_module_path) {
-        return &module;
-    }
-    return nullptr;
-}
-
 std::string completion_items_json(const std::vector<Symbol>& symbols) {
     std::ostringstream out;
     out << "[";
@@ -117,7 +92,7 @@ std::optional<std::string> module_completion_json(const Document& doc, const std
             if (!matches) {
                 continue;
             }
-            const ModuleAst* imported = find_module_unit(module, current, import);
+            const ModuleAst* imported = imported_module_unit(module, current, import);
             if (imported != nullptr) {
                 return completion_items_json(symbols_for_module(*imported, true));
             }
