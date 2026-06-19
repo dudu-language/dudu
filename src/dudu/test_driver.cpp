@@ -52,6 +52,15 @@ ProjectConfig config_for_options(const TestDriverOptions& options) {
     return config;
 }
 
+ProjectConfig build_config_for_options(const TestDriverOptions& options) {
+    ProjectConfig config = config_for_options(options);
+    if (!config.build_backend_explicit && config.build_backend == "direct" &&
+        !options.input.empty() && source_tree_files(options.input).size() > 1) {
+        config.build_backend = "cmake";
+    }
+    return config;
+}
+
 std::filesystem::path source_dir_for_input(const std::filesystem::path& input) {
     if (input.empty()) {
         return std::filesystem::current_path();
@@ -62,7 +71,7 @@ std::filesystem::path source_dir_for_input(const std::filesystem::path& input) {
 ModuleAst checked_module(const TestDriverOptions& options, const std::string& source) {
     ModuleAst module = options.input.empty() ? parse_source(source, options.input)
                                              : load_source_tree(options.input);
-    const ProjectConfig config = config_for_options(options);
+    const ProjectConfig config = build_config_for_options(options);
     module.build_values = config.build_values;
     module.build_values["TARGET_KIND"] = '"' + config.target_kind + '"';
     module.build_values["TARGET_MODE"] = '"' + config.target_mode + '"';
@@ -72,10 +81,12 @@ ModuleAst checked_module(const TestDriverOptions& options, const std::string& so
     }
     const std::filesystem::path source_dir = source_dir_for_input(options.input);
     merge_native_header_types(module, {.config = config, .source_dir = source_dir});
-    if (config.build_backend != "cmake") {
+    if (config.build_backend == "cmake") {
+        analyze_module_tree(module, {.check_bodies = true});
+    } else {
         reject_direct_backend_module_conflicts(module);
+        analyze_module(module, {.check_bodies = true});
     }
-    analyze_module(module, {.check_bodies = true});
     return module;
 }
 
@@ -201,7 +212,7 @@ std::filesystem::path default_test_output(const TestDriverOptions& options,
 
 int run_one_test_entry(TestDriverOptions options) {
     const std::string source = read_text_file(options.input);
-    const ProjectConfig config = config_for_options(options);
+    const ProjectConfig config = build_config_for_options(options);
     const std::filesystem::path output =
         options.output.value_or(default_test_output(options, config));
     if (config.build_backend == "cmake") {

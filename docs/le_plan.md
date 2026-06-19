@@ -1357,9 +1357,10 @@ push. They are not release packaging work.
 
    Status: `dudu build` and `dudu run` use the direct backend by default for
    single-module inputs. If no backend is explicitly selected and the source
-   tree imports multiple Dudu modules, `dudu build` and `dudu run` select the
-   generated CMake backend so generated C++ stays split into per-module
-   artifacts. `[build] backend = "direct"` and `[build] backend = "cmake"` parse
+   tree imports multiple Dudu modules, `dudu build`, `dudu run`, and
+   `dudu test` select the generated CMake backend so generated C++ stays split
+   into per-module artifacts. `[build] backend = "direct"` and
+   `[build] backend = "cmake"` parse
    from the manifest, and explicit direct keeps strict merged-output diagnostics
    when a project cannot honestly fit in one generated translation unit. The
    generated CMake backend is implemented for `dudu build`, `dudu run`, and

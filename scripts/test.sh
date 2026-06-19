@@ -451,7 +451,6 @@ test -f "$repo_root/build/project_backend_cmake/cmake-backend/build/generated/ma
 test -f "$repo_root/build/project_backend_cmake/cmake-backend/build/generated/helper.cpp"
 grep -Eq "cmake .*project_backend_cmake/dudu-tests/main-[0-9a-f]+-cmake/source/CMakeLists.txt" \
     "$repo_root/build/project_backend_cmake_test.err"
-grep -q "Dudu emit test modules" "$repo_root/build/project_backend_cmake_test.err"
 grep -q "2/2 tests passed" "$repo_root/build/project_backend_cmake_test.out"
 cmake_test_binary=$(sed -n 's/^test //p' "$repo_root/build/project_backend_cmake_test.err" | tail -1)
 cmake_test_generated_dir="$(dirname "$cmake_test_binary")/generated"
@@ -498,11 +497,22 @@ test -f "$repo_root/build/project_import_metadata/cmake-backend/build/generated/
     cd "$repo_root/tests/fixtures/project_backend_auto_modules"
     "$repo_root/build/dudu" run >"$repo_root/build/project_backend_auto_modules_run.out" \
         2>"$repo_root/build/project_backend_auto_modules_run.err"
+    "$repo_root/build/dudu" test >"$repo_root/build/project_backend_auto_modules_test.out" \
+        2>"$repo_root/build/project_backend_auto_modules_test.err"
 )
 grep -Eq "run .*project_backend_auto_modules/cmake-backend/build/backend_auto_modules" \
     "$repo_root/build/project_backend_auto_modules_run.err"
 test -f "$repo_root/build/project_backend_auto_modules/cmake-backend/build/generated/left.cpp"
 test -f "$repo_root/build/project_backend_auto_modules/cmake-backend/build/generated/right.cpp"
+grep -Eq "cmake .*project_backend_auto_modules/dudu-tests/main-[0-9a-f]+-cmake/source/CMakeLists.txt" \
+    "$repo_root/build/project_backend_auto_modules_test.err"
+grep -q "1/1 tests passed" "$repo_root/build/project_backend_auto_modules_test.out"
+auto_modules_test_binary=$(sed -n 's/^test //p' "$repo_root/build/project_backend_auto_modules_test.err" | tail -1)
+auto_modules_test_generated_dir="$(dirname "$auto_modules_test_binary")/generated"
+test -f "$auto_modules_test_generated_dir/main.cpp"
+test -f "$auto_modules_test_generated_dir/left.cpp"
+test -f "$auto_modules_test_generated_dir/right.cpp"
+test -f "$auto_modules_test_generated_dir/test_harness.cpp"
 
 rm -rf "$repo_root/build/project_user_cmake"
 (
