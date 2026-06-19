@@ -76,10 +76,12 @@ std::optional<TypeRef> native_member_expr_type_ref(const Symbols& symbols, const
 
 std::optional<FunctionSignature>
 native_signature_for_call(const FunctionScope& scope, const std::string& callee,
+                          const std::vector<TypeRef>& explicit_template_args,
                           const std::vector<Expr>& args, const SourceLocation* location,
                           const NativeInferExprTypeAstFn& infer_expr_type,
                           const NativeCanAssignAstFn& can_assign) {
-    return match_native_signature(scope, callee, args, location, infer_expr_type, can_assign);
+    return match_native_signature(scope, callee, explicit_template_args, args, location,
+                                  infer_expr_type, can_assign);
 }
 
 } // namespace dudu

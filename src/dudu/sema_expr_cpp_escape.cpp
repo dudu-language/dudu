@@ -258,8 +258,11 @@ TypeRef infer_cpp_escape_expr_ref(const FunctionScope& scope, std::string expr,
             check_call_args_ast(scope, callee, fn->second, args, location);
             return signature_return_type_ref(fn->second);
         }
+        const std::vector<TypeRef> explicit_template_args =
+            callee_type_ref.kind == TypeKind::Template ? callee_type_ref.children
+                                                       : std::vector<TypeRef>{};
         if (const auto signature = native_signature_for_call(
-                scope, callee, args, location, infer_expr_type_ast,
+                scope, callee, explicit_template_args, args, location, infer_expr_type_ast,
                 [&](const TypeRef& expected, const Expr& value, const TypeRef& got) {
                     return can_assign_ast(scope, expected, value, got);
                 })) {

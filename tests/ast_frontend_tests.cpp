@@ -432,7 +432,7 @@ void test_native_variadic_bare_pack_uses_type_ref_shape() {
         return dudu::type_assignment_allowed(expected, got);
     };
     const std::optional<dudu::FunctionSignature> matched =
-        dudu::match_native_signature(scope, "native_printf", args, nullptr, infer, can_assign);
+        dudu::match_native_signature(scope, "native_printf", {}, args, nullptr, infer, can_assign);
     assert(matched.has_value());
     assert(dudu::signature_param_count(*matched) == 2);
     assert(dudu::signature_param_type_ref(*matched, 1).kind == dudu::TypeKind::PackExpansion);

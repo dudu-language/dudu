@@ -39,6 +39,8 @@ forbidden=(
     "parse_native_type_text\\(type_ref_text"
     "render_type\\(const TypeRef"
     "lower_template_call_arg\\("
+    "native_template_call_base"
+    "native_template_type_refs"
 )
 
 for pattern in "${forbidden[@]}"; do

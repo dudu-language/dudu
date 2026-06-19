@@ -173,16 +173,6 @@ std::optional<TypeRef> indexed_tuple_return_type(const TypeRef& return_type,
     return out;
 }
 
-std::vector<TypeRef> native_template_type_refs(const std::vector<std::string>& args,
-                                               SourceLocation location) {
-    std::vector<TypeRef> out;
-    out.reserve(args.size());
-    for (const std::string& arg : args) {
-        out.push_back(native_template_binding_type_ref(arg, location));
-    }
-    return out;
-}
-
 bool numeric_template_arg_ref(const TypeRef& arg) {
     return arg.kind == TypeKind::Value && numeric_template_arg(arg.value);
 }
@@ -375,22 +365,17 @@ bool explicit_native_template_allowed(const FunctionScope& scope, const std::str
 
 std::optional<FunctionSignature>
 match_native_signature(const FunctionScope& scope, const std::string& callee,
+                       const std::vector<TypeRef>& explicit_template_args,
                        const std::vector<Expr>& args, const SourceLocation* location,
                        const NativeInferExprTypeAstFn& infer_expr_type,
                        const NativeCanAssignAstFn& can_assign) {
-    const auto template_call = native_template_call_base(callee);
-    const std::string lookup = template_call ? template_call->first : callee;
-    const std::vector<TypeRef> explicit_template_args =
-        template_call
-            ? native_template_type_refs(template_call->second,
-                                        location == nullptr ? SourceLocation{} : *location)
-            : std::vector<TypeRef>{};
+    const std::string& lookup = callee;
     const auto found = scope.symbols.native_function_signatures.find(lookup);
     if (found == scope.symbols.native_function_signatures.end()) {
         return std::nullopt;
     }
     std::vector<FunctionSignature> candidates = found->second;
-    if (template_call) {
+    if (!explicit_template_args.empty()) {
         for (FunctionSignature& signature : candidates) {
             signature = substitute_explicit_template_signature(std::move(signature),
                                                                explicit_template_args);
@@ -400,7 +385,7 @@ match_native_signature(const FunctionScope& scope, const std::string& callee,
         if (const std::optional<FunctionSignature> matched = match_signature_ast(
                 scope, signature, args, location, infer_expr_type, can_assign)) {
             FunctionSignature resolved = *matched;
-            if (template_call) {
+            if (!explicit_template_args.empty()) {
                 if (const auto indexed = indexed_tuple_return_type(
                         signature_return_type_ref(resolved), explicit_template_args, args, scope,
                         location, infer_expr_type)) {
@@ -418,7 +403,7 @@ match_native_signature(const FunctionScope& scope, const std::string& callee,
         has_variadic_candidate = has_variadic_candidate || signature.variadic;
     }
     if (!has_variadic_candidate &&
-        explicit_native_template_allowed(scope, lookup, template_call.has_value())) {
+        explicit_native_template_allowed(scope, lookup, !explicit_template_args.empty())) {
         for (const Expr& arg : args) {
             (void)infer_expr_type(scope, arg, location);
         }

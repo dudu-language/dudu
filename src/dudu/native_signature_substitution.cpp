@@ -304,36 +304,6 @@ TypeRef native_template_binding_type_ref(std::string_view text, SourceLocation l
     return parse_type_text(trimmed, location);
 }
 
-std::optional<std::pair<std::string, std::vector<std::string>>>
-native_template_call_base(const std::string& callee) {
-    const size_t close = callee.rfind(']');
-    if (close == std::string::npos || close + 1 != callee.size()) {
-        return std::nullopt;
-    }
-    int depth = 0;
-    for (size_t i = close + 1; i > 0; --i) {
-        const size_t pos = i - 1;
-        if (callee[pos] == ']') {
-            ++depth;
-        } else if (callee[pos] == '[') {
-            --depth;
-            if (depth == 0) {
-                const std::string base = trim(callee.substr(0, pos));
-                std::vector<std::string> args =
-                    split_top_level_args(callee.substr(pos + 1, close - pos - 1));
-                for (std::string& arg : args) {
-                    arg = trim(std::move(arg));
-                }
-                if (!base.empty() && !args.empty()) {
-                    return std::make_pair(base, std::move(args));
-                }
-                return std::nullopt;
-            }
-        }
-    }
-    return std::nullopt;
-}
-
 FunctionSignature substitute_explicit_template_signature(FunctionSignature signature,
                                                          const std::vector<TypeRef>& args) {
     const std::vector<std::string> names = signature.template_params.empty()

@@ -2169,6 +2169,11 @@ push. They are not release packaging work.
    no longer disables `TypeRef` substitution or pack expansion for clean
    fields in the same overload. The remaining text replacement is reserved for
    the specific field that needs native-artifact fallback.
+   Native explicit-template calls now pass parsed `TypeRef` template arguments
+   from `TemplateCall` expressions into overload matching directly. The old
+   `native_template_call_base` path decoded `std.get[0]`-style arguments by
+   reparsing the rendered callee string; that parser has been deleted and the
+   migration guard rejects reintroducing it.
    C++ type lowering from structured named and qualified `TypeRef` nodes now
    goes through a name-only lowering helper instead of rendering the type name
    and sending it back through the raw string type parser. Raw type-string
