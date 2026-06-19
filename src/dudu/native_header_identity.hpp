@@ -39,4 +39,10 @@ template <typename T> std::string native_decl_identity_key(const T& decl) {
     return key;
 }
 
+inline bool native_type_redeclarations_compatible(const NativeTypeDecl& lhs,
+                                                  const NativeTypeDecl& rhs) {
+    return lhs.native_spelling.empty() && rhs.native_spelling.empty() &&
+           lhs.type_ref.kind == TypeKind::Unknown && rhs.type_ref.kind == TypeKind::Unknown;
+}
+
 } // namespace dudu

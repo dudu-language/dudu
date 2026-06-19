@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <map>
 #include <set>
+#include <type_traits>
 
 namespace dudu {
 namespace {
@@ -32,6 +33,30 @@ bool non_actionable_native_collision_location(const SourceLocation& location) {
         return true;
     }
     return file.rfind("/usr/", 0) == 0 || file.rfind("/opt/", 0) == 0;
+}
+
+template <typename T>
+void add_unique_native_decl(std::vector<T>& out, std::map<std::string, T>& seen, T value,
+                            std::string_view kind) {
+    const std::string identity = native_decl_identity_key(value);
+    const auto existing = seen.find(value.name);
+    if (existing == seen.end()) {
+        seen[value.name] = value;
+        out.push_back(std::move(value));
+        return;
+    }
+    const bool compatible = [&]() {
+        if constexpr (std::is_same_v<T, NativeTypeDecl>) {
+            return native_type_redeclarations_compatible(existing->second, value);
+        }
+        return false;
+    }();
+    if (native_decl_identity_key(existing->second) != identity && !compatible &&
+        actionable_native_name_collision(value.name) &&
+        !non_actionable_native_collision_location(value.location)) {
+        throw CompileError(value.location,
+                           "native " + std::string(kind) + " name collision: " + value.name);
+    }
 }
 
 template <typename T>
@@ -127,7 +152,7 @@ void add_unique_class(std::vector<ClassDecl>& out, std::map<std::string, std::st
 
 NativeHeaderScan dedupe_scan(NativeHeaderScan scan) {
     NativeHeaderScan out;
-    std::map<std::string, std::string> types;
+    std::map<std::string, NativeTypeDecl> types;
     std::map<std::string, std::string> values;
     std::map<std::string, std::string> macros;
     std::map<std::string, std::string> namespaces;

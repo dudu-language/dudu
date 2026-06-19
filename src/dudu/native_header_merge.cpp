@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <map>
 #include <set>
+#include <type_traits>
 
 namespace dudu {
 namespace {
@@ -35,19 +36,26 @@ bool non_actionable_native_collision_location(const SourceLocation& location) {
 template <typename T>
 void append_unique_native_decls(std::vector<T>& target, const std::vector<T>& source,
                                 std::string_view kind) {
-    std::map<std::string, std::string> seen_by_name;
+    std::map<std::string, T> seen_by_name;
     for (const T& item : target) {
-        seen_by_name[item.name] = native_decl_identity_key(item);
+        seen_by_name[item.name] = item;
     }
     for (const T& item : source) {
         const std::string identity = native_decl_identity_key(item);
         const auto existing = seen_by_name.find(item.name);
         if (existing == seen_by_name.end()) {
-            seen_by_name[item.name] = identity;
+            seen_by_name[item.name] = item;
             target.push_back(item);
             continue;
         }
-        if (existing->second != identity && actionable_native_name_collision(item.name) &&
+        const bool compatible = [&]() {
+            if constexpr (std::is_same_v<T, NativeTypeDecl>) {
+                return native_type_redeclarations_compatible(existing->second, item);
+            }
+            return false;
+        }();
+        if (native_decl_identity_key(existing->second) != identity && !compatible &&
+            actionable_native_name_collision(item.name) &&
             !non_actionable_native_collision_location(item.location)) {
             throw CompileError(item.location,
                                "native " + std::string(kind) + " name collision: " + item.name);
