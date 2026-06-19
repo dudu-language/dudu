@@ -9,6 +9,8 @@ forbidden=(
     "Stmt::target"
     "Stmt::value"
     "Stmt::return_type"
+    "looks_like_dudu_type"
+    "resolve_alias_ref_with_legacy_fallback"
 )
 
 for pattern in "${forbidden[@]}"; do
