@@ -184,9 +184,10 @@ flagging code after a non-exhaustive `if` as unreachable. Remaining work is to
 keep splitting mixed lint/code-action logic, move any residual edit construction
 onto concrete AST/token ranges, and add more false-positive fixtures for
 realistic project/module cases. Import organization in the formatter and LSP code
-actions now shares a parsed `ImportDecl` renderer from the AST layer instead
-of carrying duplicate import string builders, and generic document line helpers
-live in LSP support instead of inside code actions.
+actions now shares structured leading-import block organization and parsed
+`ImportDecl` rendering instead of carrying duplicate import sorting/string
+builders, and generic document line helpers live in LSP support instead of
+inside code actions.
 
 ## Critical Module Import Blocker
 

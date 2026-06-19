@@ -1,9 +1,8 @@
 #include "dudu/format.hpp"
 
-#include "dudu/ast.hpp"
+#include "dudu/format_imports.hpp"
 #include "dudu/parser.hpp"
 
-#include <algorithm>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -40,41 +39,12 @@ void sort_leading_imports(std::vector<std::string>& lines, const std::string& no
     } catch (const std::exception&) {
         return;
     }
-    if (module.imports.size() < 2) {
-        return;
+    const std::optional<OrganizedImportBlock> organized =
+        organized_leading_import_block(lines, module);
+    if (organized) {
+        std::copy(organized->lines.begin(), organized->lines.end(),
+                  lines.begin() + static_cast<std::ptrdiff_t>(organized->start_line));
     }
-    size_t start = 0;
-    while (start < lines.size() && lines[start].empty()) {
-        ++start;
-    }
-    if (start >= lines.size()) {
-        return;
-    }
-    std::vector<ImportDecl> imports = module.imports;
-    std::sort(imports.begin(), imports.end(), [](const ImportDecl& lhs, const ImportDecl& rhs) {
-        return lhs.location.line < rhs.location.line;
-    });
-    if (imports.front().location.line != static_cast<int>(start + 1)) {
-        return;
-    }
-    std::vector<std::string> import_lines;
-    size_t end = start;
-    for (const ImportDecl& import : imports) {
-        if (import.location.line != static_cast<int>(end + 1)) {
-            break;
-        }
-        import_lines.push_back(render_import_decl(import));
-        ++end;
-    }
-    if (import_lines.size() < 2) {
-        return;
-    }
-    std::vector<std::string> sorted = import_lines;
-    std::sort(sorted.begin(), sorted.end());
-    if (sorted == import_lines) {
-        return;
-    }
-    std::copy(sorted.begin(), sorted.end(), lines.begin() + static_cast<std::ptrdiff_t>(start));
 }
 
 std::string join_lines(const std::vector<std::string>& lines) {

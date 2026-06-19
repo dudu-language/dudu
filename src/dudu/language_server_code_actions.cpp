@@ -1,6 +1,7 @@
 #include "dudu/language_server_code_actions.hpp"
 
 #include "dudu/cpp_lower.hpp"
+#include "dudu/format_imports.hpp"
 #include "dudu/language_server_json.hpp"
 #include "dudu/language_server_navigation.hpp"
 #include "dudu/language_server_support.hpp"
@@ -42,51 +43,16 @@ std::string code_action_json(const Document& doc, const CodeActionEdit& action) 
 }
 
 std::optional<TextEdit> organize_imports_edit(const Document& doc, const ModuleAst& module) {
-    if (module.imports.size() < 2) {
-        return std::nullopt;
-    }
     const std::vector<std::string> lines = document_lines(doc.text);
-    size_t start = 0;
-    while (start < lines.size() && trim_copy(lines[start]).empty()) {
-        ++start;
-    }
-    if (start >= lines.size()) {
+    const std::optional<OrganizedImportBlock> organized =
+        organized_leading_import_block(lines, module);
+    if (!organized) {
         return std::nullopt;
     }
-
-    std::vector<ImportDecl> imports = module.imports;
-    std::sort(imports.begin(), imports.end(), [](const ImportDecl& lhs, const ImportDecl& rhs) {
-        return lhs.location.line < rhs.location.line;
-    });
-    if (imports.front().location.line != static_cast<int>(start + 1)) {
-        return std::nullopt;
-    }
-
-    std::vector<std::string> import_lines;
-    size_t end = start;
-    for (const ImportDecl& import : imports) {
-        if (import.location.line != static_cast<int>(end + 1)) {
-            break;
-        }
-        import_lines.push_back(render_import_decl(import));
-        ++end;
-    }
-    if (import_lines.size() < 2) {
-        return std::nullopt;
-    }
-    std::vector<std::string> sorted = import_lines;
-    std::sort(sorted.begin(), sorted.end(), [](const std::string& lhs, const std::string& rhs) {
-        return trim_copy(lhs) < trim_copy(rhs);
-    });
-    if (sorted == import_lines) {
-        return std::nullopt;
-    }
-    std::ostringstream replacement;
-    for (const std::string& import : sorted) {
-        replacement << import << "\n";
-    }
-    return TextEdit{.range = range_json(static_cast<int>(start), 0, static_cast<int>(end), 0),
-                    .new_text = replacement.str()};
+    return TextEdit{
+        .range = range_json(static_cast<int>(organized->start_line), 0,
+                            static_cast<int>(organized->end_line), 0),
+        .new_text = organized->replacement_text};
 }
 
 std::optional<TextEdit> remove_line_edit(const Document& doc, int line) {

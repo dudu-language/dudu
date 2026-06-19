@@ -95,6 +95,8 @@
   to unambiguous workspace symbols.
 - Made project-driver `dudu fmt` skip generated/build directories while leaving
   direct `duc fmt <dir>` recursion unchanged.
+- Shared structured leading-import organization between the formatter and LSP
+  organize-imports code action.
 - Added project-driver output for successful `dudu check`, documented
   `dudu bench` in help, and made `dudu bench --quiet`/`--help` behave as
   project-driver flags while preserving benchmark arguments after `--`.

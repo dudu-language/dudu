@@ -367,7 +367,9 @@ exception handlers are covered.
 Hover for typed locals and simple inferred locals is covered.
 Hover for Dudu declaration doc comments is covered.
 Hover for Dudu symbols imported through module aliases is covered.
-Format and organize-imports code actions are covered.
+Format and organize-imports code actions are covered. Formatter and LSP
+organize-imports behavior share the same structured leading-import block
+helper.
 Missing-import quick fixes are covered using an unopened workspace file, with
 an ambiguity guard that suppresses the fix when more than one workspace module
 exports the missing name.
