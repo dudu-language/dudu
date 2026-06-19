@@ -122,6 +122,9 @@
   `compile`, and final `output`/`run` stages.
 - Clarified native-header redeclaration collision handling by spelling the
   opaque native type exception at the collision branches.
+- Made direct unaliased native C/C++ functions and types participate in
+  current-document LSP reference lookup once the native scanner proves the
+  symbol exists in the document's imports.
 
 ### Fixed
 

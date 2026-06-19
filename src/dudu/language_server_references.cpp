@@ -164,6 +164,24 @@ bool document_has_type_symbol(const Document& doc, const std::string& name) {
     return false;
 }
 
+bool document_has_direct_native_symbol(const Document& doc, const std::string& name) {
+    if (name.empty() || name.find('.') != std::string::npos) {
+        return false;
+    }
+    for (const Symbol& symbol : symbols_for_document(doc)) {
+        if (symbol.name != name || std::filesystem::path(symbol.location.file) == doc.path) {
+            continue;
+        }
+        if (symbol.kind == lsp_symbol_kind::Class || symbol.kind == lsp_symbol_kind::Struct ||
+            symbol.kind == lsp_symbol_kind::Enum || symbol.kind == lsp_symbol_kind::Function ||
+            symbol.kind == lsp_symbol_kind::Constant ||
+            symbol.kind == lsp_symbol_kind::Namespace) {
+            return true;
+        }
+    }
+    return false;
+}
+
 std::optional<std::string> dotted_source_symbol_at(const Document& doc, const Json* params) {
     const LspPosition position = lsp_position(params);
     int line = 0;
@@ -310,6 +328,9 @@ ReferenceScope reference_scope_at(const Document& doc, const Json* params,
         return ReferenceScope::Workspace;
     }
     if (unique_document_declaration_for_references(doc, name).has_value()) {
+        return ReferenceScope::CurrentDocument;
+    }
+    if (document_has_direct_native_symbol(doc, name)) {
         return ReferenceScope::CurrentDocument;
     }
     return ReferenceScope::None;

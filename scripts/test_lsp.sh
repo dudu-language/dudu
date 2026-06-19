@@ -679,6 +679,28 @@ messages = [
     packet(
         {
             "jsonrpc": "2.0",
+            "id": 70,
+            "method": "textDocument/references",
+            "params": {
+                "textDocument": {"uri": direct_native_uri},
+                "position": {"line": 4, "character": 14},
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 71,
+            "method": "textDocument/references",
+            "params": {
+                "textDocument": {"uri": direct_native_uri},
+                "position": {"line": 3, "character": 14},
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
             "id": 43,
             "method": "textDocument/definition",
             "params": {
@@ -1835,6 +1857,30 @@ assert direct_native_signature["result"]["activeParameter"] == 1
 direct_native_definition = next(item for item in responses if item.get("id") == 37)
 assert direct_native_definition["result"]["uri"].endswith("/tests/fixtures/native_headers/simple_c.h")
 assert direct_native_definition["result"]["range"]["start"]["line"] == 20
+
+direct_native_function_references = next(item for item in responses if item.get("id") == 70)
+direct_native_function_reference_ranges = {
+    (
+        item["range"]["start"]["line"],
+        item["range"]["start"]["character"],
+        item["range"]["end"]["character"],
+    )
+    for item in direct_native_function_references["result"]
+    if item["uri"] == direct_native_uri
+}
+assert direct_native_function_reference_ranges == {(4, 11, 26)}
+
+direct_native_type_references = next(item for item in responses if item.get("id") == 71)
+direct_native_type_reference_ranges = {
+    (
+        item["range"]["start"]["line"],
+        item["range"]["start"]["character"],
+        item["range"]["end"]["character"],
+    )
+    for item in direct_native_type_references["result"]
+    if item["uri"] == direct_native_uri
+}
+assert direct_native_type_reference_ranges == {(3, 11, 26)}
 
 direct_native_header_definition = next(item for item in responses if item.get("id") == 43)
 assert direct_native_header_definition["result"]["uri"].endswith("/tests/fixtures/native_headers/simple_c.h")
