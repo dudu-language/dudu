@@ -223,14 +223,6 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
     cache[key] = dedupe_scan(std::move(scan));
     return cache[key];
 }
-template <typename T> void append_unique(std::vector<T>& target, const std::vector<T>& source) {
-    std::set<std::string> seen;
-    for (const T& item : target)
-        seen.insert(item.name);
-    for (const T& item : source)
-        if (seen.insert(item.name).second)
-            target.push_back(item);
-}
 template <typename T>
 std::vector<T> prefixed_names(const std::vector<T>& source, const std::string& prefix) {
     std::vector<T> out;
@@ -277,34 +269,34 @@ NativeHeaderScan scan_native_headers(const ModuleAst& module, const NativeHeader
         }
         NativeHeaderScan scan = scan_one_header(import, options, flags);
         if (direct_import(import)) {
-            append_unique(out.types, scan.types);
-            append_unique(out.classes, scan.classes);
-            append_unique(out.values, scan.values);
+            append_unique_native_types(out.types, scan.types);
+            append_unique_native_classes(out.classes, scan.classes);
+            append_unique_native_values(out.values, scan.values);
             append_unique_native_functions(out.functions, scan.functions);
-            append_unique(out.macros, direct_macros(scan.macros));
-            append_unique(out.namespaces, scan.namespaces);
+            append_unique_native_macros(out.macros, direct_macros(scan.macros));
+            append_unique_native_namespaces(out.namespaces, scan.namespaces);
         } else {
-            append_unique(out.types, scan.types);
-            append_unique(out.classes, scan.classes);
-            append_unique(out.types, prefixed_type_names(scan.types, import.alias));
-            append_unique(out.classes, prefixed_names(scan.classes, import.alias));
-            append_unique(out.values, prefixed_names(scan.values, import.alias));
+            append_unique_native_types(out.types, scan.types);
+            append_unique_native_classes(out.classes, scan.classes);
+            append_unique_native_types(out.types, prefixed_type_names(scan.types, import.alias));
+            append_unique_native_classes(out.classes, prefixed_names(scan.classes, import.alias));
+            append_unique_native_values(out.values, prefixed_names(scan.values, import.alias));
             append_unique_native_functions(out.functions,
                                            prefixed_names(scan.functions, import.alias));
-            append_unique(out.macros, prefixed_names(scan.macros, import.alias));
-            append_unique(out.namespaces, scan.namespaces);
+            append_unique_native_macros(out.macros, prefixed_names(scan.macros, import.alias));
+            append_unique_native_namespaces(out.namespaces, scan.namespaces);
         }
     }
     return out;
 }
 void merge_native_headers(ModuleAst& module, const NativeHeaderOptions& options) {
     NativeHeaderScan scan = scan_native_headers(module, options);
-    append_unique(module.native_types, scan.types);
-    append_unique(module.native_values, scan.values);
+    append_unique_native_types(module.native_types, scan.types);
+    append_unique_native_values(module.native_values, scan.values);
     append_unique_native_functions(module.native_functions, scan.functions);
-    append_unique(module.native_macros, scan.macros);
-    append_unique(module.native_namespaces, scan.namespaces);
-    append_unique(module.native_classes, scan.classes);
+    append_unique_native_macros(module.native_macros, scan.macros);
+    append_unique_native_namespaces(module.native_namespaces, scan.namespaces);
+    append_unique_native_classes(module.native_classes, scan.classes);
 }
 std::vector<NativeTypeDecl> scan_native_header_types(const ModuleAst& module,
                                                      const NativeHeaderOptions& options) {

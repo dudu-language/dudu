@@ -321,6 +321,7 @@ struct ClassDecl {
     Visibility visibility = Visibility::Default;
     std::string name;
     std::string cpp_name;
+    NativeSymbolId identity{};
     std::vector<std::string> generic_params;
     std::vector<BaseClassDecl> base_class_refs;
     std::vector<Decorator> decorators;

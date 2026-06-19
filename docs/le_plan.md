@@ -2194,6 +2194,12 @@ push. They are not release packaging work.
    and sending it back through the raw string type parser. Raw type-string
    lowering remains only for explicit native/C++ escape compatibility paths
    and tests that exercise that boundary.
+   Native header merge now uses `NativeSymbolId` for types, values, macros,
+   namespaces, and native class shapes when deciding whether a repeated Dudu
+   binding is the same native declaration. Unqualified same-name/different-
+   identity imports are rejected instead of being silently deduped by spelling;
+   qualified scanner-collapsed C++ associated artifacts remain tracked by the
+   native identity plan.
    The AST migration guard now rejects `lower_cpp_type(type_ref_head_name(...))`
    so structured type-name codegen cannot silently re-enter the raw type parser.
    Raw string C++ type lowering no longer has its own hand-written function

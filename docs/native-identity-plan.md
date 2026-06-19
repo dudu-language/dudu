@@ -89,11 +89,17 @@ In progress.
   also populate `identity.canonical_path`.
 - Fast migration guards reject native declaration structs that drop
   `NativeSymbolId identity`.
+- Native header merging now deduplicates native types, values, macros,
+  namespaces, and classes by the Dudu binding plus `NativeSymbolId`;
+  unqualified same-named bindings with different native identities are compile
+  errors instead of silently keeping the first declaration. Qualified C++
+  associated artifacts such as `std.iterator` still need deeper scanner
+  modeling before every same-name/different-identity case can be rejected.
 
 Still missing:
 
 - Clang USR collection.
-- Identity-aware maps and deduplication as the primary key.
+- Identity-aware symbol maps as the primary sema key.
 - Identity-aware type compatibility when both sides carry native identity facts.
 - LSP go-to-definition through canonical native identity.
 

@@ -26,6 +26,14 @@ NativeSymbolId native_identity(std::string canonical_path) {
     return id;
 }
 
+NativeSymbolId native_identity(std::string canonical_path, const std::string& source_file) {
+    NativeSymbolId id = native_identity(std::move(canonical_path));
+    if (!source_file.empty()) {
+        id.usr = source_file + "::" + id.canonical_path;
+    }
+    return id;
+}
+
 TypeRef normalize_native_type_ref(TypeRef type);
 
 TypeRef parse_native_type_text(std::string text, const SourceLocation& location) {
@@ -259,8 +267,9 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
             return;
         }
         namespaces.push_back({depth, name});
-        scan.namespaces.push_back(
-            {.name = name, .identity = native_identity(name), .location = decl_location});
+        scan.namespaces.push_back({.name = name,
+                                   .identity = native_identity(name, current_file),
+                                   .location = decl_location});
     } else if ((line.find("TypedefDecl") != std::string::npos ||
                 line.find("TypeAliasDecl") != std::string::npos) &&
                std::regex_search(line, match, typedef_decl)) {
@@ -273,7 +282,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
             scan.types.push_back({.name = name,
                                   .native_spelling = useful_alias ? lowered_type : "",
                                   .type_ref = type_ref,
-                                  .identity = native_identity(name),
+                                  .identity = native_identity(name, current_file),
                                   .location = decl_location});
         }
     } else if ((line.find("RecordDecl") != std::string::npos ||
@@ -285,11 +294,12 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
             scan.types.push_back({.name = name,
                                   .native_spelling = "",
                                   .type_ref = {},
-                                  .identity = native_identity(name),
+                                  .identity = native_identity(name, current_file),
                                   .location = decl_location});
             if (line.find(" definition") != std::string::npos) {
                 ClassDecl klass;
                 klass.name = name;
+                klass.identity = native_identity(name, current_file);
                 klass.location = decl_location;
                 scan.classes.push_back(std::move(klass));
                 classes.push_back({depth, scan.classes.size() - 1});
@@ -302,7 +312,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
             scan.types.push_back({.name = name,
                                   .native_spelling = "",
                                   .type_ref = {},
-                                  .identity = native_identity(name),
+                                  .identity = native_identity(name, current_file),
                                   .location = decl_location});
             enums.push_back({depth, name});
         }
@@ -315,7 +325,7 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         const std::string signature = match[2].str();
         NativeFunctionDecl fn;
         fn.name = name;
-        fn.identity = native_identity(name);
+        fn.identity = native_identity(name, current_file);
         if (!templates.empty()) {
             fn.template_params = templates.back().params;
         }
@@ -392,19 +402,19 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                                    .native_spelling = type,
                                    .type_ref = parse_native_type_text(type, decl_location),
                                    .enum_constant = true,
-                                   .identity = native_identity(name),
+                                   .identity = native_identity(name, current_file),
                                    .location = decl_location});
         }
     } else if (line.find("VarDecl") != std::string::npos &&
                line.find("ParmVarDecl") == std::string::npos &&
                std::regex_search(line, match, var_decl)) {
         const std::string name = match[1].str();
-        if (!starts_with(name, "__")) {
+        if (!starts_with(name, "__") && name != "dudu_probe") {
             const std::string type = dudu_type(match[2].str());
             scan.values.push_back({.name = name,
                                    .native_spelling = type,
                                    .type_ref = parse_native_type_text(type, decl_location),
-                                   .identity = native_identity(name),
+                                   .identity = native_identity(name, current_file),
                                    .location = decl_location});
         }
     }

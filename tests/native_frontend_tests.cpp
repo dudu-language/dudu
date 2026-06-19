@@ -232,6 +232,37 @@ void test_native_identity_edge_cases(const std::filesystem::path& root) {
     assert(saw_inline);
 }
 
+void test_native_identity_name_collision_is_rejected(const std::filesystem::path& root) {
+    const std::filesystem::path source_dir = root / "build" / "native-identity-name-collision";
+    const std::filesystem::path left = source_dir / "left.hpp";
+    const std::filesystem::path right = source_dir / "right.hpp";
+    std::filesystem::remove_all(source_dir);
+    std::filesystem::create_directories(source_dir);
+    {
+        std::ofstream out(left);
+        out << "#pragma once\nstruct Thing { int x; };\n";
+    }
+    {
+        std::ofstream out(right);
+        out << "#pragma once\nstruct Thing { float y; };\n";
+    }
+
+    bool failed = false;
+    try {
+        dudu::ModuleAst module = dudu::parse_source("import cpp \"./left.hpp\"\n"
+                                                    "import cpp \"./right.hpp\"\n",
+                                                    source_dir / "main.dd");
+        dudu::ProjectConfig config;
+        config.project_dir = source_dir;
+        config.build_dir = source_dir / "build";
+        dudu::merge_native_header_types(module, {.config = config, .source_dir = source_dir});
+    } catch (const dudu::CompileError& error) {
+        failed = std::string(error.what()).find("native type name collision: Thing") !=
+                 std::string::npos;
+    }
+    assert(failed);
+}
+
 void test_native_single_underscore_function_macros(const std::filesystem::path& root) {
     const std::filesystem::path source_dir = root / "build" / "native-macro-scan";
     const std::filesystem::path header_dir = root / "build" / "native-macro-include";
@@ -368,6 +399,7 @@ int main() {
         test_native_header_type_scan(root);
         test_native_header_alias_preserves_identity(root);
         test_native_identity_edge_cases(root);
+        test_native_identity_name_collision_is_rejected(root);
         test_native_single_underscore_function_macros(root);
         test_native_call_arity(root);
         test_native_header_collision(root);
