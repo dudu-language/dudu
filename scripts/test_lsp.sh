@@ -35,6 +35,7 @@ def read_packets(data):
     return out
 
 uri = "file:///tmp/dudu_lsp_bad.dd"
+unrelated_uri = "file:///tmp/dudu_lsp_unrelated.dd"
 native_uri = f"file://{repo_root}/tests/fixtures/dudu_lsp_native.dd"
 missing_native_uri = f"file://{repo_root}/tests/fixtures/dudu_lsp_missing_native.dd"
 native_pkg_uri = f"file://{repo_root}/tests/fixtures/lsp_pkg_project/main.dd"
@@ -113,6 +114,29 @@ messages = [
                     "languageId": "dudu",
                     "version": 1,
                     "text": source,
+                }
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "method": "textDocument/didOpen",
+            "params": {
+                "textDocument": {
+                    "uri": unrelated_uri,
+                    "languageId": "dudu",
+                    "version": 1,
+                    "text": "\n".join(
+                        [
+                            "def add(a: i32, b: i32) -> i32:",
+                            "    return a - b",
+                            "",
+                            "def main() -> i32:",
+                            "    return add(8, 3)",
+                            "",
+                        ]
+                    ),
                 }
             },
         }
@@ -1025,6 +1049,14 @@ messages = [
     packet(
         {
             "jsonrpc": "2.0",
+            "id": 63,
+            "method": "textDocument/references",
+            "params": {"textDocument": {"uri": uri}, "position": {"line": 3, "character": 5}},
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
             "id": 61,
             "method": "textDocument/references",
             "params": {"textDocument": {"uri": uri}, "position": {"line": 8, "character": 13}},
@@ -1566,12 +1598,22 @@ formatting = next(item for item in responses if item.get("id") == 7)
 assert "def main() -> i32:\n    value: i32 = add(1, 2)\n    player: Player = Player(3)\n    player.hp\n    return True\n" in formatting["result"][0]["newText"]
 
 references = next(item for item in responses if item.get("id") == 13)
+assert all(item["uri"] == uri for item in references["result"])
 reference_starts = {
     (item["range"]["start"]["line"], item["range"]["start"]["character"])
     for item in references["result"]
 }
 assert (3, 4) in reference_starts
 assert (7, 17) in reference_starts
+
+declaration_references = next(item for item in responses if item.get("id") == 63)
+assert all(item["uri"] != unrelated_uri for item in declaration_references["result"])
+declaration_reference_starts = {
+    (item["range"]["start"]["line"], item["range"]["start"]["character"])
+    for item in declaration_references["result"]
+    if item["uri"] == uri
+}
+assert declaration_reference_starts == {(3, 4), (7, 17)}
 
 type_references = next(item for item in responses if item.get("id") == 61)
 type_reference_starts = {

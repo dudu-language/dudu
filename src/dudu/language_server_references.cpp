@@ -27,6 +27,13 @@ enum class RenameScope {
     CurrentDocument,
 };
 
+enum class ReferenceScope {
+    None,
+    Workspace,
+    WorkspaceSkipRedeclarations,
+    CurrentDocument,
+};
+
 bool renameable_symbol_kind(const int kind) {
     return kind == lsp_symbol_kind::Class || kind == lsp_symbol_kind::Method ||
            kind == lsp_symbol_kind::Field || kind == lsp_symbol_kind::Enum ||
@@ -163,12 +170,31 @@ RenameScope rename_scope_at(const Document& doc, const Json* params, const std::
     return RenameScope::None;
 }
 
+ReferenceScope reference_scope_at(const Document& doc, const Json* params,
+                                  const std::string& name) {
+    if (name.empty()) {
+        return ReferenceScope::None;
+    }
+    if (declaration_at_position(doc, params, name).has_value()) {
+        return ReferenceScope::WorkspaceSkipRedeclarations;
+    }
+    if (const std::optional<std::string> path = ast_symbol_path_at(doc, params);
+        path.has_value() && path->find('.') != std::string::npos) {
+        return ReferenceScope::Workspace;
+    }
+    if (unique_document_declaration_for_references(doc, name).has_value()) {
+        return ReferenceScope::CurrentDocument;
+    }
+    return ReferenceScope::None;
+}
+
 } // namespace
 
 std::string references_json(const Document& doc, const Json* params,
                             const std::map<std::string, Document>& workspace) {
     const std::string query = ast_symbol_at(doc, params).value_or("");
-    if (query.empty()) {
+    const ReferenceScope scope = reference_scope_at(doc, params, query);
+    if (scope == ReferenceScope::None) {
         return "[]";
     }
     std::ostringstream out;
@@ -176,6 +202,13 @@ std::string references_json(const Document& doc, const Json* params,
     bool first = true;
     for (const auto& [uri, candidate] : workspace) {
         (void)uri;
+        if (scope == ReferenceScope::CurrentDocument && candidate.uri != doc.uri) {
+            continue;
+        }
+        if (scope == ReferenceScope::WorkspaceSkipRedeclarations && candidate.uri != doc.uri &&
+            document_declares_renameable_symbol(candidate, query)) {
+            continue;
+        }
         for (const ReferenceLocation& location : references_in(candidate, query)) {
             if (!first) {
                 out << ",";

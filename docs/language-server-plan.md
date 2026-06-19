@@ -358,6 +358,8 @@ build-configuration diagnostics from a broken `dudu.toml`.
 It also covers workspace symbols and references from an unopened sibling `.dd`
 file, imported modules from a skipped `vendor` directory, plus Dudu-native and
 native C++ member completion.
+Declaration-anchored references skip unrelated same-named Dudu declarations,
+while imported module/member references still search the workspace.
 Imported Dudu module completion is covered with an unopened sibling module.
 Completion resolve, snippets, and typed local completions are covered.
 Common-form snippets for functions, classes, control flow, imports, enums, and

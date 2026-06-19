@@ -1165,7 +1165,9 @@ push. They are not release packaging work.
    is allowed when the call resolves to one renameable Dudu declaration in that
    document and no visible local type binding shadows it; ambiguous use-sites
    remain rejected until symbol identity is strong enough to avoid editing
-   unrelated same-named locals.
+   unrelated same-named locals. Declaration-anchored references use the same
+   conservative redeclaration filter, while imported module/member references
+   keep workspace search.
 
 13. Project Driver Polish
 
