@@ -68,6 +68,7 @@ add_library(dudu_frontend
     src/dudu/language_server_definition.cpp
     src/dudu/language_server_diagnostics.cpp
     src/dudu/language_server_hover.cpp
+    src/dudu/language_server_import_references.cpp
     src/dudu/language_server_json.cpp
     src/dudu/language_server_lint_common.cpp
     src/dudu/language_server_lint_unreachable.cpp
