@@ -7,12 +7,12 @@
 #include "dudu/language_server_support.hpp"
 #include "dudu/language_server_symbols.hpp"
 #include "dudu/lexer.hpp"
+#include "dudu/module_loader.hpp"
 #include "dudu/native_headers.hpp"
 #include "dudu/parser.hpp"
 
 #include <algorithm>
 #include <filesystem>
-#include <fstream>
 #include <optional>
 #include <set>
 #include <sstream>
@@ -60,51 +60,78 @@ std::string completion_documentation(const std::string& label, const std::string
     return label;
 }
 
+const ModuleAst* find_module_unit(const ModuleAst& module, const ModuleAst& current,
+                                  const ImportDecl& import) {
+    std::string resolved_module_path = import.module_path;
+    std::filesystem::path resolved_source_path;
+    for (const ModuleDependency& dependency : current.dependencies) {
+        if (dependency.import_module_path == import.module_path) {
+            resolved_module_path = dependency.resolved_module_path;
+            resolved_source_path = dependency.source_path;
+            break;
+        }
+    }
+    for (const ModuleAst& unit : module.module_units) {
+        if (!resolved_source_path.empty() && unit.source_path == resolved_source_path) {
+            return &unit;
+        }
+        if (unit.module_path == resolved_module_path) {
+            return &unit;
+        }
+    }
+    if (module.module_path == resolved_module_path) {
+        return &module;
+    }
+    return nullptr;
+}
+
+std::string completion_items_json(const std::vector<Symbol>& symbols) {
+    std::ostringstream out;
+    out << "[";
+    bool first = true;
+    for (const Symbol& symbol : symbols) {
+        if (!first) {
+            out << ",";
+        }
+        first = false;
+        out << "{\"label\":\"" << json_escape(symbol.name)
+            << "\",\"kind\":" << completion_kind(symbol.kind) << ",\"detail\":\""
+            << json_escape(symbol.detail) << "\"}";
+    }
+    out << "]";
+    return out.str();
+}
+
 std::optional<std::string> module_completion_json(const Document& doc, const std::string& target) {
-    ModuleAst module;
     try {
-        module = parse_source(doc.text, doc.path);
+        const ModuleAst module = module_for_document(doc, true);
+        const ModuleAst& current = visible_module_unit(module, doc.path);
+        for (const ImportDecl& import : current.imports) {
+            if (import.kind != ImportKind::Module) {
+                continue;
+            }
+            const std::string bound = bound_import_name(import);
+            const bool matches = import.alias.empty()
+                                     ? (target == import.module_path || target == bound)
+                                     : target == bound;
+            if (!matches) {
+                continue;
+            }
+            const ModuleAst* imported = find_module_unit(module, current, import);
+            if (imported != nullptr) {
+                return completion_items_json(symbols_for_module(*imported, true));
+            }
+            const std::filesystem::path file =
+                module_path_to_file(doc.path.parent_path(), import.module_path);
+            if (!std::filesystem::exists(file)) {
+                return "[]";
+            }
+            const ModuleAst imported_tree = load_source_tree(file);
+            return completion_items_json(
+                symbols_for_module(visible_module_unit(imported_tree, file), true));
+        }
     } catch (const std::exception&) {
         return std::nullopt;
-    }
-    for (const ImportDecl& import : module.imports) {
-        if (import.kind != ImportKind::Module) {
-            continue;
-        }
-        const std::string bound = bound_import_name(import);
-        const bool matches = import.alias.empty()
-                                 ? (target == import.module_path || target == bound)
-                                 : target == bound;
-        if (!matches) {
-            continue;
-        }
-        const std::filesystem::path file =
-            module_path_to_file(doc.path.parent_path(), import.module_path);
-        std::ifstream input(file);
-        if (!input) {
-            return "[]";
-        }
-        const std::string text{std::istreambuf_iterator<char>(input),
-                               std::istreambuf_iterator<char>()};
-        const Document imported{
-            .uri = file_uri(file),
-            .path = file,
-            .text = text,
-        };
-        std::ostringstream out;
-        out << "[";
-        bool first = true;
-        for (const Symbol& symbol : symbols_for_document(imported, false)) {
-            if (!first) {
-                out << ",";
-            }
-            first = false;
-            out << "{\"label\":\"" << json_escape(symbol.name)
-                << "\",\"kind\":" << completion_kind(symbol.kind) << ",\"detail\":\""
-                << json_escape(symbol.detail) << "\"}";
-        }
-        out << "]";
-        return out.str();
     }
     return std::nullopt;
 }

@@ -1285,8 +1285,9 @@ push. They are not release packaging work.
    signature help now use the same shared LSP module view, including imported
    Dudu module shapes, visible imported functions, and native headers. Fields
    and methods on imported classes such as `from vec3 import Vec3` are visible
-   to the editor, and selectively imported functions participate in completion
-   and call signature help.
+   to the editor, selectively imported functions participate in completion and
+   call signature help, and `module.` completion resolves through loaded module
+   units instead of manually reparsing imported files.
 
 14. Project Driver Polish
 
