@@ -1,24 +1,26 @@
 # dudu
 
-Dudu is a statically typed Python-shaped language that compiles to readable C++.
+Dudu is a statically typed Python-shaped systems language that compiles to
+readable C++20.
 
-The goal is Python syntax people already know, C/C++-style types and data
-movement, native-speed output, full access to existing C and C++ libraries, and
-generated `.hpp/.cpp` files that C++ projects can use directly. Source files use
-`.dd`.
+The target is simple: write code that looks close to Python, keep C/C++ style
+control over types and memory, use existing C and C++ libraries directly, and
+produce native code that C++ projects can consume.
+
+Source files use `.dd`.
 
 ```python
 import cpp "raylib.h" as rl
 
 
-class PlayerState:
+class Player:
     hp: i32
     x: f32
     y: f32
 
 
 def main() -> i32:
-    player = PlayerState(hp=100, x=400.0, y=300.0)
+    player = Player(hp=100, x=400.0, y=300.0)
 
     rl.InitWindow(800, 600, "dudu")
 
@@ -32,24 +34,17 @@ def main() -> i32:
     return 0
 ```
 
-## Current Status
+## Status
 
-The checked-in compiler parses `.dd`, checks the core typed subset, emits
-readable C++20, emits importable headers, formats source, handles multi-file
-Dudu imports, and validates the canonical examples that do not require external
-SDKs.
+Dudu is usable as an early compiler. It can parse and check the core typed
+subset, format source, compile multi-file projects, import native C/C++
+headers, emit readable C++20, and drive CMake-backed builds through `dudu`.
 
-The starting point is:
+It is not a stable language release yet. The current work is focused on making
+the compiler architecture, module system, native interop, diagnostics, and
+tooling solid enough for real projects.
 
-- [Project goals](docs/goals.md)
-- [Appearance spec](docs/appearance-spec.md)
-- [Python subset compiler plan](docs/python-subset-compiler-plan.md)
-- [Language sketch](docs/language.md)
-- [Interop plan](docs/interop.md)
-- [Compiler plan](docs/compiler-plan.md)
-- [Development plan](docs/development-plan.md)
-
-## Fresh Checkout Install
+## Install
 
 Install prerequisites.
 
@@ -66,7 +61,7 @@ xcode-select --install
 brew install cmake
 ```
 
-Clone, build, and install the current checkout:
+Clone, build, and install:
 
 ```sh
 git clone https://github.com/wegfawefgawefg/dudu.git
@@ -76,7 +71,20 @@ export PATH="$HOME/.local/bin:$PATH"
 dudu --version
 ```
 
-Create and run a small project:
+`install-local.sh` installs:
+
+- `dudu`, the project driver
+- `duc`, the lower-level compiler driver
+- docs
+- editor support files
+
+The default install prefix is `~/.local`. Use another prefix with:
+
+```sh
+./scripts/install-local.sh --prefix /path/to/prefix
+```
+
+## First Project
 
 ```sh
 dudu init hello
@@ -84,58 +92,26 @@ cd hello
 dudu run
 ```
 
-The local install script installs `dudu`, `duc`, docs, and editor support
-through CMake install rules. It defaults to `~/.local`; use
-`./scripts/install-local.sh --prefix /path/to/prefix` for another install root.
-
-Optional examples that use native libraries such as raylib or SDL3 need those
-libraries installed separately.
-
-Build the compiler:
+Common project commands:
 
 ```sh
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build
+dudu check
+dudu build
+dudu run
+dudu test
+dudu fmt
+dudu clean
 ```
 
-Build the compiler with developer tests enabled:
+Add `--timings` when a build feels slow:
 
 ```sh
-./scripts/build.sh
+dudu run --timings
 ```
 
-Show the compiler-driver commands:
+## Project Files
 
-```sh
-./build/duc --help
-./build/duc --version
-```
-
-Use `dudu` for normal project work. It is the Cargo-like front door for creating
-projects, building, running, testing, and cleaning:
-
-```sh
-./build/dudu init hello
-cd hello
-../build/dudu run
-../build/dudu test
-../build/dudu clean
-```
-
-Use `duc` for direct compiler-driver actions, similar to how `rustc` sits under
-Cargo:
-
-```sh
-./build/duc check tests/fixtures/simple_program.dd
-./build/duc fmt tests/fixtures/simple_program.dd
-./build/duc fmt tests/fixtures/simple_program.dd --check
-./build/duc emit tests/fixtures/simple_program.dd
-./build/duc run tests/fixtures/run_zero.dd
-./build/duc tests/fixtures/c_api_export.dd --emit-c-header -
-./build/duc emit examples/compile_time.dd -DDEBUG=true -DRENDER_BACKEND=raylib
-```
-
-A `dudu.toml` project can name its entry file and native build settings:
+Simple projects use `dudu.toml`:
 
 ```toml
 name = "hello"
@@ -144,154 +120,41 @@ entry = "src/main.dd"
 [cxx]
 standard = "c++20"
 
-[build]
-dir = "build"
-
-[include]
-paths = ["include"]
-
 [pkg]
 libs = ["raylib"]
 ```
 
-Manifest paths are resolved from the directory containing `dudu.toml`, not from
-the shell's current working directory. Explicit local imports such as
-`import "./math.dd"` or `import cpp "./local.hpp"` remain relative to the source
-file that contains the import.
+For larger native projects, `dudu build`, `dudu run`, and `dudu test` stay the
+front door, but CMake is the serious native backend. Dudu can generate and drive
+internal CMake projects, and it can also build user-owned CMake projects when
+the native build needs toolchain files, platform rules, vendored C/C++ code, or
+larger dependency graphs.
 
-Then run project commands from the project directory:
+Generated CMake under `build/` belongs to Dudu and may be overwritten.
+User-owned `CMakeLists.txt` files are never patched by Dudu.
 
-```sh
-../build/dudu check
-../build/dudu build
-../build/dudu run
-../build/dudu test
-../build/dudu clean-cache
+## Native Interop
+
+Import C and C++ headers directly:
+
+```python
+import cpp "raylib.h" as rl
+import cpp "vector" as std
 ```
-
-Add `--timings` to project commands when a build feels slow:
-
-```sh
-dudu run --timings
-```
-
-This prefixes Dudu progress lines with elapsed time so long analysis, emit,
-CMake, compile, or run phases are visible without changing program stdout.
-
-`dudu build`, `dudu run`, and `dudu test` are intended to stay the normal
-front door even for serious native projects. The direct compiler path is the
-fast narrow backend. CMake is the broad native ecosystem backend for larger
-dependency graphs, package discovery, IDE generators, and user-owned native
-builds. `dudu cmake` is an inspectable escape hatch, not the replacement for
-`dudu build`.
-
-`dudu.toml` is the canonical Dudu project file, but it does not need to own
-every native compilation detail. For simple projects it can describe the whole
-build. For larger C/C++ projects it can select a user-owned CMake backend while
-CMake remains the authority for native target definitions, toolchain files,
-platform conditionals, install rules, and vendored native dependency setup.
-The user still enters through `dudu build`/`run`/`test`; the backend boundary is
-explicit instead of pretending TOML can replace all native build systems.
-Generated CMake under the build directory is Dudu-owned and may be overwritten.
-User-owned `CMakeLists.txt` files are not patched by Dudu; they should consume
-stable generated Dudu artifacts explicitly.
-
-Project manifests can also define named targets:
-
-```toml
-name = "tools"
-
-[targets.app]
-entry = "src/main.dd"
-kind = "executable"
-
-[targets.tests]
-entry = "tests/main.dd"
-kind = "executable"
-
-[targets.app.pkg]
-libs = ["raylib"]
-
-[targets.tests.sources]
-cpp = ["tests/support.cpp"]
-```
-
-```sh
-../build/dudu run app
-../build/dudu build tests
-../build/dudu test
-```
-
-If an input file matches a target entry, Dudu applies that target's settings for
-direct file builds too.
 
 Generated headers are available for C and C++ integration:
 
 ```sh
-./build/duc emit examples/cpp_library.dd -o build/cpp_library.cpp
-./build/duc examples/cpp_library.dd --emit-header build/cpp_library.hpp
+duc emit examples/cpp_library.dd -o build/cpp_library.cpp
+duc examples/cpp_library.dd --emit-header build/cpp_library.hpp
 ```
 
-Run the core repository validation suite:
+Optional examples that use native libraries such as raylib, SDL3, OpenCV,
+Vulkan, or FFmpeg need those libraries installed separately.
 
-```sh
-./scripts/test.sh
-```
+## Editor Support
 
-This suite avoids package-SDK examples that require raylib, SDL3, OpenCV,
-Vulkan, FFmpeg, and similar installs.
-
-Run optional native interop probes:
-
-```sh
-./scripts/probe_optional.sh
-```
-
-These probes compile examples against real libraries such as raylib, SDL3,
-OpenCV, Vulkan, and FFmpeg when those libraries are available. They are for
-Dudu compiler development, not for normal users building the compiler. Missing
-packages are skipped.
-
-Run both core validation and optional native probes:
-
-```sh
-./scripts/test_full.sh
-```
-
-For dev machines that do not have raylib or SDL3 through the system package
-manager, install local probe-only copies into the ignored `third_party/`
-directory:
-
-```sh
-./scripts/setup_dev_deps.sh raylib
-./scripts/setup_dev_deps.sh sdl3
-source scripts/dev_env.sh
-./scripts/probe_optional.sh
-```
-
-Run the scalar-loop benchmark comparison:
-
-```sh
-./scripts/bench.sh
-./scripts/bench.sh 10000000
-./scripts/bench.sh 10000000 --emit-report build/benchmarks/report.json
-./scripts/bench.sh 10000000 --samples 5 --emit-report build/benchmarks/report.json
-./scripts/bench.sh 10000000 --max-ratio 1.10
-```
-
-Install this checkout locally:
-
-```sh
-./scripts/install-local.sh
-```
-
-By default this installs `dudu` and `duc` under `~/.local/bin`, docs under
-`~/.local/share/doc/dudu`, and editor support under
-`~/.local/share/dudu/editors`. Use
-`./scripts/install-local.sh --prefix /path/to/prefix` to choose a different
-install root.
-
-Editor support lives in:
+Editor files live in:
 
 - `editors/vscode`
 - `editors/vim`
@@ -299,15 +162,31 @@ Editor support lives in:
 
 The VS Code folder is a local extension with `.dd` highlighting and command
 palette actions for formatting, checking, building, and running Dudu files.
-The planned language server is tracked in
-[`docs/language-server-plan.md`](docs/language-server-plan.md).
-Start the current language server with:
+
+The language server currently starts with:
 
 ```sh
 duc lsp
 ```
 
-## Working Name
+## Roadmap
 
-`dudu` is a working name. It is short, easy to type, and intentionally a little
-plain.
+- [x] Parse and compile a typed Python-shaped subset.
+- [x] Emit readable C++20.
+- [x] Drive project builds with `dudu`.
+- [x] Compile multi-file Dudu projects.
+- [x] Import C/C++ headers through clang-based native scanning.
+- [x] Use generated CMake as the normal project backend.
+- [x] Install from a checkout with `scripts/install-local.sh`.
+- [ ] Finish the real AST migration and remove string-lowering leftovers.
+- [ ] Finish clean module/import semantics with stable generated namespaces.
+- [ ] Emit separate generated files for better incremental builds.
+- [ ] Harden native interop against common C++ libraries.
+- [ ] Add native generics, sum types, and the remaining planned language forms.
+- [ ] Finish LSP hover, go-to-definition, references, diagnostics, and formatter
+      support on top of the real AST.
+- [ ] Add a broad compatibility suite for real libraries and larger examples.
+- [ ] Add release binaries and package-manager distribution.
+
+The full implementation plan lives in [`docs/le_plan.md`](docs/le_plan.md).
+Developer command details live in [`docs/developer-guide.md`](docs/developer-guide.md).
