@@ -158,11 +158,16 @@ rm -rf "$clean_smoke"
     "$repo_root/build/dudu" clean 2>"$repo_root/build/dudu_clean.err"
     test ! -e build
 )
-grep -Eq "emit .*clean_smoke/build/clean_smoke.cpp" "$repo_root/build/dudu_run_steps.err"
-grep -Eq "build .*clean_smoke/build/clean_smoke" "$repo_root/build/dudu_run_steps.err"
-grep -Eq "run .*clean_smoke/build/clean_smoke" "$repo_root/build/dudu_run_steps.err"
+grep -Eq "backend cmake" "$repo_root/build/dudu_run_steps.err"
+grep -Eq "cmake .*clean_smoke/build/cmake-backend/source/CMakeLists.txt" \
+    "$repo_root/build/dudu_run_steps.err"
+grep -Eq "emit .*clean_smoke/build/cmake-backend/build/generated" \
+    "$repo_root/build/dudu_run_steps.err"
+grep -Eq "run .*clean_smoke/build/cmake-backend/build/clean_smoke" \
+    "$repo_root/build/dudu_run_steps.err"
 grep -Eq "run .*--user-flag.*two words" "$repo_root/build/dudu_run_steps.err"
-grep -Eq "up-to-date .*clean_smoke/build/clean_smoke" "$repo_root/build/dudu_build_cached.err"
+grep -Eq "output .*clean_smoke/build/cmake-backend/build/clean_smoke" \
+    "$repo_root/build/dudu_build_cached.err"
 test ! -s "$repo_root/build/dudu_build_quiet.err"
 grep -q "clean ./build" "$repo_root/build/dudu_clean.err"
 cache_smoke="$repo_root/build/clean_cache_smoke"

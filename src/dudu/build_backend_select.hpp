@@ -6,6 +6,7 @@
 
 namespace dudu {
 
-ProjectConfig select_build_backend(ProjectConfig config, const std::filesystem::path& input);
+ProjectConfig select_build_backend(ProjectConfig config, const std::filesystem::path& input,
+                                   bool project_driver = false);
 
 } // namespace dudu

@@ -150,7 +150,7 @@ ProjectConfig config_for_options(const CliOptions& options) {
 
 ProjectConfig build_config_for_options(const CliOptions& options) {
     ProjectConfig config = config_for_options(options);
-    return select_build_backend(std::move(config), options.input);
+    return select_build_backend(std::move(config), options.input, options.project_driver);
 }
 
 FormatPathOptions format_options_for_project(const CliOptions& options) {

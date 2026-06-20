@@ -55,7 +55,7 @@ ProjectConfig config_for_options(const TestDriverOptions& options) {
 
 ProjectConfig build_config_for_options(const TestDriverOptions& options) {
     ProjectConfig config = config_for_options(options);
-    return select_build_backend(std::move(config), options.input);
+    return select_build_backend(std::move(config), options.input, options.project_driver);
 }
 
 std::filesystem::path source_dir_for_input(const std::filesystem::path& input) {

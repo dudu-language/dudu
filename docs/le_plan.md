@@ -1393,11 +1393,12 @@ push. They are not release packaging work.
    target selection, diagnostics, generated build files, and examples.
 
    `dudu build`, `dudu run`, and `dudu test` are the serious user-facing
-   commands. Backend choice is an implementation detail. The direct backend is
-   real, fast, and intentionally narrow. The CMake backend is the broad native
-   ecosystem backend for CMake package discovery, IDE/project generators, and
-   larger native dependency graphs. `dudu cmake` remains an inspectable
-   artifact/debug/handoff command, not the primary serious-project workflow.
+   commands. Backend choice is an implementation detail for normal users. The
+   generated-CMake backend is the standard Dudu project backend because it emits
+   separate generated files and cooperates with the C/C++ ecosystem. The direct
+   backend is an explicit low-level compiler/debug backend, not the normal
+   project path. `dudu cmake` remains an inspectable artifact/debug/handoff
+   command, not the primary serious-project workflow.
    Backends must fail clearly when they cannot model a project rather than
    silently dropping C/C++ build-system details.
 
@@ -1420,19 +1421,20 @@ push. They are not release packaging work.
    This is part of the language's C/C++ interop promise. Dudu should cooperate
    with CMake, pkg-config, native compiler flags, vendored C/C++ sources, and
    user-owned native build files without turning `dudu build` into a toy-only
-   command. Direct compilation is the small fast backend. CMake is the broad
-   native ecosystem backend. `dudu cmake` is the inspectable artifact and
-   native handoff path, not the replacement for the normal command surface.
+   command. Generated CMake is the standard project backend. Direct compilation
+   is the explicit small/debug backend. `dudu cmake` is the inspectable artifact
+   and native handoff path, not the replacement for the normal command surface.
 
    This is not a Zig-style attempt to make the language build system own every
    native project. Zig's normal model is a `build.zig` graph that owns the
    build and can compile/link C and C++ inputs through that graph. Zig build
    scripts can run external tools when users write that integration, but Zig
    does not have a built-in "revert to CMake" backend. Dudu's native interop
-   goal is broader in a different direction: direct compiler builds, generated
-   CMake builds, and user-owned CMake builds are backend modes behind the same
-   command surface, not separate classes of Dudu project. CMake-backed builds
-   should still be launched through `dudu build`, `dudu run`, and `dudu test`.
+   goal is broader in a different direction: generated CMake builds and
+   user-owned CMake builds are project backend modes behind the same command
+   surface, while direct compiler builds are explicit low-level/debug mode.
+   CMake-backed builds should still be launched through `dudu build`,
+   `dudu run`, and `dudu test`.
 
    Dudu is not copying Zig here. CMake is not a shameful fallback after
    `dudu build` gives up. It is one of the serious native backends because
@@ -1454,11 +1456,10 @@ push. They are not release packaging work.
    support. `scripts/install-local.sh` configures, builds, and installs this
    checkout to `~/.local` by default or a caller-provided `--prefix`; it uses
    the same CMake install rules instead of acting as a package manager.
-   `dudu build` and `dudu run` use the direct backend by default for
-   single-module inputs. If no backend is explicitly selected and the source
-   tree imports multiple Dudu modules, `dudu build`, `dudu run`, and
-   `dudu test` select the generated CMake backend so generated C++ stays split
-   into per-module artifacts. `[build] backend = "direct"` and
+   `dudu build`, `dudu run`, and `dudu test` use the generated-CMake backend by
+   default, even for single-module inputs, so generated C++ stays split into
+   per-module artifacts. `duc build` and `duc run` keep the direct backend as
+   the low-level compiler-driver path. `[build] backend = "direct"` and
    `[build] backend = "cmake"` parse
    from the manifest, and explicit direct keeps strict merged-output diagnostics
    when a project cannot honestly fit in one generated translation unit. The
