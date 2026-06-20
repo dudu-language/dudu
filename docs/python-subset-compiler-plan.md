@@ -92,6 +92,7 @@ Built-ins:
 
 ```text
 bool
+char
 i8 i16 i32 i64
 u8 u16 u32 u64
 isize usize
@@ -105,6 +106,8 @@ Dudu-native source uses the fixed-width names above. It does not provide
 `int`, `float`, or `double` as source-level aliases. Imported C/C++ headers can
 still contain those spellings; the header scanner maps them into Dudu types for
 semantic checks and editor tooling.
+`char` is reserved for native C/C++ character and mutable `char *` buffer
+interop; normal byte-oriented Dudu code should use `i8` or `u8`.
 
 Containers:
 

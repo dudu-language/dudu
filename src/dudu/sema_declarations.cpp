@@ -50,9 +50,8 @@ bool is_virtual_like(const FunctionDecl& fn) {
 }
 
 bool has_equivalent_base(const std::vector<TypeRef>& bases, const TypeRef& candidate) {
-    return std::any_of(bases.begin(), bases.end(), [&](const TypeRef& base) {
-        return type_ref_equivalent(base, candidate);
-    });
+    return std::any_of(bases.begin(), bases.end(),
+                       [&](const TypeRef& base) { return type_ref_equivalent(base, candidate); });
 }
 
 std::string decorator_arg(const Decorator& decorator, std::string_view name) {
@@ -117,9 +116,9 @@ bool is_c_abi_primitive(const std::string& type, bool allow_void) {
     if (type == "void") {
         return allow_void;
     }
-    static const std::set<std::string> primitives = {"bool",  "i8",  "i16", "i32", "i64",
-                                                     "u8",    "u16", "u32", "u64", "isize",
-                                                     "usize", "f32", "f64", "cstr"};
+    static const std::set<std::string> primitives = {"bool",  "char",  "i8",  "i16", "i32",
+                                                     "i64",   "u8",    "u16", "u32", "u64",
+                                                     "isize", "usize", "f32", "f64", "cstr"};
     return primitives.contains(type);
 }
 

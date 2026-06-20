@@ -18,9 +18,9 @@ namespace dudu {
 namespace {
 
 bool is_builtin_type(const std::string& type) {
-    static const std::set<std::string> builtins = {"bool", "i8",   "i16", "i32",   "i64",   "u8",
-                                                   "u16",  "u32",  "u64", "isize", "usize", "f32",
-                                                   "f64",  "void", "str", "cstr"};
+    static const std::set<std::string> builtins = {"bool", "char", "i8",   "i16", "i32",   "i64",
+                                                   "u8",   "u16",  "u32",  "u64", "isize", "usize",
+                                                   "f32",  "f64",  "void", "str", "cstr"};
     return builtins.contains(type);
 }
 
@@ -320,8 +320,8 @@ Symbols collect_symbols(const ModuleAst& module) {
         symbols.module_import_prefixes.insert(prefix);
     }
     std::map<std::string, SourceLocation> names;
-    for (const char* type : {"bool", "i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64", "isize",
-                             "usize", "f32", "f64", "void", "str", "cstr"}) {
+    for (const char* type : {"bool", "char", "i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64",
+                             "isize", "usize", "f32", "f64", "void", "str", "cstr"}) {
         symbols.types.insert(type);
     }
     for (const TypeAliasDecl& alias : module.aliases) {

@@ -299,8 +299,8 @@ std::string completion_json(const Document* doc, const Json* params) {
     add_snippet("try", "snippet",
                 "try:\n    ${1:pass}\nexcept ${2:Exception} as ${3:error}:\n    ${0:pass}");
     add_snippet("except", "snippet", "except ${1:Exception} as ${2:error}:\n    ${0:pass}");
-    for (std::string_view type : {"bool", "i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64",
-                                  "isize", "usize", "f32", "f64", "str", "cstr"}) {
+    for (std::string_view type : {"bool", "char", "i8", "i16", "i32", "i64", "u8", "u16", "u32",
+                                  "u64", "isize", "usize", "f32", "f64", "str", "cstr"}) {
         add(type, 25, "type");
     }
     if (doc != nullptr) {

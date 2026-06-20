@@ -329,6 +329,8 @@ void test_builtin_method_signature_uses_type_ast() {
 }
 
 void test_native_header_types_split_cpp_templates() {
+    assert(dudu::dudu_type("char *") == "*char");
+    assert(dudu::dudu_type("const char *") == "cstr");
     assert(dudu::dudu_type("const vec<L, T, Q> &") == "&const[vec[L, T, Q]]");
     assert(dudu::dudu_type("_Args &&...") == "&_Args...");
     assert(dudu::dudu_type("typename std::remove_reference<_Tp>::type &&") ==
@@ -1521,13 +1523,12 @@ void test_type_ast_shape() {
     assert(dudu::parse_type_text("Box[list[i32]][3]").kind == dudu::TypeKind::Unknown);
     bool rejected_array_shorthand = false;
     try {
-        const dudu::ModuleAst bad_array =
-            dudu::parse_source("class Player:\n"
-                               "    hp: i32\n"
-                               "\n"
-                               "def bad():\n"
-                               "    players: Player[3][4]\n",
-                               "bad_array_shorthand.dd");
+        const dudu::ModuleAst bad_array = dudu::parse_source("class Player:\n"
+                                                             "    hp: i32\n"
+                                                             "\n"
+                                                             "def bad():\n"
+                                                             "    players: Player[3][4]\n",
+                                                             "bad_array_shorthand.dd");
         dudu::analyze_module(bad_array, {.check_bodies = true});
     } catch (const dudu::CompileError& error) {
         rejected_array_shorthand =

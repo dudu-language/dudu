@@ -19,6 +19,8 @@ std::string scalar_dudu_type(const std::string& type) {
         return "f64";
     if (type == "size_t")
         return "usize";
+    if (type == "char")
+        return "char";
     if (type == "int8_t" || type == "signed char")
         return "i8";
     if (type == "uint8_t" || type == "unsigned char")
@@ -222,7 +224,7 @@ std::string dudu_type(std::string type) {
     if (type.ends_with("...")) {
         return dudu_type(trim_copy(type.substr(0, type.size() - 3))) + "...";
     }
-    if (type == "char *" || type == "const char *")
+    if (type == "const char *")
         return "cstr";
     if (type.find("(*)") != std::string::npos || type.find("(*") != std::string::npos) {
         return "*void";

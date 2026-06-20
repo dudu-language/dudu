@@ -34,9 +34,9 @@ bool has_named_argument_shape(const std::vector<Expr>& args) {
 }
 
 bool is_builtin_cast_call(std::string_view name) {
-    static const std::vector<std::string_view> types = {"bool", "i8",  "i16", "i32", "i64",
-                                                        "u8",   "u16", "u32", "u64", "usize",
-                                                        "f32",  "f64", "str", "cstr"};
+    static const std::vector<std::string_view> types = {"bool",  "char", "i8",  "i16", "i32",
+                                                        "i64",   "u8",   "u16", "u32", "u64",
+                                                        "usize", "f32",  "f64", "str", "cstr"};
     return std::find(types.begin(), types.end(), name) != types.end();
 }
 

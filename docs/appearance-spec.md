@@ -183,6 +183,7 @@ Scalar types keep Rust/C-style fixed-width names:
 
 ```python
 bool
+char
 i8
 i16
 i32
@@ -204,10 +205,13 @@ Dudu source uses these spellings directly. It does not accept `int`, `float`,
 or `double` as core-type aliases, because those names are ambiguous across C and
 C++ ABIs. Imported C/C++ headers are still normalized into Dudu's fixed-width
 type model for checking and editor tooling.
+`char` is available for native C/C++ interop, especially mutable `char *`
+buffers. Prefer `i8`/`u8` for numeric byte data in normal Dudu code.
 
 Likely C++ lowerings:
 
 ```text
+char -> char
 str  -> std::string
 cstr -> const char*
 ```

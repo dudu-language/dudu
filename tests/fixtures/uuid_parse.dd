@@ -16,7 +16,14 @@ def main() -> i32:
         return 3
     if uuid.UUID_STR_LEN != 37:
         return 4
-    if value[0] != u8(0):
+
+    output: array[char][37]
+    uuid.uuid_unparse_lower(&value[0], &output[0])
+    if output[0] != char(48):
         return 5
+    if output[8] != char(45):
+        return 6
+    if output[36] != char(0):
+        return 7
 
     return 42

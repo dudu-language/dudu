@@ -1231,9 +1231,11 @@ push. They are not release packaging work.
    libjpeg coverage found a scanner hardening target: fields introduced through
    C preprocessor struct-member macros, such as `jpeg_common_fields`, are not
    modeled yet.
-   libuuid coverage found two more C interop hardening targets: typedefed fixed
-   C arrays such as `uuid_t` should behave as locals and overload arguments,
-   and mutable `char *out` buffers should not be modeled as input-only `cstr`.
+   libuuid coverage found a remaining C interop hardening target: typedefed
+   fixed C arrays such as `uuid_t` should behave as locals and overload
+   arguments. Mutable `char *out` buffers now scan as `*char` rather than
+   input-only `cstr`, so user-owned output buffers work through normal array
+   handoff.
 
    This matrix is not part of the always-on fast loop. Keep fast compiler
    validation small, and run the real-library/example matrix periodically, when
