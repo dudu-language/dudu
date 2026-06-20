@@ -134,4 +134,8 @@ void set_project_step_timings(bool enabled) {
     project_step_start = std::chrono::steady_clock::now();
 }
 
+bool project_step_timings_enabled() {
+    return project_step_timings;
+}
+
 } // namespace dudu

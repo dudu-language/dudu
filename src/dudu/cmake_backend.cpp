@@ -153,9 +153,7 @@ std::filesystem::path run_cmake_backend(const CMakeBackendOptions& options) {
         "cmake -S " + shell_quote_path(source_dir) + " -B " + shell_quote_path(build_dir) +
         " -DDUDU_EXECUTABLE=" +
         shell_quote_path(std::filesystem::absolute(options.dudu_executable));
-    if (options.timings) {
-        configure_command += " -DDUDU_TIMINGS=ON";
-    }
+    configure_command += options.timings ? " -DDUDU_TIMINGS=ON" : " -DDUDU_TIMINGS=OFF";
     const std::filesystem::path configure_log = options.root / "configure.log";
     if (options.verbose) {
         std::cerr << configure_command << '\n';

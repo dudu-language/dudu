@@ -6,6 +6,7 @@
 #include "dudu/sema.hpp"
 
 #include <cctype>
+#include <utility>
 
 namespace dudu {
 namespace {
@@ -15,7 +16,8 @@ bool is_borrowed_or_pointer(TypeRef type) {
             type.kind == TypeKind::Atomic || type.kind == TypeKind::Storage ||
             type.kind == TypeKind::Shared || type.kind == TypeKind::Device) &&
            type.children.size() == 1) {
-        type = type.children.front();
+        TypeRef child = type.children.front();
+        type = std::move(child);
     }
     return type.kind == TypeKind::Reference || type.kind == TypeKind::Pointer;
 }

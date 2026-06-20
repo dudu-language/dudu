@@ -187,8 +187,12 @@ std::filesystem::path default_build_output(const ProjectConfig& config,
 }
 
 ModuleAst checked_module(const CliOptions& options, const std::string& source, bool check_bodies) {
+    const bool project_output = options.project_driver && !options.quiet;
+    const bool detail_output = project_output && options.timings;
+    print_project_step(detail_output, "load", options.input);
     ModuleAst module = options.input.empty() ? parse_source(source, options.input)
                                              : load_source_tree(options.input);
+    print_project_step(detail_output, "config", options.input);
     const ProjectConfig config =
         options.input.empty() ? config_for_options(options) : build_config_for_options(options);
     module.build_values = config.build_values;
@@ -200,20 +204,28 @@ ModuleAst checked_module(const CliOptions& options, const std::string& source, b
     }
     const std::filesystem::path source_dir = source_dir_for_input(options.input);
     const NativeHeaderOptions native_header_options{.config = config, .source_dir = source_dir};
-    merge_native_header_types(module, native_header_options);
+    const bool merged_cpp_output = options.emit_cpp || options.header_output.has_value() ||
+                                   options.c_header_output.has_value();
+    const bool per_module_output =
+        !merged_cpp_output && (options.emit_modules || config.build_backend == "cmake");
+    if (!per_module_output) {
+        print_project_step(detail_output, "native-merge", module.source_path);
+        merge_native_header_types(module, native_header_options);
+    }
     for (ModuleAst& unit : module.module_units) {
         unit.build_values = module.build_values;
         unit.target_mode_explicit = module.target_mode_explicit;
+        print_project_step(detail_output, "native-merge", unit.source_path);
         merge_native_header_types(unit, native_header_options);
     }
-    const bool merged_cpp_output = options.emit_cpp || options.header_output.has_value() ||
-                                   options.c_header_output.has_value();
-    if (!merged_cpp_output && (options.emit_modules || config.build_backend == "cmake")) {
+    print_project_step(detail_output, "sema", options.input);
+    if (per_module_output) {
         analyze_module_tree(module, {.check_bodies = check_bodies});
     } else {
         reject_merged_output_module_conflicts(module);
         analyze_module(module, {.check_bodies = check_bodies});
     }
+    print_project_step(detail_output, "checked", options.input);
     return module;
 }
 
@@ -434,9 +446,8 @@ int run_cli(int argc, char** argv) {
         print_project_step(project_output, "analyze", options.input);
         const ModuleAst module = checked_module(options, source, true);
         print_project_step(project_output, "emit", *options.output);
-        write_cpp_artifacts(
-            *options.output,
-            emit_cpp_test_module_artifacts(module, options.test_filter, !options.no_capture));
+        write_cpp_artifacts(*options.output, emit_cpp_test_module_artifacts(
+                                                 module, options.test_filter, !options.no_capture));
         return 0;
     }
     if (options.emit_cpp) {

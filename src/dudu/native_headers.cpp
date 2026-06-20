@@ -8,7 +8,9 @@
 #include "dudu/native_header_parse.hpp"
 #include "dudu/native_header_scope.hpp"
 #include "dudu/native_header_types.hpp"
+#include "dudu/project_driver.hpp"
 
+#include <algorithm>
 #include <cctype>
 #include <chrono>
 #include <cstdlib>
@@ -241,6 +243,15 @@ bool source_file_belongs_to_import_family(const SourceLocation& location, const 
     return !parent_text.empty() && source_text.find(parent_text + "/") != std::string::npos;
 }
 
+bool macro_function_stub(const NativeFunctionDecl& function) {
+    if (function.identity.canonical_path != function.name ||
+        function.return_native_spelling != "auto") {
+        return false;
+    }
+    return std::ranges::all_of(function.param_native_spellings,
+                               [](const std::string& param) { return param == "auto"; });
+}
+
 std::vector<NativeFunctionDecl> alias_visible_functions(const NativeHeaderScan& scan,
                                                         const ImportDecl& import,
                                                         const NativeHeaderOptions& options) {
@@ -249,8 +260,7 @@ std::vector<NativeFunctionDecl> alias_visible_functions(const NativeHeaderScan& 
     }
     std::vector<NativeFunctionDecl> out;
     for (const NativeFunctionDecl& function : scan.functions) {
-        const bool macro_stub = function.location.file == import.location.file &&
-                                function.location.line == import.location.line;
+        const bool macro_stub = macro_function_stub(function);
         if (macro_stub ||
             source_file_belongs_to_import_family(function.location, import, options)) {
             out.push_back(function);
@@ -292,11 +302,21 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
         return found->second;
     }
     NativeHeaderRawCache raw_cache = load_native_header_raw_cache(options, key);
+    if (const std::optional<NativeHeaderScan> scan =
+            load_native_header_scan_cache(raw_cache, import.location)) {
+        cache[key] = *scan;
+        print_project_step(project_step_timings_enabled(), "native-scan-cache",
+                           unquoted(import.module_path));
+        return cache[key];
+    }
     if (raw_cache.hit) {
         NativeHeaderScan scan;
         parse_ast_dump(scan, raw_cache.ast_dump, import.location);
         parse_macro_dump(scan, raw_cache.macro_dump, import.location);
         cache[key] = dedupe_scan(std::move(scan));
+        store_native_header_scan_cache(raw_cache, cache[key]);
+        print_project_step(project_step_timings_enabled(), "native-scan-raw",
+                           unquoted(import.module_path));
         return cache[key];
     }
     const std::filesystem::path base = temp_base(options.source_dir);
@@ -349,6 +369,11 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
     }
     cleanup();
     cache[key] = dedupe_scan(std::move(scan));
+    if (!used_prelude_retry) {
+        store_native_header_scan_cache(raw_cache, cache[key]);
+    }
+    print_project_step(project_step_timings_enabled(), "native-scan-clang",
+                       unquoted(import.module_path));
     return cache[key];
 }
 template <typename T>
