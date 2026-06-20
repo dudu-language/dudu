@@ -1,0 +1,22 @@
+import c "uuid/uuid.h" as uuid
+
+
+def main() -> i32:
+    value: array[u8][16]
+    copy: array[u8][16]
+    text: str = "00112233-4455-6677-8899-aabbccddeeff"
+
+    if uuid.uuid_parse(text.c_str(), &value[0]) != 0:
+        return 1
+    if uuid.uuid_is_null(&value[0]) != 0:
+        return 2
+
+    uuid.uuid_copy(&copy[0], &value[0])
+    if uuid.uuid_compare(&value[0], &copy[0]) != 0:
+        return 3
+    if uuid.UUID_STR_LEN != 37:
+        return 4
+    if value[0] != u8(0):
+        return 5
+
+    return 42

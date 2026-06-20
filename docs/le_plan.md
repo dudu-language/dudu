@@ -1214,7 +1214,7 @@ push. They are not release packaging work.
 
    Current optional probes pass for glm, Eigen, OpenBLAS, OpenCV, sqlite, zlib,
    curl, OpenSSL, libevent, libxml2, Expat, Cairo, FreeType, libpng, libjpeg,
-   Lua, stb, fmt, spdlog, Boost filesystem, threading, POSIX mmap, POSIX
+   Lua, libuuid, stb, fmt, spdlog, Boost filesystem, threading, POSIX mmap, POSIX
    pthread, raylib, SDL3, GLFW, Dear ImGui, X11, Wayland, OpenCL, Vulkan, and
    FFmpeg on this machine. Optional
    dev-only
@@ -1231,6 +1231,9 @@ push. They are not release packaging work.
    libjpeg coverage found a scanner hardening target: fields introduced through
    C preprocessor struct-member macros, such as `jpeg_common_fields`, are not
    modeled yet.
+   libuuid coverage found two more C interop hardening targets: typedefed fixed
+   C arrays such as `uuid_t` should behave as locals and overload arguments,
+   and mutable `char *out` buffers should not be modeled as input-only `cstr`.
 
    This matrix is not part of the always-on fast loop. Keep fast compiler
    validation small, and run the real-library/example matrix periodically, when

@@ -114,6 +114,27 @@ probe_zlib() {
     echo "ok zlib"
 }
 
+probe_uuid() {
+    if ! pkg-config --exists uuid; then
+        echo "skip uuid: pkg-config package not found"
+        return
+    fi
+
+    local cpp="$repo_root/build/probe_uuid_parse.cpp"
+    local bin="$repo_root/build/probe_uuid_parse"
+    "$repo_root/build/duc" emit "$repo_root/tests/fixtures/uuid_parse.dd" -o "$cpp"
+    "${CXX:-c++}" -std=c++20 "$cpp" $(pkg-config --cflags --libs uuid) -o "$bin"
+    set +e
+    "$bin"
+    local status=$?
+    set -e
+    if [[ "$status" -ne 42 ]]; then
+        echo "uuid probe returned $status, expected 42" >&2
+        exit 1
+    fi
+    echo "ok uuid"
+}
+
 probe_curl() {
     if ! pkg-config --exists libcurl; then
         echo "skip libcurl: pkg-config package not found"
@@ -667,6 +688,7 @@ probe_opencv
 probe_sqlite
 probe_lua
 probe_zlib
+probe_uuid
 probe_curl
 probe_libpng
 probe_libjpeg
