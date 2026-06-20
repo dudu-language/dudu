@@ -1228,9 +1228,12 @@ push. They are not release packaging work.
    `extern "C"` wrapper pattern, such as FFmpeg's `libavcodec/packet.h`.
    `import cxx` covers C++-aware C headers that own their own linkage blocks
    but expose C-style globals; libxml2 imports directly through that path.
-   libjpeg coverage found a scanner hardening target: fields introduced through
-   C preprocessor struct-member macros, such as `jpeg_common_fields`, are not
-   modeled yet.
+   libjpeg coverage found a scanner hardening target: context-dependent C
+   headers need to be scanned with their module include context. The visible
+   symptom is fields introduced through C preprocessor struct-member macros,
+   such as `jpeg_common_fields`: Clang exposes `jpeg_compress_struct.err` when
+   `jpeglib.h` is parsed after its prerequisite headers, but Dudu currently
+   scans each native header in isolation.
    libuuid coverage now declares `uuid.uuid_t` locals directly and passes them
    to native functions whose parameters scan as `*u8` or `*const[u8]`, matching
    ordinary C array-to-pointer handoff for typedefed fixed arrays. Mutable

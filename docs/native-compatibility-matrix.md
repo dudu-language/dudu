@@ -72,7 +72,7 @@ compiler matures.
 | --- | --- | --- | --- | --- |
 | CUDA / CUBLAS | GPU / ML | host API, device buffers, BLAS-like calls | skip | Needs NVIDIA tooling/hardware. |
 | platform APIs | OS | Win32, Cocoa subsets | planned | Platform-specific; X11 and Wayland have Linux probes. |
-| macro-expanded C struct fields | C interop | fields introduced through C preprocessor member macros | planned | Found while probing libjpeg: `jpeg_compress_struct.err` comes from `jpeg_common_fields`, and Dudu's scanner does not model that field yet. |
+| context-dependent C headers and macro-expanded fields | C interop | scan headers with their module include context so fields introduced through macros are visible | planned | Found while probing libjpeg: `jpeg_compress_struct.err` comes from `jpeg_common_fields`. Clang exposes the field when `jpeglib.h` is parsed with prerequisite headers, but Dudu currently scans each native header in isolation. |
 
 ## Rules
 
