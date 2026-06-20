@@ -377,12 +377,6 @@ TypeRef infer_cpp_escape_expr_ref(const FunctionScope& scope, std::string expr,
                 }
                 return named_type_ref("auto", call_info->callee_expr.location);
             }
-            if (native_import_path_prefix(scope.symbols, callee)) {
-                for (const Expr& arg : args) {
-                    (void)infer_expr_type_ast(scope, arg, location);
-                }
-                return named_type_ref("auto", call_info->callee_expr.location);
-            }
         }
         if (location != nullptr && callee.find('.') == std::string::npos &&
             callee.find('[') == std::string::npos && is_plain_identifier(callee) &&

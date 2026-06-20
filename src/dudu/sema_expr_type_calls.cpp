@@ -249,13 +249,6 @@ std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Ex
     if (const auto method_type = direct_member_call_type_ref(scope, expr, callee, location)) {
         return *method_type;
     }
-    if (callee.rfind('.') != std::string::npos &&
-        native_import_path_prefix(scope.symbols, callee)) {
-        for (const Expr& arg : expr.children) {
-            (void)infer_expr_type_ast(scope, arg, location);
-        }
-        return named_type_ref("auto", expr.location);
-    }
     return std::nullopt;
 }
 

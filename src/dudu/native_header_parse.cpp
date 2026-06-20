@@ -6,6 +6,7 @@
 #include "dudu/native_header_scope.hpp"
 #include "dudu/native_header_types.hpp"
 
+#include <optional>
 #include <regex>
 #include <sstream>
 
@@ -80,23 +81,35 @@ int ast_depth(const std::string& line) {
 }
 
 std::string ast_concrete_source_file(const std::string& line) {
-    static const std::regex expansion(R"( <([^<>:]+):([0-9]+):([0-9]+)[,>])");
-    std::smatch match;
-    if (!std::regex_search(line, match, expansion)) {
-        return {};
+    static const std::regex expansion(R"((?:<|, )([^<>:]+):([0-9]+):([0-9]+)(?=[,>]))");
+    std::string out;
+    for (std::sregex_iterator it(line.begin(), line.end(), expansion), end; it != end; ++it) {
+        const std::string file = (*it)[1].str();
+        if (file != "line" && file != "col") {
+            out = file;
+        }
     }
-    const std::string file = match[1].str();
-    return file == "line" || file == "col" ? std::string{} : file;
+    return out;
 }
 
 SourceLocation ast_source_location(const std::string& line, const SourceLocation& context_location,
                                    const std::string& current_file) {
-    static const std::regex expansion(R"( <([^<>:]+):([0-9]+):([0-9]+)[,>])");
+    static const std::regex expansion(R"((?:<|, )([^<>:]+):([0-9]+):([0-9]+)(?=[,>]))");
     static const std::regex spelling(R"( col:([0-9]+))");
-    std::smatch match;
-    if (!std::regex_search(line, match, expansion)) {
+    std::smatch spelling_match;
+    std::optional<std::smatch> chosen;
+    for (std::sregex_iterator it(line.begin(), line.end(), expansion), end; it != end; ++it) {
+        const std::string file = (*it)[1].str();
+        if (file != "line" && file != "col") {
+            chosen = *it;
+        } else if (!chosen) {
+            chosen = *it;
+        }
+    }
+    if (!chosen) {
         return context_location;
     }
+    const std::smatch& match = *chosen;
     const std::string file = match[1].str();
     if ((file == "line" || file == "col") && current_file.empty()) {
         return context_location;
@@ -105,8 +118,8 @@ SourceLocation ast_source_location(const std::string& line, const SourceLocation
     out.file = file == "line" || file == "col" ? current_file : file;
     out.line = std::stoi(match[2].str());
     out.column = std::stoi(match[3].str());
-    if (std::regex_search(line, match, spelling)) {
-        out.column = std::stoi(match[1].str());
+    if (std::regex_search(line, spelling_match, spelling)) {
+        out.column = std::stoi(spelling_match[1].str());
     }
     return out;
 }
@@ -271,10 +284,9 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
                std::regex_search(line, match, method_decl)) {
         FunctionDecl method;
         method.name = match[1].str();
-        method.native_identity =
-            native_identity(scan.classes[classes.back().second].identity.canonical_path + "." +
-                                method.name,
-                            current_file);
+        method.native_identity = native_identity(
+            scan.classes[classes.back().second].identity.canonical_path + "." + method.name,
+            current_file);
         if (!templates.empty()) {
             method.generic_params = templates.back().params;
         }
@@ -297,9 +309,8 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
             qualify_scoped_types(scan, namespaces, signature_params(match[2].str()));
         FunctionDecl ctor;
         ctor.name = "init";
-        ctor.native_identity =
-            native_identity(scan.classes[classes.back().second].identity.canonical_path + ".init",
-                            current_file);
+        ctor.native_identity = native_identity(
+            scan.classes[classes.back().second].identity.canonical_path + ".init", current_file);
         for (const std::string& param : params) {
             ParamDecl decl;
             decl.name = "arg" + std::to_string(ctor.params.size());

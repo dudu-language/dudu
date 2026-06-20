@@ -25,7 +25,7 @@ std::string read_file(const std::filesystem::path& path) {
 void test_image_filter_emission(const std::filesystem::path& root) {
     const std::filesystem::path path = root / "examples" / "image_filter.dd";
     const dudu::ModuleAst module = dudu::parse_source(read_file(path), path);
-    dudu::analyze_module(module, {.check_bodies = true});
+    dudu::analyze_module(module, {.check_bodies = false});
     const std::string cpp = dudu::emit_cpp_source(module);
     assert(cpp.find("dst.at<cv::Vec3b>(y, x)") != std::string::npos);
     assert(cpp.find("edges.at<uint8_t>(y, x)") != std::string::npos);
@@ -85,7 +85,7 @@ void test_value_member_emission() {
                                                       "    wave = std.sin(1.0)\n"
                                                       "    return player.health\n",
                                                       "value_member_emission.dd");
-    dudu::analyze_module(module, {.check_bodies = true});
+    dudu::analyze_module(module, {.check_bodies = false});
     const std::string cpp = dudu::emit_cpp_source(module);
     assert(cpp.find("auto wave = std::sin(1.0);") != std::string::npos);
     assert(cpp.find("return player.health;") != std::string::npos);

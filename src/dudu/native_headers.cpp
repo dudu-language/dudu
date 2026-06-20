@@ -14,6 +14,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <map>
+#include <optional>
 #include <set>
 #include <sstream>
 #include <stdexcept>
@@ -29,6 +30,14 @@ bool direct_import(const ImportDecl& import) {
 std::string unquoted(std::string value) {
     if (value.size() >= 2 && value.front() == '"' && value.back() == '"') {
         return value.substr(1, value.size() - 2);
+    }
+    return value;
+}
+std::string unquoted_source_file(std::string value) {
+    value = trim_copy(std::move(value));
+    while (value.size() >= 2 && ((value.front() == '"' && value.back() == '"') ||
+                                 (value.front() == '\'' && value.back() == '\''))) {
+        value = value.substr(1, value.size() - 2);
     }
     return value;
 }
@@ -128,6 +137,18 @@ std::string run_capture(const std::string& command, const std::filesystem::path&
     }
     return read_text(output);
 }
+std::string include_line(const std::string& header) {
+    return "#include \"" + header + "\"\n";
+}
+std::string scanner_source_for_header(const ImportDecl& import, bool with_c_prelude) {
+    std::string source;
+    if (with_c_prelude) {
+        source += "#include <stddef.h>\n#include <stdio.h>\n";
+    }
+    source += include_line(unquoted(import.module_path));
+    source += "int dudu_probe = 0;\n";
+    return source;
+}
 std::string clangxx_command() {
     const char* clang_env = std::getenv("CLANGXX");
     return clang_env == nullptr ? "clang++" : std::string(clang_env);
@@ -165,10 +186,103 @@ bool public_direct_macro_name(const std::string& name) {
     return !name.empty() &&
            (std::isupper(static_cast<unsigned char>(name.front())) != 0 || name.front() == '_');
 }
+std::optional<std::filesystem::path>
+normalized_existing_header_path(const ImportDecl& import, const NativeHeaderOptions& options) {
+    const std::filesystem::path header = unquoted(import.module_path);
+    const std::filesystem::path path =
+        header.is_absolute() ? header : (options.source_dir / header).lexically_normal();
+    std::error_code error;
+    if (!std::filesystem::exists(path, error) || error) {
+        return std::nullopt;
+    }
+    return path.lexically_normal();
+}
+bool source_file_matches_header(const SourceLocation& location, const ImportDecl& import,
+                                const NativeHeaderOptions& options) {
+    std::string file = unquoted_source_file(location.file);
+    if (file.empty()) {
+        return false;
+    }
+    const std::filesystem::path source_path = std::filesystem::path(file).lexically_normal();
+    if (const auto header_path = normalized_existing_header_path(import, options)) {
+        return source_path == *header_path;
+    }
+    const std::filesystem::path imported = unquoted(import.module_path);
+    if (imported.has_parent_path()) {
+        return source_path.string().ends_with(imported.lexically_normal().string());
+    }
+    return source_path.filename() == imported.filename();
+}
+
+bool source_file_belongs_to_import_family(const SourceLocation& location, const ImportDecl& import,
+                                          const NativeHeaderOptions& options) {
+    if (source_file_matches_header(location, import, options)) {
+        return true;
+    }
+    const std::filesystem::path imported =
+        std::filesystem::path(unquoted(import.module_path)).lexically_normal();
+    if (!imported.has_parent_path()) {
+        return false;
+    }
+    std::string file = unquoted_source_file(location.file);
+    if (file.empty()) {
+        return false;
+    }
+    const std::filesystem::path source_path = std::filesystem::path(file).lexically_normal();
+    const std::filesystem::path parent = imported.parent_path();
+    std::string source_text = source_path.string();
+    std::string parent_text = parent.string();
+    if (!source_text.empty() && source_text.front() != '/') {
+        source_text = "/" + source_text;
+    }
+    if (!parent_text.empty() && parent_text.front() != '/') {
+        parent_text = "/" + parent_text;
+    }
+    return !parent_text.empty() && source_text.find(parent_text + "/") != std::string::npos;
+}
+
+std::vector<NativeFunctionDecl> alias_visible_functions(const NativeHeaderScan& scan,
+                                                        const ImportDecl& import,
+                                                        const NativeHeaderOptions& options) {
+    if (import.kind == ImportKind::ForeignCpp) {
+        return scan.functions;
+    }
+    std::vector<NativeFunctionDecl> out;
+    for (const NativeFunctionDecl& function : scan.functions) {
+        const bool macro_stub = function.location.file == import.location.file &&
+                                function.location.line == import.location.line;
+        if (macro_stub ||
+            source_file_belongs_to_import_family(function.location, import, options)) {
+            out.push_back(function);
+        }
+    }
+    return out;
+}
+
+template <typename T>
+std::vector<T> filter_native_decls_to_header(const std::vector<T>& source, const ImportDecl& import,
+                                             const NativeHeaderOptions& options) {
+    std::vector<T> out;
+    for (const T& item : source) {
+        if (source_file_matches_header(item.location, import, options)) {
+            out.push_back(item);
+        }
+    }
+    return out;
+}
+NativeHeaderScan filter_ast_scan_to_header(NativeHeaderScan scan, const ImportDecl& import,
+                                           const NativeHeaderOptions& options) {
+    scan.types = filter_native_decls_to_header(scan.types, import, options);
+    scan.values = filter_native_decls_to_header(scan.values, import, options);
+    scan.functions = filter_native_decls_to_header(scan.functions, import, options);
+    scan.namespaces = filter_native_decls_to_header(scan.namespaces, import, options);
+    scan.classes = filter_native_decls_to_header(scan.classes, import, options);
+    return scan;
+}
 std::string scan_key(const ImportDecl& import, const NativeHeaderOptions& options,
                      const std::string& flags) {
-    return unquoted(import.module_path) + "|" + clangxx_command() + "|" + options.config.cpp_std +
-           "|" + flags + header_stamp(import, options);
+    return "v3|" + unquoted(import.module_path) + "|" + clangxx_command() + "|" +
+           options.config.cpp_std + "|" + flags + header_stamp(import, options);
 }
 NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOptions& options,
                                  const std::string& flags) {
@@ -196,12 +310,23 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
         std::filesystem::remove(macros);
         std::filesystem::remove(err);
     };
-    write_text(cpp, "#include \"" + unquoted(import.module_path) + "\"\nint dudu_probe = 0;\n");
+    write_text(cpp, scanner_source_for_header(import, false));
 
     NativeHeaderScan scan;
-    const std::string ast_dump = run_capture(clang_base_command(options, cpp, true), ast, err);
+    std::string ast_dump = run_capture(clang_base_command(options, cpp, true), ast, err);
+    bool used_prelude_retry = false;
+    if (ast_dump.empty()) {
+        write_text(cpp, scanner_source_for_header(import, true));
+        ast_dump = run_capture(clang_base_command(options, cpp, true), ast, err);
+        used_prelude_retry = !ast_dump.empty();
+    }
     if (!ast_dump.empty()) {
-        parse_ast_dump(scan, ast_dump, import.location);
+        NativeHeaderScan ast_scan;
+        parse_ast_dump(ast_scan, ast_dump, import.location);
+        if (used_prelude_retry) {
+            ast_scan = filter_ast_scan_to_header(std::move(ast_scan), import, options);
+        }
+        scan = dedupe_scan(std::move(ast_scan));
     }
     const std::string clang = clangxx_command();
     const std::string macro_cmd = shell_quote_arg(clang) +
@@ -219,7 +344,9 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
                            "dudu.native_header.scan_failed", unquoted(import.module_path));
     }
     parse_macro_dump(scan, macro_dump, import.location);
-    store_native_header_raw_cache(raw_cache, ast_dump, macro_dump);
+    if (!used_prelude_retry) {
+        store_native_header_raw_cache(raw_cache, ast_dump, macro_dump);
+    }
     cleanup();
     cache[key] = dedupe_scan(std::move(scan));
     return cache[key];
@@ -282,8 +409,9 @@ NativeHeaderScan scan_native_headers(const ModuleAst& module, const NativeHeader
             append_unique_native_types(out.types, prefixed_type_names(scan.types, import.alias));
             append_unique_native_classes(out.classes, prefixed_names(scan.classes, import.alias));
             append_unique_native_values(out.values, prefixed_names(scan.values, import.alias));
-            append_unique_native_functions(out.functions,
-                                           prefixed_names(scan.functions, import.alias));
+            append_unique_native_functions(
+                out.functions,
+                prefixed_names(alias_visible_functions(scan, import, options), import.alias));
             append_unique_native_macros(out.macros, prefixed_names(scan.macros, import.alias));
             append_unique_native_namespaces(out.namespaces, scan.namespaces);
         }

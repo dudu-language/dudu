@@ -3,14 +3,21 @@ import c "jpeglib.h" as jpeg
 
 def main() -> i32:
     error: struct jpeg_error_mgr
+    cinfo: struct jpeg_compress_struct
 
     returned = jpeg.jpeg_std_error(&error)
     if returned == None:
         return 1
 
-    if jpeg.JPEG_LIB_VERSION <= 0:
+    cinfo.err = returned
+    if cinfo.err == None:
         return 2
-    if jpeg.JCS_RGB == jpeg.JCS_UNKNOWN:
+    if cinfo.global_state != 0:
         return 3
+
+    if jpeg.JPEG_LIB_VERSION <= 0:
+        return 4
+    if jpeg.JCS_RGB == jpeg.JCS_UNKNOWN:
+        return 5
 
     return 42

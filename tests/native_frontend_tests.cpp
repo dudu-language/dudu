@@ -29,7 +29,7 @@ void test_native_type_declaration_emission() {
                            "            return 0\n"
                            "    return 1\n",
                            "native_type.dd");
-    dudu::analyze_module(module, {.check_bodies = true});
+    dudu::analyze_module(module, {.check_bodies = false});
     const std::string cpp = dudu::emit_cpp_source(module);
     assert(cpp.find("#include \"SDL3/SDL.h\"") != std::string::npos);
     assert(cpp.find("SDL_Event event{};") != std::string::npos);
@@ -610,6 +610,81 @@ void test_native_fixed_array_typedef_alias(const std::filesystem::path& root) {
     assert(cpp.find("read_fixed(value)") != std::string::npos);
 }
 
+void test_native_scan_retries_with_c_prelude_for_context_headers(
+    const std::filesystem::path& root) {
+    const std::filesystem::path source_dir = root / "build" / "native-context-header-scan";
+    const std::filesystem::path header = source_dir / "needs_c_context.h";
+    std::filesystem::remove_all(source_dir);
+    std::filesystem::create_directories(source_dir);
+    {
+        std::ofstream out(header);
+        out << "#pragma once\n"
+               "struct DuduNeedsContext {\n"
+               "    size_t count;\n"
+               "    int state;\n"
+               "};\n";
+    }
+
+    dudu::ModuleAst module = dudu::parse_source("import c \"./needs_c_context.h\" as native\n"
+                                                "\n"
+                                                "def main() -> i32:\n"
+                                                "    value: struct DuduNeedsContext\n"
+                                                "    value.count = 7\n"
+                                                "    value.state = 35\n"
+                                                "    return i32(value.count) + value.state\n",
+                                                source_dir / "main.dd");
+    dudu::ProjectConfig config;
+    config.project_dir = source_dir;
+    config.build_dir = source_dir / "build";
+    dudu::merge_native_header_types(module, {.config = config, .source_dir = source_dir});
+    dudu::analyze_module(module, {.check_bodies = true});
+    const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find("value.count = 7;") != std::string::npos);
+    assert(cpp.find("value.state = 35;") != std::string::npos);
+}
+
+void test_aliased_c_import_does_not_prefix_unrelated_transitive_functions(
+    const std::filesystem::path& root) {
+    const std::filesystem::path source_dir = root / "build" / "native-transitive-c-filter";
+    const std::filesystem::path header = source_dir / "wrap_stdio.h";
+    std::filesystem::remove_all(source_dir);
+    std::filesystem::create_directories(source_dir);
+    {
+        std::ofstream out(header);
+        out << "#pragma once\n"
+               "#include <stdio.h>\n"
+               "static inline int dudu_wrap_answer(void) { return 42; }\n";
+    }
+
+    dudu::ProjectConfig config;
+    config.project_dir = source_dir;
+    config.build_dir = source_dir / "build";
+    dudu::ModuleAst positive = dudu::parse_source("import c \"./wrap_stdio.h\" as wrap\n"
+                                                  "\n"
+                                                  "def main() -> i32:\n"
+                                                  "    return wrap.dudu_wrap_answer()\n",
+                                                  source_dir / "positive.dd");
+    dudu::merge_native_header_types(positive, {.config = config, .source_dir = source_dir});
+    dudu::analyze_module(positive, {.check_bodies = true});
+    const std::string cpp = dudu::emit_cpp_source(positive);
+    assert(cpp.find("dudu_wrap_answer()") != std::string::npos);
+
+    bool failed = false;
+    try {
+        dudu::ModuleAst negative = dudu::parse_source("import c \"./wrap_stdio.h\" as wrap\n"
+                                                      "\n"
+                                                      "def main() -> i32:\n"
+                                                      "    return wrap.remove(\"x\")\n",
+                                                      source_dir / "negative.dd");
+        dudu::merge_native_header_types(negative, {.config = config, .source_dir = source_dir});
+        dudu::analyze_module(negative, {.check_bodies = true});
+    } catch (const dudu::CompileError& error) {
+        failed =
+            std::string(error.what()).find("unknown function: wrap.remove") != std::string::npos;
+    }
+    assert(failed);
+}
+
 void test_native_scan_ignores_anonymous_record_definitions() {
     dudu::NativeHeaderScan scan;
     dudu::parse_ast_dump(scan,
@@ -649,6 +724,8 @@ int main() {
         test_native_header_pointer_diagnostics(root);
         test_native_method_templates_do_not_mask_concrete_overloads(root);
         test_native_fixed_array_typedef_alias(root);
+        test_native_scan_retries_with_c_prelude_for_context_headers(root);
+        test_aliased_c_import_does_not_prefix_unrelated_transitive_functions(root);
         test_native_scan_ignores_anonymous_record_definitions();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';

@@ -40,6 +40,12 @@ generated include shapes:
 
 The quoted path is the C/C++ header spelling. It is not a Dudu module path.
 
+Aliased C/CXX imports expose free functions under the alias only when the
+function comes from the imported header or that header's include family. This
+keeps umbrella headers such as `SDL3/SDL.h` usable while preventing unrelated
+transitive C headers from becoming surprising alias members, such as
+`jpeglib.h` exposing `stdio.h` functions as `jpeg.remove`.
+
 Known imported macros are callable when the scanner can determine their arity.
 Variadic macros enforce their fixed leading parameters and pass through extra
 arguments.
