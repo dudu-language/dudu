@@ -40,13 +40,13 @@ bool foreign_cpp_type_name(const Symbols& symbols, const TypeRef& type) {
            symbols.native_types.contains(base_type(resolved_type));
 }
 
-bool native_import_path_prefix(const Symbols& symbols, const std::string& path) {
+bool is_native_path_prefix(const Symbols& symbols, const std::string& path) {
     const size_t dot = path.find('.');
     if (dot == std::string::npos) {
         return false;
     }
     const std::string prefix = path.substr(0, dot);
-    return symbols.native_import_prefixes.contains(prefix) &&
+    return symbols.native_path_prefixes.contains(prefix) &&
            !symbols.module_import_prefixes.contains(prefix);
 }
 
@@ -64,7 +64,7 @@ std::optional<TypeRef> native_member_path_type_ref(const Symbols& symbols, const
     if (symbols.module_import_prefixes.contains(prefix)) {
         return std::nullopt;
     }
-    if (prefix == "build" || prefix == "shader" || native_import_path_prefix(symbols, path)) {
+    if (prefix == "build" || prefix == "shader" || is_native_path_prefix(symbols, path)) {
         return named_type_ref("auto", location);
     }
     return std::nullopt;

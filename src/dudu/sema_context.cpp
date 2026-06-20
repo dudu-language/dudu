@@ -294,7 +294,7 @@ size_t find_top_level_char(const std::string& text, char wanted) {
 void add_native_path_prefix(Symbols& symbols, const std::string& name) {
     const size_t dot = name.find('.');
     if (dot != std::string::npos && dot > 0) {
-        symbols.native_import_prefixes.insert(name.substr(0, dot));
+        symbols.native_path_prefixes.insert(name.substr(0, dot));
     }
 }
 
@@ -350,9 +350,9 @@ Symbols collect_symbols(const ModuleAst& module) {
         const std::string symbol_name = "build." + name;
         symbols.native_value_type_refs[symbol_name] = build_value_type_ref(value);
     }
-    symbols.native_import_prefixes.insert("build");
+    symbols.native_path_prefixes.insert("build");
     for (const NativeNamespaceDecl& ns : module.native_namespaces) {
-        symbols.native_import_prefixes.insert(ns.name);
+        symbols.native_path_prefixes.insert(ns.name);
     }
     for (const EnumDecl& en : module.enums) {
         add_name(names, en.name, en.location);

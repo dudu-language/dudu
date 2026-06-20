@@ -1684,6 +1684,10 @@ push. They are not release packaging work.
    C++ template type lowering has been split out of `cpp_type_ref.cpp` into
    `cpp_type_templates.*`, keeping template-name mapping separate from the
    core `TypeRef` dispatcher.
+   The stale `native_import_prefixes`/`native_import_path_prefix` names were
+   renamed to `native_path_prefixes`/`is_native_path_prefix` after broad
+   `alias.anything` native-call acceptance was removed; the name now describes
+   known native member paths rather than import aliases.
 
 19. Polish Unsupported Syntax Diagnostics
 
@@ -2621,35 +2625,3 @@ push. They are not release packaging work.
    parser only forms fixed arrays from canonical `array[T][shape]`, and the
    previous `find/substr` helpers for `fixed_array_dimensions` and
    `fixed_array_base` are guarded against reintroduction.
-
-## Prototype Cruft And Style Pass
-
-As the compiler gets real, we need deliberate cleanup passes for the silly
-stuff that accumulates during fast language growth. This is not cosmetic
-polishing before the compiler works; it is part of keeping the implementation
-understandable enough to keep moving without patching around old decisions.
-
-The cleanup pass should look for:
-
-- one-line function wrappers that only rename another helper and do not improve
-  call-site clarity
-- dead compatibility paths for syntax Dudu never shipped
-- helper names that say "legacy", "fallback", "temporary", or "bridge" after
-  the replacement path is stable
-- broad files that became junk drawers and should be split along real compiler
-  boundaries
-- generic helpers that are secretly hard-coded for one test case or imported
-  library
-- duplicated semantic checks that should share a structured AST/type utility
-- validation tests that were useful during migration but now only lock in
-  prototype-era behavior
-
-The style rule is strict: Dudu has no users yet, so internal compatibility is
-not a feature. If a path exists only to keep stale implementation shapes alive,
-delete it instead of preserving it. If a wrapper is useful only because the
-underlying name is bad, rename the underlying helper.
-
-This pass should happen repeatedly after stable green milestones, especially
-after AST migration, native header hardening, module-output work, and LSP
-cleanup. Each pass should be small enough to validate quickly and commit on its
-own.
