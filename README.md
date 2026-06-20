@@ -49,6 +49,48 @@ The starting point is:
 - [Compiler plan](docs/compiler-plan.md)
 - [Development plan](docs/development-plan.md)
 
+## Fresh Checkout Install
+
+Install prerequisites.
+
+Ubuntu/Debian:
+
+```sh
+sudo apt install git cmake clang g++ build-essential
+```
+
+macOS:
+
+```sh
+xcode-select --install
+brew install cmake
+```
+
+Clone, build, and install the current checkout:
+
+```sh
+git clone https://github.com/wegfawefgawefg/dudu.git
+cd dudu
+./scripts/install-local.sh
+export PATH="$HOME/.local/bin:$PATH"
+dudu --version
+```
+
+Create and run a small project:
+
+```sh
+dudu init hello
+cd hello
+dudu run
+```
+
+The local install script installs `dudu`, `duc`, docs, and editor support
+through CMake install rules. It defaults to `~/.local`; use
+`./scripts/install-local.sh --prefix /path/to/prefix` for another install root.
+
+Optional examples that use native libraries such as raylib or SDL3 need those
+libraries installed separately.
+
 Build the compiler:
 
 ```sh

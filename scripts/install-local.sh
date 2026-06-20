@@ -46,10 +46,21 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-jobs="$(getconf _NPROCESSORS_ONLN 2>/dev/null || printf '1')"
-case "$jobs" in
-''|*[!0-9]*) jobs=1 ;;
-esac
+detect_jobs() {
+    local detected=""
+    if command -v getconf >/dev/null 2>&1; then
+        detected="$(getconf _NPROCESSORS_ONLN 2>/dev/null || true)"
+    fi
+    if [[ -z "$detected" ]] && command -v sysctl >/dev/null 2>&1; then
+        detected="$(sysctl -n hw.ncpu 2>/dev/null || true)"
+    fi
+    case "$detected" in
+    ''|*[!0-9]*) detected=1 ;;
+    esac
+    printf '%s\n' "$detected"
+}
+
+jobs="$(detect_jobs)"
 
 cmake -S "$repo_root" -B "$build_dir" \
     "${generator[@]}" \
