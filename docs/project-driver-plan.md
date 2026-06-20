@@ -223,6 +223,7 @@ Expected commands:
 ```text
 dudu run
 dudu run app
+dudu run -- --user-flag value
 dudu test
 dudu build tests
 ```
@@ -247,6 +248,7 @@ Rules:
 
 - `dudu run` uses the configured project entry.
 - `dudu run path/to/file.dd` treats that file as a script-like executable.
+- `dudu run ... -- args...` forwards trailing arguments to the executable.
 - `duc run path/to/file.dd` keeps the same low-level explicit behavior.
 - Imported modules may contain helper functions, including functions named
   `main`; only the selected entry file's `main` should lower to C++ `main`.

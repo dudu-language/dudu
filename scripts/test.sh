@@ -150,7 +150,8 @@ rm -rf "$clean_smoke"
 "$repo_root/build/dudu" new "$clean_smoke" >/dev/null
 (
     cd "$clean_smoke"
-    "$repo_root/build/dudu" run >/dev/null 2>"$repo_root/build/dudu_run_steps.err"
+    "$repo_root/build/dudu" run -- --user-flag "two words" >/dev/null \
+        2>"$repo_root/build/dudu_run_steps.err"
     test -d build
     "$repo_root/build/dudu" build >/dev/null 2>"$repo_root/build/dudu_build_cached.err"
     "$repo_root/build/dudu" build --quiet >/dev/null 2>"$repo_root/build/dudu_build_quiet.err"
@@ -160,6 +161,7 @@ rm -rf "$clean_smoke"
 grep -Eq "emit .*clean_smoke/build/clean_smoke.cpp" "$repo_root/build/dudu_run_steps.err"
 grep -Eq "build .*clean_smoke/build/clean_smoke" "$repo_root/build/dudu_run_steps.err"
 grep -Eq "run .*clean_smoke/build/clean_smoke" "$repo_root/build/dudu_run_steps.err"
+grep -Eq "run .*--user-flag.*two words" "$repo_root/build/dudu_run_steps.err"
 grep -Eq "up-to-date .*clean_smoke/build/clean_smoke" "$repo_root/build/dudu_build_cached.err"
 test ! -s "$repo_root/build/dudu_build_quiet.err"
 grep -q "clean ./build" "$repo_root/build/dudu_clean.err"

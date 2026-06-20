@@ -111,6 +111,12 @@ CliOptions parse_cli_options(int argc, char** argv, bool project_driver) {
             options.command_args.push_back(arg);
             continue;
         }
+        if (options.run && arg == "--") {
+            while (++i < argc) {
+                options.command_args.push_back(argv[i]);
+            }
+            break;
+        }
         if (arg == "-h" || arg == "--help") {
             print_cli_usage(project_driver);
             std::exit(0);

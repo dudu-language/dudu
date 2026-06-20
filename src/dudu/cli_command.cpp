@@ -246,13 +246,12 @@ int run_build_command(const CliOptions& options, char* executable) {
     if (config.build_backend == "cmake") {
         print_project_step(project_output, "cmake", cmake_backend_log_source(config));
         print_project_step(project_output, "build", cmake_backend_log_build_dir(config));
-        const std::filesystem::path bin =
-            build_cmake_project({.config = config,
-                                 .input = options.input,
-                                 .output = options.output,
-                                 .dudu_executable = dudu_executable,
-                                 .stream_output = project_output,
-                                 .verbose = options.verbose});
+        const std::filesystem::path bin = build_cmake_project({.config = config,
+                                                               .input = options.input,
+                                                               .output = options.output,
+                                                               .dudu_executable = dudu_executable,
+                                                               .stream_output = project_output,
+                                                               .verbose = options.verbose});
         print_project_step(project_output, "output", bin);
         return 0;
     }
@@ -291,8 +290,10 @@ int run_run_command(const CliOptions& options, char* executable) {
                                                                .dudu_executable = dudu_executable,
                                                                .stream_output = project_output,
                                                                .verbose = options.verbose});
-        print_project_step(project_output, "run", bin);
-        return std::system(shell_quote_path(bin).c_str()) == 0 ? 0 : 1;
+        const std::string command =
+            append_command_args(shell_quote_path(bin), options.command_args);
+        print_project_step(project_output, "run", command);
+        return std::system(command.c_str()) == 0 ? 0 : 1;
     }
     const std::string source = read_text_file(options.input);
     const std::filesystem::path output =
@@ -302,16 +303,17 @@ int run_run_command(const CliOptions& options, char* executable) {
     print_project_step(project_output, "emit", output.string() + ".cpp");
     const std::string cpp = emit_cpp_source(module);
     print_project_step(project_output, "compile", output);
-    const std::filesystem::path bin =
-        build_executable({.output = output,
-                          .config = config,
-                          .stream_output = project_output,
-                          .verbose = options.verbose},
-                         cpp);
+    const std::filesystem::path bin = build_executable({.output = output,
+                                                        .config = config,
+                                                        .stream_output = project_output,
+                                                        .verbose = options.verbose},
+                                                       cpp);
     const std::filesystem::path command =
         bin.is_relative() && bin.parent_path().empty() ? std::filesystem::path(".") / bin : bin;
-    print_project_step(project_output, "run", command);
-    return std::system(shell_quote_path(command).c_str()) == 0 ? 0 : 1;
+    const std::string run_command =
+        append_command_args(shell_quote_path(command), options.command_args);
+    print_project_step(project_output, "run", run_command);
+    return std::system(run_command.c_str()) == 0 ? 0 : 1;
 }
 
 } // namespace

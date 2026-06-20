@@ -1481,6 +1481,9 @@ push. They are not release packaging work.
    Direct `dudu build` and `dudu run` report Dudu-side `analyze`, generated C++
    `emit`, native `compile`, and final `output`/`run` stages separately so
    normal builds show where time is going.
+   `dudu run ... -- args...` now forwards trailing arguments to the launched
+   executable and prints them in the `run` step, while preserving compiled
+   program stdout for the program itself.
    `--quiet` suppresses project-driver
    progress output for scripts. `dudu check` now prints `check` and `ok` lines
    on successful validation unless `--quiet` is set, while `duc check` remains
