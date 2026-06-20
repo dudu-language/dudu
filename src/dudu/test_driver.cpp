@@ -227,6 +227,7 @@ int run_one_test_entry(TestDriverOptions options) {
              .target = target,
              .dudu_executable = options.dudu_executable,
              .stream_output = project_output,
+             .timings = options.timings,
              .verbose = options.verbose});
         print_project_step(project_output, "test", bin);
         return std::system(shell_quote_path(bin).c_str()) == 0 ? 0 : 1;

@@ -1516,6 +1516,10 @@ push. They are not release packaging work.
    Direct `dudu build` and `dudu run` report Dudu-side `analyze`, generated C++
    `emit`, native `compile`, and final `output`/`run` stages separately so
    normal builds show where time is going.
+   Project-driver commands accept `--timings`, which prefixes Dudu progress
+   lines with elapsed seconds from command start. This makes slow phases such
+   as full-module analysis or native header metadata parsing visible without
+   timestamping user program stdout.
    `dudu run ... -- args...` now forwards trailing arguments to the launched
    executable and prints them in the `run` step, while preserving compiled
    program stdout for the program itself.

@@ -2,15 +2,21 @@
 
 #include "dudu/project_config.hpp"
 
+#include <chrono>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 
 namespace dudu {
 namespace {
+
+bool project_step_timings = false;
+std::chrono::steady_clock::time_point project_step_start = std::chrono::steady_clock::now();
 
 [[noreturn]] void fail(const std::string& message) {
     throw std::runtime_error(message);
@@ -61,6 +67,14 @@ bool init_git_repo(const std::filesystem::path& dir) {
     return std::system(command.c_str()) == 0;
 }
 
+std::string elapsed_prefix() {
+    const auto now = std::chrono::steady_clock::now();
+    const std::chrono::duration<double> elapsed = now - project_step_start;
+    std::ostringstream out;
+    out << "[+" << std::fixed << std::setprecision(3) << elapsed.count() << "s] ";
+    return out.str();
+}
+
 } // namespace
 
 std::filesystem::path clean_project(const std::filesystem::path& dir) {
@@ -108,8 +122,16 @@ void new_project(const std::filesystem::path& dir) {
 
 void print_project_step(bool enabled, const std::string& label, const std::filesystem::path& path) {
     if (enabled) {
+        if (project_step_timings) {
+            std::cerr << elapsed_prefix();
+        }
         std::cerr << label << ' ' << path.string() << '\n';
     }
+}
+
+void set_project_step_timings(bool enabled) {
+    project_step_timings = enabled;
+    project_step_start = std::chrono::steady_clock::now();
 }
 
 } // namespace dudu

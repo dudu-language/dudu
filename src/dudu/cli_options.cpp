@@ -108,6 +108,10 @@ CliOptions parse_cli_options(int argc, char** argv, bool project_driver) {
                 options.quiet = true;
                 continue;
             }
+            if (arg == "--timings") {
+                options.timings = true;
+                continue;
+            }
             options.command_args.push_back(arg);
             continue;
         }
@@ -131,6 +135,10 @@ CliOptions parse_cli_options(int argc, char** argv, bool project_driver) {
         }
         if (arg == "--quiet") {
             options.quiet = true;
+            continue;
+        }
+        if (arg == "--timings") {
+            options.timings = true;
             continue;
         }
         if (arg == "--filter") {

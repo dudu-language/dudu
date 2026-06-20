@@ -17,6 +17,7 @@ struct TestDriverOptions {
     bool no_capture = false;
     bool project_driver = false;
     bool quiet = false;
+    bool timings = false;
     bool verbose = false;
 };
 

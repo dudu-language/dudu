@@ -9,17 +9,20 @@ void print_cli_usage(bool project_driver) {
         std::cout << "usage: dudu init\n"
                      "       dudu init [path]\n"
                      "       dudu new <name>\n"
-                     "       dudu run [input.dd|target] [--quiet] [--verbose] [-- args...]\n"
-                     "       dudu build [input.dd|target] [--quiet] [--verbose]\n"
-                     "       dudu bench [compiler] [--quiet] [--verbose] [-- args...]\n"
-                     "       dudu check [input.dd|dir] [--quiet]\n"
+                     "       dudu run [input.dd|target] [--quiet] [--verbose] [--timings] "
+                     "[-- args...]\n"
+                     "       dudu build [input.dd|target] [--quiet] [--verbose] [--timings]\n"
+                     "       dudu bench [compiler] [--quiet] [--verbose] [--timings] "
+                     "[-- args...]\n"
+                     "       dudu check [input.dd|dir] [--quiet] [--timings]\n"
                      "       dudu clean [path] [--quiet]\n"
                      "       dudu clean-cache [path] [--quiet]\n"
                      "       dudu fmt [input.dd|dir] [--check]\n"
                      "       dudu lsp\n"
                      "       dudu test [input.dd|target|filter] [--filter text] [--no-capture] "
-                     "[--quiet] [--verbose]\n"
-                     "       dudu cmake [input.dd|target] [-o CMakeLists.txt] [--quiet]\n";
+                     "[--quiet] [--verbose] [--timings]\n"
+                     "       dudu cmake [input.dd|target] [-o CMakeLists.txt] [--quiet] "
+                     "[--timings]\n";
         return;
     }
     std::cout

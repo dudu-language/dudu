@@ -35,6 +35,7 @@ struct CliOptions {
     bool quiet = false;
     bool run = false;
     bool test = false;
+    bool timings = false;
     bool verbose = false;
 };
 

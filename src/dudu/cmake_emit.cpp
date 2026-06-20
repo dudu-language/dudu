@@ -160,13 +160,18 @@ std::string emit_cmake_project(const ProjectConfig& config, const std::filesyste
         << "set(DUDU_PROJECT_DIR " << cmake_quote(project_dir.string()) << ")\n"
         << "set(DUDU_SOURCE " << cmake_quote(source_path) << ")\n"
         << "set(DUDU_GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)\n"
-        << "set(DUDU_GENERATED_STAMP ${DUDU_GENERATED_DIR}/.dudu_emit.stamp)\n\n";
+        << "set(DUDU_GENERATED_STAMP ${DUDU_GENERATED_DIR}/.dudu_emit.stamp)\n"
+        << "set(DUDU_TIMING_ARGS)\n"
+        << "if(DUDU_TIMINGS)\n"
+        << "    set(DUDU_TIMING_ARGS --timings)\n"
+        << "endif()\n\n";
     emit_generated_module_list(out, "DUDU_GENERATED", "${DUDU_GENERATED_DIR}", generated_sources);
     out << "add_custom_command(\n"
         << "    OUTPUT ${DUDU_GENERATED_STAMP}\n"
         << "    BYPRODUCTS ${DUDU_GENERATED}\n"
         << "    COMMAND ${CMAKE_COMMAND} -E make_directory ${DUDU_GENERATED_DIR}\n"
-        << "    COMMAND ${DUDU_EXECUTABLE} emit-modules ${DUDU_PROJECT_DIR}/${DUDU_SOURCE} -o "
+        << "    COMMAND ${DUDU_EXECUTABLE} emit-modules ${DUDU_TIMING_ARGS} "
+           "${DUDU_PROJECT_DIR}/${DUDU_SOURCE} -o "
            "${DUDU_GENERATED_DIR}\n"
         << "    COMMAND ${CMAKE_COMMAND} -E touch ${DUDU_GENERATED_STAMP}\n";
     emit_cmake_depends(out, source_tree_files(input));
@@ -214,13 +219,18 @@ std::string emit_cmake_test_project(const ProjectConfig& config, const std::file
         << "set(DUDU_PROJECT_DIR " << cmake_quote(project_dir.string()) << ")\n"
         << "set(DUDU_SOURCE " << cmake_quote(source_path) << ")\n"
         << "set(DUDU_GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)\n"
-        << "set(DUDU_GENERATED_STAMP ${DUDU_GENERATED_DIR}/.dudu_emit.stamp)\n\n";
+        << "set(DUDU_GENERATED_STAMP ${DUDU_GENERATED_DIR}/.dudu_emit.stamp)\n"
+        << "set(DUDU_TIMING_ARGS)\n"
+        << "if(DUDU_TIMINGS)\n"
+        << "    set(DUDU_TIMING_ARGS --timings)\n"
+        << "endif()\n\n";
     emit_generated_module_list(out, "DUDU_GENERATED", "${DUDU_GENERATED_DIR}", generated_sources);
     out << "add_custom_command(\n"
         << "    OUTPUT ${DUDU_GENERATED_STAMP}\n"
         << "    BYPRODUCTS ${DUDU_GENERATED}\n"
         << "    COMMAND ${CMAKE_COMMAND} -E make_directory ${DUDU_GENERATED_DIR}\n"
-        << "    COMMAND ${DUDU_EXECUTABLE} emit-test-modules ${DUDU_PROJECT_DIR}/${DUDU_SOURCE} "
+        << "    COMMAND ${DUDU_EXECUTABLE} emit-test-modules ${DUDU_TIMING_ARGS} "
+           "${DUDU_PROJECT_DIR}/${DUDU_SOURCE} "
            "-o ${DUDU_GENERATED_DIR}";
     if (!filter.empty()) {
         out << " --filter " << cmake_quote(filter);

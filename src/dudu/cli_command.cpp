@@ -251,6 +251,7 @@ int run_build_command(const CliOptions& options, char* executable) {
                                                                .output = options.output,
                                                                .dudu_executable = dudu_executable,
                                                                .stream_output = project_output,
+                                                               .timings = options.timings,
                                                                .verbose = options.verbose});
         print_project_step(project_output, "output", bin);
         return 0;
@@ -289,6 +290,7 @@ int run_run_command(const CliOptions& options, char* executable) {
                                                                .output = options.output,
                                                                .dudu_executable = dudu_executable,
                                                                .stream_output = project_output,
+                                                               .timings = options.timings,
                                                                .verbose = options.verbose});
         const std::string command =
             append_command_args(shell_quote_path(bin), options.command_args);
@@ -323,6 +325,7 @@ int run_cli(int argc, char** argv) {
         argc > 0 ? std::filesystem::path(argv[0]).stem().string() : "duc";
     const bool project_driver = executable == "dudu";
     const CliOptions options = resolve_project_input(parse_cli_options(argc, argv, project_driver));
+    set_project_step_timings(options.timings);
     if (options.lsp) {
         return run_language_server(std::cin, std::cout, std::cerr);
     }
@@ -366,6 +369,7 @@ int run_cli(int argc, char** argv) {
                                   .no_capture = options.no_capture,
                                   .project_driver = options.project_driver,
                                   .quiet = options.quiet,
+                                  .timings = options.timings,
                                   .verbose = options.verbose});
     }
     if (options.format) {

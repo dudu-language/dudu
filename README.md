@@ -127,6 +127,15 @@ Then run project commands from the project directory:
 ../build/dudu clean-cache
 ```
 
+Add `--timings` to project commands when a build feels slow:
+
+```sh
+dudu run --timings
+```
+
+This prefixes Dudu progress lines with elapsed time so long analysis, emit,
+CMake, compile, or run phases are visible without changing program stdout.
+
 `dudu build`, `dudu run`, and `dudu test` are intended to stay the normal
 front door even for serious native projects. The direct compiler path is the
 fast narrow backend. CMake is the broad native ecosystem backend for larger

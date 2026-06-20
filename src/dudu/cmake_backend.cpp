@@ -149,10 +149,13 @@ std::filesystem::path run_cmake_backend(const CMakeBackendOptions& options) {
     print_stage(options.stream_output, "generate", cmake_lists);
     write_text_file(cmake_lists, options.cmake_lists);
 
-    const std::string configure_command =
+    std::string configure_command =
         "cmake -S " + shell_quote_path(source_dir) + " -B " + shell_quote_path(build_dir) +
         " -DDUDU_EXECUTABLE=" +
         shell_quote_path(std::filesystem::absolute(options.dudu_executable));
+    if (options.timings) {
+        configure_command += " -DDUDU_TIMINGS=ON";
+    }
     const std::filesystem::path configure_log = options.root / "configure.log";
     if (options.verbose) {
         std::cerr << configure_command << '\n';
@@ -238,6 +241,7 @@ std::filesystem::path build_cmake_project(const BuildCMakeProjectOptions& option
                               .target = cmake_target_name(options.config, options.input),
                               .dudu_executable = options.dudu_executable,
                               .stream_output = options.stream_output,
+                              .timings = options.timings,
                               .verbose = options.verbose});
 }
 

@@ -15,6 +15,7 @@ struct CMakeBackendOptions {
     std::string target;
     std::filesystem::path dudu_executable;
     bool stream_output = false;
+    bool timings = false;
     bool verbose = false;
 };
 
@@ -31,6 +32,7 @@ struct BuildCMakeProjectOptions {
     std::optional<std::filesystem::path> output;
     std::filesystem::path dudu_executable;
     bool stream_output = false;
+    bool timings = false;
     bool verbose = false;
 };
 
