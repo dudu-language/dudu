@@ -159,20 +159,27 @@ std::string emit_cmake_project(const ProjectConfig& config, const std::filesyste
         << "set(DUDU_EXECUTABLE duc CACHE FILEPATH \"Path to the duc compiler\")\n"
         << "set(DUDU_PROJECT_DIR " << cmake_quote(project_dir.string()) << ")\n"
         << "set(DUDU_SOURCE " << cmake_quote(source_path) << ")\n"
-        << "set(DUDU_GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)\n\n";
+        << "set(DUDU_GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)\n"
+        << "set(DUDU_GENERATED_STAMP ${DUDU_GENERATED_DIR}/.dudu_emit.stamp)\n\n";
     emit_generated_module_list(out, "DUDU_GENERATED", "${DUDU_GENERATED_DIR}", generated_sources);
     out << "add_custom_command(\n"
-        << "    OUTPUT ${DUDU_GENERATED}\n"
+        << "    OUTPUT ${DUDU_GENERATED_STAMP}\n"
+        << "    BYPRODUCTS ${DUDU_GENERATED}\n"
         << "    COMMAND ${CMAKE_COMMAND} -E make_directory ${DUDU_GENERATED_DIR}\n"
         << "    COMMAND ${DUDU_EXECUTABLE} emit-modules ${DUDU_PROJECT_DIR}/${DUDU_SOURCE} -o "
-           "${DUDU_GENERATED_DIR}\n";
+           "${DUDU_GENERATED_DIR}\n"
+        << "    COMMAND ${CMAKE_COMMAND} -E touch ${DUDU_GENERATED_STAMP}\n";
     emit_cmake_depends(out, source_tree_files(input));
     out << "    COMMENT \"Dudu emit modules\"\n"
         << "    VERBATIM\n"
         << "    WORKING_DIRECTORY ${DUDU_PROJECT_DIR}\n"
-        << ")\n\n";
+        << ")\n"
+        << "set_source_files_properties(${DUDU_GENERATED} PROPERTIES GENERATED TRUE)\n"
+        << "add_custom_target(" << target
+        << "_dudu_generate DEPENDS ${DUDU_GENERATED_STAMP})\n\n";
     emit_pkg_config(out, config);
     emit_cmake_target(out, config, project_dir, target);
+    out << "add_dependencies(" << target << ' ' << target << "_dudu_generate)\n";
     out << "target_include_directories(" << target << " PRIVATE ${DUDU_GENERATED_DIR})\n";
     emit_cmake_list_values(out, "target_include_directories(" + target + " PRIVATE",
                            config.include_dirs, &project_dir);
@@ -206,10 +213,12 @@ std::string emit_cmake_test_project(const ProjectConfig& config, const std::file
         << "set(DUDU_EXECUTABLE duc CACHE FILEPATH \"Path to the duc compiler\")\n"
         << "set(DUDU_PROJECT_DIR " << cmake_quote(project_dir.string()) << ")\n"
         << "set(DUDU_SOURCE " << cmake_quote(source_path) << ")\n"
-        << "set(DUDU_GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)\n\n";
+        << "set(DUDU_GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)\n"
+        << "set(DUDU_GENERATED_STAMP ${DUDU_GENERATED_DIR}/.dudu_emit.stamp)\n\n";
     emit_generated_module_list(out, "DUDU_GENERATED", "${DUDU_GENERATED_DIR}", generated_sources);
     out << "add_custom_command(\n"
-        << "    OUTPUT ${DUDU_GENERATED}\n"
+        << "    OUTPUT ${DUDU_GENERATED_STAMP}\n"
+        << "    BYPRODUCTS ${DUDU_GENERATED}\n"
         << "    COMMAND ${CMAKE_COMMAND} -E make_directory ${DUDU_GENERATED_DIR}\n"
         << "    COMMAND ${DUDU_EXECUTABLE} emit-test-modules ${DUDU_PROJECT_DIR}/${DUDU_SOURCE} "
            "-o ${DUDU_GENERATED_DIR}";
@@ -219,17 +228,22 @@ std::string emit_cmake_test_project(const ProjectConfig& config, const std::file
     if (!capture_output) {
         out << " --no-capture";
     }
-    out << "\n";
+    out << "\n"
+        << "    COMMAND ${CMAKE_COMMAND} -E touch ${DUDU_GENERATED_STAMP}\n";
     emit_cmake_depends(out, source_tree_files(input));
     out << "    COMMENT \"Dudu emit test modules\"\n"
         << "    VERBATIM\n"
         << "    WORKING_DIRECTORY ${DUDU_PROJECT_DIR}\n"
-        << ")\n\n";
+        << ")\n"
+        << "set_source_files_properties(${DUDU_GENERATED} PROPERTIES GENERATED TRUE)\n"
+        << "add_custom_target(" << target
+        << "_dudu_generate DEPENDS ${DUDU_GENERATED_STAMP})\n\n";
     emit_pkg_config(out, config);
     out << "add_executable(" << target << "\n"
         << "    ${DUDU_GENERATED}\n";
     emit_cmake_sources(out, config, project_dir);
     out << ")\n";
+    out << "add_dependencies(" << target << ' ' << target << "_dudu_generate)\n";
     out << "target_include_directories(" << target << " PRIVATE ${DUDU_GENERATED_DIR})\n";
     emit_cmake_list_values(out, "target_include_directories(" + target + " PRIVATE",
                            config.include_dirs, &project_dir);

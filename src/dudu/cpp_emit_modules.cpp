@@ -6,6 +6,7 @@
 #include "dudu/cpp_emit_prelude.hpp"
 
 #include <fstream>
+#include <iterator>
 #include <set>
 #include <sstream>
 #include <stdexcept>
@@ -306,19 +307,37 @@ std::vector<CppModuleArtifact> emit_cpp_test_module_artifacts(const ModuleAst& m
     return out;
 }
 
-void write_cpp_module_artifacts(const std::filesystem::path& dir, const ModuleAst& module) {
+bool file_content_matches(const std::filesystem::path& path, const std::string& content) {
+    std::ifstream in(path, std::ios::binary);
+    if (!in) {
+        return false;
+    }
+    const std::string existing((std::istreambuf_iterator<char>(in)),
+                               std::istreambuf_iterator<char>());
+    return existing == content;
+}
+
+void write_cpp_artifacts(const std::filesystem::path& dir,
+                         const std::vector<CppModuleArtifact>& artifacts) {
     if (dir.empty()) {
         throw std::runtime_error("emit-modules requires -o <directory>");
     }
-    for (const CppModuleArtifact& artifact : emit_cpp_module_artifacts(module)) {
+    for (const CppModuleArtifact& artifact : artifacts) {
         const std::filesystem::path path = dir / artifact.path;
         std::filesystem::create_directories(path.parent_path().empty() ? dir : path.parent_path());
-        std::ofstream out(path);
+        if (file_content_matches(path, artifact.content)) {
+            continue;
+        }
+        std::ofstream out(path, std::ios::binary);
         if (!out) {
             throw std::runtime_error("could not open output " + path.string());
         }
         out << artifact.content;
     }
+}
+
+void write_cpp_module_artifacts(const std::filesystem::path& dir, const ModuleAst& module) {
+    write_cpp_artifacts(dir, emit_cpp_module_artifacts(module));
 }
 
 } // namespace dudu

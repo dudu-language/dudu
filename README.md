@@ -134,6 +134,17 @@ dependency graphs, package discovery, IDE generators, and user-owned native
 builds. `dudu cmake` is an inspectable escape hatch, not the replacement for
 `dudu build`.
 
+`dudu.toml` is the canonical Dudu project file, but it does not need to own
+every native compilation detail. For simple projects it can describe the whole
+build. For larger C/C++ projects it can select a user-owned CMake backend while
+CMake remains the authority for native target definitions, toolchain files,
+platform conditionals, install rules, and vendored native dependency setup.
+The user still enters through `dudu build`/`run`/`test`; the backend boundary is
+explicit instead of pretending TOML can replace all native build systems.
+Generated CMake under the build directory is Dudu-owned and may be overwritten.
+User-owned `CMakeLists.txt` files are not patched by Dudu; they should consume
+stable generated Dudu artifacts explicitly.
+
 Project manifests can also define named targets:
 
 ```toml

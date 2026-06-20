@@ -15,8 +15,19 @@ namespace {
     throw std::runtime_error(message);
 }
 
+std::string read_text_file(const std::filesystem::path& path) {
+    std::ifstream file(path);
+    if (!file) {
+        return {};
+    }
+    return {std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
+}
+
 void write_text_file(const std::filesystem::path& path, const std::string& text) {
     std::filesystem::create_directories(path.parent_path().empty() ? "." : path.parent_path());
+    if (read_text_file(path) == text) {
+        return;
+    }
     std::ofstream out(path);
     if (!out) {
         fail("could not open output " + path.string());
@@ -28,14 +39,6 @@ void print_stage(bool enabled, const std::string& label, const std::filesystem::
     if (enabled) {
         std::cerr << label << " " << path.string() << '\n';
     }
-}
-
-std::string read_text_file(const std::filesystem::path& path) {
-    std::ifstream file(path);
-    if (!file) {
-        return {};
-    }
-    return {std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
 }
 
 std::string command_failure_message(const std::string& label, const std::string& command,

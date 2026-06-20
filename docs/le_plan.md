@@ -1329,9 +1329,18 @@ push. They are not release packaging work.
    source-level `module.symbol` calls. `duc emit-modules` writes those artifacts
    to disk with a shared generated runtime header, and the generated CMake
    backend now compiles the per-module `.cpp` files instead of a merged
-   generated translation unit. The direct native build still compiles the
-   compatibility single-file output and fails clearly when that merged output
-   cannot represent distinct module declarations safely.
+   generated translation unit. Generated artifact writes preserve mtimes when
+   content is unchanged, and generated-CMake uses a stamp output plus generated
+   file byproducts, so whitespace-only `.dd` edits do not force unchanged
+   generated C++ translation units to recompile. The direct native build still
+   compiles the compatibility single-file output and fails clearly when that
+   merged output cannot represent distinct module declarations safely.
+
+   Remaining incremental work is on the Dudu side: `duc emit-modules` still
+   analyzes the selected entry's full module graph in a fresh process and
+   reparses cached native header metadata. Real compiler-speed work needs
+   module-level invalidation, structured native-header metadata caching, and
+   clearer phase timing/progress output for long analysis steps.
 
 13. Language Server And Formatter
 
@@ -1439,6 +1448,31 @@ push. They are not release packaging work.
    Dudu is not copying Zig here. CMake is not a shameful fallback after
    `dudu build` gives up. It is one of the serious native backends because
    CMake is where a large part of the C/C++ ecosystem already lives.
+
+   `dudu.toml` remains the canonical Dudu project file, but it does not have
+   to be the canonical source for every native compilation detail in a mixed
+   C/C++ project. The manifest should own Dudu entries, targets, generated
+   artifact locations, Dudu compile-time settings, delegated commands, and
+   backend selection. User-owned CMake may remain the authority for native
+   target definitions, toolchain files, platform conditionals, package
+   discovery, install/export rules, vendored native dependencies, CUDA or
+   platform-SDK setup, and other details that CMake already models well.
+
+   This boundary is deliberate. Trying to force all native build state into
+   `dudu.toml` would make Dudu slowly recreate CMake and would make serious
+   interop worse. The serious contract is that `dudu build` orchestrates the
+   selected backend, emits Dudu artifacts, streams useful progress, and fails
+   clearly when the selected backend cannot represent the project. The native
+   backend is allowed to own native build authority; the user should still be
+   able to enter through Dudu's commands.
+
+   File ownership must stay clean. Generated-CMake mode may overwrite Dudu's
+   internal generated CMake project under the build directory. User-owned CMake
+   mode must never patch or rewrite a user's `CMakeLists.txt`, including magic
+   commented Dudu blocks. Dudu should instead emit stable generated `.hpp/.cpp`
+   artifacts and, when useful, a small generated CMake include/source-list file
+   that user CMake can consume explicitly. `dudu init` may create an initial
+   CMake file, but after creation that file belongs to the user.
 
    Near-term distribution should stay in the dev/source-install lane until the
    CLI and compiler pipeline are boring. Add a real local install path first:

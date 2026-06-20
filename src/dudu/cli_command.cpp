@@ -430,10 +430,9 @@ int run_cli(int argc, char** argv) {
         print_project_step(project_output, "analyze", options.input);
         const ModuleAst module = checked_module(options, source, true);
         print_project_step(project_output, "emit", *options.output);
-        for (const CppModuleArtifact& artifact :
-             emit_cpp_test_module_artifacts(module, options.test_filter, !options.no_capture)) {
-            write_text_output(*options.output / artifact.path, artifact.content);
-        }
+        write_cpp_artifacts(
+            *options.output,
+            emit_cpp_test_module_artifacts(module, options.test_filter, !options.no_capture));
         return 0;
     }
     if (options.emit_cpp) {

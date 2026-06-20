@@ -332,6 +332,18 @@ is how that command gets honest native build work done.
 
 The build-driver contract is:
 
+- `dudu.toml` is the canonical Dudu project file. It owns Dudu entries,
+  targets, generated artifact locations, Dudu compile-time settings, test/bench
+  delegation, and the selected native backend.
+- `dudu.toml` is not required to be the canonical source of every native
+  compilation detail. For projects that already have real CMake machinery,
+  CMake may remain the authority for native target definitions, platform
+  conditionals, generator choices, toolchain files, install rules, vendored
+  native dependencies, and other C/C++ build-system concerns.
+- This is intentional. Forcing every C/C++/CUDA/Objective-C/platform-SDK build
+  rule through a Dudu manifest would mean slowly recreating a large part of
+  CMake, and would make Dudu worse at its core promise: sitting cleanly on top
+  of the existing C/C++ ecosystem.
 - The CMake backend is the broad native-ecosystem backend. It should support
   projects that need CMake package discovery, generated build files, IDE
   integration, platform generators, and larger native dependency graphs.
@@ -453,6 +465,39 @@ Dudu should not make CMake use feel like leaving the language tool. If a
 project already has a serious CMake build, `dudu build` should be able to drive
 that declared target. If a project does not, `dudu build` should generate and
 drive CMake internally. In all cases, the user command remains Dudu's command.
+
+The practical authority split is:
+
+- Dudu owns Dudu semantics: source files, selected entry, generated module
+  artifacts, compiler flags that affect Dudu lowering, Dudu tests, Dudu
+  formatting, and Dudu diagnostics.
+- CMake may own native semantics: exact compiler/linker invocations, toolchain
+  files, native package discovery, target properties, install/export rules,
+  platform-specific conditionals, and non-Dudu generated sources.
+- `dudu build` owns orchestration: choose the backend from `dudu.toml`, emit
+  Dudu artifacts, run the selected native build, stream useful progress, and
+  fail clearly when the selected backend cannot represent the manifest.
+
+That means Dudu does not need to become the single canonical compilation config
+for every language in a mixed project. It does need to remain the canonical
+front door for Dudu users, and it needs to make the handoff to native build
+authority explicit rather than magical.
+
+Generated-file ownership must be strict:
+
+- In generated-CMake mode, Dudu owns the internal CMake project under the Dudu
+  build directory and may overwrite it on every build. Users should not edit
+  files under `build/cmake-backend/source`.
+- In user-owned CMake mode, Dudu must not edit, patch, or rewrite the user's
+  `CMakeLists.txt`, and it must not maintain a magic commented block inside
+  that file.
+- User-owned CMake integration should happen through separate generated
+  artifacts with stable paths: generated `.hpp/.cpp` files plus, if useful, a
+  small generated include file such as `dudu_sources.cmake` that defines
+  variables or targets for the user's CMake to consume.
+- `dudu init` may create an initial `CMakeLists.txt` for a new project, but
+  after creation that file belongs to the user. Subsequent `dudu build` runs
+  must not mow it over.
 
 The practical target is:
 
