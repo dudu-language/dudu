@@ -72,6 +72,27 @@ probe_sqlite() {
     echo "ok sqlite3"
 }
 
+probe_lua() {
+    if ! pkg-config --exists lua; then
+        echo "skip lua: pkg-config package not found"
+        return
+    fi
+
+    local cpp="$repo_root/build/probe_lua_stack.cpp"
+    local bin="$repo_root/build/probe_lua_stack"
+    "$repo_root/build/duc" emit "$repo_root/tests/fixtures/lua_stack.dd" -o "$cpp"
+    "${CXX:-c++}" -std=c++20 "$cpp" $(pkg-config --cflags --libs lua) -o "$bin"
+    set +e
+    "$bin"
+    local status=$?
+    set -e
+    if [[ "$status" -ne 42 ]]; then
+        echo "lua probe returned $status, expected 42" >&2
+        exit 1
+    fi
+    echo "ok lua"
+}
+
 probe_zlib() {
     if ! pkg-config --exists zlib; then
         echo "skip zlib: pkg-config package not found"
@@ -644,6 +665,7 @@ probe_ffmpeg() {
 probe_glm
 probe_opencv
 probe_sqlite
+probe_lua
 probe_zlib
 probe_curl
 probe_libpng

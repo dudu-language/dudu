@@ -35,6 +35,7 @@ Last local probe run: 2026-06-19 with `scripts/probe_optional.sh`.
 | OpenBLAS / CBLAS | numeric | C ABI calls, fixed arrays, pointer handoff, link behavior | pass | `scripts/probe_optional.sh` / `openblas_ddot.dd` | no |
 | OpenCV | image / CV | generated C++ build and tiny image write smoke | pass | `scripts/probe_optional.sh` / `examples/image_filter.dd` | no |
 | sqlite3 | database | C API, pointers, result types, prepare/step/finalize | pass | `scripts/probe_optional.sh` / `sqlite_crud.dd` | no |
+| Lua | scripting / embedding | multiple C headers, stack API, C strings, constants, lifecycle | pass | `scripts/probe_optional.sh` / `lua_stack.dd` | no |
 | zlib | compression | C API, buffers, typedefs, constants, pointer output params | pass | `scripts/probe_optional.sh` / `zlib_roundtrip.dd` | no |
 | curl | network | C API, constants, pointer returns, struct field reads, link | pass | `scripts/probe_optional.sh` / `curl_version_info.dd` | no |
 | OpenSSL | crypto / TLS | C API, const byte input, output buffers, link flags | pass | `scripts/probe_optional.sh` / `openssl_sha256.dd` | no |
