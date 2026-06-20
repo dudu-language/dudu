@@ -1,5 +1,6 @@
 #include "dudu/cpp_emit.hpp"
 
+#include "dudu/array_shape.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_emit_classes.hpp"
 #include "dudu/cpp_emit_enums.hpp"
@@ -120,18 +121,31 @@ std::map<std::string, TypeRef> function_return_types(const ModuleAst& module) {
 void emit_constants(std::ostringstream& out, const ModuleAst& module,
                     const std::vector<std::string>& aliases, const CppEmitOptions& options) {
     for (const ConstDecl& constant : module.constants) {
+        TypeRef type_ref = constant.type_ref;
+        const ArrayShapeInference inferred =
+            infer_array_literal_shape_type(constant.type_ref, constant.value_expr);
+        if (inferred.status == ArrayShapeStatus::Inferred) {
+            type_ref = inferred.type_ref;
+        }
         const std::string& name = emitted_name(constant, options);
-        const std::string lowered_type = lower_cpp_type(constant.type_ref, aliases, options);
-        const bool pointer = type_ref_contains_kind(constant.type_ref, TypeKind::Pointer);
+        const std::string lowered_type = lower_cpp_type(type_ref, aliases, options);
+        const bool pointer = type_ref_contains_kind(type_ref, TypeKind::Pointer);
         const bool runtime_address =
-            pointer || type_ref_contains_kind(constant.type_ref, TypeKind::Volatile);
+            pointer || type_ref_contains_kind(type_ref, TypeKind::Volatile);
         out << "inline ";
         if (runtime_address && pointer) {
             out << lowered_type << " const " << name;
         } else {
             out << (runtime_address ? "const " : "constexpr ") << lowered_type << ' ' << name;
         }
-        out << " = " << lower_cpp_expr_ast(constant.value_expr, aliases) << ";\n";
+        out << " = ";
+        if (inferred.status == ArrayShapeStatus::Inferred) {
+            out << lower_array_literal(constant.value_expr, aliases, CppLocalContext{}, nullptr,
+                                       options);
+        } else {
+            out << lower_cpp_expr_ast(constant.value_expr, aliases);
+        }
+        out << ";\n";
     }
     if (!module.constants.empty()) {
         out << '\n';

@@ -6,6 +6,7 @@
 #include "dudu/sema_common.hpp"
 #include "dudu/sema_enum.hpp"
 #include "dudu/sema_expr.hpp"
+#include "dudu/type_compat.hpp"
 
 #include <algorithm>
 #include <optional>
@@ -242,6 +243,46 @@ void check_enum_match(FunctionScope& scope, const Stmt& stmt, const TypeRef& ret
     }
 }
 
+void check_value_match(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_type,
+                       int loop_depth, const MatchCheckCallbacks& callbacks,
+                       const TypeRef& subject_ref) {
+    bool wildcard = false;
+    for (const Stmt& child : stmt.children) {
+        if (child.kind != StmtKind::Case) {
+            sema_fail(child.location, "match body expects case statements");
+        }
+        if (wildcard) {
+            sema_fail(child.location, "unreachable case after wildcard");
+        }
+        if (is_wildcard_pattern_expr(child.pattern_expr)) {
+            if (!sema_has_expr(child.guard_expr)) {
+                wildcard = true;
+            }
+        } else {
+            const SourceLocation& pattern_location =
+                diagnostic_location(child.location, child.pattern_expr);
+            const TypeRef pattern_ref =
+                infer_expr_type_ast(scope, child.pattern_expr, &pattern_location);
+            if (!assignment_type_allowed(subject_ref, child.pattern_expr, pattern_ref) &&
+                !type_assignment_allowed(pattern_ref, subject_ref)) {
+                sema_fail(pattern_location, "case pattern type mismatch: expected " +
+                                                type_ref_text(subject_ref) + ", got " +
+                                                type_ref_text(pattern_ref));
+            }
+        }
+        if (sema_has_expr(child.guard_expr)) {
+            const TypeRef guard_ref = infer_expr_type_ast(
+                scope, child.guard_expr, &diagnostic_location(child.location, child.guard_expr));
+            if (!type_ref_is_name(guard_ref, "bool")) {
+                sema_fail(diagnostic_location(child.location, child.guard_expr),
+                          "match guard must be bool, got " + type_ref_text(guard_ref));
+            }
+        }
+        FunctionScope nested = scope;
+        callbacks.check_block(nested, child.children, return_type, loop_depth);
+    }
+}
+
 } // namespace
 
 void check_match_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_type,
@@ -255,8 +296,8 @@ void check_match_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& ret
     }
     const EnumDecl* en = enum_decl_for_type(scope.symbols, subject_ref);
     if (en == nullptr) {
-        sema_fail(subject_location,
-                  "match subject must be an enum, got " + type_ref_text(subject_ref));
+        check_value_match(scope, stmt, return_type, loop_depth, callbacks, subject_ref);
+        return;
     }
     check_enum_match(scope, stmt, return_type, loop_depth, callbacks, *en);
 }

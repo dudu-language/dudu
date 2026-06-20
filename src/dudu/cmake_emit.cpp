@@ -43,7 +43,7 @@ void emit_cmake_list_values(std::ostringstream& out, std::string_view prefix,
 }
 
 void emit_cmake_depends(std::ostringstream& out, const std::vector<std::filesystem::path>& files) {
-    out << "    DEPENDS";
+    out << "    DEPENDS ${DUDU_EXECUTABLE}";
     for (const std::filesystem::path& file : files) {
         out << ' ' << cmake_quote(file.string());
     }

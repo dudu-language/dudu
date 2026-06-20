@@ -8,6 +8,8 @@ let diagnostics;
 let lsp;
 let statusItem;
 
+const lspRequestTimeoutMs = 30000;
+
 function shellQuote(value) {
   return `'${value.replace(/'/g, "'\\''")}'`;
 }
@@ -222,7 +224,7 @@ class DuduLspClient {
       const timer = setTimeout(() => {
         this.pending.delete(id);
         reject(new Error(`Dudu LSP request timed out: ${method}`));
-      }, 10000);
+      }, lspRequestTimeoutMs);
       this.pending.set(id, { resolve, reject, timer });
     });
     this.send({ jsonrpc: "2.0", id, method, params });
@@ -674,6 +676,15 @@ function activate(context) {
     }),
     vscode.commands.registerCommand("dudu.testProject", () => {
       runCommand(`${shellQuote(ducPath())} test`);
+    }),
+    vscode.commands.registerCommand("dudu.restartLsp", () => {
+      lsp.stop();
+      lsp = new DuduLspClient(context);
+      lsp.start();
+      for (const document of vscode.workspace.textDocuments) {
+        lsp.didOpen(document);
+      }
+      updateStatus();
     }),
     vscode.workspace.onDidOpenTextDocument((document) => lsp.didOpen(document)),
     vscode.workspace.onDidChangeTextDocument((event) => lsp.didChange(event.document)),

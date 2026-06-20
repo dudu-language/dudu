@@ -259,7 +259,6 @@ class LanguageServer {
         documents_[uri] = {.uri = uri,
                            .path = file_uri_to_path(uri),
                            .text = string_value(text_document->get("text"))};
-        publish_diagnostics(uri);
     }
 
     void did_change(const Json* params) {
@@ -274,7 +273,6 @@ class LanguageServer {
         doc.uri = uri;
         doc.path = file_uri_to_path(uri);
         doc.text = string_value(array->back().get("text"));
-        publish_diagnostics(uri);
     }
 
     void did_save(const Json* params) {

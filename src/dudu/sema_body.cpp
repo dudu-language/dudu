@@ -313,7 +313,25 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols) {
         }
     }
     for (const ConstDecl& constant : module.constants) {
-        bind_local(base, constant.name, constant.type_ref);
+        const ArrayShapeInference inferred =
+            infer_array_literal_shape_type(constant.type_ref, constant.value_expr);
+        if (inferred.status == ArrayShapeStatus::EmptyLiteral) {
+            sema_fail(diagnostic_location(constant.location, constant.value_expr),
+                      "array shape cannot be inferred from an empty literal");
+        }
+        if (inferred.status == ArrayShapeStatus::RaggedLiteral) {
+            sema_fail(diagnostic_location(constant.location, constant.value_expr),
+                      "ragged array literal");
+        }
+        const TypeRef constant_type =
+            inferred.status == ArrayShapeStatus::Inferred ? inferred.type_ref : constant.type_ref;
+        if (inferred.status == ArrayShapeStatus::Inferred &&
+            is_array_literal(constant.value_expr)) {
+            check_array_literal_elements(base, inferred.element_type_ref, constant.value_expr,
+                                         diagnostic_location(constant.location,
+                                                             constant.value_expr));
+        }
+        bind_local(base, constant.name, constant_type);
         base.constants.insert(constant.name);
     }
     for (const ClassDecl& klass : module.classes) {

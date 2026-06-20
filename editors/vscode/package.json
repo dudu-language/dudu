@@ -60,6 +60,10 @@
       {
         "command": "dudu.testProject",
         "title": "Dudu: Test Project"
+      },
+      {
+        "command": "dudu.restartLsp",
+        "title": "Dudu: Restart Language Server"
       }
     ],
     "configuration": {

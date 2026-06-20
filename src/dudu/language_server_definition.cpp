@@ -282,11 +282,7 @@ std::string definition_json(const Document& doc, const Json* params) {
     if (word.empty()) {
         return "null";
     }
-    if (const std::optional<std::string> native_type_target =
-            native_type_target_definition_json(doc, word)) {
-        return *native_type_target;
-    }
-    const std::vector<Symbol> symbols = symbols_for_document(doc);
+    const std::vector<Symbol> symbols = symbols_for_document(doc, false);
     if (const std::optional<Symbol> exact = exact_symbol_match(symbols, word)) {
         return symbol_definition_json(*exact, doc);
     }
@@ -308,6 +304,17 @@ std::string definition_json(const Document& doc, const Json* params) {
         if (path_text != word) {
             return import_definition_json(doc, path_text).value_or("null");
         }
+    }
+    if (const std::optional<std::string> native_type_target =
+            native_type_target_definition_json(doc, word)) {
+        return *native_type_target;
+    }
+    const std::vector<Symbol> native_symbols = symbols_for_document(doc, true);
+    if (const std::optional<Symbol> exact = exact_symbol_match(native_symbols, word)) {
+        return symbol_definition_json(*exact, doc);
+    }
+    if (const std::optional<Symbol> suffix = unambiguous_suffix_symbol_match(native_symbols, word)) {
+        return symbol_definition_json(*suffix, doc);
     }
     return "null";
 }

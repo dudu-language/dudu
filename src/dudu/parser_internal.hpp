@@ -60,6 +60,8 @@ class Parser {
 
     std::vector<Stmt> parse_statement_block();
     Stmt parse_statement(std::vector<Stmt> children, size_t statement_end);
+    bool starts_statement_continuation(size_t cursor) const;
+    size_t consume_statement_continuation_block();
     JoinedTokens join_until_with_range(std::initializer_list<TokenKind> stops);
     JoinedTokens join_tokens(size_t begin, size_t end) const;
     std::string source_text_for_tokens(size_t begin, size_t end) const;

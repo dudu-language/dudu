@@ -182,6 +182,43 @@ void test_array_literal_scalar_ast_emission() {
     assert(cpp.find("std::array<int32_t, 2> xs = {{1000, 2}};") != std::string::npos);
 }
 
+void test_top_level_array_constant_ast_emission() {
+    const dudu::ModuleAst module = dudu::parse_source("DATA: array[u32] = [1, 2, 3]\n"
+                                                      "ROWS: array[i32] = [[1, 2], [3, 4]]\n"
+                                                      "\n"
+                                                      "def values() -> i32:\n"
+                                                      "    return ROWS[1][0]\n",
+                                                      "top_level_array_constant_ast.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+    const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find("inline constexpr std::array<uint32_t, 3> DATA = {1, 2, 3};") !=
+           std::string::npos);
+    assert(cpp.find("inline constexpr std::array<std::array<int32_t, 2>, 2> ROWS = {{1, 2}, "
+                    "{3, 4}};") != std::string::npos);
+}
+
+void test_value_match_ast_emission() {
+    const dudu::ModuleAst module =
+        dudu::parse_source("def classify(value: i32) -> i32:\n"
+                           "    match value:\n"
+                           "        case 0:\n"
+                           "            return 10\n"
+                           "        case 2 if value > 1:\n"
+                           "            return 20\n"
+                           "        case _:\n"
+                           "            return 30\n"
+                           "\n"
+                           "def main() -> i32:\n"
+                           "    return classify(2) - 20\n",
+                           "value_match_ast.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+    const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find("auto&& __dudu_match_2_5 = value;") != std::string::npos);
+    assert(cpp.find("if (!__dudu_match_2_5_matched && (__dudu_match_2_5 == 0))") !=
+           std::string::npos);
+    assert(cpp.find("if ((value > 1))") != std::string::npos);
+}
+
 void test_typed_literal_initializers_use_type_ast() {
     const dudu::ModuleAst module = dudu::parse_source("def values() -> i32:\n"
                                                       "    maybe: Option[i32] = None\n"
@@ -267,6 +304,17 @@ void test_class_emit_order_uses_type_ast_fields() {
     assert(cpp.find("\nstruct Node {") < cpp.find("\nstruct Holder {"));
 }
 
+void test_operator_continuation_is_part_of_return_expression() {
+    const dudu::ModuleAst module = dudu::parse_source("def value(x: i32) -> i32:\n"
+                                                      "    return x\n"
+                                                      "        + 1\n"
+                                                      "        + 2\n",
+                                                      "operator_continuation_return.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+    const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find("return ((x + 1) + 2);") != std::string::npos);
+}
+
 } // namespace
 
 int main() {
@@ -282,11 +330,14 @@ int main() {
         test_offsetof_field_emission();
         test_offsetof_string_field_requires_parsed_value();
         test_array_literal_scalar_ast_emission();
+        test_top_level_array_constant_ast_emission();
+        test_value_match_ast_emission();
         test_typed_literal_initializers_use_type_ast();
         test_inferred_auto_assignment_is_not_redeclared();
         test_inferred_native_pointer_member_emission_uses_type_ast(root);
         test_expected_generic_method_emission_uses_type_ast_receiver();
         test_class_emit_order_uses_type_ast_fields();
+        test_operator_continuation_is_part_of_return_expression();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;

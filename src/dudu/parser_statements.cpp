@@ -52,6 +52,20 @@ bool has_statement_tokens_after(const std::span<const Token> tokens, size_t curs
     return false;
 }
 
+bool is_statement_continuation_operator(const Token& token) {
+    if (token.kind == TokenKind::Identifier) {
+        return token.text == "and" || token.text == "or";
+    }
+    if (token.kind != TokenKind::Operator) {
+        return false;
+    }
+    return token.text == "+" || token.text == "-" || token.text == "*" || token.text == "/" ||
+           token.text == "%" || token.text == "&" || token.text == "|" || token.text == "^" ||
+           token.text == "<<" || token.text == ">>" || token.text == "==" ||
+           token.text == "!=" || token.text == "<" || token.text == "<=" || token.text == ">" ||
+           token.text == ">=";
+}
+
 std::optional<size_t> find_top_level_token(std::span<const Token> tokens, size_t begin, size_t end,
                                            TokenKind kind) {
     int bracket_depth = 0;
@@ -224,9 +238,11 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
 
     if (match_identifier("return")) {
         stmt.kind = StmtKind::Return;
-        const JoinedTokens value = join_until_with_range({TokenKind::Newline});
+        const size_t value_begin = cursor_;
+        cursor_ = statement_end;
+        const JoinedTokens value = join_tokens(value_begin, statement_end);
         stmt.value_expr = parse_expr_piece(value);
-        attach_statement_range(stmt, join_tokens(begin, cursor_));
+        attach_statement_range(stmt, join_tokens(begin, statement_end));
         return stmt;
     }
 
@@ -321,24 +337,28 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
     if (match_identifier("raise") || match_identifier("delete")) {
         const std::string keyword = previous().text;
         stmt.kind = keyword == "raise" ? StmtKind::Raise : StmtKind::Delete;
-        const JoinedTokens value = join_until_with_range({TokenKind::Newline});
+        const size_t value_begin = cursor_;
+        cursor_ = statement_end;
+        const JoinedTokens value = join_tokens(value_begin, statement_end);
         stmt.value_expr = parse_expr_piece(value);
-        attach_statement_range(stmt, join_tokens(begin, cursor_));
+        attach_statement_range(stmt, join_tokens(begin, statement_end));
         return stmt;
     }
 
     if (match_identifier("assert") || match_identifier("debug_assert")) {
         const std::string keyword = previous().text;
         stmt.kind = keyword == "assert" ? StmtKind::Assert : StmtKind::DebugAssert;
+        const size_t parts_begin = cursor_;
+        cursor_ = statement_end;
         const std::vector<JoinedTokens> parts =
-            split_top_level_comma_pieces(join_until_with_range({TokenKind::Newline}));
+            split_top_level_comma_pieces(join_tokens(parts_begin, statement_end));
         if (!parts.empty()) {
             stmt.condition_expr = parse_expr_piece(parts.front());
         }
         if (parts.size() >= 2) {
             stmt.message_expr = parse_expr_piece(parts[1]);
         }
-        attach_statement_range(stmt, join_tokens(begin, cursor_));
+        attach_statement_range(stmt, join_tokens(begin, statement_end));
         return stmt;
     }
 
@@ -399,6 +419,52 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
     return stmt;
 }
 
+bool Parser::starts_statement_continuation(size_t cursor) const {
+    return cursor + 1 < tokens_.size() && tokens_[cursor].kind == TokenKind::Indent &&
+           is_statement_continuation_operator(tokens_[cursor + 1]);
+}
+
+size_t Parser::consume_statement_continuation_block() {
+    consume(TokenKind::Indent, "expected indent before expression continuation");
+    size_t continuation_end = cursor_;
+    while (!at(TokenKind::Dedent) && !at(TokenKind::End)) {
+        if (at(TokenKind::Newline)) {
+            ++cursor_;
+            continue;
+        }
+        if (!is_statement_continuation_operator(current())) {
+            fail_current("expected expression continuation operator");
+        }
+        int bracket_depth = 0;
+        int paren_depth = 0;
+        int brace_depth = 0;
+        while (!at(TokenKind::End)) {
+            const bool inside_group = bracket_depth != 0 || paren_depth != 0 || brace_depth != 0;
+            if (!inside_group && at(TokenKind::Newline)) {
+                break;
+            }
+            if (current().kind == TokenKind::LBracket) {
+                ++bracket_depth;
+            } else if (current().kind == TokenKind::RBracket) {
+                --bracket_depth;
+            } else if (current().kind == TokenKind::LParen) {
+                ++paren_depth;
+            } else if (current().kind == TokenKind::RParen) {
+                --paren_depth;
+            } else if (current().kind == TokenKind::LBrace) {
+                ++brace_depth;
+            } else if (current().kind == TokenKind::RBrace) {
+                --brace_depth;
+            }
+            ++cursor_;
+        }
+        continuation_end = cursor_;
+        consume(TokenKind::Newline, "expected newline after expression continuation");
+    }
+    consume(TokenKind::Dedent, "expected dedent after expression continuation");
+    return continuation_end;
+}
+
 std::vector<Stmt> Parser::parse_statement_block() {
     std::vector<Stmt> out;
     if (!match(TokenKind::Indent)) {
@@ -433,8 +499,11 @@ std::vector<Stmt> Parser::parse_statement_block() {
             }
             ++cursor_;
         }
-        const size_t statement_end = cursor_;
+        size_t statement_end = cursor_;
         consume(TokenKind::Newline, "expected newline after statement");
+        if (starts_statement_continuation(cursor_)) {
+            statement_end = consume_statement_continuation_block();
+        }
         if (at(TokenKind::Indent)) {
             children = parse_statement_block();
         }

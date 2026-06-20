@@ -196,28 +196,41 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
             return;
         }
     }
-    out << indent(depth) << "switch ("
+    const std::string subject = "__dudu_match_" + std::to_string(stmt.location.line) + "_" +
+                                std::to_string(stmt.location.column);
+    const std::string matched = subject + "_matched";
+    out << indent(depth) << "auto&& " << subject << " = "
         << lower_expr(stmt.condition_expr, aliases, locals, local_type_refs, symbols, options)
-        << ") {\n";
+        << ";\n";
+    out << indent(depth) << "bool " << matched << " = false;\n";
     for (const Stmt& child : stmt.children) {
         if (child.kind != StmtKind::Case) {
             continue;
         }
+        std::string condition = "true";
         if (is_wildcard_pattern_expr(child.pattern_expr)) {
-            out << indent(depth) << "default:\n";
+            condition = "true";
         } else {
-            out << indent(depth) << "case "
-                << lower_expr(child.pattern_expr, aliases, locals, local_type_refs, symbols,
-                              options)
-                << ":\n";
+            condition = subject + " == " +
+                        lower_expr(child.pattern_expr, aliases, locals, local_type_refs, symbols,
+                                   options);
         }
-        out << indent(depth + 1) << "{\n";
-        emit_block(out, child.children, depth + 2, aliases, locals, local_type_refs,
-                   return_type_ref, function_returns, symbols, options);
-        out << indent(depth + 2) << "break;\n";
-        out << indent(depth + 1) << "}\n";
+        out << indent(depth) << "if (!" << matched << " && (" << condition << ")) {\n";
+        if (has_expr(child.guard_expr)) {
+            out << indent(depth + 1) << "if ("
+                << lower_expr(child.guard_expr, aliases, locals, local_type_refs, symbols, options)
+                << ") {\n";
+            out << indent(depth + 2) << matched << " = true;\n";
+            emit_block(out, child.children, depth + 2, aliases, locals, local_type_refs,
+                       return_type_ref, function_returns, symbols, options);
+            out << indent(depth + 1) << "}\n";
+        } else {
+            out << indent(depth + 1) << matched << " = true;\n";
+            emit_block(out, child.children, depth + 1, aliases, locals, local_type_refs,
+                       return_type_ref, function_returns, symbols, options);
+        }
+        out << indent(depth) << "}\n";
     }
-    out << indent(depth) << "}\n";
     if (match_cases_return(stmt)) {
         out << indent(depth) << "__builtin_unreachable();\n";
     }
