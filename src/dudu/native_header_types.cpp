@@ -2,6 +2,7 @@
 
 #include "dudu/cpp_lower.hpp"
 
+#include <optional>
 #include <string_view>
 #include <vector>
 
@@ -213,6 +214,40 @@ std::string lower_template_type(std::string type) {
     return out;
 }
 
+std::optional<std::pair<std::string, std::vector<std::string>>>
+split_suffix_array_type(std::string type) {
+    std::vector<std::string> dims;
+    type = trim_copy(std::move(type));
+    while (type.ends_with("]")) {
+        const size_t open = type.rfind('[');
+        if (open == std::string::npos) {
+            return std::nullopt;
+        }
+        const std::string dim = trim_copy(type.substr(open + 1, type.size() - open - 2));
+        if (dim.empty()) {
+            return std::nullopt;
+        }
+        dims.insert(dims.begin(), dim);
+        type = trim_copy(type.substr(0, open));
+    }
+    if (dims.empty() || type.empty()) {
+        return std::nullopt;
+    }
+    return std::pair{type, dims};
+}
+
+std::string lower_suffix_array_type(std::string base, const std::vector<std::string>& dims) {
+    std::string out = "array[" + dudu_type(std::move(base)) + "][";
+    for (size_t i = 0; i < dims.size(); ++i) {
+        if (i > 0) {
+            out += ", ";
+        }
+        out += dims[i];
+    }
+    out += "]";
+    return out;
+}
+
 } // namespace
 
 std::string dudu_type(std::string type) {
@@ -258,6 +293,13 @@ std::string dudu_type(std::string type) {
             type = trim_copy(type.substr(std::string_view(prefix).size()));
             break;
         }
+    }
+    if (const auto array_type = split_suffix_array_type(type)) {
+        std::string out = lower_suffix_array_type(array_type->first, array_type->second);
+        if (is_const) {
+            out = "const[" + out + "]";
+        }
+        return reference ? "&" + out : out;
     }
     std::string out = lower_template_type(type);
     if (is_const)

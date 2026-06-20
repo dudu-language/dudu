@@ -2,6 +2,7 @@
 #include "dudu/cpp_emit.hpp"
 #include "dudu/language_server_symbols.hpp"
 #include "dudu/native_header_parse.hpp"
+#include "dudu/native_header_types.hpp"
 #include "dudu/native_headers.hpp"
 #include "dudu/parser.hpp"
 #include "dudu/sema.hpp"
@@ -172,8 +173,9 @@ void test_native_header_type_scan(const std::filesystem::path& root) {
                                           "native_headers/simple_cpp.hpp::dudu_native.add"));
             saw_lsp_function_identity = true;
         } else if (symbol.name == "dudu_native.Widget.scaled") {
-            assert(identity_key_ends_with(symbol.native_identity_key,
-                                          "native_headers/simple_cpp.hpp::dudu_native.Widget.scaled"));
+            assert(
+                identity_key_ends_with(symbol.native_identity_key,
+                                       "native_headers/simple_cpp.hpp::dudu_native.Widget.scaled"));
             saw_lsp_method_identity = true;
         } else if (symbol.name == "DUDU_NATIVE_MAGIC") {
             assert(symbol.native_identity_key == "path:DUDU_NATIVE_MAGIC" ||
@@ -208,8 +210,7 @@ void test_cxx_import_scans_c_globals_but_emits_plain_include(const std::filesyst
     dudu::analyze_module(module, {.check_bodies = true});
     const std::string cpp = dudu::emit_cpp_source(module);
     assert(cpp.find("#include \"native_headers/simple_c.h\"") != std::string::npos);
-    assert(cpp.find("extern \"C\" {\n#include \"native_headers/simple_c.h\"") ==
-           std::string::npos);
+    assert(cpp.find("extern \"C\" {\n#include \"native_headers/simple_c.h\"") == std::string::npos);
     assert(cpp.find("return dudu_native_add(20, 22);") != std::string::npos);
     assert(cpp.find("native::dudu_native_add") == std::string::npos);
 }
@@ -561,6 +562,54 @@ void test_native_method_templates_do_not_mask_concrete_overloads(
     assert(cpp.find("std::string text = holder.text();") != std::string::npos);
 }
 
+void test_native_fixed_array_typedef_alias(const std::filesystem::path& root) {
+    assert(dudu::dudu_type("unsigned char[16]") == "array[u8][16]");
+    assert(dudu::dudu_type("int[2][3]") == "array[i32][2, 3]");
+
+    const std::filesystem::path source_dir = root / "build" / "native-fixed-array-typedef";
+    const std::filesystem::path header = source_dir / "fixed_array_alias.hpp";
+    std::filesystem::remove_all(source_dir);
+    std::filesystem::create_directories(source_dir);
+    {
+        std::ofstream out(header);
+        out << "#pragma once\n"
+               "typedef unsigned char DuduFixedBytes[16];\n"
+               "inline int read_fixed(const DuduFixedBytes value) { return value[0]; }\n"
+               "inline void copy_fixed(DuduFixedBytes dst, const DuduFixedBytes src) { "
+               "dst[0] = src[0]; }\n";
+    }
+
+    dudu::ModuleAst module = dudu::parse_source("import cpp \"./fixed_array_alias.hpp\" as native\n"
+                                                "\n"
+                                                "def main() -> i32:\n"
+                                                "    value: native.DuduFixedBytes\n"
+                                                "    copy: native.DuduFixedBytes\n"
+                                                "    native.copy_fixed(copy, value)\n"
+                                                "    if native.read_fixed(value) == 0:\n"
+                                                "        return 42\n"
+                                                "    return 1\n",
+                                                source_dir / "main.dd");
+    dudu::ProjectConfig config;
+    config.project_dir = source_dir;
+    config.build_dir = source_dir / "build";
+    dudu::merge_native_header_types(module, {.config = config, .source_dir = source_dir});
+
+    bool saw_alias = false;
+    for (const dudu::NativeTypeDecl& type : module.native_types) {
+        if (type.name == "native.DuduFixedBytes") {
+            assert(dudu::type_ref_text(type.type_ref) == "array[u8][16]");
+            saw_alias = true;
+        }
+    }
+    assert(saw_alias);
+
+    dudu::analyze_module(module, {.check_bodies = true});
+    const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find("DuduFixedBytes value{};") != std::string::npos);
+    assert(cpp.find("copy_fixed(copy, value);") != std::string::npos);
+    assert(cpp.find("read_fixed(value)") != std::string::npos);
+}
+
 void test_native_scan_ignores_anonymous_record_definitions() {
     dudu::NativeHeaderScan scan;
     dudu::parse_ast_dump(scan,
@@ -599,6 +648,7 @@ int main() {
         test_native_header_cache_invalidates_local_header(root);
         test_native_header_pointer_diagnostics(root);
         test_native_method_templates_do_not_mask_concrete_overloads(root);
+        test_native_fixed_array_typedef_alias(root);
         test_native_scan_ignores_anonymous_record_definitions();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';

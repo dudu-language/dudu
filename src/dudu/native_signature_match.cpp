@@ -81,6 +81,49 @@ bool native_numeric_promotion(const TypeRef& expected, const TypeRef& got) {
     return type_ref_head_name(expected) == "f64" && type_ref_head_name(got) == "f32";
 }
 
+std::optional<TypeRef> fixed_array_element_type_ref(const TypeRef& type) {
+    if (type.kind != TypeKind::FixedArray || type.children.size() != 1) {
+        return std::nullopt;
+    }
+    const TypeRef& storage = type.children.front();
+    if (storage.kind == TypeKind::Template && storage.name == "array" &&
+        !storage.children.empty()) {
+        return storage.children.front();
+    }
+    return storage;
+}
+
+std::optional<TypeRef> pointer_pointee_type_ref(const TypeRef& type) {
+    if (type.kind != TypeKind::Pointer || type.children.size() != 1) {
+        return std::nullopt;
+    }
+    return type.children.front();
+}
+
+bool native_fixed_array_alias_decay_allowed(const FunctionScope& scope, const TypeRef& expected,
+                                            const TypeRef& got) {
+    const std::string got_name = type_ref_head_name(got);
+    if (got_name.empty() || !scope.symbols.native_types.contains(got_name)) {
+        return false;
+    }
+    const std::optional<TypeRef> expected_pointee = pointer_pointee_type_ref(expected);
+    if (!expected_pointee) {
+        return false;
+    }
+    const TypeRef resolved_got = resolve_alias_ref(scope.symbols, got);
+    const std::optional<TypeRef> got_element = fixed_array_element_type_ref(resolved_got);
+    if (!got_element) {
+        return false;
+    }
+    if (type_assignment_allowed(*expected_pointee, *got_element)) {
+        return true;
+    }
+    if (expected_pointee->kind == TypeKind::Const && expected_pointee->children.size() == 1) {
+        return type_assignment_allowed(expected_pointee->children.front(), *got_element);
+    }
+    return false;
+}
+
 TypeRef signature_param_ref(const FunctionSignature& signature, size_t index) {
     return signature_param_type_ref(signature, index);
 }
@@ -118,11 +161,15 @@ NativeArgType native_arg_type(const FunctionScope& scope, const Expr& arg,
     return out;
 }
 
-bool native_arg_assignable(const FunctionSignature& signature, size_t index, const Expr& arg,
-                           const NativeArgType& got, const NativeCanAssignAstFn& can_assign) {
+bool native_arg_assignable(const FunctionScope& scope, const FunctionSignature& signature,
+                           size_t index, const Expr& arg, const NativeArgType& got,
+                           const NativeCanAssignAstFn& can_assign) {
     const TypeRef expected_ref = signature_param_ref(signature, index);
     if (!has_type_ref(expected_ref) || !has_type_ref(got.ref)) {
         return false;
+    }
+    if (native_fixed_array_alias_decay_allowed(scope, expected_ref, got.ref)) {
+        return true;
     }
     if (type_assignment_allowed(expected_ref, got.ref)) {
         return true;
@@ -269,7 +316,7 @@ std::vector<std::string> mismatch_reasons_ast(const FunctionScope& scope,
         const NativeArgType got = native_arg_type(scope, args[i], location, infer_expr_type);
         const TypeRef expected_ref = signature_param_ref(signature, i);
         const std::string got_text = substitute_type_ref_text(got.ref, {});
-        if (!native_arg_assignable(signature, i, args[i], got, can_assign) &&
+        if (!native_arg_assignable(scope, signature, i, args[i], got, can_assign) &&
             !native_numeric_promotion(expected_ref, got.ref)) {
             std::ostringstream out;
             out << "parameter " << (i + 1) << " expects " << signature_param_text(signature, i)
@@ -334,7 +381,7 @@ match_signature_ast(const FunctionScope& scope, const FunctionSignature& signatu
         const bool bound_template =
             has_type_ref(expected_ref) && has_type_ref(got.ref) &&
             bind_native_template_type_ast(scope.symbols, expected_ref, got.ref, bindings);
-        if (!native_arg_assignable(signature, i, args[i], got, can_assign) &&
+        if (!native_arg_assignable(scope, signature, i, args[i], got, can_assign) &&
             !native_numeric_promotion(expected_ref, got.ref) && !bound_template) {
             return std::nullopt;
         }

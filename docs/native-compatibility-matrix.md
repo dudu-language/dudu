@@ -37,7 +37,7 @@ Last local probe run: 2026-06-19 with `scripts/probe_optional.sh`.
 | sqlite3 | database | C API, pointers, result types, prepare/step/finalize | pass | `scripts/probe_optional.sh` / `sqlite_crud.dd` | no |
 | Lua | scripting / embedding | multiple C headers, stack API, C strings, constants, lifecycle | pass | `scripts/probe_optional.sh` / `lua_stack.dd` | no |
 | zlib | compression | C API, buffers, typedefs, constants, pointer output params | pass | `scripts/probe_optional.sh` / `zlib_roundtrip.dd` | no |
-| libuuid | utility / systems | typedefed C array API through explicit byte array handoff, mutable `char *out` buffer, constants, compare/copy, link | pass | `scripts/probe_optional.sh` / `uuid_parse.dd` | no |
+| libuuid | utility / systems | typedefed C array locals such as `uuid_t`, native array-to-pointer call handoff, mutable `char *out` buffer, constants, compare/copy, link | pass | `scripts/probe_optional.sh` / `uuid_parse.dd` | no |
 | curl | network | C API, constants, pointer returns, struct field reads, link | pass | `scripts/probe_optional.sh` / `curl_version_info.dd` | no |
 | OpenSSL | crypto / TLS | C API, const byte input, output buffers, link flags | pass | `scripts/probe_optional.sh` / `openssl_sha256.dd` | no |
 | libevent | event loop / network | C API, opaque pointers, config/base lifecycle, `cstr` return | pass | `scripts/probe_optional.sh` / `libevent_base.dd` | no |
@@ -73,7 +73,6 @@ compiler matures.
 | CUDA / CUBLAS | GPU / ML | host API, device buffers, BLAS-like calls | skip | Needs NVIDIA tooling/hardware. |
 | platform APIs | OS | Win32, Cocoa subsets | planned | Platform-specific; X11 and Wayland have Linux probes. |
 | macro-expanded C struct fields | C interop | fields introduced through C preprocessor member macros | planned | Found while probing libjpeg: `jpeg_compress_struct.err` comes from `jpeg_common_fields`, and Dudu's scanner does not model that field yet. |
-| typedefed fixed C arrays as locals | C interop | local declaration and overload compatibility for typedefs such as `uuid_t` | planned | Current libuuid probe uses `array[u8][16]` because `uuid_t` parameters scan as `*u8` but a `uuid.uuid_t` local does not match yet. |
 
 ## Rules
 
