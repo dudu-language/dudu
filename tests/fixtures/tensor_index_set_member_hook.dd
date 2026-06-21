@@ -1,0 +1,21 @@
+class Tensor2:
+    values: array[i32][4]
+
+    @operator("[]")
+    def at(self, index: i32) -> i32:
+        return self.values[index]
+
+    @operator("[]=")
+    def set_at(self, index: i32, value: i32):
+        self.values[index] = value
+
+
+class TensorBox:
+    tensor: Tensor2
+
+
+def main() -> i32:
+    values: array[i32] = [10, 2, 12, 1]
+    box = TensorBox(Tensor2(values))
+    box.tensor[1] = 20
+    return box.tensor[0] + box.tensor[1] + box.tensor[2]

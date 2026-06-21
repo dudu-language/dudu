@@ -1014,7 +1014,8 @@ push. They are not release packaging work.
    `array[T][Rows, Cols]` and member-backed fixed arrays such as
    `self.items[:, :]`.
    Dudu-native `@operator("[]")` read hooks and `@operator("[]=")` indexed
-   assignment hooks work for library-style tensor wrappers, and indexed member
+   assignment hooks work for library-style tensor wrappers, including member
+   receiver assignments such as `box.tensor[i] = value`, and indexed member
    paths such as `self.values[i]` type-check. One-dimensional fixed-array step
    slices such as `values[start:end:step]` produce `strided_span[T]` views.
    This is enough to play with fixed arrays, row/column/full-storage views,

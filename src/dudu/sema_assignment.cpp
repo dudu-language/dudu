@@ -84,9 +84,17 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
             member_expr_type_ref(scope.symbols, scope.local_type_refs, &target_location, receiver,
                                  {}, scope.current_class);
         if (has_type_ref(receiver_type)) {
-            return indexed_type_ref_from_type(
-                scope.symbols, target_location, receiver_type, stmt.target_expr.children[1],
-                indexed_assignment_label(receiver));
+            if (const auto signature =
+                    dudu_operator_signature(scope.symbols, "[]=", receiver_type)) {
+                std::vector<Expr> args = index_arg_exprs(stmt.target_expr.children[1]);
+                args.push_back(stmt.value_expr);
+                check_call_args_ast(scope, indexed_assignment_label(receiver) + "[]=", *signature,
+                                    args, &target_location);
+                return {};
+            }
+            return indexed_type_ref_from_type(scope.symbols, target_location, receiver_type,
+                                              stmt.target_expr.children[1],
+                                              indexed_assignment_label(receiver));
         }
     }
     if (stmt.target_expr.kind == ExprKind::Name) {
@@ -126,7 +134,8 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
         return {};
     }
     if (expr_present(stmt.target_expr)) {
-        sema_fail(target_location, "unsupported assignment target: " + expr_label(stmt.target_expr));
+        sema_fail(target_location,
+                  "unsupported assignment target: " + expr_label(stmt.target_expr));
     }
     sema_fail(target_location, "unsupported assignment target: " + expr_label(stmt.target_expr));
 }

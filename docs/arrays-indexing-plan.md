@@ -323,8 +323,9 @@ or backend calls without the core language embedding CUDA/Vulkan/OpenCL logic.
 Status: Dudu-native `@operator("[]")` methods are recognized by indexing
 semantics for read expressions, including index argument type checking. Indexed
 member paths such as `self.values[i]` type-check through the same indexing
-semantics. Dudu-native `@operator("[]=")` hooks type-check and lower simple
-`receiver[index] = value` assignments through the declared method.
+semantics. Dudu-native `@operator("[]=")` hooks type-check and lower indexed
+assignments through the declared method for both local receivers such as
+`tensor[i] = value` and member receivers such as `box.tensor[i] = value`.
 
 This also applies to imported C++ libraries if native header awareness can see
 or adapt the relevant operators:
