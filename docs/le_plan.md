@@ -1761,7 +1761,10 @@ push. They are not release packaging work.
    The stale `native_import_prefixes`/`native_import_path_prefix` names were
    renamed to `native_path_prefixes`/`is_native_path_prefix` after broad
    `alias.anything` native-call acceptance was removed; the name now describes
-   known native member paths rather than import aliases.
+   known native member paths rather than import aliases. CMake project
+   emission no longer reparses `dudu.toml` from the input path just to recover
+   the project directory; it uses the `ProjectConfig` already selected by the
+   driver, keeping manifest ownership in the project-driver phase.
 
 19. Polish Unsupported Syntax Diagnostics
 

@@ -67,10 +67,6 @@ std::string cmake_cpp_standard(const std::string& cpp_std) {
     return "20";
 }
 
-std::filesystem::path project_dir_for_input(const std::filesystem::path& input) {
-    return parse_project_config(find_project_config(input)).project_dir;
-}
-
 std::string source_path_for_project(const std::filesystem::path& project_dir,
                                     const std::filesystem::path& input) {
     return std::filesystem::relative(std::filesystem::absolute(input), project_dir).string();
@@ -146,7 +142,8 @@ void emit_pkg_config(std::ostringstream& out, const ProjectConfig& config) {
 
 std::string emit_cmake_project(const ProjectConfig& config, const std::filesystem::path& input) {
     const std::string target = config.name.empty() ? input.stem().string() : config.name;
-    const std::filesystem::path project_dir = project_dir_for_input(input);
+    const std::filesystem::path project_dir =
+        config.project_dir.empty() ? input.parent_path() : config.project_dir;
     const std::string source_path = source_path_for_project(project_dir, input);
     const std::filesystem::path generated_dir =
         std::filesystem::path("${CMAKE_CURRENT_BINARY_DIR}") / "generated";
@@ -204,7 +201,8 @@ std::string emit_cmake_project(const ProjectConfig& config, const std::filesyste
 std::string emit_cmake_test_project(const ProjectConfig& config, const std::filesystem::path& input,
                                     const std::string& target, const std::string& filter,
                                     bool capture_output) {
-    const std::filesystem::path project_dir = project_dir_for_input(input);
+    const std::filesystem::path project_dir =
+        config.project_dir.empty() ? input.parent_path() : config.project_dir;
     const std::string source_path = source_path_for_project(project_dir, input);
     const std::filesystem::path generated_dir =
         std::filesystem::path("${CMAKE_CURRENT_BINARY_DIR}") / "generated";

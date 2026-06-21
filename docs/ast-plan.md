@@ -1,13 +1,16 @@
 # AST Plan
 
-Dudu needs a real statement and expression AST. The current compiler has a
-real lexer, parser, module AST, class/function/import declarations, and nested
-raw statement blocks. That was enough to prove the language shape, C/C++
-interop, and generated C++ output. It is not enough for the next level of
-errors, generics, macros, semantic highlighting, and reliable refactors.
+Dudu needs a real statement and expression AST. The compiler now has a real
+lexer, parser, module AST, class/function/import declarations, structured
+statement bodies, and structured expression/type nodes for the supported Dudu
+surface. Earlier versions proved the language shape by carrying raw statement
+text through several phases; that migration path should not be rebuilt.
 
-The goal is not to make the compiler academic. The goal is to stop treating
-function bodies as strings.
+The goal is not to make the compiler academic. The goal is to keep function
+bodies, types, expressions, diagnostics, linting, LSP, and C++ emission on
+structured compiler data. Source strings remain valid only as literal/operator
+spelling, comments/trivia, diagnostics/display, explicit `cpp(...)` escape
+payloads, emitted C++, or native C/C++ metadata at the native boundary.
 
 Dudu does not need a separate low-level optimizer IR as the next step. The
 proper next compiler layer is a typed/core AST, or HIR, that preserves Dudu
@@ -35,17 +38,18 @@ Already structured:
 - native header metadata
 - direct parser construction of statement nodes for function and method bodies
 - parsed `Stmt` bodies stored on functions and methods
-- initial expression shape capture for common names, literals, calls,
-  template calls, member/index/slice access, unary/binary operators,
-  conditionals, and collection literals
-- initial type shape capture for names, qualified names, templates, pointers,
-  references, wrappers, fixed arrays, and function-like type signatures
+- expression nodes for names, literals, calls, template calls,
+  member/index/slice access, unary/binary operators, conditionals, named
+  arguments, C++ escapes, unsupported Python forms used for diagnostics, and
+  collection literals
+- type nodes for names, qualified names, templates, pointers, references,
+  wrappers, fixed arrays, C tag spellings, and function-like type signatures
 - type parsing now enters through the lexer/token stream instead of the old
   top-level arrow/bracket substring parser, preserving existing `TypeRef`
   shapes while making C tag spellings such as `struct stat` structured names
 - parser declaration and statement code now builds expression and type pieces
-  through token spans directly; the parser layer no longer calls the top-level
-  text expression/type parsers as a compatibility fallback
+  through token spans directly; `parse_expr_text`/`parse_type_text` are public
+  text entry points around token parsers, not semantic fallback paths
 - expression template-call bracket contents are parsed from existing token
   spans for both expression and type template arguments, including templated
   pointer casts, instead of reconstructing substring arguments and sending
@@ -2111,12 +2115,13 @@ Expression parsing has moved onto the lexer/token stream:
   operators, calls, template calls, members, indexes, tuples, lists, dicts,
   sets, slices, named arguments, explicit `cpp(...)` escapes, and unsupported
   Python expression forms that need precise diagnostics.
-- This is a compatibility migration point. The public `parse_expr_text` entry
-  remains while statement/declaration parsing still passes expression spans
-  through it. Future parser work should pass token spans directly. The token
-  expression parser implementation has been split into a small public entry
-  file, core precedence/prefix parsing, and postfix/primary parsing so new
-  expression work does not grow another oversized compiler file.
+- The public `parse_expr_text` entry remains as a text-to-AST API for tests,
+  tools, diagnostics, and isolated expression parsing. It lexes once and
+  delegates to the same token parser used by the normal parser; it must not
+  become a separate semantic fallback path. The token expression parser
+  implementation has been split into a small public entry file, core
+  precedence/prefix parsing, and postfix/primary parsing so new expression work
+  does not grow another oversized compiler file.
 
 ## Acceptance
 
