@@ -993,6 +993,10 @@ push. They are not release packaging work.
    diagnostic-only rendering, and the migration guard rejects the old `text`
    helper names so normal matching paths do not drift back toward string-shaped
    semantics.
+   Generic body specialization now substitutes generic parameters only in
+   `Name` expressions, so constructor field names, member labels, and other
+   expression metadata are not accidentally rewritten just because they share a
+   spelling with a generic parameter.
 
 3. OOP Surface Cleanup
 

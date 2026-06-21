@@ -580,6 +580,20 @@ void test_semantic_diagnostics() {
     }
     assert(bad_generic_value);
 
+    const dudu::ModuleAst generic_named_field =
+        dudu::parse_source("class Weird[t]:\n"
+                           "    t: i32\n"
+                           "    value: t\n"
+                           "\n"
+                           "def make_weird[t](value: t) -> Weird[t]:\n"
+                           "    return Weird[t](t=3, value=value)\n"
+                           "\n"
+                           "def use_weird() -> i32:\n"
+                           "    weird = make_weird[i32](7)\n"
+                           "    return weird.t\n",
+                           "generic_named_field.dd");
+    dudu::analyze_module(generic_named_field, {.check_bodies = true});
+
     bool bad_value_as_type = false;
     try {
         const dudu::ModuleAst module = dudu::parse_source("def bad_value_as_type(value: i32):\n"

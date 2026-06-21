@@ -63,7 +63,7 @@ std::string instantiated_label(const std::string& name, const std::vector<TypeRe
 
 void substitute_expr_types(Expr& expr, const std::map<std::string, TypeRef>& substitutions) {
     if (const auto replacement = substitutions.find(expr.name);
-        replacement != substitutions.end()) {
+        expr.kind == ExprKind::Name && replacement != substitutions.end()) {
         expr.name = substitute_type_ref_text(replacement->second, {});
     }
     if (has_type_ref(expr.type_ref)) {
