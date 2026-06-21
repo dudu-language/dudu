@@ -64,7 +64,7 @@ class Parser {
     size_t consume_statement_continuation_block();
     JoinedTokens join_until_with_range(std::initializer_list<TokenKind> stops);
     JoinedTokens join_tokens(size_t begin, size_t end) const;
-    std::string source_text_for_tokens(size_t begin, size_t end) const;
+    std::string token_source_spelling(size_t begin, size_t end) const;
     Expr parse_expr_piece(const JoinedTokens& piece) const;
     TypeRef parse_type_piece(const JoinedTokens& piece) const;
     std::vector<JoinedTokens> split_top_level_comma_pieces(const JoinedTokens& piece) const;

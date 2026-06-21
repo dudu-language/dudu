@@ -366,7 +366,7 @@ Parser::JoinedTokens Parser::join_tokens(size_t begin, size_t end) const {
     return joined;
 }
 
-std::string Parser::source_text_for_tokens(size_t begin, size_t end) const {
+std::string Parser::token_source_spelling(size_t begin, size_t end) const {
     std::ostringstream out;
     SourceLocation source_cursor;
     bool has_tokens = false;
@@ -390,7 +390,7 @@ Expr Parser::parse_expr_piece(const JoinedTokens& piece) const {
     ExprTokenParser parser(tokens);
     Expr expr = parser.parse();
     if (expr.kind == ExprKind::Unknown) {
-        const std::string spelling = trim_string(source_text_for_tokens(piece.begin, piece.end));
+        const std::string spelling = trim_string(token_source_spelling(piece.begin, piece.end));
         throw CompileError(expr.location,
                            "unsupported expression: " +
                                (spelling.empty() ? display_expr(expr) : spelling),
@@ -408,7 +408,7 @@ TypeRef Parser::parse_type_piece(const JoinedTokens& piece) const {
     TypeTokenParser parser(tokens);
     TypeRef type = parser.parse();
     if (const TypeRef* malformed = malformed_type_node(type)) {
-        std::string spelling = trim_string(source_text_for_tokens(piece.begin, piece.end));
+        std::string spelling = trim_string(token_source_spelling(piece.begin, piece.end));
         const std::string message =
             spelling.empty() ? "malformed type syntax" : "malformed type syntax: " + spelling;
         throw CompileError(malformed->location.line > 0 ? malformed->location : type.location,

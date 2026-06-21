@@ -1015,6 +1015,9 @@ push. They are not release packaging work.
    `sema_body.cpp` into a focused helper module, keeping body checking under
    the file-size budget and making the remaining expression-name substitution
    surface explicit.
+   Parser token-span rendering is now named `token_source_spelling` and used
+   only for parser diagnostics and explicit `cpp(...)` escape bodies; the guard
+   rejects the old generic `source_text_for_tokens` API name.
 
 3. OOP Surface Cleanup
 

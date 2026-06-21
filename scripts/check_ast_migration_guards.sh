@@ -78,6 +78,7 @@ forbidden=(
     "call_callee_text"
     "got_text = substitute_type_ref_text"
     "assignment_error_text"
+    "source_text_for_tokens"
 )
 
 for pattern in "${forbidden[@]}"; do
