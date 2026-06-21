@@ -1033,7 +1033,10 @@ push. They are not release packaging work.
    names remain public. Out-of-line methods such as
    `def Player.damage(self, amount: i32):` attach to the declared class and use
    the normal method sema/emission path. `@staticmethod`, `@classmethod`, and
-   `@property` are rejected with explicit OOP-surface diagnostics.
+   `@property` are rejected with explicit OOP-surface diagnostics. Regression
+   fixtures cover stale Python dunder lifecycle/operator names, stale
+   static/class/property decorators, and explicit member visibility keywords so
+   old prototype spellings do not silently come back.
 
 4. Arrays, Matrices, Tensors, And Slicing
 

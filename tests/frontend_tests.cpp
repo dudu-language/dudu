@@ -479,6 +479,36 @@ void test_canonical_examples_parse(const std::filesystem::path& root) {
     }
 }
 
+void test_rejected_oop_surface_fixtures(const std::filesystem::path& root) {
+    struct Case {
+        std::string path;
+        std::string expected;
+    };
+    const std::vector<Case> cases = {
+        {"bad_dunder_init.dd", "reserved Python-style dunder"},
+        {"bad_dunder_del.dd", "reserved Python-style dunder"},
+        {"bad_dunder_operator.dd", "reserved Python-style dunder"},
+        {"bad_dunder_free.dd", "reserved Python-style dunder"},
+        {"bad_staticmethod_self.dd", "@staticmethod is not supported"},
+        {"bad_staticmethod_free.dd", "@staticmethod is not supported"},
+        {"bad_classmethod.dd", "@classmethod is not supported"},
+        {"bad_property.dd", "@property is not supported"},
+        {"bad_class_member_visibility.dd", "explicit visibility keywords are not supported"},
+    };
+
+    for (const Case& item : cases) {
+        bool rejected = false;
+        try {
+            const std::filesystem::path path = root / "tests" / "fixtures" / item.path;
+            const dudu::ModuleAst module = dudu::parse_source(read_file(path), path);
+            dudu::analyze_module(module, {.check_bodies = true});
+        } catch (const dudu::CompileError& error) {
+            rejected = std::string(error.what()).find(item.expected) != std::string::npos;
+        }
+        assert(rejected);
+    }
+}
+
 void test_header_emission() {
     const dudu::ModuleAst module = dudu::parse_source("import cpp \"raylib.h\" as rl\n"
                                                       "\n"
@@ -1854,6 +1884,7 @@ int main() {
         test_cpp_module_artifacts_preserve_module_boundaries();
         test_cpp_module_artifacts_use_resolved_dependency_paths();
         test_canonical_examples_parse(root);
+        test_rejected_oop_surface_fixtures(root);
         test_header_emission();
         test_semantic_diagnostics();
         test_lsp_diagnostic_sources_are_structured();
