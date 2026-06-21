@@ -104,12 +104,15 @@ path-qualified member uses such as an imported native class constructor call
 matching the same qualified type annotation, from either cursor position.
 Frontend tests cover go-to-definition from a Dudu native type annotation to the
 source location of a real scanned local C header declaration.
-Broader native references still need to move from name-set lookup toward a
-canonical identity index.
 LSP `Symbol` entries now carry native identity keys for scanned native types,
 values, functions, macros, classes, and C++ class methods when Clang metadata
 provides them. That keeps identity available at the editor boundary and is the
 next step toward replacing native reference matching by plain source spelling.
+Find-references now uses those native identity keys to filter same-spelled
+native references across workspace documents when identity metadata is
+available, so two headers imported under the same alias with the same function
+name are not conflated. Broader native references still need a canonical
+identity index instead of recomputing symbol identity per candidate document.
 Definition and hover symbol lookup now prefer exact symbols, and only fall back
 to suffix matching when the suffix is unambiguous. Receiver-aware member
 definition and hover run before suffix fallback, so native classes with

@@ -183,6 +183,32 @@ bool document_has_direct_native_symbol(const Document& doc, const std::string& n
     return false;
 }
 
+std::optional<std::string> native_identity_for_query(const Document& doc,
+                                                     const std::string& query) {
+    if (query.empty()) {
+        return std::nullopt;
+    }
+    for (const Symbol& symbol : symbols_for_document(doc)) {
+        if (symbol.name == query && symbol.native_identity_key.has_value()) {
+            return symbol.native_identity_key;
+        }
+    }
+    return std::nullopt;
+}
+
+bool document_has_native_identity_for_query(const Document& doc, const std::string& query,
+                                            const std::string& identity) {
+    if (identity.empty()) {
+        return true;
+    }
+    for (const Symbol& symbol : symbols_for_document(doc)) {
+        if (symbol.name == query && symbol.native_identity_key == identity) {
+            return true;
+        }
+    }
+    return false;
+}
+
 std::optional<std::string> dotted_source_symbol_at(const Document& doc, const Json* params) {
     const LspPosition position = lsp_position(params);
     int line = 0;
@@ -334,6 +360,7 @@ std::string references_json(const Document& doc, const Json* params,
         scope == ReferenceScope::Workspace ? module_import_target_key(doc, query) : std::nullopt;
     const std::optional<ImportReferenceTarget> selective_target =
         scope == ReferenceScope::Workspace ? selective_import_target(doc, query) : std::nullopt;
+    const std::optional<std::string> native_identity = native_identity_for_query(doc, query);
     std::ostringstream out;
     out << "[";
     bool first = true;
@@ -371,7 +398,15 @@ std::string references_json(const Document& doc, const Json* params,
             target_module_document      ? dotted_tail(query)
             : target_selective_document ? selective_target->member_name
                                         : query;
-        for (const ReferenceLocation& location : references_in(candidate, candidate_query)) {
+        const std::vector<ReferenceLocation> locations = references_in(candidate, candidate_query);
+        if (locations.empty()) {
+            continue;
+        }
+        if (native_identity.has_value() &&
+            !document_has_native_identity_for_query(candidate, candidate_query, *native_identity)) {
+            continue;
+        }
+        for (const ReferenceLocation& location : locations) {
             if (!first) {
                 out << ",";
             }

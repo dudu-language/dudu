@@ -1411,10 +1411,14 @@ push. They are not release packaging work.
    reference lookup. LSP symbols now carry native identity keys for scanned
    native declarations, including C++ class methods, preserving canonical
    native identity at the editor boundary so native references can move away
-   from plain name matching. Definition and hover symbol lookup now prefer
-   exact symbols and only use suffix matches when unambiguous; receiver-aware
-   member definition and hover run before suffix fallback, so same-named native
-   methods resolve through the expression receiver type instead of scan order.
+   from plain name matching. Find-references uses those native identity keys to
+   filter same-spelled native references across workspace documents when
+   identity metadata is available, so two headers imported under the same alias
+   with the same function name are not conflated. Definition and hover symbol
+   lookup now prefer exact symbols and only use suffix matches when
+   unambiguous; receiver-aware member definition and hover run before suffix
+   fallback, so same-named native methods resolve through the expression
+   receiver type instead of scan order.
    Find-references keeps unresolved member expressions as dotted queries instead
    of falling back to the bare member name, so unrelated same-named member calls
    are not reported together. Module-qualified references now also include the
