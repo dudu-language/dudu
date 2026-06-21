@@ -21,6 +21,7 @@
 #include "dudu/sema_context.hpp"
 #include "dudu/sema_expr_internal.hpp"
 #include "dudu/sema_function_type.hpp"
+#include "dudu/sema_generics.hpp"
 #include "dudu/sema_inheritance.hpp"
 #include "dudu/sema_method_templates.hpp"
 #include "dudu/sema_methods.hpp"
@@ -1643,6 +1644,22 @@ void test_generic_decl_ast_shape() {
     assert(module.functions[0].generic_params == std::vector<std::string>{"T"});
 }
 
+void test_non_type_generic_param_shape() {
+    const dudu::ModuleAst module = dudu::parse_source("class SmallVec[T, N]:\n"
+                                                      "    items: array[T][N]\n",
+                                                      "generic_non_type_shape.dd");
+    assert(module.classes.size() == 1);
+    const dudu::ClassDecl& small_vec = module.classes[0];
+    const std::set<std::string> values = dudu::generic_value_params_for_class(small_vec);
+    assert(values.size() == 1);
+    assert(values.contains("N"));
+
+    const dudu::TypeRef substituted = dudu::substitute_type_ref(
+        small_vec.fields[0].type_ref,
+        {{"T", dudu::parse_type_text("i32")}, {"N", dudu::parse_type_text("3")}});
+    assert(dudu::type_ref_text(substituted) == "array[i32][3]");
+}
+
 void test_payload_enum_ast_shape() {
     const dudu::ModuleAst module = dudu::parse_source("enum Message:\n"
                                                       "    Quit\n"
@@ -1889,6 +1906,7 @@ int main() {
         test_malformed_static_field_type_is_rejected();
         test_malformed_declaration_type_syntax_is_rejected();
         test_generic_decl_ast_shape();
+        test_non_type_generic_param_shape();
         test_payload_enum_ast_shape();
         test_match_case_ast_shape();
         test_wrapper_match_type_uses_type_ast();

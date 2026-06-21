@@ -1,0 +1,18 @@
+class SmallVec[T, N]:
+    items: array[T][N]
+    count: usize
+
+    def push(self, value: T):
+        self.items[self.count] = value
+        self.count += 1
+
+    def get(self, index: usize) -> T:
+        return self.items[index]
+
+
+def main() -> i32:
+    values: array[i32] = [0, 0, 0]
+    vec: SmallVec[i32, 3] = SmallVec[i32, 3](values, 0)
+    vec.push(20)
+    vec.push(22)
+    return vec.get(0) + vec.get(1)

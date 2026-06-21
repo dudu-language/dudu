@@ -36,8 +36,15 @@ void bind_local(FunctionScope& scope, const std::string& name, const TypeRef& ty
 }
 
 Symbols with_generic_params(Symbols symbols, const std::vector<std::string>& params) {
+    return with_generic_params(std::move(symbols), params, {});
+}
+
+Symbols with_generic_params(Symbols symbols, const std::vector<std::string>& params,
+                            const std::set<std::string>& value_params) {
     for (const std::string& param : params) {
-        symbols.types.insert(param);
+        if (!value_params.contains(param)) {
+            symbols.types.insert(param);
+        }
         symbols.generic_params.insert(param);
     }
     return symbols;

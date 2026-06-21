@@ -2,6 +2,7 @@
 
 #include "dudu/array_shape.hpp"
 #include "dudu/ast_type.hpp"
+#include "dudu/cpp_lower.hpp"
 #include "dudu/sema_context.hpp"
 #include "dudu/sema_function_type.hpp"
 #include "dudu/sema_ops.hpp"
@@ -35,6 +36,46 @@ TypeRef shaped_array_type_ref(const TypeRef& element_type, const std::vector<siz
     type.location = element_type.location;
     type.range = element_type.range;
     return type;
+}
+
+TypeRef shaped_array_type_ref(const TypeRef& element_type, const std::vector<std::string>& shape) {
+    TypeRef storage;
+    storage.kind = TypeKind::Template;
+    storage.name = "array";
+    storage.children.push_back(element_type);
+    storage.location = element_type.location;
+    storage.range = element_type.range;
+
+    TypeRef type;
+    type.kind = TypeKind::FixedArray;
+    type.children.push_back(storage);
+    std::ostringstream value;
+    for (size_t i = 0; i < shape.size(); ++i) {
+        if (i > 0) {
+            value << ", ";
+        }
+        value << trim_copy(shape[i]);
+    }
+    type.value = value.str();
+    type.location = element_type.location;
+    type.range = element_type.range;
+    return type;
+}
+
+std::vector<std::string> explicit_array_shape_text(const TypeRef& type) {
+    if (type.kind != TypeKind::FixedArray || type.children.empty() ||
+        !has_type_ref(explicit_array_element_type_ref(type))) {
+        return {};
+    }
+    std::vector<std::string> out;
+    for (const std::string& dim : split_top_level_args(type.value)) {
+        const std::string trimmed = trim_copy(dim);
+        if (trimmed.empty()) {
+            return {};
+        }
+        out.push_back(trimmed);
+    }
+    return out;
 }
 
 TypeRef resolve_type_ref_alias(const Symbols& symbols, const TypeRef& raw_type) {
@@ -76,8 +117,9 @@ bool native_fixed_extent_template(const Symbols& symbols, const TypeRef& type,
         return false;
     }
     const std::string head = type_ref_head_name(type);
-    if (!native_alias && !symbols.native_types.contains(head) && !symbols.native_classes.contains(head) &&
-        head.find('.') == std::string::npos && head.find("::") == std::string::npos) {
+    if (!native_alias && !symbols.native_types.contains(head) &&
+        !symbols.native_classes.contains(head) && head.find('.') == std::string::npos &&
+        head.find("::") == std::string::npos) {
         return false;
     }
     for (size_t index = 1; index < type.children.size(); ++index) {
@@ -104,7 +146,8 @@ std::optional<TypeRef> indexed_type_ref_from_type_ref_with_count(
     const Symbols& symbols, const SourceLocation& location, const TypeRef& raw_type,
     const size_t index_count, const bool is_slice, const bool has_step, const std::string& label) {
     const TypeRef raw_receiver_type = unwrap_index_receiver_type(raw_type);
-    const bool raw_native_alias = symbols.native_types.contains(type_ref_head_name(raw_receiver_type));
+    const bool raw_native_alias =
+        symbols.native_types.contains(type_ref_head_name(raw_receiver_type));
     const TypeRef resolved_type = resolve_type_ref_alias(symbols, raw_type);
     const TypeRef* type = &resolved_type;
     while ((type->kind == TypeKind::Reference || type->kind == TypeKind::Const) &&
@@ -154,6 +197,29 @@ std::optional<TypeRef> indexed_type_ref_from_type_ref_with_count(
         }
         return shaped_array_type_ref(element,
                                      std::vector<size_t>(shape.begin() + index_count, shape.end()));
+    }
+    if (const std::vector<std::string> shape = explicit_array_shape_text(*type); !shape.empty()) {
+        const TypeRef element = explicit_array_element_type_ref(*type);
+        if (is_slice) {
+            if (shape.size() != 1) {
+                throw CompileError(location,
+                                   "array slicing requires one-dimensional fixed array: " + label);
+            }
+            TypeRef span;
+            span.kind = TypeKind::Template;
+            span.name = has_step ? "strided_span" : "span";
+            span.children.push_back(element);
+            span.location = location;
+            return span;
+        }
+        if (index_count > shape.size()) {
+            throw CompileError(location, "too many indices for array: " + label);
+        }
+        if (index_count == shape.size()) {
+            return element;
+        }
+        return shaped_array_type_ref(
+            element, std::vector<std::string>(shape.begin() + index_count, shape.end()));
     }
     if (type->kind == TypeKind::Template && type->name == "dict" && type->children.size() == 2) {
         return type->children[1];

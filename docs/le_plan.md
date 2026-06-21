@@ -1041,8 +1041,10 @@ push. They are not release packaging work.
    templates, fixed arrays, wrappers, and function types. Generic method type
    arguments can also be inferred from typed return/assignment context for
    calls such as `value: i32 = box.make()` and `return box.make()` from an
-   `i32` function. Non-type parameters and richer instantiated diagnostics
-   remain.
+   `i32` function. Non-type generic value parameters now cover fixed-array
+   extents such as `class SmallVec[T, N]` with `items: array[T][N]`, lowering
+   to `template <typename T, size_t N>` and rejecting value parameters used as
+   types. Richer instantiated diagnostics remain.
    Multi-parameter generic functions and classes such as `Pair[str, i32]`
    substitute receiver member types through the declared class generic
    parameter names. Target fixtures now cover `Stack[T]`, generic

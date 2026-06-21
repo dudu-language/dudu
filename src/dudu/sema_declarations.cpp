@@ -3,6 +3,7 @@
 #include "dudu/decorators.hpp"
 #include "dudu/sema_common.hpp"
 #include "dudu/sema_context.hpp"
+#include "dudu/sema_generics.hpp"
 #include "dudu/sema_inheritance.hpp"
 #include "dudu/source.hpp"
 
@@ -267,7 +268,8 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
     }
     for (const ClassDecl& klass : module.classes) {
         check_generic_params(klass.location, klass.generic_params);
-        const Symbols class_symbols = with_generic_params(symbols, klass.generic_params);
+        const Symbols class_symbols = with_generic_params(symbols, klass.generic_params,
+                                                          generic_value_params_for_class(klass));
         for (const Decorator& decorator : klass.decorators) {
             check_class_decorator(decorator);
         }
@@ -310,8 +312,8 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
         }
         for (const FunctionDecl& method : klass.methods) {
             check_generic_params(method.location, method.generic_params);
-            const Symbols method_symbols =
-                with_generic_params(class_symbols, method.generic_params);
+            const Symbols method_symbols = with_generic_params(
+                class_symbols, method.generic_params, generic_value_params_for_function(method));
             if (!fields.insert(method.name).second) {
                 fail(method.location, "duplicate class member: " + method.name);
             }
@@ -421,7 +423,8 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
     }
     for (const FunctionDecl& fn : module.functions) {
         check_generic_params(fn.location, fn.generic_params);
-        const Symbols function_symbols = with_generic_params(symbols, fn.generic_params);
+        const Symbols function_symbols =
+            with_generic_params(symbols, fn.generic_params, generic_value_params_for_function(fn));
         for (const Decorator& decorator : fn.decorators) {
             check_function_decorator(module, decorator);
         }

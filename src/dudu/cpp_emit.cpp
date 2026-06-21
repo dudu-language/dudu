@@ -11,8 +11,10 @@
 #include "dudu/cpp_stmt_emit.hpp"
 #include "dudu/decorators.hpp"
 #include "dudu/sema_context.hpp"
+#include "dudu/sema_generics.hpp"
 
 #include <map>
+#include <set>
 #include <sstream>
 #include <string_view>
 #include <vector>
@@ -91,7 +93,8 @@ bool emit_before_constants(const FunctionDecl& fn) {
     return cpp_emit_function_has_decorator(fn, "constexpr");
 }
 
-void emit_template_params(std::ostringstream& out, const std::vector<std::string>& params) {
+void emit_template_params(std::ostringstream& out, const std::vector<std::string>& params,
+                          const std::set<std::string>& value_params = {}) {
     if (params.empty()) {
         return;
     }
@@ -100,7 +103,7 @@ void emit_template_params(std::ostringstream& out, const std::vector<std::string
         if (i > 0) {
             out << ", ";
         }
-        out << "typename " << params[i];
+        out << (value_params.contains(params[i]) ? "size_t " : "typename ") << params[i];
     }
     out << ">\n";
 }
@@ -209,7 +212,7 @@ void emit_function_body(std::ostringstream& out, const FunctionDecl& fn,
                         const std::vector<std::string>& aliases,
                         const std::map<std::string, TypeRef>& function_returns,
                         const Symbols& symbols, const CppEmitOptions& options = {}) {
-    emit_template_params(out, fn.generic_params);
+    emit_template_params(out, fn.generic_params, generic_value_params_for_function(fn));
     emit_function_signature(out, fn, aliases, options);
     out << " {\n";
     CppLocalContext locals;
@@ -238,7 +241,7 @@ void emit_function_declarations(std::ostringstream& out, const ModuleAst& module
         if (header_only && !visible_function_in_header(fn, options)) {
             continue;
         }
-        emit_template_params(out, fn.generic_params);
+        emit_template_params(out, fn.generic_params, generic_value_params_for_function(fn));
         emit_function_signature(out, fn, aliases, options);
         out << ";\n";
         emitted = true;
@@ -254,7 +257,7 @@ void emit_class_forward_declarations(std::ostringstream& out, const ModuleAst& m
         return;
     }
     for (const ClassDecl& klass : module.classes) {
-        emit_template_params(out, klass.generic_params);
+        emit_template_params(out, klass.generic_params, generic_value_params_for_class(klass));
         out << "struct " << emitted_name(klass, options) << ";\n";
     }
     out << '\n';
@@ -303,7 +306,7 @@ std::string emit_cpp_header(const ModuleAst& module, const CppEmitOptions& optio
         if (!visible_function_in_header(fn, options)) {
             continue;
         }
-        emit_template_params(out, fn.generic_params);
+        emit_template_params(out, fn.generic_params, generic_value_params_for_function(fn));
         emit_function_signature(out, fn, aliases, options);
         out << ";\n";
     }

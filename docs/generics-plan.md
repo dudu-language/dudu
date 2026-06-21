@@ -93,7 +93,10 @@ operator validation to instantiation. Executable fixtures now cover a generic
 `Result[T, E]`, generic span math over `span[T]`, and generic method type
 arguments inferred from typed return/assignment context, such as
 `value: i32 = box.make()` and `return box.make()` from an `i32` function.
-Richer instantiated diagnostics and non-type template parameters remain.
+Richer instantiated diagnostics remain. Non-type generic value parameters are
+implemented for fixed-array extents such as `array[T][N]`; they lower to C++
+`size_t` template parameters and are visible as compile-time values, not type
+names.
 Multi-parameter generic functions and classes such as `Pair[str, i32]`
 substitute receiver member types through the declared class generic parameter
 names.
@@ -311,8 +314,12 @@ class SmallVec[T, N]:
 ```
 
 Non-type template parameters such as `N` are useful for fixed-capacity
-containers, math, graphics, and embedded code. Dudu should support them after
-type-only generics are stable.
+containers, math, graphics, and embedded code.
+
+Status: `SmallVec[T, N]` style classes compile when `N` is used as a
+fixed-array extent. Dudu emits `template <typename T, size_t N>` and
+`std::array<T, N>`, supports indexing fields with symbolic extents inside
+generic methods, and rejects using value parameters as types.
 
 ## Diagnostics
 

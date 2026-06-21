@@ -5,6 +5,7 @@
 #include "dudu/sema_scope.hpp"
 
 #include <optional>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -12,6 +13,10 @@ namespace dudu {
 
 std::string template_args_lookup_text(const Expr& expr);
 std::vector<TypeRef> template_type_refs(const Expr& expr);
+std::set<std::string> generic_value_params(const std::vector<std::string>& params,
+                                           const std::vector<TypeRef>& type_refs);
+std::set<std::string> generic_value_params_for_function(const FunctionDecl& fn);
+std::set<std::string> generic_value_params_for_class(const ClassDecl& klass);
 std::optional<std::vector<TypeRef>> infer_generic_call_type_args(const FunctionScope& scope,
                                                                  const FunctionDecl& fn,
                                                                  const std::string& callee,

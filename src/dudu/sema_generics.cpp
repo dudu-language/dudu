@@ -1,6 +1,7 @@
 #include "dudu/sema_generics.hpp"
 
 #include "dudu/ast_type.hpp"
+#include "dudu/cpp_lower.hpp"
 #include "dudu/sema_common.hpp"
 #include "dudu/sema_expr.hpp"
 #include "dudu/sema_function_type.hpp"
@@ -8,6 +9,7 @@
 
 #include <algorithm>
 #include <map>
+#include <set>
 #include <sstream>
 #include <utility>
 #include <vector>
@@ -33,6 +35,26 @@ bool unresolved_generic_binding(const TypeRef& binding) {
     return !has_type_ref(binding) || type_ref_is_auto(binding) ||
            type_ref_is_name(binding, "list") || type_ref_is_name(binding, "dict") ||
            type_ref_is_name(binding, "set");
+}
+
+bool same_name(std::string_view left, std::string_view right) {
+    return trim_copy(std::string(left)) == trim_copy(std::string(right));
+}
+
+void collect_value_generic_params(const TypeRef& type, const std::vector<std::string>& params,
+                                  std::set<std::string>& out) {
+    if (type.kind == TypeKind::FixedArray) {
+        for (const std::string& dim : split_top_level_args(type.value)) {
+            for (const std::string& param : params) {
+                if (same_name(dim, param)) {
+                    out.insert(param);
+                }
+            }
+        }
+    }
+    for (const TypeRef& child : type.children) {
+        collect_value_generic_params(child, params, out);
+    }
 }
 
 bool infer_generic_binding(const TypeRef& param_type, const TypeRef& arg_type,
@@ -107,6 +129,52 @@ std::vector<TypeRef> template_type_refs(const Expr& expr) {
         sema_fail(expr.location, "malformed template call: missing parsed type arguments");
     }
     return {};
+}
+
+std::set<std::string> generic_value_params(const std::vector<std::string>& params,
+                                           const std::vector<TypeRef>& type_refs) {
+    std::set<std::string> out;
+    for (const TypeRef& type : type_refs) {
+        collect_value_generic_params(type, params, out);
+    }
+    return out;
+}
+
+std::set<std::string> generic_value_params_for_function(const FunctionDecl& fn) {
+    std::vector<TypeRef> refs;
+    refs.reserve(fn.params.size() + 1);
+    if (function_has_return_type(fn)) {
+        refs.push_back(fn.return_type_ref);
+    }
+    for (const ParamDecl& param : fn.params) {
+        refs.push_back(param.type_ref);
+    }
+    return generic_value_params(fn.generic_params, refs);
+}
+
+std::set<std::string> generic_value_params_for_class(const ClassDecl& klass) {
+    std::vector<TypeRef> refs;
+    for (const BaseClassDecl& base : klass.base_class_refs) {
+        refs.push_back(base.type_ref);
+    }
+    for (const FieldDecl& field : klass.fields) {
+        refs.push_back(field.type_ref);
+    }
+    for (const ConstDecl& field : klass.static_fields) {
+        refs.push_back(field.type_ref);
+    }
+    for (const ConstDecl& constant : klass.constants) {
+        refs.push_back(constant.type_ref);
+    }
+    for (const FunctionDecl& method : klass.methods) {
+        if (function_has_return_type(method)) {
+            refs.push_back(method.return_type_ref);
+        }
+        for (const ParamDecl& param : method.params) {
+            refs.push_back(param.type_ref);
+        }
+    }
+    return generic_value_params(klass.generic_params, refs);
 }
 
 std::string template_args_lookup_text(const Expr& expr) {

@@ -7,6 +7,7 @@
 #include "dudu/cpp_stmt_emit.hpp"
 #include "dudu/decorators.hpp"
 #include "dudu/sema_context.hpp"
+#include "dudu/sema_generics.hpp"
 #include "dudu/sema_inheritance.hpp"
 
 #include <set>
@@ -237,7 +238,8 @@ bool visible_in_header(Visibility visibility) {
 }
 
 void emit_template_params(std::ostringstream& out, const std::vector<std::string>& params,
-                          std::string_view prefix = {}) {
+                          std::string_view prefix = {},
+                          const std::set<std::string>& value_params = {}) {
     if (params.empty()) {
         return;
     }
@@ -246,7 +248,7 @@ void emit_template_params(std::ostringstream& out, const std::vector<std::string
         if (i > 0) {
             out << ", ";
         }
-        out << "typename " << params[i];
+        out << (value_params.contains(params[i]) ? "size_t " : "typename ") << params[i];
     }
     out << ">\n";
 }
@@ -262,7 +264,8 @@ void emit_method(std::ostringstream& out, const std::string& class_name,
                  const CppEmitOptions& options) {
     const size_t first_param =
         !method.params.empty() && method.params.front().name == "self" ? 1 : 0;
-    emit_template_params(out, method.generic_params, "    ");
+    emit_template_params(out, method.generic_params, "    ",
+                         generic_value_params_for_function(method));
     if (is_constructor_method(method)) {
         out << "    " << class_name << '(';
     } else if (is_destructor_method(method)) {
@@ -386,7 +389,7 @@ void emit_classes(std::ostringstream& out, const ModuleAst& module,
         if (header_only && !visible_in_header(klass.visibility)) {
             continue;
         }
-        emit_template_params(out, klass.generic_params);
+        emit_template_params(out, klass.generic_params, {}, generic_value_params_for_class(klass));
         out << class_opening(klass, aliases, options) << " {\n";
         for (const FieldDecl& field : klass.fields) {
             out << "    " << lower_cpp_type(field.type_ref, aliases, options) << ' ' << field.name;

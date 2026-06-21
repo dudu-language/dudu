@@ -3,6 +3,7 @@
 #include "dudu/ast_parse_utils.hpp"
 #include "dudu/cpp_lower.hpp"
 
+#include <cctype>
 #include <sstream>
 #include <utility>
 
@@ -41,6 +42,43 @@ std::string substitution_lookup_key(const TypeRef& type) {
     default:
         return {};
     }
+}
+
+std::string substitution_value(const TypeRef& type) {
+    if (type.kind == TypeKind::Value) {
+        return trim_copy(type.value);
+    }
+    return trim_copy(type_ref_head_name(type));
+}
+
+bool identifier_char(char ch) {
+    return std::isalnum(static_cast<unsigned char>(ch)) != 0 || ch == '_';
+}
+
+std::string substitute_value_identifiers(std::string text,
+                                         const std::map<std::string, TypeRef>& substitutions) {
+    for (const auto& [name, type] : substitutions) {
+        if (name.empty()) {
+            continue;
+        }
+        const std::string value = substitution_value(type);
+        if (value.empty()) {
+            continue;
+        }
+        size_t pos = text.find(name);
+        while (pos != std::string::npos) {
+            const bool left_ok = pos == 0 || !identifier_char(text[pos - 1]);
+            const size_t end = pos + name.size();
+            const bool right_ok = end >= text.size() || !identifier_char(text[end]);
+            if (left_ok && right_ok) {
+                text.replace(pos, name.size(), value);
+                pos = text.find(name, pos + value.size());
+            } else {
+                pos = text.find(name, end);
+            }
+        }
+    }
+    return text;
 }
 
 } // namespace
@@ -387,6 +425,9 @@ TypeRef substitute_type_ref(const TypeRef& type,
     TypeRef out = type;
     for (TypeRef& child : out.children) {
         child = substitute_type_ref(child, substitutions);
+    }
+    if (out.kind == TypeKind::FixedArray) {
+        out.value = substitute_value_identifiers(out.value, substitutions);
     }
     return out;
 }

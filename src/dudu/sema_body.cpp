@@ -12,6 +12,7 @@
 #include "dudu/sema_common.hpp"
 #include "dudu/sema_context.hpp"
 #include "dudu/sema_expr_internal.hpp"
+#include "dudu/sema_generics.hpp"
 #include "dudu/sema_index.hpp"
 #include "dudu/sema_match.hpp"
 #include "dudu/sema_super.hpp"
@@ -169,7 +170,8 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
                 }
                 binding_type = *inferred;
             } else {
-                check_known_scoped_type_ref(scope, diagnostic_location(stmt.location, stmt.type_ref),
+                check_known_scoped_type_ref(scope,
+                                            diagnostic_location(stmt.location, stmt.type_ref),
                                             stmt.type_ref, "unknown loop binding type: ");
                 check_iterable_binding(scope.symbols, scope.local_type_refs,
                                        diagnostic_location(stmt.location, stmt.iterable_expr),
@@ -205,7 +207,8 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
             const ArrayShapeInference actual =
                 infer_array_literal_shape_type(stmt.type_ref.children.front(), stmt.value_expr);
             if (actual.status == ArrayShapeStatus::RaggedLiteral) {
-                sema_fail(diagnostic_location(stmt.location, stmt.value_expr), "ragged array literal");
+                sema_fail(diagnostic_location(stmt.location, stmt.value_expr),
+                          "ragged array literal");
             }
             if (actual.status == ArrayShapeStatus::EmptyLiteral &&
                 explicit_shape != std::vector<size_t>{0}) {
@@ -224,8 +227,8 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
             check_known_scoped_type_ref(scope, diagnostic_location(stmt.location, stmt.type_ref),
                                         stmt.type_ref, "unknown local type: ");
         } else {
-            check_known_scoped_type_ref(scope, diagnostic_location(stmt.location, type.ref), type.ref,
-                                        "unknown local type: ");
+            check_known_scoped_type_ref(scope, diagnostic_location(stmt.location, type.ref),
+                                        type.ref, "unknown local type: ");
         }
         if (sema_has_expr(stmt.value_expr)) {
             if (inferred.status == ArrayShapeStatus::Inferred &&
@@ -252,7 +255,8 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
     if (stmt.kind == StmtKind::Assign) {
         if (const std::vector<std::string> names = tuple_binding_names(stmt.target_expr);
             !names.empty()) {
-            const SourceLocation& value_location = diagnostic_location(stmt.location, stmt.value_expr);
+            const SourceLocation& value_location =
+                diagnostic_location(stmt.location, stmt.value_expr);
             const std::vector<TypeRef> types = template_type_arg_refs_with_aliases(
                 infer_expr_type_ast(scope, stmt.value_expr, &value_location), "tuple",
                 scope.symbols.alias_type_refs);
@@ -327,9 +331,9 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols) {
             inferred.status == ArrayShapeStatus::Inferred ? inferred.type_ref : constant.type_ref;
         if (inferred.status == ArrayShapeStatus::Inferred &&
             is_array_literal(constant.value_expr)) {
-            check_array_literal_elements(base, inferred.element_type_ref, constant.value_expr,
-                                         diagnostic_location(constant.location,
-                                                             constant.value_expr));
+            check_array_literal_elements(
+                base, inferred.element_type_ref, constant.value_expr,
+                diagnostic_location(constant.location, constant.value_expr));
         }
         bind_local(base, constant.name, constant_type);
         base.constants.insert(constant.name);
@@ -339,8 +343,10 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols) {
             if (function_has_decorator(method, "abstract")) {
                 continue;
             }
-            Symbols method_symbols = with_generic_params(symbols, klass.generic_params);
-            method_symbols = with_generic_params(method_symbols, method.generic_params);
+            Symbols method_symbols = with_generic_params(symbols, klass.generic_params,
+                                                         generic_value_params_for_class(klass));
+            method_symbols = with_generic_params(method_symbols, method.generic_params,
+                                                 generic_value_params_for_function(method));
             FunctionScope scope{method_symbols};
             copy_base_scope_state(scope, base);
             scope.current_class = klass.name;
@@ -358,7 +364,8 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols) {
         }
     }
     for (const FunctionDecl& fn : module.functions) {
-        Symbols function_symbols = with_generic_params(symbols, fn.generic_params);
+        Symbols function_symbols =
+            with_generic_params(symbols, fn.generic_params, generic_value_params_for_function(fn));
         FunctionScope scope{function_symbols};
         copy_base_scope_state(scope, base);
         scope.return_type_ref = function_return_type_ref(fn);
