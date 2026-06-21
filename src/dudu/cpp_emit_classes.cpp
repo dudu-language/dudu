@@ -74,7 +74,7 @@ std::vector<size_t> class_emit_order(const std::vector<ClassDecl>& classes) {
 
 std::string decorator_arg(const ClassDecl& klass, std::string_view name) {
     for (const Decorator& decorator : klass.decorators) {
-        if (const std::optional<std::string> arg = decorator_first_arg_text(decorator, name)) {
+        if (const std::optional<std::string> arg = decorator_first_arg_display(decorator, name)) {
             return *arg;
         }
     }

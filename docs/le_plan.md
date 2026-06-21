@@ -975,6 +975,10 @@ push. They are not release packaging work.
    substitution remains the normal path, while messy C++ template artifacts
    such as pack spellings and `__decay_and_strip` are quarantined at the native
    boundary and guarded against generic helper names returning.
+   Decorator argument helper names now say `display` instead of `text`; they
+   render already parsed decorator expression nodes for C++ emission rather
+   than scanning decorator source text, and the migration guard rejects the old
+   text-shaped API names.
 
 3. OOP Surface Cleanup
 

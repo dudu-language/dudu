@@ -65,6 +65,8 @@ forbidden=(
     "native_function_key"
     "method_key\\("
     "template_method_name"
+    "decorator_first_arg_text"
+    "decorator_arg_list_text"
 )
 
 for pattern in "${forbidden[@]}"; do

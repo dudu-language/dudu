@@ -42,16 +42,16 @@ bool decorator_call_matches(const Decorator& decorator, std::string_view name) {
     return decorator.expr.kind == ExprKind::Call && decorator_matches(decorator, name);
 }
 
-std::optional<std::string> decorator_first_arg_text(const Decorator& decorator,
-                                                    std::string_view name) {
+std::optional<std::string> decorator_first_arg_display(const Decorator& decorator,
+                                                       std::string_view name) {
     if (!decorator_call_matches(decorator, name) || decorator.expr.children.empty()) {
         return std::nullopt;
     }
     return display_expr(decorator.expr.children.front());
 }
 
-std::optional<std::string> decorator_arg_list_text(const Decorator& decorator,
-                                                   std::string_view name) {
+std::optional<std::string> decorator_arg_list_display(const Decorator& decorator,
+                                                      std::string_view name) {
     if (!decorator_call_matches(decorator, name)) {
         return std::nullopt;
     }

@@ -74,7 +74,7 @@ namespace {
 
 std::string cpp_emit_function_decorator_args(const FunctionDecl& fn, std::string_view name) {
     for (const Decorator& decorator : fn.decorators) {
-        if (const std::optional<std::string> args = decorator_arg_list_text(decorator, name)) {
+        if (const std::optional<std::string> args = decorator_arg_list_display(decorator, name)) {
             return *args;
         }
     }
