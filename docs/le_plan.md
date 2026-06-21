@@ -1842,7 +1842,10 @@ push. They are not release packaging work.
    explicit typed block-check context, and the migration guard rejects the old
    callback wrapper name. LSP references and navigation code now share AST
    type/expression/statement traversal helpers instead of carrying duplicated
-   recursive walker lambdas in each feature.
+   recursive walker lambdas in each feature. Local function-type alias
+   resolution now uses an explicit helper instead of a recursive
+   `std::function` lambda, keeping sema recursion named after the compiler
+   concept it implements.
 
 19. Polish Unsupported Syntax Diagnostics
 
