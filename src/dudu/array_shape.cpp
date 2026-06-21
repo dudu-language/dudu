@@ -44,6 +44,27 @@ std::optional<std::vector<size_t>> explicit_array_shape_from_type(const TypeRef&
     return shape;
 }
 
+std::optional<std::vector<std::string>> explicit_array_shape_text_from_type(const TypeRef& type) {
+    if (type.kind != TypeKind::FixedArray || type.children.empty()) {
+        return std::nullopt;
+    }
+    const TypeRef& storage = type.children.front();
+    if (storage.kind != TypeKind::Template || storage.name != "array" ||
+        storage.children.size() != 1) {
+        return std::nullopt;
+    }
+    std::vector<std::string> shape;
+    const std::vector<std::string> dims = split_top_level_args(type.value);
+    for (const std::string& dim : dims) {
+        const std::string trimmed = trim_copy(dim);
+        if (trimmed.empty()) {
+            return std::nullopt;
+        }
+        shape.push_back(trimmed);
+    }
+    return shape;
+}
+
 std::optional<std::vector<size_t>> literal_shape(const Expr& expr) {
     if (expr.kind != ExprKind::ListLiteral) {
         return std::vector<size_t>{};
@@ -124,6 +145,11 @@ ArrayShapeInference infer_array_literal_shape_type(const TypeRef& declared_type,
 std::vector<size_t> explicit_array_shape(const TypeRef& declared_type) {
     const auto shape = explicit_array_shape_from_type(declared_type);
     return shape.value_or(std::vector<size_t>{});
+}
+
+std::vector<std::string> explicit_array_shape_text(const TypeRef& declared_type) {
+    const auto shape = explicit_array_shape_text_from_type(declared_type);
+    return shape.value_or(std::vector<std::string>{});
 }
 
 TypeRef explicit_array_element_type_ref(const TypeRef& declared_type) {

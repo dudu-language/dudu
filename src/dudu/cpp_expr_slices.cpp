@@ -22,6 +22,22 @@ std::vector<size_t> local_array_shape(const std::map<std::string, TypeRef>& loca
     return {};
 }
 
+TypeRef unwrap_reference_and_const(TypeRef type) {
+    while ((type.kind == TypeKind::Reference || type.kind == TypeKind::Const) &&
+           type.children.size() == 1) {
+        type = type.children.front();
+    }
+    return type;
+}
+
+std::vector<std::string> local_array_shape_text(
+    const std::map<std::string, TypeRef>& local_type_refs, const std::string& name) {
+    if (const auto local = local_type_refs.find(name); local != local_type_refs.end()) {
+        return explicit_array_shape_text(unwrap_reference_and_const(local->second));
+    }
+    return {};
+}
+
 std::string nested_array_data_expr(std::string base, size_t rank) {
     base += ".data()";
     for (size_t i = 1; i < rank; ++i) {
@@ -30,9 +46,13 @@ std::string nested_array_data_expr(std::string base, size_t rank) {
     return base;
 }
 
-size_t shape_element_count(const std::vector<size_t>& shape) {
-    return std::accumulate(shape.begin(), shape.end(), size_t{1},
-                           [](size_t lhs, size_t rhs) { return lhs * rhs; });
+std::string shape_element_count_expr(const std::vector<std::string>& shape) {
+    return std::accumulate(
+        shape.begin(), shape.end(), std::string{},
+        [](std::string lhs, const std::string& rhs) {
+            const std::string term = "(" + rhs + ")";
+            return lhs.empty() ? term : lhs + " * " + term;
+        });
 }
 
 } // namespace
@@ -116,14 +136,14 @@ std::optional<std::string> lower_full_multidim_slice_expr(
             return std::nullopt;
         }
     }
-    const std::vector<size_t> shape = local_array_shape(local_type_refs, base.name);
+    const std::vector<std::string> shape = local_array_shape_text(local_type_refs, base.name);
     if (shape.size() != index.children.size()) {
         return std::nullopt;
     }
     const std::string lowered_base =
         lower_expr(base, aliases, locals, local_type_refs, symbols, options);
     return "std::span(" + nested_array_data_expr(lowered_base, shape.size()) + ", " +
-           std::to_string(shape_element_count(shape)) + ")";
+           shape_element_count_expr(shape) + ")";
 }
 
 } // namespace dudu

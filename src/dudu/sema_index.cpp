@@ -125,7 +125,9 @@ TypeRef indexed_type_ref_from_type(const Symbols& symbols, const SourceLocation&
     const TypeRef unwrapped_type_ref = unwrap_reference_and_const(raw_type);
     if (is_full_multidim_slice_expr(index_expr)) {
         const std::vector<size_t> shape = explicit_array_shape(unwrapped_type_ref);
-        if (shape.size() == index_expr.children.size()) {
+        const std::vector<std::string> shape_text = explicit_array_shape_text(unwrapped_type_ref);
+        if (shape.size() == index_expr.children.size() ||
+            shape_text.size() == index_expr.children.size()) {
             return array_element_template_type_ref(location, unwrapped_type_ref, "span");
         }
     }

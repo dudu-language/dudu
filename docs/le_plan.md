@@ -993,7 +993,8 @@ push. They are not release packaging work.
    Three-dimensional channel slices such as `image[:, :, c]` also produce
    `strided_span[T]` views over interleaved channel data. Full-rank fixed-array
    slices such as `mat[:, :]` and `image[:, :, :]` produce contiguous `span[T]`
-   views over the whole backing storage.
+   views over the whole backing storage, including generic non-type extents
+   such as `array[T][Rows, Cols]`.
    Dudu-native `@operator("[]")` read hooks and `@operator("[]=")` indexed
    assignment hooks work for library-style tensor wrappers, and indexed member
    paths such as `self.values[i]` type-check. One-dimensional fixed-array step

@@ -1,0 +1,18 @@
+def sum_view(values: span[i32]) -> i32:
+    total: i32 = 0
+    for value: i32 in values:
+        total += value
+    return total
+
+
+def sum_matrix[Rows, Cols](matrix: &array[i32][Rows, Cols]) -> i32:
+    all_values: span[i32] = matrix[:, :]
+    return sum_view(all_values)
+
+
+def main() -> i32:
+    matrix: array[i32] = [
+        [10, 20],
+        [3, 9],
+    ]
+    return sum_matrix[2, 2](matrix)

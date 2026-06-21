@@ -62,22 +62,6 @@ TypeRef shaped_array_type_ref(const TypeRef& element_type, const std::vector<std
     return type;
 }
 
-std::vector<std::string> explicit_array_shape_text(const TypeRef& type) {
-    if (type.kind != TypeKind::FixedArray || type.children.empty() ||
-        !has_type_ref(explicit_array_element_type_ref(type))) {
-        return {};
-    }
-    std::vector<std::string> out;
-    for (const std::string& dim : split_top_level_args(type.value)) {
-        const std::string trimmed = trim_copy(dim);
-        if (trimmed.empty()) {
-            return {};
-        }
-        out.push_back(trimmed);
-    }
-    return out;
-}
-
 TypeRef resolve_type_ref_alias(const Symbols& symbols, const TypeRef& raw_type) {
     return resolve_alias_ref(symbols, raw_type);
 }
