@@ -56,8 +56,8 @@ TypeRef assignment_target_type_ref(FunctionScope& scope, const Stmt& stmt) {
         }
         const auto pointee_type = unary_type_child_ref(type, TypeKind::Pointer);
         if (!pointee_type) {
-            const std::string type_text = trim(substitute_type_ref_text(type, {}));
-            sema_fail(target_location, "cannot dereference non-pointer: " + type_text);
+            const std::string type_display = trim(substitute_type_ref_text(type, {}));
+            sema_fail(target_location, "cannot dereference non-pointer: " + type_display);
         }
         return *pointee_type;
     }

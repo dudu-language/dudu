@@ -54,6 +54,7 @@ forbidden=(
     "signature_param_text"
     "NativeArgType"
     "function_receiver_type_text"
+    "receiver_type_text"
     "unwrap_receiver_type\\("
     "parse_native_type_text\\(type_ref_text"
     "render_type\\(const TypeRef"

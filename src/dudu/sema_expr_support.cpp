@@ -66,9 +66,9 @@ void reject_abstract_construction(const Symbols& symbols, const TypeRef& type,
     if (missing.empty()) {
         return;
     }
-    const std::string type_text = substitute_type_ref_text(type, {});
+    const std::string type_display = substitute_type_ref_text(type, {});
     std::ostringstream out;
-    out << "cannot construct abstract class: " << type_text << "; missing ";
+    out << "cannot construct abstract class: " << type_display << "; missing ";
     for (size_t i = 0; i < missing.size(); ++i) {
         if (i > 0) {
             out << ", ";
@@ -117,10 +117,11 @@ void check_call_args_ast(const FunctionScope& scope, const std::string& callee,
         const TypeRef expected = signature_param_type_ref(signature, i);
         const TypeRef got_ref = infer_expr_type_ast(scope, args[i], location);
         if (!can_assign_ast(scope, expected, args[i], got_ref)) {
-            const std::string expected_text = substitute_type_ref_text(expected, {});
-            const std::string got = substitute_type_ref_text(got_ref, {});
+            const std::string expected_display = substitute_type_ref_text(expected, {});
+            const std::string got_display = substitute_type_ref_text(got_ref, {});
             sema_expr_fail(*location, "argument " + std::to_string(i + 1) + " for " + callee +
-                                          " expects " + expected_text + ", got " + got);
+                                          " expects " + expected_display + ", got " +
+                                          got_display);
         }
     }
 }
@@ -158,11 +159,11 @@ void check_enum_variant_args_ast(const FunctionScope& scope, const EnumDecl& en,
         const TypeRef got_ref = infer_expr_type_ast(scope, *arg, location);
         const TypeRef expected = field->type_ref;
         if (!can_assign_ast(scope, expected, *arg, got_ref)) {
-            const std::string got = substitute_type_ref_text(got_ref, {});
-            const std::string expected_text = type_ref_text(expected);
+            const std::string got_display = substitute_type_ref_text(got_ref, {});
+            const std::string expected_display = type_ref_text(expected);
             sema_expr_fail(arg->location, "argument " + std::to_string(i + 1) + " for " + en.name +
-                                              "." + value.name + " expects " + expected_text +
-                                              ", got " + got);
+                                              "." + value.name + " expects " + expected_display +
+                                              ", got " + got_display);
         }
     }
 }

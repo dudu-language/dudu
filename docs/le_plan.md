@@ -1000,6 +1000,9 @@ push. They are not release packaging work.
    Body and expression semantic diagnostics now name rendered types as
    `display` values, and an unused `shape_text` helper was deleted and guarded
    so normal sema code does not regain stale text-shaped helper names.
+   Assignment, function-call, enum-constructor, and member-path diagnostics now
+   follow the same `display` naming, with a guard against reintroducing
+   receiver-type `text` variables in normal semantic code.
 
 3. OOP Surface Cleanup
 

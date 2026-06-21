@@ -196,10 +196,10 @@ TypeRef member_expr_type_ref(const Symbols& symbols,
         }
         if (location != nullptr) {
             const std::string label = expr_label(expr);
-            const std::string receiver_type_text = type_ref_text(receiver_type);
+            const std::string receiver_type_display = type_ref_text(receiver_type);
             sema_fail(*location,
                       "unknown field: " +
-                          (label.empty() ? receiver_type_text + "." + expr.name : label));
+                          (label.empty() ? receiver_type_display + "." + expr.name : label));
         }
     }
     return {};
