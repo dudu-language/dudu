@@ -52,6 +52,7 @@ compile_and_expect array_row_slice 42
 compile_and_expect array_column_slice 42
 compile_and_expect array_channel_slice 45
 compile_and_expect array_full_matrix_slice 42
+compile_and_expect array_matrix_row_range_slice 57
 compile_and_expect array_step_slice 42
 compile_and_expect array_image_kernel 42
 compile_and_expect generic_full_matrix_slice 42

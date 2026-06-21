@@ -988,8 +988,10 @@ push. They are not release packaging work.
    pointer/count handoff.
    One-dimensional fixed-array `start:end`, `:end`, `start:`, and `:` slices
    produce `span[T]` views. Fixed multidimensional arrays support trailing row
-   views such as `mat[row, :]`. Matrix column slices such as `mat[:, col]`
-   produce `strided_span[T]` views so non-contiguous views are explicit.
+   views such as `mat[row, :]`, and contiguous matrix row ranges such as
+   `mat[start:end, :]` produce `span[T]` views over the selected rows. Matrix
+   column slices such as `mat[:, col]` produce `strided_span[T]` views so
+   non-contiguous views are explicit.
    Three-dimensional channel slices such as `image[:, :, c]` also produce
    `strided_span[T]` views over interleaved channel data. Full-rank fixed-array
    slices such as `mat[:, :]` and `image[:, :, :]` produce contiguous `span[T]`
@@ -1002,8 +1004,8 @@ push. They are not release packaging work.
    slices such as `values[start:end:step]` produce `strided_span[T]` views.
    This is enough to play with fixed arrays, row/column/full-storage views,
    channel views, basic step slices, and library indexing hooks, but it is not
-   full NumPy-style indexing yet. General multidimensional slice rectangles,
-   advanced
+   full NumPy-style indexing yet. Non-contiguous multidimensional patch
+   rectangles, advanced
    gather/scatter indexing, broadcasting rules, shape metadata for library
    tensors, and GPU-backed tensor-library hooks remain.
    Same-width Dudu-native `xyzw`, `rgba`, and `stpq` read swizzles are
