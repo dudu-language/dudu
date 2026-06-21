@@ -958,10 +958,11 @@ push. They are not release packaging work.
    Sema and C++ emission unsupported-expression diagnostics now call the shared
    structured expression display helper instead of reading raw expression text
    directly at each diagnostic site.
-   Unused top-level substring scanners for assignment, member-dot, and binary
-   expression parsing have been deleted from the parse utility API. Statement
-   assignment detection stays in the token parser, and the AST migration guard
-   rejects reintroducing those old string scanner helpers.
+   Unused top-level substring scanners for assignment, member-dot, binary
+   expression, and function-arrow type parsing have been deleted from the parse
+   utility API. Statement assignment detection stays in the token parser, and
+   the AST migration guard rejects reintroducing those old string scanner
+   helpers.
 
 3. OOP Surface Cleanup
 

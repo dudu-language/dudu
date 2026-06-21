@@ -250,30 +250,4 @@ TypeKind wrapper_type_kind(std::string_view name) {
     return TypeKind::Unknown;
 }
 
-size_t find_top_level_arrow(std::string_view text) {
-    int bracket_depth = 0;
-    int paren_depth = 0;
-    int brace_depth = 0;
-    for (size_t i = 0; i + 1 < text.size(); ++i) {
-        const char c = text[i];
-        if (c == '[') {
-            ++bracket_depth;
-        } else if (c == ']') {
-            --bracket_depth;
-        } else if (c == '(') {
-            ++paren_depth;
-        } else if (c == ')') {
-            --paren_depth;
-        } else if (c == '{') {
-            ++brace_depth;
-        } else if (c == '}') {
-            --brace_depth;
-        } else if (bracket_depth == 0 && paren_depth == 0 && brace_depth == 0 &&
-                   text.substr(i, 2) == "->") {
-            return i;
-        }
-    }
-    return std::string_view::npos;
-}
-
 } // namespace dudu

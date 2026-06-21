@@ -29,6 +29,7 @@ forbidden=(
     "find_top_level_assignment"
     "find_top_level_member_dot"
     "find_top_level_binary_operator"
+    "find_top_level_arrow"
     "lower_cpp_type\\(const std::string"
     "lower_cpp_type\\(std::string"
     "is_integer_type\\(type_ref_head_name"
