@@ -45,8 +45,7 @@ void emit_source_comment(std::ostringstream& out, const Stmt& stmt, int depth) {
 }
 
 void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
-                           const std::vector<std::string>& aliases,
-                           CppLocalContext& locals,
+                           const std::vector<std::string>& aliases, CppLocalContext& locals,
                            std::map<std::string, TypeRef>& local_type_refs,
                            const TypeRef& return_type_ref,
                            const std::map<std::string, TypeRef>& function_returns,
@@ -144,10 +143,10 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                 out << " = std::nullopt";
             } else if (is_fixed_array_type(type.ref) &&
                        stmt.value_expr.kind == ExprKind::ListLiteral) {
-                out << " = {"
-                    << lower_array_literal(stmt.value_expr, aliases, locals, local_type_refs,
-                                           symbols, options)
-                    << "}";
+                out << " = "
+                    << lower_fixed_array_literal_as_type_ref(type.ref, stmt.value_expr, aliases,
+                                                             locals, local_type_refs,
+                                                             function_returns, symbols, options);
             } else if (is_template_type(type.ref, "list") &&
                        stmt.value_expr.kind == ExprKind::ListLiteral &&
                        stmt.value_expr.children.empty()) {
@@ -277,8 +276,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
 }
 
 void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
-                    const std::vector<std::string>& aliases,
-                    CppLocalContext& locals,
+                    const std::vector<std::string>& aliases, CppLocalContext& locals,
                     std::map<std::string, TypeRef>& local_type_refs, const TypeRef& return_type_ref,
                     const std::map<std::string, TypeRef>& function_returns, const Symbols* symbols,
                     const CppEmitOptions& options) {
@@ -392,8 +390,7 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
 } // namespace
 
 void emit_block(std::ostringstream& out, const std::vector<Stmt>& body, int depth,
-                const std::vector<std::string>& aliases,
-                const CppLocalContext& initial_locals,
+                const std::vector<std::string>& aliases, const CppLocalContext& initial_locals,
                 const std::map<std::string, TypeRef>& initial_local_type_refs,
                 const TypeRef& return_type_ref,
                 const std::map<std::string, TypeRef>& function_returns, const Symbols* symbols,

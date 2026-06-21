@@ -9,6 +9,7 @@
 #include "dudu/cpp_expr_emit.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/cpp_stmt_emit.hpp"
+#include "dudu/cpp_stmt_emit_support.hpp"
 #include "dudu/decorators.hpp"
 #include "dudu/sema_context.hpp"
 #include "dudu/sema_generics.hpp"
@@ -143,8 +144,9 @@ void emit_constants(std::ostringstream& out, const ModuleAst& module,
         }
         out << " = ";
         if (inferred.status == ArrayShapeStatus::Inferred) {
-            out << lower_array_literal(constant.value_expr, aliases, CppLocalContext{}, nullptr,
-                                       options);
+            out << lower_fixed_array_literal_as_type_ref(type_ref, constant.value_expr, aliases,
+                                                         CppLocalContext{}, {}, {}, nullptr,
+                                                         options);
         } else {
             out << lower_cpp_expr_ast(constant.value_expr, aliases);
         }

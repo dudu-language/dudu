@@ -6,6 +6,7 @@
 #include "dudu/cpp_stmt_generic_methods.hpp"
 
 #include <sstream>
+#include <utility>
 
 namespace dudu {
 
@@ -73,12 +74,68 @@ std::string lower_expr_as_type_ref(const TypeRef& expected_type, const Expr& exp
                                    const std::map<std::string, TypeRef>& local_type_refs,
                                    const std::map<std::string, TypeRef>& function_returns,
                                    const Symbols* symbols, const CppEmitOptions& options) {
+    if (is_fixed_array_type(expected_type) && expr.kind == ExprKind::ListLiteral) {
+        return lower_fixed_array_literal_as_type_ref(expected_type, expr, aliases, locals,
+                                                     local_type_refs, function_returns, symbols,
+                                                     options);
+    }
     if (const auto call = lower_expected_generic_method_call(expected_type, expr, aliases, locals,
                                                              local_type_refs, function_returns,
                                                              symbols, options)) {
         return *call;
     }
     return lower_emitted_expr(expr, aliases, locals, local_type_refs, symbols, options);
+}
+
+namespace {
+
+TypeRef fixed_array_child_type_ref(const TypeRef& type) {
+    const std::vector<std::string> shape = explicit_array_shape_text(type);
+    const TypeRef element = explicit_array_element_type_ref(type);
+    if (shape.size() <= 1 || !has_type_ref(element)) {
+        return element;
+    }
+    TypeRef child;
+    child.kind = TypeKind::FixedArray;
+    for (size_t i = 1; i < shape.size(); ++i) {
+        if (i > 1) {
+            child.value += ", ";
+        }
+        child.value += shape[i];
+    }
+    TypeRef storage;
+    storage.kind = TypeKind::Template;
+    storage.name = "array";
+    storage.children.push_back(element);
+    child.children.push_back(std::move(storage));
+    child.location = type.location;
+    child.range = type.range;
+    return child;
+}
+
+} // namespace
+
+std::string lower_fixed_array_literal_as_type_ref(
+    const TypeRef& expected_type, const Expr& expr, const std::vector<std::string>& aliases,
+    const CppLocalContext& locals, const std::map<std::string, TypeRef>& local_type_refs,
+    const std::map<std::string, TypeRef>& function_returns, const Symbols* symbols,
+    const CppEmitOptions& options) {
+    if (expr.kind != ExprKind::ListLiteral) {
+        return lower_expr_as_type_ref(expected_type, expr, aliases, locals, local_type_refs,
+                                      function_returns, symbols, options);
+    }
+    const TypeRef child_type = fixed_array_child_type_ref(expected_type);
+    std::ostringstream out;
+    out << lower_cpp_type(expected_type, aliases, options) << "{";
+    for (size_t i = 0; i < expr.children.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << lower_expr_as_type_ref(child_type, expr.children[i], aliases, locals,
+                                      local_type_refs, function_returns, symbols, options);
+    }
+    out << "}";
+    return out.str();
 }
 
 bool is_template_type(const TypeRef& type, std::string_view name) {

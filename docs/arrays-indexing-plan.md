@@ -77,10 +77,11 @@ The exact C++ helper type can change, but the Dudu semantics should be stable:
 fixed arrays own inline storage, lists own dynamic storage, and spans/views do
 not own data.
 
-Status: explicit `array[T][N]` and `array[T][M, N]` compile and lower to nested
-`std::array` storage. Explicit-shaped literal initializers are checked for
-rectangular shape and element type. `array[T] = literal` infers fixed shapes
-from non-empty rectangular literals.
+Status: explicit `array[T][N]`, `array[T][M, N]`, and higher-rank
+`array[T][shape]` compile and lower to nested `std::array` storage.
+Explicit-shaped literal initializers are checked for rectangular shape and
+element type. `array[T] = literal` infers fixed shapes from non-empty
+rectangular literals, including nested matrix and volume literals.
 
 ## Construction
 
@@ -91,7 +92,7 @@ xs: array[i32][4] = [1, 2, 3, 4]
 ys: array[i32] = [1, 2, 3, 4]
 ```
 
-Matrices can use nested literals:
+Matrices and tensors can use nested literals:
 
 ```python
 identity: array[f32][4, 4] = [

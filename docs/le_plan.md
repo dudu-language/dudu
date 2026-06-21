@@ -979,11 +979,13 @@ push. They are not release packaging work.
    view/copy slicing semantics so numeric, graphics, and image code feels
    natural without hidden allocation.
 
-   Status: explicit `array[T][N]` and `array[T][M, N]` compile through
-   structured `TypeRef` lowering for normal Dudu source, explicit-shaped
-   literal initializers are checked, `array[T] = literal` infers fixed shapes,
-   and comma indexing such as `mat[row, col]` lowers for Dudu-native fixed
-   arrays. Partial array indexing is type-aware and over-indexing is diagnosed.
+   Status: explicit `array[T][N]`, `array[T][M, N]`, and higher-rank
+   `array[T][shape]` compile through structured `TypeRef` lowering for normal
+   Dudu source, explicit-shaped literal initializers are checked,
+   `array[T] = literal` infers fixed shapes for rectangular matrix and volume
+   literals, and comma indexing such as `mat[row, col]` lowers for Dudu-native
+   fixed arrays. Partial array indexing is type-aware and over-indexing is
+   diagnosed.
    Fixed arrays work with `len(values)` and `&values[0]` for native
    pointer/count handoff.
    One-dimensional fixed-array `start:end`, `:end`, `start:`, and `:` slices

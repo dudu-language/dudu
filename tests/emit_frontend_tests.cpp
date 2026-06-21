@@ -179,7 +179,8 @@ void test_array_literal_scalar_ast_emission() {
                                                       "array_literal_scalar_ast.dd");
     dudu::analyze_module(module, {.check_bodies = true});
     const std::string cpp = dudu::emit_cpp_source(module);
-    assert(cpp.find("std::array<int32_t, 2> xs = {{1000, 2}};") != std::string::npos);
+    assert(cpp.find("std::array<int32_t, 2> xs = std::array<int32_t, 2>{1000, 2};") !=
+           std::string::npos);
 }
 
 void test_top_level_array_constant_ast_emission() {
@@ -191,26 +192,44 @@ void test_top_level_array_constant_ast_emission() {
                                                       "top_level_array_constant_ast.dd");
     dudu::analyze_module(module, {.check_bodies = true});
     const std::string cpp = dudu::emit_cpp_source(module);
-    assert(cpp.find("inline constexpr std::array<uint32_t, 3> DATA = {1, 2, 3};") !=
-           std::string::npos);
-    assert(cpp.find("inline constexpr std::array<std::array<int32_t, 2>, 2> ROWS = {{1, 2}, "
-                    "{3, 4}};") != std::string::npos);
+    assert(cpp.find("inline constexpr std::array<uint32_t, 3> DATA = "
+                    "std::array<uint32_t, 3>{1, 2, 3};") != std::string::npos);
+    assert(cpp.find("inline constexpr std::array<std::array<int32_t, 2>, 2> ROWS = "
+                    "std::array<std::array<int32_t, 2>, 2>{std::array<int32_t, 2>{1, "
+                    "2}, std::array<int32_t, 2>{3, 4}};") != std::string::npos);
+}
+
+void test_three_dimensional_array_literal_emission() {
+    const dudu::ModuleAst module = dudu::parse_source("def values() -> i32:\n"
+                                                      "    xs: array[i32] = [\n"
+                                                      "        [[1, 2], [3, 4]],\n"
+                                                      "        [[5, 6], [7, 8]],\n"
+                                                      "    ]\n"
+                                                      "    return xs[1, 1, 0]\n",
+                                                      "array_literal_3d_ast.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+    const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find("std::array<std::array<std::array<int32_t, 2>, 2>, 2> xs = "
+                    "std::array<std::array<std::array<int32_t, 2>, 2>, "
+                    "2>{std::array<std::array<int32_t, 2>, 2>{std::array<int32_t, "
+                    "2>{1, 2}, std::array<int32_t, 2>{3, 4}}, "
+                    "std::array<std::array<int32_t, 2>, 2>{std::array<int32_t, "
+                    "2>{5, 6}, std::array<int32_t, 2>{7, 8}}};") != std::string::npos);
 }
 
 void test_value_match_ast_emission() {
-    const dudu::ModuleAst module =
-        dudu::parse_source("def classify(value: i32) -> i32:\n"
-                           "    match value:\n"
-                           "        case 0:\n"
-                           "            return 10\n"
-                           "        case 2 if value > 1:\n"
-                           "            return 20\n"
-                           "        case _:\n"
-                           "            return 30\n"
-                           "\n"
-                           "def main() -> i32:\n"
-                           "    return classify(2) - 20\n",
-                           "value_match_ast.dd");
+    const dudu::ModuleAst module = dudu::parse_source("def classify(value: i32) -> i32:\n"
+                                                      "    match value:\n"
+                                                      "        case 0:\n"
+                                                      "            return 10\n"
+                                                      "        case 2 if value > 1:\n"
+                                                      "            return 20\n"
+                                                      "        case _:\n"
+                                                      "            return 30\n"
+                                                      "\n"
+                                                      "def main() -> i32:\n"
+                                                      "    return classify(2) - 20\n",
+                                                      "value_match_ast.dd");
     dudu::analyze_module(module, {.check_bodies = true});
     const std::string cpp = dudu::emit_cpp_source(module);
     assert(cpp.find("auto&& __dudu_match_2_5 = value;") != std::string::npos);
@@ -331,6 +350,7 @@ int main() {
         test_offsetof_string_field_requires_parsed_value();
         test_array_literal_scalar_ast_emission();
         test_top_level_array_constant_ast_emission();
+        test_three_dimensional_array_literal_emission();
         test_value_match_ast_emission();
         test_typed_literal_initializers_use_type_ast();
         test_inferred_auto_assignment_is_not_redeclared();
