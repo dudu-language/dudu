@@ -985,8 +985,9 @@ push. They are not release packaging work.
    consume those shape children instead of splitting the comma-shaped value
    mirror. Fixed-array equivalence also compares the structured shape children
    instead of the value mirror, so whitespace in the mirror cannot change type
-   identity. The native scan cache version was bumped so stale one-child fixed
-   array nodes are regenerated, and the guard rejects the removed
+   identity. Fixed-array `type_ref_same_shape` follows the same structured
+   shape rule. The native scan cache version was bumped so stale one-child
+   fixed array nodes are regenerated, and the guard rejects the removed
    `explicit_array_shape_text` helper.
 
 3. OOP Surface Cleanup

@@ -249,7 +249,10 @@ bool type_ref_is_void(const TypeRef& type) {
 
 bool type_ref_same_shape(const TypeRef& left, const TypeRef& right) {
     if (left.kind != right.kind || left.children.size() != right.children.size() ||
-        left.malformed != right.malformed || left.name != right.name || left.value != right.value) {
+        left.malformed != right.malformed || left.name != right.name) {
+        return false;
+    }
+    if (left.kind == TypeKind::Value && trim_copy(left.value) != trim_copy(right.value)) {
         return false;
     }
     for (size_t i = 0; i < left.children.size(); ++i) {
