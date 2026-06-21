@@ -55,18 +55,16 @@ bool method_signature_for_type_impl(const Symbols& symbols, const TypeRef& recei
     if (klass == nullptr) {
         return false;
     }
+    bool saw_name = false;
+    size_t expected_type_args = 0;
     for (const FunctionDecl& method : klass->methods) {
         if (method.name != lookup_name) {
             continue;
         }
+        saw_name = true;
+        expected_type_args = method.generic_params.size();
         if (method.generic_params.size() != method_args.size()) {
-            if (location != nullptr) {
-                sema_fail(*location, "method " + type + "." + lookup_name + " expects " +
-                                         std::to_string(method.generic_params.size()) +
-                                         " type arguments, got " +
-                                         std::to_string(method_args.size()));
-            }
-            return false;
+            continue;
         }
         signature = instantiate_method_signature(*klass, method, receiver_args, method_args);
         return true;
@@ -76,6 +74,11 @@ bool method_signature_for_type_impl(const Symbols& symbols, const TypeRef& recei
                                            display_name, signature, nullptr)) {
             return true;
         }
+    }
+    if (saw_name && location != nullptr) {
+        sema_fail(*location, "method " + type + "." + lookup_name + " expects " +
+                                 std::to_string(expected_type_args) + " type arguments, got " +
+                                 std::to_string(method_args.size()));
     }
     if (location != nullptr) {
         sema_fail(*location, "unknown method: " + type + "." + display_name);
@@ -124,18 +127,16 @@ bool static_method_signature_for_type_impl(const Symbols& symbols, const TypeRef
     if (klass == nullptr) {
         return false;
     }
+    bool saw_name = false;
+    size_t expected_type_args = 0;
     for (const FunctionDecl& method : klass->methods) {
         if (method.name != lookup_name || !method_is_static(method)) {
             continue;
         }
+        saw_name = true;
+        expected_type_args = method.generic_params.size();
         if (method.generic_params.size() != method_args.size()) {
-            if (location != nullptr) {
-                sema_fail(*location, "method " + type + "." + lookup_name + " expects " +
-                                         std::to_string(method.generic_params.size()) +
-                                         " type arguments, got " +
-                                         std::to_string(method_args.size()));
-            }
-            return false;
+            continue;
         }
         signature = instantiate_method_signature(*klass, method, receiver_args, method_args);
         return true;
@@ -145,6 +146,11 @@ bool static_method_signature_for_type_impl(const Symbols& symbols, const TypeRef
                                                   method_args, display_name, signature, nullptr)) {
             return true;
         }
+    }
+    if (saw_name && location != nullptr) {
+        sema_fail(*location, "method " + type + "." + lookup_name + " expects " +
+                                 std::to_string(expected_type_args) + " type arguments, got " +
+                                 std::to_string(method_args.size()));
     }
     if (location != nullptr) {
         sema_fail(*location, "unknown static method: " + type + "." + display_name);

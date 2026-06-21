@@ -255,7 +255,8 @@ bool macro_function_stub(const NativeFunctionDecl& function) {
 std::vector<NativeFunctionDecl> alias_visible_functions(const NativeHeaderScan& scan,
                                                         const ImportDecl& import,
                                                         const NativeHeaderOptions& options) {
-    if (import.kind == ImportKind::ForeignCpp) {
+    if (import.kind == ImportKind::ForeignCpp || import.kind == ImportKind::ForeignC ||
+        import.kind == ImportKind::ForeignCxx) {
         return scan.functions;
     }
     std::vector<NativeFunctionDecl> out;

@@ -9,7 +9,7 @@ The fast test loop should stay small. Run this matrix periodically, before
 version bumps, and whenever native header scanning, native type compatibility,
 project-driver build behavior, or generated CMake changes.
 
-Last local probe run: 2026-06-19 with `scripts/probe_optional.sh`.
+Last local probe run: 2026-06-21 with `scripts/probe_optional.sh`.
 
 ## Status Key
 
@@ -31,7 +31,7 @@ Last local probe run: 2026-06-19 with `scripts/probe_optional.sh`.
 | C++ standard library interop mix | C++ stdlib | `std.optional`, `std.array`, `std.span`, `std.map`, `std.unordered_set`, `std.function`, smart pointers, mutex guard | fixture | `tests/fixtures/cpp_stdlib_interop.dd` | no |
 | C++ standard library variants | C++ stdlib | `std.variant`, `std.holds_alternative`, `std.get` | fixture | `tests/fixtures/cpp_std_variant.dd` | no |
 | glm | math | header import, constructors, functions such as `glm.dot` | pass | `scripts/probe_optional.sh` / `glm_math.dd` | no |
-| Eigen | math | header-only templates, vector constructors, methods, operators | pass | `scripts/probe_optional.sh` / `eigen_vector.dd` | no |
+| Eigen | math | header-only templates, vector typedef aliases and constructors | pass | `scripts/probe_optional.sh` / `eigen_vector.dd` | alias-target methods and inherited template methods/operators such as `Vector3f.dot` need deeper native base-template modeling |
 | OpenBLAS / CBLAS | numeric | C ABI calls, fixed arrays, pointer handoff, link behavior | pass | `scripts/probe_optional.sh` / `openblas_ddot.dd` | no |
 | OpenCV | image / CV | generated C++ build and tiny image write smoke | pass | `scripts/probe_optional.sh` / `examples/image_filter.dd` | no |
 | sqlite3 | database | C API, pointers, result types, prepare/step/finalize | pass | `scripts/probe_optional.sh` / `sqlite_crud.dd` | no |
@@ -41,7 +41,7 @@ Last local probe run: 2026-06-19 with `scripts/probe_optional.sh`.
 | curl | network | C API, constants, pointer returns, struct field reads, link | pass | `scripts/probe_optional.sh` / `curl_version_info.dd` | no |
 | OpenSSL | crypto / TLS | C API, const byte input, output buffers, link flags | pass | `scripts/probe_optional.sh` / `openssl_sha256.dd` | no |
 | libevent | event loop / network | C API, opaque pointers, config/base lifecycle, `cstr` return | pass | `scripts/probe_optional.sh` / `libevent_base.dd` | no |
-| libxml2 | XML | `import cxx`, C-style globals from a C++-aware C header, parser lifecycle, returned buffers, link flags | pass | `scripts/probe_optional.sh` / `libxml_parse_memory.dd` | no |
+| libxml2 | XML | `import cxx`, C-style globals from a C++-aware C header, parser lifecycle, returned buffers, link flags | pass | `scripts/probe_optional.sh` / `libxml_parse_memory.dd` | allocator globals such as `xmlFree` are function-pointer native values and need richer function-pointer typedef metadata |
 | Expat | XML | C API, opaque parser pointer, enum status, string input, lifecycle | pass | `scripts/probe_optional.sh` / `expat_parse.dd` | no |
 | Cairo | 2D graphics | C API, opaque drawing context/surface pointers, enum constants, image buffer inspection, lifecycle | pass | `scripts/probe_optional.sh` / `cairo_image_surface.dd` | no |
 | FreeType | font / text | C API, typedefed opaque pointer, output params, version query, lifecycle | pass | `scripts/probe_optional.sh` / `freetype_version.dd` | no |
@@ -49,7 +49,7 @@ Last local probe run: 2026-06-19 with `scripts/probe_optional.sh`.
 | libjpeg | image | C API, local C structs, macro-expanded common fields, address passing, C enum constants, setup function, link | pass | `scripts/probe_optional.sh` / `libjpeg_compress_setup.dd` | no |
 | stb headers | media / utility | packaged single-header C API, byte buffers, output params, link | pass | `scripts/probe_optional.sh` / `stb_image_info.dd` | no |
 | fmt | C++ utility | variadic templates, runtime format strings, `std::string` return | pass | `scripts/probe_optional.sh` / `fmt_format.dd` | no |
-| spdlog | logging | template-heavy header stack, formatted logging call, link | pass | `scripts/probe_optional.sh` / `spdlog_basic.dd` | no |
+| spdlog | logging | template-heavy header stack, formatted logging call, link | heavy/manual | `DUDU_PROBE_HEAVY=1 scripts/probe_optional.sh` / `spdlog_basic.dd` | clang scanner currently exceeds the default optional-probe budget |
 | Boost filesystem | C++ utility | namespace import, path construction, member methods, string-returning overloads, link | pass | `scripts/probe_optional.sh` / `boost_filesystem.dd` | no |
 | raylib | game / media | window/game example, audio synth build | pass | `scripts/probe_optional.sh` / `examples/raylib_game.dd` | no |
 | SDL3 | windowing | window example build through pkg-config | pass | `scripts/probe_optional.sh` / `examples/sdl3_window.dd` | no |

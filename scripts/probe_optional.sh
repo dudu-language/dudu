@@ -5,6 +5,29 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$repo_root/scripts/dev_env.sh"
 "$repo_root/scripts/build.sh" >/dev/null
 
+build_pkg_probe() {
+    local name="$1"
+    local source="$2"
+    local package="$3"
+    local bin="$repo_root/build/$name"
+    local project="$repo_root/build/${name}_project"
+    rm -rf "$project"
+    mkdir -p "$project"
+    cp "$source" "$project/main.dd"
+    cat >"$project/dudu.toml" <<TOML
+name = "$name"
+entry = "main.dd"
+build_dir = "../${name}_build"
+
+[build]
+backend = "direct"
+
+[pkg_config]
+packages = ["$package"]
+TOML
+    "$repo_root/build/dudu" build "$project" -o "$bin" --quiet
+}
+
 probe_glm() {
     if [[ ! -f /usr/include/glm/glm.hpp ]]; then
         echo "skip glm: /usr/include/glm/glm.hpp not found"
@@ -32,11 +55,24 @@ probe_opencv() {
         return
     fi
 
-    local cpp="$repo_root/build/probe_image_filter.cpp"
     local bin="$repo_root/build/probe_image_filter"
+    local project="$repo_root/build/probe_image_filter_project"
     local run_dir="$repo_root/build/probe_image_filter_run"
-    "$repo_root/build/duc" emit "$repo_root/examples/image_filter.dd" -o "$cpp"
-    "${CXX:-c++}" -std=c++20 -w "$cpp" $(pkg-config --cflags --libs opencv4) -o "$bin"
+    rm -rf "$project"
+    mkdir -p "$project"
+    cp "$repo_root/examples/image_filter.dd" "$project/main.dd"
+    cat >"$project/dudu.toml" <<'TOML'
+name = "probe_image_filter"
+entry = "main.dd"
+build_dir = "../probe_image_filter_build"
+
+[build]
+backend = "direct"
+
+[pkg_config]
+packages = ["opencv4"]
+TOML
+    "$repo_root/build/dudu" build "$project" -o "$bin" --quiet
     rm -rf "$run_dir"
     mkdir -p "$run_dir"
     printf 'P3\n2 2\n255\n255 0 0 0 255 0 0 0 255 255 255 255\n' >"$run_dir/input.png"
@@ -78,10 +114,8 @@ probe_lua() {
         return
     fi
 
-    local cpp="$repo_root/build/probe_lua_stack.cpp"
     local bin="$repo_root/build/probe_lua_stack"
-    "$repo_root/build/duc" emit "$repo_root/tests/fixtures/lua_stack.dd" -o "$cpp"
-    "${CXX:-c++}" -std=c++20 "$cpp" $(pkg-config --cflags --libs lua) -o "$bin"
+    build_pkg_probe "probe_lua_stack" "$repo_root/tests/fixtures/lua_stack.dd" "lua"
     set +e
     "$bin"
     local status=$?
@@ -246,10 +280,9 @@ probe_libxml2() {
         return
     fi
 
-    local cpp="$repo_root/build/probe_libxml_parse_memory.cpp"
     local bin="$repo_root/build/probe_libxml_parse_memory"
-    "$repo_root/build/duc" emit "$repo_root/tests/fixtures/libxml_parse_memory.dd" -o "$cpp"
-    "${CXX:-c++}" -std=c++20 "$cpp" $(pkg-config --cflags --libs libxml-2.0) -o "$bin"
+    build_pkg_probe "probe_libxml_parse_memory" \
+        "$repo_root/tests/fixtures/libxml_parse_memory.dd" "libxml-2.0"
     set +e
     "$bin"
     local status=$?
@@ -288,10 +321,9 @@ probe_cairo() {
         return
     fi
 
-    local cpp="$repo_root/build/probe_cairo_image_surface.cpp"
     local bin="$repo_root/build/probe_cairo_image_surface"
-    "$repo_root/build/duc" emit "$repo_root/tests/fixtures/cairo_image_surface.dd" -o "$cpp"
-    "${CXX:-c++}" -std=c++20 "$cpp" $(pkg-config --cflags --libs cairo) -o "$bin"
+    build_pkg_probe "probe_cairo_image_surface" \
+        "$repo_root/tests/fixtures/cairo_image_surface.dd" "cairo"
     set +e
     "$bin"
     local status=$?
@@ -309,10 +341,9 @@ probe_freetype() {
         return
     fi
 
-    local cpp="$repo_root/build/probe_freetype_version.cpp"
     local bin="$repo_root/build/probe_freetype_version"
-    "$repo_root/build/duc" emit "$repo_root/tests/fixtures/freetype_version.dd" -o "$cpp"
-    "${CXX:-c++}" -std=c++20 "$cpp" $(pkg-config --cflags --libs freetype2) -o "$bin"
+    build_pkg_probe "probe_freetype_version" \
+        "$repo_root/tests/fixtures/freetype_version.dd" "freetype2"
     set +e
     "$bin"
     local status=$?
@@ -351,10 +382,8 @@ probe_eigen() {
         return
     fi
 
-    local cpp="$repo_root/build/probe_eigen_vector.cpp"
     local bin="$repo_root/build/probe_eigen_vector"
-    "$repo_root/build/duc" emit "$repo_root/tests/fixtures/eigen_vector.dd" -o "$cpp"
-    "${CXX:-c++}" -std=c++20 "$cpp" $(pkg-config --cflags eigen3) -o "$bin"
+    build_pkg_probe "probe_eigen_vector" "$repo_root/tests/fixtures/eigen_vector.dd" "eigen3"
     set +e
     "$bin"
     local status=$?
@@ -388,6 +417,10 @@ probe_openblas() {
 }
 
 probe_spdlog() {
+    if [[ "${DUDU_PROBE_HEAVY:-0}" != "1" ]]; then
+        echo "skip spdlog: set DUDU_PROBE_HEAVY=1 for heavy template-header probe"
+        return
+    fi
     if ! pkg-config --exists spdlog; then
         echo "skip spdlog: pkg-config package not found"
         return
@@ -414,10 +447,8 @@ probe_stb() {
         return
     fi
 
-    local cpp="$repo_root/build/probe_stb_image_info.cpp"
     local bin="$repo_root/build/probe_stb_image_info"
-    "$repo_root/build/duc" emit "$repo_root/tests/fixtures/stb_image_info.dd" -o "$cpp"
-    "${CXX:-c++}" -std=c++20 "$cpp" $(pkg-config --cflags --libs stb) -o "$bin"
+    build_pkg_probe "probe_stb_image_info" "$repo_root/tests/fixtures/stb_image_info.dd" "stb"
     set +e
     "$bin"
     local status=$?
@@ -480,7 +511,7 @@ probe_imgui() {
     fi
 
     local project="$repo_root/build/probe_imgui_context_project"
-    local bin="$project/build/probe_imgui_context"
+    local bin="$project/build/cmake-backend/build/probe_imgui_context"
     rm -rf "$project"
     mkdir -p "$project"
     cp "$repo_root/tests/fixtures/imgui_context.dd" "$project/main.dd"

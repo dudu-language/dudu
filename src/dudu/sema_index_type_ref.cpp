@@ -47,6 +47,47 @@ bool foreign_or_auto_indexable_type(const TypeRef& type) {
            head.find('.') != std::string::npos || head.find("::") != std::string::npos;
 }
 
+bool integer_extent_ref(const TypeRef& type) {
+    if (type.kind != TypeKind::Value || type.value.empty()) {
+        return false;
+    }
+    for (const char ch : type.value) {
+        if (ch < '0' || ch > '9') {
+            return false;
+        }
+    }
+    return true;
+}
+
+TypeRef unwrap_index_receiver_type(TypeRef type) {
+    while ((type.kind == TypeKind::Reference || type.kind == TypeKind::Const ||
+            type.kind == TypeKind::Pointer || type.kind == TypeKind::Storage ||
+            type.kind == TypeKind::Shared || type.kind == TypeKind::Device ||
+            type.kind == TypeKind::Volatile || type.kind == TypeKind::Atomic) &&
+           type.children.size() == 1) {
+        type = type.children.front();
+    }
+    return type;
+}
+
+bool native_fixed_extent_template(const Symbols& symbols, const TypeRef& type,
+                                  const bool native_alias) {
+    if (type.kind != TypeKind::Template || type.children.size() < 2) {
+        return false;
+    }
+    const std::string head = type_ref_head_name(type);
+    if (!native_alias && !symbols.native_types.contains(head) && !symbols.native_classes.contains(head) &&
+        head.find('.') == std::string::npos && head.find("::") == std::string::npos) {
+        return false;
+    }
+    for (size_t index = 1; index < type.children.size(); ++index) {
+        if (!integer_extent_ref(type.children[index])) {
+            return false;
+        }
+    }
+    return true;
+}
+
 } // namespace
 
 TypeRef array_element_template_type_ref(const SourceLocation& location, const TypeRef& array_type,
@@ -62,6 +103,8 @@ TypeRef array_element_template_type_ref(const SourceLocation& location, const Ty
 std::optional<TypeRef> indexed_type_ref_from_type_ref_with_count(
     const Symbols& symbols, const SourceLocation& location, const TypeRef& raw_type,
     const size_t index_count, const bool is_slice, const bool has_step, const std::string& label) {
+    const TypeRef raw_receiver_type = unwrap_index_receiver_type(raw_type);
+    const bool raw_native_alias = symbols.native_types.contains(type_ref_head_name(raw_receiver_type));
     const TypeRef resolved_type = resolve_type_ref_alias(symbols, raw_type);
     const TypeRef* type = &resolved_type;
     while ((type->kind == TypeKind::Reference || type->kind == TypeKind::Const) &&
@@ -114,6 +157,9 @@ std::optional<TypeRef> indexed_type_ref_from_type_ref_with_count(
     }
     if (type->kind == TypeKind::Template && type->name == "dict" && type->children.size() == 2) {
         return type->children[1];
+    }
+    if (native_fixed_extent_template(symbols, *type, raw_native_alias)) {
+        return type->children.front();
     }
     if (type->kind == TypeKind::Template && type->children.size() == 1) {
         return type->children.front();

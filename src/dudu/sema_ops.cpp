@@ -20,7 +20,8 @@ TypeRef unwrap_value_type_ref(const Symbols& symbols, TypeRef type) {
     while (true) {
         type = resolve_alias_ref(symbols, std::move(type));
         if (const auto inner =
-                unary_type_child_ref(type, {TypeKind::Const, TypeKind::Volatile, TypeKind::Storage,
+                unary_type_child_ref(type, {TypeKind::Reference, TypeKind::Const,
+                                            TypeKind::Volatile, TypeKind::Storage,
                                             TypeKind::Shared, TypeKind::Device})) {
             type = *inner;
             continue;

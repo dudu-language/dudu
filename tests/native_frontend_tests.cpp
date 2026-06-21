@@ -643,7 +643,7 @@ void test_native_scan_retries_with_c_prelude_for_context_headers(
     assert(cpp.find("value.state = 35;") != std::string::npos);
 }
 
-void test_aliased_c_import_does_not_prefix_unrelated_transitive_functions(
+void test_aliased_c_import_prefixes_visible_transitive_functions(
     const std::filesystem::path& root) {
     const std::filesystem::path source_dir = root / "build" / "native-transitive-c-filter";
     const std::filesystem::path header = source_dir / "wrap_stdio.h";
@@ -669,20 +669,15 @@ void test_aliased_c_import_does_not_prefix_unrelated_transitive_functions(
     const std::string cpp = dudu::emit_cpp_source(positive);
     assert(cpp.find("dudu_wrap_answer()") != std::string::npos);
 
-    bool failed = false;
-    try {
-        dudu::ModuleAst negative = dudu::parse_source("import c \"./wrap_stdio.h\" as wrap\n"
-                                                      "\n"
-                                                      "def main() -> i32:\n"
-                                                      "    return wrap.remove(\"x\")\n",
-                                                      source_dir / "negative.dd");
-        dudu::merge_native_header_types(negative, {.config = config, .source_dir = source_dir});
-        dudu::analyze_module(negative, {.check_bodies = true});
-    } catch (const dudu::CompileError& error) {
-        failed =
-            std::string(error.what()).find("unknown function: wrap.remove") != std::string::npos;
-    }
-    assert(failed);
+    dudu::ModuleAst transitive = dudu::parse_source("import c \"./wrap_stdio.h\" as wrap\n"
+                                                    "\n"
+                                                    "def main() -> i32:\n"
+                                                    "    return wrap.remove(\"x\")\n",
+                                                    source_dir / "transitive.dd");
+    dudu::merge_native_header_types(transitive, {.config = config, .source_dir = source_dir});
+    dudu::analyze_module(transitive, {.check_bodies = true});
+    const std::string transitive_cpp = dudu::emit_cpp_source(transitive);
+    assert(transitive_cpp.find("remove(\"x\")") != std::string::npos);
 }
 
 void test_native_scan_ignores_anonymous_record_definitions() {
@@ -725,7 +720,7 @@ int main() {
         test_native_method_templates_do_not_mask_concrete_overloads(root);
         test_native_fixed_array_typedef_alias(root);
         test_native_scan_retries_with_c_prelude_for_context_headers(root);
-        test_aliased_c_import_does_not_prefix_unrelated_transitive_functions(root);
+        test_aliased_c_import_prefixes_visible_transitive_functions(root);
         test_native_scan_ignores_anonymous_record_definitions();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';

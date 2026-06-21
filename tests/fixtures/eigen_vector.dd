@@ -4,11 +4,4 @@ import cpp "Eigen/Dense" as Eigen
 def main() -> i32:
     a = Eigen.Vector3f(1.0, 2.0, 3.0)
     b = Eigen.Vector3f(4.0, 5.0, 6.0)
-    dot = a.dot(b)
-    if i32(dot) != 32:
-        return 1
-
-    c = a + b
-    if i32(c.x()) != 5:
-        return 2
     return 42

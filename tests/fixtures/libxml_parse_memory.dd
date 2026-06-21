@@ -17,7 +17,6 @@ def main() -> i32:
         return 3
 
     content_len = xml.xmlStrlen(content)
-    xml.xmlFree(content)
     xml.xmlFreeDoc(doc)
     if content_len == 2:
         return 42

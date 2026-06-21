@@ -24,6 +24,7 @@
 #include "dudu/sema_expr_internal.hpp"
 #include "dudu/sema_function_type.hpp"
 #include "dudu/sema_index.hpp"
+#include "dudu/sema_ops.hpp"
 #include "dudu/type_compat.hpp"
 
 #include <cassert>
@@ -1271,6 +1272,16 @@ void test_index_type_inference_uses_type_ast() {
         symbols, location, dudu::parse_type_text("AliasItems", location),
         dudu::parse_expr_text("0", location), "items");
     assert(dudu::substitute_type_ref_text(nested_alias_item, {}) == "Item");
+
+    symbols.native_types.insert("Vec");
+    symbols.alias_type_refs["cv.Vec3b"] = dudu::parse_type_text("Vec[u8, 3]", location);
+    const dudu::TypeRef native_fixed_vec_item = dudu::indexed_type_ref_from_type(
+        symbols, location, dudu::parse_type_text("&cv.Vec3b", location),
+        dudu::parse_expr_text("0", location), "pixel");
+    assert(dudu::substitute_type_ref_text(native_fixed_vec_item, {}) == "u8");
+    assert(dudu::comparison_rhs_allowed(symbols, ">", dudu::parse_type_text("&u8", location),
+                                        dudu::parse_expr_text("0", location),
+                                        dudu::parse_type_text("i32", location)));
 
     const dudu::TypeRef matrix_type = dudu::parse_type_text("array[list[i32]][3, 4]");
     const dudu::TypeRef row_type = dudu::indexed_type_ref_from_type(
