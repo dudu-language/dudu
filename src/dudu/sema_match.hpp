@@ -3,17 +3,18 @@
 #include "dudu/ast.hpp"
 #include "dudu/sema_scope.hpp"
 
-#include <functional>
 #include <string>
 #include <vector>
 
 namespace dudu {
 
-struct MatchCheckCallbacks {
-    std::function<void(FunctionScope&, const std::vector<Stmt>&, const TypeRef&, int)> check_block;
+using MatchBlockChecker = void (*)(FunctionScope&, const std::vector<Stmt>&, const TypeRef&, int);
+
+struct MatchCheckContext {
+    MatchBlockChecker check_block = nullptr;
 };
 
 void check_match_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_type,
-                      int loop_depth, const MatchCheckCallbacks& callbacks);
+                      int loop_depth, MatchCheckContext context);
 
 } // namespace dudu

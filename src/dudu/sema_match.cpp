@@ -101,7 +101,7 @@ void bind_wrapper_case(FunctionScope& nested, const WrapperMatchType& wrapper, c
 
 bool check_wrapper_match(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_type,
                          int loop_depth, const WrapperMatchType& wrapper,
-                         const MatchCheckCallbacks& callbacks) {
+                         MatchCheckContext context) {
     const std::set<std::string> expected = wrapper.kind == WrapperMatchKind::Option
                                                ? std::set<std::string>{"Some", "None"}
                                                : std::set<std::string>{"Ok", "Err"};
@@ -145,7 +145,7 @@ bool check_wrapper_match(FunctionScope& scope, const Stmt& stmt, const TypeRef& 
                           "match guard must be bool, got " + type_ref_text(guard_ref));
             }
         }
-        callbacks.check_block(nested, child.children, return_type, loop_depth);
+        context.check_block(nested, child.children, return_type, loop_depth);
     }
     if (!wildcard && covered != expected) {
         std::vector<std::string> missing;
@@ -186,7 +186,7 @@ std::string missing_enum_cases(const EnumDecl& en, const std::set<std::string>& 
 }
 
 void check_enum_match(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_type,
-                      int loop_depth, const MatchCheckCallbacks& callbacks, const EnumDecl& en) {
+                      int loop_depth, MatchCheckContext context, const EnumDecl& en) {
     std::set<std::string> covered;
     bool wildcard = false;
     for (const Stmt& child : stmt.children) {
@@ -235,7 +235,7 @@ void check_enum_match(FunctionScope& scope, const Stmt& stmt, const TypeRef& ret
                           "match guard must be bool, got " + type_ref_text(guard_ref));
             }
         }
-        callbacks.check_block(nested, child.children, return_type, loop_depth);
+        context.check_block(nested, child.children, return_type, loop_depth);
     }
     if (!wildcard && covered.size() != en.values.size()) {
         sema_fail(stmt.location, "non-exhaustive match on " + en.name +
@@ -244,8 +244,7 @@ void check_enum_match(FunctionScope& scope, const Stmt& stmt, const TypeRef& ret
 }
 
 void check_value_match(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_type,
-                       int loop_depth, const MatchCheckCallbacks& callbacks,
-                       const TypeRef& subject_ref) {
+                       int loop_depth, MatchCheckContext context, const TypeRef& subject_ref) {
     bool wildcard = false;
     for (const Stmt& child : stmt.children) {
         if (child.kind != StmtKind::Case) {
@@ -279,27 +278,30 @@ void check_value_match(FunctionScope& scope, const Stmt& stmt, const TypeRef& re
             }
         }
         FunctionScope nested = scope;
-        callbacks.check_block(nested, child.children, return_type, loop_depth);
+        context.check_block(nested, child.children, return_type, loop_depth);
     }
 }
 
 } // namespace
 
 void check_match_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_type,
-                      int loop_depth, const MatchCheckCallbacks& callbacks) {
+                      int loop_depth, MatchCheckContext context) {
+    if (context.check_block == nullptr) {
+        sema_fail(stmt.location, "internal error: match block checker missing");
+    }
     const SourceLocation& subject_location = diagnostic_location(stmt.location, stmt.condition_expr);
     const TypeRef subject_ref = infer_expr_type_ast(scope, stmt.condition_expr, &subject_location);
     const WrapperMatchType wrapper = wrapper_match_type(subject_ref);
     if (wrapper.kind != WrapperMatchKind::None) {
-        check_wrapper_match(scope, stmt, return_type, loop_depth, wrapper, callbacks);
+        check_wrapper_match(scope, stmt, return_type, loop_depth, wrapper, context);
         return;
     }
     const EnumDecl* en = enum_decl_for_type(scope.symbols, subject_ref);
     if (en == nullptr) {
-        check_value_match(scope, stmt, return_type, loop_depth, callbacks, subject_ref);
+        check_value_match(scope, stmt, return_type, loop_depth, context, subject_ref);
         return;
     }
-    check_enum_match(scope, stmt, return_type, loop_depth, callbacks, *en);
+    check_enum_match(scope, stmt, return_type, loop_depth, context, *en);
 }
 
 } // namespace dudu

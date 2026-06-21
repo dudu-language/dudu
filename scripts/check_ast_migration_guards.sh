@@ -49,6 +49,7 @@ forbidden=(
     "signature_text\\("
     "constructor_param_type_text"
     "shape_text\\("
+    "MatchCheckCallbacks"
     "signature_param_ref"
     "signature_param_text"
     "NativeArgType"

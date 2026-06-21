@@ -1816,7 +1816,10 @@ push. They are not release packaging work.
    header scan cache type/record serialization has been split into
    `native_header_cache_format.*`, making the cache format boundary explicit
    and bringing `native_header_cache.cpp` back under the project file-size
-   guideline.
+   guideline. Match-statement sema no longer uses a generic `std::function`
+   callback adapter to recurse into block checking; the API now takes an
+   explicit typed block-check context, and the migration guard rejects the old
+   callback wrapper name.
 
 19. Polish Unsupported Syntax Diagnostics
 
