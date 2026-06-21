@@ -3,7 +3,6 @@
 #include "dudu/ast_expr.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
-#include "dudu/native_signature_match.hpp"
 
 #include <optional>
 
@@ -77,16 +76,6 @@ std::optional<TypeRef> native_member_expr_type_ref(const Symbols& symbols, const
         return std::nullopt;
     }
     return native_member_path_type_ref(symbols, *path, location);
-}
-
-std::optional<FunctionSignature>
-native_signature_for_call(const FunctionScope& scope, const std::string& callee,
-                          const std::vector<TypeRef>& explicit_template_args,
-                          const std::vector<Expr>& args, const SourceLocation* location,
-                          const NativeInferExprTypeAstFn& infer_expr_type,
-                          const NativeCanAssignAstFn& can_assign) {
-    return match_native_signature(scope, callee, explicit_template_args, args, location,
-                                  infer_expr_type, can_assign);
 }
 
 } // namespace dudu

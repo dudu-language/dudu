@@ -3,6 +3,7 @@
 #include "dudu/ast_expr.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
+#include "dudu/native_signature_match.hpp"
 #include "dudu/sema_context.hpp"
 #include "dudu/sema_function_type.hpp"
 #include "dudu/sema_generics.hpp"
@@ -106,15 +107,9 @@ TypeRef infer_call_type_ref(const Expr& expr, const std::map<std::string, TypeRe
     if (symbols != nullptr) {
         FunctionScope scope{*symbols};
         scope.local_type_refs = local_type_refs;
-        if (const auto signature = native_signature_for_call(
-                scope, direct_callee_name(expr), template_type_refs(expr), expr.children, nullptr,
-                [&](const FunctionScope&, const Expr& value, const SourceLocation*) {
-                    return infer_emitted_local_type_ref(value, local_type_refs, function_returns,
-                                                        symbols);
-                },
-                [](const TypeRef& expected, const Expr& value, const TypeRef& got) {
-                    return assignment_type_allowed(expected, value, got);
-                })) {
+        if (const auto signature =
+                match_native_signature(scope, direct_callee_name(expr), template_type_refs(expr),
+                                       expr.children, nullptr)) {
             return signature_return_type_ref(*signature);
         }
     }

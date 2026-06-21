@@ -1848,6 +1848,11 @@ push. They are not release packaging work.
    Native overload matching no longer caches a rendered argument type beside
    the inferred `TypeRef`; diagnostics and remaining native-template fallback
    bindings render on demand at their boundary.
+   Native overload matching no longer exposes callback adapter typedefs for
+   expression inference or assignment checks. It calls the structured semantic
+   functions directly, and codegen-side native call inference constructs a
+   normal `FunctionScope` with `TypeRef` locals instead of passing a private
+   callback pair.
    C++ statement emission effective local type calculation no longer stores a
    rendered type string beside `TypeRef`; the legacy string locals map is
    populated by rendering at the emission boundary only.

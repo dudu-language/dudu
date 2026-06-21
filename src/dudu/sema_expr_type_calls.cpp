@@ -1,6 +1,7 @@
 #include "dudu/ast_expr.hpp"
 #include "dudu/ast_parse_utils.hpp"
 #include "dudu/ast_type.hpp"
+#include "dudu/native_signature_match.hpp"
 #include "dudu/sema_expr_internal.hpp"
 #include "dudu/sema_methods_internal.hpp"
 
@@ -217,11 +218,7 @@ std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Ex
         check_call_args_ast(scope, callee, fn->second, expr.children, location);
         return signature_return_type_ref(fn->second);
     }
-    if (const auto signature = native_signature_for_call(
-            scope, callee, {}, expr.children, location, infer_expr_type_ast,
-            [&](const TypeRef& expected, const Expr& value, const TypeRef& got) {
-                return can_assign_ast(scope, expected, value, got);
-            })) {
+    if (const auto signature = match_native_signature(scope, callee, {}, expr.children, location)) {
         return signature_return_type_ref(*signature);
     }
     if (scope.local_type_refs.contains(callee)) {
@@ -333,12 +330,8 @@ std::optional<TypeRef> direct_template_call_type_ref(const FunctionScope& scope,
         check_constructor_args_ast(scope, instantiated, expr.children, location);
         return constructor_type;
     }
-    if (const auto signature = native_signature_for_call(
-            scope, callee_base, template_type_refs(expr), expr.children, location,
-            infer_expr_type_ast,
-            [&](const TypeRef& expected, const Expr& value, const TypeRef& got) {
-                return can_assign_ast(scope, expected, value, got);
-            })) {
+    if (const auto signature = match_native_signature(scope, callee_base, template_type_refs(expr),
+                                                      expr.children, location)) {
         return signature_return_type_ref(*signature);
     }
     if (const auto method_type =

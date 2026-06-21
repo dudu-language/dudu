@@ -427,15 +427,8 @@ void test_native_variadic_bare_pack_uses_type_ref_shape() {
 
     const std::vector<dudu::Expr> args = {dudu::parse_expr_text("1"), dudu::parse_expr_text("2"),
                                           dudu::parse_expr_text("3")};
-    auto infer = [](const dudu::FunctionScope&, const dudu::Expr&, const dudu::SourceLocation*) {
-        return dudu::parse_type_text("i32");
-    };
-    auto can_assign = [](const dudu::TypeRef& expected, const dudu::Expr&,
-                         const dudu::TypeRef& got) {
-        return dudu::type_assignment_allowed(expected, got);
-    };
     const std::optional<dudu::FunctionSignature> matched =
-        dudu::match_native_signature(scope, "native_printf", {}, args, nullptr, infer, can_assign);
+        dudu::match_native_signature(scope, "native_printf", {}, args, nullptr);
     assert(matched.has_value());
     assert(dudu::signature_param_count(*matched) == 2);
     assert(dudu::signature_param_type_ref(*matched, 1).kind == dudu::TypeKind::PackExpansion);

@@ -1,4 +1,5 @@
 #include "dudu/ast_type.hpp"
+#include "dudu/native_signature_match.hpp"
 #include "dudu/sema_expr_cpp_escape_calls.hpp"
 #include "dudu/sema_expr_internal.hpp"
 #include "dudu/sema_methods_internal.hpp"
@@ -261,11 +262,8 @@ TypeRef infer_cpp_escape_expr_ref(const FunctionScope& scope, std::string expr,
         const std::vector<TypeRef> explicit_template_args =
             callee_type_ref.kind == TypeKind::Template ? callee_type_ref.children
                                                        : std::vector<TypeRef>{};
-        if (const auto signature = native_signature_for_call(
-                scope, callee, explicit_template_args, args, location, infer_expr_type_ast,
-                [&](const TypeRef& expected, const Expr& value, const TypeRef& got) {
-                    return can_assign_ast(scope, expected, value, got);
-                })) {
+        if (const auto signature =
+                match_native_signature(scope, callee, explicit_template_args, args, location)) {
             return signature_return_type_ref(*signature);
         }
         if (!is_local_member_call(scope, callee) && callee.find('.') == std::string::npos &&
