@@ -3,6 +3,7 @@
 #include "dudu/array_shape.hpp"
 #include "dudu/ast_expr.hpp"
 #include "dudu/cpp_expr_emit.hpp"
+#include "dudu/sema_methods.hpp"
 
 #include <numeric>
 
@@ -36,6 +37,20 @@ std::vector<std::string> local_array_shape_text(
         return explicit_array_shape_text(unwrap_reference_and_const(local->second));
     }
     return {};
+}
+
+std::vector<std::string> array_shape_text_for_expr(
+    const Expr& expr, const std::map<std::string, TypeRef>& local_type_refs, const Symbols* symbols,
+    const CppLocalContext& locals) {
+    if (expr.kind == ExprKind::Name) {
+        return local_array_shape_text(local_type_refs, expr.name);
+    }
+    if (symbols == nullptr) {
+        return {};
+    }
+    const TypeRef type =
+        member_expr_type_ref(*symbols, local_type_refs, nullptr, expr, {}, locals.current_class);
+    return explicit_array_shape_text(unwrap_reference_and_const(type));
 }
 
 std::string nested_array_data_expr(std::string base, size_t rank) {
@@ -127,8 +142,7 @@ std::optional<std::string> lower_full_multidim_slice_expr(
     const Expr& base, const Expr& index, const std::vector<std::string>& aliases,
     const CppLocalContext& locals, const std::map<std::string, TypeRef>& local_type_refs,
     const Symbols* symbols, const CppEmitOptions& options) {
-    if (base.kind != ExprKind::Name || index.kind != ExprKind::TupleLiteral ||
-        index.children.size() < 2) {
+    if (index.kind != ExprKind::TupleLiteral || index.children.size() < 2) {
         return std::nullopt;
     }
     for (const Expr& child : index.children) {
@@ -136,7 +150,8 @@ std::optional<std::string> lower_full_multidim_slice_expr(
             return std::nullopt;
         }
     }
-    const std::vector<std::string> shape = local_array_shape_text(local_type_refs, base.name);
+    const std::vector<std::string> shape =
+        array_shape_text_for_expr(base, local_type_refs, symbols, locals);
     if (shape.size() != index.children.size()) {
         return std::nullopt;
     }

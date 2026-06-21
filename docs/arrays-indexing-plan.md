@@ -197,9 +197,9 @@ contiguous spans. Three-dimensional channel slices such as `image[:, :, c]`
 also produce `strided_span[T]` views over interleaved channel data. Full-rank
 fixed-array slices such as `mat[:, :]` and `image[:, :, :]` produce contiguous
 `span[T]` views over the whole backing storage, including generic non-type
-extents such as `array[T][Rows, Cols]`. General multidimensional slice
-rectangles are rejected until the compiler has explicit view types for those
-shapes.
+extents such as `array[T][Rows, Cols]` and member-backed fixed arrays such as
+`self.items[:, :]`. General multidimensional slice rectangles are rejected
+until the compiler has explicit view types for those shapes.
 
 ## Advanced Indexing
 

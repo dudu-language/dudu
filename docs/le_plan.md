@@ -994,7 +994,8 @@ push. They are not release packaging work.
    `strided_span[T]` views over interleaved channel data. Full-rank fixed-array
    slices such as `mat[:, :]` and `image[:, :, :]` produce contiguous `span[T]`
    views over the whole backing storage, including generic non-type extents
-   such as `array[T][Rows, Cols]`.
+   such as `array[T][Rows, Cols]` and member-backed fixed arrays such as
+   `self.items[:, :]`.
    Dudu-native `@operator("[]")` read hooks and `@operator("[]=")` indexed
    assignment hooks work for library-style tensor wrappers, and indexed member
    paths such as `self.values[i]` type-check. One-dimensional fixed-array step
