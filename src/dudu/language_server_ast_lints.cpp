@@ -18,8 +18,6 @@ namespace {
 struct AstLintLocal {
     std::string name;
     TypeRef type_ref;
-    int line = 0;
-    int column = 0;
 };
 
 struct AstLocalDecl {
@@ -100,10 +98,7 @@ void lint_suspicious_cast_stmt(const Stmt& stmt, const Document& doc,
     visit_stmt_expressions(
         stmt, [&](const Expr& expr) { lint_suspicious_cast_expr(expr, doc, active_decls, out); });
     if (stmt.kind == StmtKind::VarDecl && !stmt.name.empty() && has_type_ref(stmt.type_ref)) {
-        active_decls.push_back({.name = stmt.name,
-                                .type_ref = stmt.type_ref,
-                                .line = stmt.location.line,
-                                .column = stmt.location.column});
+        active_decls.push_back({.name = stmt.name, .type_ref = stmt.type_ref});
     }
     if (!stmt.children.empty()) {
         lint_suspicious_cast_statement_sequence(stmt.children, doc, active_decls, out);
@@ -152,10 +147,7 @@ void lint_suspicious_cast_function(const FunctionDecl& fn, const Document& doc,
                                    std::vector<Diagnostic>& out) {
     std::vector<AstLintLocal> active_decls;
     for (const ParamDecl& param : fn.params) {
-        active_decls.push_back({.name = param.name,
-                                .type_ref = param.type_ref,
-                                .line = param.location.line,
-                                .column = param.location.column});
+        active_decls.push_back({.name = param.name, .type_ref = param.type_ref});
     }
     lint_suspicious_cast_statement_sequence(fn.statements, doc, active_decls, out);
 }

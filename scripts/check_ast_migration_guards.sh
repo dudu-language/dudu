@@ -143,3 +143,13 @@ if rg -n "lower_cpp_type_spelling" "$repo_root/src/dudu" |
     echo "lower_cpp_type_spelling is only allowed at explicit raw C++ escape/native spelling boundaries" >&2
     exit 1
 fi
+
+awk '
+    /struct AstLintLocal/ { in_local = 1 }
+    in_local && /int (line|column)/ {
+        print FILENAME ":" FNR ": AstLintLocal should only carry name and TypeRef"
+        bad = 1
+    }
+    in_local && /^};/ { in_local = 0 }
+    END { exit bad ? 1 : 0 }
+' "$repo_root/src/dudu/language_server_ast_lints.cpp"
