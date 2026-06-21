@@ -347,6 +347,8 @@ TypeRef TypeTokenParser::parse_name_or_template(size_t begin) {
         if (type.kind == TypeKind::Template && type.name == "array") {
             TypeRef fixed = make_node(TypeKind::FixedArray, begin, cursor_);
             fixed.children.push_back(std::move(type));
+            fixed.children.insert(fixed.children.end(), std::make_move_iterator(args.begin()),
+                                  std::make_move_iterator(args.end()));
             fixed.value = trim_string(text_between(inner_begin, inner_end));
             type = std::move(fixed);
             continue;

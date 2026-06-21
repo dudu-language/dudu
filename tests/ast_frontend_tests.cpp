@@ -1468,8 +1468,13 @@ void test_type_ast_shape() {
     assert(player.fields.size() == 1);
     assert(player.fields[0].type_ref.kind == dudu::TypeKind::FixedArray);
     assert(player.fields[0].type_ref.value == "4, 4");
+    assert(player.fields[0].type_ref.children.size() == 3);
     assert(player.fields[0].type_ref.children[0].kind == dudu::TypeKind::Template);
     assert(player.fields[0].type_ref.children[0].name == "array");
+    assert(player.fields[0].type_ref.children[1].kind == dudu::TypeKind::Value);
+    assert(player.fields[0].type_ref.children[1].value == "4");
+    assert(player.fields[0].type_ref.children[2].kind == dudu::TypeKind::Value);
+    assert(player.fields[0].type_ref.children[2].value == "4");
 
     assert(module.functions.size() == 1);
     const dudu::FunctionDecl& update = module.functions[0];
@@ -1582,9 +1587,13 @@ void test_type_ast_shape() {
     assert(dudu::substitute_type_ref_text(inferred_array.type_ref, {}) == "array[i32][2, 2]");
     assert(dudu::substitute_type_ref_text(inferred_array.element_type_ref, {}) == "i32");
     assert(inferred_array.type_ref.kind == dudu::TypeKind::FixedArray);
-    assert(inferred_array.type_ref.children.size() == 1);
+    assert(inferred_array.type_ref.children.size() == 3);
     assert(inferred_array.type_ref.children[0].kind == dudu::TypeKind::Template);
     assert(inferred_array.type_ref.children[0].name == "array");
+    assert(inferred_array.type_ref.children[1].kind == dudu::TypeKind::Value);
+    assert(inferred_array.type_ref.children[1].value == "2");
+    assert(inferred_array.type_ref.children[2].kind == dudu::TypeKind::Value);
+    assert(inferred_array.type_ref.children[2].value == "2");
     assert(dudu::lower_cpp_type(inferred_array.type_ref) ==
            "std::array<std::array<int32_t, 2>, 2>");
     assert(dudu::lower_cpp_type(dudu::parse_type_text("array[f32][4, 4]")) ==

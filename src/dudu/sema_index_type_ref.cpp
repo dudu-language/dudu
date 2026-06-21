@@ -31,6 +31,12 @@ TypeRef shaped_array_type_ref(const TypeRef& element_type, const std::vector<siz
             value << ", ";
         }
         value << shape[i];
+        TypeRef dim;
+        dim.kind = TypeKind::Value;
+        dim.value = std::to_string(shape[i]);
+        dim.location = element_type.location;
+        dim.range = element_type.range;
+        type.children.push_back(std::move(dim));
     }
     type.value = value.str();
     type.location = element_type.location;
@@ -54,7 +60,14 @@ TypeRef shaped_array_type_ref(const TypeRef& element_type, const std::vector<std
         if (i > 0) {
             value << ", ";
         }
-        value << trim_copy(shape[i]);
+        const std::string dim_value = trim_copy(shape[i]);
+        value << dim_value;
+        TypeRef dim;
+        dim.kind = TypeKind::Value;
+        dim.value = dim_value;
+        dim.location = element_type.location;
+        dim.range = element_type.range;
+        type.children.push_back(std::move(dim));
     }
     type.value = value.str();
     type.location = element_type.location;
@@ -200,7 +213,7 @@ std::optional<TypeRef> indexed_type_ref_from_type_ref_with_count(
         return shaped_array_type_ref(element,
                                      std::vector<size_t>(shape.begin() + index_count, shape.end()));
     }
-    if (const std::vector<std::string> shape = explicit_array_shape_text(*type); !shape.empty()) {
+    if (const std::vector<std::string> shape = explicit_array_shape_values(*type); !shape.empty()) {
         const TypeRef element = explicit_array_element_type_ref(*type);
         if (is_slice) {
             if (shape.size() != 1) {

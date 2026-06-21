@@ -172,13 +172,17 @@ std::optional<std::pair<std::string, SourceLocation>> unknown_type_ref(const Sym
     case TypeKind::Storage:
     case TypeKind::Shared:
     case TypeKind::Static:
-    case TypeKind::FixedArray:
     case TypeKind::Function:
     case TypeKind::PackExpansion:
         for (const TypeRef& child : type.children) {
             if (const auto unknown = unknown_type_ref(symbols, child)) {
                 return unknown;
             }
+        }
+        return std::nullopt;
+    case TypeKind::FixedArray:
+        if (!type.children.empty()) {
+            return unknown_type_ref(symbols, type.children.front());
         }
         return std::nullopt;
     case TypeKind::Unknown:

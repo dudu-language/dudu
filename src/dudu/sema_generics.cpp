@@ -1,5 +1,6 @@
 #include "dudu/sema_generics.hpp"
 
+#include "dudu/array_shape.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/sema_common.hpp"
@@ -44,9 +45,9 @@ bool same_name(std::string_view left, std::string_view right) {
 void collect_value_generic_params(const TypeRef& type, const std::vector<std::string>& params,
                                   std::set<std::string>& out) {
     if (type.kind == TypeKind::FixedArray) {
-        for (const std::string& dim : split_top_level_args(type.value)) {
+        for (const TypeRef& dim : explicit_array_shape_refs(type)) {
             for (const std::string& param : params) {
-                if (same_name(dim, param)) {
+                if (same_name(type_ref_head_name(dim), param)) {
                     out.insert(param);
                 }
             }
@@ -96,11 +97,23 @@ bool infer_generic_binding(const TypeRef& param_type, const TypeRef& arg_type,
     }
 
     if (param_type.kind == TypeKind::FixedArray) {
-        if (param_type.children.size() != 1 || arg_type.children.size() != 1) {
+        if (param_type.children.empty() || arg_type.children.empty()) {
             return true;
         }
-        return infer_generic_binding(param_type.children.front(), arg_type.children.front(), params,
-                                     bindings, error);
+        if (!infer_generic_binding(param_type.children.front(), arg_type.children.front(), params,
+                                   bindings, error)) {
+            return false;
+        }
+        if (param_type.children.size() != arg_type.children.size()) {
+            return true;
+        }
+        for (size_t i = 1; i < param_type.children.size(); ++i) {
+            if (!infer_generic_binding(param_type.children[i], arg_type.children[i], params,
+                                       bindings, error)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     if (param.empty() || arg.empty()) {

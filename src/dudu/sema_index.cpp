@@ -165,48 +165,54 @@ TypeRef indexed_type_ref_from_type(const Symbols& symbols, const SourceLocation&
     const TypeRef unwrapped_type_ref = unwrap_reference_and_const(receiver_type);
     if (is_full_multidim_slice_expr(index_expr)) {
         const std::vector<size_t> shape = explicit_array_shape(unwrapped_type_ref);
-        const std::vector<std::string> shape_text = explicit_array_shape_text(unwrapped_type_ref);
+        const std::vector<std::string> shape_values =
+            explicit_array_shape_values(unwrapped_type_ref);
         if (shape.size() == index_expr.children.size() ||
-            shape_text.size() == index_expr.children.size()) {
+            shape_values.size() == index_expr.children.size()) {
             return array_element_template_type_ref(location, unwrapped_type_ref, "span");
         }
     }
     if (is_leading_range_full_tail_slice_expr(index_expr)) {
         const std::vector<size_t> shape = explicit_array_shape(unwrapped_type_ref);
-        const std::vector<std::string> shape_text = explicit_array_shape_text(unwrapped_type_ref);
+        const std::vector<std::string> shape_values =
+            explicit_array_shape_values(unwrapped_type_ref);
         if (shape.size() == index_expr.children.size() ||
-            shape_text.size() == index_expr.children.size()) {
+            shape_values.size() == index_expr.children.size()) {
             return array_element_template_type_ref(location, unwrapped_type_ref, "span");
         }
     }
     if (is_matrix_patch_slice_expr(index_expr)) {
         const std::vector<size_t> shape = explicit_array_shape(unwrapped_type_ref);
-        const std::vector<std::string> shape_text = explicit_array_shape_text(unwrapped_type_ref);
-        if (shape.size() == 2 || shape_text.size() == 2) {
+        const std::vector<std::string> shape_values =
+            explicit_array_shape_values(unwrapped_type_ref);
+        if (shape.size() == 2 || shape_values.size() == 2) {
             return array_element_template_type_ref(location, unwrapped_type_ref, "strided_span2");
         }
     }
     if (is_channel_slice_expr(index_expr)) {
         const std::vector<size_t> shape = explicit_array_shape(unwrapped_type_ref);
-        const std::vector<std::string> shape_text = explicit_array_shape_text(unwrapped_type_ref);
-        if (shape.size() == 3 || shape_text.size() == 3) {
+        const std::vector<std::string> shape_values =
+            explicit_array_shape_values(unwrapped_type_ref);
+        if (shape.size() == 3 || shape_values.size() == 3) {
             return array_element_template_type_ref(location, unwrapped_type_ref, "strided_span");
         }
     }
     if (is_column_slice_expr(index_expr)) {
         const std::vector<size_t> shape = explicit_array_shape(unwrapped_type_ref);
-        const std::vector<std::string> shape_text = explicit_array_shape_text(unwrapped_type_ref);
-        if (shape.size() == 2 || shape_text.size() == 2) {
+        const std::vector<std::string> shape_values =
+            explicit_array_shape_values(unwrapped_type_ref);
+        if (shape.size() == 2 || shape_values.size() == 2) {
             return array_element_template_type_ref(location, unwrapped_type_ref, "strided_span");
         }
     }
     if (!has_step_slice(index_expr)) {
         const std::vector<size_t> shape = explicit_array_shape(unwrapped_type_ref);
-        const std::vector<std::string> shape_text = explicit_array_shape_text(unwrapped_type_ref);
+        const std::vector<std::string> shape_values =
+            explicit_array_shape_values(unwrapped_type_ref);
         const auto known_rank = [&](const size_t expected) {
-            return shape.size() == expected || shape_text.size() == expected;
+            return shape.size() == expected || shape_values.size() == expected;
         };
-        if (!shape.empty() || !shape_text.empty()) {
+        if (!shape.empty() || !shape_values.empty()) {
             if (const auto prefix_count = trailing_full_slice_prefix_count(index_expr)) {
                 if (known_rank(*prefix_count + 1)) {
                     return array_element_template_type_ref(location, unwrapped_type_ref, "span");

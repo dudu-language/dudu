@@ -130,8 +130,7 @@ bool bind_template_type_ref(const TypeRef& expected, const TypeRef& got,
         same_native_template_name(expected.name, got.name)) {
         return bind_same_shape_children(expected, got, bindings);
     }
-    if (expected.kind == TypeKind::FixedArray && got.kind == TypeKind::FixedArray &&
-        expected.value == got.value) {
+    if (expected.kind == TypeKind::FixedArray && got.kind == TypeKind::FixedArray) {
         return bind_same_shape_children(expected, got, bindings);
     }
     return false;

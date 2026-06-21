@@ -979,6 +979,13 @@ push. They are not release packaging work.
    render already parsed decorator expression nodes for C++ emission rather
    than scanning decorator source text, and the migration guard rejects the old
    text-shaped API names.
+   Fixed-array `array[T][shape]` nodes now carry shape dimensions as structured
+   child `TypeRef` nodes after the storage type. Normal sema, slicing, generic
+   non-type parameter discovery, structural assignment, and C++ array lowering
+   consume those shape children instead of splitting the comma-shaped value
+   mirror. The native scan cache version was bumped so stale one-child fixed
+   array nodes are regenerated, and the guard rejects the removed
+   `explicit_array_shape_text` helper.
 
 3. OOP Surface Cleanup
 

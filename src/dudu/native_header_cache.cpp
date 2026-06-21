@@ -13,7 +13,7 @@
 namespace dudu {
 namespace {
 
-constexpr std::string_view kScanCacheVersion = "dudu-native-scan-v3";
+constexpr std::string_view kScanCacheVersion = "dudu-native-scan-v4";
 constexpr char kListSeparator = '\x1f';
 
 std::string read_text(const std::filesystem::path& path) {
@@ -324,8 +324,7 @@ NativeHeaderRawCache load_native_header_raw_cache(const NativeHeaderOptions& opt
 }
 
 void store_native_header_raw_cache(const NativeHeaderRawCache& cache, const std::string& ast_dump,
-                                   const std::string& macro_dump,
-                                   const std::string& dependencies) {
+                                   const std::string& macro_dump, const std::string& dependencies) {
     std::filesystem::create_directories(cache.base.parent_path());
     write_text(cache.base.string() + ".ast", ast_dump);
     write_text(cache.base.string() + ".macros", macro_dump);

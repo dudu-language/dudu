@@ -39,26 +39,26 @@ TypeRef unwrap_reference_and_const(TypeRef type) {
 }
 
 std::vector<std::string>
-local_array_shape_text(const std::map<std::string, TypeRef>& local_type_refs,
-                       const std::string& name) {
+local_array_shape_values(const std::map<std::string, TypeRef>& local_type_refs,
+                         const std::string& name) {
     if (const auto local = local_type_refs.find(name); local != local_type_refs.end()) {
-        return explicit_array_shape_text(unwrap_reference_and_const(local->second));
+        return explicit_array_shape_values(unwrap_reference_and_const(local->second));
     }
     return {};
 }
 
 std::vector<std::string>
-array_shape_text_for_expr(const Expr& expr, const std::map<std::string, TypeRef>& local_type_refs,
-                          const Symbols* symbols, const CppLocalContext& locals) {
+array_shape_values_for_expr(const Expr& expr, const std::map<std::string, TypeRef>& local_type_refs,
+                            const Symbols* symbols, const CppLocalContext& locals) {
     if (expr.kind == ExprKind::Name) {
-        return local_array_shape_text(local_type_refs, expr.name);
+        return local_array_shape_values(local_type_refs, expr.name);
     }
     if (symbols == nullptr) {
         return {};
     }
     const TypeRef type =
         member_expr_type_ref(*symbols, local_type_refs, nullptr, expr, {}, locals.current_class);
-    return explicit_array_shape_text(unwrap_reference_and_const(type));
+    return explicit_array_shape_values(unwrap_reference_and_const(type));
 }
 
 std::string nested_array_data_expr(std::string base, size_t rank) {
@@ -113,7 +113,7 @@ std::optional<std::string> lower_trailing_range_slice_expr(
         }
     }
     const std::vector<std::string> shape =
-        array_shape_text_for_expr(base, local_type_refs, symbols, locals);
+        array_shape_values_for_expr(base, local_type_refs, symbols, locals);
     if (shape.size() != index.children.size()) {
         return std::nullopt;
     }
@@ -124,9 +124,8 @@ std::optional<std::string> lower_trailing_range_slice_expr(
                "]";
     }
     const Expr& tail = index.children.back();
-    const std::string start =
-        lower_slice_bound(tail.children[0], "0", aliases, locals, local_type_refs, symbols,
-                          options);
+    const std::string start = lower_slice_bound(tail.children[0], "0", aliases, locals,
+                                                local_type_refs, symbols, options);
     const std::string end = lower_slice_bound(tail.children[1], "(" + shape.back() + ")", aliases,
                                               locals, local_type_refs, symbols, options);
     return "std::span(&(" + row + ")[" + start + "], (" + end + ") - (" + start + "))";
@@ -138,12 +137,11 @@ lower_column_slice_expr(const Expr& base, const Expr& index,
                         const std::map<std::string, TypeRef>& local_type_refs,
                         const Symbols* symbols, const CppEmitOptions& options) {
     if (index.kind != ExprKind::TupleLiteral || index.children.size() != 2 ||
-        !is_full_slice_expr(index.children[0]) ||
-        index.children[1].kind == ExprKind::Slice) {
+        !is_full_slice_expr(index.children[0]) || index.children[1].kind == ExprKind::Slice) {
         return std::nullopt;
     }
     const std::vector<std::string> shape =
-        array_shape_text_for_expr(base, local_type_refs, symbols, locals);
+        array_shape_values_for_expr(base, local_type_refs, symbols, locals);
     if (shape.size() != 2) {
         return std::nullopt;
     }
@@ -151,8 +149,8 @@ lower_column_slice_expr(const Expr& base, const Expr& index,
         lower_expr(base, aliases, locals, local_type_refs, symbols, options);
     const std::string column =
         lower_expr(index.children[1], aliases, locals, local_type_refs, symbols, options);
-    return "dudu::StridedSpan{" + lowered_base + ".data()->data() + (" + column + "), " +
-           shape[0] + ", " + shape[1] + "}";
+    return "dudu::StridedSpan{" + lowered_base + ".data()->data() + (" + column + "), " + shape[0] +
+           ", " + shape[1] + "}";
 }
 
 std::optional<std::string>
@@ -161,12 +159,12 @@ lower_channel_slice_expr(const Expr& base, const Expr& index,
                          const std::map<std::string, TypeRef>& local_type_refs,
                          const Symbols* symbols, const CppEmitOptions& options) {
     if (index.kind != ExprKind::TupleLiteral || index.children.size() != 3 ||
-        !is_full_slice_expr(index.children[0]) ||
-        !is_full_slice_expr(index.children[1]) || index.children[2].kind == ExprKind::Slice) {
+        !is_full_slice_expr(index.children[0]) || !is_full_slice_expr(index.children[1]) ||
+        index.children[2].kind == ExprKind::Slice) {
         return std::nullopt;
     }
     const std::vector<std::string> shape =
-        array_shape_text_for_expr(base, local_type_refs, symbols, locals);
+        array_shape_values_for_expr(base, local_type_refs, symbols, locals);
     if (shape.size() != 3) {
         return std::nullopt;
     }
@@ -192,7 +190,7 @@ std::optional<std::string> lower_leading_range_full_tail_slice_expr(
         }
     }
     const std::vector<std::string> shape =
-        array_shape_text_for_expr(base, local_type_refs, symbols, locals);
+        array_shape_values_for_expr(base, local_type_refs, symbols, locals);
     if (shape.size() != index.children.size()) {
         return std::nullopt;
     }
@@ -220,7 +218,7 @@ std::optional<std::string> lower_matrix_patch_slice_expr(
         return std::nullopt;
     }
     const std::vector<std::string> shape =
-        array_shape_text_for_expr(base, local_type_refs, symbols, locals);
+        array_shape_values_for_expr(base, local_type_refs, symbols, locals);
     if (shape.size() != 2) {
         return std::nullopt;
     }
@@ -256,7 +254,7 @@ std::optional<std::string> lower_full_multidim_slice_expr(
         }
     }
     const std::vector<std::string> shape =
-        array_shape_text_for_expr(base, local_type_refs, symbols, locals);
+        array_shape_values_for_expr(base, local_type_refs, symbols, locals);
     if (shape.size() != index.children.size()) {
         return std::nullopt;
     }

@@ -61,6 +61,7 @@ forbidden=(
     "replace_template_bindings"
     "replace_pack_binding"
     "join_type_refs"
+    "explicit_array_shape_text"
     "bases\\.insert\\(type_ref_text"
     "native_function_key"
     "method_key\\("

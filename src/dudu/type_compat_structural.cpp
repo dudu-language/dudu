@@ -36,9 +36,6 @@ bool type_refs_equivalent_ignoring_c_tags(const TypeRef& expected, const TypeRef
         }
         break;
     case TypeKind::FixedArray:
-        if (trim_copy(expected.value) != trim_copy(got.value)) {
-            return false;
-        }
         break;
     case TypeKind::Pointer:
     case TypeKind::Reference:
@@ -104,9 +101,14 @@ bool structural_function_assignment_allowed(const TypeRef& expected, const TypeR
 
 bool structural_fixed_array_assignment_allowed(const TypeRef& expected, const TypeRef& got) {
     if (expected.kind != TypeKind::FixedArray || got.kind != TypeKind::FixedArray ||
-        expected.children.size() != 1 || got.children.size() != 1 ||
-        trim_copy(expected.value) != trim_copy(got.value)) {
+        expected.children.size() < 2 || got.children.size() < 2 ||
+        expected.children.size() != got.children.size()) {
         return false;
+    }
+    for (size_t i = 1; i < expected.children.size(); ++i) {
+        if (!type_ref_equivalent(expected.children[i], got.children[i])) {
+            return false;
+        }
     }
     return structural_type_assignment_allowed(expected.children.front(), got.children.front());
 }

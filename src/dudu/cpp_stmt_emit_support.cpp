@@ -90,7 +90,7 @@ std::string lower_expr_as_type_ref(const TypeRef& expected_type, const Expr& exp
 namespace {
 
 TypeRef fixed_array_child_type_ref(const TypeRef& type) {
-    const std::vector<std::string> shape = explicit_array_shape_text(type);
+    const std::vector<std::string> shape = explicit_array_shape_values(type);
     const TypeRef element = explicit_array_element_type_ref(type);
     if (shape.size() <= 1 || !has_type_ref(element)) {
         return element;
@@ -108,6 +108,14 @@ TypeRef fixed_array_child_type_ref(const TypeRef& type) {
     storage.name = "array";
     storage.children.push_back(element);
     child.children.push_back(std::move(storage));
+    for (size_t i = 1; i < shape.size(); ++i) {
+        TypeRef dim;
+        dim.kind = TypeKind::Value;
+        dim.value = shape[i];
+        dim.location = type.location;
+        dim.range = type.range;
+        child.children.push_back(std::move(dim));
+    }
     child.location = type.location;
     child.range = type.range;
     return child;

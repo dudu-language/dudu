@@ -79,7 +79,7 @@ bool native_numeric_promotion(const TypeRef& expected, const TypeRef& got) {
 }
 
 std::optional<TypeRef> fixed_array_element_type_ref(const TypeRef& type) {
-    if (type.kind != TypeKind::FixedArray || type.children.size() != 1) {
+    if (type.kind != TypeKind::FixedArray || type.children.empty()) {
         return std::nullopt;
     }
     const TypeRef& storage = type.children.front();
