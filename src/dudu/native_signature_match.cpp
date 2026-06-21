@@ -121,7 +121,7 @@ bool native_fixed_array_alias_decay_allowed(const FunctionScope& scope, const Ty
     return false;
 }
 
-std::string signature_text(const std::string& callee, const FunctionSignature& signature) {
+std::string signature_display(const std::string& callee, const FunctionSignature& signature) {
     std::ostringstream out;
     out << callee << "(";
     const size_t param_count = signature_param_count(signature);
@@ -322,7 +322,7 @@ std::string native_overload_message_ast(const FunctionScope& scope, const std::s
         }
     }
     for (const FunctionSignature& candidate : candidates) {
-        out << "\ncandidate: " << signature_text(callee, candidate);
+        out << "\ncandidate: " << signature_display(callee, candidate);
         for (const std::string& reason : mismatch_reasons_ast(scope, candidate, args, location)) {
             out << "\n  reason: " << reason;
         }

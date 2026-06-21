@@ -989,6 +989,10 @@ push. They are not release packaging work.
    shape rule. The native scan cache version was bumped so stale one-child
    fixed array nodes are regenerated, and the guard rejects the removed
    `explicit_array_shape_text` helper.
+   Native overload and constructor mismatch helpers now use `display` names for
+   diagnostic-only rendering, and the migration guard rejects the old `text`
+   helper names so normal matching paths do not drift back toward string-shaped
+   semantics.
 
 3. OOP Surface Cleanup
 
