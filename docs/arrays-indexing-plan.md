@@ -199,7 +199,8 @@ views so non-contiguous views are not misrepresented as contiguous spans,
 including generic non-type extents such as `array[T][Rows, Cols]` and
 member-backed fixed arrays such as `self.items[:, col]`.
 Three-dimensional channel slices such as `image[:, :, c]` also produce
-`strided_span[T]` views over interleaved channel data. Two-dimensional patch
+`strided_span[T]` views over interleaved channel data, including generic
+non-type extents and member-backed fixed arrays. Two-dimensional patch
 rectangles such as `mat[y0:y1, x0:x1]` produce `strided_span2[T]` views with
 explicit row stride, so row gaps are not misrepresented as contiguous storage.
 `strided_span2[T]` views are iterable in row-major order.

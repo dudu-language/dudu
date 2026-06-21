@@ -1,0 +1,18 @@
+class ImageBox[Rows, Cols, Channels]:
+    pixels: array[i32][Rows, Cols, Channels]
+
+    def channel_sum(self, channel_index: i32) -> i32:
+        channel: strided_span[i32] = self.pixels[:, :, channel_index]
+        total: i32 = 0
+        for value: i32 in channel:
+            total += value
+        return total
+
+
+def main() -> i32:
+    image: array[i32] = [
+        [[1, 2], [3, 4]],
+        [[10, 20], [31, 40]],
+    ]
+    box: ImageBox[2, 2, 2] = ImageBox[2, 2, 2](image)
+    return box.channel_sum(0)

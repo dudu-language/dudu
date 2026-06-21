@@ -999,9 +999,11 @@ push. They are not release packaging work.
    views such as `mat[row, :]`, and contiguous leading-axis slab ranges such as
    `mat[start:end, :]` and `volume[start:end, :, :]` produce `span[T]` views
    over the selected storage. Matrix column slices such as `mat[:, col]`
-   produce `strided_span[T]` views so non-contiguous views are explicit.
+   produce `strided_span[T]` views so non-contiguous views are explicit,
+   including generic non-type extents and member-backed arrays.
    Three-dimensional channel slices such as `image[:, :, c]` also produce
-   `strided_span[T]` views over interleaved channel data. Two-dimensional
+   `strided_span[T]` views over interleaved channel data, including generic
+   non-type extents and member-backed arrays. Two-dimensional
    patch rectangles such as `mat[y0:y1, x0:x1]` produce `strided_span2[T]`
    views with explicit row stride, and `strided_span2[T]` views are iterable in
    row-major order. Full-rank fixed-array slices such as `mat[:, :]` and
