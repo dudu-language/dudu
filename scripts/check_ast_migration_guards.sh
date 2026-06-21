@@ -48,6 +48,7 @@ forbidden=(
     "signature_return_type_text"
     "signature_text\\("
     "constructor_param_type_text"
+    "shape_text\\("
     "signature_param_ref"
     "signature_param_text"
     "NativeArgType"

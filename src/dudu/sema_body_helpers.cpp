@@ -58,10 +58,10 @@ void check_type_match(FunctionScope& scope, const TypeRef& expected_ref, const E
     if (!type_assignment_allowed(expected_ref, got_ref) &&
         !can_assign_ast(scope, expected_ref, expr, got_ref)) {
         if (!mismatch_label.empty()) {
-            const std::string expected = substitute_type_ref_text(expected_ref, {});
-            const std::string got = substitute_type_ref_text(got_ref, {});
-            sema_fail(location,
-                      std::string(mismatch_label) + ": expected " + expected + ", got " + got);
+            const std::string expected_display = substitute_type_ref_text(expected_ref, {});
+            const std::string got_display = substitute_type_ref_text(got_ref, {});
+            sema_fail(location, std::string(mismatch_label) + ": expected " + expected_display +
+                                    ", got " + got_display);
         }
         sema_fail(location, assignment_error(expected_ref, expr, got_ref));
     }
@@ -92,10 +92,11 @@ void check_type_ref_match(FunctionScope& scope, const TypeRef& expected, const E
         !assignment_type_allowed(expected, expr, got_ref) &&
         !can_assign_ast(scope, expected, expr, got_ref)) {
         if (!mismatch_label.empty()) {
-            const std::string expected_text = substitute_type_ref_text(expected, {});
-            const std::string got = substitute_type_ref_text(got_ref, {});
+            const std::string expected_display = substitute_type_ref_text(expected, {});
+            const std::string got_display = substitute_type_ref_text(got_ref, {});
             sema_fail(location,
-                      std::string(mismatch_label) + ": expected " + expected_text + ", got " + got);
+                      std::string(mismatch_label) + ": expected " + expected_display + ", got " +
+                          got_display);
         }
         sema_fail(location, assignment_error(expected, expr, got_ref));
     }
@@ -107,9 +108,10 @@ void check_array_literal_elements(FunctionScope& scope, const TypeRef& element_t
         const TypeRef got_ref = infer_expr_type_ast(scope, expr, &location);
         if (!type_assignment_allowed(element_type, got_ref) &&
             !can_assign_ast(scope, element_type, expr, got_ref)) {
-            const std::string expected_text = substitute_type_ref_text(element_type, {});
-            const std::string got = substitute_type_ref_text(got_ref, {});
-            sema_fail(location, "array literal element expects " + expected_text + ", got " + got);
+            const std::string expected_display = substitute_type_ref_text(element_type, {});
+            const std::string got_display = substitute_type_ref_text(got_ref, {});
+            sema_fail(location,
+                      "array literal element expects " + expected_display + ", got " + got_display);
         }
         return;
     }
@@ -125,7 +127,7 @@ EffectiveVarType effective_var_type(const Stmt& stmt, const ArrayShapeInference&
     return {.ref = stmt.type_ref};
 }
 
-std::string shape_text(const std::vector<size_t>& shape) {
+std::string shape_display(const std::vector<size_t>& shape) {
     std::ostringstream out;
     out << "[";
     for (size_t i = 0; i < shape.size(); ++i) {
@@ -153,8 +155,8 @@ void check_condition_type(FunctionScope& scope, const Stmt& stmt) {
             type_ref_is_name(signature_return_type_ref(*signature), "bool")) {
             return;
         }
-        const std::string got = substitute_type_ref_text(got_ref, {});
-        sema_fail(location, "condition must be bool, got " + got);
+        const std::string got_display = substitute_type_ref_text(got_ref, {});
+        sema_fail(location, "condition must be bool, got " + got_display);
     }
 }
 

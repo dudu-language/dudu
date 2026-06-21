@@ -288,13 +288,13 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
             if (actual.status == ArrayShapeStatus::EmptyLiteral &&
                 explicit_shape != std::vector<size_t>{0}) {
                 sema_fail(diagnostic_location(stmt.location, stmt.value_expr),
-                          "array literal shape mismatch: expected " + shape_text(explicit_shape) +
+                          "array literal shape mismatch: expected " + shape_display(explicit_shape) +
                               ", got [0]");
             }
             if (actual.status == ArrayShapeStatus::Inferred && actual.shape != explicit_shape) {
                 sema_fail(diagnostic_location(stmt.location, stmt.value_expr),
-                          "array literal shape mismatch: expected " + shape_text(explicit_shape) +
-                              ", got " + shape_text(actual.shape));
+                          "array literal shape mismatch: expected " + shape_display(explicit_shape) +
+                              ", got " + shape_display(actual.shape));
             }
         }
         const EffectiveVarType type = effective_var_type(stmt, inferred);

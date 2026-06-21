@@ -108,11 +108,11 @@ std::optional<TypeRef> direct_builtin_call_type_ref(const FunctionScope& scope, 
         for (size_t i = 1; i < expr.children.size(); ++i) {
             const TypeRef got_ref = infer_expr_type_ast(scope, expr.children[i], location);
             if (location != nullptr && !can_assign_ast(scope, first, expr.children[i], got_ref)) {
-                const std::string expected = type_ref_text(first);
-                const std::string got = type_ref_text(got_ref);
+                const std::string expected_display = type_ref_text(first);
+                const std::string got_display = type_ref_text(got_ref);
                 sema_expr_fail(*location, std::string(callee) + " argument " +
-                                              std::to_string(i + 1) + " expects " + expected +
-                                              ", got " + got);
+                                              std::to_string(i + 1) + " expects " +
+                                              expected_display + ", got " + got_display);
             }
         }
         return first;

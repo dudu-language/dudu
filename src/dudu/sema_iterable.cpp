@@ -97,9 +97,10 @@ void check_iterable_binding(const Symbols& symbols,
     if (!type_assignment_allowed(binding_type, *element_type) &&
         !type_assignment_allowed(resolve_alias_ref(symbols, binding_type),
                                  resolve_alias_ref(symbols, *element_type))) {
-        const std::string element = substitute_type_ref_text(*element_type, {});
-        const std::string binding_text = substitute_type_ref_text(binding_type, {});
-        throw CompileError(location, "loop binding expects " + binding_text + ", got " + element);
+        const std::string element_display = substitute_type_ref_text(*element_type, {});
+        const std::string binding_display = substitute_type_ref_text(binding_type, {});
+        throw CompileError(location,
+                           "loop binding expects " + binding_display + ", got " + element_display);
     }
 }
 

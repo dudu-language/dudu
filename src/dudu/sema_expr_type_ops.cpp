@@ -71,8 +71,8 @@ std::optional<TypeRef> unary_expr_type_ref(const FunctionScope& scope, const Exp
     const TypeRef got_ref = infer_expr_type_ast(scope, expr.children.front(), location);
     if (expr.op == "not") {
         if (location != nullptr && type_ref_known_non_auto(got_ref) && !type_ref_is_bool(got_ref)) {
-            const std::string got = substitute_type_ref_text(got_ref, {});
-            sema_expr_fail(*location, "not expects bool, got " + got);
+            const std::string got_display = substitute_type_ref_text(got_ref, {});
+            sema_expr_fail(*location, "not expects bool, got " + got_display);
         }
         return named_type_ref("bool", expr.location);
     }
@@ -82,8 +82,8 @@ std::optional<TypeRef> unary_expr_type_ref(const FunctionScope& scope, const Exp
     if (expr.op == "~") {
         if (location != nullptr && type_ref_known_non_auto(got_ref) &&
             !type_ref_is_integer(resolve_alias_ref(scope.symbols, got_ref))) {
-            const std::string got = substitute_type_ref_text(got_ref, {});
-            sema_expr_fail(*location, "~ expects integer, got " + got);
+            const std::string got_display = substitute_type_ref_text(got_ref, {});
+            sema_expr_fail(*location, "~ expects integer, got " + got_display);
         }
         return got_ref;
     }
@@ -92,8 +92,8 @@ std::optional<TypeRef> unary_expr_type_ref(const FunctionScope& scope, const Exp
             return got_ref.children.front();
         }
         if (location != nullptr && type_ref_known_non_auto(got_ref)) {
-            const std::string got = substitute_type_ref_text(got_ref, {});
-            sema_expr_fail(*location, "cannot dereference non-pointer: " + got);
+            const std::string got_display = substitute_type_ref_text(got_ref, {});
+            sema_expr_fail(*location, "cannot dereference non-pointer: " + got_display);
         }
         return std::nullopt;
     }
@@ -124,13 +124,13 @@ std::optional<TypeRef> binary_expr_type_ref(const FunctionScope& scope, const Ex
     if (expr.op == "and" || expr.op == "or") {
         if (location != nullptr && type_ref_known_non_auto(left_ref) &&
             !type_ref_is_bool(left_ref)) {
-            const std::string left = substitute_type_ref_text(left_ref, {});
-            sema_expr_fail(*location, expr.op + " expects bool, got " + left);
+            const std::string left_display = substitute_type_ref_text(left_ref, {});
+            sema_expr_fail(*location, expr.op + " expects bool, got " + left_display);
         }
         if (location != nullptr && type_ref_known_non_auto(right_ref) &&
             !type_ref_is_bool(right_ref)) {
-            const std::string right = substitute_type_ref_text(right_ref, {});
-            sema_expr_fail(*location, expr.op + " expects bool, got " + right);
+            const std::string right_display = substitute_type_ref_text(right_ref, {});
+            sema_expr_fail(*location, expr.op + " expects bool, got " + right_display);
         }
         return named_type_ref("bool", expr.location);
     }
@@ -152,11 +152,11 @@ std::optional<TypeRef> binary_expr_type_ref(const FunctionScope& scope, const Ex
                                                     expr.children[1], right_ref) &&
                            !comparison_rhs_allowed(scope.symbols, expr.op, left_ref,
                                                    expr.children[1], right_ref)) {
-                    const std::string right = substitute_type_ref_text(right_ref, {});
+                    const std::string right_display = substitute_type_ref_text(right_ref, {});
                     sema_expr_fail(*location,
                                    "operator " + expr.op + " expects " +
                                        type_ref_text(signature_param_type_ref(*signature, 0)) +
-                                       ", got " + right);
+                                       ", got " + right_display);
                 }
                 if (!type_ref_is_name(signature_return_type_ref(*signature), "bool")) {
                     sema_expr_fail(*location,
@@ -168,10 +168,11 @@ std::optional<TypeRef> binary_expr_type_ref(const FunctionScope& scope, const Ex
         if (location != nullptr && has_type_ref(left_ref) && has_type_ref(right_ref) &&
             !comparison_rhs_allowed(scope.symbols, expr.op, left_ref, expr.children[1],
                                     right_ref)) {
-            const std::string left = substitute_type_ref_text(left_ref, {});
-            const std::string right = substitute_type_ref_text(right_ref, {});
+            const std::string left_display = substitute_type_ref_text(left_ref, {});
+            const std::string right_display = substitute_type_ref_text(right_ref, {});
             sema_expr_fail(*location,
-                           "comparison " + expr.op + " expects " + left + ", got " + right);
+                           "comparison " + expr.op + " expects " + left_display + ", got " +
+                               right_display);
         }
         return named_type_ref("bool", expr.location);
     }
@@ -191,9 +192,11 @@ std::optional<TypeRef> binary_expr_type_ref(const FunctionScope& scope, const Ex
     }
     if (location != nullptr && has_type_ref(left_ref) && has_type_ref(right_ref) &&
         !binary_rhs_allowed(scope.symbols, expr.op, left_ref, expr.children[1], right_ref)) {
-        const std::string left = substitute_type_ref_text(left_ref, {});
-        const std::string right = substitute_type_ref_text(right_ref, {});
-        sema_expr_fail(*location, "operator " + expr.op + " expects " + left + ", got " + right);
+        const std::string left_display = substitute_type_ref_text(left_ref, {});
+        const std::string right_display = substitute_type_ref_text(right_ref, {});
+        sema_expr_fail(*location,
+                       "operator " + expr.op + " expects " + left_display + ", got " +
+                           right_display);
     }
     if (has_type_ref(left_ref)) {
         return left_ref;

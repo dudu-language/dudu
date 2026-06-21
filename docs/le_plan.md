@@ -997,6 +997,9 @@ push. They are not release packaging work.
    `Name` expressions, so constructor field names, member labels, and other
    expression metadata are not accidentally rewritten just because they share a
    spelling with a generic parameter.
+   Body and expression semantic diagnostics now name rendered types as
+   `display` values, and an unused `shape_text` helper was deleted and guarded
+   so normal sema code does not regain stale text-shaped helper names.
 
 3. OOP Surface Cleanup
 

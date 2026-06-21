@@ -26,7 +26,7 @@ void check_array_literal_elements(FunctionScope& scope, const TypeRef& element_t
                                   const Expr& expr, const SourceLocation& location);
 
 EffectiveVarType effective_var_type(const Stmt& stmt, const ArrayShapeInference& inferred);
-std::string shape_text(const std::vector<size_t>& shape);
+std::string shape_display(const std::vector<size_t>& shape);
 TypeRef const_reference_type_ref(TypeRef type);
 void check_condition_type(FunctionScope& scope, const Stmt& stmt);
 std::optional<TypeRef> infer_for_binding_type(FunctionScope& scope, const Stmt& stmt);
