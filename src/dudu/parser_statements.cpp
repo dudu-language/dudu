@@ -80,8 +80,8 @@ std::optional<size_t> find_top_level_token(std::span<const Token> tokens, size_t
     return std::nullopt;
 }
 
-std::optional<size_t> find_top_level_assignment_token(std::span<const Token> tokens, size_t begin,
-                                                      size_t end) {
+std::optional<size_t> find_assignment_operator_token(std::span<const Token> tokens, size_t begin,
+                                                     size_t end) {
     int bracket_depth = 0;
     int paren_depth = 0;
     int brace_depth = 0;
@@ -367,7 +367,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
     const std::optional<size_t> colon =
         find_top_level_token(tokens_, line_begin, end, TokenKind::Colon);
     const std::optional<size_t> assignment =
-        find_top_level_assignment_token(tokens_, line_begin, end);
+        find_assignment_operator_token(tokens_, line_begin, end);
     if (colon.has_value() && (!assignment.has_value() || *colon < *assignment)) {
         stmt.kind = StmtKind::VarDecl;
         stmt.name = declaration_name_from_piece(tokens_, line_begin, *colon);
