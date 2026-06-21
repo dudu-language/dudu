@@ -325,9 +325,9 @@ FunctionSignature substitute_bound_template_signature(FunctionSignature signatur
             params.push_back(substitute_type_ref(param_type, refs));
             continue;
         }
+        const std::string native_spelling = type_ref_text(param_type);
         params.push_back(
-            parse_type_text(replace_template_bindings(signature_param_type_text(signature, i),
-                                                      bindings, pack_bindings),
+            parse_type_text(replace_template_bindings(native_spelling, bindings, pack_bindings),
                             param_type.location));
     }
     set_signature_param_types(signature, std::move(params));
@@ -347,10 +347,11 @@ FunctionSignature substitute_bound_template_signature(FunctionSignature signatur
         set_signature_return_type(signature, substitute_type_ref(return_type, refs));
         return signature;
     }
+    const std::string native_spelling = type_ref_text(return_type);
     set_signature_return_type(
-        signature, parse_type_text(replace_template_bindings(signature_return_type_text(signature),
-                                                             bindings, pack_bindings),
-                                   return_type.location));
+        signature,
+        parse_type_text(replace_template_bindings(native_spelling, bindings, pack_bindings),
+                        return_type.location));
     return signature;
 }
 

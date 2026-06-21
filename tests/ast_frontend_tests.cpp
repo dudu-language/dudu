@@ -320,13 +320,13 @@ void test_builtin_method_signature_uses_type_ast() {
     assert(dudu::builtin_cpp_method_signature(
         symbols, dudu::parse_type_text("std::vector<std::string>"), "push_back", signature));
     assert(dudu::signature_param_count(signature) == 1);
-    assert(dudu::signature_param_type_text(signature, 0) == "std::string");
+    assert(dudu::type_ref_text(dudu::signature_param_type_ref(signature, 0)) == "std::string");
     assert(dudu::signature_return_type_ref(signature).name == "void");
 
     signature = {};
     assert(dudu::builtin_cpp_method_signature(
         symbols, dudu::parse_type_text("std::atomic<uint64_t>"), "load", signature));
-    assert(dudu::signature_return_type_text(signature) == "uint64_t");
+    assert(dudu::type_ref_text(dudu::signature_return_type_ref(signature)) == "uint64_t");
 }
 
 void test_native_header_types_split_cpp_templates() {
@@ -475,7 +475,7 @@ void test_explicit_native_template_keeps_unbound_pack_params() {
     assert(dudu::signature_param_type_ref(substituted, 0).kind == dudu::TypeKind::PackExpansion);
     assert(dudu::native_template_pack_placeholder(dudu::signature_param_type_ref(substituted, 0)) ==
            std::optional<std::string>{"Args"});
-    assert(dudu::signature_return_type_text(substituted) == "Box[Node]");
+    assert(dudu::type_ref_text(dudu::signature_return_type_ref(substituted)) == "Box[Node]");
 }
 
 void test_receiver_template_substitution_uses_type_ast() {

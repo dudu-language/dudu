@@ -245,7 +245,10 @@ factory signatures. Native C++ type-trait artifacts including
 boundary before structured substitution, and `basic_string[char]` /
 `basic_string[i8]` normalize to Dudu `str`. The migration guard,
 `probe_cpp_stdlib_algorithms.sh`, `test_codegen_shapes.sh`, and
-`test_fast.sh` pass for this milestone.
+`test_fast.sh` pass for this milestone. `FunctionSignature` no longer exposes
+string-returning parameter or return type helpers; callers use `TypeRef`
+accessors and render only at diagnostic/native display edges. The migration
+guard rejects reintroducing those public string helpers.
 
 ## Goal 6: Separate Module Outputs Without Re-Flattening
 

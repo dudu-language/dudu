@@ -153,9 +153,10 @@ std::optional<TypeRef> binary_expr_type_ref(const FunctionScope& scope, const Ex
                            !comparison_rhs_allowed(scope.symbols, expr.op, left_ref,
                                                    expr.children[1], right_ref)) {
                     const std::string right = substitute_type_ref_text(right_ref, {});
-                    sema_expr_fail(*location, "operator " + expr.op + " expects " +
-                                                  signature_param_type_text(*signature, 0) +
-                                                  ", got " + right);
+                    sema_expr_fail(*location,
+                                   "operator " + expr.op + " expects " +
+                                       type_ref_text(signature_param_type_ref(*signature, 0)) +
+                                       ", got " + right);
                 }
                 if (!type_ref_is_name(signature_return_type_ref(*signature), "bool")) {
                     sema_expr_fail(*location,

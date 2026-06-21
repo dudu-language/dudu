@@ -14,8 +14,6 @@ void set_signature_return_type(FunctionSignature& signature, TypeRef type);
 size_t signature_param_count(const FunctionSignature& signature);
 TypeRef signature_param_type_ref(const FunctionSignature& signature, size_t index);
 TypeRef signature_return_type_ref(const FunctionSignature& signature);
-std::string signature_param_type_text(const FunctionSignature& signature, size_t index);
-std::string signature_return_type_text(const FunctionSignature& signature);
 bool parse_function_type(const TypeRef& type, FunctionSignature& out);
 
 } // namespace dudu

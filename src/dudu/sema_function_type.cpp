@@ -59,14 +59,6 @@ TypeRef signature_return_type_ref(const FunctionSignature& signature) {
     return void_type_ref();
 }
 
-std::string signature_param_type_text(const FunctionSignature& signature, size_t index) {
-    return substitute_type_ref_text(signature_param_type_ref(signature, index), {});
-}
-
-std::string signature_return_type_text(const FunctionSignature& signature) {
-    return substitute_type_ref_text(signature_return_type_ref(signature), {});
-}
-
 std::string function_type(const FunctionSignature& signature) {
     std::ostringstream out;
     out << "fn(";
@@ -75,9 +67,9 @@ std::string function_type(const FunctionSignature& signature) {
         if (i > 0) {
             out << ", ";
         }
-        out << signature_param_type_text(signature, i);
+        out << type_ref_text(signature_param_type_ref(signature, i));
     }
-    out << ") -> " << signature_return_type_text(signature);
+    out << ") -> " << type_ref_text(signature_return_type_ref(signature));
     return out.str();
 }
 

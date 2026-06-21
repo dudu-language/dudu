@@ -2100,8 +2100,8 @@ push. They are not release packaging work.
    through structured accessors rather than treating the legacy string mirrors
    as the public contract.
    Native variadic pack matching now reads the final parameter through
-   `signature_param_type_text`; direct `FunctionSignature` mirror access in
-   production code is confined to `sema_function_type.cpp`.
+   structured `FunctionSignature` accessors; direct `FunctionSignature` mirror
+   access in production code is confined to `sema_function_type.cpp`.
    `NativeValueDecl` now carries a `TypeRef` beside the imported spelling.
    Header scanning, module constant imports, symbol collection, and LSP symbol
    detail use the structured type when available instead of reparsing the
@@ -2606,7 +2606,7 @@ push. They are not release packaging work.
    parameter to text and comparing against `"..."`; the migration guard rejects
    reintroducing that rendered check. Native template substitution also passes
    bare pack parameters through structurally instead of rendering them through
-   `signature_param_type_text`.
+   rendered signature parameter text.
    Native template placeholder discovery now walks structured `TypeRef` heads,
    values, and children only; it no longer scans raw `Unknown.text` for names
    such as `T`, so malformed native type text cannot create implicit template

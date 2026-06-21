@@ -130,7 +130,7 @@ TypeRef signature_param_ref(const FunctionSignature& signature, size_t index) {
 }
 
 std::string signature_param_text(const FunctionSignature& signature, size_t index) {
-    return signature_param_type_text(signature, index);
+    return type_ref_text(signature_param_type_ref(signature, index));
 }
 
 std::string signature_text(const std::string& callee, const FunctionSignature& signature) {
@@ -150,7 +150,7 @@ std::string signature_text(const std::string& callee, const FunctionSignature& s
     if (signature.min_params >= 0 && static_cast<size_t>(signature.min_params) < param_count) {
         out << "; min " << signature.min_params;
     }
-    out << ") -> " << signature_return_type_text(signature);
+    out << ") -> " << type_ref_text(signature_return_type_ref(signature));
     return out.str();
 }
 

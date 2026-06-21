@@ -148,7 +148,7 @@ std::string method_signature_label(std::string_view name, const FunctionSignatur
         }
         out << substitute_type_ref_text(signature_param_type_ref(signature, i), {});
     }
-    out << ") -> " << signature_return_type_text(signature);
+    out << ") -> " << type_ref_text(signature_return_type_ref(signature));
     return out.str();
 }
 
