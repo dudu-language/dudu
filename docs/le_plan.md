@@ -1903,7 +1903,9 @@ push. They are not release packaging work.
    explicit C++ escape boundary renders the result locally.
    Emitted local call-return inference no longer has an internal receiver-base
    string fallback that renders a type and peels brackets; it relies on parsed
-   `TypeRef` shape and `type_ref_head_name`.
+   `TypeRef` shape and `type_ref_head_name`. Frontend tests now assert emitted
+   local inference through returned `TypeRef` nodes instead of a test-only
+   string-returning helper.
    Receiver template argument extraction now accepts parsed `TypeRef` only; the
    unused string overload that reparsed rendered receiver types has been
    removed.
