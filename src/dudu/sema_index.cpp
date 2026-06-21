@@ -94,6 +94,18 @@ bool is_channel_slice_expr(const Expr& expr) {
            !is_slice_expr(expr.children[2]);
 }
 
+bool is_full_multidim_slice_expr(const Expr& expr) {
+    if (expr.kind != ExprKind::TupleLiteral || expr.children.size() < 2) {
+        return false;
+    }
+    for (const Expr& child : expr.children) {
+        if (!is_full_slice_expr(child)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 } // namespace
 
 TypeRef indexed_value_type_ref(const Symbols& symbols,
@@ -111,6 +123,12 @@ TypeRef indexed_type_ref_from_type(const Symbols& symbols, const SourceLocation&
                                    const TypeRef& raw_type, const Expr& index_expr,
                                    const std::string& label) {
     const TypeRef unwrapped_type_ref = unwrap_reference_and_const(raw_type);
+    if (is_full_multidim_slice_expr(index_expr)) {
+        const std::vector<size_t> shape = explicit_array_shape(unwrapped_type_ref);
+        if (shape.size() == index_expr.children.size()) {
+            return array_element_template_type_ref(location, unwrapped_type_ref, "span");
+        }
+    }
     if (is_channel_slice_expr(index_expr)) {
         const std::vector<size_t> shape = explicit_array_shape(unwrapped_type_ref);
         if (shape.size() == 3) {

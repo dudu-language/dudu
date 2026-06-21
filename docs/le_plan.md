@@ -991,14 +991,17 @@ push. They are not release packaging work.
    views such as `mat[row, :]`. Matrix column slices such as `mat[:, col]`
    produce `strided_span[T]` views so non-contiguous views are explicit.
    Three-dimensional channel slices such as `image[:, :, c]` also produce
-   `strided_span[T]` views over interleaved channel data.
+   `strided_span[T]` views over interleaved channel data. Full-rank fixed-array
+   slices such as `mat[:, :]` and `image[:, :, :]` produce contiguous `span[T]`
+   views over the whole backing storage.
    Dudu-native `@operator("[]")` read hooks and `@operator("[]=")` indexed
    assignment hooks work for library-style tensor wrappers, and indexed member
    paths such as `self.values[i]` type-check. One-dimensional fixed-array step
    slices such as `values[start:end:step]` produce `strided_span[T]` views.
-   This is enough to play with fixed arrays, row/column views, channel views,
-   basic step slices, and library indexing hooks, but it is not full NumPy-style
-   indexing yet. General multidimensional slice combinations, advanced
+   This is enough to play with fixed arrays, row/column/full-storage views,
+   channel views, basic step slices, and library indexing hooks, but it is not
+   full NumPy-style indexing yet. General multidimensional slice rectangles,
+   advanced
    gather/scatter indexing, broadcasting rules, shape metadata for library
    tensors, and GPU-backed tensor-library hooks remain.
    Same-width Dudu-native `xyzw`, `rgba`, and `stpq` read swizzles are

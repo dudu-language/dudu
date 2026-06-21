@@ -53,13 +53,18 @@ std::string lower_index_expr(const Expr& expr, const std::vector<std::string>& a
                 expr_missing(*slice->step)
                     ? "1"
                     : lower_expr(*slice->step, aliases, locals, local_type_refs, symbols, options);
-            return "dudu::StridedSpan{&(" + out + ")[" + start + "], ((" + end + ") - (" +
-                   start + ") + (" + step + ") - 1) / (" + step + "), " + step + "}";
+            return "dudu::StridedSpan{&(" + out + ")[" + start + "], ((" + end + ") - (" + start +
+                   ") + (" + step + ") - 1) / (" + step + "), " + step + "}";
         }
         return "std::span(&(" + out + ")[" + start + "], (" + end + ") - (" + start + "))";
     }
 
     if (expr.children[1].kind == ExprKind::TupleLiteral) {
+        if (const auto full_slice =
+                lower_full_multidim_slice_expr(expr.children[0], expr.children[1], aliases, locals,
+                                               local_type_refs, symbols, options)) {
+            return *full_slice;
+        }
         if (const auto channel_slice =
                 lower_channel_slice_expr(expr.children[0], expr.children[1], aliases, locals,
                                          local_type_refs, symbols, options)) {
@@ -76,8 +81,8 @@ std::string lower_index_expr(const Expr& expr, const std::vector<std::string>& a
             return *slice;
         }
         for (const Expr& index : expr.children[1].children) {
-            out += "[" + lower_expr(index, aliases, locals, local_type_refs, symbols, options) +
-                   "]";
+            out +=
+                "[" + lower_expr(index, aliases, locals, local_type_refs, symbols, options) + "]";
         }
         return out;
     }

@@ -7,7 +7,7 @@
 #include "dudu/sema_context.hpp"
 #include "dudu/sema_function_type.hpp"
 #include "dudu/sema_generics.hpp"
-#include "dudu/sema_index_type_ref.hpp"
+#include "dudu/sema_index.hpp"
 #include "dudu/sema_native.hpp"
 #include "dudu/sema_scan.hpp"
 #include "dudu/type_compat.hpp"
@@ -43,21 +43,15 @@ std::string receiver_base_type(const TypeRef& type) {
     return type_ref_head_name(type);
 }
 
-size_t index_count(const Expr& expr) {
-    if (expr.kind == ExprKind::TupleLiteral && !expr.children.empty()) {
-        return expr.children.size();
-    }
-    return 1;
-}
-
-TypeRef indexed_local_type_ref(const TypeRef& receiver_type, const Expr& index_expr) {
-    const Symbols symbols;
+TypeRef indexed_local_type_ref(const TypeRef& receiver_type, const Expr& index_expr,
+                               const Symbols* symbols) {
+    const Symbols empty_symbols;
+    const Symbols& active_symbols = symbols == nullptr ? empty_symbols : *symbols;
     const std::string label = type_ref_head_name(receiver_type).empty()
                                   ? std::string{"indexed value"}
                                   : type_ref_head_name(receiver_type);
-    const auto indexed = indexed_type_ref_from_type_ref_with_count(
-        symbols, index_expr.location, receiver_type, index_count(index_expr), false, false, label);
-    return indexed ? *indexed : TypeRef{};
+    return indexed_type_ref_from_type(active_symbols, index_expr.location, receiver_type,
+                                      index_expr, label);
 }
 
 TypeRef infer_call_type_ref(const std::string& callee,
@@ -210,7 +204,7 @@ TypeRef infer_emitted_local_type_ref(const Expr& expr,
                 const TypeRef local_type = emitted_local_type_ref(
                     local_type_refs, expr.children[0].name, expr.children[0].location);
                 if (const TypeRef indexed_type =
-                        indexed_local_type_ref(local_type, expr.children[1]);
+                        indexed_local_type_ref(local_type, expr.children[1], symbols);
                     has_type_ref(indexed_type)) {
                     return indexed_type;
                 }
@@ -219,7 +213,7 @@ TypeRef infer_emitted_local_type_ref(const Expr& expr,
                 expr.children[0], local_type_refs, function_returns, symbols);
             if (has_type_ref(receiver_type)) {
                 if (const TypeRef indexed_type =
-                        indexed_local_type_ref(receiver_type, expr.children[1]);
+                        indexed_local_type_ref(receiver_type, expr.children[1], symbols);
                     has_type_ref(indexed_type)) {
                     return indexed_type;
                 }
