@@ -963,6 +963,10 @@ push. They are not release packaging work.
    utility API. Statement assignment detection stays in the token parser, and
    the AST migration guard rejects reintroducing those old string scanner
    helpers.
+   The remaining top-level comma/colon/member-path string splitting used by
+   `cpp(...)` inference has been renamed behind explicit `cpp_escape` helper
+   names, so normal sema/codegen cannot accidentally depend on generic
+   string-scanner APIs.
 
 3. OOP Surface Cleanup
 

@@ -42,7 +42,7 @@ namespace dudu {
 
 [[noreturn]] void sema_expr_fail(const SourceLocation& location, const std::string& message);
 
-bool is_member_path(const std::string& path);
+bool is_cpp_escape_member_path_string(const std::string& path);
 
 TypeRef infer_cpp_escape_expr_ref(const FunctionScope& scope, std::string expr,
                                   const SourceLocation* location = nullptr);

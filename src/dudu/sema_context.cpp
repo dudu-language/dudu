@@ -226,7 +226,7 @@ TypeRef resolve_alias_ref(const Symbols& symbols, TypeRef type) {
     return resolve_alias_ref_impl(symbols, std::move(type), seen);
 }
 
-std::vector<std::string> split_top_level(std::string text) {
+std::vector<std::string> split_cpp_escape_top_level(std::string text) {
     std::vector<std::string> out;
     int depth = 0;
     char quote = '\0';
@@ -261,7 +261,7 @@ std::vector<std::string> split_top_level(std::string text) {
     return out;
 }
 
-size_t find_top_level_char(const std::string& text, char wanted) {
+size_t find_cpp_escape_top_level_char(const std::string& text, char wanted) {
     int depth = 0;
     char quote = '\0';
     bool escaped = false;

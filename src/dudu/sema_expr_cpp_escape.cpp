@@ -196,8 +196,9 @@ TypeRef infer_cpp_escape_expr_ref(const FunctionScope& scope, std::string expr,
         return named_type_ref("set", parsed_expr.location);
     }
     if (starts_with(expr, "{") && expr.back() == '}') {
-        for (const std::string& entry : split_top_level(expr.substr(1, expr.size() - 2))) {
-            if (find_top_level_char(entry, ':') != std::string::npos) {
+        for (const std::string& entry :
+             split_cpp_escape_top_level(expr.substr(1, expr.size() - 2))) {
+            if (find_cpp_escape_top_level_char(entry, ':') != std::string::npos) {
                 return named_type_ref("dict", parsed_expr.location);
             }
         }
@@ -315,7 +316,7 @@ TypeRef infer_cpp_escape_expr_ref(const FunctionScope& scope, std::string expr,
             }
         }
         const size_t method_dot = callee.rfind('.');
-        if (method_dot != std::string::npos && is_member_path(callee)) {
+        if (method_dot != std::string::npos && is_cpp_escape_member_path_string(callee)) {
             const std::string receiver = trim(callee.substr(0, method_dot));
             const std::string method_name = trim(callee.substr(method_dot + 1));
             FunctionSignature signature;
@@ -389,7 +390,7 @@ TypeRef infer_cpp_escape_expr_ref(const FunctionScope& scope, std::string expr,
     if (parsed_expr.kind == ExprKind::TupleLiteral) {
         return infer_expr_type_ast(scope, parsed_expr, location);
     }
-    const std::vector<std::string> tuple_parts = split_top_level(expr);
+    const std::vector<std::string> tuple_parts = split_cpp_escape_top_level(expr);
     if (tuple_parts.size() > 1) {
         TypeRef tuple;
         tuple.kind = TypeKind::Template;
@@ -431,7 +432,7 @@ TypeRef infer_cpp_escape_expr_ref(const FunctionScope& scope, std::string expr,
         }
     }
     const size_t dot = expr.find('.');
-    if (dot != std::string::npos && is_member_path(expr)) {
+    if (dot != std::string::npos && is_cpp_escape_member_path_string(expr)) {
         return cpp_escape_member_path_type_ref(scope, location, expr);
     }
     if (const auto type = infer_parsed_name_escape_ref(scope, parsed_expr, location)) {

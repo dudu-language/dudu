@@ -205,11 +205,11 @@ TypeRef member_expr_type_ref(const Symbols& symbols,
     return {};
 }
 
-bool is_member_path(const std::string& path) {
+bool is_cpp_escape_member_path_string(const std::string& path) {
     if (path.find('.') == std::string::npos) {
         return false;
     }
-    for (const std::string& part : split_top_level(path)) {
+    for (const std::string& part : split_cpp_escape_top_level(path)) {
         if (part != path) {
             return false;
         }

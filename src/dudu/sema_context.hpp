@@ -45,8 +45,8 @@ std::optional<std::pair<std::string, SourceLocation>> unknown_type_ref(const Sym
 void check_known_type_ref(const Symbols& symbols, const SourceLocation& location,
                           const TypeRef& type, const std::string& message);
 TypeRef resolve_alias_ref(const Symbols& symbols, TypeRef type);
-std::vector<std::string> split_top_level(std::string text);
-size_t find_top_level_char(const std::string& text, char wanted);
+std::vector<std::string> split_cpp_escape_top_level(std::string text);
+size_t find_cpp_escape_top_level_char(const std::string& text, char wanted);
 Symbols collect_symbols(const ModuleAst& module);
 void check_declarations(const ModuleAst& module, const Symbols& symbols);
 
