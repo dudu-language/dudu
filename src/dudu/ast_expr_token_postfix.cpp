@@ -370,7 +370,6 @@ Expr ExprTokenParser::parse_pointer_cast_call() {
         ++cursor_;
     }
     const size_t type_end = cursor_;
-    std::string callee_text = text_between(begin, type_end);
     if (!match(TokenKind::LParen)) {
         Expr expr = make_node(ExprKind::Unary, begin, cursor_);
         expr.op = "*";
@@ -380,29 +379,11 @@ Expr ExprTokenParser::parse_pointer_cast_call() {
     match(TokenKind::RParen);
 
     Expr callee = make_node(ExprKind::Name, begin, type_end);
-    callee.name = callee_text;
+    callee.name = "*";
     Expr call = make_node(ExprKind::Call, begin, cursor_);
     call.callee.push_back(std::move(callee));
     call.children = std::move(args);
-
-    const std::string type_text = text_between(type_begin, type_end);
     call.type_ref = parse_type_span(type_begin, type_end);
-    const size_t bracket = type_text.find('[');
-    if (bracket != std::string::npos && type_text.ends_with("]")) {
-        size_t bracket_token = type_end;
-        for (size_t i = type_begin; i < type_end; ++i) {
-            if (tokens_[i].kind == TokenKind::LBracket) {
-                bracket_token = i;
-                break;
-            }
-        }
-        const size_t args_begin = bracket_token + 1;
-        const size_t args_end = type_end - 1;
-        call.kind = ExprKind::TemplateCall;
-        call.callee.front().name = "*" + trim_string(text_between(type_begin, bracket_token));
-        call.template_args.push_back(parse_expr_span(args_begin, args_end));
-        call.template_type_args = parse_type_list_span(args_begin, args_end);
-    }
     return call;
 }
 

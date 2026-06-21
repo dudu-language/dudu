@@ -1340,30 +1340,31 @@ void test_dereference_postfix_expression_shape() {
     const dudu::Expr cast = dudu::parse_expr_text("*struct State(user_data)");
     assert(cast.kind == dudu::ExprKind::Call);
     assert(cast.name.empty());
-    assert(dudu::direct_callee_name(cast) == "*struct State");
+    assert(dudu::direct_callee_name(cast) == "*");
     assert(dudu::type_ref_head_name(cast.type_ref) == "struct State");
+    assert(cast.template_args.empty());
+    assert(cast.template_type_args.empty());
 
     const dudu::Expr template_cast = dudu::parse_expr_text("*list[MissingType](ptr)");
-    assert(template_cast.kind == dudu::ExprKind::TemplateCall);
+    assert(template_cast.kind == dudu::ExprKind::Call);
     assert(template_cast.name.empty());
-    assert(dudu::direct_callee_name(template_cast) == "*list");
+    assert(dudu::direct_callee_name(template_cast) == "*");
     assert(template_cast.type_ref.kind == dudu::TypeKind::Template);
     assert(template_cast.type_ref.name == "list");
     assert(template_cast.type_ref.children.size() == 1);
     assert(template_cast.type_ref.children[0].name == "MissingType");
-    assert(template_cast.template_type_args.size() == 1);
+    assert(template_cast.template_args.empty());
+    assert(template_cast.template_type_args.empty());
 
     const dudu::Expr qualified_template_cast = dudu::parse_expr_text("*std.vector[i32](raw_data)");
-    assert(qualified_template_cast.kind == dudu::ExprKind::TemplateCall);
-    assert(dudu::direct_callee_name(qualified_template_cast) == "*std.vector");
+    assert(qualified_template_cast.kind == dudu::ExprKind::Call);
+    assert(dudu::direct_callee_name(qualified_template_cast) == "*");
     assert(qualified_template_cast.type_ref.kind == dudu::TypeKind::Template);
     assert(qualified_template_cast.type_ref.name == "std.vector");
     assert(qualified_template_cast.type_ref.children.size() == 1);
-    assert(qualified_template_cast.template_args.size() == 1);
-    assert(qualified_template_cast.template_args[0].kind == dudu::ExprKind::Name);
-    assert(qualified_template_cast.template_args[0].name == "i32");
-    assert(qualified_template_cast.template_type_args.size() == 1);
-    assert(dudu::substitute_type_ref_text(qualified_template_cast.template_type_args[0], {}) ==
+    assert(qualified_template_cast.template_args.empty());
+    assert(qualified_template_cast.template_type_args.empty());
+    assert(dudu::substitute_type_ref_text(qualified_template_cast.type_ref.children[0], {}) ==
            "i32");
 }
 

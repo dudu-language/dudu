@@ -73,6 +73,8 @@ forbidden=(
     "template_method_name"
     "decorator_first_arg_text"
     "decorator_arg_list_text"
+    "callee_text = text_between"
+    "type_text\\.find"
 )
 
 for pattern in "${forbidden[@]}"; do

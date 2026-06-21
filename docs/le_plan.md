@@ -1003,6 +1003,9 @@ push. They are not release packaging work.
    Assignment, function-call, enum-constructor, and member-path diagnostics now
    follow the same `display` naming, with a guard against reintroducing
    receiver-type `text` variables in normal semantic code.
+   Pointer-cast parsing now stores the target as a parsed `TypeRef` on a normal
+   call expression with a `*` operation marker; it no longer manufactures
+   fake callee strings such as `*list[i32]` from source spans.
 
 3. OOP Surface Cleanup
 
