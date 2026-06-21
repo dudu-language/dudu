@@ -45,6 +45,18 @@ std::string strip_forwarding_suffix(std::string type) {
 bool bind_template_type_ref(const TypeRef& expected, const TypeRef& got,
                             NativeTemplateBindings& bindings);
 
+std::optional<std::string> native_template_pack_placeholder_spelling(std::string type) {
+    type = strip_forwarding_suffix(std::move(type));
+    if (type.ends_with("...")) {
+        type.erase(type.size() - 3);
+        type = trim_copy(type);
+    }
+    if (native_template_placeholder(type)) {
+        return type;
+    }
+    return std::nullopt;
+}
+
 bool bind_template_pack_child(const TypeRef& expected, const std::vector<TypeRef>& got,
                               NativeTemplateBindings& bindings) {
     if (expected.kind != TypeKind::PackExpansion || expected.children.size() != 1) {
@@ -140,24 +152,12 @@ bool native_template_placeholder(const std::string& type) {
            std::isupper(static_cast<unsigned char>(type[1])) != 0;
 }
 
-std::optional<std::string> native_template_pack_placeholder(std::string type) {
-    type = strip_forwarding_suffix(std::move(type));
-    if (type.ends_with("...")) {
-        type.erase(type.size() - 3);
-        type = trim_copy(type);
-    }
-    if (native_template_placeholder(type)) {
-        return type;
-    }
-    return std::nullopt;
-}
-
 std::optional<std::string> native_template_pack_placeholder(const TypeRef& type) {
     if (type.kind == TypeKind::PackExpansion && type.children.size() == 1) {
         return native_template_pack_placeholder(type.children.front());
     }
     if (type.kind == TypeKind::Named) {
-        return native_template_pack_placeholder(type.name);
+        return native_template_pack_placeholder_spelling(type.name);
     }
     if (type.kind == TypeKind::Template &&
         (type.name == "__decay_and_strip" || type.name == "std.remove_reference" ||
@@ -173,7 +173,7 @@ std::optional<std::string> native_template_pack_placeholder(const TypeRef& type)
         return native_template_pack_placeholder(type.children.front());
     }
     if (const std::optional<std::string> placeholder =
-            native_template_pack_placeholder(type_ref_head_name(type))) {
+            native_template_pack_placeholder_spelling(type_ref_head_name(type))) {
         return placeholder;
     }
     return std::nullopt;

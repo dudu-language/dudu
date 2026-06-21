@@ -43,6 +43,7 @@ forbidden=(
     "native_template_call_base"
     "native_template_type_refs"
     "native_template_binding_type_ref"
+    "native_template_pack_placeholder\\(std::string"
     "bases\\.insert\\(type_ref_text"
     "native_function_key"
     "method_key\\("

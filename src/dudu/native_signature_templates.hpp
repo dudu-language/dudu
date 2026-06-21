@@ -11,7 +11,6 @@ namespace dudu {
 using NativeTemplateBindings = std::map<std::string, TypeRef>;
 
 bool native_template_placeholder(const std::string& type);
-std::optional<std::string> native_template_pack_placeholder(std::string type);
 std::optional<std::string> native_template_pack_placeholder(const TypeRef& type);
 bool bind_native_template_type_ast(const TypeRef& expected, const TypeRef& got,
                                    NativeTemplateBindings& bindings);

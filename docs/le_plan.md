@@ -2495,7 +2495,9 @@ push. They are not release packaging work.
    Bound native template substitution is now per-field rather than
    all-or-nothing: structured parameters and returns stay on `TypeRef`
    substitution even when a different field still needs native artifact
-   fallback text.
+   fallback text. Native template pack-placeholder detection exposes only the
+   parsed `TypeRef` API outside its implementation file; the string spelling
+   helper is private to the native-template boundary.
    Explicit cast assignment compatibility now compares the parsed call target
    as a normalized `TypeRef` instead of rendering the expected type and
    comparing it to callee spelling.
