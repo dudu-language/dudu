@@ -119,6 +119,12 @@ if rg -n "std::string text;" "$repo_root/src/dudu/ast.hpp"; then
     exit 1
 fi
 
+if rg -n "std::function|#include <functional>" "$repo_root/src/dudu/ast.hpp" \
+    "$repo_root/src/dudu/ast.cpp"; then
+    echo "core AST traversal must use template visitors, not std::function callback wrappers" >&2
+    exit 1
+fi
+
 if rg -n "\\braw_type\\b|\\braw_receiver_type\\b|\\braw_native_alias\\b" \
     "$repo_root/src/dudu/sema_index.cpp" "$repo_root/src/dudu/sema_index_type_ref.cpp" \
     "$repo_root/src/dudu/sema_index_type_ref.hpp"; then
