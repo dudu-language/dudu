@@ -164,7 +164,7 @@ std::optional<ExprPath> call_callee_path(const Expr& expr) {
     return std::nullopt;
 }
 
-std::string call_callee_text(const Expr& expr) {
+std::string call_callee_display(const Expr& expr) {
     const std::optional<ExprPath> path = call_callee_path(expr);
     return path ? render_expr_path(*path) : "";
 }
@@ -173,7 +173,7 @@ std::string direct_callee_name(const Expr& expr) {
     if (expr.kind != ExprKind::Call && expr.kind != ExprKind::TemplateCall) {
         return {};
     }
-    return call_callee_text(expr);
+    return call_callee_display(expr);
 }
 
 std::string join_display_exprs(const std::vector<Expr>& exprs, std::string_view separator) {
@@ -208,7 +208,7 @@ std::string display_template_args(const Expr& expr) {
 }
 
 std::string display_call_expr(const Expr& expr) {
-    std::string callee = call_callee_text(expr);
+    std::string callee = call_callee_display(expr);
     if (callee.empty() && !expr.callee.empty()) {
         callee = display_expr(expr.callee.front());
     }
@@ -236,7 +236,7 @@ std::string display_expr(const Expr& expr) {
     case ExprKind::Call:
         return display_call_expr(expr);
     case ExprKind::TemplateCall:
-        return call_callee_text(expr) + "[" + display_template_args(expr) + "](" +
+        return call_callee_display(expr) + "[" + display_template_args(expr) + "](" +
                join_display_exprs(expr.children, ", ") + ")";
     case ExprKind::Member:
         return expr.children.size() == 1 ? display_expr(expr.children.front()) + "." + expr.name

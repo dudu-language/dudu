@@ -1006,6 +1006,8 @@ push. They are not release packaging work.
    Pointer-cast parsing now stores the target as a parsed `TypeRef` on a normal
    call expression with a `*` operation marker; it no longer manufactures
    fake callee strings such as `*list[i32]` from source spans.
+   The remaining internal AST callee renderer is named as display-only, and the
+   migration guard rejects the old `call_callee_text` helper name.
 
 3. OOP Surface Cleanup
 
