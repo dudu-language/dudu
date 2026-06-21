@@ -9,7 +9,6 @@
 #include <algorithm>
 #include <cctype>
 #include <filesystem>
-#include <functional>
 #include <optional>
 #include <sstream>
 
@@ -98,7 +97,9 @@ std::optional<std::string> ast_symbol_at_impl(const Document& doc, const Json* p
         }
         set_if_hit(type_ref_text(type), type.location);
     };
-    const auto visit_type_tree = [&](const TypeRef& type) { visit_type_ref_tree(type, visit_type); };
+    const auto visit_type_tree = [&](const TypeRef& type) {
+        visit_type_ref_tree(type, visit_type);
+    };
     const auto visit_expr = [&](const Expr& expr) {
         if (expr.kind == ExprKind::Name || expr.kind == ExprKind::Member) {
             std::string name = expr.name;
@@ -110,17 +111,14 @@ std::optional<std::string> ast_symbol_at_impl(const Document& doc, const Json* p
             set_if_hit(name, expr_name_location(expr));
         }
     };
-    const std::function<void(const std::vector<Stmt>&)> visit_stmts =
-        [&](const std::vector<Stmt>& statements) {
-            for (const Stmt& stmt : statements) {
-                visit_stmt_binding_names(stmt, set_if_hit);
-                visit_type_tree(stmt.type_ref);
-                visit_stmt_expressions(stmt, [&](const Expr& expr) {
-                    visit_lsp_expr_tree(expr, visit_expr, visit_type);
-                });
-                visit_stmts(stmt.children);
-            }
-        };
+    const auto visit_stmts = [&](const std::vector<Stmt>& statements) {
+        visit_lsp_stmt_tree(statements, [&](const Stmt& stmt) {
+            visit_stmt_binding_names(stmt, set_if_hit);
+            visit_type_tree(stmt.type_ref);
+            visit_stmt_expressions(
+                stmt, [&](const Expr& expr) { visit_lsp_expr_tree(expr, visit_expr, visit_type); });
+        });
+    };
     try {
         const ModuleAst module = parse_source(doc.text, doc.path);
         for (const ImportDecl& import : module.imports) {
@@ -219,15 +217,12 @@ std::optional<ExprPath> ast_expr_path_at_impl(const Document& doc, const Json* p
             return;
         }
     };
-    const std::function<void(const std::vector<Stmt>&)> visit_stmts =
-        [&](const std::vector<Stmt>& statements) {
-            for (const Stmt& stmt : statements) {
-                visit_stmt_expressions(stmt, [&](const Expr& expr) {
-                    visit_lsp_expr_tree(expr, visit_expr, visit_type);
-                });
-                visit_stmts(stmt.children);
-            }
-        };
+    const auto visit_stmts = [&](const std::vector<Stmt>& statements) {
+        visit_lsp_stmt_tree(statements, [&](const Stmt& stmt) {
+            visit_stmt_expressions(
+                stmt, [&](const Expr& expr) { visit_lsp_expr_tree(expr, visit_expr, visit_type); });
+        });
+    };
     try {
         const ModuleAst module = parse_source(doc.text, doc.path);
         for (const ConstDecl& constant : module.constants) {

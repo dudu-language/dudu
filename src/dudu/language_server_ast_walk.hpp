@@ -47,6 +47,14 @@ void visit_lsp_expr_tree(const Expr& expr, VisitExpr visit_expr, VisitType visit
     detail::visit_expr_tree_impl(expr, visit_expr, visit_type);
 }
 
+template <typename Visit>
+void visit_lsp_stmt_tree(const std::vector<Stmt>& statements, Visit visit) {
+    for (const Stmt& stmt : statements) {
+        visit(stmt);
+        visit_lsp_stmt_tree(stmt.children, visit);
+    }
+}
+
 template <typename Add> void visit_stmt_binding_names(const Stmt& stmt, Add add) {
     if ((stmt.kind == StmtKind::VarDecl || stmt.kind == StmtKind::For ||
          stmt.kind == StmtKind::Except) &&

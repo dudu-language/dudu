@@ -1,11 +1,9 @@
-#include "dudu/language_server_navigation.hpp"
-
 #include "dudu/ast_expr.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/language_server_ast_walk.hpp"
+#include "dudu/language_server_navigation.hpp"
 #include "dudu/parser.hpp"
 
-#include <functional>
 #include <optional>
 #include <set>
 #include <utility>
@@ -38,10 +36,10 @@ std::vector<ReferenceLocation> references_in(const Document& doc, const std::str
         }
         add_matched(name, location);
     };
-    const auto visit_type = [&](const TypeRef& type) {
-        add(type_ref_text(type), type.location);
+    const auto visit_type = [&](const TypeRef& type) { add(type_ref_text(type), type.location); };
+    const auto visit_type_tree = [&](const TypeRef& type) {
+        visit_type_ref_tree(type, visit_type);
     };
-    const auto visit_type_tree = [&](const TypeRef& type) { visit_type_ref_tree(type, visit_type); };
     const auto visit_expr = [&](const Expr& expr) {
         if (expr.kind == ExprKind::Name || expr.kind == ExprKind::Member) {
             add(expr.name, expr_name_location(expr));
@@ -53,17 +51,14 @@ std::vector<ReferenceLocation> references_in(const Document& doc, const std::str
             }
         }
     };
-    const std::function<void(const std::vector<Stmt>&)> visit_stmts =
-        [&](const std::vector<Stmt>& statements) {
-            for (const Stmt& stmt : statements) {
-                visit_stmt_binding_names(stmt, add);
-                visit_type_tree(stmt.type_ref);
-                visit_stmt_expressions(stmt, [&](const Expr& expr) {
-                    visit_lsp_expr_tree(expr, visit_expr, visit_type);
-                });
-                visit_stmts(stmt.children);
-            }
-        };
+    const auto visit_stmts = [&](const std::vector<Stmt>& statements) {
+        visit_lsp_stmt_tree(statements, [&](const Stmt& stmt) {
+            visit_stmt_binding_names(stmt, add);
+            visit_type_tree(stmt.type_ref);
+            visit_stmt_expressions(
+                stmt, [&](const Expr& expr) { visit_lsp_expr_tree(expr, visit_expr, visit_type); });
+        });
+    };
     try {
         const ModuleAst module = parse_source(doc.text, doc.path);
         for (const ImportDecl& import : module.imports) {

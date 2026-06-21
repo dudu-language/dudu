@@ -1841,8 +1841,8 @@ push. They are not release packaging work.
    callback adapter to recurse into block checking; the API now takes an
    explicit typed block-check context, and the migration guard rejects the old
    callback wrapper name. LSP reference and navigation code now share AST
-   type/expression traversal helpers instead of carrying duplicated recursive
-   walker lambdas in each feature.
+   type/expression/statement traversal helpers instead of carrying duplicated
+   recursive walker lambdas in each feature.
 
 19. Polish Unsupported Syntax Diagnostics
 
