@@ -97,7 +97,7 @@ explicit_template_type_ref_bindings(const std::vector<std::string>& names,
     return out;
 }
 
-std::string join_type_refs(const std::vector<TypeRef>& types) {
+std::string join_native_type_ref_spellings(const std::vector<TypeRef>& types) {
     std::string out;
     for (size_t i = 0; i < types.size(); ++i) {
         if (i > 0) {
@@ -117,9 +117,9 @@ std::string replace_all(std::string text, const std::string& needle, const std::
     return text;
 }
 
-std::string replace_pack_binding(std::string type, const std::string& name,
-                                 const std::vector<TypeRef>& args) {
-    const std::string joined = join_type_refs(args);
+std::string replace_native_pack_spelling_binding(std::string type, const std::string& name,
+                                                 const std::vector<TypeRef>& args) {
+    const std::string joined = join_native_type_ref_spellings(args);
     type =
         replace_all(std::move(type), "typename __decay_and_strip<" + name + ">::__type...", joined);
     type =
@@ -171,15 +171,25 @@ std::string collapse_decay_and_strip(std::string type) {
     return type;
 }
 
-std::string replace_template_bindings(std::string type, const NativeTemplateBindings& bindings,
-                                      const NativePackBindingMap& pack_bindings) {
+std::string replace_native_template_spelling_bindings(
+    std::string type, const NativeTemplateBindings& bindings,
+    const NativePackBindingMap& pack_bindings) {
     for (const auto& [name, args] : pack_bindings) {
-        type = replace_pack_binding(std::move(type), name, args);
+        type = replace_native_pack_spelling_binding(std::move(type), name, args);
     }
     for (const auto& [name, arg] : bindings) {
         type = replace_type_identifier(std::move(type), name, substitute_type_ref_text(arg, {}));
     }
     return collapse_decay_and_strip(std::move(type));
+}
+
+TypeRef substitute_native_spelling_type_ref(const TypeRef& type,
+                                            const NativeTemplateBindings& bindings,
+                                            const NativePackBindingMap& pack_bindings) {
+    const std::string native_spelling = type_ref_text(type);
+    return parse_type_text(
+        replace_native_template_spelling_bindings(native_spelling, bindings, pack_bindings),
+        type.location);
 }
 
 TypeRef require_signature_type_ref(const TypeRef& type, std::string_view context) {
@@ -325,10 +335,7 @@ FunctionSignature substitute_bound_template_signature(FunctionSignature signatur
             params.push_back(substitute_type_ref(param_type, refs));
             continue;
         }
-        const std::string native_spelling = type_ref_text(param_type);
-        params.push_back(
-            parse_type_text(replace_template_bindings(native_spelling, bindings, pack_bindings),
-                            param_type.location));
+        params.push_back(substitute_native_spelling_type_ref(param_type, bindings, pack_bindings));
     }
     set_signature_param_types(signature, std::move(params));
 
@@ -347,11 +354,8 @@ FunctionSignature substitute_bound_template_signature(FunctionSignature signatur
         set_signature_return_type(signature, substitute_type_ref(return_type, refs));
         return signature;
     }
-    const std::string native_spelling = type_ref_text(return_type);
     set_signature_return_type(
-        signature,
-        parse_type_text(replace_template_bindings(native_spelling, bindings, pack_bindings),
-                        return_type.location));
+        signature, substitute_native_spelling_type_ref(return_type, bindings, pack_bindings));
     return signature;
 }
 

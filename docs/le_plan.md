@@ -970,6 +970,11 @@ push. They are not release packaging work.
    Index sema helper parameters now use receiver-type terminology for structured
    `TypeRef` values instead of `raw_type` names, and the guard rejects moving
    those misleading names back into the normal index sema path.
+   Bound native signature substitution now keeps its render/reparse fallback
+   behind explicitly named native-spelling helpers. Structured `TypeRef`
+   substitution remains the normal path, while messy C++ template artifacts
+   such as pack spellings and `__decay_and_strip` are quarantined at the native
+   boundary and guarded against generic helper names returning.
 
 3. OOP Surface Cleanup
 
