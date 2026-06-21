@@ -1011,6 +1011,10 @@ push. They are not release packaging work.
    Native overload and assignment compatibility mismatch helpers now use
    display-only naming at the diagnostic edge, and the guard rejects the old
    text-shaped helper names.
+   Generic function body type substitution has been split out of
+   `sema_body.cpp` into a focused helper module, keeping body checking under
+   the file-size budget and making the remaining expression-name substitution
+   surface explicit.
 
 3. OOP Surface Cleanup
 
