@@ -995,10 +995,12 @@ push. They are not release packaging work.
    over the selected storage. Matrix column slices such as `mat[:, col]`
    produce `strided_span[T]` views so non-contiguous views are explicit.
    Three-dimensional channel slices such as `image[:, :, c]` also produce
-   `strided_span[T]` views over interleaved channel data. Full-rank fixed-array
-   slices such as `mat[:, :]` and `image[:, :, :]` produce contiguous `span[T]`
-   views over the whole backing storage, including generic non-type extents
-   such as `array[T][Rows, Cols]` and member-backed fixed arrays such as
+   `strided_span[T]` views over interleaved channel data. Two-dimensional
+   patch rectangles such as `mat[y0:y1, x0:x1]` produce `strided_span2[T]`
+   views with explicit row stride. Full-rank fixed-array slices such as
+   `mat[:, :]` and `image[:, :, :]` produce contiguous `span[T]` views over
+   the whole backing storage, including generic non-type extents such as
+   `array[T][Rows, Cols]` and member-backed fixed arrays such as
    `self.items[:, :]`.
    Dudu-native `@operator("[]")` read hooks and `@operator("[]=")` indexed
    assignment hooks work for library-style tensor wrappers, and indexed member
@@ -1007,9 +1009,9 @@ push. They are not release packaging work.
    This is enough to play with fixed arrays, row/column/full-storage views,
    channel views, basic step slices, and library indexing hooks, but it is not
    full NumPy-style indexing yet. Non-contiguous multidimensional patch
-   rectangles, advanced
-   gather/scatter indexing, broadcasting rules, shape metadata for library
-   tensors, and GPU-backed tensor-library hooks remain.
+   rectangles beyond rank-2, advanced gather/scatter indexing, broadcasting
+   rules, shape metadata for library tensors, and GPU-backed tensor-library
+   hooks remain.
    Same-width Dudu-native `xyzw`, `rgba`, and `stpq` read swizzles are
    implemented for local class receivers and expression receivers. Same-width
    Dudu-native write swizzles are implemented for assignable receivers and

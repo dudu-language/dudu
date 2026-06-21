@@ -1,7 +1,6 @@
-#include "dudu/cpp_type_internal.hpp"
-
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
+#include "dudu/cpp_type_internal.hpp"
 
 #include <sstream>
 
@@ -62,6 +61,9 @@ std::string lower_template_type(const TypeRef& type) {
     if (name == "strided_span") {
         return "dudu::StridedSpan<" + join_lowered_type_args(type.children) + ">";
     }
+    if (name == "strided_span2") {
+        return "dudu::StridedSpan2<" + join_lowered_type_args(type.children) + ">";
+    }
     if (name == "dict") {
         return "std::unordered_map<" + join_lowered_type_args(type.children) + ">";
     }
@@ -104,6 +106,10 @@ std::string lower_template_type(const TypeRef& type,
     }
     if (name == "strided_span") {
         return "dudu::StridedSpan<" + join_lowered_type_args(type.children, namespace_aliases) +
+               ">";
+    }
+    if (name == "strided_span2") {
+        return "dudu::StridedSpan2<" + join_lowered_type_args(type.children, namespace_aliases) +
                ">";
     }
     if (name == "dict") {
@@ -154,6 +160,10 @@ std::string lower_template_type(const TypeRef& type,
     }
     if (name == "strided_span") {
         return "dudu::StridedSpan<" +
+               join_lowered_type_args(type.children, namespace_aliases, options) + ">";
+    }
+    if (name == "strided_span2") {
+        return "dudu::StridedSpan2<" +
                join_lowered_type_args(type.children, namespace_aliases, options) + ">";
     }
     if (name == "dict") {

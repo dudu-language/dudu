@@ -237,6 +237,16 @@ void emit_result_prelude(std::ostringstream& out, const ModuleAst& module) {
            "    Iterator begin() const { return {data, stride}; }\n"
            "    Iterator end() const { return {data + count * stride, stride}; }\n"
            "};\n"
+           "template <typename T> struct StridedSpan2 {\n"
+           "    T* data{};\n"
+           "    std::size_t rows{};\n"
+           "    std::size_t cols{};\n"
+           "    std::size_t row_stride{};\n"
+           "    StridedSpan<T> operator[](std::size_t row) const {\n"
+           "        return {data + row * row_stride, cols, 1};\n"
+           "    }\n"
+           "    std::size_t size() const { return rows * cols; }\n"
+           "};\n"
            "} // namespace dudu\n";
     if (!freestanding) {
         out << "using dudu::print;\n";

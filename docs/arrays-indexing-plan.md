@@ -176,7 +176,7 @@ Proposed spellings:
 
 ```python
 row: span[f32] = mat[row_index, :]
-patch: view[f32, 2] = image[y0:y1, x0:x1]
+patch: strided_span2[f32] = image[y0:y1, x0:x1]
 copy: list[f32] = list(row)
 ```
 
@@ -197,13 +197,14 @@ and `volume[start:end, :, :]` also produce `span[T]` views over the selected
 storage. Matrix column slices such as `mat[:, col]` produce `strided_span[T]`
 views so non-contiguous views are not misrepresented as contiguous spans.
 Three-dimensional channel slices such as `image[:, :, c]` also produce
-`strided_span[T]` views over interleaved channel data. Full-rank fixed-array
-slices such as `mat[:, :]` and `image[:, :, :]` produce contiguous `span[T]`
-views over the whole backing storage, including generic non-type extents such
-as `array[T][Rows, Cols]` and member-backed fixed arrays such as
-`self.items[:, :]`. Non-contiguous multidimensional patch rectangles such as
-`image[y0:y1, x0:x1]` are rejected until the compiler has explicit 2D view
-types for those shapes.
+`strided_span[T]` views over interleaved channel data. Two-dimensional patch
+rectangles such as `mat[y0:y1, x0:x1]` produce `strided_span2[T]` views with
+explicit row stride, so row gaps are not misrepresented as contiguous storage.
+Full-rank fixed-array slices such as `mat[:, :]` and `image[:, :, :]` produce
+contiguous `span[T]` views over the whole backing storage, including generic
+non-type extents such as `array[T][Rows, Cols]` and member-backed fixed arrays
+such as `self.items[:, :]`. Higher-rank non-contiguous patch views remain out
+of scope until the compiler has rank-generic view types.
 
 ## Advanced Indexing
 

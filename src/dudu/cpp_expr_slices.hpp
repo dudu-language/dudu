@@ -32,6 +32,11 @@ std::optional<std::string> lower_leading_range_full_tail_slice_expr(
     const CppLocalContext& locals, const std::map<std::string, TypeRef>& local_type_refs,
     const Symbols* symbols, const CppEmitOptions& options);
 
+std::optional<std::string> lower_matrix_patch_slice_expr(
+    const Expr& base, const Expr& index, const std::vector<std::string>& aliases,
+    const CppLocalContext& locals, const std::map<std::string, TypeRef>& local_type_refs,
+    const Symbols* symbols, const CppEmitOptions& options);
+
 std::optional<std::string> lower_full_multidim_slice_expr(
     const Expr& base, const Expr& index, const std::vector<std::string>& aliases,
     const CppLocalContext& locals, const std::map<std::string, TypeRef>& local_type_refs,

@@ -185,6 +185,39 @@ std::optional<std::string> lower_leading_range_full_tail_slice_expr(
            trailing_count + "))";
 }
 
+std::optional<std::string> lower_matrix_patch_slice_expr(
+    const Expr& base, const Expr& index, const std::vector<std::string>& aliases,
+    const CppLocalContext& locals, const std::map<std::string, TypeRef>& local_type_refs,
+    const Symbols* symbols, const CppEmitOptions& options) {
+    if (index.kind != ExprKind::TupleLiteral || index.children.size() != 2 ||
+        !is_simple_range_slice_expr(index.children[0]) ||
+        !is_simple_range_slice_expr(index.children[1])) {
+        return std::nullopt;
+    }
+    const std::vector<std::string> shape =
+        array_shape_text_for_expr(base, local_type_refs, symbols, locals);
+    if (shape.size() != 2) {
+        return std::nullopt;
+    }
+    const Expr& row_slice = index.children[0];
+    const Expr& col_slice = index.children[1];
+    const std::string row_start = lower_slice_bound(row_slice.children[0], "0", aliases, locals,
+                                                    local_type_refs, symbols, options);
+    const std::string row_end =
+        lower_slice_bound(row_slice.children[1], "(" + shape[0] + ")", aliases, locals,
+                          local_type_refs, symbols, options);
+    const std::string col_start = lower_slice_bound(col_slice.children[0], "0", aliases, locals,
+                                                    local_type_refs, symbols, options);
+    const std::string col_end =
+        lower_slice_bound(col_slice.children[1], "(" + shape[1] + ")", aliases, locals,
+                          local_type_refs, symbols, options);
+    const std::string lowered_base =
+        lower_expr(base, aliases, locals, local_type_refs, symbols, options);
+    return "dudu::StridedSpan2{" + nested_array_data_expr(lowered_base, shape.size()) + " + ((" +
+           row_start + ") * (" + shape[1] + ")) + (" + col_start + "), (" + row_end + ") - (" +
+           row_start + "), (" + col_end + ") - (" + col_start + "), " + shape[1] + "}";
+}
+
 std::optional<std::string> lower_full_multidim_slice_expr(
     const Expr& base, const Expr& index, const std::vector<std::string>& aliases,
     const CppLocalContext& locals, const std::map<std::string, TypeRef>& local_type_refs,

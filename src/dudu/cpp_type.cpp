@@ -11,9 +11,10 @@ namespace dudu {
 namespace {
 
 bool known_structured_template_root(std::string_view name) {
-    return name == "list" || name == "span" || name == "strided_span" || name == "dict" ||
-           name == "set" || name == "Option" || name == "Result" || name == "tuple" ||
-           name == "variant" || name == "std.function" || name == "std::function";
+    return name == "list" || name == "span" || name == "strided_span" || name == "strided_span2" ||
+           name == "dict" || name == "set" || name == "Option" || name == "Result" ||
+           name == "tuple" || name == "variant" || name == "std.function" ||
+           name == "std::function";
 }
 
 const std::map<std::string, std::string>& builtin_cpp_type_names() {

@@ -135,10 +135,11 @@ bool known_type_ref(const Symbols& symbols, const TypeRef& type) {
     const std::string base = base_type(type);
     return !has_type_ref(type) || is_builtin_type(base) || symbols.types.contains(base) ||
            base.find('.') != std::string::npos || starts_with(base, "struct ") || base == "list" ||
-           base == "array" || base == "span" || base == "strided_span" || base == "dict" ||
-           base == "set" || base == "tuple" || base == "variant" || base == "Result" ||
-           base == "Option" || base == "fn" || base == "const" || base == "atomic" ||
-           base == "volatile" || base == "storage" || base == "shared" || base == "device";
+           base == "array" || base == "span" || base == "strided_span" || base == "strided_span2" ||
+           base == "dict" || base == "set" || base == "tuple" || base == "variant" ||
+           base == "Result" || base == "Option" || base == "fn" || base == "const" ||
+           base == "atomic" || base == "volatile" || base == "storage" || base == "shared" ||
+           base == "device";
 }
 
 std::optional<std::pair<std::string, SourceLocation>> unknown_type_ref(const Symbols& symbols,

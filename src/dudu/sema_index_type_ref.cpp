@@ -159,6 +159,24 @@ std::optional<TypeRef> indexed_type_ref_from_type_ref_with_count(
             return args.front();
         }
     }
+    if (const std::vector<TypeRef> args = template_type_arg_refs(*type, "strided_span2");
+        args.size() == 1) {
+        if (is_slice) {
+            throw CompileError(location, "strided_span2 slicing is not implemented: " + label);
+        }
+        if (index_count == 1) {
+            TypeRef row;
+            row.kind = TypeKind::Template;
+            row.name = "strided_span";
+            row.children.push_back(args.front());
+            row.location = location;
+            return row;
+        }
+        if (index_count == 2) {
+            return args.front();
+        }
+        throw CompileError(location, "too many indices for strided_span2: " + label);
+    }
     if (const std::vector<size_t> shape = explicit_array_shape(*type); !shape.empty()) {
         const TypeRef element = explicit_array_element_type_ref(*type);
         if (is_slice) {

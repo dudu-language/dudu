@@ -75,6 +75,11 @@ std::string lower_index_expr(const Expr& expr, const std::vector<std::string>& a
                 options)) {
             return *row_range_slice;
         }
+        if (const auto matrix_patch =
+                lower_matrix_patch_slice_expr(expr.children[0], expr.children[1], aliases, locals,
+                                              local_type_refs, symbols, options)) {
+            return *matrix_patch;
+        }
         if (const auto column_slice =
                 lower_column_slice_expr(expr.children[0], expr.children[1], aliases, locals,
                                         local_type_refs, symbols, options)) {
