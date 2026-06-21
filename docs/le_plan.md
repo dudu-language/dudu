@@ -2594,6 +2594,8 @@ push. They are not release packaging work.
    Member expression emission no longer guesses `.` versus `::` from uppercase
    receiver spelling; class static access, enum variants, native classes, native
    prefixes, and module prefixes are selected from symbol metadata.
+   Pointer-cast emission no longer accepts named pointee types based on uppercase
+   spelling; named cast targets must resolve through real symbol/type metadata.
    The fast AST migration guard now also rejects reintroducing the deleted
    uppercase constructor spelling heuristic or the legacy alias-resolution
    fallback helper.

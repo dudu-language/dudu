@@ -13,7 +13,6 @@
 #include "dudu/source.hpp"
 
 #include <algorithm>
-#include <cctype>
 #include <optional>
 #include <sstream>
 #include <string_view>
@@ -40,7 +39,7 @@ bool is_builtin_cast_call(std::string_view name) {
     return std::find(types.begin(), types.end(), name) != types.end();
 }
 
-bool pointer_cast_type_ref_like(const TypeRef& type) {
+bool pointer_cast_type_ref_like(const TypeRef& type, const Symbols* symbols) {
     const std::string name = type_ref_head_name(type);
     for (std::string_view tag : {"struct ", "class ", "union ", "enum "}) {
         if (name.starts_with(tag)) {
@@ -67,8 +66,7 @@ bool pointer_cast_type_ref_like(const TypeRef& type) {
     case TypeKind::Function:
         return true;
     case TypeKind::Named:
-        return !type.name.empty() &&
-               std::isupper(static_cast<unsigned char>(type.name.front())) != 0;
+        return symbols != nullptr && known_type_ref(*symbols, type);
     case TypeKind::Pointer:
     case TypeKind::Reference:
     case TypeKind::PackExpansion:
@@ -79,11 +77,11 @@ bool pointer_cast_type_ref_like(const TypeRef& type) {
     return false;
 }
 
-std::optional<TypeRef> pointer_cast_pointee_type_ref(const Expr& expr) {
+std::optional<TypeRef> pointer_cast_pointee_type_ref(const Expr& expr, const Symbols* symbols) {
     if (!has_type_ref(expr.type_ref)) {
         return std::nullopt;
     }
-    if (!pointer_cast_type_ref_like(expr.type_ref)) {
+    if (!pointer_cast_type_ref_like(expr.type_ref, symbols)) {
         return std::nullopt;
     }
     return expr.type_ref;
@@ -319,7 +317,7 @@ lower_pointer_cast_expr(const Expr& expr, const std::vector<std::string>& aliase
         return std::nullopt;
     }
     const Expr& call = expr.children.front();
-    const std::optional<TypeRef> pointee = pointer_cast_pointee_type_ref(call);
+    const std::optional<TypeRef> pointee = pointer_cast_pointee_type_ref(call, symbols);
     if (!pointee) {
         return std::nullopt;
     }
@@ -365,7 +363,7 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
     }
     const std::string callee_name = direct_callee_name(expr);
     if (starts_with(callee_name, "*")) {
-        if (const std::optional<TypeRef> pointee = pointer_cast_pointee_type_ref(expr)) {
+        if (const std::optional<TypeRef> pointee = pointer_cast_pointee_type_ref(expr, symbols)) {
             return "reinterpret_cast<" +
                    lower_cpp_type(pointer_type_ref_from_pointee(*pointee, expr.location), aliases,
                                   options) +
