@@ -1840,7 +1840,9 @@ push. They are not release packaging work.
    guideline. Match-statement sema no longer uses a generic `std::function`
    callback adapter to recurse into block checking; the API now takes an
    explicit typed block-check context, and the migration guard rejects the old
-   callback wrapper name.
+   callback wrapper name. LSP reference and navigation code now share AST
+   type/expression traversal helpers instead of carrying duplicated recursive
+   walker lambdas in each feature.
 
 19. Polish Unsupported Syntax Diagnostics
 

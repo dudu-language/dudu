@@ -92,16 +92,14 @@ std::optional<std::string> ast_symbol_at_impl(const Document& doc, const Json* p
             result = name;
         }
     };
-    const std::function<void(const TypeRef&)> visit_type = [&](const TypeRef& type) {
-        if (result || !has_type_ref(type)) {
+    const auto visit_type = [&](const TypeRef& type) {
+        if (result) {
             return;
         }
         set_if_hit(type_ref_text(type), type.location);
-        for (const TypeRef& child : type.children) {
-            visit_type(child);
-        }
     };
-    const std::function<void(const Expr&)> visit_expr = [&](const Expr& expr) {
+    const auto visit_type_tree = [&](const TypeRef& type) { visit_type_ref_tree(type, visit_type); };
+    const auto visit_expr = [&](const Expr& expr) {
         if (expr.kind == ExprKind::Name || expr.kind == ExprKind::Member) {
             std::string name = expr.name;
             if (prefer_member_path && expr.kind == ExprKind::Member) {
@@ -111,29 +109,15 @@ std::optional<std::string> ast_symbol_at_impl(const Document& doc, const Json* p
             }
             set_if_hit(name, expr_name_location(expr));
         }
-        for (const Expr& callee : expr.callee) {
-            visit_expr(callee);
-        }
-        for (const Expr& param : expr.params) {
-            visit_expr(param);
-        }
-        for (const Expr& arg : expr.template_args) {
-            visit_expr(arg);
-        }
-        for (const TypeRef& arg : expr.template_type_args) {
-            visit_type(arg);
-        }
-        visit_type(expr.type_ref);
-        for (const Expr& child : expr.children) {
-            visit_expr(child);
-        }
     };
     const std::function<void(const std::vector<Stmt>&)> visit_stmts =
         [&](const std::vector<Stmt>& statements) {
             for (const Stmt& stmt : statements) {
                 visit_stmt_binding_names(stmt, set_if_hit);
-                visit_type(stmt.type_ref);
-                visit_stmt_expressions(stmt, visit_expr);
+                visit_type_tree(stmt.type_ref);
+                visit_stmt_expressions(stmt, [&](const Expr& expr) {
+                    visit_lsp_expr_tree(expr, visit_expr, visit_type);
+                });
                 visit_stmts(stmt.children);
             }
         };
@@ -145,63 +129,63 @@ std::optional<std::string> ast_symbol_at_impl(const Document& doc, const Json* p
         }
         for (const TypeAliasDecl& alias : module.aliases) {
             set_if_hit(alias.name, alias.location);
-            visit_type(alias.type_ref);
+            visit_type_tree(alias.type_ref);
         }
         for (const ConstDecl& constant : module.constants) {
             set_if_hit(constant.name, constant.location);
-            visit_type(constant.type_ref);
-            visit_expr(constant.value_expr);
+            visit_type_tree(constant.type_ref);
+            visit_lsp_expr_tree(constant.value_expr, visit_expr, visit_type);
         }
         for (const EnumDecl& en : module.enums) {
             set_if_hit(en.name, en.location);
-            visit_type(en.underlying_type_ref);
+            visit_type_tree(en.underlying_type_ref);
             for (const EnumValueDecl& value : en.values) {
                 set_if_hit(value.name, value.location);
                 for (const EnumPayloadField& field : value.payload_fields) {
                     set_if_hit(field.name, field.location);
-                    visit_type(field.type_ref);
+                    visit_type_tree(field.type_ref);
                 }
-                visit_expr(value.value_expr);
+                visit_lsp_expr_tree(value.value_expr, visit_expr, visit_type);
             }
         }
         for (const ClassDecl& klass : module.classes) {
             set_if_hit(klass.name, klass.location);
             for (const BaseClassDecl& base : klass.base_class_refs) {
-                visit_type(base.type_ref);
+                visit_type_tree(base.type_ref);
             }
             for (const FieldDecl& field : klass.fields) {
                 set_if_hit(field.name, field.location);
-                visit_type(field.type_ref);
-                visit_expr(field.value_expr);
+                visit_type_tree(field.type_ref);
+                visit_lsp_expr_tree(field.value_expr, visit_expr, visit_type);
             }
             for (const ConstDecl& constant : klass.constants) {
                 set_if_hit(constant.name, constant.location);
-                visit_type(constant.type_ref);
-                visit_expr(constant.value_expr);
+                visit_type_tree(constant.type_ref);
+                visit_lsp_expr_tree(constant.value_expr, visit_expr, visit_type);
             }
             for (const ConstDecl& field : klass.static_fields) {
                 set_if_hit(field.name, field.location);
-                visit_type(field.type_ref);
-                visit_expr(field.value_expr);
+                visit_type_tree(field.type_ref);
+                visit_lsp_expr_tree(field.value_expr, visit_expr, visit_type);
             }
             for (const FunctionDecl& method : klass.methods) {
                 set_if_hit(method.name, method.location);
-                visit_type(method.receiver_type_ref);
-                visit_type(method.return_type_ref);
+                visit_type_tree(method.receiver_type_ref);
+                visit_type_tree(method.return_type_ref);
                 for (const ParamDecl& param : method.params) {
                     set_if_hit(param.name, param.location);
-                    visit_type(param.type_ref);
+                    visit_type_tree(param.type_ref);
                 }
                 visit_stmts(method.statements);
             }
         }
         for (const FunctionDecl& fn : module.functions) {
             set_if_hit(fn.name, fn.location);
-            visit_type(fn.receiver_type_ref);
-            visit_type(fn.return_type_ref);
+            visit_type_tree(fn.receiver_type_ref);
+            visit_type_tree(fn.return_type_ref);
             for (const ParamDecl& param : fn.params) {
                 set_if_hit(param.name, param.location);
-                visit_type(param.type_ref);
+                visit_type_tree(param.type_ref);
             }
             visit_stmts(fn.statements);
         }
@@ -224,7 +208,8 @@ std::optional<ExprPath> ast_expr_path_at_impl(const Document& doc, const Json* p
         return target_column >= start && target_column <= end;
     };
     std::optional<ExprPath> result;
-    const std::function<void(const Expr&)> visit_expr = [&](const Expr& expr) {
+    const auto visit_type = [](const TypeRef&) {};
+    const auto visit_expr = [&](const Expr& expr) {
         if (result) {
             return;
         }
@@ -233,45 +218,35 @@ std::optional<ExprPath> ast_expr_path_at_impl(const Document& doc, const Json* p
             result = expr_path_from_expr(expr);
             return;
         }
-        for (const Expr& callee : expr.callee) {
-            visit_expr(callee);
-        }
-        for (const Expr& param : expr.params) {
-            visit_expr(param);
-        }
-        for (const Expr& arg : expr.template_args) {
-            visit_expr(arg);
-        }
-        for (const Expr& child : expr.children) {
-            visit_expr(child);
-        }
     };
     const std::function<void(const std::vector<Stmt>&)> visit_stmts =
         [&](const std::vector<Stmt>& statements) {
             for (const Stmt& stmt : statements) {
-                visit_stmt_expressions(stmt, visit_expr);
+                visit_stmt_expressions(stmt, [&](const Expr& expr) {
+                    visit_lsp_expr_tree(expr, visit_expr, visit_type);
+                });
                 visit_stmts(stmt.children);
             }
         };
     try {
         const ModuleAst module = parse_source(doc.text, doc.path);
         for (const ConstDecl& constant : module.constants) {
-            visit_expr(constant.value_expr);
+            visit_lsp_expr_tree(constant.value_expr, visit_expr, visit_type);
         }
         for (const EnumDecl& en : module.enums) {
             for (const EnumValueDecl& value : en.values) {
-                visit_expr(value.value_expr);
+                visit_lsp_expr_tree(value.value_expr, visit_expr, visit_type);
             }
         }
         for (const ClassDecl& klass : module.classes) {
             for (const FieldDecl& field : klass.fields) {
-                visit_expr(field.value_expr);
+                visit_lsp_expr_tree(field.value_expr, visit_expr, visit_type);
             }
             for (const ConstDecl& constant : klass.constants) {
-                visit_expr(constant.value_expr);
+                visit_lsp_expr_tree(constant.value_expr, visit_expr, visit_type);
             }
             for (const ConstDecl& field : klass.static_fields) {
-                visit_expr(field.value_expr);
+                visit_lsp_expr_tree(field.value_expr, visit_expr, visit_type);
             }
             for (const FunctionDecl& method : klass.methods) {
                 visit_stmts(method.statements);
