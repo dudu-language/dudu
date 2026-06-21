@@ -203,8 +203,10 @@ grep -Eq "clean-cache .*clean_cache_smoke/build/dudu-header-cache" \
 "$repo_root/build/dudu" test "$repo_root/tests/fixtures/dudu_tests.dd" \
     >"$repo_root/build/dudu_tests.out" 2>"$repo_root/build/dudu_test_steps.err"
 grep -q "3/3 tests passed" "$repo_root/build/dudu_tests.out"
-grep -Eq "emit build/dudu-tests/dudu_tests-[0-9a-f]+\\.cpp" "$repo_root/build/dudu_test_steps.err"
-grep -Eq "test build/dudu-tests/dudu_tests-[0-9a-f]+$" "$repo_root/build/dudu_test_steps.err"
+grep -Eq "cmake build/dudu-tests/dudu_tests-[0-9a-f]+-cmake/source/CMakeLists\\.txt" \
+    "$repo_root/build/dudu_test_steps.err"
+grep -Eq "test build/dudu-tests/dudu_tests-[0-9a-f]+-cmake/build/dudu_tests-[0-9a-f]+" \
+    "$repo_root/build/dudu_test_steps.err"
 "$repo_root/build/dudu" test "$repo_root/tests/fixtures/simple_program.dd" \
     >"$repo_root/build/dudu_tests_zero.out"
 grep -q "running 0 tests" "$repo_root/build/dudu_tests_zero.out"
@@ -382,8 +384,10 @@ grep -q "test-from-project" "$repo_root/build/project_delegated_test.out"
     "$repo_root/build/dudu" cmake tool -o "$repo_root/build/project_targets_cmake.txt" \
         2>"$repo_root/build/project_targets_cmake.err"
 )
-grep -Eq "build .*project_targets/tool" "$repo_root/build/project_targets_build.err"
-grep -Eq "run .*project_targets/tool" "$repo_root/build/project_targets_run.err"
+grep -Eq "backend cmake" "$repo_root/build/project_targets_build.err"
+grep -Eq "compile .*project_targets/cmake-backend/build" "$repo_root/build/project_targets_build.err"
+grep -Eq "output .*project_targets/cmake-backend/build/tool" "$repo_root/build/project_targets_build.err"
+grep -Eq "run '.*project_targets/cmake-backend/build/tool'" "$repo_root/build/project_targets_run.err"
 grep -q "tool target" "$repo_root/build/project_targets_run.out"
 grep -q "ok target_test" "$repo_root/build/project_targets_test.out"
 grep -q "1/1 tests passed" "$repo_root/build/project_targets_test.out"
@@ -651,7 +655,7 @@ cat >"$fake_pkg_config" <<'SH'
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ "$*" != "--cflags --libs fixturelib" ]]; then
+if [[ "$*" != "--cflags --libs fixturelib" && "$*" != "--cflags fixturelib" ]]; then
     echo "unexpected pkg-config args: $*" >&2
     exit 1
 fi
@@ -844,7 +848,7 @@ compile_and_expect posix_threads_mutex 42
 compile_path_and_expect multifile tests/fixtures/multifile/main.dd 42
 
 direct_bin="$repo_root/build/dudu_build_simple"
-"$repo_root/build/dudu" build "$repo_root/tests/fixtures/simple_program.dd" -o "$direct_bin"
+"$repo_root/build/duc" build "$repo_root/tests/fixtures/simple_program.dd" -o "$direct_bin"
 set +e
 "$direct_bin"
 direct_status=$?

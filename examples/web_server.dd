@@ -1,7 +1,7 @@
 # Tiny HTTP API using a hypothetical C++ HTTP library.
 
-import cpp "httplib.h" as http
-import cpp "sqlite3.h" as sqlite
+import cpp "httplib.h"
+import c "sqlite3.h" as sqlite
 import cpp "string" as std
 import c "stdlib.h" as c
 
@@ -29,31 +29,31 @@ def parse_i64(text: str) -> i64:
     return c.atoll(text.c_str())
 
 
-def find_todo(db: *sqlite.sqlite3, todo_id: i64) -> Result[Todo, DbError]:
+def find_todo(db: *struct sqlite3, todo_id: i64) -> Result[Todo, DbError]:
     query = "select id, title, done from todos where id = ?"
-    stmt: *sqlite.sqlite3_stmt = None
+    stmt: *struct sqlite3_stmt = None
 
-    if sqlite.prepare_v2(db, query.c_str(), -1, &stmt, None) != sqlite.OK:
+    if sqlite.sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, None) != sqlite.SQLITE_OK:
         return Err(DbError.QueryFailed)
 
-    sqlite.bind_int64(stmt, 1, todo_id)
-    step = sqlite.step(stmt)
+    sqlite.sqlite3_bind_int64(stmt, 1, todo_id)
+    step = sqlite.sqlite3_step(stmt)
 
-    if step != sqlite.ROW:
-        sqlite.finalize(stmt)
+    if step != sqlite.SQLITE_ROW:
+        sqlite.sqlite3_finalize(stmt)
         return Err(DbError.NotFound)
 
     todo = Todo(
-        id=sqlite.column_int64(stmt, 0),
-        title=std.string(cstr(sqlite.column_text(stmt, 1))),
-        done=sqlite.column_int(stmt, 2) != 0,
+        id=sqlite.sqlite3_column_int64(stmt, 0),
+        title=std.string(cstr(sqlite.sqlite3_column_text(stmt, 1))),
+        done=sqlite.sqlite3_column_int(stmt, 2) != 0,
     )
 
-    sqlite.finalize(stmt)
+    sqlite.sqlite3_finalize(stmt)
     return Ok(todo)
 
 
-def handle_get_todo(db: *sqlite.sqlite3, req: http.Request, res: &http.Response):
+def handle_get_todo(db: *struct sqlite3, req: httplib.Request, res: &httplib.Response):
     todo_id = parse_i64(req.matches[1])
     result = find_todo(db, todo_id)
 
@@ -64,20 +64,20 @@ def handle_get_todo(db: *sqlite.sqlite3, req: http.Request, res: &http.Response)
         res.set_content("{\"error\":\"not found\"}", "application/json")
 
 
-def handle_health(req: http.Request, res: &http.Response):
+def handle_health(req: httplib.Request, res: &httplib.Response):
     res.set_content("{\"ok\":true}", "application/json")
 
 
 def main() -> i32:
-    db: *sqlite.sqlite3 = None
+    db: *struct sqlite3 = None
 
-    if sqlite.open("todos.db", &db) != sqlite.OK:
+    if sqlite.sqlite3_open("todos.db", &db) != sqlite.SQLITE_OK:
         return 1
 
-    app = http.Server()
+    app = httplib.Server()
 
     app.Get("/todos/(\\d+)", cpp("[&](auto&& req, auto&& res) { handle_get_todo(db, req, res); }"))
     app.Get("/health", handle_health)
     app.listen("0.0.0.0", 8080)
-    sqlite.close(db)
+    sqlite.sqlite3_close(db)
     return 0
