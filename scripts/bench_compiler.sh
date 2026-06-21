@@ -172,8 +172,8 @@ run_case "duc_check_native_cold" "native_scan_cold" "$native_header" \
 run_case "duc_check_native_cached" "native_scan_cached" "$native_header" \
     "$repo_root/build/duc" check "$native_header"
 
-run_case "dudu_build_direct" "direct_build" "$simple" \
-    "$repo_root/build/dudu" build "$simple" -o "$bench_dir/simple_program" --quiet
+run_case "duc_build_direct" "direct_build" "$simple" \
+    "$repo_root/build/duc" build "$simple" -o "$bench_dir/simple_program" --quiet
 
 run_case "dudu_build_cmake_modules" "cmake_build" "$multi_project" \
     "$repo_root/build/dudu" build "$multi_entry" --quiet
