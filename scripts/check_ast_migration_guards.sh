@@ -80,6 +80,11 @@ if rg -n "ends_with\\(\"\\.(reference|const_reference|iterator|const_iterator)\"
     exit 1
 fi
 
+if rg -n "std::isupper" "$repo_root/src/dudu/cpp_expr_emit.cpp"; then
+    echo "member emission must use symbol metadata, not uppercase spelling heuristics" >&2
+    exit 1
+fi
+
 if rg -n "std::string text;" "$repo_root/src/dudu/ast.hpp"; then
     echo "raw text payload fields do not belong in the core Dudu AST" >&2
     exit 1

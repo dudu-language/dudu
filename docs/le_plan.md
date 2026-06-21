@@ -2591,6 +2591,9 @@ push. They are not release packaging work.
    Emitted expression type inference no longer guesses symbol-less constructor
    calls from uppercase spelling; constructor inference now requires real
    `Symbols` class/native/type metadata.
+   Member expression emission no longer guesses `.` versus `::` from uppercase
+   receiver spelling; class static access, enum variants, native classes, native
+   prefixes, and module prefixes are selected from symbol metadata.
    The fast AST migration guard now also rejects reintroducing the deleted
    uppercase constructor spelling heuristic or the legacy alias-resolution
    fallback helper.

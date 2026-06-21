@@ -16,7 +16,6 @@
 #include "dudu/source.hpp"
 
 #include <algorithm>
-#include <cctype>
 #include <optional>
 #include <sstream>
 #include <string_view>
@@ -69,7 +68,7 @@ std::string lower_string_literal_value(std::string_view value) {
 
 std::string lower_member_expr(std::string receiver, const std::string& member,
                               const std::vector<std::string>& aliases,
-                              const CppEmitOptions& options) {
+                              const CppEmitOptions& options, const bool scoped_receiver) {
     receiver = trim_copy(std::move(receiver));
     if (receiver.empty()) {
         return member;
@@ -92,13 +91,28 @@ std::string lower_member_expr(std::string receiver, const std::string& member,
     if (qualified != dotted) {
         return qualified;
     }
-    const size_t head_end = receiver.find_first_of(".:");
-    const std::string head =
-        head_end == std::string::npos ? receiver : receiver.substr(0, head_end);
-    const bool scoped_receiver =
-        receiver.find("::") != std::string::npos ||
-        (!head.empty() && std::isupper(static_cast<unsigned char>(head.front())) != 0);
+    if (receiver.find("::") != std::string::npos) {
+        return receiver + "::" + member;
+    }
     return receiver + (scoped_receiver ? "::" : ".") + member;
+}
+
+bool member_receiver_is_scoped(const Expr& receiver, const Symbols* symbols,
+                               const CppLocalContext& locals) {
+    if (receiver.kind != ExprKind::Name) {
+        return false;
+    }
+    if (receiver.name == "class") {
+        return !locals.current_class.empty();
+    }
+    if (symbols == nullptr) {
+        return false;
+    }
+    return symbols->classes.contains(receiver.name) ||
+           symbols->enums.contains(receiver.name) ||
+           symbols->native_classes.contains(receiver.name) ||
+           symbols->native_path_prefixes.contains(receiver.name) ||
+           symbols->module_import_prefixes.contains(receiver.name);
 }
 
 std::string join_lowered_exprs(const std::vector<Expr>& exprs,
@@ -343,7 +357,9 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
             }
             return lower_member_expr(lower_expr(expr.children.front(), aliases, locals,
                                                 local_type_refs, symbols, options),
-                                     expr.name, aliases, options);
+                                     expr.name, aliases, options,
+                                     member_receiver_is_scoped(expr.children.front(), symbols,
+                                                               locals));
         }
         break;
     case ExprKind::DictEntry:
