@@ -2,18 +2,18 @@
 
 #include "dudu/ast_expr.hpp"
 #include "dudu/ast_type.hpp"
+#include "dudu/language_server_ast_walk.hpp"
 #include "dudu/language_server_import_references.hpp"
 #include "dudu/language_server_json.hpp"
 #include "dudu/language_server_local_context.hpp"
-#include "dudu/language_server_navigation.hpp"
 #include "dudu/language_server_native_lookup.hpp"
-#include "dudu/language_server_symbols.hpp"
+#include "dudu/language_server_navigation.hpp"
 #include "dudu/language_server_support.hpp"
+#include "dudu/language_server_symbols.hpp"
 #include "dudu/parser.hpp"
 
 #include <algorithm>
 #include <filesystem>
-#include <functional>
 #include <map>
 #include <optional>
 #include <set>
@@ -133,12 +133,10 @@ bool selected_call_callee(const Document& doc, const Json* params, const std::st
             matched = true;
         }
     };
-    const std::function<void(const std::vector<Stmt>&)> visit_stmts =
-        [&](const std::vector<Stmt>& statements) {
-            for (const Stmt& stmt : statements) {
-                visit_stmt_tree_expressions(stmt, visit_expr);
-            }
-        };
+    const auto visit_stmts = [&](const std::vector<Stmt>& statements) {
+        visit_lsp_stmt_tree(
+            statements, [&](const Stmt& stmt) { visit_stmt_tree_expressions(stmt, visit_expr); });
+    };
     try {
         const ModuleAst module = parse_source(doc.text, doc.path);
         for (const ClassDecl& klass : module.classes) {
@@ -175,8 +173,7 @@ bool document_has_direct_native_symbol(const Document& doc, const std::string& n
         }
         if (symbol.kind == lsp_symbol_kind::Class || symbol.kind == lsp_symbol_kind::Struct ||
             symbol.kind == lsp_symbol_kind::Enum || symbol.kind == lsp_symbol_kind::Function ||
-            symbol.kind == lsp_symbol_kind::Constant ||
-            symbol.kind == lsp_symbol_kind::Namespace) {
+            symbol.kind == lsp_symbol_kind::Constant || symbol.kind == lsp_symbol_kind::Namespace) {
             return true;
         }
     }
@@ -375,29 +372,28 @@ std::string references_json(const Document& doc, const Json* params,
         }
         std::error_code path_error;
         const std::filesystem::path candidate_path =
-            candidate.path.empty()
-                ? std::filesystem::path{}
-                : std::filesystem::weakly_canonical(candidate.path, path_error);
+            candidate.path.empty() ? std::filesystem::path{}
+                                   : std::filesystem::weakly_canonical(candidate.path, path_error);
         const bool target_module_document = module_target.has_value() && !candidate.path.empty() &&
                                             !path_error &&
                                             candidate_path.string() == *module_target;
-        const bool target_selective_document = selective_target.has_value() &&
-                                               !candidate.path.empty() && !path_error &&
-                                               candidate_path.string() ==
-                                                   selective_target->source_key;
+        const bool target_selective_document =
+            selective_target.has_value() && !candidate.path.empty() && !path_error &&
+            candidate_path.string() == selective_target->source_key;
         if (module_target.has_value() && candidate.uri != doc.uri && !target_module_document &&
             module_import_target_key(candidate, query) != module_target) {
             continue;
         }
-        if (selective_target.has_value() && candidate.uri != doc.uri && !target_selective_document &&
+        if (selective_target.has_value() && candidate.uri != doc.uri &&
+            !target_selective_document &&
             !same_import_reference_target(selective_import_target(candidate, query),
                                           selective_target)) {
             continue;
         }
-        const std::string candidate_query =
-            target_module_document      ? dotted_tail(query)
-            : target_selective_document ? selective_target->member_name
-                                        : query;
+        const std::string candidate_query = target_module_document ? dotted_tail(query)
+                                            : target_selective_document
+                                                ? selective_target->member_name
+                                                : query;
         const std::vector<ReferenceLocation> locations = references_in(candidate, candidate_query);
         if (locations.empty()) {
             continue;
