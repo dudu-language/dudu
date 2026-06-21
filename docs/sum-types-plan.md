@@ -131,6 +131,22 @@ match token:
         return 0
 ```
 
+`match` also supports ordinary value cases for integer, string, enum-like, and
+other comparable values:
+
+```python
+match key:
+    case "fps":
+        return show_fps()
+    case "cpu":
+        return show_cpu()
+    case _:
+        return show_default()
+```
+
+Value matches are ordered comparison chains, not exhaustive sum-type matches.
+Use `_` when unmatched values need a default branch.
+
 ## Exhaustiveness
 
 For sum types, `match` should be exhaustive by default:

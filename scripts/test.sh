@@ -794,6 +794,7 @@ compile_and_expect std_vector_map_string 42
 compile_and_expect cpp_stdlib_interop 42
 compile_and_expect cpp_std_variant 42
 compile_and_expect anonymous_variant 42
+compile_and_expect value_match_string 42
 compile_and_expect native_dependent_template_return 42
 compile_and_expect generic_non_type_param 42
 compile_and_expect layout_attrs 21

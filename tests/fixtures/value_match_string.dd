@@ -1,0 +1,11 @@
+def classify(name: str) -> i32:
+    match name:
+        case "fps":
+            return 40
+        case "cpu":
+            return 10
+        case _:
+            return 2
+
+def main() -> i32:
+    return classify("fps") + classify("missing")
