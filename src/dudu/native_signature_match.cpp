@@ -125,14 +125,6 @@ bool native_fixed_array_alias_decay_allowed(const FunctionScope& scope, const Ty
     return false;
 }
 
-TypeRef signature_param_ref(const FunctionSignature& signature, size_t index) {
-    return signature_param_type_ref(signature, index);
-}
-
-std::string signature_param_text(const FunctionSignature& signature, size_t index) {
-    return type_ref_text(signature_param_type_ref(signature, index));
-}
-
 std::string signature_text(const std::string& callee, const FunctionSignature& signature) {
     std::ostringstream out;
     out << callee << "(";
@@ -140,7 +132,7 @@ std::string signature_text(const std::string& callee, const FunctionSignature& s
     for (size_t i = 0; i < param_count; ++i) {
         if (i > 0)
             out << ", ";
-        out << signature_param_text(signature, i);
+        out << type_ref_text(signature_param_type_ref(signature, i));
     }
     if (signature.variadic) {
         if (param_count != 0)
@@ -309,13 +301,13 @@ std::vector<std::string> mismatch_reasons_ast(const FunctionScope& scope,
     const size_t fixed_params = std::min(signature_param_count(signature), args.size());
     for (size_t i = 0; i < fixed_params; ++i) {
         const NativeArgType got = native_arg_type(scope, args[i], location);
-        const TypeRef expected_ref = signature_param_ref(signature, i);
+        const TypeRef expected_ref = signature_param_type_ref(signature, i);
         const std::string got_text = substitute_type_ref_text(got.ref, {});
         if (!native_arg_assignable(scope, args[i], got, expected_ref) &&
             !native_numeric_promotion(expected_ref, got.ref)) {
             std::ostringstream out;
-            out << "parameter " << (i + 1) << " expects " << signature_param_text(signature, i)
-                << ", got " << got_text;
+            out << "parameter " << (i + 1) << " expects " << type_ref_text(expected_ref) << ", got "
+                << got_text;
             reasons.push_back(out.str());
         }
     }
@@ -367,7 +359,7 @@ std::optional<FunctionSignature> match_signature_ast(const FunctionScope& scope,
     const size_t provided_fixed = std::min(fixed_params, args.size());
     for (size_t i = 0; i < provided_fixed; ++i) {
         const NativeArgType got = native_arg_type(scope, args[i], location);
-        const TypeRef expected_ref = signature_param_ref(signature, i);
+        const TypeRef expected_ref = signature_param_type_ref(signature, i);
         const bool bound_template =
             has_type_ref(expected_ref) && has_type_ref(got.ref) &&
             bind_native_template_type_ast(scope.symbols, expected_ref, got.ref, bindings);

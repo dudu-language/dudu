@@ -39,6 +39,8 @@ forbidden=(
     "template_args_lookup_text"
     "signature_param_type_text"
     "signature_return_type_text"
+    "signature_param_ref"
+    "signature_param_text"
     "function_receiver_type_text"
     "unwrap_receiver_type\\("
     "parse_native_type_text\\(type_ref_text"
