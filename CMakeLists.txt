@@ -91,6 +91,7 @@ add_library(dudu_frontend
     src/dudu/native_build.cpp
     src/dudu/native_header_cache.cpp
     src/dudu/native_header_cache_deps.cpp
+    src/dudu/native_header_cache_format.cpp
     src/dudu/native_header_collision.cpp
     src/dudu/native_header_dedupe.cpp
     src/dudu/native_header_merge.cpp

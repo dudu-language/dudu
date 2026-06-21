@@ -1,11 +1,10 @@
 #include "dudu/native_header_cache.hpp"
 
-#include "dudu/ast_type.hpp"
 #include "dudu/native_header_cache_deps.hpp"
+#include "dudu/native_header_cache_format.hpp"
 #include "dudu/project_config.hpp"
 
 #include <fstream>
-#include <functional>
 #include <optional>
 #include <sstream>
 #include <vector>
@@ -14,7 +13,6 @@ namespace dudu {
 namespace {
 
 constexpr std::string_view kScanCacheVersion = "dudu-native-scan-v4";
-constexpr char kListSeparator = '\x1f';
 
 std::string read_text(const std::filesystem::path& path) {
     std::ifstream in(path);
@@ -40,181 +38,6 @@ std::filesystem::path default_cache_dir(const NativeHeaderOptions& options) {
 
 std::string cache_id(const std::string& key) {
     return std::to_string(std::hash<std::string>{}(key));
-}
-
-std::string join_strings(const std::vector<std::string>& values) {
-    std::string out;
-    for (size_t i = 0; i < values.size(); ++i) {
-        if (i > 0) {
-            out.push_back(kListSeparator);
-        }
-        out += values[i];
-    }
-    return out;
-}
-
-std::vector<std::string> split_strings(const std::string& text) {
-    std::vector<std::string> out;
-    if (text.empty()) {
-        return out;
-    }
-    size_t start = 0;
-    while (start <= text.size()) {
-        const size_t next = text.find(kListSeparator, start);
-        out.push_back(
-            text.substr(start, next == std::string::npos ? std::string::npos : next - start));
-        if (next == std::string::npos) {
-            break;
-        }
-        start = next + 1;
-    }
-    return out;
-}
-
-void append_number(std::string& out, const size_t value) {
-    out += std::to_string(value);
-    out.push_back(';');
-}
-
-void append_string(std::string& out, const std::string& value) {
-    out += std::to_string(value.size());
-    out.push_back(':');
-    out += value;
-}
-
-void append_type_ref(std::string& out, const TypeRef& type) {
-    append_number(out, static_cast<size_t>(type.kind));
-    append_number(out, type.malformed ? 1 : 0);
-    append_string(out, type.name);
-    append_string(out, type.value);
-    append_number(out, type.children.size());
-    for (const TypeRef& child : type.children) {
-        append_type_ref(out, child);
-    }
-}
-
-std::optional<size_t> read_number(std::string_view text, size_t& offset) {
-    const size_t end = text.find(';', offset);
-    if (end == std::string_view::npos) {
-        return std::nullopt;
-    }
-    const size_t value =
-        static_cast<size_t>(std::stoull(std::string(text.substr(offset, end - offset))));
-    offset = end + 1;
-    return value;
-}
-
-std::optional<std::string> read_string(std::string_view text, size_t& offset) {
-    const size_t colon = text.find(':', offset);
-    if (colon == std::string_view::npos) {
-        return std::nullopt;
-    }
-    const size_t size =
-        static_cast<size_t>(std::stoull(std::string(text.substr(offset, colon - offset))));
-    const size_t data = colon + 1;
-    if (data + size > text.size()) {
-        return std::nullopt;
-    }
-    offset = data + size;
-    return std::string(text.substr(data, size));
-}
-
-std::optional<TypeRef> read_type_ref(std::string_view text, size_t& offset,
-                                     const SourceLocation& location, const bool root) {
-    const std::optional<size_t> kind = read_number(text, offset);
-    const std::optional<size_t> malformed = read_number(text, offset);
-    const std::optional<std::string> name = read_string(text, offset);
-    const std::optional<std::string> value = read_string(text, offset);
-    const std::optional<size_t> child_count = read_number(text, offset);
-    if (!kind || !malformed || !name || !value || !child_count) {
-        return std::nullopt;
-    }
-    TypeRef type;
-    type.kind = static_cast<TypeKind>(*kind);
-    type.malformed = *malformed != 0;
-    type.name = *name;
-    type.value = *value;
-    if (root) {
-        type.location = location;
-        type.range.start = location;
-        type.range.end = location;
-    }
-    for (size_t i = 0; i < *child_count; ++i) {
-        const std::optional<TypeRef> child = read_type_ref(text, offset, location, false);
-        if (!child) {
-            return std::nullopt;
-        }
-        type.children.push_back(*child);
-    }
-    return type;
-}
-
-std::string cached_type_text(const TypeRef& type) {
-    std::string out;
-    append_type_ref(out, type);
-    return out;
-}
-
-TypeRef cached_type_ref(const std::string& text, const SourceLocation& location) {
-    size_t offset = 0;
-    const std::optional<TypeRef> type = read_type_ref(text, offset, location, true);
-    if (!type || offset != text.size()) {
-        return parse_type_text(text, location);
-    }
-    return *type;
-}
-
-std::vector<std::string> cached_type_texts(const std::vector<TypeRef>& types) {
-    std::vector<std::string> out;
-    out.reserve(types.size());
-    for (const TypeRef& type : types) {
-        out.push_back(cached_type_text(type));
-    }
-    return out;
-}
-
-std::vector<TypeRef> cached_type_refs(const std::string& text, const SourceLocation& location) {
-    std::vector<TypeRef> out;
-    for (const std::string& item : split_strings(text)) {
-        out.push_back(cached_type_ref(item, location));
-    }
-    return out;
-}
-
-void write_record(std::ostream& out, std::string_view tag, const std::vector<std::string>& fields) {
-    out << tag;
-    for (const std::string& field : fields) {
-        out << '\t' << field.size() << ':' << field;
-    }
-    out << '\n';
-}
-
-std::optional<std::pair<std::string, std::vector<std::string>>>
-parse_record(const std::string& line) {
-    const size_t first_tab = line.find('\t');
-    const std::string tag = line.substr(0, first_tab);
-    std::vector<std::string> fields;
-    size_t offset = first_tab == std::string::npos ? line.size() : first_tab + 1;
-    while (offset < line.size()) {
-        const size_t colon = line.find(':', offset);
-        if (colon == std::string::npos) {
-            return std::nullopt;
-        }
-        const size_t size = static_cast<size_t>(std::stoull(line.substr(offset, colon - offset)));
-        const size_t data = colon + 1;
-        if (data + size > line.size()) {
-            return std::nullopt;
-        }
-        fields.push_back(line.substr(data, size));
-        offset = data + size;
-        if (offset < line.size()) {
-            if (line[offset] != '\t') {
-                return std::nullopt;
-            }
-            ++offset;
-        }
-    }
-    return std::make_pair(tag, fields);
 }
 
 NativeSymbolId symbol_id(const std::vector<std::string>& fields, size_t usr_index,
@@ -251,7 +74,7 @@ void write_function_record(std::ostream& out, std::string_view tag, const Functi
                                        fn.cpp_name,
                                        fn.native_identity.usr,
                                        fn.native_identity.canonical_path,
-                                       join_strings(fn.generic_params),
+                                       native_cache_join_strings(fn.generic_params),
                                        cached_type_text(fn.return_type_ref)};
     append_location_fields(fields, fn.location);
     fields.push_back(std::to_string(fn.params.size()));
@@ -272,7 +95,7 @@ std::optional<FunctionDecl> read_function_record(const std::vector<std::string>&
     fn.name = fields[0];
     fn.cpp_name = fields[1];
     fn.native_identity = symbol_id(fields, 2, 3);
-    fn.generic_params = split_strings(fields[4]);
+    fn.generic_params = native_cache_split_strings(fields[4]);
     fn.return_type_ref = cached_type_ref(fields[5], function_location);
     fn.location = function_location;
     const size_t param_count = static_cast<size_t>(std::stoull(fields[9]));
@@ -376,8 +199,8 @@ std::optional<NativeHeaderScan> load_native_header_scan_cache(const NativeHeader
         } else if (tag == "NF" && fields.size() == 13) {
             const SourceLocation decl_location = cached_location(fields, 10, location);
             scan.functions.push_back({.name = fields[0],
-                                      .template_params = split_strings(fields[1]),
-                                      .param_native_spellings = split_strings(fields[2]),
+                                      .template_params = native_cache_split_strings(fields[1]),
+                                      .param_native_spellings = native_cache_split_strings(fields[2]),
                                       .param_type_refs = cached_type_refs(fields[3], decl_location),
                                       .return_native_spelling = fields[4],
                                       .return_type_ref = cached_type_ref(fields[5], decl_location),
@@ -402,7 +225,7 @@ std::optional<NativeHeaderScan> load_native_header_scan_cache(const NativeHeader
             klass.name = fields[0];
             klass.cpp_name = fields[1];
             klass.identity = symbol_id(fields, 2, 3);
-            klass.generic_params = split_strings(fields[4]);
+            klass.generic_params = native_cache_split_strings(fields[4]);
             klass.origin_module = fields[5];
             klass.location = decl_location;
             scan.classes.push_back(std::move(klass));
@@ -455,9 +278,10 @@ void store_native_header_scan_cache(const NativeHeaderRawCache& cache,
     }
     for (const NativeFunctionDecl& item : scan.functions) {
         std::vector<std::string> fields = {item.name,
-                                           join_strings(item.template_params),
-                                           join_strings(item.param_native_spellings),
-                                           join_strings(cached_type_texts(item.param_type_refs)),
+                                           native_cache_join_strings(item.template_params),
+                                           native_cache_join_strings(item.param_native_spellings),
+                                           native_cache_join_strings(
+                                               cached_type_texts(item.param_type_refs)),
                                            item.return_native_spelling,
                                            cached_type_text(item.return_type_ref),
                                            std::to_string(item.min_params),
@@ -485,7 +309,7 @@ void store_native_header_scan_cache(const NativeHeaderRawCache& cache,
                                            klass.cpp_name,
                                            klass.identity.usr,
                                            klass.identity.canonical_path,
-                                           join_strings(klass.generic_params),
+                                           native_cache_join_strings(klass.generic_params),
                                            klass.origin_module};
         append_location_fields(fields, klass.location);
         write_record(out, "CLS", fields);
