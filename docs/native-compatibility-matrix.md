@@ -37,6 +37,7 @@ Last local probe run: 2026-06-21 with `scripts/probe_optional.sh`.
 | sqlite3 | database | C API, pointers, result types, prepare/step/finalize | pass | `scripts/probe_optional.sh` / `sqlite_crud.dd` | no |
 | Lua | scripting / embedding | multiple C headers, stack API, C strings, constants, lifecycle | pass | `scripts/probe_optional.sh` / `lua_stack.dd` | no |
 | zlib | compression | C API, buffers, typedefs, constants, pointer output params | pass | `scripts/probe_optional.sh` / `zlib_roundtrip.dd` | no |
+| liblzma | compression | C API, version query, nullable C string return, link | pass | `scripts/probe_optional.sh` / `lzma_version.dd` | no |
 | libuuid | utility / systems | typedefed C array locals such as `uuid_t`, native array-to-pointer call handoff, mutable `char *out` buffer, constants, compare/copy, link | pass | `scripts/probe_optional.sh` / `uuid_parse.dd` | no |
 | curl | network | C API, constants, pointer returns, struct field reads, link | pass | `scripts/probe_optional.sh` / `curl_version_info.dd` | no |
 | OpenSSL | crypto / TLS | C API, const byte input, output buffers, link flags | pass | `scripts/probe_optional.sh` / `openssl_sha256.dd` | no |

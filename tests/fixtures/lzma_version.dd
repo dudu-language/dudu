@@ -1,0 +1,11 @@
+import c "lzma.h" as lzma
+
+
+def main() -> i32:
+    version = lzma.lzma_version_number()
+    name = lzma.lzma_version_string()
+    if version == 0:
+        return 1
+    if name == None:
+        return 2
+    return 42

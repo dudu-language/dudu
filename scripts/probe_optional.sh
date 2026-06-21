@@ -148,6 +148,27 @@ probe_zlib() {
     echo "ok zlib"
 }
 
+probe_lzma() {
+    if ! pkg-config --exists liblzma; then
+        echo "skip liblzma: pkg-config package not found"
+        return
+    fi
+
+    local cpp="$repo_root/build/probe_lzma_version.cpp"
+    local bin="$repo_root/build/probe_lzma_version"
+    "$repo_root/build/duc" emit "$repo_root/tests/fixtures/lzma_version.dd" -o "$cpp"
+    "${CXX:-c++}" -std=c++20 "$cpp" $(pkg-config --cflags --libs liblzma) -o "$bin"
+    set +e
+    "$bin"
+    local status=$?
+    set -e
+    if [[ "$status" -ne 42 ]]; then
+        echo "lzma probe returned $status, expected 42" >&2
+        exit 1
+    fi
+    echo "ok lzma"
+}
+
 probe_uuid() {
     if ! pkg-config --exists uuid; then
         echo "skip uuid: pkg-config package not found"
@@ -719,6 +740,7 @@ probe_opencv
 probe_sqlite
 probe_lua
 probe_zlib
+probe_lzma
 probe_uuid
 probe_curl
 probe_libpng

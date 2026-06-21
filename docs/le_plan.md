@@ -1243,7 +1243,7 @@ push. They are not release packaging work.
    Current optional probes pass for glm, Eigen, OpenBLAS, OpenCV, sqlite, zlib,
    curl, OpenSSL, libevent, libxml2, Expat, Cairo, FreeType, libpng, libjpeg,
    Lua, libuuid, stb, fmt, spdlog, Boost filesystem, threading, POSIX mmap, POSIX
-   pthread, raylib, SDL3, GLFW, Dear ImGui, X11, Wayland, OpenCL, Vulkan, and
+   pthread, liblzma, raylib, SDL3, GLFW, Dear ImGui, X11, Wayland, OpenCL, Vulkan, and
    FFmpeg on this machine. Optional
    dev-only
    dependencies can be installed into the ignored `third_party/install` prefix
