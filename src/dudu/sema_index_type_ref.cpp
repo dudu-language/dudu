@@ -62,8 +62,8 @@ TypeRef shaped_array_type_ref(const TypeRef& element_type, const std::vector<std
     return type;
 }
 
-TypeRef resolve_type_ref_alias(const Symbols& symbols, const TypeRef& raw_type) {
-    return resolve_alias_ref(symbols, raw_type);
+TypeRef resolve_type_ref_alias(const Symbols& symbols, const TypeRef& receiver_type) {
+    return resolve_alias_ref(symbols, receiver_type);
 }
 
 bool foreign_or_auto_indexable_type(const TypeRef& type) {
@@ -127,12 +127,12 @@ TypeRef array_element_template_type_ref(const SourceLocation& location, const Ty
 }
 
 std::optional<TypeRef> indexed_type_ref_from_type_ref_with_count(
-    const Symbols& symbols, const SourceLocation& location, const TypeRef& raw_type,
+    const Symbols& symbols, const SourceLocation& location, const TypeRef& receiver_type,
     const size_t index_count, const bool is_slice, const bool has_step, const std::string& label) {
-    const TypeRef raw_receiver_type = unwrap_index_receiver_type(raw_type);
-    const bool raw_native_alias =
-        symbols.native_types.contains(type_ref_head_name(raw_receiver_type));
-    const TypeRef resolved_type = resolve_type_ref_alias(symbols, raw_type);
+    const TypeRef unwrapped_receiver_type = unwrap_index_receiver_type(receiver_type);
+    const bool receiver_is_native_alias =
+        symbols.native_types.contains(type_ref_head_name(unwrapped_receiver_type));
+    const TypeRef resolved_type = resolve_type_ref_alias(symbols, receiver_type);
     const TypeRef* type = &resolved_type;
     while ((type->kind == TypeKind::Reference || type->kind == TypeKind::Const) &&
            type->children.size() == 1) {
@@ -226,7 +226,7 @@ std::optional<TypeRef> indexed_type_ref_from_type_ref_with_count(
     if (type->kind == TypeKind::Template && type->name == "dict" && type->children.size() == 2) {
         return type->children[1];
     }
-    if (native_fixed_extent_template(symbols, *type, raw_native_alias)) {
+    if (native_fixed_extent_template(symbols, *type, receiver_is_native_alias)) {
         return type->children.front();
     }
     if (type->kind == TypeKind::Template && type->children.size() == 1) {

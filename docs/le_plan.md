@@ -967,6 +967,9 @@ push. They are not release packaging work.
    `cpp(...)` inference has been renamed behind explicit `cpp_escape` helper
    names, so normal sema/codegen cannot accidentally depend on generic
    string-scanner APIs.
+   Index sema helper parameters now use receiver-type terminology for structured
+   `TypeRef` values instead of `raw_type` names, and the guard rejects moving
+   those misleading names back into the normal index sema path.
 
 3. OOP Surface Cleanup
 

@@ -102,6 +102,13 @@ if rg -n "std::string text;" "$repo_root/src/dudu/ast.hpp"; then
     exit 1
 fi
 
+if rg -n "\\braw_type\\b|\\braw_receiver_type\\b|\\braw_native_alias\\b" \
+    "$repo_root/src/dudu/sema_index.cpp" "$repo_root/src/dudu/sema_index_type_ref.cpp" \
+    "$repo_root/src/dudu/sema_index_type_ref.hpp"; then
+    echo "index sema uses structured TypeRef receiver metadata; raw names belong only at raw/native boundaries" >&2
+    exit 1
+fi
+
 awk '
     /struct Native(Type|Value|Function)Decl/ { in_native = 1 }
     in_native && /std::string type;/ {

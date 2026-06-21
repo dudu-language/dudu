@@ -160,9 +160,9 @@ TypeRef indexed_value_type_ref(const Symbols& symbols,
 }
 
 TypeRef indexed_type_ref_from_type(const Symbols& symbols, const SourceLocation& location,
-                                   const TypeRef& raw_type, const Expr& index_expr,
+                                   const TypeRef& receiver_type, const Expr& index_expr,
                                    const std::string& label) {
-    const TypeRef unwrapped_type_ref = unwrap_reference_and_const(raw_type);
+    const TypeRef unwrapped_type_ref = unwrap_reference_and_const(receiver_type);
     if (is_full_multidim_slice_expr(index_expr)) {
         const std::vector<size_t> shape = explicit_array_shape(unwrapped_type_ref);
         const std::vector<std::string> shape_text = explicit_array_shape_text(unwrapped_type_ref);
@@ -220,7 +220,7 @@ TypeRef indexed_type_ref_from_type(const Symbols& symbols, const SourceLocation&
         }
     }
     if (const auto indexed_ref = indexed_type_ref_from_type_ref_with_count(
-            symbols, location, raw_type, index_count_from_expr(index_expr),
+            symbols, location, receiver_type, index_count_from_expr(index_expr),
             is_slice_expr(index_expr), has_step_slice(index_expr), label)) {
         return *indexed_ref;
     }
