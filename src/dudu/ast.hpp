@@ -3,7 +3,6 @@
 #include "dudu/source.hpp"
 
 #include <filesystem>
-#include <functional>
 #include <map>
 #include <string>
 #include <string_view>
@@ -369,9 +368,50 @@ std::string render_import_decl(const ImportDecl& import);
 std::string_view statement_kind_name(StmtKind kind);
 std::string_view expression_kind_name(ExprKind kind);
 std::string_view type_kind_name(TypeKind kind);
-void visit_expr_tree(const Expr& expr, const std::function<void(const Expr&)>& visitor);
-void visit_stmt_expressions(const Stmt& stmt, const std::function<void(const Expr&)>& visitor);
-void visit_stmt_tree_expressions(const Stmt& stmt, const std::function<void(const Expr&)>& visitor);
+namespace detail {
+template <typename Visit> void visit_expr_tree_impl(const Expr& expr, Visit& visit) {
+    visit(expr);
+    for (const Expr& child : expr.callee) {
+        visit_expr_tree_impl(child, visit);
+    }
+    for (const Expr& child : expr.params) {
+        visit_expr_tree_impl(child, visit);
+    }
+    for (const Expr& child : expr.template_args) {
+        visit_expr_tree_impl(child, visit);
+    }
+    for (const Expr& child : expr.children) {
+        visit_expr_tree_impl(child, visit);
+    }
+}
+template <typename Visit> void visit_stmt_expressions_impl(const Stmt& stmt, Visit& visit) {
+    visit(stmt.expr);
+    visit(stmt.value_expr);
+    visit(stmt.target_expr);
+    visit(stmt.condition_expr);
+    visit(stmt.message_expr);
+    visit(stmt.iterable_expr);
+    visit(stmt.pattern_expr);
+    visit(stmt.guard_expr);
+}
+template <typename Visit> void visit_stmt_tree_expressions_impl(const Stmt& stmt, Visit& visit) {
+    auto visit_expr = [&](const Expr& expr) { visit_expr_tree_impl(expr, visit); };
+    visit_stmt_expressions_impl(stmt, visit_expr);
+    for (const Stmt& child : stmt.children) {
+        visit_stmt_tree_expressions_impl(child, visit);
+    }
+}
+} // namespace detail
+
+template <typename Visit> void visit_expr_tree(const Expr& expr, Visit visit) {
+    detail::visit_expr_tree_impl(expr, visit);
+}
+template <typename Visit> void visit_stmt_expressions(const Stmt& stmt, Visit visit) {
+    detail::visit_stmt_expressions_impl(stmt, visit);
+}
+template <typename Visit> void visit_stmt_tree_expressions(const Stmt& stmt, Visit visit) {
+    detail::visit_stmt_tree_expressions_impl(stmt, visit);
+}
 Expr parse_expr_text(std::string_view text, SourceLocation location = {});
 TypeRef parse_type_text(std::string_view text, SourceLocation location = {});
 std::vector<std::string> tuple_binding_names(const Expr& expr);

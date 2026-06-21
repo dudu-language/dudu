@@ -1845,7 +1845,10 @@ push. They are not release packaging work.
    recursive walker lambdas in each feature. Local function-type alias
    resolution now uses an explicit helper instead of a recursive
    `std::function` lambda, keeping sema recursion named after the compiler
-   concept it implements.
+   concept it implements. Core AST expression/statement visitors are now
+   template traversal helpers instead of compiled `std::function` callback
+   wrappers, leaving `std::function` usage to generated C++ function types and
+   the emitted prelude.
 
 19. Polish Unsupported Syntax Diagnostics
 
