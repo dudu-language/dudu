@@ -7,8 +7,8 @@
 #include "dudu/format.hpp"
 #include "dudu/format_path.hpp"
 #include "dudu/language_server_completion.hpp"
-#include "dudu/language_server_diagnostics.hpp"
 #include "dudu/language_server_definition.hpp"
+#include "dudu/language_server_diagnostics.hpp"
 #include "dudu/language_server_hover.hpp"
 #include "dudu/language_server_json.hpp"
 #include "dudu/language_server_navigation.hpp"
@@ -231,10 +231,10 @@ void test_merged_output_rejects_same_named_module_declarations() {
         dudu::reject_merged_output_module_conflicts(module);
     } catch (const dudu::CompileError& error) {
         const std::string message = error.what();
-        rejected = message.find("merged C++ output cannot combine Dudu modules") !=
-                       std::string::npos &&
-                   message.find("[build] backend = \"cmake\"") != std::string::npos &&
-                   message.find("duc emit-modules") != std::string::npos;
+        rejected =
+            message.find("merged C++ output cannot combine Dudu modules") != std::string::npos &&
+            message.find("[build] backend = \"cmake\"") != std::string::npos &&
+            message.find("duc emit-modules") != std::string::npos;
     }
     assert(rejected);
 }
@@ -581,8 +581,7 @@ void test_semantic_diagnostics() {
     } catch (const dudu::CompileError& error) {
         assert(error.location().line == 2);
         assert(error.location().column > 5);
-        assert(std::string(error.what()).find("value used as a type: value") !=
-               std::string::npos);
+        assert(std::string(error.what()).find("value used as a type: value") != std::string::npos);
         bad_value_as_type = true;
     }
     assert(bad_value_as_type);
@@ -597,8 +596,7 @@ void test_semantic_diagnostics() {
     } catch (const dudu::CompileError& error) {
         assert(error.location().line == 3);
         assert(error.location().column > 5);
-        assert(std::string(error.what()).find("value used as a type: value") !=
-               std::string::npos);
+        assert(std::string(error.what()).find("value used as a type: value") != std::string::npos);
         bad_prior_local_as_type = true;
     }
     assert(bad_prior_local_as_type);
@@ -702,8 +700,7 @@ void test_lsp_member_completion_uses_imported_module_shapes() {
                                      "    v: Vec3 = Vec3(x=1.0, y=2.0)\n"
                                      "    v.x\n"
                                      "    return 0\n"};
-    dudu::Json params =
-        dudu::JsonParser("{\"position\":{\"line\":4,\"character\":6}}").parse();
+    dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":4,\"character\":6}}").parse();
     const std::string completions = dudu::completion_json(&doc, &params);
     assert(completions.find("\"label\":\"x\"") != std::string::npos);
     assert(completions.find("\"label\":\"y\"") != std::string::npos);
@@ -770,8 +767,7 @@ void test_lsp_module_completion_uses_loaded_module_units() {
                                      "def main() -> i32:\n"
                                      "    maths.\n"
                                      "    return 0\n"};
-    dudu::Json params =
-        dudu::JsonParser("{\"position\":{\"line\":3,\"character\":10}}").parse();
+    dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":3,\"character\":10}}").parse();
     const std::string completions = dudu::completion_json(&doc, &params);
     assert(completions.find("\"label\":\"inc\"") != std::string::npos);
     assert(completions.find("inc(value: i32) -> i32") != std::string::npos);
@@ -793,8 +789,7 @@ void test_lsp_definition_uses_loaded_module_units() {
                                      "\n"
                                      "def main() -> i32:\n"
                                      "    return maths.inc(1)\n"};
-    dudu::Json params =
-        dudu::JsonParser("{\"position\":{\"line\":3,\"character\":18}}").parse();
+    dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":3,\"character\":18}}").parse();
     const std::string definition = dudu::definition_json(doc, &params);
     assert(definition.find(dudu::file_uri(dir / "maths.dd")) != std::string::npos);
     assert(definition.find("\"line\":0") != std::string::npos);
@@ -817,8 +812,7 @@ void test_lsp_definition_jumps_to_native_header_type() {
                                      "def main() -> i32:\n"
                                      "    point: NativePoint\n"
                                      "    return point.x\n"};
-    dudu::Json params =
-        dudu::JsonParser("{\"position\":{\"line\":3,\"character\":16}}").parse();
+    dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":3,\"character\":16}}").parse();
     const std::string definition = dudu::definition_json(doc, &params);
     assert(definition.find(dudu::file_uri(dir / "native_point.h")) != std::string::npos);
     assert(definition.find("\"line\":0") != std::string::npos);
@@ -829,22 +823,21 @@ void test_lsp_definition_uses_receiver_for_ambiguous_native_methods() {
         std::filesystem::temp_directory_path() / "dudu_lsp_native_method_definition_test";
     std::filesystem::remove_all(dir);
     std::filesystem::create_directories(dir);
-    write_file(dir / "native_methods.hpp",
-               "namespace left {\n"
-               "struct Thing {\n"
-               "    int shared() const {\n"
-               "        return 1;\n"
-               "    }\n"
-               "};\n"
-               "}\n"
-               "\n"
-               "namespace right {\n"
-               "struct Thing {\n"
-               "    int shared() const {\n"
-               "        return 2;\n"
-               "    }\n"
-               "};\n"
-               "}\n");
+    write_file(dir / "native_methods.hpp", "namespace left {\n"
+                                           "struct Thing {\n"
+                                           "    int shared() const {\n"
+                                           "        return 1;\n"
+                                           "    }\n"
+                                           "};\n"
+                                           "}\n"
+                                           "\n"
+                                           "namespace right {\n"
+                                           "struct Thing {\n"
+                                           "    int shared() const {\n"
+                                           "        return 2;\n"
+                                           "    }\n"
+                                           "};\n"
+                                           "}\n");
 
     const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
                              .path = dir / "main.dd",
@@ -854,8 +847,7 @@ void test_lsp_definition_uses_receiver_for_ambiguous_native_methods() {
                                      "    first: left.Thing\n"
                                      "    second: right.Thing\n"
                                      "    return second.shared()\n"};
-    dudu::Json params =
-        dudu::JsonParser("{\"position\":{\"line\":5,\"character\":20}}").parse();
+    dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":5,\"character\":20}}").parse();
     const std::string definition = dudu::definition_json(doc, &params);
     assert(definition.find(dudu::file_uri(dir / "native_methods.hpp")) != std::string::npos);
     assert(definition.find("\"line\":10") != std::string::npos);
@@ -866,22 +858,21 @@ void test_lsp_hover_uses_receiver_for_ambiguous_native_methods() {
         std::filesystem::temp_directory_path() / "dudu_lsp_native_method_hover_test";
     std::filesystem::remove_all(dir);
     std::filesystem::create_directories(dir);
-    write_file(dir / "native_methods.hpp",
-               "namespace left {\n"
-               "struct Thing {\n"
-               "    int shared() const {\n"
-               "        return 1;\n"
-               "    }\n"
-               "};\n"
-               "}\n"
-               "\n"
-               "namespace right {\n"
-               "struct Thing {\n"
-               "    float shared() const {\n"
-               "        return 2.0f;\n"
-               "    }\n"
-               "};\n"
-               "}\n");
+    write_file(dir / "native_methods.hpp", "namespace left {\n"
+                                           "struct Thing {\n"
+                                           "    int shared() const {\n"
+                                           "        return 1;\n"
+                                           "    }\n"
+                                           "};\n"
+                                           "}\n"
+                                           "\n"
+                                           "namespace right {\n"
+                                           "struct Thing {\n"
+                                           "    float shared() const {\n"
+                                           "        return 2.0f;\n"
+                                           "    }\n"
+                                           "};\n"
+                                           "}\n");
 
     const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
                              .path = dir / "main.dd",
@@ -891,8 +882,7 @@ void test_lsp_hover_uses_receiver_for_ambiguous_native_methods() {
                                      "    first: left.Thing\n"
                                      "    second: right.Thing\n"
                                      "    return i32(second.shared())\n"};
-    dudu::Json params =
-        dudu::JsonParser("{\"position\":{\"line\":5,\"character\":24}}").parse();
+    dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":5,\"character\":24}}").parse();
     const std::string hover = dudu::hover_json(doc, "second.shared", "", &params);
     assert(hover.find("shared() -> f32") != std::string::npos);
     assert(hover.find("shared() -> i32") == std::string::npos);
@@ -903,22 +893,21 @@ void test_lsp_references_keep_unbound_member_query_dotted() {
         std::filesystem::temp_directory_path() / "dudu_lsp_member_reference_query_test";
     std::filesystem::remove_all(dir);
     std::filesystem::create_directories(dir);
-    write_file(dir / "native_methods.hpp",
-               "namespace left {\n"
-               "struct Thing {\n"
-               "    int shared() const {\n"
-               "        return 1;\n"
-               "    }\n"
-               "};\n"
-               "}\n"
-               "\n"
-               "namespace right {\n"
-               "struct Thing {\n"
-               "    int shared() const {\n"
-               "        return 2;\n"
-               "    }\n"
-               "};\n"
-               "}\n");
+    write_file(dir / "native_methods.hpp", "namespace left {\n"
+                                           "struct Thing {\n"
+                                           "    int shared() const {\n"
+                                           "        return 1;\n"
+                                           "    }\n"
+                                           "};\n"
+                                           "}\n"
+                                           "\n"
+                                           "namespace right {\n"
+                                           "struct Thing {\n"
+                                           "    int shared() const {\n"
+                                           "        return 2;\n"
+                                           "    }\n"
+                                           "};\n"
+                                           "}\n");
 
     const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
                              .path = dir / "main.dd",
@@ -929,8 +918,7 @@ void test_lsp_references_keep_unbound_member_query_dotted() {
                                      "    second: right.Thing\n"
                                      "    return second.shared() + first.shared()\n"};
     const std::map<std::string, dudu::Document> workspace{{doc.uri, doc}};
-    dudu::Json params =
-        dudu::JsonParser("{\"position\":{\"line\":5,\"character\":20}}").parse();
+    dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":5,\"character\":20}}").parse();
     const std::string refs = dudu::references_json(doc, &params, workspace);
     assert(refs.find("\"start\":{\"line\":5,\"character\":18}") != std::string::npos);
     assert(refs.find("\"start\":{\"line\":5,\"character\":35}") == std::string::npos);
@@ -987,6 +975,19 @@ void test_lsp_unreachable_lint_does_not_flag_partial_branch_return() {
                                      "        return -1\n"
                                      "    value: i32 = x + 1\n"
                                      "    return value\n"};
+    const std::vector<dudu::Diagnostic> diags = dudu::diagnostics_for_document(doc);
+    for (const dudu::Diagnostic& diag : diags) {
+        assert(diag.code != "dudu.lint.unreachable");
+    }
+}
+
+void test_lsp_unreachable_lint_does_not_flag_return_continuation() {
+    const dudu::Document doc{.uri = "",
+                             .path = "lint_return_continuation.dd",
+                             .text = "def value(x: f32) -> f32:\n"
+                                     "    return x\n"
+                                     "        + 0.5\n"
+                                     "        + 0.25\n"};
     const std::vector<dudu::Diagnostic> diags = dudu::diagnostics_for_document(doc);
     for (const dudu::Diagnostic& diag : diags) {
         assert(diag.code != "dudu.lint.unreachable");
@@ -1061,8 +1062,7 @@ void test_lsp_references_track_qualified_type_refs() {
     assert(refs.size() == 2);
 
     const std::map<std::string, dudu::Document> workspace{{doc.uri, doc}};
-    dudu::Json params =
-        dudu::JsonParser("{\"position\":{\"line\":2,\"character\":23}}").parse();
+    dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":2,\"character\":23}}").parse();
     const std::string refs_json = dudu::references_json(doc, &params, workspace);
     assert(refs_json.find("\"start\":{\"line\":2,\"character\":18}") != std::string::npos);
     assert(refs_json.find("\"start\":{\"line\":3,\"character\":11}") != std::string::npos);
@@ -1104,8 +1104,7 @@ void test_lsp_module_reference_filters_alias_target() {
           .path = dir / "other.dd",
           .text = read_file(dir / "other.dd")}},
     };
-    dudu::Json params =
-        dudu::JsonParser("{\"position\":{\"line\":3,\"character\":15}}").parse();
+    dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":3,\"character\":15}}").parse();
     const std::string refs = dudu::references_json(main_doc, &params, workspace);
     assert(refs.find(dudu::file_uri(dir / "main.dd")) != std::string::npos);
     assert(refs.find(dudu::file_uri(dir / "same.dd")) != std::string::npos);
@@ -1132,8 +1131,7 @@ void test_lsp_module_references_include_target_declaration() {
                                     .text = read_file(dir / "helper.dd")};
     const std::map<std::string, dudu::Document> workspace{{main_doc.uri, main_doc},
                                                           {helper_doc.uri, helper_doc}};
-    dudu::Json params =
-        dudu::JsonParser("{\"position\":{\"line\":3,\"character\":15}}").parse();
+    dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":3,\"character\":15}}").parse();
     const std::string refs = dudu::references_json(main_doc, &params, workspace);
     assert(refs.find(dudu::file_uri(dir / "main.dd")) != std::string::npos);
     assert(refs.find(dudu::file_uri(dir / "helper.dd")) != std::string::npos);
@@ -1180,8 +1178,7 @@ void test_lsp_selective_import_references_include_target_declaration() {
           .path = dir / "other.dd",
           .text = read_file(dir / "other.dd")}},
     };
-    dudu::Json params =
-        dudu::JsonParser("{\"position\":{\"line\":3,\"character\":15}}").parse();
+    dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":3,\"character\":15}}").parse();
     const std::string refs = dudu::references_json(main_doc, &params, workspace);
     assert(refs.find(dudu::file_uri(dir / "main.dd")) != std::string::npos);
     assert(refs.find(dudu::file_uri(dir / "same.dd")) != std::string::npos);
@@ -1488,24 +1485,23 @@ void test_reference_list_indexing() {
 }
 
 void test_negative_numeric_literals_contextualize_as_f32_args() {
-    const dudu::ModuleAst module =
-        dudu::parse_source("def take_f32(x: f32, y: f32):\n"
-                           "    pass\n"
-                           "\n"
-                           "class Player:\n"
-                           "    x: f32\n"
-                           "    y: f32\n"
-                           "\n"
-                           "    def move(self, dx: f32, dy: f32):\n"
-                           "        self.x += dx\n"
-                           "        self.y += dy\n"
-                           "\n"
-                           "def main() -> i32:\n"
-                           "    take_f32(-2.0, -1.0)\n"
-                           "    player = Player(x=1.0, y=2.0)\n"
-                           "    player.move(2.0, -1.0)\n"
-                           "    return 0\n",
-                           "negative_numeric_literal_args.dd");
+    const dudu::ModuleAst module = dudu::parse_source("def take_f32(x: f32, y: f32):\n"
+                                                      "    pass\n"
+                                                      "\n"
+                                                      "class Player:\n"
+                                                      "    x: f32\n"
+                                                      "    y: f32\n"
+                                                      "\n"
+                                                      "    def move(self, dx: f32, dy: f32):\n"
+                                                      "        self.x += dx\n"
+                                                      "        self.y += dy\n"
+                                                      "\n"
+                                                      "def main() -> i32:\n"
+                                                      "    take_f32(-2.0, -1.0)\n"
+                                                      "    player = Player(x=1.0, y=2.0)\n"
+                                                      "    player.move(2.0, -1.0)\n"
+                                                      "    return 0\n",
+                                                      "negative_numeric_literal_args.dd");
     dudu::analyze_module(module, {.check_bodies = true});
 }
 
@@ -1812,6 +1808,7 @@ int main() {
         test_lsp_hover_uses_loaded_module_units();
         test_lsp_unreachable_lint_uses_branch_structure();
         test_lsp_unreachable_lint_does_not_flag_partial_branch_return();
+        test_lsp_unreachable_lint_does_not_flag_return_continuation();
         test_lsp_scope_lint_tracks_inferred_assignment_locals();
         test_lsp_suspicious_cast_lint_uses_type_refs();
         test_lsp_references_track_assignment_bindings();

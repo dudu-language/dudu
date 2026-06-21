@@ -216,11 +216,13 @@ first unreachable statement in a block, and now lives in a focused AST-backed
 pass with shared source-file identity handling. Suspicious-cast lint scope
 state carries structured `TypeRef` locals and renders type text only at the
 diagnostic message boundary. A partial-branch-return fixture guards against
-flagging code after a non-exhaustive `if` as unreachable. Remaining work is to
-keep splitting mixed lint/code-action logic, move any residual edit construction
-onto concrete AST/token ranges, and add more false-positive fixtures for
-realistic project/module cases. Import organization in the formatter and LSP code
-actions now shares structured leading-import block organization and parsed
+flagging code after a non-exhaustive `if` as unreachable, and a multiline
+return-continuation fixture guards against treating continued expression lines
+as unreachable statements. Remaining work is to keep splitting mixed
+lint/code-action logic, move any residual edit construction onto concrete
+AST/token ranges, and add more false-positive fixtures for realistic
+project/module cases. Import organization in the formatter and LSP code actions
+now shares structured leading-import block organization and parsed
 `ImportDecl` rendering instead of carrying duplicate import sorting/string
 builders, and generic document line helpers live in LSP support instead of
 individual action files. A multi-module lint fixture guards against reporting a
