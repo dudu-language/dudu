@@ -1367,8 +1367,11 @@ push. They are not release packaging work.
    Remaining incremental work is on the Dudu side: `duc emit-modules` still
    analyzes the selected entry's full module graph in a fresh process and
    reparses cached native header metadata. Real compiler-speed work needs
-   module-level invalidation, structured native-header metadata caching, and
-   clearer phase timing/progress output for long analysis steps.
+   module-level invalidation and structured native-header metadata caching.
+   `duc emit-modules --timings` and `duc emit-test-modules --timings` now print
+   detailed analyze/load/config/native-merge/sema/emit progress, which also
+   makes generated-CMake custom command stalls visible when `dudu build
+   --timings` enables `DUDU_TIMINGS`.
 
 13. Language Server And Formatter
 

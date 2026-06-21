@@ -128,6 +128,14 @@ compile_and_expect value_match_string 42
 "$repo_root/build/dudu" --help | grep -Fq 'dudu build [input.dd|target] [--quiet] [--verbose]'
 "$repo_root/build/dudu" --help | grep -Fq 'dudu check [input.dd|dir] [--quiet]'
 "$repo_root/build/dudu" bench compiler --quiet -- --help | grep -q 'bench_compiler.sh'
+emit_timing_dir="$repo_root/build/emit_modules_timing_smoke"
+rm -rf "$emit_timing_dir"
+emit_timing_output="$("$repo_root/build/duc" emit-modules \
+    "$repo_root/tests/fixtures/project_import_metadata/main.dd" \
+    -o "$emit_timing_dir" --timings 2>&1)"
+printf '%s\n' "$emit_timing_output" | grep -Eq '^\[\+[0-9]+\.[0-9]{3}s\] load '
+printf '%s\n' "$emit_timing_output" | grep -Eq '^\[\+[0-9]+\.[0-9]{3}s\] sema '
+printf '%s\n' "$emit_timing_output" | grep -Eq '^\[\+[0-9]+\.[0-9]{3}s\] emit '
 direct_smoke="$repo_root/build/direct_backend_smoke"
 rm -rf "$direct_smoke"
 mkdir -p "$direct_smoke"

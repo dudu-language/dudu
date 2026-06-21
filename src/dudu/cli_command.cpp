@@ -187,8 +187,7 @@ std::filesystem::path default_build_output(const ProjectConfig& config,
 }
 
 ModuleAst checked_module(const CliOptions& options, const std::string& source, bool check_bodies) {
-    const bool project_output = options.project_driver && !options.quiet;
-    const bool detail_output = project_output && options.timings;
+    const bool detail_output = !options.quiet && options.timings;
     print_project_step(detail_output, "load", options.input);
     ModuleAst module = options.input.empty() ? parse_source(source, options.input)
                                              : load_source_tree(options.input);
@@ -431,7 +430,7 @@ int run_cli(int argc, char** argv) {
         if (!options.output.has_value()) {
             fail("emit-modules requires -o <directory>");
         }
-        const bool project_output = options.project_driver && !options.quiet;
+        const bool project_output = !options.quiet && (options.project_driver || options.timings);
         print_project_step(project_output, "analyze", options.input);
         const ModuleAst module = checked_module(options, source, true);
         print_project_step(project_output, "emit", *options.output);
@@ -442,7 +441,7 @@ int run_cli(int argc, char** argv) {
         if (!options.output.has_value()) {
             fail("emit-test-modules requires -o <directory>");
         }
-        const bool project_output = options.project_driver && !options.quiet;
+        const bool project_output = !options.quiet && (options.project_driver || options.timings);
         print_project_step(project_output, "analyze", options.input);
         const ModuleAst module = checked_module(options, source, true);
         print_project_step(project_output, "emit", *options.output);
