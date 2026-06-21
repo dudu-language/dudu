@@ -36,6 +36,7 @@ forbidden=(
     "assignment_error\\(const TypeRef& expected, const Expr& expr, const std::string"
     "type_ref_text\\(type\\) == \"\\.\\.\\.\""
     "function_receiver_type_text"
+    "unwrap_receiver_type\\("
     "parse_native_type_text\\(type_ref_text"
     "render_type\\(const TypeRef"
     "lower_template_call_arg\\("

@@ -19,7 +19,7 @@ namespace dudu {
 namespace {
 
 std::string unwrap_type(const Symbols& symbols, const TypeRef& type) {
-    return unwrap_receiver_type(symbols, type);
+    return receiver_class_name(symbols, type);
 }
 
 bool ref_like(const TypeRef& type) {

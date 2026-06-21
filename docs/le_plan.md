@@ -831,6 +831,10 @@ push. They are not release packaging work.
    resolution, inherited field/method collection, storage checks, and method
    declaration lookup now walk parsed base-class `TypeRef` nodes instead of
    rendering base types before recursion.
+   Receiver unwrapping now exposes the structured `unwrap_receiver_type_ref`
+   path for semantic work; the string-producing helper is explicitly named
+   `receiver_class_name` and is used only where a class lookup key or
+   diagnostic class label is required.
    `super` method and `super.init` inference now keep selected base classes as
    parsed `TypeRef` nodes, passing structured receiver types into constructor
    and method checks and rendering only for diagnostics.

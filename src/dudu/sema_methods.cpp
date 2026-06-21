@@ -50,7 +50,7 @@ bool method_signature_for_type_impl(const Symbols& symbols, const TypeRef& recei
                                     const SourceLocation* location) {
     const TypeRef templated_receiver = receiver_template_type_ref(symbols, receiver_type);
     const std::vector<TypeRef> receiver_args = template_arg_refs_from_type(templated_receiver);
-    const std::string type = unwrap_receiver_type(symbols, receiver_type);
+    const std::string type = receiver_class_name(symbols, receiver_type);
     const ClassDecl* klass = class_for_receiver_type(symbols, receiver_type);
     if (klass == nullptr) {
         return false;
@@ -122,7 +122,7 @@ bool static_method_signature_for_type_impl(const Symbols& symbols, const TypeRef
                                            const SourceLocation* location) {
     const TypeRef templated_receiver = receiver_template_type_ref(symbols, type_name);
     const std::vector<TypeRef> receiver_args = template_arg_refs_from_type(templated_receiver);
-    const std::string type = unwrap_receiver_type(symbols, type_name);
+    const std::string type = receiver_class_name(symbols, type_name);
     const ClassDecl* klass = class_for_receiver_type(symbols, type_name);
     if (klass == nullptr) {
         return false;
@@ -207,7 +207,7 @@ std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
     const std::vector<Expr>& args, const SourceLocation* location) {
     const TypeRef templated_receiver = receiver_template_type_ref(scope.symbols, receiver_type);
     const std::vector<TypeRef> receiver_args = template_arg_refs_from_type(templated_receiver);
-    const std::string type = unwrap_receiver_type(scope.symbols, receiver_type);
+    const std::string type = receiver_class_name(scope.symbols, receiver_type);
     const ClassDecl* klass = class_for_receiver_type(scope.symbols, receiver_type);
     if (klass == nullptr) {
         return std::nullopt;
@@ -240,7 +240,7 @@ std::optional<FunctionSignature> inferred_generic_method_signature_for_type(
     const SourceLocation* location) {
     const TypeRef templated_receiver = receiver_template_type_ref(scope.symbols, receiver_type);
     const std::vector<TypeRef> receiver_args = template_arg_refs_from_type(templated_receiver);
-    const std::string type = unwrap_receiver_type(scope.symbols, receiver_type);
+    const std::string type = receiver_class_name(scope.symbols, receiver_type);
     const ClassDecl* klass = class_for_receiver_type(scope.symbols, receiver_type);
     if (klass == nullptr) {
         return std::nullopt;

@@ -92,13 +92,13 @@ TypeRef unwrap_receiver_type_ref(const Symbols& symbols, const TypeRef& type) {
     }
 }
 
-std::string unwrap_receiver_type(const Symbols& symbols, const TypeRef& type) {
+std::string receiver_class_name(const Symbols& symbols, const TypeRef& type) {
     const TypeRef current = unwrap_receiver_type_ref(symbols, type);
     return strip_c_type_tag(type_ref_head_name(current));
 }
 
 const ClassDecl* class_for_receiver_type(const Symbols& symbols, const TypeRef& type) {
-    const auto klass = symbols.classes.find(unwrap_receiver_type(symbols, type));
+    const auto klass = symbols.classes.find(receiver_class_name(symbols, type));
     return klass == symbols.classes.end() ? nullptr : klass->second;
 }
 

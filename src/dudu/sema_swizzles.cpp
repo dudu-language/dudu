@@ -39,7 +39,7 @@ std::optional<TypeRef> swizzle_type_ref_for_type(const Symbols& symbols,
     if (!component_set) {
         return std::nullopt;
     }
-    const std::string class_name = unwrap_receiver_type(symbols, receiver_type);
+    const std::string class_name = receiver_class_name(symbols, receiver_type);
     const ClassDecl* klass = class_for_receiver_type(symbols, receiver_type);
     if (klass == nullptr) {
         return std::nullopt;

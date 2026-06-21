@@ -20,7 +20,7 @@ namespace {
 std::optional<std::vector<TypeRef>> infer_expected_method_type_args(
     const Symbols& symbols, const TypeRef& receiver_type, const std::string& method_name,
     const std::vector<TypeRef>& arg_types, const TypeRef& expected_type) {
-    const std::string type = unwrap_receiver_type(symbols, receiver_type);
+    const std::string type = receiver_class_name(symbols, receiver_type);
     const auto klass = symbols.classes.find(type);
     if (klass == symbols.classes.end()) {
         return std::nullopt;

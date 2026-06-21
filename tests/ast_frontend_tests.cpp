@@ -616,9 +616,11 @@ void test_unwrap_receiver_uses_type_ast() {
     symbols.alias_type_refs["AliasBox"] = dudu::parse_type_text("Box[i32]");
     symbols.alias_type_refs["ConstAliasBox"] = dudu::parse_type_text("const[AliasBox]");
 
-    assert(dudu::unwrap_receiver_type(symbols, dudu::parse_type_text("*const[AliasBox]")) == "Box");
-    assert(dudu::unwrap_receiver_type(symbols, dudu::parse_type_text("*ConstAliasBox")) == "Box");
-    assert(dudu::unwrap_receiver_type(symbols, dudu::parse_type_text("&struct sqlite3")) ==
+    assert(dudu::type_ref_head_name(dudu::unwrap_receiver_type_ref(
+               symbols, dudu::parse_type_text("*const[AliasBox]"))) == "Box");
+    assert(dudu::type_ref_head_name(dudu::unwrap_receiver_type_ref(
+               symbols, dudu::parse_type_text("*ConstAliasBox"))) == "Box");
+    assert(dudu::receiver_class_name(symbols, dudu::parse_type_text("&struct sqlite3")) ==
            "sqlite3");
 }
 
