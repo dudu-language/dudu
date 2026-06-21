@@ -231,9 +231,9 @@ void append_location_fields(std::vector<std::string>& fields, const SourceLocati
 }
 
 SourceLocation cached_location(const std::vector<std::string>& fields, size_t index,
-                               const SourceLocation& fallback) {
+                               const SourceLocation& default_location) {
     if (fields.size() < index + 3) {
-        return fallback;
+        return default_location;
     }
     return {.file = fields[index],
             .line = std::stoi(fields[index + 1]),
