@@ -299,10 +299,14 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
                                  const std::string& flags) {
     static std::map<std::string, NativeHeaderScan> cache;
     const std::string key = scan_key(import, options, flags);
-    if (const auto found = cache.find(key); found != cache.end()) {
-        return found->second;
-    }
     NativeHeaderRawCache raw_cache = load_native_header_raw_cache(options, key);
+    if (raw_cache.hit) {
+        if (const auto found = cache.find(key); found != cache.end()) {
+            return found->second;
+        }
+    } else {
+        cache.erase(key);
+    }
     if (const std::optional<NativeHeaderScan> scan =
             load_native_header_scan_cache(raw_cache, import.location)) {
         cache[key] = *scan;
@@ -324,21 +328,26 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
     const std::filesystem::path cpp = base.string() + ".cpp";
     const std::filesystem::path ast = base.string() + ".ast";
     const std::filesystem::path macros = base.string() + ".macros";
+    const std::filesystem::path deps = base.string() + ".d";
     const std::filesystem::path err = base.string() + ".err";
     const auto cleanup = [&]() {
         std::filesystem::remove(cpp);
         std::filesystem::remove(ast);
         std::filesystem::remove(macros);
+        std::filesystem::remove(deps);
         std::filesystem::remove(err);
     };
     write_text(cpp, scanner_source_for_header(import, false));
 
     NativeHeaderScan scan;
-    std::string ast_dump = run_capture(clang_base_command(options, cpp, true), ast, err);
+    const std::string dependency_flags =
+        " -MMD -MF " + shell_quote_path(deps) + " -MT dudu_native_scan";
+    std::string ast_dump =
+        run_capture(clang_base_command(options, cpp, true) + dependency_flags, ast, err);
     bool used_prelude_retry = false;
     if (ast_dump.empty()) {
         write_text(cpp, scanner_source_for_header(import, true));
-        ast_dump = run_capture(clang_base_command(options, cpp, true), ast, err);
+        ast_dump = run_capture(clang_base_command(options, cpp, true) + dependency_flags, ast, err);
         used_prelude_retry = !ast_dump.empty();
     }
     if (!ast_dump.empty()) {
@@ -366,7 +375,7 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
     }
     parse_macro_dump(scan, macro_dump, import.location);
     if (!used_prelude_retry) {
-        store_native_header_raw_cache(raw_cache, ast_dump, macro_dump);
+        store_native_header_raw_cache(raw_cache, ast_dump, macro_dump, read_text(deps));
     }
     cleanup();
     cache[key] = dedupe_scan(std::move(scan));

@@ -482,6 +482,50 @@ void test_native_header_cache_invalidates_local_header(const std::filesystem::pa
     assert(failed);
 }
 
+void test_native_header_cache_invalidates_included_header(const std::filesystem::path& root) {
+    const std::filesystem::path source_dir = root / "build" / "native-cache-transitive";
+    const std::filesystem::path wrapper = source_dir / "wrapper.hpp";
+    const std::filesystem::path detail = source_dir / "detail.hpp";
+    dudu::ProjectConfig config;
+    config.build_dir = source_dir / "build";
+    std::filesystem::remove_all(source_dir);
+    std::filesystem::create_directories(source_dir);
+
+    {
+        std::ofstream out(wrapper);
+        out << "#pragma once\n#include \"detail.hpp\"\n";
+    }
+    {
+        std::ofstream out(detail);
+        out << "#pragma once\ninline int included_answer(void) { return 42; }\n";
+    }
+    dudu::ModuleAst first = dudu::parse_source("import cpp \"./wrapper.hpp\" as wrap\n"
+                                               "\n"
+                                               "def main() -> i32:\n"
+                                               "    return wrap.included_answer()\n",
+                                               source_dir / "main.dd");
+    dudu::merge_native_header_types(first, {.config = config, .source_dir = source_dir});
+    dudu::analyze_module(first, {.check_bodies = true});
+
+    {
+        std::ofstream out(detail);
+        out << "#pragma once\ninline int replacement_answer(void) { return 42; }\n";
+    }
+    bool failed = false;
+    try {
+        dudu::ModuleAst second = dudu::parse_source("import cpp \"./wrapper.hpp\" as wrap\n"
+                                                    "\n"
+                                                    "def main() -> i32:\n"
+                                                    "    return wrap.included_answer()\n",
+                                                    source_dir / "main.dd");
+        dudu::merge_native_header_types(second, {.config = config, .source_dir = source_dir});
+        dudu::analyze_module(second, {.check_bodies = true});
+    } catch (const dudu::CompileError& error) {
+        failed = std::string(error.what()).find("included_answer") != std::string::npos;
+    }
+    assert(failed);
+}
+
 void test_native_header_pointer_diagnostics(const std::filesystem::path& root) {
     bool failed = false;
     try {
@@ -716,6 +760,7 @@ int main() {
         test_native_call_arity(root);
         test_native_header_collision(root);
         test_native_header_cache_invalidates_local_header(root);
+        test_native_header_cache_invalidates_included_header(root);
         test_native_header_pointer_diagnostics(root);
         test_native_method_templates_do_not_mask_concrete_overloads(root);
         test_native_fixed_array_typedef_alias(root);

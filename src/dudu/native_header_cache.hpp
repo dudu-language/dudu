@@ -13,12 +13,14 @@ struct NativeHeaderRawCache {
     std::filesystem::path base;
     std::string ast_dump;
     std::string macro_dump;
+    std::string dependencies;
 };
 
 NativeHeaderRawCache load_native_header_raw_cache(const NativeHeaderOptions& options,
                                                   const std::string& key);
 void store_native_header_raw_cache(const NativeHeaderRawCache& cache, const std::string& ast_dump,
-                                   const std::string& macro_dump);
+                                   const std::string& macro_dump,
+                                   const std::string& dependencies = {});
 std::optional<NativeHeaderScan> load_native_header_scan_cache(const NativeHeaderRawCache& cache,
                                                               const SourceLocation& location);
 void store_native_header_scan_cache(const NativeHeaderRawCache& cache,

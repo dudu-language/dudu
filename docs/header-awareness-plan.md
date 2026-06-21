@@ -294,7 +294,8 @@ Cache key inputs:
 - pkg-config cflags
 - C++ standard
 - target triple when configured
-- mtimes or content hashes for directly included headers
+- dependency stamps for the imported header and local headers reached through
+  Clang's dependency output
 
 Cache output:
 
@@ -302,6 +303,7 @@ Cache output:
 - discovered constants
 - discovered functions
 - diagnostics from Clang
+- dependency stamps used to reject stale raw and parsed scan cache entries
 
 Default location:
 

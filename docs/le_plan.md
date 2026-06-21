@@ -1169,9 +1169,10 @@ push. They are not release packaging work.
    from canonical native declaration metadata when available.
 
    Status: overload diagnostics, explicit native C++ template function calls
-   including multi-argument calls, local-header cache invalidation, cache
-   cleanup, broken-Clang diagnostics, missing-header diagnostics, and common
-   const pointer/reference lowering are implemented. Explicit native template
+   including multi-argument calls, local-header and transitive included-header
+   cache invalidation, cache cleanup, broken-Clang diagnostics, missing-header
+   diagnostics, and common const pointer/reference lowering are implemented.
+   Explicit native template
    allowance is limited to explicit template-call syntax on imported native
    prefixes whose scanner metadata is incomplete. Aliased native imports avoid
    double-prefixing names that already come from the imported namespace, native
@@ -1365,9 +1366,11 @@ push. They are not release packaging work.
    merged output cannot represent distinct module declarations safely.
 
    Remaining incremental work is on the Dudu side: `duc emit-modules` still
-   analyzes the selected entry's full module graph in a fresh process and
-   reparses cached native header metadata. Real compiler-speed work needs
-   module-level invalidation and structured native-header metadata caching.
+   analyzes the selected entry's full module graph in a fresh process. Native
+   header raw and scan caches are dependency-stamped before disk or process
+   cache hits are trusted, but real compiler-speed work still needs
+   module-level invalidation and broader structured native-header metadata
+   reuse.
    `duc emit-modules --timings` and `duc emit-test-modules --timings` now print
    detailed analyze/load/config/native-merge/sema/emit progress, which also
    makes generated-CMake custom command stalls visible when `dudu build

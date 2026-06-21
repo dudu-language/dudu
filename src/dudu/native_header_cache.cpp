@@ -1,6 +1,7 @@
 #include "dudu/native_header_cache.hpp"
 
 #include "dudu/ast_type.hpp"
+#include "dudu/native_header_cache_deps.hpp"
 #include "dudu/project_config.hpp"
 
 #include <fstream>
@@ -307,7 +308,13 @@ NativeHeaderRawCache load_native_header_raw_cache(const NativeHeaderOptions& opt
     cache.base = default_cache_dir(options) / cache_id(key);
     const std::filesystem::path ast = cache.base.string() + ".ast";
     const std::filesystem::path macros = cache.base.string() + ".macros";
-    if (!std::filesystem::exists(ast) || !std::filesystem::exists(macros)) {
+    const std::filesystem::path deps = cache.base.string() + ".deps";
+    if (!std::filesystem::exists(ast) || !std::filesystem::exists(macros) ||
+        !std::filesystem::exists(deps)) {
+        return cache;
+    }
+    cache.dependencies = read_text(deps);
+    if (!native_header_dependency_stamps_current(cache.dependencies)) {
         return cache;
     }
     cache.ast_dump = read_text(ast);
@@ -317,14 +324,20 @@ NativeHeaderRawCache load_native_header_raw_cache(const NativeHeaderOptions& opt
 }
 
 void store_native_header_raw_cache(const NativeHeaderRawCache& cache, const std::string& ast_dump,
-                                   const std::string& macro_dump) {
+                                   const std::string& macro_dump,
+                                   const std::string& dependencies) {
     std::filesystem::create_directories(cache.base.parent_path());
     write_text(cache.base.string() + ".ast", ast_dump);
     write_text(cache.base.string() + ".macros", macro_dump);
+    write_text(cache.base.string() + ".deps",
+               native_header_dependency_stamps_from_makefile(dependencies));
 }
 
 std::optional<NativeHeaderScan> load_native_header_scan_cache(const NativeHeaderRawCache& cache,
                                                               const SourceLocation& location) {
+    if (!native_header_dependency_stamps_current(cache.dependencies)) {
+        return std::nullopt;
+    }
     const std::string text = read_text(scan_cache_path(cache));
     if (text.empty()) {
         return std::nullopt;
