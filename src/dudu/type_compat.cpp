@@ -376,7 +376,7 @@ bool assignment_type_allowed(const TypeRef& expected, const Expr& expr, const Ty
            (is_numeric_type(normalized_expected_ref) && is_numeric_literal_expr(expr));
 }
 
-std::string display_type(const Expr& expr, const TypeRef& got) {
+std::string assignment_type_display(const Expr& expr, const TypeRef& got) {
     if (has_type_ref(got)) {
         return substitute_type_ref_text(got, {});
     }
@@ -385,16 +385,16 @@ std::string display_type(const Expr& expr, const TypeRef& got) {
 
 namespace {
 
-std::string assignment_error_text(const std::string& expected, const Expr& expr,
-                                  const TypeRef& got) {
-    return "cannot assign " + display_type(expr, got) + " to " + expected +
+std::string assignment_error_display(const std::string& expected, const Expr& expr,
+                                     const TypeRef& got) {
+    return "cannot assign " + assignment_type_display(expr, got) + " to " + expected +
            " without an explicit cast";
 }
 
 } // namespace
 
 std::string assignment_error(const TypeRef& expected, const Expr& expr, const TypeRef& got) {
-    return assignment_error_text(substitute_type_ref_text(expected, {}), expr, got);
+    return assignment_error_display(substitute_type_ref_text(expected, {}), expr, got);
 }
 
 } // namespace dudu

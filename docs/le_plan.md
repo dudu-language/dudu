@@ -1008,6 +1008,9 @@ push. They are not release packaging work.
    fake callee strings such as `*list[i32]` from source spans.
    The remaining internal AST callee renderer is named as display-only, and the
    migration guard rejects the old `call_callee_text` helper name.
+   Native overload and assignment compatibility mismatch helpers now use
+   display-only naming at the diagnostic edge, and the guard rejects the old
+   text-shaped helper names.
 
 3. OOP Surface Cleanup
 

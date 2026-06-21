@@ -76,6 +76,8 @@ forbidden=(
     "callee_text = text_between"
     "type_text\\.find"
     "call_callee_text"
+    "got_text = substitute_type_ref_text"
+    "assignment_error_text"
 )
 
 for pattern in "${forbidden[@]}"; do

@@ -295,12 +295,12 @@ std::vector<std::string> mismatch_reasons_ast(const FunctionScope& scope,
     for (size_t i = 0; i < fixed_params; ++i) {
         const TypeRef got_ref = native_arg_type_ref(scope, args[i], location);
         const TypeRef expected_ref = signature_param_type_ref(signature, i);
-        const std::string got_text = substitute_type_ref_text(got_ref, {});
+        const std::string got_display = substitute_type_ref_text(got_ref, {});
         if (!native_arg_assignable(scope, args[i], got_ref, expected_ref) &&
             !native_numeric_promotion(expected_ref, got_ref)) {
             std::ostringstream out;
             out << "parameter " << (i + 1) << " expects " << type_ref_text(expected_ref) << ", got "
-                << got_text;
+                << got_display;
             reasons.push_back(out.str());
         }
     }
