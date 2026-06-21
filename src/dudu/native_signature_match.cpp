@@ -19,10 +19,6 @@
 namespace dudu {
 namespace {
 
-struct NativeArgType {
-    TypeRef ref;
-};
-
 [[noreturn]] void fail(const SourceLocation& location, const std::string& message) {
     throw CompileError(location, message);
 }
@@ -146,25 +142,23 @@ std::string signature_text(const std::string& callee, const FunctionSignature& s
     return out.str();
 }
 
-NativeArgType native_arg_type(const FunctionScope& scope, const Expr& arg,
-                              const SourceLocation* location) {
-    NativeArgType out;
-    out.ref = infer_expr_type_ast(scope, arg, location);
-    return out;
+TypeRef native_arg_type_ref(const FunctionScope& scope, const Expr& arg,
+                            const SourceLocation* location) {
+    return infer_expr_type_ast(scope, arg, location);
 }
 
-bool native_arg_assignable(const FunctionScope& scope, const Expr& arg, const NativeArgType& got,
+bool native_arg_assignable(const FunctionScope& scope, const Expr& arg, const TypeRef& got_ref,
                            const TypeRef& expected_ref) {
-    if (!has_type_ref(expected_ref) || !has_type_ref(got.ref)) {
+    if (!has_type_ref(expected_ref) || !has_type_ref(got_ref)) {
         return false;
     }
-    if (native_fixed_array_alias_decay_allowed(scope, expected_ref, got.ref)) {
+    if (native_fixed_array_alias_decay_allowed(scope, expected_ref, got_ref)) {
         return true;
     }
-    if (type_assignment_allowed(expected_ref, got.ref)) {
+    if (type_assignment_allowed(expected_ref, got_ref)) {
         return true;
     }
-    return can_assign_ast(scope, expected_ref, arg, got.ref);
+    return can_assign_ast(scope, expected_ref, arg, got_ref);
 }
 
 std::optional<TypeRef> indexed_tuple_return_type(const TypeRef& return_type,
@@ -189,8 +183,7 @@ std::optional<TypeRef> indexed_tuple_return_type(const TypeRef& return_type,
         index_text.find_first_not_of("0123456789") != std::string::npos) {
         return std::nullopt;
     }
-    const NativeArgType arg_type = native_arg_type(scope, args.front(), location);
-    const TypeRef tuple = arg_type.ref;
+    const TypeRef tuple = native_arg_type_ref(scope, args.front(), location);
     if (tuple.kind != TypeKind::Template ||
         (tuple.name != "tuple" && tuple.name != "std.tuple" && tuple.name != "std::tuple")) {
         return std::nullopt;
@@ -300,11 +293,11 @@ std::vector<std::string> mismatch_reasons_ast(const FunctionScope& scope,
     std::vector<std::string> reasons;
     const size_t fixed_params = std::min(signature_param_count(signature), args.size());
     for (size_t i = 0; i < fixed_params; ++i) {
-        const NativeArgType got = native_arg_type(scope, args[i], location);
+        const TypeRef got_ref = native_arg_type_ref(scope, args[i], location);
         const TypeRef expected_ref = signature_param_type_ref(signature, i);
-        const std::string got_text = substitute_type_ref_text(got.ref, {});
-        if (!native_arg_assignable(scope, args[i], got, expected_ref) &&
-            !native_numeric_promotion(expected_ref, got.ref)) {
+        const std::string got_text = substitute_type_ref_text(got_ref, {});
+        if (!native_arg_assignable(scope, args[i], got_ref, expected_ref) &&
+            !native_numeric_promotion(expected_ref, got_ref)) {
             std::ostringstream out;
             out << "parameter " << (i + 1) << " expects " << type_ref_text(expected_ref) << ", got "
                 << got_text;
@@ -325,7 +318,7 @@ std::string native_overload_message_ast(const FunctionScope& scope, const std::s
         for (size_t i = 0; i < args.size(); ++i) {
             if (i > 0)
                 out << ", ";
-            out << substitute_type_ref_text(native_arg_type(scope, args[i], location).ref, {});
+            out << substitute_type_ref_text(native_arg_type_ref(scope, args[i], location), {});
         }
     }
     for (const FunctionSignature& candidate : candidates) {
@@ -358,13 +351,13 @@ std::optional<FunctionSignature> match_signature_ast(const FunctionScope& scope,
     const size_t fixed_params = has_pack_param ? pack_start : signature_param_count(signature);
     const size_t provided_fixed = std::min(fixed_params, args.size());
     for (size_t i = 0; i < provided_fixed; ++i) {
-        const NativeArgType got = native_arg_type(scope, args[i], location);
+        const TypeRef got_ref = native_arg_type_ref(scope, args[i], location);
         const TypeRef expected_ref = signature_param_type_ref(signature, i);
         const bool bound_template =
-            has_type_ref(expected_ref) && has_type_ref(got.ref) &&
-            bind_native_template_type_ast(scope.symbols, expected_ref, got.ref, bindings);
-        if (!native_arg_assignable(scope, args[i], got, expected_ref) &&
-            !native_numeric_promotion(expected_ref, got.ref) && !bound_template) {
+            has_type_ref(expected_ref) && has_type_ref(got_ref) &&
+            bind_native_template_type_ast(scope.symbols, expected_ref, got_ref, bindings);
+        if (!native_arg_assignable(scope, args[i], got_ref, expected_ref) &&
+            !native_numeric_promotion(expected_ref, got_ref) && !bound_template) {
             return std::nullopt;
         }
     }
@@ -372,7 +365,7 @@ std::optional<FunctionSignature> match_signature_ast(const FunctionScope& scope,
         const std::string pack_name = *pack_param_placeholder;
         std::vector<TypeRef> types;
         for (size_t i = fixed_params; i < args.size(); ++i) {
-            types.push_back(native_arg_type(scope, args[i], location).ref);
+            types.push_back(native_arg_type_ref(scope, args[i], location));
         }
         pack_bindings[pack_name] = std::move(types);
     }
