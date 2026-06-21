@@ -4,6 +4,8 @@
 #include "dudu/sema_scope.hpp"
 #include "dudu/type_compat.hpp"
 
+#include <sstream>
+
 namespace dudu {
 namespace {
 
@@ -19,6 +21,18 @@ bool is_native_enum_value_expr(const FunctionScope& scope, const Expr& expr,
     }
     const std::optional<std::string> path = expr_path_key(expr);
     return path && scope.symbols.native_enum_values.contains(*path);
+}
+
+std::string template_args_label(const Expr& expr) {
+    std::ostringstream out;
+    const std::vector<TypeRef> args = template_type_refs(expr);
+    for (size_t i = 0; i < args.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << substitute_type_ref_text(args[i], {});
+    }
+    return out.str();
 }
 
 } // namespace
@@ -188,7 +202,7 @@ std::string template_call_callee(const FunctionScope& scope, const Expr& expr,
     } else {
         return {};
     }
-    out << "[" << template_args_lookup_text(expr) << "]";
+    out << "[" << template_args_label(expr) << "]";
     return out.str();
 }
 

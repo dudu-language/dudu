@@ -177,18 +177,6 @@ std::set<std::string> generic_value_params_for_class(const ClassDecl& klass) {
     return generic_value_params(klass.generic_params, refs);
 }
 
-std::string template_args_lookup_text(const Expr& expr) {
-    std::ostringstream out;
-    const std::vector<TypeRef> args = template_type_refs(expr);
-    for (size_t i = 0; i < args.size(); ++i) {
-        if (i > 0) {
-            out << ", ";
-        }
-        out << substitute_type_ref_text(args[i], {});
-    }
-    return out.str();
-}
-
 std::optional<std::vector<TypeRef>> infer_generic_call_type_args(const FunctionScope& scope,
                                                                  const FunctionDecl& fn,
                                                                  const std::string& callee,

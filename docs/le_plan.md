@@ -1909,7 +1909,9 @@ push. They are not release packaging work.
    removed.
    Built-in `min`/`max` and contextual numeric binary inference now pass
    inferred `TypeRef` operands into assignment compatibility instead of calling
-   through rendered argument-type strings.
+   through rendered argument-type strings. Generic inference no longer exposes
+   a string-returning template-argument label helper; diagnostics render
+   template argument labels locally from parsed `TypeRef` nodes.
    Dudu-owned `FunctionSignature` construction now uses centralized
    `TypeRef` setters for parameter and return types; rendered signature strings
    are derived at that assignment boundary instead of being hand-maintained by

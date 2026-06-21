@@ -11,7 +11,6 @@
 
 namespace dudu {
 
-std::string template_args_lookup_text(const Expr& expr);
 std::vector<TypeRef> template_type_refs(const Expr& expr);
 std::set<std::string> generic_value_params(const std::vector<std::string>& params,
                                            const std::vector<TypeRef>& type_refs);
