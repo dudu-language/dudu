@@ -983,7 +983,9 @@ push. They are not release packaging work.
    child `TypeRef` nodes after the storage type. Normal sema, slicing, generic
    non-type parameter discovery, structural assignment, and C++ array lowering
    consume those shape children instead of splitting the comma-shaped value
-   mirror. The native scan cache version was bumped so stale one-child fixed
+   mirror. Fixed-array equivalence also compares the structured shape children
+   instead of the value mirror, so whitespace in the mirror cannot change type
+   identity. The native scan cache version was bumped so stale one-child fixed
    array nodes are regenerated, and the guard rejects the removed
    `explicit_array_shape_text` helper.
 

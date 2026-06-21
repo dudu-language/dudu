@@ -279,9 +279,6 @@ bool type_ref_equivalent(const TypeRef& left, const TypeRef& right) {
         }
         break;
     case TypeKind::FixedArray:
-        if (trim_copy(left.value) != trim_copy(right.value)) {
-            return false;
-        }
         break;
     case TypeKind::Pointer:
     case TypeKind::Reference:

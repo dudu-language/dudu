@@ -1598,6 +1598,8 @@ void test_type_ast_shape() {
            "std::array<std::array<int32_t, 2>, 2>");
     assert(dudu::lower_cpp_type(dudu::parse_type_text("array[f32][4, 4]")) ==
            "std::array<std::array<float, 4>, 4>");
+    assert(dudu::type_ref_equivalent(dudu::parse_type_text("array[f32][4, 4]"),
+                                     dudu::parse_type_text("array[f32][4,4]")));
     assert(dudu::lower_cpp_type_spelling("array[i32][3]") == "std::array<int32_t, 3>");
     assert(dudu::lower_cpp_type_spelling("array[f32][4, 4]") ==
            "std::array<std::array<float, 4>, 4>");
