@@ -149,6 +149,7 @@ expect_fail bad_generic_method_arg_type --check "argument 1 for box.id\\[i32\\] 
 expect_fail bad_generic_method_arity --check "method Box.choose expects 2 type arguments, got 1"
 expect_fail bad_generic_pair_arg_type --check "constructor Pair\\[str, i32\\] argument 1 expects str, got i32"
 expect_fail bad_generic_value_param_as_type --check "unknown field type: N"
+expect_fail bad_generic_instantiated_operator --check "operator + expects Player, got Player while instantiating add\\[Player\\]"
 expect_fail bad_empty_template_call --emit-cpp "template call expects at least 1 type argument"
 expect_fail bad_non_callable_template_call --emit-cpp "unsupported template call expression: 1"
 expect_fail bad_condition_type --emit-cpp "condition must be bool, got i32"

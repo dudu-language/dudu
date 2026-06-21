@@ -2,6 +2,7 @@
 #include "dudu/ast_parse_utils.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/native_signature_match.hpp"
+#include "dudu/sema_body.hpp"
 #include "dudu/sema_expr_internal.hpp"
 #include "dudu/sema_methods_internal.hpp"
 
@@ -209,6 +210,10 @@ std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Ex
             const FunctionSignature signature =
                 instantiate_generic_signature(*decl->second, *type_args);
             check_call_args_ast(scope, callee, signature, expr.children, location);
+            if (location != nullptr) {
+                check_instantiated_generic_function_body(scope, *decl->second, *type_args, "",
+                                                         *location);
+            }
             return signature_return_type_ref(signature);
         }
         return std::nullopt;

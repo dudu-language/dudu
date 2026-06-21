@@ -1,0 +1,13 @@
+class Player:
+    hp: i32
+
+
+def add[T](left: T, right: T) -> T:
+    return left + right
+
+
+def main() -> i32:
+    first = Player(1)
+    second = Player(2)
+    value = add(first, second)
+    return value.hp

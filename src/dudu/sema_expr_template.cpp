@@ -1,6 +1,7 @@
 #include "dudu/ast_expr.hpp"
 #include "dudu/ast_parse_utils.hpp"
 #include "dudu/ast_type.hpp"
+#include "dudu/sema_body.hpp"
 #include "dudu/sema_expr_internal.hpp"
 
 namespace dudu {
@@ -28,6 +29,9 @@ std::optional<FunctionSignature> explicit_generic_function_signature_ast(
     }
     FunctionSignature signature = instantiate_generic_signature(*fn->second, type_args);
     check_call_args_ast(scope, emitted_callee, signature, expr.children, location);
+    if (location != nullptr) {
+        check_instantiated_generic_function_body(scope, *fn->second, type_args, "", *location);
+    }
     return signature;
 }
 

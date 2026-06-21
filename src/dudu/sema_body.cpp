@@ -16,11 +16,14 @@
 #include "dudu/sema_index.hpp"
 #include "dudu/sema_match.hpp"
 #include "dudu/sema_super.hpp"
+#include "dudu/source.hpp"
+
+#include <map>
+#include <set>
+#include <sstream>
 
 namespace dudu {
-
 namespace {
-
 void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_type_ref,
                 int loop_depth);
 
@@ -34,6 +37,78 @@ void check_block(FunctionScope& scope, const std::vector<Stmt>& body,
         check_stmt(scope, stmt, return_type_ref, loop_depth);
     }
     scope.allow_super_init = false;
+}
+
+std::map<std::string, TypeRef> type_substitutions(const std::vector<std::string>& params,
+                                                  const std::vector<TypeRef>& args) {
+    std::map<std::string, TypeRef> out;
+    for (size_t i = 0; i < params.size() && i < args.size(); ++i) {
+        out.emplace(params[i], args[i]);
+    }
+    return out;
+}
+
+std::string instantiated_label(const std::string& name, const std::vector<TypeRef>& args) {
+    std::ostringstream out;
+    out << name << "[";
+    for (size_t i = 0; i < args.size(); ++i) {
+        if (i != 0) {
+            out << ", ";
+        }
+        out << substitute_type_ref_text(args[i], {});
+    }
+    out << "]";
+    return out.str();
+}
+
+void substitute_expr_types(Expr& expr, const std::map<std::string, TypeRef>& substitutions) {
+    if (const auto replacement = substitutions.find(expr.name);
+        replacement != substitutions.end()) {
+        expr.name = substitute_type_ref_text(replacement->second, {});
+    }
+    if (has_type_ref(expr.type_ref)) {
+        expr.type_ref = substitute_type_ref(expr.type_ref, substitutions);
+    }
+    for (TypeRef& type_arg : expr.template_type_args) {
+        type_arg = substitute_type_ref(type_arg, substitutions);
+    }
+    for (Expr& child : expr.children) {
+        substitute_expr_types(child, substitutions);
+    }
+    for (Expr& callee : expr.callee) {
+        substitute_expr_types(callee, substitutions);
+    }
+    for (Expr& param : expr.params) {
+        substitute_expr_types(param, substitutions);
+    }
+    for (Expr& arg : expr.template_args) {
+        substitute_expr_types(arg, substitutions);
+    }
+}
+
+void substitute_stmt_types(Stmt& stmt, const std::map<std::string, TypeRef>& substitutions) {
+    if (has_type_ref(stmt.type_ref)) {
+        stmt.type_ref = substitute_type_ref(stmt.type_ref, substitutions);
+    }
+    substitute_expr_types(stmt.expr, substitutions);
+    substitute_expr_types(stmt.value_expr, substitutions);
+    substitute_expr_types(stmt.target_expr, substitutions);
+    substitute_expr_types(stmt.condition_expr, substitutions);
+    substitute_expr_types(stmt.message_expr, substitutions);
+    substitute_expr_types(stmt.iterable_expr, substitutions);
+    substitute_expr_types(stmt.pattern_expr, substitutions);
+    substitute_expr_types(stmt.guard_expr, substitutions);
+    for (Stmt& child : stmt.children) {
+        substitute_stmt_types(child, substitutions);
+    }
+}
+
+std::vector<Stmt> substitute_body_types(std::vector<Stmt> body,
+                                        const std::map<std::string, TypeRef>& substitutions) {
+    for (Stmt& stmt : body) {
+        substitute_stmt_types(stmt, substitutions);
+    }
+    return body;
 }
 
 void check_known_scoped_type_ref(const FunctionScope& scope, const SourceLocation& location,
@@ -381,4 +456,43 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols) {
     }
 }
 
+void check_instantiated_generic_function_body(const FunctionScope& caller_scope,
+                                              const FunctionDecl& fn,
+                                              const std::vector<TypeRef>& type_args,
+                                              const std::string& label,
+                                              const SourceLocation& site) {
+    static thread_local std::set<std::string> active_instantiations;
+    const std::string instantiation =
+        label.empty() ? instantiated_label(fn.name, type_args) : label;
+    if (active_instantiations.contains(instantiation)) {
+        return;
+    }
+
+    const std::map<std::string, TypeRef> substitutions =
+        type_substitutions(fn.generic_params, type_args);
+    std::vector<Stmt> body = substitute_body_types(fn.statements, substitutions);
+    TypeRef return_type_ref = function_has_return_type(fn)
+                                  ? substitute_type_ref(fn.return_type_ref, substitutions)
+                                  : void_type_ref(fn.location);
+
+    FunctionScope scope{caller_scope.symbols};
+    scope.constants = caller_scope.constants;
+    scope.target_mode = caller_scope.target_mode;
+    scope.return_type_ref = return_type_ref;
+    for (const ParamDecl& param : fn.params) {
+        bind_local(scope, param.name, substitute_type_ref(param.type_ref, substitutions));
+    }
+
+    active_instantiations.insert(instantiation);
+    try {
+        check_block(scope, body, return_type_ref, 0);
+    } catch (const CompileError& error) {
+        active_instantiations.erase(instantiation);
+        throw CompileError(error.location(),
+                           std::string(error.what()) + " while instantiating " + instantiation +
+                               " at " + format_location(site),
+                           error.code(), error.data_name());
+    }
+    active_instantiations.erase(instantiation);
+}
 } // namespace dudu
