@@ -59,7 +59,9 @@ compile_and_expect array_volume_literal 42
 compile_and_expect array_step_slice 42
 compile_and_expect array_image_kernel 42
 compile_and_expect generic_full_matrix_slice 42
+compile_and_expect generic_column_slice 27
 compile_and_expect member_full_matrix_slice 42
+compile_and_expect member_column_slice 39
 compile_and_expect swizzle_vec2 42
 compile_and_expect swizzle_rgba 42
 compile_and_expect swizzle_stpq 42

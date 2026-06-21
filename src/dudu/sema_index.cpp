@@ -172,13 +172,15 @@ TypeRef indexed_type_ref_from_type(const Symbols& symbols, const SourceLocation&
     }
     if (is_channel_slice_expr(index_expr)) {
         const std::vector<size_t> shape = explicit_array_shape(unwrapped_type_ref);
-        if (shape.size() == 3) {
+        const std::vector<std::string> shape_text = explicit_array_shape_text(unwrapped_type_ref);
+        if (shape.size() == 3 || shape_text.size() == 3) {
             return array_element_template_type_ref(location, unwrapped_type_ref, "strided_span");
         }
     }
     if (is_column_slice_expr(index_expr)) {
         const std::vector<size_t> shape = explicit_array_shape(unwrapped_type_ref);
-        if (shape.size() == 2) {
+        const std::vector<std::string> shape_text = explicit_array_shape_text(unwrapped_type_ref);
+        if (shape.size() == 2 || shape_text.size() == 2) {
             return array_element_template_type_ref(location, unwrapped_type_ref, "strided_span");
         }
     }

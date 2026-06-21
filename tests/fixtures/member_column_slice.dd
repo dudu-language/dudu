@@ -1,0 +1,19 @@
+class MatrixBox[Rows, Cols]:
+    items: array[i32][Rows, Cols]
+
+    def column_sum(self, column_index: i32) -> i32:
+        column: strided_span[i32] = self.items[:, column_index]
+        total: i32 = 0
+        for value: i32 in column:
+            total += value
+        return total
+
+
+def main() -> i32:
+    matrix: array[i32] = [
+        [1, 2, 3],
+        [10, 20, 30],
+        [4, 5, 6],
+    ]
+    box: MatrixBox[3, 3] = MatrixBox[3, 3](matrix)
+    return box.column_sum(2)

@@ -195,7 +195,9 @@ trailing full row slice such as `mat[row, :]`, which produces `span[T]` over the
 selected row. Contiguous leading-axis slab ranges such as `mat[start:end, :]`
 and `volume[start:end, :, :]` also produce `span[T]` views over the selected
 storage. Matrix column slices such as `mat[:, col]` produce `strided_span[T]`
-views so non-contiguous views are not misrepresented as contiguous spans.
+views so non-contiguous views are not misrepresented as contiguous spans,
+including generic non-type extents such as `array[T][Rows, Cols]` and
+member-backed fixed arrays such as `self.items[:, col]`.
 Three-dimensional channel slices such as `image[:, :, c]` also produce
 `strided_span[T]` views over interleaved channel data. Two-dimensional patch
 rectangles such as `mat[y0:y1, x0:x1]` produce `strided_span2[T]` views with
