@@ -141,6 +141,13 @@ printf '%s\n' "$cmake_build_output" | grep -Eq '^generate .*/build/project_backe
 printf '%s\n' "$cmake_build_output" | grep -Eq '^configure .*/build/project_backend_cmake/cmake-backend/build$'
 printf '%s\n' "$cmake_build_output" | grep -Eq '^compile .*/build/project_backend_cmake/cmake-backend/build$'
 printf '%s\n' "$cmake_build_output" | grep -Eq '^output .*/backend_cmake$'
+cmake_cached_output="$("$repo_root/build/dudu" build \
+    "$repo_root/tests/fixtures/project_backend_cmake" 2>&1)"
+printf '%s\n' "$cmake_cached_output" | grep -Eq '^configure .*/build/project_backend_cmake/cmake-backend/build$'
+if printf '%s\n' "$cmake_cached_output" | grep -q '^-- Configuring done'; then
+    echo "cached generated-CMake build reran configure" >&2
+    exit 1
+fi
 "$repo_root/build/dudu" build \
     "$repo_root/tests/fixtures/project_backend_cmake_function_namespaces" --quiet
 "$repo_root/build/duc" fmt "$repo_root/tests/fixtures/simple_program.dd" --check

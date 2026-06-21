@@ -23,16 +23,29 @@ std::string read_text_file(const std::filesystem::path& path) {
     return {std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
 }
 
-void write_text_file(const std::filesystem::path& path, const std::string& text) {
+bool write_text_file(const std::filesystem::path& path, const std::string& text) {
     std::filesystem::create_directories(path.parent_path().empty() ? "." : path.parent_path());
     if (read_text_file(path) == text) {
-        return;
+        return false;
     }
     std::ofstream out(path);
     if (!out) {
         fail("could not open output " + path.string());
     }
     out << text;
+    return true;
+}
+
+bool configure_is_current(const std::filesystem::path& build_dir,
+                          const std::filesystem::path& command_path,
+                          const std::string& command) {
+    return std::filesystem::exists(build_dir / "CMakeCache.txt") &&
+           read_text_file(command_path) == command;
+}
+
+void record_configure_command(const std::filesystem::path& command_path,
+                              const std::string& command) {
+    (void)write_text_file(command_path, command);
 }
 
 void print_stage(bool enabled, const std::string& label, const std::filesystem::path& path) {
@@ -64,16 +77,21 @@ void configure_user_cmake(const UserCMakeBackendOptions& options,
         configure_command += " -DCMAKE_BUILD_TYPE=" + shell_quote_arg(options.config.cmake_config);
     }
     const std::filesystem::path configure_log = options.root / "configure.log";
+    const std::filesystem::path configure_command_log = options.root / "configure.command";
     if (options.verbose) {
         std::cerr << configure_command << '\n';
     }
     print_stage(options.stream_output, "configure", build_dir);
+    if (configure_is_current(build_dir, configure_command_log, configure_command)) {
+        return;
+    }
     const int status = options.stream_output
                            ? run_shell_command_streaming(configure_command, configure_log)
                            : run_shell_command(configure_command, configure_log);
     if (status != 0) {
         fail(command_failure_message("CMake configure", configure_command, configure_log));
     }
+    record_configure_command(configure_command_log, configure_command);
 }
 
 void build_user_cmake(const UserCMakeBackendOptions& options,
@@ -147,7 +165,7 @@ std::filesystem::path run_cmake_backend(const CMakeBackendOptions& options) {
     const std::filesystem::path build_dir = options.root / "build";
     const std::filesystem::path cmake_lists = source_dir / "CMakeLists.txt";
     print_stage(options.stream_output, "generate", cmake_lists);
-    write_text_file(cmake_lists, options.cmake_lists);
+    const bool cmake_lists_changed = write_text_file(cmake_lists, options.cmake_lists);
 
     std::string configure_command =
         "cmake -S " + shell_quote_path(source_dir) + " -B " + shell_quote_path(build_dir) +
@@ -155,15 +173,20 @@ std::filesystem::path run_cmake_backend(const CMakeBackendOptions& options) {
         shell_quote_path(std::filesystem::absolute(options.dudu_executable));
     configure_command += options.timings ? " -DDUDU_TIMINGS=ON" : " -DDUDU_TIMINGS=OFF";
     const std::filesystem::path configure_log = options.root / "configure.log";
+    const std::filesystem::path configure_command_log = options.root / "configure.command";
     if (options.verbose) {
         std::cerr << configure_command << '\n';
     }
     print_stage(options.stream_output, "configure", build_dir);
-    const int configure_status = options.stream_output
-                                     ? run_shell_command_streaming(configure_command, configure_log)
-                                     : run_shell_command(configure_command, configure_log);
-    if (configure_status != 0) {
-        fail(command_failure_message("CMake configure", configure_command, configure_log));
+    if (cmake_lists_changed || !configure_is_current(build_dir, configure_command_log,
+                                                     configure_command)) {
+        const int configure_status =
+            options.stream_output ? run_shell_command_streaming(configure_command, configure_log)
+                                  : run_shell_command(configure_command, configure_log);
+        if (configure_status != 0) {
+            fail(command_failure_message("CMake configure", configure_command, configure_log));
+        }
+        record_configure_command(configure_command_log, configure_command);
     }
 
     const std::string build_command = "cmake --build " + shell_quote_path(build_dir) +

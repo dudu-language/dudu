@@ -405,6 +405,11 @@ Current implementation reality:
   command lines stay behind `--verbose`, cached direct builds print an explicit
   `up-to-date` outcome, and `--quiet` suppresses project-driver progress output
   for scripts.
+- Generated and user-owned CMake backends cache the configure command and skip
+  redundant `cmake -S/-B` configure runs when the CMake cache, generated
+  source, and command line are unchanged. The driver still prints the
+  `configure` stage so build progress remains readable, then lets
+  `cmake --build` do the incremental native compile.
 - `dudu check` prints `check` and `ok` progress lines on success unless
   `--quiet` is set, so successful validation is visible to humans without
   changing `duc check` script behavior.
