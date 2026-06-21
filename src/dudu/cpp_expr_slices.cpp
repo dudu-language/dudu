@@ -99,6 +99,39 @@ std::optional<std::string> lower_trailing_full_slice_expr(
     return "std::span(&(" + row + ")[0], (" + row + ").size())";
 }
 
+std::optional<std::string> lower_trailing_range_slice_expr(
+    const Expr& base, const Expr& index, const std::vector<std::string>& aliases,
+    const CppLocalContext& locals, const std::map<std::string, TypeRef>& local_type_refs,
+    const Symbols* symbols, const CppEmitOptions& options) {
+    if (index.kind != ExprKind::TupleLiteral || index.children.empty() ||
+        !is_simple_range_slice_expr(index.children.back())) {
+        return std::nullopt;
+    }
+    for (size_t i = 0; i + 1 < index.children.size(); ++i) {
+        if (index.children[i].kind == ExprKind::Slice) {
+            return std::nullopt;
+        }
+    }
+    const std::vector<std::string> shape =
+        array_shape_text_for_expr(base, local_type_refs, symbols, locals);
+    if (shape.size() != index.children.size()) {
+        return std::nullopt;
+    }
+    std::string row = lower_expr(base, aliases, locals, local_type_refs, symbols, options);
+    for (size_t i = 0; i + 1 < index.children.size(); ++i) {
+        row += "[" +
+               lower_expr(index.children[i], aliases, locals, local_type_refs, symbols, options) +
+               "]";
+    }
+    const Expr& tail = index.children.back();
+    const std::string start =
+        lower_slice_bound(tail.children[0], "0", aliases, locals, local_type_refs, symbols,
+                          options);
+    const std::string end = lower_slice_bound(tail.children[1], "(" + shape.back() + ")", aliases,
+                                              locals, local_type_refs, symbols, options);
+    return "std::span(&(" + row + ")[" + start + "], (" + end + ") - (" + start + "))";
+}
+
 std::optional<std::string>
 lower_column_slice_expr(const Expr& base, const Expr& index,
                         const std::vector<std::string>& aliases, const CppLocalContext& locals,

@@ -1,0 +1,14 @@
+def sum_view(values: span[i32]) -> i32:
+    total: i32 = 0
+    for value: i32 in values:
+        total += value
+    return total
+
+
+def main() -> i32:
+    image: array[i32] = [
+        [[1, 2, 3, 4], [10, 20, 30, 40]],
+        [[5, 6, 7, 8], [50, 60, 70, 80]],
+    ]
+    channels: span[i32] = image[1, 0, 1:4]
+    return sum_view(channels)

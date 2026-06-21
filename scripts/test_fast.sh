@@ -52,6 +52,7 @@ compile_and_expect array_row_slice 42
 compile_and_expect array_column_slice 42
 compile_and_expect array_channel_slice 45
 compile_and_expect array_full_matrix_slice 42
+compile_and_expect array_trailing_range_slice 21
 compile_and_expect array_matrix_patch_slice 18
 compile_and_expect array_matrix_row_range_slice 57
 compile_and_expect array_volume_slab_slice 100
@@ -61,9 +62,11 @@ compile_and_expect array_image_kernel 42
 compile_and_expect generic_full_matrix_slice 42
 compile_and_expect generic_column_slice 27
 compile_and_expect generic_channel_slice 66
+compile_and_expect generic_trailing_range_slice 90
 compile_and_expect member_full_matrix_slice 42
 compile_and_expect member_column_slice 39
 compile_and_expect member_channel_slice 45
+compile_and_expect member_trailing_range_slice 210
 compile_and_expect swizzle_vec2 42
 compile_and_expect swizzle_rgba 42
 compile_and_expect swizzle_stpq 42

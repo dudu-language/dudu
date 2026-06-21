@@ -111,6 +111,22 @@ bool is_simple_range_slice_expr(const Expr& expr) {
            expr.children[1].kind != ExprKind::Slice;
 }
 
+std::optional<size_t> trailing_range_slice_prefix_count(const Expr& expr) {
+    if (expr.kind != ExprKind::TupleLiteral || expr.children.empty()) {
+        return std::nullopt;
+    }
+    const Expr& tail = expr.children.back();
+    if (!is_simple_range_slice_expr(tail)) {
+        return std::nullopt;
+    }
+    for (size_t i = 0; i + 1 < expr.children.size(); ++i) {
+        if (is_slice_expr(expr.children[i])) {
+            return std::nullopt;
+        }
+    }
+    return expr.children.size() - 1;
+}
+
 bool is_leading_range_full_tail_slice_expr(const Expr& expr) {
     if (expr.kind != ExprKind::TupleLiteral || expr.children.size() < 2 ||
         !is_simple_range_slice_expr(expr.children[0])) {
@@ -185,10 +201,20 @@ TypeRef indexed_type_ref_from_type(const Symbols& symbols, const SourceLocation&
         }
     }
     if (!has_step_slice(index_expr)) {
-        if (const std::vector<size_t> shape = explicit_array_shape(raw_type); !shape.empty()) {
+        const std::vector<size_t> shape = explicit_array_shape(unwrapped_type_ref);
+        const std::vector<std::string> shape_text = explicit_array_shape_text(unwrapped_type_ref);
+        const auto known_rank = [&](const size_t expected) {
+            return shape.size() == expected || shape_text.size() == expected;
+        };
+        if (!shape.empty() || !shape_text.empty()) {
             if (const auto prefix_count = trailing_full_slice_prefix_count(index_expr)) {
-                if (*prefix_count + 1 == shape.size()) {
-                    return array_element_template_type_ref(location, raw_type, "span");
+                if (known_rank(*prefix_count + 1)) {
+                    return array_element_template_type_ref(location, unwrapped_type_ref, "span");
+                }
+            }
+            if (const auto prefix_count = trailing_range_slice_prefix_count(index_expr)) {
+                if (known_rank(*prefix_count + 1)) {
+                    return array_element_template_type_ref(location, unwrapped_type_ref, "span");
                 }
             }
         }

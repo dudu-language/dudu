@@ -223,6 +223,10 @@ tile = image[y:y + 8, x:x + 8]
 Do not add NumPy-style arbitrary gather/scatter indexing until normal slices,
 views, and tensor shapes are solid.
 
+Status: fixed arrays support contiguous trailing-dimension range slices after
+scalar prefixes, such as `image[y, x, 0:3]`, as `span[T]` views. This includes
+generic non-type extents and member-backed fixed arrays.
+
 ## Swizzling
 
 GLSL-style swizzling is valuable for vector math and shader-like code:

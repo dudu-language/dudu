@@ -16,6 +16,10 @@ std::optional<std::string> lower_trailing_full_slice_expr(
     const Expr& base, const Expr& index, const std::vector<std::string>& aliases,
     const CppLocalContext& locals, const std::map<std::string, TypeRef>& local_type_refs,
     const Symbols* symbols, const CppEmitOptions& options);
+std::optional<std::string> lower_trailing_range_slice_expr(
+    const Expr& base, const Expr& index, const std::vector<std::string>& aliases,
+    const CppLocalContext& locals, const std::map<std::string, TypeRef>& local_type_refs,
+    const Symbols* symbols, const CppEmitOptions& options);
 std::optional<std::string>
 lower_column_slice_expr(const Expr& base, const Expr& index,
                         const std::vector<std::string>& aliases, const CppLocalContext& locals,

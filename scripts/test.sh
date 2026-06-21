@@ -818,6 +818,7 @@ compile_and_expect extern_c_handler 42
 compile_and_expect cpp_namespace_alias 42
 compile_and_expect fixed_arrays 42
 compile_and_expect array_full_matrix_slice 42
+compile_and_expect array_trailing_range_slice 21
 compile_and_expect array_matrix_patch_slice 18
 compile_and_expect array_matrix_row_range_slice 57
 compile_and_expect array_volume_slab_slice 100
@@ -825,9 +826,11 @@ compile_and_expect array_volume_literal 42
 compile_and_expect generic_full_matrix_slice 42
 compile_and_expect generic_column_slice 27
 compile_and_expect generic_channel_slice 66
+compile_and_expect generic_trailing_range_slice 90
 compile_and_expect member_full_matrix_slice 42
 compile_and_expect member_column_slice 39
 compile_and_expect member_channel_slice 45
+compile_and_expect member_trailing_range_slice 210
 compile_and_expect compound_assignment 46
 compile_and_expect bitwise_ops 42
 compile_and_expect binary_packet_parser 42

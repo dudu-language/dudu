@@ -1003,7 +1003,9 @@ push. They are not release packaging work.
    including generic non-type extents and member-backed arrays.
    Three-dimensional channel slices such as `image[:, :, c]` also produce
    `strided_span[T]` views over interleaved channel data, including generic
-   non-type extents and member-backed arrays. Two-dimensional
+   non-type extents and member-backed arrays. Trailing-dimension range slices
+   such as `image[y, x, 0:3]` produce contiguous `span[T]` views, including
+   generic non-type extents and member-backed arrays. Two-dimensional
    patch rectangles such as `mat[y0:y1, x0:x1]` produce `strided_span2[T]`
    views with explicit row stride, and `strided_span2[T]` views are iterable in
    row-major order. Full-rank fixed-array slices such as `mat[:, :]` and

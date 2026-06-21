@@ -90,6 +90,11 @@ std::string lower_index_expr(const Expr& expr, const std::vector<std::string>& a
                                                local_type_refs, symbols, options)) {
             return *slice;
         }
+        if (const auto slice = lower_trailing_range_slice_expr(
+                expr.children[0], expr.children[1], aliases, locals, local_type_refs, symbols,
+                options)) {
+            return *slice;
+        }
         for (const Expr& index : expr.children[1].children) {
             out +=
                 "[" + lower_expr(index, aliases, locals, local_type_refs, symbols, options) + "]";
