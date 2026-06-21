@@ -200,6 +200,7 @@ Three-dimensional channel slices such as `image[:, :, c]` also produce
 `strided_span[T]` views over interleaved channel data. Two-dimensional patch
 rectangles such as `mat[y0:y1, x0:x1]` produce `strided_span2[T]` views with
 explicit row stride, so row gaps are not misrepresented as contiguous storage.
+`strided_span2[T]` views are iterable in row-major order.
 Full-rank fixed-array slices such as `mat[:, :]` and `image[:, :, :]` produce
 contiguous `span[T]` views over the whole backing storage, including generic
 non-type extents such as `array[T][Rows, Cols]` and member-backed fixed arrays

@@ -54,6 +54,9 @@ std::optional<TypeRef> iterable_type_ref_from_type(TypeRef type) {
     if (const auto element = single_template_child_type_ref(type, "strided_span")) {
         return *element;
     }
+    if (const auto element = single_template_child_type_ref(type, "strided_span2")) {
+        return *element;
+    }
     if (const auto element = fixed_array_element_type_ref(type)) {
         return *element;
     }
