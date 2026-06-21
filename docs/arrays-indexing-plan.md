@@ -191,17 +191,18 @@ and `:` slices as `span[T]` views. One-dimensional stepped fixed-array slices
 such as `values[start:end:step]`, `values[start::step]`, and `values[::step]`
 produce `strided_span[T]` views. Fixed multidimensional arrays also support a
 trailing full row slice such as `mat[row, :]`, which produces `span[T]` over the
-selected row. Contiguous matrix row ranges such as `mat[start:end, :]` also
-produce `span[T]` views over the selected rows. Matrix column slices such as
-`mat[:, col]` produce `strided_span[T]` views so non-contiguous views are not
-misrepresented as contiguous spans. Three-dimensional channel slices such as
-`image[:, :, c]` also produce `strided_span[T]` views over interleaved channel
-data. Full-rank fixed-array slices such as `mat[:, :]` and `image[:, :, :]`
-produce contiguous `span[T]` views over the whole backing storage, including
-generic non-type extents such as `array[T][Rows, Cols]` and member-backed fixed
-arrays such as `self.items[:, :]`. Non-contiguous multidimensional patch
-rectangles such as `image[y0:y1, x0:x1]` are rejected until the compiler has
-explicit 2D view types for those shapes.
+selected row. Contiguous leading-axis slab ranges such as `mat[start:end, :]`
+and `volume[start:end, :, :]` also produce `span[T]` views over the selected
+storage. Matrix column slices such as `mat[:, col]` produce `strided_span[T]`
+views so non-contiguous views are not misrepresented as contiguous spans.
+Three-dimensional channel slices such as `image[:, :, c]` also produce
+`strided_span[T]` views over interleaved channel data. Full-rank fixed-array
+slices such as `mat[:, :]` and `image[:, :, :]` produce contiguous `span[T]`
+views over the whole backing storage, including generic non-type extents such
+as `array[T][Rows, Cols]` and member-backed fixed arrays such as
+`self.items[:, :]`. Non-contiguous multidimensional patch rectangles such as
+`image[y0:y1, x0:x1]` are rejected until the compiler has explicit 2D view
+types for those shapes.
 
 ## Advanced Indexing
 

@@ -988,10 +988,10 @@ push. They are not release packaging work.
    pointer/count handoff.
    One-dimensional fixed-array `start:end`, `:end`, `start:`, and `:` slices
    produce `span[T]` views. Fixed multidimensional arrays support trailing row
-   views such as `mat[row, :]`, and contiguous matrix row ranges such as
-   `mat[start:end, :]` produce `span[T]` views over the selected rows. Matrix
-   column slices such as `mat[:, col]` produce `strided_span[T]` views so
-   non-contiguous views are explicit.
+   views such as `mat[row, :]`, and contiguous leading-axis slab ranges such as
+   `mat[start:end, :]` and `volume[start:end, :, :]` produce `span[T]` views
+   over the selected storage. Matrix column slices such as `mat[:, col]`
+   produce `strided_span[T]` views so non-contiguous views are explicit.
    Three-dimensional channel slices such as `image[:, :, c]` also produce
    `strided_span[T]` views over interleaved channel data. Full-rank fixed-array
    slices such as `mat[:, :]` and `image[:, :, :]` produce contiguous `span[T]`

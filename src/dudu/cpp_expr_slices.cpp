@@ -153,17 +153,22 @@ lower_channel_slice_expr(const Expr& base, const Expr& index,
            std::to_string(shape[0] * shape[1]) + ", " + std::to_string(shape[2]) + "}";
 }
 
-std::optional<std::string> lower_matrix_row_range_slice_expr(
+std::optional<std::string> lower_leading_range_full_tail_slice_expr(
     const Expr& base, const Expr& index, const std::vector<std::string>& aliases,
     const CppLocalContext& locals, const std::map<std::string, TypeRef>& local_type_refs,
     const Symbols* symbols, const CppEmitOptions& options) {
-    if (index.kind != ExprKind::TupleLiteral || index.children.size() != 2 ||
-        !is_simple_range_slice_expr(index.children[0]) || !is_full_slice_expr(index.children[1])) {
+    if (index.kind != ExprKind::TupleLiteral || index.children.size() < 2 ||
+        !is_simple_range_slice_expr(index.children[0])) {
         return std::nullopt;
+    }
+    for (size_t i = 1; i < index.children.size(); ++i) {
+        if (!is_full_slice_expr(index.children[i])) {
+            return std::nullopt;
+        }
     }
     const std::vector<std::string> shape =
         array_shape_text_for_expr(base, local_type_refs, symbols, locals);
-    if (shape.size() != 2) {
+    if (shape.size() != index.children.size()) {
         return std::nullopt;
     }
     const Expr& row_slice = index.children[0];
@@ -174,9 +179,10 @@ std::optional<std::string> lower_matrix_row_range_slice_expr(
                           local_type_refs, symbols, options);
     const std::string lowered_base =
         lower_expr(base, aliases, locals, local_type_refs, symbols, options);
+    const std::string trailing_count = shape_element_count_expr({shape.begin() + 1, shape.end()});
     return "std::span(" + nested_array_data_expr(lowered_base, shape.size()) + " + ((" + row_start +
-           ") * (" + shape[1] + ")), ((" + row_end + ") - (" + row_start + ")) * (" + shape[1] +
-           "))";
+           ") * (" + trailing_count + ")), ((" + row_end + ") - (" + row_start + ")) * (" +
+           trailing_count + "))";
 }
 
 std::optional<std::string> lower_full_multidim_slice_expr(

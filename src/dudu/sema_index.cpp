@@ -111,9 +111,17 @@ bool is_simple_range_slice_expr(const Expr& expr) {
            expr.children[1].kind != ExprKind::Slice;
 }
 
-bool is_matrix_row_range_slice_expr(const Expr& expr) {
-    return expr.kind == ExprKind::TupleLiteral && expr.children.size() == 2 &&
-           is_simple_range_slice_expr(expr.children[0]) && is_full_slice_expr(expr.children[1]);
+bool is_leading_range_full_tail_slice_expr(const Expr& expr) {
+    if (expr.kind != ExprKind::TupleLiteral || expr.children.size() < 2 ||
+        !is_simple_range_slice_expr(expr.children[0])) {
+        return false;
+    }
+    for (size_t i = 1; i < expr.children.size(); ++i) {
+        if (!is_full_slice_expr(expr.children[i])) {
+            return false;
+        }
+    }
+    return true;
 }
 
 } // namespace
@@ -141,10 +149,11 @@ TypeRef indexed_type_ref_from_type(const Symbols& symbols, const SourceLocation&
             return array_element_template_type_ref(location, unwrapped_type_ref, "span");
         }
     }
-    if (is_matrix_row_range_slice_expr(index_expr)) {
+    if (is_leading_range_full_tail_slice_expr(index_expr)) {
         const std::vector<size_t> shape = explicit_array_shape(unwrapped_type_ref);
         const std::vector<std::string> shape_text = explicit_array_shape_text(unwrapped_type_ref);
-        if (shape.size() == 2 || shape_text.size() == 2) {
+        if (shape.size() == index_expr.children.size() ||
+            shape_text.size() == index_expr.children.size()) {
             return array_element_template_type_ref(location, unwrapped_type_ref, "span");
         }
     }

@@ -70,9 +70,9 @@ std::string lower_index_expr(const Expr& expr, const std::vector<std::string>& a
                                          local_type_refs, symbols, options)) {
             return *channel_slice;
         }
-        if (const auto row_range_slice =
-                lower_matrix_row_range_slice_expr(expr.children[0], expr.children[1], aliases,
-                                                  locals, local_type_refs, symbols, options)) {
+        if (const auto row_range_slice = lower_leading_range_full_tail_slice_expr(
+                expr.children[0], expr.children[1], aliases, locals, local_type_refs, symbols,
+                options)) {
             return *row_range_slice;
         }
         if (const auto column_slice =
