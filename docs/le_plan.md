@@ -2580,6 +2580,12 @@ push. They are not release packaging work.
    Reference collection also exposes a parsed-`ModuleAst` entry point, so
    reference and rename requests can reuse modules they have already parsed
    instead of making collection parse source text internally.
+   LSP reference and rename scope checks now distinguish project-visible
+   symbols from the current file's visible symbols, so imported module aliases,
+   target declarations, and same-file redeclaration filtering do not share a
+   vague document-symbol query. Member-call selection also preserves full
+   callee paths such as `module_alias.function` when the cursor is on the
+   member name.
    `offsetof[Type]("field")` C++ emission now requires the parsed string
    literal value carried by the AST instead of unquoting raw expression text as
    a malformed-node fallback.

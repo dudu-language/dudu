@@ -69,8 +69,9 @@ bool position_contains_name(const Json* params, const std::string& name,
 }
 
 std::optional<Symbol> declaration_at_position(const Document& doc, const Json* params,
-                                              const std::string& name) {
-    for (const Symbol& symbol : symbols_for_document(doc, false)) {
+                                              const std::string& name,
+                                              const std::vector<Symbol>& symbols) {
+    for (const Symbol& symbol : symbols) {
         if (symbol.name == name && renameable_symbol_kind(symbol.kind) &&
             std::filesystem::path(symbol.location.file) == doc.path &&
             position_contains_name(params, name, symbol.location)) {
@@ -80,8 +81,9 @@ std::optional<Symbol> declaration_at_position(const Document& doc, const Json* p
     return std::nullopt;
 }
 
-bool document_declares_renameable_symbol(const Document& doc, const std::string& name) {
-    for (const Symbol& symbol : symbols_for_document(doc, false)) {
+bool document_declares_renameable_symbol(const Document& doc, const std::string& name,
+                                         const std::vector<Symbol>& symbols) {
+    for (const Symbol& symbol : symbols) {
         if (symbol.name == name && renameable_symbol_kind(symbol.kind) &&
             std::filesystem::path(symbol.location.file) == doc.path) {
             return true;
@@ -90,17 +92,21 @@ bool document_declares_renameable_symbol(const Document& doc, const std::string&
     return false;
 }
 
-std::optional<Symbol> unique_document_declaration_for_references(const Document& doc,
-                                                                 const std::string& name) {
+std::optional<Symbol>
+unique_document_declaration_for_references(const Document& doc, const std::string& name,
+                                           const ModuleAst* module,
+                                           const std::vector<Symbol>& symbols) {
     if (name.empty() || name.find('.') != std::string::npos) {
         return std::nullopt;
     }
     std::set<std::string> reference_ranges;
-    for (const ReferenceLocation& location : references_in(doc, name)) {
+    const std::vector<ReferenceLocation> references =
+        module == nullptr ? references_in(doc, name) : references_in(*module, doc, name);
+    for (const ReferenceLocation& location : references) {
         reference_ranges.insert(symbol_range_key(location.uri, location.range));
     }
     std::optional<Symbol> declaration;
-    for (const Symbol& symbol : symbols_for_document(doc, false)) {
+    for (const Symbol& symbol : symbols) {
         if (symbol.name != name || !renameable_symbol_kind(symbol.kind)) {
             continue;
         }
@@ -115,8 +121,8 @@ std::optional<Symbol> unique_document_declaration_for_references(const Document&
     return declaration;
 }
 
-bool document_has_type_symbol(const Document& doc, const std::string& name) {
-    for (const Symbol& symbol : symbols_for_document(doc)) {
+bool document_has_type_symbol(const std::vector<Symbol>& symbols, const std::string& name) {
+    for (const Symbol& symbol : symbols) {
         if (symbol.name == name &&
             (symbol.kind == lsp_symbol_kind::Class || symbol.kind == lsp_symbol_kind::Struct)) {
             return true;
@@ -125,11 +131,12 @@ bool document_has_type_symbol(const Document& doc, const std::string& name) {
     return false;
 }
 
-bool document_has_direct_native_symbol(const Document& doc, const std::string& name) {
+bool document_has_direct_native_symbol(const Document& doc, const std::string& name,
+                                       const std::vector<Symbol>& symbols) {
     if (name.empty() || name.find('.') != std::string::npos) {
         return false;
     }
-    for (const Symbol& symbol : symbols_for_document(doc)) {
+    for (const Symbol& symbol : symbols) {
         if (symbol.name != name || std::filesystem::path(symbol.location.file) == doc.path) {
             continue;
         }
@@ -142,12 +149,12 @@ bool document_has_direct_native_symbol(const Document& doc, const std::string& n
     return false;
 }
 
-std::optional<std::string> native_identity_for_query(const Document& doc,
+std::optional<std::string> native_identity_for_query(const std::vector<Symbol>& symbols,
                                                      const std::string& query) {
     if (query.empty()) {
         return std::nullopt;
     }
-    for (const Symbol& symbol : symbols_for_document(doc)) {
+    for (const Symbol& symbol : symbols) {
         if (symbol.name == query && symbol.native_identity_key.has_value()) {
             return symbol.native_identity_key;
         }
@@ -155,12 +162,12 @@ std::optional<std::string> native_identity_for_query(const Document& doc,
     return std::nullopt;
 }
 
-bool document_has_native_identity_for_query(const Document& doc, const std::string& query,
-                                            const std::string& identity) {
+bool document_has_native_identity_for_query(const std::vector<Symbol>& symbols,
+                                            const std::string& query, const std::string& identity) {
     if (identity.empty()) {
         return true;
     }
-    for (const Symbol& symbol : symbols_for_document(doc)) {
+    for (const Symbol& symbol : symbols) {
         if (symbol.name == query && symbol.native_identity_key == identity) {
             return true;
         }
@@ -168,9 +175,22 @@ bool document_has_native_identity_for_query(const Document& doc, const std::stri
     return false;
 }
 
+bool dudu_module_identity(const std::string& identity) {
+    constexpr std::string_view prefix = "path:";
+    return identity.rfind(prefix, 0) == 0;
+}
+
 std::string dotted_tail(const std::string& query) {
     const size_t dot = query.rfind('.');
     return dot == std::string::npos ? query : query.substr(dot + 1);
+}
+
+std::optional<ModuleAst> load_document_module(const Document& doc, bool include_native) {
+    try {
+        return module_for_document(doc, include_native);
+    } catch (const std::exception&) {
+        return std::nullopt;
+    }
 }
 
 std::optional<ModuleAst> parse_document_module(const Document& doc) {
@@ -181,8 +201,17 @@ std::optional<ModuleAst> parse_document_module(const Document& doc) {
     }
 }
 
+const ModuleAst* visible_document_module(const std::optional<ModuleAst>& module,
+                                         const Document& doc) {
+    if (!module.has_value()) {
+        return nullptr;
+    }
+    return &visible_module_unit(*module, doc.path);
+}
+
 std::string reference_query_at(const Document& doc, const AstSelection& selection,
-                               const ModuleAst* module) {
+                               const ModuleAst* module,
+                               const std::vector<Symbol>& symbols_with_native) {
     const std::string name = selection.symbol.value_or("");
     std::optional<std::string> expression_path;
     std::vector<std::string> paths;
@@ -224,7 +253,7 @@ std::string reference_query_at(const Document& doc, const AstSelection& selectio
                     return path;
                 }
             }
-            if (document_has_type_symbol(doc, path)) {
+            if (document_has_type_symbol(symbols_with_native, path)) {
                 return path;
             }
         }
@@ -236,11 +265,13 @@ std::string reference_query_at(const Document& doc, const AstSelection& selectio
 }
 
 RenameScope rename_scope_at(const Document& doc, const Json* params, const std::string& name,
-                            const AstSelection& selection) {
-    if (declaration_at_position(doc, params, name).has_value()) {
+                            const AstSelection& selection, const ModuleAst* module,
+                            const std::vector<Symbol>& symbols_without_native) {
+    if (declaration_at_position(doc, params, name, symbols_without_native).has_value()) {
         return RenameScope::Workspace;
     }
-    const std::optional<Symbol> declaration = unique_document_declaration_for_references(doc, name);
+    const std::optional<Symbol> declaration =
+        unique_document_declaration_for_references(doc, name, module, symbols_without_native);
     if (!declaration.has_value()) {
         return RenameScope::None;
     }
@@ -254,11 +285,13 @@ RenameScope rename_scope_at(const Document& doc, const Json* params, const std::
 }
 
 ReferenceScope reference_scope_at(const Document& doc, const Json* params, const std::string& name,
-                                  const AstSelection& selection) {
+                                  const AstSelection& selection, const ModuleAst* module,
+                                  const std::vector<Symbol>& symbols_without_native,
+                                  const std::vector<Symbol>& symbols_with_native) {
     if (name.empty()) {
         return ReferenceScope::None;
     }
-    if (declaration_at_position(doc, params, name).has_value()) {
+    if (declaration_at_position(doc, params, name, symbols_without_native).has_value()) {
         return ReferenceScope::WorkspaceSkipRedeclarations;
     }
     if (selection.symbol_path.has_value() &&
@@ -268,10 +301,11 @@ ReferenceScope reference_scope_at(const Document& doc, const Json* params, const
     if (selective_import_target(doc, name).has_value()) {
         return ReferenceScope::Workspace;
     }
-    if (unique_document_declaration_for_references(doc, name).has_value()) {
+    if (unique_document_declaration_for_references(doc, name, module, symbols_without_native)
+            .has_value()) {
         return ReferenceScope::CurrentDocument;
     }
-    if (document_has_direct_native_symbol(doc, name)) {
+    if (document_has_direct_native_symbol(doc, name, symbols_with_native)) {
         return ReferenceScope::CurrentDocument;
     }
     return ReferenceScope::None;
@@ -282,10 +316,19 @@ ReferenceScope reference_scope_at(const Document& doc, const Json* params, const
 std::string references_json(const Document& doc, const Json* params,
                             const std::map<std::string, Document>& workspace) {
     const AstSelection selection = ast_selection_at(doc, params);
-    const std::optional<ModuleAst> current_module = parse_document_module(doc);
+    const std::optional<ModuleAst> current_module = load_document_module(doc, true);
+    const ModuleAst* current_unit = visible_document_module(current_module, doc);
+    const std::vector<Symbol> current_symbols_with_native =
+        current_unit == nullptr ? std::vector<Symbol>{}
+                                : visible_symbols_for_document(*current_unit, doc, true);
+    const std::vector<Symbol> current_symbols_without_native =
+        current_unit == nullptr ? std::vector<Symbol>{}
+                                : visible_symbols_for_document(*current_unit, doc, false);
     const std::string query =
-        reference_query_at(doc, selection, current_module.has_value() ? &*current_module : nullptr);
-    const ReferenceScope scope = reference_scope_at(doc, params, query, selection);
+        reference_query_at(doc, selection, current_unit, current_symbols_with_native);
+    const ReferenceScope scope =
+        reference_scope_at(doc, params, query, selection, current_unit,
+                           current_symbols_without_native, current_symbols_with_native);
     if (scope == ReferenceScope::None) {
         return "[]";
     }
@@ -293,7 +336,8 @@ std::string references_json(const Document& doc, const Json* params,
         scope == ReferenceScope::Workspace ? module_import_target_key(doc, query) : std::nullopt;
     const std::optional<ImportReferenceTarget> selective_target =
         scope == ReferenceScope::Workspace ? selective_import_target(doc, query) : std::nullopt;
-    const std::optional<std::string> native_identity = native_identity_for_query(doc, query);
+    const std::optional<std::string> native_identity =
+        native_identity_for_query(current_symbols_with_native, query);
     std::ostringstream out;
     out << "[";
     bool first = true;
@@ -302,8 +346,16 @@ std::string references_json(const Document& doc, const Json* params,
         if (scope == ReferenceScope::CurrentDocument && candidate.uri != doc.uri) {
             continue;
         }
+        const std::optional<ModuleAst> candidate_module = parse_document_module(candidate);
+        const ModuleAst* candidate_unit = visible_document_module(candidate_module, candidate);
+        if (candidate_unit == nullptr) {
+            continue;
+        }
+        const std::vector<Symbol> candidate_symbols_without_native =
+            visible_symbols_for_document(*candidate_unit, candidate, false);
         if (scope == ReferenceScope::WorkspaceSkipRedeclarations && candidate.uri != doc.uri &&
-            document_declares_renameable_symbol(candidate, query)) {
+            document_declares_renameable_symbol(candidate, query,
+                                                candidate_symbols_without_native)) {
             continue;
         }
         std::error_code path_error;
@@ -312,10 +364,10 @@ std::string references_json(const Document& doc, const Json* params,
                                    : std::filesystem::weakly_canonical(candidate.path, path_error);
         const bool target_module_document = module_target.has_value() && !candidate.path.empty() &&
                                             !path_error &&
-                                            candidate_path.string() == *module_target;
+                                            same_path(candidate_path, *module_target);
         const bool target_selective_document =
             selective_target.has_value() && !candidate.path.empty() && !path_error &&
-            candidate_path.string() == selective_target->source_key;
+            same_path(candidate_path, selective_target->source_key);
         if (module_target.has_value() && candidate.uri != doc.uri && !target_module_document &&
             module_import_target_key(candidate, query) != module_target) {
             continue;
@@ -330,18 +382,28 @@ std::string references_json(const Document& doc, const Json* params,
                                             : target_selective_document
                                                 ? selective_target->member_name
                                                 : query;
-        const std::optional<ModuleAst> candidate_module = parse_document_module(candidate);
-        if (!candidate_module.has_value()) {
-            continue;
-        }
         const std::vector<ReferenceLocation> locations =
-            references_in(*candidate_module, candidate, candidate_query);
+            references_in(*candidate_unit, candidate, candidate_query);
         if (locations.empty()) {
             continue;
         }
-        if (native_identity.has_value() &&
-            !document_has_native_identity_for_query(candidate, candidate_query, *native_identity)) {
-            continue;
+        if (!target_module_document && !target_selective_document && native_identity.has_value()) {
+            std::vector<Symbol> candidate_symbols_with_native;
+            if (dudu_module_identity(*native_identity)) {
+                const std::optional<ModuleAst> candidate_tree =
+                    load_document_module(candidate, false);
+                if (const ModuleAst* candidate_visible =
+                        visible_document_module(candidate_tree, candidate)) {
+                    candidate_symbols_with_native =
+                        visible_symbols_for_document(*candidate_visible, candidate, true);
+                }
+            } else {
+                candidate_symbols_with_native = symbols_for_document(candidate, true);
+            }
+            if (!document_has_native_identity_for_query(candidate_symbols_with_native,
+                                                        candidate_query, *native_identity)) {
+                continue;
+            }
         }
         for (const ReferenceLocation& location : locations) {
             if (!first) {
@@ -361,7 +423,13 @@ std::string rename_json(const Document& doc, const Json* params,
     const std::string old_name = selection.symbol.value_or("");
     const std::string new_name =
         params == nullptr ? std::string{} : string_value(params->get("newName"));
-    const RenameScope scope = rename_scope_at(doc, params, old_name, selection);
+    const std::optional<ModuleAst> current_module = load_document_module(doc, true);
+    const ModuleAst* current_unit = visible_document_module(current_module, doc);
+    const std::vector<Symbol> current_symbols_without_native =
+        current_unit == nullptr ? std::vector<Symbol>{}
+                                : visible_symbols_for_document(*current_unit, doc, false);
+    const RenameScope scope = rename_scope_at(doc, params, old_name, selection, current_unit,
+                                              current_symbols_without_native);
     if (!valid_identifier(new_name) || scope == RenameScope::None) {
         return "null";
     }
@@ -373,16 +441,20 @@ std::string rename_json(const Document& doc, const Json* params,
         if (scope == RenameScope::CurrentDocument && candidate.uri != doc.uri) {
             continue;
         }
-        if (scope == RenameScope::Workspace && candidate.uri != doc.uri &&
-            document_declares_renameable_symbol(candidate, old_name)) {
+        const std::optional<ModuleAst> candidate_module = parse_document_module(candidate);
+        const ModuleAst* candidate_unit = visible_document_module(candidate_module, candidate);
+        if (candidate_unit == nullptr) {
             continue;
         }
-        const std::optional<ModuleAst> candidate_module = parse_document_module(candidate);
-        if (!candidate_module.has_value()) {
+        const std::vector<Symbol> candidate_symbols_without_native =
+            visible_symbols_for_document(*candidate_unit, candidate, false);
+        if (scope == RenameScope::Workspace && candidate.uri != doc.uri &&
+            document_declares_renameable_symbol(candidate, old_name,
+                                                candidate_symbols_without_native)) {
             continue;
         }
         const std::vector<ReferenceLocation> locations =
-            references_in(*candidate_module, candidate, old_name);
+            references_in(*candidate_unit, candidate, old_name);
         if (locations.empty()) {
             continue;
         }

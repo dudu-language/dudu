@@ -100,6 +100,12 @@
 - Added an AST-backed `references_in` entry point so LSP reference and rename
   paths can reuse parsed modules instead of reparsing inside reference
   collection.
+- Added explicit visible-document symbol collection for LSP reference and
+  rename scope checks, keeping project-wide symbol queries separate from
+  per-file reference filtering.
+- Fixed LSP member-call selection so references and rename preserve full
+  callee paths such as `module_alias.function` when the cursor is on the member
+  name.
 - Shared parsed `TypeRef` index and iterable inference for public string entry
   points before falling back to native/operator boundaries.
 - Added Cairo to the optional native compatibility probe suite.

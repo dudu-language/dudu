@@ -10,7 +10,11 @@
 namespace dudu {
 
 std::vector<Symbol> symbols_for_module(const ModuleAst& module, bool include_native = true);
+std::vector<Symbol> symbols_for_document(const ModuleAst& module, const Document& doc,
+                                         bool include_native = true);
 std::vector<Symbol> symbols_for_document(const Document& doc, bool include_native = true);
+std::vector<Symbol> visible_symbols_for_document(const ModuleAst& module, const Document& doc,
+                                                 bool include_native = true);
 std::optional<Symbol> exact_symbol_match(const std::vector<Symbol>& symbols,
                                          const std::string& query);
 std::optional<Symbol> unambiguous_suffix_symbol_match(const std::vector<Symbol>& symbols,
