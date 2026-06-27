@@ -21,7 +21,8 @@ void add_cpp_escape_diagnostic(const SourceLocation& location, std::set<std::pai
                    .source = "dudu/lint",
                    .severity = 2,
                    .code = "dudu.lint.cpp_escape",
-                   .data_name = ""});
+                   .data_name = "",
+                   .fix_range = std::nullopt});
 }
 
 void lint_cpp_escape_stmt(const Stmt& stmt, const Document& doc,

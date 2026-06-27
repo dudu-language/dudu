@@ -20,6 +20,11 @@ std::string range_json(const SourceLocation& location) {
     return range_json(line, column, column + 1);
 }
 
+std::string range_json(const SourceRange& range) {
+    return range_json(std::max(0, range.start.line - 1), std::max(0, range.start.column - 1),
+                      std::max(0, range.end.line - 1), std::max(0, range.end.column - 1));
+}
+
 std::string range_json(int line, int start_character, int end_character) {
     return range_json(line, start_character, line, end_character);
 }

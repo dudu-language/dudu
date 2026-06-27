@@ -121,7 +121,8 @@ void lint_suspicious_cast_expr(const Expr& expr, const Document& doc,
                                .source = "dudu/lint",
                                .severity = 2,
                                .code = "dudu.lint.suspicious_cast",
-                               .data_name = ""});
+                               .data_name = "",
+                               .fix_range = std::nullopt});
             }
         }
     });

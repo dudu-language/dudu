@@ -741,6 +741,12 @@ messages = [
                             "source": "dudu/lint",
                             "code": "dudu.lint.unused",
                             "message": "unused local: unused_value",
+                            "data": {
+                                "fixRange": {
+                                    "start": {"line": 1, "character": 0},
+                                    "end": {"line": 2, "character": 0},
+                                }
+                            },
                         }
                     ]
                 },
@@ -934,6 +940,12 @@ messages = [
                             "source": "dudu/lint",
                             "code": "dudu.lint.unreachable",
                             "message": "unreachable statement after terminating statement",
+                            "data": {
+                                "fixRange": {
+                                    "start": {"line": 2, "character": 0},
+                                    "end": {"line": 3, "character": 0},
+                                }
+                            },
                         }
                     ]
                 },
@@ -1577,6 +1589,14 @@ unused_codes = {
     item["message"]: item.get("code") for item in unused_diagnostics["params"]["diagnostics"]
 }
 assert unused_codes["unused local: unused_value"] == "dudu.lint.unused"
+unused_fix_range = next(
+    item for item in unused_diagnostics["params"]["diagnostics"]
+    if item["message"] == "unused local: unused_value"
+)["data"]["fixRange"]
+assert unused_fix_range["start"]["line"] == 1
+assert unused_fix_range["start"]["character"] == 0
+assert unused_fix_range["end"]["line"] == 2
+assert unused_fix_range["end"]["character"] == 0
 
 shadow_diagnostics = next(
     item

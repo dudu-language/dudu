@@ -3,6 +3,7 @@
 #include "dudu/cpp_lower.hpp"
 #include "dudu/language_server_ast_lints.hpp"
 #include "dudu/language_server_json.hpp"
+#include "dudu/language_server_navigation.hpp"
 #include "dudu/language_server_support.hpp"
 #include "dudu/module_loader.hpp"
 #include "dudu/native_build.hpp"
@@ -58,7 +59,8 @@ std::vector<Diagnostic> diagnostics_for_document(const Document& doc) {
                      .source = "dudu/build-config",
                      .severity = 1,
                      .code = "",
-                     .data_name = ""}};
+                     .data_name = "",
+                     .fix_range = std::nullopt}};
         }
         if (const std::optional<std::string> missing = missing_pkg_config_package(config)) {
             return {{.location = {.file = doc.path, .line = 1, .column = 1},
@@ -66,7 +68,8 @@ std::vector<Diagnostic> diagnostics_for_document(const Document& doc) {
                      .source = "dudu/build-config",
                      .severity = 1,
                      .code = "",
-                     .data_name = ""}};
+                     .data_name = "",
+                     .fix_range = std::nullopt}};
         }
         ModuleAst module = module_for_document(doc, true);
         if (!module.module_units.empty() || config.build_backend == "cmake") {
@@ -81,14 +84,16 @@ std::vector<Diagnostic> diagnostics_for_document(const Document& doc) {
                  .source = diagnostic_source(error.code()),
                  .severity = 1,
                  .code = error.code(),
-                 .data_name = error.data_name()}};
+                 .data_name = error.data_name(),
+                 .fix_range = std::nullopt}};
     } catch (const std::exception& error) {
         return {{.location = {.file = doc.path, .line = 1, .column = 1},
                  .message = error.what(),
                  .source = "dudu/lsp",
                  .severity = 1,
                  .code = "",
-                 .data_name = ""}};
+                 .data_name = "",
+                 .fix_range = std::nullopt}};
     }
 }
 
@@ -103,8 +108,20 @@ std::string diagnostic_json(const Diagnostic& diagnostic) {
     if (!diagnostic.code.empty()) {
         out << ",\"code\":\"" << json_escape(diagnostic.code) << "\"";
     }
-    if (!diagnostic.data_name.empty()) {
-        out << ",\"data\":{\"name\":\"" << json_escape(diagnostic.data_name) << "\"}";
+    if (!diagnostic.data_name.empty() || diagnostic.fix_range.has_value()) {
+        out << ",\"data\":{";
+        bool first = true;
+        if (!diagnostic.data_name.empty()) {
+            out << "\"name\":\"" << json_escape(diagnostic.data_name) << "\"";
+            first = false;
+        }
+        if (diagnostic.fix_range.has_value()) {
+            if (!first) {
+                out << ",";
+            }
+            out << "\"fixRange\":" << range_json(*diagnostic.fix_range);
+        }
+        out << "}";
     }
     out << ",\"message\":\"" << json_escape(diagnostic.message) << "\"}";
     return out.str();

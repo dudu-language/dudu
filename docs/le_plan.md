@@ -241,7 +241,11 @@ now shares structured leading-import block organization and parsed
 builders, and generic document line helpers live in LSP support instead of
 individual action files. AST-backed unused-local and shadowing checks have also
 been split into a focused scope-lint pass, leaving the aggregate AST lint entry
-point responsible for orchestration instead of owning every lint rule.
+point responsible for orchestration instead of owning every lint rule. Lint
+diagnostics for removable unreachable statements and unused locals now carry a
+structured `data.fixRange` computed by the AST lint pass, and the corresponding
+LSP quick fixes consume that range instead of reconstructing deletion edits from
+document line text.
 AST-backed suspicious narrowing-cast checks now also live in a focused lint
 pass with typed local state. Raw `cpp(...)` escape-hatch warnings also live in
 a focused lint pass, so the aggregate AST lint entry point is now only a

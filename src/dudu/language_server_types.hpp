@@ -36,6 +36,7 @@ struct Diagnostic {
     int severity = 1;
     std::string code;
     std::string data_name;
+    std::optional<SourceRange> fix_range;
 };
 
 struct Symbol {

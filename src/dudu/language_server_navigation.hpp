@@ -20,6 +20,7 @@ struct LspPosition {
 };
 
 std::string range_json(const SourceLocation& location);
+std::string range_json(const SourceRange& range);
 std::string range_json(int line, int start_character, int end_character);
 std::string range_json(int start_line, int start_character, int end_line, int end_character);
 

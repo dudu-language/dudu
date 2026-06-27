@@ -103,6 +103,9 @@
   direct `duc fmt <dir>` recursion unchanged.
 - Shared structured leading-import organization between the formatter and LSP
   organize-imports code action.
+- Made lint remove-line code actions consume structured diagnostic
+  `data.fixRange` edits produced from AST-backed lint passes instead of
+  rebuilding delete ranges from document line text.
 - Included optional real-header LSP probes in `scripts/test_full.sh`.
 - Added project-driver output for successful `dudu check`, documented
   `dudu bench` in help, and made `dudu bench --quiet`/`--help` behave as

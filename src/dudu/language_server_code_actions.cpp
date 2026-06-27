@@ -55,19 +55,6 @@ std::optional<TextEdit> organize_imports_edit(const Document& doc, const ModuleA
         .new_text = organized->replacement_text};
 }
 
-std::optional<TextEdit> remove_line_edit(const Document& doc, int line) {
-    const std::vector<std::string> lines = document_lines(doc.text);
-    if (line < 0 || line >= static_cast<int>(lines.size())) {
-        return std::nullopt;
-    }
-    const bool has_next = line + 1 <= document_line_count(doc.text);
-    return TextEdit{
-        .range = has_next ? range_json(line, 0, line + 1, 0)
-                          : range_json(line, 0, line,
-                                       static_cast<int>(lines[static_cast<size_t>(line)].size())),
-        .new_text = ""};
-}
-
 bool importable_symbol_kind(int kind) {
     return kind == lsp_symbol_kind::Class || kind == lsp_symbol_kind::Enum ||
            kind == lsp_symbol_kind::Function || kind == lsp_symbol_kind::Constant ||
@@ -137,6 +124,21 @@ std::optional<std::string> module_path_for_import(const std::filesystem::path& b
         out << parts[i];
     }
     return out.str();
+}
+
+std::optional<std::string> range_json_from_lsp_range(const Json* range) {
+    const Json* start = range == nullptr ? nullptr : range->get("start");
+    const Json* end = range == nullptr ? nullptr : range->get("end");
+    const int start_line = optional_int_value(start == nullptr ? nullptr : start->get("line"), -1);
+    const int start_character =
+        optional_int_value(start == nullptr ? nullptr : start->get("character"), -1);
+    const int end_line = optional_int_value(end == nullptr ? nullptr : end->get("line"), -1);
+    const int end_character =
+        optional_int_value(end == nullptr ? nullptr : end->get("character"), -1);
+    if (start_line < 0 || start_character < 0 || end_line < 0 || end_character < 0) {
+        return std::nullopt;
+    }
+    return range_json(start_line, start_character, end_line, end_character);
 }
 
 std::optional<CodeActionEdit>
@@ -227,18 +229,20 @@ std::vector<std::string> lint_actions(const Document& doc, const Json* params) {
         if (!unreachable && !unused_local) {
             continue;
         }
-        const Json* range = diagnostic.get("range");
-        const Json* start = range == nullptr ? nullptr : range->get("start");
+        const Json* data = diagnostic.get("data");
+        const std::optional<std::string> fix_range =
+            range_json_from_lsp_range(data == nullptr ? nullptr : data->get("fixRange"));
+        const Json* start = fix_range ? (data->get("fixRange")->get("start")) : nullptr;
         const int line = optional_int_value(start == nullptr ? nullptr : start->get("line"), -1);
-        if (line < 0 || !seen_lines.insert(line).second) {
+        if (!fix_range || line < 0 || !seen_lines.insert(line).second) {
             continue;
         }
         const std::string title =
             unused_local ? "Remove unused local" : "Remove unreachable statement";
-        if (const std::optional<TextEdit> edit = remove_line_edit(doc, line)) {
-            out.push_back(code_action_json(
-                doc, CodeActionEdit{.title = title, .kind = "quickfix", .edit = *edit}));
-        }
+        out.push_back(code_action_json(
+            doc, CodeActionEdit{.title = title,
+                                .kind = "quickfix",
+                                .edit = TextEdit{.range = *fix_range, .new_text = ""}}));
     }
     return out;
 }
