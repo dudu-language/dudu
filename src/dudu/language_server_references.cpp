@@ -267,7 +267,8 @@ std::string reference_query_at(const Document& doc, const AstSelection& selectio
     return name;
 }
 
-RenameScope rename_scope_at(const Document& doc, const Json* params, const std::string& name) {
+RenameScope rename_scope_at(const Document& doc, const Json* params, const std::string& name,
+                            const AstSelection& selection) {
     if (declaration_at_position(doc, params, name).has_value()) {
         return RenameScope::Workspace;
     }
@@ -278,23 +279,22 @@ RenameScope rename_scope_at(const Document& doc, const Json* params, const std::
     if (has_type_ref(local_type_ref_before_cursor(doc, name, params))) {
         return RenameScope::None;
     }
-    if (ast_symbol_at(doc, params).value_or("") == name &&
-        selected_call_callee(doc, params, name)) {
+    if (selection.symbol.value_or("") == name && selected_call_callee(doc, params, name)) {
         return RenameScope::CurrentDocument;
     }
     return RenameScope::None;
 }
 
-ReferenceScope reference_scope_at(const Document& doc, const Json* params,
-                                  const std::string& name) {
+ReferenceScope reference_scope_at(const Document& doc, const Json* params, const std::string& name,
+                                  const AstSelection& selection) {
     if (name.empty()) {
         return ReferenceScope::None;
     }
     if (declaration_at_position(doc, params, name).has_value()) {
         return ReferenceScope::WorkspaceSkipRedeclarations;
     }
-    if (const std::optional<std::string> path = ast_symbol_path_at(doc, params);
-        path.has_value() && path->find('.') != std::string::npos) {
+    if (selection.symbol_path.has_value() &&
+        selection.symbol_path->find('.') != std::string::npos) {
         return ReferenceScope::Workspace;
     }
     if (selective_import_target(doc, name).has_value()) {
@@ -315,7 +315,7 @@ std::string references_json(const Document& doc, const Json* params,
                             const std::map<std::string, Document>& workspace) {
     const AstSelection selection = ast_selection_at(doc, params);
     const std::string query = reference_query_at(doc, selection);
-    const ReferenceScope scope = reference_scope_at(doc, params, query);
+    const ReferenceScope scope = reference_scope_at(doc, params, query, selection);
     if (scope == ReferenceScope::None) {
         return "[]";
     }
@@ -382,10 +382,11 @@ std::string references_json(const Document& doc, const Json* params,
 
 std::string rename_json(const Document& doc, const Json* params,
                         const std::map<std::string, Document>& workspace) {
-    const std::string old_name = ast_symbol_at(doc, params).value_or("");
+    const AstSelection selection = ast_selection_at(doc, params);
+    const std::string old_name = selection.symbol.value_or("");
     const std::string new_name =
         params == nullptr ? std::string{} : string_value(params->get("newName"));
-    const RenameScope scope = rename_scope_at(doc, params, old_name);
+    const RenameScope scope = rename_scope_at(doc, params, old_name, selection);
     if (!valid_identifier(new_name) || scope == RenameScope::None) {
         return "null";
     }
