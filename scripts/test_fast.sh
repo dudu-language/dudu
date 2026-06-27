@@ -119,6 +119,7 @@ grep -Fq "virtual ~Derived() = default;" "$repo_root/build/inheritance_virtual_d
 grep -Fq "virtual ~Resource(" "$repo_root/build/inheritance_virtual_drop.cpp"
 compile_and_expect native_inheritance_basic 42
 compile_and_expect native_imported_base 62
+compile_and_expect native_enum_compare 42
 compile_and_expect native_template_function 42
 compile_and_expect native_scan_local 42
 

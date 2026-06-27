@@ -79,8 +79,9 @@ Recommended tiers:
 - `scripts/test_full.sh`: run before version tags, big milestone branches, or
   "this should be stable" checkpoints. It combines the core and optional local
   probes.
-- Future `scripts/test_examples.sh`: curated in-repo example builds. These
-  should be mostly headless and reproducible.
+- `scripts/test_examples.sh`: curated in-repo example checks and object builds.
+  It keeps core examples required and skips package-SDK examples when their
+  `pkg-config` packages are missing.
 - `scripts/test_dogfood.sh`: local-only external repo checks, such as
   `raymarch-dd`, `dudu-webserver`, and other real projects when they exist on a
   developer machine. It skips missing repos and uses timeouts so dogfood checks

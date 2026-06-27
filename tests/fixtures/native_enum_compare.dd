@@ -1,0 +1,8 @@
+import cpp "native_headers/native_enum_compare.hpp" as native
+
+
+def main() -> i32:
+    event = native.dudu_native_event(native.DUDU_NATIVE_EVENT_QUIT)
+    if event.type == native.DUDU_NATIVE_EVENT_QUIT:
+        return 42
+    return 1

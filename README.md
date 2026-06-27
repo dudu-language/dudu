@@ -160,10 +160,12 @@ Vulkan, or FFmpeg need those libraries installed separately.
 External dogfood projects can be checked locally with:
 
 ```sh
+./scripts/test_examples.sh
 ./scripts/test_dogfood.sh
 ```
 
-That script skips missing local repos and currently covers `raymarch-dd` and
+The example script skips missing optional package SDKs. The dogfood script
+skips missing local repos and currently covers `raymarch-dd` and
 `dudu-webserver` when they exist next to the Dudu checkout.
 
 ## Editor Support

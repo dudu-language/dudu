@@ -45,7 +45,7 @@ def main() -> i32:
         ImGui.Render()
         sdl.SDL_SetRenderDrawColor(renderer, 12, 14, 18, 255)
         sdl.SDL_RenderClear(renderer)
-        imgui_renderer.ImGui_ImplSDLRenderer3_RenderDrawData(ImGui.GetDrawData(), renderer)
+        imgui_renderer.ImGui_ImplSDLRenderer3_RenderDrawData(ImGui.GetDrawData())
         sdl.SDL_RenderPresent(renderer)
 
     imgui_renderer.ImGui_ImplSDLRenderer3_Shutdown()

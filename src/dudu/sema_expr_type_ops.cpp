@@ -30,6 +30,14 @@ bool type_ref_is_bool(const TypeRef& type) {
     return type_ref_is_name(type, "bool");
 }
 
+bool equality_assignment_allowed(const FunctionScope& scope, const std::string& op,
+                                 const Expr& left_expr, const TypeRef& left_ref,
+                                 const Expr& right_expr, const TypeRef& right_ref) {
+    return (op == "==" || op == "!=") &&
+           (can_assign_ast(scope, left_ref, right_expr, right_ref) ||
+            can_assign_ast(scope, right_ref, left_expr, left_ref));
+}
+
 TypeRef pointer_type_ref(TypeRef pointee, SourceLocation location) {
     return wrapped_type_ref(TypeKind::Pointer, std::move(pointee), location);
 }
@@ -167,7 +175,9 @@ std::optional<TypeRef> binary_expr_type_ref(const FunctionScope& scope, const Ex
         }
         if (location != nullptr && has_type_ref(left_ref) && has_type_ref(right_ref) &&
             !comparison_rhs_allowed(scope.symbols, expr.op, left_ref, expr.children[1],
-                                    right_ref)) {
+                                    right_ref) &&
+            !equality_assignment_allowed(scope, expr.op, expr.children[0], left_ref,
+                                         expr.children[1], right_ref)) {
             const std::string left_display = substitute_type_ref_text(left_ref, {});
             const std::string right_display = substitute_type_ref_text(right_ref, {});
             sema_expr_fail(*location,
