@@ -24,8 +24,8 @@ struct EscapeMemberCall {
 };
 
 std::optional<EscapeCall> parsed_escape_call(const Expr& parsed);
-std::optional<EscapeCall> escape_call_from_text(const std::string& expr, size_t open,
-                                                SourceLocation location);
+std::optional<EscapeCall> parse_cpp_escape_call_text(const std::string& expr, size_t open,
+                                                     SourceLocation location);
 std::optional<EscapeMemberCall> parsed_member_call(const EscapeCall& call);
 
 } // namespace dudu

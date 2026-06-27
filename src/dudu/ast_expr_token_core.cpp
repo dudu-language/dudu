@@ -328,11 +328,6 @@ Expr ExprTokenParser::parse_prefix(std::initializer_list<TokenKind> stops) {
     return parse_postfix(stops);
 }
 
-Expr ExprTokenParser::parse_unknown_until_stops(size_t begin,
-                                                std::initializer_list<TokenKind> stops) {
-    return parse_unsupported_expr(ExprKind::Unknown, begin, stops);
-}
-
 Expr ExprTokenParser::parse_unsupported_expr(ExprKind kind, size_t begin,
                                              std::initializer_list<TokenKind> stops) {
     int depth = 0;

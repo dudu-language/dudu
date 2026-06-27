@@ -2879,3 +2879,6 @@ push. They are not release packaging work.
    `type.children.front()` can copy from storage owned by the value being
    overwritten. Wrapper peeling must copy the child first and then replace the
    parent, and `reference_array_index.dd` guards the indexed-reference path.
+   The dead `parse_unknown_until_stops` helper has been deleted, and the
+   remaining call parser that consumes raw text is named as an explicit
+   `cpp(...)` escape-boundary helper rather than a generic expression fallback.

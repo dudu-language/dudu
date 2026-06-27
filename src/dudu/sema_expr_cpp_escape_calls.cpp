@@ -62,8 +62,8 @@ std::optional<EscapeCall> parsed_escape_call(const Expr& parsed) {
                       .args = parsed.children};
 }
 
-std::optional<EscapeCall> escape_call_from_text(const std::string& expr, size_t open,
-                                                SourceLocation location) {
+std::optional<EscapeCall> parse_cpp_escape_call_text(const std::string& expr, size_t open,
+                                                     SourceLocation location) {
     if (find_call_close(expr, open) != expr.size() - 1) {
         return std::nullopt;
     }

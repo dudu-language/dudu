@@ -50,8 +50,8 @@ TypeRef infer_cpp_escape_expr_ref(const FunctionScope& scope, std::string expr,
     if (!call_info) {
         const size_t call = find_call_open(expr);
         if (call != std::string::npos) {
-            call_info = escape_call_from_text(expr, call,
-                                              location == nullptr ? SourceLocation{} : *location);
+            call_info = parse_cpp_escape_call_text(
+                expr, call, location == nullptr ? SourceLocation{} : *location);
         }
     }
     if (call_info) {
