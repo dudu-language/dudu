@@ -206,38 +206,6 @@ bool document_has_native_identity_for_query(const Document& doc, const std::stri
     return false;
 }
 
-std::optional<std::string> dotted_source_symbol_at(const Document& doc, const Json* params) {
-    const LspPosition position = lsp_position(params);
-    int line = 0;
-    size_t line_start = 0;
-    while (line < position.line) {
-        const size_t newline = doc.text.find('\n', line_start);
-        if (newline == std::string::npos) {
-            return std::nullopt;
-        }
-        line_start = newline + 1;
-        ++line;
-    }
-    const size_t line_end = doc.text.find('\n', line_start);
-    const std::string_view text = std::string_view(doc.text).substr(
-        line_start, line_end == std::string::npos ? std::string::npos : line_end - line_start);
-    if (position.character < 0 || static_cast<size_t>(position.character) > text.size()) {
-        return std::nullopt;
-    }
-    size_t start = static_cast<size_t>(position.character);
-    while (start > 0 && symbol_char(text[start - 1])) {
-        --start;
-    }
-    size_t end = static_cast<size_t>(position.character);
-    while (end < text.size() && symbol_char(text[end])) {
-        ++end;
-    }
-    if (start >= end) {
-        return std::nullopt;
-    }
-    return std::string(text.substr(start, end - start));
-}
-
 std::string dotted_tail(const std::string& query) {
     const size_t dot = query.rfind('.');
     return dot == std::string::npos ? query : query.substr(dot + 1);
@@ -253,9 +221,6 @@ std::string reference_query_at(const Document& doc, const Json* params) {
     if (const std::optional<ExprPath> path = ast_expr_path_at(doc, params)) {
         expression_path = render_expr_path(*path);
         paths.push_back(*expression_path);
-    }
-    if (const std::optional<std::string> path = dotted_source_symbol_at(doc, params)) {
-        paths.push_back(*path);
     }
     try {
         const ModuleAst module = parse_source(doc.text, doc.path);
