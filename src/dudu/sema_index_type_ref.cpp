@@ -175,7 +175,9 @@ std::optional<TypeRef> indexed_type_ref_from_type_ref_with_count(
     if (const std::vector<TypeRef> args = template_type_arg_refs(*type, "strided_span2");
         args.size() == 1) {
         if (is_slice) {
-            throw CompileError(location, "strided_span2 slicing is not implemented: " + label);
+            throw CompileError(
+                location, "strided_span2 slicing requires two-dimensional slice syntax: " + label +
+                              "; use patch[row0:row1, :] or patch[:, col]");
         }
         if (index_count == 1) {
             TypeRef row;
