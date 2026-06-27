@@ -104,6 +104,15 @@ std::string scanner_flags(const NativeHeaderOptions& options) {
 }
 std::filesystem::path temp_base(const std::filesystem::path& source_dir) {
     const auto ticks = std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+    std::error_code error;
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path(error) / "dudu-native-headers";
+    if (!error) {
+        std::filesystem::create_directories(dir, error);
+        if (!error) {
+            return dir / ("dudu_native_headers_" + ticks);
+        }
+    }
     return source_dir / (".dudu_native_headers_" + ticks);
 }
 bool requires_scan_success(const ImportDecl& import) {
