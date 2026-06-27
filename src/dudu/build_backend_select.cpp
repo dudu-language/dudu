@@ -6,12 +6,11 @@ namespace dudu {
 
 ProjectConfig select_build_backend(ProjectConfig config, const std::filesystem::path& input,
                                    bool project_driver) {
-    if (!config.build_backend_explicit && config.build_backend == "direct" && project_driver) {
-        config.build_backend = "cmake";
+    if (config.build_backend_explicit || config.build_backend != "cmake" || project_driver) {
+        return config;
     }
-    if (!config.build_backend_explicit && config.build_backend == "direct" && !input.empty() &&
-        source_tree_files(input).size() > 1) {
-        config.build_backend = "cmake";
+    if (!input.empty() && source_tree_files(input).size() <= 1) {
+        config.build_backend = "direct";
     }
     return config;
 }

@@ -92,7 +92,7 @@ void test_build_backend_selection(const std::filesystem::path& root) {
     write_text(project / "dudu.toml", "name = \"backend_probe\"\n"
                                       "entry = \"src/main.dd\"\n");
     const dudu::ProjectConfig implicit = dudu::parse_project_config(project / "dudu.toml");
-    assert(implicit.build_backend == "direct");
+    assert(implicit.build_backend == "cmake");
     assert(!implicit.build_backend_explicit);
     assert(dudu::select_build_backend(implicit, project / "src/main.dd", false).build_backend ==
            "direct");

@@ -178,6 +178,10 @@ if printf '%s\n' "$cmake_cached_output" | grep -q '^-- Configuring done'; then
     echo "cached generated-CMake build reran configure" >&2
     exit 1
 fi
+default_cmake_output="$("$repo_root/build/dudu" build \
+    "$repo_root/tests/fixtures/simple_program.dd" 2>&1)"
+printf '%s\n' "$default_cmake_output" | grep -Eq '^backend cmake$'
+printf '%s\n' "$default_cmake_output" | grep -Eq '^output .*/simple_program$'
 "$repo_root/build/dudu" build \
     "$repo_root/tests/fixtures/project_backend_cmake_function_namespaces" --quiet
 "$repo_root/build/duc" fmt "$repo_root/tests/fixtures/simple_program.dd" --check

@@ -1635,9 +1635,10 @@ push. They are not release packaging work.
    the same CMake install rules instead of acting as a package manager.
    `dudu build`, `dudu run`, and `dudu test` use the generated-CMake backend by
    default, even for single-module inputs, so generated C++ stays split into
-   per-module artifacts. `duc build` and `duc run` keep the direct backend as
-   the low-level compiler-driver path. `[build] backend = "direct"` and
-   `[build] backend = "cmake"` parse
+   per-module artifacts. The project configuration model also defaults to
+   CMake; `duc build` and `duc run` select the direct backend for implicit
+   single-file compiler-driver work as the low-level path. `[build] backend =
+   "direct"` and `[build] backend = "cmake"` parse
    from the manifest, and explicit direct keeps strict merged-output diagnostics
    when a project cannot honestly fit in one generated translation unit. The
    generated CMake backend is implemented for `dudu build`, `dudu run`, and
