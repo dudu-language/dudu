@@ -124,6 +124,8 @@
   scaffolds; it builds generated Dudu module artifacts through `duc`.
 - Made direct `dudu build` and `dudu run` print separate `analyze`, `emit`,
   `compile`, and final `output`/`run` stages.
+- Made generated and user-owned CMake backend stage logs use project-driver
+  timing prefixes for `generate`, `configure`, and `compile`.
 - Clarified native-header redeclaration collision handling by spelling the
   opaque native type exception at the collision branches.
 - Made direct unaliased native C/C++ functions participate in current-document

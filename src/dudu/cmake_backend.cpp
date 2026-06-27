@@ -2,6 +2,7 @@
 
 #include "dudu/cmake_emit.hpp"
 #include "dudu/native_build.hpp"
+#include "dudu/project_driver.hpp"
 #include "dudu/source.hpp"
 
 #include <chrono>
@@ -80,12 +81,6 @@ void record_configure_command(const std::filesystem::path& command_path,
     (void)write_text_file(command_path, command);
 }
 
-void print_stage(bool enabled, const std::string& label, const std::filesystem::path& path) {
-    if (enabled) {
-        std::cerr << label << " " << path.string() << '\n';
-    }
-}
-
 std::string command_failure_message(const std::string& label, const std::string& command,
                                     const std::filesystem::path& log_path) {
     std::string message = label + " failed\ncommand: " + command;
@@ -137,7 +132,7 @@ void configure_user_cmake(const UserCMakeBackendOptions& options,
     if (options.verbose) {
         std::cerr << configure_command << '\n';
     }
-    print_stage(options.stream_output, "configure", build_dir);
+    print_project_step(options.stream_output, "configure", build_dir);
     if (configure_is_current(build_dir, configure_command_log, configure_command)) {
         return;
     }
@@ -164,7 +159,7 @@ void build_user_cmake(const UserCMakeBackendOptions& options,
     if (options.verbose) {
         std::cerr << build_command << '\n';
     }
-    print_stage(options.stream_output, "compile", build_dir);
+    print_project_step(options.stream_output, "compile", build_dir);
     const int status = options.stream_output ? run_shell_command_streaming(build_command, build_log)
                                              : run_shell_command(build_command, build_log);
     if (status != 0) {
@@ -221,7 +216,7 @@ std::filesystem::path run_cmake_backend(const CMakeBackendOptions& options) {
     const std::filesystem::path source_dir = options.root / "source";
     const std::filesystem::path build_dir = options.root / "build";
     const std::filesystem::path cmake_lists = source_dir / "CMakeLists.txt";
-    print_stage(options.stream_output, "generate", cmake_lists);
+    print_project_step(options.stream_output, "generate", cmake_lists);
     const bool cmake_lists_changed = write_text_file(cmake_lists, options.cmake_lists);
 
     std::string configure_command =
@@ -234,7 +229,7 @@ std::filesystem::path run_cmake_backend(const CMakeBackendOptions& options) {
     if (options.verbose) {
         std::cerr << configure_command << '\n';
     }
-    print_stage(options.stream_output, "configure", build_dir);
+    print_project_step(options.stream_output, "configure", build_dir);
     if (cmake_lists_changed ||
         !configure_is_current(build_dir, configure_command_log, configure_command)) {
         const int configure_status =
@@ -252,7 +247,7 @@ std::filesystem::path run_cmake_backend(const CMakeBackendOptions& options) {
     if (options.verbose) {
         std::cerr << build_command << '\n';
     }
-    print_stage(options.stream_output, "compile", build_dir);
+    print_project_step(options.stream_output, "compile", build_dir);
     const int build_status = options.stream_output
                                  ? run_shell_command_streaming(build_command, build_log)
                                  : run_shell_command(build_command, build_log);
