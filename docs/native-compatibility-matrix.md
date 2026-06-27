@@ -9,7 +9,9 @@ The fast test loop should stay small. Run this matrix periodically, before
 version bumps, and whenever native header scanning, native type compatibility,
 project-driver build behavior, or generated CMake changes.
 
-Last local probe run: 2026-06-21 with `scripts/probe_optional.sh`.
+Last local probe run: 2026-06-27 with `scripts/probe_optional.sh`. The default
+run passed all available non-heavy probes on this machine; `spdlog` remained
+the intentional `DUDU_PROBE_HEAVY=1` skip.
 
 ## Status Key
 
