@@ -1547,6 +1547,9 @@ push. They are not release packaging work.
    symbol path, and expression path together. This removes duplicated parse/walk
    work from the hot editor path and keeps future hover/reference/rename
    improvements on one cursor-selection model.
+   The LSP hover request path now also passes that selected expression path into
+   hover handling instead of reparsing the document to recover member-hover
+   context.
    Find-references keeps unresolved member expressions as dotted queries instead
    of falling back to the bare member name, so unrelated same-named member calls
    are not reported together. Module-qualified references now also include the

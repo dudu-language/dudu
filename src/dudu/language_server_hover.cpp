@@ -138,8 +138,7 @@ std::optional<std::string> native_alias_hover_json(const Document& doc, const st
 std::string symbol_hover_json(const Document& doc, const Symbol& symbol) {
     std::string markdown = "`" + symbol.detail + "`";
     if (uri_for_location(symbol.location, doc) == doc.uri) {
-        if (const std::string docs = doc_comment_before(doc, symbol.location.line);
-            !docs.empty()) {
+        if (const std::string docs = doc_comment_before(doc, symbol.location.line); !docs.empty()) {
             markdown += "\n\n" + docs;
         }
     }
@@ -201,14 +200,14 @@ std::optional<std::string> member_hover_json(const Document& doc, const ExprPath
                 }
                 for (const FunctionDecl& method : klass.methods) {
                     if (method.name == member) {
-                        return symbol_hover_json(
-                            doc, {.name = method.name,
-                                  .detail = function_detail(method),
-                                  .location = method.location,
-                                  .kind = is_constructor_method_name(method.name)
-                                              ? lsp_symbol_kind::Constructor
-                                              : lsp_symbol_kind::Method,
-                                  .native_identity_key = std::nullopt});
+                        return symbol_hover_json(doc,
+                                                 {.name = method.name,
+                                                  .detail = function_detail(method),
+                                                  .location = method.location,
+                                                  .kind = is_constructor_method_name(method.name)
+                                                              ? lsp_symbol_kind::Constructor
+                                                              : lsp_symbol_kind::Method,
+                                                  .native_identity_key = std::nullopt});
                     }
                 }
             }
@@ -225,8 +224,8 @@ std::optional<std::string> member_hover_json(const Document& doc, const ExprPath
 
 } // namespace
 
-std::string hover_json(const Document& doc, const std::string& word,
-                       const std::string& local_type, const Json* params) {
+std::string hover_json(const Document& doc, const std::string& word, const std::string& local_type,
+                       const Json* params, std::optional<ExprPath> selected_path) {
     if (const std::optional<std::string> native_alias = native_alias_hover_json(doc, word)) {
         return *native_alias;
     }
@@ -237,9 +236,12 @@ std::string hover_json(const Document& doc, const std::string& word,
     if (const std::optional<std::string> imported = imported_symbol_hover_json(doc, word)) {
         return *imported;
     }
-    if (const std::optional<ExprPath> path = params == nullptr ? std::nullopt
-                                                               : ast_expr_path_at(doc, params)) {
-        if (const std::optional<std::string> member_hover = member_hover_json(doc, *path, params)) {
+    if (!selected_path.has_value() && params != nullptr) {
+        selected_path = ast_expr_path_at(doc, params);
+    }
+    if (selected_path.has_value()) {
+        if (const std::optional<std::string> member_hover =
+                member_hover_json(doc, *selected_path, params)) {
             return *member_hover;
         }
     }

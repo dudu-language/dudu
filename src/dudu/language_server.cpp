@@ -401,11 +401,12 @@ class LanguageServer {
         if (doc == nullptr) {
             return "null";
         }
-        const std::string word = ast_symbol_path_at(*doc, params).value_or("");
-        return hover_json(*doc, word,
-                          substitute_type_ref_text(
-                              local_type_ref_before_cursor(*doc, word, params), {}),
-                          params);
+        const AstSelection selection = ast_selection_at(*doc, params);
+        const std::string word = selection.symbol_path.value_or("");
+        return hover_json(
+            *doc, word,
+            substitute_type_ref_text(local_type_ref_before_cursor(*doc, word, params), {}), params,
+            selection.expr_path);
     }
 
     std::string completion_result(const Json* params) const {
