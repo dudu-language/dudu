@@ -52,7 +52,26 @@ fi
 
 bench_dir="$repo_root/build/bench_compiler"
 mkdir -p "$bench_dir" "$(dirname "$csv_path")"
-printf 'case,phase,sample,elapsed_ms,lines,files,status\n' >"$csv_path"
+printf 'case,phase,sample,elapsed_ms,peak_rss_kb,lines,files,status\n' >"$csv_path"
+runner="$bench_dir/bench_runner.py"
+cat >"$runner" <<'PY'
+import resource
+import subprocess
+import sys
+
+if len(sys.argv) < 4 or sys.argv[2] != "--":
+    raise SystemExit("usage: bench_runner.py rss-path -- command [args...]")
+
+rss_path = sys.argv[1]
+cmd = sys.argv[3:]
+status = subprocess.run(cmd, check=False).returncode
+rss = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss
+if sys.platform == "darwin":
+    rss = int((rss + 1023) / 1024)
+with open(rss_path, "w", encoding="utf-8") as handle:
+    handle.write(f"{rss}\n")
+raise SystemExit(status)
+PY
 
 elapsed_ms() {
     local start_ns="$1"
@@ -96,19 +115,26 @@ run_case_prepared() {
         "$prepare_fn" "$sample"
         local stdout="$bench_dir/${name}_${sample}.out"
         local stderr="$bench_dir/${name}_${sample}.err"
+        local rss_file="$bench_dir/${name}_${sample}.rss"
         local start end status
+        rm -f "$rss_file"
         start="$(date +%s%N)"
         set +e
-        "$@" >"$stdout" 2>"$stderr"
+        python3 "$runner" "$rss_file" -- "$@" >"$stdout" 2>"$stderr"
         status=$?
         set -e
         end="$(date +%s%N)"
         local ms
         ms="$(elapsed_ms "$start" "$end")"
-        printf '%s,%s,%s,%s,%s,%s,%s\n' "$name" "$phase" "$sample" "$ms" "$lines" "$files" \
-            "$status" >>"$csv_path"
-        printf '%-32s sample %d/%d %10sms status=%s\n' "$name" "$sample" "$samples" "$ms" \
-            "$status"
+        local peak_rss
+        peak_rss=0
+        if [[ -f "$rss_file" ]]; then
+            peak_rss="$(tr -d ' ' <"$rss_file")"
+        fi
+        printf '%s,%s,%s,%s,%s,%s,%s,%s\n' "$name" "$phase" "$sample" "$ms" "$peak_rss" \
+            "$lines" "$files" "$status" >>"$csv_path"
+        printf '%-32s sample %d/%d %10sms %10sKB status=%s\n' "$name" "$sample" "$samples" \
+            "$ms" "$peak_rss" "$status"
         if [[ "$status" -ne 0 ]]; then
             echo "benchmark case failed: $name" >&2
             cat "$stderr" >&2
@@ -324,14 +350,16 @@ NR > 1 {
     key = $1 "," $2
     count[key] += 1
     sum[key] += $4
-    lines[key] = $5
-    files[key] = $6
+    rss[key] += $5
+    lines[key] = $6
+    files[key] = $7
 }
 END {
     for (key in count) {
         split(key, parts, ",")
-        printf "%-32s phase=%-18s mean_ms=%10.3f lines=%s files=%s\n",
-            parts[1], parts[2], sum[key] / count[key], lines[key], files[key]
+        printf "%-32s phase=%-34s mean_ms=%10.3f mean_peak_rss_kb=%10.0f lines=%s files=%s\n",
+            parts[1], parts[2], sum[key] / count[key], rss[key] / count[key],
+            lines[key], files[key]
     }
 }' "$csv_path" | sort
 

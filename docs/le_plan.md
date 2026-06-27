@@ -1417,17 +1417,17 @@ push. They are not release packaging work.
    `duc_lsp_diagnostics`, so editor latency is visible outside the full LSP
    smoke suite. The changed-file case runs against a copied fixture under
    `build/bench_compiler` so benchmarks do not mutate checked-in examples. It
-   records source line/file counts with each sample. This is a baseline harness,
-   not a pass/fail gate; thresholds, memory tracking, larger synthetic corpora,
-   and deeper clean/no-op/one-file-changed generated-CMake breakdowns remain
-   later benchmark expansions. `dudu-webserver` dogfood found a native-header
-   cache regression where dependency stamps recorded the generated scanner
-   `.cpp`, then deleted it, making every later process treat the cache as stale.
-   The scanner now records full system-header dependencies with `-MD` and
-   explicitly ignores only the generated scanner source. On the local webserver
-   project, a touched `.dd` rebuild dropped from about 25.6s to about 9.9s on
-   first cache population and about 3.9s on the next process run with
-   `native-scan-cache` hits.
+   records source line/file counts and peak child-process RSS in KB with each
+   sample. This is a baseline harness, not a pass/fail gate; thresholds, larger
+   synthetic corpora, and deeper clean/no-op/one-file-changed generated-CMake
+   breakdowns remain later benchmark expansions. `dudu-webserver` dogfood found
+   a native-header cache regression where dependency stamps recorded the
+   generated scanner `.cpp`, then deleted it, making every later process treat
+   the cache as stale. The scanner now records full system-header dependencies
+   with `-MD` and explicitly ignores only the generated scanner source. On the
+   local webserver project, a touched `.dd` rebuild dropped from about 25.6s to
+   about 9.9s on first cache population and about 3.9s on the next process run
+   with `native-scan-cache` hits.
 
 12. Incremental Build Strategy
 
