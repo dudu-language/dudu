@@ -26,6 +26,7 @@ struct ProjectTarget {
 
 struct ProjectConfig {
     std::filesystem::path project_dir;
+    std::filesystem::path manifest_path;
     std::string name;
     std::filesystem::path main;
     std::filesystem::path build_dir;

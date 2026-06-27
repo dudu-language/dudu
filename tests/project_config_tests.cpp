@@ -1,5 +1,6 @@
 #include "dudu/build_backend_select.hpp"
 #include "dudu/cli_options.hpp"
+#include "dudu/cmake_emit.hpp"
 #include "dudu/project_config.hpp"
 
 #include <cassert>
@@ -46,8 +47,26 @@ void test_manifest_relative_paths(const std::filesystem::path& root) {
     const dudu::ProjectConfig config = dudu::parse_project_config(config_path);
     assert(config.project_dir.lexically_normal() ==
            std::filesystem::absolute(project).lexically_normal());
+    assert(config.manifest_path.lexically_normal() ==
+           std::filesystem::absolute(project / "dudu.toml").lexically_normal());
     assert(dudu::project_path(config, "third_party/include").lexically_normal() ==
            (project / "third_party/include").lexically_normal());
+}
+
+void test_cmake_emit_depends_on_manifest(const std::filesystem::path& root) {
+    const std::filesystem::path project = root / "build" / "project-config-cmake-depends";
+    std::filesystem::remove_all(project);
+    write_text(project / "dudu.toml", "name = \"manifest_dep_probe\"\n"
+                                      "entry = \"src/main.dd\"\n"
+                                      "\n"
+                                      "[build]\n"
+                                      "MODE = \"fast\"\n");
+    write_text(project / "src" / "main.dd", "def main() -> i32:\n    return 0\n");
+
+    const dudu::ProjectConfig config = dudu::parse_project_config(project / "dudu.toml");
+    const std::string cmake = dudu::emit_cmake_project(config, project / "src" / "main.dd");
+    assert(cmake.find((project / "dudu.toml").string()) != std::string::npos);
+    assert(cmake.find("DEPENDS ${DUDU_EXECUTABLE}") != std::string::npos);
 }
 
 void test_build_backend_selection(const std::filesystem::path& root) {
@@ -301,6 +320,7 @@ void test_project_driver_command_defaults(const std::filesystem::path& root) {
 int main() {
     try {
         test_manifest_relative_paths(DUDU_REPO_ROOT);
+        test_cmake_emit_depends_on_manifest(DUDU_REPO_ROOT);
         test_build_backend_selection(DUDU_REPO_ROOT);
         test_quoted_manifest_strings(DUDU_REPO_ROOT);
         test_invalid_manifest_string_escapes(DUDU_REPO_ROOT);

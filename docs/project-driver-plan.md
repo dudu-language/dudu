@@ -378,6 +378,9 @@ Current implementation reality:
   plus a shared `dudu_runtime.hpp`.
 - The generated CMake backend uses `duc emit-modules` and compiles the
   generated per-module `.cpp` files.
+- Generated CMake module emission depends on both the loaded `.dd` module
+  sources and the parsed `dudu.toml`, so build values, target mode, and other
+  manifest-only Dudu settings can invalidate the emit step.
 - `dudu test` can use the generated CMake backend. It uses
   `duc emit-test-modules` to emit per-module test-mode `.hpp/.cpp` artifacts
   plus a small generated `test_harness.cpp`; generated module sources suppress

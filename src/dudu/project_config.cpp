@@ -245,6 +245,7 @@ ProjectConfig parse_project_config(const std::filesystem::path& path) {
     const std::filesystem::path parent =
         config_path.has_parent_path() ? config_path.parent_path() : std::filesystem::path(".");
     config.project_dir = std::filesystem::absolute(parent).lexically_normal();
+    config.manifest_path = std::filesystem::absolute(config_path).lexically_normal();
     std::ifstream file(config_path);
     if (!file) {
         return config;

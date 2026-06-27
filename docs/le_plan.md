@@ -1436,7 +1436,9 @@ push. They are not release packaging work.
    with `-MD` and explicitly ignores only the generated scanner source. On the
    local webserver project, a touched `.dd` rebuild dropped from about 25.6s to
    about 9.9s on first cache population and about 3.9s on the next process run
-   with `native-scan-cache` hits.
+   with `native-scan-cache` hits. Generated CMake module emission now records
+   the parsed `dudu.toml` as an emit dependency as well as the loaded `.dd`
+   sources, so manifest-only Dudu settings can invalidate generated artifacts.
 
 12. Incremental Build Strategy
 

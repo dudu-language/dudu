@@ -118,6 +118,9 @@
   `duc` focused on explicit compiler-driver workflows.
 - Documented `dudu build`, `dudu run`, and `dudu test` as the stable project
   front door, with direct and CMake backends as implementation details.
+- Made generated CMake module emission depend on the parsed `dudu.toml`, so
+  manifest-only changes can trigger Dudu re-emission instead of relying only on
+  `.dd` source mtimes.
 - Added fast validation that `dudu init` and `dudu new` create runnable hello
   projects with the documented git/`.gitignore` behavior.
 - Added an initial user-owned `CMakeLists.txt` to `dudu init` and `dudu new`

@@ -112,6 +112,15 @@ std::vector<std::filesystem::path> module_source_files(const ModuleAst& module) 
     return files;
 }
 
+std::vector<std::filesystem::path> dudu_emit_dependencies(const ProjectConfig& config,
+                                                          const ModuleAst& module) {
+    std::vector<std::filesystem::path> files = module_source_files(module);
+    if (!config.manifest_path.empty() && std::filesystem::exists(config.manifest_path)) {
+        files.push_back(config.manifest_path);
+    }
+    return files;
+}
+
 void emit_generated_module_list(std::ostringstream& out, std::string_view name,
                                 const std::filesystem::path& generated_dir,
                                 const std::vector<std::filesystem::path>& paths) {
@@ -183,7 +192,7 @@ std::string emit_cmake_project(const ProjectConfig& config, const std::filesyste
            "${DUDU_PROJECT_DIR}/${DUDU_SOURCE} -o "
            "${DUDU_GENERATED_DIR}\n"
         << "    COMMAND ${CMAKE_COMMAND} -E touch ${DUDU_GENERATED_STAMP}\n";
-    emit_cmake_depends(out, module_source_files(module));
+    emit_cmake_depends(out, dudu_emit_dependencies(config, module));
     out << "    COMMENT \"Dudu emit modules\"\n"
         << "    VERBATIM\n"
         << "    WORKING_DIRECTORY ${DUDU_PROJECT_DIR}\n"
@@ -250,7 +259,7 @@ std::string emit_cmake_test_project(const ProjectConfig& config, const std::file
     }
     out << "\n"
         << "    COMMAND ${CMAKE_COMMAND} -E touch ${DUDU_GENERATED_STAMP}\n";
-    emit_cmake_depends(out, module_source_files(module));
+    emit_cmake_depends(out, dudu_emit_dependencies(config, module));
     out << "    COMMENT \"Dudu emit test modules\"\n"
         << "    VERBATIM\n"
         << "    WORKING_DIRECTORY ${DUDU_PROJECT_DIR}\n"
