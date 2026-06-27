@@ -39,7 +39,7 @@ Current direction notes:
   [Project Goals](goals.md#concurrency-philosophy).
 - Value `match` lowering should stay lean. All-return value matches now lower to
   direct ordered returns without a generated `matched` boolean; non-returning
-  value matches can still lower to `else if`/`else`. See
+  value matches lower to ordered `else if`/`else` chains. See
   [Sum Types Plan](sum-types-plan.md).
 - Compiler and LSP scratch artifacts must stay out of source directories. Native
   header scanner scratch files belong in temp/cache/build locations, not beside

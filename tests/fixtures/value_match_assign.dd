@@ -1,0 +1,14 @@
+def classify(value: i32) -> i32:
+    score = 0
+    match value:
+        case 0:
+            score = 10
+        case 2 if value > 1:
+            score = 20
+        case _:
+            score = 30
+    return score
+
+
+def main() -> i32:
+    return classify(0) + classify(2) + classify(5)

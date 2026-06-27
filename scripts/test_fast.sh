@@ -125,6 +125,7 @@ compile_and_expect native_scan_local 42
 "$repo_root/build/duc" run "$repo_root/tests/fixtures/value_match.dd" \
     -o "$repo_root/build/duc_run_value_match"
 compile_and_expect value_match_string 42
+compile_and_expect value_match_assign 60
 "$repo_root/build/dudu" check "$repo_root/tests/fixtures/project_import_metadata/main.dd"
 "$repo_root/build/dudu" --version | grep -q '^dudu 0\.1\.0$'
 "$repo_root/build/dudu" --help | grep -Fq 'dudu build [input.dd|target] [--quiet] [--verbose]'

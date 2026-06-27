@@ -501,8 +501,8 @@ expressions. Simple zero-payload enum matches lower to C++ `switch`, require
 enforce exhaustiveness. Payload destructuring, guards, `Option`, and `Result`
 matching are implemented.
 
-Optimization note: all-return value matches, such as HTTP route dispatch, now
-lower to a lean ordered chain without a generated `matched` boolean:
+Optimization note: value matches, such as HTTP route dispatch, now lower to a
+lean ordered chain without a generated `matched` boolean:
 
 ```cpp
 if (subject == "/") return index_route(request);
@@ -510,8 +510,8 @@ if (subject == "/health") return health_route(request);
 return not_found_route(request);
 ```
 
-For non-returning case bodies, `else if`/`else` lowering would preserve ordered
-match semantics without reevaluating the `matched` guard on every case.
+Non-returning value matches use the same ordered shape with `else if` / `else`,
+so assignment-style cases do not reevaluate a `matched` guard on every branch.
 
 Status: anonymous `variant[...]` parses as a template type, validates its
 alternative types, lowers to `std::variant`, and supports direct assignment

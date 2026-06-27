@@ -238,6 +238,31 @@ void test_value_match_ast_emission() {
     assert(cpp.find("if ((__dudu_match_2_5 == 2) && ((value > 1)))") != std::string::npos);
 }
 
+void test_non_returning_value_match_emits_else_chain() {
+    const dudu::ModuleAst module = dudu::parse_source("def classify(value: i32) -> i32:\n"
+                                                      "    score = 0\n"
+                                                      "    match value:\n"
+                                                      "        case 0:\n"
+                                                      "            score = 10\n"
+                                                      "        case 2 if value > 1:\n"
+                                                      "            score = 20\n"
+                                                      "        case _:\n"
+                                                      "            score = 30\n"
+                                                      "    return score\n"
+                                                      "\n"
+                                                      "def main() -> i32:\n"
+                                                      "    return classify(2) - 20\n",
+                                                      "non_returning_value_match_ast.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+    const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find("auto&& __dudu_match_3_5 = value;") != std::string::npos);
+    assert(cpp.find("__dudu_match_3_5_matched") == std::string::npos);
+    assert(cpp.find("if (__dudu_match_3_5 == 0)") != std::string::npos);
+    assert(cpp.find("else if ((__dudu_match_3_5 == 2) && ((value > 1)))") != std::string::npos);
+    assert(cpp.find("else {\n") != std::string::npos);
+    assert(cpp.find("score = 30;") != std::string::npos);
+}
+
 void test_typed_literal_initializers_use_type_ast() {
     const dudu::ModuleAst module = dudu::parse_source("def values() -> i32:\n"
                                                       "    maybe: Option[i32] = None\n"
@@ -352,6 +377,7 @@ int main() {
         test_top_level_array_constant_ast_emission();
         test_three_dimensional_array_literal_emission();
         test_value_match_ast_emission();
+        test_non_returning_value_match_emits_else_chain();
         test_typed_literal_initializers_use_type_ast();
         test_inferred_auto_assignment_is_not_redeclared();
         test_inferred_native_pointer_member_emission_uses_type_ast(root);
