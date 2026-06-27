@@ -135,6 +135,9 @@ multi_project="$repo_root/tests/fixtures/project_backend_auto_modules_native"
 multi_entry="$multi_project/main.dd"
 incremental_project="$bench_dir/incremental_project"
 incremental_entry="$incremental_project/main.dd"
+lsp_project="$bench_dir/lsp_project"
+lsp_entry="$lsp_project/main.dd"
+lsp_probe="$bench_dir/lsp_probe.py"
 
 prepare_incremental_project() {
     rm -rf "$incremental_project"
@@ -157,6 +160,128 @@ touch_incremental_dep() {
     else
         perl -0pi -e 's/native\.add\(21, 21\)/native.add(20, 22)/g' "$incremental_project/dep.dd"
     fi
+}
+
+prepare_lsp_project() {
+    rm -rf "$lsp_project"
+    mkdir -p "$lsp_project"
+    cat >"$lsp_entry" <<'EOF'
+class Player:
+    hp: i32
+
+def add(a: i32, b: i32) -> i32:
+    return a + b
+
+def main() -> i32:
+    player = Player(42)
+    value = add(player.hp, 8)
+    return True
+EOF
+    cat >"$lsp_probe" <<'PY'
+import json
+import pathlib
+import subprocess
+import sys
+
+duc = sys.argv[1]
+entry = pathlib.Path(sys.argv[2]).resolve()
+uri = entry.as_uri()
+source = entry.read_text()
+
+def packet(obj):
+    body = json.dumps(obj, separators=(",", ":"))
+    return f"Content-Length: {len(body)}\r\n\r\n{body}"
+
+def read_packets(data):
+    packets = []
+    cursor = 0
+    while cursor < len(data):
+        header_end = data.find(b"\r\n\r\n", cursor)
+        if header_end < 0:
+            break
+        headers = data[cursor:header_end].decode()
+        length = None
+        for line in headers.split("\r\n"):
+            if line.lower().startswith("content-length:"):
+                length = int(line.split(":", 1)[1].strip())
+                break
+        if length is None:
+            raise RuntimeError(f"missing Content-Length in {headers!r}")
+        body_start = header_end + 4
+        body_end = body_start + length
+        packets.append(json.loads(data[body_start:body_end]))
+        cursor = body_end
+    return packets
+
+messages = [
+    packet({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"rootUri": entry.parent.as_uri()}}),
+    packet({"jsonrpc": "2.0", "method": "initialized", "params": {}}),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "method": "textDocument/didOpen",
+            "params": {
+                "textDocument": {
+                    "uri": uri,
+                    "languageId": "dudu",
+                    "version": 1,
+                    "text": source,
+                }
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "method": "textDocument/didSave",
+            "params": {"textDocument": {"uri": uri}},
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "textDocument/documentSymbol",
+            "params": {"textDocument": {"uri": uri}},
+        }
+    ),
+    packet({"jsonrpc": "2.0", "id": 3, "method": "shutdown", "params": None}),
+    packet({"jsonrpc": "2.0", "method": "exit", "params": None}),
+]
+
+proc = subprocess.run(
+    [duc, "lsp"],
+    input="".join(messages).encode(),
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE,
+    timeout=5,
+    check=False,
+)
+if proc.returncode != 0:
+    raise RuntimeError(proc.stderr.decode(errors="replace"))
+
+packets = read_packets(proc.stdout)
+diagnostics = [
+    item for item in packets
+    if item.get("method") == "textDocument/publishDiagnostics"
+    and item.get("params", {}).get("uri") == uri
+]
+if not diagnostics:
+    raise RuntimeError("LSP did not publish diagnostics for benchmark document")
+diagnostic_messages = [
+    diagnostic.get("message", "")
+    for diagnostic in diagnostics[-1].get("params", {}).get("diagnostics", [])
+]
+if not any("return type mismatch" in message for message in diagnostic_messages):
+    raise RuntimeError(f"unexpected diagnostics: {diagnostic_messages!r}")
+
+symbol_response = next((item for item in packets if item.get("id") == 2), None)
+if symbol_response is None or "result" not in symbol_response:
+    raise RuntimeError("LSP did not answer documentSymbol")
+symbol_names = {item.get("name") for item in symbol_response["result"]}
+if not {"Player", "add", "main"}.issubset(symbol_names):
+    raise RuntimeError(f"unexpected document symbols: {symbol_response['result']!r}")
+PY
 }
 
 run_case "duc_check_simple" "frontend_check" "$simple" \
@@ -187,6 +312,10 @@ run_case "dudu_build_cmake_modules_noop" "cmake_noop_build" "$incremental_projec
 run_case_prepared "dudu_build_cmake_modules_changed" "cmake_one_file_changed_build" \
     "$incremental_project" touch_incremental_dep \
     "$repo_root/build/dudu" build "$incremental_entry" --quiet
+
+prepare_lsp_project
+run_case "duc_lsp_diagnostics" "lsp_diagnostics" "$lsp_entry" \
+    python3 "$lsp_probe" "$repo_root/build/duc" "$lsp_entry"
 
 echo
 echo "summary:"
