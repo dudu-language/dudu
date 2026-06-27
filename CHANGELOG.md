@@ -123,6 +123,9 @@
   `.dd` source mtimes.
 - Updated `dudu init`/`dudu new` starter CMake to compile all generated Dudu
   module `.cpp` files instead of only `main.cpp`.
+- Made the `dudu init`/`dudu new` starter CMake refresh generated module
+  artifacts through a stamp output so no-op CMake builds do not rerun Dudu
+  emission.
 - Added fast validation that `dudu init` and `dudu new` create runnable hello
   projects with the documented git/`.gitignore` behavior.
 - Added an initial user-owned `CMakeLists.txt` to `dudu init` and `dudu new`

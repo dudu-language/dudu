@@ -509,7 +509,9 @@ Generated-file ownership must be strict:
   after creation that file belongs to the user. Subsequent `dudu build` runs
   must not mow it over. The starter CMake should compile all generated Dudu
   module `.cpp` files, not only the entry module, so adding a normal imported
-  `.dd` file does not require hand-editing the starter immediately.
+  `.dd` file does not require hand-editing the starter immediately. Its
+  build-time refresh uses a stamp output so no-op CMake builds do not rerun
+  Dudu emission.
 
 The practical target is:
 
