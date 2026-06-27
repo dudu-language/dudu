@@ -1415,7 +1415,10 @@ push. They are not release packaging work.
    generated-CMake one-Dudu-file-changed rebuild cases. It also measures a
    lightweight LSP parse/diagnostic/document-symbol roundtrip through
    `duc_lsp_diagnostics`, so editor latency is visible outside the full LSP
-   smoke suite. The changed-file case runs against a copied fixture under
+   smoke suite. A generated synthetic multi-module corpus under
+   `build/bench_compiler` gives frontend throughput a larger parse/sema input
+   than the tiny correctness fixtures. The changed-file case runs against a
+   copied fixture under
    `build/bench_compiler` so benchmarks do not mutate checked-in examples. It
    records source line/file counts and peak child-process RSS in KB with each
    sample. This is a baseline harness, not a pass/fail gate; thresholds, larger

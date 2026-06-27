@@ -164,6 +164,8 @@ incremental_entry="$incremental_project/main.dd"
 lsp_project="$bench_dir/lsp_project"
 lsp_entry="$lsp_project/main.dd"
 lsp_probe="$bench_dir/lsp_probe.py"
+synthetic_project="$bench_dir/synthetic_project"
+synthetic_entry="$synthetic_project/main.dd"
 
 prepare_incremental_project() {
     rm -rf "$incremental_project"
@@ -310,6 +312,44 @@ if not {"Player", "add", "main"}.issubset(symbol_names):
 PY
 }
 
+prepare_synthetic_project() {
+    rm -rf "$synthetic_project"
+    mkdir -p "$synthetic_project"
+    : >"$synthetic_entry"
+    for module in $(seq 0 11); do
+        printf 'import mod%02d\n' "$module" >>"$synthetic_entry"
+    done
+    {
+        printf '\n'
+        printf 'def main() -> i32:\n'
+        printf '    total: i32 = 0\n'
+    } >>"$synthetic_entry"
+    for module in $(seq 0 11); do
+        for func in $(seq 0 15); do
+            printf '    total += mod%02d.mod%02d_func%02d(%d)\n' \
+                "$module" "$module" "$func" "$func" >>"$synthetic_entry"
+        done
+    done
+    printf '    return total\n' >>"$synthetic_entry"
+
+    for module in $(seq 0 11); do
+        local file
+        file="$(printf '%s/mod%02d.dd' "$synthetic_project" "$module")"
+        : >"$file"
+        for func in $(seq 0 15); do
+            cat >>"$file" <<EOF
+def mod$(printf '%02d' "$module")_func$(printf '%02d' "$func")(value: i32) -> i32:
+    running: i32 = value
+    running += $(($module + $func))
+    if running % 2 == 0:
+        return running / 2
+    return running * 3 + 1
+
+EOF
+        done
+    done
+}
+
 run_case "duc_check_simple" "frontend_check" "$simple" \
     "$repo_root/build/duc" check "$simple"
 
@@ -342,6 +382,10 @@ run_case_prepared "dudu_build_cmake_modules_changed" "cmake_one_file_changed_bui
 prepare_lsp_project
 run_case "duc_lsp_diagnostics" "lsp_diagnostics" "$lsp_entry" \
     python3 "$lsp_probe" "$repo_root/build/duc" "$lsp_entry"
+
+prepare_synthetic_project
+run_case "duc_check_synthetic" "frontend_synthetic" "$synthetic_project" \
+    "$repo_root/build/duc" check "$synthetic_entry"
 
 echo
 echo "summary:"
