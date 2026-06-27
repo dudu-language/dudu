@@ -6,20 +6,16 @@
 #include "dudu/native_header_cache.hpp"
 #include "dudu/native_header_merge.hpp"
 #include "dudu/native_header_parse.hpp"
+#include "dudu/native_header_scan_command.hpp"
 #include "dudu/native_header_scope.hpp"
 #include "dudu/native_header_types.hpp"
 #include "dudu/project_driver.hpp"
 
 #include <algorithm>
 #include <cctype>
-#include <chrono>
-#include <cstdlib>
-#include <fstream>
 #include <map>
 #include <optional>
 #include <set>
-#include <sstream>
-#include <stdexcept>
 namespace dudu {
 namespace {
 bool is_foreign(const ImportDecl& import) {
@@ -29,12 +25,6 @@ bool is_foreign(const ImportDecl& import) {
 bool direct_import(const ImportDecl& import) {
     return import.alias.empty();
 }
-std::string unquoted(std::string value) {
-    if (value.size() >= 2 && value.front() == '"' && value.back() == '"') {
-        return value.substr(1, value.size() - 2);
-    }
-    return value;
-}
 std::string unquoted_source_file(std::string value) {
     value = trim_copy(std::move(value));
     while (value.size() >= 2 && ((value.front() == '"' && value.back() == '"') ||
@@ -43,155 +33,10 @@ std::string unquoted_source_file(std::string value) {
     }
     return value;
 }
-void append_include_flag(std::string& flags, const std::filesystem::path& path) {
-    flags += " " + shell_quote_arg("-I" + path.lexically_normal().string());
-}
-std::string read_text(const std::filesystem::path& path) {
-    std::ifstream in(path);
-    if (!in) {
-        return {};
-    }
-    return {std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()};
-}
-void write_text(const std::filesystem::path& path, const std::string& text) {
-    std::ofstream out(path);
-    if (!out) {
-        throw std::runtime_error("could not write " + path.string());
-    }
-    out << text;
-}
-std::string capture_pkg_config_cflags(const std::vector<std::string>& packages) {
-    if (packages.empty()) {
-        return {};
-    }
-    const char* pkg_config = std::getenv("PKG_CONFIG");
-    std::string command =
-        shell_quote_arg(pkg_config == nullptr ? "pkg-config" : std::string(pkg_config)) +
-        " --cflags";
-    for (const std::string& package : packages) {
-        command += " " + shell_quote_arg(package);
-    }
-    command += " 2>/dev/null";
-    FILE* pipe = popen(command.c_str(), "r");
-    if (pipe == nullptr) {
-        return {};
-    }
-    std::string output;
-    char buffer[256];
-    while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
-        output += buffer;
-    }
-    if (pclose(pipe) != 0) {
-        return {};
-    }
-    return output;
-}
-std::string scanner_flags(const NativeHeaderOptions& options) {
-    std::string flags;
-    append_include_flag(flags, options.source_dir);
-    for (const std::string& include_dir : options.config.include_dirs) {
-        append_include_flag(flags, project_path(options.config, include_dir));
-    }
-    for (const std::string& define : options.config.defines) {
-        flags += " " + shell_quote_arg("-D" + define);
-    }
-    for (const std::string& flag : options.config.flags) {
-        flags += " " + shell_quote_arg(flag);
-    }
-    const std::string pkg_flags =
-        trim_copy(capture_pkg_config_cflags(options.config.pkg_config_packages));
-    return pkg_flags.empty() ? flags : flags + " " + pkg_flags;
-}
-std::filesystem::path temp_base(const std::filesystem::path& source_dir) {
-    const auto ticks = std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
-    std::error_code error;
-    const std::filesystem::path dir =
-        std::filesystem::temp_directory_path(error) / "dudu-native-headers";
-    if (!error) {
-        std::filesystem::create_directories(dir, error);
-        if (!error) {
-            return dir / ("dudu_native_headers_" + ticks);
-        }
-    }
-    return source_dir / (".dudu_native_headers_" + ticks);
-}
 bool requires_scan_success(const ImportDecl& import) {
-    const std::filesystem::path header = unquoted(import.module_path);
+    const std::filesystem::path header = native_header_unquoted(import.module_path);
     const std::string text = header.string();
     return header.is_absolute() || starts_with(text, ".") || starts_with(text, "/");
-}
-std::string header_stamp(const ImportDecl& import, const NativeHeaderOptions& options) {
-    const std::filesystem::path header = unquoted(import.module_path);
-    const std::filesystem::path path =
-        header.is_absolute() ? header : (options.source_dir / header).lexically_normal();
-    std::error_code error;
-    if (!std::filesystem::exists(path, error) || error) {
-        return {};
-    }
-    const auto size = std::filesystem::file_size(path, error);
-    if (error) {
-        return {};
-    }
-    const auto mtime = std::filesystem::last_write_time(path, error);
-    if (error) {
-        return {};
-    }
-    return "|" + path.string() + "|" + std::to_string(size) + "|" +
-           std::to_string(mtime.time_since_epoch().count());
-}
-std::string run_capture(const std::string& command, const std::filesystem::path& output,
-                        const std::filesystem::path& error) {
-    const int status = std::system(
-        (command + " >" + shell_quote_path(output) + " 2>" + shell_quote_path(error)).c_str());
-    if (status != 0) {
-        return {};
-    }
-    return read_text(output);
-}
-std::string include_line(const std::string& header) {
-    return "#include \"" + header + "\"\n";
-}
-std::string scanner_source_for_header(const ImportDecl& import, bool with_c_prelude) {
-    std::string source;
-    if (with_c_prelude) {
-        source += "#include <stddef.h>\n#include <stdio.h>\n";
-    }
-    source += include_line(unquoted(import.module_path));
-    source += "int dudu_probe = 0;\n";
-    return source;
-}
-std::string clangxx_command() {
-    const char* clang_env = std::getenv("CLANGXX");
-    return clang_env == nullptr ? "clang++" : std::string(clang_env);
-}
-std::string clang_base_command(const NativeHeaderOptions& options, const std::filesystem::path& cpp,
-                               bool ast_dump) {
-    const std::string clang = clangxx_command();
-    std::string command = shell_quote_arg(clang) +
-                          " -std=" + shell_quote_arg(options.config.cpp_std) +
-                          " -x c++ -fsyntax-only -fno-color-diagnostics ";
-    if (ast_dump) {
-        command += "-Xclang -ast-dump ";
-    }
-    return command + shell_quote_path(cpp) + scanner_flags(options);
-}
-std::string scan_error_message(const ImportDecl& import, std::string detail,
-                               const std::string& clang) {
-    std::ostringstream out;
-    out << "could not scan native header " << unquoted(import.module_path);
-    detail = trim_copy(std::move(detail));
-    if (!detail.empty()) {
-        out << "\n" << detail;
-    }
-    if (!clang.empty() && detail.find(clang) != std::string::npos) {
-        out << "\nhint: native header awareness requires clang++; install clang or set CLANGXX";
-    } else if (detail.find("not found") != std::string::npos ||
-               detail.find("No such file") != std::string::npos) {
-        out << "\nhint: add the header directory to [include].paths or the package to [pkg].libs";
-    } else {
-        out << "\nhint: native header awareness requires clang++; install clang or set CLANGXX";
-    }
-    return out.str();
 }
 bool public_direct_macro_name(const std::string& name) {
     return !name.empty() &&
@@ -199,7 +44,7 @@ bool public_direct_macro_name(const std::string& name) {
 }
 std::optional<std::filesystem::path>
 normalized_existing_header_path(const ImportDecl& import, const NativeHeaderOptions& options) {
-    const std::filesystem::path header = unquoted(import.module_path);
+    const std::filesystem::path header = native_header_unquoted(import.module_path);
     const std::filesystem::path path =
         header.is_absolute() ? header : (options.source_dir / header).lexically_normal();
     std::error_code error;
@@ -218,7 +63,7 @@ bool source_file_matches_header(const SourceLocation& location, const ImportDecl
     if (const auto header_path = normalized_existing_header_path(import, options)) {
         return source_path == *header_path;
     }
-    const std::filesystem::path imported = unquoted(import.module_path);
+    const std::filesystem::path imported = native_header_unquoted(import.module_path);
     if (imported.has_parent_path()) {
         return source_path.string().ends_with(imported.lexically_normal().string());
     }
@@ -231,7 +76,7 @@ bool source_file_belongs_to_import_family(const SourceLocation& location, const 
         return true;
     }
     const std::filesystem::path imported =
-        std::filesystem::path(unquoted(import.module_path)).lexically_normal();
+        std::filesystem::path(native_header_unquoted(import.module_path)).lexically_normal();
     if (!imported.has_parent_path()) {
         return false;
     }
@@ -299,15 +144,10 @@ NativeHeaderScan filter_ast_scan_to_header(NativeHeaderScan scan, const ImportDe
     scan.classes = filter_native_decls_to_header(scan.classes, import, options);
     return scan;
 }
-std::string scan_key(const ImportDecl& import, const NativeHeaderOptions& options,
-                     const std::string& flags) {
-    return "v3|" + unquoted(import.module_path) + "|" + clangxx_command() + "|" +
-           options.config.cpp_std + "|" + flags + header_stamp(import, options);
-}
 NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOptions& options,
                                  const std::string& flags) {
     static std::map<std::string, NativeHeaderScan> cache;
-    const std::string key = scan_key(import, options, flags);
+    const std::string key = native_header_scan_key(import, options, flags);
     NativeHeaderRawCache raw_cache = load_native_header_raw_cache(options, key);
     if (raw_cache.hit) {
         if (const auto found = cache.find(key); found != cache.end()) {
@@ -320,7 +160,7 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
             load_native_header_scan_cache(raw_cache, import.location)) {
         cache[key] = *scan;
         print_project_step(project_step_timings_enabled(), "native-scan-cache",
-                           unquoted(import.module_path));
+                           native_header_unquoted(import.module_path));
         return cache[key];
     }
     if (raw_cache.hit) {
@@ -330,10 +170,10 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
         cache[key] = dedupe_scan(std::move(scan));
         store_native_header_scan_cache(raw_cache, cache[key]);
         print_project_step(project_step_timings_enabled(), "native-scan-raw",
-                           unquoted(import.module_path));
+                           native_header_unquoted(import.module_path));
         return cache[key];
     }
-    const std::filesystem::path base = temp_base(options.source_dir);
+    const std::filesystem::path base = native_header_temp_base(options.source_dir);
     const std::filesystem::path cpp = base.string() + ".cpp";
     const std::filesystem::path ast = base.string() + ".ast";
     const std::filesystem::path macros = base.string() + ".macros";
@@ -346,17 +186,21 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
         std::filesystem::remove(deps);
         std::filesystem::remove(err);
     };
-    write_text(cpp, scanner_source_for_header(import, false));
+    native_header_write_text(cpp, native_header_scanner_source_for_header(import, false));
 
     NativeHeaderScan scan;
     const std::string dependency_flags =
         " -MD -MF " + shell_quote_path(deps) + " -MT dudu_native_scan";
     std::string ast_dump =
-        run_capture(clang_base_command(options, cpp, true) + dependency_flags, ast, err);
+        native_header_run_capture(native_header_clang_base_command(options, cpp, true) +
+                                      dependency_flags,
+                                  ast, err);
     bool used_prelude_retry = false;
     if (ast_dump.empty()) {
-        write_text(cpp, scanner_source_for_header(import, true));
-        ast_dump = run_capture(clang_base_command(options, cpp, true) + dependency_flags, ast, err);
+        native_header_write_text(cpp, native_header_scanner_source_for_header(import, true));
+        ast_dump = native_header_run_capture(native_header_clang_base_command(options, cpp, true) +
+                                                 dependency_flags,
+                                             ast, err);
         used_prelude_retry = !ast_dump.empty();
     }
     if (!ast_dump.empty()) {
@@ -367,24 +211,28 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
         }
         scan = dedupe_scan(std::move(ast_scan));
     }
-    const std::string clang = clangxx_command();
+    const std::string clang = native_header_clangxx_command();
     const std::string macro_cmd = shell_quote_arg(clang) +
                                   " -std=" + shell_quote_arg(options.config.cpp_std) +
                                   " -x c++ -dM -E " + shell_quote_path(cpp) + flags;
-    const std::string macro_dump = run_capture(macro_cmd, macros, err);
+    const std::string macro_dump = native_header_run_capture(macro_cmd, macros, err);
     if (ast_dump.empty() && macro_dump.empty()) {
         if (!requires_scan_success(import)) {
             cleanup();
             return {};
         }
-        const std::string detail = read_text(err);
+        const std::string detail = native_header_read_text(err);
         cleanup();
-        throw CompileError(import.location, scan_error_message(import, detail, clangxx_command()),
-                           "dudu.native_header.scan_failed", unquoted(import.module_path));
+        throw CompileError(import.location,
+                           native_header_scan_error_message(
+                               import, detail, native_header_clangxx_command()),
+                           "dudu.native_header.scan_failed",
+                           native_header_unquoted(import.module_path));
     }
     parse_macro_dump(scan, macro_dump, import.location);
     if (!used_prelude_retry) {
-        store_native_header_raw_cache(raw_cache, ast_dump, macro_dump, read_text(deps), cpp);
+        store_native_header_raw_cache(raw_cache, ast_dump, macro_dump,
+                                      native_header_read_text(deps), cpp);
     }
     cleanup();
     cache[key] = dedupe_scan(std::move(scan));
@@ -392,7 +240,7 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
         store_native_header_scan_cache(raw_cache, cache[key]);
     }
     print_project_step(project_step_timings_enabled(), "native-scan-clang",
-                       unquoted(import.module_path));
+                       native_header_unquoted(import.module_path));
     return cache[key];
 }
 template <typename T>
@@ -433,7 +281,7 @@ std::vector<NativeMacroDecl> direct_macros(const std::vector<NativeMacroDecl>& s
 }
 } // namespace
 NativeHeaderScan scan_native_headers(const ModuleAst& module, const NativeHeaderOptions& options) {
-    const std::string flags = scanner_flags(options);
+    const std::string flags = native_header_scanner_flags(options);
     NativeHeaderScan out;
     for (const ImportDecl& import : module.imports) {
         if (!is_foreign(import)) {

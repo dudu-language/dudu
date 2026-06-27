@@ -1885,7 +1885,10 @@ push. They are not release packaging work.
    concept it implements. Core AST expression/statement visitors are now
    template traversal helpers instead of compiled `std::function` callback
    wrappers, leaving `std::function` usage to generated C++ function types and
-   the emitted prelude.
+   the emitted prelude. Native header scanner command/source construction now
+   lives in `native_header_scan_command.*`, keeping clang invocation, temp-file
+   IO, pkg-config flag collection, and scanner error text out of the native
+   declaration merge/orchestration file.
 
 19. Polish Unsupported Syntax Diagnostics
 

@@ -97,6 +97,7 @@ add_library(dudu_frontend
     src/dudu/native_header_merge.cpp
     src/dudu/native_header_parse.cpp
     src/dudu/native_header_parse_macros.cpp
+    src/dudu/native_header_scan_command.cpp
     src/dudu/native_header_scope.cpp
     src/dudu/native_header_types.cpp
     src/dudu/native_headers.cpp
