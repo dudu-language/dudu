@@ -1355,7 +1355,11 @@ push. They are not release packaging work.
    `duduplayground`, `raymarch-dd`, `dudu-webserver`, and similar external
    repos are dogfood inputs, not required public fixtures; curated,
    reproducible examples should live in the Dudu repo when they become
-   official compatibility checks.
+   official compatibility checks. `dudu-webserver` is currently a useful
+   POSIX/C++ standard-library dogfood repo because it stresses multi-file Dudu
+   modules, generated CMake builds, repeated native imports, sockets, `poll`,
+   time APIs, environment reads, and C++ string interop without wrapper
+   headers.
 
 11. Compiler Throughput And Build Performance
 
@@ -1405,7 +1409,14 @@ push. They are not release packaging work.
    sample. This is a baseline harness, not a pass/fail gate; thresholds, memory
    tracking, LSP latency, larger synthetic corpora, and deeper clean/no-op/
    one-file-changed generated-CMake breakdowns remain later benchmark
-   expansions.
+   expansions. `dudu-webserver` dogfood found a native-header cache regression
+   where dependency stamps recorded the generated scanner `.cpp`, then deleted
+   it, making every later process treat the cache as stale. The scanner now
+   records full system-header dependencies with `-MD` and explicitly ignores
+   only the generated scanner source. On the local webserver project, a touched
+   `.dd` rebuild dropped from about 25.6s to about 9.9s on first cache
+   population and about 3.9s on the next process run with `native-scan-cache`
+   hits.
 
 12. Incremental Build Strategy
 
@@ -1447,7 +1458,8 @@ push. They are not release packaging work.
    Remaining incremental work is on the Dudu side: `duc emit-modules` still
    analyzes the selected entry's full module graph in a fresh process. Native
    header raw and scan caches are dependency-stamped before disk or process
-   cache hits are trusted, but real compiler-speed work still needs
+   cache hits are trusted, and scanner-generated source files must not
+   participate in those stamps. Real compiler-speed work still needs
    module-level invalidation and broader structured native-header metadata
    reuse.
    `duc emit-modules --timings` and `duc emit-test-modules --timings` now print

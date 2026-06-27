@@ -1,6 +1,7 @@
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_emit.hpp"
 #include "dudu/language_server_symbols.hpp"
+#include "dudu/native_header_cache_deps.hpp"
 #include "dudu/native_header_parse.hpp"
 #include "dudu/native_header_types.hpp"
 #include "dudu/native_headers.hpp"
@@ -438,6 +439,30 @@ void test_native_header_collision(const std::filesystem::path& root) {
     assert(failed);
 }
 
+void test_native_header_cache_ignores_generated_scanner_source(const std::filesystem::path& root) {
+    const std::filesystem::path source_dir = root / "build" / "native-cache-generated-source";
+    const std::filesystem::path generated = source_dir / "dudu_native_headers_123.cpp";
+    const std::filesystem::path header = source_dir / "real.hpp";
+    std::filesystem::remove_all(source_dir);
+    std::filesystem::create_directories(source_dir);
+    {
+        std::ofstream out(generated);
+        out << "#include \"real.hpp\"\n";
+    }
+    {
+        std::ofstream out(header);
+        out << "#pragma once\ninline int real_answer(void) { return 42; }\n";
+    }
+
+    const std::string make_deps =
+        "dudu_native_scan: " + generated.string() + " " + header.string() + "\n";
+    const std::string stamps =
+        dudu::native_header_dependency_stamps_from_makefile(make_deps, generated);
+    assert(stamps.find(generated.string()) == std::string::npos);
+    assert(stamps.find(header.string()) != std::string::npos);
+    assert(dudu::native_header_dependency_stamps_current(stamps));
+}
+
 void test_native_header_cache_invalidates_local_header(const std::filesystem::path& root) {
     const std::filesystem::path source_dir = root / "build" / "native-cache-invalidation";
     const std::filesystem::path header = source_dir / "cache_probe.hpp";
@@ -759,6 +784,7 @@ int main() {
         test_native_single_underscore_function_macros(root);
         test_native_call_arity(root);
         test_native_header_collision(root);
+        test_native_header_cache_ignores_generated_scanner_source(root);
         test_native_header_cache_invalidates_local_header(root);
         test_native_header_cache_invalidates_included_header(root);
         test_native_header_pointer_diagnostics(root);

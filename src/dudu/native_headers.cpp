@@ -350,7 +350,7 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
 
     NativeHeaderScan scan;
     const std::string dependency_flags =
-        " -MMD -MF " + shell_quote_path(deps) + " -MT dudu_native_scan";
+        " -MD -MF " + shell_quote_path(deps) + " -MT dudu_native_scan";
     std::string ast_dump =
         run_capture(clang_base_command(options, cpp, true) + dependency_flags, ast, err);
     bool used_prelude_retry = false;
@@ -384,7 +384,7 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
     }
     parse_macro_dump(scan, macro_dump, import.location);
     if (!used_prelude_retry) {
-        store_native_header_raw_cache(raw_cache, ast_dump, macro_dump, read_text(deps));
+        store_native_header_raw_cache(raw_cache, ast_dump, macro_dump, read_text(deps), cpp);
     }
     cleanup();
     cache[key] = dedupe_scan(std::move(scan));

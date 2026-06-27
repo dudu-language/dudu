@@ -67,9 +67,16 @@ std::vector<std::filesystem::path> dependency_paths_from_makefile(std::string te
 
 } // namespace
 
-std::string native_header_dependency_stamps_from_makefile(const std::string& make_deps) {
+std::string
+native_header_dependency_stamps_from_makefile(const std::string& make_deps,
+                                              const std::filesystem::path& generated_source) {
     std::ostringstream out;
+    const std::filesystem::path ignored =
+        generated_source.empty() ? std::filesystem::path{} : generated_source.lexically_normal();
     for (const std::filesystem::path& path : dependency_paths_from_makefile(make_deps)) {
+        if (!ignored.empty() && path.lexically_normal() == ignored) {
+            continue;
+        }
         if (const std::optional<std::string> stamp = file_stamp(path)) {
             out << *stamp << '\n';
         }
