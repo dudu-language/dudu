@@ -122,6 +122,8 @@
   projects with the documented git/`.gitignore` behavior.
 - Added an initial user-owned `CMakeLists.txt` to `dudu init` and `dudu new`
   scaffolds; it builds generated Dudu module artifacts through `duc`.
+- Made scaffolded `CMakeLists.txt` files depend on all `src/*.dd` files so
+  imported Dudu source edits trigger regeneration.
 - Made direct `dudu build` and `dudu run` print separate `analyze`, `emit`,
   `compile`, and final `output`/`run` stages.
 - Made generated and user-owned CMake backend stage logs use project-driver
