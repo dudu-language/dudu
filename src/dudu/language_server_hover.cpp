@@ -147,7 +147,8 @@ std::optional<std::string> member_hover_json(const Document& doc, const ExprPath
     }
     const std::string& receiver = path.segments.front().text;
     const std::string& member = path.segments.back().text;
-    const TypeRef type_ref = local_type_ref_before_cursor(doc, receiver, params);
+    const TypeRef type_ref =
+        local_type_ref_before_cursor(visible_module_unit(module, doc.path), receiver, params);
     if (!has_type_ref(type_ref)) {
         return std::nullopt;
     }
@@ -277,7 +278,7 @@ std::string hover_json(const Document& doc, const std::string& word, const std::
     std::string fallback_local_type = local_type;
     if (fallback_local_type.empty() && !query.empty() && params != nullptr) {
         fallback_local_type =
-            substitute_type_ref_text(local_type_ref_before_cursor(doc, query, params), {});
+            substitute_type_ref_text(local_type_ref_before_cursor(current, query, params), {});
     }
     if (!fallback_local_type.empty()) {
         return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"`" + json_escape(query) + ": " +

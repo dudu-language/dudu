@@ -8,7 +8,6 @@
 #include "dudu/language_server_navigation.hpp"
 #include "dudu/language_server_support.hpp"
 #include "dudu/lexer.hpp"
-#include "dudu/parser.hpp"
 #include "dudu/sema_common.hpp"
 #include "dudu/sema_context.hpp"
 #include "dudu/sema_expr.hpp"
@@ -263,9 +262,9 @@ void collect_function_locals(FunctionScope& scope, const FunctionDecl& fn, int c
     collect_block_locals(scope, fn.statements, cursor_line);
 }
 
-std::optional<FunctionScope> local_scope_before_cursor(const Document& doc, const Json* params) {
+std::optional<FunctionScope> local_scope_before_cursor(const ModuleAst& module,
+                                                       const Json* params) {
     const int cursor_line = one_based_cursor_line(params);
-    ModuleAst module = parse_source(doc.text, doc.path);
     Symbols symbols = collect_symbols(module);
     FunctionScope scope(symbols);
     for (const FunctionDecl& fn : module.functions) {
@@ -301,17 +300,17 @@ std::optional<std::string> member_completion_target(const Document& doc, const J
     return dotted_target_before(tokens, *dot_index);
 }
 
-TypeRef local_type_ref_before_cursor(const Document& doc, const std::string& name,
+TypeRef local_type_ref_before_cursor(const ModuleAst& module, const std::string& name,
                                      const Json* params) {
-    const std::map<std::string, TypeRef> locals = local_type_refs_before_cursor(doc, params);
+    const std::map<std::string, TypeRef> locals = local_type_refs_before_cursor(module, params);
     const auto found = locals.find(name);
     return found == locals.end() ? TypeRef{} : found->second;
 }
 
-std::map<std::string, TypeRef> local_type_refs_before_cursor(const Document& doc,
+std::map<std::string, TypeRef> local_type_refs_before_cursor(const ModuleAst& module,
                                                              const Json* params) {
     try {
-        if (const std::optional<FunctionScope> scope = local_scope_before_cursor(doc, params)) {
+        if (const std::optional<FunctionScope> scope = local_scope_before_cursor(module, params)) {
             return scope->local_type_refs;
         }
     } catch (const std::exception&) {

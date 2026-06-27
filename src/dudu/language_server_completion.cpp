@@ -123,7 +123,7 @@ std::string member_completion_json(const Document& doc, const ModuleAst& module,
             module_completion_json(doc, module, current, target)) {
         return *module_result;
     }
-    const TypeRef type_ref = local_type_ref_before_cursor(doc, target, params);
+    const TypeRef type_ref = local_type_ref_before_cursor(current, target, params);
     if (!has_type_ref(type_ref)) {
         return "[]";
     }
@@ -307,14 +307,12 @@ std::string completion_json(const Document* doc, const Json* params) {
                                   "u64", "isize", "usize", "f32", "f64", "str", "cstr"}) {
         add(type, 25, "type");
     }
-    if (doc != nullptr) {
-        for (const auto& [name, type_ref] : local_type_refs_before_cursor(*doc, params)) {
+    if (doc != nullptr && current != nullptr) {
+        for (const auto& [name, type_ref] : local_type_refs_before_cursor(*current, params)) {
             add(name, 6, name + ": " + substitute_type_ref_text(type_ref, {}));
         }
-        if (current != nullptr) {
-            for (const Symbol& symbol : symbols_for_module(*current, true)) {
-                add(symbol.name, completion_kind(symbol.kind), symbol.detail);
-            }
+        for (const Symbol& symbol : symbols_for_module(*current, true)) {
+            add(symbol.name, completion_kind(symbol.kind), symbol.detail);
         }
     }
     out << "]";

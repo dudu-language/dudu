@@ -143,7 +143,8 @@ std::optional<std::string> member_definition_json(const Document& doc, const Exp
     }
     const std::string& receiver = path.segments.front().text;
     const std::string& member = path.segments.back().text;
-    const TypeRef type_ref = local_type_ref_before_cursor(doc, receiver, params);
+    const TypeRef type_ref =
+        local_type_ref_before_cursor(visible_module_unit(module, doc.path), receiver, params);
     if (!has_type_ref(type_ref)) {
         return std::nullopt;
     }

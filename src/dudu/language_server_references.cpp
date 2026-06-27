@@ -275,7 +275,7 @@ RenameScope rename_scope_at(const Document& doc, const Json* params, const std::
     if (!declaration.has_value()) {
         return RenameScope::None;
     }
-    if (has_type_ref(local_type_ref_before_cursor(doc, name, params))) {
+    if (module != nullptr && has_type_ref(local_type_ref_before_cursor(*module, name, params))) {
         return RenameScope::None;
     }
     if (selection.symbol.value_or("") == name && selection.call_callee) {
