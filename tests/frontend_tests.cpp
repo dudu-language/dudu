@@ -12,6 +12,7 @@
 #include "dudu/language_server_hover.hpp"
 #include "dudu/language_server_json.hpp"
 #include "dudu/language_server_navigation.hpp"
+#include "dudu/language_server_reference_collect.hpp"
 #include "dudu/language_server_references.hpp"
 #include "dudu/lexer.hpp"
 #include "dudu/module_loader.hpp"

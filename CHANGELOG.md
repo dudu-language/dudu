@@ -95,6 +95,8 @@
 - Made LSP rename call-site detection use the shared cursor selection result
   instead of reparsing the document to check whether the cursor is on a call
   callee.
+- Split LSP reference collection behind its own API header so navigation no
+  longer owns reference-search declarations.
 - Shared parsed `TypeRef` index and iterable inference for public string entry
   points before falling back to native/operator boundaries.
 - Added Cairo to the optional native compatibility probe suite.

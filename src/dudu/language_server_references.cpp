@@ -7,6 +7,7 @@
 #include "dudu/language_server_local_context.hpp"
 #include "dudu/language_server_native_lookup.hpp"
 #include "dudu/language_server_navigation.hpp"
+#include "dudu/language_server_reference_collect.hpp"
 #include "dudu/language_server_support.hpp"
 #include "dudu/language_server_symbols.hpp"
 #include "dudu/parser.hpp"

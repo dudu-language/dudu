@@ -2574,6 +2574,9 @@ push. They are not release packaging work.
    binding forms for assignment-created locals and tuple destructuring targets.
    Find-references/rename no longer treats inferred local definitions as plain
    expression text while only typed declarations count as bindings.
+   Reference collection now has its own API header instead of being declared by
+   the generic navigation header, keeping the LSP ownership boundary clearer as
+   the remaining selection/reference helpers move onto shared AST state.
    `offsetof[Type]("field")` C++ emission now requires the parsed string
    literal value carried by the AST instead of unquoting raw expression text as
    a malformed-node fallback.

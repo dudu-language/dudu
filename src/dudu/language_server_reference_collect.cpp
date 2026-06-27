@@ -1,3 +1,5 @@
+#include "dudu/language_server_reference_collect.hpp"
+
 #include "dudu/ast_expr.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/language_server_ast_walk.hpp"
@@ -7,7 +9,6 @@
 #include <optional>
 #include <set>
 #include <utility>
-#include <vector>
 
 namespace dudu {
 

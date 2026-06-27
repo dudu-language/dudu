@@ -47,8 +47,6 @@ bool symbol_matches(const std::string& symbol, const std::string& query);
 bool identifier_char(char c);
 bool valid_identifier(const std::string& value);
 
-std::vector<ReferenceLocation> references_in(const Document& doc, const std::string& query);
-
 bool same_path(const std::filesystem::path& lhs, const std::filesystem::path& rhs);
 bool skip_workspace_dir(const std::string& name);
 
