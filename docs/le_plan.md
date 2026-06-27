@@ -1891,7 +1891,10 @@ push. They are not release packaging work.
    declaration merge/orchestration file. Inheritance signature, abstract-method,
    and multiple-inheritance traversal helpers now live in
    `sema_inheritance_internal.*`, leaving `sema_inheritance.cpp` focused on the
-   public inheritance sema API.
+   public inheritance sema API. Parsed `cpp(...)` escape inference helpers now
+   live in `sema_expr_cpp_escape_infer.*`, leaving
+   `sema_expr_cpp_escape.cpp` focused on the public escape-expression
+   dispatcher.
 
 19. Polish Unsupported Syntax Diagnostics
 
