@@ -1888,7 +1888,10 @@ push. They are not release packaging work.
    the emitted prelude. Native header scanner command/source construction now
    lives in `native_header_scan_command.*`, keeping clang invocation, temp-file
    IO, pkg-config flag collection, and scanner error text out of the native
-   declaration merge/orchestration file.
+   declaration merge/orchestration file. Inheritance signature, abstract-method,
+   and multiple-inheritance traversal helpers now live in
+   `sema_inheritance_internal.*`, leaving `sema_inheritance.cpp` focused on the
+   public inheritance sema API.
 
 19. Polish Unsupported Syntax Diagnostics
 
