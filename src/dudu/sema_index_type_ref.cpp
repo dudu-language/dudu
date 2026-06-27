@@ -9,6 +9,7 @@
 
 #include <sstream>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace dudu {
@@ -103,7 +104,8 @@ TypeRef unwrap_index_receiver_type(TypeRef type) {
             type.kind == TypeKind::Shared || type.kind == TypeKind::Device ||
             type.kind == TypeKind::Volatile || type.kind == TypeKind::Atomic) &&
            type.children.size() == 1) {
-        type = type.children.front();
+        TypeRef child = type.children.front();
+        type = std::move(child);
     }
     return type;
 }

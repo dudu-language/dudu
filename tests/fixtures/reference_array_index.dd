@@ -1,0 +1,7 @@
+def pick(values: &array[i32][3], index: i32) -> i32:
+    return values[index]
+
+
+def main() -> i32:
+    values: array[i32][3] = [10, 20, 22]
+    return pick(values, 1) + pick(values, 2)

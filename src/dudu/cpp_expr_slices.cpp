@@ -7,6 +7,7 @@
 #include "dudu/sema_methods.hpp"
 
 #include <numeric>
+#include <utility>
 
 namespace dudu {
 namespace {
@@ -38,7 +39,8 @@ std::string lower_slice_bound(const Expr& expr, const std::string& default_value
 TypeRef unwrap_reference_and_const(TypeRef type) {
     while ((type.kind == TypeKind::Reference || type.kind == TypeKind::Const) &&
            type.children.size() == 1) {
-        type = type.children.front();
+        TypeRef child = type.children.front();
+        type = std::move(child);
     }
     return type;
 }

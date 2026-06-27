@@ -44,6 +44,7 @@ compile_and_expect function_values 42
 compile_and_expect fixed_arrays 42
 compile_and_expect array_explicit_initializer 42
 compile_and_expect array_shape_inference 42
+compile_and_expect reference_array_index 42
 compile_and_expect array_row_index 7
 compile_and_expect array_c_handoff 42
 compile_and_expect array_slice_view 42

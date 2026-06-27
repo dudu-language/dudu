@@ -2832,3 +2832,8 @@ push. They are not release packaging work.
    parser only forms fixed arrays from canonical `array[T][shape]`, and the
    previous `find/substr` helpers for `fixed_array_dimensions` and
    `fixed_array_base` are guarded against reintroduction.
+   `raymarch-dd` dogfood found a Release-only `TypeRef` lifetime bug in
+   wrapped index receiver unwrapping: replacing a wrapper with
+   `type.children.front()` can copy from storage owned by the value being
+   overwritten. Wrapper peeling must copy the child first and then replace the
+   parent, and `reference_array_index.dd` guards the indexed-reference path.
