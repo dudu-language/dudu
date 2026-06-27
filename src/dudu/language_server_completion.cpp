@@ -117,8 +117,8 @@ std::vector<Symbol> visible_symbols_for_document(const Document& doc) {
         const ModuleAst module = module_for_document(doc, true);
         return symbols_for_module(visible_module_unit(module, doc.path), true);
     } catch (const std::exception&) {
-        return symbols_for_document(doc);
     }
+    return {};
 }
 
 std::string member_completion_json(const Document& doc, const std::string& target,

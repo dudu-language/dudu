@@ -2592,7 +2592,11 @@ push. They are not release packaging work.
    selection, current-file symbols, and Dudu import resolution before loading
    native-aware state only for member/native fallbacks. Hover lookup now uses
    the same loaded module tree for normal/imported symbols and loads
-   native-aware state only for native symbol/member fallback hover.
+   native-aware state only for native symbol/member fallback hover. The public
+   LSP symbol collection API no longer parses documents internally; document
+   symbols, workspace symbols, completions, missing-import quick fixes, and
+   native-reference checks now load or parse modules explicitly before asking
+   the symbol layer to collect declarations.
    `offsetof[Type]("field")` C++ emission now requires the parsed string
    literal value carried by the AST instead of unquoting raw expression text as
    a malformed-node fallback.

@@ -5,7 +5,6 @@
 #include "dudu/language_server_support.hpp"
 #include "dudu/native_header_identity.hpp"
 #include "dudu/native_headers.hpp"
-#include "dudu/parser.hpp"
 
 #include <optional>
 #include <sstream>
@@ -229,20 +228,6 @@ std::optional<Symbol> unambiguous_suffix_symbol_match(const std::vector<Symbol>&
         return std::nullopt;
     }
     return matches.front();
-}
-
-std::vector<Symbol> symbols_for_document(const Document& doc, bool include_native) {
-    try {
-        ModuleAst module = parse_source(doc.text, doc.path);
-        if (include_native) {
-            const ProjectConfig config = config_for_file(doc.path);
-            merge_native_header_types(module,
-                                      {.config = config, .source_dir = doc.path.parent_path()});
-        }
-        return symbols_for_module(module, include_native);
-    } catch (const std::exception&) {
-    }
-    return {};
 }
 
 std::vector<Symbol> visible_symbols_for_document(const ModuleAst& module, const Document& doc,

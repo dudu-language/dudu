@@ -399,7 +399,13 @@ std::string references_json(const Document& doc, const Json* params,
                         visible_symbols_for_document(*candidate_visible, candidate, true);
                 }
             } else {
-                candidate_symbols_with_native = symbols_for_document(candidate, true);
+                const std::optional<ModuleAst> candidate_tree =
+                    load_document_module(candidate, true);
+                if (const ModuleAst* candidate_visible =
+                        visible_document_module(candidate_tree, candidate)) {
+                    candidate_symbols_with_native =
+                        visible_symbols_for_document(*candidate_visible, candidate, true);
+                }
             }
             if (!document_has_native_identity_for_query(candidate_symbols_with_native,
                                                         candidate_query, *native_identity)) {

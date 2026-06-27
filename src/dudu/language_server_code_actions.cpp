@@ -49,10 +49,9 @@ std::optional<TextEdit> organize_imports_edit(const Document& doc, const ModuleA
     if (!organized) {
         return std::nullopt;
     }
-    return TextEdit{
-        .range = range_json(static_cast<int>(organized->start_line), 0,
-                            static_cast<int>(organized->end_line), 0),
-        .new_text = organized->replacement_text};
+    return TextEdit{.range = range_json(static_cast<int>(organized->start_line), 0,
+                                        static_cast<int>(organized->end_line), 0),
+                    .new_text = organized->replacement_text};
 }
 
 bool importable_symbol_kind(int kind) {
@@ -151,7 +150,14 @@ missing_import_action(const Document& doc, const std::string& name, const Module
         if (same_path(candidate.path, doc.path)) {
             continue;
         }
-        for (const Symbol& symbol : symbols_for_document(candidate, false)) {
+        std::vector<Symbol> candidate_symbols;
+        try {
+            candidate_symbols =
+                symbols_for_module(parse_source(candidate.text, candidate.path), false);
+        } catch (const std::exception&) {
+            continue;
+        }
+        for (const Symbol& symbol : candidate_symbols) {
             if (symbol.name != name || !importable_symbol_kind(symbol.kind)) {
                 continue;
             }

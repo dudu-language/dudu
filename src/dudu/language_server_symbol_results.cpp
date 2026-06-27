@@ -2,7 +2,10 @@
 
 #include "dudu/language_server_json.hpp"
 #include "dudu/language_server_navigation.hpp"
+#include "dudu/language_server_support.hpp"
 #include "dudu/language_server_symbols.hpp"
+#include "dudu/module_loader.hpp"
+#include "dudu/parser.hpp"
 
 #include <map>
 #include <sstream>
@@ -21,12 +24,25 @@ std::string symbol_json(const Symbol& symbol, const Document& doc) {
     return out.str();
 }
 
+std::vector<Symbol> document_symbols(const Document& doc, bool include_native) {
+    try {
+        if (include_native) {
+            const ModuleAst module = module_for_document(doc, true);
+            return visible_symbols_for_document(visible_module_unit(module, doc.path), doc, true);
+        }
+        const ModuleAst module = parse_source(doc.text, doc.path);
+        return symbols_for_module(module, false);
+    } catch (const std::exception&) {
+    }
+    return {};
+}
+
 } // namespace
 
 std::string document_symbols_json(const Document& doc) {
     std::ostringstream out;
     out << "[";
-    const std::vector<Symbol> symbols = symbols_for_document(doc);
+    const std::vector<Symbol> symbols = document_symbols(doc, true);
     for (size_t i = 0; i < symbols.size(); ++i) {
         if (i > 0) {
             out << ",";
@@ -46,7 +62,7 @@ std::string workspace_symbols_json(const std::string& query,
     bool first = true;
     for (const auto& [uri, doc] : workspace) {
         const bool include_native = open_documents.contains(uri);
-        for (const Symbol& symbol : symbols_for_document(doc, include_native)) {
+        for (const Symbol& symbol : document_symbols(doc, include_native)) {
             if (!lowered_query.empty() &&
                 lower_copy(symbol.name).find(lowered_query) == std::string::npos) {
                 continue;

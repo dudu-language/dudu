@@ -113,6 +113,9 @@
   loading native-aware state for member/native fallbacks.
 - Made LSP hover reuse the loaded module tree for normal/imported symbols and
   load native-aware state only for native symbol/member fallback hover.
+- Removed the LSP symbol API that parsed documents internally; symbol request,
+  completion, quick-fix, and reference paths now load or parse modules
+  explicitly before collecting symbols.
 - Shared parsed `TypeRef` index and iterable inference for public string entry
   points before falling back to native/operator boundaries.
 - Added Cairo to the optional native compatibility probe suite.
