@@ -108,7 +108,18 @@ def run_case(case):
                 },
             }
         ),
-        packet({"jsonrpc": "2.0", "id": 5, "method": "shutdown", "params": None}),
+        packet(
+            {
+                "jsonrpc": "2.0",
+                "id": 5,
+                "method": "textDocument/hover",
+                "params": {
+                    "textDocument": {"uri": uri},
+                    "position": case["hover_position"],
+                },
+            }
+        ),
+        packet({"jsonrpc": "2.0", "id": 6, "method": "shutdown", "params": None}),
         packet({"jsonrpc": "2.0", "method": "exit", "params": None}),
     ]
     proc = subprocess.run(
@@ -144,6 +155,14 @@ def run_case(case):
     definition = next(item for item in responses if item.get("id") == 4)
     if definition["result"] is None:
         raise AssertionError(f"{case['name']} missing definition")
+
+    hover = next(item for item in responses if item.get("id") == 5)
+    hover_result = hover["result"]
+    if hover_result is None:
+        raise AssertionError(f"{case['name']} missing hover")
+    hover_value = hover_result["contents"]["value"]
+    if case["hover_contains"] not in hover_value:
+        raise AssertionError(f"{case['name']} hover: {hover_value}")
     print(f"ok {case['name']}")
 
 
@@ -163,6 +182,8 @@ cases = [
         "signature_position": {"line": 4, "character": 37},
         "signature_contains": "sqlite3_open",
         "definition_position": {"line": 4, "character": 14},
+        "hover_position": {"line": 4, "character": 14},
+        "hover_contains": "sqlite3_open",
     },
     {
         "name": "raylib",
@@ -180,6 +201,8 @@ cases = [
         "signature_position": {"line": 4, "character": 27},
         "signature_contains": "InitWindow",
         "definition_position": {"line": 3, "character": 10},
+        "hover_position": {"line": 3, "character": 10},
+        "hover_contains": "Vector2",
     },
     {
         "name": "sdl3",
@@ -196,6 +219,8 @@ cases = [
         "signature_position": {"line": 3, "character": 13},
         "signature_contains": "SDL_Init",
         "definition_position": {"line": 3, "character": 6},
+        "hover_position": {"line": 3, "character": 6},
+        "hover_contains": "SDL_Init",
     },
     {
         "name": "glfw3",
@@ -212,6 +237,8 @@ cases = [
         "signature_position": {"line": 3, "character": 13},
         "signature_contains": "glfwInit",
         "definition_position": {"line": 3, "character": 7},
+        "hover_position": {"line": 3, "character": 7},
+        "hover_contains": "glfwInit",
     },
 ]
 
