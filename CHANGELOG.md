@@ -132,6 +132,8 @@
   source dependency discovery no longer walks imports a second time.
 - Split AST-backed unused-local and shadowing lint logic into a focused
   language-server scope-lint module.
+- Split AST-backed suspicious narrowing-cast lint logic into a focused
+  language-server lint module.
 - Clarified native-header redeclaration collision handling by spelling the
   opaque native type exception at the collision branches.
 - Made direct unaliased native C/C++ functions participate in current-document

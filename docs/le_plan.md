@@ -241,7 +241,9 @@ now shares structured leading-import block organization and parsed
 builders, and generic document line helpers live in LSP support instead of
 individual action files. AST-backed unused-local and shadowing checks have also
 been split into a focused scope-lint pass, leaving the aggregate AST lint entry
-point responsible for orchestration instead of owning every lint rule. A
+point responsible for orchestration instead of owning every lint rule.
+AST-backed suspicious narrowing-cast checks now also live in a focused lint
+pass with typed local state. A
 multi-module lint fixture guards against reporting a
 dependency module's unused local in the entry document's diagnostics.
 
