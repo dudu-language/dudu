@@ -71,6 +71,7 @@ add_library(dudu_frontend
     src/dudu/language_server_hover.cpp
     src/dudu/language_server_import_references.cpp
     src/dudu/language_server_json.cpp
+    src/dudu/language_server_lint_cpp_escape.cpp
     src/dudu/language_server_lint_common.cpp
     src/dudu/language_server_lint_scope.cpp
     src/dudu/language_server_lint_suspicious_cast.cpp

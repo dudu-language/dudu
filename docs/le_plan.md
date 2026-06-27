@@ -243,7 +243,9 @@ individual action files. AST-backed unused-local and shadowing checks have also
 been split into a focused scope-lint pass, leaving the aggregate AST lint entry
 point responsible for orchestration instead of owning every lint rule.
 AST-backed suspicious narrowing-cast checks now also live in a focused lint
-pass with typed local state. A
+pass with typed local state. Raw `cpp(...)` escape-hatch warnings also live in
+a focused lint pass, so the aggregate AST lint entry point is now only a
+dispatcher. A
 multi-module lint fixture guards against reporting a
 dependency module's unused local in the entry document's diagnostics.
 
