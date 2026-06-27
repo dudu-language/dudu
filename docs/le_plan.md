@@ -2605,7 +2605,10 @@ push. They are not release packaging work.
    local-context helpers. Semantic-token requests also load the same visible
    module unit through the shared module loader, with native-aware state loaded
    only for native token classification instead of open-coding parse plus
-   header merge in the request handler.
+   header merge in the request handler. LSP code actions now also load modules
+   through the shared module loader and operate on visible current/candidate
+   units for organize-import and missing-import actions instead of carrying a
+   private document parser wrapper.
    `offsetof[Type]("field")` C++ emission now requires the parsed string
    literal value carried by the AST instead of unquoting raw expression text as
    a malformed-node fallback.

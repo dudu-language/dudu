@@ -6,7 +6,6 @@
 #include "dudu/language_server_navigation.hpp"
 #include "dudu/language_server_support.hpp"
 #include "dudu/language_server_symbols.hpp"
-#include "dudu/parser.hpp"
 
 #include <algorithm>
 #include <filesystem>
@@ -27,9 +26,9 @@ struct CodeActionEdit {
     TextEdit edit;
 };
 
-std::optional<ModuleAst> parsed_document(const Document& doc) {
+std::optional<ModuleAst> loaded_document_module(const Document& doc) {
     try {
-        return parse_source(doc.text, doc.path);
+        return module_for_document(doc, false);
     } catch (const std::exception&) {
         return std::nullopt;
     }
@@ -152,8 +151,9 @@ missing_import_action(const Document& doc, const std::string& name, const Module
         }
         std::vector<Symbol> candidate_symbols;
         try {
+            const ModuleAst candidate_module = module_for_document(candidate, false);
             candidate_symbols =
-                symbols_for_module(parse_source(candidate.text, candidate.path), false);
+                symbols_for_module(visible_module_unit(candidate_module, candidate.path), false);
         } catch (const std::exception&) {
             continue;
         }
@@ -258,19 +258,19 @@ std::vector<std::string> lint_actions(const Document& doc, const Json* params) {
 std::string code_actions_json(const Document& doc, const Json* params,
                               const std::map<std::string, Document>& workspace) {
     std::vector<std::string> actions;
-    const std::optional<ModuleAst> module = parsed_document(doc);
+    const std::optional<ModuleAst> module = loaded_document_module(doc);
+    const ModuleAst* current = module ? &visible_module_unit(*module, doc.path) : nullptr;
     actions.push_back("{\"title\":\"Format document\",\"kind\":\"source.format\","
                       "\"command\":{\"title\":\"Format document\","
                       "\"command\":\"editor.action.formatDocument\"}}");
-    if (module) {
-        if (const std::optional<TextEdit> edit = organize_imports_edit(doc, *module)) {
+    if (current != nullptr) {
+        if (const std::optional<TextEdit> edit = organize_imports_edit(doc, *current)) {
             actions.push_back(code_action_json(doc, CodeActionEdit{.title = "Organize imports",
                                                                    .kind = "source.organizeImports",
                                                                    .edit = *edit}));
         }
     }
-    for (const std::string& action :
-         missing_import_actions(doc, params, module ? &*module : nullptr, workspace)) {
+    for (const std::string& action : missing_import_actions(doc, params, current, workspace)) {
         actions.push_back(action);
     }
     for (const std::string& action : lint_actions(doc, params)) {

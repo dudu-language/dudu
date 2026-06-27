@@ -124,6 +124,8 @@
   parsing the document inside local-context helpers.
 - Made LSP semantic tokens reuse the shared module loader and visible module
   unit instead of parsing and native-merging inside the request handler.
+- Made LSP code actions reuse shared module loading and visible module units
+  for organize-import and missing-import actions.
 - Shared parsed `TypeRef` index and iterable inference for public string entry
   points before falling back to native/operator boundaries.
 - Added Cairo to the optional native compatibility probe suite.
