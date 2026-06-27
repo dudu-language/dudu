@@ -1852,7 +1852,8 @@ void test_ast_expr_path_at_cursor() {
     };
 
     dudu::Json params = completion_params(1, 17);
-    const std::optional<dudu::ExprPath> path = dudu::ast_expr_path_at(doc, &params);
+    const dudu::ModuleAst module = dudu::parse_source(doc.text, doc.path);
+    const std::optional<dudu::ExprPath> path = dudu::ast_selection_at(module, &params).expr_path;
     assert(path);
     assert(path->segments.size() == 3);
     assert(path->segments[0].text == "player");

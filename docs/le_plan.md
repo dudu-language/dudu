@@ -2596,7 +2596,9 @@ push. They are not release packaging work.
    LSP symbol collection API no longer parses documents internally; document
    symbols, workspace symbols, completions, missing-import quick fixes, and
    native-reference checks now load or parse modules explicitly before asking
-   the symbol layer to collect declarations.
+   the symbol layer to collect declarations. Document-parsing LSP cursor
+   selection wrappers were also removed; hover derives cursor selection from
+   the same visible module unit it already loaded.
    `offsetof[Type]("field")` C++ emission now requires the parsed string
    literal value carried by the AST instead of unquoting raw expression text as
    a malformed-node fallback.

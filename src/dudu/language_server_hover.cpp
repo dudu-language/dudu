@@ -219,12 +219,22 @@ std::string hover_json(const Document& doc, const std::string& word, const std::
         return "null";
     }
     const ModuleAst& current = visible_module_unit(module, doc.path);
+    std::string query = word;
+    if ((query.empty() || !selected_path.has_value()) && params != nullptr) {
+        const AstSelection selection = ast_selection_at(current, params);
+        if (query.empty()) {
+            query = selection.symbol_path.value_or("");
+        }
+        if (!selected_path.has_value()) {
+            selected_path = selection.expr_path;
+        }
+    }
     const std::vector<Symbol> symbols = visible_symbols_for_document(current, doc, false);
-    if (const std::optional<Symbol> exact = exact_symbol_match(symbols, word)) {
+    if (const std::optional<Symbol> exact = exact_symbol_match(symbols, query)) {
         return symbol_hover_json(doc, *exact);
     }
     if (const std::optional<std::string> imported =
-            imported_symbol_hover_json(doc, module, current, word)) {
+            imported_symbol_hover_json(doc, module, current, query)) {
         return *imported;
     }
     std::optional<ModuleAst> native_module;
@@ -237,22 +247,19 @@ std::string hover_json(const Document& doc, const std::string& word, const std::
     try {
         const ModuleAst* native = load_native_module();
         if (const std::optional<std::string> native_alias =
-                native_alias_hover_json(word, *native)) {
+                native_alias_hover_json(query, *native)) {
             return *native_alias;
         }
         const std::vector<Symbol> native_symbols =
             visible_symbols_for_document(visible_module_unit(*native, doc.path), doc, true);
-        if (const std::optional<Symbol> exact = exact_symbol_match(native_symbols, word)) {
+        if (const std::optional<Symbol> exact = exact_symbol_match(native_symbols, query)) {
             return symbol_hover_json(doc, *exact);
         }
         if (const std::optional<Symbol> suffix =
-                unambiguous_suffix_symbol_match(native_symbols, word)) {
+                unambiguous_suffix_symbol_match(native_symbols, query)) {
             return symbol_hover_json(doc, *suffix);
         }
     } catch (const std::exception&) {
-    }
-    if (!selected_path.has_value() && params != nullptr) {
-        selected_path = ast_selection_at(current, params).expr_path;
     }
     if (selected_path.has_value()) {
         try {
@@ -264,12 +271,17 @@ std::string hover_json(const Document& doc, const std::string& word, const std::
         } catch (const std::exception&) {
         }
     }
-    if (const std::optional<Symbol> suffix = unambiguous_suffix_symbol_match(symbols, word)) {
+    if (const std::optional<Symbol> suffix = unambiguous_suffix_symbol_match(symbols, query)) {
         return symbol_hover_json(doc, *suffix);
     }
-    if (!local_type.empty()) {
-        return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"`" + json_escape(word) + ": " +
-               json_escape(local_type) + "`\"}}";
+    std::string fallback_local_type = local_type;
+    if (fallback_local_type.empty() && !query.empty() && params != nullptr) {
+        fallback_local_type =
+            substitute_type_ref_text(local_type_ref_before_cursor(doc, query, params), {});
+    }
+    if (!fallback_local_type.empty()) {
+        return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"`" + json_escape(query) + ": " +
+               json_escape(fallback_local_type) + "`\"}}";
     }
     return "null";
 }

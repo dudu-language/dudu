@@ -3,7 +3,6 @@
 #include "dudu/language_server_ast_walk.hpp"
 #include "dudu/language_server_json.hpp"
 #include "dudu/language_server_navigation.hpp"
-#include "dudu/parser.hpp"
 
 namespace dudu {
 namespace {
@@ -233,26 +232,6 @@ AstSelection ast_selection_at(const ModuleAst& module, const Json* params) {
     AstSelection selection;
     collect_selection_from_module(module, lsp_position(params), selection);
     return selection;
-}
-
-AstSelection ast_selection_at(const Document& doc, const Json* params) {
-    try {
-        return ast_selection_at(parse_source(doc.text, doc.path), params);
-    } catch (const std::exception&) {
-        return {};
-    }
-}
-
-std::optional<std::string> ast_symbol_at(const Document& doc, const Json* params) {
-    return ast_selection_at(doc, params).symbol;
-}
-
-std::optional<std::string> ast_symbol_path_at(const Document& doc, const Json* params) {
-    return ast_selection_at(doc, params).symbol_path;
-}
-
-std::optional<ExprPath> ast_expr_path_at(const Document& doc, const Json* params) {
-    return ast_selection_at(doc, params).expr_path;
 }
 
 } // namespace dudu
