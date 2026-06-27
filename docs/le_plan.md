@@ -2587,7 +2587,10 @@ push. They are not release packaging work.
    callee paths such as `module_alias.function` when the cursor is on the
    member name. References and rename now derive cursor selection from the same
    visible parsed module unit used for their symbol and reference scans, and a
-   misleading unused module/document symbol overload was removed.
+   misleading unused module/document symbol overload was removed. Definition
+   lookup now also reuses one loaded module tree for header imports, cursor
+   selection, current-file symbols, and Dudu import resolution before loading
+   native-aware state only for member/native fallbacks.
    `offsetof[Type]("field")` C++ emission now requires the parsed string
    literal value carried by the AST instead of unquoting raw expression text as
    a malformed-node fallback.

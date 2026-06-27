@@ -108,6 +108,9 @@
   name.
 - Made LSP references and rename derive cursor selection from the same visible
   parsed module unit used for their symbol and reference scans.
+- Made LSP definition lookup reuse a loaded module tree for header imports,
+  cursor selection, current-file symbols, and Dudu import resolution before
+  loading native-aware state for member/native fallbacks.
 - Shared parsed `TypeRef` index and iterable inference for public string entry
   points before falling back to native/operator boundaries.
 - Added Cairo to the optional native compatibility probe suite.

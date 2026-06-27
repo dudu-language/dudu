@@ -113,15 +113,10 @@ std::optional<std::filesystem::path> resolve_header_path(const std::filesystem::
     return std::nullopt;
 }
 
-std::optional<std::string> header_definition_json(const Document& doc, const Json* params) {
+std::optional<std::string> header_definition_json(const Document& doc, const ModuleAst& current,
+                                                  const Json* params) {
     const LspPosition position = lsp_position(params);
-    ModuleAst module;
-    try {
-        module = parse_source(doc.text, doc.path);
-    } catch (const std::exception&) {
-        return std::nullopt;
-    }
-    for (const ImportDecl& import : module.imports) {
+    for (const ImportDecl& import : current.imports) {
         if (import.kind != ImportKind::ForeignC && import.kind != ImportKind::ForeignCxx &&
             import.kind != ImportKind::ForeignCpp) {
             continue;
@@ -141,7 +136,7 @@ std::optional<std::string> header_definition_json(const Document& doc, const Jso
 }
 
 std::optional<std::string> member_definition_json(const Document& doc, const ExprPath& path,
-                                                  const Json* params) {
+                                                  const Json* params, const ModuleAst& module) {
     if (path.segments.size() < 2 || path.segments.front().kind != ExprPathSegmentKind::Name ||
         path.segments.back().kind != ExprPathSegmentKind::Name) {
         return std::nullopt;
@@ -152,118 +147,107 @@ std::optional<std::string> member_definition_json(const Document& doc, const Exp
     if (!has_type_ref(type_ref)) {
         return std::nullopt;
     }
-    try {
-        ModuleAst module = module_for_document(doc, true);
-        const std::set<std::string> candidate_types = member_candidate_types(module, type_ref);
-        const auto find_member =
-            [&](const std::vector<ClassDecl>& classes) -> std::optional<std::string> {
-            for (const ClassDecl& klass : classes) {
-                if (!candidate_types.contains(klass.name)) {
-                    continue;
-                }
-                for (const FieldDecl& field : klass.fields) {
-                    if (field.name == member) {
-                        return location_json(uri_for_location(field.location, doc),
-                                             range_json(field.location));
-                    }
-                }
-                for (const FunctionDecl& method : klass.methods) {
-                    if (method.name == member) {
-                        return location_json(uri_for_location(method.location, doc),
-                                             range_json(method.location));
-                    }
+    const std::set<std::string> candidate_types = member_candidate_types(module, type_ref);
+    const auto find_member =
+        [&](const std::vector<ClassDecl>& classes) -> std::optional<std::string> {
+        for (const ClassDecl& klass : classes) {
+            if (!candidate_types.contains(klass.name)) {
+                continue;
+            }
+            for (const FieldDecl& field : klass.fields) {
+                if (field.name == member) {
+                    return location_json(uri_for_location(field.location, doc),
+                                         range_json(field.location));
                 }
             }
-            return std::nullopt;
-        };
-        if (const std::optional<std::string> native = find_member(module.native_classes)) {
-            return native;
+            for (const FunctionDecl& method : klass.methods) {
+                if (method.name == member) {
+                    return location_json(uri_for_location(method.location, doc),
+                                         range_json(method.location));
+                }
+            }
         }
-        return find_member(module.classes);
-    } catch (const std::exception&) {
+        return std::nullopt;
+    };
+    if (const std::optional<std::string> native = find_member(module.native_classes)) {
+        return native;
     }
-    return std::nullopt;
+    return find_member(module.classes);
 }
 
-std::optional<std::string> import_definition_json(const Document& doc, const std::string& word) {
+std::optional<std::string> import_definition_json(const Document& doc, const ModuleAst& module,
+                                                  const ModuleAst& current,
+                                                  const std::string& word) {
     if (word.empty()) {
         return std::nullopt;
     }
-    try {
-        const ModuleAst module = module_for_document(doc, false);
-        const ModuleAst& current = visible_module_unit(module, doc.path);
-        for (const ImportDecl& import : current.imports) {
-            if (import.kind != ImportKind::Module && import.kind != ImportKind::From) {
-                continue;
-            }
-            if (import.kind == ImportKind::From && bound_import_name(import) != word) {
-                continue;
-            }
-            std::string target;
-            if (import.kind == ImportKind::Module) {
-                const std::string bound = bound_import_name(import);
-                const std::vector<std::string> prefixes =
-                    import.alias.empty() ? std::vector<std::string>{import.module_path, bound}
-                                         : std::vector<std::string>{bound};
-                bool matched = false;
-                for (const std::string& prefix : prefixes) {
-                    if (word == prefix) {
-                        matched = true;
-                        break;
-                    }
-                    if (word.rfind(prefix + ".", 0) == 0) {
-                        target = word.substr(prefix.size() + 1);
-                        matched = true;
-                        break;
-                    }
+    for (const ImportDecl& import : current.imports) {
+        if (import.kind != ImportKind::Module && import.kind != ImportKind::From) {
+            continue;
+        }
+        if (import.kind == ImportKind::From && bound_import_name(import) != word) {
+            continue;
+        }
+        std::string target;
+        if (import.kind == ImportKind::Module) {
+            const std::string bound = bound_import_name(import);
+            const std::vector<std::string> prefixes =
+                import.alias.empty() ? std::vector<std::string>{import.module_path, bound}
+                                     : std::vector<std::string>{bound};
+            bool matched = false;
+            for (const std::string& prefix : prefixes) {
+                if (word == prefix) {
+                    matched = true;
+                    break;
                 }
-                if (!matched) {
-                    continue;
+                if (word.rfind(prefix + ".", 0) == 0) {
+                    target = word.substr(prefix.size() + 1);
+                    matched = true;
+                    break;
                 }
             }
-            const std::filesystem::path file =
-                module_path_to_file(doc.path.parent_path(), import.module_path);
-            std::error_code error;
-            if (!std::filesystem::exists(file, error) || error) {
+            if (!matched) {
                 continue;
-            }
-            if (import.kind == ImportKind::Module && target.empty()) {
-                return location_json(file_uri(file), range_json(0, 0, 0));
-            }
-            const ModuleAst* imported = imported_module_unit(module, current, import);
-            ModuleAst loaded_imported;
-            if (imported == nullptr) {
-                loaded_imported = load_source_tree(file);
-                imported = &visible_module_unit(loaded_imported, file);
-            }
-            if (import.kind == ImportKind::From) {
-                target = import.imported_name;
-            }
-            for (const Symbol& symbol : symbols_for_module(*imported, false)) {
-                if (symbol.name == target) {
-                    return location_json(uri_for_location(symbol.location, doc),
-                                         range_json(symbol.location));
-                }
             }
         }
-    } catch (const std::exception&) {
+        const std::filesystem::path file =
+            module_path_to_file(doc.path.parent_path(), import.module_path);
+        std::error_code error;
+        if (!std::filesystem::exists(file, error) || error) {
+            continue;
+        }
+        if (import.kind == ImportKind::Module && target.empty()) {
+            return location_json(file_uri(file), range_json(0, 0, 0));
+        }
+        const ModuleAst* imported = imported_module_unit(module, current, import);
+        ModuleAst loaded_imported;
+        if (imported == nullptr) {
+            loaded_imported = load_source_tree(file);
+            imported = &visible_module_unit(loaded_imported, file);
+        }
+        if (import.kind == ImportKind::From) {
+            target = import.imported_name;
+        }
+        for (const Symbol& symbol : symbols_for_module(*imported, false)) {
+            if (symbol.name == target) {
+                return location_json(uri_for_location(symbol.location, doc),
+                                     range_json(symbol.location));
+            }
+        }
     }
     return std::nullopt;
 }
 
 std::optional<std::string> native_type_target_definition_json(const Document& doc,
-                                                              const std::string& word) {
+                                                              const std::string& word,
+                                                              const ModuleAst& module) {
     if (word.empty()) {
         return std::nullopt;
     }
-    try {
-        ModuleAst module = module_for_document(doc, true);
-        if (const std::optional<NativeClassDefinition> definition =
-                native_alias_target_class_definition(module, word)) {
-            return location_json(uri_for_location(definition->location, doc),
-                                 range_json(definition->location));
-        }
-    } catch (const std::exception&) {
+    if (const std::optional<NativeClassDefinition> definition =
+            native_alias_target_class_definition(module, word)) {
+        return location_json(uri_for_location(definition->location, doc),
+                             range_json(definition->location));
     }
     return std::nullopt;
 }
@@ -275,42 +259,63 @@ std::string symbol_definition_json(const Symbol& symbol, const Document& doc) {
 } // namespace
 
 std::string definition_json(const Document& doc, const Json* params) {
-    if (const std::optional<std::string> header = header_definition_json(doc, params)) {
+    ModuleAst module = module_for_document(doc, false);
+    const ModuleAst& current = visible_module_unit(module, doc.path);
+    if (const std::optional<std::string> header = header_definition_json(doc, current, params)) {
         return *header;
     }
-    const AstSelection selection = ast_selection_at(doc, params);
+    const AstSelection selection = ast_selection_at(current, params);
     const std::string word = selection.symbol_path.value_or("");
     if (word.empty()) {
         return "null";
     }
-    const std::vector<Symbol> symbols = symbols_for_document(doc, false);
+    const std::vector<Symbol> symbols = visible_symbols_for_document(current, doc, false);
     if (const std::optional<Symbol> exact = exact_symbol_match(symbols, word)) {
         return symbol_definition_json(*exact, doc);
     }
+    std::optional<ModuleAst> native_module;
+    const auto load_native_module = [&]() -> const ModuleAst* {
+        if (!native_module.has_value()) {
+            native_module = module_for_document(doc, true);
+        }
+        return &*native_module;
+    };
     const std::optional<ExprPath>& path = selection.expr_path;
     if (path && path->segments.size() >= 2) {
-        if (const std::optional<std::string> member_definition =
-                member_definition_json(doc, *path, params)) {
-            return *member_definition;
+        try {
+            const ModuleAst* native = load_native_module();
+            if (const std::optional<std::string> member_definition =
+                    member_definition_json(doc, *path, params, *native)) {
+                return *member_definition;
+            }
+        } catch (const std::exception&) {
         }
     }
     if (const std::optional<Symbol> suffix = unambiguous_suffix_symbol_match(symbols, word)) {
         return symbol_definition_json(*suffix, doc);
     }
-    if (const std::optional<std::string> import_definition = import_definition_json(doc, word)) {
+    if (const std::optional<std::string> import_definition =
+            import_definition_json(doc, module, current, word)) {
         return *import_definition;
     }
     if (path && path->segments.size() >= 2) {
         const std::string path_text = render_expr_path(*path);
         if (path_text != word) {
-            return import_definition_json(doc, path_text).value_or("null");
+            return import_definition_json(doc, module, current, path_text).value_or("null");
         }
     }
+    const ModuleAst* native = nullptr;
+    try {
+        native = load_native_module();
+    } catch (const std::exception&) {
+        return "null";
+    }
     if (const std::optional<std::string> native_type_target =
-            native_type_target_definition_json(doc, word)) {
+            native_type_target_definition_json(doc, word, *native)) {
         return *native_type_target;
     }
-    const std::vector<Symbol> native_symbols = symbols_for_document(doc, true);
+    const std::vector<Symbol> native_symbols =
+        visible_symbols_for_document(visible_module_unit(*native, doc.path), doc, true);
     if (const std::optional<Symbol> exact = exact_symbol_match(native_symbols, word)) {
         return symbol_definition_json(*exact, doc);
     }
