@@ -133,6 +133,30 @@ compile_and_expect value_match_assign 60
 "$repo_root/build/dudu" --help | grep -Fq 'dudu build [input.dd|target] [--quiet] [--verbose]'
 "$repo_root/build/dudu" --help | grep -Fq 'dudu check [input.dd|dir] [--quiet]'
 "$repo_root/build/dudu" bench compiler --quiet -- --help | grep -q 'bench_compiler.sh'
+init_smoke="$(mktemp -d)"
+"$repo_root/build/dudu" init "$init_smoke"
+test -f "$init_smoke/dudu.toml"
+test -f "$init_smoke/src/main.dd"
+test -f "$init_smoke/README.md"
+test -f "$init_smoke/.gitignore"
+test -d "$init_smoke/.git"
+init_run_output="$(
+    cd "$init_smoke"
+    "$repo_root/build/dudu" run --quiet
+)"
+printf '%s\n' "$init_run_output" | grep -Fq 'hello from dudu'
+rm -rf "$init_smoke"
+new_smoke="$repo_root/build/project_new_smoke"
+rm -rf "$new_smoke"
+"$repo_root/build/dudu" new "$new_smoke"
+test -f "$new_smoke/dudu.toml"
+test -f "$new_smoke/src/main.dd"
+test ! -e "$new_smoke/.gitignore"
+new_run_output="$(
+    cd "$new_smoke"
+    "$repo_root/build/dudu" run --quiet
+)"
+printf '%s\n' "$new_run_output" | grep -Fq 'hello from dudu'
 emit_timing_dir="$repo_root/build/emit_modules_timing_smoke"
 rm -rf "$emit_timing_dir"
 emit_timing_output="$("$repo_root/build/duc" emit-modules \

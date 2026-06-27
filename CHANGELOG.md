@@ -118,6 +118,8 @@
   `duc` focused on explicit compiler-driver workflows.
 - Documented `dudu build`, `dudu run`, and `dudu test` as the stable project
   front door, with direct and CMake backends as implementation details.
+- Added fast validation that `dudu init` and `dudu new` create runnable hello
+  projects with the documented git/`.gitignore` behavior.
 - Made direct `dudu build` and `dudu run` print separate `analyze`, `emit`,
   `compile`, and final `output`/`run` stages.
 - Clarified native-header redeclaration collision handling by spelling the

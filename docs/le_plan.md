@@ -1633,6 +1633,9 @@ push. They are not release packaging work.
    support. `scripts/install-local.sh` configures, builds, and installs this
    checkout to `~/.local` by default or a caller-provided `--prefix`; it uses
    the same CMake install rules instead of acting as a package manager.
+   `dudu init` and `dudu new` have fast acceptance coverage proving they create
+   runnable hello projects and follow the documented git/`.gitignore` behavior
+   inside and outside an enclosing repository.
    `dudu build`, `dudu run`, and `dudu test` use the generated-CMake backend by
    default, even for single-module inputs, so generated C++ stays split into
    per-module artifacts. The project configuration model also defaults to
