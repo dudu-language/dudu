@@ -11,7 +11,8 @@ project-driver build behavior, or generated CMake changes.
 
 Last local probe run: 2026-06-27 with `scripts/probe_optional.sh`. The default
 run passed all available non-heavy probes on this machine; `spdlog` remained
-the intentional `DUDU_PROBE_HEAVY=1` skip.
+the intentional default skip, and the manual
+`DUDU_PROBE_HEAVY=1` spdlog smoke passed separately.
 
 ## Status Key
 
@@ -52,7 +53,7 @@ the intentional `DUDU_PROBE_HEAVY=1` skip.
 | libjpeg | image | C API, local C structs, macro-expanded common fields, address passing, C enum constants, setup function, link | pass | `scripts/probe_optional.sh` / `libjpeg_compress_setup.dd` | no |
 | stb headers | media / utility | packaged single-header C API, byte buffers, output params, link | pass | `scripts/probe_optional.sh` / `stb_image_info.dd` | no |
 | fmt | C++ utility | variadic templates, runtime format strings, `std::string` return | pass | `scripts/probe_optional.sh` / `fmt_format.dd` | no |
-| spdlog | logging | template-heavy header stack, formatted logging call, link | heavy/manual | `DUDU_PROBE_HEAVY=1 scripts/probe_optional.sh` / `spdlog_basic.dd` | clang scanner currently exceeds the default optional-probe budget |
+| spdlog | logging | template-heavy header stack, formatted logging call, link | heavy/manual pass | `DUDU_PROBE_HEAVY=1 scripts/probe_optional.sh` / `spdlog_basic.dd` | clang scanner currently exceeds the default optional-probe budget |
 | Boost filesystem | C++ utility | namespace import, path construction, member methods, string-returning overloads, link | pass | `scripts/probe_optional.sh` / `boost_filesystem.dd` | no |
 | raylib | game / media | window/game example, audio synth build | pass | `scripts/probe_optional.sh` / `examples/raylib_game.dd` | no |
 | SDL3 | windowing | window example build through pkg-config | pass | `scripts/probe_optional.sh` / `examples/sdl3_window.dd` | no |

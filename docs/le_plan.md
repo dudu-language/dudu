@@ -1328,12 +1328,14 @@ push. They are not release packaging work.
 
    Current optional probes pass for glm, Eigen, OpenBLAS, OpenCV, sqlite, zlib,
    curl, OpenSSL, libevent, libxml2, Expat, Cairo, FreeType, libpng, libjpeg,
-   Lua, libuuid, stb, fmt, spdlog, Boost filesystem, threading, POSIX mmap, POSIX
-   pthread, liblzma, raylib, SDL3, GLFW, Dear ImGui, X11, Wayland, OpenCL, Vulkan, and
-   FFmpeg on this machine. Optional
-   dev-only
-   dependencies can be installed into the ignored `third_party/install` prefix
-   with `scripts/setup_dev_deps.sh`; the main Dudu build does not require them.
+   Lua, libuuid, stb, fmt, Boost filesystem, threading, POSIX mmap, POSIX
+   pthread, liblzma, raylib, SDL3, GLFW, Dear ImGui, X11, Wayland, OpenCL,
+   Vulkan, and FFmpeg on this machine. `spdlog` remains an intentional
+   heavy/manual probe behind `DUDU_PROBE_HEAVY=1`; the manual spdlog smoke
+   passes locally but is too slow for the default optional sweep. Optional
+   dev-only dependencies can be installed into the ignored
+   `third_party/install` prefix with `scripts/setup_dev_deps.sh`; the main Dudu
+   build does not require them.
 
    POSIX pthread coverage now imports `pthread.h` directly and exercises
    `pthread_create` with a Dudu function pointer callback plus native mutex
