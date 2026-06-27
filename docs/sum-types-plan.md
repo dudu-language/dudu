@@ -201,7 +201,7 @@ guards: they do not count toward exhaustiveness.
 ## Current Status
 
 Simple zero-payload enums lower to C++ `enum class` and support exhaustive
-`match` through a generated `switch`.
+`match` through ordered generated comparisons.
 
 Payload enums now lower to a tagged `std::variant` wrapper with one nested
 struct per variant. Variant constructors such as `Message.Move(x=10, y=20)`,
@@ -496,13 +496,13 @@ duplicate named fields, and snake_case names. Payload enums lower to tagged
 Status: `match` and `case` statements parse into statement AST nodes instead of
 being recognized only by a raw unsupported-prefix check. The AST records the
 match subject, each case pattern, optional case guards, and parsed guard
-expressions. Simple zero-payload enum matches lower to C++ `switch`, require
-`EnumName.VariantName` or `_` cases, reject unknown and duplicate cases, and
-enforce exhaustiveness. Payload destructuring, guards, `Option`, and `Result`
-matching are implemented.
+expressions. Simple zero-payload enum matches lower to ordered C++ comparisons,
+require `EnumName.VariantName` or `_` cases, reject unknown and duplicate cases,
+and enforce exhaustiveness. Payload destructuring, guards, `Option`, and
+`Result` matching are implemented.
 
-Optimization note: value matches, such as HTTP route dispatch, now lower to a
-lean ordered chain without a generated `matched` boolean:
+Optimization note: value matches and guarded zero-payload enum matches now lower
+to a lean ordered chain without a generated `matched` boolean:
 
 ```cpp
 if (subject == "/") return index_route(request);

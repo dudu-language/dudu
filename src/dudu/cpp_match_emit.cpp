@@ -52,6 +52,24 @@ std::string value_case_condition(const Stmt& case_stmt, const std::string& subje
     return condition;
 }
 
+std::string enum_case_condition(const Stmt& case_stmt, const EnumDecl& en,
+                                const std::string& subject, const std::vector<std::string>& aliases,
+                                const CppLocalContext& locals,
+                                const std::map<std::string, TypeRef>& local_type_refs,
+                                const Symbols* symbols, const CppEmitOptions& options) {
+    std::string condition = "true";
+    const std::optional<std::string> variant = enum_case_variant_name(case_stmt);
+    if (variant && *variant != "_") {
+        condition = subject + " == " + emitted_type_name(en.name, options) + "::" + *variant;
+    }
+    if (has_expr(case_stmt.guard_expr)) {
+        const std::string guard =
+            lower_expr(case_stmt.guard_expr, aliases, locals, local_type_refs, symbols, options);
+        condition = "(" + condition + ") && (" + guard + ")";
+    }
+    return condition;
+}
+
 void emit_all_return_value_match(std::ostringstream& out, const Stmt& stmt, int depth,
                                  const std::string& subject,
                                  const std::vector<std::string>& aliases,
@@ -107,6 +125,41 @@ void emit_ordered_value_match(std::ostringstream& out, const Stmt& stmt, int dep
         out << indent(depth) << (emitted_case ? "else if (" : "if (")
             << value_case_condition(child, subject, aliases, locals, local_type_refs, symbols,
                                     options)
+            << ") {\n";
+        emit_block(out, child.children, depth + 1, aliases, locals, local_type_refs,
+                   return_type_ref, function_returns, symbols, options);
+        out << indent(depth) << "}\n";
+        emitted_case = true;
+    }
+}
+
+void emit_ordered_enum_match(std::ostringstream& out, const Stmt& stmt, int depth,
+                             const EnumDecl& en, const std::string& subject,
+                             const std::vector<std::string>& aliases, const CppLocalContext& locals,
+                             const std::map<std::string, TypeRef>& local_type_refs,
+                             const TypeRef& return_type_ref,
+                             const std::map<std::string, TypeRef>& function_returns,
+                             const Symbols* symbols, const CppEmitOptions& options) {
+    bool emitted_case = false;
+    for (const Stmt& child : stmt.children) {
+        if (child.kind != StmtKind::Case) {
+            continue;
+        }
+        if (is_wildcard_pattern_expr(child.pattern_expr) && !has_expr(child.guard_expr)) {
+            if (emitted_case) {
+                out << indent(depth) << "else {\n";
+                emit_block(out, child.children, depth + 1, aliases, locals, local_type_refs,
+                           return_type_ref, function_returns, symbols, options);
+                out << indent(depth) << "}\n";
+            } else {
+                emit_block(out, child.children, depth, aliases, locals, local_type_refs,
+                           return_type_ref, function_returns, symbols, options);
+            }
+            return;
+        }
+        out << indent(depth) << (emitted_case ? "else if (" : "if (")
+            << enum_case_condition(child, en, subject, aliases, locals, local_type_refs, symbols,
+                                   options)
             << ") {\n";
         emit_block(out, child.children, depth + 1, aliases, locals, local_type_refs,
                    return_type_ref, function_returns, symbols, options);
@@ -205,6 +258,21 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         }
         const EnumDecl* en =
             symbols == nullptr ? nullptr : enum_decl_for_type(*symbols, subject_type_ref);
+        if (en != nullptr && !enum_has_payloads(*en) && match_has_guards(stmt)) {
+            const std::string subject = "__dudu_match_" + std::to_string(stmt.location.line) + "_" +
+                                        std::to_string(stmt.location.column);
+            out << indent(depth) << "auto&& " << subject << " = "
+                << lower_expr(stmt.condition_expr, aliases, locals, local_type_refs, symbols,
+                              options)
+                << ";\n";
+            emit_ordered_enum_match(out, stmt, depth, *en, subject, aliases, locals,
+                                    local_type_refs, return_type_ref, function_returns, symbols,
+                                    options);
+            if (match_cases_return(stmt)) {
+                out << indent(depth) << "__builtin_unreachable();\n";
+            }
+            return;
+        }
         if (en != nullptr && (enum_has_payloads(*en) || match_has_guards(stmt))) {
             const std::string subject = "__dudu_match_" + std::to_string(stmt.location.line) + "_" +
                                         std::to_string(stmt.location.column);

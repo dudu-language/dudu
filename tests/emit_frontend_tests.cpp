@@ -263,6 +263,34 @@ void test_non_returning_value_match_emits_else_chain() {
     assert(cpp.find("score = 30;") != std::string::npos);
 }
 
+void test_guarded_enum_match_emits_ordered_chain() {
+    const dudu::ModuleAst module =
+        dudu::parse_source("enum Direction:\n"
+                           "    North\n"
+                           "    South\n"
+                           "\n"
+                           "def classify(direction: Direction, enabled: bool) -> i32:\n"
+                           "    match direction:\n"
+                           "        case Direction.North if enabled:\n"
+                           "            return 10\n"
+                           "        case Direction.North:\n"
+                           "            return 20\n"
+                           "        case Direction.South:\n"
+                           "            return 30\n"
+                           "\n"
+                           "def main() -> i32:\n"
+                           "    return classify(Direction.North, False) - 20\n",
+                           "guarded_enum_match_ast.dd");
+    dudu::analyze_module(module, {.check_bodies = true});
+    const std::string cpp = dudu::emit_cpp_source(module);
+    assert(cpp.find("auto&& __dudu_match_6_5 = direction;") != std::string::npos);
+    assert(cpp.find("__dudu_match_6_5_matched") == std::string::npos);
+    assert(cpp.find("if ((__dudu_match_6_5 == Direction::North) && (enabled))") !=
+           std::string::npos);
+    assert(cpp.find("else if (__dudu_match_6_5 == Direction::North)") != std::string::npos);
+    assert(cpp.find("else if (__dudu_match_6_5 == Direction::South)") != std::string::npos);
+}
+
 void test_typed_literal_initializers_use_type_ast() {
     const dudu::ModuleAst module = dudu::parse_source("def values() -> i32:\n"
                                                       "    maybe: Option[i32] = None\n"
@@ -378,6 +406,7 @@ int main() {
         test_three_dimensional_array_literal_emission();
         test_value_match_ast_emission();
         test_non_returning_value_match_emits_else_chain();
+        test_guarded_enum_match_emits_ordered_chain();
         test_typed_literal_initializers_use_type_ast();
         test_inferred_auto_assignment_is_not_redeclared();
         test_inferred_native_pointer_member_emission_uses_type_ast(root);
