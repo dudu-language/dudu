@@ -617,7 +617,6 @@ push. They are not release packaging work.
    `TypeRef` head name directly; the old `function_receiver_type_text` helper
    that rendered the receiver type only to compare it with class names has been
    deleted and guarded.
-   `struct stat`.
    Normal template-call emission lowers bracket arguments from parsed
    `TypeRef` nodes, including non-type value arguments, instead of falling back
    to raw expression text. Template-call C++ emission now synthesizes

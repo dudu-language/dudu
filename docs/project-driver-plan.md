@@ -440,8 +440,8 @@ Current implementation reality:
   when using a user-owned CMake project, or through `dudu cmake` when emitting
   an inspectable generated CMake artifact.
 
-The next build-driver work should close that gap without changing the front
-door: users should still type `dudu build`, `dudu run`, and `dudu test`.
+Future build-driver work should keep that front-door contract intact: users
+should still type `dudu build`, `dudu run`, and `dudu test`.
 
 This is not modeled after a language build tool that owns the whole world.
 Dudu sits directly on the C/C++ ecosystem, so CMake support is not a fallback
