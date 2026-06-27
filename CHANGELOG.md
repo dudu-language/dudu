@@ -97,6 +97,9 @@
   callee.
 - Split LSP reference collection behind its own API header so navigation no
   longer owns reference-search declarations.
+- Added an AST-backed `references_in` entry point so LSP reference and rename
+  paths can reuse parsed modules instead of reparsing inside reference
+  collection.
 - Shared parsed `TypeRef` index and iterable inference for public string entry
   points before falling back to native/operator boundaries.
 - Added Cairo to the optional native compatibility probe suite.

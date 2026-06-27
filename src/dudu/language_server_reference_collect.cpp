@@ -12,7 +12,8 @@
 
 namespace dudu {
 
-std::vector<ReferenceLocation> references_in(const Document& doc, const std::string& query) {
+std::vector<ReferenceLocation> references_in(const ModuleAst& module, const Document& doc,
+                                             const std::string& query) {
     std::vector<ReferenceLocation> out;
     if (query.empty()) {
         return out;
@@ -60,78 +61,82 @@ std::vector<ReferenceLocation> references_in(const Document& doc, const std::str
                 stmt, [&](const Expr& expr) { visit_lsp_expr_tree(expr, visit_expr, visit_type); });
         });
     };
-    try {
-        const ModuleAst module = parse_source(doc.text, doc.path);
-        for (const ImportDecl& import : module.imports) {
-            add(bound_import_name(import), import.location);
-            add(import.imported_name, import.location);
+    for (const ImportDecl& import : module.imports) {
+        add(bound_import_name(import), import.location);
+        add(import.imported_name, import.location);
+    }
+    for (const TypeAliasDecl& alias : module.aliases) {
+        add(alias.name, alias.location);
+        visit_type_tree(alias.type_ref);
+    }
+    for (const ConstDecl& constant : module.constants) {
+        add(constant.name, constant.location);
+        visit_type_tree(constant.type_ref);
+        visit_lsp_expr_tree(constant.value_expr, visit_expr, visit_type);
+    }
+    for (const EnumDecl& en : module.enums) {
+        add(en.name, en.location);
+        visit_type_tree(en.underlying_type_ref);
+        for (const EnumValueDecl& value : en.values) {
+            add(value.name, value.location);
+            for (const EnumPayloadField& field : value.payload_fields) {
+                add(field.name, field.location);
+                visit_type_tree(field.type_ref);
+            }
+            visit_lsp_expr_tree(value.value_expr, visit_expr, visit_type);
         }
-        for (const TypeAliasDecl& alias : module.aliases) {
-            add(alias.name, alias.location);
-            visit_type_tree(alias.type_ref);
+    }
+    for (const ClassDecl& klass : module.classes) {
+        add(klass.name, klass.location);
+        for (const BaseClassDecl& base : klass.base_class_refs) {
+            visit_type_tree(base.type_ref);
         }
-        for (const ConstDecl& constant : module.constants) {
+        for (const FieldDecl& field : klass.fields) {
+            add(field.name, field.location);
+            visit_type_tree(field.type_ref);
+            visit_lsp_expr_tree(field.value_expr, visit_expr, visit_type);
+        }
+        for (const ConstDecl& constant : klass.constants) {
             add(constant.name, constant.location);
             visit_type_tree(constant.type_ref);
             visit_lsp_expr_tree(constant.value_expr, visit_expr, visit_type);
         }
-        for (const EnumDecl& en : module.enums) {
-            add(en.name, en.location);
-            visit_type_tree(en.underlying_type_ref);
-            for (const EnumValueDecl& value : en.values) {
-                add(value.name, value.location);
-                for (const EnumPayloadField& field : value.payload_fields) {
-                    add(field.name, field.location);
-                    visit_type_tree(field.type_ref);
-                }
-                visit_lsp_expr_tree(value.value_expr, visit_expr, visit_type);
-            }
+        for (const ConstDecl& field : klass.static_fields) {
+            add(field.name, field.location);
+            visit_type_tree(field.type_ref);
+            visit_lsp_expr_tree(field.value_expr, visit_expr, visit_type);
         }
-        for (const ClassDecl& klass : module.classes) {
-            add(klass.name, klass.location);
-            for (const BaseClassDecl& base : klass.base_class_refs) {
-                visit_type_tree(base.type_ref);
-            }
-            for (const FieldDecl& field : klass.fields) {
-                add(field.name, field.location);
-                visit_type_tree(field.type_ref);
-                visit_lsp_expr_tree(field.value_expr, visit_expr, visit_type);
-            }
-            for (const ConstDecl& constant : klass.constants) {
-                add(constant.name, constant.location);
-                visit_type_tree(constant.type_ref);
-                visit_lsp_expr_tree(constant.value_expr, visit_expr, visit_type);
-            }
-            for (const ConstDecl& field : klass.static_fields) {
-                add(field.name, field.location);
-                visit_type_tree(field.type_ref);
-                visit_lsp_expr_tree(field.value_expr, visit_expr, visit_type);
-            }
-            for (const FunctionDecl& method : klass.methods) {
-                add(method.name, method.location);
-                visit_type_tree(method.receiver_type_ref);
-                visit_type_tree(method.return_type_ref);
-                for (const ParamDecl& param : method.params) {
-                    add(param.name, param.location);
-                    visit_type_tree(param.type_ref);
-                }
-                visit_stmts(method.statements);
-            }
-        }
-        for (const FunctionDecl& fn : module.functions) {
-            add(fn.name, fn.location);
-            visit_type_tree(fn.receiver_type_ref);
-            visit_type_tree(fn.return_type_ref);
-            for (const ParamDecl& param : fn.params) {
+        for (const FunctionDecl& method : klass.methods) {
+            add(method.name, method.location);
+            visit_type_tree(method.receiver_type_ref);
+            visit_type_tree(method.return_type_ref);
+            for (const ParamDecl& param : method.params) {
                 add(param.name, param.location);
                 visit_type_tree(param.type_ref);
             }
-            visit_stmts(fn.statements);
+            visit_stmts(method.statements);
         }
+    }
+    for (const FunctionDecl& fn : module.functions) {
+        add(fn.name, fn.location);
+        visit_type_tree(fn.receiver_type_ref);
+        visit_type_tree(fn.return_type_ref);
+        for (const ParamDecl& param : fn.params) {
+            add(param.name, param.location);
+            visit_type_tree(param.type_ref);
+        }
+        visit_stmts(fn.statements);
+    }
+    return out;
+}
+
+std::vector<ReferenceLocation> references_in(const Document& doc, const std::string& query) {
+    try {
+        const ModuleAst module = parse_source(doc.text, doc.path);
+        return references_in(module, doc, query);
     } catch (const std::exception&) {
         return {};
     }
-    return out;
 }
 
 } // namespace dudu

@@ -7,6 +7,10 @@
 
 namespace dudu {
 
+struct ModuleAst;
+
+std::vector<ReferenceLocation> references_in(const ModuleAst& module, const Document& doc,
+                                             const std::string& query);
 std::vector<ReferenceLocation> references_in(const Document& doc, const std::string& query);
 
 } // namespace dudu

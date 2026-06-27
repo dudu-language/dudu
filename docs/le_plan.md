@@ -2577,6 +2577,9 @@ push. They are not release packaging work.
    Reference collection now has its own API header instead of being declared by
    the generic navigation header, keeping the LSP ownership boundary clearer as
    the remaining selection/reference helpers move onto shared AST state.
+   Reference collection also exposes a parsed-`ModuleAst` entry point, so
+   reference and rename requests can reuse modules they have already parsed
+   instead of making collection parse source text internally.
    `offsetof[Type]("field")` C++ emission now requires the parsed string
    literal value carried by the AST instead of unquoting raw expression text as
    a malformed-node fallback.

@@ -173,7 +173,16 @@ std::string dotted_tail(const std::string& query) {
     return dot == std::string::npos ? query : query.substr(dot + 1);
 }
 
-std::string reference_query_at(const Document& doc, const AstSelection& selection) {
+std::optional<ModuleAst> parse_document_module(const Document& doc) {
+    try {
+        return parse_source(doc.text, doc.path);
+    } catch (const std::exception&) {
+        return std::nullopt;
+    }
+}
+
+std::string reference_query_at(const Document& doc, const AstSelection& selection,
+                               const ModuleAst* module) {
     const std::string name = selection.symbol.value_or("");
     std::optional<std::string> expression_path;
     std::vector<std::string> paths;
@@ -184,34 +193,33 @@ std::string reference_query_at(const Document& doc, const AstSelection& selectio
         expression_path = render_expr_path(*selection.expr_path);
         paths.push_back(*expression_path);
     }
-    try {
-        const ModuleAst module = parse_source(doc.text, doc.path);
+    if (module != nullptr) {
         for (const std::string& path : paths) {
             if (path.empty() || path == name || path.find('.') == std::string::npos) {
                 continue;
             }
-            if (native_alias_target_class_definition(module, path).has_value()) {
+            if (native_alias_target_class_definition(*module, path).has_value()) {
                 return path;
             }
             if (module_import_target_key(doc, path).has_value()) {
                 return path;
             }
-            for (const ClassDecl& klass : module.native_classes) {
+            for (const ClassDecl& klass : module->native_classes) {
                 if (klass.name == path) {
                     return path;
                 }
             }
-            for (const NativeFunctionDecl& fn : module.native_functions) {
+            for (const NativeFunctionDecl& fn : module->native_functions) {
                 if (fn.name == path) {
                     return path;
                 }
             }
-            for (const NativeValueDecl& value : module.native_values) {
+            for (const NativeValueDecl& value : module->native_values) {
                 if (value.name == path) {
                     return path;
                 }
             }
-            for (const NativeMacroDecl& macro : module.native_macros) {
+            for (const NativeMacroDecl& macro : module->native_macros) {
                 if (macro.name == path) {
                     return path;
                 }
@@ -220,8 +228,6 @@ std::string reference_query_at(const Document& doc, const AstSelection& selectio
                 return path;
             }
         }
-    } catch (const std::exception&) {
-        return name;
     }
     if (expression_path.has_value() && expression_path->find('.') != std::string::npos) {
         return *expression_path;
@@ -276,7 +282,9 @@ ReferenceScope reference_scope_at(const Document& doc, const Json* params, const
 std::string references_json(const Document& doc, const Json* params,
                             const std::map<std::string, Document>& workspace) {
     const AstSelection selection = ast_selection_at(doc, params);
-    const std::string query = reference_query_at(doc, selection);
+    const std::optional<ModuleAst> current_module = parse_document_module(doc);
+    const std::string query =
+        reference_query_at(doc, selection, current_module.has_value() ? &*current_module : nullptr);
     const ReferenceScope scope = reference_scope_at(doc, params, query, selection);
     if (scope == ReferenceScope::None) {
         return "[]";
@@ -322,7 +330,12 @@ std::string references_json(const Document& doc, const Json* params,
                                             : target_selective_document
                                                 ? selective_target->member_name
                                                 : query;
-        const std::vector<ReferenceLocation> locations = references_in(candidate, candidate_query);
+        const std::optional<ModuleAst> candidate_module = parse_document_module(candidate);
+        if (!candidate_module.has_value()) {
+            continue;
+        }
+        const std::vector<ReferenceLocation> locations =
+            references_in(*candidate_module, candidate, candidate_query);
         if (locations.empty()) {
             continue;
         }
@@ -364,7 +377,12 @@ std::string rename_json(const Document& doc, const Json* params,
             document_declares_renameable_symbol(candidate, old_name)) {
             continue;
         }
-        const std::vector<ReferenceLocation> locations = references_in(candidate, old_name);
+        const std::optional<ModuleAst> candidate_module = parse_document_module(candidate);
+        if (!candidate_module.has_value()) {
+            continue;
+        }
+        const std::vector<ReferenceLocation> locations =
+            references_in(*candidate_module, candidate, old_name);
         if (locations.empty()) {
             continue;
         }
