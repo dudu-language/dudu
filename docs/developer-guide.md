@@ -154,7 +154,9 @@ platform conditionals, install rules, and vendored native dependency setup.
 
 Generated CMake under the build directory is Dudu-owned and may be overwritten.
 User-owned `CMakeLists.txt` files are not patched by Dudu; they should consume
-stable generated Dudu artifacts explicitly.
+stable generated Dudu artifacts explicitly. The scaffolded CMake file from
+`dudu init`/`dudu new` runs `duc emit-modules`, discovers generated module
+`.cpp` files, and then belongs to the project.
 
 ## Validation
 

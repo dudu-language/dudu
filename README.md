@@ -138,7 +138,8 @@ larger dependency graphs.
 Generated CMake under `build/` belongs to Dudu and may be overwritten.
 User-owned `CMakeLists.txt` files are never patched by Dudu. New projects get
 a starter `CMakeLists.txt` that builds generated Dudu module artifacts through
-`duc`; after creation, that file belongs to the project.
+`duc`; it discovers generated module `.cpp` files so simple multi-file Dudu
+projects link correctly. After creation, that file belongs to the project.
 
 ## Native Interop
 

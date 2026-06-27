@@ -121,6 +121,8 @@
 - Made generated CMake module emission depend on the parsed `dudu.toml`, so
   manifest-only changes can trigger Dudu re-emission instead of relying only on
   `.dd` source mtimes.
+- Updated `dudu init`/`dudu new` starter CMake to compile all generated Dudu
+  module `.cpp` files instead of only `main.cpp`.
 - Added fast validation that `dudu init` and `dudu new` create runnable hello
   projects with the documented git/`.gitignore` behavior.
 - Added an initial user-owned `CMakeLists.txt` to `dudu init` and `dudu new`

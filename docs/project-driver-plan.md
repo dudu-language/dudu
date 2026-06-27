@@ -507,7 +507,9 @@ Generated-file ownership must be strict:
   variables or targets for the user's CMake to consume.
 - `dudu init` may create an initial `CMakeLists.txt` for a new project, but
   after creation that file belongs to the user. Subsequent `dudu build` runs
-  must not mow it over.
+  must not mow it over. The starter CMake should compile all generated Dudu
+  module `.cpp` files, not only the entry module, so adding a normal imported
+  `.dd` file does not require hand-editing the starter immediately.
 
 The practical target is:
 
