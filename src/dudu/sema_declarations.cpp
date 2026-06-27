@@ -1,6 +1,7 @@
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/decorators.hpp"
+#include "dudu/naming.hpp"
 #include "dudu/sema_common.hpp"
 #include "dudu/sema_context.hpp"
 #include "dudu/sema_generics.hpp"
@@ -99,14 +100,6 @@ void check_generic_params(const SourceLocation& location, const std::vector<std:
             fail(location, "duplicate generic parameter: " + param);
         }
     }
-}
-
-bool is_constructor_method(const FunctionDecl& method) {
-    return method.name == "init";
-}
-
-bool is_destructor_method(const FunctionDecl& method) {
-    return method.name == "drop";
 }
 
 bool function_returns(const FunctionDecl& fn, std::string_view name) {

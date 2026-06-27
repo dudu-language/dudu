@@ -6,6 +6,7 @@
 #include "dudu/cpp_lower.hpp"
 #include "dudu/cpp_stmt_emit.hpp"
 #include "dudu/decorators.hpp"
+#include "dudu/naming.hpp"
 #include "dudu/sema_context.hpp"
 #include "dudu/sema_generics.hpp"
 #include "dudu/sema_inheritance.hpp"
@@ -97,14 +98,6 @@ std::string function_decorator_arg(const FunctionDecl& fn, std::string_view name
         }
     }
     return {};
-}
-
-bool is_constructor_method(const FunctionDecl& method) {
-    return method.name == "init";
-}
-
-bool is_destructor_method(const FunctionDecl& method) {
-    return method.name == "drop";
 }
 
 std::string operator_name(const FunctionDecl& method) {

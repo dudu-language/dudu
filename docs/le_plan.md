@@ -2886,3 +2886,6 @@ push. They are not release packaging work.
    dotted text; it relies on parsed AST symbols and expression paths, preserving
    the existing string/comment false-positive guards. The leftover dotted-symbol
    character helper from that scanner was also deleted.
+   Dudu constructor/destructor method-name predicates now live in the naming
+   module instead of being duplicated in declaration sema and C++ class
+   emission.

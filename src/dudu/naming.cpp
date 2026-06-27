@@ -66,6 +66,14 @@ bool is_dudu_all_caps(const std::string& name) {
     return true;
 }
 
+bool is_constructor_method(const FunctionDecl& method) {
+    return method.name == "init";
+}
+
+bool is_destructor_method(const FunctionDecl& method) {
+    return method.name == "drop";
+}
+
 void check_naming(const ModuleAst& module) {
     for (const TypeAliasDecl& alias : module.aliases) {
         if (!is_pascal_case(alias.name)) {
