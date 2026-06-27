@@ -281,10 +281,6 @@ bool symbol_matches(const std::string& symbol, const std::string& query) {
     return dot != std::string::npos && symbol.substr(dot + 1) == query;
 }
 
-bool symbol_char(char c) {
-    return identifier_char(c) || c == '.';
-}
-
 bool identifier_char(char c) {
     return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_';
 }

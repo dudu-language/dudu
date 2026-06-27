@@ -2884,4 +2884,5 @@ push. They are not release packaging work.
    `cpp(...)` escape-boundary helper rather than a generic expression fallback.
    LSP reference query selection no longer scans the current source line for
    dotted text; it relies on parsed AST symbols and expression paths, preserving
-   the existing string/comment false-positive guards.
+   the existing string/comment false-positive guards. The leftover dotted-symbol
+   character helper from that scanner was also deleted.

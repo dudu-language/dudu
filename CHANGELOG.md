@@ -82,7 +82,7 @@
   text call parser as an explicit `cpp(...)` escape-boundary helper.
 - Removed the raw line scanner from LSP reference query selection; references
   now use parsed AST symbols and expression paths instead of arbitrary dotted
-  source text.
+  source text, and the leftover dotted-symbol character helper was deleted.
 - Shared parsed `TypeRef` index and iterable inference for public string entry
   points before falling back to native/operator boundaries.
 - Added Cairo to the optional native compatibility probe suite.
