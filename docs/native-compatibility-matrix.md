@@ -14,6 +14,11 @@ run passed all available non-heavy probes on this machine; `spdlog` remained
 the intentional default skip, and the manual
 `DUDU_PROBE_HEAVY=1` spdlog smoke passed separately.
 
+Last local dogfood run: 2026-06-27 with `scripts/test_dogfood.sh`.
+`raymarch-dd` built through the generated CMake backend, and
+`dudu-webserver` built plus passed route smoke checks for `/`, `/health`,
+`/echo`, and `/routes`.
+
 ## Status Key
 
 - `pass`: currently covered by an optional probe or fixture and passed locally.

@@ -197,8 +197,9 @@ duc lsp
 - [x] Add native generics, payload enums, fixed arrays, slicing, operator
       overloads, and inheritance.
 - [x] Emit separate generated files through the generated-CMake backend.
+- [x] Keep module imports canonical so the same `.dd` file reached through
+      multiple import routes is one module, not duplicate declarations.
 - [ ] Finish the real AST migration and remove string-lowering leftovers.
-- [ ] Finish clean module/import semantics with stable generated namespaces.
 - [ ] Add module-level compiler invalidation for faster Dudu-side rebuilds.
 - [ ] Harden native interop against common C++ libraries.
 - [ ] Finish LSP hover, go-to-definition, references, diagnostics, and formatter
