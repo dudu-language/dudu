@@ -1086,7 +1086,10 @@ push. They are not release packaging work.
    generic non-type extents and member-backed arrays. Two-dimensional
    patch rectangles such as `mat[y0:y1, x0:x1]` produce `strided_span2[T]`
    views with explicit row stride, and `strided_span2[T]` views are iterable in
-   row-major order. Full-rank fixed-array slices such as `mat[:, :]` and
+   row-major order. Existing `strided_span2[T]` patch views can also be
+   resliced into full patch, row, column, row-range, column-range, and subpatch
+   views, so matrix patches can be reused instead of immediately copied.
+   Full-rank fixed-array slices such as `mat[:, :]` and
    `image[:, :, :]` produce contiguous `span[T]` views over the whole backing
    storage, including generic non-type extents such as
    `array[T][Rows, Cols]` and member-backed fixed arrays such as

@@ -60,6 +60,11 @@ std::string lower_index_expr(const Expr& expr, const std::vector<std::string>& a
     }
 
     if (expr.children[1].kind == ExprKind::TupleLiteral) {
+        if (const auto span2_slice =
+                lower_strided_span2_slice_expr(expr.children[0], expr.children[1], aliases, locals,
+                                               local_type_refs, symbols, options)) {
+            return *span2_slice;
+        }
         if (const auto full_slice =
                 lower_full_multidim_slice_expr(expr.children[0], expr.children[1], aliases, locals,
                                                local_type_refs, symbols, options)) {
@@ -90,9 +95,9 @@ std::string lower_index_expr(const Expr& expr, const std::vector<std::string>& a
                                                local_type_refs, symbols, options)) {
             return *slice;
         }
-        if (const auto slice = lower_trailing_range_slice_expr(
-                expr.children[0], expr.children[1], aliases, locals, local_type_refs, symbols,
-                options)) {
+        if (const auto slice =
+                lower_trailing_range_slice_expr(expr.children[0], expr.children[1], aliases, locals,
+                                                local_type_refs, symbols, options)) {
             return *slice;
         }
         for (const Expr& index : expr.children[1].children) {

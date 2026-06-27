@@ -203,7 +203,10 @@ Three-dimensional channel slices such as `image[:, :, c]` also produce
 non-type extents and member-backed fixed arrays. Two-dimensional patch
 rectangles such as `mat[y0:y1, x0:x1]` produce `strided_span2[T]` views with
 explicit row stride, so row gaps are not misrepresented as contiguous storage.
-`strided_span2[T]` views are iterable in row-major order.
+`strided_span2[T]` views are iterable in row-major order and can be resliced
+with full, row, column, row-range, column-range, and subpatch forms such as
+`patch[:, :]`, `patch[row, :]`, `patch[:, col]`, `patch[row0:row1, :]`,
+`patch[row, col0:col1]`, and `patch[row0:row1, col0:col1]`.
 Full-rank fixed-array slices such as `mat[:, :]` and `image[:, :, :]` produce
 contiguous `span[T]` views over the whole backing storage, including generic
 non-type extents such as `array[T][Rows, Cols]` and member-backed fixed arrays

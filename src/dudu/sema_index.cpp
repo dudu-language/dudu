@@ -146,6 +146,49 @@ bool is_matrix_patch_slice_expr(const Expr& expr) {
            is_simple_range_slice_expr(expr.children[1]);
 }
 
+std::optional<TypeRef> single_template_child(const TypeRef& type, std::string_view name) {
+    const std::vector<TypeRef> args = template_type_arg_refs(type, name);
+    if (args.size() == 1) {
+        return args.front();
+    }
+    return std::nullopt;
+}
+
+TypeRef view_type_ref(const SourceLocation& location, std::string_view name,
+                      const TypeRef& element) {
+    TypeRef out;
+    out.kind = TypeKind::Template;
+    out.name = std::string(name);
+    out.children.push_back(element);
+    out.location = location;
+    return out;
+}
+
+std::optional<TypeRef> indexed_strided_span2_type_ref(const SourceLocation& location,
+                                                      const TypeRef& receiver_type,
+                                                      const Expr& index_expr) {
+    const std::optional<TypeRef> element =
+        single_template_child(unwrap_reference_and_const(receiver_type), "strided_span2");
+    if (!element || index_expr.kind != ExprKind::TupleLiteral || index_expr.children.size() != 2) {
+        return std::nullopt;
+    }
+    if (is_full_multidim_slice_expr(index_expr) ||
+        is_leading_range_full_tail_slice_expr(index_expr) ||
+        is_matrix_patch_slice_expr(index_expr)) {
+        return view_type_ref(location, "strided_span2", *element);
+    }
+    if (is_column_slice_expr(index_expr) ||
+        trailing_full_slice_prefix_count(index_expr).has_value() ||
+        trailing_range_slice_prefix_count(index_expr).has_value()) {
+        return view_type_ref(location, "strided_span", *element);
+    }
+    if (is_simple_range_slice_expr(index_expr.children[0]) &&
+        !is_slice_expr(index_expr.children[1])) {
+        return view_type_ref(location, "strided_span", *element);
+    }
+    return std::nullopt;
+}
+
 } // namespace
 
 TypeRef indexed_value_type_ref(const Symbols& symbols,
@@ -163,6 +206,10 @@ TypeRef indexed_type_ref_from_type(const Symbols& symbols, const SourceLocation&
                                    const TypeRef& receiver_type, const Expr& index_expr,
                                    const std::string& label) {
     const TypeRef unwrapped_type_ref = unwrap_reference_and_const(receiver_type);
+    if (const std::optional<TypeRef> span2_type =
+            indexed_strided_span2_type_ref(location, receiver_type, index_expr)) {
+        return *span2_type;
+    }
     if (is_full_multidim_slice_expr(index_expr)) {
         const std::vector<size_t> shape = explicit_array_shape(unwrapped_type_ref);
         const std::vector<std::string> shape_values =
