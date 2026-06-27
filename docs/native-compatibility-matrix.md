@@ -67,6 +67,16 @@ the intentional default skip, and the manual
 | C macros | C/C++ preprocessor | constants, function-like macros, variadics, lowercase macros | fixture | `cpp_macro_bomb.dd`, `c_macro_constants.dd` | no |
 | Native C++ templates | C++ templates | explicit template calls, method templates, dependent returns | fixture | `native_template_function.dd`, `cpp_template_member.dd`, `native_dependent_template_return.dd` | no |
 
+## External Dogfood Repos
+
+These repos are not required for the normal test loop, but they should be run
+periodically because they catch whole-project friction that small fixtures miss.
+
+| Repo | Domain | Current Use | Status |
+| --- | --- | --- | --- |
+| `/home/vega/Coding/Graphics/raymarch-dd` | graphics / SDL / generated modules | Real-time app with vector math, C library calls, generated CMake, LSP navigation pressure, and runtime rendering. | local dogfood |
+| `/home/vega/Coding/Web/dudu-webserver` | POSIX networking / C++ stdlib | Multi-file blocking HTTP server using sockets, polling, libc, C strings, and `std.string` without a C++ webserver shim. | local dogfood; `dudu build` and route smoke passed on 2026-06-27 |
+
 ## Planned Matrix Targets
 
 These are important enough to become official probes or fixtures as the
