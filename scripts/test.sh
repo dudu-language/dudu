@@ -372,7 +372,7 @@ grep -q "test-from-project" "$repo_root/build/project_delegated_test.out"
     cd "$repo_root/tests/fixtures/project_targets"
     "$repo_root/build/dudu" check tool
     "$repo_root/build/dudu" build tool 2>"$repo_root/build/project_targets_build.err"
-    test -x "$repo_root/build/project_targets/tool"
+    test -x "$repo_root/build/project_targets/cmake-backend/build/tool"
     "$repo_root/build/dudu" run tool >"$repo_root/build/project_targets_run.out" \
         2>"$repo_root/build/project_targets_run.err"
     "$repo_root/build/dudu" test >"$repo_root/build/project_targets_test.out" \
