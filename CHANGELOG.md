@@ -118,6 +118,8 @@
   explicitly before collecting symbols.
 - Removed document-parsing LSP selection wrappers; hover now derives cursor
   selection from the visible module it already loaded.
+- Made LSP completion and signature help reuse one loaded module tree per
+  request instead of loading again inside module/member/symbol helpers.
 - Shared parsed `TypeRef` index and iterable inference for public string entry
   points before falling back to native/operator boundaries.
 - Added Cairo to the optional native compatibility probe suite.

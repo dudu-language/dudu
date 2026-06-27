@@ -78,52 +78,49 @@ std::string completion_items_json(const std::vector<Symbol>& symbols) {
     return out.str();
 }
 
-std::optional<std::string> module_completion_json(const Document& doc, const std::string& target) {
-    try {
-        const ModuleAst module = module_for_document(doc, true);
-        const ModuleAst& current = visible_module_unit(module, doc.path);
-        for (const ImportDecl& import : current.imports) {
-            if (import.kind != ImportKind::Module) {
-                continue;
-            }
-            const std::string bound = bound_import_name(import);
-            const bool matches = import.alias.empty()
-                                     ? (target == import.module_path || target == bound)
-                                     : target == bound;
-            if (!matches) {
-                continue;
-            }
-            const ModuleAst* imported = imported_module_unit(module, current, import);
-            if (imported != nullptr) {
-                return completion_items_json(symbols_for_module(*imported, true));
-            }
-            const std::filesystem::path file =
-                module_path_to_file(doc.path.parent_path(), import.module_path);
-            if (!std::filesystem::exists(file)) {
-                return "[]";
-            }
-            const ModuleAst imported_tree = load_source_tree(file);
-            return completion_items_json(
-                symbols_for_module(visible_module_unit(imported_tree, file), true));
+std::optional<std::string> module_completion_json(const Document& doc, const ModuleAst& module,
+                                                  const ModuleAst& current,
+                                                  const std::string& target) {
+    for (const ImportDecl& import : current.imports) {
+        if (import.kind != ImportKind::Module) {
+            continue;
         }
-    } catch (const std::exception&) {
-        return std::nullopt;
+        const std::string bound = bound_import_name(import);
+        const bool matches = import.alias.empty()
+                                 ? (target == import.module_path || target == bound)
+                                 : target == bound;
+        if (!matches) {
+            continue;
+        }
+        const ModuleAst* imported = imported_module_unit(module, current, import);
+        if (imported != nullptr) {
+            return completion_items_json(symbols_for_module(*imported, true));
+        }
+        const std::filesystem::path file =
+            module_path_to_file(doc.path.parent_path(), import.module_path);
+        if (!std::filesystem::exists(file)) {
+            return "[]";
+        }
+        const ModuleAst imported_tree = load_source_tree(file);
+        return completion_items_json(
+            symbols_for_module(visible_module_unit(imported_tree, file), true));
     }
     return std::nullopt;
 }
 
-std::vector<Symbol> visible_symbols_for_document(const Document& doc) {
+std::optional<ModuleAst> completion_module(const Document& doc) {
     try {
-        const ModuleAst module = module_for_document(doc, true);
-        return symbols_for_module(visible_module_unit(module, doc.path), true);
+        return module_for_document(doc, true);
     } catch (const std::exception&) {
     }
-    return {};
+    return std::nullopt;
 }
 
-std::string member_completion_json(const Document& doc, const std::string& target,
+std::string member_completion_json(const Document& doc, const ModuleAst& module,
+                                   const ModuleAst& current, const std::string& target,
                                    const Json* params) {
-    if (const std::optional<std::string> module_result = module_completion_json(doc, target)) {
+    if (const std::optional<std::string> module_result =
+            module_completion_json(doc, module, current, target)) {
         return *module_result;
     }
     const TypeRef type_ref = local_type_ref_before_cursor(doc, target, params);
@@ -141,42 +138,38 @@ std::string member_completion_json(const Document& doc, const std::string& targe
         out << "{\"label\":\"" << json_escape(label) << "\",\"kind\":" << kind << ",\"detail\":\""
             << json_escape(detail) << "\"}";
     };
-    try {
-        ModuleAst module = module_for_document(doc, true);
-        const std::set<std::string> candidate_types = member_candidate_types(module, type_ref);
-        for (const ClassDecl& klass : module.classes) {
-            if (!candidate_types.contains(klass.name)) {
-                continue;
-            }
-            for (const FieldDecl& field : klass.fields) {
-                add(field.name, 5, field.name + ": " + type_ref_text(field.type_ref));
-            }
-            for (const ConstDecl& constant : klass.constants) {
-                add(constant.name, 21, constant.name + ": " + type_ref_text(constant.type_ref));
-            }
-            for (const ConstDecl& field : klass.static_fields) {
-                add(field.name, 5, field.name + ": " + type_ref_text(field.type_ref));
-            }
-            for (const FunctionDecl& method : klass.methods) {
-                add(method.name, is_constructor_method_name(method.name) ? 4 : 2,
-                    function_detail(method));
-            }
-            break;
+    const std::set<std::string> candidate_types = member_candidate_types(module, type_ref);
+    for (const ClassDecl& klass : module.classes) {
+        if (!candidate_types.contains(klass.name)) {
+            continue;
         }
-        for (const ClassDecl& klass : module.native_classes) {
-            if (!candidate_types.contains(klass.name)) {
-                continue;
-            }
-            for (const FieldDecl& field : klass.fields) {
-                add(field.name, 5, field.name + ": " + type_ref_text(field.type_ref));
-            }
-            for (const FunctionDecl& method : klass.methods) {
-                add(method.name, is_constructor_method_name(method.name) ? 4 : 2,
-                    function_detail(method));
-            }
-            break;
+        for (const FieldDecl& field : klass.fields) {
+            add(field.name, 5, field.name + ": " + type_ref_text(field.type_ref));
         }
-    } catch (const std::exception&) {
+        for (const ConstDecl& constant : klass.constants) {
+            add(constant.name, 21, constant.name + ": " + type_ref_text(constant.type_ref));
+        }
+        for (const ConstDecl& field : klass.static_fields) {
+            add(field.name, 5, field.name + ": " + type_ref_text(field.type_ref));
+        }
+        for (const FunctionDecl& method : klass.methods) {
+            add(method.name, is_constructor_method_name(method.name) ? 4 : 2,
+                function_detail(method));
+        }
+        break;
+    }
+    for (const ClassDecl& klass : module.native_classes) {
+        if (!candidate_types.contains(klass.name)) {
+            continue;
+        }
+        for (const FieldDecl& field : klass.fields) {
+            add(field.name, 5, field.name + ": " + type_ref_text(field.type_ref));
+        }
+        for (const FunctionDecl& method : klass.methods) {
+            add(method.name, is_constructor_method_name(method.name) ? 4 : 2,
+                function_detail(method));
+        }
+        break;
     }
     out << "]";
     return out.str();
@@ -256,10 +249,21 @@ CallSite call_site_at(const Document& doc, const Json* params) {
 } // namespace
 
 std::string completion_json(const Document* doc, const Json* params) {
+    std::optional<ModuleAst> module;
+    const ModuleAst* current = nullptr;
+    if (doc != nullptr) {
+        module = completion_module(*doc);
+        if (module.has_value()) {
+            current = &visible_module_unit(*module, doc->path);
+        }
+    }
     if (doc != nullptr) {
         if (const std::optional<std::string> member_target =
                 member_completion_target(*doc, params)) {
-            return member_completion_json(*doc, *member_target, params);
+            if (module.has_value() && current != nullptr) {
+                return member_completion_json(*doc, *module, *current, *member_target, params);
+            }
+            return "[]";
         }
     }
     std::ostringstream out;
@@ -307,8 +311,10 @@ std::string completion_json(const Document* doc, const Json* params) {
         for (const auto& [name, type_ref] : local_type_refs_before_cursor(*doc, params)) {
             add(name, 6, name + ": " + substitute_type_ref_text(type_ref, {}));
         }
-        for (const Symbol& symbol : visible_symbols_for_document(*doc)) {
-            add(symbol.name, completion_kind(symbol.kind), symbol.detail);
+        if (current != nullptr) {
+            for (const Symbol& symbol : symbols_for_module(*current, true)) {
+                add(symbol.name, completion_kind(symbol.kind), symbol.detail);
+            }
         }
     }
     out << "]";
@@ -349,10 +355,14 @@ std::string signature_help_json(const Document* doc, const Json* params) {
         return "{\"signatures\":[],\"activeSignature\":0,\"activeParameter\":0}";
     }
     std::vector<std::string> signatures;
-    for (const Symbol& symbol : visible_symbols_for_document(*doc)) {
-        if (symbol_matches(symbol.name, call.name) &&
-            (symbol.kind == lsp_symbol_kind::Function || symbol.kind == lsp_symbol_kind::Method)) {
-            signatures.push_back(symbol.detail);
+    if (const std::optional<ModuleAst> module = completion_module(*doc)) {
+        const ModuleAst& current = visible_module_unit(*module, doc->path);
+        for (const Symbol& symbol : symbols_for_module(current, true)) {
+            if (symbol_matches(symbol.name, call.name) &&
+                (symbol.kind == lsp_symbol_kind::Function ||
+                 symbol.kind == lsp_symbol_kind::Method)) {
+                signatures.push_back(symbol.detail);
+            }
         }
     }
     std::ostringstream out;
