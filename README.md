@@ -44,6 +44,11 @@ It is not a stable language release yet. The current work is focused on making
 the compiler architecture, module system, native interop, diagnostics, and
 tooling solid enough for real projects.
 
+Current language coverage includes Dudu-native generics, payload enums with
+exhaustive `match`, fixed arrays with matrix/tensor-style indexing and slices,
+operator overloads, native inheritance, generated CMake module builds, and
+initial LSP support.
+
 ## Install
 
 Install prerequisites.
@@ -152,6 +157,15 @@ duc examples/cpp_library.dd --emit-header build/cpp_library.hpp
 Optional examples that use native libraries such as raylib, SDL3, OpenCV,
 Vulkan, or FFmpeg need those libraries installed separately.
 
+External dogfood projects can be checked locally with:
+
+```sh
+./scripts/test_dogfood.sh
+```
+
+That script skips missing local repos and currently covers `raymarch-dd` and
+`dudu-webserver` when they exist next to the Dudu checkout.
+
 ## Editor Support
 
 Editor files live in:
@@ -178,11 +192,13 @@ duc lsp
 - [x] Import C/C++ headers through clang-based native scanning.
 - [x] Use generated CMake as the normal project backend.
 - [x] Install from a checkout with `scripts/install-local.sh`.
+- [x] Add native generics, payload enums, fixed arrays, slicing, operator
+      overloads, and inheritance.
+- [x] Emit separate generated files through the generated-CMake backend.
 - [ ] Finish the real AST migration and remove string-lowering leftovers.
 - [ ] Finish clean module/import semantics with stable generated namespaces.
-- [ ] Emit separate generated files for better incremental builds.
+- [ ] Add module-level compiler invalidation for faster Dudu-side rebuilds.
 - [ ] Harden native interop against common C++ libraries.
-- [ ] Add native generics, sum types, and the remaining planned language forms.
 - [ ] Finish LSP hover, go-to-definition, references, diagnostics, and formatter
       support on top of the real AST.
 - [ ] Add a broad compatibility suite for real libraries and larger examples.
