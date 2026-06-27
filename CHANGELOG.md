@@ -122,6 +122,8 @@
   request instead of loading again inside module/member/symbol helpers.
 - Made LSP local-type lookup consume a loaded visible module unit instead of
   parsing the document inside local-context helpers.
+- Made LSP semantic tokens reuse the shared module loader and visible module
+  unit instead of parsing and native-merging inside the request handler.
 - Shared parsed `TypeRef` index and iterable inference for public string entry
   points before falling back to native/operator boundaries.
 - Added Cairo to the optional native compatibility probe suite.

@@ -19,9 +19,6 @@
 #include "dudu/language_server_types.hpp"
 #include "dudu/language_server_workspace.hpp"
 #include "dudu/native_build.hpp"
-#include "dudu/native_headers.hpp"
-#include "dudu/parser.hpp"
-#include "dudu/project_config.hpp"
 #include "dudu/sema.hpp"
 #include "dudu/source.hpp"
 
@@ -308,20 +305,14 @@ class LanguageServer {
         if (found == documents_.end()) {
             return "{\"data\":[]}";
         }
-        ModuleAst module;
         try {
-            module = parse_source(found->second.text, found->second.path);
+            const ModuleAst module = module_for_document(found->second, false);
+            const ModuleAst native_symbols = module_for_document(found->second, true);
+            return semantic_tokens_json(visible_module_unit(module, found->second.path),
+                                        visible_module_unit(native_symbols, found->second.path));
         } catch (const std::exception&) {
             return "{\"data\":[]}";
         }
-        ModuleAst native_symbols = module;
-        try {
-            const ProjectConfig config = config_for_file(found->second.path);
-            merge_native_header_types(
-                native_symbols, {.config = config, .source_dir = found->second.path.parent_path()});
-        } catch (const std::exception&) {
-        }
-        return semantic_tokens_json(module, native_symbols);
     }
 
     std::string formatting_result(const Json* params) const {
