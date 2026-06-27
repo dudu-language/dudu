@@ -126,6 +126,8 @@
 - Made the `dudu init`/`dudu new` starter CMake refresh generated module
   artifacts through a stamp output so no-op CMake builds do not rerun Dudu
   emission.
+- Listed generated starter-CMake module sources as custom-command byproducts so
+  missing generated files can be recovered by the build graph.
 - Added fast validation that `dudu init` and `dudu new` create runnable hello
   projects with the documented git/`.gitignore` behavior.
 - Added an initial user-owned `CMakeLists.txt` to `dudu init` and `dudu new`

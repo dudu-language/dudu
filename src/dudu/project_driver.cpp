@@ -125,6 +125,7 @@ std::string scaffold_cmake_lists(const std::string& name) {
            "\n"
            "add_custom_command(\n"
            "    OUTPUT \"${DUDU_GENERATED_STAMP}\"\n"
+           "    BYPRODUCTS ${DUDU_GENERATED_SOURCES}\n"
            "    COMMAND \"${CMAKE_COMMAND}\" -E make_directory \"${DUDU_GENERATED_DIR}\"\n"
            "    COMMAND \"${DUC_EXECUTABLE}\" emit-modules \"${DUDU_ENTRY}\" -o "
            "\"${DUDU_GENERATED_DIR}\"\n"
