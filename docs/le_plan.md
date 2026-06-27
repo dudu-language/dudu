@@ -239,7 +239,10 @@ project/module cases. Import organization in the formatter and LSP code actions
 now shares structured leading-import block organization and parsed
 `ImportDecl` rendering instead of carrying duplicate import sorting/string
 builders, and generic document line helpers live in LSP support instead of
-individual action files. A multi-module lint fixture guards against reporting a
+individual action files. AST-backed unused-local and shadowing checks have also
+been split into a focused scope-lint pass, leaving the aggregate AST lint entry
+point responsible for orchestration instead of owning every lint rule. A
+multi-module lint fixture guards against reporting a
 dependency module's unused local in the entry document's diagnostics.
 
 ## Resolved Critical Module Import Blocker

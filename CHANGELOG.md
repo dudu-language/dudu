@@ -130,6 +130,8 @@
   timing prefixes for `generate`, `configure`, and `compile`.
 - Reused the loaded module graph while emitting generated CMake projects so
   source dependency discovery no longer walks imports a second time.
+- Split AST-backed unused-local and shadowing lint logic into a focused
+  language-server scope-lint module.
 - Clarified native-header redeclaration collision handling by spelling the
   opaque native type exception at the collision branches.
 - Made direct unaliased native C/C++ functions participate in current-document
