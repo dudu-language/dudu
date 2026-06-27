@@ -501,10 +501,8 @@ expressions. Simple zero-payload enum matches lower to C++ `switch`, require
 enforce exhaustiveness. Payload destructuring, guards, `Option`, and `Result`
 matching are implemented.
 
-Optimization note: value matches currently lower to guarded independent `if`
-statements with a generated `matched` boolean. For value matches where every
-case body returns, such as HTTP route dispatch, the emitter could produce a
-leaner ordered chain without the matched flag:
+Optimization note: all-return value matches, such as HTTP route dispatch, now
+lower to a lean ordered chain without a generated `matched` boolean:
 
 ```cpp
 if (subject == "/") return index_route(request);

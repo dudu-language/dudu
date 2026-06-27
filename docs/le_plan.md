@@ -37,10 +37,9 @@ Current direction notes:
   threads, queues, `select`/`poll`/platform event APIs, and explicit state
   machines over core-language `async`/`await`. See
   [Project Goals](goals.md#concurrency-philosophy).
-- Value `match` lowering should become leaner. The current general lowering
-  uses independent guarded `if` statements plus a generated `matched` boolean;
-  all-return value matches can lower to direct ordered returns, and
-  non-returning value matches can lower to `else if`/`else`. See
+- Value `match` lowering should stay lean. All-return value matches now lower to
+  direct ordered returns without a generated `matched` boolean; non-returning
+  value matches can still lower to `else if`/`else`. See
   [Sum Types Plan](sum-types-plan.md).
 - Compiler and LSP scratch artifacts must stay out of source directories. Native
   header scanner scratch files belong in temp/cache/build locations, not beside

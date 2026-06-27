@@ -33,6 +33,53 @@ bool match_cases_return(const Stmt& stmt) {
     return true;
 }
 
+std::string value_case_condition(const Stmt& case_stmt, const std::string& subject,
+                                 const std::vector<std::string>& aliases,
+                                 const CppLocalContext& locals,
+                                 const std::map<std::string, TypeRef>& local_type_refs,
+                                 const Symbols* symbols, const CppEmitOptions& options) {
+    std::string condition = "true";
+    if (!is_wildcard_pattern_expr(case_stmt.pattern_expr)) {
+        condition =
+            subject + " == " +
+            lower_expr(case_stmt.pattern_expr, aliases, locals, local_type_refs, symbols, options);
+    }
+    if (has_expr(case_stmt.guard_expr)) {
+        const std::string guard =
+            lower_expr(case_stmt.guard_expr, aliases, locals, local_type_refs, symbols, options);
+        condition = "(" + condition + ") && (" + guard + ")";
+    }
+    return condition;
+}
+
+void emit_all_return_value_match(std::ostringstream& out, const Stmt& stmt, int depth,
+                                 const std::string& subject,
+                                 const std::vector<std::string>& aliases,
+                                 const CppLocalContext& locals,
+                                 const std::map<std::string, TypeRef>& local_type_refs,
+                                 const TypeRef& return_type_ref,
+                                 const std::map<std::string, TypeRef>& function_returns,
+                                 const Symbols* symbols, const CppEmitOptions& options) {
+    for (const Stmt& child : stmt.children) {
+        if (child.kind != StmtKind::Case) {
+            continue;
+        }
+        if (is_wildcard_pattern_expr(child.pattern_expr) && !has_expr(child.guard_expr)) {
+            emit_block(out, child.children, depth, aliases, locals, local_type_refs,
+                       return_type_ref, function_returns, symbols, options);
+            return;
+        }
+        out << indent(depth) << "if ("
+            << value_case_condition(child, subject, aliases, locals, local_type_refs, symbols,
+                                    options)
+            << ") {\n";
+        emit_block(out, child.children, depth + 1, aliases, locals, local_type_refs,
+                   return_type_ref, function_returns, symbols, options);
+        out << indent(depth) << "}\n";
+    }
+    out << indent(depth) << "__builtin_unreachable();\n";
+}
+
 void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                           const std::vector<std::string>& aliases, const CppLocalContext& locals,
                           const TypeRef& return_type_ref,
@@ -202,6 +249,11 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
     out << indent(depth) << "auto&& " << subject << " = "
         << lower_expr(stmt.condition_expr, aliases, locals, local_type_refs, symbols, options)
         << ";\n";
+    if (match_cases_return(stmt)) {
+        emit_all_return_value_match(out, stmt, depth, subject, aliases, locals, local_type_refs,
+                                    return_type_ref, function_returns, symbols, options);
+        return;
+    }
     out << indent(depth) << "bool " << matched << " = false;\n";
     for (const Stmt& child : stmt.children) {
         if (child.kind != StmtKind::Case) {
@@ -211,9 +263,9 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         if (is_wildcard_pattern_expr(child.pattern_expr)) {
             condition = "true";
         } else {
-            condition = subject + " == " +
-                        lower_expr(child.pattern_expr, aliases, locals, local_type_refs, symbols,
-                                   options);
+            condition =
+                subject + " == " +
+                lower_expr(child.pattern_expr, aliases, locals, local_type_refs, symbols, options);
         }
         out << indent(depth) << "if (!" << matched << " && (" << condition << ")) {\n";
         if (has_expr(child.guard_expr)) {

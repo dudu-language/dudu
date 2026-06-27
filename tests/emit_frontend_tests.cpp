@@ -233,9 +233,9 @@ void test_value_match_ast_emission() {
     dudu::analyze_module(module, {.check_bodies = true});
     const std::string cpp = dudu::emit_cpp_source(module);
     assert(cpp.find("auto&& __dudu_match_2_5 = value;") != std::string::npos);
-    assert(cpp.find("if (!__dudu_match_2_5_matched && (__dudu_match_2_5 == 0))") !=
-           std::string::npos);
-    assert(cpp.find("if ((value > 1))") != std::string::npos);
+    assert(cpp.find("__dudu_match_2_5_matched") == std::string::npos);
+    assert(cpp.find("if (__dudu_match_2_5 == 0)") != std::string::npos);
+    assert(cpp.find("if ((__dudu_match_2_5 == 2) && ((value > 1)))") != std::string::npos);
 }
 
 void test_typed_literal_initializers_use_type_ast() {
