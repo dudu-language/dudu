@@ -136,7 +136,9 @@ the native build needs toolchain files, platform rules, vendored C/C++ code, or
 larger dependency graphs.
 
 Generated CMake under `build/` belongs to Dudu and may be overwritten.
-User-owned `CMakeLists.txt` files are never patched by Dudu.
+User-owned `CMakeLists.txt` files are never patched by Dudu. New projects get
+a starter `CMakeLists.txt` that builds generated Dudu module artifacts through
+`duc`; after creation, that file belongs to the project.
 
 ## Native Interop
 

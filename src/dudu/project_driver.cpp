@@ -48,6 +48,23 @@ std::string project_name(const std::filesystem::path& dir) {
     return name.empty() || name == "." ? "dudu_app" : name.string();
 }
 
+std::string cmake_identifier(std::string name) {
+    if (name.empty()) {
+        return "dudu_app";
+    }
+    for (char& c : name) {
+        const bool valid = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+                           (c >= '0' && c <= '9') || c == '_' || c == '-';
+        if (!valid) {
+            c = '_';
+        }
+    }
+    if (name.front() >= '0' && name.front() <= '9') {
+        name.insert(name.begin(), '_');
+    }
+    return name;
+}
+
 bool has_enclosing_git_repo(std::filesystem::path dir) {
     dir = std::filesystem::absolute(std::move(dir));
     while (true) {
@@ -75,6 +92,44 @@ std::string elapsed_prefix() {
     return out.str();
 }
 
+std::string scaffold_cmake_lists(const std::string& name) {
+    const std::string cmake_name = cmake_identifier(name);
+    std::ostringstream out;
+    out << "cmake_minimum_required(VERSION 3.20)\n"
+           "\n"
+        << "project(" << cmake_name
+        << " LANGUAGES CXX)\n"
+           "\n"
+           "set(DUC_EXECUTABLE \"\" CACHE FILEPATH \"Path to the duc compiler\")\n"
+           "if(NOT DUC_EXECUTABLE)\n"
+           "    find_program(DUC_EXECUTABLE_FOUND duc REQUIRED)\n"
+           "    set(DUC_EXECUTABLE \"${DUC_EXECUTABLE_FOUND}\" CACHE FILEPATH "
+           "\"Path to the duc compiler\" FORCE)\n"
+           "endif()\n"
+           "\n"
+           "set(DUDU_ENTRY \"${CMAKE_CURRENT_SOURCE_DIR}/src/main.dd\")\n"
+           "set(DUDU_GENERATED_DIR \"${CMAKE_CURRENT_BINARY_DIR}/dudu-generated\")\n"
+           "set(DUDU_GENERATED_MAIN \"${DUDU_GENERATED_DIR}/main.cpp\")\n"
+           "\n"
+           "add_custom_command(\n"
+           "    OUTPUT\n"
+           "        \"${DUDU_GENERATED_MAIN}\"\n"
+           "        \"${DUDU_GENERATED_DIR}/main.hpp\"\n"
+           "        \"${DUDU_GENERATED_DIR}/dudu_runtime.hpp\"\n"
+           "    COMMAND \"${CMAKE_COMMAND}\" -E make_directory \"${DUDU_GENERATED_DIR}\"\n"
+           "    COMMAND \"${DUC_EXECUTABLE}\" emit-modules \"${DUDU_ENTRY}\" -o "
+           "\"${DUDU_GENERATED_DIR}\"\n"
+           "    DEPENDS \"${DUDU_ENTRY}\"\n"
+           "    WORKING_DIRECTORY \"${CMAKE_CURRENT_SOURCE_DIR}\"\n"
+           "    VERBATIM\n"
+           ")\n"
+           "\n";
+    out << "add_executable(" << cmake_name << " \"${DUDU_GENERATED_MAIN}\")\n"
+        << "target_include_directories(" << cmake_name << " PRIVATE \"${DUDU_GENERATED_DIR}\")\n"
+        << "target_compile_features(" << cmake_name << " PRIVATE cxx_std_20)\n";
+    return out.str();
+}
+
 } // namespace
 
 std::filesystem::path clean_project(const std::filesystem::path& dir) {
@@ -93,20 +148,21 @@ void init_project(const std::filesystem::path& dir) {
     if (write_gitignore) {
         (void)init_git_repo(dir);
     }
-    write_new_file(dir / "dudu.toml",
-                   "name = \"" + name + "\"\n"
-                   "entry = \"src/main.dd\"\n"
-                   "\n"
-                   "[cxx]\n"
-                   "standard = \"c++20\"\n"
-                   "\n"
-                   "[build]\n"
-                   "dir = \"build\"\n");
-    write_new_file(dir / "src" / "main.dd",
-                   "def main() -> i32:\n"
-                   "    print(\"hello from dudu\")\n"
-                   "    return 0\n");
+    const std::string manifest = "name = \"" + name +
+                                 "\"\n"
+                                 "entry = \"src/main.dd\"\n"
+                                 "\n"
+                                 "[cxx]\n"
+                                 "standard = \"c++20\"\n"
+                                 "\n"
+                                 "[build]\n"
+                                 "dir = \"build\"\n";
+    write_new_file(dir / "dudu.toml", manifest);
+    write_new_file(dir / "src" / "main.dd", "def main() -> i32:\n"
+                                            "    print(\"hello from dudu\")\n"
+                                            "    return 0\n");
     write_new_file(dir / "README.md", "# " + name + "\n\nRun with:\n\n```bash\ndudu run\n```\n");
+    write_new_file(dir / "CMakeLists.txt", scaffold_cmake_lists(name));
     if (write_gitignore) {
         write_new_file(dir / ".gitignore", "build/\n");
     }

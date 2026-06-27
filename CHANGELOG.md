@@ -120,6 +120,8 @@
   front door, with direct and CMake backends as implementation details.
 - Added fast validation that `dudu init` and `dudu new` create runnable hello
   projects with the documented git/`.gitignore` behavior.
+- Added an initial user-owned `CMakeLists.txt` to `dudu init` and `dudu new`
+  scaffolds; it builds generated Dudu module artifacts through `duc`.
 - Made direct `dudu build` and `dudu run` print separate `analyze`, `emit`,
   `compile`, and final `output`/`run` stages.
 - Clarified native-header redeclaration collision handling by spelling the

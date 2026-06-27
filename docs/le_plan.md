@@ -1634,7 +1634,9 @@ push. They are not release packaging work.
    the same CMake install rules instead of acting as a package manager.
    `dudu init` and `dudu new` have fast acceptance coverage proving they create
    runnable hello projects and follow the documented git/`.gitignore` behavior
-   inside and outside an enclosing repository.
+   inside and outside an enclosing repository. They also create a starter
+   user-owned `CMakeLists.txt` that builds generated Dudu module artifacts
+   through `duc`; the fast smoke configures and builds that file with CMake.
    `dudu build`, `dudu run`, and `dudu test` use the generated-CMake backend by
    default, even for single-module inputs, so generated C++ stays split into
    per-module artifacts. The project configuration model also defaults to

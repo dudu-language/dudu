@@ -92,6 +92,7 @@ dudu clean
 dudu.toml
 src/main.dd
 README.md
+CMakeLists.txt
 ```
 
 `dudu init tools/pack` initializes a specific directory, creating it if needed.
@@ -103,6 +104,7 @@ hello/
     dudu.toml
     src/main.dd
     README.md
+    CMakeLists.txt
 ```
 
 Like Cargo, `dudu init` and `dudu new` initialize git and write `.gitignore`

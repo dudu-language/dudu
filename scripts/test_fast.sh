@@ -133,11 +133,13 @@ compile_and_expect value_match_assign 60
 "$repo_root/build/dudu" --help | grep -Fq 'dudu build [input.dd|target] [--quiet] [--verbose]'
 "$repo_root/build/dudu" --help | grep -Fq 'dudu check [input.dd|dir] [--quiet]'
 "$repo_root/build/dudu" bench compiler --quiet -- --help | grep -q 'bench_compiler.sh'
-init_smoke="$(mktemp -d)"
+init_parent="$(mktemp -d)"
+init_smoke="$init_parent/hello_init"
 "$repo_root/build/dudu" init "$init_smoke"
 test -f "$init_smoke/dudu.toml"
 test -f "$init_smoke/src/main.dd"
 test -f "$init_smoke/README.md"
+test -f "$init_smoke/CMakeLists.txt"
 test -f "$init_smoke/.gitignore"
 test -d "$init_smoke/.git"
 init_run_output="$(
@@ -145,12 +147,29 @@ init_run_output="$(
     "$repo_root/build/dudu" run --quiet
 )"
 printf '%s\n' "$init_run_output" | grep -Fq 'hello from dudu'
-rm -rf "$init_smoke"
+cmake -S "$init_smoke" -B "$init_smoke/cmake-build" \
+    -DDUC_EXECUTABLE="$repo_root/build/duc" >/dev/null
+cmake --build "$init_smoke/cmake-build" >/dev/null
+cmake_init_output="$("$init_smoke/cmake-build/hello_init")"
+printf '%s\n' "$cmake_init_output" | grep -Fq 'hello from dudu'
+cat >>"$init_smoke/dudu.toml" <<'TOML'
+
+[cmake]
+source = "."
+target = "hello_init"
+TOML
+user_cmake_init_output="$(
+    cd "$init_smoke"
+    PATH="$repo_root/build:$PATH" "$repo_root/build/dudu" run --quiet
+)"
+printf '%s\n' "$user_cmake_init_output" | grep -Fq 'hello from dudu'
+rm -rf "$init_parent"
 new_smoke="$repo_root/build/project_new_smoke"
 rm -rf "$new_smoke"
 "$repo_root/build/dudu" new "$new_smoke"
 test -f "$new_smoke/dudu.toml"
 test -f "$new_smoke/src/main.dd"
+test -f "$new_smoke/CMakeLists.txt"
 test ! -e "$new_smoke/.gitignore"
 new_run_output="$(
     cd "$new_smoke"
