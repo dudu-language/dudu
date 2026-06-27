@@ -96,6 +96,30 @@ std::string command_failure_message(const std::string& label, const std::string&
     return message;
 }
 
+std::filesystem::path generated_target_artifact(const ProjectConfig& config,
+                                                const std::filesystem::path& build_dir,
+                                                const std::string& target) {
+    if (config.target_kind == "library") {
+        return build_dir / ("lib" + target + ".a");
+    }
+    if (config.target_kind == "shared_library") {
+        return build_dir / ("lib" + target + ".so");
+    }
+    return build_dir / target;
+}
+
+std::filesystem::path copy_output_artifact(const std::filesystem::path& source,
+                                           const std::filesystem::path& output) {
+    std::error_code error;
+    if (std::filesystem::equivalent(source, output, error)) {
+        return output;
+    }
+    std::filesystem::create_directories(output.parent_path().empty() ? "." : output.parent_path());
+    std::filesystem::copy_file(source, output, std::filesystem::copy_options::overwrite_existing);
+    std::filesystem::permissions(output, std::filesystem::status(source).permissions());
+    return output;
+}
+
 void configure_user_cmake(const UserCMakeBackendOptions& options,
                           const std::filesystem::path& build_dir) {
     const std::filesystem::path source_dir =
@@ -235,7 +259,7 @@ std::filesystem::path run_cmake_backend(const CMakeBackendOptions& options) {
     if (build_status != 0) {
         fail(command_failure_message("CMake build", build_command, build_log));
     }
-    return build_dir / options.target;
+    return generated_target_artifact(options.config, build_dir, options.target);
 }
 
 std::filesystem::path run_user_cmake_backend(const UserCMakeBackendOptions& options) {
@@ -280,23 +304,28 @@ int run_user_cmake_tests(const UserCMakeBackendOptions& options) {
 }
 
 std::filesystem::path build_cmake_project(const BuildCMakeProjectOptions& options) {
-    if (options.output.has_value()) {
-        fail("CMake backend does not support -o; configure the target name in dudu.toml");
-    }
     if (uses_user_cmake_backend(options.config)) {
+        if (options.output.has_value()) {
+            fail("user-owned CMake backend does not support -o; configure the target in CMake");
+        }
         return run_user_cmake_backend({.config = options.config,
                                        .root = default_user_cmake_backend_root(options.config),
                                        .stream_output = options.stream_output,
                                        .verbose = options.verbose});
     }
-    return run_cmake_backend({.config = options.config,
-                              .root = default_cmake_backend_root(options.config),
-                              .cmake_lists = emit_cmake_project(options.config, options.input),
-                              .target = cmake_target_name(options.config, options.input),
-                              .dudu_executable = options.dudu_executable,
-                              .stream_output = options.stream_output,
-                              .timings = options.timings,
-                              .verbose = options.verbose});
+    const std::filesystem::path artifact =
+        run_cmake_backend({.config = options.config,
+                           .root = default_cmake_backend_root(options.config),
+                           .cmake_lists = emit_cmake_project(options.config, options.input),
+                           .target = cmake_target_name(options.config, options.input),
+                           .dudu_executable = options.dudu_executable,
+                           .stream_output = options.stream_output,
+                           .timings = options.timings,
+                           .verbose = options.verbose});
+    if (options.output.has_value()) {
+        return copy_output_artifact(artifact, *options.output);
+    }
+    return artifact;
 }
 
 } // namespace dudu

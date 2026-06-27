@@ -182,6 +182,21 @@ default_cmake_output="$("$repo_root/build/dudu" build \
     "$repo_root/tests/fixtures/simple_program.dd" 2>&1)"
 printf '%s\n' "$default_cmake_output" | grep -Eq '^backend cmake$'
 printf '%s\n' "$default_cmake_output" | grep -Eq '^output .*/simple_program$'
+default_cmake_o="$repo_root/build/default_cmake_o_smoke/simple_program_copy"
+rm -rf "$repo_root/build/default_cmake_o_smoke"
+default_cmake_o_output="$("$repo_root/build/dudu" build \
+    "$repo_root/tests/fixtures/simple_program.dd" -o "$default_cmake_o" 2>&1)"
+printf '%s\n' "$default_cmake_o_output" | grep -Eq '^backend cmake$'
+printf '%s\n' "$default_cmake_o_output" | grep -Eq "^output $default_cmake_o$"
+test -x "$default_cmake_o"
+set +e
+"$default_cmake_o"
+default_cmake_o_status=$?
+set -e
+if [[ "$default_cmake_o_status" -ne 42 ]]; then
+    echo "generated-CMake -o copied binary returned $default_cmake_o_status, expected 42" >&2
+    exit 1
+fi
 "$repo_root/build/dudu" build \
     "$repo_root/tests/fixtures/project_backend_cmake_function_namespaces" --quiet
 "$repo_root/build/duc" fmt "$repo_root/tests/fixtures/simple_program.dd" --check

@@ -1657,6 +1657,9 @@ push. They are not release packaging work.
    command lines behind `--verbose`; cached direct builds also print an explicit
    `up-to-date` outcome by default. `dudu build` reports the final artifact path
    with an `output` line for both direct and generated-CMake backends.
+   Generated-CMake executable/library builds support `-o` by copying the built
+   CMake target artifact to the requested path after a successful build, while
+   user-owned CMake keeps artifact naming under the user's CMake project.
    Direct `dudu build` and `dudu run` report Dudu-side `analyze`, generated C++
    `emit`, native `compile`, and final `output`/`run` stages separately so
    normal builds show where time is going.
