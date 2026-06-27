@@ -231,12 +231,6 @@ std::optional<Symbol> unambiguous_suffix_symbol_match(const std::vector<Symbol>&
     return matches.front();
 }
 
-std::vector<Symbol> symbols_for_document(const ModuleAst& module, const Document& doc,
-                                         bool include_native) {
-    (void)doc;
-    return symbols_for_module(module, include_native);
-}
-
 std::vector<Symbol> symbols_for_document(const Document& doc, bool include_native) {
     try {
         ModuleAst module = parse_source(doc.text, doc.path);

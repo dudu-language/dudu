@@ -106,6 +106,8 @@
 - Fixed LSP member-call selection so references and rename preserve full
   callee paths such as `module_alias.function` when the cursor is on the member
   name.
+- Made LSP references and rename derive cursor selection from the same visible
+  parsed module unit used for their symbol and reference scans.
 - Shared parsed `TypeRef` index and iterable inference for public string entry
   points before falling back to native/operator boundaries.
 - Added Cairo to the optional native compatibility probe suite.

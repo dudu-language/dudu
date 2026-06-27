@@ -315,9 +315,10 @@ ReferenceScope reference_scope_at(const Document& doc, const Json* params, const
 
 std::string references_json(const Document& doc, const Json* params,
                             const std::map<std::string, Document>& workspace) {
-    const AstSelection selection = ast_selection_at(doc, params);
     const std::optional<ModuleAst> current_module = load_document_module(doc, true);
     const ModuleAst* current_unit = visible_document_module(current_module, doc);
+    const AstSelection selection =
+        current_unit == nullptr ? AstSelection{} : ast_selection_at(*current_unit, params);
     const std::vector<Symbol> current_symbols_with_native =
         current_unit == nullptr ? std::vector<Symbol>{}
                                 : visible_symbols_for_document(*current_unit, doc, true);
@@ -419,12 +420,13 @@ std::string references_json(const Document& doc, const Json* params,
 
 std::string rename_json(const Document& doc, const Json* params,
                         const std::map<std::string, Document>& workspace) {
-    const AstSelection selection = ast_selection_at(doc, params);
+    const std::optional<ModuleAst> current_module = load_document_module(doc, true);
+    const ModuleAst* current_unit = visible_document_module(current_module, doc);
+    const AstSelection selection =
+        current_unit == nullptr ? AstSelection{} : ast_selection_at(*current_unit, params);
     const std::string old_name = selection.symbol.value_or("");
     const std::string new_name =
         params == nullptr ? std::string{} : string_value(params->get("newName"));
-    const std::optional<ModuleAst> current_module = load_document_module(doc, true);
-    const ModuleAst* current_unit = visible_document_module(current_module, doc);
     const std::vector<Symbol> current_symbols_without_native =
         current_unit == nullptr ? std::vector<Symbol>{}
                                 : visible_symbols_for_document(*current_unit, doc, false);

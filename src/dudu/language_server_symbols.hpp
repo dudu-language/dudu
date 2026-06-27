@@ -10,8 +10,6 @@
 namespace dudu {
 
 std::vector<Symbol> symbols_for_module(const ModuleAst& module, bool include_native = true);
-std::vector<Symbol> symbols_for_document(const ModuleAst& module, const Document& doc,
-                                         bool include_native = true);
 std::vector<Symbol> symbols_for_document(const Document& doc, bool include_native = true);
 std::vector<Symbol> visible_symbols_for_document(const ModuleAst& module, const Document& doc,
                                                  bool include_native = true);
