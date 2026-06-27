@@ -111,6 +111,8 @@
 - Made LSP definition lookup reuse a loaded module tree for header imports,
   cursor selection, current-file symbols, and Dudu import resolution before
   loading native-aware state for member/native fallbacks.
+- Made LSP hover reuse the loaded module tree for normal/imported symbols and
+  load native-aware state only for native symbol/member fallback hover.
 - Shared parsed `TypeRef` index and iterable inference for public string entry
   points before falling back to native/operator boundaries.
 - Added Cairo to the optional native compatibility probe suite.

@@ -2590,7 +2590,9 @@ push. They are not release packaging work.
    misleading unused module/document symbol overload was removed. Definition
    lookup now also reuses one loaded module tree for header imports, cursor
    selection, current-file symbols, and Dudu import resolution before loading
-   native-aware state only for member/native fallbacks.
+   native-aware state only for member/native fallbacks. Hover lookup now uses
+   the same loaded module tree for normal/imported symbols and loads
+   native-aware state only for native symbol/member fallback hover.
    `offsetof[Type]("field")` C++ emission now requires the parsed string
    literal value carried by the AST instead of unquoting raw expression text as
    a malformed-node fallback.

@@ -48,89 +48,81 @@ std::string doc_comment_before(const Document& doc, int one_based_line) {
     return out.str();
 }
 
-std::optional<std::string> imported_symbol_hover_json(const Document& doc,
+std::optional<std::string> imported_symbol_hover_json(const Document& doc, const ModuleAst& module,
+                                                      const ModuleAst& current,
                                                       const std::string& word) {
     if (word.empty()) {
         return std::nullopt;
     }
-    try {
-        const ModuleAst module = module_for_document(doc, false);
-        const ModuleAst& current = visible_module_unit(module, doc.path);
-        for (const ImportDecl& import : current.imports) {
-            std::string target;
-            if (import.kind == ImportKind::Module) {
-                const std::string bound = bound_import_name(import);
-                const std::vector<std::string> prefixes =
-                    import.alias.empty() ? std::vector<std::string>{import.module_path, bound}
-                                         : std::vector<std::string>{bound};
-                for (const std::string& prefix : prefixes) {
-                    if (word.rfind(prefix + ".", 0) == 0) {
-                        target = word.substr(prefix.size() + 1);
-                        break;
-                    }
+    for (const ImportDecl& import : current.imports) {
+        std::string target;
+        if (import.kind == ImportKind::Module) {
+            const std::string bound = bound_import_name(import);
+            const std::vector<std::string> prefixes =
+                import.alias.empty() ? std::vector<std::string>{import.module_path, bound}
+                                     : std::vector<std::string>{bound};
+            for (const std::string& prefix : prefixes) {
+                if (word.rfind(prefix + ".", 0) == 0) {
+                    target = word.substr(prefix.size() + 1);
+                    break;
                 }
-                if (target.empty()) {
-                    continue;
-                }
-            } else if (import.kind == ImportKind::From && bound_import_name(import) == word) {
-                target = import.imported_name;
-            } else {
+            }
+            if (target.empty()) {
                 continue;
             }
-            const std::filesystem::path file =
-                module_path_to_file(doc.path.parent_path(), import.module_path);
-            std::error_code error;
-            if (!std::filesystem::exists(file, error) || error) {
-                continue;
-            }
-            const ModuleAst* imported = imported_module_unit(module, current, import);
-            ModuleAst loaded_imported;
-            if (imported == nullptr) {
-                loaded_imported = load_source_tree(file);
-                imported = &visible_module_unit(loaded_imported, file);
-            }
-            for (const Symbol& symbol : symbols_for_module(*imported, false)) {
-                if (symbol.name != target) {
-                    continue;
-                }
-                return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"`" +
-                       json_escape(symbol.detail) + "`\"}}";
-            }
+        } else if (import.kind == ImportKind::From && bound_import_name(import) == word) {
+            target = import.imported_name;
+        } else {
+            continue;
         }
-    } catch (const std::exception&) {
+        const std::filesystem::path file =
+            module_path_to_file(doc.path.parent_path(), import.module_path);
+        std::error_code error;
+        if (!std::filesystem::exists(file, error) || error) {
+            continue;
+        }
+        const ModuleAst* imported = imported_module_unit(module, current, import);
+        ModuleAst loaded_imported;
+        if (imported == nullptr) {
+            loaded_imported = load_source_tree(file);
+            imported = &visible_module_unit(loaded_imported, file);
+        }
+        for (const Symbol& symbol : symbols_for_module(*imported, false)) {
+            if (symbol.name != target) {
+                continue;
+            }
+            return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"`" +
+                   json_escape(symbol.detail) + "`\"}}";
+        }
     }
     return std::nullopt;
 }
 
-std::optional<std::string> native_alias_hover_json(const Document& doc, const std::string& word) {
+std::optional<std::string> native_alias_hover_json(const std::string& word,
+                                                   const ModuleAst& module) {
     if (word.empty()) {
         return std::nullopt;
     }
-    try {
-        ModuleAst module = module_for_document(doc, true);
-        const auto build_hover = [&](const NativeTypeDecl& type) -> std::optional<std::string> {
-            const std::optional<NativeClassDefinition> target =
-                native_alias_target_class_definition(module, type);
-            if (!target) {
-                return std::nullopt;
-            }
-            const std::string markdown = "`native type = " + native_type_alias_type_text(type) +
-                                         "`\n\nresolves to `" + "native class " + target->name +
-                                         "`";
-            return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"" + json_escape(markdown) +
-                   "\"},\"range\":" + range_json(type.location) + "}";
-        };
-        for (const NativeTypeDecl& type : module.native_types) {
-            if (type.name == word) {
-                return build_hover(type);
-            }
+    const auto build_hover = [&](const NativeTypeDecl& type) -> std::optional<std::string> {
+        const std::optional<NativeClassDefinition> target =
+            native_alias_target_class_definition(module, type);
+        if (!target) {
+            return std::nullopt;
         }
-        for (const NativeTypeDecl& type : module.native_types) {
-            if (symbol_matches(type.name, word)) {
-                return build_hover(type);
-            }
+        const std::string markdown = "`native type = " + native_type_alias_type_text(type) +
+                                     "`\n\nresolves to `" + "native class " + target->name + "`";
+        return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"" + json_escape(markdown) +
+               "\"},\"range\":" + range_json(type.location) + "}";
+    };
+    for (const NativeTypeDecl& type : module.native_types) {
+        if (type.name == word) {
+            return build_hover(type);
         }
-    } catch (const std::exception&) {
+    }
+    for (const NativeTypeDecl& type : module.native_types) {
+        if (symbol_matches(type.name, word)) {
+            return build_hover(type);
+        }
     }
     return std::nullopt;
 }
@@ -147,7 +139,7 @@ std::string symbol_hover_json(const Document& doc, const Symbol& symbol) {
 }
 
 std::optional<std::string> member_hover_json(const Document& doc, const ExprPath& path,
-                                             const Json* params) {
+                                             const Json* params, const ModuleAst& module) {
     if (params == nullptr || path.segments.size() < 2 ||
         path.segments.front().kind != ExprPathSegmentKind::Name ||
         path.segments.back().kind != ExprPathSegmentKind::Name) {
@@ -159,90 +151,117 @@ std::optional<std::string> member_hover_json(const Document& doc, const ExprPath
     if (!has_type_ref(type_ref)) {
         return std::nullopt;
     }
-    try {
-        ModuleAst module = module_for_document(doc, true);
-        const std::set<std::string> candidate_types = member_candidate_types(module, type_ref);
-        const auto find_member =
-            [&](const std::vector<ClassDecl>& classes) -> std::optional<std::string> {
-            for (const ClassDecl& klass : classes) {
-                if (!candidate_types.contains(klass.name)) {
-                    continue;
-                }
-                for (const FieldDecl& field : klass.fields) {
-                    if (field.name == member) {
-                        return symbol_hover_json(
-                            doc, {.name = field.name,
-                                  .detail = field.name + ": " + type_ref_text(field.type_ref),
-                                  .location = field.location,
-                                  .kind = lsp_symbol_kind::Field,
-                                  .native_identity_key = std::nullopt});
-                    }
-                }
-                for (const ConstDecl& constant : klass.constants) {
-                    if (constant.name == member) {
-                        return symbol_hover_json(
-                            doc, {.name = constant.name,
-                                  .detail = constant.name + ": " + type_ref_text(constant.type_ref),
-                                  .location = constant.location,
-                                  .kind = lsp_symbol_kind::Constant,
-                                  .native_identity_key = std::nullopt});
-                    }
-                }
-                for (const ConstDecl& field : klass.static_fields) {
-                    if (field.name == member) {
-                        return symbol_hover_json(
-                            doc, {.name = field.name,
-                                  .detail = field.name + ": " + type_ref_text(field.type_ref),
-                                  .location = field.location,
-                                  .kind = lsp_symbol_kind::Field,
-                                  .native_identity_key = std::nullopt});
-                    }
-                }
-                for (const FunctionDecl& method : klass.methods) {
-                    if (method.name == member) {
-                        return symbol_hover_json(doc,
-                                                 {.name = method.name,
-                                                  .detail = function_detail(method),
-                                                  .location = method.location,
-                                                  .kind = is_constructor_method_name(method.name)
-                                                              ? lsp_symbol_kind::Constructor
-                                                              : lsp_symbol_kind::Method,
-                                                  .native_identity_key = std::nullopt});
-                    }
+    const std::set<std::string> candidate_types = member_candidate_types(module, type_ref);
+    const auto find_member =
+        [&](const std::vector<ClassDecl>& classes) -> std::optional<std::string> {
+        for (const ClassDecl& klass : classes) {
+            if (!candidate_types.contains(klass.name)) {
+                continue;
+            }
+            for (const FieldDecl& field : klass.fields) {
+                if (field.name == member) {
+                    return symbol_hover_json(
+                        doc, {.name = field.name,
+                              .detail = field.name + ": " + type_ref_text(field.type_ref),
+                              .location = field.location,
+                              .kind = lsp_symbol_kind::Field,
+                              .native_identity_key = std::nullopt});
                 }
             }
-            return std::nullopt;
-        };
-        if (const std::optional<std::string> native = find_member(module.native_classes)) {
-            return native;
+            for (const ConstDecl& constant : klass.constants) {
+                if (constant.name == member) {
+                    return symbol_hover_json(
+                        doc, {.name = constant.name,
+                              .detail = constant.name + ": " + type_ref_text(constant.type_ref),
+                              .location = constant.location,
+                              .kind = lsp_symbol_kind::Constant,
+                              .native_identity_key = std::nullopt});
+                }
+            }
+            for (const ConstDecl& field : klass.static_fields) {
+                if (field.name == member) {
+                    return symbol_hover_json(
+                        doc, {.name = field.name,
+                              .detail = field.name + ": " + type_ref_text(field.type_ref),
+                              .location = field.location,
+                              .kind = lsp_symbol_kind::Field,
+                              .native_identity_key = std::nullopt});
+                }
+            }
+            for (const FunctionDecl& method : klass.methods) {
+                if (method.name == member) {
+                    return symbol_hover_json(doc, {.name = method.name,
+                                                   .detail = function_detail(method),
+                                                   .location = method.location,
+                                                   .kind = is_constructor_method_name(method.name)
+                                                               ? lsp_symbol_kind::Constructor
+                                                               : lsp_symbol_kind::Method,
+                                                   .native_identity_key = std::nullopt});
+                }
+            }
         }
-        return find_member(module.classes);
-    } catch (const std::exception&) {
+        return std::nullopt;
+    };
+    if (const std::optional<std::string> native = find_member(module.native_classes)) {
+        return native;
     }
-    return std::nullopt;
+    return find_member(module.classes);
 }
 
 } // namespace
 
 std::string hover_json(const Document& doc, const std::string& word, const std::string& local_type,
                        const Json* params, std::optional<ExprPath> selected_path) {
-    if (const std::optional<std::string> native_alias = native_alias_hover_json(doc, word)) {
-        return *native_alias;
+    ModuleAst module;
+    try {
+        module = module_for_document(doc, false);
+    } catch (const std::exception&) {
+        return "null";
     }
-    const std::vector<Symbol> symbols = symbols_for_document(doc);
+    const ModuleAst& current = visible_module_unit(module, doc.path);
+    const std::vector<Symbol> symbols = visible_symbols_for_document(current, doc, false);
     if (const std::optional<Symbol> exact = exact_symbol_match(symbols, word)) {
         return symbol_hover_json(doc, *exact);
     }
-    if (const std::optional<std::string> imported = imported_symbol_hover_json(doc, word)) {
+    if (const std::optional<std::string> imported =
+            imported_symbol_hover_json(doc, module, current, word)) {
         return *imported;
     }
+    std::optional<ModuleAst> native_module;
+    const auto load_native_module = [&]() -> const ModuleAst* {
+        if (!native_module.has_value()) {
+            native_module = module_for_document(doc, true);
+        }
+        return &*native_module;
+    };
+    try {
+        const ModuleAst* native = load_native_module();
+        if (const std::optional<std::string> native_alias =
+                native_alias_hover_json(word, *native)) {
+            return *native_alias;
+        }
+        const std::vector<Symbol> native_symbols =
+            visible_symbols_for_document(visible_module_unit(*native, doc.path), doc, true);
+        if (const std::optional<Symbol> exact = exact_symbol_match(native_symbols, word)) {
+            return symbol_hover_json(doc, *exact);
+        }
+        if (const std::optional<Symbol> suffix =
+                unambiguous_suffix_symbol_match(native_symbols, word)) {
+            return symbol_hover_json(doc, *suffix);
+        }
+    } catch (const std::exception&) {
+    }
     if (!selected_path.has_value() && params != nullptr) {
-        selected_path = ast_expr_path_at(doc, params);
+        selected_path = ast_selection_at(current, params).expr_path;
     }
     if (selected_path.has_value()) {
-        if (const std::optional<std::string> member_hover =
-                member_hover_json(doc, *selected_path, params)) {
-            return *member_hover;
+        try {
+            const ModuleAst* native = load_native_module();
+            if (const std::optional<std::string> member_hover =
+                    member_hover_json(doc, *selected_path, params, *native)) {
+                return *member_hover;
+            }
+        } catch (const std::exception&) {
         }
     }
     if (const std::optional<Symbol> suffix = unambiguous_suffix_symbol_match(symbols, word)) {
