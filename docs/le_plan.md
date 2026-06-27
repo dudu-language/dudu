@@ -1542,6 +1542,11 @@ push. They are not release packaging work.
    unambiguous; receiver-aware member definition and hover run before suffix
    fallback, so same-named native methods resolve through the expression
    receiver type instead of scan order.
+   Cursor selection for definition and reference queries now runs through a
+   shared AST-backed selection pass that records the simple symbol, dotted
+   symbol path, and expression path together. This removes duplicated parse/walk
+   work from the hot editor path and keeps future hover/reference/rename
+   improvements on one cursor-selection model.
    Find-references keeps unresolved member expressions as dotted queries instead
    of falling back to the bare member name, so unrelated same-named member calls
    are not reported together. Module-qualified references now also include the
@@ -1905,7 +1910,9 @@ push. They are not release packaging work.
    explicit typed block-check context, and the migration guard rejects the old
    callback wrapper name. LSP references and navigation code now share AST
    type/expression/statement traversal helpers instead of carrying duplicated
-   recursive walker lambdas in each feature. Local function-type alias
+   recursive walker lambdas in each feature, and cursor selection now lives in
+   `language_server_selection.*` instead of navigation utilities so definition
+   and reference lookup share one AST selection result. Local function-type alias
    resolution now uses an explicit helper instead of a recursive
    `std::function` lambda, keeping sema recursion named after the compiler
    concept it implements. Core AST expression/statement visitors are now

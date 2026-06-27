@@ -1,5 +1,7 @@
 #pragma once
 
+#include "dudu/ast.hpp"
+#include "dudu/ast_expr.hpp"
 #include "dudu/language_server_types.hpp"
 #include "dudu/source.hpp"
 
@@ -12,11 +14,16 @@ namespace dudu {
 
 struct Json;
 struct Expr;
-struct ExprPath;
 
 struct LspPosition {
     int line = 0;
     int character = 0;
+};
+
+struct AstSelection {
+    std::optional<std::string> symbol;
+    std::optional<std::string> symbol_path;
+    std::optional<ExprPath> expr_path;
 };
 
 std::string range_json(const SourceLocation& location);
@@ -30,6 +37,8 @@ std::string uri_for_location(const SourceLocation& location, const Document& doc
 std::string file_uri(const std::filesystem::path& path);
 SourceLocation expr_name_location(const Expr& expr);
 
+AstSelection ast_selection_at(const ModuleAst& module, const Json* params);
+AstSelection ast_selection_at(const Document& doc, const Json* params);
 std::optional<std::string> ast_symbol_at(const Document& doc, const Json* params);
 std::optional<std::string> ast_symbol_path_at(const Document& doc, const Json* params);
 std::optional<ExprPath> ast_expr_path_at(const Document& doc, const Json* params);

@@ -211,15 +211,15 @@ std::string dotted_tail(const std::string& query) {
     return dot == std::string::npos ? query : query.substr(dot + 1);
 }
 
-std::string reference_query_at(const Document& doc, const Json* params) {
-    const std::string name = ast_symbol_at(doc, params).value_or("");
+std::string reference_query_at(const Document& doc, const AstSelection& selection) {
+    const std::string name = selection.symbol.value_or("");
     std::optional<std::string> expression_path;
     std::vector<std::string> paths;
-    if (const std::optional<std::string> path = ast_symbol_path_at(doc, params)) {
-        paths.push_back(*path);
+    if (selection.symbol_path.has_value()) {
+        paths.push_back(*selection.symbol_path);
     }
-    if (const std::optional<ExprPath> path = ast_expr_path_at(doc, params)) {
-        expression_path = render_expr_path(*path);
+    if (selection.expr_path.has_value()) {
+        expression_path = render_expr_path(*selection.expr_path);
         paths.push_back(*expression_path);
     }
     try {
@@ -313,7 +313,8 @@ ReferenceScope reference_scope_at(const Document& doc, const Json* params,
 
 std::string references_json(const Document& doc, const Json* params,
                             const std::map<std::string, Document>& workspace) {
-    const std::string query = reference_query_at(doc, params);
+    const AstSelection selection = ast_selection_at(doc, params);
+    const std::string query = reference_query_at(doc, selection);
     const ReferenceScope scope = reference_scope_at(doc, params, query);
     if (scope == ReferenceScope::None) {
         return "[]";

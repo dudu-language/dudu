@@ -85,6 +85,9 @@
   source text, and the leftover dotted-symbol character helper was deleted.
 - Shared Dudu constructor/destructor method-name predicates between sema and
   C++ class emission through the naming module.
+- Split LSP cursor selection into a shared AST-backed selection pass so
+  definition and reference queries can reuse the selected symbol, dotted path,
+  and expression path instead of reparsing for each lookup question.
 - Shared parsed `TypeRef` index and iterable inference for public string entry
   points before falling back to native/operator boundaries.
 - Added Cairo to the optional native compatibility probe suite.

@@ -278,7 +278,8 @@ std::string definition_json(const Document& doc, const Json* params) {
     if (const std::optional<std::string> header = header_definition_json(doc, params)) {
         return *header;
     }
-    const std::string word = ast_symbol_path_at(doc, params).value_or("");
+    const AstSelection selection = ast_selection_at(doc, params);
+    const std::string word = selection.symbol_path.value_or("");
     if (word.empty()) {
         return "null";
     }
@@ -286,7 +287,7 @@ std::string definition_json(const Document& doc, const Json* params) {
     if (const std::optional<Symbol> exact = exact_symbol_match(symbols, word)) {
         return symbol_definition_json(*exact, doc);
     }
-    const std::optional<ExprPath> path = ast_expr_path_at(doc, params);
+    const std::optional<ExprPath>& path = selection.expr_path;
     if (path && path->segments.size() >= 2) {
         if (const std::optional<std::string> member_definition =
                 member_definition_json(doc, *path, params)) {
@@ -313,7 +314,8 @@ std::string definition_json(const Document& doc, const Json* params) {
     if (const std::optional<Symbol> exact = exact_symbol_match(native_symbols, word)) {
         return symbol_definition_json(*exact, doc);
     }
-    if (const std::optional<Symbol> suffix = unambiguous_suffix_symbol_match(native_symbols, word)) {
+    if (const std::optional<Symbol> suffix =
+            unambiguous_suffix_symbol_match(native_symbols, word)) {
         return symbol_definition_json(*suffix, doc);
     }
     return "null";
