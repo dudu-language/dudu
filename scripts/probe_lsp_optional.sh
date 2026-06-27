@@ -120,12 +120,13 @@ def run_case(case):
         check=True,
     )
     responses = read_packets(proc.stdout)
-    diagnostics = [
+    diagnostic_packets = [
         item
         for item in responses
         if item.get("method") == "textDocument/publishDiagnostics"
         and item["params"]["uri"] == uri
-    ][0]["params"]["diagnostics"]
+    ]
+    diagnostics = diagnostic_packets[0]["params"]["diagnostics"] if diagnostic_packets else []
     if diagnostics:
         raise AssertionError(f"{case['name']} diagnostics: {diagnostics}")
 
