@@ -4,9 +4,11 @@
 #include "dudu/native_build.hpp"
 #include "dudu/source.hpp"
 
+#include <chrono>
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
+#include <thread>
 
 namespace dudu {
 namespace {
@@ -14,6 +16,37 @@ namespace {
 [[noreturn]] void fail(const std::string& message) {
     throw std::runtime_error(message);
 }
+
+class BackendLock {
+  public:
+    explicit BackendLock(const std::filesystem::path& root) : lock_dir_(root / ".dudu.lock") {
+        std::filesystem::create_directories(root);
+        constexpr int max_attempts = 2400;
+        for (int attempt = 0; attempt < max_attempts; ++attempt) {
+            if (std::filesystem::create_directory(lock_dir_)) {
+                locked_ = true;
+                return;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        }
+        fail("CMake backend is locked by another dudu process: " + lock_dir_.string());
+    }
+
+    BackendLock(const BackendLock&) = delete;
+    BackendLock& operator=(const BackendLock&) = delete;
+
+    ~BackendLock() {
+        if (!locked_) {
+            return;
+        }
+        std::error_code ignored;
+        std::filesystem::remove_all(lock_dir_, ignored);
+    }
+
+  private:
+    std::filesystem::path lock_dir_;
+    bool locked_ = false;
+};
 
 std::string read_text_file(const std::filesystem::path& path) {
     std::ifstream file(path);
@@ -37,8 +70,7 @@ bool write_text_file(const std::filesystem::path& path, const std::string& text)
 }
 
 bool configure_is_current(const std::filesystem::path& build_dir,
-                          const std::filesystem::path& command_path,
-                          const std::string& command) {
+                          const std::filesystem::path& command_path, const std::string& command) {
     return std::filesystem::exists(build_dir / "CMakeCache.txt") &&
            read_text_file(command_path) == command;
 }
@@ -161,6 +193,7 @@ bool uses_user_cmake_backend(const ProjectConfig& config) {
 }
 
 std::filesystem::path run_cmake_backend(const CMakeBackendOptions& options) {
+    const BackendLock lock(options.root);
     const std::filesystem::path source_dir = options.root / "source";
     const std::filesystem::path build_dir = options.root / "build";
     const std::filesystem::path cmake_lists = source_dir / "CMakeLists.txt";
@@ -178,8 +211,8 @@ std::filesystem::path run_cmake_backend(const CMakeBackendOptions& options) {
         std::cerr << configure_command << '\n';
     }
     print_stage(options.stream_output, "configure", build_dir);
-    if (cmake_lists_changed || !configure_is_current(build_dir, configure_command_log,
-                                                     configure_command)) {
+    if (cmake_lists_changed ||
+        !configure_is_current(build_dir, configure_command_log, configure_command)) {
         const int configure_status =
             options.stream_output ? run_shell_command_streaming(configure_command, configure_log)
                                   : run_shell_command(configure_command, configure_log);
@@ -209,7 +242,7 @@ std::filesystem::path run_user_cmake_backend(const UserCMakeBackendOptions& opti
     if (!uses_user_cmake_backend(options.config)) {
         fail("user-owned CMake backend requires [build] backend = \"cmake\" and [cmake] source");
     }
-    std::filesystem::create_directories(options.root);
+    const BackendLock lock(options.root);
     const std::filesystem::path build_dir = options.root / "build";
     const std::string target = user_cmake_target_name(options.config);
 
@@ -222,7 +255,7 @@ int run_user_cmake_tests(const UserCMakeBackendOptions& options) {
     if (!uses_user_cmake_backend(options.config)) {
         fail("user-owned CMake tests require [build] backend = \"cmake\" and [cmake] source");
     }
-    std::filesystem::create_directories(options.root);
+    const BackendLock lock(options.root);
     const std::filesystem::path build_dir = options.root / "build";
     configure_user_cmake(options, build_dir);
     build_user_cmake(options, build_dir, std::nullopt);

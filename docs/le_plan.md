@@ -370,6 +370,11 @@ Make daily use feel good:
 - better test binary output paths: done
 - examples and docs that prefer `dudu run` where it improves usability: done
 
+Status note: generated CMake backend invocations now take a per-build-root lock
+so concurrent `dudu build <target>` runs in one project serialize instead of
+clobbering the shared generated `CMakeLists.txt` and producing misleading
+CMake target errors.
+
 This pays off immediately because every future example and feature becomes
 easier to build, run, and test.
 
