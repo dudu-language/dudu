@@ -40,6 +40,12 @@ void collect_selection_from_statements(const std::vector<Stmt>& statements,
         visit_type_ref_tree(type, visit_type);
     };
     const auto visit_expr = [&](const Expr& expr) {
+        if (!selection.call_callee &&
+            (expr.kind == ExprKind::Call || expr.kind == ExprKind::TemplateCall) &&
+            expr.callee.size() == 1 && expr.callee.front().kind == ExprKind::Name &&
+            contains_name(expr.callee.front().location, expr.callee.front().name, position)) {
+            selection.call_callee = true;
+        }
         if (expr.kind != ExprKind::Name && expr.kind != ExprKind::Member) {
             return;
         }
@@ -86,6 +92,12 @@ void collect_selection_from_module(const ModuleAst& module, const LspPosition& p
         visit_type_ref_tree(type, visit_type);
     };
     const auto visit_expr = [&](const Expr& expr) {
+        if (!selection.call_callee &&
+            (expr.kind == ExprKind::Call || expr.kind == ExprKind::TemplateCall) &&
+            expr.callee.size() == 1 && expr.callee.front().kind == ExprKind::Name &&
+            contains_name(expr.callee.front().location, expr.callee.front().name, position)) {
+            selection.call_callee = true;
+        }
         if (expr.kind != ExprKind::Name && expr.kind != ExprKind::Member) {
             return;
         }

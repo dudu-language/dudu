@@ -1552,6 +1552,8 @@ push. They are not release packaging work.
    context.
    Reference and rename scope decisions now also consume the shared selection
    result instead of reselecting the same symbol/path.
+   Rename call-site detection records call-callee selection during the same AST
+   walk, removing another private parse from rename scope checks.
    Find-references keeps unresolved member expressions as dotted queries instead
    of falling back to the bare member name, so unrelated same-named member calls
    are not reported together. Module-qualified references now also include the

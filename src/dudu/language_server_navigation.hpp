@@ -24,6 +24,7 @@ struct AstSelection {
     std::optional<std::string> symbol;
     std::optional<std::string> symbol_path;
     std::optional<ExprPath> expr_path;
+    bool call_callee = false;
 };
 
 std::string range_json(const SourceLocation& location);

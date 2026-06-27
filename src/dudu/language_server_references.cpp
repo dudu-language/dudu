@@ -2,7 +2,6 @@
 
 #include "dudu/ast_expr.hpp"
 #include "dudu/ast_type.hpp"
-#include "dudu/language_server_ast_walk.hpp"
 #include "dudu/language_server_import_references.hpp"
 #include "dudu/language_server_json.hpp"
 #include "dudu/language_server_local_context.hpp"
@@ -113,44 +112,6 @@ std::optional<Symbol> unique_document_declaration_for_references(const Document&
         declaration = symbol;
     }
     return declaration;
-}
-
-bool selected_call_callee(const Document& doc, const Json* params, const std::string& name) {
-    if (name.empty()) {
-        return false;
-    }
-    bool matched = false;
-    const auto visit_expr = [&](const Expr& expr) {
-        if (matched || (expr.kind != ExprKind::Call && expr.kind != ExprKind::TemplateCall) ||
-            expr.callee.size() != 1) {
-            return;
-        }
-        const Expr& callee = expr.callee.front();
-        if (callee.kind != ExprKind::Name || callee.name != name) {
-            return;
-        }
-        if (position_contains_name(params, name, callee.location)) {
-            matched = true;
-        }
-    };
-    const auto visit_stmts = [&](const std::vector<Stmt>& statements) {
-        visit_lsp_stmt_tree(
-            statements, [&](const Stmt& stmt) { visit_stmt_tree_expressions(stmt, visit_expr); });
-    };
-    try {
-        const ModuleAst module = parse_source(doc.text, doc.path);
-        for (const ClassDecl& klass : module.classes) {
-            for (const FunctionDecl& method : klass.methods) {
-                visit_stmts(method.statements);
-            }
-        }
-        for (const FunctionDecl& fn : module.functions) {
-            visit_stmts(fn.statements);
-        }
-    } catch (const std::exception&) {
-        return false;
-    }
-    return matched;
 }
 
 bool document_has_type_symbol(const Document& doc, const std::string& name) {
@@ -279,7 +240,7 @@ RenameScope rename_scope_at(const Document& doc, const Json* params, const std::
     if (has_type_ref(local_type_ref_before_cursor(doc, name, params))) {
         return RenameScope::None;
     }
-    if (selection.symbol.value_or("") == name && selected_call_callee(doc, params, name)) {
+    if (selection.symbol.value_or("") == name && selection.call_callee) {
         return RenameScope::CurrentDocument;
     }
     return RenameScope::None;

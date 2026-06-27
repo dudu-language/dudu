@@ -92,6 +92,9 @@
   path instead of parsing the document again for member hover.
 - Made LSP reference and rename scope checks consume the shared cursor
   selection result instead of selecting the same symbol/path again.
+- Made LSP rename call-site detection use the shared cursor selection result
+  instead of reparsing the document to check whether the cursor is on a call
+  callee.
 - Shared parsed `TypeRef` index and iterable inference for public string entry
   points before falling back to native/operator boundaries.
 - Added Cairo to the optional native compatibility probe suite.
