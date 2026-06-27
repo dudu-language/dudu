@@ -87,10 +87,9 @@ void emit_cmake_target(std::ostringstream& out, const ProjectConfig& config,
     out << ")\n";
 }
 
-std::vector<std::filesystem::path> generated_module_sources(const std::filesystem::path& input,
+std::vector<std::filesystem::path> generated_module_sources(const ModuleAst& module,
                                                             bool test_source = false) {
     std::vector<std::filesystem::path> sources;
-    const ModuleAst module = load_source_tree(input);
     const std::vector<CppModuleArtifact> artifacts =
         test_source ? emit_cpp_test_module_artifacts(module) : emit_cpp_module_artifacts(module);
     for (const CppModuleArtifact& artifact : artifacts) {
@@ -99,6 +98,18 @@ std::vector<std::filesystem::path> generated_module_sources(const std::filesyste
         }
     }
     return sources;
+}
+
+std::vector<std::filesystem::path> module_source_files(const ModuleAst& module) {
+    if (module.module_units.empty()) {
+        return {module.source_path};
+    }
+    std::vector<std::filesystem::path> files;
+    files.reserve(module.module_units.size());
+    for (const ModuleAst& unit : module.module_units) {
+        files.push_back(unit.source_path);
+    }
+    return files;
 }
 
 void emit_generated_module_list(std::ostringstream& out, std::string_view name,
@@ -147,7 +158,8 @@ std::string emit_cmake_project(const ProjectConfig& config, const std::filesyste
     const std::string source_path = source_path_for_project(project_dir, input);
     const std::filesystem::path generated_dir =
         std::filesystem::path("${CMAKE_CURRENT_BINARY_DIR}") / "generated";
-    const std::vector<std::filesystem::path> generated_sources = generated_module_sources(input);
+    const ModuleAst module = load_source_tree(input);
+    const std::vector<std::filesystem::path> generated_sources = generated_module_sources(module);
     std::ostringstream out;
     out << "cmake_minimum_required(VERSION 3.20)\n\n"
         << "project(" << target << " LANGUAGES C CXX)\n\n"
@@ -171,14 +183,13 @@ std::string emit_cmake_project(const ProjectConfig& config, const std::filesyste
            "${DUDU_PROJECT_DIR}/${DUDU_SOURCE} -o "
            "${DUDU_GENERATED_DIR}\n"
         << "    COMMAND ${CMAKE_COMMAND} -E touch ${DUDU_GENERATED_STAMP}\n";
-    emit_cmake_depends(out, source_tree_files(input));
+    emit_cmake_depends(out, module_source_files(module));
     out << "    COMMENT \"Dudu emit modules\"\n"
         << "    VERBATIM\n"
         << "    WORKING_DIRECTORY ${DUDU_PROJECT_DIR}\n"
         << ")\n"
         << "set_source_files_properties(${DUDU_GENERATED} PROPERTIES GENERATED TRUE)\n"
-        << "add_custom_target(" << target
-        << "_dudu_generate DEPENDS ${DUDU_GENERATED_STAMP})\n\n";
+        << "add_custom_target(" << target << "_dudu_generate DEPENDS ${DUDU_GENERATED_STAMP})\n\n";
     emit_pkg_config(out, config);
     emit_cmake_target(out, config, project_dir, target);
     out << "add_dependencies(" << target << ' ' << target << "_dudu_generate)\n";
@@ -206,8 +217,9 @@ std::string emit_cmake_test_project(const ProjectConfig& config, const std::file
     const std::string source_path = source_path_for_project(project_dir, input);
     const std::filesystem::path generated_dir =
         std::filesystem::path("${CMAKE_CURRENT_BINARY_DIR}") / "generated";
+    const ModuleAst module = load_source_tree(input);
     const std::vector<std::filesystem::path> generated_sources =
-        generated_module_sources(input, true);
+        generated_module_sources(module, true);
     std::ostringstream out;
     out << "cmake_minimum_required(VERSION 3.20)\n\n"
         << "project(" << target << " LANGUAGES C CXX)\n\n"
@@ -238,14 +250,13 @@ std::string emit_cmake_test_project(const ProjectConfig& config, const std::file
     }
     out << "\n"
         << "    COMMAND ${CMAKE_COMMAND} -E touch ${DUDU_GENERATED_STAMP}\n";
-    emit_cmake_depends(out, source_tree_files(input));
+    emit_cmake_depends(out, module_source_files(module));
     out << "    COMMENT \"Dudu emit test modules\"\n"
         << "    VERBATIM\n"
         << "    WORKING_DIRECTORY ${DUDU_PROJECT_DIR}\n"
         << ")\n"
         << "set_source_files_properties(${DUDU_GENERATED} PROPERTIES GENERATED TRUE)\n"
-        << "add_custom_target(" << target
-        << "_dudu_generate DEPENDS ${DUDU_GENERATED_STAMP})\n\n";
+        << "add_custom_target(" << target << "_dudu_generate DEPENDS ${DUDU_GENERATED_STAMP})\n\n";
     emit_pkg_config(out, config);
     out << "add_executable(" << target << "\n"
         << "    ${DUDU_GENERATED}\n";
