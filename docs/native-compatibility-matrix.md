@@ -74,8 +74,8 @@ periodically because they catch whole-project friction that small fixtures miss.
 
 | Repo | Domain | Current Use | Status |
 | --- | --- | --- | --- |
-| `/home/vega/Coding/Graphics/raymarch-dd` | graphics / SDL / generated modules | Real-time app with vector math, C library calls, generated CMake, LSP navigation pressure, and runtime rendering. | local dogfood |
-| `/home/vega/Coding/Web/dudu-webserver` | POSIX networking / C++ stdlib | Multi-file blocking HTTP server using sockets, polling, libc, C strings, and `std.string` without a C++ webserver shim. | local dogfood; `dudu build` and route smoke passed on 2026-06-27 |
+| `/home/vega/Coding/Graphics/raymarch-dd` | graphics / SDL / generated modules | Real-time app with vector math, C library calls, generated CMake, LSP navigation pressure, and runtime rendering. | local dogfood via `scripts/test_dogfood.sh` |
+| `/home/vega/Coding/Web/dudu-webserver` | POSIX networking / C++ stdlib | Multi-file blocking HTTP server using sockets, polling, libc, C strings, and `std.string` without a C++ webserver shim. | local dogfood via `scripts/test_dogfood.sh`; build and route smoke passed on 2026-06-27 |
 
 ## Planned Matrix Targets
 

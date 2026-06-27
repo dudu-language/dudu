@@ -81,9 +81,10 @@ Recommended tiers:
   probes.
 - Future `scripts/test_examples.sh`: curated in-repo example builds. These
   should be mostly headless and reproducible.
-- Future `scripts/test_dogfood.sh`: local-only external repo checks, such as
-  `duduplayground`, `raymarch-dd`, and other real projects when they exist on a
-  developer machine.
+- `scripts/test_dogfood.sh`: local-only external repo checks, such as
+  `raymarch-dd`, `dudu-webserver`, and other real projects when they exist on a
+  developer machine. It skips missing repos and uses timeouts so dogfood checks
+  do not become a normal edit-loop trap.
 
 Do not put huge SDK/library matrices, windowed demo apps, or external dogfood
 repos in the required fast loop. Run them periodically, when changing the
