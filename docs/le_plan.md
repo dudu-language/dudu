@@ -1740,9 +1740,11 @@ push. They are not release packaging work.
    code, control flow, arrays, modules/imports, generics/templates, class/OOP
    shapes, native interop shapes, and mixed realistic project-shaped corpora as
    the benchmark suite grows. The benchmark harness now includes a `mixed`
-   generated shape by default; a local one-sample Release run at
-   `--line-scales 50000 --shapes mixed` measured about 122ms and 112MB RSS for
-   roughly 27.6k generated Dudu lines across nine files. The
+   generated shape by default; a local three-sample Release run at
+   `--line-scales 50000` measured the mixed shape at about 111ms and 113MB RSS
+   for roughly 27.6k generated Dudu lines across nine files. The same run
+   measured expression-heavy code at about 231ms, keeping expression
+   parsing/sema as the current frontend outlier. The
    changed-file case runs against a copied fixture under `build/bench_compiler`
    so benchmarks do not mutate checked-in examples. It
    records source line/file counts and peak child-process RSS in KB with each
