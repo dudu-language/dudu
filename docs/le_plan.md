@@ -1439,7 +1439,9 @@ push. They are not release packaging work.
    blocks, array/indexing operations, and generic instantiation. Compiler-speed
    claims must be checked against multiple generated shapes and at least one
    real dogfood project when practical, because one benchmark can hide that only
-   a specific compilation feature is slow. Benchmarks can select
+   a specific compilation feature is slow. Reject a speed patch if it only
+   improves one generated shape while regressing other representative shapes;
+   that is a local trick, not a compiler throughput win. Benchmarks can select
    `--build-type Debug`, `Release`, or `RelWithDebInfo`; Debug measures
    inner-loop compiler development pain, while Release measures shipped-tool
    speed. Summary output reports lines per second in addition to elapsed time
