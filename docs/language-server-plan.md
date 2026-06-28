@@ -309,13 +309,16 @@ def connect(host: str, port: i32) -> Result[Socket, Error]:
 The official documentation syntax should be:
 
 - contiguous `#` comments immediately before a declaration
-- a leading triple-single-quoted string body, `''' ... '''`, inside functions,
-  classes, methods, enums, and modules for larger API docs
+- a leading triple-single-quoted string body, `''' ... '''`, as the first
+  statement inside functions, classes, methods, enums, and modules for larger
+  API docs, matching Python's docstring shape
 - markdown-ish plain text in LSP hovers, completion resolve, and signature help
 
 `#` comment docs are best for short summaries. Triple-quoted docstrings are for
 multi-paragraph library documentation, parameter descriptions, examples, and
-notes. Docstrings are documentation, not runtime string expressions.
+notes. Docstrings are documentation, not runtime string expressions. Unlike
+Rust/Zig-style declaration docs, large Dudu docstrings live inside the thing
+they document because the broader language goal is Python-shaped source.
 
 Current support is partial: hover can show contiguous `#` comments immediately
 above declarations in the current Dudu document. The implementation currently
