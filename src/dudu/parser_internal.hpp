@@ -82,6 +82,7 @@ class Parser {
     std::vector<JoinedTokens> split_top_level_comma_pieces(const JoinedTokens& piece) const;
     JoinedTokens join_until_top_level_identifier(std::string_view identifier,
                                                  std::initializer_list<TokenKind> stops);
+    size_t estimate_statement_block_capacity() const;
 };
 
 } // namespace dudu

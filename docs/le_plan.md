@@ -1461,6 +1461,10 @@ push. They are not release packaging work.
    should deliberately stress different language surfaces, not just line count:
    declarations, imports, calls, control flow, arrays/indexing, generics,
    classes, native interop, diagnostics, and mixed realistic project layouts.
+   Add both isolated stress shapes and combination cases that cross features
+   such as templates plus overloads plus native imports, because a compiler can
+   look fast on every single-feature corpus while one real feature interaction
+   dominates user-visible compile time.
    Reject a speed patch if it only improves one generated shape while
    regressing other representative shapes; that is a local trick, not a
    compiler throughput win.
@@ -1787,6 +1791,16 @@ push. They are not release packaging work.
    A three-sample broad run measured expressions about 230ms, calls about
    62ms, control about 73ms, generics about 87ms, and mixed about 112ms. Keep
    this as sema hot-path cleanup, not as a major throughput win. Rewriting
+   statement-block parsing to reserve first-level statement storage from the
+   token stream was then kept as a small parser allocation cleanup. It targets
+   large single-function and large block-shaped files, not native-heavy code.
+   A five-sample focused Release run measured expression-heavy 50k at about
+   230ms, calls at about 60ms, control at about 74ms, and mixed at about
+   103ms. A three-sample broad Release repeat measured expressions about
+   225ms, calls about 58ms, modules about 76ms, arrays about 83ms, generics
+   about 91ms, and mixed about 105ms. Treat this as a modest broad-neutral
+   win; it does not remove the deeper expression-AST allocation bottleneck.
+   Rewriting
    `sema_context::trim` from front-erasing to substring bounds plus ASCII
    checks was tried and rejected: focused repeats regressed modules and mixed
    project-shaped code and did not preserve an expression-heavy win. Lazily

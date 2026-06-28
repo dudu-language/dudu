@@ -415,6 +415,7 @@ std::vector<Stmt> Parser::parse_statement_block() {
     if (!match(TokenKind::Indent)) {
         return out;
     }
+    out.reserve(estimate_statement_block_capacity());
     while (!at(TokenKind::Dedent) && !at(TokenKind::End)) {
         if (match(TokenKind::Newline)) {
             continue;
@@ -459,6 +460,66 @@ std::vector<Stmt> Parser::parse_statement_block() {
     }
     consume(TokenKind::Dedent, "expected dedent after block");
     return out;
+}
+
+size_t Parser::estimate_statement_block_capacity() const {
+    size_t count = 0;
+    int nested_indent = 0;
+    int bracket_depth = 0;
+    int paren_depth = 0;
+    int brace_depth = 0;
+    bool saw_top_level_token = false;
+
+    for (size_t index = cursor_; index < tokens_.size(); ++index) {
+        const Token& token = tokens_[index];
+        const bool inside_group = bracket_depth != 0 || paren_depth != 0 || brace_depth != 0;
+        if (!inside_group) {
+            if (token.kind == TokenKind::Indent) {
+                ++nested_indent;
+                continue;
+            }
+            if (token.kind == TokenKind::Dedent) {
+                if (nested_indent == 0) {
+                    break;
+                }
+                --nested_indent;
+                continue;
+            }
+        }
+
+        if (nested_indent == 0) {
+            if (!inside_group && token.kind == TokenKind::Newline) {
+                if (saw_top_level_token) {
+                    ++count;
+                    saw_top_level_token = false;
+                }
+                continue;
+            }
+            if (token.kind != TokenKind::Newline && token.kind != TokenKind::Indent &&
+                token.kind != TokenKind::Dedent) {
+                saw_top_level_token = true;
+            }
+        }
+
+        if (token.kind == TokenKind::LBracket) {
+            ++bracket_depth;
+        } else if (token.kind == TokenKind::RBracket) {
+            --bracket_depth;
+        } else if (token.kind == TokenKind::LParen) {
+            ++paren_depth;
+        } else if (token.kind == TokenKind::RParen) {
+            --paren_depth;
+        } else if (token.kind == TokenKind::LBrace) {
+            ++brace_depth;
+        } else if (token.kind == TokenKind::RBrace) {
+            --brace_depth;
+        }
+    }
+
+    if (saw_top_level_token) {
+        ++count;
+    }
+    return count;
 }
 
 } // namespace dudu
