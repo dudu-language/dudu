@@ -86,6 +86,8 @@
   strings instead of full `std::filesystem::path` objects.
 - Reduced parser allocation churn by avoiding tuple-item vector allocation for
   non-comma expressions and pre-reserving lexer token storage.
+- Reduced lexer token memory churn by storing token text as views into the
+  parsed source and copying only at AST persistence boundaries.
 - Removed obsolete string-based Dudu method/class template substitution helpers.
 - Removed an unused unknown-expression parser helper and renamed the remaining
   text call parser as an explicit `cpp(...)` escape-boundary helper.

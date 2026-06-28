@@ -303,7 +303,7 @@ ImportDecl Parser::parse_from_import(const Token& start) {
 }
 
 std::string Parser::parse_path() {
-    std::string out = consume_identifier("expected module path").text;
+    std::string out{consume_identifier("expected module path").text};
     while (match(TokenKind::Dot)) {
         out += '.';
         out += consume_identifier("expected name after dot").text;
@@ -392,12 +392,14 @@ Expr Parser::parse_expr_piece(const JoinedTokens& piece) const {
     if (!piece.has_tokens) {
         return make_expr(ExprKind::Missing, "", piece.range.start);
     }
-    const std::span<const Token> source_tokens = tokens_.subspan(piece.begin, piece.end - piece.begin);
+    const std::span<const Token> source_tokens =
+        tokens_.subspan(piece.begin, piece.end - piece.begin);
     std::vector<Token> filtered_tokens;
     if (has_layout_tokens(source_tokens)) {
         filtered_tokens = syntax_piece_tokens(source_tokens);
     }
-    ExprTokenParser parser(filtered_tokens.empty() ? source_tokens : std::span<const Token>{filtered_tokens});
+    ExprTokenParser parser(filtered_tokens.empty() ? source_tokens
+                                                   : std::span<const Token>{filtered_tokens});
     Expr expr = parser.parse();
     if (expr.kind == ExprKind::Unknown) {
         const std::string spelling = trim_string(token_source_spelling(piece.begin, piece.end));
@@ -413,12 +415,14 @@ TypeRef Parser::parse_type_piece(const JoinedTokens& piece) const {
     if (!piece.has_tokens) {
         return make_type(TypeKind::Unknown, "", piece.range.start);
     }
-    const std::span<const Token> source_tokens = tokens_.subspan(piece.begin, piece.end - piece.begin);
+    const std::span<const Token> source_tokens =
+        tokens_.subspan(piece.begin, piece.end - piece.begin);
     std::vector<Token> filtered_tokens;
     if (has_layout_tokens(source_tokens)) {
         filtered_tokens = syntax_piece_tokens(source_tokens);
     }
-    TypeTokenParser parser(filtered_tokens.empty() ? source_tokens : std::span<const Token>{filtered_tokens});
+    TypeTokenParser parser(filtered_tokens.empty() ? source_tokens
+                                                   : std::span<const Token>{filtered_tokens});
     TypeRef type = parser.parse();
     if (const TypeRef* malformed = malformed_type_node(type)) {
         std::string spelling = trim_string(token_source_spelling(piece.begin, piece.end));

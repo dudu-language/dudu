@@ -3,6 +3,7 @@
 #include "dudu/source.hpp"
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace dudu {
@@ -32,7 +33,7 @@ enum class TokenKind {
 
 struct Token {
     TokenKind kind = TokenKind::End;
-    std::string text;
+    std::string_view text;
     SourceLocation location;
 };
 

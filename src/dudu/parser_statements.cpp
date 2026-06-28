@@ -134,7 +134,7 @@ std::string declaration_name_from_piece(std::span<const Token> tokens, size_t be
         throw CompileError(tokens[index].location, "expected : after declaration name",
                            "dudu.parser.syntax");
     }
-    return tokens[begin].text;
+    return std::string(tokens[begin].text);
 }
 
 } // namespace
@@ -234,7 +234,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
 
     if (match_identifier("if") || match_identifier("elif") || match_identifier("while") ||
         match_identifier("match")) {
-        const std::string keyword = previous().text;
+        const std::string keyword{previous().text};
         stmt.kind = keyword == "if"      ? StmtKind::If
                     : keyword == "elif"  ? StmtKind::Elif
                     : keyword == "while" ? StmtKind::While
@@ -248,7 +248,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
     }
 
     if (match_identifier("else") || match_identifier("try")) {
-        const std::string keyword = previous().text;
+        const std::string keyword{previous().text};
         stmt.kind = keyword == "else" ? StmtKind::Else : StmtKind::Try;
         consume(TokenKind::Colon, "expected : after " + keyword);
         attach_statement_range(stmt, join_tokens(begin, cursor_));
@@ -311,7 +311,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
     }
 
     if (match_identifier("break") || match_identifier("continue") || match_identifier("pass")) {
-        const std::string keyword = previous().text;
+        const std::string keyword{previous().text};
         stmt.kind = keyword == "break"      ? StmtKind::Break
                     : keyword == "continue" ? StmtKind::Continue
                                             : StmtKind::Pass;
@@ -321,7 +321,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
     }
 
     if (match_identifier("raise") || match_identifier("delete")) {
-        const std::string keyword = previous().text;
+        const std::string keyword{previous().text};
         stmt.kind = keyword == "raise" ? StmtKind::Raise : StmtKind::Delete;
         const size_t value_begin = cursor_;
         cursor_ = statement_end;
@@ -332,7 +332,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
     }
 
     if (match_identifier("assert") || match_identifier("debug_assert")) {
-        const std::string keyword = previous().text;
+        const std::string keyword{previous().text};
         stmt.kind = keyword == "assert" ? StmtKind::Assert : StmtKind::DebugAssert;
         const size_t parts_begin = cursor_;
         cursor_ = statement_end;
@@ -388,8 +388,8 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
         if (stmt.kind == StmtKind::CompoundAssign) {
             const std::optional<CompoundAssignOp> op = compound_assignment_op(assign.text);
             if (!op) {
-                throw CompileError(assign.location,
-                                   "unsupported compound assignment operator: " + assign.text);
+                throw CompileError(assign.location, "unsupported compound assignment operator: " +
+                                                        std::string(assign.text));
             }
             stmt.compound_op = *op;
         }

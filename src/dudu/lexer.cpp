@@ -52,8 +52,8 @@ class Lexer {
         throw CompileError(loc(line_, column), message, "dudu.lexer.syntax");
     }
 
-    void push(TokenKind kind, std::string text, int line, int column) {
-        tokens_.push_back({kind, std::move(text), loc(line, column)});
+    void push(TokenKind kind, std::string_view text, int line, int column) {
+        tokens_.push_back({kind, text, loc(line, column)});
     }
 
     void lex_line() {
@@ -156,26 +156,29 @@ class Lexer {
             return lex_string(column);
         }
         if (peek() == '-' && peek(1) == '>') {
+            const size_t start = cursor_;
             take();
             take();
-            push(TokenKind::Arrow, "->", line_, column);
+            push(TokenKind::Arrow, source_.substr(start, 2), line_, column);
             return 2;
         }
-        const std::string three{peek(), peek(1), peek(2)};
+        const std::string_view three = source_.substr(cursor_, 3);
         if (three == "<<=" || three == ">>=") {
+            const size_t start = cursor_;
             take();
             take();
             take();
-            push(TokenKind::Operator, three, line_, column);
+            push(TokenKind::Operator, source_.substr(start, 3), line_, column);
             return 3;
         }
-        const std::string two{peek(), peek(1)};
+        const std::string_view two = source_.substr(cursor_, 2);
         if (two == "==" || two == "!=" || two == "<=" || two == ">=" || two == "+=" ||
             two == "-=" || two == "*=" || two == "/=" || two == "%=" || two == "&=" ||
             two == "|=" || two == "^=" || two == "<<" || two == ">>") {
+            const size_t start = cursor_;
             take();
             take();
-            push(TokenKind::Operator, two, line_, column);
+            push(TokenKind::Operator, source_.substr(start, 2), line_, column);
             return 2;
         }
         return lex_punctuation(column);
@@ -195,8 +198,7 @@ class Lexer {
         while (is_identifier_char(peek())) {
             take();
         }
-        push(TokenKind::Identifier, std::string(source_.substr(start, cursor_ - start)), line_,
-             column);
+        push(TokenKind::Identifier, source_.substr(start, cursor_ - start), line_, column);
         return static_cast<int>(cursor_ - start);
     }
 
@@ -207,7 +209,7 @@ class Lexer {
                peek() == '.') {
             take();
         }
-        push(TokenKind::Number, std::string(source_.substr(start, cursor_ - start)), line_, column);
+        push(TokenKind::Number, source_.substr(start, cursor_ - start), line_, column);
         return static_cast<int>(cursor_ - start);
     }
 
@@ -227,8 +229,8 @@ class Lexer {
                 if (c == quote && peek() == quote && peek(1) == quote) {
                     take();
                     take();
-                    push(TokenKind::String, std::string(source_.substr(start, cursor_ - start)),
-                         start_line, column);
+                    push(TokenKind::String, source_.substr(start, cursor_ - start), start_line,
+                         column);
                     return static_cast<int>(cursor_ - start);
                 }
             }
@@ -246,8 +248,7 @@ class Lexer {
                 continue;
             }
             if (c == quote) {
-                push(TokenKind::String, std::string(source_.substr(start, cursor_ - start)), line_,
-                     column);
+                push(TokenKind::String, source_.substr(start, cursor_ - start), line_, column);
                 return static_cast<int>(cursor_ - start);
             }
             if (c == '\n' || c == '\r') {
@@ -258,8 +259,9 @@ class Lexer {
     }
 
     int lex_punctuation(int column) {
+        const size_t start = cursor_;
         const char c = take();
-        const std::string text(1, c);
+        const std::string_view text = source_.substr(start, 1);
         switch (c) {
         case '(':
             push(TokenKind::LParen, text, line_, column);

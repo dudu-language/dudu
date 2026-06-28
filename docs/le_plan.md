@@ -1434,7 +1434,10 @@ push. They are not release packaging work.
    `--shapes functions,classes,expressions,modules,calls,control,arrays,generics`
    so profiling can distinguish slow declaration lookup, class/member handling,
    expression parsing/sema, import/module behavior, nested calls, control-flow
-   blocks, array/indexing operations, and generic instantiation. Benchmarks can select
+   blocks, array/indexing operations, and generic instantiation. Compiler-speed
+   claims must be checked against multiple generated shapes and at least one
+   real dogfood project when practical, because one benchmark can hide that only
+   a specific compilation feature is slow. Benchmarks can select
    `--build-type Debug`, `Release`, or `RelWithDebInfo`; Debug measures
    inner-loop compiler development pain, while Release measures shipped-tool
    speed. Summary output reports lines per second in addition to elapsed time

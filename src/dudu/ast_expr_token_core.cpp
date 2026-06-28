@@ -266,7 +266,7 @@ Expr ExprTokenParser::parse_binary(int min_precedence, std::initializer_list<Tok
         if (precedence < min_precedence) {
             break;
         }
-        const std::string op = current().text;
+        const std::string op{current().text};
         ++cursor_;
         Expr rhs = (stop_at(stops) || at_end())
                        ? make_expr(ExprKind::Missing, "", current().location)

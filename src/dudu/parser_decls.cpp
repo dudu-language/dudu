@@ -260,7 +260,7 @@ std::vector<std::string> Parser::parse_generic_params() {
         fail_current("generic parameter list cannot be empty");
     }
     while (true) {
-        params.push_back(consume_identifier("expected generic parameter name").text);
+        params.push_back(std::string(consume_identifier("expected generic parameter name").text));
         if (match(TokenKind::Comma)) {
             continue;
         }
