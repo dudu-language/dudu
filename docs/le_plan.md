@@ -1822,6 +1822,25 @@ push. They are not release packaging work.
    synthesized AST paths can create temporary strings. The likely serious fixes
    are an interned source text/symbol store, compact token/source-position
    storage, and arena or compact child storage for expression trees.
+   `SourceFileName` then moved from an interned string pointer to a compact
+   32-bit intern id while preserving the existing API. This shrinks every
+   `SourceLocation`, `SourceRange`, token, and AST node that stores locations.
+   A five-sample focused Release run measured expression-heavy 50k at about
+   227ms and 265MB RSS, calls at about 60ms and 52MB RSS, control at about
+   73ms and 64MB RSS, and mixed at about 101ms and 103MB RSS. A three-sample
+   broad Release repeat measured expressions about 221ms and 265MB RSS,
+   calls about 57ms and 52MB RSS, functions about 59ms and 48MB RSS, modules
+   about 76ms and 105MB RSS, generics about 88ms and 44MB RSS, and mixed
+   about 105ms and 103MB RSS. Keep this as a real representation cleanup: it
+   reduces memory broadly and improves the expression-heavy outlier without
+   changing language behavior.
+   Replacing statement-level optional `shared_ptr` fields with `unique_ptr`
+   plus deep-copy semantics was tried and rejected. It reduced some retained
+   memory in expression/call/control shapes, but a five-sample focused Release
+   run made expression-heavy 50k slower at about 235ms and increased the mixed
+   project-shaped RSS to about 118MB. The deep-copy behavior is the wrong
+   ownership shape for the current AST; revisit only as part of a broader
+   compact/arena AST design where statement copies are controlled explicitly.
    Rewriting
    `sema_context::trim` from front-erasing to substring bounds plus ASCII
    checks was tried and rejected: focused repeats regressed modules and mixed

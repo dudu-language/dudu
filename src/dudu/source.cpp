@@ -1,8 +1,11 @@
 #include "dudu/source.hpp"
 
+#include <cstdint>
+#include <deque>
+#include <stdexcept>
 #include <mutex>
 #include <sstream>
-#include <unordered_set>
+#include <unordered_map>
 #include <utility>
 
 namespace dudu {
@@ -13,34 +16,68 @@ const std::string& empty_file_name() {
     return empty;
 }
 
-const std::string* intern_file_name(std::string_view file) {
-    if (file.empty()) {
-        return {};
+struct FileNameInterner {
+    std::mutex mutex;
+    std::deque<std::string> files;
+    std::unordered_map<std::string, uint32_t> ids;
+
+    FileNameInterner() {
+        files.emplace_back();
     }
-    static std::mutex mutex;
-    static std::unordered_set<std::string> files;
-    std::lock_guard lock(mutex);
-    const auto [it, inserted] = files.emplace(file);
-    (void)inserted;
-    return &*it;
+};
+
+FileNameInterner& file_name_interner() {
+    static FileNameInterner interner;
+    return interner;
+}
+
+uint32_t intern_file_name(std::string_view file) {
+    if (file.empty()) {
+        return 0;
+    }
+    FileNameInterner& interner = file_name_interner();
+    std::lock_guard lock(interner.mutex);
+    const std::string key(file);
+    if (const auto found = interner.ids.find(key); found != interner.ids.end()) {
+        return found->second;
+    }
+    if (interner.files.size() >= static_cast<size_t>(UINT32_MAX)) {
+        throw std::runtime_error("too many source file names interned");
+    }
+    const uint32_t id = static_cast<uint32_t>(interner.files.size());
+    interner.files.push_back(key);
+    interner.ids.emplace(interner.files.back(), id);
+    return id;
+}
+
+const std::string& file_name_from_id(uint32_t id) {
+    if (id == 0) {
+        return empty_file_name();
+    }
+    FileNameInterner& interner = file_name_interner();
+    std::lock_guard lock(interner.mutex);
+    if (id >= interner.files.size()) {
+        return empty_file_name();
+    }
+    return interner.files[id];
 }
 
 } // namespace
 
 SourceFileName::SourceFileName(const char* file)
-    : file_(file == nullptr || file[0] == '\0' ? nullptr : intern_file_name(file)) {
+    : file_id_(file == nullptr || file[0] == '\0' ? 0 : intern_file_name(file)) {
 }
 
 SourceFileName::SourceFileName(std::string file)
-    : file_(file.empty() ? nullptr : intern_file_name(file)) {
+    : file_id_(file.empty() ? 0 : intern_file_name(file)) {
 }
 
 SourceFileName::SourceFileName(std::string_view file)
-    : file_(file.empty() ? nullptr : intern_file_name(file)) {
+    : file_id_(file.empty() ? 0 : intern_file_name(file)) {
 }
 
 const std::string& SourceFileName::str() const {
-    return file_ == nullptr ? empty_file_name() : *file_;
+    return file_name_from_id(file_id_);
 }
 
 bool SourceFileName::empty() const {

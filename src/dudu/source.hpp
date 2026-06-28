@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <iosfwd>
 #include <stdexcept>
 #include <string>
@@ -23,7 +24,7 @@ class SourceFileName {
     operator std::string_view() const;
 
   private:
-    const std::string* file_ = nullptr;
+    uint32_t file_id_ = 0;
 };
 
 std::ostream& operator<<(std::ostream& out, const SourceFileName& file);
