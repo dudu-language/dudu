@@ -1474,7 +1474,13 @@ push. They are not release packaging work.
    size. A naive statement-block reserve based on the remaining token span was
    tried and rejected because nested control-flow blocks over-reserved and made
    control-heavy benchmarks worse. Do not retry that shape without a depth-aware
-   statement count. The changed-file case runs against a copied
+   statement count. Lexer token reservation now uses a less stingy source-size
+   estimate; local direct 10k expression timings showed a lower load phase, but
+   the broader harness treated this as a small allocation-churn tweak rather
+   than a major throughput win. Massif still shows repeated source filename
+   storage in `SourceLocation` as a remaining lexer-side allocation candidate;
+   solve that with a deliberate shared/interned filename representation rather
+   than a string-view lifetime shortcut. The changed-file case runs against a copied
    fixture under `build/bench_compiler` so benchmarks do not mutate checked-in
    examples. It
    records source line/file counts and peak child-process RSS in KB with each
