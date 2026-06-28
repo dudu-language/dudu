@@ -1465,7 +1465,13 @@ push. They are not release packaging work.
    harness measured about 0.29s and 249MB RSS including its process/RSS wrapper
    overhead. A local one-sample 10k Release run of the expanded shapes measured
    calls, control flow, arrays, and generics around 0.05-0.07s each, so
-   expression-heavy bodies remain the main frontend throughput outlier. The changed-file case runs against a copied
+   expression-heavy bodies remain the main frontend throughput outlier. The
+   parser now avoids allocating tuple-item storage for expressions that do not
+   actually contain a comma and pre-reserves lexer token storage from source
+   size. A naive statement-block reserve based on the remaining token span was
+   tried and rejected because nested control-flow blocks over-reserved and made
+   control-heavy benchmarks worse. Do not retry that shape without a depth-aware
+   statement count. The changed-file case runs against a copied
    fixture under `build/bench_compiler` so benchmarks do not mutate checked-in
    examples. It
    records source line/file counts and peak child-process RSS in KB with each

@@ -84,6 +84,8 @@
   arrays/indexing, and generics stress cases.
 - Reduced parser/AST memory churn by storing `SourceLocation` file names as
   strings instead of full `std::filesystem::path` objects.
+- Reduced parser allocation churn by avoiding tuple-item vector allocation for
+  non-comma expressions and pre-reserving lexer token storage.
 - Removed obsolete string-based Dudu method/class template substitution helpers.
 - Removed an unused unknown-expression parser helper and renamed the remaining
   text call parser as an explicit `cpp(...)` escape-boundary helper.

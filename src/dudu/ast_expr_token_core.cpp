@@ -156,16 +156,21 @@ std::vector<TypeRef> ExprTokenParser::parse_type_list_span(size_t begin, size_t 
 
 Expr ExprTokenParser::parse_comma_expr(std::initializer_list<TokenKind> stops) {
     const size_t begin = cursor_;
+    Expr first = parse_named_or_binary(stops);
+    if (stop_at(stops) || !match(TokenKind::Comma)) {
+        return first;
+    }
     std::vector<Expr> items;
-    items.push_back(parse_named_or_binary(stops));
-    while (!stop_at(stops) && match(TokenKind::Comma)) {
+    items.reserve(2);
+    items.push_back(std::move(first));
+    while (!stop_at(stops)) {
         if (stop_at(stops)) {
             break;
         }
         items.push_back(parse_named_or_binary(stops));
-    }
-    if (items.size() == 1) {
-        return std::move(items.front());
+        if (!match(TokenKind::Comma)) {
+            break;
+        }
     }
     Expr tuple = make_node(ExprKind::TupleLiteral, begin, cursor_);
     tuple.children = std::move(items);

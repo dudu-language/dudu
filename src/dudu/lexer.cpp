@@ -14,6 +14,7 @@ class Lexer {
 
     std::vector<Token> run() {
         indents_.push_back(0);
+        tokens_.reserve((source_.size() / 4) + 16);
         while (!done()) {
             lex_line();
         }
