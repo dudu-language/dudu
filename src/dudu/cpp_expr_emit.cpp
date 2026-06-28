@@ -188,14 +188,14 @@ TypeRef pointer_template_type_ref_from_expr(const Expr& expr) {
     return pointer;
 }
 
-std::string cpp_binary_operator(const std::string& op) {
+std::string cpp_binary_operator(std::string_view op) {
     if (op == "and") {
         return "&&";
     }
     if (op == "or") {
         return "||";
     }
-    return op;
+    return std::string(op);
 }
 
 std::string parsed_literal_value(const Expr& expr, std::string_view name) {
@@ -250,7 +250,7 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
             return *pointer_cast;
         }
         if (expr.children.size() == 1) {
-            const std::string op = expr.op == "not" ? "!" : expr.op;
+            const std::string op = expr.op == "not" ? "!" : std::string(expr.op);
             return "(" + op +
                    lower_expr(expr.children.front(), aliases, locals, local_type_refs, symbols,
                               options) +

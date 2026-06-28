@@ -399,11 +399,13 @@ std::string display_expr(const Expr& expr) {
     case ExprKind::NoneLiteral:
         return "None";
     case ExprKind::Unary:
-        return expr.children.empty() ? expr.op : expr.op + display_expr(expr.children.front());
+        return expr.children.empty() ? std::string(expr.op)
+                                     : std::string(expr.op) + display_expr(expr.children.front());
     case ExprKind::Binary:
-        return expr.children.size() == 2 ? display_expr(expr.children[0]) + " " + expr.op + " " +
-                                               display_expr(expr.children[1])
-                                         : malformed_expr_display("binary");
+        return expr.children.size() == 2
+                   ? display_expr(expr.children[0]) + " " + std::string(expr.op) + " " +
+                         display_expr(expr.children[1])
+                   : malformed_expr_display("binary");
     case ExprKind::Call:
         return display_call_expr(expr);
     case ExprKind::TemplateCall:

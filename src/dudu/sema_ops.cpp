@@ -19,10 +19,9 @@ TypeRef unwrap_value_type_ref(const Symbols& symbols, TypeRef type) {
     type = resolve_alias_ref(symbols, std::move(type));
     while (true) {
         type = resolve_alias_ref(symbols, std::move(type));
-        if (const auto inner =
-                unary_type_child_ref(type, {TypeKind::Reference, TypeKind::Const,
-                                            TypeKind::Volatile, TypeKind::Storage,
-                                            TypeKind::Shared, TypeKind::Device})) {
+        if (const auto inner = unary_type_child_ref(type, {TypeKind::Reference, TypeKind::Const,
+                                                           TypeKind::Volatile, TypeKind::Storage,
+                                                           TypeKind::Shared, TypeKind::Device})) {
             type = *inner;
             continue;
         }
@@ -128,9 +127,10 @@ native_operator_signature(const Symbols& symbols, const std::string& op, const T
 
 } // namespace
 
-std::optional<FunctionSignature>
-dudu_operator_signature(const Symbols& symbols, const std::string& op, const TypeRef& left) {
-    if (!is_supported_dudu_operator(op)) {
+std::optional<FunctionSignature> dudu_operator_signature(const Symbols& symbols,
+                                                         std::string_view op, const TypeRef& left) {
+    const std::string op_text(op);
+    if (!is_supported_dudu_operator(op_text)) {
         return std::nullopt;
     }
     const ClassDecl* klass = class_for_receiver_type(symbols, left);
@@ -138,7 +138,7 @@ dudu_operator_signature(const Symbols& symbols, const std::string& op, const Typ
         return std::nullopt;
     }
     for (const FunctionDecl& method : klass->methods) {
-        if (!method_has_operator(method, op)) {
+        if (!method_has_operator(method, op_text)) {
             continue;
         }
         FunctionSignature signature;
@@ -188,17 +188,19 @@ dudu_binary_operator_signature(const Symbols& symbols, const std::string& op, co
     return std::nullopt;
 }
 
-std::optional<FunctionSignature>
-binary_operator_signature(const Symbols& symbols, const std::string& op, const TypeRef& left,
-                          const Expr& right_expr, const TypeRef& right) {
+std::optional<FunctionSignature> binary_operator_signature(const Symbols& symbols,
+                                                           std::string_view op, const TypeRef& left,
+                                                           const Expr& right_expr,
+                                                           const TypeRef& right) {
+    const std::string op_text(op);
     if (const auto signature =
-            dudu_binary_operator_signature(symbols, op, left, right_expr, right)) {
+            dudu_binary_operator_signature(symbols, op_text, left, right_expr, right)) {
         return signature;
     }
-    return native_operator_signature(symbols, op, left, &right_expr, right);
+    return native_operator_signature(symbols, op_text, left, &right_expr, right);
 }
 
-bool binary_rhs_allowed(const Symbols& symbols, const std::string& op, const TypeRef& left,
+bool binary_rhs_allowed(const Symbols& symbols, std::string_view op, const TypeRef& left,
                         const Expr& right_expr, const TypeRef& right) {
     const TypeRef resolved_left = resolve_alias_ref(symbols, left);
     const TypeRef value_left_ref = unwrap_value_type_ref(symbols, left);
@@ -231,7 +233,7 @@ bool binary_rhs_allowed(const Symbols& symbols, const std::string& op, const Typ
     return false;
 }
 
-bool comparison_rhs_allowed(const Symbols& symbols, const std::string& op, const TypeRef& left,
+bool comparison_rhs_allowed(const Symbols& symbols, std::string_view op, const TypeRef& left,
                             const Expr& right_expr, const TypeRef& right) {
     if ((op == "==" || op == "!=") && same_or_assignable(left, right_expr, right)) {
         return true;

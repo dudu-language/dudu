@@ -79,8 +79,8 @@ bool is_builtin_call(const std::string& callee);
 bool is_local_member_call(const FunctionScope& scope, const std::string& callee);
 void reject_abstract_construction(const Symbols& symbols, const TypeRef& type,
                                   const SourceLocation* location);
-bool is_comparison_op(const std::string& op);
-bool is_arithmetic_op(const std::string& op);
+bool is_comparison_op(std::string_view op);
+bool is_arithmetic_op(std::string_view op);
 std::optional<std::string> contextual_numeric_binary_type(const FunctionScope& scope,
                                                           const Expr& left_expr,
                                                           const std::string& left,

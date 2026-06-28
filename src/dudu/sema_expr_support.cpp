@@ -78,7 +78,7 @@ void reject_abstract_construction(const Symbols& symbols, const TypeRef& type,
     sema_expr_fail(*location, out.str());
 }
 
-bool is_comparison_op(const std::string& op) {
+bool is_comparison_op(std::string_view op) {
     return op == "==" || op == "!=" || op == "<" || op == "<=" || op == ">" || op == ">=";
 }
 
@@ -124,8 +124,7 @@ void check_call_args_ast(const FunctionScope& scope, const std::string& callee,
             const std::string expected_display = substitute_type_ref_text(expected, {});
             const std::string got_display = substitute_type_ref_text(got_ref, {});
             sema_expr_fail(*location, "argument " + std::to_string(i + 1) + " for " + callee +
-                                          " expects " + expected_display + ", got " +
-                                          got_display);
+                                          " expects " + expected_display + ", got " + got_display);
         }
     }
 }

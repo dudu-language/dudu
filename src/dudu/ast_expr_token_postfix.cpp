@@ -31,10 +31,10 @@ Expr ExprTokenParser::parse_postfix(std::initializer_list<TokenKind> stops) {
             if (!at(TokenKind::Identifier)) {
                 break;
             }
-            const size_t begin = expr_token_begin(expr);
+            const SourceLocation start = expr.range.start;
             const Token& name = current();
             ++cursor_;
-            Expr member = make_node(ExprKind::Member, begin, cursor_);
+            Expr member = make_node_from_start(ExprKind::Member, start, cursor_);
             member.name = name.text;
             member.children.reserve(1);
             member.children.push_back(std::move(expr));
@@ -42,20 +42,20 @@ Expr ExprTokenParser::parse_postfix(std::initializer_list<TokenKind> stops) {
             continue;
         }
         if (match(TokenKind::LBracket)) {
-            const size_t begin = expr_token_begin(expr);
+            const SourceLocation start = expr.range.start;
             const size_t body_begin = cursor_;
             const size_t close =
                 matching_close(body_begin - 1, TokenKind::LBracket, TokenKind::RBracket);
             if (close < tokens_.size() && close + 1 < tokens_.size() &&
                 tokens_[close + 1].kind == TokenKind::LParen) {
                 cursor_ = close + 1;
-                expr = parse_template_call_from_brackets(std::move(expr), begin, body_begin, close,
+                expr = parse_template_call_from_brackets(std::move(expr), start, body_begin, close,
                                                          stops);
                 continue;
             }
             Expr index_arg = parse_index_argument();
             match(TokenKind::RBracket);
-            Expr index = make_node(ExprKind::Index, begin, cursor_);
+            Expr index = make_node_from_start(ExprKind::Index, start, cursor_);
             index.children.reserve(2);
             index.children.push_back(std::move(expr));
             index.children.push_back(std::move(index_arg));
@@ -142,18 +142,18 @@ size_t ExprTokenParser::expr_token_end(const Expr& expr) const {
 
 Expr ExprTokenParser::parse_call(Expr callee, std::initializer_list<TokenKind> stops) {
     (void)stops;
-    const size_t begin = expr_token_begin(callee);
+    const SourceLocation start = callee.range.start;
     const size_t open = cursor_;
     match(TokenKind::LParen);
     const size_t body_begin = cursor_;
     const size_t close = matching_close(open, TokenKind::LParen, TokenKind::RParen);
     if (close < tokens_.size() && span_has_top_level_identifier(body_begin, close, "for")) {
         cursor_ = close + 1;
-        return make_node(ExprKind::Comprehension, begin, cursor_);
+        return make_node_from_start(ExprKind::Comprehension, start, cursor_);
     }
     std::vector<Expr> args = parse_arg_list(TokenKind::RParen);
     match(TokenKind::RParen);
-    Expr call = make_node(ExprKind::Call, begin, cursor_);
+    Expr call = make_node_from_start(ExprKind::Call, start, cursor_);
     const std::optional<ExprPath> path = expr_path_from_expr(callee);
     const std::string callee_name = path ? render_expr_path(*path) : display_expr(callee);
     set_expr_callee(call, std::vector<Expr>{std::move(callee)});
@@ -192,7 +192,7 @@ Expr ExprTokenParser::parse_template_call(Expr indexed_callee,
     return call;
 }
 
-Expr ExprTokenParser::parse_template_call_from_brackets(Expr callee, size_t begin,
+Expr ExprTokenParser::parse_template_call_from_brackets(Expr callee, SourceLocation start,
                                                         size_t template_begin, size_t template_end,
                                                         std::initializer_list<TokenKind> stops) {
     (void)stops;
@@ -200,7 +200,7 @@ Expr ExprTokenParser::parse_template_call_from_brackets(Expr callee, size_t begi
     std::vector<Expr> args = parse_arg_list(TokenKind::RParen);
     match(TokenKind::RParen);
 
-    Expr call = make_node(ExprKind::TemplateCall, begin, cursor_);
+    Expr call = make_node_from_start(ExprKind::TemplateCall, start, cursor_);
     set_expr_callee(call, std::vector<Expr>{std::move(callee)});
     set_expr_template_type_args(call, parse_type_list_span(template_begin, template_end));
     Expr template_expr = parse_expr_span(template_begin, template_end);

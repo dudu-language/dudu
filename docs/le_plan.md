@@ -1683,8 +1683,21 @@ push. They are not release packaging work.
    50k, with RSS still around 285MB at 50k. A broad one-sample Release sweep
    after both parser changes measured expression-heavy 50k around 261ms,
    functions/classes around 46-72ms, calls/control around 67-81ms,
-   arrays/generics around 87-90ms, and modules around 85ms. Keep compiler
-   speed validation broad: generated corpora need multiple diverse code shapes,
+   arrays/generics around 87-90ms, and modules around 85ms. A postfix parser
+   cleanup then removed common `expr_token_begin` rescans from member, index,
+   call, and bracket-template-call node construction. That mostly acts as
+   parser hygiene for call/member-heavy real code; current generated shapes did
+   not show a meaningful isolated throughput change. Replacing `Expr::op`'s
+   owned `std::string` with canonical `std::string_view` operator spellings
+   reduced `Expr` from 240 to 224 bytes and `Stmt` from 736 to 704 bytes.
+   Focused three-sample Release benchmarks moved expression-heavy 50k from
+   about 262ms/285MB RSS to about 245ms/272MB RSS, while calls moved about
+   67ms/61MB to about 65ms/59MB, arrays stayed around 85ms with lower RSS, and
+   generics stayed around 88-91ms with lower RSS. A broad one-sample Release
+   sweep after the layout change measured expression-heavy 50k around 245ms,
+   functions/classes around 45-70ms, calls/control around 65-80ms,
+   arrays/generics around 85-88ms, and modules around 85ms. Keep compiler speed
+   validation broad: generated corpora need multiple diverse code shapes,
    because one particular compilation path can dominate or regress while an
    aggregate number looks acceptable. Do not treat a compiler-speed change as
    proven by one synthetic shape; include expression-heavy code, call-heavy

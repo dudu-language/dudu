@@ -8,6 +8,69 @@
 
 namespace dudu {
 
+namespace {
+
+std::string_view canonical_operator_text(std::string_view text) {
+    if (text == "and") {
+        return "and";
+    }
+    if (text == "or") {
+        return "or";
+    }
+    if (text == "not") {
+        return "not";
+    }
+    if (text.size() == 1) {
+        switch (text[0]) {
+        case '*':
+            return "*";
+        case '-':
+            return "-";
+        case '&':
+            return "&";
+        case '~':
+            return "~";
+        case '+':
+            return "+";
+        case '/':
+            return "/";
+        case '%':
+            return "%";
+        case '<':
+            return "<";
+        case '>':
+            return ">";
+        case '|':
+            return "|";
+        case '^':
+            return "^";
+        default:
+            return text;
+        }
+    }
+    if (text == "==") {
+        return "==";
+    }
+    if (text == "!=") {
+        return "!=";
+    }
+    if (text == "<=") {
+        return "<=";
+    }
+    if (text == ">=") {
+        return ">=";
+    }
+    if (text == "<<") {
+        return "<<";
+    }
+    if (text == ">>") {
+        return ">>";
+    }
+    return text;
+}
+
+} // namespace
+
 ExprTokenParser::ExprTokenParser(std::span<const Token> tokens) : tokens_(tokens) {
 }
 
@@ -123,6 +186,16 @@ Expr ExprTokenParser::make_node(ExprKind kind, size_t begin, size_t end) const {
     expr.kind = kind;
     expr.location = begin < tokens_.size() ? tokens_[begin].location : SourceLocation{};
     expr.range = range_between(begin, end);
+    return expr;
+}
+
+Expr ExprTokenParser::make_node_from_start(ExprKind kind, SourceLocation start, size_t end) const {
+    Expr expr;
+    expr.kind = kind;
+    expr.location = start;
+    expr.range.start = start;
+    expr.range.end =
+        (end > 0 && end <= tokens_.size()) ? expr_token_end_location(tokens_[end - 1]) : start;
     return expr;
 }
 
@@ -286,7 +359,7 @@ Expr ExprTokenParser::parse_binary(int min_precedence, std::initializer_list<Tok
         if (precedence < min_precedence) {
             break;
         }
-        const std::string op{current().text};
+        const std::string_view op = canonical_operator_text(current().text);
         ++cursor_;
         Expr rhs = (stop_at(stops) || at_end())
                        ? make_expr(ExprKind::Missing, "", current().location)
@@ -352,7 +425,7 @@ Expr ExprTokenParser::parse_prefix(std::initializer_list<TokenKind> stops) {
             }
             if (token.text == "*" || token.text == "-" || token.text == "&" || token.text == "~") {
                 ++cursor_;
-                return parse_unary(std::string(token.text), begin, stops);
+                return parse_unary(canonical_operator_text(token.text), begin, stops);
             }
         }
     }
@@ -388,10 +461,10 @@ Expr ExprTokenParser::parse_unsupported_expr(ExprKind kind, size_t begin,
     return make_node(kind, begin, cursor_);
 }
 
-Expr ExprTokenParser::parse_unary(std::string op, size_t begin,
+Expr ExprTokenParser::parse_unary(std::string_view op, size_t begin,
                                   std::initializer_list<TokenKind> stops) {
     Expr expr = make_node(ExprKind::Unary, begin, cursor_);
-    expr.op = std::move(op);
+    expr.op = op;
     expr.children.reserve(1);
     if (stop_at(stops) || at_end()) {
         expr.children.push_back(make_expr(ExprKind::Missing, "", current().location));

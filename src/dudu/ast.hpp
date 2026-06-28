@@ -167,7 +167,7 @@ struct Expr {
     ExprKind kind = ExprKind::Missing;
     std::string name;
     std::string value;
-    std::string op;
+    std::string_view op;
     std::shared_ptr<std::vector<Expr>> callee;
     std::shared_ptr<std::vector<Expr>> template_args;
     std::shared_ptr<std::vector<TypeRef>> template_type_args;
