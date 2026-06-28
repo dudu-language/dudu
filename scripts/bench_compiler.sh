@@ -7,7 +7,7 @@ csv_path="$repo_root/build/bench_compiler/compiler_bench.csv"
 build_tools=1
 build_type="Debug"
 line_scales="1000,5000,10000"
-shapes="functions,classes,expressions,modules,calls,control,arrays,generics"
+shapes="functions,classes,expressions,modules,calls,control,arrays,generics,mixed"
 
 usage() {
     cat <<'EOF'
@@ -21,7 +21,7 @@ source line counts, for example:
   --line-scales 10000,50000,100000,200000,500000,1000000
 
 --shapes accepts a comma-separated list of generated frontend stress shapes:
-  functions,classes,expressions,modules,calls,control,arrays,generics
+  functions,classes,expressions,modules,calls,control,arrays,generics,mixed
 
 --build-type chooses the compiler binary build used for the benchmark. Debug
 matches the normal dev loop. Release measures shipped-tool speed.
@@ -231,7 +231,7 @@ validate_shapes() {
     for shape in "${requested_shapes[@]}"; do
         shape="$(printf '%s' "$shape" | tr -d '[:space:]')"
         case "$shape" in
-            functions|classes|expressions|modules|calls|control|arrays|generics)
+            functions|classes|expressions|modules|calls|control|arrays|generics|mixed)
                 ;;
             *)
                 echo "invalid --shapes entry: $shape" >&2
@@ -738,6 +738,76 @@ EOF
     printf '%s\n' "$entry"
 }
 
+prepare_scaled_mixed_case() {
+    local requested_lines="$1"
+    local project="$scale_root/mixed_$requested_lines"
+    local entry="$project/main.dd"
+    rm -rf "$project"
+    mkdir -p "$project"
+
+    local module_count=8
+    local funcs_per_module=$((requested_lines / (module_count * 22)))
+    if [[ "$funcs_per_module" -lt 1 ]]; then
+        funcs_per_module=1
+    fi
+
+    : >"$entry"
+    for ((module = 0; module < module_count; ++module)); do
+        printf 'import mix%02d\n' "$module" >>"$entry"
+    done
+    {
+        printf '\n'
+        printf 'def main() -> i32:\n'
+        printf '    total: i32 = 0\n'
+    } >>"$entry"
+    for ((module = 0; module < module_count; ++module)); do
+        local call_limit="$funcs_per_module"
+        if [[ "$call_limit" -gt 32 ]]; then
+            call_limit=32
+        fi
+        for ((func = 0; func < call_limit; ++func)); do
+            printf '    total += mix%02d.mix%02d_func_%03d(%d)\n' \
+                "$module" "$module" "$func" "$func" >>"$entry"
+        done
+    done
+    printf '    return total\n' >>"$entry"
+
+    for ((module = 0; module < module_count; ++module)); do
+        local file
+        file="$(printf '%s/mix%02d.dd' "$project" "$module")"
+        cat >"$file" <<EOF
+class MixBox$(printf '%02d' "$module"):
+    value: i32
+    scale: i32
+
+    def bump(self, amount: i32) -> i32:
+        self.value += amount * self.scale
+        return self.value
+
+def mix$(printf '%02d' "$module")_identity[T](value: T) -> T:
+    return value
+
+EOF
+        for ((func = 0; func < funcs_per_module; ++func)); do
+            cat >>"$file" <<EOF
+def mix$(printf '%02d' "$module")_func_$(printf '%03d' "$func")(seed: i32) -> i32:
+    box: MixBox$(printf '%02d' "$module") = MixBox$(printf '%02d' "$module")(seed + $func, $((module + 1)))
+    values: array[i32] = [seed, seed + 1, seed + 2, seed + 3]
+    total: i32 = 0
+    for index: i32 in range(4):
+        total += values[index]
+        if total % 2 == 0:
+            total += box.bump(index)
+        else:
+            total -= index
+    return mix$(printf '%02d' "$module")_identity[i32](total)
+
+EOF
+        done
+    done
+    printf '%s\n' "$entry"
+}
+
 validate_shapes
 
 run_case "duc_check_simple" "frontend_check" "$simple" \
@@ -828,6 +898,12 @@ for requested_lines in "${requested_line_scales[@]}"; do
     if shape_enabled "generics"; then
         scaled_entry="$(prepare_scaled_generics_case "$requested_lines")"
         run_case "duc_check_generics_${requested_lines}" "frontend_generics" "$scaled_entry" \
+            "$tool_build_dir/duc" check "$scaled_entry"
+    fi
+    if shape_enabled "mixed"; then
+        scaled_entry="$(prepare_scaled_mixed_case "$requested_lines")"
+        scaled_project="$(dirname "$scaled_entry")"
+        run_case "duc_check_mixed_${requested_lines}" "frontend_mixed" "$scaled_project" \
             "$tool_build_dir/duc" check "$scaled_entry"
     fi
 done

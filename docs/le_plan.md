@@ -1433,15 +1433,18 @@ push. They are not release packaging work.
    `1000,5000,10000` lines and allowing explicit stress runs such as
    `--line-scales 10000,50000,100000,200000,500000,1000000`. The generated
    shapes are selectable with
-   `--shapes functions,classes,expressions,modules,calls,control,arrays,generics`
+   `--shapes functions,classes,expressions,modules,calls,control,arrays,generics,mixed`
    so profiling can distinguish slow declaration lookup, class/member handling,
    expression parsing/sema, import/module behavior, nested calls, control-flow
-   blocks, array/indexing operations, and generic instantiation. Compiler-speed
-   claims must be checked against multiple generated shapes and at least one
-   real dogfood project when practical, because one benchmark can hide that only
-   a specific compilation feature is slow. Reject a speed patch if it only
-   improves one generated shape while regressing other representative shapes;
-   that is a local trick, not a compiler throughput win. Benchmarks can select
+   blocks, array/indexing operations, generic instantiation, and mixed
+   project-shaped code that combines imports, classes, methods, generics,
+   arrays, loops, calls, and arithmetic in one generated corpus.
+   Compiler-speed claims must be checked against multiple generated shapes and
+   at least one real dogfood project when practical, because one benchmark can
+   hide that only a specific compilation feature is slow. Reject a speed patch
+   if it only improves one generated shape while regressing other
+   representative shapes; that is a local trick, not a compiler throughput win.
+   Benchmarks can select
    `--build-type Debug`, `Release`, or `RelWithDebInfo`; Debug measures
    inner-loop compiler development pain, while Release measures shipped-tool
    speed. Summary output reports lines per second in addition to elapsed time
@@ -1736,7 +1739,10 @@ push. They are not release packaging work.
    proven by one synthetic shape; include expression-heavy code, call-heavy
    code, control flow, arrays, modules/imports, generics/templates, class/OOP
    shapes, native interop shapes, and mixed realistic project-shaped corpora as
-   the benchmark suite grows. The
+   the benchmark suite grows. The benchmark harness now includes a `mixed`
+   generated shape by default; a local one-sample Release run at
+   `--line-scales 50000 --shapes mixed` measured about 122ms and 112MB RSS for
+   roughly 27.6k generated Dudu lines across nine files. The
    changed-file case runs against a copied fixture under `build/bench_compiler`
    so benchmarks do not mutate checked-in examples. It
    records source line/file counts and peak child-process RSS in KB with each
