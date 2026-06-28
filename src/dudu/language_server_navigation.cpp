@@ -45,10 +45,10 @@ std::string location_json(const std::string& uri, const std::string& range) {
 }
 
 std::string uri_for_location(const SourceLocation& location, const Document& doc) {
-    if (location.file.empty() || std::filesystem::path(location.file) == doc.path) {
+    if (location.file.empty() || std::filesystem::path(location.file.str()) == doc.path) {
         return doc.uri;
     }
-    std::filesystem::path path = location.file;
+    std::filesystem::path path = location.file.str();
     if (path.is_relative()) {
         path = std::filesystem::absolute(path);
     }

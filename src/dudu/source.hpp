@@ -1,12 +1,41 @@
 #pragma once
 
+#include <iosfwd>
+#include <memory>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 
 namespace dudu {
 
+class SourceFileName {
+  public:
+    SourceFileName() = default;
+    SourceFileName(const char* file);
+    SourceFileName(std::string file);
+    SourceFileName(std::string_view file);
+    SourceFileName(std::shared_ptr<const std::string> file);
+
+    const std::string& str() const;
+    bool empty() const;
+    bool ends_with(std::string_view suffix) const;
+    size_t rfind(std::string_view needle, size_t position = std::string::npos) const;
+
+    operator std::string() const;
+    operator std::string_view() const;
+
+  private:
+    std::shared_ptr<const std::string> file_;
+};
+
+std::ostream& operator<<(std::ostream& out, const SourceFileName& file);
+bool operator==(const SourceFileName& left, std::string_view right);
+bool operator==(std::string_view left, const SourceFileName& right);
+bool operator!=(const SourceFileName& left, std::string_view right);
+bool operator!=(std::string_view left, const SourceFileName& right);
+
 struct SourceLocation {
-    std::string file;
+    SourceFileName file;
     int line = 1;
     int column = 1;
 };

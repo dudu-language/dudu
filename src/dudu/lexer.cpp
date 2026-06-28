@@ -1,6 +1,7 @@
 #include "dudu/lexer.hpp"
 
 #include <cctype>
+#include <memory>
 #include <string>
 
 namespace dudu {
@@ -9,7 +10,7 @@ namespace {
 class Lexer {
   public:
     Lexer(std::string_view source, std::filesystem::path file)
-        : source_(source), file_(std::move(file).string()) {
+        : source_(source), file_(std::make_shared<const std::string>(std::move(file).string())) {
     }
 
     std::vector<Token> run() {
@@ -25,7 +26,7 @@ class Lexer {
 
   private:
     std::string_view source_;
-    std::string file_;
+    std::shared_ptr<const std::string> file_;
     size_t cursor_ = 0;
     int line_ = 1;
     std::vector<int> indents_;

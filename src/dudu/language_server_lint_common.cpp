@@ -23,6 +23,10 @@ bool lint_same_source_file(const std::filesystem::path& lhs, const std::filesyst
     return lhs_canonical == rhs_canonical;
 }
 
+bool lint_same_source_file(const SourceFileName& lhs, const std::filesystem::path& rhs) {
+    return lint_same_source_file(std::filesystem::path(lhs.str()), rhs);
+}
+
 SourceRange lint_delete_line_range(const SourceLocation& location, const Document& doc) {
     const std::vector<std::string> lines = document_lines(doc.text);
     const int zero_based_line = std::max(0, location.line - 1);

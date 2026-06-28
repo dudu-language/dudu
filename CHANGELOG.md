@@ -90,6 +90,8 @@
   parsed source and copying only at AST persistence boundaries.
 - Increased lexer token pre-reservation for token-dense source so expression
   stress files spend less of the load phase growing the token vector.
+- Reduced source-location memory churn by sharing immutable filename storage
+  across tokens and AST ranges instead of copying the path into every location.
 - Removed obsolete string-based Dudu method/class template substitution helpers.
 - Removed an unused unknown-expression parser helper and renamed the remaining
   text call parser as an explicit `cpp(...)` escape-boundary helper.

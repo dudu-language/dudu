@@ -36,7 +36,7 @@ Expr parse_expr_text(std::string_view text, SourceLocation location) {
     if (text.empty()) {
         return make_expr(ExprKind::Missing, "", location);
     }
-    std::vector<Token> tokens = lex_source(text, location.file);
+    std::vector<Token> tokens = lex_source(text, location.file.str());
     shift_token_locations(tokens, location);
     tokens.erase(std::remove_if(tokens.begin(), tokens.end(),
                                 [](const Token& token) {

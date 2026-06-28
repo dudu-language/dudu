@@ -19,7 +19,7 @@ void shift_token_locations(std::vector<Token>& tokens, const SourceLocation& bas
 }
 
 std::vector<Token> type_tokens(std::string_view text, const SourceLocation& location) {
-    std::vector<Token> tokens = lex_source(text, location.file);
+    std::vector<Token> tokens = lex_source(text, location.file.str());
     shift_token_locations(tokens, location);
     tokens.erase(std::remove_if(tokens.begin(), tokens.end(),
                                 [](const Token& token) {
