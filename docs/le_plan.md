@@ -1675,13 +1675,22 @@ push. They are not release packaging work.
    +0.17s before sema, with total check around +0.27s. A broad one-sample
    Release sweep measured expression-heavy 50k around 284ms, functions/classes
    around 44-68ms, calls/control/arrays/generics around 67-92ms, and modules
-   around 92ms. Keep compiler speed validation broad: generated
-   corpora need multiple diverse code shapes, because one particular
-   compilation path can dominate or regress while an aggregate number looks
-   acceptable. Do not treat a compiler-speed change as proven by one synthetic
-   shape; include expression-heavy code, call-heavy code, control flow, arrays,
-   modules/imports, generics/templates, class/OOP shapes, and native interop
-   shapes as the benchmark suite grows. The
+   around 92ms. A token-kind-gated prefix parser then reduced repeated hot
+   helper calls in expression parsing; focused three-sample Release expression
+   benchmarks moved 10k lines from about 67ms to about 65ms and 50k lines from
+   about 287ms to about 273ms. Inlining the expression-token predicate moved
+   the focused expression benchmark again to about 61ms at 10k and 258ms at
+   50k, with RSS still around 285MB at 50k. A broad one-sample Release sweep
+   after both parser changes measured expression-heavy 50k around 261ms,
+   functions/classes around 46-72ms, calls/control around 67-81ms,
+   arrays/generics around 87-90ms, and modules around 85ms. Keep compiler
+   speed validation broad: generated corpora need multiple diverse code shapes,
+   because one particular compilation path can dominate or regress while an
+   aggregate number looks acceptable. Do not treat a compiler-speed change as
+   proven by one synthetic shape; include expression-heavy code, call-heavy
+   code, control flow, arrays, modules/imports, generics/templates, class/OOP
+   shapes, native interop shapes, and mixed realistic project-shaped corpora as
+   the benchmark suite grows. The
    changed-file case runs against a copied fixture under `build/bench_compiler`
    so benchmarks do not mutate checked-in examples. It
    records source line/file counts and peak child-process RSS in KB with each

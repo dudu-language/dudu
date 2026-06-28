@@ -26,11 +26,6 @@ SourceLocation expr_token_end_location(const Token& token) {
     return end;
 }
 
-bool expression_token(const Token& token) {
-    return token.kind != TokenKind::Newline && token.kind != TokenKind::Indent &&
-           token.kind != TokenKind::Dedent && token.kind != TokenKind::End;
-}
-
 Expr parse_expr_text(std::string_view text, SourceLocation location) {
     text = trim_view_with_location(text, location);
     if (text.empty()) {

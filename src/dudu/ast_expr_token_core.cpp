@@ -303,56 +303,58 @@ Expr ExprTokenParser::parse_binary(int min_precedence, std::initializer_list<Tok
 
 Expr ExprTokenParser::parse_prefix(std::initializer_list<TokenKind> stops) {
     const size_t begin = cursor_;
-    if (at_identifier("def")) {
-        return parse_unsupported_expr(ExprKind::DefExpression, begin, stops);
-    }
-    if (match_identifier("lambda")) {
-        Expr expr = make_node(ExprKind::Lambda, begin, cursor_);
-        expr.children.reserve(1);
-        if (!stop_at(stops)) {
-            const size_t args_begin = cursor_;
-            while (!stop_at(stops) && !at(TokenKind::Colon)) {
-                ++cursor_;
+    if (!at_end()) {
+        const Token& token = current();
+        if (token.kind == TokenKind::Identifier) {
+            if (token.text == "def") {
+                return parse_unsupported_expr(ExprKind::DefExpression, begin, stops);
             }
-            expr.name = text_between(args_begin, cursor_);
-            if (match(TokenKind::Colon) && !stop_at(stops)) {
-                expr.children.push_back(parse_named_or_binary(stops));
+            if (token.text == "lambda") {
+                ++cursor_;
+                Expr expr = make_node(ExprKind::Lambda, begin, cursor_);
+                expr.children.reserve(1);
+                if (!stop_at(stops)) {
+                    const size_t args_begin = cursor_;
+                    while (!stop_at(stops) && !at(TokenKind::Colon)) {
+                        ++cursor_;
+                    }
+                    expr.name = text_between(args_begin, cursor_);
+                    if (match(TokenKind::Colon) && !stop_at(stops)) {
+                        expr.children.push_back(parse_named_or_binary(stops));
+                    }
+                }
+                expr.range = range_between(begin, cursor_);
+                return expr;
+            }
+            if (token.text == "not") {
+                ++cursor_;
+                return parse_unary("not", begin, stops);
+            }
+            if (token.text == "await") {
+                ++cursor_;
+                Expr expr = make_node(ExprKind::Await, begin, cursor_);
+                expr.children.reserve(1);
+                expr.children.push_back(parse_prefix(stops));
+                expr.range = range_between(begin, cursor_);
+                return expr;
+            }
+            if (token.text == "yield") {
+                ++cursor_;
+                Expr expr = make_node(ExprKind::Yield, begin, cursor_);
+                expr.children.reserve(1);
+                expr.children.push_back(parse_prefix(stops));
+                expr.range = range_between(begin, cursor_);
+                return expr;
+            }
+        } else if (token.kind == TokenKind::Operator) {
+            if (token.text == "*" && pointer_cast_call_ahead()) {
+                return parse_pointer_cast_call();
+            }
+            if (token.text == "*" || token.text == "-" || token.text == "&" || token.text == "~") {
+                ++cursor_;
+                return parse_unary(std::string(token.text), begin, stops);
             }
         }
-        expr.range = range_between(begin, cursor_);
-        return expr;
-    }
-    if (match_identifier("not")) {
-        return parse_unary("not", begin, stops);
-    }
-    if (match_identifier("await")) {
-        Expr expr = make_node(ExprKind::Await, begin, cursor_);
-        expr.children.reserve(1);
-        expr.children.push_back(parse_prefix(stops));
-        expr.range = range_between(begin, cursor_);
-        return expr;
-    }
-    if (match_identifier("yield")) {
-        Expr expr = make_node(ExprKind::Yield, begin, cursor_);
-        expr.children.reserve(1);
-        expr.children.push_back(parse_prefix(stops));
-        expr.range = range_between(begin, cursor_);
-        return expr;
-    }
-    if (at_operator("*") && pointer_cast_call_ahead()) {
-        return parse_pointer_cast_call();
-    }
-    if (match_operator("*")) {
-        return parse_unary("*", begin, stops);
-    }
-    if (match_operator("-")) {
-        return parse_unary("-", begin, stops);
-    }
-    if (match_operator("&")) {
-        return parse_unary("&", begin, stops);
-    }
-    if (match_operator("~")) {
-        return parse_unary("~", begin, stops);
     }
     return parse_postfix(stops);
 }
