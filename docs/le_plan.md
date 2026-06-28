@@ -1704,14 +1704,20 @@ push. They are not release packaging work.
    about 70ms to about 68ms, classes 50k from about 45ms to about 42ms,
    control 50k from about 80ms to about 78ms, and modules 50k from about 85ms
    to about 83ms, with memory broadly unchanged from the previous layout win.
-   Keep compiler speed validation broad: generated corpora need multiple
-   diverse code shapes, because one particular compilation path can dominate or
-   regress while an aggregate number looks acceptable. Do not treat a
-   compiler-speed change as proven by one synthetic shape; include
-   expression-heavy code, call-heavy code, control flow, arrays,
-   modules/imports, generics/templates, class/OOP shapes, native interop
-   shapes, and mixed realistic project-shaped corpora as the benchmark suite
-   grows. The
+   `type_ref_is_name` then stopped routing simple name comparisons through
+   `type_ref_head_name`, avoiding a temporary `std::string` in a common sema
+   predicate while preserving the old `TypeKind::Named`-only behavior. The
+   three-sample broad Release sweep was mixed but mostly useful: calls 50k
+   moved about 65ms to 64ms, functions 50k about 68ms to 66ms, modules 50k
+   about 83ms to 79ms, arrays stayed around 85ms, expressions stayed around
+   239-240ms, and control flow was noisier around 78-82ms. Keep compiler speed
+   validation broad: generated corpora need multiple diverse code shapes,
+   because one particular compilation path can dominate or regress while an
+   aggregate number looks acceptable. Do not treat a compiler-speed change as
+   proven by one synthetic shape; include expression-heavy code, call-heavy
+   code, control flow, arrays, modules/imports, generics/templates, class/OOP
+   shapes, native interop shapes, and mixed realistic project-shaped corpora as
+   the benchmark suite grows. The
    changed-file case runs against a copied fixture under `build/bench_compiler`
    so benchmarks do not mutate checked-in examples. It
    records source line/file counts and peak child-process RSS in KB with each

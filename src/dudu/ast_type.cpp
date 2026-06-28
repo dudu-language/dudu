@@ -270,7 +270,7 @@ void set_stmt_type_ref(Stmt& stmt, TypeRef type) {
 }
 
 bool type_ref_is_name(const TypeRef& type, std::string_view name) {
-    return type.kind == TypeKind::Named && type_ref_head_name(type) == name;
+    return type.kind == TypeKind::Named && trim_view(type.name) == name;
 }
 
 bool type_ref_is_auto(const TypeRef& type) {
