@@ -298,7 +298,7 @@ void collect_stmt_tokens(const std::vector<Stmt>& statements, std::vector<Semant
     for (const Stmt& stmt : statements) {
         if (stmt.kind == StmtKind::VarDecl) {
             add_semantic_token(tokens, stmt.location, stmt.name, token_variable, mod_declaration);
-            collect_type_tokens(stmt.type_ref, tokens, native_index);
+            collect_type_tokens(stmt_type_ref(stmt), tokens, native_index);
             collect_expr_tokens(stmt.value_expr, tokens, native_index);
         } else if (stmt.kind == StmtKind::Assign || stmt.kind == StmtKind::CompoundAssign) {
             collect_expr_tokens(stmt.target_expr, tokens, native_index);
@@ -312,7 +312,7 @@ void collect_stmt_tokens(const std::vector<Stmt>& statements, std::vector<Semant
             collect_expr_tokens(stmt.condition_expr, tokens, native_index);
         } else if (stmt.kind == StmtKind::For) {
             add_semantic_token(tokens, stmt.location, stmt.name, token_variable, mod_declaration);
-            collect_type_tokens(stmt.type_ref, tokens, native_index);
+            collect_type_tokens(stmt_type_ref(stmt), tokens, native_index);
             collect_expr_tokens(stmt.iterable_expr, tokens, native_index);
         } else if (stmt.kind == StmtKind::Expr) {
             collect_expr_tokens(stmt.expr, tokens, native_index);

@@ -166,11 +166,12 @@ void bind_tuple_names(FunctionScope& scope, const Stmt& stmt) {
 
 void bind_statement(FunctionScope& scope, const Stmt& stmt) {
     if (stmt.kind == StmtKind::VarDecl) {
-        if (has_type_ref(stmt.type_ref)) {
+        if (has_stmt_type_ref(stmt)) {
+            const TypeRef& declared_type = stmt_type_ref(stmt);
             const ArrayShapeInference inferred =
-                infer_array_literal_shape_type(stmt.type_ref, stmt.value_expr);
+                infer_array_literal_shape_type(declared_type, stmt.value_expr);
             const TypeRef type_ref =
-                inferred.status == ArrayShapeStatus::Inferred ? inferred.type_ref : stmt.type_ref;
+                inferred.status == ArrayShapeStatus::Inferred ? inferred.type_ref : declared_type;
             lsp_bind_local(scope, stmt.name, type_ref);
             return;
         }
@@ -188,7 +189,7 @@ void bind_statement(FunctionScope& scope, const Stmt& stmt) {
         }
     }
     if (stmt.kind == StmtKind::Except && !stmt.name.empty()) {
-        lsp_bind_local(scope, stmt.name, stmt.type_ref);
+        lsp_bind_local(scope, stmt.name, stmt_type_ref(stmt));
     }
 }
 
@@ -219,7 +220,7 @@ void collect_block_locals(FunctionScope& scope, const std::vector<Stmt>& stateme
 void collect_for_body_locals(FunctionScope scope, const Stmt& stmt, int cursor_line,
                              std::map<std::string, TypeRef>& out) {
     if (!stmt.name.empty()) {
-        TypeRef binding_type = stmt.type_ref;
+        TypeRef binding_type = stmt_type_ref(stmt);
         if (!has_type_ref(binding_type)) {
             if (const auto inferred = infer_lsp_for_binding_type(scope, stmt)) {
                 binding_type = *inferred;

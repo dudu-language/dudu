@@ -94,9 +94,8 @@ void check_type_ref_match(FunctionScope& scope, const TypeRef& expected, const E
         if (!mismatch_label.empty()) {
             const std::string expected_display = substitute_type_ref_text(expected, {});
             const std::string got_display = substitute_type_ref_text(got_ref, {});
-            sema_fail(location,
-                      std::string(mismatch_label) + ": expected " + expected_display + ", got " +
-                          got_display);
+            sema_fail(location, std::string(mismatch_label) + ": expected " + expected_display +
+                                    ", got " + got_display);
         }
         sema_fail(location, assignment_error(expected, expr, got_ref));
     }
@@ -116,7 +115,8 @@ void check_array_literal_elements(FunctionScope& scope, const TypeRef& element_t
         return;
     }
     for (const Expr& child : expr.children) {
-        check_array_literal_elements(scope, element_type, child, diagnostic_location(location, child));
+        check_array_literal_elements(scope, element_type, child,
+                                     diagnostic_location(location, child));
     }
 }
 
@@ -124,7 +124,7 @@ EffectiveVarType effective_var_type(const Stmt& stmt, const ArrayShapeInference&
     if (inferred.status == ArrayShapeStatus::Inferred) {
         return {.ref = inferred.type_ref, .inferred = true};
     }
-    return {.ref = stmt.type_ref};
+    return {.ref = stmt_type_ref(stmt)};
 }
 
 std::string shape_display(const std::vector<size_t>& shape) {

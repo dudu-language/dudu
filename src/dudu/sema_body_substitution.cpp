@@ -30,8 +30,8 @@ void substitute_expr_types(Expr& expr, const std::map<std::string, TypeRef>& sub
 }
 
 void substitute_stmt_types(Stmt& stmt, const std::map<std::string, TypeRef>& substitutions) {
-    if (has_type_ref(stmt.type_ref)) {
-        stmt.type_ref = substitute_type_ref(stmt.type_ref, substitutions);
+    if (has_stmt_type_ref(stmt)) {
+        set_stmt_type_ref(stmt, substitute_type_ref(stmt_type_ref(stmt), substitutions));
     }
     substitute_expr_types(stmt.expr, substitutions);
     substitute_expr_types(stmt.value_expr, substitutions);

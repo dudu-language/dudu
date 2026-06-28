@@ -193,7 +193,7 @@ struct Stmt {
     StmtKind kind = StmtKind::Unknown;
     std::string name;
     std::vector<std::string> cpp_lines;
-    TypeRef type_ref;
+    std::shared_ptr<TypeRef> type_ref;
     CompoundAssignOp compound_op = CompoundAssignOp::None;
     UnsupportedFeature unsupported_feature = UnsupportedFeature::None;
     Expr expr;

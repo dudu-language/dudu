@@ -1519,7 +1519,19 @@ push. They are not release packaging work.
    dropped local `Expr` size again from 288 to 264 bytes and `Stmt` from 2592
    to 2400 bytes. The same one-sample 10k/50k Release sweep stayed positive:
    expression-heavy 50k measured about 1.08s/370MB RSS, and modules 50k about
-   147ms/249MB RSS. The
+   147ms/249MB RSS. Statement-declared type metadata was then moved behind the
+   same explicit helper API because only declarations, typed loop bindings, and
+   typed catches carry it. This left `Expr` at 264 bytes and dropped local
+   `Stmt` size from 2400 to 2272 bytes. A broad one-sample Release sweep stayed
+   broadly positive on memory: expression-heavy 50k measured about
+   1.10s/364MB RSS, modules 50k about 139ms/239MB RSS, functions 50k about
+   113ms/115MB RSS, calls 50k about 133ms/108MB RSS, control 50k about
+   143ms/119MB RSS, arrays 50k about 159ms/87MB RSS, and generics 50k about
+   153ms/64MB RSS. Time differences at this size are mostly noise-level, so this
+   is kept as a memory/scale win rather than claimed as a throughput win. Keep
+   compiler speed validation broad: generated corpora need multiple code shapes,
+   because one particular compilation path can dominate or regress while an
+   aggregate number looks acceptable. The
    changed-file case runs against a copied fixture under `build/bench_compiler`
    so benchmarks do not mutate checked-in examples. It
    records source line/file counts and peak child-process RSS in KB with each

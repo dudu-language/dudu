@@ -131,8 +131,9 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
     }
     if (stmt.kind == StmtKind::VarDecl) {
         const std::string& name = stmt.name;
+        const TypeRef& declared_type = stmt_type_ref(stmt);
         const ArrayShapeInference inferred =
-            infer_array_literal_shape_type(stmt.type_ref, stmt.value_expr);
+            infer_array_literal_shape_type(declared_type, stmt.value_expr);
         const EffectiveStmtType type = effective_stmt_type(stmt, inferred);
         locals.bind(name);
         local_type_refs[name] = type.ref;
@@ -322,10 +323,10 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
     }
     if (stmt.kind == StmtKind::Except) {
         out << indent(depth);
-        if (stmt.name.empty() || !has_type_ref(stmt.type_ref)) {
+        if (stmt.name.empty() || !has_stmt_type_ref(stmt)) {
             out << "catch (...)";
         } else {
-            out << "catch (const " << lower_cpp_type(stmt.type_ref, aliases, options) << "& "
+            out << "catch (const " << lower_cpp_type(stmt_type_ref(stmt), aliases, options) << "& "
                 << stmt.name << ")";
         }
         out << " {\n";
@@ -350,9 +351,9 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                                                      local_type_refs, symbols, options);
         std::string binding_type = "auto";
         locals.bind(stmt.name);
-        if (has_type_ref(stmt.type_ref)) {
-            binding_type = lower_cpp_type(stmt.type_ref, aliases, options);
-            local_type_refs[stmt.name] = stmt.type_ref;
+        if (has_stmt_type_ref(stmt)) {
+            binding_type = lower_cpp_type(stmt_type_ref(stmt), aliases, options);
+            local_type_refs[stmt.name] = stmt_type_ref(stmt);
         }
         if (direct_callee_name(stmt.iterable_expr) == "range") {
             const std::vector<Expr>& args = stmt.iterable_expr.children;
@@ -376,7 +377,7 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
             out << indent(depth) << "}\n";
             return;
         }
-        const std::string loop_type = has_type_ref(stmt.type_ref) ? binding_type : "auto&&";
+        const std::string loop_type = has_stmt_type_ref(stmt) ? binding_type : "auto&&";
         out << indent(depth) << "for (" << loop_type << ' ' << binding << " : " << range << ") {\n";
         emit_block(out, stmt.children, depth + 1, aliases, locals, local_type_refs, return_type_ref,
                    function_returns, symbols, options);

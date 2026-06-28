@@ -252,6 +252,23 @@ void set_expr_type_ref(Expr& expr, TypeRef type) {
     expr.type_ref = std::make_shared<TypeRef>(std::move(type));
 }
 
+bool has_stmt_type_ref(const Stmt& stmt) {
+    return stmt.type_ref != nullptr && has_type_ref(*stmt.type_ref);
+}
+
+const TypeRef& stmt_type_ref(const Stmt& stmt) {
+    static const TypeRef empty;
+    return stmt.type_ref == nullptr ? empty : *stmt.type_ref;
+}
+
+void set_stmt_type_ref(Stmt& stmt, TypeRef type) {
+    if (!has_type_ref(type)) {
+        stmt.type_ref.reset();
+        return;
+    }
+    stmt.type_ref = std::make_shared<TypeRef>(std::move(type));
+}
+
 bool type_ref_is_name(const TypeRef& type, std::string_view name) {
     return type.kind == TypeKind::Named && type_ref_head_name(type) == name;
 }

@@ -53,7 +53,7 @@ EffectiveStmtType effective_stmt_type(const Stmt& stmt, const ArrayShapeInferenc
     if (inferred.status == ArrayShapeStatus::Inferred) {
         return {.ref = inferred.type_ref};
     }
-    return {.ref = stmt.type_ref};
+    return {.ref = stmt_type_ref(stmt)};
 }
 
 std::string lower_declared_stmt_type(const TypeRef& type, const std::vector<std::string>& aliases,

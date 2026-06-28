@@ -1,4 +1,5 @@
 #include "dudu/ast_parse_utils.hpp"
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/parser_internal.hpp"
 #include "dudu/parser_statement_ops.hpp"
@@ -247,7 +248,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
         stmt.name = name.text;
         if (match(TokenKind::Colon)) {
             const JoinedTokens type = join_until_top_level_identifier("in", {TokenKind::Newline});
-            stmt.type_ref = parse_type_piece(type);
+            set_stmt_type_ref(stmt, parse_type_piece(type));
         }
         if (!match_identifier("in")) {
             fail_current("expected in after for loop binding");
@@ -287,7 +288,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
             stmt.name = declaration_name_from_piece(tokens_, header.begin, header.end);
             consume(TokenKind::Colon, "expected : after except binding");
             const JoinedTokens type = join_until_with_range({TokenKind::Colon, TokenKind::Newline});
-            stmt.type_ref = parse_type_piece(type);
+            set_stmt_type_ref(stmt, parse_type_piece(type));
         } else {
             stmt.condition_expr = parse_expr_piece(header);
         }
@@ -359,7 +360,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
         stmt.name = declaration_name_from_piece(tokens_, line_begin, *colon);
         const size_t type_end = assignment.value_or(end);
         const JoinedTokens type = join_tokens(*colon + 1, type_end);
-        stmt.type_ref = parse_type_piece(type);
+        set_stmt_type_ref(stmt, parse_type_piece(type));
         if (assignment.has_value()) {
             const JoinedTokens value = join_tokens(*assignment + 1, end);
             stmt.value_expr = parse_expr_piece(value);

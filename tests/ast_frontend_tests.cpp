@@ -936,12 +936,14 @@ void test_statement_ast_shape() {
     assert(main.statements.size() == 5);
     assert(main.statements[0].kind == dudu::StmtKind::VarDecl);
     assert(main.statements[0].name == "total");
-    assert(dudu::substitute_type_ref_text(main.statements[0].type_ref, {}) == "i32");
+    assert(dudu::has_stmt_type_ref(main.statements[0]));
+    assert(dudu::substitute_type_ref_text(dudu::stmt_type_ref(main.statements[0]), {}) == "i32");
     assert(main.statements[0].value_expr.kind == dudu::ExprKind::IntLiteral);
     assert(main.statements[0].value_expr.value == "0");
     assert(main.statements[1].kind == dudu::StmtKind::For);
     assert(main.statements[1].name == "item");
-    assert(dudu::substitute_type_ref_text(main.statements[1].type_ref, {}) == "i32");
+    assert(dudu::has_stmt_type_ref(main.statements[1]));
+    assert(dudu::substitute_type_ref_text(dudu::stmt_type_ref(main.statements[1]), {}) == "i32");
     assert(main.statements[1].iterable_expr.kind == dudu::ExprKind::Name);
     assert(main.statements[1].iterable_expr.name == "values");
     assert(main.statements[1].children.size() == 1);
@@ -999,7 +1001,8 @@ void test_except_binding_name_must_be_identifier() {
     const dudu::Stmt& except = module.functions.front().statements[1];
     assert(except.kind == dudu::StmtKind::Except);
     assert(except.name == "err");
-    assert(dudu::type_ref_text(except.type_ref) == "Error");
+    assert(dudu::has_stmt_type_ref(except));
+    assert(dudu::type_ref_text(dudu::stmt_type_ref(except)) == "Error");
 
     bool rejected = false;
     try {
@@ -1485,10 +1488,12 @@ void test_type_ast_shape() {
     assert(update.params[0].type_ref.kind == dudu::TypeKind::Reference);
     assert(update.params[1].type_ref.kind == dudu::TypeKind::Template);
     assert(update.params[1].type_ref.children[0].name == "str");
-    assert(update.statements[0].type_ref.kind == dudu::TypeKind::Const);
-    assert(update.statements[0].type_ref.range.start.line == 16);
-    assert(update.statements[0].type_ref.range.start.column > update.statements[0].location.column);
-    assert(update.statements[0].type_ref.children[0].kind == dudu::TypeKind::Template);
+    assert(dudu::has_stmt_type_ref(update.statements[0]));
+    const dudu::TypeRef& statement_type = dudu::stmt_type_ref(update.statements[0]);
+    assert(statement_type.kind == dudu::TypeKind::Const);
+    assert(statement_type.range.start.line == 16);
+    assert(statement_type.range.start.column > update.statements[0].location.column);
+    assert(statement_type.children[0].kind == dudu::TypeKind::Template);
 
     assert(dudu::lower_cpp_type(dudu::parse_type_text("list[*Player]")) == "std::vector<Player*>");
     assert(dudu::lower_cpp_type(dudu::parse_type_text("*const[i32]")) == "const int32_t*");

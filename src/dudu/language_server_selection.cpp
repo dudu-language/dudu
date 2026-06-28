@@ -93,7 +93,7 @@ void collect_selection_from_statements(const std::vector<Stmt>& statements,
     visit_lsp_stmt_tree(statements, [&](const Stmt& stmt) {
         visit_stmt_binding_names(stmt, set_symbol);
         visit_stmt_binding_names(stmt, set_symbol_path);
-        visit_type_tree(stmt.type_ref);
+        visit_type_tree(stmt_type_ref(stmt));
         visit_stmt_expressions(
             stmt, [&](const Expr& expr) { visit_lsp_expr_tree(expr, visit_expr, visit_type); });
     });

@@ -90,8 +90,8 @@ void lint_suspicious_cast_stmt(const Stmt& stmt, const Document& doc,
     }
     visit_stmt_expressions(
         stmt, [&](const Expr& expr) { lint_suspicious_cast_expr(expr, doc, active_decls, out); });
-    if (stmt.kind == StmtKind::VarDecl && !stmt.name.empty() && has_type_ref(stmt.type_ref)) {
-        active_decls.push_back({.name = stmt.name, .type_ref = stmt.type_ref});
+    if (stmt.kind == StmtKind::VarDecl && !stmt.name.empty() && has_stmt_type_ref(stmt)) {
+        active_decls.push_back({.name = stmt.name, .type_ref = stmt_type_ref(stmt)});
     }
     if (!stmt.children.empty()) {
         lint_suspicious_cast_statement_sequence(stmt.children, doc, active_decls, out);
