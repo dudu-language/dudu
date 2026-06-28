@@ -7,7 +7,7 @@ namespace dudu {
 std::string format_location(const SourceLocation& location) {
     std::ostringstream out;
     if (!location.file.empty()) {
-        out << location.file.string() << ':';
+        out << location.file << ':';
     }
     out << location.line << ':' << location.column;
     return out.str();

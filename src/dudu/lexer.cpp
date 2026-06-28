@@ -9,7 +9,7 @@ namespace {
 class Lexer {
   public:
     Lexer(std::string_view source, std::filesystem::path file)
-        : source_(source), file_(std::move(file)) {
+        : source_(source), file_(std::move(file).string()) {
     }
 
     std::vector<Token> run() {
@@ -24,7 +24,7 @@ class Lexer {
 
   private:
     std::string_view source_;
-    std::filesystem::path file_;
+    std::string file_;
     size_t cursor_ = 0;
     int line_ = 1;
     std::vector<int> indents_;

@@ -46,7 +46,7 @@ NativeSymbolId symbol_id(const std::vector<std::string>& fields, size_t usr_inde
 }
 
 std::vector<std::string> location_fields(const SourceLocation& location) {
-    return {location.file.string(), std::to_string(location.line), std::to_string(location.column)};
+    return {location.file, std::to_string(location.line), std::to_string(location.column)};
 }
 
 void append_location_fields(std::vector<std::string>& fields, const SourceLocation& location) {

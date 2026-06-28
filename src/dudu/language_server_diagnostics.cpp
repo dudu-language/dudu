@@ -54,7 +54,7 @@ std::vector<Diagnostic> diagnostics_for_document(const Document& doc) {
         try {
             config = config_for_file(doc.path);
         } catch (const std::exception& error) {
-            return {{.location = {.file = doc.path, .line = 1, .column = 1},
+            return {{.location = {.file = doc.path.string(), .line = 1, .column = 1},
                      .message = error.what(),
                      .source = "dudu/build-config",
                      .severity = 1,
@@ -63,7 +63,7 @@ std::vector<Diagnostic> diagnostics_for_document(const Document& doc) {
                      .fix_range = std::nullopt}};
         }
         if (const std::optional<std::string> missing = missing_pkg_config_package(config)) {
-            return {{.location = {.file = doc.path, .line = 1, .column = 1},
+            return {{.location = {.file = doc.path.string(), .line = 1, .column = 1},
                      .message = "missing pkg-config package: " + *missing,
                      .source = "dudu/build-config",
                      .severity = 1,
@@ -87,7 +87,7 @@ std::vector<Diagnostic> diagnostics_for_document(const Document& doc) {
                  .data_name = error.data_name(),
                  .fix_range = std::nullopt}};
     } catch (const std::exception& error) {
-        return {{.location = {.file = doc.path, .line = 1, .column = 1},
+        return {{.location = {.file = doc.path.string(), .line = 1, .column = 1},
                  .message = error.what(),
                  .source = "dudu/lsp",
                  .severity = 1,

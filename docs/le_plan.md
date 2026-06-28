@@ -1455,10 +1455,13 @@ push. They are not release packaging work.
    RSS. A parser fast path now avoids copying expression/type token spans when
    they contain no layout tokens; this keeps multiline continuation semantics
    unchanged while dropping the local 5k expression-heavy parse/load phase from
-   about 0.87s to about 0.76s. A local Release-built compiler check of the
-   10k expression-heavy generated case measured about 0.60s with `duc
-   --timings`, while the benchmark harness measured about 0.95s including its
-   process/RSS wrapper overhead. The changed-file case runs against a copied
+   about 0.87s to about 0.76s. Source locations now store file names as
+   strings instead of full `std::filesystem::path` objects, avoiding repeated
+   path-internal allocations in tokens, ranges, and AST nodes. Locally this
+   dropped the 10k expression-heavy Release check from about 0.60s and 458MB
+   RSS to about 0.25s and 227MB RSS with direct `duc --timings`; the benchmark
+   harness measured about 0.29s and 249MB RSS including its process/RSS wrapper
+   overhead. The changed-file case runs against a copied
    fixture under `build/bench_compiler` so benchmarks do not mutate checked-in
    examples. It
    records source line/file counts and peak child-process RSS in KB with each

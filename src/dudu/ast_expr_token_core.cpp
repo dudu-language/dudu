@@ -268,6 +268,7 @@ Expr ExprTokenParser::parse_binary(int min_precedence, std::initializer_list<Tok
                        : parse_binary(precedence + 1, stops);
         Expr binary = make_node(ExprKind::Binary, begin, cursor_);
         binary.op = op;
+        binary.children.reserve(2);
         binary.children.push_back(std::move(lhs));
         binary.children.push_back(std::move(rhs));
         lhs = std::move(binary);

@@ -1,13 +1,12 @@
 #pragma once
 
-#include <filesystem>
 #include <stdexcept>
 #include <string>
 
 namespace dudu {
 
 struct SourceLocation {
-    std::filesystem::path file;
+    std::string file;
     int line = 1;
     int column = 1;
 };
