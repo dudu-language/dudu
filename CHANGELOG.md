@@ -129,6 +129,8 @@
   reducing expression node size without changing parsed template type metadata.
 - Moved sparse expression callee payloads behind pointer storage, reducing
   expression and statement node size while keeping call handling structured.
+- Replaced expression-parser binary operator precedence string comparisons with
+  size/character dispatch, reducing expression-heavy parse/load time.
 - Reduced parser work by carrying layout-token metadata on joined token spans
   instead of rescanning each expression/type piece before parsing it.
 - Removed obsolete string-based Dudu method/class template substitution helpers.

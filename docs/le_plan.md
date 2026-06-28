@@ -1626,10 +1626,20 @@ push. They are not release packaging work.
    expression-heavy 50k measured about 1.01s/285MB RSS, modules 50k about
    107ms/112MB RSS, functions 50k about 97ms/57MB RSS, calls 50k about
    118ms/60MB RSS, control 50k about 119ms/68MB RSS, arrays 50k about
-   144ms/58MB RSS, and generics 50k about 144ms/47MB RSS. Keep compiler speed
-   validation broad: generated corpora need multiple code shapes, because one
-   particular compilation path can dominate or regress while an aggregate number
-   looks acceptable. The
+   144ms/58MB RSS, and generics 50k about 144ms/47MB RSS. Callgrind on a 5k
+   expression-heavy generated file showed parsing at roughly 65% of total
+   instruction count and sema around 34%, with libc `memcmp` dominating the
+   flat profile. The parser's binary-precedence check then moved from repeated
+   `string_view == literal` comparisons to size/character dispatch. Focused
+   `expressions_50000 --timings` improved from about 0.95s total and 0.585s
+   parse/load to about 0.875s total and 0.505s parse/load. A broad one-sample
+   10k/50k Release sweep kept the change: expression-heavy 50k measured about
+   932ms/285MB RSS, modules 50k about 100ms/111MB RSS, functions 50k about
+   96ms/57MB RSS, calls 50k about 113ms/61MB RSS, control 50k about
+   117ms/68MB RSS, arrays 50k about 139ms/58MB RSS, and generics 50k about
+   142ms/47MB RSS. Keep compiler speed validation broad: generated corpora need
+   multiple code shapes, because one particular compilation path can dominate or
+   regress while an aggregate number looks acceptable. The
    changed-file case runs against a copied fixture under `build/bench_compiler`
    so benchmarks do not mutate checked-in examples. It
    records source line/file counts and peak child-process RSS in KB with each

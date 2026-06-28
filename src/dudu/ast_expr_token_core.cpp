@@ -226,10 +226,11 @@ Expr ExprTokenParser::parse_named_or_binary(std::initializer_list<TokenKind> sto
 
 int ExprTokenParser::binary_precedence(const Token& token) {
     if (token.kind == TokenKind::Identifier) {
-        if (token.text == "or") {
+        const std::string_view text = token.text;
+        if (text.size() == 2 && text[0] == 'o' && text[1] == 'r') {
             return 1;
         }
-        if (token.text == "and") {
+        if (text.size() == 3 && text[0] == 'a' && text[1] == 'n' && text[2] == 'd') {
             return 2;
         }
         return 0;
@@ -237,27 +238,42 @@ int ExprTokenParser::binary_precedence(const Token& token) {
     if (token.kind != TokenKind::Operator) {
         return 0;
     }
-    if (token.text == "==" || token.text == "!=" || token.text == "<=" || token.text == ">=" ||
-        token.text == "<" || token.text == ">") {
-        return 3;
+    const std::string_view text = token.text;
+    if (text.size() == 1) {
+        switch (text[0]) {
+        case '<':
+        case '>':
+            return 3;
+        case '|':
+            return 4;
+        case '^':
+            return 5;
+        case '&':
+            return 6;
+        case '+':
+        case '-':
+            return 8;
+        case '*':
+        case '/':
+        case '%':
+            return 9;
+        default:
+            return 0;
+        }
     }
-    if (token.text == "|") {
-        return 4;
-    }
-    if (token.text == "^") {
-        return 5;
-    }
-    if (token.text == "&") {
-        return 6;
-    }
-    if (token.text == "<<" || token.text == ">>") {
-        return 7;
-    }
-    if (token.text == "+" || token.text == "-") {
-        return 8;
-    }
-    if (token.text == "*" || token.text == "/" || token.text == "%") {
-        return 9;
+    if (text.size() == 2) {
+        switch (text[0]) {
+        case '=':
+            return text[1] == '=' ? 3 : 0;
+        case '!':
+            return text[1] == '=' ? 3 : 0;
+        case '<':
+            return text[1] == '=' ? 3 : (text[1] == '<' ? 7 : 0);
+        case '>':
+            return text[1] == '=' ? 3 : (text[1] == '>' ? 7 : 0);
+        default:
+            return 0;
+        }
     }
     return 0;
 }
