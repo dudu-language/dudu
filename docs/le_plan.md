@@ -1760,7 +1760,10 @@ push. They are not release packaging work.
    project-shaped code and did not preserve an expression-heavy win. Lazily
    computing `infer_expr_type_ast` diagnostic locations was also tried and
    rejected: the expression-heavy target did not improve, and broad generated
-   shape differences were noise-level. The
+   shape differences were noise-level. A last-local-type lookup cache inside
+   `FunctionScope` was tried and rejected: it made expression-heavy code,
+   arrays, functions, control flow, and mixed project-shaped code worse despite
+   slightly helping generics. The
    changed-file case runs against a copied fixture under `build/bench_compiler`
    so benchmarks do not mutate checked-in examples. It
    records source line/file counts and peak child-process RSS in KB with each
