@@ -71,14 +71,14 @@ void test_keyword_statements_keep_token_ranges() {
     assert(loop.iterable_expr.range.start.column == 22);
     assert(loop.children.front().kind == dudu::StmtKind::DebugAssert);
     assert(dudu::display_expr(loop.children.front().condition_expr) == "item > 0");
-    assert(loop.children.front().message_expr.kind == dudu::ExprKind::StringLiteral);
-    assert(loop.children.front().message_expr.value == "positive");
+    assert(dudu::stmt_message_expr(loop.children.front()).kind == dudu::ExprKind::StringLiteral);
+    assert(dudu::stmt_message_expr(loop.children.front()).value == "positive");
     const dudu::Stmt& call_assert = loop.children[1];
     assert(call_assert.kind == dudu::StmtKind::DebugAssert);
     assert(call_assert.condition_expr.kind == dudu::ExprKind::Call);
     assert(call_assert.condition_expr.children.size() == 3);
-    assert(call_assert.message_expr.kind == dudu::ExprKind::StringLiteral);
-    assert(call_assert.message_expr.value == "in range");
+    assert(dudu::stmt_message_expr(call_assert).kind == dudu::ExprKind::StringLiteral);
+    assert(dudu::stmt_message_expr(call_assert).value == "in range");
 }
 
 } // namespace

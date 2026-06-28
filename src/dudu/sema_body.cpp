@@ -82,9 +82,9 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
                           " target mode; use debug_assert or a target-specific assert handler");
         }
         check_condition_type(scope, stmt);
-        if (sema_has_expr(stmt.message_expr)) {
-            (void)infer_expr_type_ast(scope, stmt.message_expr,
-                                      &diagnostic_location(stmt.location, stmt.message_expr));
+        if (has_stmt_message_expr(stmt)) {
+            const Expr& message = stmt_message_expr(stmt);
+            (void)infer_expr_type_ast(scope, message, &diagnostic_location(stmt.location, message));
         }
         return;
     }

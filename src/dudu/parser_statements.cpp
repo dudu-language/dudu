@@ -1,3 +1,4 @@
+#include "dudu/ast_expr.hpp"
 #include "dudu/ast_parse_utils.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
@@ -329,7 +330,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
             stmt.condition_expr = parse_expr_piece(parts.front());
         }
         if (parts.size() >= 2) {
-            stmt.message_expr = parse_expr_piece(parts[1]);
+            set_stmt_message_expr(stmt, parse_expr_piece(parts[1]));
         }
         attach_statement_range(stmt, join_tokens(begin, statement_end));
         return stmt;

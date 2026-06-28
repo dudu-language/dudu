@@ -88,9 +88,9 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
             << lower_emitted_expr(stmt.condition_expr, aliases, locals, local_type_refs, symbols,
                                   options)
             << ")) { throw std::runtime_error(";
-        if (has_expr(stmt.message_expr))
-            out << lower_emitted_expr(stmt.message_expr, aliases, locals, local_type_refs, symbols,
-                                      options);
+        if (has_stmt_message_expr(stmt))
+            out << lower_emitted_expr(stmt_message_expr(stmt), aliases, locals, local_type_refs,
+                                      symbols, options);
         else
             out << cpp_string_literal("assert failed: " + display_expr(stmt.condition_expr));
         out << "); }\n";
@@ -101,10 +101,10 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
             << lower_emitted_expr(stmt.condition_expr, aliases, locals, local_type_refs, symbols,
                                   options)
             << ")";
-        if (has_expr(stmt.message_expr))
+        if (has_stmt_message_expr(stmt))
             out << " && ("
-                << lower_emitted_expr(stmt.message_expr, aliases, locals, local_type_refs, symbols,
-                                      options)
+                << lower_emitted_expr(stmt_message_expr(stmt), aliases, locals, local_type_refs,
+                                      symbols, options)
                 << ")";
         out << ");\n";
         return;

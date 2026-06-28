@@ -38,6 +38,9 @@ std::string direct_callee_name(const Expr& expr);
 bool has_expr_template_type_args(const Expr& expr);
 const std::vector<TypeRef>& expr_template_type_args(const Expr& expr);
 void set_expr_template_type_args(Expr& expr, std::vector<TypeRef> args);
+bool has_stmt_message_expr(const Stmt& stmt);
+const Expr& stmt_message_expr(const Stmt& stmt);
+void set_stmt_message_expr(Stmt& stmt, Expr expr);
 std::string display_expr(const Expr& expr);
 
 } // namespace dudu

@@ -108,6 +108,9 @@
 - Moved sparse expression template type arguments behind pointer storage,
   shrinking expression-heavy AST memory use without changing template-call
   semantics.
+- Moved sparse assertion message expressions behind pointer storage, shrinking
+  statement nodes and reducing peak RSS across generated compiler benchmark
+  shapes.
 - Reduced parser work by carrying layout-token metadata on joined token spans
   instead of rescanning each expression/type piece before parsing it.
 - Removed obsolete string-based Dudu method/class template substitution helpers.

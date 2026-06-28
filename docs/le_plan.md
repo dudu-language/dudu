@@ -1547,7 +1547,15 @@ push. They are not release packaging work.
    0.62-0.63s after the layout metadata change. The one-sample broad harness
    still bounces in total time, so keep treating this as a parser-path win
    validated by focused timings plus normal fast tests, not as a final compiler
-   throughput solution. Keep
+   throughput solution. Assertion custom-message expressions were then moved
+   behind sparse pointer storage, because most statements do not carry assertion
+   messages. This left `Expr` at 256 bytes and dropped local `Stmt` size from
+   2208 to 1968 bytes. A broad one-sample 10k/50k Release sweep stayed
+   positive on memory: expression-heavy 50k measured about 1.08s/343MB RSS,
+   modules 50k about 145ms/212MB RSS, functions 50k about 114ms/103MB RSS,
+   calls 50k about 133ms/97MB RSS, control 50k about 140ms/107MB RSS, arrays
+   50k about 153ms/80MB RSS, and generics 50k about 150ms/61MB RSS. Time
+   remains noise-level at this size, so keep this as a memory/scale win. Keep
    compiler speed validation broad: generated corpora need multiple code shapes,
    because one particular compilation path can dominate or regress while an
    aggregate number looks acceptable. The
