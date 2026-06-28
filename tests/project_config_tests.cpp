@@ -114,7 +114,7 @@ void test_build_backend_selection(const std::filesystem::path& root) {
     assert(implicit.build_backend == "cmake");
     assert(!implicit.build_backend_explicit);
     assert(dudu::select_build_backend(implicit, project / "src/main.dd", false).build_backend ==
-           "direct");
+           "cmake");
     assert(dudu::select_build_backend(implicit, project / "src/main.dd", true).build_backend ==
            "cmake");
 
@@ -124,8 +124,9 @@ void test_build_backend_selection(const std::filesystem::path& root) {
                                             "def main() -> i32:\n"
                                             "    return support.support()\n");
     const dudu::ProjectConfig implicit_multi = dudu::parse_project_config(project / "dudu.toml");
-    assert(dudu::select_build_backend(implicit_multi, project / "src/main.dd", false)
-               .build_backend == "cmake");
+    assert(
+        dudu::select_build_backend(implicit_multi, project / "src/main.dd", false).build_backend ==
+        "cmake");
 
     write_text(project / "dudu.toml", "name = \"backend_probe\"\n"
                                       "entry = \"src/main.dd\"\n"

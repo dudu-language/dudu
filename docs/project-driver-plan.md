@@ -398,9 +398,9 @@ Current implementation reality:
   or explicit delegated test command.
 - `dudu build`, `dudu run`, and `dudu test` stream native compiler, CMake, and
   CTest output by default through the project-driver front door. Full native
-  command lines stay behind `--verbose`, cached direct builds print an explicit
-  `up-to-date` outcome, and `--quiet` suppresses project-driver progress output
-  for scripts.
+  command lines stay behind `--verbose`, generated/user-owned CMake builds
+  report their CMake/build/output stages, and `--quiet` suppresses
+  project-driver progress output for scripts.
 - Generated and user-owned CMake backends cache the configure command and skip
   redundant `cmake -S/-B` configure runs when the CMake cache, generated
   source, and command line are unchanged. The driver still prints the

@@ -1600,6 +1600,9 @@ push. They are not release packaging work.
    file byproducts, so whitespace-only `.dd` edits do not force unchanged
    generated C++ translation units to recompile. Project builds use this CMake
    path; `[build] backend = "direct"` is no longer a supported manifest mode.
+   The old implicit single-file shortcut to the direct backend has also been
+   removed, so `dudu build` and `dudu run` exercise generated/user-owned CMake
+   for small projects too.
 
    Remaining incremental work is on the Dudu side: `duc emit-modules` still
    analyzes the selected entry's full module graph in a fresh process. Native
@@ -1806,7 +1809,7 @@ push. They are not release packaging work.
    emits an internal CMake project and drives `cmake -S/-B`
    plus `cmake --build`. Native inputs such as include paths, library paths,
    libraries, flags, pkg-config packages, and extra C/C++ sources are covered
-   by direct and generated-CMake backends for normal project shapes. The
+   by the generated-CMake backend for normal project shapes. The
    generated-CMake fixture links an extra C source into both the app target and
    generated Dudu test harness. `dudu cmake` still emits CMake for inspection or
    handoff. User-owned CMake build/run/test are implemented for manifests that
@@ -1815,15 +1818,14 @@ push. They are not release packaging work.
    CTest when no Dudu test entry or explicit delegated test command is present.
    The project-driver front door now streams native compiler, CMake, and CTest
    output for `dudu build`, `dudu run`, and `dudu test` while keeping full
-   command lines behind `--verbose`; cached direct builds also print an explicit
-   `up-to-date` outcome by default. `dudu build` reports the final artifact path
-   with an `output` line for both direct and generated-CMake backends.
+   command lines behind `--verbose`. `dudu build` reports the final artifact
+   path with an `output` line for generated/user-owned CMake backends.
    Generated-CMake executable/library builds support `-o` by copying the built
    CMake target artifact to the requested path after a successful build, while
    user-owned CMake keeps artifact naming under the user's CMake project.
-   Direct `dudu build` and `dudu run` report Dudu-side `analyze`, generated C++
-   `emit`, native `compile`, and final `output`/`run` stages separately so
-   normal builds show where time is going.
+   Generated-CMake builds report `backend`, `entry`, `cmake`, `build`, and
+   final `output`/`run` stages before delegating to CMake so normal builds show
+   where time is going.
    Project-driver commands accept `--timings`, which prefixes Dudu progress
    lines with elapsed seconds from command start. This makes slow phases such
    as full-module analysis or native header metadata parsing visible without

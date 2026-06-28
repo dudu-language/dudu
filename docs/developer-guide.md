@@ -50,7 +50,7 @@ dudu clean-cache
 ```
 
 If an input file matches a target entry, Dudu applies that target's settings for
-direct file builds too.
+normal CMake-backed `dudu build` and `dudu run` commands too.
 
 ## Compiler Driver
 
@@ -140,11 +140,11 @@ CMake, compile, or run phases are visible without changing program stdout.
 ## Build Backends
 
 `dudu build`, `dudu run`, and `dudu test` are intended to stay the normal front
-door even for serious native projects. The direct compiler path is the fast
-narrow backend. CMake is the broad native ecosystem backend for larger
-dependency graphs, package discovery, IDE generators, and user-owned native
-builds. `dudu cmake` is an inspectable escape hatch, not the replacement for
-`dudu build`.
+door even for serious native projects. `dudu build` and `dudu run` use generated
+or user-owned CMake, including for small single-file projects, so project builds
+exercise the same native ecosystem path as larger dependency graphs, package
+discovery, IDE generators, and user-owned native builds. `dudu cmake` is an
+inspectable escape hatch, not the replacement for `dudu build`.
 
 `dudu.toml` is the canonical Dudu project file, but it does not need to own
 every native compilation detail. For simple projects it can describe the whole

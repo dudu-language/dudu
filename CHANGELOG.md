@@ -176,6 +176,9 @@
 - Removed `[build] backend = "direct"` as a supported Dudu project backend;
   project builds use generated/user-owned CMake, while `duc build <file.dd>`
   remains the low-level compiler-driver build path.
+- Removed the implicit single-file direct backend shortcut from `dudu build` and
+  `dudu run`; generated/user-owned CMake is now the project build path even for
+  small projects.
 - Avoided cloning the full module symbol table for non-generic function and
   method body/declaration checks. On the local 5k generated functions
   benchmark, `duc check` dropped from about 3.5s to about 0.5s.
