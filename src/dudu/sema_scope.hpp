@@ -21,10 +21,22 @@ struct FunctionScope {
     std::map<std::string, TypeRef> local_type_refs;
 };
 
+inline const TypeRef* local_type_ref_ptr(const std::map<std::string, TypeRef>& local_type_refs,
+                                         const std::string& name) {
+    if (const auto local = local_type_refs.find(name); local != local_type_refs.end()) {
+        return &local->second;
+    }
+    return nullptr;
+}
+
+inline const TypeRef* local_type_ref_ptr(const FunctionScope& scope, const std::string& name) {
+    return local_type_ref_ptr(scope.local_type_refs, name);
+}
+
 inline TypeRef local_type_ref(const FunctionScope& scope, const std::string& name,
                               SourceLocation location = {}) {
-    if (const auto local = scope.local_type_refs.find(name); local != scope.local_type_refs.end()) {
-        return local->second;
+    if (const TypeRef* local = local_type_ref_ptr(scope, name)) {
+        return *local;
     }
     TypeRef unknown;
     unknown.location = location;
@@ -33,8 +45,8 @@ inline TypeRef local_type_ref(const FunctionScope& scope, const std::string& nam
 
 inline TypeRef local_type_ref(const std::map<std::string, TypeRef>& local_type_refs,
                               const std::string& name, SourceLocation location = {}) {
-    if (const auto local = local_type_refs.find(name); local != local_type_refs.end()) {
-        return local->second;
+    if (const TypeRef* local = local_type_ref_ptr(local_type_refs, name)) {
+        return *local;
     }
     TypeRef unknown;
     unknown.location = location;

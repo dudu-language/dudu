@@ -1779,7 +1779,14 @@ push. They are not release packaging work.
    three-sample broad Release run was neutral rather than a throughput win:
    functions about 63ms, arrays about 83ms, expressions about 233ms, modules
    about 82ms, and mixed about 107ms. Keep this only as source-rule
-   consistency, not as a claimed speedup. Rewriting
+   consistency, not as a claimed speedup. Local type lookup then gained a
+   pointer-returning helper used by the hot `Name` inference branch, avoiding
+   unknown-type construction and a `has_type_ref` check on every local hit. A
+   five-sample focused Release run was small but non-negative: expressions
+   about 233ms, calls about 61ms, control about 73ms, and mixed about 106ms.
+   A three-sample broad run measured expressions about 230ms, calls about
+   62ms, control about 73ms, generics about 87ms, and mixed about 112ms. Keep
+   this as sema hot-path cleanup, not as a major throughput win. Rewriting
    `sema_context::trim` from front-erasing to substring bounds plus ASCII
    checks was tried and rejected: focused repeats regressed modules and mixed
    project-shaped code and did not preserve an expression-heavy win. Lazily

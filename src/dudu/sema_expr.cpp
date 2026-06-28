@@ -86,9 +86,10 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
             }
             return {};
         }
-        if (const TypeRef local = local_type_ref(scope, expr.name, type_location);
-            has_type_ref(local)) {
-            return local;
+        if (const TypeRef* local = local_type_ref_ptr(scope, expr.name)) {
+            TypeRef out = *local;
+            out.location = type_location;
+            return out;
         }
         if (const auto fn = scope.symbols.function_signatures.find(expr.name);
             fn != scope.symbols.function_signatures.end()) {
