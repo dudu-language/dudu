@@ -143,6 +143,9 @@
 - Removed `[build] backend = "direct"` as a supported Dudu project backend;
   project builds use generated/user-owned CMake, while `duc build <file.dd>`
   remains the low-level compiler-driver build path.
+- Avoided cloning the full module symbol table for non-generic function and
+  method body/declaration checks. On the local 5k generated functions
+  benchmark, `duc check` dropped from about 3.5s to about 0.5s.
 - Expanded `docs/le_plan.md` with explicit prototype-cruft cleanup rules for
   vacuous helpers, one-line wrappers, temporary compile-shape branches, and
   behavior-preserving style passes.

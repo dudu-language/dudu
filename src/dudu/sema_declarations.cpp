@@ -261,17 +261,23 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
     }
     for (const ClassDecl& klass : module.classes) {
         check_generic_params(klass.location, klass.generic_params);
-        const Symbols class_symbols = with_generic_params(symbols, klass.generic_params,
-                                                          generic_value_params_for_class(klass));
+        std::optional<Symbols> class_symbol_storage;
+        const Symbols* class_symbols = &symbols;
+        if (!klass.generic_params.empty()) {
+            class_symbol_storage =
+                with_generic_params(symbols, klass.generic_params,
+                                    generic_value_params_for_class(klass));
+            class_symbols = &*class_symbol_storage;
+        }
         for (const Decorator& decorator : klass.decorators) {
             check_class_decorator(decorator);
         }
         std::vector<TypeRef> bases;
         for (const BaseClassDecl& base : klass.base_class_refs) {
             check_supported_type_shape(base.location, base.type_ref);
-            check_known_type_ref(class_symbols, base.location, base.type_ref,
+            check_known_type_ref(*class_symbols, base.location, base.type_ref,
                                  "unknown base class: ");
-            const TypeRef resolved_base = resolve_alias_ref(class_symbols, base.type_ref);
+            const TypeRef resolved_base = resolve_alias_ref(*class_symbols, base.type_ref);
             if (has_equivalent_base(bases, resolved_base)) {
                 fail(base.location, "duplicate base class: " + type_ref_text(base.type_ref));
             }
@@ -284,7 +290,7 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                 fail(field.location, "duplicate field: " + field.name);
             }
             check_supported_type_shape(field.location, field.type_ref);
-            check_known_type_ref(class_symbols, field.location, field.type_ref,
+            check_known_type_ref(*class_symbols, field.location, field.type_ref,
                                  "unknown field type: ");
         }
         for (const ConstDecl& constant : klass.constants) {
@@ -292,7 +298,7 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                 fail(constant.location, "duplicate class member: " + constant.name);
             }
             check_supported_type_shape(constant.location, constant.type_ref);
-            check_known_type_ref(class_symbols, constant.location, constant.type_ref,
+            check_known_type_ref(*class_symbols, constant.location, constant.type_ref,
                                  "unknown class constant type: ");
         }
         for (const ConstDecl& field : klass.static_fields) {
@@ -300,13 +306,19 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                 fail(field.location, "duplicate class member: " + field.name);
             }
             check_supported_type_shape(field.location, field.type_ref);
-            check_known_type_ref(class_symbols, field.location, field.type_ref,
+            check_known_type_ref(*class_symbols, field.location, field.type_ref,
                                  "unknown static field type: ");
         }
         for (const FunctionDecl& method : klass.methods) {
             check_generic_params(method.location, method.generic_params);
-            const Symbols method_symbols = with_generic_params(
-                class_symbols, method.generic_params, generic_value_params_for_function(method));
+            std::optional<Symbols> method_symbol_storage;
+            const Symbols* method_symbols = class_symbols;
+            if (!method.generic_params.empty()) {
+                method_symbol_storage =
+                    with_generic_params(*class_symbols, method.generic_params,
+                                        generic_value_params_for_function(method));
+                method_symbols = &*method_symbol_storage;
+            }
             if (!fields.insert(method.name).second) {
                 fail(method.location, "duplicate class member: " + method.name);
             }
@@ -404,20 +416,26 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                     fail(param.location, "duplicate parameter: " + param.name);
                 }
                 check_supported_type_shape(param.location, param.type_ref);
-                check_known_type_ref(method_symbols, param.location, param.type_ref,
+                check_known_type_ref(*method_symbols, param.location, param.type_ref,
                                      "unknown parameter type: ");
             }
             if (function_has_return_type(method)) {
                 check_supported_type_shape(method.location, method.return_type_ref);
             }
-            check_known_type_ref(method_symbols, method.location, method.return_type_ref,
+            check_known_type_ref(*method_symbols, method.location, method.return_type_ref,
                                  "unknown return type: ");
         }
     }
     for (const FunctionDecl& fn : module.functions) {
         check_generic_params(fn.location, fn.generic_params);
-        const Symbols function_symbols =
-            with_generic_params(symbols, fn.generic_params, generic_value_params_for_function(fn));
+        std::optional<Symbols> function_symbol_storage;
+        const Symbols* function_symbols = &symbols;
+        if (!fn.generic_params.empty()) {
+            function_symbol_storage =
+                with_generic_params(symbols, fn.generic_params,
+                                    generic_value_params_for_function(fn));
+            function_symbols = &*function_symbol_storage;
+        }
         for (const Decorator& decorator : fn.decorators) {
             check_function_decorator(module, decorator);
         }
@@ -444,13 +462,13 @@ void check_declarations(const ModuleAst& module, const Symbols& symbols) {
                 fail(param.location, "duplicate parameter: " + param.name);
             }
             check_supported_type_shape(param.location, param.type_ref);
-            check_known_type_ref(function_symbols, param.location, param.type_ref,
+            check_known_type_ref(*function_symbols, param.location, param.type_ref,
                                  "unknown parameter type: ");
         }
         if (function_has_return_type(fn)) {
             check_supported_type_shape(fn.location, fn.return_type_ref);
         }
-        check_known_type_ref(function_symbols, fn.location, fn.return_type_ref,
+        check_known_type_ref(*function_symbols, fn.location, fn.return_type_ref,
                              "unknown return type: ");
     }
 }

@@ -1440,7 +1440,11 @@ push. They are not release packaging work.
    become useful. A later 5k one-sample diverse run showed classes/modules
    around 0.5-0.6s, while many-functions and expression-heavy cases were around
    3.5-3.6s, so optimization work should prioritize those paths before import
-   mechanics. The changed-file case runs against a copied fixture under
+   mechanics. The first measured optimization stopped cloning the full module
+   symbol table for every non-generic function/method declaration and body
+   check; locally this dropped the 5k many-functions case from about 3.5s to
+   about 0.5s while leaving expression-heavy code as the next clear hotspot.
+   The changed-file case runs against a copied fixture under
    `build/bench_compiler` so benchmarks do not mutate checked-in examples. It
    records source line/file counts and peak child-process RSS in KB with each
    sample. This is a baseline harness, not a pass/fail gate; thresholds, larger

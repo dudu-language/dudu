@@ -19,6 +19,7 @@
 #include "dudu/sema_super.hpp"
 #include "dudu/source.hpp"
 
+#include <optional>
 #include <set>
 
 namespace dudu {
@@ -336,15 +337,27 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols) {
         base.constants.insert(constant.name);
     }
     for (const ClassDecl& klass : module.classes) {
+        std::optional<Symbols> class_symbol_storage;
+        const Symbols* class_symbols = &symbols;
+        if (!klass.generic_params.empty()) {
+            class_symbol_storage =
+                with_generic_params(symbols, klass.generic_params,
+                                    generic_value_params_for_class(klass));
+            class_symbols = &*class_symbol_storage;
+        }
         for (const FunctionDecl& method : klass.methods) {
             if (function_has_decorator(method, "abstract")) {
                 continue;
             }
-            Symbols method_symbols = with_generic_params(symbols, klass.generic_params,
-                                                         generic_value_params_for_class(klass));
-            method_symbols = with_generic_params(method_symbols, method.generic_params,
-                                                 generic_value_params_for_function(method));
-            FunctionScope scope{method_symbols};
+            std::optional<Symbols> method_symbol_storage;
+            const Symbols* method_symbols = class_symbols;
+            if (!method.generic_params.empty()) {
+                method_symbol_storage =
+                    with_generic_params(*class_symbols, method.generic_params,
+                                        generic_value_params_for_function(method));
+                method_symbols = &*method_symbol_storage;
+            }
+            FunctionScope scope{*method_symbols};
             copy_base_scope_state(scope, base);
             scope.current_class = klass.name;
             scope.allow_super_init = method.name == "init";
@@ -361,9 +374,15 @@ void check_bodies(const ModuleAst& module, const Symbols& symbols) {
         }
     }
     for (const FunctionDecl& fn : module.functions) {
-        Symbols function_symbols =
-            with_generic_params(symbols, fn.generic_params, generic_value_params_for_function(fn));
-        FunctionScope scope{function_symbols};
+        std::optional<Symbols> function_symbol_storage;
+        const Symbols* function_symbols = &symbols;
+        if (!fn.generic_params.empty()) {
+            function_symbol_storage =
+                with_generic_params(symbols, fn.generic_params,
+                                    generic_value_params_for_function(fn));
+            function_symbols = &*function_symbol_storage;
+        }
+        FunctionScope scope{*function_symbols};
         copy_base_scope_state(scope, base);
         scope.return_type_ref = function_return_type_ref(fn);
         for (const ParamDecl& param : fn.params) {
