@@ -1,8 +1,8 @@
 #include "dudu/source.hpp"
 
 #include <mutex>
-#include <set>
 #include <sstream>
+#include <unordered_set>
 #include <utility>
 
 namespace dudu {
@@ -18,7 +18,7 @@ const std::string* intern_file_name(std::string_view file) {
         return {};
     }
     static std::mutex mutex;
-    static std::set<std::string, std::less<>> files;
+    static std::unordered_set<std::string> files;
     std::lock_guard lock(mutex);
     const auto [it, inserted] = files.emplace(file);
     (void)inserted;

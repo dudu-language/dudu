@@ -1493,7 +1493,11 @@ push. They are not release packaging work.
    interner was also tried after callgrind showed `std::set` insertion/lookup
    hot; it crashed through recursive interner entry and was reverted. Future
    filename speed work should prefer a cleaner parse-owned source-file identity
-   instead of a clever interner cache. The
+   instead of a clever interner cache. The interner backing store was then
+   changed from `std::set` to `std::unordered_set`, preserving stable interned
+   string storage while avoiding tree lookup cost; a local one-sample 10k
+   Release shape sweep was neutral-to-positive, with expression-heavy checks
+   around 254ms and modules around 49ms. The
    changed-file case runs against a copied fixture under `build/bench_compiler`
    so benchmarks do not mutate checked-in examples. It
    records source line/file counts and peak child-process RSS in KB with each

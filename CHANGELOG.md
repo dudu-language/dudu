@@ -94,6 +94,9 @@
   across tokens and AST ranges instead of copying the path into every location.
 - Reduced statement parser work by scanning once for top-level declaration and
   assignment operators instead of walking the same statement token span twice.
+- Switched interned source filename storage from a tree set to a hash set to
+  reduce source-location lookup overhead without changing stored filename
+  lifetime.
 - Removed obsolete string-based Dudu method/class template substitution helpers.
 - Removed an unused unknown-expression parser helper and renamed the remaining
   text call parser as an explicit `cpp(...)` escape-boundary helper.
