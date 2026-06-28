@@ -1443,8 +1443,13 @@ push. They are not release packaging work.
    mechanics. The first measured optimization stopped cloning the full module
    symbol table for every non-generic function/method declaration and body
    check; locally this dropped the 5k many-functions case from about 3.5s to
-   about 0.5s while leaving expression-heavy code as the next clear hotspot.
-   The changed-file case runs against a copied fixture under
+   about 0.5s while leaving expression-heavy code as the next clear hotspot. A
+   second measured optimization stopped low-level `duc check` from loading the
+   full module tree for single-file sources without Dudu module imports. Native
+   C/C++ imports still stay on the single-file path and native-merge into that
+   root module. Locally this dropped the 5k many-functions case further to
+   about 0.22s and the 5k expression-heavy case to about 2.0s with much lower
+   RSS. The changed-file case runs against a copied fixture under
    `build/bench_compiler` so benchmarks do not mutate checked-in examples. It
    records source line/file counts and peak child-process RSS in KB with each
    sample. This is a baseline harness, not a pass/fail gate; thresholds, larger

@@ -18,6 +18,7 @@
 #include "dudu/sema.hpp"
 #include "dudu/test_driver.hpp"
 
+#include <algorithm>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -186,14 +187,33 @@ std::filesystem::path default_build_output(const ProjectConfig& config,
     return config.build_dir.empty() ? filename : project_path(config, config.build_dir) / filename;
 }
 
+bool has_dudu_module_imports(const ModuleAst& module) {
+    return std::any_of(module.imports.begin(), module.imports.end(), [](const ImportDecl& import) {
+        return import.kind == ImportKind::Module || import.kind == ImportKind::From;
+    });
+}
+
 ModuleAst checked_module(const CliOptions& options, const std::string& source, bool check_bodies) {
     const bool detail_output = !options.quiet && options.timings;
-    print_project_step(detail_output, "load", options.input);
-    ModuleAst module = options.input.empty() ? parse_source(source, options.input)
-                                             : load_source_tree(options.input);
     print_project_step(detail_output, "config", options.input);
-    const ProjectConfig config =
-        options.input.empty() ? config_for_options(options) : build_config_for_options(options);
+    const ProjectConfig config = config_for_options(options);
+    print_project_step(detail_output, "load", options.input);
+    const bool merged_cpp_output = options.emit_cpp || options.header_output.has_value() ||
+                                   options.c_header_output.has_value();
+    const bool force_module_tree =
+        !merged_cpp_output && (options.emit_modules || options.project_driver);
+    ModuleAst module;
+    if (options.input.empty()) {
+        module = parse_source(source, options.input);
+    } else if (force_module_tree) {
+        module = load_source_tree(options.input, source);
+    } else {
+        module = parse_source(source, options.input);
+        if (has_dudu_module_imports(module)) {
+            module = load_source_tree(options.input, source);
+        }
+    }
+    const bool per_module_output = force_module_tree || !module.module_units.empty();
     module.build_values = config.build_values;
     module.build_values["TARGET_KIND"] = '"' + config.target_kind + '"';
     module.build_values["TARGET_MODE"] = '"' + config.target_mode + '"';
@@ -203,10 +223,6 @@ ModuleAst checked_module(const CliOptions& options, const std::string& source, b
     }
     const std::filesystem::path source_dir = source_dir_for_input(options.input);
     const NativeHeaderOptions native_header_options{.config = config, .source_dir = source_dir};
-    const bool merged_cpp_output = options.emit_cpp || options.header_output.has_value() ||
-                                   options.c_header_output.has_value();
-    const bool per_module_output =
-        !merged_cpp_output && (options.emit_modules || config.build_backend == "cmake");
     if (!per_module_output) {
         print_project_step(detail_output, "native-merge", module.source_path);
         merge_native_header_types(module, native_header_options);
