@@ -2,7 +2,6 @@
 
 #include "dudu/source.hpp"
 
-#include <cctype>
 #include <map>
 
 namespace dudu {
@@ -13,6 +12,18 @@ bool is_foreign_import(const ImportDecl& import) {
            import.kind == ImportKind::ForeignCpp;
 }
 
+bool is_ascii_upper(char c) {
+    return c >= 'A' && c <= 'Z';
+}
+
+bool is_ascii_lower(char c) {
+    return c >= 'a' && c <= 'z';
+}
+
+bool is_ascii_digit(char c) {
+    return c >= '0' && c <= '9';
+}
+
 } // namespace
 
 bool is_all_caps_identifier(const Token& token) {
@@ -21,12 +32,12 @@ bool is_all_caps_identifier(const Token& token) {
     }
     bool saw_letter = false;
     for (char c : token.text) {
-        if (std::isalpha(static_cast<unsigned char>(c)) != 0) {
+        if (is_ascii_upper(c) || is_ascii_lower(c)) {
             saw_letter = true;
-            if (std::islower(static_cast<unsigned char>(c)) != 0) {
+            if (is_ascii_lower(c)) {
                 return false;
             }
-        } else if (std::isdigit(static_cast<unsigned char>(c)) == 0 && c != '_') {
+        } else if (!is_ascii_digit(c) && c != '_') {
             return false;
         }
     }

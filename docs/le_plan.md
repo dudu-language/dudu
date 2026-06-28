@@ -1441,9 +1441,13 @@ push. They are not release packaging work.
    arrays, loops, calls, and arithmetic in one generated corpus.
    Compiler-speed claims must be checked against multiple generated shapes and
    at least one real dogfood project when practical, because one benchmark can
-   hide that only a specific compilation feature is slow. Reject a speed patch
-   if it only improves one generated shape while regressing other
-   representative shapes; that is a local trick, not a compiler throughput win.
+   hide that only a specific compilation feature is slow. Generated corpora
+   should deliberately stress different language surfaces, not just line count:
+   declarations, imports, calls, control flow, arrays/indexing, generics,
+   classes, native interop, diagnostics, and mixed realistic project layouts.
+   Reject a speed patch if it only improves one generated shape while
+   regressing other representative shapes; that is a local trick, not a
+   compiler throughput win.
    Benchmarks can select
    `--build-type Debug`, `Release`, or `RelWithDebInfo`; Debug measures
    inner-loop compiler development pain, while Release measures shipped-tool
@@ -1754,7 +1758,12 @@ push. They are not release packaging work.
    the same ASCII treatment for trimming, identifier checks, and numeric
    literal checks. A five-sample focused Release repeat on affected 50k shapes
    was neutral-to-positive after noise settled: functions about 63ms, arrays
-   about 82ms, expressions about 228ms, and mixed about 106ms. Rewriting
+   about 82ms, expressions about 228ms, and mixed about 106ms. Parser
+   all-caps-identifier checks then got the same explicit ASCII treatment. A
+   three-sample broad Release run was neutral rather than a throughput win:
+   functions about 63ms, arrays about 83ms, expressions about 233ms, modules
+   about 82ms, and mixed about 107ms. Keep this only as source-rule
+   consistency, not as a claimed speedup. Rewriting
    `sema_context::trim` from front-erasing to substring bounds plus ASCII
    checks was tried and rejected: focused repeats regressed modules and mixed
    project-shaped code and did not preserve an expression-heavy win. Lazily
