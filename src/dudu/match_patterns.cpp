@@ -11,10 +11,10 @@ namespace dudu {
 namespace {
 
 const Expr* enum_pattern_head(const Stmt& stmt) {
-    if (stmt.pattern_expr.kind == ExprKind::Call && !stmt.pattern_expr.callee.empty()) {
-        return &stmt.pattern_expr.callee.front();
+    if (stmt_pattern_expr(stmt).kind == ExprKind::Call && !stmt_pattern_expr(stmt).callee.empty()) {
+        return &stmt_pattern_expr(stmt).callee.front();
     }
-    return &stmt.pattern_expr;
+    return &stmt_pattern_expr(stmt);
 }
 
 std::optional<std::pair<std::string, std::string>> enum_variant_path_expr(const Expr& expr) {
@@ -32,7 +32,7 @@ bool is_wildcard_pattern_expr(const Expr& expr) {
 }
 
 std::optional<std::string> enum_case_variant_name(const Stmt& stmt) {
-    if (is_wildcard_pattern_expr(stmt.pattern_expr)) {
+    if (is_wildcard_pattern_expr(stmt_pattern_expr(stmt))) {
         return std::string{"_"};
     }
     const auto path = enum_variant_path_expr(*enum_pattern_head(stmt));
@@ -43,7 +43,7 @@ std::optional<std::string> enum_case_variant_name(const Stmt& stmt) {
 }
 
 std::optional<std::string> enum_case_variant_name_for(const EnumDecl& en, const Stmt& stmt) {
-    if (is_wildcard_pattern_expr(stmt.pattern_expr)) {
+    if (is_wildcard_pattern_expr(stmt_pattern_expr(stmt))) {
         return std::string{"_"};
     }
     const auto path = enum_variant_path_expr(*enum_pattern_head(stmt));
@@ -55,11 +55,11 @@ std::optional<std::string> enum_case_variant_name_for(const EnumDecl& en, const 
 
 std::vector<EnumCaseBinding> enum_case_bindings(const Stmt& stmt, const EnumValueDecl& value) {
     std::vector<EnumCaseBinding> out;
-    if (stmt.pattern_expr.kind != ExprKind::Call) {
+    if (stmt_pattern_expr(stmt).kind != ExprKind::Call) {
         return out;
     }
-    for (size_t i = 0; i < stmt.pattern_expr.children.size(); ++i) {
-        const Expr& child = stmt.pattern_expr.children[i];
+    for (size_t i = 0; i < stmt_pattern_expr(stmt).children.size(); ++i) {
+        const Expr& child = stmt_pattern_expr(stmt).children[i];
         if (child.kind == ExprKind::Name && !child.name.empty()) {
             out.push_back({.field_index = i, .name = child.name});
         } else if (child.kind == ExprKind::NamedArg && child.children.size() == 1 &&

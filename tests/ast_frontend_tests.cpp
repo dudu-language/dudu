@@ -1724,23 +1724,23 @@ void test_match_case_ast_shape() {
 
     const dudu::Stmt& quit = match.children[0];
     assert(quit.kind == dudu::StmtKind::Case);
-    assert(quit.pattern_expr.kind == dudu::ExprKind::Member);
-    assert(quit.pattern_expr.name == "Quit");
-    assert(quit.pattern_expr.children.size() == 1);
-    assert(quit.pattern_expr.children[0].kind == dudu::ExprKind::Name);
-    assert(quit.pattern_expr.children[0].name == "Message");
+    assert(dudu::stmt_pattern_expr(quit).kind == dudu::ExprKind::Member);
+    assert(dudu::stmt_pattern_expr(quit).name == "Quit");
+    assert(dudu::stmt_pattern_expr(quit).children.size() == 1);
+    assert(dudu::stmt_pattern_expr(quit).children[0].kind == dudu::ExprKind::Name);
+    assert(dudu::stmt_pattern_expr(quit).children[0].name == "Message");
     assert(quit.children.size() == 1);
     assert(quit.children[0].kind == dudu::StmtKind::Return);
 
     const dudu::Stmt& move = match.children[1];
     assert(move.kind == dudu::StmtKind::Case);
-    assert(move.pattern_expr.kind == dudu::ExprKind::Call);
-    assert(dudu::direct_callee_name(move.pattern_expr) == "Message.Move");
-    assert(move.pattern_expr.children.size() == 2);
-    assert(move.pattern_expr.children[0].kind == dudu::ExprKind::Name);
-    assert(move.pattern_expr.children[0].name == "x");
-    assert(move.pattern_expr.children[1].kind == dudu::ExprKind::Name);
-    assert(move.pattern_expr.children[1].name == "y");
+    assert(dudu::stmt_pattern_expr(move).kind == dudu::ExprKind::Call);
+    assert(dudu::direct_callee_name(dudu::stmt_pattern_expr(move)) == "Message.Move");
+    assert(dudu::stmt_pattern_expr(move).children.size() == 2);
+    assert(dudu::stmt_pattern_expr(move).children[0].kind == dudu::ExprKind::Name);
+    assert(dudu::stmt_pattern_expr(move).children[0].name == "x");
+    assert(dudu::stmt_pattern_expr(move).children[1].kind == dudu::ExprKind::Name);
+    assert(dudu::stmt_pattern_expr(move).children[1].name == "y");
     assert(dudu::stmt_guard_expr(move).kind == dudu::ExprKind::Binary);
     assert(dudu::stmt_guard_expr(move).op == ">");
     assert(dudu::stmt_guard_expr(move).children.size() == 2);
@@ -1752,8 +1752,8 @@ void test_match_case_ast_shape() {
     const dudu::Stmt& wildcard = match.children[2];
     assert(wildcard.kind == dudu::StmtKind::Case);
     assert(dudu::stmt_guard_expr(wildcard).kind == dudu::ExprKind::Missing);
-    assert(wildcard.pattern_expr.kind == dudu::ExprKind::Name);
-    assert(wildcard.pattern_expr.name == "_");
+    assert(dudu::stmt_pattern_expr(wildcard).kind == dudu::ExprKind::Name);
+    assert(dudu::stmt_pattern_expr(wildcard).name == "_");
 }
 
 void test_wrapper_match_type_uses_type_ast() {

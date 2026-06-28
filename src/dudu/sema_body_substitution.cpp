@@ -48,7 +48,11 @@ void substitute_stmt_types(Stmt& stmt, const std::map<std::string, TypeRef>& sub
         set_stmt_message_expr(stmt, std::move(message));
     }
     substitute_expr_types(stmt.iterable_expr, substitutions);
-    substitute_expr_types(stmt.pattern_expr, substitutions);
+    if (has_stmt_pattern_expr(stmt)) {
+        Expr pattern = stmt_pattern_expr(stmt);
+        substitute_expr_types(pattern, substitutions);
+        set_stmt_pattern_expr(stmt, std::move(pattern));
+    }
     if (has_stmt_guard_expr(stmt)) {
         Expr guard = stmt_guard_expr(stmt);
         substitute_expr_types(guard, substitutions);

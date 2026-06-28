@@ -40,10 +40,10 @@ std::string value_case_condition(const Stmt& case_stmt, const std::string& subje
                                  const std::map<std::string, TypeRef>& local_type_refs,
                                  const Symbols* symbols, const CppEmitOptions& options) {
     std::string condition = "true";
-    if (!is_wildcard_pattern_expr(case_stmt.pattern_expr)) {
-        condition =
-            subject + " == " +
-            lower_expr(case_stmt.pattern_expr, aliases, locals, local_type_refs, symbols, options);
+    if (!is_wildcard_pattern_expr(stmt_pattern_expr(case_stmt))) {
+        condition = subject + " == " +
+                    lower_expr(stmt_pattern_expr(case_stmt), aliases, locals, local_type_refs,
+                               symbols, options);
     }
     if (has_stmt_guard_expr(case_stmt)) {
         const std::string guard = lower_expr(stmt_guard_expr(case_stmt), aliases, locals,
@@ -83,7 +83,7 @@ void emit_all_return_value_match(std::ostringstream& out, const Stmt& stmt, int 
         if (child.kind != StmtKind::Case) {
             continue;
         }
-        if (is_wildcard_pattern_expr(child.pattern_expr) && !has_stmt_guard_expr(child)) {
+        if (is_wildcard_pattern_expr(stmt_pattern_expr(child)) && !has_stmt_guard_expr(child)) {
             emit_block(out, child.children, depth, aliases, locals, local_type_refs,
                        return_type_ref, function_returns, symbols, options);
             return;
@@ -111,7 +111,7 @@ void emit_ordered_value_match(std::ostringstream& out, const Stmt& stmt, int dep
         if (child.kind != StmtKind::Case) {
             continue;
         }
-        if (is_wildcard_pattern_expr(child.pattern_expr) && !has_stmt_guard_expr(child)) {
+        if (is_wildcard_pattern_expr(stmt_pattern_expr(child)) && !has_stmt_guard_expr(child)) {
             if (emitted_case) {
                 out << indent(depth) << "else {\n";
                 emit_block(out, child.children, depth + 1, aliases, locals, local_type_refs,
@@ -146,7 +146,7 @@ void emit_ordered_enum_match(std::ostringstream& out, const Stmt& stmt, int dept
         if (child.kind != StmtKind::Case) {
             continue;
         }
-        if (is_wildcard_pattern_expr(child.pattern_expr) && !has_stmt_guard_expr(child)) {
+        if (is_wildcard_pattern_expr(stmt_pattern_expr(child)) && !has_stmt_guard_expr(child)) {
             if (emitted_case) {
                 out << indent(depth) << "else {\n";
                 emit_block(out, child.children, depth + 1, aliases, locals, local_type_refs,
@@ -202,7 +202,8 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                 if (child.kind != StmtKind::Case) {
                     continue;
                 }
-                const std::optional<std::string> case_name = wrapper_case_name(child.pattern_expr);
+                const std::optional<std::string> case_name =
+                    wrapper_case_name(stmt_pattern_expr(child));
                 std::string condition = "true";
                 if (case_name && *case_name != "_") {
                     if (wrapper.kind == WrapperMatchKind::Option) {
@@ -217,7 +218,7 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                 std::map<std::string, TypeRef> nested_type_refs = local_type_refs;
                 if (case_name &&
                     (*case_name == "Some" || *case_name == "Ok" || *case_name == "Err")) {
-                    if (const auto binding = wrapper_case_binding_name(child.pattern_expr)) {
+                    if (const auto binding = wrapper_case_binding_name(stmt_pattern_expr(child))) {
                         if (*case_name == "Some" && wrapper.arg_refs.size() == 1) {
                             nested.bind(*binding);
                             nested_type_refs[*binding] = wrapper.arg_refs[0];

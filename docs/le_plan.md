@@ -1562,7 +1562,15 @@ push. They are not release packaging work.
    positive: expression-heavy 50k measured about 1.05s/331MB RSS, modules 50k
    about 137ms/193MB RSS, functions 50k about 110ms/94MB RSS, calls 50k about
    127ms/90MB RSS, control 50k about 131ms/98MB RSS, arrays 50k about
-   154ms/75MB RSS, and generics 50k about 149ms/58MB RSS. Keep
+   154ms/75MB RSS, and generics 50k about 149ms/58MB RSS. Match pattern
+   expressions then moved behind sparse pointer storage, keeping case matching
+   structured while avoiding an embedded pattern expression on every statement.
+   This left `Expr` at 256 bytes and dropped local `Stmt` size from 1728 to
+   1488 bytes. A broad one-sample 10k/50k Release sweep stayed positive on
+   memory: expression-heavy 50k measured about 1.06s/319MB RSS, modules 50k
+   about 124ms/172MB RSS, functions 50k about 101ms/85MB RSS, calls 50k about
+   124ms/82MB RSS, control 50k about 132ms/90MB RSS, arrays 50k about
+   149ms/70MB RSS, and generics 50k about 144ms/56MB RSS. Keep
    compiler speed validation broad: generated corpora need multiple code shapes,
    because one particular compilation path can dominate or regress while an
    aggregate number looks acceptable. The

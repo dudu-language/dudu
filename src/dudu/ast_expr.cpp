@@ -210,6 +210,23 @@ void set_stmt_message_expr(Stmt& stmt, Expr expr) {
     stmt.message_expr = std::make_shared<Expr>(std::move(expr));
 }
 
+bool has_stmt_pattern_expr(const Stmt& stmt) {
+    return stmt.pattern_expr != nullptr && expr_present(*stmt.pattern_expr);
+}
+
+const Expr& stmt_pattern_expr(const Stmt& stmt) {
+    static const Expr empty;
+    return stmt.pattern_expr == nullptr ? empty : *stmt.pattern_expr;
+}
+
+void set_stmt_pattern_expr(Stmt& stmt, Expr expr) {
+    if (expr_missing(expr)) {
+        stmt.pattern_expr.reset();
+        return;
+    }
+    stmt.pattern_expr = std::make_shared<Expr>(std::move(expr));
+}
+
 bool has_stmt_guard_expr(const Stmt& stmt) {
     return stmt.guard_expr != nullptr && expr_present(*stmt.guard_expr);
 }

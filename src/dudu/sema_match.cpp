@@ -115,7 +115,7 @@ bool check_wrapper_match(FunctionScope& scope, const Stmt& stmt, const TypeRef& 
         if (wildcard) {
             sema_fail(child.location, "unreachable case after wildcard");
         }
-        const std::optional<std::string> name = wrapper_case_name(child.pattern_expr);
+        const std::optional<std::string> name = wrapper_case_name(stmt_pattern_expr(child));
         if (!name || (!expected.contains(*name) && *name != "_")) {
             sema_fail(child.location, wrapper.kind == WrapperMatchKind::Option
                                           ? "case pattern must be Some(...), None, or _"
@@ -137,7 +137,7 @@ bool check_wrapper_match(FunctionScope& scope, const Stmt& stmt, const TypeRef& 
             }
         }
         FunctionScope nested = scope;
-        bind_wrapper_case(nested, wrapper, child.pattern_expr, child.location);
+        bind_wrapper_case(nested, wrapper, stmt_pattern_expr(child), child.location);
         if (has_stmt_guard_expr(child)) {
             const TypeRef guard_ref =
                 infer_expr_type_ast(nested, stmt_guard_expr(child),
@@ -226,7 +226,7 @@ void check_enum_match(FunctionScope& scope, const Stmt& stmt, const TypeRef& ret
         if (*variant != "_") {
             const EnumValueDecl* value = enum_variant_decl(en, *variant);
             if (value != nullptr) {
-                bind_payload_case(nested, *value, child.pattern_expr, child.location);
+                bind_payload_case(nested, *value, stmt_pattern_expr(child), child.location);
             }
         }
         if (has_stmt_guard_expr(child)) {
@@ -256,16 +256,16 @@ void check_value_match(FunctionScope& scope, const Stmt& stmt, const TypeRef& re
         if (wildcard) {
             sema_fail(child.location, "unreachable case after wildcard");
         }
-        if (is_wildcard_pattern_expr(child.pattern_expr)) {
+        if (is_wildcard_pattern_expr(stmt_pattern_expr(child))) {
             if (!has_stmt_guard_expr(child)) {
                 wildcard = true;
             }
         } else {
             const SourceLocation& pattern_location =
-                diagnostic_location(child.location, child.pattern_expr);
+                diagnostic_location(child.location, stmt_pattern_expr(child));
             const TypeRef pattern_ref =
-                infer_expr_type_ast(scope, child.pattern_expr, &pattern_location);
-            if (!assignment_type_allowed(subject_ref, child.pattern_expr, pattern_ref) &&
+                infer_expr_type_ast(scope, stmt_pattern_expr(child), &pattern_location);
+            if (!assignment_type_allowed(subject_ref, stmt_pattern_expr(child), pattern_ref) &&
                 !type_assignment_allowed(pattern_ref, subject_ref)) {
                 sema_fail(pattern_location, "case pattern type mismatch: expected " +
                                                 type_ref_text(subject_ref) + ", got " +
