@@ -1744,7 +1744,13 @@ push. They are not release packaging work.
    `--line-scales 50000` measured the mixed shape at about 111ms and 113MB RSS
    for roughly 27.6k generated Dudu lines across nine files. The same run
    measured expression-heavy code at about 231ms, keeping expression
-   parsing/sema as the current frontend outlier. The
+   parsing/sema as the current frontend outlier. Lexer character
+   classification then moved from locale-aware C library calls to explicit
+   ASCII checks for Dudu source. A local three-sample Release run was
+   neutral-to-positive across broad shapes: simple `duc check` moved from
+   about 17ms to 14ms, native cached checks from about 18ms to 14ms,
+   expression-heavy 50k from about 231ms to 230ms, modules from about 79ms to
+   76ms, and mixed from about 111ms to 109ms. The
    changed-file case runs against a copied fixture under `build/bench_compiler`
    so benchmarks do not mutate checked-in examples. It
    records source line/file counts and peak child-process RSS in KB with each

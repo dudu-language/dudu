@@ -1,6 +1,5 @@
 #include "dudu/lexer.hpp"
 
-#include <cctype>
 #include <string>
 
 namespace dudu {
@@ -87,7 +86,7 @@ class Lexer {
         int column = spaces + 1;
         while (!done() && peek() != '\n' && peek() != '\r') {
             const char c = peek();
-            if (std::isspace(static_cast<unsigned char>(c)) != 0) {
+            if (c == ' ' || c == '\t') {
                 take();
                 ++column;
                 continue;
@@ -149,7 +148,7 @@ class Lexer {
         if (is_identifier_start(c)) {
             return lex_identifier(column);
         }
-        if (std::isdigit(static_cast<unsigned char>(c)) != 0) {
+        if (is_ascii_digit(c)) {
             return lex_number(column);
         }
         if (c == '"' || c == '\'') {
@@ -185,11 +184,23 @@ class Lexer {
     }
 
     static bool is_identifier_start(char c) {
-        return std::isalpha(static_cast<unsigned char>(c)) != 0 || c == '_';
+        return is_ascii_alpha(c) || c == '_';
     }
 
     static bool is_identifier_char(char c) {
-        return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_';
+        return is_ascii_alpha(c) || is_ascii_digit(c) || c == '_';
+    }
+
+    static bool is_ascii_digit(char c) {
+        return c >= '0' && c <= '9';
+    }
+
+    static bool is_ascii_alpha(char c) {
+        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+    }
+
+    static bool is_number_literal_char(char c) {
+        return is_ascii_alpha(c) || is_ascii_digit(c) || c == '_' || c == '.';
     }
 
     int lex_identifier(int column) {
@@ -205,8 +216,7 @@ class Lexer {
     int lex_number(int column) {
         const size_t start = cursor_;
         take();
-        while (std::isalnum(static_cast<unsigned char>(peek())) != 0 || peek() == '_' ||
-               peek() == '.') {
+        while (is_number_literal_char(peek())) {
             take();
         }
         push(TokenKind::Number, source_.substr(start, cursor_ - start), line_, column);
