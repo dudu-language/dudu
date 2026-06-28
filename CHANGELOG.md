@@ -150,6 +150,9 @@
   sources without Dudu module imports. On the local 5k generated functions
   benchmark, `duc check` dropped further to about 0.22s; the 5k
   expression-heavy benchmark dropped to about 2.0s with much lower RSS.
+- Avoided copying expression/type token slices during parsing when the token
+  span contains no layout tokens. The local 5k expression-heavy parse/load
+  phase dropped from about 0.87s to about 0.76s.
 - Expanded `docs/le_plan.md` with explicit prototype-cruft cleanup rules for
   vacuous helpers, one-line wrappers, temporary compile-shape branches, and
   behavior-preserving style passes.

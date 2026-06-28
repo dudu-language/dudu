@@ -83,6 +83,13 @@ std::vector<Token> syntax_piece_tokens(std::span<const Token> tokens) {
     return out;
 }
 
+bool has_layout_tokens(std::span<const Token> tokens) {
+    return std::any_of(tokens.begin(), tokens.end(), [](const Token& token) {
+        return token.kind == TokenKind::Newline || token.kind == TokenKind::Indent ||
+               token.kind == TokenKind::Dedent;
+    });
+}
+
 } // namespace
 
 Parser::Parser(std::span<const Token> tokens) : tokens_(tokens) {
@@ -385,9 +392,12 @@ Expr Parser::parse_expr_piece(const JoinedTokens& piece) const {
     if (!piece.has_tokens) {
         return make_expr(ExprKind::Missing, "", piece.range.start);
     }
-    std::vector<Token> tokens =
-        syntax_piece_tokens(tokens_.subspan(piece.begin, piece.end - piece.begin));
-    ExprTokenParser parser(tokens);
+    const std::span<const Token> source_tokens = tokens_.subspan(piece.begin, piece.end - piece.begin);
+    std::vector<Token> filtered_tokens;
+    if (has_layout_tokens(source_tokens)) {
+        filtered_tokens = syntax_piece_tokens(source_tokens);
+    }
+    ExprTokenParser parser(filtered_tokens.empty() ? source_tokens : std::span<const Token>{filtered_tokens});
     Expr expr = parser.parse();
     if (expr.kind == ExprKind::Unknown) {
         const std::string spelling = trim_string(token_source_spelling(piece.begin, piece.end));
@@ -403,9 +413,12 @@ TypeRef Parser::parse_type_piece(const JoinedTokens& piece) const {
     if (!piece.has_tokens) {
         return make_type(TypeKind::Unknown, "", piece.range.start);
     }
-    std::vector<Token> tokens =
-        syntax_piece_tokens(tokens_.subspan(piece.begin, piece.end - piece.begin));
-    TypeTokenParser parser(tokens);
+    const std::span<const Token> source_tokens = tokens_.subspan(piece.begin, piece.end - piece.begin);
+    std::vector<Token> filtered_tokens;
+    if (has_layout_tokens(source_tokens)) {
+        filtered_tokens = syntax_piece_tokens(source_tokens);
+    }
+    TypeTokenParser parser(filtered_tokens.empty() ? source_tokens : std::span<const Token>{filtered_tokens});
     TypeRef type = parser.parse();
     if (const TypeRef* malformed = malformed_type_node(type)) {
         std::string spelling = trim_string(token_source_spelling(piece.begin, piece.end));

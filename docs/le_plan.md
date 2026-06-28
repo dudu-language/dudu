@@ -1449,8 +1449,12 @@ push. They are not release packaging work.
    C/C++ imports still stay on the single-file path and native-merge into that
    root module. Locally this dropped the 5k many-functions case further to
    about 0.22s and the 5k expression-heavy case to about 2.0s with much lower
-   RSS. The changed-file case runs against a copied fixture under
-   `build/bench_compiler` so benchmarks do not mutate checked-in examples. It
+   RSS. A parser fast path now avoids copying expression/type token spans when
+   they contain no layout tokens; this keeps multiline continuation semantics
+   unchanged while dropping the local 5k expression-heavy parse/load phase from
+   about 0.87s to about 0.76s. The changed-file case runs against a copied
+   fixture under `build/bench_compiler` so benchmarks do not mutate checked-in
+   examples. It
    records source line/file counts and peak child-process RSS in KB with each
    sample. This is a baseline harness, not a pass/fail gate; thresholds, larger
    synthetic corpora, and deeper clean/no-op/one-file-changed generated-CMake
