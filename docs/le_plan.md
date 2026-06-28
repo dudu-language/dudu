@@ -1645,9 +1645,30 @@ push. They are not release packaging work.
    measured win is intentionally recorded as minor: focused expression-heavy
    50k moved only from about 0.875s to about 0.871s, while one broad sample saw
    expression-heavy 50k around 918ms/285MB RSS and no meaningful broad
-   regression. Keep compiler speed validation broad: generated corpora need
-   multiple code shapes, because one particular compilation path can dominate or
-   regress while an aggregate number looks acceptable. The
+   regression. After removing the direct native build backend and routing build
+   commands through generated CMake, a fresh one-sample 10k/50k Release sweep
+   again showed expression-heavy code as the outlier: about 902ms/285MB RSS at
+   50k lines, while functions/classes/modules/calls/control/arrays/generics
+   stayed around 67-139ms at 50k. An empty `SourceFileName` constructor
+   short-circuit was tried as hot-path hygiene after callgrind showed many
+   empty-source primitive `TypeRef` locations, but a focused three-sample
+   Release benchmark showed no meaningful expression-throughput improvement; do
+   not count that as a compiler-speed win. A simple primitive numeric
+   arithmetic fast path then avoided full alias/operator/assignment
+   compatibility checks for exact primitive numeric operands and contextual
+   numeric literals, while keeping aliases and complex user/native operators on
+   the normal sema path. Focused three-sample Release expression benchmarks
+   dropped 10k lines from about 194ms to about 153ms and 50k lines from about
+   915ms to about 726ms, with RSS still around 285MB at 50k. A broad one-sample
+   shape sweep then measured expression-heavy 50k around 700ms, with
+   functions/classes/modules/calls/control/arrays/generics still roughly in
+   their previous ranges. Keep compiler speed validation broad: generated
+   corpora need multiple diverse code shapes, because one particular
+   compilation path can dominate or regress while an aggregate number looks
+   acceptable. Do not treat a compiler-speed change as proven by one synthetic
+   shape; include expression-heavy code, call-heavy code, control flow, arrays,
+   modules/imports, generics/templates, class/OOP shapes, and native interop
+   shapes as the benchmark suite grows. The
    changed-file case runs against a copied fixture under `build/bench_compiler`
    so benchmarks do not mutate checked-in examples. It
    records source line/file counts and peak child-process RSS in KB with each

@@ -28,13 +28,15 @@ const std::string* intern_file_name(std::string_view file) {
 } // namespace
 
 SourceFileName::SourceFileName(const char* file)
-    : file_(file == nullptr ? nullptr : intern_file_name(file)) {
+    : file_(file == nullptr || file[0] == '\0' ? nullptr : intern_file_name(file)) {
 }
 
-SourceFileName::SourceFileName(std::string file) : file_(intern_file_name(file)) {
+SourceFileName::SourceFileName(std::string file)
+    : file_(file.empty() ? nullptr : intern_file_name(file)) {
 }
 
-SourceFileName::SourceFileName(std::string_view file) : file_(intern_file_name(file)) {
+SourceFileName::SourceFileName(std::string_view file)
+    : file_(file.empty() ? nullptr : intern_file_name(file)) {
 }
 
 const std::string& SourceFileName::str() const {

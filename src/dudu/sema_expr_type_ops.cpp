@@ -2,7 +2,9 @@
 #include "dudu/sema_expr_internal.hpp"
 #include "dudu/type_compat.hpp"
 
+#include <optional>
 #include <set>
+#include <string_view>
 #include <utility>
 
 namespace dudu {
@@ -13,6 +15,61 @@ bool is_numeric_literal_expr(const Expr& expr) {
         return is_numeric_literal_expr(expr.children.front());
     }
     return expr.kind == ExprKind::IntLiteral || expr.kind == ExprKind::FloatLiteral;
+}
+
+bool primitive_numeric_name(std::string_view name) {
+    return name == "i8" || name == "i16" || name == "i32" || name == "i64" || name == "u8" ||
+           name == "u16" || name == "u32" || name == "u64" || name == "f32" || name == "f64" ||
+           name == "usize" || name == "isize";
+}
+
+bool primitive_integer_name(std::string_view name) {
+    return name == "i8" || name == "i16" || name == "i32" || name == "i64" || name == "u8" ||
+           name == "u16" || name == "u32" || name == "u64" || name == "usize" || name == "isize";
+}
+
+std::optional<std::string_view> primitive_type_name(const TypeRef& type) {
+    if ((type.kind != TypeKind::Named && type.kind != TypeKind::Qualified) ||
+        !type.children.empty()) {
+        return std::nullopt;
+    }
+    return type.name;
+}
+
+bool simple_numeric_type_ref(const TypeRef& type) {
+    const std::optional<std::string_view> name = primitive_type_name(type);
+    return name.has_value() && primitive_numeric_name(*name);
+}
+
+bool simple_integer_type_ref(const TypeRef& type) {
+    const std::optional<std::string_view> name = primitive_type_name(type);
+    return name.has_value() && primitive_integer_name(*name);
+}
+
+bool integer_only_op(std::string_view op) {
+    return op == "%" || op == "&" || op == "|" || op == "^" || op == "<<" || op == ">>";
+}
+
+std::optional<TypeRef> simple_numeric_binary_type(std::string_view op, const Expr& left_expr,
+                                                  const TypeRef& left_ref, const Expr& right_expr,
+                                                  const TypeRef& right_ref) {
+    if (!simple_numeric_type_ref(left_ref) || !simple_numeric_type_ref(right_ref)) {
+        return std::nullopt;
+    }
+    if (integer_only_op(op) &&
+        (!simple_integer_type_ref(left_ref) || !simple_integer_type_ref(right_ref))) {
+        return std::nullopt;
+    }
+    if (type_ref_is_name(left_ref, right_ref.name)) {
+        return left_ref;
+    }
+    if (is_numeric_literal_expr(left_expr)) {
+        return right_ref;
+    }
+    if (is_numeric_literal_expr(right_expr)) {
+        return left_ref;
+    }
+    return std::nullopt;
 }
 
 bool is_numeric_type_ref(const Symbols& symbols, TypeRef type) {
@@ -33,9 +90,8 @@ bool type_ref_is_bool(const TypeRef& type) {
 bool equality_assignment_allowed(const FunctionScope& scope, const std::string& op,
                                  const Expr& left_expr, const TypeRef& left_ref,
                                  const Expr& right_expr, const TypeRef& right_ref) {
-    return (op == "==" || op == "!=") &&
-           (can_assign_ast(scope, left_ref, right_expr, right_ref) ||
-            can_assign_ast(scope, right_ref, left_expr, left_ref));
+    return (op == "==" || op == "!=") && (can_assign_ast(scope, left_ref, right_expr, right_ref) ||
+                                          can_assign_ast(scope, right_ref, left_expr, left_ref));
 }
 
 TypeRef pointer_type_ref(TypeRef pointee, SourceLocation location) {
@@ -180,13 +236,16 @@ std::optional<TypeRef> binary_expr_type_ref(const FunctionScope& scope, const Ex
                                          expr.children[1], right_ref)) {
             const std::string left_display = substitute_type_ref_text(left_ref, {});
             const std::string right_display = substitute_type_ref_text(right_ref, {});
-            sema_expr_fail(*location,
-                           "comparison " + expr.op + " expects " + left_display + ", got " +
-                               right_display);
+            sema_expr_fail(*location, "comparison " + expr.op + " expects " + left_display +
+                                          ", got " + right_display);
         }
         return named_type_ref("bool", expr.location);
     }
     if (is_arithmetic_op(expr.op)) {
+        if (const auto simple = simple_numeric_binary_type(expr.op, expr.children[0], left_ref,
+                                                           expr.children[1], right_ref)) {
+            return *simple;
+        }
         if (const auto contextual = contextual_numeric_binary_type(
                 scope, expr.children[0], left_ref, expr.children[1], right_ref)) {
             return *contextual;
@@ -204,9 +263,8 @@ std::optional<TypeRef> binary_expr_type_ref(const FunctionScope& scope, const Ex
         !binary_rhs_allowed(scope.symbols, expr.op, left_ref, expr.children[1], right_ref)) {
         const std::string left_display = substitute_type_ref_text(left_ref, {});
         const std::string right_display = substitute_type_ref_text(right_ref, {});
-        sema_expr_fail(*location,
-                       "operator " + expr.op + " expects " + left_display + ", got " +
-                           right_display);
+        sema_expr_fail(*location, "operator " + expr.op + " expects " + left_display + ", got " +
+                                      right_display);
     }
     if (has_type_ref(left_ref)) {
         return left_ref;
