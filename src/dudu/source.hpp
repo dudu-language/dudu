@@ -1,7 +1,6 @@
 #pragma once
 
 #include <iosfwd>
-#include <memory>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -14,7 +13,6 @@ class SourceFileName {
     SourceFileName(const char* file);
     SourceFileName(std::string file);
     SourceFileName(std::string_view file);
-    SourceFileName(std::shared_ptr<const std::string> file);
 
     const std::string& str() const;
     bool empty() const;
@@ -25,7 +23,7 @@ class SourceFileName {
     operator std::string_view() const;
 
   private:
-    std::shared_ptr<const std::string> file_;
+    const std::string* file_ = nullptr;
 };
 
 std::ostream& operator<<(std::ostream& out, const SourceFileName& file);

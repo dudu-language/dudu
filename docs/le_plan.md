@@ -1477,11 +1477,11 @@ push. They are not release packaging work.
    statement count. Lexer token reservation now uses a less stingy source-size
    estimate; local direct 10k expression timings showed a lower load phase, but
    the broader harness treated this as a small allocation-churn tweak rather
-   than a major throughput win. `SourceLocation` filenames now use shared
+   than a major throughput win. `SourceLocation` filenames now use interned
    immutable filename storage instead of copying the source path into every
    token and AST range. On a local one-sample 10k Release run, expression-heavy
-   checks dropped from about 283ms and 244MB RSS to about 248ms and 137MB RSS,
-   modules from about 80ms and 131MB RSS to about 53ms and 89MB RSS, and
+   checks dropped from about 283ms and 244MB RSS to about 256ms and 122MB RSS,
+   modules from about 80ms and 131MB RSS to about 52ms and 80MB RSS, and
    call/control-heavy shapes also dropped into the low-to-mid 40ms range. The
    changed-file case runs against a copied fixture under `build/bench_compiler`
    so benchmarks do not mutate checked-in examples. It

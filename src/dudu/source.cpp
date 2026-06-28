@@ -1,5 +1,7 @@
 #include "dudu/source.hpp"
 
+#include <mutex>
+#include <set>
 #include <sstream>
 #include <utility>
 
@@ -11,26 +13,28 @@ const std::string& empty_file_name() {
     return empty;
 }
 
-std::shared_ptr<const std::string> make_file_name(std::string file) {
+const std::string* intern_file_name(std::string_view file) {
     if (file.empty()) {
         return {};
     }
-    return std::make_shared<const std::string>(std::move(file));
+    static std::mutex mutex;
+    static std::set<std::string, std::less<>> files;
+    std::lock_guard lock(mutex);
+    const auto [it, inserted] = files.emplace(file);
+    (void)inserted;
+    return &*it;
 }
 
 } // namespace
 
 SourceFileName::SourceFileName(const char* file)
-    : file_(file == nullptr ? nullptr : make_file_name(file)) {
+    : file_(file == nullptr ? nullptr : intern_file_name(file)) {
 }
 
-SourceFileName::SourceFileName(std::string file) : file_(make_file_name(std::move(file))) {
+SourceFileName::SourceFileName(std::string file) : file_(intern_file_name(file)) {
 }
 
-SourceFileName::SourceFileName(std::string_view file) : file_(make_file_name(std::string(file))) {
-}
-
-SourceFileName::SourceFileName(std::shared_ptr<const std::string> file) : file_(std::move(file)) {
+SourceFileName::SourceFileName(std::string_view file) : file_(intern_file_name(file)) {
 }
 
 const std::string& SourceFileName::str() const {
