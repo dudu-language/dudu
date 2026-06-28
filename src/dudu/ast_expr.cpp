@@ -210,6 +210,23 @@ void set_stmt_message_expr(Stmt& stmt, Expr expr) {
     stmt.message_expr = std::make_shared<Expr>(std::move(expr));
 }
 
+bool has_stmt_condition_expr(const Stmt& stmt) {
+    return stmt.condition_expr != nullptr && expr_present(*stmt.condition_expr);
+}
+
+const Expr& stmt_condition_expr(const Stmt& stmt) {
+    static const Expr empty;
+    return stmt.condition_expr == nullptr ? empty : *stmt.condition_expr;
+}
+
+void set_stmt_condition_expr(Stmt& stmt, Expr expr) {
+    if (expr_missing(expr)) {
+        stmt.condition_expr.reset();
+        return;
+    }
+    stmt.condition_expr = std::make_shared<Expr>(std::move(expr));
+}
+
 bool has_stmt_iterable_expr(const Stmt& stmt) {
     return stmt.iterable_expr != nullptr && expr_present(*stmt.iterable_expr);
 }

@@ -954,13 +954,14 @@ void test_statement_ast_shape() {
     assert(main.statements[1].children[0].value_expr.kind == dudu::ExprKind::Name);
     assert(main.statements[1].children[0].value_expr.name == "item");
     assert(main.statements[2].kind == dudu::StmtKind::If);
-    assert(main.statements[2].condition_expr.kind == dudu::ExprKind::Binary);
-    assert(main.statements[2].condition_expr.op == "==");
-    assert(main.statements[2].condition_expr.children.size() == 2);
-    assert(main.statements[2].condition_expr.children[0].kind == dudu::ExprKind::Name);
-    assert(main.statements[2].condition_expr.children[0].name == "total");
-    assert(main.statements[2].condition_expr.children[1].kind == dudu::ExprKind::IntLiteral);
-    assert(main.statements[2].condition_expr.children[1].value == "0");
+    assert(dudu::stmt_condition_expr(main.statements[2]).kind == dudu::ExprKind::Binary);
+    assert(dudu::stmt_condition_expr(main.statements[2]).op == "==");
+    assert(dudu::stmt_condition_expr(main.statements[2]).children.size() == 2);
+    assert(dudu::stmt_condition_expr(main.statements[2]).children[0].kind == dudu::ExprKind::Name);
+    assert(dudu::stmt_condition_expr(main.statements[2]).children[0].name == "total");
+    assert(dudu::stmt_condition_expr(main.statements[2]).children[1].kind ==
+           dudu::ExprKind::IntLiteral);
+    assert(dudu::stmt_condition_expr(main.statements[2]).children[1].value == "0");
     assert(main.statements[2].children.size() == 1);
     assert(main.statements[2].children[0].kind == dudu::StmtKind::CompoundAssign);
     assert(main.statements[3].kind == dudu::StmtKind::Else);
@@ -1186,16 +1187,16 @@ void test_expression_ast_shape() {
 
     const dudu::Stmt& branch = main.statements[1];
     assert(branch.kind == dudu::StmtKind::If);
-    assert(branch.condition_expr.kind == dudu::ExprKind::Binary);
-    assert(branch.condition_expr.op == "or");
-    assert(branch.condition_expr.children[0].kind == dudu::ExprKind::Unary);
-    assert(branch.condition_expr.children[0].op == "not");
-    assert(branch.condition_expr.children[0].children[0].range.start.column >
-           branch.condition_expr.children[0].range.start.column);
-    assert(branch.condition_expr.children[1].kind == dudu::ExprKind::Binary);
-    assert(branch.condition_expr.children[1].op == "<");
-    assert(branch.condition_expr.children[1].children[1].range.start.column >
-           branch.condition_expr.children[1].children[0].range.start.column);
+    assert(dudu::stmt_condition_expr(branch).kind == dudu::ExprKind::Binary);
+    assert(dudu::stmt_condition_expr(branch).op == "or");
+    assert(dudu::stmt_condition_expr(branch).children[0].kind == dudu::ExprKind::Unary);
+    assert(dudu::stmt_condition_expr(branch).children[0].op == "not");
+    assert(dudu::stmt_condition_expr(branch).children[0].children[0].range.start.column >
+           dudu::stmt_condition_expr(branch).children[0].range.start.column);
+    assert(dudu::stmt_condition_expr(branch).children[1].kind == dudu::ExprKind::Binary);
+    assert(dudu::stmt_condition_expr(branch).children[1].op == "<");
+    assert(dudu::stmt_condition_expr(branch).children[1].children[1].range.start.column >
+           dudu::stmt_condition_expr(branch).children[1].children[0].range.start.column);
     assert(branch.children.size() == 1);
 
     const dudu::Stmt& assign = branch.children[0];
@@ -1718,8 +1719,8 @@ void test_match_case_ast_shape() {
     assert(handle.statements.size() == 1);
     const dudu::Stmt& match = handle.statements[0];
     assert(match.kind == dudu::StmtKind::Match);
-    assert(match.condition_expr.kind == dudu::ExprKind::Name);
-    assert(match.condition_expr.name == "msg");
+    assert(dudu::stmt_condition_expr(match).kind == dudu::ExprKind::Name);
+    assert(dudu::stmt_condition_expr(match).name == "msg");
     assert(match.children.size() == 3);
 
     const dudu::Stmt& quit = match.children[0];

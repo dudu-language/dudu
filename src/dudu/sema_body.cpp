@@ -137,7 +137,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
     }
     if (stmt.kind == StmtKind::Except) {
         FunctionScope nested = scope;
-        if (sema_has_expr(stmt.condition_expr) || (stmt.name.empty() != !has_stmt_type_ref(stmt))) {
+        if (has_stmt_condition_expr(stmt) || (stmt.name.empty() != !has_stmt_type_ref(stmt))) {
             sema_fail(stmt.location, "expected except binding as name: Type");
         }
         if (!stmt.name.empty()) {

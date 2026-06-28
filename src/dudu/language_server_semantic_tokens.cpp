@@ -309,7 +309,7 @@ void collect_stmt_tokens(const std::vector<Stmt>& statements, std::vector<Semant
         } else if (stmt.kind == StmtKind::If || stmt.kind == StmtKind::Elif ||
                    stmt.kind == StmtKind::While || stmt.kind == StmtKind::Assert ||
                    stmt.kind == StmtKind::DebugAssert) {
-            collect_expr_tokens(stmt.condition_expr, tokens, native_index);
+            collect_expr_tokens(stmt_condition_expr(stmt), tokens, native_index);
         } else if (stmt.kind == StmtKind::For) {
             add_semantic_token(tokens, stmt.location, stmt.name, token_variable, mod_declaration);
             collect_type_tokens(stmt_type_ref(stmt), tokens, native_index);

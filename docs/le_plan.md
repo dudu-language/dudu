@@ -1578,7 +1578,15 @@ push. They are not release packaging work.
    1.05s/307MB RSS, modules 50k about 116ms/152MB RSS, functions 50k about
    103ms/75MB RSS, calls 50k about 121ms/76MB RSS, control 50k about
    127ms/81MB RSS, arrays 50k about 146ms/68MB RSS, and generics 50k about
-   145ms/53MB RSS. Keep
+   145ms/53MB RSS. Statement condition expressions then moved behind sparse
+   pointer storage. This field is less rare than match/loop-only payloads, so
+   it was kept only after the broad sweep stayed positive across control-heavy
+   code. It left `Expr` at 256 bytes and dropped local `Stmt` size from 1248 to
+   1008 bytes. A broad one-sample 10k/50k Release sweep measured
+   expression-heavy 50k around 1.04s/297MB RSS, modules 50k around
+   112ms/131MB RSS, functions 50k around 95ms/66MB RSS, calls 50k around
+   118ms/66MB RSS, control 50k around 122ms/75MB RSS, arrays 50k around
+   140ms/62MB RSS, and generics 50k around 141ms/50MB RSS. Keep
    compiler speed validation broad: generated corpora need multiple code shapes,
    because one particular compilation path can dominate or regress while an
    aggregate number looks acceptable. The

@@ -229,7 +229,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
                                          : StmtKind::Match;
         const JoinedTokens condition =
             join_until_with_range({TokenKind::Colon, TokenKind::Newline});
-        stmt.condition_expr = parse_expr_piece(condition);
+        set_stmt_condition_expr(stmt, parse_expr_piece(condition));
         consume(TokenKind::Colon, "expected : after " + keyword + " condition");
         attach_statement_range(stmt, join_tokens(begin, cursor_));
         return stmt;
@@ -291,7 +291,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
             const JoinedTokens type = join_until_with_range({TokenKind::Colon, TokenKind::Newline});
             set_stmt_type_ref(stmt, parse_type_piece(type));
         } else {
-            stmt.condition_expr = parse_expr_piece(header);
+            set_stmt_condition_expr(stmt, parse_expr_piece(header));
         }
         consume(TokenKind::Colon, "expected : after except");
         attach_statement_range(stmt, join_tokens(begin, cursor_));
@@ -327,7 +327,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
         const std::vector<JoinedTokens> parts =
             split_top_level_comma_pieces(join_tokens(parts_begin, statement_end));
         if (!parts.empty()) {
-            stmt.condition_expr = parse_expr_piece(parts.front());
+            set_stmt_condition_expr(stmt, parse_expr_piece(parts.front()));
         }
         if (parts.size() >= 2) {
             set_stmt_message_expr(stmt, parse_expr_piece(parts[1]));

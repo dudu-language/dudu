@@ -294,8 +294,9 @@ void check_match_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& ret
         sema_fail(stmt.location, "internal error: match block checker missing");
     }
     const SourceLocation& subject_location =
-        diagnostic_location(stmt.location, stmt.condition_expr);
-    const TypeRef subject_ref = infer_expr_type_ast(scope, stmt.condition_expr, &subject_location);
+        diagnostic_location(stmt.location, stmt_condition_expr(stmt));
+    const TypeRef subject_ref =
+        infer_expr_type_ast(scope, stmt_condition_expr(stmt), &subject_location);
     const WrapperMatchType wrapper = wrapper_match_type(subject_ref);
     if (wrapper.kind != WrapperMatchKind::None) {
         check_wrapper_match(scope, stmt, return_type, loop_depth, wrapper, context);

@@ -147,8 +147,8 @@ TypeRef const_reference_type_ref(TypeRef type) {
 }
 
 void check_condition_type(FunctionScope& scope, const Stmt& stmt) {
-    const SourceLocation& location = diagnostic_location(stmt.location, stmt.condition_expr);
-    const TypeRef got_ref = infer_expr_type_ast(scope, stmt.condition_expr, &location);
+    const SourceLocation& location = diagnostic_location(stmt.location, stmt_condition_expr(stmt));
+    const TypeRef got_ref = infer_expr_type_ast(scope, stmt_condition_expr(stmt), &location);
     if (has_type_ref(got_ref) && !type_ref_is_name(got_ref, "bool") && !type_ref_is_auto(got_ref)) {
         if (const auto signature = dudu_operator_signature(scope.symbols, "bool", got_ref);
             signature && signature_param_count(*signature) == 0 &&

@@ -85,21 +85,21 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
     }
     if (stmt.kind == StmtKind::Assert) {
         out << indent(depth) << "if (!("
-            << lower_emitted_expr(stmt.condition_expr, aliases, locals, local_type_refs, symbols,
-                                  options)
+            << lower_emitted_expr(stmt_condition_expr(stmt), aliases, locals, local_type_refs,
+                                  symbols, options)
             << ")) { throw std::runtime_error(";
         if (has_stmt_message_expr(stmt))
             out << lower_emitted_expr(stmt_message_expr(stmt), aliases, locals, local_type_refs,
                                       symbols, options);
         else
-            out << cpp_string_literal("assert failed: " + display_expr(stmt.condition_expr));
+            out << cpp_string_literal("assert failed: " + display_expr(stmt_condition_expr(stmt)));
         out << "); }\n";
         return;
     }
     if (stmt.kind == StmtKind::DebugAssert) {
         out << indent(depth) << "assert(("
-            << lower_emitted_expr(stmt.condition_expr, aliases, locals, local_type_refs, symbols,
-                                  options)
+            << lower_emitted_expr(stmt_condition_expr(stmt), aliases, locals, local_type_refs,
+                                  symbols, options)
             << ")";
         if (has_stmt_message_expr(stmt))
             out << " && ("
@@ -283,9 +283,9 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                     const CppEmitOptions& options) {
     emit_source_comment(out, stmt, depth);
     if (stmt.kind == StmtKind::If) {
-        out << indent(depth) << if_keyword_for_condition(stmt.condition_expr) << " ("
-            << lower_emitted_expr(stmt.condition_expr, aliases, locals, local_type_refs, symbols,
-                                  options)
+        out << indent(depth) << if_keyword_for_condition(stmt_condition_expr(stmt)) << " ("
+            << lower_emitted_expr(stmt_condition_expr(stmt), aliases, locals, local_type_refs,
+                                  symbols, options)
             << ") {\n";
         emit_block(out, stmt.children, depth + 1, aliases, locals, local_type_refs, return_type_ref,
                    function_returns, symbols, options);
@@ -293,9 +293,10 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         return;
     }
     if (stmt.kind == StmtKind::Elif) {
-        out << indent(depth) << "else " << if_keyword_for_condition(stmt.condition_expr) << " ("
-            << lower_emitted_expr(stmt.condition_expr, aliases, locals, local_type_refs, symbols,
-                                  options)
+        out << indent(depth) << "else " << if_keyword_for_condition(stmt_condition_expr(stmt))
+            << " ("
+            << lower_emitted_expr(stmt_condition_expr(stmt), aliases, locals, local_type_refs,
+                                  symbols, options)
             << ") {\n";
         emit_block(out, stmt.children, depth + 1, aliases, locals, local_type_refs, return_type_ref,
                    function_returns, symbols, options);
@@ -337,8 +338,8 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
     }
     if (stmt.kind == StmtKind::While) {
         out << indent(depth) << "while ("
-            << lower_emitted_expr(stmt.condition_expr, aliases, locals, local_type_refs, symbols,
-                                  options)
+            << lower_emitted_expr(stmt_condition_expr(stmt), aliases, locals, local_type_refs,
+                                  symbols, options)
             << ") {\n";
         emit_block(out, stmt.children, depth + 1, aliases, locals, local_type_refs, return_type_ref,
                    function_returns, symbols, options);

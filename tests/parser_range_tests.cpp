@@ -53,11 +53,11 @@ void test_keyword_statements_keep_token_ranges() {
 
     const dudu::Stmt& branch = main.statements[0];
     assert(branch.kind == dudu::StmtKind::If);
-    assert(dudu::display_expr(branch.condition_expr) == "ready(value)");
+    assert(dudu::display_expr(dudu::stmt_condition_expr(branch)) == "ready(value)");
     assert(branch.range.start.column == 5);
     assert(branch.range.end.column == 23);
-    assert(branch.condition_expr.kind == dudu::ExprKind::Call);
-    assert(branch.condition_expr.range.start.column == 10);
+    assert(dudu::stmt_condition_expr(branch).kind == dudu::ExprKind::Call);
+    assert(dudu::stmt_condition_expr(branch).range.start.column == 10);
     assert(branch.children.front().kind == dudu::StmtKind::Return);
     assert(branch.children.front().value_expr.range.start.column == 16);
 
@@ -70,13 +70,13 @@ void test_keyword_statements_keep_token_ranges() {
     assert(dudu::stmt_iterable_expr(loop).name == "values");
     assert(dudu::stmt_iterable_expr(loop).range.start.column == 22);
     assert(loop.children.front().kind == dudu::StmtKind::DebugAssert);
-    assert(dudu::display_expr(loop.children.front().condition_expr) == "item > 0");
+    assert(dudu::display_expr(dudu::stmt_condition_expr(loop.children.front())) == "item > 0");
     assert(dudu::stmt_message_expr(loop.children.front()).kind == dudu::ExprKind::StringLiteral);
     assert(dudu::stmt_message_expr(loop.children.front()).value == "positive");
     const dudu::Stmt& call_assert = loop.children[1];
     assert(call_assert.kind == dudu::StmtKind::DebugAssert);
-    assert(call_assert.condition_expr.kind == dudu::ExprKind::Call);
-    assert(call_assert.condition_expr.children.size() == 3);
+    assert(dudu::stmt_condition_expr(call_assert).kind == dudu::ExprKind::Call);
+    assert(dudu::stmt_condition_expr(call_assert).children.size() == 3);
     assert(dudu::stmt_message_expr(call_assert).kind == dudu::ExprKind::StringLiteral);
     assert(dudu::stmt_message_expr(call_assert).value == "in range");
 }

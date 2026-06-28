@@ -186,7 +186,7 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                           const std::map<std::string, TypeRef>& function_returns,
                           const Symbols* symbols, const CppEmitOptions& options) {
     const TypeRef subject_type_ref = infer_emitted_local_type_ref(
-        stmt.condition_expr, local_type_refs, function_returns, symbols);
+        stmt_condition_expr(stmt), local_type_refs, function_returns, symbols);
     if (has_type_ref(subject_type_ref)) {
         const WrapperMatchType wrapper = wrapper_match_type(subject_type_ref);
         if (wrapper.kind != WrapperMatchKind::None) {
@@ -194,7 +194,7 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                                         std::to_string(stmt.location.column);
             const std::string matched = subject + "_matched";
             out << indent(depth) << "auto&& " << subject << " = "
-                << lower_expr(stmt.condition_expr, aliases, locals, local_type_refs, symbols,
+                << lower_expr(stmt_condition_expr(stmt), aliases, locals, local_type_refs, symbols,
                               options)
                 << ";\n";
             out << indent(depth) << "bool " << matched << " = false;\n";
@@ -264,7 +264,7 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
             const std::string subject = "__dudu_match_" + std::to_string(stmt.location.line) + "_" +
                                         std::to_string(stmt.location.column);
             out << indent(depth) << "auto&& " << subject << " = "
-                << lower_expr(stmt.condition_expr, aliases, locals, local_type_refs, symbols,
+                << lower_expr(stmt_condition_expr(stmt), aliases, locals, local_type_refs, symbols,
                               options)
                 << ";\n";
             emit_ordered_enum_match(out, stmt, depth, *en, subject, aliases, locals,
@@ -280,7 +280,7 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                                         std::to_string(stmt.location.column);
             const std::string matched = subject + "_matched";
             out << indent(depth) << "auto&& " << subject << " = "
-                << lower_expr(stmt.condition_expr, aliases, locals, local_type_refs, symbols,
+                << lower_expr(stmt_condition_expr(stmt), aliases, locals, local_type_refs, symbols,
                               options)
                 << ";\n";
             out << indent(depth) << "bool " << matched << " = false;\n";
@@ -351,7 +351,7 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
     const std::string subject = "__dudu_match_" + std::to_string(stmt.location.line) + "_" +
                                 std::to_string(stmt.location.column);
     out << indent(depth) << "auto&& " << subject << " = "
-        << lower_expr(stmt.condition_expr, aliases, locals, local_type_refs, symbols, options)
+        << lower_expr(stmt_condition_expr(stmt), aliases, locals, local_type_refs, symbols, options)
         << ";\n";
     if (match_cases_return(stmt)) {
         emit_all_return_value_match(out, stmt, depth, subject, aliases, locals, local_type_refs,
