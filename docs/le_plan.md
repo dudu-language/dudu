@@ -1800,6 +1800,16 @@ push. They are not release packaging work.
    225ms, calls about 58ms, modules about 76ms, arrays about 83ms, generics
    about 91ms, and mixed about 105ms. Treat this as a modest broad-neutral
    win; it does not remove the deeper expression-AST allocation bottleneck.
+   Statement classification then stopped scanning a line after the first
+   top-level assignment operator, because no later colon can make that line a
+   typed declaration. This avoids walking long right-hand expressions just to
+   classify ordinary assignments. A focused five-sample Release run measured
+   calls at about 57ms, control at about 74ms, expressions at about 225ms, and
+   mixed at about 104ms. The broad three-sample repeat kept calls around 58ms,
+   control around 73ms, arrays around 83ms, modules around 75ms, and mixed
+   around 107ms; expression-heavy landed at about 231ms, so treat this as a
+   statement-scan cleanup for assignment-heavy code, not as the expression-AST
+   fix.
    Rewriting
    `sema_context::trim` from front-erasing to substring bounds plus ASCII
    checks was tried and rejected: focused repeats regressed modules and mixed

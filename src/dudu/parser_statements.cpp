@@ -78,8 +78,6 @@ StatementOperatorScan scan_top_level_statement_operators(std::span<const Token> 
             }
             if (!out.assignment.has_value() && is_assignment_operator(token)) {
                 out.assignment = index;
-            }
-            if (out.colon.has_value() && out.assignment.has_value()) {
                 break;
             }
         }
