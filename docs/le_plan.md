@@ -1757,7 +1757,10 @@ push. They are not release packaging work.
    about 82ms, expressions about 228ms, and mixed about 106ms. Rewriting
    `sema_context::trim` from front-erasing to substring bounds plus ASCII
    checks was tried and rejected: focused repeats regressed modules and mixed
-   project-shaped code and did not preserve an expression-heavy win. The
+   project-shaped code and did not preserve an expression-heavy win. Lazily
+   computing `infer_expr_type_ast` diagnostic locations was also tried and
+   rejected: the expression-heavy target did not improve, and broad generated
+   shape differences were noise-level. The
    changed-file case runs against a copied fixture under `build/bench_compiler`
    so benchmarks do not mutate checked-in examples. It
    records source line/file counts and peak child-process RSS in KB with each
