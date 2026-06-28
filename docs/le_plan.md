@@ -1497,7 +1497,16 @@ push. They are not release packaging work.
    changed from `std::set` to `std::unordered_set`, preserving stable interned
    string storage while avoiding tree lookup cost; a local one-sample 10k
    Release shape sweep was neutral-to-positive, with expression-heavy checks
-   around 254ms and modules around 49ms. The
+   around 254ms and modules around 49ms. A later 10k/50k Release scale run
+   showed expression-heavy code is still the clear outlier but scales roughly
+   linearly: about 252ms and 122MB RSS at 10k lines, about 1.2s and 533MB RSS
+   at 50k lines. By comparison, many-functions reached about 0.13s at 50k
+   lines. The next serious expression-throughput work should target AST storage
+   shape, especially binary-expression trees that currently allocate vector
+   child storage per node. A local size probe measured `Expr` at 416 bytes and
+   `Stmt` at 3616 bytes, because each node currently carries many payload fields
+   for every possible variant; this is acceptable for keeping the language
+   moving but not for million-line compiler throughput. The
    changed-file case runs against a copied fixture under `build/bench_compiler`
    so benchmarks do not mutate checked-in examples. It
    records source line/file counts and peak child-process RSS in KB with each
