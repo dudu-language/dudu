@@ -1606,7 +1606,17 @@ push. They are not release packaging work.
    980ms/299MB RSS, modules 50k about 110ms/116MB RSS, functions 50k about
    99ms/59MB RSS, calls 50k about 119ms/63MB RSS, control 50k about
    118ms/70MB RSS, arrays 50k about 143ms/59MB RSS, and generics 50k about
-   139ms/47MB RSS. Keep
+   139ms/47MB RSS. Expression-level template argument payloads then moved
+   behind sparse pointer storage. Parsed `TypeRef` template arguments were
+   already sparse; this removed the mostly-empty expression template-argument
+   vector from normal expression nodes. It dropped local `Expr` size from 256
+   to 248 bytes and local `Stmt` size from 768 to 752 bytes. Focused timings
+   were neutral, so the change is kept as a memory/scale win rather than a
+   throughput win. A broad one-sample 10k/50k Release sweep measured
+   expression-heavy 50k around 1.02s/292MB RSS, modules 50k around 104ms/113MB
+   RSS, functions 50k around 97ms/58MB RSS, calls 50k around 117ms/61MB RSS,
+   control 50k around 119ms/69MB RSS, arrays 50k around 141ms/58MB RSS, and
+   generics 50k around 140ms/46MB RSS. Keep
    compiler speed validation broad: generated corpora need multiple code shapes,
    because one particular compilation path can dominate or regress while an
    aggregate number looks acceptable. The

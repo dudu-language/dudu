@@ -256,7 +256,7 @@ std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Ex
 
 std::optional<TypeRef> direct_template_call_type_ref(const FunctionScope& scope, const Expr& expr,
                                                      const SourceLocation* location) {
-    if (expr.template_args.empty() && !has_expr_template_type_args(expr)) {
+    if (!has_expr_template_args(expr) && !has_expr_template_type_args(expr)) {
         if (location != nullptr) {
             sema_expr_fail(*location, "template call expects at least 1 type argument");
         }

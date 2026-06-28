@@ -183,12 +183,11 @@ Expr ExprTokenParser::parse_template_call(Expr indexed_callee,
     call.callee.reserve(1);
     call.callee.push_back(std::move(callee));
     if (expr_missing(template_expr)) {
-        call.template_args.clear();
+        set_expr_template_args(call, {});
     } else if (template_expr.kind == ExprKind::TupleLiteral) {
-        call.template_args = std::move(template_expr.children);
+        set_expr_template_args(call, std::move(template_expr.children));
     } else {
-        call.template_args.reserve(1);
-        call.template_args.push_back(std::move(template_expr));
+        set_expr_template_args(call, std::vector<Expr>{std::move(template_expr)});
     }
     set_expr_template_type_args(call, parse_type_list_span(template_begin, template_end));
     call.children = std::move(args);
@@ -210,9 +209,9 @@ Expr ExprTokenParser::parse_template_call_from_brackets(Expr callee, size_t begi
     Expr template_expr = parse_expr_span(template_begin, template_end);
     if (!expr_missing(template_expr) && template_expr.kind != ExprKind::Unknown) {
         if (template_expr.kind == ExprKind::TupleLiteral) {
-            call.template_args = std::move(template_expr.children);
+            set_expr_template_args(call, std::move(template_expr.children));
         } else {
-            call.template_args.push_back(std::move(template_expr));
+            set_expr_template_args(call, std::vector<Expr>{std::move(template_expr)});
         }
     }
     call.children = std::move(args);

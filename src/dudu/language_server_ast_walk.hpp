@@ -23,7 +23,7 @@ void visit_expr_tree_impl(const Expr& expr, VisitExpr& visit_expr, VisitType& vi
     for (const Expr& callee : expr.callee) {
         visit_expr_tree_impl(callee, visit_expr, visit_type);
     }
-    for (const Expr& arg : expr.template_args) {
+    for (const Expr& arg : expr_template_args(expr)) {
         visit_expr_tree_impl(arg, visit_expr, visit_type);
     }
     for (const TypeRef& arg : expr_template_type_args(expr)) {

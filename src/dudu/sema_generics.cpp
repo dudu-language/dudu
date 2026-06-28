@@ -138,7 +138,7 @@ std::vector<TypeRef> template_type_refs(const Expr& expr) {
     if (has_expr_template_type_args(expr)) {
         return expr_template_type_args(expr);
     }
-    if (!expr.template_args.empty()) {
+    if (has_expr_template_args(expr)) {
         sema_fail(expr.location, "malformed template call: missing parsed type arguments");
     }
     return {};

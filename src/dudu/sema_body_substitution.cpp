@@ -29,7 +29,7 @@ void substitute_expr_types(Expr& expr, const std::map<std::string, TypeRef>& sub
     for (Expr& callee : expr.callee) {
         substitute_expr_types(callee, substitutions);
     }
-    for (Expr& arg : expr.template_args) {
+    for (Expr& arg : mutable_expr_template_args(expr)) {
         substitute_expr_types(arg, substitutions);
     }
 }

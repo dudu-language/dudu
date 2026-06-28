@@ -92,7 +92,7 @@ void check_expr(const Expr& expr) {
     for (const Expr& child : expr.callee) {
         check_expr(child);
     }
-    for (const Expr& child : expr.template_args) {
+    for (const Expr& child : expr_template_args(expr)) {
         check_expr(child);
     }
     for (const Expr& child : expr.children) {

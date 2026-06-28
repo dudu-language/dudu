@@ -193,6 +193,30 @@ void set_expr_template_type_args(Expr& expr, std::vector<TypeRef> args) {
     expr.template_type_args = std::make_shared<std::vector<TypeRef>>(std::move(args));
 }
 
+bool has_expr_template_args(const Expr& expr) {
+    return expr.template_args != nullptr && !expr.template_args->empty();
+}
+
+const std::vector<Expr>& expr_template_args(const Expr& expr) {
+    static const std::vector<Expr> empty;
+    return expr.template_args == nullptr ? empty : *expr.template_args;
+}
+
+std::vector<Expr>& mutable_expr_template_args(Expr& expr) {
+    if (expr.template_args == nullptr) {
+        expr.template_args = std::make_shared<std::vector<Expr>>();
+    }
+    return *expr.template_args;
+}
+
+void set_expr_template_args(Expr& expr, std::vector<Expr> args) {
+    if (args.empty()) {
+        expr.template_args.reset();
+        return;
+    }
+    expr.template_args = std::make_shared<std::vector<Expr>>(std::move(args));
+}
+
 bool has_stmt_message_expr(const Stmt& stmt) {
     return stmt.message_expr != nullptr && expr_present(*stmt.message_expr);
 }
@@ -316,7 +340,7 @@ std::string display_template_args(const Expr& expr) {
         first = false;
         out << substitute_type_ref_text(type, {});
     }
-    for (const Expr& value : expr.template_args) {
+    for (const Expr& value : expr_template_args(expr)) {
         if (!first) {
             out << ", ";
         }

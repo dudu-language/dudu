@@ -287,7 +287,7 @@ void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
             collect_type_tokens(arg, tokens, native_index);
         }
     } else {
-        for (const Expr& arg : expr.template_args) {
+        for (const Expr& arg : expr_template_args(expr)) {
             collect_expr_tokens(arg, tokens, native_index);
         }
     }

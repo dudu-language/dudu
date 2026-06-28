@@ -159,7 +159,7 @@ void check_expr(const std::set<std::string>& names, const Expr& expr) {
     for (const Expr& child : expr.callee) {
         check_expr(names, child);
     }
-    for (const Expr& child : expr.template_args) {
+    for (const Expr& child : expr_template_args(expr)) {
         check_expr(names, child);
     }
     for (const Expr& child : expr.children) {
