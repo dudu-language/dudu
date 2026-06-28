@@ -36,6 +36,7 @@ Expr ExprTokenParser::parse_postfix(std::initializer_list<TokenKind> stops) {
             ++cursor_;
             Expr member = make_node(ExprKind::Member, begin, cursor_);
             member.name = name.text;
+            member.children.reserve(1);
             member.children.push_back(std::move(expr));
             expr = std::move(member);
             continue;
@@ -55,6 +56,7 @@ Expr ExprTokenParser::parse_postfix(std::initializer_list<TokenKind> stops) {
             Expr index_arg = parse_index_argument();
             match(TokenKind::RBracket);
             Expr index = make_node(ExprKind::Index, begin, cursor_);
+            index.children.reserve(2);
             index.children.push_back(std::move(expr));
             index.children.push_back(std::move(index_arg));
             expr = std::move(index);
@@ -154,6 +156,7 @@ Expr ExprTokenParser::parse_call(Expr callee, std::initializer_list<TokenKind> s
     Expr call = make_node(ExprKind::Call, begin, cursor_);
     const std::optional<ExprPath> path = expr_path_from_expr(callee);
     const std::string callee_name = path ? render_expr_path(*path) : display_expr(callee);
+    call.callee.reserve(1);
     call.callee.push_back(std::move(callee));
     call.children = std::move(args);
     if (callee_name == "cpp") {
@@ -177,12 +180,14 @@ Expr ExprTokenParser::parse_template_call(Expr indexed_callee,
     std::vector<Expr> args = parse_arg_list(TokenKind::RParen);
     match(TokenKind::RParen);
     Expr call = make_node(ExprKind::TemplateCall, begin, cursor_);
+    call.callee.reserve(1);
     call.callee.push_back(std::move(callee));
     if (expr_missing(template_expr)) {
         call.template_args.clear();
     } else if (template_expr.kind == ExprKind::TupleLiteral) {
         call.template_args = std::move(template_expr.children);
     } else {
+        call.template_args.reserve(1);
         call.template_args.push_back(std::move(template_expr));
     }
     set_expr_template_type_args(call, parse_type_list_span(template_begin, template_end));
@@ -199,6 +204,7 @@ Expr ExprTokenParser::parse_template_call_from_brackets(Expr callee, size_t begi
     match(TokenKind::RParen);
 
     Expr call = make_node(ExprKind::TemplateCall, begin, cursor_);
+    call.callee.reserve(1);
     call.callee.push_back(std::move(callee));
     set_expr_template_type_args(call, parse_type_list_span(template_begin, template_end));
     Expr template_expr = parse_expr_span(template_begin, template_end);
@@ -312,6 +318,7 @@ Expr ExprTokenParser::parse_brace_literal(size_t begin) {
         if (match(TokenKind::Colon)) {
             dict = true;
             Expr entry = make_node(ExprKind::DictEntry, entry_begin, cursor_);
+            entry.children.reserve(2);
             entry.children.push_back(std::move(key));
             entry.children.push_back(parse_named_or_binary({TokenKind::Comma, TokenKind::RBrace}));
             entry.range = range_between(entry_begin, cursor_);
@@ -382,6 +389,7 @@ Expr ExprTokenParser::parse_pointer_cast_call() {
     Expr callee = make_node(ExprKind::Name, begin, type_end);
     callee.name = "*";
     Expr call = make_node(ExprKind::Call, begin, cursor_);
+    call.callee.reserve(1);
     call.callee.push_back(std::move(callee));
     call.children = std::move(args);
     set_expr_type_ref(call, parse_type_span(type_begin, type_end));

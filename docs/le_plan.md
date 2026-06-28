@@ -1595,7 +1595,18 @@ push. They are not release packaging work.
    1.04s/298MB RSS, modules 50k around 107ms/115MB RSS, functions 50k around
    96ms/59MB RSS, calls 50k around 116ms/62MB RSS, control 50k around
    120ms/70MB RSS, arrays 50k around 141ms/60MB RSS, and generics 50k around
-   143ms/47MB RSS. Keep
+   143ms/47MB RSS. After that, focused `expressions_50000 --timings` showed
+   parse/load still dominated expression-heavy code: roughly 0.63s parse/load
+   and 0.36s sema out of about 1.0s total. A small allocation pass reserved
+   known child/callee vector sizes for unary, member, index, call, slice,
+   conditional, dict-entry, and related expression nodes. Focused
+   `expressions_50000 --timings` improved from about 0.996s total with 0.634s
+   parse/load to about 0.953s total with 0.584s parse/load. A broad one-sample
+   10k/50k Release sweep kept the change: expression-heavy 50k measured about
+   980ms/299MB RSS, modules 50k about 110ms/116MB RSS, functions 50k about
+   99ms/59MB RSS, calls 50k about 119ms/63MB RSS, control 50k about
+   118ms/70MB RSS, arrays 50k about 143ms/59MB RSS, and generics 50k about
+   139ms/47MB RSS. Keep
    compiler speed validation broad: generated corpora need multiple code shapes,
    because one particular compilation path can dominate or regress while an
    aggregate number looks acceptable. The

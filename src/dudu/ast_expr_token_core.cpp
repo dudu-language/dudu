@@ -181,6 +181,7 @@ Expr ExprTokenParser::parse_named_or_binary(std::initializer_list<TokenKind> sto
     const size_t begin = cursor_;
     if (match(TokenKind::Colon)) {
         Expr expr = make_node(ExprKind::Slice, begin, cursor_);
+        expr.children.reserve(2);
         expr.children.push_back(make_expr(ExprKind::Missing, "", expr.location));
         expr.children.push_back((stop_at(stops) || at(TokenKind::Comma))
                                     ? make_expr(ExprKind::Missing, "", current().location)
@@ -192,12 +193,14 @@ Expr ExprTokenParser::parse_named_or_binary(std::initializer_list<TokenKind> sto
     if (match(TokenKind::Assign) && lhs.kind == ExprKind::Name) {
         Expr expr = make_node(ExprKind::NamedArg, begin, cursor_);
         expr.name = lhs.name;
+        expr.children.reserve(1);
         expr.children.push_back(parse_comma_expr(stops));
         expr.range = range_between(begin, cursor_);
         return expr;
     }
     if (!stop_at(stops) && match(TokenKind::Colon)) {
         Expr expr = make_node(ExprKind::Slice, begin, cursor_);
+        expr.children.reserve(2);
         expr.children.push_back(std::move(lhs));
         expr.children.push_back((stop_at(stops) || at(TokenKind::Comma))
                                     ? make_expr(ExprKind::Missing, "", current().location)
@@ -207,6 +210,7 @@ Expr ExprTokenParser::parse_named_or_binary(std::initializer_list<TokenKind> sto
     }
     if (match_identifier("if")) {
         Expr expr = make_node(ExprKind::Conditional, begin, cursor_);
+        expr.children.reserve(3);
         expr.children.push_back(std::move(lhs));
         expr.children.push_back(parse_named_or_binary(stops));
         if (match_identifier("else")) {
@@ -288,6 +292,7 @@ Expr ExprTokenParser::parse_prefix(std::initializer_list<TokenKind> stops) {
     }
     if (match_identifier("lambda")) {
         Expr expr = make_node(ExprKind::Lambda, begin, cursor_);
+        expr.children.reserve(1);
         if (!stop_at(stops)) {
             const size_t args_begin = cursor_;
             while (!stop_at(stops) && !at(TokenKind::Colon)) {
@@ -306,12 +311,14 @@ Expr ExprTokenParser::parse_prefix(std::initializer_list<TokenKind> stops) {
     }
     if (match_identifier("await")) {
         Expr expr = make_node(ExprKind::Await, begin, cursor_);
+        expr.children.reserve(1);
         expr.children.push_back(parse_prefix(stops));
         expr.range = range_between(begin, cursor_);
         return expr;
     }
     if (match_identifier("yield")) {
         Expr expr = make_node(ExprKind::Yield, begin, cursor_);
+        expr.children.reserve(1);
         expr.children.push_back(parse_prefix(stops));
         expr.range = range_between(begin, cursor_);
         return expr;
@@ -367,6 +374,7 @@ Expr ExprTokenParser::parse_unary(std::string op, size_t begin,
                                   std::initializer_list<TokenKind> stops) {
     Expr expr = make_node(ExprKind::Unary, begin, cursor_);
     expr.op = std::move(op);
+    expr.children.reserve(1);
     if (stop_at(stops) || at_end()) {
         expr.children.push_back(make_expr(ExprKind::Missing, "", current().location));
     } else {

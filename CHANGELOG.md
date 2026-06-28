@@ -122,6 +122,9 @@
   structured.
 - Moved assignment target expressions behind pointer storage, reducing statement
   node size while preserving assignment, swizzle, index, and LSP target handling.
+- Reduced expression parser allocation churn by reserving fixed child/callee
+  vector sizes for unary, member, index, call, slice, conditional, and related
+  expression nodes.
 - Reduced parser work by carrying layout-token metadata on joined token spans
   instead of rescanning each expression/type piece before parsing it.
 - Removed obsolete string-based Dudu method/class template substitution helpers.
