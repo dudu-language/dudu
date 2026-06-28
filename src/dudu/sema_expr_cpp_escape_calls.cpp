@@ -31,11 +31,11 @@ TypeRef call_callee_type_ref(const Expr& parsed, const std::string& callee) {
     if (callee.empty()) {
         return {};
     }
-    if (parsed.kind == ExprKind::TemplateCall && !parsed.template_type_args.empty()) {
+    if (parsed.kind == ExprKind::TemplateCall && has_expr_template_type_args(parsed)) {
         TypeRef type;
         type.kind = TypeKind::Template;
         type.name = callee;
-        type.children = parsed.template_type_args;
+        type.children = expr_template_type_args(parsed);
         type.location = parsed.location;
         type.range = parsed.range;
         return type;

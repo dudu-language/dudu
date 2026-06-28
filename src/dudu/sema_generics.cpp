@@ -135,8 +135,8 @@ bool infer_generic_binding(const TypeRef& param_type, const TypeRef& arg_type,
 } // namespace
 
 std::vector<TypeRef> template_type_refs(const Expr& expr) {
-    if (!expr.template_type_args.empty()) {
-        return expr.template_type_args;
+    if (has_expr_template_type_args(expr)) {
+        return expr_template_type_args(expr);
     }
     if (!expr.template_args.empty()) {
         sema_fail(expr.location, "malformed template call: missing parsed type arguments");

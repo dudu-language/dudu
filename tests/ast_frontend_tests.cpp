@@ -1214,10 +1214,10 @@ void test_expression_ast_shape() {
     assert(assign.value_expr.template_args[0].name == "f32");
     assert(assign.value_expr.template_args[0].range.start.column >
            assign.value_expr.range.start.column);
-    assert(assign.value_expr.template_type_args.size() == 1);
-    assert(assign.value_expr.template_type_args[0].kind == dudu::TypeKind::Named);
-    assert(assign.value_expr.template_type_args[0].name == "f32");
-    assert(assign.value_expr.template_type_args[0].range.start.column >
+    assert(dudu::expr_template_type_args(assign.value_expr).size() == 1);
+    assert(dudu::expr_template_type_args(assign.value_expr)[0].kind == dudu::TypeKind::Named);
+    assert(dudu::expr_template_type_args(assign.value_expr)[0].name == "f32");
+    assert(dudu::expr_template_type_args(assign.value_expr)[0].range.start.column >
            assign.value_expr.range.start.column);
     assert(assign.value_expr.children.size() == 4);
     assert(assign.value_expr.children[0].range.start.column > assign.value_expr.range.start.column);
@@ -1346,7 +1346,7 @@ void test_dereference_postfix_expression_shape() {
     assert(dudu::direct_callee_name(cast) == "*");
     assert(dudu::type_ref_head_name(dudu::expr_type_ref(cast)) == "struct State");
     assert(cast.template_args.empty());
-    assert(cast.template_type_args.empty());
+    assert(!dudu::has_expr_template_type_args(cast));
 
     const dudu::Expr template_cast = dudu::parse_expr_text("*list[MissingType](ptr)");
     assert(template_cast.kind == dudu::ExprKind::Call);
@@ -1358,7 +1358,7 @@ void test_dereference_postfix_expression_shape() {
     assert(template_cast_type.children.size() == 1);
     assert(template_cast_type.children[0].name == "MissingType");
     assert(template_cast.template_args.empty());
-    assert(template_cast.template_type_args.empty());
+    assert(!dudu::has_expr_template_type_args(template_cast));
 
     const dudu::Expr qualified_template_cast = dudu::parse_expr_text("*std.vector[i32](raw_data)");
     assert(qualified_template_cast.kind == dudu::ExprKind::Call);
@@ -1369,7 +1369,7 @@ void test_dereference_postfix_expression_shape() {
     assert(qualified_template_cast_type.name == "std.vector");
     assert(qualified_template_cast_type.children.size() == 1);
     assert(qualified_template_cast.template_args.empty());
-    assert(qualified_template_cast.template_type_args.empty());
+    assert(!dudu::has_expr_template_type_args(qualified_template_cast));
     assert(dudu::substitute_type_ref_text(qualified_template_cast_type.children[0], {}) == "i32");
 }
 

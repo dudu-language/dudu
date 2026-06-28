@@ -35,6 +35,9 @@ std::optional<std::string> member_callee_name(const Expr& expr);
 bool is_member_callee(const Expr& expr, std::string_view receiver, std::string_view member);
 std::optional<ExprPath> call_callee_path(const Expr& expr);
 std::string direct_callee_name(const Expr& expr);
+bool has_expr_template_type_args(const Expr& expr);
+const std::vector<TypeRef>& expr_template_type_args(const Expr& expr);
+void set_expr_template_type_args(Expr& expr, std::vector<TypeRef> args);
 std::string display_expr(const Expr& expr);
 
 } // namespace dudu

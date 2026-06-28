@@ -282,8 +282,8 @@ void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
     for (const Expr& child : expr.children) {
         collect_expr_tokens(child, tokens, native_index);
     }
-    if (!expr.template_type_args.empty()) {
-        for (const TypeRef& arg : expr.template_type_args) {
+    if (has_expr_template_type_args(expr)) {
+        for (const TypeRef& arg : expr_template_type_args(expr)) {
             collect_type_tokens(arg, tokens, native_index);
         }
     } else {

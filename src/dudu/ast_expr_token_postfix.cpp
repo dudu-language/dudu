@@ -185,7 +185,7 @@ Expr ExprTokenParser::parse_template_call(Expr indexed_callee,
     } else {
         call.template_args.push_back(std::move(template_expr));
     }
-    call.template_type_args = parse_type_list_span(template_begin, template_end);
+    set_expr_template_type_args(call, parse_type_list_span(template_begin, template_end));
     call.children = std::move(args);
     return call;
 }
@@ -200,7 +200,7 @@ Expr ExprTokenParser::parse_template_call_from_brackets(Expr callee, size_t begi
 
     Expr call = make_node(ExprKind::TemplateCall, begin, cursor_);
     call.callee.push_back(std::move(callee));
-    call.template_type_args = parse_type_list_span(template_begin, template_end);
+    set_expr_template_type_args(call, parse_type_list_span(template_begin, template_end));
     Expr template_expr = parse_expr_span(template_begin, template_end);
     if (!expr_missing(template_expr) && template_expr.kind != ExprKind::Unknown) {
         if (template_expr.kind == ExprKind::TupleLiteral) {

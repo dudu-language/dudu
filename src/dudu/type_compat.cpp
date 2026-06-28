@@ -96,11 +96,11 @@ std::optional<TypeRef> call_target_type_ref(const Expr& expr) {
     if (callee.empty()) {
         return std::nullopt;
     }
-    if (expr.kind == ExprKind::TemplateCall && !expr.template_type_args.empty()) {
+    if (expr.kind == ExprKind::TemplateCall && has_expr_template_type_args(expr)) {
         TypeRef type;
         type.kind = TypeKind::Template;
         type.name = callee;
-        type.children = expr.template_type_args;
+        type.children = expr_template_type_args(expr);
         type.location = expr.location;
         return type;
     }

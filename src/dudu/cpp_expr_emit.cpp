@@ -168,10 +168,10 @@ TypeKind wrapper_template_kind(std::string_view name) {
 
 TypeRef template_type_ref_from_expr(const Expr& expr, std::string name) {
     TypeRef type;
-    type.kind =
-        expr.template_type_args.size() == 1 ? wrapper_template_kind(name) : TypeKind::Template;
+    type.kind = expr_template_type_args(expr).size() == 1 ? wrapper_template_kind(name)
+                                                          : TypeKind::Template;
     type.name = std::move(name);
-    type.children = expr.template_type_args;
+    type.children = expr_template_type_args(expr);
     type.location = expr.location;
     type.range = expr.range;
     return type;
@@ -279,12 +279,12 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
     case ExprKind::Call:
         return lower_call_expr(expr, aliases, locals, local_type_refs, symbols, options);
     case ExprKind::TemplateCall: {
-        if (expr.template_type_args.empty()) {
+        if (!has_expr_template_type_args(expr)) {
             throw CompileError(expr.location,
                                "malformed template call: missing parsed type arguments");
         }
         const std::string lowered_template_args =
-            join_lowered_type_args(expr.template_type_args, aliases, options);
+            join_lowered_type_args(expr_template_type_args(expr), aliases, options);
         const std::string lowered_call_args = join_lowered_exprs(
             expr.children, aliases, locals, local_type_refs, ", ", symbols, options);
         const std::string callee = direct_callee_name(expr);
@@ -311,7 +311,7 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
                    ")";
         }
         if ((callee == "std.function" || callee == "std::function") &&
-            expr.template_type_args.size() == 1) {
+            expr_template_type_args(expr).size() == 1) {
             const std::string type =
                 lower_cpp_type(template_type_ref_from_expr(expr, callee), aliases, options);
             return expr.children.empty() ? type + "{}" : type + "(" + lowered_call_args + ")";

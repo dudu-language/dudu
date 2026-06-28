@@ -170,7 +170,7 @@ struct Expr {
     std::string op;
     std::vector<Expr> callee;
     std::vector<Expr> template_args;
-    std::vector<TypeRef> template_type_args;
+    std::shared_ptr<std::vector<TypeRef>> template_type_args;
     std::shared_ptr<TypeRef> type_ref;
     std::vector<Expr> children;
     SourceLocation location;

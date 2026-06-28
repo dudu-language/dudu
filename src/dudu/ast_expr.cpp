@@ -176,6 +176,23 @@ std::string direct_callee_name(const Expr& expr) {
     return call_callee_display(expr);
 }
 
+bool has_expr_template_type_args(const Expr& expr) {
+    return expr.template_type_args != nullptr && !expr.template_type_args->empty();
+}
+
+const std::vector<TypeRef>& expr_template_type_args(const Expr& expr) {
+    static const std::vector<TypeRef> empty;
+    return expr.template_type_args == nullptr ? empty : *expr.template_type_args;
+}
+
+void set_expr_template_type_args(Expr& expr, std::vector<TypeRef> args) {
+    if (args.empty()) {
+        expr.template_type_args.reset();
+        return;
+    }
+    expr.template_type_args = std::make_shared<std::vector<TypeRef>>(std::move(args));
+}
+
 std::string join_display_exprs(const std::vector<Expr>& exprs, std::string_view separator) {
     std::ostringstream out;
     for (size_t i = 0; i < exprs.size(); ++i) {
@@ -190,7 +207,7 @@ std::string join_display_exprs(const std::vector<Expr>& exprs, std::string_view 
 std::string display_template_args(const Expr& expr) {
     std::ostringstream out;
     bool first = true;
-    for (const TypeRef& type : expr.template_type_args) {
+    for (const TypeRef& type : expr_template_type_args(expr)) {
         if (!first) {
             out << ", ";
         }

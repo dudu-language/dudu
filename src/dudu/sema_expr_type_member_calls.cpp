@@ -111,7 +111,7 @@ std::optional<TypeRef> direct_template_member_call_type_ref(const FunctionScope&
         return std::nullopt;
     }
     const Expr& member = expr.callee.front();
-    return receiver_call_type_ref(scope, expr, callee, member.name, expr.template_type_args,
+    return receiver_call_type_ref(scope, expr, callee, member.name, expr_template_type_args(expr),
                                   location);
 }
 

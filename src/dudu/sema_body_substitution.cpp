@@ -1,5 +1,6 @@
 #include "dudu/sema_body_substitution.hpp"
 
+#include "dudu/ast_expr.hpp"
 #include "dudu/ast_type.hpp"
 
 #include <sstream>
@@ -15,8 +16,12 @@ void substitute_expr_types(Expr& expr, const std::map<std::string, TypeRef>& sub
     if (has_expr_type_ref(expr)) {
         set_expr_type_ref(expr, substitute_type_ref(expr_type_ref(expr), substitutions));
     }
-    for (TypeRef& type_arg : expr.template_type_args) {
-        type_arg = substitute_type_ref(type_arg, substitutions);
+    if (has_expr_template_type_args(expr)) {
+        std::vector<TypeRef> type_args = expr_template_type_args(expr);
+        for (TypeRef& type_arg : type_args) {
+            type_arg = substitute_type_ref(type_arg, substitutions);
+        }
+        set_expr_template_type_args(expr, std::move(type_args));
     }
     for (Expr& child : expr.children) {
         substitute_expr_types(child, substitutions);

@@ -1528,7 +1528,17 @@ push. They are not release packaging work.
    113ms/115MB RSS, calls 50k about 133ms/108MB RSS, control 50k about
    143ms/119MB RSS, arrays 50k about 159ms/87MB RSS, and generics 50k about
    153ms/64MB RSS. Time differences at this size are mostly noise-level, so this
-   is kept as a memory/scale win rather than claimed as a throughput win. Keep
+   is kept as a memory/scale win rather than claimed as a throughput win.
+   Expression template type arguments were then moved behind sparse pointer
+   storage, because only explicit template calls carry them. This dropped local
+   `Expr` size from 264 to 256 bytes and `Stmt` from 2272 to 2208 bytes. The
+   broad one-sample Release sweep stayed positive on memory: expression-heavy
+   50k measured about 1.07s/355MB RSS, modules 50k about 148ms/233MB RSS,
+   functions 50k about 118ms/113MB RSS, calls 50k about 130ms/105MB RSS,
+   control 50k about 139ms/116MB RSS, arrays 50k about 158ms/85MB RSS, and
+   generics 50k about 151ms/64MB RSS. The module time bounce is within the
+   one-sample noise seen in nearby runs; this is kept for the consistent memory
+   drop across diverse generated shapes. Keep
    compiler speed validation broad: generated corpora need multiple code shapes,
    because one particular compilation path can dominate or regress while an
    aggregate number looks acceptable. The
