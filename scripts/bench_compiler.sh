@@ -21,7 +21,11 @@ source line counts, for example:
   --line-scales 10000,50000,100000,200000,500000,1000000
 
 --shapes accepts a comma-separated list of generated frontend stress shapes:
-  functions,classes,expressions,modules,calls,control,arrays,generics,mixed
+  functions,classes,expressions,modules,calls,control,arrays,generics,stdlib,mixed
+
+The stdlib shape is intentionally not in the default set because real C++
+standard-library header scanning is much slower than pure Dudu frontend
+shapes. Select it explicitly when measuring native interop throughput.
 
 --build-type chooses the compiler binary build used for the benchmark. Debug
 matches the normal dev loop. Release measures shipped-tool speed.
@@ -231,7 +235,7 @@ validate_shapes() {
     for shape in "${requested_shapes[@]}"; do
         shape="$(printf '%s' "$shape" | tr -d '[:space:]')"
         case "$shape" in
-            functions|classes|expressions|modules|calls|control|arrays|generics|mixed)
+            functions|classes|expressions|modules|calls|control|arrays|generics|stdlib|mixed)
                 ;;
             *)
                 echo "invalid --shapes entry: $shape" >&2
@@ -738,6 +742,67 @@ EOF
     printf '%s\n' "$entry"
 }
 
+prepare_scaled_stdlib_case() {
+    local requested_lines="$1"
+    local project="$scale_root/stdlib_$requested_lines"
+    local entry="$project/main.dd"
+    rm -rf "$project"
+    mkdir -p "$project"
+
+    local funcs=$((requested_lines / 26))
+    if [[ "$funcs" -lt 1 ]]; then
+        funcs=1
+    fi
+
+    cat >"$entry" <<'EOF'
+import cpp "algorithm" as std
+import cpp "numeric" as std
+import cpp "string" as std
+import cpp "tuple" as std
+import cpp "unordered_map" as std
+import cpp "utility" as std
+import cpp "vector" as std
+
+EOF
+    for ((i = 0; i < funcs; ++i)); do
+        cat >>"$entry" <<EOF
+def stdlib_func_$i(seed: i32) -> i32:
+    values: std.vector[i32]
+    values.push_back(seed)
+    values.push_back(seed + 3)
+    values.push_back($i)
+    values.push_back(seed + 1)
+    std.sort(values.begin(), values.end())
+    total: i32 = std.accumulate(values.begin(), values.end(), 0)
+    names: std.vector[std.string]
+    names.push_back(std.string("alpha"))
+    names.push_back(std.string("beta"))
+    scores: std.unordered_map[std.string, i32]
+    scores[names[0]] = total
+    scores[names[1]] = total + $i
+    pair: std.pair[std.string, i32] = std.make_pair(std.string("score"), scores[names[1]])
+    tup: std.tuple[std.string, i32] = std.make_tuple(pair.first, pair.second)
+    if std.get[1](tup) != pair.second:
+        return 0
+    return scores[std.string("alpha")] + std.get[1](tup)
+
+EOF
+    done
+    {
+        printf 'def main() -> i32:\n'
+        printf '    total: i32 = 0\n'
+        local limit="$funcs"
+        if [[ "$limit" -gt 128 ]]; then
+            limit=128
+        fi
+        for ((i = 0; i < limit; ++i)); do
+            printf '    total += stdlib_func_%d(%d)\n' "$i" "$i"
+        done
+        printf '    return total\n'
+    } >>"$entry"
+    printf '%s\n' "$entry"
+}
+
 prepare_scaled_mixed_case() {
     local requested_lines="$1"
     local project="$scale_root/mixed_$requested_lines"
@@ -898,6 +963,11 @@ for requested_lines in "${requested_line_scales[@]}"; do
     if shape_enabled "generics"; then
         scaled_entry="$(prepare_scaled_generics_case "$requested_lines")"
         run_case "duc_check_generics_${requested_lines}" "frontend_generics" "$scaled_entry" \
+            "$tool_build_dir/duc" check "$scaled_entry"
+    fi
+    if shape_enabled "stdlib"; then
+        scaled_entry="$(prepare_scaled_stdlib_case "$requested_lines")"
+        run_case "duc_check_stdlib_${requested_lines}" "frontend_stdlib" "$scaled_entry" \
             "$tool_build_dir/duc" check "$scaled_entry"
     fi
     if shape_enabled "mixed"; then

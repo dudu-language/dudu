@@ -1433,12 +1433,17 @@ push. They are not release packaging work.
    `1000,5000,10000` lines and allowing explicit stress runs such as
    `--line-scales 10000,50000,100000,200000,500000,1000000`. The generated
    shapes are selectable with
-   `--shapes functions,classes,expressions,modules,calls,control,arrays,generics,mixed`
+   `--shapes functions,classes,expressions,modules,calls,control,arrays,generics,stdlib,mixed`
    so profiling can distinguish slow declaration lookup, class/member handling,
    expression parsing/sema, import/module behavior, nested calls, control-flow
-   blocks, array/indexing operations, generic instantiation, and mixed
-   project-shaped code that combines imports, classes, methods, generics,
-   arrays, loops, calls, and arithmetic in one generated corpus.
+   blocks, array/indexing operations, generic instantiation, standard-library
+   native interop, and mixed project-shaped code that combines imports, classes,
+   methods, generics, arrays, loops, calls, and arithmetic in one generated
+   corpus. The `stdlib` shape is intentionally explicit rather than default
+   because it pulls real C++ standard headers through native scanning and is
+   much slower than pure Dudu frontend shapes; a local one-sample 1k Release
+   run measured about 2.6s and 101MB RSS. Use it when validating native interop
+   throughput instead of every routine compiler-speed loop.
    Compiler-speed claims must be checked against multiple generated shapes and
    at least one real dogfood project when practical, because one benchmark can
    hide that only a specific compilation feature is slow. Generated corpora
