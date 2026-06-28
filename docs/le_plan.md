@@ -1563,6 +1563,18 @@ push. They are not release packaging work.
    declaration, and exclude other files that reuse the alias for a different
    module.
 
+   Documentation hover needs a real documentation model, not only line scanning.
+   Dudu should support Python-shaped contiguous `#` declaration comments and
+   triple-single-quoted `''' ... '''` docstrings for larger module, class,
+   method, function, enum, field, constant, and alias docs. The language server
+   should attach these docs to AST declarations, preserve them across module
+   imports, and show them in hover, completion resolve, signature help, and
+   document symbols. Native C/C++ hover should also surface header comments when
+   Clang/header metadata can recover them, while falling back honestly to
+   signature-only hover when documentation is unavailable. The concrete plan and
+   remaining implementation checklist live in
+   [Language Server Plan](language-server-plan.md#doc-comments-and-docstrings).
+
 14. Project Driver Polish
 
    Keep using `dudu` on real projects and fix friction in native build inputs,

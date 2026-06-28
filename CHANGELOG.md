@@ -131,6 +131,8 @@
 - Added Cairo to the optional native compatibility probe suite.
 - Added CMake install rules and `scripts/install-local.sh` for local source
   installs of `dudu`, `duc`, docs, and editor support.
+- Documented the planned Dudu doc comment/docstring model for LSP hover,
+  completion, signature help, imported module docs, and native C/C++ docs.
 
 ### Changed
 

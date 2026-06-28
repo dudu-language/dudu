@@ -280,6 +280,67 @@ member expressions. Semantic tokens merge scanned native header symbols as a
 classification layer, so native C/C++ references in Dudu code can carry the
 `native` modifier without emitting header-file token ranges.
 
+## Doc Comments And Docstrings
+
+Hover documentation should feel Python-shaped and useful for real libraries.
+Dudu should support both lightweight comment blocks and full docstrings:
+
+```python
+# Adds two signed integers.
+# This is good for short API notes.
+def add(a: i32, b: i32) -> i32:
+    return a + b
+
+
+def connect(host: str, port: i32) -> Result[Socket, Error]:
+    '''
+    Open a TCP connection.
+
+    Args:
+        host: DNS name or address.
+        port: TCP port.
+
+    Returns:
+        A connected socket or an error value.
+    '''
+    ...
+```
+
+The official documentation syntax should be:
+
+- contiguous `#` comments immediately before a declaration
+- a leading triple-single-quoted string body, `''' ... '''`, inside functions,
+  classes, methods, enums, and modules for larger API docs
+- markdown-ish plain text in LSP hovers, completion resolve, and signature help
+
+`#` comment docs are best for short summaries. Triple-quoted docstrings are for
+multi-paragraph library documentation, parameter descriptions, examples, and
+notes. Docstrings are documentation, not runtime string expressions.
+
+Current support is partial: hover can show contiguous `#` comments immediately
+above declarations in the current Dudu document. The implementation currently
+recovers those comments from source lines at hover time instead of attaching
+documentation to declaration AST nodes.
+
+Remaining work:
+
+1. Parse declaration docs into structured AST fields instead of scanning source
+   lines from the hover path.
+2. Support leading `''' ... '''` docstrings for modules, classes, methods,
+   functions, enums, fields, constants, and aliases.
+3. Preserve docs through module loading so imported Dudu symbols show their
+   docs in hover, completion, signature help, and document symbols.
+4. Define formatting rules for docstrings, including indentation trimming and
+   blank-line preservation.
+5. Add parser diagnostics for malformed or misplaced docstrings.
+6. Add LSP fixtures for same-file docs, imported module docs, class/member
+   docs, and completion/signature-help documentation.
+7. Extend native header scanning to capture C/C++ comments when Clang exposes
+   useful source ranges or documentation comments.
+8. Show native C/C++ documentation in hover/completion/signature help when
+   available, while clearly falling back to signature-only hover when native
+   docs cannot be recovered.
+
 ### Milestone 3: Completion And Signature Help
 
 - `textDocument/completion`
