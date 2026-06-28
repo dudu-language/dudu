@@ -138,6 +138,9 @@
 
 ### Changed
 
+- Removed `[build] backend = "direct"` as a supported Dudu project backend;
+  project builds use generated/user-owned CMake, while `duc build <file.dd>`
+  remains the low-level compiler-driver build path.
 - Expanded `docs/le_plan.md` with explicit prototype-cruft cleanup rules for
   vacuous helpers, one-line wrappers, temporary compile-shape branches, and
   behavior-preserving style passes.

@@ -193,28 +193,27 @@ emit_timing_output="$("$repo_root/build/duc" emit-modules \
 printf '%s\n' "$emit_timing_output" | grep -Eq '^\[\+[0-9]+\.[0-9]{3}s\] load '
 printf '%s\n' "$emit_timing_output" | grep -Eq '^\[\+[0-9]+\.[0-9]{3}s\] sema '
 printf '%s\n' "$emit_timing_output" | grep -Eq '^\[\+[0-9]+\.[0-9]{3}s\] emit '
-direct_smoke="$repo_root/build/direct_backend_smoke"
-rm -rf "$direct_smoke"
-mkdir -p "$direct_smoke"
-cp "$repo_root/tests/fixtures/simple_program.dd" "$direct_smoke/main.dd"
-cat >"$direct_smoke/dudu.toml" <<'TOML'
-name = "direct_output_smoke"
+rejected_direct_backend="$repo_root/build/rejected_direct_backend_smoke"
+rm -rf "$rejected_direct_backend"
+mkdir -p "$rejected_direct_backend"
+cp "$repo_root/tests/fixtures/simple_program.dd" "$rejected_direct_backend/main.dd"
+cat >"$rejected_direct_backend/dudu.toml" <<'TOML'
+name = "rejected_direct_backend"
 entry = "main.dd"
 build_dir = "."
 
 [build]
 backend = "direct"
 TOML
-direct_build_output="$(
-    cd "$direct_smoke"
-    "$repo_root/build/dudu" build -o "$repo_root/build/direct_output_smoke" 2>&1
-)"
-printf '%s\n' "$direct_build_output" | grep -Eq '^backend direct$'
-printf '%s\n' "$direct_build_output" | grep -Eq '^entry .*/main\.dd$'
-printf '%s\n' "$direct_build_output" | grep -Eq '^analyze .*/main\.dd$'
-printf '%s\n' "$direct_build_output" | grep -Eq '^emit .*/direct_output_smoke\.cpp$'
-printf '%s\n' "$direct_build_output" | grep -Eq '^compile .*/direct_output_smoke$'
-printf '%s\n' "$direct_build_output" | grep -Eq '^output .*/direct_output_smoke$'
+if (
+    cd "$rejected_direct_backend"
+    "$repo_root/build/dudu" build -o "$repo_root/build/rejected_direct_backend" \
+        >"$repo_root/build/rejected_direct_backend.out" 2>"$repo_root/build/rejected_direct_backend.err"
+); then
+    echo "dudu project build unexpectedly accepted [build] backend = direct" >&2
+    exit 1
+fi
+grep -Fq 'invalid [target] backend: backend = "direct"' "$repo_root/build/rejected_direct_backend.err"
 cmake_build_output="$("$repo_root/build/dudu" build \
     "$repo_root/tests/fixtures/project_backend_cmake" 2>&1)"
 printf '%s\n' "$cmake_build_output" | grep -Eq '^backend cmake$'

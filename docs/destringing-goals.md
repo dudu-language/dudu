@@ -274,8 +274,8 @@ stable generated declaration names for same-module declarations and qualified
 imported module references, so same-named declarations in different Dudu
 modules no longer collide in the emitted artifacts. The generated CMake backend
 uses `duc emit-modules` and compiles the per-module generated `.cpp` files
-instead of compiling one merged Dudu translation unit. The direct backend still
-uses the narrow merged-output path and now fails clearly when that path cannot
-represent distinct module declarations safely. Regression coverage includes the
+instead of compiling one merged Dudu translation unit. The low-level `duc`
+merged-output path now fails clearly when that path cannot represent distinct
+module declarations safely. Regression coverage includes the
 module metadata/unit tests, `project_backend_auto_modules`, and the broad
 `scripts/test.sh` pass.

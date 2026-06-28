@@ -19,9 +19,6 @@ name = "$name"
 entry = "main.dd"
 build_dir = "../${name}_build"
 
-[build]
-backend = "direct"
-
 [pkg_config]
 packages = ["$package"]
 TOML
@@ -65,9 +62,6 @@ probe_opencv() {
 name = "probe_image_filter"
 entry = "main.dd"
 build_dir = "../probe_image_filter_build"
-
-[build]
-backend = "direct"
 
 [pkg_config]
 packages = ["opencv4"]

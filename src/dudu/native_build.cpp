@@ -358,8 +358,8 @@ std::string native_failure_message(std::string label, const std::filesystem::pat
 std::filesystem::path build_executable(const NativeBuildOptions& options, const std::string& cpp) {
     if (options.config.build_backend != "direct") {
         fail("build backend '" + options.config.build_backend +
-             "' cannot be driven by the direct native build path; use `dudu cmake` for CMake "
-             "artifact emission or select [build] backend = \"direct\"");
+             "' cannot be driven by the low-level native build path; use `dudu build` for "
+             "project builds or `duc build <file.dd>` for compiler-driver smoke/debug builds");
     }
     const std::filesystem::path output = options.output.empty() ? "a.out" : options.output;
     std::filesystem::create_directories(output.parent_path().empty() ? "." : output.parent_path());

@@ -288,9 +288,10 @@ import Name as Alias` also materializes Dudu-native aliases for types,
 constants, and functions. Python-shaped namespace boundaries now reject
 transitive dependency leakage and private selective-import leakage; modules
 only expose their own declarations through qualified imports unless a facade
-defines an explicit public wrapper. The direct backend still uses a merged
-module model rather than per-module symbol namespaces, so it remains narrower
-than the generated-CMake module backend. Qualified Dudu module imports such as
+defines an explicit public wrapper. The old merged-output compatibility path
+still exists under low-level `duc` emission/build commands, but Dudu project
+builds use generated CMake so modules compile through per-module artifacts.
+Qualified Dudu module imports such as
 `import camera as cam` and
 `import renderer.camera` now bind `cam.Type`, `cam.function`,
 `renderer.camera.Type`, and `renderer.camera.function` through non-emitted
@@ -308,9 +309,7 @@ Parser-level duplicate direct import checks use the same aliasing guidance.
 Cycle diagnostics now report the module graph path that closes the cycle, for
 example `a -> b -> a`, at the import statement that introduced the cycle.
 Same-name declarations now also carry stable generated C++ names derived from
-their owning module, but the direct backend and semantic lookup still need to
-switch to those names coherently before they can coexist through normal
-semantic analysis and codegen. The per-module artifact emitter now uses those
+their owning module. The per-module artifact emitter now uses those
 generated names for same-module declarations and qualified imported module
 references, including `import module as alias`, `import module.path`, and
 selective `from module import Name` forms. `duc emit-modules` now analyzes each module unit in its
@@ -326,12 +325,9 @@ importer use the facade's private dependencies by accident. Qualified Dudu
 module prefixes are also tracked separately from opaque native C++ prefixes, so
 an imported module's private selective imports, such as
 `facade.hidden_answer`, are rejected by Dudu sema instead of leaking through to
-generated C++ as unknown native calls. The direct backend
-still uses the compatibility merged output and remains intentionally narrower
-until semantic lookup and direct codegen fully move to module namespaces, but it
-now rejects cross-module declaration-name collisions with a merged-output
-diagnostic that points users at `[build] backend = "cmake"` through
-`dudu build` or `duc emit-modules` instead of surfacing generic
+generated C++ as unknown native calls. The merged-output compatibility path now
+rejects cross-module declaration-name collisions with a diagnostic that points
+users at `dudu build` or `duc emit-modules` instead of surfacing generic
 duplicate-declaration fallout. The same guard also applies to explicit merged
 `--emit-cpp`/header output, even when the project manifest uses the CMake
 backend. A focused frontend regression proves the module tree can analyze
@@ -1457,13 +1453,11 @@ push. They are not release packaging work.
    module so CMake/Ninja can rebuild changed translation units instead of whole
    programs.
 
-   Status: direct native builds preserve generated C++ mtimes and skip the
-   C++ compile/link step when the generated C++, native build command, and
-   native source inputs are unchanged. True per-module generated C++ remains
-   the larger architecture step and is a major requirement for a serious C/C++
-   ecosystem-facing toolchain. Current `duc emit` and direct-backend
-   `dudu build` output one generated C++ translation unit for the whole Dudu source tree;
-   source-tree module units are now preserved in the AST, and per-module
+   Status: low-level `duc build <file.dd>` preserves generated C++ mtimes and
+   skips the C++ compile/link step when the generated C++, native build command,
+   and native source inputs are unchanged. `duc emit`/`duc build` still use one
+   generated C++ translation unit for compiler-driver compatibility;
+   source-tree module units are preserved in the AST, and per-module
    semantic analysis validates those units without merged-name duplicate
    fallout. Module units now carry resolved Dudu dependency metadata, and the
    per-module artifact emitter uses that metadata for generated includes and
@@ -1484,9 +1478,8 @@ push. They are not release packaging work.
    generated translation unit. Generated artifact writes preserve mtimes when
    content is unchanged, and generated-CMake uses a stamp output plus generated
    file byproducts, so whitespace-only `.dd` edits do not force unchanged
-   generated C++ translation units to recompile. The direct native build still
-   compiles the compatibility single-file output and fails clearly when that
-   merged output cannot represent distinct module declarations safely.
+   generated C++ translation units to recompile. Project builds use this CMake
+   path; `[build] backend = "direct"` is no longer a supported manifest mode.
 
    Remaining incremental work is on the Dudu side: `duc emit-modules` still
    analyzes the selected entry's full module graph in a fresh process. Native
@@ -1628,7 +1621,8 @@ push. They are not release packaging work.
    does not have a built-in "revert to CMake" backend. Dudu's native interop
    goal is broader in a different direction: generated CMake builds and
    user-owned CMake builds are project backend modes behind the same command
-   surface, while direct compiler builds are explicit low-level/debug mode.
+   surface, while direct compiler builds remain explicit `duc` low-level/debug
+   mode outside project manifests.
    CMake-backed builds should still be launched through `dudu build`,
    `dudu run`, and `dudu test`.
 
@@ -1685,13 +1679,11 @@ push. They are not release packaging work.
    `dudu build`, `dudu run`, and `dudu test` use the generated-CMake backend by
    default, even for single-module inputs, so generated C++ stays split into
    per-module artifacts. The project configuration model also defaults to
-   CMake; `duc build` and `duc run` select the direct backend for implicit
-   single-file compiler-driver work as the low-level path. `[build] backend =
-   "direct"` and `[build] backend = "cmake"` parse
-   from the manifest, and explicit direct keeps strict merged-output diagnostics
-   when a project cannot honestly fit in one generated translation unit. The
-   generated CMake backend is implemented for `dudu build`, `dudu run`, and
-   `dudu test`; it emits an internal CMake project and drives `cmake -S/-B`
+   CMake; `duc build` and `duc run` remain low-level single-file compiler-driver
+   conveniences. `[build] backend = "cmake"` is the only supported manifest
+   backend; `[build] backend = "direct"` is rejected. The generated CMake
+   backend is implemented for `dudu build`, `dudu run`, and `dudu test`; it
+   emits an internal CMake project and drives `cmake -S/-B`
    plus `cmake --build`. Native inputs such as include paths, library paths,
    libraries, flags, pkg-config packages, and extra C/C++ sources are covered
    by direct and generated-CMake backends for normal project shapes. The
@@ -1816,7 +1808,7 @@ push. They are not release packaging work.
    negative fixture coverage and is rejected through the unsupported-feature
    path. The remaining raw machinery is documented as either the explicit
    `cpp(...)` escape boundary, native C/C++ spelling compatibility, or the
-   intentionally narrow direct-backend merged translation unit. No active
+   intentionally narrow low-level `duc` merged translation unit. No active
    dunder/operator compatibility path or stale inline-function-literal path was
    found in the implementation. Optional expression holes now use a dedicated
    `Missing` expression kind; `Unknown` is reserved for unsupported source text

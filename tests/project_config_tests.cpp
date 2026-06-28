@@ -132,11 +132,13 @@ void test_build_backend_selection(const std::filesystem::path& root) {
                                       "\n"
                                       "[build]\n"
                                       "backend = \"direct\"\n");
-    const dudu::ProjectConfig explicit_direct = dudu::parse_project_config(project / "dudu.toml");
-    assert(explicit_direct.build_backend == "direct");
-    assert(explicit_direct.build_backend_explicit);
-    assert(dudu::select_build_backend(explicit_direct, project / "src/main.dd", true)
-               .build_backend == "direct");
+    bool direct_rejected = false;
+    try {
+        (void)dudu::parse_project_config(project / "dudu.toml");
+    } catch (const std::runtime_error&) {
+        direct_rejected = true;
+    }
+    assert(direct_rejected);
 
     write_text(project / "dudu.toml", "name = \"backend_probe\"\n"
                                       "entry = \"src/main.dd\"\n"

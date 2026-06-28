@@ -15,8 +15,9 @@ duc build src/main.dd -o build/app
 `duc`, and coordinates normal C/C++ build tools without replacing them.
 `dudu build`, `dudu run`, and `dudu test` are the stable user-facing commands;
 whether they drive generated CMake or a user-owned CMake project is a backend
-choice. Direct compiler builds stay available through `duc` and explicit
-`[build] backend = "direct"` for low-level/debug work.
+choice. Direct compiler builds stay available through `duc build <file.dd>` for
+low-level compiler-driver smoke/debug work, but they are not a Dudu project
+backend.
 
 ## Goal
 
@@ -321,11 +322,10 @@ projects. Backend choice is an implementation detail, not a split between
 toy and real workflows.
 
 This is the serious model for native projects. Users should not have to leave
-`dudu build` just because a project grows past the direct compiler path. The
-driver may choose a generated CMake backend or a user-owned CMake backend, but
-the user-facing command remains the same. The direct compiler backend remains
-available for low-level compiler work and explicit narrow builds, not as the
-normal `dudu` project path.
+`dudu build` when a project becomes real. The driver may choose a generated
+CMake backend or a user-owned CMake backend, but the user-facing command
+remains the same. Direct compiler builds remain a `duc` compiler-driver
+convenience, not a `dudu` project mode.
 
 This is not Dudu trying to replace CMake or clone another language's build
 tool. Dudu's native interop promise means it must cooperate with existing C and
@@ -349,10 +349,9 @@ The build-driver contract is:
 - The CMake backend is the broad native-ecosystem backend. It should support
   projects that need CMake package discovery, generated build files, IDE
   integration, platform generators, and larger native dependency graphs.
-- The direct backend emits one compatibility C++ translation unit and invokes
-  the configured native compiler. It is explicit, low-level, and intentionally
-  narrow. Use it through `duc build`, `duc run`, or `[build] backend =
-  "direct"` when inspecting compiler output or doing small smoke builds.
+- `duc build <file.dd>` can still emit one compatibility C++ translation unit
+  and invoke the configured native compiler for compiler-driver smoke/debug
+  work. This path is intentionally outside project manifests.
 - `dudu cmake` emits an inspectable CMake artifact. It is useful for debugging,
   bootstrapping, and native handoff, but it is not a replacement for
   `dudu build`, `dudu run`, or `dudu test`.
@@ -370,10 +369,6 @@ Current implementation reality:
   `dudu test` select the generated CMake backend so generated `.hpp/.cpp`
   artifacts stay per-module. This is true even for simple single-module
   projects, because separate generated files are the normal Dudu build model.
-- The direct backend currently emits one generated C++ translation unit for the
-  Dudu source tree. Imported `.dd` files are parsed as modules, but their
-  generated C++ is still merged into that one `.cpp` file before native
-  compilation.
 - `duc emit-modules` writes generated `.hpp/.cpp` artifacts per Dudu module
   plus a shared `dudu_runtime.hpp`.
 - The generated CMake backend uses `duc emit-modules` and compiles the
@@ -386,18 +381,14 @@ Current implementation reality:
   plus a small generated `test_harness.cpp`; generated module sources suppress
   normal executable entry points and headers expose test functions to the
   harness.
-- The direct backend still compiles the compatibility merged `.cpp` output.
-- `[build] backend = "direct"` and `[build] backend = "cmake"` parse from
-  `dudu.toml`. The direct backend is selectable explicitly and keeps strict
-  merged-output diagnostics when the project cannot be represented by one
-  generated translation unit. The generated CMake backend is implemented for
+- `[build] backend = "cmake"` parses from `dudu.toml`; `[build] backend =
+  "direct"` is rejected. The generated CMake backend is implemented for
   `dudu build`, `dudu run`, and `dudu test`; it emits an internal CMake project
   and drives `cmake -S/-B` plus `cmake --build`.
-- The direct and generated-CMake backends support useful native inputs:
-  include paths, library paths, libraries, compile flags, link flags,
-  pkg-config packages, and extra C/C++ sources. The generated-CMake fixtures
-  cover linking an extra C source into both the app target and generated Dudu
-  test harness.
+- The generated-CMake backend supports useful native inputs: include paths,
+  library paths, libraries, compile flags, link flags, pkg-config packages, and
+  extra C/C++ sources. Fixtures cover linking an extra C source into both the
+  app target and generated Dudu test harness.
 - `dudu cmake` emits CMake for inspection or handoff.
 - User-owned CMake project integration is implemented for `dudu build`,
   `dudu run`, and `dudu test` when `[build] backend = "cmake"` and
@@ -462,10 +453,9 @@ project's native build system. Zig's normal model is a `build.zig` graph that
 owns the build and can compile/link C and C++ inputs through that graph. Zig
 build scripts can run external tools when users write that integration, but
 Zig does not have a built-in "revert to CMake" backend. Dudu's interop goal is
-broader in a different direction: existing CMake projects, generated CMake
-projects, and plain native flags should all be valid ways for the same Dudu
-command surface to reach the C/C++ ecosystem. Direct compiler builds remain
-available through `duc` and explicit `[build] backend = "direct"` for
+broader in a different direction: existing CMake projects and generated CMake
+projects are the valid ways for the Dudu project command surface to reach the
+C/C++ ecosystem. Direct compiler builds remain available through `duc` for
 low-level/debug use.
 
 Put differently: Dudu is not copying Zig here. There is no plan where Dudu
@@ -529,7 +519,8 @@ The practical target is:
 
 Backend selection rules should be boring:
 
-- If the manifest explicitly selects a backend, use it.
+- If the manifest explicitly selects `backend = "cmake"`, use it.
+- If the manifest selects any other backend, reject it.
 - If no backend is selected, use generated CMake for `dudu` project-driver
   builds.
 - If the selected backend cannot model the project, fail with a diagnostic that
@@ -542,8 +533,6 @@ change the user's main workflow from `dudu build`, `dudu run`, and `dudu test`.
 
 Implementation checklist:
 
-- direct backend: emit C++ and invoke the compiler directly for explicit
-  low-level/debug builds
 - generated CMake backend: emit an internal CMake project and drive it from
   `dudu build`, `dudu run`, and `dudu test`
 - user-owned CMake backend: configure/build/run declared targets from an
@@ -555,7 +544,7 @@ Planned manifest shape:
 
 ```toml
 [build]
-backend = "direct" # or "cmake"
+backend = "cmake"
 dir = "build"
 
 [cmake]
@@ -658,7 +647,6 @@ docs. Generated Dudu projects do not get a changelog by default.
 - `dudu build` can compile a project with a hand-written `.cpp` file.
 - `dudu build` can compile a project using a pkg-config package such as raylib.
 - `dudu cmake` emits a readable CMake project.
-- `dudu build` can use the direct backend explicitly.
 - `dudu build` can use the CMake backend explicitly.
 - `dudu run` selects the generated CMake backend automatically for projects
   with no explicit backend setting.

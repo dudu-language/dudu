@@ -369,7 +369,7 @@ ProjectConfig parse_project_config(const std::filesystem::path& path) {
         } else if (section == "build" && name == "backend") {
             config.build_backend = unquote(path, line, value);
             config.build_backend_explicit = true;
-            validate_one_of(path, line, "backend", config.build_backend, {"direct", "cmake"});
+            validate_one_of(path, line, "backend", config.build_backend, {"cmake"});
         } else if (section == "cmake" && name == "source") {
             config.cmake_source = unquote(path, line, value);
         } else if (section == "cmake" && name == "target") {
