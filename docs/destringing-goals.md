@@ -263,8 +263,8 @@ Definition of done:
 - imports lower to generated includes/references instead of textual flattening
 - CMake/Ninja can rebuild changed generated modules independently
 - diagnostics still point to original Dudu source ranges
-- the merged-output backend is treated as a compatibility backend for narrow
-  direct builds, not the semantic model
+- merged output remains only for explicit emit/debugging workflows, not as the
+  project build semantic model
 
 Status: complete. Source-tree module units are preserved on `ModuleAst` with
 resolved dependency metadata. `emit_cpp_module_artifacts` emits a shared runtime

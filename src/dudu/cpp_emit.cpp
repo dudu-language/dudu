@@ -148,7 +148,7 @@ void emit_constants(std::ostringstream& out, const ModuleAst& module,
                                                          CppLocalContext{}, {}, {}, nullptr,
                                                          options);
         } else {
-            out << lower_cpp_expr_ast(constant.value_expr, aliases);
+            out << lower_cpp_expr_ast(constant.value_expr, aliases, CppLocalContext{}, options);
         }
         out << ";\n";
     }
@@ -160,7 +160,9 @@ void emit_constants(std::ostringstream& out, const ModuleAst& module,
 void emit_static_asserts(std::ostringstream& out, const ModuleAst& module,
                          const std::vector<std::string>& aliases) {
     for (const StaticAssertDecl& assertion : module.static_asserts) {
-        out << "static_assert" << lower_cpp_expr_ast(assertion.expression_expr, aliases) << ";\n";
+        out << "static_assert"
+            << lower_cpp_expr_ast(assertion.expression_expr, aliases, CppLocalContext{}, {})
+            << ";\n";
     }
     if (!module.static_asserts.empty()) {
         out << '\n';
@@ -199,8 +201,10 @@ void emit_function_signature(std::ostringstream& out, const FunctionDecl& fn,
     if (cpp_emit_function_has_decorator(fn, "constexpr")) {
         out << "constexpr ";
     }
-    out << lower_cpp_type(function_return_type_ref(fn), aliases, options) << ' '
-        << emitted_name(fn, options) << '(';
+    const std::string& name = cpp_emit_function_has_decorator(fn, "extern_c")
+                                  ? fn.name
+                                  : emitted_value_name(fn.name, options);
+    out << lower_cpp_type(function_return_type_ref(fn), aliases, options) << ' ' << name << '(';
     for (size_t i = 0; i < fn.params.size(); ++i) {
         if (i > 0) {
             out << ", ";

@@ -158,10 +158,23 @@ void emit_pkg_config(std::ostringstream& out, const ProjectConfig& config) {
     out << ")\n\n";
 }
 
+void emit_target_mode_options(std::ostringstream& out, const std::string& target,
+                              const ProjectConfig& config) {
+    if (config.target_mode == "freestanding" || config.target_mode == "embedded") {
+        out << "target_compile_options(" << target
+            << " PRIVATE \"-ffreestanding\" \"-fno-exceptions\" \"-fno-rtti\")\n";
+    }
+}
+
 } // namespace
 
 std::string emit_cmake_project(const ProjectConfig& config, const std::filesystem::path& input) {
     const std::string target = config.name.empty() ? input.stem().string() : config.name;
+    return emit_cmake_project(config, input, target);
+}
+
+std::string emit_cmake_project(const ProjectConfig& config, const std::filesystem::path& input,
+                               const std::string& target) {
     const std::filesystem::path project_dir =
         config.project_dir.empty() ? input.parent_path() : config.project_dir;
     const std::string source_path = source_path_for_project(project_dir, input);
@@ -208,6 +221,7 @@ std::string emit_cmake_project(const ProjectConfig& config, const std::filesyste
     emit_cmake_list_values(out, "target_compile_definitions(" + target + " PRIVATE",
                            config.defines);
     emit_cmake_list_values(out, "target_compile_options(" + target + " PRIVATE", config.flags);
+    emit_target_mode_options(out, target, config);
     emit_cmake_list_values(out, "target_link_directories(" + target + " PRIVATE", config.lib_dirs,
                            &project_dir);
     emit_cmake_list_values(out, "target_link_libraries(" + target + " PRIVATE", config.libs);
@@ -278,6 +292,7 @@ std::string emit_cmake_test_project(const ProjectConfig& config, const std::file
     emit_cmake_list_values(out, "target_compile_definitions(" + target + " PRIVATE",
                            config.defines);
     emit_cmake_list_values(out, "target_compile_options(" + target + " PRIVATE", config.flags);
+    emit_target_mode_options(out, target, config);
     emit_cmake_list_values(out, "target_link_directories(" + target + " PRIVATE", config.lib_dirs,
                            &project_dir);
     emit_cmake_list_values(out, "target_link_libraries(" + target + " PRIVATE", config.libs);

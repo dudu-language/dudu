@@ -1419,15 +1419,17 @@ push. They are not release packaging work.
    benchmark outside the fast correctness loop, and `dudu bench compiler`
    dispatches to it when run from a checkout containing that script. It emits
    CSV plus a readable summary and currently measures representative frontend
-   check, C++ emission, native header cold/cache check, direct build,
+   check, C++ emission, native header cold/cache check,
    generated-CMake module build, generated-CMake no-op rebuild, and
    generated-CMake one-Dudu-file-changed rebuild cases. It also measures a
    lightweight LSP parse/diagnostic/document-symbol roundtrip through
    `duc_lsp_diagnostics`, so editor latency is visible outside the full LSP
    smoke suite. A generated synthetic multi-module corpus under
    `build/bench_compiler` gives frontend throughput a larger parse/sema input
-   than the tiny correctness fixtures. The benchmark also generates scalable
-   frontend-throughput corpora through `--line-scales`, defaulting to
+   than the tiny correctness fixtures. The benchmark also generates diverse
+   scalable frontend-throughput corpora through `--line-scales` and code shapes
+   such as functions, classes, expressions, modules, calls, control flow,
+   arrays, and generics, defaulting to
    `1000,5000,10000` lines and allowing explicit stress runs such as
    `--line-scales 10000,50000,100000,200000,500000,1000000`. The generated
    shapes are selectable with
@@ -1839,8 +1841,9 @@ push. They are not release packaging work.
    does not have a built-in "revert to CMake" backend. Dudu's native interop
    goal is broader in a different direction: generated CMake builds and
    user-owned CMake builds are project backend modes behind the same command
-   surface, while direct compiler builds remain explicit `duc` low-level/debug
-   mode outside project manifests.
+   surface. The old direct native build backend has been removed; `duc` stays
+   valuable for low-level check/format/emit/debugging commands, not as a
+   separate native build path.
    CMake-backed builds should still be launched through `dudu build`,
    `dudu run`, and `dudu test`.
 
@@ -1897,9 +1900,10 @@ push. They are not release packaging work.
    `dudu build`, `dudu run`, and `dudu test` use the generated-CMake backend by
    default, even for single-module inputs, so generated C++ stays split into
    per-module artifacts. The project configuration model also defaults to
-   CMake; `duc build` and `duc run` remain low-level single-file compiler-driver
-   conveniences. `[build] backend = "cmake"` is the only supported manifest
-   backend; `[build] backend = "direct"` is rejected. The generated CMake
+   CMake; `duc build` and `duc run` also use generated CMake rather than a
+   separate single-file native compiler shortcut. `[build] backend = "cmake"`
+   is the only supported manifest backend; `[build] backend = "direct"` is
+   rejected. The generated CMake
    backend is implemented for `dudu build`, `dudu run`, and `dudu test`; it
    emits an internal CMake project and drives `cmake -S/-B`
    plus `cmake --build`. Native inputs such as include paths, library paths,

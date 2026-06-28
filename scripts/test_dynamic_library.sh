@@ -16,7 +16,9 @@ rm -f "$lib" "$header" "$host_c" "$host"
         2>"$repo_root/build/project_plugin_dynamic_library_verbose.err"
     "$repo_root/build/duc" main.dd --emit-c-header "$header"
 )
-grep -q -- "-fPIC -shared" "$repo_root/build/project_plugin_dynamic_library_verbose.err"
+test -x "$lib"
+grep -q "add_library(dudu_plugin SHARED" \
+    "$project/build/cmake-backend/source/CMakeLists.txt"
 grep -q "int32_t plugin_answer(void);" "$header"
 
 cat >"$host_c" <<'C'

@@ -76,7 +76,8 @@ void emit_enums(std::ostringstream& out, const ModuleAst& module,
         for (const EnumValueDecl& value : en.values) {
             out << "    " << value.name;
             if (has_expr(value.value_expr)) {
-                out << " = " << lower_cpp_expr_ast(value.value_expr, aliases);
+                out << " = "
+                    << lower_cpp_expr_ast(value.value_expr, aliases, CppLocalContext{}, options);
             }
             out << ",\n";
         }

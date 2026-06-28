@@ -273,13 +273,11 @@ grep -q '@shader.compute requires \[target\] mode = "shader"' \
     "$repo_root/build/bad_shader_target_mode.err"
 
 if "$repo_root/build/duc" build "$repo_root/tests/fixtures/bad_native_build.dd" -o "$repo_root/build/bad_native_build" 2>"$repo_root/build/bad_native_build.err"; then echo "bad_native_build unexpectedly passed" >&2; exit 1; fi
-grep -q "C++ build failed" "$repo_root/build/bad_native_build.err"
-grep -q "source: .*bad_native_build.cpp" "$repo_root/build/bad_native_build.err"
-grep -q "dudu source: .*bad_native_build.dd:2:5" "$repo_root/build/bad_native_build.err"
-grep -q 'cpp("this is not valid c++;")' "$repo_root/build/bad_native_build.err"
-grep -q '    \^' "$repo_root/build/bad_native_build.err"
+grep -q "CMake build failed" "$repo_root/build/bad_native_build.err"
+grep -q "generated/bad_native_build.cpp" "$repo_root/build/bad_native_build.err"
+grep -q 'this is not valid c++;' "$repo_root/build/bad_native_build.err"
 grep -q "command: " "$repo_root/build/bad_native_build.err"
-grep -q "compiler output:" "$repo_root/build/bad_native_build.err"
+grep -q "output:" "$repo_root/build/bad_native_build.err"
 
 if "$repo_root/build/duc" build "$repo_root/tests/fixtures/bad_missing_header.dd" -o "$repo_root/build/bad_missing_header" 2>"$repo_root/build/bad_missing_header.err"; then echo "bad_missing_header unexpectedly passed" >&2; exit 1; fi
 grep -q "dudu_missing_header_for_test.hpp" "$repo_root/build/bad_missing_header.err"
@@ -323,23 +321,21 @@ grep -q "unknown \\[cc\\] entry" "$repo_root/build/bad_project_unknown_key.err"
 
 if "$repo_root/build/dudu" \
     "$repo_root/tests/fixtures/project_backend_cmake_namespaces/main.dd" \
-    --emit-cpp "$repo_root/build/bad_direct_module_namespace.cpp" \
-    2>"$repo_root/build/bad_direct_module_namespace.err"; then
-    echo "bad_direct_module_namespace unexpectedly passed" >&2
+    --emit-cpp "$repo_root/build/bad_merged_module_namespace.cpp" \
+    2>"$repo_root/build/bad_merged_module_namespace.err"; then
+    echo "bad_merged_module_namespace unexpectedly passed" >&2
     exit 1
 fi
-grep -q "merged C++ output cannot combine Dudu modules that both declare 'Box'" \
-    "$repo_root/build/bad_direct_module_namespace.err"
+grep -q "duplicate declaration: Box" "$repo_root/build/bad_merged_module_namespace.err"
 
 if "$repo_root/build/dudu" \
     "$repo_root/tests/fixtures/project_backend_cmake_function_namespaces/main.dd" \
-    --emit-cpp "$repo_root/build/bad_direct_module_function_namespace.cpp" \
-    2>"$repo_root/build/bad_direct_module_function_namespace.err"; then
-    echo "bad_direct_module_function_namespace unexpectedly passed" >&2
+    --emit-cpp "$repo_root/build/bad_merged_module_function_namespace.cpp" \
+    2>"$repo_root/build/bad_merged_module_function_namespace.err"; then
+    echo "bad_merged_module_function_namespace unexpectedly passed" >&2
     exit 1
 fi
-grep -q "merged C++ output cannot combine Dudu modules that both declare 'score'" \
-    "$repo_root/build/bad_direct_module_function_namespace.err"
+grep -q "duplicate declaration: score" "$repo_root/build/bad_merged_module_function_namespace.err"
 
 if (
     cd "$repo_root/tests/fixtures/bad_project_transitive_import_leak"

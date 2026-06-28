@@ -34,7 +34,29 @@ std::filesystem::path module_artifact_base(const ModuleAst& module) {
     return module_artifact_base_for_path(module.module_path);
 }
 
-void add_local_generated_names(CppEmitOptions& options, const ModuleAst& unit) {
+bool public_abi_function(const FunctionDecl& fn, bool test_source) {
+    return fn.visibility != Visibility::Private && (test_source || !cpp_emit_function_is_test(fn));
+}
+
+std::string module_target_kind(const ModuleAst& module) {
+    const auto found = module.build_values.find("TARGET_KIND");
+    if (found == module.build_values.end()) {
+        return {};
+    }
+    std::string value = found->second;
+    if (value.size() >= 2 && value.front() == '"' && value.back() == '"') {
+        value = value.substr(1, value.size() - 2);
+    }
+    return value;
+}
+
+bool preserve_public_abi_names(const ModuleAst& module) {
+    const std::string kind = module_target_kind(module);
+    return kind == "library" || kind == "shared_library";
+}
+
+void add_local_generated_names(CppEmitOptions& options, const ModuleAst& unit, bool public_abi,
+                               bool test_source) {
     for (const TypeAliasDecl& alias : unit.aliases) {
         if (!alias.cpp_name.empty()) {
             options.generated_type_names[alias.name] = alias.cpp_name;
@@ -64,13 +86,17 @@ void add_local_generated_names(CppEmitOptions& options, const ModuleAst& unit) {
     }
     for (const FunctionDecl& fn : unit.functions) {
         if (!fn.cpp_name.empty()) {
-            options.generated_value_names[fn.name] = fn.cpp_name;
+            options.generated_value_names[fn.name] =
+                cpp_emit_function_has_decorator(fn, "extern_c") ||
+                        (public_abi && public_abi_function(fn, test_source))
+                    ? fn.name
+                    : fn.cpp_name;
         }
     }
 }
 
 void add_imported_generated_names(CppEmitOptions& options, const ModuleAst& dependency,
-                                  const ImportDecl& import) {
+                                  const ImportDecl& import, bool public_abi, bool test_source) {
     const std::string prefix = import.alias.empty() ? import.module_path : import.alias;
     const bool selective = import.kind == ImportKind::From;
     const std::string selective_name = import.alias.empty() ? import.imported_name : import.alias;
@@ -101,7 +127,11 @@ void add_imported_generated_names(CppEmitOptions& options, const ModuleAst& depe
     }
     for (const FunctionDecl& fn : dependency.functions) {
         if ((!selective || fn.name == import.imported_name) && !fn.cpp_name.empty()) {
-            options.generated_value_names[expose(fn.name)] = fn.cpp_name;
+            options.generated_value_names[expose(fn.name)] =
+                cpp_emit_function_has_decorator(fn, "extern_c") ||
+                        (public_abi && public_abi_function(fn, test_source))
+                    ? fn.name
+                    : fn.cpp_name;
         }
     }
 }
@@ -119,20 +149,21 @@ std::string resolved_module_path_for_import(const ModuleAst& unit, const ImportD
 
 CppEmitOptions module_emit_options(const ModuleAst& unit,
                                    const std::map<std::string, const ModuleAst*>& modules,
-                                   bool test_source = false) {
+                                   bool test_source = false, bool public_abi = false) {
     CppEmitOptions options;
     options.emit_prelude = false;
     options.use_generated_names = true;
     options.test_source = test_source;
     options.expose_test_functions = test_source;
-    add_local_generated_names(options, unit);
+    add_local_generated_names(options, unit, public_abi, test_source);
     for (const ImportDecl& import : unit.imports) {
         if (import.kind != ImportKind::Module && import.kind != ImportKind::From) {
             continue;
         }
         const auto dependency = modules.find(resolved_module_path_for_import(unit, import));
         if (dependency != modules.end()) {
-            add_imported_generated_names(options, *dependency->second, import);
+            add_imported_generated_names(options, *dependency->second, import, public_abi,
+                                         test_source);
         }
     }
     return options;
@@ -192,18 +223,18 @@ void emit_entry_point(std::ostringstream& out, const ModuleAst& unit,
 
 std::string header_with_module_includes(const ModuleAst& unit,
                                         const std::map<std::string, const ModuleAst*>& modules,
-                                        bool test_source = false) {
+                                        bool test_source = false, bool public_abi = false) {
     std::ostringstream out;
     emit_module_includes(out, unit);
-    out << emit_cpp_header(unit, module_emit_options(unit, modules, test_source));
+    out << emit_cpp_header(unit, module_emit_options(unit, modules, test_source, public_abi));
     return out.str();
 }
 
 std::string source_with_boundary_comment(const ModuleAst& unit,
                                          const std::map<std::string, const ModuleAst*>& modules,
-                                         bool test_source = false) {
+                                         bool test_source = false, bool public_abi = false) {
     std::ostringstream out;
-    const CppEmitOptions options = module_emit_options(unit, modules, test_source);
+    const CppEmitOptions options = module_emit_options(unit, modules, test_source, public_abi);
     out << "// dudu module: " << (unit.module_path.empty() ? "main" : unit.module_path) << "\n";
     emit_module_includes(out, unit);
     out << emit_cpp_source(unit, options);
@@ -215,16 +246,17 @@ std::string source_with_boundary_comment(const ModuleAst& unit,
 
 void append_artifacts(std::vector<CppModuleArtifact>& out, const ModuleAst& unit,
                       const std::map<std::string, const ModuleAst*>& modules,
-                      bool test_source = false) {
+                      bool test_source = false, bool public_abi = false) {
     const std::filesystem::path base = module_artifact_base(unit);
     out.push_back({.path = base.string() + ".hpp",
                    .module_path = unit.module_path,
                    .kind = CppModuleArtifactKind::Header,
-                   .content = header_with_module_includes(unit, modules, test_source)});
-    out.push_back({.path = base.string() + ".cpp",
-                   .module_path = unit.module_path,
-                   .kind = CppModuleArtifactKind::Source,
-                   .content = source_with_boundary_comment(unit, modules, test_source)});
+                   .content = header_with_module_includes(unit, modules, test_source, public_abi)});
+    out.push_back(
+        {.path = base.string() + ".cpp",
+         .module_path = unit.module_path,
+         .kind = CppModuleArtifactKind::Source,
+         .content = source_with_boundary_comment(unit, modules, test_source, public_abi)});
 }
 
 std::map<std::string, const ModuleAst*> module_map(const std::vector<ModuleAst>& units) {
@@ -274,12 +306,14 @@ std::vector<CppModuleArtifact> emit_cpp_module_artifacts(const ModuleAst& module
                    .kind = CppModuleArtifactKind::Header,
                    .content = runtime_header(module)});
     if (module.module_units.empty()) {
-        append_artifacts(out, module, {{module.module_path, &module}});
+        append_artifacts(out, module, {{module.module_path, &module}}, false,
+                         preserve_public_abi_names(module));
         return out;
     }
     const std::map<std::string, const ModuleAst*> modules = module_map(module.module_units);
+    const bool public_abi = preserve_public_abi_names(module);
     for (const ModuleAst& unit : module.module_units) {
-        append_artifacts(out, unit, modules);
+        append_artifacts(out, unit, modules, false, public_abi);
     }
     return out;
 }

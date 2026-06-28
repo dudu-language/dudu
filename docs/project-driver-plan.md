@@ -509,7 +509,9 @@ The practical target is:
 
 - Normal Dudu projects use generated CMake by default, even when they are
   small.
-- Explicit direct builds are reserved for `duc` and narrow/debug workflows.
+- `duc build` uses the same generated-CMake backend. Low-level `duc` remains
+  useful for check/format/emit/debugging actions, but there is no separate
+  direct native build backend.
 - Existing CMake projects can remain user-owned; Dudu should drive the declared
   CMake target instead of pretending to understand every project-specific build
   rule itself.
@@ -617,7 +619,7 @@ docs. Generated Dudu projects do not get a changelog by default.
 3. Implement `dudu init`.
 4. Implement manifest parsing for the minimal single-target `dudu.toml`.
 5. Implement `dudu check`, `dudu build`, and `dudu run`.
-6. Add direct compiler invocation for explicit low-level/debug builds.
+6. Route `duc build`/`duc run` through the generated-CMake backend too.
 7. Add pkg-config include/link flag expansion.
 8. Add C and C++ source file passthrough.
 9. Implement `dudu cmake`.

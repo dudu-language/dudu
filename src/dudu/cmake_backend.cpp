@@ -197,6 +197,24 @@ std::string cmake_target_name(const ProjectConfig& config, const std::filesystem
     return config.name.empty() ? input.stem().string() : config.name;
 }
 
+std::string output_library_target_name(const std::filesystem::path& output) {
+    std::string name = output.stem().string();
+    if (name.rfind("lib", 0) == 0 && name.size() > 3) {
+        name = name.substr(3);
+    }
+    return name.empty() ? output.stem().string() : name;
+}
+
+std::string generated_cmake_target_name(const ProjectConfig& config,
+                                        const std::filesystem::path& input,
+                                        const std::optional<std::filesystem::path>& output) {
+    if (output.has_value() &&
+        (config.target_kind == "library" || config.target_kind == "shared_library")) {
+        return output_library_target_name(*output);
+    }
+    return cmake_target_name(config, input);
+}
+
 std::string user_cmake_target_name(const ProjectConfig& config) {
     if (!config.cmake_target.empty()) {
         return config.cmake_target;
@@ -308,11 +326,13 @@ std::filesystem::path build_cmake_project(const BuildCMakeProjectOptions& option
                                        .stream_output = options.stream_output,
                                        .verbose = options.verbose});
     }
+    const std::string target =
+        generated_cmake_target_name(options.config, options.input, options.output);
     const std::filesystem::path artifact =
         run_cmake_backend({.config = options.config,
                            .root = default_cmake_backend_root(options.config),
-                           .cmake_lists = emit_cmake_project(options.config, options.input),
-                           .target = cmake_target_name(options.config, options.input),
+                           .cmake_lists = emit_cmake_project(options.config, options.input, target),
+                           .target = target,
                            .dudu_executable = options.dudu_executable,
                            .stream_output = options.stream_output,
                            .timings = options.timings,

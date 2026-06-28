@@ -416,17 +416,12 @@ rm -f "$repo_root/build/project_cc_bin" "$repo_root/build/project_cc_bin.cpp"
     "$repo_root/build/duc" build -o "$repo_root/build/project_cc_bin" --verbose \
         2>"$repo_root/build/project_cc_verbose.err"
 )
-grep -q "^c++ -std=c++20" "$repo_root/build/project_cc_verbose.err"
-grep -q "project_cc_bin.cpp" "$repo_root/build/project_cc_verbose.err"
-grep -Eq -- "-I.*/project_cc/include" "$repo_root/build/project_cc_verbose.err"
-grep -q -- "-DDUDU_PROJECT_CC=40" "$repo_root/build/project_cc_verbose.err"
-grep -q -- "-DDUDU_PROJECT_CC_FLAG=2" "$repo_root/build/project_cc_verbose.err"
-grep -Eq -- "-L.*/project_cc/lib" "$repo_root/build/project_cc_verbose.err"
-grep -q "project_cc_bin.cpp" "$repo_root/build/compile_commands.json"
-grep -Eq -- "-I.*/project_cc/include" "$repo_root/build/compile_commands.json"
-grep -q -- "-DDUDU_PROJECT_CC=40" "$repo_root/build/compile_commands.json"
-grep -q -- "-DDUDU_PROJECT_CC_FLAG=2" "$repo_root/build/compile_commands.json"
-grep -Eq -- "-L.*/project_cc/lib" "$repo_root/build/compile_commands.json"
+project_cc_cmake="$repo_root/tests/fixtures/project_cc/build/cmake-backend/source/CMakeLists.txt"
+grep -q "target_include_directories(main PRIVATE" "$project_cc_cmake"
+grep -Eq "project_cc/include" "$project_cc_cmake"
+grep -q 'target_compile_definitions(main PRIVATE "DUDU_PROJECT_CC=40")' "$project_cc_cmake"
+grep -q 'target_compile_options(main PRIVATE "-DDUDU_PROJECT_CC_FLAG=2")' "$project_cc_cmake"
+grep -Eq "project_cc/lib" "$project_cc_cmake"
 set +e
 "$repo_root/build/project_cc_bin"
 project_cc_status=$?
@@ -440,11 +435,13 @@ rm -rf "$repo_root/build/project_default_output"
     cd "$repo_root/tests/fixtures/project_default_output"
     "$repo_root/build/duc" build --verbose 2>"$repo_root/build/project_default_output_verbose.err"
 )
-test -x "$repo_root/build/project_default_output/default_tool"
-grep -q "project_default_output/default_tool.cpp" \
+test -x "$repo_root/build/project_default_output/cmake-backend/build/default_tool"
+grep -q "cmake .*build/project_default_output/cmake-backend/source" \
+    "$repo_root/build/project_default_output_verbose.err"
+grep -q "build .*build/project_default_output/cmake-backend/build" \
     "$repo_root/build/project_default_output_verbose.err"
 set +e
-"$repo_root/build/project_default_output/default_tool"
+"$repo_root/build/project_default_output/cmake-backend/build/default_tool"
 project_default_output_status=$?
 set -e
 if [[ "$project_default_output_status" -ne 42 ]]; then
@@ -582,9 +579,10 @@ rm -f "$repo_root/build/project_linker_script_bin" "$repo_root/build/project_lin
     "$repo_root/build/duc" build -o "$repo_root/build/project_linker_script_bin" --verbose \
         2>"$repo_root/build/project_linker_script_verbose.err"
 )
-grep -q -- "-Wl,-T,linker.ld" "$repo_root/build/project_linker_script_verbose.err"
+grep -q -- "-Wl,-T,linker.ld" \
+    "$repo_root/tests/fixtures/project_linker_script/build/cmake-backend/source/CMakeLists.txt"
 grep -q '__attribute__((section(".dudu_boot")))' \
-    "$repo_root/build/project_linker_script_bin.cpp"
+    "$repo_root/tests/fixtures/project_linker_script/build/cmake-backend/build/generated/main.cpp"
 set +e
 "$repo_root/build/project_linker_script_bin"
 project_linker_script_status=$?
@@ -651,28 +649,43 @@ if [[ "$project_cmake_multifile_status" -ne 42 ]]; then
     exit 1
 fi
 fake_pkg_config="$repo_root/build/fake-pkg-config"
-cat >"$fake_pkg_config" <<'SH'
+fake_pkg_config_include="$(cd "$repo_root/tests/fixtures/project_pkg_config/include" && pwd)"
+cat >"$fake_pkg_config" <<SH
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ "$*" != "--cflags --libs fixturelib" && "$*" != "--cflags fixturelib" ]]; then
-    echo "unexpected pkg-config args: $*" >&2
+if [[ "\$*" == "--version" ]]; then
+    printf '%s\n' '1.0.0'
+    exit 0
+fi
+if [[ "\$*" == *"--modversion"* && "\$*" == *"fixturelib"* ]]; then
+    printf '%s\n' '1.0.0'
+    exit 0
+fi
+if [[ "\$*" == *"--exists"* && "\$*" == *"fixturelib"* ]]; then
+    exit 0
+fi
+if [[ "\$*" != *"fixturelib"* ]]; then
+    echo "unexpected pkg-config args: \$*" >&2
     exit 1
 fi
-
-printf '%s\n' '-Iinclude'
+if [[ "\$*" == *"--cflags"* ]]; then
+    printf '%s\n' '-I$fake_pkg_config_include'
+fi
 SH
 chmod +x "$fake_pkg_config"
 rm -f "$repo_root/build/project_pkg_config_bin" "$repo_root/build/project_pkg_config_bin.cpp"
+rm -rf "$repo_root/tests/fixtures/project_pkg_config/build/cmake-backend"
 (
     cd "$repo_root/tests/fixtures/project_pkg_config"
     PKG_CONFIG="$fake_pkg_config" "$repo_root/build/duc" build \
         -o "$repo_root/build/project_pkg_config_bin" --verbose \
         2>"$repo_root/build/project_pkg_config_verbose.err"
 )
-grep -q -- "-Iinclude" "$repo_root/build/project_pkg_config_verbose.err"
-grep -q "project_pkg_config_bin.cpp" "$repo_root/build/compile_commands.json"
-grep -q -- "-Iinclude" "$repo_root/build/compile_commands.json"
+grep -q "pkg_check_modules(DUDU_PKG REQUIRED IMPORTED_TARGET fixturelib)" \
+    "$repo_root/tests/fixtures/project_pkg_config/build/cmake-backend/source/CMakeLists.txt"
+grep -q "target_link_libraries(main PRIVATE PkgConfig::DUDU_PKG)" \
+    "$repo_root/tests/fixtures/project_pkg_config/build/cmake-backend/source/CMakeLists.txt"
 set +e
 "$repo_root/build/project_pkg_config_bin"
 project_pkg_config_status=$?
@@ -688,9 +701,9 @@ rm -f "$repo_root/build/libproject_library.a" "$repo_root/build/libproject_libra
         2>"$repo_root/build/project_library_verbose.err"
 )
 test -f "$repo_root/build/libproject_library.a"
-ar t "$repo_root/build/libproject_library.a" | grep -q "libproject_library.a.o"
-grep -q -- "-c .*libproject_library.a.cpp" "$repo_root/build/project_library_verbose.err"
-grep -q "ar rcs .*libproject_library.a" "$repo_root/build/project_library_verbose.err"
+ar t "$repo_root/build/libproject_library.a" | grep -q "\.cpp.o"
+grep -q "add_library(project_library STATIC" \
+    "$repo_root/tests/fixtures/project_library/build/cmake-backend/source/CMakeLists.txt"
 (
     cd "$repo_root/tests/fixtures/project_library"
     "$repo_root/build/duc" main.dd --emit-header "$repo_root/build/project_library.hpp"
@@ -715,7 +728,8 @@ rm -f "$repo_root/build/libproject_shared.so" "$repo_root/build/libproject_share
     "$repo_root/build/duc" main.dd --emit-header "$repo_root/build/project_shared_library.hpp"
 )
 test -f "$repo_root/build/libproject_shared.so"
-grep -q -- "-fPIC -shared" "$repo_root/build/project_shared_library_verbose.err"
+grep -q "add_library(project_shared SHARED" \
+    "$repo_root/tests/fixtures/project_shared_library/build/cmake-backend/source/CMakeLists.txt"
 printf '#include "project_shared_library.hpp"\nint main() { return answer(); }\n' \
     >"$repo_root/build/project_shared_library_caller.cpp"
 "${CXX:-c++}" -std=c++20 -I"$repo_root/build" \
@@ -737,10 +751,12 @@ rm -f "$repo_root/build/libproject_freestanding.a" "$repo_root/build/libproject_
         2>"$repo_root/build/project_freestanding_verbose.err"
 )
 test -f "$repo_root/build/libproject_freestanding.a"
-grep -q -- "-ffreestanding" "$repo_root/build/project_freestanding_verbose.err"
-grep -q -- "-fno-exceptions" "$repo_root/build/project_freestanding_verbose.err"
-grep -q -- "-fno-rtti" "$repo_root/build/project_freestanding_verbose.err"
-if grep -q "#include <iostream>" "$repo_root/build/libproject_freestanding.a.cpp"; then
+freestanding_cmake="$repo_root/tests/fixtures/project_freestanding_mode/build/cmake-backend/source/CMakeLists.txt"
+freestanding_cpp="$repo_root/tests/fixtures/project_freestanding_mode/build/cmake-backend/build/generated/main.cpp"
+grep -q -- "-ffreestanding" "$freestanding_cmake"
+grep -q -- "-fno-exceptions" "$freestanding_cmake"
+grep -q -- "-fno-rtti" "$freestanding_cmake"
+if grep -q "#include <iostream>" "$freestanding_cpp"; then
     echo "freestanding prelude unexpectedly included iostream" >&2
     exit 1
 fi
@@ -751,11 +767,13 @@ rm -f "$repo_root/build/libproject_embedded_uart.a" "$repo_root/build/libproject
         2>"$repo_root/build/project_embedded_uart_verbose.err"
 )
 test -f "$repo_root/build/libproject_embedded_uart.a"
-grep -q -- "-ffreestanding" "$repo_root/build/project_embedded_uart_verbose.err"
-grep -q -- "-fno-exceptions" "$repo_root/build/project_embedded_uart_verbose.err"
-grep -q -- "-fno-rtti" "$repo_root/build/project_embedded_uart_verbose.err"
-grep -q "volatile uint32_t status" "$repo_root/build/libproject_embedded_uart.a.cpp"
-grep -q "reinterpret_cast<volatile UartRegs\\*>" "$repo_root/build/libproject_embedded_uart.a.cpp"
+embedded_uart_cmake="$repo_root/tests/fixtures/project_embedded_uart/build/cmake-backend/source/CMakeLists.txt"
+embedded_uart_cpp="$repo_root/tests/fixtures/project_embedded_uart/build/cmake-backend/build/generated/main.cpp"
+grep -q -- "-ffreestanding" "$embedded_uart_cmake"
+grep -q -- "-fno-exceptions" "$embedded_uart_cmake"
+grep -q -- "-fno-rtti" "$embedded_uart_cmake"
+grep -q "volatile uint32_t status" "$embedded_uart_cpp"
+grep -q "reinterpret_cast<volatile DuduMainUartRegs\\*>" "$embedded_uart_cpp"
 if (
     cd "$repo_root/tests/fixtures/project_library"
     "$repo_root/build/duc" run -o "$repo_root/build/project_library_run"
@@ -862,14 +880,14 @@ compile_and_expect posix_mmap_hash 42
 compile_and_expect posix_threads_mutex 42
 compile_path_and_expect multifile tests/fixtures/multifile/main.dd 42
 
-direct_bin="$repo_root/build/dudu_build_simple"
-"$repo_root/build/duc" build "$repo_root/tests/fixtures/simple_program.dd" -o "$direct_bin"
+cmake_bin="$repo_root/build/dudu_build_simple"
+"$repo_root/build/duc" build "$repo_root/tests/fixtures/simple_program.dd" -o "$cmake_bin"
 set +e
-"$direct_bin"
-direct_status=$?
+"$cmake_bin"
+cmake_status=$?
 set -e
-if [[ "$direct_status" -ne 42 ]]; then
-    echo "dudu build simple_program returned $direct_status, expected 42" >&2
+if [[ "$cmake_status" -ne 42 ]]; then
+    echo "dudu build simple_program returned $cmake_status, expected 42" >&2
     exit 1
 fi
 

@@ -3,15 +3,11 @@
 #include "dudu/build_backend_select.hpp"
 #include "dudu/cmake_backend.hpp"
 #include "dudu/cmake_emit.hpp"
-#include "dudu/cpp_emit.hpp"
 #include "dudu/decorators.hpp"
-#include "dudu/module_loader.hpp"
 #include "dudu/native_build.hpp"
-#include "dudu/native_headers.hpp"
 #include "dudu/parser.hpp"
 #include "dudu/project_config.hpp"
 #include "dudu/project_driver.hpp"
-#include "dudu/sema.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -56,35 +52,6 @@ ProjectConfig config_for_options(const TestDriverOptions& options) {
 ProjectConfig build_config_for_options(const TestDriverOptions& options) {
     ProjectConfig config = config_for_options(options);
     return select_build_backend(std::move(config), options.input, options.project_driver);
-}
-
-std::filesystem::path source_dir_for_input(const std::filesystem::path& input) {
-    if (input.empty()) {
-        return std::filesystem::current_path();
-    }
-    return input.has_parent_path() ? input.parent_path() : std::filesystem::current_path();
-}
-
-ModuleAst checked_module(const TestDriverOptions& options, const std::string& source) {
-    ModuleAst module = options.input.empty() ? parse_source(source, options.input)
-                                             : load_source_tree(options.input);
-    const ProjectConfig config = build_config_for_options(options);
-    module.build_values = config.build_values;
-    module.build_values["TARGET_KIND"] = '"' + config.target_kind + '"';
-    module.build_values["TARGET_MODE"] = '"' + config.target_mode + '"';
-    module.target_mode_explicit = config.target_mode_explicit;
-    for (const auto& [name, value] : options.build_values) {
-        module.build_values[name] = value;
-    }
-    const std::filesystem::path source_dir = source_dir_for_input(options.input);
-    merge_native_header_types(module, {.config = config, .source_dir = source_dir});
-    if (config.build_backend == "cmake") {
-        analyze_module_tree(module, {.check_bodies = true});
-    } else {
-        reject_merged_output_module_conflicts(module);
-        analyze_module(module, {.check_bodies = true});
-    }
-    return module;
 }
 
 bool looks_like_test_input(const std::filesystem::path& value) {
@@ -208,43 +175,27 @@ std::filesystem::path default_test_output(const TestDriverOptions& options,
 }
 
 int run_one_test_entry(TestDriverOptions options) {
-    const std::string source = read_text_file(options.input);
     const ProjectConfig config = build_config_for_options(options);
     const std::filesystem::path output =
         options.output.value_or(default_test_output(options, config));
-    if (config.build_backend == "cmake") {
-        const bool project_output = options.project_driver && !options.quiet;
-        const std::string target = output.filename().string();
-        const std::filesystem::path root =
-            output.parent_path() / (output.filename().string() + "-cmake");
-        print_project_step(project_output, "cmake", root / "source" / "CMakeLists.txt");
-        print_project_step(project_output, "build", root / "build");
-        const std::filesystem::path bin = run_cmake_backend(
-            {.config = config,
-             .root = root,
-             .cmake_lists = emit_cmake_test_project(config, options.input, target,
-                                                    options.test_filter, !options.no_capture),
-             .target = target,
-             .dudu_executable = options.dudu_executable,
-             .stream_output = project_output,
-             .timings = options.timings,
-             .verbose = options.verbose});
-        print_project_step(project_output, "test", bin);
-        return std::system(shell_quote_path(bin).c_str()) == 0 ? 0 : 1;
-    }
     const bool project_output = options.project_driver && !options.quiet;
-    print_project_step(project_output, "emit", output.string() + ".cpp");
-    print_project_step(project_output, "test", output);
-    const std::string harness = emit_cpp_test_source(checked_module(options, source),
-                                                     options.test_filter, !options.no_capture);
-    const std::filesystem::path bin = build_executable({.output = output,
-                                                        .config = config,
-                                                        .stream_output = project_output,
-                                                        .verbose = options.verbose},
-                                                       harness);
-    const std::filesystem::path command =
-        bin.is_relative() && bin.parent_path().empty() ? std::filesystem::path(".") / bin : bin;
-    return std::system(shell_quote_path(command).c_str()) == 0 ? 0 : 1;
+    const std::string target = output.filename().string();
+    const std::filesystem::path root =
+        output.parent_path() / (output.filename().string() + "-cmake");
+    print_project_step(project_output, "cmake", root / "source" / "CMakeLists.txt");
+    print_project_step(project_output, "build", root / "build");
+    const std::filesystem::path bin = run_cmake_backend(
+        {.config = config,
+         .root = root,
+         .cmake_lists = emit_cmake_test_project(config, options.input, target, options.test_filter,
+                                                !options.no_capture),
+         .target = target,
+         .dudu_executable = options.dudu_executable,
+         .stream_output = project_output,
+         .timings = options.timings,
+         .verbose = options.verbose});
+    print_project_step(project_output, "test", bin);
+    return std::system(shell_quote_path(bin).c_str()) == 0 ? 0 : 1;
 }
 
 int run_recursive_tests(TestDriverOptions options) {
