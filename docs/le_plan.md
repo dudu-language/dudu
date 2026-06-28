@@ -1637,7 +1637,13 @@ push. They are not release packaging work.
    932ms/285MB RSS, modules 50k about 100ms/111MB RSS, functions 50k about
    96ms/57MB RSS, calls 50k about 113ms/61MB RSS, control 50k about
    117ms/68MB RSS, arrays 50k about 139ms/58MB RSS, and generics 50k about
-   142ms/47MB RSS. Keep compiler speed validation broad: generated corpora need
+   142ms/47MB RSS. A small assignment-target fast path then skipped the full
+   expression parser for bare-name assignment targets. This is a common source
+   shape and removes unnecessary AST parser work for `name = value`, but the
+   measured win is intentionally recorded as minor: focused expression-heavy
+   50k moved only from about 0.875s to about 0.871s, while one broad sample saw
+   expression-heavy 50k around 918ms/285MB RSS and no meaningful broad
+   regression. Keep compiler speed validation broad: generated corpora need
    multiple code shapes, because one particular compilation path can dominate or
    regress while an aggregate number looks acceptable. The
    changed-file case runs against a copied fixture under `build/bench_compiler`

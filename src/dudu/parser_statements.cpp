@@ -125,6 +125,14 @@ std::string declaration_name_from_piece(std::span<const Token> tokens, size_t be
     return std::string(tokens[begin].text);
 }
 
+std::optional<Expr> simple_name_expr_from_piece(std::span<const Token> tokens, size_t begin,
+                                                size_t end) {
+    if (begin + 1 == end && begin < tokens.size() && tokens[begin].kind == TokenKind::Identifier) {
+        return make_expr(ExprKind::Name, tokens[begin].text, tokens[begin].location);
+    }
+    return std::nullopt;
+}
+
 } // namespace
 
 std::vector<Parser::JoinedTokens>
@@ -382,7 +390,12 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
             stmt.compound_op = *op;
         }
         const JoinedTokens target = join_tokens(line_begin, *assignment);
-        set_stmt_target_expr(stmt, parse_expr_piece(target));
+        if (std::optional<Expr> simple_target =
+                simple_name_expr_from_piece(tokens_, line_begin, *assignment)) {
+            set_stmt_target_expr(stmt, std::move(*simple_target));
+        } else {
+            set_stmt_target_expr(stmt, parse_expr_piece(target));
+        }
         const JoinedTokens value = join_tokens(*assignment + 1, end);
         stmt.value_expr = parse_expr_piece(value);
         return stmt;
