@@ -137,10 +137,23 @@ NativeHeaderRawCache load_native_header_raw_cache(const NativeHeaderOptions& opt
     if (!native_header_dependency_stamps_current(cache.dependencies)) {
         return cache;
     }
+    cache.hit = true;
+    return cache;
+}
+
+bool load_native_header_raw_cache_payload(NativeHeaderRawCache& cache) {
+    const std::filesystem::path ast = cache.base.string() + ".ast";
+    const std::filesystem::path macros = cache.base.string() + ".macros";
+    if (!std::filesystem::exists(ast) || !std::filesystem::exists(macros)) {
+        cache.hit = false;
+        cache.ast_dump.clear();
+        cache.macro_dump.clear();
+        return false;
+    }
     cache.ast_dump = read_text(ast);
     cache.macro_dump = read_text(macros);
     cache.hit = !cache.ast_dump.empty() || !cache.macro_dump.empty();
-    return cache;
+    return cache.hit;
 }
 
 void store_native_header_raw_cache(const NativeHeaderRawCache& cache, const std::string& ast_dump,

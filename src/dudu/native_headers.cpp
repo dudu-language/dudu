@@ -163,7 +163,7 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
                            native_header_unquoted(import.module_path));
         return cache[key];
     }
-    if (raw_cache.hit) {
+    if (raw_cache.hit && load_native_header_raw_cache_payload(raw_cache)) {
         NativeHeaderScan scan;
         parse_ast_dump(scan, raw_cache.ast_dump, import.location);
         parse_macro_dump(scan, raw_cache.macro_dump, import.location);
@@ -191,16 +191,13 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
     NativeHeaderScan scan;
     const std::string dependency_flags =
         " -MD -MF " + shell_quote_path(deps) + " -MT dudu_native_scan";
-    std::string ast_dump =
-        native_header_run_capture(native_header_clang_base_command(options, cpp, true) +
-                                      dependency_flags,
-                                  ast, err);
+    std::string ast_dump = native_header_run_capture(
+        native_header_clang_base_command(options, cpp, true) + dependency_flags, ast, err);
     bool used_prelude_retry = false;
     if (ast_dump.empty()) {
         native_header_write_text(cpp, native_header_scanner_source_for_header(import, true));
-        ast_dump = native_header_run_capture(native_header_clang_base_command(options, cpp, true) +
-                                                 dependency_flags,
-                                             ast, err);
+        ast_dump = native_header_run_capture(
+            native_header_clang_base_command(options, cpp, true) + dependency_flags, ast, err);
         used_prelude_retry = !ast_dump.empty();
     }
     if (!ast_dump.empty()) {
@@ -223,11 +220,10 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
         }
         const std::string detail = native_header_read_text(err);
         cleanup();
-        throw CompileError(import.location,
-                           native_header_scan_error_message(
-                               import, detail, native_header_clangxx_command()),
-                           "dudu.native_header.scan_failed",
-                           native_header_unquoted(import.module_path));
+        throw CompileError(
+            import.location,
+            native_header_scan_error_message(import, detail, native_header_clangxx_command()),
+            "dudu.native_header.scan_failed", native_header_unquoted(import.module_path));
     }
     parse_macro_dump(scan, macro_dump, import.location);
     if (!used_prelude_retry) {

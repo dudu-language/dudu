@@ -18,6 +18,7 @@ struct NativeHeaderRawCache {
 
 NativeHeaderRawCache load_native_header_raw_cache(const NativeHeaderOptions& options,
                                                   const std::string& key);
+bool load_native_header_raw_cache_payload(NativeHeaderRawCache& cache);
 void store_native_header_raw_cache(const NativeHeaderRawCache& cache, const std::string& ast_dump,
                                    const std::string& macro_dump,
                                    const std::string& dependencies = {},

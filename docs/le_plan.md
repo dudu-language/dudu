@@ -1444,7 +1444,12 @@ push. They are not release packaging work.
    much slower than pure Dudu frontend shapes; a local 1k Release run measured
    about 2.6s and 101MB RSS cold, then about 114ms and 47MB RSS on cached
    samples. Use it when validating native interop throughput instead of every
-   routine compiler-speed loop.
+   routine compiler-speed loop. Cached native scan loading then stopped reading
+   raw `.ast` and `.macros` dumps before trying the compact `.scan` cache.
+   Direct timings moved the seven-header stdlib cache section from about 66ms
+   to about 45ms, and a three-sample harness run moved cached samples to about
+   105ms and 36MB RSS while leaving pure-Dudu generated shapes within normal
+   noise.
    Compiler-speed claims must be checked against multiple generated shapes and
    at least one real dogfood project when practical, because one benchmark can
    hide that only a specific compilation feature is slow. Generated corpora
