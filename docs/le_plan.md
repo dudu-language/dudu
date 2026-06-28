@@ -1810,6 +1810,18 @@ push. They are not release packaging work.
    around 107ms; expression-heavy landed at about 231ms, so treat this as a
    statement-scan cleanup for assignment-heavy code, not as the expression-AST
    fix.
+   A massif heap profile of `duc check` on the 50k expression shape showed the
+   remaining memory problem clearly: peak useful heap was about 272MB. The
+   dominant retained buckets were lexer token storage at about 74MB, binary
+   expression parsing/child storage at tens of MB and still the largest parse
+   bucket at peak, statement-block storage at about 35MB, and optional
+   assignment-target expression storage at about 12MB. Do not spend more time
+   on tiny string scans before addressing the compact-AST/token representation
+   problem. `Expr.name`/`Expr.value` cannot be naively changed to
+   `std::string_view` without an ownership plan, because native escape and
+   synthesized AST paths can create temporary strings. The likely serious fixes
+   are an interned source text/symbol store, compact token/source-position
+   storage, and arena or compact child storage for expression trees.
    Rewriting
    `sema_context::trim` from front-erasing to substring bounds plus ASCII
    checks was tried and rejected: focused repeats regressed modules and mixed
