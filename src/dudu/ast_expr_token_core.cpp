@@ -11,13 +11,13 @@ namespace dudu {
 namespace {
 
 std::string_view canonical_operator_text(std::string_view text) {
-    if (text == "and") {
+    if (text_is(text, "and")) {
         return "and";
     }
-    if (text == "or") {
+    if (text_is(text, "or")) {
         return "or";
     }
-    if (text == "not") {
+    if (text_is(text, "not")) {
         return "not";
     }
     if (text.size() == 1) {
@@ -48,22 +48,22 @@ std::string_view canonical_operator_text(std::string_view text) {
             return text;
         }
     }
-    if (text == "==") {
+    if (text_is(text, "==")) {
         return "==";
     }
-    if (text == "!=") {
+    if (text_is(text, "!=")) {
         return "!=";
     }
-    if (text == "<=") {
+    if (text_is(text, "<=")) {
         return "<=";
     }
-    if (text == ">=") {
+    if (text_is(text, ">=")) {
         return ">=";
     }
-    if (text == "<<") {
+    if (text_is(text, "<<")) {
         return "<<";
     }
-    if (text == ">>") {
+    if (text_is(text, ">>")) {
         return ">>";
     }
     return text;
@@ -379,10 +379,10 @@ Expr ExprTokenParser::parse_prefix(std::initializer_list<TokenKind> stops) {
     if (!at_end()) {
         const Token& token = current();
         if (token.kind == TokenKind::Identifier) {
-            if (token.text == "def") {
+            if (text_is(token.text, "def")) {
                 return parse_unsupported_expr(ExprKind::DefExpression, begin, stops);
             }
-            if (token.text == "lambda") {
+            if (text_is(token.text, "lambda")) {
                 ++cursor_;
                 Expr expr = make_node(ExprKind::Lambda, begin, cursor_);
                 expr.children.reserve(1);
@@ -399,11 +399,11 @@ Expr ExprTokenParser::parse_prefix(std::initializer_list<TokenKind> stops) {
                 expr.range = range_between(begin, cursor_);
                 return expr;
             }
-            if (token.text == "not") {
+            if (text_is(token.text, "not")) {
                 ++cursor_;
                 return parse_unary("not", begin, stops);
             }
-            if (token.text == "await") {
+            if (text_is(token.text, "await")) {
                 ++cursor_;
                 Expr expr = make_node(ExprKind::Await, begin, cursor_);
                 expr.children.reserve(1);
@@ -411,7 +411,7 @@ Expr ExprTokenParser::parse_prefix(std::initializer_list<TokenKind> stops) {
                 expr.range = range_between(begin, cursor_);
                 return expr;
             }
-            if (token.text == "yield") {
+            if (text_is(token.text, "yield")) {
                 ++cursor_;
                 Expr expr = make_node(ExprKind::Yield, begin, cursor_);
                 expr.children.reserve(1);
@@ -420,10 +420,11 @@ Expr ExprTokenParser::parse_prefix(std::initializer_list<TokenKind> stops) {
                 return expr;
             }
         } else if (token.kind == TokenKind::Operator) {
-            if (token.text == "*" && pointer_cast_call_ahead()) {
+            if (text_is(token.text, "*") && pointer_cast_call_ahead()) {
                 return parse_pointer_cast_call();
             }
-            if (token.text == "*" || token.text == "-" || token.text == "&" || token.text == "~") {
+            if (text_is(token.text, "*") || text_is(token.text, "-") || text_is(token.text, "&") ||
+                text_is(token.text, "~")) {
                 ++cursor_;
                 return parse_unary(canonical_operator_text(token.text), begin, stops);
             }

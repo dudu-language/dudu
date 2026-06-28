@@ -1710,7 +1710,14 @@ push. They are not release packaging work.
    three-sample broad Release sweep was mixed but mostly useful: calls 50k
    moved about 65ms to 64ms, functions 50k about 68ms to 66ms, modules 50k
    about 83ms to 79ms, arrays stayed around 85ms, expressions stayed around
-   239-240ms, and control flow was noisier around 78-82ms. Keep compiler speed
+   239-240ms, and control flow was noisier around 78-82ms. Token/string literal
+   comparisons in parser hot paths then gained fixed-size literal overloads so
+   checks such as `match_identifier("return")` and `at_operator("*")` do not
+   rebuild a `string_view` from a C string and measure the literal every time.
+   A three-sample broad Release sweep moved expression-heavy 50k from about
+   239-240ms to about 233ms, with calls around 64ms, control around 76ms,
+   modules around 80ms, arrays around 85ms, and generics around 91ms. Keep
+   compiler speed
    validation broad: generated corpora need multiple diverse code shapes,
    because one particular compilation path can dominate or regress while an
    aggregate number looks acceptable. Do not treat a compiler-speed change as

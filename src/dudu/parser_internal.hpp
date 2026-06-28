@@ -2,6 +2,7 @@
 
 #include "dudu/parser.hpp"
 
+#include <cstddef>
 #include <initializer_list>
 #include <string_view>
 
@@ -29,8 +30,18 @@ class Parser {
     const Token& previous() const;
     bool at(TokenKind kind) const;
     bool check_text(std::string_view text) const;
+    template <size_t N> bool check_text(const char (&text)[N]) const {
+        return token_text_is(current(), TokenKind::Identifier, text);
+    }
     bool match(TokenKind kind);
     bool match_identifier(std::string_view text);
+    template <size_t N> bool match_identifier(const char (&text)[N]) {
+        if (!check_text(text)) {
+            return false;
+        }
+        ++cursor_;
+        return true;
+    }
     const Token& consume(TokenKind kind, std::string_view message);
     const Token& consume_identifier(std::string_view message);
     [[noreturn]] void fail_current(const std::string& message) const;

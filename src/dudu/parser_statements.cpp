@@ -34,6 +34,10 @@ bool token_is_identifier(const Token& token, std::string_view text) {
     return token.kind == TokenKind::Identifier && token.text == text;
 }
 
+template <size_t N> bool token_is_identifier(const Token& token, const char (&text)[N]) {
+    return token_text_is(token, TokenKind::Identifier, text);
+}
+
 bool token_is_stop(const Token& token, std::initializer_list<TokenKind> stops) {
     for (const TokenKind stop : stops) {
         if (token.kind == stop)

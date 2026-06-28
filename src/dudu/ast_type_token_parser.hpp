@@ -3,6 +3,7 @@
 #include "dudu/ast.hpp"
 #include "dudu/token.hpp"
 
+#include <cstddef>
 #include <initializer_list>
 #include <span>
 #include <string>
@@ -25,12 +26,32 @@ class TypeTokenParser {
     const Token& current() const;
     bool at(TokenKind kind) const;
     bool at_operator(std::string_view op) const;
+    template <size_t N> bool at_operator(const char (&op)[N]) const {
+        return !at_end() && token_text_is(current(), TokenKind::Operator, op);
+    }
     bool at_identifier(std::string_view text) const;
+    template <size_t N> bool at_identifier(const char (&text)[N]) const {
+        return !at_end() && token_text_is(current(), TokenKind::Identifier, text);
+    }
     bool at_ellipsis() const;
     bool stop_at(std::initializer_list<TokenKind> stops) const;
     bool match(TokenKind kind);
     bool match_operator(std::string_view op);
+    template <size_t N> bool match_operator(const char (&op)[N]) {
+        if (!at_operator(op)) {
+            return false;
+        }
+        ++cursor_;
+        return true;
+    }
     bool match_identifier(std::string_view text);
+    template <size_t N> bool match_identifier(const char (&text)[N]) {
+        if (!at_identifier(text)) {
+            return false;
+        }
+        ++cursor_;
+        return true;
+    }
     bool match_scope_separator();
     bool match_ellipsis();
 

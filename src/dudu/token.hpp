@@ -2,6 +2,7 @@
 
 #include "dudu/source.hpp"
 
+#include <cstddef>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -36,6 +37,18 @@ struct Token {
     std::string_view text;
     SourceLocation location;
 };
+
+template <size_t N> bool text_is(std::string_view text, const char (&literal)[N]) {
+    static_assert(N > 0);
+    constexpr size_t literal_size = N - 1;
+    return text.size() == literal_size &&
+           std::char_traits<char>::compare(text.data(), literal, literal_size) == 0;
+}
+
+template <size_t N>
+bool token_text_is(const Token& token, TokenKind kind, const char (&literal)[N]) {
+    return token.kind == kind && text_is(token.text, literal);
+}
 
 std::string token_kind_name(TokenKind kind);
 
