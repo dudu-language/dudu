@@ -1754,7 +1754,10 @@ push. They are not release packaging work.
    the same ASCII treatment for trimming, identifier checks, and numeric
    literal checks. A five-sample focused Release repeat on affected 50k shapes
    was neutral-to-positive after noise settled: functions about 63ms, arrays
-   about 82ms, expressions about 228ms, and mixed about 106ms. The
+   about 82ms, expressions about 228ms, and mixed about 106ms. Rewriting
+   `sema_context::trim` from front-erasing to substring bounds plus ASCII
+   checks was tried and rejected: focused repeats regressed modules and mixed
+   project-shaped code and did not preserve an expression-heavy win. The
    changed-file case runs against a copied fixture under `build/bench_compiler`
    so benchmarks do not mutate checked-in examples. It
    records source line/file counts and peak child-process RSS in KB with each
