@@ -1662,7 +1662,20 @@ push. They are not release packaging work.
    915ms to about 726ms, with RSS still around 285MB at 50k. A broad one-sample
    shape sweep then measured expression-heavy 50k around 700ms, with
    functions/classes/modules/calls/control/arrays/generics still roughly in
-   their previous ranges. Keep compiler speed validation broad: generated
+   their previous ranges. A follow-up callgrind run found the expression-heavy
+   path was spending most of its load/parse time in accidental `SourceFileName`
+   construction: normal lexer comparisons such as `two == "=="` could select a
+   reverse `std::string_view == SourceFileName` overload and intern string
+   literals millions of times. `SourceFileName` constructors are now explicit
+   and only the natural `SourceFileName == string_view` comparison direction is
+   exposed. Focused three-sample Release expression benchmarks then dropped 10k
+   lines from about 153ms to about 67ms and 50k lines from about 742ms to about
+   287ms, with RSS still around 285MB at 50k. The timing split for
+   expression-heavy 50k moved load/parse from about +0.53s before sema to about
+   +0.17s before sema, with total check around +0.27s. A broad one-sample
+   Release sweep measured expression-heavy 50k around 284ms, functions/classes
+   around 44-68ms, calls/control/arrays/generics around 67-92ms, and modules
+   around 92ms. Keep compiler speed validation broad: generated
    corpora need multiple diverse code shapes, because one particular
    compilation path can dominate or regress while an aggregate number looks
    acceptable. Do not treat a compiler-speed change as proven by one synthetic

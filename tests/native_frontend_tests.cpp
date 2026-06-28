@@ -331,12 +331,12 @@ void test_native_scan_dedupe_allows_opaque_redeclarations() {
     dudu::NativeTypeDecl left;
     left.name = "Thing";
     left.identity.canonical_path = "left.Thing";
-    left.location = {.file = "left.hpp", .line = 1, .column = 8};
+    left.location = {.file = dudu::SourceFileName("left.hpp"), .line = 1, .column = 8};
     scan.types.push_back(std::move(left));
     dudu::NativeTypeDecl right;
     right.name = "Thing";
     right.identity.canonical_path = "right.Thing";
-    right.location = {.file = "right.hpp", .line = 1, .column = 8};
+    right.location = {.file = dudu::SourceFileName("right.hpp"), .line = 1, .column = 8};
     scan.types.push_back(std::move(right));
 
     scan = dudu::dedupe_scan(std::move(scan));
@@ -354,16 +354,18 @@ void test_native_scan_dedupe_rejects_alias_identity_collision() {
     dudu::NativeTypeDecl left;
     left.name = "Thing";
     left.native_spelling = "i32";
-    left.type_ref = dudu::parse_type_text("i32", {.file = "left.hpp", .line = 1, .column = 8});
+    left.type_ref = dudu::parse_type_text(
+        "i32", {.file = dudu::SourceFileName("left.hpp"), .line = 1, .column = 8});
     left.identity.canonical_path = "left.Thing";
-    left.location = {.file = "left.hpp", .line = 1, .column = 8};
+    left.location = {.file = dudu::SourceFileName("left.hpp"), .line = 1, .column = 8};
     scan.types.push_back(std::move(left));
     dudu::NativeTypeDecl right;
     right.name = "Thing";
     right.native_spelling = "f32";
-    right.type_ref = dudu::parse_type_text("f32", {.file = "right.hpp", .line = 1, .column = 8});
+    right.type_ref = dudu::parse_type_text(
+        "f32", {.file = dudu::SourceFileName("right.hpp"), .line = 1, .column = 8});
     right.identity.canonical_path = "right.Thing";
-    right.location = {.file = "right.hpp", .line = 1, .column = 8};
+    right.location = {.file = dudu::SourceFileName("right.hpp"), .line = 1, .column = 8};
     scan.types.push_back(std::move(right));
 
     bool failed = false;
@@ -751,14 +753,15 @@ void test_aliased_c_import_prefixes_visible_transitive_functions(
 
 void test_native_scan_ignores_anonymous_record_definitions() {
     dudu::NativeHeaderScan scan;
-    dudu::parse_ast_dump(scan,
-                         "|-CXXRecordDecl 0x1 <test.hpp:10:5, line:13:5> line:10:5 union "
-                         "definition\n"
-                         "|-CXXRecordDecl 0x2 <test.hpp:20:5, line:23:5> line:20:5 struct "
-                         "definition\n"
-                         "|-CXXRecordDecl 0x3 <test.hpp:30:1, line:32:1> line:30:8 struct "
-                         "NamedThing definition\n",
-                         {.file = "native_anonymous.dd", .line = 1, .column = 1});
+    dudu::parse_ast_dump(
+        scan,
+        "|-CXXRecordDecl 0x1 <test.hpp:10:5, line:13:5> line:10:5 union "
+        "definition\n"
+        "|-CXXRecordDecl 0x2 <test.hpp:20:5, line:23:5> line:20:5 struct "
+        "definition\n"
+        "|-CXXRecordDecl 0x3 <test.hpp:30:1, line:32:1> line:30:8 struct "
+        "NamedThing definition\n",
+        {.file = dudu::SourceFileName("native_anonymous.dd"), .line = 1, .column = 1});
     scan = dudu::dedupe_scan(std::move(scan));
     bool saw_named = false;
     for (const dudu::NativeTypeDecl& type : scan.types) {

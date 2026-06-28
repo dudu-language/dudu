@@ -1284,7 +1284,8 @@ void test_lsp_native_references_filter_by_identity() {
 void test_allocation_type_ref_diagnostics() {
     dudu::Symbols symbols;
     const dudu::FunctionScope scope(symbols);
-    const dudu::SourceLocation location{.file = "cpp_escape_alloc.dd", .line = 7, .column = 12};
+    const dudu::SourceLocation location{
+        .file = dudu::SourceFileName("cpp_escape_alloc.dd"), .line = 7, .column = 12};
 
     const std::vector<dudu::TypeRef> type_args = {dudu::parse_type_text("list[i32]", location)};
     const std::optional<dudu::TypeRef> allocation =
@@ -1339,7 +1340,8 @@ void test_emitted_local_index_type_inference() {
 
 void test_index_type_inference_uses_type_ast() {
     dudu::Symbols symbols;
-    const dudu::SourceLocation location{.file = "index_types.dd", .line = 1, .column = 1};
+    const dudu::SourceLocation location{
+        .file = dudu::SourceFileName("index_types.dd"), .line = 1, .column = 1};
     symbols.alias_type_refs["Ints"] = dudu::parse_type_text("list[i32]", location);
     symbols.alias_type_refs["ItemAlias"] = dudu::parse_type_text("Item", location);
     symbols.alias_type_refs["AliasItems"] = dudu::parse_type_text("list[ItemAlias]", location);

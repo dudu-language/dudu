@@ -10,9 +10,9 @@ namespace dudu {
 class SourceFileName {
   public:
     SourceFileName() = default;
-    SourceFileName(const char* file);
-    SourceFileName(std::string file);
-    SourceFileName(std::string_view file);
+    explicit SourceFileName(const char* file);
+    explicit SourceFileName(std::string file);
+    explicit SourceFileName(std::string_view file);
 
     const std::string& str() const;
     bool empty() const;
@@ -28,9 +28,7 @@ class SourceFileName {
 
 std::ostream& operator<<(std::ostream& out, const SourceFileName& file);
 bool operator==(const SourceFileName& left, std::string_view right);
-bool operator==(std::string_view left, const SourceFileName& right);
 bool operator!=(const SourceFileName& left, std::string_view right);
-bool operator!=(std::string_view left, const SourceFileName& right);
 
 struct SourceLocation {
     SourceFileName file;

@@ -59,7 +59,7 @@ SourceLocation cached_location(const std::vector<std::string>& fields, size_t in
     if (fields.size() < index + 3) {
         return default_location;
     }
-    return {.file = fields[index],
+    return {.file = SourceFileName(fields[index]),
             .line = std::stoi(fields[index + 1]),
             .column = std::stoi(fields[index + 2])};
 }

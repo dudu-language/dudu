@@ -72,15 +72,7 @@ bool operator==(const SourceFileName& left, std::string_view right) {
     return std::string_view(left) == right;
 }
 
-bool operator==(std::string_view left, const SourceFileName& right) {
-    return left == std::string_view(right);
-}
-
 bool operator!=(const SourceFileName& left, std::string_view right) {
-    return !(left == right);
-}
-
-bool operator!=(std::string_view left, const SourceFileName& right) {
     return !(left == right);
 }
 

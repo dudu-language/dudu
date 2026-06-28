@@ -21,7 +21,8 @@ namespace {
 std::string read_text_file(const std::filesystem::path& path) {
     std::ifstream file(path);
     if (!file) {
-        throw CompileError({.file = path.string(), .line = 1, .column = 1}, "could not open module");
+        throw CompileError({.file = SourceFileName(path.string()), .line = 1, .column = 1},
+                           "could not open module");
     }
     return {std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
 }
@@ -279,7 +280,7 @@ const ModuleAst& load_one(const std::filesystem::path& path, const std::filesyst
         return loaded.at(canonical);
     }
     if (std::find(stack.begin(), stack.end(), canonical) != stack.end()) {
-        throw CompileError({.file = path.string(), .line = 1, .column = 1},
+        throw CompileError({.file = SourceFileName(path.string()), .line = 1, .column = 1},
                            module_cycle_message(root, stack, canonical));
     }
     stack.push_back(canonical);
@@ -324,10 +325,10 @@ const ModuleAst& load_one(const std::filesystem::path& path, const std::filesyst
 void collect_files(const std::filesystem::path& path, std::vector<std::filesystem::path>& stack,
                    std::vector<std::filesystem::path>& out) {
     const std::filesystem::path canonical = std::filesystem::weakly_canonical(path);
-    const std::filesystem::path root = stack.empty() ? canonical.parent_path()
-                                                     : stack.front().parent_path();
+    const std::filesystem::path root =
+        stack.empty() ? canonical.parent_path() : stack.front().parent_path();
     if (std::find(stack.begin(), stack.end(), canonical) != stack.end()) {
-        throw CompileError({.file = path.string(), .line = 1, .column = 1},
+        throw CompileError({.file = SourceFileName(path.string()), .line = 1, .column = 1},
                            module_cycle_message(root, stack, canonical));
     }
     if (std::find(out.begin(), out.end(), canonical) != out.end()) {

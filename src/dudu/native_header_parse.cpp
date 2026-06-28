@@ -115,7 +115,11 @@ SourceLocation ast_source_location(const std::string& line, const SourceLocation
         return context_location;
     }
     SourceLocation out;
-    out.file = file == "line" || file == "col" ? current_file : file;
+    if (file == "line" || file == "col") {
+        out.file = SourceFileName(current_file);
+    } else {
+        out.file = SourceFileName(file);
+    }
     out.line = std::stoi(match[2].str());
     out.column = std::stoi(match[3].str());
     if (std::regex_search(line, spelling_match, spelling)) {
