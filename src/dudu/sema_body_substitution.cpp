@@ -24,9 +24,6 @@ void substitute_expr_types(Expr& expr, const std::map<std::string, TypeRef>& sub
     for (Expr& callee : expr.callee) {
         substitute_expr_types(callee, substitutions);
     }
-    for (Expr& param : expr.params) {
-        substitute_expr_types(param, substitutions);
-    }
     for (Expr& arg : expr.template_args) {
         substitute_expr_types(arg, substitutions);
     }

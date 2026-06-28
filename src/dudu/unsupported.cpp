@@ -74,9 +74,8 @@ void check_expr(const Expr& expr) {
                            "explicit if statement");
     }
     if (expr.kind == ExprKind::Yield) {
-        throw CompileError(expr.location,
-                           "unsupported Python feature: generators; use an explicit "
-                           "iterator/state type or callback");
+        throw CompileError(expr.location, "unsupported Python feature: generators; use an explicit "
+                                          "iterator/state type or callback");
     }
     if (expr.kind == ExprKind::Call) {
         const std::optional<std::string> callee = bare_callee_name(expr);
@@ -91,9 +90,6 @@ void check_expr(const Expr& expr) {
         }
     }
     for (const Expr& child : expr.callee) {
-        check_expr(child);
-    }
-    for (const Expr& child : expr.params) {
         check_expr(child);
     }
     for (const Expr& child : expr.template_args) {

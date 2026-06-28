@@ -1514,7 +1514,12 @@ push. They are not release packaging work.
    positive: expression-heavy 50k dropped from about 1.2s/533MB RSS to about
    1.1s/395MB RSS, modules 50k dropped from about 188ms/352MB to about
    148ms/265MB, and the other shapes saw similar RSS reductions without an
-   obvious time regression. The
+   obvious time regression. A follow-up removed the unused `Expr::params`
+   vector and its dead walker passes; no parser produced that field. This
+   dropped local `Expr` size again from 288 to 264 bytes and `Stmt` from 2592
+   to 2400 bytes. The same one-sample 10k/50k Release sweep stayed positive:
+   expression-heavy 50k measured about 1.08s/370MB RSS, and modules 50k about
+   147ms/249MB RSS. The
    changed-file case runs against a copied fixture under `build/bench_compiler`
    so benchmarks do not mutate checked-in examples. It
    records source line/file counts and peak child-process RSS in KB with each

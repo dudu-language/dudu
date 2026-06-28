@@ -279,9 +279,6 @@ void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
             collect_expr_tokens(callee, tokens, native_index);
         }
     }
-    for (const Expr& param : expr.params) {
-        collect_expr_tokens(param, tokens, native_index);
-    }
     for (const Expr& child : expr.children) {
         collect_expr_tokens(child, tokens, native_index);
     }

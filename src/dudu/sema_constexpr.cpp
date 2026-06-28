@@ -25,9 +25,6 @@ void check_expr_calls(const Expr& expr, const std::set<std::string>& constexpr_f
     for (const Expr& child : expr.callee) {
         check_expr_calls(child, constexpr_functions, dudu_functions);
     }
-    for (const Expr& child : expr.params) {
-        check_expr_calls(child, constexpr_functions, dudu_functions);
-    }
     for (const Expr& child : expr.template_args) {
         check_expr_calls(child, constexpr_functions, dudu_functions);
     }
