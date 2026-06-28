@@ -31,7 +31,9 @@ void visit_expr_tree_impl(const Expr& expr, VisitExpr& visit_expr, VisitType& vi
     for (const TypeRef& arg : expr.template_type_args) {
         visit_type_ref_tree_impl(arg, visit_type);
     }
-    visit_type_ref_tree_impl(expr.type_ref, visit_type);
+    if (has_expr_type_ref(expr)) {
+        visit_type_ref_tree_impl(expr_type_ref(expr), visit_type);
+    }
     for (const Expr& child : expr.children) {
         visit_expr_tree_impl(child, visit_expr, visit_type);
     }

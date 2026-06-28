@@ -82,8 +82,8 @@ std::optional<TypeRef> infer_parsed_pointer_cast_escape_ref(const FunctionScope&
         !starts_with(parsed.callee.front().name, "*")) {
         return std::nullopt;
     }
-    TypeRef type_ref = parsed.type_ref;
-    if (!has_type_ref(type_ref)) {
+    TypeRef type_ref = expr_type_ref(parsed);
+    if (!has_expr_type_ref(parsed)) {
         if (location != nullptr) {
             sema_expr_fail(parsed.callee.front().location, "malformed pointer cast type");
         }

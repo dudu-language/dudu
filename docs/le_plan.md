@@ -1506,7 +1506,15 @@ push. They are not release packaging work.
    child storage per node. A local size probe measured `Expr` at 416 bytes and
    `Stmt` at 3616 bytes, because each node currently carries many payload fields
    for every possible variant; this is acceptable for keeping the language
-   moving but not for million-line compiler throughput. The
+   moving but not for million-line compiler throughput. The first structural
+   shrink moved rare expression-attached type metadata behind pointer storage,
+   because it is mainly used for pointer-cast/template metadata. This dropped
+   local `Expr` size from 416 to 288 bytes and `Stmt` size from 3616 to 2592
+   bytes. A one-sample 10k/50k Release sweep across all generated shapes was
+   positive: expression-heavy 50k dropped from about 1.2s/533MB RSS to about
+   1.1s/395MB RSS, modules 50k dropped from about 188ms/352MB to about
+   148ms/265MB, and the other shapes saw similar RSS reductions without an
+   obvious time regression. The
    changed-file case runs against a copied fixture under `build/bench_compiler`
    so benchmarks do not mutate checked-in examples. It
    records source line/file counts and peak child-process RSS in KB with each

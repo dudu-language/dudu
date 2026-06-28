@@ -12,7 +12,7 @@ namespace dudu {
 namespace {
 
 TypeRef template_pointer_cast_type_ref(const Expr& expr) {
-    TypeRef pointer = wrapped_type_ref(TypeKind::Pointer, expr.type_ref, expr.location);
+    TypeRef pointer = wrapped_type_ref(TypeKind::Pointer, expr_type_ref(expr), expr.location);
     pointer.range = expr.range;
     return pointer;
 }
@@ -142,13 +142,13 @@ std::optional<TypeRef> direct_pointer_cast_type_ref(const FunctionScope& scope, 
     if (!starts_with(callee, "*")) {
         return std::nullopt;
     }
-    if (!has_type_ref(expr.type_ref)) {
+    if (!has_expr_type_ref(expr)) {
         if (location != nullptr) {
             sema_expr_fail(*location, "unsupported pointer cast expression: " + callee);
         }
         return std::nullopt;
     }
-    TypeRef pointee = expr.type_ref;
+    TypeRef pointee = expr_type_ref(expr);
     if (const auto unknown = unknown_type_ref(scope.symbols, pointee)) {
         if (location != nullptr) {
             const SourceLocation error_location =

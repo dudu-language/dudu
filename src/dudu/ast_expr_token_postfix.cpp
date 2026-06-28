@@ -1,6 +1,7 @@
 #include "dudu/ast_expr.hpp"
 #include "dudu/ast_expr_token_parser.hpp"
 #include "dudu/ast_parse_utils.hpp"
+#include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 
 #include <algorithm>
@@ -383,7 +384,7 @@ Expr ExprTokenParser::parse_pointer_cast_call() {
     Expr call = make_node(ExprKind::Call, begin, cursor_);
     call.callee.push_back(std::move(callee));
     call.children = std::move(args);
-    call.type_ref = parse_type_span(type_begin, type_end);
+    set_expr_type_ref(call, parse_type_span(type_begin, type_end));
     return call;
 }
 

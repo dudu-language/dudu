@@ -235,6 +235,23 @@ bool has_type_ref(const TypeRef& type) {
            !trim_copy(type.value).empty() || !type.children.empty();
 }
 
+bool has_expr_type_ref(const Expr& expr) {
+    return expr.type_ref != nullptr && has_type_ref(*expr.type_ref);
+}
+
+const TypeRef& expr_type_ref(const Expr& expr) {
+    static const TypeRef empty;
+    return expr.type_ref == nullptr ? empty : *expr.type_ref;
+}
+
+void set_expr_type_ref(Expr& expr, TypeRef type) {
+    if (!has_type_ref(type)) {
+        expr.type_ref.reset();
+        return;
+    }
+    expr.type_ref = std::make_shared<TypeRef>(std::move(type));
+}
+
 bool type_ref_is_name(const TypeRef& type, std::string_view name) {
     return type.kind == TypeKind::Named && type_ref_head_name(type) == name;
 }

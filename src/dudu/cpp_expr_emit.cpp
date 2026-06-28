@@ -108,8 +108,7 @@ bool member_receiver_is_scoped(const Expr& receiver, const Symbols* symbols,
     if (symbols == nullptr) {
         return false;
     }
-    return symbols->classes.contains(receiver.name) ||
-           symbols->enums.contains(receiver.name) ||
+    return symbols->classes.contains(receiver.name) || symbols->enums.contains(receiver.name) ||
            symbols->native_classes.contains(receiver.name) ||
            symbols->native_path_prefixes.contains(receiver.name) ||
            symbols->module_import_prefixes.contains(receiver.name);
@@ -179,12 +178,12 @@ TypeRef template_type_ref_from_expr(const Expr& expr, std::string name) {
 }
 
 TypeRef pointer_template_type_ref_from_expr(const Expr& expr) {
-    if (!has_type_ref(expr.type_ref)) {
+    if (!has_expr_type_ref(expr)) {
         throw CompileError(expr.location,
                            "malformed pointer cast expression: missing parsed target type");
     }
 
-    TypeRef pointer = wrapped_type_ref(TypeKind::Pointer, expr.type_ref, expr.location);
+    TypeRef pointer = wrapped_type_ref(TypeKind::Pointer, expr_type_ref(expr), expr.location);
     pointer.range = expr.range;
     return pointer;
 }
@@ -355,11 +354,11 @@ std::string lower_expr(const Expr& expr, const std::vector<std::string>& aliases
                            "." + expr.name;
                 }
             }
-            return lower_member_expr(lower_expr(expr.children.front(), aliases, locals,
-                                                local_type_refs, symbols, options),
-                                     expr.name, aliases, options,
-                                     member_receiver_is_scoped(expr.children.front(), symbols,
-                                                               locals));
+            return lower_member_expr(
+                lower_expr(expr.children.front(), aliases, locals, local_type_refs, symbols,
+                           options),
+                expr.name, aliases, options,
+                member_receiver_is_scoped(expr.children.front(), symbols, locals));
         }
         break;
     case ExprKind::DictEntry:

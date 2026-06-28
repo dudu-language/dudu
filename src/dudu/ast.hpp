@@ -4,6 +4,7 @@
 
 #include <filesystem>
 #include <map>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -171,7 +172,7 @@ struct Expr {
     std::vector<Expr> params;
     std::vector<Expr> template_args;
     std::vector<TypeRef> template_type_args;
-    TypeRef type_ref;
+    std::shared_ptr<TypeRef> type_ref;
     std::vector<Expr> children;
     SourceLocation location;
     SourceRange range;

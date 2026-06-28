@@ -78,13 +78,14 @@ bool pointer_cast_type_ref_like(const TypeRef& type, const Symbols* symbols) {
 }
 
 std::optional<TypeRef> pointer_cast_pointee_type_ref(const Expr& expr, const Symbols* symbols) {
-    if (!has_type_ref(expr.type_ref)) {
+    if (!has_expr_type_ref(expr)) {
         return std::nullopt;
     }
-    if (!pointer_cast_type_ref_like(expr.type_ref, symbols)) {
+    const TypeRef& type_ref = expr_type_ref(expr);
+    if (!pointer_cast_type_ref_like(type_ref, symbols)) {
         return std::nullopt;
     }
-    return expr.type_ref;
+    return type_ref;
 }
 
 TypeRef pointer_type_ref_from_pointee(TypeRef type, SourceLocation location) {

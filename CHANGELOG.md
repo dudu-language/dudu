@@ -97,6 +97,9 @@
 - Switched interned source filename storage from a tree set to a hash set to
   reduce source-location lookup overhead without changing stored filename
   lifetime.
+- Moved rare expression-attached type metadata behind pointer storage, shrinking
+  `Expr` and `Stmt` nodes and reducing peak RSS across generated compiler
+  benchmarks.
 - Removed obsolete string-based Dudu method/class template substitution helpers.
 - Removed an unused unknown-expression parser helper and renamed the remaining
   text call parser as an explicit `cpp(...)` escape-boundary helper.

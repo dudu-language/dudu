@@ -12,8 +12,8 @@ void substitute_expr_types(Expr& expr, const std::map<std::string, TypeRef>& sub
         expr.kind == ExprKind::Name && replacement != substitutions.end()) {
         expr.name = substitute_type_ref_text(replacement->second, {});
     }
-    if (has_type_ref(expr.type_ref)) {
-        expr.type_ref = substitute_type_ref(expr.type_ref, substitutions);
+    if (has_expr_type_ref(expr)) {
+        set_expr_type_ref(expr, substitute_type_ref(expr_type_ref(expr), substitutions));
     }
     for (TypeRef& type_arg : expr.template_type_args) {
         type_arg = substitute_type_ref(type_arg, substitutions);
