@@ -70,8 +70,9 @@ void collect_selection_from_statements(const std::vector<Stmt>& statements,
         collect_call_callee_selection(expr, position, selection);
         if (!selection.call_callee &&
             (expr.kind == ExprKind::Call || expr.kind == ExprKind::TemplateCall) &&
-            expr.callee.size() == 1 && expr.callee.front().kind == ExprKind::Name &&
-            contains_name(expr.callee.front().location, expr.callee.front().name, position)) {
+            expr_callee(expr).size() == 1 && expr_callee(expr).front().kind == ExprKind::Name &&
+            contains_name(expr_callee(expr).front().location, expr_callee(expr).front().name,
+                          position)) {
             selection.call_callee = true;
         }
         if (expr.kind != ExprKind::Name && expr.kind != ExprKind::Member) {
@@ -123,8 +124,9 @@ void collect_selection_from_module(const ModuleAst& module, const LspPosition& p
         collect_call_callee_selection(expr, position, selection);
         if (!selection.call_callee &&
             (expr.kind == ExprKind::Call || expr.kind == ExprKind::TemplateCall) &&
-            expr.callee.size() == 1 && expr.callee.front().kind == ExprKind::Name &&
-            contains_name(expr.callee.front().location, expr.callee.front().name, position)) {
+            expr_callee(expr).size() == 1 && expr_callee(expr).front().kind == ExprKind::Name &&
+            contains_name(expr_callee(expr).front().location, expr_callee(expr).front().name,
+                          position)) {
             selection.call_callee = true;
         }
         if (expr.kind != ExprKind::Name && expr.kind != ExprKind::Member) {

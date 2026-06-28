@@ -10,7 +10,7 @@ std::optional<TypeRef> receiver_call_type_ref(const FunctionScope& scope, const 
                                               const std::string& method_name,
                                               const std::vector<TypeRef>& method_args,
                                               const SourceLocation* location) {
-    const Expr& member = expr.callee.front();
+    const Expr& member = expr_callee(expr).front();
     const Expr& receiver_expr = member.children.front();
     FunctionSignature signature;
     if (receiver_expr.kind == ExprKind::Name && receiver_expr.name == "class" &&
@@ -68,11 +68,11 @@ std::optional<TypeRef> receiver_call_type_ref(const FunctionScope& scope, const 
 std::optional<TypeRef> direct_member_call_type_ref(const FunctionScope& scope, const Expr& expr,
                                                    const std::string& callee,
                                                    const SourceLocation* location) {
-    if (expr.callee.empty() || expr.callee.front().kind != ExprKind::Member ||
-        expr.callee.front().children.size() != 1) {
+    if (!has_expr_callee(expr) || expr_callee(expr).front().kind != ExprKind::Member ||
+        expr_callee(expr).front().children.size() != 1) {
         return std::nullopt;
     }
-    const Expr& member = expr.callee.front();
+    const Expr& member = expr_callee(expr).front();
     const Expr& receiver_expr = member.children.front();
     const bool bare_nonlocal_receiver =
         receiver_expr.kind == ExprKind::Name && !scope.local_type_refs.contains(receiver_expr.name);
@@ -95,10 +95,10 @@ std::optional<TypeRef> direct_member_call_type_ref(const FunctionScope& scope, c
 
 std::optional<TypeRef> direct_member_call_type_ref(const FunctionScope& scope, const Expr& expr,
                                                    const SourceLocation* location) {
-    if (expr.callee.empty() || expr.callee.front().kind != ExprKind::Member) {
+    if (!has_expr_callee(expr) || expr_callee(expr).front().kind != ExprKind::Member) {
         return std::nullopt;
     }
-    const std::string callee = expr_label(expr.callee.front());
+    const std::string callee = expr_label(expr_callee(expr).front());
     return direct_member_call_type_ref(scope, expr, callee, location);
 }
 
@@ -106,11 +106,11 @@ std::optional<TypeRef> direct_template_member_call_type_ref(const FunctionScope&
                                                             const Expr& expr,
                                                             const std::string& callee,
                                                             const SourceLocation* location) {
-    if (expr.callee.empty() || expr.callee.front().kind != ExprKind::Member ||
-        expr.callee.front().children.size() != 1) {
+    if (!has_expr_callee(expr) || expr_callee(expr).front().kind != ExprKind::Member ||
+        expr_callee(expr).front().children.size() != 1) {
         return std::nullopt;
     }
-    const Expr& member = expr.callee.front();
+    const Expr& member = expr_callee(expr).front();
     return receiver_call_type_ref(scope, expr, callee, member.name, expr_template_type_args(expr),
                                   location);
 }

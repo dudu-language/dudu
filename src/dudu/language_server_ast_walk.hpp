@@ -20,7 +20,7 @@ template <typename Visit> void visit_type_ref_tree_impl(const TypeRef& type, Vis
 template <typename VisitExpr, typename VisitType>
 void visit_expr_tree_impl(const Expr& expr, VisitExpr& visit_expr, VisitType& visit_type) {
     visit_expr(expr);
-    for (const Expr& callee : expr.callee) {
+    for (const Expr& callee : expr_callee(expr)) {
         visit_expr_tree_impl(callee, visit_expr, visit_type);
     }
     for (const Expr& arg : expr_template_args(expr)) {

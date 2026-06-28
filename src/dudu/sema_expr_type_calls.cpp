@@ -170,7 +170,7 @@ std::optional<TypeRef> direct_call_type_ref(const FunctionScope& scope, const Ex
     const ScopedCallee scoped_callee = scoped_call_callee(scope, expr, location);
     const std::string& callee = scoped_callee.key;
     if (callee.empty()) {
-        if (!expr.callee.empty() && expr.callee.front().kind == ExprKind::Member) {
+        if (has_expr_callee(expr) && expr_callee(expr).front().kind == ExprKind::Member) {
             if (const auto method_type = direct_member_call_type_ref(scope, expr, location)) {
                 return *method_type;
             }

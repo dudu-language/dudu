@@ -230,8 +230,8 @@ void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
         break;
     case ExprKind::Call:
     case ExprKind::TemplateCall:
-        if (!expr.callee.empty()) {
-            collect_call_callee_tokens(expr.callee.front(), tokens, native_index);
+        if (has_expr_callee(expr)) {
+            collect_call_callee_tokens(expr_callee(expr).front(), tokens, native_index);
         } else {
             add_semantic_token(tokens, expr.location, expr.name, token_function);
         }
@@ -275,7 +275,7 @@ void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
         break;
     }
     if (expr.kind != ExprKind::Call && expr.kind != ExprKind::TemplateCall) {
-        for (const Expr& callee : expr.callee) {
+        for (const Expr& callee : expr_callee(expr)) {
             collect_expr_tokens(callee, tokens, native_index);
         }
     }

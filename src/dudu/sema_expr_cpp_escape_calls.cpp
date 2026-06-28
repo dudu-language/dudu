@@ -41,7 +41,7 @@ TypeRef call_callee_type_ref(const Expr& parsed, const std::string& callee) {
         return type;
     }
     const SourceLocation location =
-        parsed.callee.empty() ? parsed.location : parsed.callee.front().location;
+        !has_expr_callee(parsed) ? parsed.location : expr_callee(parsed).front().location;
     return named_type_ref(callee, location);
 }
 
@@ -57,7 +57,8 @@ std::optional<EscapeCall> parsed_escape_call(const Expr& parsed) {
     }
     TypeRef callee_type = call_callee_type_ref(parsed, callee);
     return EscapeCall{.callee = std::move(callee),
-                      .callee_expr = parsed.callee.empty() ? Expr{} : parsed.callee.front(),
+                      .callee_expr =
+                          !has_expr_callee(parsed) ? Expr{} : expr_callee(parsed).front(),
                       .callee_type_ref = std::move(callee_type),
                       .args = parsed.children};
 }

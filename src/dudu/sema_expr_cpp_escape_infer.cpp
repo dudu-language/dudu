@@ -77,22 +77,22 @@ std::optional<TypeRef> infer_parsed_index_escape_ref(const FunctionScope& scope,
 std::optional<TypeRef> infer_parsed_pointer_cast_escape_ref(const FunctionScope& scope,
                                                             const Expr& parsed,
                                                             const SourceLocation* location) {
-    if (parsed.kind != ExprKind::Call || parsed.callee.size() != 1 ||
-        parsed.callee.front().kind != ExprKind::Name ||
-        !starts_with(parsed.callee.front().name, "*")) {
+    if (parsed.kind != ExprKind::Call || expr_callee(parsed).size() != 1 ||
+        expr_callee(parsed).front().kind != ExprKind::Name ||
+        !starts_with(expr_callee(parsed).front().name, "*")) {
         return std::nullopt;
     }
     TypeRef type_ref = expr_type_ref(parsed);
     if (!has_expr_type_ref(parsed)) {
         if (location != nullptr) {
-            sema_expr_fail(parsed.callee.front().location, "malformed pointer cast type");
+            sema_expr_fail(expr_callee(parsed).front().location, "malformed pointer cast type");
         }
         return std::nullopt;
     }
     if (const auto unknown = unknown_type_ref(scope.symbols, type_ref)) {
         if (location != nullptr) {
             const SourceLocation error_location =
-                unknown->second.line > 0 ? unknown->second : parsed.callee.front().location;
+                unknown->second.line > 0 ? unknown->second : expr_callee(parsed).front().location;
             sema_expr_fail(error_location, "unknown pointer cast type: " + unknown->first);
         }
         return std::nullopt;
@@ -100,7 +100,7 @@ std::optional<TypeRef> infer_parsed_pointer_cast_escape_ref(const FunctionScope&
     for (const Expr& arg : parsed.children) {
         (void)infer_expr_type_ast(scope, arg, location);
     }
-    return pointer_type_ref(std::move(type_ref), parsed.callee.front().location);
+    return pointer_type_ref(std::move(type_ref), expr_callee(parsed).front().location);
 }
 
 std::optional<TypeRef> infer_parsed_unary_escape_ref(const FunctionScope& scope, const Expr& parsed,

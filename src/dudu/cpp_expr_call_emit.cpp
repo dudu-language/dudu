@@ -191,8 +191,8 @@ std::string lower_callee_expr(const Expr& expr, const std::vector<std::string>& 
                               const CppLocalContext& locals,
                               const std::map<std::string, TypeRef>& local_type_refs,
                               const Symbols* symbols, const CppEmitOptions& options) {
-    if (!expr.callee.empty()) {
-        const Expr& callee = expr.callee.front();
+    if (has_expr_callee(expr)) {
+        const Expr& callee = expr_callee(expr).front();
         if (callee.kind == ExprKind::Member && callee.children.size() == 1 &&
             callee.children.front().kind == ExprKind::Name &&
             callee.children.front().name == "super") {
@@ -207,8 +207,9 @@ std::string lower_callee_expr(const Expr& expr, const std::vector<std::string>& 
                    "->" + callee.name;
         }
     }
-    if (!expr.callee.empty()) {
-        return lower_expr(expr.callee.front(), aliases, locals, local_type_refs, symbols, options);
+    if (has_expr_callee(expr)) {
+        return lower_expr(expr_callee(expr).front(), aliases, locals, local_type_refs, symbols,
+                          options);
     }
     return locals.contains(expr.name) ? expr.name : emitted_value_name(expr.name, options);
 }
@@ -348,9 +349,9 @@ std::string lower_call_expr(const Expr& expr, const std::vector<std::string>& al
                             const CppLocalContext& locals,
                             const std::map<std::string, TypeRef>& local_type_refs,
                             const Symbols* symbols, const CppEmitOptions& options) {
-    if (!expr.callee.empty()) {
+    if (has_expr_callee(expr)) {
         if (symbols != nullptr) {
-            if (const auto variant = enum_variant_from_expr(*symbols, expr.callee.front())) {
+            if (const auto variant = enum_variant_from_expr(*symbols, expr_callee(expr).front())) {
                 if (enum_has_payloads(*variant->first)) {
                     return lower_enum_variant_constructor(*variant->first, *variant->second,
                                                           expr.children, aliases, locals,

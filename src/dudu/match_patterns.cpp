@@ -11,8 +11,9 @@ namespace dudu {
 namespace {
 
 const Expr* enum_pattern_head(const Stmt& stmt) {
-    if (stmt_pattern_expr(stmt).kind == ExprKind::Call && !stmt_pattern_expr(stmt).callee.empty()) {
-        return &stmt_pattern_expr(stmt).callee.front();
+    if (stmt_pattern_expr(stmt).kind == ExprKind::Call &&
+        has_expr_callee(stmt_pattern_expr(stmt))) {
+        return &expr_callee(stmt_pattern_expr(stmt)).front();
     }
     return &stmt_pattern_expr(stmt);
 }
@@ -96,9 +97,9 @@ std::optional<std::string> wrapper_case_name(const Expr& pattern) {
     if (pattern.kind == ExprKind::NoneLiteral) {
         return std::string{"None"};
     }
-    if (pattern.kind == ExprKind::Call && !pattern.callee.empty() &&
-        pattern.callee.front().kind == ExprKind::Name) {
-        return pattern.callee.front().name;
+    if (pattern.kind == ExprKind::Call && has_expr_callee(pattern) &&
+        expr_callee(pattern).front().kind == ExprKind::Name) {
+        return expr_callee(pattern).front().name;
     }
     return std::nullopt;
 }

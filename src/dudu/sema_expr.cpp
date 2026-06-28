@@ -35,8 +35,9 @@ std::optional<std::string> unknown_module_function_message(const Symbols& symbol
 
 TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
                             const SourceLocation* location) {
-    const SourceLocation type_location =
-        location == nullptr ? diagnostic_location(expr.location, expr) : diagnostic_location(*location, expr);
+    const SourceLocation type_location = location == nullptr
+                                             ? diagnostic_location(expr.location, expr)
+                                             : diagnostic_location(*location, expr);
     switch (expr.kind) {
     case ExprKind::Missing:
         return {};
@@ -128,10 +129,10 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
         if (location != nullptr) {
             const ScopedCallee scoped_callee = scoped_call_callee(scope, expr, location);
             const std::string& callee = scoped_callee.key;
-            if (!expr.callee.empty() && expr.callee.front().kind != ExprKind::Name &&
-                expr.callee.front().kind != ExprKind::Member) {
-                sema_expr_fail(*location,
-                               "unsupported call expression: " + expr_label(expr.callee.front()));
+            if (has_expr_callee(expr) && expr_callee(expr).front().kind != ExprKind::Name &&
+                expr_callee(expr).front().kind != ExprKind::Member) {
+                sema_expr_fail(*location, "unsupported call expression: " +
+                                              expr_label(expr_callee(expr).front()));
             }
             if (const auto message = unknown_module_function_message(scope.symbols, callee)) {
                 sema_expr_fail(*location, *message);
@@ -158,10 +159,10 @@ TypeRef infer_expr_type_ast(const FunctionScope& scope, const Expr& expr,
                 }
                 sema_expr_fail(*location, "unknown function: " + callee);
             }
-            if (!expr.callee.empty() && expr.callee.front().kind != ExprKind::Name &&
-                expr.callee.front().kind != ExprKind::Member) {
+            if (has_expr_callee(expr) && expr_callee(expr).front().kind != ExprKind::Name &&
+                expr_callee(expr).front().kind != ExprKind::Member) {
                 sema_expr_fail(*location, "unsupported template call expression: " +
-                                              expr_label(expr.callee.front()));
+                                              expr_label(expr_callee(expr).front()));
             }
             sema_expr_fail(*location, "unknown template call: " + callee);
         }

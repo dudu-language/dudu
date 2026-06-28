@@ -81,10 +81,10 @@ TypeRef emitted_local_type_ref(const std::map<std::string, TypeRef>& local_type_
 TypeRef infer_call_type_ref(const Expr& expr, const std::map<std::string, TypeRef>& local_type_refs,
                             const std::map<std::string, TypeRef>& function_returns,
                             const Symbols* symbols) {
-    if (expr.callee.empty()) {
+    if (!has_expr_callee(expr)) {
         return infer_call_type_ref(expr.name, function_returns, symbols, expr.location);
     }
-    const Expr& callee = expr.callee.front();
+    const Expr& callee = expr_callee(expr).front();
     if (callee.kind == ExprKind::Name) {
         return infer_call_type_ref(callee.name, function_returns, symbols, callee.location);
     }

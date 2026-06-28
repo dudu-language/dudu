@@ -156,8 +156,7 @@ Expr ExprTokenParser::parse_call(Expr callee, std::initializer_list<TokenKind> s
     Expr call = make_node(ExprKind::Call, begin, cursor_);
     const std::optional<ExprPath> path = expr_path_from_expr(callee);
     const std::string callee_name = path ? render_expr_path(*path) : display_expr(callee);
-    call.callee.reserve(1);
-    call.callee.push_back(std::move(callee));
+    set_expr_callee(call, std::vector<Expr>{std::move(callee)});
     call.children = std::move(args);
     if (callee_name == "cpp") {
         call.kind = ExprKind::CppEscape;
@@ -180,8 +179,7 @@ Expr ExprTokenParser::parse_template_call(Expr indexed_callee,
     std::vector<Expr> args = parse_arg_list(TokenKind::RParen);
     match(TokenKind::RParen);
     Expr call = make_node(ExprKind::TemplateCall, begin, cursor_);
-    call.callee.reserve(1);
-    call.callee.push_back(std::move(callee));
+    set_expr_callee(call, std::vector<Expr>{std::move(callee)});
     if (expr_missing(template_expr)) {
         set_expr_template_args(call, {});
     } else if (template_expr.kind == ExprKind::TupleLiteral) {
@@ -203,8 +201,7 @@ Expr ExprTokenParser::parse_template_call_from_brackets(Expr callee, size_t begi
     match(TokenKind::RParen);
 
     Expr call = make_node(ExprKind::TemplateCall, begin, cursor_);
-    call.callee.reserve(1);
-    call.callee.push_back(std::move(callee));
+    set_expr_callee(call, std::vector<Expr>{std::move(callee)});
     set_expr_template_type_args(call, parse_type_list_span(template_begin, template_end));
     Expr template_expr = parse_expr_span(template_begin, template_end);
     if (!expr_missing(template_expr) && template_expr.kind != ExprKind::Unknown) {
@@ -388,8 +385,7 @@ Expr ExprTokenParser::parse_pointer_cast_call() {
     Expr callee = make_node(ExprKind::Name, begin, type_end);
     callee.name = "*";
     Expr call = make_node(ExprKind::Call, begin, cursor_);
-    call.callee.reserve(1);
-    call.callee.push_back(std::move(callee));
+    set_expr_callee(call, std::vector<Expr>{std::move(callee)});
     call.children = std::move(args);
     set_expr_type_ref(call, parse_type_span(type_begin, type_end));
     return call;

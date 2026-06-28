@@ -26,7 +26,7 @@ void substitute_expr_types(Expr& expr, const std::map<std::string, TypeRef>& sub
     for (Expr& child : expr.children) {
         substitute_expr_types(child, substitutions);
     }
-    for (Expr& callee : expr.callee) {
+    for (Expr& callee : mutable_expr_callee(expr)) {
         substitute_expr_types(callee, substitutions);
     }
     for (Expr& arg : mutable_expr_template_args(expr)) {

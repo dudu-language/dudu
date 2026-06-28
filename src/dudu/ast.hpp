@@ -168,7 +168,7 @@ struct Expr {
     std::string name;
     std::string value;
     std::string op;
-    std::vector<Expr> callee;
+    std::shared_ptr<std::vector<Expr>> callee;
     std::shared_ptr<std::vector<Expr>> template_args;
     std::shared_ptr<std::vector<TypeRef>> template_type_args;
     std::shared_ptr<TypeRef> type_ref;
@@ -371,8 +371,10 @@ std::string_view type_kind_name(TypeKind kind);
 namespace detail {
 template <typename Visit> void visit_expr_tree_impl(const Expr& expr, Visit& visit) {
     visit(expr);
-    for (const Expr& child : expr.callee) {
-        visit_expr_tree_impl(child, visit);
+    if (expr.callee != nullptr) {
+        for (const Expr& child : *expr.callee) {
+            visit_expr_tree_impl(child, visit);
+        }
     }
     if (expr.template_args != nullptr) {
         for (const Expr& child : *expr.template_args) {

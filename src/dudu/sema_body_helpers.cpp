@@ -21,9 +21,10 @@ namespace {
 
 void check_type_match(FunctionScope& scope, const TypeRef& expected_ref, const Expr& expr,
                       const SourceLocation& location, std::string_view mismatch_label) {
-    if (expr.kind == ExprKind::Call && !expr.callee.empty() &&
-        expr.callee.front().kind == ExprKind::Member && expr.callee.front().children.size() == 1) {
-        const Expr& member = expr.callee.front();
+    if (expr.kind == ExprKind::Call && has_expr_callee(expr) &&
+        expr_callee(expr).front().kind == ExprKind::Member &&
+        expr_callee(expr).front().children.size() == 1) {
+        const Expr& member = expr_callee(expr).front();
         const Expr& receiver = member.children.front();
         const bool receiver_is_bare_path =
             receiver.kind == ExprKind::Name && !scope.local_type_refs.contains(receiver.name);

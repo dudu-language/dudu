@@ -156,7 +156,7 @@ void check_expr(const std::set<std::string>& names, const Expr& expr) {
             throw CompileError(expr.location, "unknown build flag: build." + expr.name);
         }
     }
-    for (const Expr& child : expr.callee) {
+    for (const Expr& child : expr_callee(expr)) {
         check_expr(names, child);
     }
     for (const Expr& child : expr_template_args(expr)) {

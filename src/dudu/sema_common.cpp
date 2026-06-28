@@ -100,8 +100,8 @@ std::optional<ExprPath> scoped_expr_path_from_expr(const FunctionScope& scope, c
 
 std::optional<ExprPath> scoped_call_callee_path(const FunctionScope& scope, const Expr& expr,
                                                 const SourceLocation* location) {
-    if (!expr.callee.empty()) {
-        return scoped_expr_path_from_expr(scope, expr.callee.front(), location);
+    if (has_expr_callee(expr)) {
+        return scoped_expr_path_from_expr(scope, expr_callee(expr).front(), location);
     }
     return std::nullopt;
 }

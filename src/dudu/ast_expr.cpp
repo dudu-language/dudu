@@ -127,18 +127,20 @@ bool expr_present(const Expr& expr) {
 }
 
 std::optional<std::string> bare_callee_name(const Expr& expr) {
-    if (!expr.callee.empty() && expr.callee.front().kind == ExprKind::Name &&
-        !expr.callee.front().name.empty()) {
-        return expr.callee.front().name;
+    const std::vector<Expr>& callee_values = expr_callee(expr);
+    if (!callee_values.empty() && callee_values.front().kind == ExprKind::Name &&
+        !callee_values.front().name.empty()) {
+        return callee_values.front().name;
     }
     return std::nullopt;
 }
 
 std::optional<std::string> member_callee_name(const Expr& expr) {
-    if (expr.kind != ExprKind::Call || expr.callee.size() != 1) {
+    const std::vector<Expr>& callee_values = expr_callee(expr);
+    if (expr.kind != ExprKind::Call || callee_values.size() != 1) {
         return std::nullopt;
     }
-    const Expr& callee = expr.callee.front();
+    const Expr& callee = callee_values.front();
     if (callee.kind != ExprKind::Member || callee.name.empty()) {
         return std::nullopt;
     }
@@ -146,10 +148,11 @@ std::optional<std::string> member_callee_name(const Expr& expr) {
 }
 
 bool is_member_callee(const Expr& expr, std::string_view receiver, std::string_view member) {
-    if (expr.kind != ExprKind::Call || expr.callee.size() != 1) {
+    const std::vector<Expr>& callee_values = expr_callee(expr);
+    if (expr.kind != ExprKind::Call || callee_values.size() != 1) {
         return false;
     }
-    const Expr& callee = expr.callee.front();
+    const Expr& callee = callee_values.front();
     if (callee.kind != ExprKind::Member || callee.name != member || callee.children.size() != 1) {
         return false;
     }
@@ -158,8 +161,9 @@ bool is_member_callee(const Expr& expr, std::string_view receiver, std::string_v
 }
 
 std::optional<ExprPath> call_callee_path(const Expr& expr) {
-    if (!expr.callee.empty()) {
-        return expr_path_from_expr(expr.callee.front());
+    const std::vector<Expr>& callee_values = expr_callee(expr);
+    if (!callee_values.empty()) {
+        return expr_path_from_expr(callee_values.front());
     }
     return std::nullopt;
 }
@@ -174,6 +178,30 @@ std::string direct_callee_name(const Expr& expr) {
         return {};
     }
     return call_callee_display(expr);
+}
+
+bool has_expr_callee(const Expr& expr) {
+    return expr.callee != nullptr && !expr.callee->empty();
+}
+
+const std::vector<Expr>& expr_callee(const Expr& expr) {
+    static const std::vector<Expr> empty;
+    return expr.callee == nullptr ? empty : *expr.callee;
+}
+
+std::vector<Expr>& mutable_expr_callee(Expr& expr) {
+    if (expr.callee == nullptr) {
+        expr.callee = std::make_shared<std::vector<Expr>>();
+    }
+    return *expr.callee;
+}
+
+void set_expr_callee(Expr& expr, std::vector<Expr> callee) {
+    if (callee.empty()) {
+        expr.callee.reset();
+        return;
+    }
+    expr.callee = std::make_shared<std::vector<Expr>>(std::move(callee));
 }
 
 bool has_expr_template_type_args(const Expr& expr) {
@@ -352,8 +380,8 @@ std::string display_template_args(const Expr& expr) {
 
 std::string display_call_expr(const Expr& expr) {
     std::string callee = call_callee_display(expr);
-    if (callee.empty() && !expr.callee.empty()) {
-        callee = display_expr(expr.callee.front());
+    if (callee.empty() && has_expr_callee(expr)) {
+        callee = display_expr(expr_callee(expr).front());
     }
     return callee + "(" + join_display_exprs(expr.children, ", ") + ")";
 }

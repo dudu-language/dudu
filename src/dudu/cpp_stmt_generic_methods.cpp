@@ -1,5 +1,6 @@
 #include "dudu/cpp_stmt_generic_methods.hpp"
 
+#include "dudu/ast_expr.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_expr_call_emit.hpp"
 #include "dudu/cpp_expr_emit.hpp"
@@ -75,11 +76,11 @@ std::optional<std::string> lower_expected_generic_method_call(
     const std::map<std::string, TypeRef>& function_returns, const Symbols* symbols,
     const CppEmitOptions& options) {
     if (symbols == nullptr || !has_type_ref(expected_type) || expr.kind != ExprKind::Call ||
-        expr.callee.empty() || expr.callee.front().kind != ExprKind::Member ||
-        expr.callee.front().children.size() != 1) {
+        !has_expr_callee(expr) || expr_callee(expr).front().kind != ExprKind::Member ||
+        expr_callee(expr).front().children.size() != 1) {
         return std::nullopt;
     }
-    const Expr& member = expr.callee.front();
+    const Expr& member = expr_callee(expr).front();
     const Expr& receiver = member.children.front();
     TypeRef receiver_type_ref =
         infer_emitted_local_type_ref(receiver, local_type_refs, function_returns, symbols);

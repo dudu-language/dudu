@@ -34,8 +34,8 @@ void test_digit_suffixed_member_receiver() {
                                                       "digit_member.dd");
     const dudu::Expr& expr = module.functions.front().statements.front().expr;
     assert(expr.kind == dudu::ExprKind::Call);
-    assert(!expr.callee.empty());
-    assert(expr.callee.front().kind == dudu::ExprKind::Member);
+    assert(dudu::has_expr_callee(expr));
+    assert(dudu::expr_callee(expr).front().kind == dudu::ExprKind::Member);
 }
 
 void test_keyword_statements_keep_token_ranges() {

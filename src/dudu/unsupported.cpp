@@ -89,7 +89,7 @@ void check_expr(const Expr& expr) {
                                "statically known fields or methods");
         }
     }
-    for (const Expr& child : expr.callee) {
+    for (const Expr& child : expr_callee(expr)) {
         check_expr(child);
     }
     for (const Expr& child : expr_template_args(expr)) {

@@ -19,8 +19,8 @@ std::string expr_path(const Expr& expr) {
 std::string decorator_name(const Decorator& decorator) {
     const Expr& expr = decorator.expr;
     if ((expr.kind == ExprKind::Call || expr.kind == ExprKind::TemplateCall) &&
-        !expr.callee.empty()) {
-        return expr_path(expr.callee.front());
+        has_expr_callee(expr)) {
+        return expr_path(expr_callee(expr).front());
     }
     return expr_path(expr);
 }

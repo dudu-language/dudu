@@ -1616,10 +1616,20 @@ push. They are not release packaging work.
    expression-heavy 50k around 1.02s/292MB RSS, modules 50k around 104ms/113MB
    RSS, functions 50k around 97ms/58MB RSS, calls 50k around 117ms/61MB RSS,
    control 50k around 119ms/69MB RSS, arrays 50k around 141ms/58MB RSS, and
-   generics 50k around 140ms/46MB RSS. Keep
-   compiler speed validation broad: generated corpora need multiple code shapes,
-   because one particular compilation path can dominate or regress while an
-   aggregate number looks acceptable. The
+   generics 50k around 140ms/46MB RSS. Expression callees then moved behind
+   sparse pointer storage. Calls still keep structured callee AST, but normal
+   non-call expressions no longer carry an empty vector. This dropped local
+   `Expr` size from 248 to 240 bytes and local `Stmt` size from 752 to 736
+   bytes. Focused timings were neutral: expression-heavy 50k stayed around
+   0.95s total, with parse/load still the dominant phase. A broad one-sample
+   10k/50k Release sweep kept the change as a memory/scale win:
+   expression-heavy 50k measured about 1.01s/285MB RSS, modules 50k about
+   107ms/112MB RSS, functions 50k about 97ms/57MB RSS, calls 50k about
+   118ms/60MB RSS, control 50k about 119ms/68MB RSS, arrays 50k about
+   144ms/58MB RSS, and generics 50k about 144ms/47MB RSS. Keep compiler speed
+   validation broad: generated corpora need multiple code shapes, because one
+   particular compilation path can dominate or regress while an aggregate number
+   looks acceptable. The
    changed-file case runs against a copied fixture under `build/bench_compiler`
    so benchmarks do not mutate checked-in examples. It
    records source line/file counts and peak child-process RSS in KB with each
