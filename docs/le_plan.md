@@ -1722,7 +1722,11 @@ push. They are not release packaging work.
    LSP workspace scan, native-header cache, and generated-CMake backend. The
    three-sample broad Release sweep was mostly neutral on frontend throughput:
    expression-heavy 50k stayed around 232ms, while calls/control/arrays moved
-   slightly lower and build-driver cases stayed within normal noise. Keep
+   slightly lower and build-driver cases stayed within normal noise. Replacing
+   primitive numeric type/operator classification with hand-written
+   size/character checks was tried and rejected: a three-sample broad Release
+   sweep did not improve expression-heavy code and made calls/control/modules
+   slightly worse. Keep
    compiler speed
    validation broad: generated corpora need multiple diverse code shapes,
    because one particular compilation path can dominate or regress while an
