@@ -1,6 +1,7 @@
 #include "dudu/sema_body.hpp"
 
 #include "dudu/array_shape.hpp"
+#include "dudu/ast_expr.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/control_flow.hpp"
 #include "dudu/escapes.hpp"
@@ -157,13 +158,13 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
     }
     if (stmt.kind == StmtKind::For) {
         FunctionScope nested = scope;
-        if (!stmt.name.empty() && sema_has_expr(stmt.iterable_expr)) {
+        if (!stmt.name.empty() && has_stmt_iterable_expr(stmt)) {
             check_local_binding_name(stmt.location, stmt.name);
             TypeRef binding_type = stmt_type_ref(stmt);
             if (!has_type_ref(binding_type)) {
                 const auto inferred = infer_for_binding_type(scope, stmt);
                 if (!inferred) {
-                    sema_fail(diagnostic_location(stmt.location, stmt.iterable_expr),
+                    sema_fail(diagnostic_location(stmt.location, stmt_iterable_expr(stmt)),
                               "cannot infer loop binding type");
                 }
                 binding_type = *inferred;
@@ -173,8 +174,8 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
                                             diagnostic_location(stmt.location, declared_type),
                                             declared_type, "unknown loop binding type: ");
                 check_iterable_binding(scope.symbols, scope.local_type_refs,
-                                       diagnostic_location(stmt.location, stmt.iterable_expr),
-                                       binding_type, stmt.iterable_expr);
+                                       diagnostic_location(stmt.location, stmt_iterable_expr(stmt)),
+                                       binding_type, stmt_iterable_expr(stmt));
             }
             bind_local(nested, stmt.name, binding_type);
         }

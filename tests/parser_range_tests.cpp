@@ -66,9 +66,9 @@ void test_keyword_statements_keep_token_ranges() {
     assert(loop.name == "item");
     assert(dudu::has_stmt_type_ref(loop));
     assert(dudu::substitute_type_ref_text(dudu::stmt_type_ref(loop), {}) == "i32");
-    assert(loop.iterable_expr.kind == dudu::ExprKind::Name);
-    assert(loop.iterable_expr.name == "values");
-    assert(loop.iterable_expr.range.start.column == 22);
+    assert(dudu::stmt_iterable_expr(loop).kind == dudu::ExprKind::Name);
+    assert(dudu::stmt_iterable_expr(loop).name == "values");
+    assert(dudu::stmt_iterable_expr(loop).range.start.column == 22);
     assert(loop.children.front().kind == dudu::StmtKind::DebugAssert);
     assert(dudu::display_expr(loop.children.front().condition_expr) == "item > 0");
     assert(dudu::stmt_message_expr(loop.children.front()).kind == dudu::ExprKind::StringLiteral);

@@ -194,20 +194,20 @@ void bind_statement(FunctionScope& scope, const Stmt& stmt) {
 }
 
 std::optional<TypeRef> infer_lsp_for_binding_type(FunctionScope& scope, const Stmt& stmt) {
-    if (!sema_has_expr(stmt.iterable_expr)) {
+    if (!has_stmt_iterable_expr(stmt)) {
         return std::nullopt;
     }
-    if (direct_callee_name(stmt.iterable_expr) == "range") {
-        return named_type_ref("i32", stmt.iterable_expr.location);
+    if (direct_callee_name(stmt_iterable_expr(stmt)) == "range") {
+        return named_type_ref("i32", stmt_iterable_expr(stmt).location);
     }
-    if (stmt.iterable_expr.kind == ExprKind::Name) {
+    if (stmt_iterable_expr(stmt).kind == ExprKind::Name) {
         const TypeRef local_ref =
-            local_type_ref(scope, stmt.iterable_expr.name, stmt.iterable_expr.location);
+            local_type_ref(scope, stmt_iterable_expr(stmt).name, stmt_iterable_expr(stmt).location);
         if (const auto element = iterable_type_ref_from_type(local_ref)) {
             return *element;
         }
     }
-    const TypeRef iterable_type = infer_lsp_expr_type(scope, stmt.iterable_expr);
+    const TypeRef iterable_type = infer_lsp_expr_type(scope, stmt_iterable_expr(stmt));
     if (const auto element = iterable_type_ref_from_type(iterable_type)) {
         return *element;
     }

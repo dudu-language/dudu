@@ -201,7 +201,7 @@ struct Stmt {
     Expr target_expr;
     Expr condition_expr;
     std::shared_ptr<Expr> message_expr;
-    Expr iterable_expr;
+    std::shared_ptr<Expr> iterable_expr;
     std::shared_ptr<Expr> pattern_expr;
     std::shared_ptr<Expr> guard_expr;
     std::vector<Stmt> children;
@@ -389,7 +389,9 @@ template <typename Visit> void visit_stmt_expressions_impl(const Stmt& stmt, Vis
     if (stmt.message_expr != nullptr) {
         visit(*stmt.message_expr);
     }
-    visit(stmt.iterable_expr);
+    if (stmt.iterable_expr != nullptr) {
+        visit(*stmt.iterable_expr);
+    }
     if (stmt.pattern_expr != nullptr) {
         visit(*stmt.pattern_expr);
     }

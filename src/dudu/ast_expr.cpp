@@ -210,6 +210,23 @@ void set_stmt_message_expr(Stmt& stmt, Expr expr) {
     stmt.message_expr = std::make_shared<Expr>(std::move(expr));
 }
 
+bool has_stmt_iterable_expr(const Stmt& stmt) {
+    return stmt.iterable_expr != nullptr && expr_present(*stmt.iterable_expr);
+}
+
+const Expr& stmt_iterable_expr(const Stmt& stmt) {
+    static const Expr empty;
+    return stmt.iterable_expr == nullptr ? empty : *stmt.iterable_expr;
+}
+
+void set_stmt_iterable_expr(Stmt& stmt, Expr expr) {
+    if (expr_missing(expr)) {
+        stmt.iterable_expr.reset();
+        return;
+    }
+    stmt.iterable_expr = std::make_shared<Expr>(std::move(expr));
+}
+
 bool has_stmt_pattern_expr(const Stmt& stmt) {
     return stmt.pattern_expr != nullptr && expr_present(*stmt.pattern_expr);
 }

@@ -161,24 +161,24 @@ void check_condition_type(FunctionScope& scope, const Stmt& stmt) {
 }
 
 std::optional<TypeRef> infer_for_binding_type(FunctionScope& scope, const Stmt& stmt) {
-    if (!sema_has_expr(stmt.iterable_expr)) {
+    if (!has_stmt_iterable_expr(stmt)) {
         return std::nullopt;
     }
-    const SourceLocation& location = diagnostic_location(stmt.location, stmt.iterable_expr);
-    if (direct_callee_name(stmt.iterable_expr) == "range") {
-        for (const Expr& arg : stmt.iterable_expr.children) {
+    const SourceLocation& location = diagnostic_location(stmt.location, stmt_iterable_expr(stmt));
+    if (direct_callee_name(stmt_iterable_expr(stmt)) == "range") {
+        for (const Expr& arg : stmt_iterable_expr(stmt).children) {
             (void)infer_expr_type_ast(scope, arg, &location);
         }
         return named_type_ref("i32", location);
     }
-    if (stmt.iterable_expr.kind == ExprKind::Name) {
+    if (stmt_iterable_expr(stmt).kind == ExprKind::Name) {
         const std::optional<TypeRef> element =
-            iterable_value_type_ref(scope.local_type_refs, stmt.iterable_expr.name);
+            iterable_value_type_ref(scope.local_type_refs, stmt_iterable_expr(stmt).name);
         if (element) {
             return *element;
         }
     }
-    const TypeRef iterable_type = infer_expr_type_ast(scope, stmt.iterable_expr, &location);
+    const TypeRef iterable_type = infer_expr_type_ast(scope, stmt_iterable_expr(stmt), &location);
     if (!has_type_ref(iterable_type)) {
         return std::nullopt;
     }

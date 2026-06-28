@@ -1570,7 +1570,15 @@ push. They are not release packaging work.
    memory: expression-heavy 50k measured about 1.06s/319MB RSS, modules 50k
    about 124ms/172MB RSS, functions 50k about 101ms/85MB RSS, calls 50k about
    124ms/82MB RSS, control 50k about 132ms/90MB RSS, arrays 50k about
-   149ms/70MB RSS, and generics 50k about 144ms/56MB RSS. Keep
+   149ms/70MB RSS, and generics 50k about 144ms/56MB RSS. `for` iterable
+   expressions then moved behind sparse pointer storage, because only loop
+   statements carry them. This left `Expr` at 256 bytes and dropped local
+   `Stmt` size from 1488 to 1248 bytes. A broad one-sample 10k/50k Release
+   sweep stayed positive on memory: expression-heavy 50k measured about
+   1.05s/307MB RSS, modules 50k about 116ms/152MB RSS, functions 50k about
+   103ms/75MB RSS, calls 50k about 121ms/76MB RSS, control 50k about
+   127ms/81MB RSS, arrays 50k about 146ms/68MB RSS, and generics 50k about
+   145ms/53MB RSS. Keep
    compiler speed validation broad: generated corpora need multiple code shapes,
    because one particular compilation path can dominate or regress while an
    aggregate number looks acceptable. The

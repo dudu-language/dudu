@@ -115,6 +115,8 @@
   statement-heavy AST memory use.
 - Moved sparse match pattern expressions behind pointer storage, shrinking
   statement nodes again while keeping match handling structured.
+- Moved sparse `for` iterable expressions behind pointer storage, reducing AST
+  memory for non-loop-heavy code.
 - Reduced parser work by carrying layout-token metadata on joined token spans
   instead of rescanning each expression/type piece before parsing it.
 - Removed obsolete string-based Dudu method/class template substitution helpers.

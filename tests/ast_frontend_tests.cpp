@@ -944,8 +944,8 @@ void test_statement_ast_shape() {
     assert(main.statements[1].name == "item");
     assert(dudu::has_stmt_type_ref(main.statements[1]));
     assert(dudu::substitute_type_ref_text(dudu::stmt_type_ref(main.statements[1]), {}) == "i32");
-    assert(main.statements[1].iterable_expr.kind == dudu::ExprKind::Name);
-    assert(main.statements[1].iterable_expr.name == "values");
+    assert(dudu::stmt_iterable_expr(main.statements[1]).kind == dudu::ExprKind::Name);
+    assert(dudu::stmt_iterable_expr(main.statements[1]).name == "values");
     assert(main.statements[1].children.size() == 1);
     assert(main.statements[1].children[0].kind == dudu::StmtKind::CompoundAssign);
     assert(main.statements[1].children[0].target_expr.kind == dudu::ExprKind::Name);

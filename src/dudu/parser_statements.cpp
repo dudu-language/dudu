@@ -255,7 +255,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
             fail_current("expected in after for loop binding");
         }
         const JoinedTokens iterable = join_until_with_range({TokenKind::Colon, TokenKind::Newline});
-        stmt.iterable_expr = parse_expr_piece(iterable);
+        set_stmt_iterable_expr(stmt, parse_expr_piece(iterable));
         consume(TokenKind::Colon, "expected : after for loop iterable");
         attach_statement_range(stmt, join_tokens(begin, cursor_));
         return stmt;

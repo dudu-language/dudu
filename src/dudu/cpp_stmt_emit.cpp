@@ -345,9 +345,9 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         out << indent(depth) << "}\n";
         return;
     }
-    if (stmt.kind == StmtKind::For && has_expr(stmt.iterable_expr)) {
+    if (stmt.kind == StmtKind::For && has_stmt_iterable_expr(stmt)) {
         std::string binding = stmt.name;
-        const std::string range = lower_emitted_expr(stmt.iterable_expr, aliases, locals,
+        const std::string range = lower_emitted_expr(stmt_iterable_expr(stmt), aliases, locals,
                                                      local_type_refs, symbols, options);
         std::string binding_type = "auto";
         locals.bind(stmt.name);
@@ -355,8 +355,8 @@ void emit_statement(std::ostringstream& out, const Stmt& stmt, int depth,
             binding_type = lower_cpp_type(stmt_type_ref(stmt), aliases, options);
             local_type_refs[stmt.name] = stmt_type_ref(stmt);
         }
-        if (direct_callee_name(stmt.iterable_expr) == "range") {
-            const std::vector<Expr>& args = stmt.iterable_expr.children;
+        if (direct_callee_name(stmt_iterable_expr(stmt)) == "range") {
+            const std::vector<Expr>& args = stmt_iterable_expr(stmt).children;
             const std::string start = args.size() == 1
                                           ? "0"
                                           : lower_emitted_expr(args.at(0), aliases, locals,
