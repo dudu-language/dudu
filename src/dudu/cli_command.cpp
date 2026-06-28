@@ -6,6 +6,7 @@
 #include "dudu/cmake_emit.hpp"
 #include "dudu/cpp_emit.hpp"
 #include "dudu/cpp_emit_modules.hpp"
+#include "dudu/file_io.hpp"
 #include "dudu/format_path.hpp"
 #include "dudu/language_server.hpp"
 #include "dudu/module_loader.hpp"
@@ -23,7 +24,6 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <iterator>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -34,14 +34,6 @@ namespace {
 
 [[noreturn]] void fail(const std::string& message) {
     throw std::runtime_error(message);
-}
-
-std::string read_text_file(const std::filesystem::path& path) {
-    std::ifstream file(path);
-    if (!file) {
-        fail("could not open " + path.string());
-    }
-    return {std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
 }
 
 std::optional<std::filesystem::path> find_executable_on_path(const std::filesystem::path& name) {
@@ -231,7 +223,7 @@ ModuleAst checked_module(const CliOptions& options, const std::string& source, b
 
 void check_source_file(CliOptions options, const std::filesystem::path& path) {
     options.input = path;
-    (void)checked_module(options, read_text_file(path), true);
+    (void)checked_module(options, read_required_text_file(path), true);
 }
 
 bool check_source_path(const CliOptions& options) {
@@ -378,7 +370,7 @@ int run_cli(int argc, char** argv) {
         return run_run_command(options, argv[0]);
     }
 
-    const std::string source = read_text_file(options.input);
+    const std::string source = read_required_text_file(options.input);
     if (options.header_output.has_value()) {
         write_text_output(options.header_output,
                           emit_cpp_header(checked_module(options, source, false)));

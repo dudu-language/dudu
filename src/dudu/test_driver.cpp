@@ -4,6 +4,7 @@
 #include "dudu/cmake_backend.hpp"
 #include "dudu/cmake_emit.hpp"
 #include "dudu/decorators.hpp"
+#include "dudu/file_io.hpp"
 #include "dudu/native_build.hpp"
 #include "dudu/parser.hpp"
 #include "dudu/project_config.hpp"
@@ -12,7 +13,6 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
-#include <fstream>
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
@@ -23,14 +23,6 @@ namespace {
 
 [[noreturn]] void fail(const std::string& message) {
     throw std::runtime_error(message);
-}
-
-std::string read_text_file(const std::filesystem::path& path) {
-    std::ifstream file(path);
-    if (!file) {
-        fail("could not open " + path.string());
-    }
-    return {std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
 }
 
 std::filesystem::path build_config_path(const std::filesystem::path& input) {
@@ -83,7 +75,7 @@ bool module_has_tests(const ModuleAst& module) {
 }
 
 bool file_has_tests(const std::filesystem::path& path) {
-    return module_has_tests(parse_source(read_text_file(path), path));
+    return module_has_tests(parse_source(read_required_text_file(path), path));
 }
 
 std::vector<std::filesystem::path> discover_test_files(const std::filesystem::path& root) {

@@ -1,15 +1,17 @@
 #include "dudu/language_server_workspace.hpp"
 
+#include "dudu/file_io.hpp"
 #include "dudu/language_server_navigation.hpp"
 #include "dudu/language_server_support.hpp"
 #include "dudu/module_names.hpp"
 #include "dudu/parser.hpp"
 
 #include <filesystem>
-#include <fstream>
 #include <map>
+#include <optional>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace dudu {
@@ -40,14 +42,12 @@ void collect_imported_documents(const Document& doc,
             error.clear();
             continue;
         }
-        std::ifstream file(path);
-        if (!file) {
+        std::optional<std::string> text = try_read_text_file(path);
+        if (!text) {
             continue;
         }
-        const std::string text{std::istreambuf_iterator<char>(file),
-                               std::istreambuf_iterator<char>()};
         const std::string uri = file_uri(path);
-        const Document imported{.uri = uri, .path = path, .text = text};
+        const Document imported{.uri = uri, .path = path, .text = std::move(*text)};
         out.try_emplace(uri, imported);
         ++scanned;
         visiting.insert(canonical);
@@ -83,14 +83,12 @@ void collect_workspace_documents(const std::filesystem::path& root,
             error.clear();
             continue;
         }
-        std::ifstream file(path);
-        if (!file) {
+        std::optional<std::string> text = try_read_text_file(path);
+        if (!text) {
             continue;
         }
-        const std::string text{std::istreambuf_iterator<char>(file),
-                               std::istreambuf_iterator<char>()};
         const std::string uri = file_uri(path);
-        out[uri] = {.uri = uri, .path = path, .text = text};
+        out[uri] = {.uri = uri, .path = path, .text = std::move(*text)};
         if (++scanned >= 1000) {
             return;
         }

@@ -1,5 +1,6 @@
 #include "dudu/format_path.hpp"
 
+#include "dudu/file_io.hpp"
 #include "dudu/format.hpp"
 
 #include <algorithm>
@@ -10,14 +11,6 @@
 
 namespace dudu {
 namespace {
-
-std::string read_text_file(const std::filesystem::path& path) {
-    std::ifstream file(path);
-    if (!file) {
-        throw std::runtime_error("could not open " + path.string());
-    }
-    return {std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
-}
 
 void write_text_file(const std::filesystem::path& path, const std::string& text) {
     std::ofstream out(path);
@@ -72,11 +65,11 @@ bool excluded_dir(const std::filesystem::path& path,
 }
 
 void format_file_in_place(const std::filesystem::path& path) {
-    write_text_file(path, format_source(read_text_file(path)));
+    write_text_file(path, format_source(read_required_text_file(path)));
 }
 
 bool check_formatted_file(const std::filesystem::path& path) {
-    const std::string source = read_text_file(path);
+    const std::string source = read_required_text_file(path);
     if (format_source(source) == source) {
         return true;
     }
@@ -129,7 +122,7 @@ void format_path(const std::filesystem::path& path,
                  const std::optional<std::filesystem::path>& output, std::ostream& stream,
                  const FormatPathOptions& options) {
     if (!std::filesystem::is_directory(path)) {
-        const std::string formatted = format_source(read_text_file(path));
+        const std::string formatted = format_source(read_required_text_file(path));
         if (!output.has_value() || output->empty()) {
             stream << formatted;
         } else {

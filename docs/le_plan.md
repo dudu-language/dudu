@@ -1716,7 +1716,13 @@ push. They are not release packaging work.
    rebuild a `string_view` from a C string and measure the literal every time.
    A three-sample broad Release sweep moved expression-heavy 50k from about
    239-240ms to about 233ms, with calls around 64ms, control around 76ms,
-   modules around 80ms, arrays around 85ms, and generics around 91ms. Keep
+   modules around 80ms, arrays around 85ms, and generics around 91ms.
+   Iterator-based full-file reads were then replaced with one shared pre-sized
+   file read helper used by the CLI, module loader, formatter, test driver,
+   LSP workspace scan, native-header cache, and generated-CMake backend. The
+   three-sample broad Release sweep was mostly neutral on frontend throughput:
+   expression-heavy 50k stayed around 232ms, while calls/control/arrays moved
+   slightly lower and build-driver cases stayed within normal noise. Keep
    compiler speed
    validation broad: generated corpora need multiple diverse code shapes,
    because one particular compilation path can dominate or regress while an

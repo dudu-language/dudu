@@ -4,9 +4,10 @@
 #include "dudu/cpp_emit.hpp"
 #include "dudu/cpp_emit_internal.hpp"
 #include "dudu/cpp_emit_prelude.hpp"
+#include "dudu/file_io.hpp"
 
 #include <fstream>
-#include <iterator>
+#include <optional>
 #include <set>
 #include <sstream>
 #include <stdexcept>
@@ -342,13 +343,11 @@ std::vector<CppModuleArtifact> emit_cpp_test_module_artifacts(const ModuleAst& m
 }
 
 bool file_content_matches(const std::filesystem::path& path, const std::string& content) {
-    std::ifstream in(path, std::ios::binary);
-    if (!in) {
+    std::optional<std::string> existing = try_read_text_file(path);
+    if (!existing) {
         return false;
     }
-    const std::string existing((std::istreambuf_iterator<char>(in)),
-                               std::istreambuf_iterator<char>());
-    return existing == content;
+    return *existing == content;
 }
 
 void write_cpp_artifacts(const std::filesystem::path& dir,

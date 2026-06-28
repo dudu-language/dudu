@@ -2,29 +2,29 @@
 
 #include "dudu/ast_parse_utils.hpp"
 #include "dudu/ast_type.hpp"
+#include "dudu/file_io.hpp"
 #include "dudu/module_import_aliases.hpp"
 #include "dudu/module_names.hpp"
 #include "dudu/parser.hpp"
 #include "dudu/source.hpp"
 
 #include <algorithm>
-#include <fstream>
 #include <map>
 #include <optional>
 #include <set>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace dudu {
 namespace {
 
 std::string read_text_file(const std::filesystem::path& path) {
-    std::ifstream file(path);
-    if (!file) {
-        throw CompileError({.file = SourceFileName(path.string()), .line = 1, .column = 1},
-                           "could not open module");
+    if (std::optional<std::string> text = try_read_text_file(path)) {
+        return std::move(*text);
     }
-    return {std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
+    throw CompileError({.file = SourceFileName(path.string()), .line = 1, .column = 1},
+                       "could not open module");
 }
 
 void stamp_module_origin(ModuleAst& module, const std::filesystem::path& source_path,

@@ -1,5 +1,6 @@
 #include "dudu/native_header_cache.hpp"
 
+#include "dudu/file_io.hpp"
 #include "dudu/native_header_cache_deps.hpp"
 #include "dudu/native_header_cache_format.hpp"
 #include "dudu/project_config.hpp"
@@ -15,11 +16,7 @@ namespace {
 constexpr std::string_view kScanCacheVersion = "dudu-native-scan-v4";
 
 std::string read_text(const std::filesystem::path& path) {
-    std::ifstream in(path);
-    if (!in) {
-        return {};
-    }
-    return {std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()};
+    return try_read_text_file(path).value_or("");
 }
 
 void write_text(const std::filesystem::path& path, const std::string& text) {

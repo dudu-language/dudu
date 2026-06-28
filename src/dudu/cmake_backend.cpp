@@ -1,6 +1,7 @@
 #include "dudu/cmake_backend.hpp"
 
 #include "dudu/cmake_emit.hpp"
+#include "dudu/file_io.hpp"
 #include "dudu/native_build.hpp"
 #include "dudu/project_driver.hpp"
 #include "dudu/source.hpp"
@@ -50,11 +51,7 @@ class BackendLock {
 };
 
 std::string read_text_file(const std::filesystem::path& path) {
-    std::ifstream file(path);
-    if (!file) {
-        return {};
-    }
-    return {std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
+    return try_read_text_file(path).value_or("");
 }
 
 bool write_text_file(const std::filesystem::path& path, const std::string& text) {

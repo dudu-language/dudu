@@ -1,6 +1,7 @@
 #include "dudu/native_header_scan_command.hpp"
 
 #include "dudu/cpp_lower.hpp"
+#include "dudu/file_io.hpp"
 #include "dudu/native_build.hpp"
 #include "dudu/project_driver.hpp"
 
@@ -78,11 +79,7 @@ std::string native_header_unquoted(std::string value) {
 }
 
 std::string native_header_read_text(const std::filesystem::path& path) {
-    std::ifstream in(path);
-    if (!in) {
-        return {};
-    }
-    return {std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()};
+    return try_read_text_file(path).value_or("");
 }
 
 void native_header_write_text(const std::filesystem::path& path, const std::string& text) {
@@ -142,8 +139,7 @@ std::string native_header_run_capture(const std::string& command,
     return native_header_read_text(output);
 }
 
-std::string native_header_scanner_source_for_header(const ImportDecl& import,
-                                                   bool with_c_prelude) {
+std::string native_header_scanner_source_for_header(const ImportDecl& import, bool with_c_prelude) {
     std::string source;
     if (with_c_prelude) {
         source += "#include <stddef.h>\n#include <stdio.h>\n";
