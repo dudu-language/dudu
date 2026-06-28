@@ -6,10 +6,11 @@ samples=3
 csv_path="$repo_root/build/bench_compiler/compiler_bench.csv"
 build_tools=1
 line_scales="1000,5000,10000"
+shapes="functions,classes,expressions,modules"
 
 usage() {
     cat <<'EOF'
-usage: scripts/bench_compiler.sh [--samples N] [--csv path] [--line-scales list] [--no-build]
+usage: scripts/bench_compiler.sh [--samples N] [--csv path] [--line-scales list] [--shapes list] [--no-build]
 
 Measures Dudu compiler and project-driver latency. This is an explicit
 developer benchmark, not part of the fast correctness loop.
@@ -17,6 +18,9 @@ developer benchmark, not part of the fast correctness loop.
 --line-scales accepts a comma-separated list of approximate generated Dudu
 source line counts, for example:
   --line-scales 10000,50000,100000,200000,500000,1000000
+
+--shapes accepts a comma-separated list of generated frontend stress shapes:
+  functions,classes,expressions,modules
 EOF
 }
 
@@ -32,6 +36,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --line-scales)
             line_scales="${2:?--line-scales requires a comma-separated list}"
+            shift 2
+            ;;
+        --shapes)
+            shapes="${2:?--shapes requires a comma-separated list}"
             shift 2
             ;;
         --no-build)
@@ -176,6 +184,34 @@ lsp_probe="$bench_dir/lsp_probe.py"
 synthetic_project="$bench_dir/synthetic_project"
 synthetic_entry="$synthetic_project/main.dd"
 scale_root="$bench_dir/scale_projects"
+IFS=',' read -r -a requested_shapes <<<"$shapes"
+
+shape_enabled() {
+    local wanted="$1"
+    local shape
+    for shape in "${requested_shapes[@]}"; do
+        shape="$(printf '%s' "$shape" | tr -d '[:space:]')"
+        if [[ "$shape" == "$wanted" ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+validate_shapes() {
+    local shape
+    for shape in "${requested_shapes[@]}"; do
+        shape="$(printf '%s' "$shape" | tr -d '[:space:]')"
+        case "$shape" in
+            functions|classes|expressions|modules)
+                ;;
+            *)
+                echo "invalid --shapes entry: $shape" >&2
+                exit 1
+                ;;
+        esac
+    done
+}
 
 prepare_incremental_project() {
     rm -rf "$incremental_project"
@@ -360,9 +396,9 @@ EOF
     done
 }
 
-prepare_scaled_frontend_case() {
+prepare_scaled_functions_case() {
     local requested_lines="$1"
-    local project="$scale_root/lines_$requested_lines"
+    local project="$scale_root/functions_$requested_lines"
     local entry="$project/main.dd"
     rm -rf "$project"
     mkdir -p "$project"
@@ -398,6 +434,121 @@ EOF
     } >>"$entry"
     printf '%s\n' "$entry"
 }
+
+prepare_scaled_classes_case() {
+    local requested_lines="$1"
+    local project="$scale_root/classes_$requested_lines"
+    local entry="$project/main.dd"
+    rm -rf "$project"
+    mkdir -p "$project"
+
+    local classes=$((requested_lines / 9))
+    if [[ "$classes" -lt 1 ]]; then
+        classes=1
+    fi
+    : >"$entry"
+    for ((i = 0; i < classes; ++i)); do
+        cat >>"$entry" <<EOF
+class BenchType$i:
+    value: i32
+
+    def bump(self, delta: i32) -> i32:
+        self.value += delta
+        return self.value
+
+EOF
+    done
+    {
+        printf 'def main() -> i32:\n'
+        printf '    total: i32 = 0\n'
+        local limit="$classes"
+        if [[ "$limit" -gt 128 ]]; then
+            limit=128
+        fi
+        for ((i = 0; i < limit; ++i)); do
+            printf '    item_%d = BenchType%d(%d)\n' "$i" "$i" "$i"
+            printf '    total += item_%d.bump(%d)\n' "$i" "$i"
+        done
+        printf '    return total\n'
+    } >>"$entry"
+    printf '%s\n' "$entry"
+}
+
+prepare_scaled_expressions_case() {
+    local requested_lines="$1"
+    local project="$scale_root/expressions_$requested_lines"
+    local entry="$project/main.dd"
+    rm -rf "$project"
+    mkdir -p "$project"
+
+    local statements=$((requested_lines - 4))
+    if [[ "$statements" -lt 1 ]]; then
+        statements=1
+    fi
+    {
+        printf 'def main() -> i32:\n'
+        printf '    total: i32 = 1\n'
+        for ((i = 0; i < statements; ++i)); do
+            printf '    total = (((total + %d) * 3) - ((%d + total) / 2)) + (%d %% 17)\n' "$i" "$i" "$i"
+        done
+        printf '    return total\n'
+    } >"$entry"
+    printf '%s\n' "$entry"
+}
+
+prepare_scaled_modules_case() {
+    local requested_lines="$1"
+    local project="$scale_root/modules_$requested_lines"
+    local entry="$project/main.dd"
+    rm -rf "$project"
+    mkdir -p "$project"
+
+    local module_count=16
+    local funcs_per_module=$((requested_lines / (module_count * 7)))
+    if [[ "$funcs_per_module" -lt 1 ]]; then
+        funcs_per_module=1
+    fi
+
+    : >"$entry"
+    for ((module = 0; module < module_count; ++module)); do
+        printf 'import mod%02d\n' "$module" >>"$entry"
+    done
+    {
+        printf '\n'
+        printf 'def main() -> i32:\n'
+        printf '    total: i32 = 0\n'
+    } >>"$entry"
+    for ((module = 0; module < module_count; ++module)); do
+        local call_limit="$funcs_per_module"
+        if [[ "$call_limit" -gt 16 ]]; then
+            call_limit=16
+        fi
+        for ((func = 0; func < call_limit; ++func)); do
+            printf '    total += mod%02d.mod%02d_func%03d(%d)\n' \
+                "$module" "$module" "$func" "$func" >>"$entry"
+        done
+    done
+    printf '    return total\n' >>"$entry"
+
+    for ((module = 0; module < module_count; ++module)); do
+        local file
+        file="$(printf '%s/mod%02d.dd' "$project" "$module")"
+        : >"$file"
+        for ((func = 0; func < funcs_per_module; ++func)); do
+            cat >>"$file" <<EOF
+def mod$(printf '%02d' "$module")_func$(printf '%03d' "$func")(value: i32) -> i32:
+    running: i32 = value
+    running += $module
+    running += $func
+    return running
+
+EOF
+        done
+    done
+    printf '%s\n' "$entry"
+}
+
+validate_shapes
 
 run_case "duc_check_simple" "frontend_check" "$simple" \
     "$repo_root/build/duc" check "$simple"
@@ -448,9 +599,27 @@ for requested_lines in "${requested_line_scales[@]}"; do
             exit 1
             ;;
     esac
-    scaled_entry="$(prepare_scaled_frontend_case "$requested_lines")"
-    run_case "duc_check_lines_${requested_lines}" "frontend_lines" "$scaled_entry" \
-        "$repo_root/build/duc" check "$scaled_entry"
+    if shape_enabled "functions"; then
+        scaled_entry="$(prepare_scaled_functions_case "$requested_lines")"
+        run_case "duc_check_functions_${requested_lines}" "frontend_functions" "$scaled_entry" \
+            "$repo_root/build/duc" check "$scaled_entry"
+    fi
+    if shape_enabled "classes"; then
+        scaled_entry="$(prepare_scaled_classes_case "$requested_lines")"
+        run_case "duc_check_classes_${requested_lines}" "frontend_classes" "$scaled_entry" \
+            "$repo_root/build/duc" check "$scaled_entry"
+    fi
+    if shape_enabled "expressions"; then
+        scaled_entry="$(prepare_scaled_expressions_case "$requested_lines")"
+        run_case "duc_check_expressions_${requested_lines}" "frontend_expressions" "$scaled_entry" \
+            "$repo_root/build/duc" check "$scaled_entry"
+    fi
+    if shape_enabled "modules"; then
+        scaled_entry="$(prepare_scaled_modules_case "$requested_lines")"
+        scaled_project="$(dirname "$scaled_entry")"
+        run_case "duc_check_modules_${requested_lines}" "frontend_modules" "$scaled_project" \
+            "$repo_root/build/duc" check "$scaled_entry"
+    fi
 done
 
 echo

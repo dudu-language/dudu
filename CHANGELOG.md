@@ -135,6 +135,8 @@
   completion, signature help, imported module docs, and native C/C++ docs.
 - Added scalable generated-source compiler benchmark cases with line-count
   controls and lines-per-second summaries.
+- Expanded compiler benchmarks with selectable generated code shapes for
+  functions, classes, expression-heavy bodies, and multi-module import graphs.
 
 ### Changed
 

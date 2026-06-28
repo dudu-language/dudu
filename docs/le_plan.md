@@ -1396,7 +1396,10 @@ push. They are not release packaging work.
 
    - tiny single-file script-style program
    - medium multi-module Dudu project
-   - large synthetic Dudu source corpus for frontend throughput
+   - large synthetic Dudu source corpora for frontend throughput, split across
+     diverse generated shapes instead of only one easy case:
+     many functions, many classes/methods, expression-heavy bodies, and
+     multi-module import graphs
    - native-heavy imports such as standard library, SDL3, raylib, glm, sqlite,
      and POSIX headers
    - generated CMake backend projects
@@ -1424,14 +1427,20 @@ push. They are not release packaging work.
    smoke suite. A generated synthetic multi-module corpus under
    `build/bench_compiler` gives frontend throughput a larger parse/sema input
    than the tiny correctness fixtures. The benchmark also generates scalable
-   single-file frontend-throughput corpora through `--line-scales`, defaulting
-   to `1000,5000,10000` lines and allowing explicit stress runs such as
-   `--line-scales 10000,50000,100000,200000,500000,1000000`. Summary output
-   reports lines per second in addition to elapsed time and peak RSS. A local
-   one-sample baseline on 2026-06-28 measured `duc check` at about 13.3s and
-   318MB RSS for roughly 10k generated Dudu lines, which is too slow for the
-   language goal and should trigger profiling before larger 50k+ runs become
-   useful. The changed-file case runs against a copied fixture under
+   frontend-throughput corpora through `--line-scales`, defaulting to
+   `1000,5000,10000` lines and allowing explicit stress runs such as
+   `--line-scales 10000,50000,100000,200000,500000,1000000`. The generated
+   shapes are selectable with `--shapes functions,classes,expressions,modules`
+   so profiling can distinguish slow declaration lookup, class/member handling,
+   expression parsing/sema, and import/module behavior. Summary output reports
+   lines per second in addition to elapsed time and peak RSS. A local one-sample
+   baseline on 2026-06-28 measured the original many-functions shape at about
+   13.3s and 318MB RSS for roughly 10k generated Dudu lines, which is too slow
+   for the language goal and should trigger profiling before larger 50k+ runs
+   become useful. A later 5k one-sample diverse run showed classes/modules
+   around 0.5-0.6s, while many-functions and expression-heavy cases were around
+   3.5-3.6s, so optimization work should prioritize those paths before import
+   mechanics. The changed-file case runs against a copied fixture under
    `build/bench_compiler` so benchmarks do not mutate checked-in examples. It
    records source line/file counts and peak child-process RSS in KB with each
    sample. This is a baseline harness, not a pass/fail gate; thresholds, larger
