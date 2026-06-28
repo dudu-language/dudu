@@ -203,7 +203,7 @@ struct Stmt {
     std::shared_ptr<Expr> message_expr;
     Expr iterable_expr;
     Expr pattern_expr;
-    Expr guard_expr;
+    std::shared_ptr<Expr> guard_expr;
     std::vector<Stmt> children;
     SourceLocation location;
     SourceRange range;
@@ -391,7 +391,9 @@ template <typename Visit> void visit_stmt_expressions_impl(const Stmt& stmt, Vis
     }
     visit(stmt.iterable_expr);
     visit(stmt.pattern_expr);
-    visit(stmt.guard_expr);
+    if (stmt.guard_expr != nullptr) {
+        visit(*stmt.guard_expr);
+    }
 }
 template <typename Visit> void visit_stmt_tree_expressions_impl(const Stmt& stmt, Visit& visit) {
     auto visit_expr = [&](const Expr& expr) { visit_expr_tree_impl(expr, visit); };

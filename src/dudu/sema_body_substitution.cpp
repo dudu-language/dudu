@@ -49,7 +49,11 @@ void substitute_stmt_types(Stmt& stmt, const std::map<std::string, TypeRef>& sub
     }
     substitute_expr_types(stmt.iterable_expr, substitutions);
     substitute_expr_types(stmt.pattern_expr, substitutions);
-    substitute_expr_types(stmt.guard_expr, substitutions);
+    if (has_stmt_guard_expr(stmt)) {
+        Expr guard = stmt_guard_expr(stmt);
+        substitute_expr_types(guard, substitutions);
+        set_stmt_guard_expr(stmt, std::move(guard));
+    }
     for (Stmt& child : stmt.children) {
         substitute_stmt_types(child, substitutions);
     }

@@ -41,6 +41,9 @@ void set_expr_template_type_args(Expr& expr, std::vector<TypeRef> args);
 bool has_stmt_message_expr(const Stmt& stmt);
 const Expr& stmt_message_expr(const Stmt& stmt);
 void set_stmt_message_expr(Stmt& stmt, Expr expr);
+bool has_stmt_guard_expr(const Stmt& stmt);
+const Expr& stmt_guard_expr(const Stmt& stmt);
+void set_stmt_guard_expr(Stmt& stmt, Expr expr);
 std::string display_expr(const Expr& expr);
 
 } // namespace dudu

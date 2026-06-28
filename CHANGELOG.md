@@ -111,6 +111,8 @@
 - Moved sparse assertion message expressions behind pointer storage, shrinking
   statement nodes and reducing peak RSS across generated compiler benchmark
   shapes.
+- Moved sparse match guard expressions behind pointer storage, further reducing
+  statement-heavy AST memory use.
 - Reduced parser work by carrying layout-token metadata on joined token spans
   instead of rescanning each expression/type piece before parsing it.
 - Removed obsolete string-based Dudu method/class template substitution helpers.

@@ -1,5 +1,6 @@
 #include "dudu/cpp_match_emit.hpp"
 
+#include "dudu/ast_expr.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/control_flow.hpp"
 #include "dudu/cpp_expr_emit.hpp"
@@ -14,7 +15,7 @@
 namespace dudu {
 bool match_has_guards(const Stmt& stmt) {
     for (const Stmt& child : stmt.children) {
-        if (child.kind == StmtKind::Case && has_expr(child.guard_expr)) {
+        if (child.kind == StmtKind::Case && has_stmt_guard_expr(child)) {
             return true;
         }
     }
@@ -44,9 +45,9 @@ std::string value_case_condition(const Stmt& case_stmt, const std::string& subje
             subject + " == " +
             lower_expr(case_stmt.pattern_expr, aliases, locals, local_type_refs, symbols, options);
     }
-    if (has_expr(case_stmt.guard_expr)) {
-        const std::string guard =
-            lower_expr(case_stmt.guard_expr, aliases, locals, local_type_refs, symbols, options);
+    if (has_stmt_guard_expr(case_stmt)) {
+        const std::string guard = lower_expr(stmt_guard_expr(case_stmt), aliases, locals,
+                                             local_type_refs, symbols, options);
         condition = "(" + condition + ") && (" + guard + ")";
     }
     return condition;
@@ -62,9 +63,9 @@ std::string enum_case_condition(const Stmt& case_stmt, const EnumDecl& en,
     if (variant && *variant != "_") {
         condition = subject + " == " + emitted_type_name(en.name, options) + "::" + *variant;
     }
-    if (has_expr(case_stmt.guard_expr)) {
-        const std::string guard =
-            lower_expr(case_stmt.guard_expr, aliases, locals, local_type_refs, symbols, options);
+    if (has_stmt_guard_expr(case_stmt)) {
+        const std::string guard = lower_expr(stmt_guard_expr(case_stmt), aliases, locals,
+                                             local_type_refs, symbols, options);
         condition = "(" + condition + ") && (" + guard + ")";
     }
     return condition;
@@ -82,7 +83,7 @@ void emit_all_return_value_match(std::ostringstream& out, const Stmt& stmt, int 
         if (child.kind != StmtKind::Case) {
             continue;
         }
-        if (is_wildcard_pattern_expr(child.pattern_expr) && !has_expr(child.guard_expr)) {
+        if (is_wildcard_pattern_expr(child.pattern_expr) && !has_stmt_guard_expr(child)) {
             emit_block(out, child.children, depth, aliases, locals, local_type_refs,
                        return_type_ref, function_returns, symbols, options);
             return;
@@ -110,7 +111,7 @@ void emit_ordered_value_match(std::ostringstream& out, const Stmt& stmt, int dep
         if (child.kind != StmtKind::Case) {
             continue;
         }
-        if (is_wildcard_pattern_expr(child.pattern_expr) && !has_expr(child.guard_expr)) {
+        if (is_wildcard_pattern_expr(child.pattern_expr) && !has_stmt_guard_expr(child)) {
             if (emitted_case) {
                 out << indent(depth) << "else {\n";
                 emit_block(out, child.children, depth + 1, aliases, locals, local_type_refs,
@@ -145,7 +146,7 @@ void emit_ordered_enum_match(std::ostringstream& out, const Stmt& stmt, int dept
         if (child.kind != StmtKind::Case) {
             continue;
         }
-        if (is_wildcard_pattern_expr(child.pattern_expr) && !has_expr(child.guard_expr)) {
+        if (is_wildcard_pattern_expr(child.pattern_expr) && !has_stmt_guard_expr(child)) {
             if (emitted_case) {
                 out << indent(depth) << "else {\n";
                 emit_block(out, child.children, depth + 1, aliases, locals, local_type_refs,
@@ -235,10 +236,10 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                         }
                     }
                 }
-                if (has_expr(child.guard_expr)) {
+                if (has_stmt_guard_expr(child)) {
                     out << indent(depth + 1) << "if ("
-                        << lower_expr(child.guard_expr, aliases, nested, nested_type_refs, symbols,
-                                      options)
+                        << lower_expr(stmt_guard_expr(child), aliases, nested, nested_type_refs,
+                                      symbols, options)
                         << ") {\n";
                     out << indent(depth + 2) << matched << " = true;\n";
                     emit_block(out, child.children, depth + 2, aliases, nested, nested_type_refs,
@@ -324,10 +325,10 @@ void emit_match_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                         }
                     }
                 }
-                if (has_expr(child.guard_expr)) {
+                if (has_stmt_guard_expr(child)) {
                     out << indent(depth + 1) << "if ("
-                        << lower_expr(child.guard_expr, aliases, nested, nested_type_refs, symbols,
-                                      options)
+                        << lower_expr(stmt_guard_expr(child), aliases, nested, nested_type_refs,
+                                      symbols, options)
                         << ") {\n";
                     out << indent(depth + 2) << matched << " = true;\n";
                     emit_block(out, child.children, depth + 2, aliases, nested, nested_type_refs,

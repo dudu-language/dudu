@@ -1741,17 +1741,17 @@ void test_match_case_ast_shape() {
     assert(move.pattern_expr.children[0].name == "x");
     assert(move.pattern_expr.children[1].kind == dudu::ExprKind::Name);
     assert(move.pattern_expr.children[1].name == "y");
-    assert(move.guard_expr.kind == dudu::ExprKind::Binary);
-    assert(move.guard_expr.op == ">");
-    assert(move.guard_expr.children.size() == 2);
-    assert(move.guard_expr.children[0].kind == dudu::ExprKind::Name);
-    assert(move.guard_expr.children[0].name == "x");
-    assert(move.guard_expr.children[1].kind == dudu::ExprKind::IntLiteral);
-    assert(move.guard_expr.children[1].value == "0");
+    assert(dudu::stmt_guard_expr(move).kind == dudu::ExprKind::Binary);
+    assert(dudu::stmt_guard_expr(move).op == ">");
+    assert(dudu::stmt_guard_expr(move).children.size() == 2);
+    assert(dudu::stmt_guard_expr(move).children[0].kind == dudu::ExprKind::Name);
+    assert(dudu::stmt_guard_expr(move).children[0].name == "x");
+    assert(dudu::stmt_guard_expr(move).children[1].kind == dudu::ExprKind::IntLiteral);
+    assert(dudu::stmt_guard_expr(move).children[1].value == "0");
 
     const dudu::Stmt& wildcard = match.children[2];
     assert(wildcard.kind == dudu::StmtKind::Case);
-    assert(wildcard.guard_expr.kind == dudu::ExprKind::Missing);
+    assert(dudu::stmt_guard_expr(wildcard).kind == dudu::ExprKind::Missing);
     assert(wildcard.pattern_expr.kind == dudu::ExprKind::Name);
     assert(wildcard.pattern_expr.name == "_");
 }

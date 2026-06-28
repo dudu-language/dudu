@@ -1555,7 +1555,14 @@ push. They are not release packaging work.
    modules 50k about 145ms/212MB RSS, functions 50k about 114ms/103MB RSS,
    calls 50k about 133ms/97MB RSS, control 50k about 140ms/107MB RSS, arrays
    50k about 153ms/80MB RSS, and generics 50k about 150ms/61MB RSS. Time
-   remains noise-level at this size, so keep this as a memory/scale win. Keep
+   remains noise-level at this size, so keep this as a memory/scale win. Match
+   guard expressions were then moved behind sparse pointer storage for the same
+   reason. This left `Expr` at 256 bytes and dropped local `Stmt` size from
+   1968 to 1728 bytes. A broad one-sample 10k/50k Release sweep stayed
+   positive: expression-heavy 50k measured about 1.05s/331MB RSS, modules 50k
+   about 137ms/193MB RSS, functions 50k about 110ms/94MB RSS, calls 50k about
+   127ms/90MB RSS, control 50k about 131ms/98MB RSS, arrays 50k about
+   154ms/75MB RSS, and generics 50k about 149ms/58MB RSS. Keep
    compiler speed validation broad: generated corpora need multiple code shapes,
    because one particular compilation path can dominate or regress while an
    aggregate number looks acceptable. The

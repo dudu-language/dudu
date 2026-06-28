@@ -268,7 +268,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
         if (match_identifier("if")) {
             const JoinedTokens guard =
                 join_until_with_range({TokenKind::Colon, TokenKind::Newline});
-            stmt.guard_expr = parse_expr_piece(guard);
+            set_stmt_guard_expr(stmt, parse_expr_piece(guard));
         }
         consume(TokenKind::Colon, "expected : after case pattern");
         attach_statement_range(stmt, join_tokens(begin, cursor_));

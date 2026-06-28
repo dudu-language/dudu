@@ -1,5 +1,6 @@
 #include "dudu/sema_match.hpp"
 
+#include "dudu/ast_expr.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_lower.hpp"
 #include "dudu/match_patterns.hpp"
@@ -121,27 +122,28 @@ bool check_wrapper_match(FunctionScope& scope, const Stmt& stmt, const TypeRef& 
                                           : "case pattern must be Ok(...), Err(...), or _");
         }
         if (*name == "_") {
-            if (!sema_has_expr(child.guard_expr) && covered == expected) {
+            if (!has_stmt_guard_expr(child) && covered == expected) {
                 sema_fail(child.location, "unreachable wildcard case after exhaustive cases");
             }
-            if (!sema_has_expr(child.guard_expr)) {
+            if (!has_stmt_guard_expr(child)) {
                 wildcard = true;
             }
         } else {
             if (covered.contains(*name)) {
                 sema_fail(child.location, "unreachable duplicate case: " + *name);
             }
-            if (!sema_has_expr(child.guard_expr)) {
+            if (!has_stmt_guard_expr(child)) {
                 covered.insert(*name);
             }
         }
         FunctionScope nested = scope;
         bind_wrapper_case(nested, wrapper, child.pattern_expr, child.location);
-        if (sema_has_expr(child.guard_expr)) {
-            const TypeRef guard_ref = infer_expr_type_ast(
-                nested, child.guard_expr, &diagnostic_location(child.location, child.guard_expr));
+        if (has_stmt_guard_expr(child)) {
+            const TypeRef guard_ref =
+                infer_expr_type_ast(nested, stmt_guard_expr(child),
+                                    &diagnostic_location(child.location, stmt_guard_expr(child)));
             if (!type_ref_is_name(guard_ref, "bool")) {
-                sema_fail(diagnostic_location(child.location, child.guard_expr),
+                sema_fail(diagnostic_location(child.location, stmt_guard_expr(child)),
                           "match guard must be bool, got " + type_ref_text(guard_ref));
             }
         }
@@ -201,10 +203,10 @@ void check_enum_match(FunctionScope& scope, const Stmt& stmt, const TypeRef& ret
             sema_fail(child.location, "case pattern must be " + en.name + ".Variant or _");
         }
         if (*variant == "_") {
-            if (!sema_has_expr(child.guard_expr) && covered.size() == en.values.size()) {
+            if (!has_stmt_guard_expr(child) && covered.size() == en.values.size()) {
                 sema_fail(child.location, "unreachable wildcard case after exhaustive cases");
             }
-            if (!sema_has_expr(child.guard_expr)) {
+            if (!has_stmt_guard_expr(child)) {
                 wildcard = true;
             }
         } else {
@@ -216,7 +218,7 @@ void check_enum_match(FunctionScope& scope, const Stmt& stmt, const TypeRef& ret
                 sema_fail(child.location,
                           "unreachable duplicate case: " + en.name + "." + *variant);
             }
-            if (!sema_has_expr(child.guard_expr)) {
+            if (!has_stmt_guard_expr(child)) {
                 covered.insert(*variant);
             }
         }
@@ -227,11 +229,12 @@ void check_enum_match(FunctionScope& scope, const Stmt& stmt, const TypeRef& ret
                 bind_payload_case(nested, *value, child.pattern_expr, child.location);
             }
         }
-        if (sema_has_expr(child.guard_expr)) {
-            const TypeRef guard_ref = infer_expr_type_ast(
-                nested, child.guard_expr, &diagnostic_location(child.location, child.guard_expr));
+        if (has_stmt_guard_expr(child)) {
+            const TypeRef guard_ref =
+                infer_expr_type_ast(nested, stmt_guard_expr(child),
+                                    &diagnostic_location(child.location, stmt_guard_expr(child)));
             if (!type_ref_is_name(guard_ref, "bool")) {
-                sema_fail(diagnostic_location(child.location, child.guard_expr),
+                sema_fail(diagnostic_location(child.location, stmt_guard_expr(child)),
                           "match guard must be bool, got " + type_ref_text(guard_ref));
             }
         }
@@ -254,7 +257,7 @@ void check_value_match(FunctionScope& scope, const Stmt& stmt, const TypeRef& re
             sema_fail(child.location, "unreachable case after wildcard");
         }
         if (is_wildcard_pattern_expr(child.pattern_expr)) {
-            if (!sema_has_expr(child.guard_expr)) {
+            if (!has_stmt_guard_expr(child)) {
                 wildcard = true;
             }
         } else {
@@ -269,11 +272,12 @@ void check_value_match(FunctionScope& scope, const Stmt& stmt, const TypeRef& re
                                                 type_ref_text(pattern_ref));
             }
         }
-        if (sema_has_expr(child.guard_expr)) {
-            const TypeRef guard_ref = infer_expr_type_ast(
-                scope, child.guard_expr, &diagnostic_location(child.location, child.guard_expr));
+        if (has_stmt_guard_expr(child)) {
+            const TypeRef guard_ref =
+                infer_expr_type_ast(scope, stmt_guard_expr(child),
+                                    &diagnostic_location(child.location, stmt_guard_expr(child)));
             if (!type_ref_is_name(guard_ref, "bool")) {
-                sema_fail(diagnostic_location(child.location, child.guard_expr),
+                sema_fail(diagnostic_location(child.location, stmt_guard_expr(child)),
                           "match guard must be bool, got " + type_ref_text(guard_ref));
             }
         }
@@ -289,7 +293,8 @@ void check_match_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& ret
     if (context.check_block == nullptr) {
         sema_fail(stmt.location, "internal error: match block checker missing");
     }
-    const SourceLocation& subject_location = diagnostic_location(stmt.location, stmt.condition_expr);
+    const SourceLocation& subject_location =
+        diagnostic_location(stmt.location, stmt.condition_expr);
     const TypeRef subject_ref = infer_expr_type_ast(scope, stmt.condition_expr, &subject_location);
     const WrapperMatchType wrapper = wrapper_match_type(subject_ref);
     if (wrapper.kind != WrapperMatchKind::None) {

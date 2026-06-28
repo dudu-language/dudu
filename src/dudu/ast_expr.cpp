@@ -210,6 +210,23 @@ void set_stmt_message_expr(Stmt& stmt, Expr expr) {
     stmt.message_expr = std::make_shared<Expr>(std::move(expr));
 }
 
+bool has_stmt_guard_expr(const Stmt& stmt) {
+    return stmt.guard_expr != nullptr && expr_present(*stmt.guard_expr);
+}
+
+const Expr& stmt_guard_expr(const Stmt& stmt) {
+    static const Expr empty;
+    return stmt.guard_expr == nullptr ? empty : *stmt.guard_expr;
+}
+
+void set_stmt_guard_expr(Stmt& stmt, Expr expr) {
+    if (expr_missing(expr)) {
+        stmt.guard_expr.reset();
+        return;
+    }
+    stmt.guard_expr = std::make_shared<Expr>(std::move(expr));
+}
+
 std::string join_display_exprs(const std::vector<Expr>& exprs, std::string_view separator) {
     std::ostringstream out;
     for (size_t i = 0; i < exprs.size(); ++i) {
