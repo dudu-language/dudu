@@ -1750,7 +1750,11 @@ push. They are not release packaging work.
    neutral-to-positive across broad shapes: simple `duc check` moved from
    about 17ms to 14ms, native cached checks from about 18ms to 14ms,
    expression-heavy 50k from about 231ms to 230ms, modules from about 79ms to
-   76ms, and mixed from about 111ms to 109ms. The
+   76ms, and mixed from about 111ms to 109ms. Shared parse utilities then got
+   the same ASCII treatment for trimming, identifier checks, and numeric
+   literal checks. A five-sample focused Release repeat on affected 50k shapes
+   was neutral-to-positive after noise settled: functions about 63ms, arrays
+   about 82ms, expressions about 228ms, and mixed about 106ms. The
    changed-file case runs against a copied fixture under `build/bench_compiler`
    so benchmarks do not mutate checked-in examples. It
    records source line/file counts and peak child-process RSS in KB with each
