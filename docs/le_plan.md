@@ -1486,7 +1486,10 @@ push. They are not release packaging work.
    statement parser now finds top-level colons and assignment operators in one
    pass over generic statements instead of scanning the same token span twice;
    direct 10k expression timings showed lower load time, while the broad
-   one-sample shape sweep was neutral-to-positive. The
+   one-sample shape sweep was neutral-to-positive. An O(1) `join_tokens` range
+   shortcut using only first and last token locations was tried and rejected
+   because repeated direct/harness timings were neutral-to-negative after noise
+   settled. The
    changed-file case runs against a copied fixture under `build/bench_compiler`
    so benchmarks do not mutate checked-in examples. It
    records source line/file counts and peak child-process RSS in KB with each
