@@ -1441,9 +1441,10 @@ push. They are not release packaging work.
    methods, generics, arrays, loops, calls, and arithmetic in one generated
    corpus. The `stdlib` shape is intentionally explicit rather than default
    because it pulls real C++ standard headers through native scanning and is
-   much slower than pure Dudu frontend shapes; a local one-sample 1k Release
-   run measured about 2.6s and 101MB RSS. Use it when validating native interop
-   throughput instead of every routine compiler-speed loop.
+   much slower than pure Dudu frontend shapes; a local 1k Release run measured
+   about 2.6s and 101MB RSS cold, then about 114ms and 47MB RSS on cached
+   samples. Use it when validating native interop throughput instead of every
+   routine compiler-speed loop.
    Compiler-speed claims must be checked against multiple generated shapes and
    at least one real dogfood project when practical, because one benchmark can
    hide that only a specific compilation feature is slow. Generated corpora
