@@ -1489,7 +1489,11 @@ push. They are not release packaging work.
    one-sample shape sweep was neutral-to-positive. An O(1) `join_tokens` range
    shortcut using only first and last token locations was tried and rejected
    because repeated direct/harness timings were neutral-to-negative after noise
-   settled. The
+   settled. A thread-local "last filename" cache inside the source filename
+   interner was also tried after callgrind showed `std::set` insertion/lookup
+   hot; it crashed through recursive interner entry and was reverted. Future
+   filename speed work should prefer a cleaner parse-owned source-file identity
+   instead of a clever interner cache. The
    changed-file case runs against a copied fixture under `build/bench_compiler`
    so benchmarks do not mutate checked-in examples. It
    records source line/file counts and peak child-process RSS in KB with each
