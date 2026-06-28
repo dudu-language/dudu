@@ -5,12 +5,13 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 samples=3
 csv_path="$repo_root/build/bench_compiler/compiler_bench.csv"
 build_tools=1
+build_type="Debug"
 line_scales="1000,5000,10000"
 shapes="functions,classes,expressions,modules"
 
 usage() {
     cat <<'EOF'
-usage: scripts/bench_compiler.sh [--samples N] [--csv path] [--line-scales list] [--shapes list] [--no-build]
+usage: scripts/bench_compiler.sh [--samples N] [--csv path] [--build-type Debug|Release] [--line-scales list] [--shapes list] [--no-build]
 
 Measures Dudu compiler and project-driver latency. This is an explicit
 developer benchmark, not part of the fast correctness loop.
@@ -21,6 +22,9 @@ source line counts, for example:
 
 --shapes accepts a comma-separated list of generated frontend stress shapes:
   functions,classes,expressions,modules
+
+--build-type chooses the compiler binary build used for the benchmark. Debug
+matches the normal dev loop. Release measures shipped-tool speed.
 EOF
 }
 
@@ -32,6 +36,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --csv)
             csv_path="${2:?--csv requires a path}"
+            shift 2
+            ;;
+        --build-type)
+            build_type="${2:?--build-type requires Debug or Release}"
             shift 2
             ;;
         --line-scales)
@@ -63,8 +71,28 @@ if [[ "$samples" -lt 1 ]]; then
     exit 1
 fi
 
+case "$build_type" in
+    Debug|Release|RelWithDebInfo)
+        ;;
+    *)
+        echo "--build-type must be Debug, Release, or RelWithDebInfo" >&2
+        exit 1
+        ;;
+esac
+
+tool_build_dir="$repo_root/build"
+if [[ "$build_type" != "Debug" ]]; then
+    tool_build_dir="$repo_root/build-${build_type,,}"
+fi
+
 if [[ "$build_tools" -eq 1 ]]; then
-    "$repo_root/scripts/build.sh" >/dev/null
+    cmake -S "$repo_root" -B "$tool_build_dir" \
+        -DCMAKE_BUILD_TYPE="$build_type" \
+        -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+        -DDUDU_BUILD_TESTS=ON \
+        -DDUDU_STRICT=ON \
+        -DDUDU_WARN_AS_ERROR=ON >/dev/null
+    cmake --build "$tool_build_dir" >/dev/null
 fi
 
 bench_dir="$repo_root/build/bench_compiler"
@@ -551,41 +579,41 @@ EOF
 validate_shapes
 
 run_case "duc_check_simple" "frontend_check" "$simple" \
-    "$repo_root/build/duc" check "$simple"
+    "$tool_build_dir/duc" check "$simple"
 
 run_case "duc_emit_simple" "cpp_emit" "$simple" \
-    "$repo_root/build/duc" emit "$simple" -o "$bench_dir/simple_program.cpp"
+    "$tool_build_dir/duc" emit "$simple" -o "$bench_dir/simple_program.cpp"
 
-"$repo_root/build/duc" clean-cache "$native_header" >/dev/null 2>&1
+"$tool_build_dir/duc" clean-cache "$native_header" >/dev/null 2>&1
 run_case "duc_check_native_cold" "native_scan_cold" "$native_header" \
-    "$repo_root/build/duc" check "$native_header"
+    "$tool_build_dir/duc" check "$native_header"
 
 run_case "duc_check_native_cached" "native_scan_cached" "$native_header" \
-    "$repo_root/build/duc" check "$native_header"
+    "$tool_build_dir/duc" check "$native_header"
 
 run_case "duc_build_file" "compiler_driver_build" "$simple" \
-    "$repo_root/build/duc" build "$simple" -o "$bench_dir/simple_program" --quiet
+    "$tool_build_dir/duc" build "$simple" -o "$bench_dir/simple_program" --quiet
 
 run_case "dudu_build_cmake_modules" "cmake_build" "$multi_project" \
-    "$repo_root/build/dudu" build "$multi_entry" --quiet
+    "$tool_build_dir/dudu" build "$multi_entry" --quiet
 
 prepare_incremental_project
-"$repo_root/build/dudu" build "$incremental_entry" --quiet >/dev/null
+"$tool_build_dir/dudu" build "$incremental_entry" --quiet >/dev/null
 
 run_case "dudu_build_cmake_modules_noop" "cmake_noop_build" "$incremental_project" \
-    "$repo_root/build/dudu" build "$incremental_entry" --quiet
+    "$tool_build_dir/dudu" build "$incremental_entry" --quiet
 
 run_case_prepared "dudu_build_cmake_modules_changed" "cmake_one_file_changed_build" \
     "$incremental_project" touch_incremental_dep \
-    "$repo_root/build/dudu" build "$incremental_entry" --quiet
+    "$tool_build_dir/dudu" build "$incremental_entry" --quiet
 
 prepare_lsp_project
 run_case "duc_lsp_diagnostics" "lsp_diagnostics" "$lsp_entry" \
-    python3 "$lsp_probe" "$repo_root/build/duc" "$lsp_entry"
+    python3 "$lsp_probe" "$tool_build_dir/duc" "$lsp_entry"
 
 prepare_synthetic_project
 run_case "duc_check_synthetic" "frontend_synthetic" "$synthetic_project" \
-    "$repo_root/build/duc" check "$synthetic_entry"
+    "$tool_build_dir/duc" check "$synthetic_entry"
 
 IFS=',' read -r -a requested_line_scales <<<"$line_scales"
 for requested_lines in "${requested_line_scales[@]}"; do
@@ -602,23 +630,23 @@ for requested_lines in "${requested_line_scales[@]}"; do
     if shape_enabled "functions"; then
         scaled_entry="$(prepare_scaled_functions_case "$requested_lines")"
         run_case "duc_check_functions_${requested_lines}" "frontend_functions" "$scaled_entry" \
-            "$repo_root/build/duc" check "$scaled_entry"
+            "$tool_build_dir/duc" check "$scaled_entry"
     fi
     if shape_enabled "classes"; then
         scaled_entry="$(prepare_scaled_classes_case "$requested_lines")"
         run_case "duc_check_classes_${requested_lines}" "frontend_classes" "$scaled_entry" \
-            "$repo_root/build/duc" check "$scaled_entry"
+            "$tool_build_dir/duc" check "$scaled_entry"
     fi
     if shape_enabled "expressions"; then
         scaled_entry="$(prepare_scaled_expressions_case "$requested_lines")"
         run_case "duc_check_expressions_${requested_lines}" "frontend_expressions" "$scaled_entry" \
-            "$repo_root/build/duc" check "$scaled_entry"
+            "$tool_build_dir/duc" check "$scaled_entry"
     fi
     if shape_enabled "modules"; then
         scaled_entry="$(prepare_scaled_modules_case "$requested_lines")"
         scaled_project="$(dirname "$scaled_entry")"
         run_case "duc_check_modules_${requested_lines}" "frontend_modules" "$scaled_project" \
-            "$repo_root/build/duc" check "$scaled_entry"
+            "$tool_build_dir/duc" check "$scaled_entry"
     fi
 done
 

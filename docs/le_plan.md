@@ -1432,8 +1432,11 @@ push. They are not release packaging work.
    `--line-scales 10000,50000,100000,200000,500000,1000000`. The generated
    shapes are selectable with `--shapes functions,classes,expressions,modules`
    so profiling can distinguish slow declaration lookup, class/member handling,
-   expression parsing/sema, and import/module behavior. Summary output reports
-   lines per second in addition to elapsed time and peak RSS. A local one-sample
+   expression parsing/sema, and import/module behavior. Benchmarks can select
+   `--build-type Debug`, `Release`, or `RelWithDebInfo`; Debug measures
+   inner-loop compiler development pain, while Release measures shipped-tool
+   speed. Summary output reports lines per second in addition to elapsed time
+   and peak RSS. A local one-sample
    baseline on 2026-06-28 measured the original many-functions shape at about
    13.3s and 318MB RSS for roughly 10k generated Dudu lines, which is too slow
    for the language goal and should trigger profiling before larger 50k+ runs
@@ -1452,7 +1455,10 @@ push. They are not release packaging work.
    RSS. A parser fast path now avoids copying expression/type token spans when
    they contain no layout tokens; this keeps multiline continuation semantics
    unchanged while dropping the local 5k expression-heavy parse/load phase from
-   about 0.87s to about 0.76s. The changed-file case runs against a copied
+   about 0.87s to about 0.76s. A local Release-built compiler check of the
+   10k expression-heavy generated case measured about 0.60s with `duc
+   --timings`, while the benchmark harness measured about 0.95s including its
+   process/RSS wrapper overhead. The changed-file case runs against a copied
    fixture under `build/bench_compiler` so benchmarks do not mutate checked-in
    examples. It
    records source line/file counts and peak child-process RSS in KB with each

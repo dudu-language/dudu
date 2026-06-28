@@ -77,6 +77,9 @@
 - Added parsed `TypeRef` substitution for generic Dudu field member lookup.
 - Removed render-and-reparse churn from Dudu-native generic class
   instantiation.
+- Added `scripts/bench_compiler.sh --build-type` so compiler throughput can be
+  measured separately for Debug development builds and Release shipped-tool
+  builds.
 - Removed obsolete string-based Dudu method/class template substitution helpers.
 - Removed an unused unknown-expression parser helper and renamed the remaining
   text call parser as an explicit `cpp(...)` escape-boundary helper.
