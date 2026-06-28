@@ -80,6 +80,8 @@
 - Added `scripts/bench_compiler.sh --build-type` so compiler throughput can be
   measured separately for Debug development builds and Release shipped-tool
   builds.
+- Expanded generated compiler benchmark shapes with calls, control-flow,
+  arrays/indexing, and generics stress cases.
 - Reduced parser/AST memory churn by storing `SourceLocation` file names as
   strings instead of full `std::filesystem::path` objects.
 - Removed obsolete string-based Dudu method/class template substitution helpers.

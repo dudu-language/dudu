@@ -7,7 +7,7 @@ csv_path="$repo_root/build/bench_compiler/compiler_bench.csv"
 build_tools=1
 build_type="Debug"
 line_scales="1000,5000,10000"
-shapes="functions,classes,expressions,modules"
+shapes="functions,classes,expressions,modules,calls,control,arrays,generics"
 
 usage() {
     cat <<'EOF'
@@ -21,7 +21,7 @@ source line counts, for example:
   --line-scales 10000,50000,100000,200000,500000,1000000
 
 --shapes accepts a comma-separated list of generated frontend stress shapes:
-  functions,classes,expressions,modules
+  functions,classes,expressions,modules,calls,control,arrays,generics
 
 --build-type chooses the compiler binary build used for the benchmark. Debug
 matches the normal dev loop. Release measures shipped-tool speed.
@@ -231,7 +231,7 @@ validate_shapes() {
     for shape in "${requested_shapes[@]}"; do
         shape="$(printf '%s' "$shape" | tr -d '[:space:]')"
         case "$shape" in
-            functions|classes|expressions|modules)
+            functions|classes|expressions|modules|calls|control|arrays|generics)
                 ;;
             *)
                 echo "invalid --shapes entry: $shape" >&2
@@ -576,6 +576,168 @@ EOF
     printf '%s\n' "$entry"
 }
 
+prepare_scaled_calls_case() {
+    local requested_lines="$1"
+    local project="$scale_root/calls_$requested_lines"
+    local entry="$project/main.dd"
+    rm -rf "$project"
+    mkdir -p "$project"
+
+    local helpers=$((requested_lines / 6))
+    if [[ "$helpers" -lt 1 ]]; then
+        helpers=1
+    fi
+    : >"$entry"
+    for ((i = 0; i < helpers; ++i)); do
+        cat >>"$entry" <<EOF
+def call_leaf_$i(left: i32, right: i32) -> i32:
+    value: i32 = left + right
+    value += $i
+    return value
+
+EOF
+    done
+    {
+        printf 'def main() -> i32:\n'
+        printf '    total: i32 = 0\n'
+        local limit="$helpers"
+        if [[ "$limit" -gt 512 ]]; then
+            limit=512
+        fi
+        for ((i = 0; i < limit; ++i)); do
+            printf '    total = call_leaf_%d(call_leaf_%d(total, %d), total)\n' "$i" "$i" "$i"
+        done
+        printf '    return total\n'
+    } >>"$entry"
+    printf '%s\n' "$entry"
+}
+
+prepare_scaled_control_case() {
+    local requested_lines="$1"
+    local project="$scale_root/control_$requested_lines"
+    local entry="$project/main.dd"
+    rm -rf "$project"
+    mkdir -p "$project"
+
+    local funcs=$((requested_lines / 12))
+    if [[ "$funcs" -lt 1 ]]; then
+        funcs=1
+    fi
+    : >"$entry"
+    for ((i = 0; i < funcs; ++i)); do
+        cat >>"$entry" <<EOF
+def control_func_$i(value: i32) -> i32:
+    total: i32 = value
+    for index: i32 in range(4):
+        if total % 2 == 0:
+            total += index + $i
+        else:
+            total -= index
+    while total < $((i + 16)):
+        total += 1
+    return total
+
+EOF
+    done
+    {
+        printf 'def main() -> i32:\n'
+        printf '    total: i32 = 0\n'
+        local limit="$funcs"
+        if [[ "$limit" -gt 256 ]]; then
+            limit=256
+        fi
+        for ((i = 0; i < limit; ++i)); do
+            printf '    total += control_func_%d(%d)\n' "$i" "$i"
+        done
+        printf '    return total\n'
+    } >>"$entry"
+    printf '%s\n' "$entry"
+}
+
+prepare_scaled_arrays_case() {
+    local requested_lines="$1"
+    local project="$scale_root/arrays_$requested_lines"
+    local entry="$project/main.dd"
+    rm -rf "$project"
+    mkdir -p "$project"
+
+    local funcs=$((requested_lines / 12))
+    if [[ "$funcs" -lt 1 ]]; then
+        funcs=1
+    fi
+    : >"$entry"
+    for ((i = 0; i < funcs; ++i)); do
+        cat >>"$entry" <<EOF
+def array_func_$i(values: &array[i32][4]) -> i32:
+    total: i32 = 0
+    for index: i32 in range(4):
+        total += values[index]
+    values[0] = total + $i
+    return values[0] + values[1]
+
+EOF
+    done
+    {
+        printf 'def main() -> i32:\n'
+        printf '    values: array[i32] = [1, 2, 3, 4]\n'
+        printf '    total: i32 = 0\n'
+        local limit="$funcs"
+        if [[ "$limit" -gt 256 ]]; then
+            limit=256
+        fi
+        for ((i = 0; i < limit; ++i)); do
+            printf '    total += array_func_%d(values)\n' "$i"
+        done
+        printf '    return total\n'
+    } >>"$entry"
+    printf '%s\n' "$entry"
+}
+
+prepare_scaled_generics_case() {
+    local requested_lines="$1"
+    local project="$scale_root/generics_$requested_lines"
+    local entry="$project/main.dd"
+    rm -rf "$project"
+    mkdir -p "$project"
+
+    local funcs=$((requested_lines / 9))
+    if [[ "$funcs" -lt 1 ]]; then
+        funcs=1
+    fi
+    cat >"$entry" <<'EOF'
+class BenchBox[T]:
+    value: T
+
+    def get(self) -> T:
+        return self.value
+
+def bench_identity[T](value: T) -> T:
+    return value
+
+EOF
+    for ((i = 0; i < funcs; ++i)); do
+        cat >>"$entry" <<EOF
+def generic_func_$i(value: i32) -> i32:
+    box: BenchBox[i32] = BenchBox[i32](bench_identity[i32](value + $i))
+    return box.get()
+
+EOF
+    done
+    {
+        printf 'def main() -> i32:\n'
+        printf '    total: i32 = 0\n'
+        local limit="$funcs"
+        if [[ "$limit" -gt 256 ]]; then
+            limit=256
+        fi
+        for ((i = 0; i < limit; ++i)); do
+            printf '    total += generic_func_%d(%d)\n' "$i" "$i"
+        done
+        printf '    return total\n'
+    } >>"$entry"
+    printf '%s\n' "$entry"
+}
+
 validate_shapes
 
 run_case "duc_check_simple" "frontend_check" "$simple" \
@@ -646,6 +808,26 @@ for requested_lines in "${requested_line_scales[@]}"; do
         scaled_entry="$(prepare_scaled_modules_case "$requested_lines")"
         scaled_project="$(dirname "$scaled_entry")"
         run_case "duc_check_modules_${requested_lines}" "frontend_modules" "$scaled_project" \
+            "$tool_build_dir/duc" check "$scaled_entry"
+    fi
+    if shape_enabled "calls"; then
+        scaled_entry="$(prepare_scaled_calls_case "$requested_lines")"
+        run_case "duc_check_calls_${requested_lines}" "frontend_calls" "$scaled_entry" \
+            "$tool_build_dir/duc" check "$scaled_entry"
+    fi
+    if shape_enabled "control"; then
+        scaled_entry="$(prepare_scaled_control_case "$requested_lines")"
+        run_case "duc_check_control_${requested_lines}" "frontend_control" "$scaled_entry" \
+            "$tool_build_dir/duc" check "$scaled_entry"
+    fi
+    if shape_enabled "arrays"; then
+        scaled_entry="$(prepare_scaled_arrays_case "$requested_lines")"
+        run_case "duc_check_arrays_${requested_lines}" "frontend_arrays" "$scaled_entry" \
+            "$tool_build_dir/duc" check "$scaled_entry"
+    fi
+    if shape_enabled "generics"; then
+        scaled_entry="$(prepare_scaled_generics_case "$requested_lines")"
+        run_case "duc_check_generics_${requested_lines}" "frontend_generics" "$scaled_entry" \
             "$tool_build_dir/duc" check "$scaled_entry"
     fi
 done

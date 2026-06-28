@@ -1430,9 +1430,11 @@ push. They are not release packaging work.
    frontend-throughput corpora through `--line-scales`, defaulting to
    `1000,5000,10000` lines and allowing explicit stress runs such as
    `--line-scales 10000,50000,100000,200000,500000,1000000`. The generated
-   shapes are selectable with `--shapes functions,classes,expressions,modules`
+   shapes are selectable with
+   `--shapes functions,classes,expressions,modules,calls,control,arrays,generics`
    so profiling can distinguish slow declaration lookup, class/member handling,
-   expression parsing/sema, and import/module behavior. Benchmarks can select
+   expression parsing/sema, import/module behavior, nested calls, control-flow
+   blocks, array/indexing operations, and generic instantiation. Benchmarks can select
    `--build-type Debug`, `Release`, or `RelWithDebInfo`; Debug measures
    inner-loop compiler development pain, while Release measures shipped-tool
    speed. Summary output reports lines per second in addition to elapsed time
@@ -1461,7 +1463,9 @@ push. They are not release packaging work.
    dropped the 10k expression-heavy Release check from about 0.60s and 458MB
    RSS to about 0.25s and 227MB RSS with direct `duc --timings`; the benchmark
    harness measured about 0.29s and 249MB RSS including its process/RSS wrapper
-   overhead. The changed-file case runs against a copied
+   overhead. A local one-sample 10k Release run of the expanded shapes measured
+   calls, control flow, arrays, and generics around 0.05-0.07s each, so
+   expression-heavy bodies remain the main frontend throughput outlier. The changed-file case runs against a copied
    fixture under `build/bench_compiler` so benchmarks do not mutate checked-in
    examples. It
    records source line/file counts and peak child-process RSS in KB with each
