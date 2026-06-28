@@ -360,6 +360,19 @@ Parser::JoinedTokens Parser::join_tokens(size_t begin, size_t end) const {
     JoinedTokens joined;
     joined.begin = begin;
     joined.end = std::min(end, tokens_.size());
+    if (begin < joined.end && begin < tokens_.size()) {
+        const Token& first = tokens_[begin];
+        const Token& last = tokens_[joined.end - 1];
+        if (first.kind != TokenKind::Newline && first.kind != TokenKind::Indent &&
+            first.kind != TokenKind::Dedent && last.kind != TokenKind::Newline &&
+            last.kind != TokenKind::Indent && last.kind != TokenKind::Dedent &&
+            first.location.line == last.location.line) {
+            joined.has_tokens = true;
+            joined.range.start = first.location;
+            joined.range.end = token_end_location(last);
+            return joined;
+        }
+    }
     for (size_t index = begin; index < end && index < tokens_.size(); ++index) {
         const Token& token = tokens_[index];
         if (!joined.has_tokens) {

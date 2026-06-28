@@ -1696,14 +1696,22 @@ push. They are not release packaging work.
    generics stayed around 88-91ms with lower RSS. A broad one-sample Release
    sweep after the layout change measured expression-heavy 50k around 245ms,
    functions/classes around 45-70ms, calls/control around 65-80ms,
-   arrays/generics around 85-88ms, and modules around 85ms. Keep compiler speed
-   validation broad: generated corpora need multiple diverse code shapes,
-   because one particular compilation path can dominate or regress while an
-   aggregate number looks acceptable. Do not treat a compiler-speed change as
-   proven by one synthetic shape; include expression-heavy code, call-heavy
-   code, control flow, arrays, modules/imports, generics/templates, class/OOP
-   shapes, native interop shapes, and mixed realistic project-shaped corpora as
-   the benchmark suite grows. The
+   arrays/generics around 85-88ms, and modules around 85ms. `join_tokens` then
+   gained a same-line fast path so normal single-line statement pieces do not
+   rescan every token just to compute source ranges and rediscover that there
+   are no layout tokens. A three-sample broad Release sweep moved
+   expression-heavy 50k from about 245ms to about 239ms, functions 50k from
+   about 70ms to about 68ms, classes 50k from about 45ms to about 42ms,
+   control 50k from about 80ms to about 78ms, and modules 50k from about 85ms
+   to about 83ms, with memory broadly unchanged from the previous layout win.
+   Keep compiler speed validation broad: generated corpora need multiple
+   diverse code shapes, because one particular compilation path can dominate or
+   regress while an aggregate number looks acceptable. Do not treat a
+   compiler-speed change as proven by one synthetic shape; include
+   expression-heavy code, call-heavy code, control flow, arrays,
+   modules/imports, generics/templates, class/OOP shapes, native interop
+   shapes, and mixed realistic project-shaped corpora as the benchmark suite
+   grows. The
    changed-file case runs against a copied fixture under `build/bench_compiler`
    so benchmarks do not mutate checked-in examples. It
    records source line/file counts and peak child-process RSS in KB with each
