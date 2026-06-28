@@ -382,7 +382,7 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
             stmt.compound_op = *op;
         }
         const JoinedTokens target = join_tokens(line_begin, *assignment);
-        stmt.target_expr = parse_expr_piece(target);
+        set_stmt_target_expr(stmt, parse_expr_piece(target));
         const JoinedTokens value = join_tokens(*assignment + 1, end);
         stmt.value_expr = parse_expr_piece(value);
         return stmt;

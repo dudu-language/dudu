@@ -187,7 +187,7 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
         return;
     }
     if (stmt.kind == StmtKind::Assign) {
-        if (const std::vector<std::string> names = tuple_binding_names(stmt.target_expr);
+        if (const std::vector<std::string> names = tuple_binding_names(stmt_target_expr(stmt));
             !names.empty()) {
             out << indent(depth) << "auto [" << join_names(names) << "] = "
                 << lower_emitted_expr(stmt.value_expr, aliases, locals, local_type_refs, symbols,
@@ -195,11 +195,11 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                 << ";\n";
             return;
         }
-        if (stmt.target_expr.kind == ExprKind::Name && !stmt.target_expr.name.empty()) {
-            const std::string& lhs = stmt.target_expr.name;
+        if (stmt_target_expr(stmt).kind == ExprKind::Name && !stmt_target_expr(stmt).name.empty()) {
+            const std::string& lhs = stmt_target_expr(stmt).name;
             if (local_type_refs.contains(lhs)) {
                 const TypeRef lhs_type =
-                    emitted_local_type_ref(local_type_refs, lhs, stmt.target_expr.location);
+                    emitted_local_type_ref(local_type_refs, lhs, stmt_target_expr(stmt).location);
                 const bool option_target = is_template_type(lhs_type, "Option");
                 const std::string value =
                     lower_expr_as_type_ref(lhs_type, stmt.value_expr, aliases, locals,
@@ -220,13 +220,14 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                 if (has_type_ref(inferred_ref)) {
                     local_type_refs.emplace(lhs, inferred_ref);
                 } else {
-                    local_type_refs.emplace(lhs, named_type_ref("auto", stmt.target_expr.location));
+                    local_type_refs.emplace(
+                        lhs, named_type_ref("auto", stmt_target_expr(stmt).location));
                 }
                 out << indent(depth) << "auto " << lhs << " = " << value << ";\n";
             }
             return;
         }
-        if (expr_present(stmt.target_expr)) {
+        if (has_stmt_target_expr(stmt)) {
             if (const auto swizzle = lower_swizzle_assignment(stmt, aliases, locals,
                                                               local_type_refs, symbols, options)) {
                 out << indent(depth) << *swizzle << ";\n";
@@ -237,10 +238,10 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                 out << indent(depth) << *call << ";\n";
                 return;
             }
-            const TypeRef target_type =
-                symbols == nullptr
-                    ? TypeRef{}
-                    : member_expr_type_ref(*symbols, local_type_refs, nullptr, stmt.target_expr);
+            const TypeRef target_type = symbols == nullptr
+                                            ? TypeRef{}
+                                            : member_expr_type_ref(*symbols, local_type_refs,
+                                                                   nullptr, stmt_target_expr(stmt));
             const std::string value =
                 has_type_ref(target_type)
                     ? lower_expr_as_type_ref(target_type, stmt.value_expr, aliases, locals,
@@ -248,15 +249,15 @@ void emit_simple_statement(std::ostringstream& out, const Stmt& stmt, int depth,
                     : lower_emitted_expr(stmt.value_expr, aliases, locals, local_type_refs, symbols,
                                          options);
             out << indent(depth)
-                << lower_emitted_expr(stmt.target_expr, aliases, locals, local_type_refs, symbols,
-                                      options)
+                << lower_emitted_expr(stmt_target_expr(stmt), aliases, locals, local_type_refs,
+                                      symbols, options)
                 << " = " << value << ";\n";
             return;
         }
     }
     if (stmt.kind == StmtKind::CompoundAssign) {
         out << indent(depth)
-            << lower_emitted_expr(stmt.target_expr, aliases, locals, local_type_refs, symbols,
+            << lower_emitted_expr(stmt_target_expr(stmt), aliases, locals, local_type_refs, symbols,
                                   options)
             << ' ' << compound_assign_op_text(stmt.compound_op) << '=' << " "
             << lower_emitted_expr(stmt.value_expr, aliases, locals, local_type_refs, symbols,

@@ -272,11 +272,11 @@ lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& al
                             const CppLocalContext& locals,
                             const std::map<std::string, TypeRef>& local_type_refs,
                             const Symbols* symbols, const CppEmitOptions& options) {
-    if (symbols == nullptr || stmt.target_expr.kind != ExprKind::Index ||
-        stmt.target_expr.children.size() != 2) {
+    if (symbols == nullptr || stmt_target_expr(stmt).kind != ExprKind::Index ||
+        stmt_target_expr(stmt).children.size() != 2) {
         return std::nullopt;
     }
-    const Expr& receiver = stmt.target_expr.children[0];
+    const Expr& receiver = stmt_target_expr(stmt).children[0];
     TypeRef receiver_type;
     if (receiver.kind == ExprKind::Name) {
         receiver_type = local_type_ref(local_type_refs, receiver.name, receiver.location);
@@ -291,7 +291,7 @@ lower_index_assignment_hook(const Stmt& stmt, const std::vector<std::string>& al
     if (!method) {
         return std::nullopt;
     }
-    std::vector<Expr> args = index_arg_exprs(stmt.target_expr.children[1]);
+    std::vector<Expr> args = index_arg_exprs(stmt_target_expr(stmt).children[1]);
     args.push_back(stmt.value_expr);
     const std::string lowered_receiver =
         lower_expr(receiver, aliases, locals, local_type_refs, symbols, options);

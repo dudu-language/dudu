@@ -66,17 +66,17 @@ void collect_scope_lints_stmt_sequence(const std::vector<Stmt>& statements, cons
             add_scope_local(stmt.name, stmt.location, active_decls, locals, out, true);
         } else if (stmt.kind == StmtKind::Assign &&
                    lint_same_source_file(stmt.location.file, doc.path)) {
-            if (const std::vector<std::string> names = tuple_binding_names(stmt.target_expr);
+            if (const std::vector<std::string> names = tuple_binding_names(stmt_target_expr(stmt));
                 !names.empty()) {
                 for (const std::string& name : names) {
                     if (!active_decl_contains(active_decls, name)) {
                         add_scope_local(name, stmt.location, active_decls, locals, out, false);
                     }
                 }
-            } else if (stmt.target_expr.kind == ExprKind::Name &&
-                       !active_decl_contains(active_decls, stmt.target_expr.name)) {
-                add_scope_local(stmt.target_expr.name, stmt.target_expr.location, active_decls,
-                                locals, out, false);
+            } else if (stmt_target_expr(stmt).kind == ExprKind::Name &&
+                       !active_decl_contains(active_decls, stmt_target_expr(stmt).name)) {
+                add_scope_local(stmt_target_expr(stmt).name, stmt_target_expr(stmt).location,
+                                active_decls, locals, out, false);
             }
         } else if ((stmt.kind == StmtKind::For || stmt.kind == StmtKind::Except) &&
                    !stmt.name.empty() && lint_same_source_file(stmt.location.file, doc.path)) {

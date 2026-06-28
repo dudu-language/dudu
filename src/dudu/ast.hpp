@@ -198,7 +198,7 @@ struct Stmt {
     UnsupportedFeature unsupported_feature = UnsupportedFeature::None;
     Expr expr;
     Expr value_expr;
-    Expr target_expr;
+    std::shared_ptr<Expr> target_expr;
     std::shared_ptr<Expr> condition_expr;
     std::shared_ptr<Expr> message_expr;
     std::shared_ptr<Expr> iterable_expr;
@@ -384,7 +384,9 @@ template <typename Visit> void visit_expr_tree_impl(const Expr& expr, Visit& vis
 template <typename Visit> void visit_stmt_expressions_impl(const Stmt& stmt, Visit& visit) {
     visit(stmt.expr);
     visit(stmt.value_expr);
-    visit(stmt.target_expr);
+    if (stmt.target_expr != nullptr) {
+        visit(*stmt.target_expr);
+    }
     if (stmt.condition_expr != nullptr) {
         visit(*stmt.condition_expr);
     }

@@ -40,7 +40,11 @@ void substitute_stmt_types(Stmt& stmt, const std::map<std::string, TypeRef>& sub
     }
     substitute_expr_types(stmt.expr, substitutions);
     substitute_expr_types(stmt.value_expr, substitutions);
-    substitute_expr_types(stmt.target_expr, substitutions);
+    if (has_stmt_target_expr(stmt)) {
+        Expr target = stmt_target_expr(stmt);
+        substitute_expr_types(target, substitutions);
+        set_stmt_target_expr(stmt, std::move(target));
+    }
     if (has_stmt_condition_expr(stmt)) {
         Expr condition = stmt_condition_expr(stmt);
         substitute_expr_types(condition, substitutions);

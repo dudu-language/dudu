@@ -255,7 +255,7 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
         return;
     }
     if (stmt.kind == StmtKind::Assign) {
-        if (const std::vector<std::string> names = tuple_binding_names(stmt.target_expr);
+        if (const std::vector<std::string> names = tuple_binding_names(stmt_target_expr(stmt));
             !names.empty()) {
             const SourceLocation& value_location =
                 diagnostic_location(stmt.location, stmt.value_expr);
@@ -271,14 +271,15 @@ void check_stmt(FunctionScope& scope, const Stmt& stmt, const TypeRef& return_ty
             }
             return;
         }
-        if (stmt.target_expr.kind == ExprKind::TupleLiteral) {
-            sema_fail(diagnostic_location(stmt.location, stmt.target_expr),
+        if (stmt_target_expr(stmt).kind == ExprKind::TupleLiteral) {
+            sema_fail(diagnostic_location(stmt.location, stmt_target_expr(stmt)),
                       "tuple destructuring targets must be names");
         }
-        if (stmt.target_expr.kind == ExprKind::Name &&
-            !scope.local_type_refs.contains(stmt.target_expr.name)) {
-            const std::string& name = stmt.target_expr.name;
-            check_local_binding_name(diagnostic_location(stmt.location, stmt.target_expr), name);
+        if (stmt_target_expr(stmt).kind == ExprKind::Name &&
+            !scope.local_type_refs.contains(stmt_target_expr(stmt).name)) {
+            const std::string& name = stmt_target_expr(stmt).name;
+            check_local_binding_name(diagnostic_location(stmt.location, stmt_target_expr(stmt)),
+                                     name);
             const TypeRef inferred = infer_expr_type_ast(
                 scope, stmt.value_expr, &diagnostic_location(stmt.location, stmt.value_expr));
             bind_local(scope, name, inferred);

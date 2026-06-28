@@ -301,7 +301,7 @@ void collect_stmt_tokens(const std::vector<Stmt>& statements, std::vector<Semant
             collect_type_tokens(stmt_type_ref(stmt), tokens, native_index);
             collect_expr_tokens(stmt.value_expr, tokens, native_index);
         } else if (stmt.kind == StmtKind::Assign || stmt.kind == StmtKind::CompoundAssign) {
-            collect_expr_tokens(stmt.target_expr, tokens, native_index);
+            collect_expr_tokens(stmt_target_expr(stmt), tokens, native_index);
             collect_expr_tokens(stmt.value_expr, tokens, native_index);
         } else if (stmt.kind == StmtKind::Return || stmt.kind == StmtKind::Raise ||
                    stmt.kind == StmtKind::Delete) {

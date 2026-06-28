@@ -150,7 +150,7 @@ void lsp_bind_inferred_local(FunctionScope& scope, const std::string& name, cons
 }
 
 void bind_tuple_names(FunctionScope& scope, const Stmt& stmt) {
-    const std::vector<std::string> names = tuple_binding_names(stmt.target_expr);
+    const std::vector<std::string> names = tuple_binding_names(stmt_target_expr(stmt));
     if (names.empty()) {
         return;
     }
@@ -179,13 +179,13 @@ void bind_statement(FunctionScope& scope, const Stmt& stmt) {
         return;
     }
     if (stmt.kind == StmtKind::Assign) {
-        if (!tuple_binding_names(stmt.target_expr).empty()) {
+        if (!tuple_binding_names(stmt_target_expr(stmt)).empty()) {
             bind_tuple_names(scope, stmt);
             return;
         }
-        if (stmt.target_expr.kind == ExprKind::Name &&
-            !scope.local_type_refs.contains(stmt.target_expr.name)) {
-            lsp_bind_inferred_local(scope, stmt.target_expr.name, stmt.value_expr);
+        if (stmt_target_expr(stmt).kind == ExprKind::Name &&
+            !scope.local_type_refs.contains(stmt_target_expr(stmt).name)) {
+            lsp_bind_inferred_local(scope, stmt_target_expr(stmt).name, stmt.value_expr);
         }
     }
     if (stmt.kind == StmtKind::Except && !stmt.name.empty()) {

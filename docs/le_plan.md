@@ -1586,7 +1586,16 @@ push. They are not release packaging work.
    expression-heavy 50k around 1.04s/297MB RSS, modules 50k around
    112ms/131MB RSS, functions 50k around 95ms/66MB RSS, calls 50k around
    118ms/66MB RSS, control 50k around 122ms/75MB RSS, arrays 50k around
-   140ms/62MB RSS, and generics 50k around 141ms/50MB RSS. Keep
+   140ms/62MB RSS, and generics 50k around 141ms/50MB RSS. Assignment target
+   expressions then moved behind sparse pointer storage. This touches sema,
+   codegen, swizzle/index assignment, and LSP target handling, so it was kept
+   only after assignment-relevant generated shapes stayed positive. It left
+   `Expr` at 256 bytes and dropped local `Stmt` size from 1008 to 768 bytes. A
+   broad one-sample 10k/50k Release sweep measured expression-heavy 50k around
+   1.04s/298MB RSS, modules 50k around 107ms/115MB RSS, functions 50k around
+   96ms/59MB RSS, calls 50k around 116ms/62MB RSS, control 50k around
+   120ms/70MB RSS, arrays 50k around 141ms/60MB RSS, and generics 50k around
+   143ms/47MB RSS. Keep
    compiler speed validation broad: generated corpora need multiple code shapes,
    because one particular compilation path can dominate or regress while an
    aggregate number looks acceptable. The

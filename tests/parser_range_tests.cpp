@@ -15,15 +15,15 @@ void test_statement_source_range_uses_token_span() {
                                                       "statement_range.dd");
     const dudu::FunctionDecl& main = module.functions.front();
     const dudu::Stmt& assign = main.statements.front();
-    assert(assign.target_expr.kind == dudu::ExprKind::Name);
-    assert(assign.target_expr.name == "value");
+    assert(dudu::stmt_target_expr(assign).kind == dudu::ExprKind::Name);
+    assert(dudu::stmt_target_expr(assign).name == "value");
     assert(assign.value_expr.kind == dudu::ExprKind::Call);
     assert(dudu::display_expr(assign.value_expr) == "add(1, 2)");
     assert(assign.range.start.line == 2);
     assert(assign.range.start.column == 5);
     assert(assign.range.end.line == 2);
     assert(assign.range.end.column == 27);
-    assert(assign.target_expr.range.start.column == 5);
+    assert(dudu::stmt_target_expr(assign).range.start.column == 5);
     assert(assign.value_expr.range.start.column == 18);
 }
 

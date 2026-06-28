@@ -1,5 +1,6 @@
 #include "dudu/cpp_expr_swizzles.hpp"
 
+#include "dudu/ast_expr.hpp"
 #include "dudu/ast_type.hpp"
 #include "dudu/cpp_expr_emit.hpp"
 #include "dudu/cpp_lower.hpp"
@@ -49,7 +50,8 @@ std::optional<std::string_view> swizzle_component_order(const std::string& swizz
 bool is_local_dudu_class_type(const Symbols& symbols, TypeRef type) {
     type = resolve_alias_ref(symbols, std::move(type));
     const std::string head = type_ref_head_name(type);
-    return !head.empty() && symbols.classes.contains(head) && !symbols.native_classes.contains(head);
+    return !head.empty() && symbols.classes.contains(head) &&
+           !symbols.native_classes.contains(head);
 }
 
 std::optional<std::string>
@@ -140,14 +142,15 @@ lower_swizzle_assignment(const Stmt& stmt, const std::vector<std::string>& alias
                          const CppLocalContext& locals,
                          const std::map<std::string, TypeRef>& local_type_refs,
                          const Symbols* symbols, const CppEmitOptions& options) {
-    if (stmt.target_expr.kind != ExprKind::Member || stmt.target_expr.children.size() != 1) {
+    if (stmt_target_expr(stmt).kind != ExprKind::Member ||
+        stmt_target_expr(stmt).children.size() != 1) {
         return std::nullopt;
     }
-    const Expr& receiver_expr = stmt.target_expr.children.front();
-    if (!is_supported_swizzle(stmt.target_expr.name)) {
+    const Expr& receiver_expr = stmt_target_expr(stmt).children.front();
+    if (!is_supported_swizzle(stmt_target_expr(stmt).name)) {
         return std::nullopt;
     }
-    const auto rhs_order = swizzle_component_order(stmt.target_expr.name);
+    const auto rhs_order = swizzle_component_order(stmt_target_expr(stmt).name);
     if (!rhs_order) {
         return std::nullopt;
     }
@@ -159,8 +162,8 @@ lower_swizzle_assignment(const Stmt& stmt, const std::vector<std::string>& alias
     std::ostringstream out;
     out << "([&]() { auto&& __dudu_swizzle_rhs = "
         << lower_expr(stmt.value_expr, aliases, locals, local_type_refs, symbols, options) << "; ";
-    for (size_t i = 0; i < stmt.target_expr.name.size(); ++i) {
-        out << receiver << "." << stmt.target_expr.name[i] << " = __dudu_swizzle_rhs."
+    for (size_t i = 0; i < stmt_target_expr(stmt).name.size(); ++i) {
+        out << receiver << "." << stmt_target_expr(stmt).name[i] << " = __dudu_swizzle_rhs."
             << (*rhs_order)[i] << "; ";
     }
     out << "}())";

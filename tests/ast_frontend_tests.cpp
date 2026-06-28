@@ -948,8 +948,8 @@ void test_statement_ast_shape() {
     assert(dudu::stmt_iterable_expr(main.statements[1]).name == "values");
     assert(main.statements[1].children.size() == 1);
     assert(main.statements[1].children[0].kind == dudu::StmtKind::CompoundAssign);
-    assert(main.statements[1].children[0].target_expr.kind == dudu::ExprKind::Name);
-    assert(main.statements[1].children[0].target_expr.name == "total");
+    assert(dudu::stmt_target_expr(main.statements[1].children[0]).kind == dudu::ExprKind::Name);
+    assert(dudu::stmt_target_expr(main.statements[1].children[0]).name == "total");
     assert(main.statements[1].children[0].compound_op == dudu::CompoundAssignOp::Add);
     assert(main.statements[1].children[0].value_expr.kind == dudu::ExprKind::Name);
     assert(main.statements[1].children[0].value_expr.name == "item");
@@ -967,8 +967,8 @@ void test_statement_ast_shape() {
     assert(main.statements[3].kind == dudu::StmtKind::Else);
     assert(main.statements[3].children.size() == 1);
     assert(main.statements[3].children[0].kind == dudu::StmtKind::Assign);
-    assert(main.statements[3].children[0].target_expr.kind == dudu::ExprKind::Name);
-    assert(main.statements[3].children[0].target_expr.name == "total");
+    assert(dudu::stmt_target_expr(main.statements[3].children[0]).kind == dudu::ExprKind::Name);
+    assert(dudu::stmt_target_expr(main.statements[3].children[0]).name == "total");
     assert(main.statements[3].children[0].value_expr.kind == dudu::ExprKind::IntLiteral);
     assert(main.statements[3].children[0].value_expr.value == "1");
     assert(main.statements[4].kind == dudu::StmtKind::Return);
@@ -1201,9 +1201,9 @@ void test_expression_ast_shape() {
 
     const dudu::Stmt& assign = branch.children[0];
     assert(assign.kind == dudu::StmtKind::Assign);
-    assert(assign.target_expr.kind == dudu::ExprKind::Member);
-    assert(assign.target_expr.name == "name");
-    assert(assign.target_expr.children[0].kind == dudu::ExprKind::Index);
+    assert(dudu::stmt_target_expr(assign).kind == dudu::ExprKind::Member);
+    assert(dudu::stmt_target_expr(assign).name == "name");
+    assert(dudu::stmt_target_expr(assign).children[0].kind == dudu::ExprKind::Index);
     assert(assign.value_expr.kind == dudu::ExprKind::TemplateCall);
     assert(assign.value_expr.name.empty());
     assert(dudu::direct_callee_name(assign.value_expr) == "Vec4");
@@ -1248,10 +1248,10 @@ void test_expression_ast_shape() {
 
     const dudu::Stmt& pointer_assign = main.statements[4];
     assert(pointer_assign.kind == dudu::StmtKind::Assign);
-    assert(pointer_assign.target_expr.kind == dudu::ExprKind::Unary);
-    assert(pointer_assign.target_expr.op == "*");
-    assert(pointer_assign.target_expr.children[0].range.start.column >
-           pointer_assign.target_expr.range.start.column);
+    assert(dudu::stmt_target_expr(pointer_assign).kind == dudu::ExprKind::Unary);
+    assert(dudu::stmt_target_expr(pointer_assign).op == "*");
+    assert(dudu::stmt_target_expr(pointer_assign).children[0].range.start.column >
+           dudu::stmt_target_expr(pointer_assign).range.start.column);
     assert(pointer_assign.value_expr.kind == dudu::ExprKind::Unary);
     assert(pointer_assign.value_expr.op == "&");
     assert(pointer_assign.value_expr.children[0].kind == dudu::ExprKind::Index);

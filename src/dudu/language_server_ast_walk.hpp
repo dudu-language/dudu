@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dudu/ast.hpp"
+#include "dudu/ast_expr.hpp"
 #include "dudu/ast_type.hpp"
 
 namespace dudu {
@@ -64,12 +65,12 @@ template <typename Add> void visit_stmt_binding_names(const Stmt& stmt, Add add)
     if (stmt.kind != StmtKind::Assign) {
         return;
     }
-    if (stmt.target_expr.kind == ExprKind::Name && !stmt.target_expr.name.empty()) {
-        add(stmt.target_expr.name, stmt.target_expr.location);
+    if (stmt_target_expr(stmt).kind == ExprKind::Name && !stmt_target_expr(stmt).name.empty()) {
+        add(stmt_target_expr(stmt).name, stmt_target_expr(stmt).location);
         return;
     }
-    if (stmt.target_expr.kind == ExprKind::TupleLiteral) {
-        for (const Expr& child : stmt.target_expr.children) {
+    if (stmt_target_expr(stmt).kind == ExprKind::TupleLiteral) {
+        for (const Expr& child : stmt_target_expr(stmt).children) {
             if (child.kind == ExprKind::Name && !child.name.empty()) {
                 add(child.name, child.location);
             }

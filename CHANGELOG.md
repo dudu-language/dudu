@@ -120,6 +120,8 @@
 - Moved statement condition expressions behind pointer storage, reducing
   statement node size while keeping control-flow, match, and assertion checks
   structured.
+- Moved assignment target expressions behind pointer storage, reducing statement
+  node size while preserving assignment, swizzle, index, and LSP target handling.
 - Reduced parser work by carrying layout-token metadata on joined token spans
   instead of rescanning each expression/type piece before parsing it.
 - Removed obsolete string-based Dudu method/class template substitution helpers.

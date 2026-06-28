@@ -227,6 +227,23 @@ void set_stmt_condition_expr(Stmt& stmt, Expr expr) {
     stmt.condition_expr = std::make_shared<Expr>(std::move(expr));
 }
 
+bool has_stmt_target_expr(const Stmt& stmt) {
+    return stmt.target_expr != nullptr && expr_present(*stmt.target_expr);
+}
+
+const Expr& stmt_target_expr(const Stmt& stmt) {
+    static const Expr empty;
+    return stmt.target_expr == nullptr ? empty : *stmt.target_expr;
+}
+
+void set_stmt_target_expr(Stmt& stmt, Expr expr) {
+    if (expr_missing(expr)) {
+        stmt.target_expr.reset();
+        return;
+    }
+    stmt.target_expr = std::make_shared<Expr>(std::move(expr));
+}
+
 bool has_stmt_iterable_expr(const Stmt& stmt) {
     return stmt.iterable_expr != nullptr && expr_present(*stmt.iterable_expr);
 }
