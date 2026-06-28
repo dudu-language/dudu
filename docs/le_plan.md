@@ -1483,6 +1483,10 @@ push. They are not release packaging work.
    checks dropped from about 283ms and 244MB RSS to about 256ms and 122MB RSS,
    modules from about 80ms and 131MB RSS to about 52ms and 80MB RSS, and
    call/control-heavy shapes also dropped into the low-to-mid 40ms range. The
+   statement parser now finds top-level colons and assignment operators in one
+   pass over generic statements instead of scanning the same token span twice;
+   direct 10k expression timings showed lower load time, while the broad
+   one-sample shape sweep was neutral-to-positive. The
    changed-file case runs against a copied fixture under `build/bench_compiler`
    so benchmarks do not mutate checked-in examples. It
    records source line/file counts and peak child-process RSS in KB with each

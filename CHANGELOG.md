@@ -92,6 +92,8 @@
   stress files spend less of the load phase growing the token vector.
 - Reduced source-location memory churn by interning immutable filename storage
   across tokens and AST ranges instead of copying the path into every location.
+- Reduced statement parser work by scanning once for top-level declaration and
+  assignment operators instead of walking the same statement token span twice.
 - Removed obsolete string-based Dudu method/class template substitution helpers.
 - Removed an unused unknown-expression parser helper and renamed the remaining
   text call parser as an explicit `cpp(...)` escape-boundary helper.

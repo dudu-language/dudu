@@ -52,44 +52,30 @@ bool has_statement_tokens_after(const std::span<const Token> tokens, size_t curs
     return false;
 }
 
-std::optional<size_t> find_top_level_token(std::span<const Token> tokens, size_t begin, size_t end,
-                                           TokenKind kind) {
-    int bracket_depth = 0;
-    int paren_depth = 0;
-    int brace_depth = 0;
-    for (size_t index = begin; index < end; ++index) {
-        const Token& token = tokens[index];
-        const bool inside_group = bracket_depth != 0 || paren_depth != 0 || brace_depth != 0;
-        if (!inside_group && token.kind == kind) {
-            return index;
-        }
-        if (token.kind == TokenKind::LBracket) {
-            ++bracket_depth;
-        } else if (token.kind == TokenKind::RBracket) {
-            --bracket_depth;
-        } else if (token.kind == TokenKind::LParen) {
-            ++paren_depth;
-        } else if (token.kind == TokenKind::RParen) {
-            --paren_depth;
-        } else if (token.kind == TokenKind::LBrace) {
-            ++brace_depth;
-        } else if (token.kind == TokenKind::RBrace) {
-            --brace_depth;
-        }
-    }
-    return std::nullopt;
-}
+struct StatementOperatorScan {
+    std::optional<size_t> colon;
+    std::optional<size_t> assignment;
+};
 
-std::optional<size_t> find_assignment_operator_token(std::span<const Token> tokens, size_t begin,
-                                                     size_t end) {
+StatementOperatorScan scan_top_level_statement_operators(std::span<const Token> tokens,
+                                                         size_t begin, size_t end) {
+    StatementOperatorScan out;
     int bracket_depth = 0;
     int paren_depth = 0;
     int brace_depth = 0;
     for (size_t index = begin; index < end; ++index) {
         const Token& token = tokens[index];
         const bool inside_group = bracket_depth != 0 || paren_depth != 0 || brace_depth != 0;
-        if (!inside_group && is_assignment_operator(token)) {
-            return index;
+        if (!inside_group) {
+            if (!out.colon.has_value() && token.kind == TokenKind::Colon) {
+                out.colon = index;
+            }
+            if (!out.assignment.has_value() && is_assignment_operator(token)) {
+                out.assignment = index;
+            }
+            if (out.colon.has_value() && out.assignment.has_value()) {
+                break;
+            }
         }
         if (token.kind == TokenKind::LBracket) {
             ++bracket_depth;
@@ -105,7 +91,7 @@ std::optional<size_t> find_assignment_operator_token(std::span<const Token> toke
             --brace_depth;
         }
     }
-    return std::nullopt;
+    return out;
 }
 
 UnsupportedFeature unsupported_feature_for_token(const Token& token) {
@@ -364,10 +350,10 @@ Stmt Parser::parse_statement(std::vector<Stmt> children, size_t statement_end) {
     const JoinedTokens whole = join_tokens(line_begin, end);
     attach_statement_range(stmt, whole);
 
-    const std::optional<size_t> colon =
-        find_top_level_token(tokens_, line_begin, end, TokenKind::Colon);
-    const std::optional<size_t> assignment =
-        find_assignment_operator_token(tokens_, line_begin, end);
+    const StatementOperatorScan operators =
+        scan_top_level_statement_operators(tokens_, line_begin, end);
+    const std::optional<size_t> colon = operators.colon;
+    const std::optional<size_t> assignment = operators.assignment;
     if (colon.has_value() && (!assignment.has_value() || *colon < *assignment)) {
         stmt.kind = StmtKind::VarDecl;
         stmt.name = declaration_name_from_piece(tokens_, line_begin, *colon);
