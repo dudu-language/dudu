@@ -5,13 +5,18 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 samples=3
 csv_path="$repo_root/build/bench_compiler/compiler_bench.csv"
 build_tools=1
+line_scales="1000,5000,10000"
 
 usage() {
     cat <<'EOF'
-usage: scripts/bench_compiler.sh [--samples N] [--csv path] [--no-build]
+usage: scripts/bench_compiler.sh [--samples N] [--csv path] [--line-scales list] [--no-build]
 
 Measures Dudu compiler and project-driver latency. This is an explicit
 developer benchmark, not part of the fast correctness loop.
+
+--line-scales accepts a comma-separated list of approximate generated Dudu
+source line counts, for example:
+  --line-scales 10000,50000,100000,200000,500000,1000000
 EOF
 }
 
@@ -23,6 +28,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --csv)
             csv_path="${2:?--csv requires a path}"
+            shift 2
+            ;;
+        --line-scales)
+            line_scales="${2:?--line-scales requires a comma-separated list}"
             shift 2
             ;;
         --no-build)
@@ -166,6 +175,7 @@ lsp_entry="$lsp_project/main.dd"
 lsp_probe="$bench_dir/lsp_probe.py"
 synthetic_project="$bench_dir/synthetic_project"
 synthetic_entry="$synthetic_project/main.dd"
+scale_root="$bench_dir/scale_projects"
 
 prepare_incremental_project() {
     rm -rf "$incremental_project"
@@ -350,6 +360,45 @@ EOF
     done
 }
 
+prepare_scaled_frontend_case() {
+    local requested_lines="$1"
+    local project="$scale_root/lines_$requested_lines"
+    local entry="$project/main.dd"
+    rm -rf "$project"
+    mkdir -p "$project"
+
+    # Each generated helper contributes five lines. The main function keeps
+    # enough references alive to exercise name lookup without making C++ compile
+    # time part of this frontend benchmark.
+    local helpers=$((requested_lines / 5))
+    if [[ "$helpers" -lt 1 ]]; then
+        helpers=1
+    fi
+    : >"$entry"
+    for ((i = 0; i < helpers; ++i)); do
+        cat >>"$entry" <<EOF
+def generated_func_$i(value: i32) -> i32:
+    total: i32 = value
+    total += $i
+    return total
+
+EOF
+    done
+    {
+        printf 'def main() -> i32:\n'
+        printf '    total: i32 = 0\n'
+        local limit="$helpers"
+        if [[ "$limit" -gt 128 ]]; then
+            limit=128
+        fi
+        for ((i = 0; i < limit; ++i)); do
+            printf '    total += generated_func_%d(%d)\n' "$i" "$i"
+        done
+        printf '    return total\n'
+    } >>"$entry"
+    printf '%s\n' "$entry"
+}
+
 run_case "duc_check_simple" "frontend_check" "$simple" \
     "$repo_root/build/duc" check "$simple"
 
@@ -387,6 +436,23 @@ prepare_synthetic_project
 run_case "duc_check_synthetic" "frontend_synthetic" "$synthetic_project" \
     "$repo_root/build/duc" check "$synthetic_entry"
 
+IFS=',' read -r -a requested_line_scales <<<"$line_scales"
+for requested_lines in "${requested_line_scales[@]}"; do
+    requested_lines="$(printf '%s' "$requested_lines" | tr -d '[:space:]')"
+    if [[ -z "$requested_lines" ]]; then
+        continue
+    fi
+    case "$requested_lines" in
+        ''|*[!0-9]*)
+            echo "invalid --line-scales entry: $requested_lines" >&2
+            exit 1
+            ;;
+    esac
+    scaled_entry="$(prepare_scaled_frontend_case "$requested_lines")"
+    run_case "duc_check_lines_${requested_lines}" "frontend_lines" "$scaled_entry" \
+        "$repo_root/build/duc" check "$scaled_entry"
+done
+
 echo
 echo "summary:"
 awk -F',' '
@@ -401,8 +467,10 @@ NR > 1 {
 END {
     for (key in count) {
         split(key, parts, ",")
-        printf "%-32s phase=%-34s mean_ms=%10.3f mean_peak_rss_kb=%10.0f lines=%s files=%s\n",
-            parts[1], parts[2], sum[key] / count[key], rss[key] / count[key],
+        mean_ms = sum[key] / count[key]
+        lines_per_second = mean_ms > 0 ? (lines[key] * 1000.0 / mean_ms) : 0
+        printf "%-32s phase=%-34s mean_ms=%10.3f lines_per_second=%12.0f mean_peak_rss_kb=%10.0f lines=%s files=%s\n",
+            parts[1], parts[2], mean_ms, lines_per_second, rss[key] / count[key],
             lines[key], files[key]
     }
 }' "$csv_path" | sort

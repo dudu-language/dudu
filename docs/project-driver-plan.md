@@ -431,7 +431,9 @@ Current implementation reality:
   compiler-throughput benchmark from a checkout that contains
   `scripts/bench_compiler.sh`. `--quiet`, `--verbose`, `--help`, and
   `--version` are parsed as project-driver flags; benchmark command arguments
-  that look like flags can still be passed after `--`.
+  that look like flags can still be passed after `--`. The compiler benchmark
+  supports scalable generated-source runs, for example
+  `dudu bench compiler -- --line-scales 10000,50000,100000`.
 - Delegated `[test]` and `[bench]` commands, plus fallback `scripts/test.sh`
   and `scripts/bench.sh`, execute from the manifest directory so running Dudu
   from a project subdirectory does not change command-relative paths.

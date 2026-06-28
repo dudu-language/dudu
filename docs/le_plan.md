@@ -1427,8 +1427,15 @@ push. They are not release packaging work.
    `duc_lsp_diagnostics`, so editor latency is visible outside the full LSP
    smoke suite. A generated synthetic multi-module corpus under
    `build/bench_compiler` gives frontend throughput a larger parse/sema input
-   than the tiny correctness fixtures. The changed-file case runs against a
-   copied fixture under
+   than the tiny correctness fixtures. The benchmark also generates scalable
+   single-file frontend-throughput corpora through `--line-scales`, defaulting
+   to `1000,5000,10000` lines and allowing explicit stress runs such as
+   `--line-scales 10000,50000,100000,200000,500000,1000000`. Summary output
+   reports lines per second in addition to elapsed time and peak RSS. A local
+   one-sample baseline on 2026-06-28 measured `duc check` at about 13.3s and
+   318MB RSS for roughly 10k generated Dudu lines, which is too slow for the
+   language goal and should trigger profiling before larger 50k+ runs become
+   useful. The changed-file case runs against a copied fixture under
    `build/bench_compiler` so benchmarks do not mutate checked-in examples. It
    records source line/file counts and peak child-process RSS in KB with each
    sample. This is a baseline harness, not a pass/fail gate; thresholds, larger
