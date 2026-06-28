@@ -1538,7 +1538,16 @@ push. They are not release packaging work.
    control 50k about 139ms/116MB RSS, arrays 50k about 158ms/85MB RSS, and
    generics 50k about 151ms/64MB RSS. The module time bounce is within the
    one-sample noise seen in nearby runs; this is kept for the consistent memory
-   drop across diverse generated shapes. Keep
+   drop across diverse generated shapes. Parser joined-token spans now carry a
+   `has_layout_tokens` bit, avoiding a second scan over every expression/type
+   piece just to decide whether multiline layout tokens need filtering. This is
+   especially relevant for expression-heavy code because it creates many parsed
+   pieces. Focused `expressions_50000 --timings` runs moved the pre-sema
+   parse/load interval from roughly 0.90s before this line of work to roughly
+   0.62-0.63s after the layout metadata change. The one-sample broad harness
+   still bounces in total time, so keep treating this as a parser-path win
+   validated by focused timings plus normal fast tests, not as a final compiler
+   throughput solution. Keep
    compiler speed validation broad: generated corpora need multiple code shapes,
    because one particular compilation path can dominate or regress while an
    aggregate number looks acceptable. The

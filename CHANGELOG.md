@@ -108,6 +108,8 @@
 - Moved sparse expression template type arguments behind pointer storage,
   shrinking expression-heavy AST memory use without changing template-call
   semantics.
+- Reduced parser work by carrying layout-token metadata on joined token spans
+  instead of rescanning each expression/type piece before parsing it.
 - Removed obsolete string-based Dudu method/class template substitution helpers.
 - Removed an unused unknown-expression parser helper and renamed the remaining
   text call parser as an explicit `cpp(...)` escape-boundary helper.

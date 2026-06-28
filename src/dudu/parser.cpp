@@ -83,13 +83,6 @@ std::vector<Token> syntax_piece_tokens(std::span<const Token> tokens) {
     return out;
 }
 
-bool has_layout_tokens(std::span<const Token> tokens) {
-    return std::any_of(tokens.begin(), tokens.end(), [](const Token& token) {
-        return token.kind == TokenKind::Newline || token.kind == TokenKind::Indent ||
-               token.kind == TokenKind::Dedent;
-    });
-}
-
 } // namespace
 
 Parser::Parser(std::span<const Token> tokens) : tokens_(tokens) {
@@ -330,6 +323,7 @@ Parser::JoinedTokens Parser::join_until_with_range(std::initializer_list<TokenKi
         }
         if (inside_group &&
             (at(TokenKind::Newline) || at(TokenKind::Indent) || at(TokenKind::Dedent))) {
+            joined.has_layout_tokens = true;
             ++cursor_;
             continue;
         }
@@ -337,6 +331,10 @@ Parser::JoinedTokens Parser::join_until_with_range(std::initializer_list<TokenKi
         if (!joined.has_tokens) {
             joined.range.start = token.location;
             joined.has_tokens = true;
+        }
+        if (token.kind == TokenKind::Newline || token.kind == TokenKind::Indent ||
+            token.kind == TokenKind::Dedent) {
+            joined.has_layout_tokens = true;
         }
         joined.range.end = token_end_location(token);
         if (current().kind == TokenKind::LBracket) {
@@ -368,6 +366,10 @@ Parser::JoinedTokens Parser::join_tokens(size_t begin, size_t end) const {
             joined.range.start = token.location;
             joined.has_tokens = true;
         }
+        if (token.kind == TokenKind::Newline || token.kind == TokenKind::Indent ||
+            token.kind == TokenKind::Dedent) {
+            joined.has_layout_tokens = true;
+        }
         joined.range.end = token_end_location(token);
     }
     return joined;
@@ -395,7 +397,7 @@ Expr Parser::parse_expr_piece(const JoinedTokens& piece) const {
     const std::span<const Token> source_tokens =
         tokens_.subspan(piece.begin, piece.end - piece.begin);
     std::vector<Token> filtered_tokens;
-    if (has_layout_tokens(source_tokens)) {
+    if (piece.has_layout_tokens) {
         filtered_tokens = syntax_piece_tokens(source_tokens);
     }
     ExprTokenParser parser(filtered_tokens.empty() ? source_tokens
@@ -418,7 +420,7 @@ TypeRef Parser::parse_type_piece(const JoinedTokens& piece) const {
     const std::span<const Token> source_tokens =
         tokens_.subspan(piece.begin, piece.end - piece.begin);
     std::vector<Token> filtered_tokens;
-    if (has_layout_tokens(source_tokens)) {
+    if (piece.has_layout_tokens) {
         filtered_tokens = syntax_piece_tokens(source_tokens);
     }
     TypeTokenParser parser(filtered_tokens.empty() ? source_tokens

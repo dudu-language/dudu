@@ -18,6 +18,7 @@ class Parser {
         size_t begin = 0;
         size_t end = 0;
         bool has_tokens = false;
+        bool has_layout_tokens = false;
     };
 
   private:
