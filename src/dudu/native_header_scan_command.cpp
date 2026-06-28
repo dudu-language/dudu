@@ -90,9 +90,12 @@ void native_header_write_text(const std::filesystem::path& path, const std::stri
     out << text;
 }
 
-std::string native_header_scanner_flags(const NativeHeaderOptions& options) {
+std::string native_header_scanner_flags(const NativeHeaderOptions& options,
+                                        bool include_source_dir) {
     std::string flags;
-    append_include_flag(flags, options.source_dir);
+    if (include_source_dir) {
+        append_include_flag(flags, options.source_dir);
+    }
     for (const std::string& include_dir : options.config.include_dirs) {
         append_include_flag(flags, project_path(options.config, include_dir));
     }
@@ -155,7 +158,8 @@ std::string native_header_clangxx_command() {
 }
 
 std::string native_header_clang_base_command(const NativeHeaderOptions& options,
-                                             const std::filesystem::path& cpp, bool ast_dump) {
+                                             const std::filesystem::path& cpp, bool ast_dump,
+                                             const std::string& flags) {
     const std::string clang = native_header_clangxx_command();
     std::string command = shell_quote_arg(clang) +
                           " -std=" + shell_quote_arg(options.config.cpp_std) +
@@ -163,7 +167,7 @@ std::string native_header_clang_base_command(const NativeHeaderOptions& options,
     if (ast_dump) {
         command += "-Xclang -ast-dump ";
     }
-    return command + shell_quote_path(cpp) + native_header_scanner_flags(options);
+    return command + shell_quote_path(cpp) + flags;
 }
 
 std::string native_header_scan_error_message(const ImportDecl& import, std::string detail,

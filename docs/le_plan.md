@@ -1449,7 +1449,12 @@ push. They are not release packaging work.
    Direct timings moved the seven-header stdlib cache section from about 66ms
    to about 45ms, and a three-sample harness run moved cached samples to about
    105ms and 36MB RSS while leaving pure-Dudu generated shapes within normal
-   noise.
+   noise. Standard-library imports then stopped baking the importing source
+   directory into the native scanner flags when no matching local header
+   exists, so system-style headers can share cache entries across generated
+   projects. In a 1k/5k stdlib scale run, `stdlib_5000` stopped paying a
+   second roughly 2.7s cold scan after `stdlib_1000` and ran around 215ms from
+   the shared standard-header cache.
    Compiler-speed claims must be checked against multiple generated shapes and
    at least one real dogfood project when practical, because one benchmark can
    hide that only a specific compilation feature is slow. Generated corpora

@@ -38,6 +38,19 @@ bool requires_scan_success(const ImportDecl& import) {
     const std::string text = header.string();
     return header.is_absolute() || starts_with(text, ".") || starts_with(text, "/");
 }
+bool import_needs_source_dir_include(const ImportDecl& import, const NativeHeaderOptions& options) {
+    const std::filesystem::path header = native_header_unquoted(import.module_path);
+    if (header.is_absolute()) {
+        return false;
+    }
+    const std::string text = header.string();
+    if (starts_with(text, ".") || header.has_parent_path()) {
+        return true;
+    }
+    std::error_code error;
+    return std::filesystem::exists((options.source_dir / header).lexically_normal(), error) &&
+           !error;
+}
 bool public_direct_macro_name(const std::string& name) {
     return !name.empty() &&
            (std::isupper(static_cast<unsigned char>(name.front())) != 0 || name.front() == '_');
@@ -192,12 +205,13 @@ NativeHeaderScan scan_one_header(const ImportDecl& import, const NativeHeaderOpt
     const std::string dependency_flags =
         " -MD -MF " + shell_quote_path(deps) + " -MT dudu_native_scan";
     std::string ast_dump = native_header_run_capture(
-        native_header_clang_base_command(options, cpp, true) + dependency_flags, ast, err);
+        native_header_clang_base_command(options, cpp, true, flags) + dependency_flags, ast, err);
     bool used_prelude_retry = false;
     if (ast_dump.empty()) {
         native_header_write_text(cpp, native_header_scanner_source_for_header(import, true));
         ast_dump = native_header_run_capture(
-            native_header_clang_base_command(options, cpp, true) + dependency_flags, ast, err);
+            native_header_clang_base_command(options, cpp, true, flags) + dependency_flags, ast,
+            err);
         used_prelude_retry = !ast_dump.empty();
     }
     if (!ast_dump.empty()) {
@@ -277,12 +291,13 @@ std::vector<NativeMacroDecl> direct_macros(const std::vector<NativeMacroDecl>& s
 }
 } // namespace
 NativeHeaderScan scan_native_headers(const ModuleAst& module, const NativeHeaderOptions& options) {
-    const std::string flags = native_header_scanner_flags(options);
     NativeHeaderScan out;
     for (const ImportDecl& import : module.imports) {
         if (!is_foreign(import)) {
             continue;
         }
+        const std::string flags =
+            native_header_scanner_flags(options, import_needs_source_dir_include(import, options));
         NativeHeaderScan scan = scan_one_header(import, options, flags);
         if (direct_import(import)) {
             append_unique_native_types(out.types, scan.types);
