@@ -58,7 +58,8 @@ for Dudu symbols also carry those AST docs through current-document, imported,
 module, and member completion paths. Hover no longer recovers declaration
 comments by scanning source lines at request time, and completion resolve
 preserves documentation attached to the item instead of fabricating docs from
-display text.
+display text. Signature help also surfaces those docs for Dudu functions from
+the visible symbol index.
 
 ## Target Behavior
 

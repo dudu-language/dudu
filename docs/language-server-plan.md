@@ -342,19 +342,19 @@ declarations attach to parsed declaration AST nodes. Hover shows those docs for
 same-file declarations and imported Dudu module symbols. Completion items now
 carry those AST docs for local, imported, and Dudu member symbols, and
 `completionItem/resolve` preserves that documentation payload instead of
-reconstructing it from display text. Triple-quoted docstrings, signature-help
-docs, document-symbol docs, and native C/C++ documentation are still planned.
+reconstructing it from display text. Signature help also shows those docs for
+Dudu functions visible through the ProjectIndex. Triple-quoted docstrings,
+document-symbol docs, and native C/C++ documentation are still planned.
 
 Remaining work:
 
 1. Support leading `''' ... '''` docstrings for modules, classes, methods,
    functions, enums, fields, constants, and aliases.
-2. Preserve docs in signature help and document symbols.
+2. Preserve docs in document symbols.
 3. Define formatting rules for docstrings, including indentation trimming and
    blank-line preservation.
 4. Add parser diagnostics for malformed or misplaced docstrings.
-5. Add LSP fixtures for signature-help documentation and broader class/member
-   doc cases.
+5. Add LSP fixtures for broader class/member doc cases.
 6. Extend native header scanning to capture C/C++ comments when Clang exposes
    useful source ranges or documentation comments.
 7. Show native C/C++ documentation in hover/completion/signature help when
@@ -384,7 +384,9 @@ coverage is implemented for common function, type, control-flow, import, and
 exception forms. Completion items for Dudu symbols preserve AST-backed
 documentation comments across current-document symbols, selective imports,
 module completions, and member completions, and completion resolve keeps that
-documentation instead of replacing it with a generic detail string.
+documentation instead of replacing it with a generic detail string. Signature
+help includes AST documentation for Dudu functions reached through the same
+visible symbol index.
 
 ### Milestone 4: Native Header Navigation
 

@@ -206,6 +206,11 @@ struct CallSite {
     int parameter = 0;
 };
 
+struct SignatureCandidate {
+    std::string label;
+    std::string documentation;
+};
+
 bool signature_token_before_cursor(const Token& token, int line, int character) {
     if (token.kind == TokenKind::Newline || token.kind == TokenKind::Indent ||
         token.kind == TokenKind::Dedent || token.kind == TokenKind::End) {
@@ -391,14 +396,14 @@ std::string signature_help_json(const Document* doc, const Json* params) {
     if (call.name.empty()) {
         return "{\"signatures\":[],\"activeSignature\":0,\"activeParameter\":0}";
     }
-    std::vector<std::string> signatures;
+    std::vector<SignatureCandidate> signatures;
     if (const ProjectIndex* index = completion_index(*doc)) {
         const ModuleAst& current = index->visible_unit_for_path(doc->path);
         for (const Symbol& symbol : symbols_for_module(current, true)) {
             if (symbol_matches(symbol.name, call.name) &&
                 (symbol.kind == lsp_symbol_kind::Function ||
                  symbol.kind == lsp_symbol_kind::Method)) {
-                signatures.push_back(symbol.detail);
+                signatures.push_back({.label = symbol.detail, .documentation = symbol.doc_comment});
             }
         }
     }
@@ -408,7 +413,9 @@ std::string signature_help_json(const Document* doc, const Json* params) {
         if (i > 0) {
             out << ",";
         }
-        out << "{\"label\":\"" << json_escape(signatures[i]) << "\"}";
+        out << "{\"label\":\"" << json_escape(signatures[i].label) << "\"";
+        write_documentation(out, signatures[i].documentation);
+        out << "}";
     }
     out << "],\"activeSignature\":0,\"activeParameter\":" << call.parameter << "}";
     return out.str();

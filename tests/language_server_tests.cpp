@@ -152,8 +152,7 @@ void test_lsp_completion_uses_visible_imported_functions() {
 }
 
 void test_lsp_completion_includes_imported_ast_docs() {
-    const std::filesystem::path dir =
-        std::filesystem::temp_directory_path() / "dudu_lsp_imported_completion_doc_test";
+    const std::filesystem::path dir = std::filesystem::temp_directory_path() / "dudu_lsp_comp_doc";
     std::filesystem::remove_all(dir);
     std::filesystem::create_directories(dir);
     write_file(dir / "helper.dd", "# Adds one for completion docs.\n"
@@ -176,7 +175,7 @@ void test_lsp_completion_includes_imported_ast_docs() {
 
 void test_lsp_member_completion_includes_ast_docs() {
     const std::filesystem::path dir =
-        std::filesystem::temp_directory_path() / "dudu_lsp_member_completion_doc_test";
+        std::filesystem::temp_directory_path() / "dudu_lsp_member_comp_doc";
     std::filesystem::remove_all(dir);
     std::filesystem::create_directories(dir);
     write_file(dir / "vec3.dd", "class Vec3:\n"
@@ -221,7 +220,8 @@ void test_lsp_signature_help_uses_visible_imported_functions() {
         std::filesystem::temp_directory_path() / "dudu_lsp_imported_function_signature_test";
     std::filesystem::remove_all(dir);
     std::filesystem::create_directories(dir);
-    write_file(dir / "helper.dd", "def helper(value: i32, amount: i32) -> i32:\n"
+    write_file(dir / "helper.dd", "# Combines two values for signature docs.\n"
+                                  "def helper(value: i32, amount: i32) -> i32:\n"
                                   "    return value + amount\n");
     write_file(dir / "main.dd", "def main() -> i32:\n"
                                 "    return 0\n");
@@ -235,6 +235,7 @@ void test_lsp_signature_help_uses_visible_imported_functions() {
     dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":3,\"character\":22}}").parse();
     const std::string help = dudu::signature_help_json(&doc, &params);
     assert(help.find("helper(i32, i32) -> i32") != std::string::npos);
+    assert(help.find("Combines two values for signature docs.") != std::string::npos);
     assert(help.find("\"activeParameter\":1") != std::string::npos);
 }
 
