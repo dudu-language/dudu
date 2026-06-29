@@ -249,7 +249,7 @@ void set_expr_type_ref(Expr& expr, TypeRef type) {
         expr.type_ref.reset();
         return;
     }
-    expr.type_ref = std::make_shared<TypeRef>(std::move(type));
+    expr.type_ref = std::make_unique<TypeRef>(std::move(type));
 }
 
 bool has_stmt_type_ref(const Stmt& stmt) {

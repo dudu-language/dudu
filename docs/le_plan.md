@@ -1834,6 +1834,21 @@ push. They are not release packaging work.
    about 105ms and 103MB RSS. Keep this as a real representation cleanup: it
    reduces memory broadly and improves the expression-heavy outlier without
    changing language behavior.
+   Expression optional side fields then moved from `shared_ptr` to
+   `unique_ptr` with explicit deep-copy semantics. This shrinks `Expr` from
+   216 bytes to 184 bytes and `Stmt` from 680 bytes to 616 bytes in the
+   current layout. Unlike the rejected statement-level ownership experiment,
+   focused and broad Release sweeps stayed positive: a five-sample focused
+   run measured expression-heavy 50k at about 213ms and 238MB RSS, calls at
+   about 56ms and 49MB RSS, control at about 71ms and 59MB RSS, and mixed at
+   about 100ms and 99MB RSS. A three-sample broad sweep measured expressions
+   about 208ms and 238MB RSS, calls about 58ms and 49MB RSS, functions about
+   56ms and 45MB RSS, classes about 41ms and 33MB RSS, modules about 75ms and
+   99MB RSS, arrays about 79ms and 51MB RSS, generics about 87ms and 41MB
+   RSS, and mixed about 105ms and 99MB RSS. Keep validating this kind of
+   representation change against diverse generated shapes; the win is broad
+   memory reduction plus a real expression-heavy improvement, not a one-shape
+   trick.
    Replacing statement-level optional `shared_ptr` fields with `unique_ptr`
    plus deep-copy semantics was tried and rejected. It reduced some retained
    memory in expression/call/control shapes, but a five-sample focused Release

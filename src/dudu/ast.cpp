@@ -5,6 +5,43 @@
 #include <vector>
 
 namespace dudu {
+Expr::Expr(const Expr& other)
+    : kind(other.kind), name(other.name), value(other.value), op(other.op),
+      callee(other.callee == nullptr ? nullptr
+                                     : std::make_unique<std::vector<Expr>>(*other.callee)),
+      template_args(other.template_args == nullptr
+                        ? nullptr
+                        : std::make_unique<std::vector<Expr>>(*other.template_args)),
+      template_type_args(other.template_type_args == nullptr
+                             ? nullptr
+                             : std::make_unique<std::vector<TypeRef>>(*other.template_type_args)),
+      type_ref(other.type_ref == nullptr ? nullptr : std::make_unique<TypeRef>(*other.type_ref)),
+      children(other.children), location(other.location), range(other.range) {
+}
+
+Expr& Expr::operator=(const Expr& other) {
+    if (this == &other) {
+        return *this;
+    }
+    kind = other.kind;
+    name = other.name;
+    value = other.value;
+    op = other.op;
+    callee =
+        other.callee == nullptr ? nullptr : std::make_unique<std::vector<Expr>>(*other.callee);
+    template_args = other.template_args == nullptr
+                        ? nullptr
+                        : std::make_unique<std::vector<Expr>>(*other.template_args);
+    template_type_args = other.template_type_args == nullptr
+                             ? nullptr
+                             : std::make_unique<std::vector<TypeRef>>(*other.template_type_args);
+    type_ref = other.type_ref == nullptr ? nullptr : std::make_unique<TypeRef>(*other.type_ref);
+    children = other.children;
+    location = other.location;
+    range = other.range;
+    return *this;
+}
+
 std::vector<std::string> tuple_binding_names(const Expr& expr) {
     if (expr.kind != ExprKind::TupleLiteral) {
         return {};

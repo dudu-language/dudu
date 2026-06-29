@@ -164,14 +164,20 @@ enum class ExprKind {
 };
 
 struct Expr {
+    Expr() = default;
+    Expr(const Expr& other);
+    Expr& operator=(const Expr& other);
+    Expr(Expr&&) noexcept = default;
+    Expr& operator=(Expr&&) noexcept = default;
+
     ExprKind kind = ExprKind::Missing;
     std::string name;
     std::string value;
     std::string_view op;
-    std::shared_ptr<std::vector<Expr>> callee;
-    std::shared_ptr<std::vector<Expr>> template_args;
-    std::shared_ptr<std::vector<TypeRef>> template_type_args;
-    std::shared_ptr<TypeRef> type_ref;
+    std::unique_ptr<std::vector<Expr>> callee;
+    std::unique_ptr<std::vector<Expr>> template_args;
+    std::unique_ptr<std::vector<TypeRef>> template_type_args;
+    std::unique_ptr<TypeRef> type_ref;
     std::vector<Expr> children;
     SourceLocation location;
     SourceRange range;

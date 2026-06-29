@@ -191,7 +191,7 @@ const std::vector<Expr>& expr_callee(const Expr& expr) {
 
 std::vector<Expr>& mutable_expr_callee(Expr& expr) {
     if (expr.callee == nullptr) {
-        expr.callee = std::make_shared<std::vector<Expr>>();
+        expr.callee = std::make_unique<std::vector<Expr>>();
     }
     return *expr.callee;
 }
@@ -201,7 +201,7 @@ void set_expr_callee(Expr& expr, std::vector<Expr> callee) {
         expr.callee.reset();
         return;
     }
-    expr.callee = std::make_shared<std::vector<Expr>>(std::move(callee));
+    expr.callee = std::make_unique<std::vector<Expr>>(std::move(callee));
 }
 
 bool has_expr_template_type_args(const Expr& expr) {
@@ -218,7 +218,7 @@ void set_expr_template_type_args(Expr& expr, std::vector<TypeRef> args) {
         expr.template_type_args.reset();
         return;
     }
-    expr.template_type_args = std::make_shared<std::vector<TypeRef>>(std::move(args));
+    expr.template_type_args = std::make_unique<std::vector<TypeRef>>(std::move(args));
 }
 
 bool has_expr_template_args(const Expr& expr) {
@@ -232,7 +232,7 @@ const std::vector<Expr>& expr_template_args(const Expr& expr) {
 
 std::vector<Expr>& mutable_expr_template_args(Expr& expr) {
     if (expr.template_args == nullptr) {
-        expr.template_args = std::make_shared<std::vector<Expr>>();
+        expr.template_args = std::make_unique<std::vector<Expr>>();
     }
     return *expr.template_args;
 }
@@ -242,7 +242,7 @@ void set_expr_template_args(Expr& expr, std::vector<Expr> args) {
         expr.template_args.reset();
         return;
     }
-    expr.template_args = std::make_shared<std::vector<Expr>>(std::move(args));
+    expr.template_args = std::make_unique<std::vector<Expr>>(std::move(args));
 }
 
 bool has_stmt_message_expr(const Stmt& stmt) {
