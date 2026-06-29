@@ -326,6 +326,7 @@ def main() -> i32:
         request(39, "textDocument/references", {"textDocument": text_document(entities), "position": position(entities_source, "Play", add=1)}),
         request(42, "textDocument/references", {"textDocument": text_document(main), "position": position(main_source, "player.hp", add=len("player."))}),
         request(43, "textDocument/references", {"textDocument": text_document(main), "position": position(main_source, "player.move", add=len("player."))}),
+        request(44, "textDocument/references", {"textDocument": text_document(entities), "position": position(entities_source, "move(self")}),
         request(40, "textDocument/documentSymbol", {"textDocument": text_document(ops)}),
         request(41, "textDocument/definition", {"textDocument": text_document(ops), "position": position(ops_source, "add(self", add=1)}),
         request(50, "textDocument/completion", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add", add=len("nb."))}),
@@ -415,6 +416,14 @@ def main() -> i32:
         raise AssertionError(f"missing Player.move declaration through use-site refs: {method_use_refs!r}")
     if has_start(method_use_refs, entities.as_uri(), enemy_move_decl["line"], enemy_move_decl["character"]):
         raise AssertionError(f"Enemy.move leaked into Player.move refs: {method_use_refs!r}")
+    method_decl_refs = response(messages, 44)
+    assert_nonempty(method_decl_refs, "method declaration identity references")
+    if not has_start(method_decl_refs, main.as_uri(), main_player_move["line"], main_player_move["character"]):
+        raise AssertionError(f"missing main player.move through declaration refs: {method_decl_refs!r}")
+    if not has_start(method_decl_refs, entities.as_uri(), player_move_decl["line"], player_move_decl["character"]):
+        raise AssertionError(f"missing Player.move declaration reference: {method_decl_refs!r}")
+    if has_start(method_decl_refs, entities.as_uri(), enemy_move_decl["line"], enemy_move_decl["character"]):
+        raise AssertionError(f"Enemy.move leaked into declaration refs: {method_decl_refs!r}")
     assert_symbol_names(response(messages, 40), ["Vec2", "main"])
     assert_nonempty(response(messages, 41), "operator method definition")
     assert_completion_labels(response(messages, 50), ["matrix_native_add", "MatrixNativePoint", "DUDU_MATRIX_NATIVE_SCALE"])
