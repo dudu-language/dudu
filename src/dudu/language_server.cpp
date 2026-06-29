@@ -358,7 +358,10 @@ class LanguageServer {
     std::string workspace_symbol_result(const Json* params) const {
         const std::string query =
             params == nullptr ? std::string{} : string_value(params->get("query"));
-        return workspace_symbols_json(query, cached_workspace_documents(), documents_);
+        if (documents_.empty()) {
+            return "[]";
+        }
+        return workspace_symbols_json(query, documents_);
     }
 
     std::string definition_result(const Json* params) const {
