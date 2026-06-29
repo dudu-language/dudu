@@ -1429,17 +1429,19 @@ push. They are not release packaging work.
    than the tiny correctness fixtures. The benchmark also generates diverse
    scalable frontend-throughput corpora through `--line-scales` and code shapes
    such as functions, classes, expressions, modules, calls, control flow,
-   arrays, and generics, defaulting to
+   arrays, indexing/slicing/swizzling, generics, pattern matching/sum types,
+   and operator overloads, defaulting to
    `1000,5000,10000` lines and allowing explicit stress runs such as
    `--line-scales 10000,50000,100000,200000,500000,1000000`. The generated
    shapes are selectable with
-   `--shapes functions,classes,expressions,modules,calls,control,arrays,generics,stdlib,mixed`
+   `--shapes functions,classes,expressions,modules,calls,control,arrays,indexing,generics,matches,operators,stdlib,mixed`
    so profiling can distinguish slow declaration lookup, class/member handling,
    expression parsing/sema, import/module behavior, nested calls, control-flow
-   blocks, array/indexing operations, generic instantiation, standard-library
-   native interop, and mixed project-shaped code that combines imports, classes,
-   methods, generics, arrays, loops, calls, and arithmetic in one generated
-   corpus. The `stdlib` shape is intentionally explicit rather than default
+   blocks, array basics, matrix/tensor-like indexing and slices, generic
+   instantiation, match lowering for enums/sum types, operator overload
+   resolution, standard-library native interop, and mixed project-shaped code
+   that combines imports, classes, methods, generics, arrays, loops, calls, and
+   arithmetic in one generated corpus. The `stdlib` shape is intentionally explicit rather than default
    because it pulls real C++ standard headers through native scanning and is
    much slower than pure Dudu frontend shapes; a local 1k Release run measured
    about 2.6s and 101MB RSS cold, then about 114ms and 47MB RSS on cached

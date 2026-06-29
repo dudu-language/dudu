@@ -7,7 +7,7 @@ csv_path="$repo_root/build/bench_compiler/compiler_bench.csv"
 build_tools=1
 build_type="Debug"
 line_scales="1000,5000,10000"
-shapes="functions,classes,expressions,modules,calls,control,arrays,generics,mixed"
+shapes="functions,classes,expressions,modules,calls,control,arrays,indexing,generics,matches,operators,mixed"
 
 usage() {
     cat <<'EOF'
@@ -21,7 +21,7 @@ source line counts, for example:
   --line-scales 10000,50000,100000,200000,500000,1000000
 
 --shapes accepts a comma-separated list of generated frontend stress shapes:
-  functions,classes,expressions,modules,calls,control,arrays,generics,stdlib,mixed
+  functions,classes,expressions,modules,calls,control,arrays,indexing,generics,matches,operators,stdlib,mixed
 
 The stdlib shape is intentionally not in the default set because real C++
 standard-library header scanning is much slower than pure Dudu frontend
@@ -235,7 +235,7 @@ validate_shapes() {
     for shape in "${requested_shapes[@]}"; do
         shape="$(printf '%s' "$shape" | tr -d '[:space:]')"
         case "$shape" in
-            functions|classes|expressions|modules|calls|control|arrays|generics|stdlib|mixed)
+            functions|classes|expressions|modules|calls|control|arrays|indexing|generics|matches|operators|stdlib|mixed)
                 ;;
             *)
                 echo "invalid --shapes entry: $shape" >&2
@@ -697,6 +697,74 @@ EOF
     printf '%s\n' "$entry"
 }
 
+prepare_scaled_indexing_case() {
+    local requested_lines="$1"
+    local project="$scale_root/indexing_$requested_lines"
+    local entry="$project/main.dd"
+    rm -rf "$project"
+    mkdir -p "$project"
+
+    local funcs=$((requested_lines / 24))
+    if [[ "$funcs" -lt 1 ]]; then
+        funcs=1
+    fi
+    cat >"$entry" <<'EOF'
+class Vec2:
+    x: i32
+    y: i32
+
+
+class Color4:
+    r: i32
+    g: i32
+    b: i32
+    a: i32
+
+
+def sum_span(values: strided_span[i32]) -> i32:
+    total: i32 = 0
+    for value: i32 in values:
+        total += value
+    return total
+
+EOF
+    for ((i = 0; i < funcs; ++i)); do
+        cat >>"$entry" <<EOF
+def indexing_func_$i(seed: i32) -> i32:
+    matrix: array[i32] = [
+        [seed, seed + 1, seed + 2],
+        [seed + 3, seed + 4, seed + 5],
+    ]
+    image: array[i32] = [
+        [[seed, seed + 1], [seed + 2, seed + 3]],
+        [[seed + 4, seed + 5], [seed + 6, seed + 7]],
+    ]
+    row: array[i32][3] = matrix[1]
+    column: strided_span[i32] = matrix[:, 1]
+    channel: strided_span[i32] = image[:, :, 0]
+    pos: Vec2 = Vec2(seed, seed + 1)
+    pos.yx = Vec2(seed + 2, seed + 3)
+    color: Color4 = Color4(seed, seed + 1, seed + 2, seed + 3)
+    color.bgra = Color4(seed + 6, seed + 5, seed + 4, seed + 7)
+    return row[0] + row[2] + sum_span(column) + sum_span(channel) + pos.x + pos.y + color.r + color.a + $i
+
+EOF
+    done
+    {
+        printf 'def main() -> i32:\n'
+        printf '    total: i32 = 0\n'
+        local limit="$funcs"
+        if [[ "$limit" -gt 128 ]]; then
+            limit=128
+        fi
+        for ((i = 0; i < limit; ++i)); do
+            printf '    total += indexing_func_%d(%d)\n' "$i" "$i"
+        done
+        printf '    return total\n'
+    } >>"$entry"
+    printf '%s\n' "$entry"
+}
+
 prepare_scaled_generics_case() {
     local requested_lines="$1"
     local project="$scale_root/generics_$requested_lines"
@@ -736,6 +804,147 @@ EOF
         fi
         for ((i = 0; i < limit; ++i)); do
             printf '    total += generic_func_%d(%d)\n' "$i" "$i"
+        done
+        printf '    return total\n'
+    } >>"$entry"
+    printf '%s\n' "$entry"
+}
+
+prepare_scaled_matches_case() {
+    local requested_lines="$1"
+    local project="$scale_root/matches_$requested_lines"
+    local entry="$project/main.dd"
+    rm -rf "$project"
+    mkdir -p "$project"
+
+    local funcs=$((requested_lines / 28))
+    if [[ "$funcs" -lt 1 ]]; then
+        funcs=1
+    fi
+    cat >"$entry" <<'EOF'
+enum Message:
+    Quit
+
+    Move:
+        x: i32
+        y: i32
+
+    Write(str)
+
+    Scale(i32)
+
+
+EOF
+    for ((i = 0; i < funcs; ++i)); do
+        cat >>"$entry" <<EOF
+def match_func_$i(msg: Message, seed: i32) -> i32:
+    match msg:
+        case Message.Quit:
+            return seed + $i
+        case Message.Move(x, y) if x > y:
+            return x - y + seed
+        case Message.Move(x, y):
+            return x + y + $i
+        case Message.Write(text) if len(text) > 3:
+            return i32(len(text)) + seed
+        case Message.Write(text):
+            return i32(len(text)) + $i
+        case Message.Scale(value):
+            return value * 2 + seed
+
+EOF
+    done
+    {
+        printf 'def main() -> i32:\n'
+        printf '    total: i32 = 0\n'
+        printf '    moved: Message = Message.Move(x=20, y=19)\n'
+        printf '    text: Message = Message.Write("bench")\n'
+        printf '    scale: Message = Message.Scale(7)\n'
+        local limit="$funcs"
+        if [[ "$limit" -gt 128 ]]; then
+            limit=128
+        fi
+        for ((i = 0; i < limit; ++i)); do
+            printf '    total += match_func_%d(moved, %d)\n' "$i" "$i"
+            printf '    total += match_func_%d(text, %d)\n' "$i" "$i"
+            printf '    total += match_func_%d(scale, %d)\n' "$i" "$i"
+        done
+        printf '    return total\n'
+    } >>"$entry"
+    printf '%s\n' "$entry"
+}
+
+prepare_scaled_operators_case() {
+    local requested_lines="$1"
+    local project="$scale_root/operators_$requested_lines"
+    local entry="$project/main.dd"
+    rm -rf "$project"
+    mkdir -p "$project"
+
+    local funcs=$((requested_lines / 24))
+    if [[ "$funcs" -lt 1 ]]; then
+        funcs=1
+    fi
+    cat >"$entry" <<'EOF'
+class Vec2:
+    x: i32
+    y: i32
+
+    @operator("+")
+    def add(self, other: Vec2) -> Vec2:
+        return Vec2(self.x + other.x, self.y + other.y)
+
+    @operator("*")
+    def mul_vec(self, other: Vec2) -> Vec2:
+        return Vec2(self.x * other.x, self.y * other.y)
+
+    @operator("*")
+    def mul_scalar(self, value: i32) -> Vec2:
+        return Vec2(self.x * value, self.y * value)
+
+    @operator("==")
+    def same(self, other: Vec2) -> bool:
+        return self.x == other.x and self.y == other.y
+
+
+class Tensor2:
+    values: array[i32][4]
+
+    @operator("[]")
+    def at(self, index: i32) -> i32:
+        return self.values[index]
+
+    @operator("[]=")
+    def put(self, index: i32, value: i32):
+        self.values[index] = value
+
+
+EOF
+    for ((i = 0; i < funcs; ++i)); do
+        cat >>"$entry" <<EOF
+def operator_func_$i(seed: i32) -> i32:
+    a: Vec2 = Vec2(seed + 1, seed + 2)
+    b: Vec2 = Vec2(seed + 3, seed + 4)
+    c = (a + b) * 2
+    d = a * b
+    values: array[i32] = [seed, seed + 1, seed + 2, seed + 3]
+    tensor = Tensor2(values)
+    tensor[1] = c.x + d.y + $i
+    if c == d:
+        return tensor[0]
+    return tensor[1] + tensor[2]
+
+EOF
+    done
+    {
+        printf 'def main() -> i32:\n'
+        printf '    total: i32 = 0\n'
+        local limit="$funcs"
+        if [[ "$limit" -gt 128 ]]; then
+            limit=128
+        fi
+        for ((i = 0; i < limit; ++i)); do
+            printf '    total += operator_func_%d(%d)\n' "$i" "$i"
         done
         printf '    return total\n'
     } >>"$entry"
@@ -960,9 +1169,24 @@ for requested_lines in "${requested_line_scales[@]}"; do
         run_case "duc_check_arrays_${requested_lines}" "frontend_arrays" "$scaled_entry" \
             "$tool_build_dir/duc" check "$scaled_entry"
     fi
+    if shape_enabled "indexing"; then
+        scaled_entry="$(prepare_scaled_indexing_case "$requested_lines")"
+        run_case "duc_check_indexing_${requested_lines}" "frontend_indexing" "$scaled_entry" \
+            "$tool_build_dir/duc" check "$scaled_entry"
+    fi
     if shape_enabled "generics"; then
         scaled_entry="$(prepare_scaled_generics_case "$requested_lines")"
         run_case "duc_check_generics_${requested_lines}" "frontend_generics" "$scaled_entry" \
+            "$tool_build_dir/duc" check "$scaled_entry"
+    fi
+    if shape_enabled "matches"; then
+        scaled_entry="$(prepare_scaled_matches_case "$requested_lines")"
+        run_case "duc_check_matches_${requested_lines}" "frontend_matches" "$scaled_entry" \
+            "$tool_build_dir/duc" check "$scaled_entry"
+    fi
+    if shape_enabled "operators"; then
+        scaled_entry="$(prepare_scaled_operators_case "$requested_lines")"
+        run_case "duc_check_operators_${requested_lines}" "frontend_operators" "$scaled_entry" \
             "$tool_build_dir/duc" check "$scaled_entry"
     fi
     if shape_enabled "stdlib"; then
