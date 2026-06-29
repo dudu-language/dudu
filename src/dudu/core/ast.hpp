@@ -317,6 +317,7 @@ struct NativeNamespaceDecl {
     std::string name;
     NativeSymbolId identity{};
     SourceLocation location;
+    std::string doc_comment{};
 };
 
 struct EnumPayloadField {

@@ -3789,4 +3789,5 @@ push. They are not release packaging work.
    the matrix checks native namespace semantic-token classification, and
    find-references on the namespace segment is filtered through native identity
    so same-header uses are included without leaking same-spelled namespaces from
-   unrelated headers.
+   unrelated headers. Header comments on native namespace declarations are now
+   preserved through the scan cache and shown in hover.

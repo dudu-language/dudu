@@ -406,6 +406,7 @@ def other() -> i32:
     (tmp / "native_namespace.hpp").write_text(
         """#pragma once
 
+/** Matrix namespace docs. */
 namespace matrix_space {
     /** Adds inside a native namespace. */
     inline int namespaced_add(int left, int right) {
@@ -938,10 +939,12 @@ def main() -> i32:
         raise AssertionError(f"missing native namespace hover: {native_namespace_hover!r}")
     if "Native identity:" not in native_namespace_hover:
         raise AssertionError(f"missing native namespace identity: {native_namespace_hover!r}")
+    if "Matrix namespace docs." not in native_namespace_hover:
+        raise AssertionError(f"missing native namespace docs: {native_namespace_hover!r}")
     native_namespace_definition = response(messages, 87)
     if not native_namespace_definition["uri"].endswith("/native_namespace.hpp"):
         raise AssertionError(f"native namespace definition did not jump to header: {native_namespace_definition!r}")
-    if native_namespace_definition["range"]["start"]["line"] != 2:
+    if native_namespace_definition["range"]["start"]["line"] != 3:
         raise AssertionError(f"native namespace definition jumped to wrong line: {native_namespace_definition!r}")
     native_namespace_completion = response(messages, 88)
     assert_completion_labels(native_namespace_completion, ["namespaced_add"])

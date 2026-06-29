@@ -401,8 +401,8 @@ Remaining work:
    appear beyond unterminated triple strings and misplaced docstrings.
 5. Add larger-doc LSP fixtures for fields/constants/aliases if a larger-doc
    syntax is added.
-6. Extend native C/C++ documentation fixtures beyond native functions when the
-   scanner exposes useful docs for more declaration kinds.
+6. Extend native C/C++ documentation fixtures beyond native functions and
+   namespaces when the scanner exposes useful docs for more declaration kinds.
 
 ### Milestone 3: Completion And Signature Help
 
@@ -582,7 +582,8 @@ the namespace segment jump to/show the namespace declaration, completion after
 the namespace path lists namespaced functions with docs, semantic tokens
 classify the namespace as a native namespace token, and find-references on the
 namespace segment uses native identity so same-spelled namespaces from other
-headers do not leak in.
+headers do not leak in. Header comments on native namespace declarations are
+preserved through the scan cache and shown in hover.
 Dudu-owned declaration and unique-reference scope checks use Dudu-only document
 symbols, so ordinary references do not trigger native header scanning unless
 the selected symbol is an explicit native import.

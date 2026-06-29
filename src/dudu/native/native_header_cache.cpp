@@ -13,7 +13,7 @@
 namespace dudu {
 namespace {
 
-constexpr std::string_view kScanCacheVersion = "dudu-native-scan-v5";
+constexpr std::string_view kScanCacheVersion = "dudu-native-scan-v6";
 
 std::string read_text(const std::filesystem::path& path) {
     return try_read_text_file(path).value_or("");
@@ -232,10 +232,11 @@ std::optional<NativeHeaderScan> load_native_header_scan_cache(const NativeHeader
                                    .function_like = fields[2] == "1",
                                    .identity = symbol_id(fields, 3, 4),
                                    .location = decl_location});
-        } else if (tag == "NN" && fields.size() == 6) {
+        } else if (tag == "NN" && fields.size() == 7) {
             scan.namespaces.push_back({.name = fields[0],
                                        .identity = symbol_id(fields, 1, 2),
-                                       .location = cached_location(fields, 3, location)});
+                                       .location = cached_location(fields, 4, location),
+                                       .doc_comment = fields[3]});
         } else if (tag == "CLS" && fields.size() == 10) {
             const SourceLocation decl_location = cached_location(fields, 7, location);
             ClassDecl klass;
@@ -321,7 +322,7 @@ void store_native_header_scan_cache(const NativeHeaderRawCache& cache,
     }
     for (const NativeNamespaceDecl& item : scan.namespaces) {
         std::vector<std::string> fields = {item.name, item.identity.usr,
-                                           item.identity.canonical_path};
+                                           item.identity.canonical_path, item.doc_comment};
         append_location_fields(fields, item.location);
         write_record(out, "NN", fields);
     }

@@ -267,7 +267,8 @@ std::vector<Symbol> symbols_for_module(const ModuleAst& module, bool include_nat
                        .detail = "native namespace " + ns.name,
                        .location = ns.location,
                        .kind = lsp_symbol_kind::Namespace,
-                       .native_identity_key = native_identity_key(ns.identity)});
+                       .native_identity_key = native_identity_key(ns.identity),
+                       .doc_comment = ns.doc_comment});
     }
     for (const NativeTypeDecl& type : module.native_types) {
         out.push_back({.name = type.name,

@@ -151,6 +151,8 @@ tokens assert the namespace uses the native namespace classification.
 Find-references on that namespace segment is also identity-filtered through
 `ProjectIndex`: same-header namespace uses are included, while same-spelled
 namespaces from another header are excluded.
+Header comments on native namespace declarations are preserved through the scan
+cache and shown in namespace hover.
 Rename now uses module-qualified and selective-import Dudu identity for proven
 use-site renames: renaming `math.mix` from a use site edits the source
 declaration and matching `math.mix` references while leaving same-named

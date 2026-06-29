@@ -25,6 +25,7 @@ enum class CommentTargetKind {
     Class,
     Field,
     Method,
+    Namespace,
 };
 
 struct CommentTarget {
@@ -198,6 +199,11 @@ void append_doc_text(NativeHeaderScan& scan, const CommentTarget& target, const 
                             text);
         }
         break;
+    case CommentTargetKind::Namespace:
+        if (target.primary < scan.namespaces.size()) {
+            append_doc_text(scan.namespaces[target.primary].doc_comment, text);
+        }
+        break;
     }
 }
 
@@ -284,6 +290,9 @@ void parse_ast_line(NativeHeaderScan& scan, const std::string& line,
         scan.namespaces.push_back({.name = name,
                                    .identity = native_identity(name, current_file),
                                    .location = decl_location});
+        comment_targets.push_back({.depth = depth,
+                                   .kind = CommentTargetKind::Namespace,
+                                   .primary = scan.namespaces.size() - 1});
     } else if ((line.find("TypedefDecl") != std::string::npos ||
                 line.find("TypeAliasDecl") != std::string::npos) &&
                std::regex_search(line, match, typedef_decl)) {
