@@ -14,7 +14,8 @@ namespace dudu {
 std::string file_uri_to_path(std::string uri);
 std::filesystem::path project_config_path(const std::filesystem::path& file);
 ProjectConfig config_for_file(const std::filesystem::path& file);
-const ProjectIndex& project_index_for_document(const Document& doc, bool include_native_headers);
+const ProjectIndex& project_index_for_document(const Document& doc, bool include_native_headers,
+                                               bool check_semantics = false);
 void clear_language_server_module_cache();
 int leading_spaces(const std::string& line);
 int document_line_count(const std::string& text);

@@ -6,7 +6,6 @@
 #include "dudu/language_server_navigation.hpp"
 #include "dudu/language_server_support.hpp"
 #include "dudu/native_build.hpp"
-#include "dudu/sema.hpp"
 
 #include <cstdlib>
 #include <filesystem>
@@ -70,9 +69,8 @@ std::vector<Diagnostic> diagnostics_for_document(const Document& doc) {
                  .data_name = "",
                  .fix_range = std::nullopt}};
         }
-        ModuleAst module = project_index_for_document(doc, true).merged_module();
-        analyze_module_tree(module, {.check_bodies = true});
-        return ast_lint_diagnostics(module, doc);
+        const ProjectIndex& index = project_index_for_document(doc, true, true);
+        return ast_lint_diagnostics(index.merged_module(), doc);
     } catch (const CompileError& error) {
         return {{.location = error.location(),
                  .message = error.what(),

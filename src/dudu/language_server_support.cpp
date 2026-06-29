@@ -16,6 +16,7 @@ struct ModuleCacheKey {
     std::string path;
     size_t text_hash = 0;
     bool include_native_headers = false;
+    bool check_semantics = false;
 
     friend bool operator<(const ModuleCacheKey& lhs, const ModuleCacheKey& rhs) {
         if (lhs.path != rhs.path) {
@@ -24,7 +25,10 @@ struct ModuleCacheKey {
         if (lhs.text_hash != rhs.text_hash) {
             return lhs.text_hash < rhs.text_hash;
         }
-        return lhs.include_native_headers < rhs.include_native_headers;
+        if (lhs.include_native_headers != rhs.include_native_headers) {
+            return lhs.include_native_headers < rhs.include_native_headers;
+        }
+        return lhs.check_semantics < rhs.check_semantics;
     }
 };
 
@@ -84,10 +88,12 @@ ProjectConfig config_for_file(const std::filesystem::path& file) {
     return parsed;
 }
 
-const ProjectIndex& project_index_for_document(const Document& doc, bool include_native_headers) {
+const ProjectIndex& project_index_for_document(const Document& doc, bool include_native_headers,
+                                               bool check_semantics) {
     const ModuleCacheKey key{.path = doc.path.lexically_normal().string(),
                              .text_hash = std::hash<std::string>{}(doc.text),
-                             .include_native_headers = include_native_headers};
+                             .include_native_headers = include_native_headers,
+                             .check_semantics = check_semantics};
     if (const auto found = project_index_cache.find(key); found != project_index_cache.end()) {
         if (found->second.index.source_stamps_current()) {
             return found->second.index;
@@ -104,7 +110,8 @@ const ProjectIndex& project_index_for_document(const Document& doc, bool include
                                 std::filesystem::exists(doc.path.parent_path());
     options.include_native_headers = include_native_headers;
     options.include_native_headers_in_merged_module = include_native_headers;
-    options.check_semantics = false;
+    options.check_semantics = check_semantics;
+    options.semantic_options = {.check_bodies = true};
     ProjectIndex index = ProjectIndex::load(options);
     ModuleCacheEntry entry{.index = std::move(index)};
     auto result = project_index_cache.emplace(key, std::move(entry));
