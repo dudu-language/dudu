@@ -1929,6 +1929,17 @@ push. They are not release packaging work.
    around 79ms, indexing around 131ms, matches around 64ms, operators around
    92ms, and mixed around 91ms. Keep this as a small hot-path cleanup, not as
    a major compiler-speed milestone.
+   The source-text atom lookup cache then expanded from a one-entry
+   thread-local cache to a tiny direct-mapped cache. This keeps the same
+   mutex-protected interner miss path but helps compiler code that alternates
+   between several AST names instead of repeatedly touching one atom. A
+   five-sample focused Release run measured arrays 50k around 65ms, indexing
+   around 124ms, generics around 73ms, matches around 57ms, operators around
+   87ms, and mixed around 85ms. A three-sample broad Release run stayed clean:
+   expressions around 198ms, calls around 51ms, classes around 38ms, control
+   around 60ms, modules around 58ms, arrays around 67ms, indexing around
+   125ms, generics around 73ms, matches around 60ms, operators around 90ms,
+   and mixed around 86ms. Keep it as a real broad frontend-throughput win.
    Replacing statement-level optional `shared_ptr` fields with `unique_ptr`
    plus deep-copy semantics was tried and rejected. It reduced some retained
    memory in expression/call/control shapes, but a five-sample focused Release

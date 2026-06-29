@@ -1,5 +1,6 @@
 #include "dudu/source.hpp"
 
+#include <array>
 #include <cstdint>
 #include <deque>
 #include <stdexcept>
@@ -100,19 +101,21 @@ const std::string& source_text_from_id(uint32_t id) {
     if (id == 0) {
         return empty_file_name();
     }
-    static thread_local uint32_t cached_id = 0;
-    static thread_local const std::string* cached_text = nullptr;
-    if (id == cached_id && cached_text != nullptr) {
-        return *cached_text;
+    constexpr size_t cache_size = 16;
+    const size_t cache_slot = id % cache_size;
+    static thread_local std::array<uint32_t, cache_size> cached_ids{};
+    static thread_local std::array<const std::string*, cache_size> cached_texts{};
+    if (id == cached_ids[cache_slot] && cached_texts[cache_slot] != nullptr) {
+        return *cached_texts[cache_slot];
     }
     SourceTextInterner& interner = source_text_interner();
     std::lock_guard lock(interner.mutex);
     if (id >= interner.texts.size()) {
         return empty_file_name();
     }
-    cached_id = id;
-    cached_text = &interner.texts[id];
-    return *cached_text;
+    cached_ids[cache_slot] = id;
+    cached_texts[cache_slot] = &interner.texts[id];
+    return *cached_texts[cache_slot];
 }
 
 } // namespace
