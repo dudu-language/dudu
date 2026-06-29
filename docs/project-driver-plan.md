@@ -512,6 +512,9 @@ The practical target is:
 - `duc build` uses the same generated-CMake backend. Low-level `duc` remains
   useful for check/format/emit/debugging actions, but there is no separate
   direct native build backend.
+- Backend selection is intentionally not a separate compiler layer anymore.
+  The manifest parser accepts only `backend = "cmake"` and rejects every other
+  value; generated/user-owned CMake code owns the build path directly.
 - Existing CMake projects can remain user-owned; Dudu should drive the declared
   CMake target instead of pretending to understand every project-specific build
   rule itself.

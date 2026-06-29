@@ -1,4 +1,3 @@
-#include "dudu/build_backend_select.hpp"
 #include "dudu/cli_options.hpp"
 #include "dudu/cmake_emit.hpp"
 #include "dudu/project_config.hpp"
@@ -89,7 +88,6 @@ void test_build_backend_selection(const std::filesystem::path& root) {
     const dudu::ProjectConfig config = dudu::parse_project_config(project / "dudu.toml");
     assert(config.build_dir == "build");
     assert(config.build_backend == "cmake");
-    assert(config.build_backend_explicit);
     assert(config.cmake_source == ".");
     assert(config.cmake_target == "backend_probe");
     assert(config.cmake_config == "Debug");
@@ -112,11 +110,6 @@ void test_build_backend_selection(const std::filesystem::path& root) {
                                       "entry = \"src/main.dd\"\n");
     const dudu::ProjectConfig implicit = dudu::parse_project_config(project / "dudu.toml");
     assert(implicit.build_backend == "cmake");
-    assert(!implicit.build_backend_explicit);
-    assert(dudu::select_build_backend(implicit, project / "src/main.dd", false).build_backend ==
-           "cmake");
-    assert(dudu::select_build_backend(implicit, project / "src/main.dd", true).build_backend ==
-           "cmake");
 
     write_text(project / "src" / "support.dd", "def support() -> i32:\n    return 1\n");
     write_text(project / "src" / "main.dd", "import support\n"
@@ -124,9 +117,7 @@ void test_build_backend_selection(const std::filesystem::path& root) {
                                             "def main() -> i32:\n"
                                             "    return support.support()\n");
     const dudu::ProjectConfig implicit_multi = dudu::parse_project_config(project / "dudu.toml");
-    assert(
-        dudu::select_build_backend(implicit_multi, project / "src/main.dd", false).build_backend ==
-        "cmake");
+    assert(implicit_multi.build_backend == "cmake");
 
     write_text(project / "dudu.toml", "name = \"backend_probe\"\n"
                                       "entry = \"src/main.dd\"\n"

@@ -74,11 +74,7 @@ std::vector<Diagnostic> diagnostics_for_document(const Document& doc) {
                  .fix_range = std::nullopt}};
         }
         ModuleAst module = module_for_document(doc, true);
-        if (!module.module_units.empty() || config.build_backend == "cmake") {
-            analyze_module_tree(module, {.check_bodies = true});
-        } else {
-            analyze_module(module, {.check_bodies = true});
-        }
+        analyze_module_tree(module, {.check_bodies = true});
         return ast_lint_diagnostics(module, doc);
     } catch (const CompileError& error) {
         return {{.location = error.location(),

@@ -2256,7 +2256,9 @@ push. They are not release packaging work.
    CMake; `duc build` and `duc run` also use generated CMake rather than a
    separate single-file native compiler shortcut. `[build] backend = "cmake"`
    is the only supported manifest backend; `[build] backend = "direct"` is
-   rejected. The generated CMake
+   rejected. The old no-op backend selector layer has been removed, so backend
+   validation lives in manifest parsing and build execution lives in the CMake
+   backend. The generated CMake
    backend is implemented for `dudu build`, `dudu run`, and `dudu test`; it
    emits an internal CMake project and drives `cmake -S/-B`
    plus `cmake --build`. Native inputs such as include paths, library paths,

@@ -1,6 +1,5 @@
 #include "dudu/test_driver.hpp"
 
-#include "dudu/build_backend_select.hpp"
 #include "dudu/cmake_backend.hpp"
 #include "dudu/cmake_emit.hpp"
 #include "dudu/decorators.hpp"
@@ -42,8 +41,7 @@ ProjectConfig config_for_options(const TestDriverOptions& options) {
 }
 
 ProjectConfig build_config_for_options(const TestDriverOptions& options) {
-    ProjectConfig config = config_for_options(options);
-    return select_build_backend(std::move(config), options.input, options.project_driver);
+    return config_for_options(options);
 }
 
 bool looks_like_test_input(const std::filesystem::path& value) {
