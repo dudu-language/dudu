@@ -272,6 +272,7 @@ fi
 grep -q '@shader.compute requires \[target\] mode = "shader"' \
     "$repo_root/build/bad_shader_target_mode.err"
 
+rm -rf "$repo_root/build/cmake-backend"
 if "$repo_root/build/duc" build "$repo_root/tests/fixtures/bad_native_build.dd" -o "$repo_root/build/bad_native_build" 2>"$repo_root/build/bad_native_build.err"; then echo "bad_native_build unexpectedly passed" >&2; exit 1; fi
 grep -q "CMake build failed" "$repo_root/build/bad_native_build.err"
 grep -q "generated/bad_native_build.cpp" "$repo_root/build/bad_native_build.err"
@@ -279,6 +280,7 @@ grep -q 'this is not valid c++;' "$repo_root/build/bad_native_build.err"
 grep -q "command: " "$repo_root/build/bad_native_build.err"
 grep -q "output:" "$repo_root/build/bad_native_build.err"
 
+rm -rf "$repo_root/build/cmake-backend"
 if "$repo_root/build/duc" build "$repo_root/tests/fixtures/bad_missing_header.dd" -o "$repo_root/build/bad_missing_header" 2>"$repo_root/build/bad_missing_header.err"; then echo "bad_missing_header unexpectedly passed" >&2; exit 1; fi
 grep -q "dudu_missing_header_for_test.hpp" "$repo_root/build/bad_missing_header.err"
 grep -q "could not scan native header" "$repo_root/build/bad_missing_header.err"

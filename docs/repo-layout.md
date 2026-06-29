@@ -6,9 +6,10 @@ output.
 
 ## Top Level
 
-- `src/main.cpp`: tiny executable entry point shared by `dudu` and `duc`.
-- `src/dudu/`: compiler, project driver, C++ emitter, LSP, formatter, native
-  header scanner, and shared tooling library implementation.
+- `src/tools/`: tiny executable entry points for `dudu`, `duc`, and `dudu-lsp`.
+- `src/dudu/`: shared implementation, split by subsystem:
+  `core`, `frontend`, `parser`, `sema`, `codegen`, `native`, `project`, `lsp`,
+  `format`, `testing`, and `support`.
 - `include/dudu/`: public C/C++ headers exported by Dudu when needed.
 - `tests/`: C++ unit tests and `.dd` fixtures for compiler and LSP behavior.
 - `examples/`: curated Dudu examples that should stay reproducible.
@@ -17,13 +18,15 @@ output.
 - `editors/`: editor integrations, including the VS Code extension.
 - `docs/`: language, compiler, project-driver, LSP, and planning documents.
 
-The `src/main.cpp` plus `src/dudu/` split is intentional. `src/main.cpp` is only
-the CLI front door; the actual compiler source lives under `src/dudu/` and is
-built as the `dudu_frontend` library.
+The `src/tools/` plus `src/dudu/` split is intentional. Tool entry points should
+stay tiny; the actual compiler, project driver, formatter, native scanner, and
+language server code lives under `src/dudu/` and is currently built as the
+`dudu_frontend` library.
 
-The current `src/dudu/` directory is still too flat internally. The clean
-subsystem split and `dudu-lsp` binary plan lives in
-[Repository Refactor Plan](repo-refactor-plan.md).
+The first subsystem directory split and `dudu-lsp` binary are complete. Future
+cleanup should continue from [Repository Refactor Plan](repo-refactor-plan.md),
+especially splitting the single implementation library into explicit subsystem
+libraries when that pays off.
 
 ## What Does Not Belong Here
 
