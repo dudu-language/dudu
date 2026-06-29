@@ -15,13 +15,13 @@ repo_root = pathlib.Path(sys.argv[1]).resolve()
 duc = repo_root / "build" / "duc"
 
 
-def packet(obj):
+def lsp_message(obj):
     body = json.dumps(obj, separators=(",", ":"))
     return f"Content-Length: {len(body)}\r\n\r\n{body}"
 
 
-def read_packets(data):
-    packets = []
+def read_lsp_messages(data):
+    messages = []
     cursor = 0
     while cursor < len(data):
         header_end = data.find(b"\r\n\r\n", cursor)
@@ -37,9 +37,9 @@ def read_packets(data):
             raise AssertionError(f"missing Content-Length in {headers!r}")
         body_start = header_end + 4
         body_end = body_start + length
-        packets.append(json.loads(data[body_start:body_end]))
+        messages.append(json.loads(data[body_start:body_end]))
         cursor = body_end
-    return packets
+    return messages
 
 
 def position(text, needle, add=0, occurrence=0):
@@ -55,9 +55,9 @@ def text_document(path):
     return {"uri": pathlib.Path(path).resolve().as_uri()}
 
 
-def open_packet(path):
+def open_message(path):
     path = pathlib.Path(path).resolve()
-    return packet(
+    return lsp_message(
         {
             "jsonrpc": "2.0",
             "method": "textDocument/didOpen",
@@ -74,11 +74,11 @@ def open_packet(path):
 
 
 def request(request_id, method, params):
-    return packet({"jsonrpc": "2.0", "id": request_id, "method": method, "params": params})
+    return lsp_message({"jsonrpc": "2.0", "id": request_id, "method": method, "params": params})
 
 
-def response(packets, request_id):
-    for item in packets:
+def response(messages, request_id):
+    for item in messages:
         if item.get("id") == request_id:
             if "error" in item:
                 raise AssertionError(f"request {request_id} failed: {item['error']}")
@@ -86,9 +86,9 @@ def response(packets, request_id):
     raise AssertionError(f"missing response for request {request_id}")
 
 
-def publish_diagnostics(packets, uri):
+def publish_diagnostics(messages, uri):
     diagnostics = []
-    for item in packets:
+    for item in messages:
         if item.get("method") == "textDocument/publishDiagnostics":
             params = item.get("params", {})
             if params.get("uri") == uri:
@@ -236,13 +236,13 @@ def main() -> i32:
     native = tmp / "native_user.dd"
     missing = tmp / "missing_import.dd"
     messages = [
-        packet({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"rootUri": tmp.as_uri()}}),
-        packet({"jsonrpc": "2.0", "method": "initialized", "params": {}}),
-        open_packet(main),
-        open_packet(ops),
-        open_packet(native),
-        open_packet(missing),
-        packet({"jsonrpc": "2.0", "method": "textDocument/didSave", "params": {"textDocument": text_document(missing)}}),
+        lsp_message({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"rootUri": tmp.as_uri()}}),
+        lsp_message({"jsonrpc": "2.0", "method": "initialized", "params": {}}),
+        open_message(main),
+        open_message(ops),
+        open_message(native),
+        open_message(missing),
+        lsp_message({"jsonrpc": "2.0", "method": "textDocument/didSave", "params": {"textDocument": text_document(missing)}}),
         request(10, "textDocument/documentSymbol", {"textDocument": text_document(main)}),
         request(11, "workspace/symbol", {"query": "Player"}),
         request(12, "workspace/symbol", {"query": "Mode"}),
@@ -273,7 +273,7 @@ def main() -> i32:
         request(52, "textDocument/definition", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add", add=len("nb."))}),
         request(53, "textDocument/hover", {"textDocument": text_document(native), "position": position(native_source, "nb.DUDU_MATRIX_NATIVE_SCALE", add=len("nb."))}),
         request(99, "shutdown", None),
-        packet({"jsonrpc": "2.0", "method": "exit", "params": None}),
+        lsp_message({"jsonrpc": "2.0", "method": "exit", "params": None}),
     ]
     proc = subprocess.run(
         [str(duc), "lsp"],
@@ -285,25 +285,25 @@ def main() -> i32:
     )
     if proc.returncode != 0:
         raise AssertionError(proc.stderr.decode(errors="replace"))
-    packets = read_packets(proc.stdout)
+    messages = read_lsp_messages(proc.stdout)
 
-    assert_symbol_names(response(packets, 10), ["main"])
+    assert_symbol_names(response(messages, 10), ["main"])
     for request_id in range(11, 18):
-        assert_nonempty(response(packets, request_id), f"workspace symbol {request_id}")
+        assert_nonempty(response(messages, request_id), f"workspace symbol {request_id}")
     for request_id in range(20, 30):
-        assert_nonempty(response(packets, request_id), f"definition {request_id}")
+        assert_nonempty(response(messages, request_id), f"definition {request_id}")
     for request_id in (30, 31):
-        hover = response(packets, request_id)
+        hover = response(messages, request_id)
         assert_nonempty(hover and hover.get("contents"), f"hover {request_id}")
-    assert_nonempty(response(packets, 32), "local references")
-    assert_completion_labels(response(packets, 33), ["MAGIC", "mix"])
-    assert_completion_labels(response(packets, 34), ["transitive_value"])
-    assert_symbol_names(response(packets, 40), ["Vec2", "main"])
-    assert_nonempty(response(packets, 41), "operator method definition")
-    assert_completion_labels(response(packets, 50), ["matrix_native_add", "MatrixNativePoint", "DUDU_MATRIX_NATIVE_SCALE"])
+    assert_nonempty(response(messages, 32), "local references")
+    assert_completion_labels(response(messages, 33), ["MAGIC", "mix"])
+    assert_completion_labels(response(messages, 34), ["transitive_value"])
+    assert_symbol_names(response(messages, 40), ["Vec2", "main"])
+    assert_nonempty(response(messages, 41), "operator method definition")
+    assert_completion_labels(response(messages, 50), ["matrix_native_add", "MatrixNativePoint", "DUDU_MATRIX_NATIVE_SCALE"])
     for request_id in (51, 52, 53):
-        assert_nonempty(response(packets, request_id), f"native request {request_id}")
-    missing_diags = publish_diagnostics(packets, missing.as_uri())
+        assert_nonempty(response(messages, request_id), f"native request {request_id}")
+    missing_diags = publish_diagnostics(messages, missing.as_uri())
     if not missing_diags or not missing_diags[-1]:
         raise AssertionError("missing import fixture did not publish diagnostics")
 

@@ -15,12 +15,12 @@ from pathlib import Path
 repo_root = Path(sys.argv[1])
 
 
-def packet(obj):
+def lsp_message(obj):
     body = json.dumps(obj, separators=(",", ":"))
     return f"Content-Length: {len(body)}\r\n\r\n{body}"
 
 
-def read_packets(data):
+def read_lsp_messages(data):
     out = []
     cursor = 0
     while cursor < len(data):
@@ -60,8 +60,8 @@ def run_case(case):
     uri = f"file://{work / 'main.dd'}"
 
     messages = [
-        packet({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}),
-        packet(
+        lsp_message({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}),
+        lsp_message(
             {
                 "jsonrpc": "2.0",
                 "method": "textDocument/didOpen",
@@ -75,7 +75,7 @@ def run_case(case):
                 },
             }
         ),
-        packet(
+        lsp_message(
             {
                 "jsonrpc": "2.0",
                 "id": 2,
@@ -86,7 +86,7 @@ def run_case(case):
                 },
             }
         ),
-        packet(
+        lsp_message(
             {
                 "jsonrpc": "2.0",
                 "id": 3,
@@ -97,7 +97,7 @@ def run_case(case):
                 },
             }
         ),
-        packet(
+        lsp_message(
             {
                 "jsonrpc": "2.0",
                 "id": 4,
@@ -108,7 +108,7 @@ def run_case(case):
                 },
             }
         ),
-        packet(
+        lsp_message(
             {
                 "jsonrpc": "2.0",
                 "id": 5,
@@ -119,8 +119,8 @@ def run_case(case):
                 },
             }
         ),
-        packet({"jsonrpc": "2.0", "id": 6, "method": "shutdown", "params": None}),
-        packet({"jsonrpc": "2.0", "method": "exit", "params": None}),
+        lsp_message({"jsonrpc": "2.0", "id": 6, "method": "shutdown", "params": None}),
+        lsp_message({"jsonrpc": "2.0", "method": "exit", "params": None}),
     ]
     proc = subprocess.run(
         [str(repo_root / "build" / "duc"), "lsp"],
@@ -130,14 +130,14 @@ def run_case(case):
         timeout=10,
         check=True,
     )
-    responses = read_packets(proc.stdout)
-    diagnostic_packets = [
+    responses = read_lsp_messages(proc.stdout)
+    diagnostic_messages = [
         item
         for item in responses
         if item.get("method") == "textDocument/publishDiagnostics"
         and item["params"]["uri"] == uri
     ]
-    diagnostics = diagnostic_packets[0]["params"]["diagnostics"] if diagnostic_packets else []
+    diagnostics = diagnostic_messages[0]["params"]["diagnostics"] if diagnostic_messages else []
     if diagnostics:
         raise AssertionError(f"{case['name']} diagnostics: {diagnostics}")
 

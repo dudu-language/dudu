@@ -10,11 +10,11 @@ import sys
 
 repo_root = sys.argv[1]
 
-def packet(obj):
+def lsp_message(obj):
     body = json.dumps(obj, separators=(",", ":"))
     return f"Content-Length: {len(body)}\r\n\r\n{body}"
 
-def read_packets(data):
+def read_lsp_messages(data):
     out = []
     cursor = 0
     while cursor < len(data):
@@ -104,8 +104,8 @@ missing_native_source = "\n".join(
     ]
 )
 messages = [
-    packet({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}),
-    packet(
+    lsp_message({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}),
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "method": "textDocument/didOpen",
@@ -119,7 +119,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "method": "textDocument/didOpen",
@@ -142,7 +142,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "method": "textDocument/didOpen",
@@ -165,7 +165,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 59,
@@ -175,7 +175,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "method": "textDocument/didOpen",
@@ -200,7 +200,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 54,
@@ -211,7 +211,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 55,
@@ -223,7 +223,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "method": "textDocument/didOpen",
@@ -246,7 +246,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 62,
@@ -258,7 +258,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 56,
@@ -269,7 +269,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 57,
@@ -281,7 +281,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 58,
@@ -292,7 +292,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "method": "textDocument/didOpen",
@@ -312,7 +312,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "method": "textDocument/didOpen",
@@ -334,7 +334,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 47,
@@ -345,7 +345,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "method": "textDocument/didOpen",
@@ -369,7 +369,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 42,
@@ -377,7 +377,7 @@ messages = [
             "params": {"query": "vendored_helper"},
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 48,
@@ -388,7 +388,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 49,
@@ -399,7 +399,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 50,
@@ -410,7 +410,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 51,
@@ -421,7 +421,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "method": "textDocument/didOpen",
@@ -445,7 +445,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "method": "textDocument/didOpen",
@@ -467,7 +467,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 41,
@@ -478,7 +478,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "method": "textDocument/didOpen",
@@ -503,7 +503,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 39,
@@ -514,7 +514,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 40,
@@ -525,7 +525,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 45,
@@ -536,7 +536,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "method": "textDocument/didOpen",
@@ -565,7 +565,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 52,
@@ -576,7 +576,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 53,
@@ -587,7 +587,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "method": "textDocument/didOpen",
@@ -609,7 +609,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 38,
@@ -620,7 +620,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "method": "textDocument/didOpen",
@@ -643,7 +643,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 35,
@@ -654,7 +654,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 36,
@@ -665,7 +665,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 37,
@@ -676,7 +676,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 70,
@@ -687,7 +687,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 43,
@@ -698,7 +698,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "method": "textDocument/didOpen",
@@ -720,7 +720,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 34,
@@ -753,7 +753,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "method": "textDocument/didOpen",
@@ -777,7 +777,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "method": "textDocument/didOpen",
@@ -800,7 +800,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 33,
@@ -811,7 +811,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "method": "textDocument/didOpen",
@@ -834,7 +834,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "method": "textDocument/didOpen",
@@ -854,7 +854,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 32,
@@ -865,7 +865,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "method": "textDocument/didOpen",
@@ -887,7 +887,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 46,
@@ -898,7 +898,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "method": "textDocument/didOpen",
@@ -919,7 +919,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 29,
@@ -952,7 +952,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "method": "textDocument/didOpen",
@@ -972,7 +972,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 28,
@@ -984,7 +984,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 2,
@@ -992,7 +992,7 @@ messages = [
             "params": {"textDocument": {"uri": uri}},
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 44,
@@ -1000,7 +1000,7 @@ messages = [
             "params": {"textDocument": {"uri": uri}},
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 3,
@@ -1008,7 +1008,7 @@ messages = [
             "params": {"textDocument": {"uri": uri}, "position": {"line": 3, "character": 5}},
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 4,
@@ -1016,7 +1016,7 @@ messages = [
             "params": {"textDocument": {"uri": uri}, "position": {"line": 3, "character": 5}},
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 5,
@@ -1024,7 +1024,7 @@ messages = [
             "params": {"textDocument": {"uri": uri}, "position": {"line": 8, "character": 4}},
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 24,
@@ -1038,7 +1038,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 6,
@@ -1046,7 +1046,7 @@ messages = [
             "params": {"textDocument": {"uri": uri}, "position": {"line": 7, "character": 25}},
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 21,
@@ -1054,7 +1054,7 @@ messages = [
             "params": {"textDocument": {"uri": uri}, "position": {"line": 9, "character": 11}},
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 7,
@@ -1062,7 +1062,7 @@ messages = [
             "params": {"textDocument": {"uri": uri}, "options": {"tabSize": 4}},
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 13,
@@ -1070,7 +1070,7 @@ messages = [
             "params": {"textDocument": {"uri": uri}, "position": {"line": 7, "character": 18}},
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 63,
@@ -1078,7 +1078,7 @@ messages = [
             "params": {"textDocument": {"uri": uri}, "position": {"line": 3, "character": 5}},
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 61,
@@ -1086,7 +1086,7 @@ messages = [
             "params": {"textDocument": {"uri": uri}, "position": {"line": 8, "character": 13}},
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 16,
@@ -1098,7 +1098,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 17,
@@ -1113,8 +1113,8 @@ messages = [
             },
         }
     ),
-    packet({"jsonrpc": "2.0", "id": 14, "method": "workspace/symbol", "params": {"query": "add"}}),
-    packet(
+    lsp_message({"jsonrpc": "2.0", "id": 14, "method": "workspace/symbol", "params": {"query": "add"}}),
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "method": "textDocument/didOpen",
@@ -1128,7 +1128,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 8,
@@ -1136,7 +1136,7 @@ messages = [
             "params": {"textDocument": {"uri": native_uri}},
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 9,
@@ -1147,7 +1147,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 10,
@@ -1158,7 +1158,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 11,
@@ -1169,7 +1169,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 12,
@@ -1180,7 +1180,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 69,
@@ -1191,7 +1191,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 15,
@@ -1202,7 +1202,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 22,
@@ -1213,7 +1213,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 23,
@@ -1224,7 +1224,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 30,
@@ -1235,7 +1235,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 31,
@@ -1246,7 +1246,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 60,
@@ -1257,7 +1257,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 65,
@@ -1268,7 +1268,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 67,
@@ -1279,7 +1279,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 68,
@@ -1290,7 +1290,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 66,
@@ -1298,7 +1298,7 @@ messages = [
             "params": {"textDocument": {"uri": native_uri}},
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 25,
@@ -1313,7 +1313,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 26,
@@ -1341,7 +1341,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "method": "textDocument/didOpen",
@@ -1361,7 +1361,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 64,
@@ -1389,7 +1389,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 18,
@@ -1400,7 +1400,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 19,
@@ -1408,7 +1408,7 @@ messages = [
             "params": {"query": "workspace_helper"},
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "method": "textDocument/didOpen",
@@ -1422,7 +1422,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "method": "textDocument/didOpen",
@@ -1444,7 +1444,7 @@ messages = [
             },
         }
     ),
-    packet(
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "id": 27,
@@ -1470,8 +1470,8 @@ messages = [
             },
         }
     ),
-    packet({"jsonrpc": "2.0", "id": 20, "method": "shutdown", "params": None}),
-    packet({"jsonrpc": "2.0", "method": "exit", "params": None}),
+    lsp_message({"jsonrpc": "2.0", "id": 20, "method": "shutdown", "params": None}),
+    lsp_message({"jsonrpc": "2.0", "method": "exit", "params": None}),
 ]
 
 diagnostic_uris = [
@@ -1486,8 +1486,8 @@ diagnostic_uris = [
     native_pkg_uri,
     missing_pkg_uri,
 ]
-diagnostic_packets = [
-    packet(
+diagnostic_messages = [
+    lsp_message(
         {
             "jsonrpc": "2.0",
             "method": "textDocument/didSave",
@@ -1496,7 +1496,7 @@ diagnostic_packets = [
     )
     for diagnostic_uri in diagnostic_uris
 ]
-messages[-2:-2] = diagnostic_packets
+messages[-2:-2] = diagnostic_messages
 
 proc = subprocess.run(
     [f"{repo_root}/build/duc", "lsp"],
@@ -1509,7 +1509,7 @@ proc = subprocess.run(
 if proc.stderr:
     raise AssertionError(proc.stderr.decode())
 
-responses = read_packets(proc.stdout)
+responses = read_lsp_messages(proc.stdout)
 initialize = next(item for item in responses if item.get("id") == 1)
 assert initialize["result"]["capabilities"]["textDocumentSync"] == 2
 assert initialize["result"]["capabilities"]["documentFormattingProvider"] is True
