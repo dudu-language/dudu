@@ -169,6 +169,10 @@ def has_semantic(decoded, text, token_type, modifiers):
     )
 
 
+def has_semantic_type(decoded, text, token_type):
+    return any(item_text == text and item_type == token_type for item_text, item_type, _, _, _ in decoded)
+
+
 def modifier_mask(modifiers, name):
     return 1 << modifiers.index(name)
 
@@ -224,12 +228,20 @@ enum Token:
 enum OtherToken:
     IntLit(i64)
 
+# Generic box docs.
 class Box[T]:
+    # Box value docs.
     value: T
 
+    # Gets the boxed value docs.
     def get(self) -> T:
         return self.value
 
+    def echo[U](self, value: U) -> U:
+        '''Echoes a generic method value docs.'''
+        return value
+
+# Returns a generic identity value docs.
 def identity[T](value: T) -> T:
     return value
 
@@ -306,9 +318,10 @@ def main() -> i32:
     other_score = other_math.mix(other_entities.MAX_HP, other_math.MAGIC)
     counter_score = Counter.bump() + Counter.count + Counter.LIMIT
     box: Box[i32] = Box[i32](score)
+    echoed = box.echo[i32](score)
     same = player == Player(MAX_HP)
     if same:
-        return box.get() + transitive.transitive_value() + other_score + counter_score
+        return box.get() + echoed + transitive.transitive_value() + other_score + counter_score
     return math.MAGIC
 """
     (tmp / "main.dd").write_text(main_source)
@@ -419,13 +432,18 @@ namespace matrix_space {
     inline int namespaced_add(int left, int right) {
         return left + right;
     }
+
+    /** Returns a native template identity value. */
+    template <typename T> T identity(T value) {
+        return value;
+    }
 }
 """
     )
     native_namespace_source = """import cpp "native_namespace.hpp"
 
 def main() -> i32:
-    return matrix_space.namespaced_add(2, 3)
+    return matrix_space.namespaced_add(2, 3) + matrix_space.identity[i32](4)
 """
     (tmp / "native_namespace_user.dd").write_text(native_namespace_source)
     native_namespace_same_source = """import cpp "native_namespace.hpp"
@@ -562,6 +580,12 @@ def main() -> i32:
         request(94, "textDocument/definition", {"textDocument": text_document(ops), "position": position(ops_source, "left + right", add=len("left "))}),
         request(95, "textDocument/hover", {"textDocument": text_document(ops), "position": position(ops_source, "left + right", add=len("left "))}),
         request(96, "textDocument/references", {"textDocument": text_document(ops), "position": position(ops_source, "left + right", add=len("left "))}),
+        request(97, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "identity[i32]", add=1)}),
+        request(98, "textDocument/references", {"textDocument": text_document(main), "position": position(main_source, "identity[i32]", add=1)}),
+        request(99, "textDocument/definition", {"textDocument": text_document(main), "position": position(main_source, "box.echo", add=len("box."))}),
+        request(100, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "box.echo", add=len("box."))}),
+        request(101, "textDocument/references", {"textDocument": text_document(main), "position": position(main_source, "box.echo", add=len("box."))}),
+        request(102, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "Box[i32]", add=1)}),
         request(50, "textDocument/completion", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add", add=len("nb."))}),
         request(51, "textDocument/hover", {"textDocument": text_document(native), "position": position(native_source, "nb.MatrixNativePoint", add=len("nb."))}),
         request(52, "textDocument/definition", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add", add=len("nb."))}),
@@ -587,8 +611,12 @@ def main() -> i32:
         request(88, "textDocument/completion", {"textDocument": text_document(native_namespace), "position": position(native_namespace_source, "matrix_space.namespaced_add", add=len("matrix_space."))}),
         request(89, "textDocument/semanticTokens/full", {"textDocument": text_document(native_namespace)}),
         request(90, "textDocument/references", {"textDocument": text_document(native_namespace), "position": position(native_namespace_source, "matrix_space.namespaced_add", add=1)}),
+        request(103, "textDocument/hover", {"textDocument": text_document(native_namespace), "position": position(native_namespace_source, "matrix_space.identity", add=len("matrix_space."))}),
+        request(104, "textDocument/definition", {"textDocument": text_document(native_namespace), "position": position(native_namespace_source, "matrix_space.identity", add=len("matrix_space."))}),
+        request(105, "textDocument/references", {"textDocument": text_document(native_namespace), "position": position(native_namespace_source, "matrix_space.identity", add=len("matrix_space."))}),
+        request(106, "textDocument/signatureHelp", {"textDocument": text_document(native_namespace), "position": position(native_namespace_source, "matrix_space.identity[i32](4)", add=len("matrix_space.identity[i32]("))}),
         request(70, "textDocument/semanticTokens/full", {"textDocument": text_document(unresolved)}),
-        request(99, "shutdown", None),
+        request(900, "shutdown", None),
         lsp_message({"jsonrpc": "2.0", "method": "exit", "params": None}),
     ]
     proc = subprocess.run(
@@ -847,8 +875,12 @@ def main() -> i32:
         raise AssertionError(f"missing imported module namespace semantic token: {decoded_tokens!r}")
     if not has_semantic(decoded_tokens, "Player", "class", 0):
         raise AssertionError(f"missing imported class semantic token: {decoded_tokens!r}")
+    if not has_semantic(decoded_tokens, "Box", "class", 0):
+        raise AssertionError(f"missing imported generic class semantic token: {decoded_tokens!r}")
     if not has_semantic(decoded_tokens, "mix", "function", 0):
         raise AssertionError(f"missing imported function semantic token: {decoded_tokens!r}")
+    if not has_semantic_type(decoded_tokens, "identity", "function"):
+        raise AssertionError(f"missing imported generic function semantic token: {decoded_tokens!r}")
     if not has_semantic(decoded_tokens, "MAGIC", "variable", readonly):
         raise AssertionError(f"missing imported const semantic token: {decoded_tokens!r}")
     native_tokens = decode_semantic_tokens(native_source, response(messages, 84)["data"], legend)
@@ -893,6 +925,34 @@ def main() -> i32:
         raise AssertionError(f"missing operator method declaration ref: {operator_refs!r}")
     if not has_start(operator_refs, ops.as_uri(), operator_use["line"], operator_use["character"]):
         raise AssertionError(f"missing operator use ref: {operator_refs!r}")
+    generic_function_hover = response(messages, 97)["contents"]["value"]
+    if "identity[T](value: T) -> T" not in generic_function_hover or "Returns a generic identity value docs." not in generic_function_hover:
+        raise AssertionError(f"missing generic function hover docs/signature: {generic_function_hover!r}")
+    generic_function_refs = response(messages, 98)
+    identity_decl = position(entities_source, "identity[T]", add=0)
+    identity_use = position(main_source, "identity[i32]", add=0)
+    if not has_start(generic_function_refs, entities.as_uri(), identity_decl["line"], identity_decl["character"]):
+        raise AssertionError(f"missing generic identity declaration ref: {generic_function_refs!r}")
+    if not has_start(generic_function_refs, main.as_uri(), identity_use["line"], identity_use["character"]):
+        raise AssertionError(f"missing generic identity use ref: {generic_function_refs!r}")
+    generic_method_definition = response(messages, 99)
+    box_echo_decl = position(entities_source, "echo[U]", add=0)
+    if generic_method_definition["uri"] != entities.as_uri():
+        raise AssertionError(f"generic method definition did not jump to source module: {generic_method_definition!r}")
+    if generic_method_definition["range"]["start"]["line"] != box_echo_decl["line"]:
+        raise AssertionError(f"generic method definition jumped to wrong line: {generic_method_definition!r}")
+    generic_method_hover = response(messages, 100)["contents"]["value"]
+    if "echo[U](self" not in generic_method_hover or "Echoes a generic method value docs." not in generic_method_hover:
+        raise AssertionError(f"missing generic method hover docs/signature: {generic_method_hover!r}")
+    generic_method_refs = response(messages, 101)
+    box_echo_use = position(main_source, "box.echo", add=len("box."))
+    if not has_start(generic_method_refs, entities.as_uri(), box_echo_decl["line"], box_echo_decl["character"]):
+        raise AssertionError(f"missing generic method declaration ref: {generic_method_refs!r}")
+    if not has_start(generic_method_refs, main.as_uri(), box_echo_use["line"], box_echo_use["character"]):
+        raise AssertionError(f"missing generic method use ref: {generic_method_refs!r}")
+    generic_class_hover = response(messages, 102)["contents"]["value"]
+    if "class Box[T]" not in generic_class_hover or "Generic box docs." not in generic_class_hover:
+        raise AssertionError(f"missing generic class hover docs/signature: {generic_class_hover!r}")
     native_completion = response(messages, 50)
     assert_completion_labels(native_completion, ["matrix_native_add", "MatrixNativePoint", "DUDU_MATRIX_NATIVE_SCALE", "MATRIX_MODE_FAST"])
     assert_documentation_contains(item_named(native_completion, "matrix_native_add"), "Adds two matrix fixture integers.")
@@ -988,11 +1048,14 @@ def main() -> i32:
     if native_namespace_definition["range"]["start"]["line"] != 3:
         raise AssertionError(f"native namespace definition jumped to wrong line: {native_namespace_definition!r}")
     native_namespace_completion = response(messages, 88)
-    assert_completion_labels(native_namespace_completion, ["namespaced_add"])
+    assert_completion_labels(native_namespace_completion, ["namespaced_add", "identity"])
     assert_documentation_contains(item_named(native_namespace_completion, "namespaced_add"), "Adds inside a native namespace.")
+    assert_documentation_contains(item_named(native_namespace_completion, "identity"), "Returns a native template identity value.")
     native_namespace_tokens = decode_semantic_tokens(native_namespace_source, response(messages, 89)["data"], legend)
     if not has_semantic(native_namespace_tokens, "matrix_space", "namespace", native_modifier):
         raise AssertionError(f"missing native namespace semantic token: {native_namespace_tokens!r}")
+    if not has_semantic(native_namespace_tokens, "identity", "function", native_modifier):
+        raise AssertionError(f"missing native template function semantic token: {native_namespace_tokens!r}")
     native_namespace_refs = response(messages, 90)
     native_namespace_use = position(native_namespace_source, "matrix_space.namespaced_add")
     native_namespace_same_use = position(native_namespace_same_source, "matrix_space.namespaced_add")
@@ -1003,6 +1066,26 @@ def main() -> i32:
         raise AssertionError(f"missing same-header native namespace reference: {native_namespace_refs!r}")
     if has_start(native_namespace_refs, native_namespace_other.as_uri(), native_namespace_other_use["line"], native_namespace_other_use["character"]):
         raise AssertionError(f"unrelated native namespace reference leaked: {native_namespace_refs!r}")
+    native_template_hover = response(messages, 103)["contents"]["value"]
+    if "identity" not in native_template_hover or "Returns a native template identity value." not in native_template_hover:
+        raise AssertionError(f"missing native template hover docs/signature: {native_template_hover!r}")
+    native_template_definition = response(messages, 104)
+    if not native_template_definition["uri"].endswith("/native_namespace.hpp"):
+        raise AssertionError(f"native template definition did not jump to header: {native_template_definition!r}")
+    native_namespace_header = (tmp / "native_namespace.hpp").read_text()
+    native_template_decl = position(native_namespace_header, "template <typename T>", add=0)
+    if native_template_definition["range"]["start"]["line"] != native_template_decl["line"]:
+        raise AssertionError(f"native template definition jumped to wrong line: {native_template_definition!r}")
+    native_template_refs = response(messages, 105)
+    native_template_use = position(native_namespace_source, "matrix_space.identity", add=len("matrix_space."))
+    if not has_start(native_template_refs, native_namespace.as_uri(), native_template_use["line"], native_template_use["character"]):
+        raise AssertionError(f"missing native template function reference: {native_template_refs!r}")
+    native_template_signature = response(messages, 106)
+    if not native_template_signature.get("signatures"):
+        raise AssertionError(f"missing native template signature help: {native_template_signature!r}")
+    native_template_signature_docs = native_template_signature["signatures"][0]["documentation"]["value"]
+    if "Returns a native template identity value." not in native_template_signature_docs:
+        raise AssertionError(f"missing native template signature docs: {native_template_signature!r}")
     missing_diags = publish_diagnostics(messages, missing.as_uri())
     if not missing_diags or not missing_diags[-1]:
         raise AssertionError("missing import fixture did not publish diagnostics")

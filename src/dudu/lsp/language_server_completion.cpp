@@ -291,16 +291,39 @@ std::vector<Token> signature_tokens_before_cursor(const Document& doc, int line,
 }
 
 std::string call_name_before_open_paren(const std::vector<Token>& tokens, size_t open_index) {
-    if (open_index == 0 || tokens[open_index - 1].kind != TokenKind::Identifier) {
+    if (open_index == 0) {
         return {};
     }
-    size_t start = open_index - 1;
+    size_t name_end = open_index - 1;
+    if (tokens[name_end].kind == TokenKind::RBracket) {
+        int bracket_depth = 0;
+        std::optional<size_t> template_open;
+        for (size_t index = name_end + 1; index-- > 0;) {
+            if (tokens[index].kind == TokenKind::RBracket) {
+                ++bracket_depth;
+            } else if (tokens[index].kind == TokenKind::LBracket) {
+                --bracket_depth;
+                if (bracket_depth == 0) {
+                    template_open = index;
+                    break;
+                }
+            }
+        }
+        if (!template_open || *template_open == 0) {
+            return {};
+        }
+        name_end = *template_open - 1;
+    }
+    if (tokens[name_end].kind != TokenKind::Identifier) {
+        return {};
+    }
+    size_t start = name_end;
     while (start >= 2 && tokens[start - 1].kind == TokenKind::Dot &&
            tokens[start - 2].kind == TokenKind::Identifier) {
         start -= 2;
     }
     std::string out;
-    for (size_t i = start; i < open_index; ++i) {
+    for (size_t i = start; i <= name_end; ++i) {
         if (tokens[i].kind != TokenKind::Identifier && tokens[i].kind != TokenKind::Dot) {
             return {};
         }

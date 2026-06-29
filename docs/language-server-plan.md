@@ -660,6 +660,17 @@ left/right operand types using the LSP module view, and jumps to the matching
 operator identity: hovering the operator token shows the method signature/docs,
 and references from the operator token include the method declaration plus typed
 operator uses.
+Dudu generic symbol coverage now includes generic function hover and
+identity-based references, generic class hover with declaration docs, and
+generic method definition/hover/references from explicit method-template call
+sites. The shared LSP symbol-detail formatter includes generic parameter lists
+for Dudu functions, methods, and classes so hover, completion, signature help,
+and workspace symbols expose source-shaped generic signatures.
+Native C++ template functions are also covered in the JSON-RPC matrix through a
+local header fixture: completion, hover, go-to-definition, references,
+signature help, documentation, and semantic tokens all treat explicit Dudu
+template calls such as `matrix_space.identity[i32](...)` as ordinary native
+symbol intelligence.
 Semantic-token coverage now decodes token deltas back to source text and checks
 token names, kinds, and modifiers for Dudu classes, enums, enum members, fields,
 static fields, module constants, methods, parameters, implicit local bindings,
@@ -701,10 +712,10 @@ Status: `scripts/test_lsp_matrix.sh` now builds a deterministic temporary
 multi-file workspace and drives JSON-RPC requests for module aliases,
 selective imports, direct module imports, transitive import graph loading,
 classes, instance methods, fields, constants, enums, sum-type variants,
-generic functions/classes, overloaded operators, locals, module-qualified
-completion, native headers, native functions, native types, native macros, and
-missing import diagnostics. `scripts/test_lsp.sh` runs this matrix after the
-older smoke suite.
+generic functions/classes/methods, overloaded operators, locals,
+module-qualified completion, native headers, native functions, native template
+functions, native types, native macros, and missing import diagnostics.
+`scripts/test_lsp.sh` runs this matrix after the older smoke suite.
 
 ## Non-Goals
 

@@ -308,11 +308,11 @@ Required fixture families:
 - imported Dudu functions/classes/constants
 - module aliases and selective imports
 - fields and methods on Dudu classes
-- generic classes/functions
+- generic classes/functions/methods
 - enum members and sum-type variants
 - overloaded operators
 - native C functions/types/macros
-- native C++ classes/methods/templates/namespaces
+- native C++ classes/methods/template functions/namespaces
 - missing/unresolved symbol behavior
 - doc comments and docstrings
 - semantic-token classifications

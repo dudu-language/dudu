@@ -17,9 +17,25 @@ bool is_constructor_method_name(const std::string& name) {
     return name == "init";
 }
 
+std::string generic_params_label(const std::vector<std::string>& params) {
+    if (params.empty()) {
+        return {};
+    }
+    std::ostringstream out;
+    out << "[";
+    for (size_t i = 0; i < params.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << params[i];
+    }
+    out << "]";
+    return out.str();
+}
+
 std::string function_detail(const FunctionDecl& fn) {
     std::ostringstream out;
-    out << "def " << fn.name << "(";
+    out << "def " << fn.name << generic_params_label(fn.generic_params) << "(";
     for (size_t i = 0; i < fn.params.size(); ++i) {
         if (i > 0) {
             out << ", ";
@@ -177,7 +193,7 @@ std::vector<Symbol> symbols_for_module(const ModuleAst& module, bool include_nat
     std::vector<Symbol> out;
     for (const ClassDecl& klass : module.classes) {
         out.push_back({.name = klass.name,
-                       .detail = "class " + klass.name,
+                       .detail = "class " + klass.name + generic_params_label(klass.generic_params),
                        .location = klass.location,
                        .kind = lsp_symbol_kind::Class,
                        .native_identity_key = std::nullopt,
