@@ -1100,7 +1100,7 @@ void test_lsp_hover_uses_receiver_for_ambiguous_native_methods() {
                                      "    second: right.Thing\n"
                                      "    return i32(second.shared())\n"};
     dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":5,\"character\":24}}").parse();
-    const std::string hover = dudu::hover_json(doc, "second.shared", "", &params);
+    const std::string hover = dudu::hover_json(doc, "second.shared", &params);
     assert(hover.find("shared() -> f32") != std::string::npos);
     assert(hover.find("shared() -> i32") == std::string::npos);
 }
@@ -1157,7 +1157,7 @@ void test_lsp_hover_uses_loaded_module_units() {
                                      "\n"
                                      "def main() -> i32:\n"
                                      "    return maths.inc(1)\n"};
-    const std::string hover = dudu::hover_json(doc, "maths.inc", "");
+    const std::string hover = dudu::hover_json(doc, "maths.inc");
     assert(hover.find("def inc(value: i32) -> i32") != std::string::npos);
 }
 

@@ -398,7 +398,7 @@ class LanguageServer {
         if (doc == nullptr) {
             return "null";
         }
-        return hover_json(*doc, "", "", params, std::nullopt);
+        return hover_json(*doc, "", params, std::nullopt);
     }
 
     std::string completion_result(const Json* params) const {

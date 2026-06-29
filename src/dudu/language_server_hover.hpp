@@ -10,7 +10,7 @@ namespace dudu {
 
 struct Json;
 
-std::string hover_json(const Document& doc, const std::string& word, const std::string& local_type,
+std::string hover_json(const Document& doc, const std::string& word,
                        const Json* params = nullptr,
                        std::optional<ExprPath> selected_path = std::nullopt);
 

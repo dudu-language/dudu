@@ -208,8 +208,8 @@ std::optional<std::string> member_hover_json(const Document& doc, const ExprPath
 
 } // namespace
 
-std::string hover_json(const Document& doc, const std::string& word, const std::string& local_type,
-                       const Json* params, std::optional<ExprPath> selected_path) {
+std::string hover_json(const Document& doc, const std::string& word, const Json* params,
+                       std::optional<ExprPath> selected_path) {
     const ProjectIndex* index = nullptr;
     try {
         index = &project_index_for_document(doc, false);
@@ -273,14 +273,13 @@ std::string hover_json(const Document& doc, const std::string& word, const std::
     if (const std::optional<Symbol> suffix = unambiguous_suffix_symbol_match(symbols, query)) {
         return symbol_hover_json(doc, *suffix);
     }
-    std::string fallback_local_type = local_type;
-    if (fallback_local_type.empty() && !query.empty() && params != nullptr) {
-        fallback_local_type =
-            substitute_type_ref_text(local_type_ref_before_cursor(current, query, params), {});
-    }
-    if (!fallback_local_type.empty()) {
+    const std::string local_type =
+        !query.empty() && params != nullptr
+            ? substitute_type_ref_text(local_type_ref_before_cursor(current, query, params), {})
+            : std::string{};
+    if (!local_type.empty()) {
         return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"`" + json_escape(query) + ": " +
-               json_escape(fallback_local_type) + "`\"}}";
+               json_escape(local_type) + "`\"}}";
     }
     return "null";
 }
