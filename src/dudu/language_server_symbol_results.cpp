@@ -4,8 +4,6 @@
 #include "dudu/language_server_navigation.hpp"
 #include "dudu/language_server_support.hpp"
 #include "dudu/language_server_symbols.hpp"
-#include "dudu/module_loader.hpp"
-#include "dudu/parser.hpp"
 
 #include <map>
 #include <sstream>
@@ -26,12 +24,8 @@ std::string symbol_json(const Symbol& symbol, const Document& doc) {
 
 std::vector<Symbol> document_symbols(const Document& doc, bool include_native) {
     try {
-        if (include_native) {
-            const ModuleAst module = module_for_document(doc, true);
-            return visible_symbols_for_document(visible_module_unit(module, doc.path), doc, true);
-        }
-        const ModuleAst module = parse_source(doc.text, doc.path);
-        return symbols_for_module(module, false);
+        const ProjectIndex& index = project_index_for_document(doc, include_native);
+        return symbols_for_module(index.visible_unit_for_path(doc.path), include_native);
     } catch (const std::exception&) {
     }
     return {};
