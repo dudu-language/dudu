@@ -2335,9 +2335,11 @@ push. They are not release packaging work.
    across current-document, imported, module, and member completion paths.
    Signature help also surfaces them for Dudu functions from the visible symbol
    index. Document symbols now use LSP `DocumentSymbol` shape and include a
-   short AST doc summary in their detail text. Triple-quoted docstrings and
-   native C/C++ docs remain planned. The concrete plan and remaining
-   implementation checklist live in
+   short AST doc summary in their detail text. The JSON-RPC LSP matrix covers
+   doc propagation for classes, fields, methods, imported completions,
+   signature help, and document symbols. Triple-quoted docstrings and native
+   C/C++ docs remain planned. The concrete plan and remaining implementation
+   checklist live in
    [Language Server Plan](language-server-plan.md#doc-comments-and-docstrings).
 
 14. Project Driver Polish

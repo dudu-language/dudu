@@ -115,11 +115,30 @@ def assert_completion_labels(result, expected):
         raise AssertionError(f"missing completions {missing}; got {sorted(labels)}")
 
 
+def item_named(result, name):
+    for item in result:
+        if item.get("name") == name or item.get("label") == name:
+            return item
+    raise AssertionError(f"missing item {name}; got {result!r}")
+
+
+def assert_documentation_contains(item, text):
+    documentation = item.get("documentation", {})
+    if isinstance(documentation, dict):
+        value = documentation.get("value", "")
+    else:
+        value = str(documentation)
+    if text not in value:
+        raise AssertionError(f"missing documentation {text!r} in {item!r}")
+
+
 tmp = pathlib.Path(tempfile.mkdtemp(prefix="dudu_lsp_matrix_"))
 try:
     (tmp / "math_utils.dd").write_text(
-        """MAGIC: i32 = 9
+        """# Magic value used by matrix fixture docs.
+MAGIC: i32 = 9
 
+# Mixes two numbers for signature docs.
 def mix(left: i32, right: i32) -> i32:
     return left + right + MAGIC
 """
@@ -132,8 +151,10 @@ def mix(left: i32, right: i32) -> i32:
     (tmp / "entities.dd").write_text(
         """import transitive
 
+# Max health for player docs.
 MAX_HP: i32 = 42
 
+# Mode enum docs.
 enum Mode:
     Play
     Pause
@@ -151,9 +172,12 @@ class Box[T]:
 def identity[T](value: T) -> T:
     return value
 
+# Runtime player docs.
 class Player:
+    # Current hit points docs.
     hp: i32
 
+    # Moves the player docs.
     def move(self, dx: i32, dy: i32) -> i32:
         self.hp += dx + dy
         return self.hp
@@ -232,6 +256,7 @@ def main() -> i32:
     (tmp / "missing_import.dd").write_text(missing_source)
 
     main = tmp / "main.dd"
+    entities = tmp / "entities.dd"
     ops = tmp / "operators.dd"
     native = tmp / "native_user.dd"
     missing = tmp / "missing_import.dd"
@@ -239,11 +264,13 @@ def main() -> i32:
         lsp_message({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"rootUri": tmp.as_uri()}}),
         lsp_message({"jsonrpc": "2.0", "method": "initialized", "params": {}}),
         open_message(main),
+        open_message(entities),
         open_message(ops),
         open_message(native),
         open_message(missing),
         lsp_message({"jsonrpc": "2.0", "method": "textDocument/didSave", "params": {"textDocument": text_document(missing)}}),
         request(10, "textDocument/documentSymbol", {"textDocument": text_document(main)}),
+        request(18, "textDocument/documentSymbol", {"textDocument": text_document(entities)}),
         request(11, "workspace/symbol", {"query": "Player"}),
         request(12, "workspace/symbol", {"query": "Mode"}),
         request(13, "workspace/symbol", {"query": "Token"}),
@@ -266,6 +293,8 @@ def main() -> i32:
         request(32, "textDocument/references", {"textDocument": text_document(main), "position": position(main_source, "current =")}),
         request(33, "textDocument/completion", {"textDocument": text_document(main), "position": position(main_source, "math.MAGIC", add=len("math."))}),
         request(34, "textDocument/completion", {"textDocument": text_document(main), "position": position(main_source, "transitive.transitive_value", add=len("transitive."))}),
+        request(35, "textDocument/completion", {"textDocument": text_document(main), "position": position(main_source, "player.move", add=len("player."))}),
+        request(36, "textDocument/signatureHelp", {"textDocument": text_document(main), "position": position(main_source, "math.mix(current", add=len("math.mix(current"))}),
         request(40, "textDocument/documentSymbol", {"textDocument": text_document(ops)}),
         request(41, "textDocument/definition", {"textDocument": text_document(ops), "position": position(ops_source, "add(self", add=1)}),
         request(50, "textDocument/completion", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add", add=len("nb."))}),
@@ -288,6 +317,12 @@ def main() -> i32:
     messages = read_lsp_messages(proc.stdout)
 
     assert_symbol_names(response(messages, 10), ["main"])
+    entity_symbols = response(messages, 18)
+    assert_symbol_names(entity_symbols, ["MAX_HP", "Mode", "Box", "Player"])
+    if "Runtime player docs." not in item_named(entity_symbols, "Player").get("detail", ""):
+        raise AssertionError(f"missing Player doc detail in {entity_symbols!r}")
+    if "Moves the player docs." not in item_named(entity_symbols, "move").get("detail", ""):
+        raise AssertionError(f"missing move doc detail in {entity_symbols!r}")
     for request_id in range(11, 18):
         assert_nonempty(response(messages, request_id), f"workspace symbol {request_id}")
     for request_id in range(20, 30):
@@ -297,7 +332,15 @@ def main() -> i32:
         assert_nonempty(hover and hover.get("contents"), f"hover {request_id}")
     assert_nonempty(response(messages, 32), "local references")
     assert_completion_labels(response(messages, 33), ["MAGIC", "mix"])
+    assert_documentation_contains(item_named(response(messages, 33), "mix"), "Mixes two numbers")
     assert_completion_labels(response(messages, 34), ["transitive_value"])
+    member_completion = response(messages, 35)
+    assert_completion_labels(member_completion, ["move", "hp"])
+    assert_documentation_contains(item_named(member_completion, "move"), "Moves the player docs.")
+    signature_help = response(messages, 36)
+    signature_docs = signature_help["signatures"][0]["documentation"]["value"]
+    if "Mixes two numbers for signature docs." not in signature_docs:
+        raise AssertionError(f"missing signature docs: {signature_help!r}")
     assert_symbol_names(response(messages, 40), ["Vec2", "main"])
     assert_nonempty(response(messages, 41), "operator method definition")
     assert_completion_labels(response(messages, 50), ["matrix_native_add", "MatrixNativePoint", "DUDU_MATRIX_NATIVE_SCALE"])

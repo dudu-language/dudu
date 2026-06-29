@@ -346,17 +346,19 @@ reconstructing it from display text. Signature help also shows those docs for
 Dudu functions visible through the ProjectIndex. Triple-quoted docstrings,
 native C/C++ documentation, and broader class/member doc fixtures are still
 planned. Document symbols now use proper LSP `DocumentSymbol` objects and put a
-short AST doc summary into `detail` when a symbol has leading `#` docs.
+short AST doc summary into `detail` when a symbol has leading `#` docs. The
+JSON-RPC LSP matrix covers class, field, method, imported completion, signature
+help, and document-symbol doc propagation.
 
 Remaining work:
 
 1. Support leading `''' ... '''` docstrings for modules, classes, methods,
    functions, enums, fields, constants, and aliases.
-2. Add broader class/member document-symbol doc fixtures.
+2. Add direct native C/C++ documentation fixtures once scanner support exists.
 3. Define formatting rules for docstrings, including indentation trimming and
    blank-line preservation.
 4. Add parser diagnostics for malformed or misplaced docstrings.
-5. Add LSP fixtures for broader class/member doc cases.
+5. Add more LSP fixtures for docstrings once parser support exists.
 6. Extend native header scanning to capture C/C++ comments when Clang exposes
    useful source ranges or documentation comments.
 7. Show native C/C++ documentation in hover/completion/signature help when

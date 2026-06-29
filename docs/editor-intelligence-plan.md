@@ -60,7 +60,10 @@ comments by scanning source lines at request time, and completion resolve
 preserves documentation attached to the item instead of fabricating docs from
 display text. Signature help also surfaces those docs for Dudu functions from
 the visible symbol index. Document symbols now use LSP `DocumentSymbol` shape
-and include a short AST doc summary in their detail text when available.
+and include a short AST doc summary in their detail text when available. The
+LSP matrix fixture now exercises doc propagation for classes, fields, methods,
+imported completions, signature help, and document symbols through actual
+JSON-RPC requests.
 
 ## Target Behavior
 
