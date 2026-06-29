@@ -114,6 +114,11 @@ if rg -n "std::isupper" "$repo_root/src/dudu/cpp_expr_call_emit.cpp"; then
     exit 1
 fi
 
+if rg -n "\\bfallback_uri\\b" "$repo_root/src/dudu"; then
+    echo "fallback_uri is misleading; use default_uri for locationless LSP symbols" >&2
+    exit 1
+fi
+
 if rg -n "std::regex|#include <regex>" "$repo_root/src/dudu"/language_server_lint_*.cpp \
     "$repo_root/src/dudu/language_server_ast_lints.cpp"; then
     echo "LSP lint rules must use AST/sema facts, not regex over source text" >&2

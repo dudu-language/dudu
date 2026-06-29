@@ -23,9 +23,9 @@ std::string symbol_json(const Symbol& symbol, const Document& doc) {
     return out.str();
 }
 
-std::string symbol_json(const Symbol& symbol, const std::string& fallback_uri) {
+std::string symbol_json(const Symbol& symbol, const std::string& default_uri) {
     const std::string uri = symbol.location.file.empty()
-                                ? fallback_uri
+                                ? default_uri
                                 : file_uri(std::filesystem::path(symbol.location.file));
     std::ostringstream out;
     out << "{\"name\":\"" << json_escape(symbol.name) << "\",\"kind\":" << symbol.kind
@@ -45,14 +45,14 @@ std::vector<Symbol> document_symbols(const Document& doc, bool include_native) {
 
 void append_matching_symbols(std::ostringstream& out, bool& first, std::set<std::string>& seen,
                              const std::string& lowered_query,
-                             const std::vector<Symbol>& symbols, const std::string& fallback_uri) {
+                             const std::vector<Symbol>& symbols, const std::string& default_uri) {
     for (const Symbol& symbol : symbols) {
         if (!lowered_query.empty() &&
             lower_copy(symbol.name).find(lowered_query) == std::string::npos) {
             continue;
         }
         const std::string uri = symbol.location.file.empty()
-                                    ? fallback_uri
+                                    ? default_uri
                                     : file_uri(std::filesystem::path(symbol.location.file));
         const std::string key = symbol.name + "\n" + uri + "\n" + range_json(symbol.location);
         if (!seen.insert(key).second) {
@@ -62,7 +62,7 @@ void append_matching_symbols(std::ostringstream& out, bool& first, std::set<std:
             out << ",";
         }
         first = false;
-        out << symbol_json(symbol, fallback_uri);
+        out << symbol_json(symbol, default_uri);
     }
 }
 
