@@ -133,15 +133,15 @@ std::optional<std::string> header_definition_json(const Document& doc, const Mod
 }
 
 std::optional<std::string> member_definition_json(const Document& doc, const ExprPath& path,
-                                                  const Json* params, const ModuleAst& module) {
+                                                  const Json* params, const ModuleAst& current,
+                                                  const ModuleAst& module) {
     if (path.segments.size() < 2 || path.segments.front().kind != ExprPathSegmentKind::Name ||
         path.segments.back().kind != ExprPathSegmentKind::Name) {
         return std::nullopt;
     }
     const std::string& receiver = path.segments.front().text;
     const std::string& member = path.segments.back().text;
-    const TypeRef type_ref =
-        local_type_ref_before_cursor(visible_module_unit(module, doc.path), receiver, params);
+    const TypeRef type_ref = local_type_ref_before_cursor(current, receiver, params);
     if (!has_type_ref(type_ref)) {
         return std::nullopt;
     }
@@ -272,7 +272,7 @@ std::string definition_json(const Document& doc, const Json* params) {
     if (word.empty()) {
         return "null";
     }
-    const std::vector<Symbol> symbols = visible_symbols_for_document(current, doc, false);
+    const std::vector<Symbol> symbols = symbols_for_module(current, false);
     if (const std::optional<Symbol> exact = exact_symbol_match(symbols, word)) {
         return symbol_definition_json(*exact, doc);
     }
@@ -288,7 +288,7 @@ std::string definition_json(const Document& doc, const Json* params) {
         try {
             const ProjectIndex* native = load_native_index();
             if (const std::optional<std::string> member_definition =
-                    member_definition_json(doc, *path, params, native->merged_module())) {
+                    member_definition_json(doc, *path, params, current, native->merged_module())) {
                 return *member_definition;
             }
         } catch (const std::exception&) {
@@ -318,7 +318,7 @@ std::string definition_json(const Document& doc, const Json* params) {
         return *native_type_target;
     }
     const std::vector<Symbol> native_symbols =
-        visible_symbols_for_document(native->visible_unit_for_path(doc.path), doc, true);
+        symbols_for_module(native->visible_unit_for_path(doc.path), true);
     if (const std::optional<Symbol> exact = exact_symbol_match(native_symbols, word)) {
         return symbol_definition_json(*exact, doc);
     }

@@ -6,6 +6,7 @@
 #include "dudu/language_server_navigation.hpp"
 #include "dudu/language_server_support.hpp"
 #include "dudu/language_server_symbols.hpp"
+#include "dudu/project_index.hpp"
 
 #include <algorithm>
 #include <filesystem>
@@ -26,12 +27,16 @@ struct CodeActionEdit {
     TextEdit edit;
 };
 
-std::optional<ModuleAst> loaded_document_module(const Document& doc) {
+const ProjectIndex* document_project_index(const Document& doc) {
     try {
-        return module_for_document(doc, false);
+        return &project_index_for_document(doc, false);
     } catch (const std::exception&) {
-        return std::nullopt;
+        return nullptr;
     }
+}
+
+const ModuleAst* visible_document_unit(const ProjectIndex* index, const Document& doc) {
+    return index == nullptr ? nullptr : &index->visible_unit_for_path(doc.path);
 }
 
 std::string code_action_json(const Document& doc, const CodeActionEdit& action) {
@@ -150,13 +155,12 @@ missing_import_action(const Document& doc, const std::string& name, const Module
             continue;
         }
         std::vector<Symbol> candidate_symbols;
-        try {
-            const ModuleAst candidate_module = module_for_document(candidate, false);
-            candidate_symbols =
-                symbols_for_module(visible_module_unit(candidate_module, candidate.path), false);
-        } catch (const std::exception&) {
+        const ProjectIndex* candidate_index = document_project_index(candidate);
+        const ModuleAst* candidate_unit = visible_document_unit(candidate_index, candidate);
+        if (candidate_unit == nullptr) {
             continue;
         }
+        candidate_symbols = symbols_for_module(*candidate_unit, false);
         for (const Symbol& symbol : candidate_symbols) {
             if (symbol.name != name || !importable_symbol_kind(symbol.kind)) {
                 continue;
@@ -258,8 +262,8 @@ std::vector<std::string> lint_actions(const Document& doc, const Json* params) {
 std::string code_actions_json(const Document& doc, const Json* params,
                               const std::map<std::string, Document>& workspace) {
     std::vector<std::string> actions;
-    const std::optional<ModuleAst> module = loaded_document_module(doc);
-    const ModuleAst* current = module ? &visible_module_unit(*module, doc.path) : nullptr;
+    const ProjectIndex* index = document_project_index(doc);
+    const ModuleAst* current = visible_document_unit(index, doc);
     actions.push_back("{\"title\":\"Format document\",\"kind\":\"source.format\","
                       "\"command\":{\"title\":\"Format document\","
                       "\"command\":\"editor.action.formatDocument\"}}");

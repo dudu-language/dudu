@@ -238,9 +238,4 @@ std::optional<Symbol> unambiguous_suffix_symbol_match(const std::vector<Symbol>&
     return matches.front();
 }
 
-std::vector<Symbol> visible_symbols_for_document(const ModuleAst& module, const Document& doc,
-                                                 bool include_native) {
-    return symbols_for_module(visible_module_unit(module, doc.path), include_native);
-}
-
 } // namespace dudu

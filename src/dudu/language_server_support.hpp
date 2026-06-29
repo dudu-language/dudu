@@ -15,11 +15,7 @@ std::string file_uri_to_path(std::string uri);
 std::filesystem::path project_config_path(const std::filesystem::path& file);
 ProjectConfig config_for_file(const std::filesystem::path& file);
 const ProjectIndex& project_index_for_document(const Document& doc, bool include_native_headers);
-ModuleAst module_for_document(const Document& doc, bool include_native_headers);
 void clear_language_server_module_cache();
-const ModuleAst& visible_module_unit(const ModuleAst& module, const std::filesystem::path& path);
-const ModuleAst* imported_module_unit(const ModuleAst& module, const ModuleAst& current,
-                                      const ImportDecl& import);
 int leading_spaces(const std::string& line);
 int document_line_count(const std::string& text);
 std::vector<std::string> document_lines(const std::string& text);

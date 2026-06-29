@@ -10,7 +10,7 @@
 #include "dudu/language_server_reference_collect.hpp"
 #include "dudu/language_server_support.hpp"
 #include "dudu/language_server_symbols.hpp"
-#include "dudu/parser.hpp"
+#include "dudu/project_index.hpp"
 
 #include <algorithm>
 #include <filesystem>
@@ -193,28 +193,19 @@ std::string dotted_tail(const std::string& query) {
     return dot == std::string::npos ? query : query.substr(dot + 1);
 }
 
-std::optional<ModuleAst> load_document_module(const Document& doc, bool include_native) {
+const ProjectIndex* document_project_index(const Document& doc, bool include_native) {
     try {
-        return module_for_document(doc, include_native);
+        return &project_index_for_document(doc, include_native);
     } catch (const std::exception&) {
-        return std::nullopt;
-    }
-}
-
-std::optional<ModuleAst> parse_document_module(const Document& doc) {
-    try {
-        return parse_source(doc.text, doc.path);
-    } catch (const std::exception&) {
-        return std::nullopt;
-    }
-}
-
-const ModuleAst* visible_document_module(const std::optional<ModuleAst>& module,
-                                         const Document& doc) {
-    if (!module.has_value()) {
         return nullptr;
     }
-    return &visible_module_unit(*module, doc.path);
+}
+
+const ModuleAst* visible_document_unit(const ProjectIndex* index, const Document& doc) {
+    if (index == nullptr) {
+        return nullptr;
+    }
+    return &index->visible_unit_for_path(doc.path);
 }
 
 std::string reference_query_at(const Document& doc, const AstSelection& selection,
@@ -326,16 +317,14 @@ ReferenceScope reference_scope_at(const Document& doc, const Json* params, const
 
 std::string references_json(const Document& doc, const Json* params,
                             const std::map<std::string, Document>& workspace) {
-    const std::optional<ModuleAst> current_module = load_document_module(doc, true);
-    const ModuleAst* current_unit = visible_document_module(current_module, doc);
+    const ProjectIndex* current_index = document_project_index(doc, true);
+    const ModuleAst* current_unit = visible_document_unit(current_index, doc);
     const AstSelection selection =
         current_unit == nullptr ? AstSelection{} : ast_selection_at(*current_unit, params);
     const std::vector<Symbol> current_symbols_with_native =
-        current_unit == nullptr ? std::vector<Symbol>{}
-                                : visible_symbols_for_document(*current_unit, doc, true);
+        current_unit == nullptr ? std::vector<Symbol>{} : symbols_for_module(*current_unit, true);
     const std::vector<Symbol> current_symbols_without_native =
-        current_unit == nullptr ? std::vector<Symbol>{}
-                                : visible_symbols_for_document(*current_unit, doc, false);
+        current_unit == nullptr ? std::vector<Symbol>{} : symbols_for_module(*current_unit, false);
     const std::string query =
         reference_query_at(doc, selection, current_unit, current_symbols_with_native);
     const ReferenceScope scope =
@@ -358,13 +347,13 @@ std::string references_json(const Document& doc, const Json* params,
         if (scope == ReferenceScope::CurrentDocument && candidate.uri != doc.uri) {
             continue;
         }
-        const std::optional<ModuleAst> candidate_module = parse_document_module(candidate);
-        const ModuleAst* candidate_unit = visible_document_module(candidate_module, candidate);
+        const ProjectIndex* candidate_index = document_project_index(candidate, false);
+        const ModuleAst* candidate_unit = visible_document_unit(candidate_index, candidate);
         if (candidate_unit == nullptr) {
             continue;
         }
         const std::vector<Symbol> candidate_symbols_without_native =
-            visible_symbols_for_document(*candidate_unit, candidate, false);
+            symbols_for_module(*candidate_unit, false);
         if (scope == ReferenceScope::WorkspaceSkipRedeclarations && candidate.uri != doc.uri &&
             document_declares_renameable_symbol(candidate, query,
                                                 candidate_symbols_without_native)) {
@@ -402,20 +391,17 @@ std::string references_json(const Document& doc, const Json* params,
         if (!target_module_document && !target_selective_document && native_identity.has_value()) {
             std::vector<Symbol> candidate_symbols_with_native;
             if (dudu_module_identity(*native_identity)) {
-                const std::optional<ModuleAst> candidate_tree =
-                    load_document_module(candidate, false);
                 if (const ModuleAst* candidate_visible =
-                        visible_document_module(candidate_tree, candidate)) {
+                        visible_document_unit(candidate_index, candidate)) {
                     candidate_symbols_with_native =
-                        visible_symbols_for_document(*candidate_visible, candidate, true);
+                        symbols_for_module(*candidate_visible, true);
                 }
             } else {
-                const std::optional<ModuleAst> candidate_tree =
-                    load_document_module(candidate, true);
+                const ProjectIndex* candidate_tree = document_project_index(candidate, true);
                 if (const ModuleAst* candidate_visible =
-                        visible_document_module(candidate_tree, candidate)) {
+                        visible_document_unit(candidate_tree, candidate)) {
                     candidate_symbols_with_native =
-                        visible_symbols_for_document(*candidate_visible, candidate, true);
+                        symbols_for_module(*candidate_visible, true);
                 }
             }
             if (!document_has_native_identity_for_query(candidate_symbols_with_native,
@@ -437,16 +423,15 @@ std::string references_json(const Document& doc, const Json* params,
 
 std::string rename_json(const Document& doc, const Json* params,
                         const std::map<std::string, Document>& workspace) {
-    const std::optional<ModuleAst> current_module = load_document_module(doc, true);
-    const ModuleAst* current_unit = visible_document_module(current_module, doc);
+    const ProjectIndex* current_index = document_project_index(doc, true);
+    const ModuleAst* current_unit = visible_document_unit(current_index, doc);
     const AstSelection selection =
         current_unit == nullptr ? AstSelection{} : ast_selection_at(*current_unit, params);
     const std::string old_name = selection.symbol.value_or("");
     const std::string new_name =
         params == nullptr ? std::string{} : string_value(params->get("newName"));
     const std::vector<Symbol> current_symbols_without_native =
-        current_unit == nullptr ? std::vector<Symbol>{}
-                                : visible_symbols_for_document(*current_unit, doc, false);
+        current_unit == nullptr ? std::vector<Symbol>{} : symbols_for_module(*current_unit, false);
     const RenameScope scope = rename_scope_at(doc, params, old_name, selection, current_unit,
                                               current_symbols_without_native);
     if (!valid_identifier(new_name) || scope == RenameScope::None) {
@@ -460,13 +445,13 @@ std::string rename_json(const Document& doc, const Json* params,
         if (scope == RenameScope::CurrentDocument && candidate.uri != doc.uri) {
             continue;
         }
-        const std::optional<ModuleAst> candidate_module = parse_document_module(candidate);
-        const ModuleAst* candidate_unit = visible_document_module(candidate_module, candidate);
+        const ProjectIndex* candidate_index = document_project_index(candidate, false);
+        const ModuleAst* candidate_unit = visible_document_unit(candidate_index, candidate);
         if (candidate_unit == nullptr) {
             continue;
         }
         const std::vector<Symbol> candidate_symbols_without_native =
-            visible_symbols_for_document(*candidate_unit, candidate, false);
+            symbols_for_module(*candidate_unit, false);
         if (scope == RenameScope::Workspace && candidate.uri != doc.uri &&
             document_declares_renameable_symbol(candidate, old_name,
                                                 candidate_symbols_without_native)) {

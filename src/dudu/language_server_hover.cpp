@@ -136,7 +136,8 @@ std::string symbol_hover_json(const Document& doc, const Symbol& symbol) {
 }
 
 std::optional<std::string> member_hover_json(const Document& doc, const ExprPath& path,
-                                             const Json* params, const ModuleAst& module) {
+                                             const Json* params, const ModuleAst& current,
+                                             const ModuleAst& module) {
     if (params == nullptr || path.segments.size() < 2 ||
         path.segments.front().kind != ExprPathSegmentKind::Name ||
         path.segments.back().kind != ExprPathSegmentKind::Name) {
@@ -144,8 +145,7 @@ std::optional<std::string> member_hover_json(const Document& doc, const ExprPath
     }
     const std::string& receiver = path.segments.front().text;
     const std::string& member = path.segments.back().text;
-    const TypeRef type_ref =
-        local_type_ref_before_cursor(visible_module_unit(module, doc.path), receiver, params);
+    const TypeRef type_ref = local_type_ref_before_cursor(current, receiver, params);
     if (!has_type_ref(type_ref)) {
         return std::nullopt;
     }
@@ -227,7 +227,7 @@ std::string hover_json(const Document& doc, const std::string& word, const std::
             selected_path = selection.expr_path;
         }
     }
-    const std::vector<Symbol> symbols = visible_symbols_for_document(current, doc, false);
+    const std::vector<Symbol> symbols = symbols_for_module(current, false);
     if (const std::optional<Symbol> exact = exact_symbol_match(symbols, query)) {
         return symbol_hover_json(doc, *exact);
     }
@@ -248,8 +248,8 @@ std::string hover_json(const Document& doc, const std::string& word, const std::
                 native_alias_hover_json(query, native->merged_module())) {
             return *native_alias;
         }
-        const std::vector<Symbol> native_symbols = visible_symbols_for_document(
-            native->visible_unit_for_path(doc.path), doc, true);
+        const std::vector<Symbol> native_symbols =
+            symbols_for_module(native->visible_unit_for_path(doc.path), true);
         if (const std::optional<Symbol> exact = exact_symbol_match(native_symbols, query)) {
             return symbol_hover_json(doc, *exact);
         }
@@ -263,7 +263,8 @@ std::string hover_json(const Document& doc, const std::string& word, const std::
         try {
             const ProjectIndex* native = load_native_index();
             if (const std::optional<std::string> member_hover =
-                    member_hover_json(doc, *selected_path, params, native->merged_module())) {
+                    member_hover_json(doc, *selected_path, params, current,
+                                      native->merged_module())) {
                 return *member_hover;
             }
         } catch (const std::exception&) {
