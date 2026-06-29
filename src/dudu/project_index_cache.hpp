@@ -9,9 +9,18 @@
 
 namespace dudu {
 
+struct ProjectIndexCacheStats {
+    size_t entries = 0;
+    size_t hits = 0;
+    size_t misses = 0;
+    size_t stale_evictions = 0;
+    size_t loads = 0;
+};
+
 class ProjectIndexCache {
   public:
     const ProjectIndex& get(ProjectIndexOptions options);
+    ProjectIndexCacheStats stats() const;
     void clear();
 
   private:
@@ -37,6 +46,7 @@ class ProjectIndexCache {
     static CacheKey key_for_options(const ProjectIndexOptions& options);
 
     std::map<CacheKey, CacheEntry> entries_;
+    ProjectIndexCacheStats stats_;
 };
 
 } // namespace dudu

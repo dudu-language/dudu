@@ -79,6 +79,10 @@ const ProjectIndex& project_index_for_document(const Document& doc, bool include
     return project_index_cache.get(options);
 }
 
+ProjectIndexCacheStats language_server_project_index_cache_stats() {
+    return project_index_cache.stats();
+}
+
 void clear_language_server_module_cache() {
     project_index_cache.clear();
 }

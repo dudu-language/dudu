@@ -1012,6 +1012,44 @@ void test_lsp_project_index_cache_invalidates_imported_file_changes() {
     dudu::clear_language_server_module_cache();
 }
 
+void test_lsp_project_index_cache_records_warm_hits() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_project_index_stats_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "maths.dd", "def inc(value: i32) -> i32:\n"
+                                 "    return value + 1\n");
+    write_file(dir / "main.dd", "def main() -> i32:\n"
+                                "    return 0\n");
+
+    const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
+                             .path = dir / "main.dd",
+                             .text = "import maths\n"
+                                     "\n"
+                                     "def main() -> i32:\n"
+                                     "    return maths.inc(1)\n"};
+    dudu::clear_language_server_module_cache();
+    dudu::ProjectIndexCacheStats stats = dudu::language_server_project_index_cache_stats();
+    assert(stats.entries == 0);
+    assert(stats.hits == 0);
+    assert(stats.misses == 0);
+
+    (void)dudu::project_index_for_document(doc, false);
+    stats = dudu::language_server_project_index_cache_stats();
+    assert(stats.entries == 1);
+    assert(stats.hits == 0);
+    assert(stats.misses == 1);
+    assert(stats.loads == 1);
+
+    (void)dudu::project_index_for_document(doc, false);
+    stats = dudu::language_server_project_index_cache_stats();
+    assert(stats.entries == 1);
+    assert(stats.hits == 1);
+    assert(stats.misses == 1);
+    assert(stats.loads == 1);
+    dudu::clear_language_server_module_cache();
+}
+
 void test_lsp_definition_jumps_to_native_header_type() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_lsp_native_definition_unit_test";
@@ -2068,6 +2106,7 @@ int main() {
         test_lsp_module_completion_uses_loaded_module_units();
         test_lsp_definition_uses_loaded_module_units();
         test_lsp_project_index_cache_invalidates_imported_file_changes();
+        test_lsp_project_index_cache_records_warm_hits();
         test_lsp_definition_jumps_to_native_header_type();
         test_lsp_definition_uses_receiver_for_ambiguous_native_methods();
         test_lsp_hover_uses_receiver_for_ambiguous_native_methods();

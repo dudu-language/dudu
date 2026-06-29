@@ -69,17 +69,29 @@ const ProjectIndex& ProjectIndexCache::get(ProjectIndexOptions options) {
     const CacheKey key = key_for_options(options);
     if (const auto found = entries_.find(key); found != entries_.end()) {
         if (found->second.index.source_stamps_current()) {
+            ++stats_.hits;
             return found->second.index;
         }
+        ++stats_.stale_evictions;
         entries_.erase(found);
     }
+    ++stats_.misses;
     CacheEntry entry{.index = ProjectIndex::load(options)};
+    ++stats_.loads;
     auto result = entries_.emplace(key, std::move(entry));
+    stats_.entries = entries_.size();
     return result.first->second.index;
+}
+
+ProjectIndexCacheStats ProjectIndexCache::stats() const {
+    ProjectIndexCacheStats out = stats_;
+    out.entries = entries_.size();
+    return out;
 }
 
 void ProjectIndexCache::clear() {
     entries_.clear();
+    stats_ = {};
 }
 
 } // namespace dudu
