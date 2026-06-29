@@ -478,6 +478,7 @@ def main() -> i32:
         request(67, "textDocument/references", {"textDocument": text_document(main), "position": position(main_source, "Player(MAX_HP)", add=len("Player("))}),
         request(73, "textDocument/references", {"textDocument": text_document(main), "position": position(main_source, "Counter.count", add=len("Counter."))}),
         request(74, "textDocument/references", {"textDocument": text_document(main), "position": position(main_source, "Counter.bump", add=len("Counter."))}),
+        request(79, "textDocument/rename", {"textDocument": text_document(main), "position": position(main_source, "math.mix", add=len("math.")), "newName": "blend"}),
         request(33, "textDocument/completion", {"textDocument": text_document(main), "position": position(main_source, "return math.MAGIC", add=len("return math."))}),
         request(34, "textDocument/completion", {"textDocument": text_document(main), "position": position(main_source, "transitive.transitive_value", add=len("transitive."))}),
         request(35, "textDocument/completion", {"textDocument": text_document(main), "position": position(main_source, "player.move", add=len("player."))}),
@@ -572,6 +573,18 @@ def main() -> i32:
         raise AssertionError(f"other_math.mix declaration leaked into math.mix refs: {imported_function_refs!r}")
     if has_start(imported_function_refs, main.as_uri(), main_other_math_mix["line"], main_other_math_mix["character"]):
         raise AssertionError(f"other_math.mix use leaked into math.mix refs: {imported_function_refs!r}")
+    imported_function_rename = response(messages, 79)
+    rename_changes = imported_function_rename.get("changes", {})
+    math_edits = rename_changes.get((tmp / "math_utils.dd").as_uri(), [])
+    main_edits = rename_changes.get(main.as_uri(), [])
+    if not any(edit.get("range", {}).get("start", {}) == math_mix_decl for edit in math_edits):
+        raise AssertionError(f"math.mix rename missed declaration: {imported_function_rename!r}")
+    if not any(edit.get("range", {}).get("start", {}) == main_math_mix for edit in main_edits):
+        raise AssertionError(f"math.mix rename missed use site: {imported_function_rename!r}")
+    if any(edit.get("range", {}).get("start", {}) == main_other_math_mix for edit in main_edits):
+        raise AssertionError(f"math.mix rename edited other_math.mix: {imported_function_rename!r}")
+    if (tmp / "other_math_utils.dd").as_uri() in rename_changes:
+        raise AssertionError(f"math.mix rename edited unrelated module: {imported_function_rename!r}")
 
     imported_constant_refs = response(messages, 67)
     assert_nonempty(imported_constant_refs, "imported Dudu constant references")

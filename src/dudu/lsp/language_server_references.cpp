@@ -202,6 +202,10 @@ const ProjectIndex* workspace_candidate_index(const ProjectIndex* workspace_inde
 RenameScope rename_scope_at(const Document& doc, const Json* params, const std::string& name,
                             const AstSelection& selection, const ModuleAst* module,
                             const std::vector<Symbol>& symbols_without_native) {
+    if (module_import_target_key(doc, name).has_value() ||
+        selective_import_target(doc, name).has_value()) {
+        return RenameScope::Workspace;
+    }
     if (declaration_at_position(doc, params, name, symbols_without_native).has_value()) {
         return RenameScope::Workspace;
     }
@@ -359,16 +363,23 @@ std::string rename_json(const Document& doc, const Json* params,
     const ModuleAst* current_unit = visible_document_unit(current_index, doc);
     const AstSelection selection =
         current_unit == nullptr ? AstSelection{} : ast_selection_at(*current_unit, params);
-    const std::string old_name = selection.symbol.value_or("");
     const std::string new_name =
         params == nullptr ? std::string{} : string_value(params->get("newName"));
+    const std::vector<Symbol> current_symbols_with_native =
+        current_unit == nullptr ? std::vector<Symbol>{} : symbols_for_module(*current_unit, true);
     const std::vector<Symbol> current_symbols_without_native =
         current_unit == nullptr ? std::vector<Symbol>{} : symbols_for_module(*current_unit, false);
+    const std::string old_name =
+        reference_query_at(doc, params, selection, current_unit, current_symbols_with_native);
     const RenameScope scope = rename_scope_at(doc, params, old_name, selection, current_unit,
                                               current_symbols_without_native);
     if (!valid_identifier(new_name) || scope == RenameScope::None) {
         return "null";
     }
+    const std::optional<std::string> module_target =
+        scope == RenameScope::Workspace ? module_import_target_key(doc, old_name) : std::nullopt;
+    const std::optional<ImportReferenceTarget> selective_target =
+        scope == RenameScope::Workspace ? selective_import_target(doc, old_name) : std::nullopt;
     std::ostringstream out;
     out << "{\"changes\":{";
     bool first_doc = true;
@@ -388,8 +399,32 @@ std::string rename_json(const Document& doc, const Json* params,
                                                 candidate_symbols_without_native)) {
             continue;
         }
+        std::error_code path_error;
+        const std::filesystem::path candidate_path =
+            candidate.path.empty() ? std::filesystem::path{}
+                                   : std::filesystem::weakly_canonical(candidate.path, path_error);
+        const bool target_module_document = module_target.has_value() && !candidate.path.empty() &&
+                                            !path_error &&
+                                            same_path(candidate_path, *module_target);
+        const bool target_selective_document =
+            selective_target.has_value() && !candidate.path.empty() && !path_error &&
+            same_path(candidate_path, selective_target->source_key);
+        if (module_target.has_value() && candidate.uri != doc.uri && !target_module_document &&
+            module_import_target_key(candidate, old_name) != module_target) {
+            continue;
+        }
+        if (selective_target.has_value() && candidate.uri != doc.uri &&
+            !target_selective_document &&
+            !same_import_reference_target(selective_import_target(candidate, old_name),
+                                          selective_target)) {
+            continue;
+        }
+        const std::string candidate_query = target_module_document ? dotted_tail(old_name)
+                                            : target_selective_document
+                                                ? selective_target->member_name
+                                                : old_name;
         const std::vector<ReferenceLocation> locations =
-            references_in(*candidate_unit, candidate, old_name);
+            references_in(*candidate_unit, candidate, candidate_query);
         if (locations.empty()) {
             continue;
         }

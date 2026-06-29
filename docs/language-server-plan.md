@@ -487,8 +487,12 @@ same-named Dudu symbol so declaration rename does not edit obvious unrelated
 symbols. It allows use-site-triggered rename edits only inside the current
 document for an unqualified call expression that resolves to one renameable
 Dudu declaration in that document with no visible local type binding shadowing
-it. Other use-site rename requests stay rejected until the LSP can prove symbol
-identity strongly enough to avoid editing unrelated same-named locals. Initial
+it. Module-qualified Dudu use sites now also rename through the same module
+target identity used by find-references: a rename from `math.mix` edits the
+imported declaration and matching `math.mix` uses while leaving unrelated
+`other_math.mix` symbols untouched. Other use-site rename requests stay rejected
+until the LSP can prove symbol identity strongly enough to avoid editing
+unrelated same-named locals. Initial
 `textDocument/codeAction` support is implemented with a format-document source
 action wired into VS Code. Organize-imports code actions are implemented for the
 leading import block and return a WorkspaceEdit through the VS Code adapter.
