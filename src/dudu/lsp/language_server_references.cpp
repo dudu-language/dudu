@@ -237,6 +237,12 @@ std::string reference_query_at(const Document& doc, const Json* params,
         paths.push_back(*selection.symbol_path);
     }
     if (selection.expr_path.has_value()) {
+        if (module != nullptr) {
+            if (const std::optional<std::string> member_query =
+                    member_use_reference_query_at(*module, *selection.expr_path, params)) {
+                return *member_query;
+            }
+        }
         expression_path = render_expr_path(*selection.expr_path);
         paths.push_back(*expression_path);
     }

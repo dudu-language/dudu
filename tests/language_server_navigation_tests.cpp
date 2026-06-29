@@ -3,6 +3,7 @@
 #include "dudu/lsp/language_server_diagnostics.hpp"
 #include "dudu/lsp/language_server_hover.hpp"
 #include "dudu/lsp/language_server_json.hpp"
+#include "dudu/lsp/language_server_member_references.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_reference_collect.hpp"
 #include "dudu/lsp/language_server_references.hpp"
@@ -466,6 +467,74 @@ void test_lsp_references_use_member_identity() {
     assert(refs.find("\"start\":{\"line\":7,\"character\":4}") == std::string::npos);
     assert(refs.find("\"start\":{\"line\":10,\"character\":20}") == std::string::npos);
     assert(refs.find("\"start\":{\"line\":15,\"character\":29}") == std::string::npos);
+
+    dudu::Json use_params =
+        dudu::JsonParser("{\"position\":{\"line\":15,\"character\":20}}").parse();
+    const std::string use_refs = dudu::references_json(doc, &use_params, workspace);
+    assert(use_refs.find("\"start\":{\"line\":1,\"character\":4}") != std::string::npos);
+    assert(use_refs.find("\"start\":{\"line\":4,\"character\":20}") != std::string::npos);
+    assert(use_refs.find("\"start\":{\"line\":15,\"character\":18}") != std::string::npos);
+    assert(use_refs.find("\"start\":{\"line\":7,\"character\":4}") == std::string::npos);
+    assert(use_refs.find("\"start\":{\"line\":10,\"character\":20}") == std::string::npos);
+    assert(use_refs.find("\"start\":{\"line\":15,\"character\":29}") == std::string::npos);
+}
+
+void test_lsp_references_use_imported_member_identity_from_use_site() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_imported_member_refs_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    const std::filesystem::path entities_path = dir / "entities.dd";
+    const std::filesystem::path main_path = dir / "main.dd";
+    const std::string entities_source = "class Player:\n"
+                                        "    hp: i32\n"
+                                        "\n"
+                                        "    def heal(self) -> i32:\n"
+                                        "        return self.hp\n"
+                                        "\n"
+                                        "class Enemy:\n"
+                                        "    hp: i32\n"
+                                        "\n"
+                                        "    def hurt(self) -> i32:\n"
+                                        "        return self.hp\n";
+    const std::string main_source = "from entities import Player\n"
+                                    "from entities import Enemy\n"
+                                    "\n"
+                                    "def main() -> i32:\n"
+                                    "    player: Player = Player(1)\n"
+                                    "    enemy: Enemy = Enemy(2)\n"
+                                    "    return player.hp + enemy.hp\n";
+    write_file(entities_path, entities_source);
+    write_file(main_path, main_source);
+    const dudu::Document main_doc{
+        .uri = dudu::file_uri(main_path), .path = main_path, .text = main_source};
+    const dudu::Document entities_doc{
+        .uri = dudu::file_uri(entities_path), .path = entities_path, .text = entities_source};
+    const std::map<std::string, dudu::Document> workspace{{main_doc.uri, main_doc},
+                                                          {entities_doc.uri, entities_doc}};
+    dudu::clear_language_server_module_cache();
+    dudu::set_language_server_open_documents(workspace);
+    const dudu::ProjectIndex& index = dudu::project_index_for_document(main_doc, true);
+    const dudu::ModuleAst* entity_unit = index.unit_for_path(entities_path);
+    assert(entity_unit != nullptr);
+    assert(!dudu::references_in(*entity_unit, entities_doc, "Player.hp").empty());
+    dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":6,\"character\":20}}").parse();
+    const dudu::ModuleAst& main_unit = index.visible_unit_for_path(main_path);
+    const dudu::AstSelection selection = dudu::ast_selection_at(main_unit, &params);
+    assert(selection.expr_path.has_value());
+    const std::optional<std::string> member_query =
+        dudu::member_use_reference_query_at(main_unit, *selection.expr_path, &params);
+    assert(member_query == "Player.hp");
+    const std::string refs = dudu::references_json(main_doc, &params, workspace);
+    assert(refs.find(dudu::file_uri(main_path)) != std::string::npos);
+    assert(refs.find(dudu::file_uri(entities_path)) != std::string::npos);
+    assert(refs.find("\"start\":{\"line\":1,\"character\":4}") != std::string::npos);
+    assert(refs.find("\"start\":{\"line\":4,\"character\":20}") != std::string::npos);
+    assert(refs.find("\"start\":{\"line\":6,\"character\":18}") != std::string::npos);
+    assert(refs.find("\"start\":{\"line\":7,\"character\":4}") == std::string::npos);
+    assert(refs.find("\"start\":{\"line\":10,\"character\":20}") == std::string::npos);
+    assert(refs.find("\"start\":{\"line\":6,\"character\":29}") == std::string::npos);
+    dudu::clear_language_server_module_cache();
 }
 
 void test_lsp_references_use_enum_value_identity() {
@@ -675,6 +744,7 @@ int main() {
         test_lsp_references_scope_same_named_locals_by_function();
         test_lsp_references_track_qualified_type_refs();
         test_lsp_references_use_member_identity();
+        test_lsp_references_use_imported_member_identity_from_use_site();
         test_lsp_references_use_enum_value_identity();
         test_lsp_module_reference_filters_alias_target();
         test_lsp_module_references_include_target_declaration();

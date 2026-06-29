@@ -320,6 +320,7 @@ def main() -> i32:
         request(37, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "import entities", add=len("import "))}),
         request(38, "textDocument/references", {"textDocument": text_document(entities), "position": position(entities_source, "hp: i32", add=1)}),
         request(39, "textDocument/references", {"textDocument": text_document(entities), "position": position(entities_source, "Play", add=1)}),
+        request(42, "textDocument/references", {"textDocument": text_document(main), "position": position(main_source, "player.hp", add=len("player."))}),
         request(40, "textDocument/documentSymbol", {"textDocument": text_document(ops)}),
         request(41, "textDocument/definition", {"textDocument": text_document(ops), "position": position(ops_source, "add(self", add=1)}),
         request(50, "textDocument/completion", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add", add=len("nb."))}),
@@ -389,6 +390,15 @@ def main() -> i32:
         raise AssertionError(f"missing Mode.Play declaration reference: {enum_refs!r}")
     if has_start(enum_refs, entities.as_uri(), other_play["line"], other_play["character"]):
         raise AssertionError(f"OtherMode.Play leaked into Mode.Play refs: {enum_refs!r}")
+    member_use_refs = response(messages, 42)
+    assert_nonempty(member_use_refs, "member use identity references")
+    main_player_hp = position(main_source, "player.hp", add=len("player."))
+    if not has_start(member_use_refs, main.as_uri(), main_player_hp["line"], main_player_hp["character"]):
+        raise AssertionError(f"missing main player.hp use reference: {member_use_refs!r}")
+    if not has_start(member_use_refs, entities.as_uri(), player_self_hp["line"], player_self_hp["character"]):
+        raise AssertionError(f"missing Player.self hp through use-site refs: {member_use_refs!r}")
+    if has_start(member_use_refs, entities.as_uri(), enemy_self_hp["line"], enemy_self_hp["character"]):
+        raise AssertionError(f"Enemy.self hp leaked into use-site refs: {member_use_refs!r}")
     assert_symbol_names(response(messages, 40), ["Vec2", "main"])
     assert_nonempty(response(messages, 41), "operator method definition")
     assert_completion_labels(response(messages, 50), ["matrix_native_add", "MatrixNativePoint", "DUDU_MATRIX_NATIVE_SCALE"])
