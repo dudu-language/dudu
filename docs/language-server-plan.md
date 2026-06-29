@@ -509,6 +509,12 @@ Native overloaded function signature help is covered with a local fixture
 header.
 Local completion scope filtering is covered so deeper-block locals do not leak
 into outer-block completions.
+The server caches the expanded workspace document set across requests and
+invalidates it on open-buffer changes, so repeated workspace-symbol,
+references, rename, and code-action requests do not rescan the filesystem and
+import graph each time. The compiler benchmark LSP probe exercises repeated
+workspace-symbol and references requests so this warm workspace path is visible
+outside the correctness-only smoke suite.
 Optional LSP probes cover real `sqlite3` and `raylib` headers through
 `pkg-config`, plus `SDL3` and `GLFW` when installed, including diagnostics,
 completion, signature help, definition, and hover. They are part of

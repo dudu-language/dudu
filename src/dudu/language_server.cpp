@@ -66,6 +66,9 @@ class LanguageServer {
     std::ostream& out_;
     std::ostream& err_;
     std::map<std::string, Document> documents_;
+    size_t documents_revision_ = 0;
+    mutable size_t workspace_cache_revision_ = std::numeric_limits<size_t>::max();
+    mutable std::map<std::string, Document> workspace_cache_;
     bool shutdown_ = false;
     bool exit_ = false;
 
@@ -255,6 +258,7 @@ class LanguageServer {
         documents_[uri] = {.uri = uri,
                            .path = file_uri_to_path(uri),
                            .text = string_value(text_document->get("text"))};
+        invalidate_workspace_cache();
     }
 
     void did_change(const Json* params) {
@@ -269,6 +273,7 @@ class LanguageServer {
         doc.uri = uri;
         doc.path = file_uri_to_path(uri);
         doc.text = string_value(array->back().get("text"));
+        invalidate_workspace_cache();
     }
 
     void did_save(const Json* params) {
@@ -352,7 +357,7 @@ class LanguageServer {
     std::string workspace_symbol_result(const Json* params) const {
         const std::string query =
             params == nullptr ? std::string{} : string_value(params->get("query"));
-        return workspace_symbols_json(query, workspace_documents(documents_), documents_);
+        return workspace_symbols_json(query, cached_workspace_documents(), documents_);
     }
 
     std::string definition_result(const Json* params) const {
@@ -368,7 +373,7 @@ class LanguageServer {
         if (doc == nullptr) {
             return "[]";
         }
-        return references_json(*doc, params, workspace_documents(documents_));
+        return references_json(*doc, params, cached_workspace_documents());
     }
 
     std::string rename_result(const Json* params) const {
@@ -376,7 +381,7 @@ class LanguageServer {
         if (doc == nullptr) {
             return "null";
         }
-        return rename_json(*doc, params, workspace_documents(documents_));
+        return rename_json(*doc, params, cached_workspace_documents());
     }
 
     std::string code_action_result(const Json* params) const {
@@ -384,7 +389,7 @@ class LanguageServer {
         if (doc == nullptr) {
             return "[]";
         }
-        return code_actions_json(*doc, params, workspace_documents(documents_));
+        return code_actions_json(*doc, params, cached_workspace_documents());
     }
 
     std::string hover_result(const Json* params) const {
@@ -413,6 +418,20 @@ class LanguageServer {
             text_document == nullptr ? std::string{} : string_value(text_document->get("uri"));
         const auto found = documents_.find(uri);
         return found == documents_.end() ? nullptr : &found->second;
+    }
+
+    void invalidate_workspace_cache() {
+        ++documents_revision_;
+        workspace_cache_revision_ = std::numeric_limits<size_t>::max();
+        workspace_cache_.clear();
+    }
+
+    const std::map<std::string, Document>& cached_workspace_documents() const {
+        if (workspace_cache_revision_ != documents_revision_) {
+            workspace_cache_ = workspace_documents(documents_);
+            workspace_cache_revision_ = documents_revision_;
+        }
+        return workspace_cache_;
     }
 };
 

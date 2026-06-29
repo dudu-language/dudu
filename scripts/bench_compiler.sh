@@ -353,7 +353,45 @@ messages = [
             "params": {"textDocument": {"uri": uri}},
         }
     ),
-    packet({"jsonrpc": "2.0", "id": 3, "method": "shutdown", "params": None}),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 3,
+            "method": "workspace/symbol",
+            "params": {"query": "add"},
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 4,
+            "method": "workspace/symbol",
+            "params": {"query": "Player"},
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 5,
+            "method": "textDocument/references",
+            "params": {
+                "textDocument": {"uri": uri},
+                "position": {"line": 8, "character": 13},
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 6,
+            "method": "textDocument/references",
+            "params": {
+                "textDocument": {"uri": uri},
+                "position": {"line": 8, "character": 13},
+            },
+        }
+    ),
+    packet({"jsonrpc": "2.0", "id": 7, "method": "shutdown", "params": None}),
     packet({"jsonrpc": "2.0", "method": "exit", "params": None}),
 ]
 
@@ -389,6 +427,17 @@ if symbol_response is None or "result" not in symbol_response:
 symbol_names = {item.get("name") for item in symbol_response["result"]}
 if not {"Player", "add", "main"}.issubset(symbol_names):
     raise RuntimeError(f"unexpected document symbols: {symbol_response['result']!r}")
+
+workspace_add = next((item for item in packets if item.get("id") == 3), None)
+if workspace_add is None or not any(item.get("name") == "add" for item in workspace_add.get("result", [])):
+    raise RuntimeError(f"unexpected workspace add symbols: {workspace_add!r}")
+workspace_player = next((item for item in packets if item.get("id") == 4), None)
+if workspace_player is None or not any(item.get("name") == "Player" for item in workspace_player.get("result", [])):
+    raise RuntimeError(f"unexpected workspace Player symbols: {workspace_player!r}")
+for request_id in (5, 6):
+    references = next((item for item in packets if item.get("id") == request_id), None)
+    if references is None or len(references.get("result", [])) < 2:
+        raise RuntimeError(f"unexpected references response {request_id}: {references!r}")
 PY
 }
 

@@ -2251,6 +2251,14 @@ push. They are not release packaging work.
    declaration, and exclude other files that reuse the alias for a different
    module.
 
+   The LSP server now caches the expanded workspace document set across
+   requests and invalidates it when open buffers change. Workspace-symbol,
+   references, rename, and code-action requests reuse that warm workspace set
+   instead of rescanning imported modules and the filesystem on every request.
+   `scripts/bench_compiler.sh` now includes repeated workspace-symbol and
+   references requests in its LSP probe so this warm-request path remains
+   visible in benchmark runs.
+
    Documentation hover needs a real documentation model, not only line scanning.
    Dudu should support Python-shaped contiguous `#` declaration comments and
    Python-style triple-single-quoted `''' ... '''` docstrings as the first
