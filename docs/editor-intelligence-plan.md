@@ -59,7 +59,12 @@ Dudu semantic tokens now use a source-symbol index for Dudu classes, enums,
 enum members, implicit local bindings, and member calls instead of relying only
 on syntax shape or native metadata. A decoded semantic-token fixture asserts
 token text, kind, and modifiers against the original source for the core Dudu
-token classes.
+token classes. The LSP server now builds semantic tokens with ProjectIndex
+import context, so imported Dudu module aliases, selective imported classes,
+imported functions, and imported constants receive namespace/class/function/
+readonly-variable token identities instead of syntax-only fallback coloring.
+The JSON-RPC LSP matrix decodes those token streams and asserts the imported
+symbol kinds.
 Leading `#` declaration comments and first-body triple-single-quoted
 docstrings for modules, functions, methods, classes, and enums now attach to
 parsed Dudu declarations and flow through hover for same-file and imported Dudu
@@ -72,9 +77,9 @@ fabricating docs from display text. Signature help also surfaces those docs for
 Dudu functions from the visible symbol index. Document symbols now use LSP
 `DocumentSymbol` shape and include a short AST doc summary in their detail text
 when available. The LSP matrix fixture now exercises doc propagation for
-classes, fields, methods, imported completions, signature help, and document
-symbols through actual JSON-RPC requests, including docstring-backed module,
-class, enum, method, and function symbols.
+classes, fields, field member hover, methods, imported completions, signature
+help, and document symbols through actual JSON-RPC requests, including
+docstring-backed module, class, enum, method, and function symbols.
 Native hover now surfaces the scanner's canonical native identity key when the
 symbol has one, so hover shows both the Dudu-shaped signature/type and the
 identity used by native references.

@@ -2356,9 +2356,13 @@ push. They are not release packaging work.
    signature help surfaces them for Dudu functions from the visible symbol
    index. Document symbols now use LSP `DocumentSymbol` shape and include a
    short AST doc summary in their detail text. The JSON-RPC LSP matrix covers
-   doc propagation for classes, fields, methods, imported completions,
-   signature help, import hover, and document symbols, including
+   doc propagation for classes, fields, typed field hover, methods, imported
+   completions, signature help, import hover, and document symbols, including
    docstring-backed module, class, enum, method, and function docs.
+   Semantic tokens are ProjectIndex-aware for imported Dudu module aliases,
+   selective imported classes, imported functions, and imported constants, and
+   the JSON-RPC LSP matrix decodes the token stream to assert those imported
+   symbol identities.
    Misplaced module/class/enum/function docstrings now produce explicit parser
    diagnostics instead of generic syntax failures or inert string statements.
    Field/constant/alias larger-doc syntax and native C/C++ docs remain planned.

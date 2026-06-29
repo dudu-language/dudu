@@ -360,8 +360,9 @@ Dudu declarations attach to parsed declaration AST nodes, and first-body
 triple-single-quoted docstrings attach to modules, functions, methods, classes,
 and enums. Docstring statements are removed from the executable statement list,
 so they are documentation rather than runtime string expressions. Hover shows
-attached docs for same-file declarations and imported Dudu module symbols,
-including module docs when hovering a module import alias.
+attached docs for same-file declarations, imported Dudu module symbols, and
+typed member fields such as `player.hp`, including module docs when hovering a
+module import alias.
 Completion items now carry those AST docs for local, imported, and Dudu member
 symbols, and `completionItem/resolve` preserves that documentation payload
 instead of reconstructing it from display text. Signature help also shows those
@@ -371,9 +372,15 @@ module/class/enum/function docstrings now produce explicit parser diagnostics
 instead of generic syntax failures or inert string statements. Document symbols
 now use proper LSP `DocumentSymbol` objects and put a short AST doc summary
 into `detail` when a symbol has docs. The JSON-RPC LSP matrix covers class,
-field, method, imported
-completion, signature help, import hover, and document-symbol doc propagation,
-including docstring-backed module, class, enum, method, and function docs.
+field, typed field hover, method, imported completion, signature help, import
+hover, and document-symbol doc propagation, including docstring-backed module,
+class, enum, method, and function docs.
+
+Semantic tokens are also ProjectIndex-aware for Dudu imports. Module aliases
+such as `math`, selective imported classes such as `Player`, imported functions
+such as `math.mix`, and imported constants such as `math.MAGIC` now color from
+symbol identity instead of local syntax shape. The JSON-RPC LSP matrix decodes
+the returned token stream and asserts those imported token kinds.
 
 Remaining work:
 
@@ -384,8 +391,8 @@ Remaining work:
    indentation trimming and blank-line preservation.
 4. Extend parser diagnostics for malformed docstrings if new malformed cases
    appear beyond unterminated triple strings and misplaced docstrings.
-5. Add more LSP fixtures for field/constant/alias documentation once their
-   larger-doc syntax is decided.
+5. Add more LSP fixtures for constant/alias documentation once their larger-doc
+   syntax is decided.
 6. Extend native header scanning to capture C/C++ comments when Clang exposes
    useful source ranges or documentation comments.
 7. Show native C/C++ documentation in hover/completion/signature help when

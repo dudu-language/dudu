@@ -292,6 +292,33 @@ void test_lsp_hover_uses_imported_ast_doc_comments() {
     assert(hover.find("Imported increment helper.") != std::string::npos);
 }
 
+void test_lsp_hover_uses_imported_member_identity_for_field_docs() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_imported_member_hover_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "entities.dd", "class Player:\n"
+                                    "    # Player hit point docs.\n"
+                                    "    hp: i32\n"
+                                    "\n"
+                                    "class Enemy:\n"
+                                    "    # Enemy hit point docs.\n"
+                                    "    hp: i32\n");
+
+    const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
+                             .path = dir / "main.dd",
+                             .text = "from entities import Player\n"
+                                     "\n"
+                                     "def main() -> i32:\n"
+                                     "    player: Player = Player(10)\n"
+                                     "    return player.hp\n"};
+    dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":4,\"character\":18}}").parse();
+    const std::string hover = dudu::hover_json(doc, "", &params);
+    assert(hover.find("hp: i32") != std::string::npos);
+    assert(hover.find("Player hit point docs.") != std::string::npos);
+    assert(hover.find("Enemy hit point docs.") == std::string::npos);
+}
+
 void test_lsp_unreachable_lint_uses_branch_structure() {
     const dudu::Document doc{.uri = "",
                              .path = "lint_unreachable.dd",
@@ -790,6 +817,7 @@ int main() {
         test_lsp_hover_uses_loaded_module_units();
         test_lsp_hover_uses_ast_doc_comments();
         test_lsp_hover_uses_imported_ast_doc_comments();
+        test_lsp_hover_uses_imported_member_identity_for_field_docs();
         test_lsp_unreachable_lint_uses_branch_structure();
         test_lsp_unreachable_lint_does_not_flag_partial_branch_return();
         test_lsp_unreachable_lint_does_not_flag_return_continuation();

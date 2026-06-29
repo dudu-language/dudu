@@ -1,7 +1,8 @@
 #include "dudu/lsp/language_server.hpp"
 
-#include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
+#include "dudu/core/ast_type.hpp"
+#include "dudu/core/source.hpp"
 #include "dudu/format/format.hpp"
 #include "dudu/lsp/language_server_code_actions.hpp"
 #include "dudu/lsp/language_server_completion.hpp"
@@ -20,7 +21,6 @@
 #include "dudu/lsp/language_server_workspace.hpp"
 #include "dudu/native/native_build.hpp"
 #include "dudu/sema/sema.hpp"
-#include "dudu/core/source.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -314,8 +314,7 @@ class LanguageServer {
         try {
             const ProjectIndex& index = project_index_for_document(found->second, false);
             const ProjectIndex& native_index = project_index_for_document(found->second, true);
-            return semantic_tokens_json(index.visible_unit_for_path(found->second.path),
-                                        native_index.visible_unit_for_path(found->second.path));
+            return semantic_tokens_json(index, found->second.path, native_index);
         } catch (const std::exception&) {
             return "{\"data\":[]}";
         }

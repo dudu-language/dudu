@@ -2,9 +2,11 @@
 
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
-#include "dudu/lsp/language_server_native_lookup.hpp"
+#include "dudu/lsp/language_server_semantic_index.hpp"
+#include "dudu/project/project_index.hpp"
 
 #include <algorithm>
+#include <filesystem>
 #include <optional>
 #include <set>
 #include <sstream>
@@ -41,24 +43,6 @@ constexpr int mod_readonly = 4;
 constexpr int mod_static = 8;
 constexpr int mod_native = 16;
 
-struct NativeSemanticIndex {
-    std::set<std::string> types;
-    std::set<std::string> classes;
-    std::set<std::string> class_aliases;
-    std::set<std::string> values;
-    std::set<std::string> functions;
-    std::set<std::string> macros;
-    std::set<std::string> namespaces;
-    std::set<std::string> enum_members;
-    std::set<std::string> methods;
-};
-
-struct DuduSemanticIndex {
-    std::set<std::string> classes;
-    std::set<std::string> enums;
-    std::set<std::string> enum_members;
-};
-
 void add_semantic_token(std::vector<SemanticToken>& tokens, const SourceLocation& loc,
                         std::string_view text, int type, int modifiers = 0) {
     if (text.empty() || loc.line <= 0 || loc.column <= 0) {
@@ -94,71 +78,51 @@ SourceLocation shifted_location(SourceLocation loc, int columns) {
     return loc;
 }
 
+SourceLocation import_bound_location(const ImportDecl& import) {
+    SourceLocation loc = import.location;
+    if (!import.alias.empty()) {
+        if (import.kind == ImportKind::From) {
+            loc.column +=
+                static_cast<int>(std::string_view("from ").size() + import.module_path.size() +
+                                 std::string_view(" import ").size() + import.imported_name.size() +
+                                 std::string_view(" as ").size());
+            return loc;
+        }
+        std::string_view prefix = "import ";
+        if (import.kind == ImportKind::ForeignC) {
+            prefix = "import c ";
+        } else if (import.kind == ImportKind::ForeignCxx) {
+            prefix = "import cxx ";
+        } else if (import.kind == ImportKind::ForeignCpp) {
+            prefix = "import cpp ";
+        }
+        loc.column += static_cast<int>(prefix.size() + import.module_path.size() +
+                                       std::string_view(" as ").size());
+        return loc;
+    }
+    if (import.kind == ImportKind::From) {
+        loc.column +=
+            static_cast<int>(std::string_view("from ").size() + import.module_path.size() +
+                             std::string_view(" import ").size());
+        return loc;
+    }
+    loc.column += static_cast<int>(std::string_view("import ").size());
+    if (import.kind == ImportKind::ForeignC) {
+        loc.column += static_cast<int>(std::string_view("c ").size());
+    } else if (import.kind == ImportKind::ForeignCxx) {
+        loc.column += static_cast<int>(std::string_view("cxx ").size());
+    } else if (import.kind == ImportKind::ForeignCpp) {
+        loc.column += static_cast<int>(std::string_view("cpp ").size());
+    }
+    return loc;
+}
+
 SourceLocation member_name_location(const Expr& expr) {
     if (expr.kind == ExprKind::Member && !expr.children.empty() &&
         expr.children.front().range.end.column > 0) {
         return shifted_location(range_end_location(expr.children.front().range), 1);
     }
     return expr.location;
-}
-
-void add_native_name(std::set<std::string>& values, const std::string& name) {
-    values.insert(name);
-}
-
-NativeSemanticIndex native_semantic_index(const ModuleAst& module) {
-    NativeSemanticIndex out;
-    const NativeClassDefinitionIndex class_index = native_class_definition_index(module);
-    for (const NativeTypeDecl& type : module.native_types) {
-        add_native_name(out.types, type.name);
-        if (native_alias_target_class_definition(class_index, type).has_value()) {
-            add_native_name(out.class_aliases, type.name);
-        }
-    }
-    for (const NativeValueDecl& value : module.native_values) {
-        add_native_name(out.values, value.name);
-    }
-    for (const NativeFunctionDecl& fn : module.native_functions) {
-        add_native_name(out.functions, fn.name);
-    }
-    for (const NativeMacroDecl& macro : module.native_macros) {
-        add_native_name(out.macros, macro.name);
-    }
-    for (const NativeNamespaceDecl& ns : module.native_namespaces) {
-        add_native_name(out.namespaces, ns.name);
-    }
-    for (const ClassDecl& klass : module.native_classes) {
-        add_native_name(out.classes, klass.name);
-        for (const ConstDecl& constant : klass.constants) {
-            add_native_name(out.values, klass.name + "." + constant.name);
-        }
-        for (const FieldDecl& field : klass.fields) {
-            add_native_name(out.values, klass.name + "." + field.name);
-        }
-        for (const FunctionDecl& method : klass.methods) {
-            add_native_name(out.methods, klass.name + "." + method.name);
-        }
-    }
-    for (const EnumDecl& en : module.enums) {
-        for (const EnumValueDecl& value : en.values) {
-            add_native_name(out.enum_members, en.name + "." + value.name);
-        }
-    }
-    return out;
-}
-
-DuduSemanticIndex dudu_semantic_index(const ModuleAst& module) {
-    DuduSemanticIndex out;
-    for (const ClassDecl& klass : module.classes) {
-        out.classes.insert(klass.name);
-    }
-    for (const EnumDecl& en : module.enums) {
-        out.enums.insert(en.name);
-        for (const EnumValueDecl& value : en.values) {
-            out.enum_members.insert(en.name + "." + value.name);
-        }
-    }
-    return out;
 }
 
 void collect_type_tokens(const TypeRef& type, std::vector<SemanticToken>& tokens,
@@ -221,7 +185,13 @@ void collect_call_callee_tokens(const Expr& expr, std::vector<SemanticToken>& to
         }
         const SourceLocation member_location = member_name_location(expr);
         const std::optional<std::string> path = expr_path_key(expr);
-        if (native_index != nullptr && path && native_index->macros.contains(*path)) {
+        if (path && dudu_index.functions.contains(*path)) {
+            add_semantic_token(tokens, member_location, expr.name, token_function);
+        } else if (path && dudu_index.enum_members.contains(*path)) {
+            add_semantic_token(tokens, member_location, expr.name, token_enum_member, mod_readonly);
+        } else if (path && dudu_index.values.contains(*path)) {
+            add_semantic_token(tokens, member_location, expr.name, token_variable, mod_readonly);
+        } else if (native_index != nullptr && path && native_index->macros.contains(*path)) {
             add_native_semantic_token(tokens, member_location, expr.name, token_macro);
         } else if (native_index != nullptr && path && native_index->functions.contains(*path)) {
             add_native_semantic_token(tokens, member_location, expr.name, token_function);
@@ -259,10 +229,18 @@ void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
                                       mod_readonly);
         } else if (native_index != nullptr && native_index->namespaces.contains(expr.name)) {
             add_native_semantic_token(tokens, expr.location, expr.name, token_namespace);
+        } else if (dudu_index.namespaces.contains(expr.name)) {
+            add_semantic_token(tokens, expr.location, expr.name, token_namespace);
+        } else if (dudu_index.types.contains(expr.name)) {
+            add_semantic_token(tokens, expr.location, expr.name, token_type);
         } else if (dudu_index.classes.contains(expr.name)) {
             add_semantic_token(tokens, expr.location, expr.name, token_class);
         } else if (dudu_index.enums.contains(expr.name)) {
             add_semantic_token(tokens, expr.location, expr.name, token_enum);
+        } else if (dudu_index.functions.contains(expr.name)) {
+            add_semantic_token(tokens, expr.location, expr.name, token_function);
+        } else if (dudu_index.values.contains(expr.name)) {
+            add_semantic_token(tokens, expr.location, expr.name, token_variable, mod_readonly);
         } else {
             add_semantic_token(tokens, expr.location, expr.name, token_variable);
         }
@@ -270,8 +248,7 @@ void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
     case ExprKind::Call:
     case ExprKind::TemplateCall:
         if (has_expr_callee(expr)) {
-            collect_call_callee_tokens(expr_callee(expr).front(), tokens, dudu_index,
-                                       native_index);
+            collect_call_callee_tokens(expr_callee(expr).front(), tokens, dudu_index, native_index);
         } else {
             add_semantic_token(tokens, expr.location, expr.name, token_function);
         }
@@ -282,9 +259,21 @@ void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
         }
         const SourceLocation member_location = member_name_location(expr);
         const std::optional<std::string> path = expr_path_key(expr);
-        if (native_index != nullptr && path &&
-            (native_index->classes.contains(*path) ||
-             native_index->class_aliases.contains(*path))) {
+        if (path && dudu_index.enum_members.contains(*path)) {
+            add_semantic_token(tokens, member_location, expr.name, token_enum_member, mod_readonly);
+        } else if (path && dudu_index.types.contains(*path)) {
+            add_semantic_token(tokens, member_location, expr.name, token_type);
+        } else if (path && dudu_index.classes.contains(*path)) {
+            add_semantic_token(tokens, member_location, expr.name, token_class);
+        } else if (path && dudu_index.enums.contains(*path)) {
+            add_semantic_token(tokens, member_location, expr.name, token_enum);
+        } else if (path && dudu_index.functions.contains(*path)) {
+            add_semantic_token(tokens, member_location, expr.name, token_function);
+        } else if (path && dudu_index.values.contains(*path)) {
+            add_semantic_token(tokens, member_location, expr.name, token_variable, mod_readonly);
+        } else if (native_index != nullptr && path &&
+                   (native_index->classes.contains(*path) ||
+                    native_index->class_aliases.contains(*path))) {
             add_native_semantic_token(tokens, member_location, expr.name, token_class);
         } else if (native_index != nullptr && path && native_index->types.contains(*path)) {
             add_native_semantic_token(tokens, member_location, expr.name, token_type);
@@ -294,8 +283,6 @@ void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
         } else if (native_index != nullptr && path && native_index->enum_members.contains(*path)) {
             add_native_semantic_token(tokens, member_location, expr.name, token_enum_member,
                                       mod_readonly);
-        } else if (path && dudu_index.enum_members.contains(*path)) {
-            add_semantic_token(tokens, member_location, expr.name, token_enum_member, mod_readonly);
         } else {
             add_semantic_token(tokens, member_location, expr.name, token_property);
         }
@@ -378,14 +365,34 @@ void collect_stmt_tokens(const std::vector<Stmt>& statements, std::vector<Semant
 }
 
 void collect_semantic_tokens(const ModuleAst& module, std::vector<SemanticToken>& tokens,
-                             const NativeSemanticIndex* native_index) {
-    const DuduSemanticIndex dudu_index = dudu_semantic_index(module);
+                             const NativeSemanticIndex* native_index,
+                             const DuduSemanticIndex& dudu_index) {
     for (const ImportDecl& import : module.imports) {
         const bool native_import = import.kind == ImportKind::ForeignC ||
                                    import.kind == ImportKind::ForeignCxx ||
                                    import.kind == ImportKind::ForeignCpp;
-        add_semantic_token(tokens, shifted_location(import.location, 7), bound_import_name(import),
-                           token_namespace, native_import ? mod_native : 0);
+        const std::string bound = bound_import_name(import);
+        int import_token_type = token_namespace;
+        int import_modifiers = mod_declaration | (native_import ? mod_native : 0);
+        if (import.kind == ImportKind::From && !native_import) {
+            if (dudu_index.classes.contains(bound)) {
+                import_token_type = token_class;
+            } else if (dudu_index.enums.contains(bound)) {
+                import_token_type = token_enum;
+            } else if (dudu_index.enum_members.contains(bound)) {
+                import_token_type = token_enum_member;
+                import_modifiers |= mod_readonly;
+            } else if (dudu_index.functions.contains(bound)) {
+                import_token_type = token_function;
+            } else if (dudu_index.types.contains(bound)) {
+                import_token_type = token_type;
+            } else if (dudu_index.values.contains(bound)) {
+                import_token_type = token_variable;
+                import_modifiers |= mod_readonly;
+            }
+        }
+        add_semantic_token(tokens, import_bound_location(import), bound, import_token_type,
+                           import_modifiers);
     }
     for (const TypeAliasDecl& alias : module.aliases) {
         add_semantic_token(tokens, shifted_location(alias.location, 5), alias.name, token_type,
@@ -459,12 +466,7 @@ void collect_semantic_tokens(const ModuleAst& module, std::vector<SemanticToken>
     }
 }
 
-} // namespace
-
-std::string semantic_tokens_json(const ModuleAst& module, const ModuleAst& native_symbols) {
-    std::vector<SemanticToken> tokens;
-    const NativeSemanticIndex native_index = native_semantic_index(native_symbols);
-    collect_semantic_tokens(module, tokens, &native_index);
+std::string encode_semantic_tokens(std::vector<SemanticToken> tokens) {
     std::sort(tokens.begin(), tokens.end(),
               [](const SemanticToken& left, const SemanticToken& right) {
                   if (left.line != right.line) {
@@ -499,8 +501,27 @@ std::string semantic_tokens_json(const ModuleAst& module, const ModuleAst& nativ
     return out.str();
 }
 
+} // namespace
+
+std::string semantic_tokens_json(const ModuleAst& module, const ModuleAst& native_symbols) {
+    std::vector<SemanticToken> tokens;
+    const NativeSemanticIndex native_index = native_semantic_index(native_symbols);
+    collect_semantic_tokens(module, tokens, &native_index, dudu_semantic_index(module));
+    return encode_semantic_tokens(std::move(tokens));
+}
+
 std::string semantic_tokens_json(const ModuleAst& module) {
     return semantic_tokens_json(module, {});
+}
+
+std::string semantic_tokens_json(const ProjectIndex& index, const std::filesystem::path& path,
+                                 const ProjectIndex& native_index) {
+    const ModuleAst& current = index.visible_unit_for_path(path);
+    const NativeSemanticIndex native_symbols =
+        native_semantic_index(native_index.visible_unit_for_path(path));
+    std::vector<SemanticToken> tokens;
+    collect_semantic_tokens(current, tokens, &native_symbols, dudu_semantic_index(index, current));
+    return encode_semantic_tokens(std::move(tokens));
 }
 
 } // namespace dudu

@@ -1,21 +1,22 @@
-#include "dudu/core/array_shape.hpp"
-#include "dudu/core/ast_expr.hpp"
-#include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_emit.hpp"
 #include "dudu/codegen/cpp_expr_emit.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
 #include "dudu/codegen/cpp_stmt_types.hpp"
+#include "dudu/core/array_shape.hpp"
+#include "dudu/core/ast_expr.hpp"
+#include "dudu/core/ast_type.hpp"
+#include "dudu/core/match_patterns.hpp"
 #include "dudu/lsp/language_server_completion.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_local_context.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_semantic_tokens.hpp"
-#include "dudu/core/match_patterns.hpp"
 #include "dudu/native/native_header_types.hpp"
 #include "dudu/native/native_signature_match.hpp"
 #include "dudu/native/native_signature_substitution.hpp"
 #include "dudu/native/native_signature_templates.hpp"
 #include "dudu/parser/parser.hpp"
+#include "dudu/project/project_index.hpp"
 #include "dudu/sema/sema.hpp"
 #include "dudu/sema/sema_builtin_methods.hpp"
 #include "dudu/sema/sema_context.hpp"
@@ -33,6 +34,8 @@
 #include <cassert>
 #include <cctype>
 #include <exception>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <optional>
 #include <set>
@@ -42,6 +45,14 @@
 #include <vector>
 
 namespace {
+
+void write_file(const std::filesystem::path& path, const std::string& text) {
+    std::ofstream file(path);
+    if (!file) {
+        throw std::runtime_error("could not write " + path.string());
+    }
+    file << text;
+}
 
 std::vector<int> semantic_token_data(const std::string& json) {
     std::vector<int> out;
@@ -255,6 +266,49 @@ void test_decoded_semantic_tokens_cover_core_dudu_kinds() {
     require_decoded_semantic_token(tokens, "Play", token_enum_member, mod_readonly);
     require_decoded_semantic_token(tokens, "2", token_number, 0);
     require_decoded_semantic_token(tokens, "\"ok\"", token_string, 0);
+}
+
+void test_project_semantic_tokens_are_import_aware() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_project_semantic_tokens_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "math_utils.dd", "MAGIC: i32 = 9\n"
+                                      "\n"
+                                      "def mix(left: i32, right: i32) -> i32:\n"
+                                      "    return left + right + MAGIC\n");
+    write_file(dir / "entities.dd", "class Player:\n"
+                                    "    hp: i32\n");
+    const std::string main_source = "import math_utils as math\n"
+                                    "from entities import Player\n"
+                                    "\n"
+                                    "def main() -> i32:\n"
+                                    "    player: Player = Player(1)\n"
+                                    "    return math.mix(player.hp, math.MAGIC)\n";
+    write_file(dir / "main.dd", main_source);
+
+    dudu::ProjectIndexOptions options;
+    options.entry_path = dir / "main.dd";
+    options.source_dir = dir;
+    options.force_module_tree = true;
+    const dudu::ProjectIndex index = dudu::ProjectIndex::load(options);
+
+    dudu::ProjectIndexOptions native_options = options;
+    native_options.include_native_headers = false;
+    const dudu::ProjectIndex native_index = dudu::ProjectIndex::load(native_options);
+    const std::vector<DecodedSemanticToken> tokens = decoded_semantic_tokens(
+        main_source, dudu::semantic_tokens_json(index, dir / "main.dd", native_index));
+
+    constexpr int token_namespace = 0;
+    constexpr int token_class = 2;
+    constexpr int token_function = 4;
+    constexpr int token_variable = 6;
+    constexpr int mod_readonly = 4;
+
+    require_decoded_semantic_token(tokens, "math", token_namespace, 0);
+    require_decoded_semantic_token(tokens, "Player", token_class, 0);
+    require_decoded_semantic_token(tokens, "mix", token_function, 0);
+    require_decoded_semantic_token(tokens, "MAGIC", token_variable, mod_readonly);
 }
 
 void test_ast_constructor_assignment_aliases() {
@@ -741,6 +795,7 @@ int main() {
     try {
         test_native_semantic_tokens();
         test_decoded_semantic_tokens_cover_core_dudu_kinds();
+        test_project_semantic_tokens_are_import_aware();
         test_ast_constructor_assignment_aliases();
         test_ast_index_receiver_type_inference();
         test_statement_ast_shape();

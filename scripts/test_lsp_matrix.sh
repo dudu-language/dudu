@@ -142,6 +142,33 @@ def has_start(result, uri, line, character):
     return False
 
 
+def split_lines(text):
+    return text.splitlines()
+
+
+def decode_semantic_tokens(source, data, legend):
+    lines = split_lines(source)
+    decoded = []
+    line = 0
+    character = 0
+    for i in range(0, len(data), 5):
+        delta_line, delta_start, length, token_type, modifiers = data[i : i + 5]
+        line += delta_line
+        character = character + delta_start if delta_line == 0 else delta_start
+        text = ""
+        if 0 <= line < len(lines):
+            text = lines[line][character : character + length]
+        decoded.append((text, legend[token_type], modifiers, line, character))
+    return decoded
+
+
+def has_semantic(decoded, text, token_type, modifiers):
+    return any(
+        item_text == text and item_type == token_type and item_modifiers == modifiers
+        for item_text, item_type, item_modifiers, _, _ in decoded
+    )
+
+
 tmp = pathlib.Path(tempfile.mkdtemp(prefix="dudu_lsp_matrix_"))
 try:
     (tmp / "math_utils.dd").write_text(
@@ -327,6 +354,8 @@ def main() -> i32:
         request(42, "textDocument/references", {"textDocument": text_document(main), "position": position(main_source, "player.hp", add=len("player."))}),
         request(43, "textDocument/references", {"textDocument": text_document(main), "position": position(main_source, "player.move", add=len("player."))}),
         request(44, "textDocument/references", {"textDocument": text_document(entities), "position": position(entities_source, "move(self")}),
+        request(45, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "player.hp", add=len("player."))}),
+        request(46, "textDocument/semanticTokens/full", {"textDocument": text_document(main)}),
         request(40, "textDocument/documentSymbol", {"textDocument": text_document(ops)}),
         request(41, "textDocument/definition", {"textDocument": text_document(ops), "position": position(ops_source, "add(self", add=1)}),
         request(50, "textDocument/completion", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add", add=len("nb."))}),
@@ -424,6 +453,21 @@ def main() -> i32:
         raise AssertionError(f"missing Player.move declaration reference: {method_decl_refs!r}")
     if has_start(method_decl_refs, entities.as_uri(), enemy_move_decl["line"], enemy_move_decl["character"]):
         raise AssertionError(f"Enemy.move leaked into declaration refs: {method_decl_refs!r}")
+    member_hover = response(messages, 45)
+    member_hover_value = member_hover["contents"]["value"]
+    if "hp: i32" not in member_hover_value or "Current hit points docs." not in member_hover_value:
+        raise AssertionError(f"missing member hover field docs: {member_hover!r}")
+    initialize = response(messages, 1)
+    legend = initialize["capabilities"]["semanticTokensProvider"]["legend"]["tokenTypes"]
+    decoded_tokens = decode_semantic_tokens(main_source, response(messages, 46)["data"], legend)
+    if not has_semantic(decoded_tokens, "math", "namespace", 0):
+        raise AssertionError(f"missing imported module namespace semantic token: {decoded_tokens!r}")
+    if not has_semantic(decoded_tokens, "Player", "class", 0):
+        raise AssertionError(f"missing imported class semantic token: {decoded_tokens!r}")
+    if not has_semantic(decoded_tokens, "mix", "function", 0):
+        raise AssertionError(f"missing imported function semantic token: {decoded_tokens!r}")
+    if not has_semantic(decoded_tokens, "MAGIC", "variable", 4):
+        raise AssertionError(f"missing imported const semantic token: {decoded_tokens!r}")
     assert_symbol_names(response(messages, 40), ["Vec2", "main"])
     assert_nonempty(response(messages, 41), "operator method definition")
     assert_completion_labels(response(messages, 50), ["matrix_native_add", "MatrixNativePoint", "DUDU_MATRIX_NATIVE_SCALE"])
