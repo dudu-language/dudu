@@ -119,8 +119,12 @@ signature/type when it is available.
 Find-references now uses those native identity keys to filter same-spelled
 native references across workspace documents when identity metadata is
 available, so two headers imported under the same alias with the same function
-name are not conflated. Broader native references still need a canonical
-identity index instead of recomputing symbol identity per candidate document.
+name are not conflated. `ProjectIndex` now builds a per-module native identity
+table for native types, values, macros, functions, classes, and C++ methods, so
+native reference filtering uses indexed symbol identity instead of rebuilding
+LSP symbol lists per candidate document. Single-file editor overlays are also
+stamped with their entry path, so open documents that do not exist on disk still
+participate in indexed native reference filtering.
 Reference and rename workspace scans now prefer module units from the already
 loaded warm `ProjectIndex` for candidate files in the same module tree before
 falling back to per-document project loads, keeping repeated requests on shared

@@ -1,9 +1,11 @@
 #include "dudu/project/project_index.hpp"
 
 #include "dudu/core/file_io.hpp"
-#include "dudu/project/module_loader.hpp"
+#include "dudu/native/native_header_identity.hpp"
 #include "dudu/native/native_headers.hpp"
 #include "dudu/parser/parser.hpp"
+#include "dudu/project/module_loader.hpp"
+#include "dudu/project/module_names.hpp"
 
 #include <algorithm>
 #include <fstream>
@@ -93,6 +95,17 @@ void analyze_project_module(const ModuleAst& module, const ProjectIndexOptions& 
 }
 
 ModuleAst load_project_module(const ProjectIndexOptions& options) {
+    const auto stamp_single_module = [&](ModuleAst module) {
+        if (!options.entry_path.empty() && module.source_path.empty()) {
+            module.source_path = canonical_key_path(options.entry_path);
+        }
+        if (!module.source_path.empty() && module.module_path.empty()) {
+            const std::filesystem::path root =
+                module.source_path.has_parent_path() ? module.source_path.parent_path() : ".";
+            module.module_path = module_name_from_file(root, module.source_path);
+        }
+        return module;
+    };
     if (options.entry_path.empty()) {
         return parse_source(std::string(options.entry_source), options.entry_path);
     }
@@ -103,7 +116,8 @@ ModuleAst load_project_module(const ProjectIndexOptions& options) {
     if (options.allow_module_tree && options.force_module_tree) {
         return load_source_tree(options.entry_path, source_overrides);
     }
-    ModuleAst parsed = parse_source(std::string(options.entry_source), options.entry_path);
+    ModuleAst parsed =
+        stamp_single_module(parse_source(std::string(options.entry_source), options.entry_path));
     if (options.allow_module_tree && has_dudu_module_imports(parsed)) {
         return load_source_tree(options.entry_path, source_overrides);
     }
@@ -135,6 +149,39 @@ void add_export_names(ProjectModuleSummary& summary, const ModuleAst& module) {
     for (const FunctionDecl& fn : module.functions) {
         summary.exports.insert(fn.name);
     }
+}
+
+void add_native_identity(std::map<std::string, std::set<std::string>>& out, const std::string& name,
+                         const NativeSymbolId& identity) {
+    const std::string key = native_symbol_identity_key(identity);
+    if (name.empty() || key.empty()) {
+        return;
+    }
+    out[name].insert(key);
+}
+
+std::map<std::string, std::set<std::string>>
+native_identity_index_for_module(const ModuleAst& module) {
+    std::map<std::string, std::set<std::string>> out;
+    for (const NativeTypeDecl& type : module.native_types) {
+        add_native_identity(out, type.name, type.identity);
+    }
+    for (const NativeValueDecl& value : module.native_values) {
+        add_native_identity(out, value.name, value.identity);
+    }
+    for (const NativeMacroDecl& macro : module.native_macros) {
+        add_native_identity(out, macro.name, macro.identity);
+    }
+    for (const NativeFunctionDecl& fn : module.native_functions) {
+        add_native_identity(out, fn.name, fn.identity);
+    }
+    for (const ClassDecl& klass : module.native_classes) {
+        add_native_identity(out, klass.name, klass.identity);
+        for (const FunctionDecl& method : klass.methods) {
+            add_native_identity(out, klass.name + "." + method.name, method.native_identity);
+        }
+    }
+    return out;
 }
 
 std::vector<const ModuleAst*> indexed_units(const ModuleAst& module) {
@@ -203,6 +250,7 @@ ProjectIndex ProjectIndex::load(ProjectIndexOptions options) {
         index.source_path_to_index_[path_key(unit->source_path)] = index_id;
         index.module_path_to_index_[unit->module_path] = index_id;
         index.modules_.push_back(std::move(summary));
+        index.native_identities_by_module_.push_back(native_identity_index_for_module(*unit));
     }
 
     for (ProjectModuleSummary& summary : index.modules_) {
@@ -394,6 +442,25 @@ const ModuleAst* ProjectIndex::imported_unit(const ModuleAst& current,
         }
     }
     return unit_for_module(resolved_module_path);
+}
+
+bool ProjectIndex::module_has_native_identity_for_query(const std::filesystem::path& path,
+                                                        std::string_view query,
+                                                        std::string_view identity) const {
+    if (query.empty() || identity.empty()) {
+        return false;
+    }
+    const auto found = source_path_to_index_.find(path_key(path));
+    if (found == source_path_to_index_.end() ||
+        found->second >= native_identities_by_module_.size()) {
+        return false;
+    }
+    const auto& by_name = native_identities_by_module_[found->second];
+    const auto identities = by_name.find(std::string(query));
+    if (identities == by_name.end()) {
+        return false;
+    }
+    return identities->second.contains(std::string(identity));
 }
 
 } // namespace dudu

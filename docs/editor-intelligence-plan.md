@@ -78,6 +78,10 @@ class, enum, method, and function symbols.
 Native hover now surfaces the scanner's canonical native identity key when the
 symbol has one, so hover shows both the Dudu-shaped signature/type and the
 identity used by native references.
+Native find-references now consults `ProjectIndex`'s per-module native identity
+table instead of rebuilding LSP symbol lists for every candidate document. Open
+single-file editor overlays are indexed with their entry path, so unsaved or
+not-yet-written files can still take part in native identity filtering.
 
 ## Target Behavior
 

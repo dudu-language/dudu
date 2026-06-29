@@ -2252,10 +2252,15 @@ push. They are not release packaging work.
    from plain name matching. Find-references uses those native identity keys to
    filter same-spelled native references across workspace documents when
    identity metadata is available, so two headers imported under the same alias
-   with the same function name are not conflated. Native hover now also shows
-   the canonical native identity key beside the Dudu-shaped signature/type when
-   scanner metadata provides one. Reference and rename workspace scans now
-   prefer module units from the already loaded warm `ProjectIndex` for
+   with the same function name are not conflated. Native reference filtering now
+   uses a per-module native identity table in `ProjectIndex` instead of
+   rebuilding LSP symbols for each candidate document. Single-file editor
+   overlays are stamped with their entry path so open documents that do not
+   exist on disk still participate in indexed native reference filtering.
+   Native hover now also shows the canonical native identity key beside the
+   Dudu-shaped signature/type when scanner metadata provides one. Reference and
+   rename workspace scans now prefer module units from the already loaded warm
+   `ProjectIndex` for
    candidate files in the same module tree before falling back to per-document
    project loads. Definition and hover symbol lookup now prefer exact symbols
    and only use suffix matches when unambiguous; receiver-aware member
