@@ -89,6 +89,11 @@ struct ReferenceCollector {
             if (const std::optional<ExprPath> path = expr_path_from_expr(expr);
                 path.has_value() && render_expr_path(*path) == query) {
                 add_matched(expr.name, expr_name_location(expr));
+            } else if (path.has_value() && query.find('.') == std::string::npos &&
+                       !path->segments.empty() &&
+                       path->segments.front().kind == ExprPathSegmentKind::Name &&
+                       path->segments.front().text == query) {
+                add_matched(query, path->segments.front().location);
             } else if (path.has_value() && path->segments.size() == 2 &&
                        path->segments[0].kind == ExprPathSegmentKind::Name &&
                        path->segments[1].kind == ExprPathSegmentKind::Name &&

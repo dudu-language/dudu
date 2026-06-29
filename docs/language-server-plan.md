@@ -579,8 +579,10 @@ the constructor call shows the constructor docs/signature.
 Native C++ namespaces are covered in the matrix too. Scanned namespace
 declarations are LSP symbols with native identities, hover and definition on
 the namespace segment jump to/show the namespace declaration, completion after
-the namespace path lists namespaced functions with docs, and semantic tokens
-classify the namespace as a native namespace token.
+the namespace path lists namespaced functions with docs, semantic tokens
+classify the namespace as a native namespace token, and find-references on the
+namespace segment uses native identity so same-spelled namespaces from other
+headers do not leak in.
 Dudu-owned declaration and unique-reference scope checks use Dudu-only document
 symbols, so ordinary references do not trigger native header scanning unless
 the selected symbol is an explicit native import.

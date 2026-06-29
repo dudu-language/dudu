@@ -52,6 +52,12 @@ std::string reference_query_at(const Document& doc, const Json* params,
         expression_path = render_expr_path(*selection.expr_path);
         paths.push_back(*expression_path);
     }
+    const std::string selected_path =
+        selection.symbol_path.value_or(expression_path.value_or(name));
+    if (const std::optional<Symbol> native_namespace =
+            native_namespace_segment_symbol(symbols_with_native, selection.symbol, selected_path)) {
+        return native_namespace->name;
+    }
     if (module != nullptr) {
         for (const std::string& path : paths) {
             if (path.empty() || path == name || path.find('.') == std::string::npos) {

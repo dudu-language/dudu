@@ -3786,4 +3786,7 @@ push. They are not release packaging work.
    Native namespace declarations now participate in the shared LSP symbol
    inventory. Hover and definition on a selected namespace segment target the
    namespace declaration, completion after the namespace lists scanned members,
-   and the matrix checks native namespace semantic-token classification.
+   the matrix checks native namespace semantic-token classification, and
+   find-references on the namespace segment is filtered through native identity
+   so same-header uses are included without leaking same-spelled namespaces from
+   unrelated headers.

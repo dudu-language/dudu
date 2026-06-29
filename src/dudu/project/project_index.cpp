@@ -163,6 +163,9 @@ void add_native_identity(std::map<std::string, std::set<std::string>>& out, cons
 std::map<std::string, std::set<std::string>>
 native_identity_index_for_module(const ModuleAst& module) {
     std::map<std::string, std::set<std::string>> out;
+    for (const NativeNamespaceDecl& ns : module.native_namespaces) {
+        add_native_identity(out, ns.name, ns.identity);
+    }
     for (const NativeTypeDecl& type : module.native_types) {
         add_native_identity(out, type.name, type.identity);
     }

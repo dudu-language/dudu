@@ -6,11 +6,14 @@
 #include "dudu/lsp/language_server_member_references.hpp"
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_reference_collect.hpp"
+#include "dudu/lsp/language_server_reference_query.hpp"
 #include "dudu/lsp/language_server_references.hpp"
 #include "dudu/lsp/language_server_support.hpp"
+#include "dudu/lsp/language_server_symbols.hpp"
 #include "dudu/native/native_headers.hpp"
 #include "dudu/parser/parser.hpp"
 #include "dudu/project/module_loader.hpp"
+#include "dudu/project/project_index.hpp"
 #include "dudu/sema/sema.hpp"
 
 #include <cassert>
@@ -965,6 +968,48 @@ void test_lsp_native_references_filter_by_identity() {
     assert(refs.find(dudu::file_uri(dir / "other.dd")) == std::string::npos);
 }
 
+void test_lsp_references_track_member_path_root_segments() {
+    const dudu::Document doc{.uri = "file:///member_root.dd",
+                             .path = "member_root.dd",
+                             .text = "def main() -> i32:\n"
+                                     "    return matrix_space.namespaced_add(2, 3)\n"};
+    const dudu::ModuleAst module = dudu::parse_source(doc.text, doc.path);
+    const std::vector<dudu::ReferenceLocation> refs =
+        dudu::references_in(module, doc, "matrix_space");
+    assert(!refs.empty());
+    assert(refs.front().range.find("\"line\":1") != std::string::npos);
+    assert(refs.front().range.find("\"character\":11") != std::string::npos);
+}
+
+void test_lsp_native_namespace_reference_query_uses_selected_segment() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_native_namespace_query_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "native_namespace.hpp",
+               "#pragma once\n"
+               "\n"
+               "namespace matrix_space {\n"
+               "    inline int namespaced_add(int left, int right) {\n"
+               "        return left + right;\n"
+               "    }\n"
+               "}\n");
+    write_file(dir / "main.dd", "import cpp \"native_namespace.hpp\"\n"
+                                "\n"
+                                "def main() -> i32:\n"
+                                "    return matrix_space.namespaced_add(2, 3)\n");
+    const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
+                             .path = dir / "main.dd",
+                             .text = read_file(dir / "main.dd")};
+    const dudu::ProjectIndex& index = dudu::project_index_for_document(doc, true);
+    const dudu::ModuleAst& unit = index.visible_unit_for_path(doc.path);
+    dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":3,\"character\":13}}").parse();
+    const dudu::AstSelection selection = dudu::ast_selection_at(unit, &params);
+    const std::string query = dudu::reference_query_at(doc, &params, selection, &unit,
+                                                       dudu::symbols_for_module(unit, true));
+    assert(query == "matrix_space");
+}
+
 void test_lsp_static_class_member_definition_hover_and_references() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_lsp_static_member_navigation_test";
@@ -1077,6 +1122,8 @@ int main() {
         test_lsp_module_references_include_target_declaration();
         test_lsp_selective_import_references_include_target_declaration();
         test_lsp_native_references_filter_by_identity();
+        test_lsp_references_track_member_path_root_segments();
+        test_lsp_native_namespace_reference_query_uses_selected_segment();
         test_lsp_static_class_member_definition_hover_and_references();
     } catch (const std::exception& error) {
         std::cerr << error.what() << "\n";

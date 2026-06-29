@@ -420,6 +420,28 @@ def main() -> i32:
     return matrix_space.namespaced_add(2, 3)
 """
     (tmp / "native_namespace_user.dd").write_text(native_namespace_source)
+    native_namespace_same_source = """import cpp "native_namespace.hpp"
+
+def same_namespace() -> i32:
+    return matrix_space.namespaced_add(4, 5)
+"""
+    (tmp / "native_namespace_same.dd").write_text(native_namespace_same_source)
+    (tmp / "native_namespace_other.hpp").write_text(
+        """#pragma once
+
+namespace matrix_space {
+    inline int namespaced_add(int left, int right) {
+        return left - right;
+    }
+}
+"""
+    )
+    native_namespace_other_source = """import cpp "native_namespace_other.hpp"
+
+def other_namespace() -> i32:
+    return matrix_space.namespaced_add(6, 7)
+"""
+    (tmp / "native_namespace_other.dd").write_text(native_namespace_other_source)
     unresolved_source = """class Player:
     hp: i32
 
@@ -452,6 +474,8 @@ def main() -> i32:
     native_cpp_same = tmp / "native_cpp_same.dd"
     native_cpp_other = tmp / "native_cpp_other.dd"
     native_namespace = tmp / "native_namespace_user.dd"
+    native_namespace_same = tmp / "native_namespace_same.dd"
+    native_namespace_other = tmp / "native_namespace_other.dd"
     unresolved = tmp / "unresolved_tokens.dd"
     missing = tmp / "missing_import.dd"
     messages = [
@@ -465,6 +489,8 @@ def main() -> i32:
         open_message(native_cpp_same),
         open_message(native_cpp_other),
         open_message(native_namespace),
+        open_message(native_namespace_same),
+        open_message(native_namespace_other),
         open_message(unresolved),
         open_message(missing),
         lsp_message({"jsonrpc": "2.0", "method": "textDocument/didSave", "params": {"textDocument": text_document(missing)}}),
@@ -546,6 +572,7 @@ def main() -> i32:
         request(87, "textDocument/definition", {"textDocument": text_document(native_namespace), "position": position(native_namespace_source, "matrix_space.namespaced_add", add=1)}),
         request(88, "textDocument/completion", {"textDocument": text_document(native_namespace), "position": position(native_namespace_source, "matrix_space.namespaced_add", add=len("matrix_space."))}),
         request(89, "textDocument/semanticTokens/full", {"textDocument": text_document(native_namespace)}),
+        request(90, "textDocument/references", {"textDocument": text_document(native_namespace), "position": position(native_namespace_source, "matrix_space.namespaced_add", add=1)}),
         request(70, "textDocument/semanticTokens/full", {"textDocument": text_document(unresolved)}),
         request(99, "shutdown", None),
         lsp_message({"jsonrpc": "2.0", "method": "exit", "params": None}),
@@ -922,6 +949,16 @@ def main() -> i32:
     native_namespace_tokens = decode_semantic_tokens(native_namespace_source, response(messages, 89)["data"], legend)
     if not has_semantic(native_namespace_tokens, "matrix_space", "namespace", native_modifier):
         raise AssertionError(f"missing native namespace semantic token: {native_namespace_tokens!r}")
+    native_namespace_refs = response(messages, 90)
+    native_namespace_use = position(native_namespace_source, "matrix_space.namespaced_add")
+    native_namespace_same_use = position(native_namespace_same_source, "matrix_space.namespaced_add")
+    native_namespace_other_use = position(native_namespace_other_source, "matrix_space.namespaced_add")
+    if not has_start(native_namespace_refs, native_namespace.as_uri(), native_namespace_use["line"], native_namespace_use["character"]):
+        raise AssertionError(f"missing native namespace source reference: {native_namespace_refs!r}")
+    if not has_start(native_namespace_refs, native_namespace_same.as_uri(), native_namespace_same_use["line"], native_namespace_same_use["character"]):
+        raise AssertionError(f"missing same-header native namespace reference: {native_namespace_refs!r}")
+    if has_start(native_namespace_refs, native_namespace_other.as_uri(), native_namespace_other_use["line"], native_namespace_other_use["character"]):
+        raise AssertionError(f"unrelated native namespace reference leaked: {native_namespace_refs!r}")
     missing_diags = publish_diagnostics(messages, missing.as_uri())
     if not missing_diags or not missing_diags[-1]:
         raise AssertionError("missing import fixture did not publish diagnostics")

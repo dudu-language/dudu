@@ -243,6 +243,9 @@ ReferenceScope reference_scope_at(const Document& doc, const Json* params, const
             .has_value()) {
         return ReferenceScope::CurrentDocument;
     }
+    if (native_identity_for_query(symbols_with_native, name).has_value()) {
+        return ReferenceScope::Workspace;
+    }
     if (document_has_structured_references(doc, name, module)) {
         return ReferenceScope::CurrentDocument;
     }
