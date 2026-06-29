@@ -2000,6 +2000,13 @@ push. They are not release packaging work.
    indexing slightly noisier and no broad proof from the opt-in stdlib shape.
    Keep the simpler copied-candidate path until profiling shows signature-copy
    cost is genuinely dominant.
+   Transparent `std::string_view` lookup for the source filename/text interners
+   was tried and rejected. The focused five-sample run looked mildly positive
+   for expressions/calls, but the broader three-sample default Release sweep did
+   not prove the win: expression-heavy code landed around 200ms, indexing around
+   127ms, native around 242ms with the usual first-sample header cost, and RSS
+   did not improve. Do not add transparent interner machinery again unless a
+   fresh profile shows pre-lookup string allocation is a real bottleneck.
    Changing `named_type_ref` from an owning `std::string` parameter to
    `std::string_view` was tried and rejected even though it looked like an
    obvious way to avoid temporary strings before atom interning. Focused
