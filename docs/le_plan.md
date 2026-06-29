@@ -2175,8 +2175,14 @@ push. They are not release packaging work.
    changed module plus its dependent entry, and verifies unrelated generated
    module artifacts keep their mtimes.
 
+   `duc emit-modules` and `duc emit-test-modules` now load the selected entry's
+   module graph first, compare source stamps, compute reverse-dependency
+   affected modules, and run semantic analysis only for that affected module
+   set before emission. Cached emits report `analyze 0 modules`, and one-file
+   edit fixtures report the filtered affected count.
+
    Remaining incremental work is on the Dudu side: `duc emit-modules` still
-   analyzes the selected entry's full module graph in a fresh process.
+   loads the selected entry's full module graph in a fresh process.
    ProjectIndex now exposes reverse-dependency dirty propagation, so the
    compiler can ask which modules are affected by one or more changed source
    files without re-deriving that relationship in command-specific code.

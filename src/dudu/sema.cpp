@@ -10,6 +10,7 @@
 #include "dudu/unsupported.hpp"
 
 #include <map>
+#include <set>
 
 namespace dudu {
 namespace {
@@ -74,6 +75,23 @@ void analyze_module_tree(const ModuleAst& module, SemanticOptions options) {
     }
     for (const ModuleAst& unit : module.module_units) {
         analyze_module(unit, options);
+    }
+}
+
+void analyze_module_tree(const ModuleAst& module, const std::vector<std::string>& module_paths,
+                         SemanticOptions options) {
+    if (module_paths.empty()) {
+        return;
+    }
+    if (module.module_units.empty()) {
+        analyze_module(module, options);
+        return;
+    }
+    const std::set<std::string> selected(module_paths.begin(), module_paths.end());
+    for (const ModuleAst& unit : module.module_units) {
+        if (selected.contains(unit.module_path)) {
+            analyze_module(unit, options);
+        }
     }
 }
 

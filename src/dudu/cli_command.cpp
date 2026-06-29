@@ -14,6 +14,7 @@
 #include "dudu/project_config.hpp"
 #include "dudu/project_driver.hpp"
 #include "dudu/project_index_cache.hpp"
+#include "dudu/sema.hpp"
 #include "dudu/test_driver.hpp"
 
 #include <algorithm>
@@ -190,6 +191,31 @@ const ProjectIndex& checked_index(const CliOptions& options, const std::string& 
     return checked;
 }
 
+const ProjectIndex& indexed_module_graph(const CliOptions& options, const std::string& source,
+                                         bool check_semantics, bool check_bodies) {
+    const bool detail_output = !options.quiet && options.timings;
+    print_project_step(detail_output, "config", options.input);
+    const ProjectConfig config = config_for_options(options);
+    print_project_step(detail_output, "parse", options.input);
+    const std::filesystem::path source_dir = source_dir_for_input(options.input);
+    const ProjectIndex& index = cli_project_index_cache.get(
+        {.entry_path = options.input,
+         .entry_source = source,
+         .source_overrides = {},
+         .config = config,
+         .source_dir = source_dir,
+         .build_values = options.build_values,
+         .force_module_tree = true,
+         .include_native_headers = true,
+         .check_semantics = check_semantics,
+         .semantic_options = {.check_bodies = check_bodies}});
+    print_project_step(detail_output, "indexed", options.input);
+    if (check_semantics) {
+        print_project_step(detail_output, "checked", options.input);
+    }
+    return index;
+}
+
 ModuleAst checked_module(const CliOptions& options, const std::string& source, bool check_bodies) {
     return checked_index(options, source, check_bodies).merged_module();
 }
@@ -359,8 +385,8 @@ int run_cli(int argc, char** argv) {
             fail("emit-modules requires -o <directory>");
         }
         const bool project_output = !options.quiet && (options.project_driver || options.timings);
-        print_project_step(project_output, "analyze", options.input);
-        const ProjectIndex index = checked_index(options, source, true);
+        print_project_step(project_output, "load", options.input);
+        const ProjectIndex& index = indexed_module_graph(options, source, false, false);
         const std::filesystem::path stamp_file = *options.output / ".dudu_sources.stamp";
         const std::vector<std::filesystem::path> changed_sources =
             index.changed_sources_since_stamp_file(stamp_file);
@@ -368,6 +394,9 @@ int run_cli(int argc, char** argv) {
             index.affected_modules_for_sources(changed_sources);
         print_project_step(project_output, "dirty",
                            std::to_string(affected_modules.size()) + " modules");
+        print_project_step(project_output, "analyze",
+                           std::to_string(affected_modules.size()) + " modules");
+        analyze_module_tree(index.merged_module(), affected_modules, {.check_bodies = true});
         print_project_step(project_output, "emit", *options.output);
         write_cpp_artifacts(*options.output,
                             emit_cpp_module_artifacts(index.merged_module(), affected_modules));
@@ -379,8 +408,8 @@ int run_cli(int argc, char** argv) {
             fail("emit-test-modules requires -o <directory>");
         }
         const bool project_output = !options.quiet && (options.project_driver || options.timings);
-        print_project_step(project_output, "analyze", options.input);
-        const ProjectIndex index = checked_index(options, source, true);
+        print_project_step(project_output, "load", options.input);
+        const ProjectIndex& index = indexed_module_graph(options, source, false, false);
         const std::filesystem::path stamp_file = *options.output / ".dudu_test_sources.stamp";
         const std::vector<std::filesystem::path> changed_sources =
             index.changed_sources_since_stamp_file(stamp_file);
@@ -388,6 +417,9 @@ int run_cli(int argc, char** argv) {
             index.affected_modules_for_sources(changed_sources);
         print_project_step(project_output, "dirty",
                            std::to_string(affected_modules.size()) + " modules");
+        print_project_step(project_output, "analyze",
+                           std::to_string(affected_modules.size()) + " modules");
+        analyze_module_tree(index.merged_module(), affected_modules, {.check_bodies = true});
         print_project_step(project_output, "emit", *options.output);
         write_cpp_artifacts(*options.output, emit_cpp_test_module_artifacts(
                                                  index.merged_module(), affected_modules,

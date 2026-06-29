@@ -192,13 +192,14 @@ emit_timing_output="$("$repo_root/build/duc" emit-modules \
     -o "$emit_timing_dir" --timings 2>&1)"
 printf '%s\n' "$emit_timing_output" | grep -Eq '^\[\+[0-9]+\.[0-9]{3}s\] parse '
 printf '%s\n' "$emit_timing_output" | grep -Eq '^\[\+[0-9]+\.[0-9]{3}s\] indexed '
-printf '%s\n' "$emit_timing_output" | grep -Eq '^\[\+[0-9]+\.[0-9]{3}s\] checked '
 printf '%s\n' "$emit_timing_output" | grep -Eq '^\[\+[0-9]+\.[0-9]{3}s\] dirty '
+printf '%s\n' "$emit_timing_output" | grep -Eq '^\[\+[0-9]+\.[0-9]{3}s\] analyze '
 printf '%s\n' "$emit_timing_output" | grep -Eq '^\[\+[0-9]+\.[0-9]{3}s\] emit '
 emit_timing_cached_output="$("$repo_root/build/duc" emit-modules \
     "$repo_root/tests/fixtures/project_import_metadata/main.dd" \
     -o "$emit_timing_dir" --timings 2>&1)"
 printf '%s\n' "$emit_timing_cached_output" | grep -Fq 'dirty 0 modules'
+printf '%s\n' "$emit_timing_cached_output" | grep -Fq 'analyze 0 modules'
 emit_incremental_project="$repo_root/build/emit_modules_incremental_smoke/project"
 emit_incremental_dir="$repo_root/build/emit_modules_incremental_smoke/generated"
 rm -rf "$repo_root/build/emit_modules_incremental_smoke"
@@ -215,6 +216,7 @@ perl -pi -e 's/height=22/height=23/' "$emit_incremental_project/windowing.dd"
 emit_incremental_output="$("$repo_root/build/duc" emit-modules \
     "$emit_incremental_project/main.dd" -o "$emit_incremental_dir" --timings 2>&1)"
 printf '%s\n' "$emit_incremental_output" | grep -Fq 'dirty 2 modules'
+printf '%s\n' "$emit_incremental_output" | grep -Fq 'analyze 2 modules'
 windowing_after="$(stat -c %y "$emit_incremental_dir/windowing.cpp")"
 camera_after="$(stat -c %y "$emit_incremental_dir/camera.cpp")"
 renderer_after="$(stat -c %y "$emit_incremental_dir/renderer.cpp")"
