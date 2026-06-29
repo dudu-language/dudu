@@ -482,6 +482,7 @@ def main() -> i32:
         request(35, "textDocument/completion", {"textDocument": text_document(main), "position": position(main_source, "player.move", add=len("player."))}),
         request(75, "textDocument/completion", {"textDocument": text_document(main), "position": position(main_source, "Counter.bump", add=len("Counter."))}),
         request(76, "textDocument/signatureHelp", {"textDocument": text_document(main), "position": position(main_source, "Counter.bump()", add=len("Counter.bump("))}),
+        request(77, "textDocument/signatureHelp", {"textDocument": text_document(main), "position": position(main_source, "Player(MAX_HP)", add=len("Player("))}),
         request(36, "textDocument/signatureHelp", {"textDocument": text_document(main), "position": position(main_source, "math.mix(current", add=len("math.mix(current"))}),
         request(37, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "import entities", add=len("import "))}),
         request(38, "textDocument/references", {"textDocument": text_document(entities), "position": position(entities_source, "hp: i32", add=1)}),
@@ -540,6 +541,12 @@ def main() -> i32:
         assert_nonempty(response(messages, request_id), f"workspace symbol {request_id}")
     for request_id in range(20, 30):
         assert_nonempty(response(messages, request_id), f"definition {request_id}")
+    player_definition = response(messages, 21)
+    player_decl = position(entities_source, "class Player")
+    if player_definition["uri"] != entities.as_uri():
+        raise AssertionError(f"Player constructor definition did not jump to source module: {player_definition!r}")
+    if player_definition["range"]["start"]["line"] != player_decl["line"]:
+        raise AssertionError(f"Player constructor definition jumped to wrong line: {player_definition!r}")
     for request_id in (30, 31):
         hover = response(messages, request_id)
         assert_nonempty(hover and hover.get("contents"), f"hover {request_id}")
@@ -591,6 +598,12 @@ def main() -> i32:
     counter_signature_docs = counter_signature_help["signatures"][0]["documentation"]["value"]
     if "Bumps the counter docs." not in counter_signature_docs:
         raise AssertionError(f"missing Counter.bump signature docs: {counter_signature_help!r}")
+    player_signature_help = response(messages, 77)
+    player_signature = player_signature_help["signatures"][0]
+    if "Player(hp: i32)" not in player_signature["label"]:
+        raise AssertionError(f"missing Player constructor signature: {player_signature_help!r}")
+    if "Runtime player docs." not in player_signature["documentation"]["value"]:
+        raise AssertionError(f"missing Player constructor docs: {player_signature_help!r}")
     signature_help = response(messages, 36)
     signature_docs = signature_help["signatures"][0]["documentation"]["value"]
     if "Mixes two numbers for signature docs." not in signature_docs:

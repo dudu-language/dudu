@@ -558,7 +558,9 @@ definition, hover, and references. Direct tests and the JSON-RPC matrix cover
 on an unrelated `OtherCounter` filtered out. Class/static member completion and
 signature help now share that member inventory too: `Counter.` completes
 constants, static fields, and methods, and `Counter.bump(` surfaces the method
-signature/docs in the JSON-RPC matrix.
+signature/docs in the JSON-RPC matrix. Constructor signature help now uses the
+indexed class shape as well, so class calls such as `Player(` show field/init
+parameters and docs.
 Dudu-owned declaration and unique-reference scope checks use Dudu-only document
 symbols, so ordinary references do not trigger native header scanning unless
 the selected symbol is an explicit native import.

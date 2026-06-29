@@ -65,6 +65,9 @@ unrelated `OtherCounter`, so type/member paths do not fall back to tail spelling
 Completion and signature help now use the same class-member symbol inventory:
 `Counter.` offers `LIMIT`, `count`, and `bump`, and `Counter.bump(` shows the
 method signature plus attached docs through the real `dudu-lsp` JSON-RPC matrix.
+Constructor calls now participate in signature help too: `Player(` reports the
+field/init-derived constructor signature and declaration docs from the indexed
+class shape.
 Enum value declaration references use the same qualified identity shape, so
 `Mode.Play` does not collide with another enum's `Play` variant. Payload
 sum-type variants such as `Token.IntLit(i64)` use the same identity path for
