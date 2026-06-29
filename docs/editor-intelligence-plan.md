@@ -101,6 +101,10 @@ not-yet-written files can still take part in native identity filtering.
 Native C++ member field go-to-definition is covered through direct LSP tests and
 the JSON-RPC matrix, so receiver-typed uses like `widget.value` jump to the
 scanned header field declaration when Clang provides a source location.
+Native C++ member field references are also covered through direct tests and
+the JSON-RPC matrix: a `MatrixWidget.value` query includes other receiver-typed
+uses of the same native field shape without leaking to an unrelated
+`OtherWidget.value`.
 
 ## Target Behavior
 

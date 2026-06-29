@@ -585,6 +585,9 @@ Go-to-definition for native C++ member methods is covered with a local fixture
 header. Go-to-definition for imported native type annotations also follows a
 structured native type alias to its scanned class declaration when that target
 is available.
+Find-references for native C++ member fields is covered in direct tests and the
+JSON-RPC matrix with same-named fields on unrelated receiver types filtered out
+by the receiver's structured type.
 Go-to-definition for imported C/C++ headers respects manifest-relative
 `[include] paths`, matching the project-driver path contract.
 Native overloaded function signature help is covered with a local fixture

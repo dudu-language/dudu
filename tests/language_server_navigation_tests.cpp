@@ -265,6 +265,55 @@ void test_lsp_references_keep_unbound_member_query_dotted() {
     assert(refs.find("\"start\":{\"line\":5,\"character\":35}") == std::string::npos);
 }
 
+void test_lsp_native_field_references_filter_by_receiver_type() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_native_field_reference_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "native_widgets.hpp", "struct MatrixWidget {\n"
+                                           "    int value;\n"
+                                           "};\n"
+                                           "\n"
+                                           "struct OtherWidget {\n"
+                                           "    int value;\n"
+                                           "};\n");
+    write_file(dir / "main.dd", "import cpp \"./native_widgets.hpp\"\n"
+                                "\n"
+                                "def main() -> i32:\n"
+                                "    widget: MatrixWidget\n"
+                                "    return widget.value\n");
+    write_file(dir / "same.dd", "import cpp \"./native_widgets.hpp\"\n"
+                                "\n"
+                                "def same() -> i32:\n"
+                                "    widget: MatrixWidget\n"
+                                "    return widget.value\n");
+    write_file(dir / "other.dd", "import cpp \"./native_widgets.hpp\"\n"
+                                 "\n"
+                                 "def other() -> i32:\n"
+                                 "    widget: OtherWidget\n"
+                                 "    return widget.value\n");
+
+    const dudu::Document main_doc{.uri = dudu::file_uri(dir / "main.dd"),
+                                  .path = dir / "main.dd",
+                                  .text = read_file(dir / "main.dd")};
+    const std::map<std::string, dudu::Document> workspace{
+        {main_doc.uri, main_doc},
+        {dudu::file_uri(dir / "same.dd"),
+         {.uri = dudu::file_uri(dir / "same.dd"),
+          .path = dir / "same.dd",
+          .text = read_file(dir / "same.dd")}},
+        {dudu::file_uri(dir / "other.dd"),
+         {.uri = dudu::file_uri(dir / "other.dd"),
+          .path = dir / "other.dd",
+          .text = read_file(dir / "other.dd")}},
+    };
+    dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":4,\"character\":18}}").parse();
+    const std::string refs = dudu::references_json(main_doc, &params, workspace);
+    assert(refs.find(dudu::file_uri(dir / "main.dd")) != std::string::npos);
+    assert(refs.find(dudu::file_uri(dir / "same.dd")) != std::string::npos);
+    assert(refs.find(dudu::file_uri(dir / "other.dd")) == std::string::npos);
+}
+
 void test_lsp_hover_uses_loaded_module_units() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_lsp_module_hover_unit_test";
@@ -868,6 +917,7 @@ int main() {
         test_lsp_hover_uses_receiver_for_ambiguous_native_methods();
         test_lsp_hover_infers_local_from_native_call();
         test_lsp_references_keep_unbound_member_query_dotted();
+        test_lsp_native_field_references_filter_by_receiver_type();
         test_lsp_hover_uses_loaded_module_units();
         test_lsp_hover_uses_ast_doc_comments();
         test_lsp_hover_uses_imported_ast_doc_comments();

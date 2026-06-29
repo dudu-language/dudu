@@ -320,6 +320,15 @@ class MatrixWidget {
 };
 """
     )
+    (tmp / "native_other_widget.hpp").write_text(
+        """#pragma once
+
+class OtherWidget {
+  public:
+    int value = 0;
+};
+"""
+    )
     native_cpp_source = """import cpp "native_widget.hpp"
 
 def main() -> i32:
@@ -328,6 +337,20 @@ def main() -> i32:
     return widget.scaled(2)
 """
     (tmp / "native_cpp_user.dd").write_text(native_cpp_source)
+    native_cpp_same_source = """import cpp "native_widget.hpp"
+
+def same() -> i32:
+    widget: MatrixWidget
+    return widget.value
+"""
+    (tmp / "native_cpp_same.dd").write_text(native_cpp_same_source)
+    native_cpp_other_source = """import cpp "native_other_widget.hpp"
+
+def other() -> i32:
+    widget: OtherWidget
+    return widget.value
+"""
+    (tmp / "native_cpp_other.dd").write_text(native_cpp_other_source)
     unresolved_source = """class Player:
     hp: i32
 
@@ -357,6 +380,8 @@ def main() -> i32:
     ops = tmp / "operators.dd"
     native = tmp / "native_user.dd"
     native_cpp = tmp / "native_cpp_user.dd"
+    native_cpp_same = tmp / "native_cpp_same.dd"
+    native_cpp_other = tmp / "native_cpp_other.dd"
     unresolved = tmp / "unresolved_tokens.dd"
     missing = tmp / "missing_import.dd"
     messages = [
@@ -367,6 +392,8 @@ def main() -> i32:
         open_message(ops),
         open_message(native),
         open_message(native_cpp),
+        open_message(native_cpp_same),
+        open_message(native_cpp_other),
         open_message(unresolved),
         open_message(missing),
         lsp_message({"jsonrpc": "2.0", "method": "textDocument/didSave", "params": {"textDocument": text_document(missing)}}),
@@ -417,6 +444,7 @@ def main() -> i32:
         request(57, "textDocument/hover", {"textDocument": text_document(native_cpp), "position": position(native_cpp_source, "widget.value", add=len("widget."))}),
         request(58, "textDocument/signatureHelp", {"textDocument": text_document(native_cpp), "position": position(native_cpp_source, "widget.scaled(2", add=len("widget.scaled(2"))}),
         request(59, "textDocument/definition", {"textDocument": text_document(native_cpp), "position": position(native_cpp_source, "widget.value", add=len("widget."))}),
+        request(60, "textDocument/references", {"textDocument": text_document(native_cpp), "position": position(native_cpp_source, "widget.value", add=len("widget."))}),
         request(70, "textDocument/semanticTokens/full", {"textDocument": text_document(unresolved)}),
         request(99, "shutdown", None),
         lsp_message({"jsonrpc": "2.0", "method": "exit", "params": None}),
@@ -578,6 +606,13 @@ def main() -> i32:
         raise AssertionError(f"native member definition did not jump to header: {native_member_definition!r}")
     if native_member_definition["range"]["start"]["line"] != 10:
         raise AssertionError(f"native member definition jumped to wrong line: {native_member_definition!r}")
+    native_member_refs = response(messages, 60)
+    if not has_start(native_member_refs, native_cpp.as_uri(), 4, len("    widget.")):
+        raise AssertionError(f"missing native member reference in source doc: {native_member_refs!r}")
+    if not has_start(native_member_refs, native_cpp_same.as_uri(), 4, len("    return widget.")):
+        raise AssertionError(f"missing native member reference in same-header doc: {native_member_refs!r}")
+    if has_start(native_member_refs, native_cpp_other.as_uri(), 4, len("    return widget.")):
+        raise AssertionError(f"unrelated native member reference leaked across receiver type: {native_member_refs!r}")
     missing_diags = publish_diagnostics(messages, missing.as_uri())
     if not missing_diags or not missing_diags[-1]:
         raise AssertionError("missing import fixture did not publish diagnostics")
