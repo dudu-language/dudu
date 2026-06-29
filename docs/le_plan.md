@@ -1826,6 +1826,21 @@ push. They are not release packaging work.
    synthesized AST paths can create temporary strings. The likely serious fixes
    are an interned source text/symbol store, compact token/source-position
    storage, and arena or compact child storage for expression trees.
+   Throughput work must keep expanding the corpus instead of narrowing it:
+   expression-heavy code is currently the most obvious outlier, but Dudu also
+   needs generated and dogfood coverage for imports, native headers,
+   overload-heavy calls, templates/generics, indexing/slicing, OOP, match
+   lowering, and mixed project-shaped modules. A speedup is not real unless it
+   survives that diversity, because the compiler can easily be slow for one
+   particular aspect of compilation while looking fine on a single benchmark.
+   The next structural expression-AST milestone should remove the public
+   vector-per-node child representation rather than layering a compatibility
+   wrapper around it. Candidate designs are: a compact tagged expression node
+   with explicit unary/binary/member/index/call payloads, an arena-backed AST
+   with stable child spans, or a small child-list representation used through a
+   real accessor API. The chosen design must migrate parser, sema, codegen,
+   LSP, formatter, and lint together so `Expr::children` does not remain as a
+   legacy escape hatch.
    `SourceFileName` then moved from an interned string pointer to a compact
    32-bit intern id while preserving the existing API. This shrinks every
    `SourceLocation`, `SourceRange`, token, and AST node that stores locations.
