@@ -392,13 +392,6 @@ std::string rename_json(const Document& doc, const Json* params,
         if (candidate_unit == nullptr) {
             continue;
         }
-        const std::vector<Symbol> candidate_symbols_without_native =
-            symbols_for_module(*candidate_unit, false);
-        if (scope == RenameScope::Workspace && candidate.uri != doc.uri &&
-            document_declares_renameable_symbol(candidate, old_name,
-                                                candidate_symbols_without_native)) {
-            continue;
-        }
         std::error_code path_error;
         const std::filesystem::path candidate_path =
             candidate.path.empty() ? std::filesystem::path{}
@@ -409,6 +402,14 @@ std::string rename_json(const Document& doc, const Json* params,
         const bool target_selective_document =
             selective_target.has_value() && !candidate.path.empty() && !path_error &&
             same_path(candidate_path, selective_target->source_key);
+        const std::vector<Symbol> candidate_symbols_without_native =
+            symbols_for_module(*candidate_unit, false);
+        if (scope == RenameScope::Workspace && candidate.uri != doc.uri &&
+            !target_module_document && !target_selective_document &&
+            document_declares_renameable_symbol(candidate, old_name,
+                                                candidate_symbols_without_native)) {
+            continue;
+        }
         if (module_target.has_value() && candidate.uri != doc.uri && !target_module_document &&
             module_import_target_key(candidate, old_name) != module_target) {
             continue;

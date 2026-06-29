@@ -136,9 +136,12 @@ Native C++ member method definition and references are now covered through the
 JSON-RPC matrix as well: `MatrixWidget.scaled` jumps to the scanned header
 method and finds other receiver-typed uses without leaking to an unrelated
 `OtherWidget.scaled`.
-Rename now uses module-qualified Dudu identity for proven use-site renames:
-renaming `math.mix` from a use site edits the source declaration and matching
-`math.mix` references while leaving same-named `other_math.mix` symbols alone.
+Rename now uses module-qualified and selective-import Dudu identity for proven
+use-site renames: renaming `math.mix` from a use site edits the source
+declaration and matching `math.mix` references while leaving same-named
+`other_math.mix` symbols alone, and renaming `MAX_HP` from a selective-import
+use edits the source constant/import/use sites without touching
+`other_entities.MAX_HP`.
 
 ## Target Behavior
 

@@ -479,6 +479,7 @@ def main() -> i32:
         request(73, "textDocument/references", {"textDocument": text_document(main), "position": position(main_source, "Counter.count", add=len("Counter."))}),
         request(74, "textDocument/references", {"textDocument": text_document(main), "position": position(main_source, "Counter.bump", add=len("Counter."))}),
         request(79, "textDocument/rename", {"textDocument": text_document(main), "position": position(main_source, "math.mix", add=len("math.")), "newName": "blend"}),
+        request(80, "textDocument/rename", {"textDocument": text_document(main), "position": position(main_source, "Player(MAX_HP)", add=len("Player(")), "newName": "START_HP"}),
         request(33, "textDocument/completion", {"textDocument": text_document(main), "position": position(main_source, "return math.MAGIC", add=len("return math."))}),
         request(34, "textDocument/completion", {"textDocument": text_document(main), "position": position(main_source, "transitive.transitive_value", add=len("transitive."))}),
         request(35, "textDocument/completion", {"textDocument": text_document(main), "position": position(main_source, "player.move", add=len("player."))}),
@@ -601,6 +602,18 @@ def main() -> i32:
         raise AssertionError(f"other_entities.MAX_HP declaration leaked into MAX_HP refs: {imported_constant_refs!r}")
     if has_start(imported_constant_refs, main.as_uri(), main_other_max_hp["line"], main_other_max_hp["character"]):
         raise AssertionError(f"other_entities.MAX_HP use leaked into MAX_HP refs: {imported_constant_refs!r}")
+    imported_constant_rename = response(messages, 80)
+    constant_rename_changes = imported_constant_rename.get("changes", {})
+    entities_edits = constant_rename_changes.get(entities.as_uri(), [])
+    main_constant_edits = constant_rename_changes.get(main.as_uri(), [])
+    if not any(edit.get("range", {}).get("start", {}) == entities_max_hp_decl for edit in entities_edits):
+        raise AssertionError(f"MAX_HP rename missed declaration: {imported_constant_rename!r}")
+    if not any(edit.get("range", {}).get("start", {}) == main_max_hp for edit in main_constant_edits):
+        raise AssertionError(f"MAX_HP rename missed use site: {imported_constant_rename!r}")
+    if any(edit.get("range", {}).get("start", {}) == main_other_max_hp for edit in main_constant_edits):
+        raise AssertionError(f"MAX_HP rename edited other_entities.MAX_HP: {imported_constant_rename!r}")
+    if (tmp / "other_entities.dd").as_uri() in constant_rename_changes:
+        raise AssertionError(f"MAX_HP rename edited unrelated module: {imported_constant_rename!r}")
     assert_completion_labels(response(messages, 33), ["MAGIC", "mix"])
     assert_documentation_contains(item_named(response(messages, 33), "mix"), "Mixes two numbers")
     assert_completion_labels(response(messages, 34), ["transitive_value"])

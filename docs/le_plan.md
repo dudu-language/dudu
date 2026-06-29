@@ -2377,10 +2377,11 @@ push. They are not release packaging work.
    docs over JSON-RPC. Constructor signature help now uses indexed class shapes,
    so `Player(` shows field/init parameters and declaration docs. Workspace
    symbols include class/static members such as `Counter.count` with first-doc-
-   line detail summaries. Use-site rename for module-qualified Dudu symbols now
-   uses the same module target identity as references, so renaming `math.mix`
-   edits the imported declaration and matching uses without touching unrelated
-   `other_math.mix` symbols.
+   line detail summaries. Use-site rename for module-qualified and
+   selective-import Dudu symbols now uses the same target identity as
+   references, so renaming `math.mix` or `MAX_HP` edits the imported source
+   declaration and matching uses without touching unrelated `other_math.mix` or
+   `other_entities.MAX_HP` symbols.
    Native function hover/detail includes both the lowered Dudu signature and a
    compact scanner-derived native signature suffix when concrete
    return/parameter spelling is available.
