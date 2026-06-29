@@ -1,0 +1,21 @@
+2026-06-29
+
+Current active goal:
+
+Finish Dudu's real module/incremental architecture the right way. Introduce a real ProjectIndex/module graph
+owner for parsed AST modules, exported interfaces, symbols, reverse references, dependency tracking, dirty state, and
+native header metadata. Move duc check, emit-modules, emit-test-modules, dudu build/run/test, and LSP hover/
+definition/references/completion/diagnostics onto that shared index instead of cold one-off load/analyze paths.
+
+Preserve and complete per-module generated .hpp/.cpp artifacts, stable generated names, dependency tracking, and
+mtime-preserving writes. Ensure no-op builds do not re-run Dudu work unnecessarily, one-file edits only re-analyze/
+re-emit affected modules, and generated CMake/Ninja can rebuild only changed native artifacts.
+
+Remove or absorb ad hoc LSP/module caches and any lexical/string fallback paths that affect Dudu semantics,
+navigation, lint, diagnostics, codegen, or formatting. Raw spellings are allowed only at explicit native C/C++ or
+escape-hatch boundaries.
+
+Validate with focused correctness tests, synthetic multi-module projects, LSP JSON-RPC tests, raymarch-dd, dudu-
+webserver, and timing numbers for clean build, no-op build, one-file edit build, header-cache cold/warm, cold LSP
+workspace index, and warm LSP hover/go-to-definition/find-references/diagnostics/completion. Keep validation fast
+during iteration, but commit and push only stable green milestones.
