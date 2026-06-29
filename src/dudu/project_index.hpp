@@ -43,6 +43,7 @@ class ProjectIndex {
 
     const ModuleAst& merged_module() const { return module_; }
     const std::vector<ProjectModuleSummary>& modules() const { return modules_; }
+    std::vector<std::filesystem::path> source_files() const;
     const ProjectModuleSummary* summary_for_path(const std::filesystem::path& path) const;
     const ProjectModuleSummary* summary_for_module(std::string_view module_path) const;
     bool source_stamps_current() const;

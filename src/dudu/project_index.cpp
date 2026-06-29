@@ -172,6 +172,17 @@ ProjectIndex ProjectIndex::load(ProjectIndexOptions options) {
     return index;
 }
 
+std::vector<std::filesystem::path> ProjectIndex::source_files() const {
+    std::vector<std::filesystem::path> out;
+    out.reserve(modules_.size());
+    for (const ProjectModuleSummary& summary : modules_) {
+        if (!summary.source_path.empty()) {
+            out.push_back(summary.source_path);
+        }
+    }
+    return out;
+}
+
 const ProjectModuleSummary*
 ProjectIndex::summary_for_path(const std::filesystem::path& path) const {
     const auto found = source_path_to_index_.find(path_key(path));
