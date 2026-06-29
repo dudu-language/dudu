@@ -409,6 +409,26 @@ std::vector<std::filesystem::path> cpp_test_module_source_paths(const ModuleAst&
     return out;
 }
 
+std::vector<std::filesystem::path> cpp_module_artifact_paths(const ModuleAst& module) {
+    std::vector<std::filesystem::path> out;
+    out.push_back("dudu_runtime.hpp");
+    const std::vector<ModuleAst>& units =
+        module.module_units.empty() ? std::vector<ModuleAst>{module} : module.module_units;
+    out.reserve(1 + units.size() * 2);
+    for (const ModuleAst& unit : units) {
+        const std::filesystem::path base = module_artifact_base(unit);
+        out.push_back(base.string() + ".hpp");
+        out.push_back(base.string() + ".cpp");
+    }
+    return out;
+}
+
+std::vector<std::filesystem::path> cpp_test_module_artifact_paths(const ModuleAst& module) {
+    std::vector<std::filesystem::path> out = cpp_module_artifact_paths(module);
+    out.push_back("test_harness.cpp");
+    return out;
+}
+
 bool file_content_matches(const std::filesystem::path& path, const std::string& content) {
     std::optional<std::string> existing = try_read_text_file(path);
     if (!existing) {

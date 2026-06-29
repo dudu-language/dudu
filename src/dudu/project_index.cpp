@@ -26,14 +26,12 @@ std::string path_key(const std::filesystem::path& path) {
     return canonical_key_path(path).string();
 }
 
-std::optional<std::filesystem::file_time_type>
-file_mtime(const std::filesystem::path& path) {
+std::optional<std::filesystem::file_time_type> file_mtime(const std::filesystem::path& path) {
     if (path.empty()) {
         return std::nullopt;
     }
     std::error_code error;
-    const std::filesystem::file_time_type mtime =
-        std::filesystem::last_write_time(path, error);
+    const std::filesystem::file_time_type mtime = std::filesystem::last_write_time(path, error);
     return error ? std::nullopt : std::optional<std::filesystem::file_time_type>{mtime};
 }
 
@@ -170,7 +168,8 @@ std::vector<SourceStamp> parse_source_stamp_file(const std::filesystem::path& pa
             continue;
         }
         const size_t first = line.find('\t');
-        const size_t second = first == std::string::npos ? std::string::npos : line.find('\t', first + 1);
+        const size_t second =
+            first == std::string::npos ? std::string::npos : line.find('\t', first + 1);
         if (first == std::string::npos || second == std::string::npos) {
             continue;
         }
@@ -235,14 +234,13 @@ ProjectIndex::summary_for_path(const std::filesystem::path& path) const {
     return found == source_path_to_index_.end() ? nullptr : &modules_[found->second];
 }
 
-const ProjectModuleSummary*
-ProjectIndex::summary_for_module(std::string_view module_path) const {
+const ProjectModuleSummary* ProjectIndex::summary_for_module(std::string_view module_path) const {
     const auto found = module_path_to_index_.find(std::string(module_path));
     return found == module_path_to_index_.end() ? nullptr : &modules_[found->second];
 }
 
-std::vector<std::string> ProjectIndex::affected_modules_for_sources(
-    const std::vector<std::filesystem::path>& paths) const {
+std::vector<std::string>
+ProjectIndex::affected_modules_for_sources(const std::vector<std::filesystem::path>& paths) const {
     std::set<std::string> affected;
     std::vector<std::string> stack;
     for (const std::filesystem::path& path : paths) {
@@ -325,6 +323,22 @@ bool ProjectIndex::source_stamps_current() const {
             continue;
         }
         if (file_mtime(summary.source_path) != summary.source_mtime) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool source_stamp_file_current(const std::filesystem::path& path) {
+    const std::vector<SourceStamp> stamps = parse_source_stamp_file(path);
+    if (stamps.empty()) {
+        return false;
+    }
+    for (const SourceStamp& stamp : stamps) {
+        if (stamp.source_key.empty() || stamp.mtime.empty()) {
+            return false;
+        }
+        if (mtime_stamp(file_mtime(std::filesystem::path(stamp.source_key))) != stamp.mtime) {
             return false;
         }
     }

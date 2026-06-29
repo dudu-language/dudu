@@ -200,6 +200,16 @@ emit_timing_cached_output="$("$repo_root/build/duc" emit-modules \
     -o "$emit_timing_dir" --timings 2>&1)"
 printf '%s\n' "$emit_timing_cached_output" | grep -Fq 'dirty 0 modules'
 printf '%s\n' "$emit_timing_cached_output" | grep -Fq 'analyze 0 modules'
+if printf '%s\n' "$emit_timing_cached_output" | grep -Eq ' load | parse | indexed '; then
+    echo "cached emit-modules unexpectedly loaded the module graph" >&2
+    exit 1
+fi
+rm "$emit_timing_dir/camera.cpp"
+emit_timing_missing_artifact_output="$("$repo_root/build/duc" emit-modules \
+    "$repo_root/tests/fixtures/project_import_metadata/main.dd" \
+    -o "$emit_timing_dir" --timings 2>&1)"
+printf '%s\n' "$emit_timing_missing_artifact_output" | grep -Eq '^\[\+[0-9]+\.[0-9]{3}s\] load '
+test -f "$emit_timing_dir/camera.cpp"
 emit_incremental_project="$repo_root/build/emit_modules_incremental_smoke/project"
 emit_incremental_dir="$repo_root/build/emit_modules_incremental_smoke/generated"
 rm -rf "$repo_root/build/emit_modules_incremental_smoke"

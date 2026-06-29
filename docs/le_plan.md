@@ -2175,25 +2175,24 @@ push. They are not release packaging work.
    changed module plus its dependent entry, and verifies unrelated generated
    module artifacts keep their mtimes.
 
-   `duc emit-modules` and `duc emit-test-modules` now load the selected entry's
-   module graph first, compare source stamps, compute reverse-dependency
-   affected modules, and run semantic analysis only for that affected module
-   set before emission. Cached emits report `analyze 0 modules`, and one-file
-   edit fixtures report the filtered affected count.
-
-   Remaining incremental work is on the Dudu side: `duc emit-modules` still
-   loads the selected entry's full module graph in a fresh process.
-   ProjectIndex now exposes reverse-dependency dirty propagation, so the
-   compiler can ask which modules are affected by one or more changed source
-   files without re-deriving that relationship in command-specific code.
    `duc emit-modules` and `duc emit-test-modules` persist source stamp files
-   beside generated artifacts, compare the current graph with the last emitted
-   graph, and report the affected module count in timing output. Native header
-   raw and scan caches are dependency-stamped before disk or process cache hits
-   are trusted, and scanner-generated source files must not participate in those
-   stamps. Real compiler-speed work still needs selective analysis/emission
-   based on the affected module set and broader structured native-header
-   metadata reuse.
+   beside generated artifacts. When those source stamps and the generated
+   artifact manifest are current, cached emits skip entry-source reads, module
+   graph load, parse, index, and semantic analysis entirely; timing output
+   reports `dirty 0 modules` and `analyze 0 modules`. The artifact manifest is
+   part of the correctness check: if a generated artifact is missing, the
+   command loads the graph and re-emits the project instead of trusting the
+   source stamps alone. When one or more source files changed, ProjectIndex
+   computes reverse-dependency affected modules and semantic analysis runs only
+   for that affected module set before selective emission. One-file edit
+   fixtures report the filtered affected count, and missing-artifact fixtures
+   verify deleted generated files are recreated.
+
+   Native header raw and scan caches are dependency-stamped before disk or
+   process cache hits are trusted, and scanner-generated source files must not
+   participate in those stamps. Real compiler-speed work still needs broader
+   structured native-header metadata reuse and benchmark coverage across larger
+   projects.
    `duc emit-modules --timings` and `duc emit-test-modules --timings` now print
    detailed analyze/load/config/native-merge/sema/emit progress, which also
    makes generated-CMake custom command stalls visible when `dudu build

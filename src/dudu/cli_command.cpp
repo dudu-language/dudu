@@ -23,6 +23,7 @@
 #include <fstream>
 #include <iostream>
 #include <optional>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -175,17 +176,17 @@ const ProjectIndex& checked_index(const CliOptions& options, const std::string& 
     const bool force_module_tree =
         !merged_cpp_output && (options.emit_modules || options.project_driver);
     const std::filesystem::path source_dir = source_dir_for_input(options.input);
-    const ProjectIndex& checked = cli_project_index_cache.get(
-        {.entry_path = options.input,
-         .entry_source = source,
-         .source_overrides = {},
-         .config = config,
-         .source_dir = source_dir,
-         .build_values = options.build_values,
-         .force_module_tree = force_module_tree,
-         .include_native_headers = true,
-         .check_semantics = true,
-         .semantic_options = {.check_bodies = check_bodies}});
+    const ProjectIndex& checked =
+        cli_project_index_cache.get({.entry_path = options.input,
+                                     .entry_source = source,
+                                     .source_overrides = {},
+                                     .config = config,
+                                     .source_dir = source_dir,
+                                     .build_values = options.build_values,
+                                     .force_module_tree = force_module_tree,
+                                     .include_native_headers = true,
+                                     .check_semantics = true,
+                                     .semantic_options = {.check_bodies = check_bodies}});
     print_project_step(detail_output, "indexed", options.input);
     print_project_step(detail_output, "checked", options.input);
     return checked;
@@ -198,17 +199,17 @@ const ProjectIndex& indexed_module_graph(const CliOptions& options, const std::s
     const ProjectConfig config = config_for_options(options);
     print_project_step(detail_output, "parse", options.input);
     const std::filesystem::path source_dir = source_dir_for_input(options.input);
-    const ProjectIndex& index = cli_project_index_cache.get(
-        {.entry_path = options.input,
-         .entry_source = source,
-         .source_overrides = {},
-         .config = config,
-         .source_dir = source_dir,
-         .build_values = options.build_values,
-         .force_module_tree = true,
-         .include_native_headers = true,
-         .check_semantics = check_semantics,
-         .semantic_options = {.check_bodies = check_bodies}});
+    const ProjectIndex& index =
+        cli_project_index_cache.get({.entry_path = options.input,
+                                     .entry_source = source,
+                                     .source_overrides = {},
+                                     .config = config,
+                                     .source_dir = source_dir,
+                                     .build_values = options.build_values,
+                                     .force_module_tree = true,
+                                     .include_native_headers = true,
+                                     .check_semantics = check_semantics,
+                                     .semantic_options = {.check_bodies = check_bodies}});
     print_project_step(detail_output, "indexed", options.input);
     if (check_semantics) {
         print_project_step(detail_output, "checked", options.input);
@@ -238,6 +239,50 @@ bool check_source_path(const CliOptions& options) {
         check_source_file(options, entry.path());
     }
     return true;
+}
+
+bool artifact_manifest_current(const std::filesystem::path& dir,
+                               const std::filesystem::path& manifest) {
+    const std::optional<std::string> text = try_read_text_file(manifest);
+    if (!text.has_value()) {
+        return false;
+    }
+    std::istringstream lines(*text);
+    std::string line;
+    bool any = false;
+    while (std::getline(lines, line)) {
+        if (line.empty()) {
+            continue;
+        }
+        any = true;
+        std::error_code error;
+        if (!std::filesystem::exists(dir / line, error) || error) {
+            return false;
+        }
+    }
+    return any;
+}
+
+void write_artifact_manifest(const std::filesystem::path& manifest,
+                             const std::vector<std::filesystem::path>& paths) {
+    std::filesystem::create_directories(manifest.parent_path().empty() ? "."
+                                                                       : manifest.parent_path());
+    std::ofstream out(manifest, std::ios::binary);
+    if (!out) {
+        fail("could not open artifact manifest " + manifest.string());
+    }
+    for (const std::filesystem::path& path : paths) {
+        out << path.string() << '\n';
+    }
+}
+
+std::vector<std::string> all_project_module_paths(const ProjectIndex& index) {
+    std::vector<std::string> out;
+    out.reserve(index.modules().size());
+    for (const ProjectModuleSummary& module : index.modules()) {
+        out.push_back(module.module_path);
+    }
+    return out;
 }
 
 int run_build_command(const CliOptions& options, char* executable) {
@@ -369,15 +414,21 @@ int run_cli(int argc, char** argv) {
         return run_run_command(options, argv[0]);
     }
 
-    const std::string source = read_required_text_file(options.input);
+    std::optional<std::string> source;
+    const auto input_source = [&]() -> const std::string& {
+        if (!source.has_value()) {
+            source = read_required_text_file(options.input);
+        }
+        return *source;
+    };
     if (options.header_output.has_value()) {
         write_text_output(options.header_output,
-                          emit_cpp_header(checked_module(options, source, false)));
+                          emit_cpp_header(checked_module(options, input_source(), false)));
         return 0;
     }
     if (options.c_header_output.has_value()) {
         write_text_output(options.c_header_output,
-                          emit_c_header(checked_module(options, source, false)));
+                          emit_c_header(checked_module(options, input_source(), false)));
         return 0;
     }
     if (options.emit_modules) {
@@ -385,13 +436,26 @@ int run_cli(int argc, char** argv) {
             fail("emit-modules requires -o <directory>");
         }
         const bool project_output = !options.quiet && (options.project_driver || options.timings);
-        print_project_step(project_output, "load", options.input);
-        const ProjectIndex& index = indexed_module_graph(options, source, false, false);
         const std::filesystem::path stamp_file = *options.output / ".dudu_sources.stamp";
+        const std::filesystem::path artifact_manifest = *options.output / ".dudu_artifacts.stamp";
+        if (source_stamp_file_current(stamp_file) &&
+            artifact_manifest_current(*options.output, artifact_manifest)) {
+            print_project_step(project_output, "dirty", "0 modules");
+            print_project_step(project_output, "analyze", "0 modules");
+            print_project_step(project_output, "emit", *options.output);
+            return 0;
+        }
+        print_project_step(project_output, "load", options.input);
+        const std::string& source = input_source();
+        const ProjectIndex& index = indexed_module_graph(options, source, false, false);
         const std::vector<std::filesystem::path> changed_sources =
             index.changed_sources_since_stamp_file(stamp_file);
-        const std::vector<std::string> affected_modules =
+        std::vector<std::string> affected_modules =
             index.affected_modules_for_sources(changed_sources);
+        if (changed_sources.empty() &&
+            !artifact_manifest_current(*options.output, artifact_manifest)) {
+            affected_modules = all_project_module_paths(index);
+        }
         print_project_step(project_output, "dirty",
                            std::to_string(affected_modules.size()) + " modules");
         print_project_step(project_output, "analyze",
@@ -400,6 +464,8 @@ int run_cli(int argc, char** argv) {
         print_project_step(project_output, "emit", *options.output);
         write_cpp_artifacts(*options.output,
                             emit_cpp_module_artifacts(index.merged_module(), affected_modules));
+        write_artifact_manifest(artifact_manifest,
+                                cpp_module_artifact_paths(index.merged_module()));
         index.write_source_stamp_file(stamp_file);
         return 0;
     }
@@ -408,13 +474,27 @@ int run_cli(int argc, char** argv) {
             fail("emit-test-modules requires -o <directory>");
         }
         const bool project_output = !options.quiet && (options.project_driver || options.timings);
-        print_project_step(project_output, "load", options.input);
-        const ProjectIndex& index = indexed_module_graph(options, source, false, false);
         const std::filesystem::path stamp_file = *options.output / ".dudu_test_sources.stamp";
+        const std::filesystem::path artifact_manifest =
+            *options.output / ".dudu_test_artifacts.stamp";
+        if (source_stamp_file_current(stamp_file) &&
+            artifact_manifest_current(*options.output, artifact_manifest)) {
+            print_project_step(project_output, "dirty", "0 modules");
+            print_project_step(project_output, "analyze", "0 modules");
+            print_project_step(project_output, "emit", *options.output);
+            return 0;
+        }
+        print_project_step(project_output, "load", options.input);
+        const std::string& source = input_source();
+        const ProjectIndex& index = indexed_module_graph(options, source, false, false);
         const std::vector<std::filesystem::path> changed_sources =
             index.changed_sources_since_stamp_file(stamp_file);
-        const std::vector<std::string> affected_modules =
+        std::vector<std::string> affected_modules =
             index.affected_modules_for_sources(changed_sources);
+        if (changed_sources.empty() &&
+            !artifact_manifest_current(*options.output, artifact_manifest)) {
+            affected_modules = all_project_module_paths(index);
+        }
         print_project_step(project_output, "dirty",
                            std::to_string(affected_modules.size()) + " modules");
         print_project_step(project_output, "analyze",
@@ -424,14 +504,17 @@ int run_cli(int argc, char** argv) {
         write_cpp_artifacts(*options.output, emit_cpp_test_module_artifacts(
                                                  index.merged_module(), affected_modules,
                                                  options.test_filter, !options.no_capture));
+        write_artifact_manifest(artifact_manifest,
+                                cpp_test_module_artifact_paths(index.merged_module()));
         index.write_source_stamp_file(stamp_file);
         return 0;
     }
     if (options.emit_cpp) {
-        write_text_output(options.output, emit_cpp_source(checked_module(options, source, true)));
+        write_text_output(options.output,
+                          emit_cpp_source(checked_module(options, input_source(), true)));
         return 0;
     }
-    write_text_output(std::nullopt, emit_cpp_source(checked_module(options, source, true)));
+    write_text_output(std::nullopt, emit_cpp_source(checked_module(options, input_source(), true)));
     return 0;
 }
 
