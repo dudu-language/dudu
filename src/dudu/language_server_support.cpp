@@ -6,9 +6,33 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <functional>
+#include <map>
 #include <sstream>
+#include <string>
 
 namespace dudu {
+namespace {
+
+struct ModuleCacheKey {
+    std::string path;
+    size_t text_hash = 0;
+    bool include_native_headers = false;
+
+    friend bool operator<(const ModuleCacheKey& lhs, const ModuleCacheKey& rhs) {
+        if (lhs.path != rhs.path) {
+            return lhs.path < rhs.path;
+        }
+        if (lhs.text_hash != rhs.text_hash) {
+            return lhs.text_hash < rhs.text_hash;
+        }
+        return lhs.include_native_headers < rhs.include_native_headers;
+    }
+};
+
+std::map<ModuleCacheKey, ModuleAst> module_cache;
+
+} // namespace
 
 std::string file_uri_to_path(std::string uri) {
     constexpr std::string_view prefix = "file://";
@@ -72,6 +96,12 @@ void apply_project_context(ModuleAst& module, const ProjectConfig& config) {
 }
 
 ModuleAst module_for_document(const Document& doc, bool include_native_headers) {
+    const ModuleCacheKey key{.path = doc.path.lexically_normal().string(),
+                             .text_hash = std::hash<std::string>{}(doc.text),
+                             .include_native_headers = include_native_headers};
+    if (const auto found = module_cache.find(key); found != module_cache.end()) {
+        return found->second;
+    }
     const ProjectConfig config = config_for_file(doc.path);
     ModuleAst parsed = parse_source(doc.text, doc.path);
     const bool saved_tree =
@@ -81,17 +111,21 @@ ModuleAst module_for_document(const Document& doc, bool include_native_headers) 
                            ? load_source_tree(doc.path, doc.text)
                            : std::move(parsed);
     apply_project_context(module, config);
-    if (!include_native_headers) {
-        return module;
+    if (include_native_headers) {
+        const NativeHeaderOptions native_options{.config = config,
+                                                 .source_dir = doc.path.parent_path()};
+        merge_native_header_types(module, native_options);
+        for (ModuleAst& unit : module.module_units) {
+            apply_project_context(unit, config);
+            merge_native_header_types(unit, native_options);
+        }
     }
-    const NativeHeaderOptions native_options{.config = config,
-                                             .source_dir = doc.path.parent_path()};
-    merge_native_header_types(module, native_options);
-    for (ModuleAst& unit : module.module_units) {
-        apply_project_context(unit, config);
-        merge_native_header_types(unit, native_options);
-    }
+    module_cache.emplace(key, module);
     return module;
+}
+
+void clear_language_server_module_cache() {
+    module_cache.clear();
 }
 
 const ModuleAst& visible_module_unit(const ModuleAst& module, const std::filesystem::path& path) {

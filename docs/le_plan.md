@@ -2258,6 +2258,21 @@ push. They are not release packaging work.
    `scripts/bench_compiler.sh` now includes repeated workspace-symbol and
    references requests in its LSP probe so this warm-request path remains
    visible in benchmark runs.
+   The LSP support layer also caches parsed/merged module views keyed by the
+   open document text and native-header mode. Hover, definition, references,
+   completion, and diagnostics should hit that warm module view for repeated
+   requests instead of reparsing source trees and remerging native metadata.
+
+   The validation suite must not rely only on `raymarch-dd` and
+   `dudu-webserver`. Add curated, cheap mini-workspaces for each editor-action
+   class: module aliases, selective imports, nested module paths, classes,
+   instance methods, static methods, fields, constants, enums, sum types,
+   native generics, operators, locals, parameters, module-qualified symbols,
+   native headers, native functions, native types, native macros, missing
+   imports, rename conflict guards, formatter/code-action edits, and
+   diagnostics. Dogfood repos stay valuable as end-to-end checks, but the core
+   LSP suite should prove each behavior in deterministic fixtures with cold and
+   warm latency coverage.
 
    Documentation hover needs a real documentation model, not only line scanning.
    Dudu should support Python-shaped contiguous `#` declaration comments and

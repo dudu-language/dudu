@@ -281,6 +281,7 @@ class LanguageServer {
         if (text_document == nullptr) {
             return;
         }
+        invalidate_workspace_cache();
         publish_diagnostics(string_value(text_document->get("uri")));
     }
 
@@ -424,6 +425,7 @@ class LanguageServer {
         ++documents_revision_;
         workspace_cache_revision_ = std::numeric_limits<size_t>::max();
         workspace_cache_.clear();
+        clear_language_server_module_cache();
     }
 
     const std::map<std::string, Document>& cached_workspace_documents() const {

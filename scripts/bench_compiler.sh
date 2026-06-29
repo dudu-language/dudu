@@ -391,7 +391,51 @@ messages = [
             },
         }
     ),
-    packet({"jsonrpc": "2.0", "id": 7, "method": "shutdown", "params": None}),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 7,
+            "method": "textDocument/definition",
+            "params": {
+                "textDocument": {"uri": uri},
+                "position": {"line": 8, "character": 13},
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 8,
+            "method": "textDocument/definition",
+            "params": {
+                "textDocument": {"uri": uri},
+                "position": {"line": 8, "character": 13},
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 9,
+            "method": "textDocument/hover",
+            "params": {
+                "textDocument": {"uri": uri},
+                "position": {"line": 8, "character": 13},
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 10,
+            "method": "textDocument/hover",
+            "params": {
+                "textDocument": {"uri": uri},
+                "position": {"line": 8, "character": 13},
+            },
+        }
+    ),
+    packet({"jsonrpc": "2.0", "id": 11, "method": "shutdown", "params": None}),
     packet({"jsonrpc": "2.0", "method": "exit", "params": None}),
 ]
 
@@ -438,6 +482,15 @@ for request_id in (5, 6):
     references = next((item for item in packets if item.get("id") == request_id), None)
     if references is None or len(references.get("result", [])) < 2:
         raise RuntimeError(f"unexpected references response {request_id}: {references!r}")
+for request_id in (7, 8):
+    definition = next((item for item in packets if item.get("id") == request_id), None)
+    if definition is None or not definition.get("result"):
+        raise RuntimeError(f"unexpected definition response {request_id}: {definition!r}")
+for request_id in (9, 10):
+    hover = next((item for item in packets if item.get("id") == request_id), None)
+    contents = hover.get("result", {}).get("contents") if hover is not None else None
+    if not contents:
+        raise RuntimeError(f"unexpected hover response {request_id}: {hover!r}")
 PY
 }
 

@@ -444,6 +444,16 @@ These tests should not require every optional native dependency for the core
 suite. Use small local fixture headers for core LSP behavior, and keep real
 library probes under optional native tests.
 
+The validation suite should include curated mini-workspaces for each class of
+editor action, not only `raymarch-dd` and `dudu-webserver`. Required fixture
+families include module aliases, selective imports, nested module paths,
+classes, instance methods, static methods, fields, constants, enums, sum types,
+native generics, operators, locals, parameters, module-qualified symbols,
+native headers, native functions, native types, native macros, missing imports,
+rename conflict guards, formatter/code-action edits, and diagnostics. Dogfood
+repos remain useful end-to-end checks, but the core LSP suite must prove each
+navigation behavior in small deterministic projects that are cheap to run.
+
 Status: the smoke suite now drives LSP JSON-RPC for single-file diagnostics,
 formatting, Dudu symbols, references, rename, workspace symbols, native fixture
 imports, native macro hover/completion, strict missing-header diagnostics, and
@@ -515,6 +525,11 @@ references, rename, and code-action requests do not rescan the filesystem and
 import graph each time. The compiler benchmark LSP probe exercises repeated
 workspace-symbol and references requests so this warm workspace path is visible
 outside the correctness-only smoke suite.
+The language-server support layer also caches parsed/merged module views by
+open-document text and native-header mode, invalidating them on document
+changes and saves. Repeated hover, definition, references, completion, and
+diagnostic requests for the same buffer should reuse the warm module view
+instead of reparsing and remerging native headers.
 Optional LSP probes cover real `sqlite3` and `raylib` headers through
 `pkg-config`, plus `SDL3` and `GLFW` when installed, including diagnostics,
 completion, signature help, definition, and hover. They are part of
