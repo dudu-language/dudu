@@ -3,6 +3,12 @@
 Dudu needs a real language server. Syntax highlighting alone is not enough for
 a systems language that promises full C/C++ interop.
 
+Detailed editor-quality goals live in
+[Editor Intelligence Plan](editor-intelligence-plan.md). That plan defines the
+Rust-Analyzer/clangd-like target for semantic highlighting, local/native
+go-to-definition, rich hover, doc comments, native header jumps, and VS Code
+language-client integration.
+
 The language server should make `.dd` files feel native in VS Code and other
 LSP-capable editors:
 
@@ -214,6 +220,13 @@ The extension should provide:
 
 The extension should not duplicate compiler logic in TypeScript. It should
 delegate intelligence to `duc lsp`.
+
+The current extension uses a hand-written JSON-RPC client. That was enough to
+bootstrap diagnostics and several requests, but it leaves feature classes such as
+semantic tokens easy to miss. The serious path is to use VS Code's
+`vscode-languageclient` package so standard LSP capabilities, including semantic
+tokens, are wired by normal client plumbing while `duc lsp` remains the owner of
+compiler intelligence.
 
 Status: the local VS Code extension starts `duc lsp`, forwards document
 open/change/save events, debounces rapid change notifications, displays LSP

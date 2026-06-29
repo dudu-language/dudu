@@ -1,0 +1,194 @@
+# Dudu Editor Intelligence Plan
+
+Dudu should feel like a serious compiled language in VS Code and other LSP
+editors. Syntax coloring is not enough. The target experience is closer to
+Rust Analyzer or clangd: the editor should know what symbols mean, where they
+come from, and how to navigate through Dudu and imported C/C++ code.
+
+This plan is part of the ProjectIndex/LSP work. It is not cosmetic theme work.
+The language server must expose real compiler facts, and the editor extension
+must wire those facts through standard LSP features.
+
+## Current Gap
+
+The `duc lsp` server advertises semantic tokens and already implements many
+hover, definition, references, completion, and diagnostic requests. The local VS
+Code extension, however, still uses a small hand-written JSON-RPC client. That
+client wires several requests manually, but it does not register semantic-token
+support with VS Code. In practice, `.dd` coloring is still mostly the TextMate
+grammar, so it looks flat compared with Rust or C/C++ tooling.
+
+Some intelligence also remains incomplete server-side:
+
+- go-to-definition should work for local variables and parameters
+- go-to-definition should work for functions, constants, fields, methods, enum
+  values, sum-type variants, module aliases, selective imports, and imported
+  Dudu library symbols
+- go-to-definition should jump through imported C/C++ headers when scanned
+  source locations are available
+- hover should show full Dudu type/signature information, not just a symbol name
+- hover should attach Dudu `#` declaration comments and Python-style docstrings
+- hover should show native C/C++ signatures and documentation when available
+- find-references should use symbol identity, not only spelling
+- semantic highlighting should distinguish declarations, locals, parameters,
+  fields, methods, types, functions, constants, macros, native symbols, and
+  unresolved symbols
+
+## Target Behavior
+
+### Dudu Source
+
+For source in the current project or a Dudu library:
+
+- clicking a local variable jumps to the binding that introduced it
+- clicking a parameter jumps to the parameter declaration
+- clicking a function call jumps to the function definition
+- clicking a class/type name jumps to the class/type declaration
+- clicking a field access jumps to the field declaration when the receiver type
+  is known
+- clicking a method call jumps to the method definition when the receiver type is
+  known
+- clicking an enum value or sum-type variant jumps to the variant declaration
+- clicking `import module` or `from module import name` jumps to the module file
+  or imported declaration
+- hover shows kind, type/signature, module path, visibility, docs, and relevant
+  native identity if the symbol comes from native code
+
+### Native C/C++ Interop
+
+For imported native code:
+
+- `import c "SDL3/SDL.h"` and `import cpp <vector>` should produce navigable
+  native symbols when the scanner has source locations
+- clicking a C function, macro, enum constant, struct type, typedef, C++ class,
+  namespace, method, field, constructor, or overload should jump to the header
+  declaration when the declaration is real and not only synthesized
+- hover should show the scanned C/C++ spelling plus the Dudu-shaped type when
+  useful
+- native docs should be shown when Clang/header metadata can recover useful
+  comments; otherwise hover should honestly show signature-only information
+- native source locations should point at headers, not generated C++
+- synthesized symbols and macro-generated declarations should be labeled as such
+
+### Standard Library And Installed Sources
+
+Dudu should eventually be able to jump into installed Dudu source the way Rust
+can jump into installed Rust library source:
+
+- built-in library modules should live as real `.dd` source where possible
+- installed source paths should be known to the project index
+- hover and definition should work on standard library symbols exactly like
+  project symbols
+- generated/compiler-only built-ins should clearly say they are built in and
+  should not pretend to have a source file
+
+## VS Code Client Work
+
+The serious extension path is to use VS Code's standard language-client package
+instead of maintaining a broad hand-written LSP client.
+
+Required work:
+
+- keep TextMate highlighting as a baseline for startup and non-LSP editors
+- use `vscode-languageclient` for `duc lsp`
+- let the standard client wire diagnostics, hover, definition, references,
+  rename, completion, signature help, formatting, code actions, document symbols,
+  workspace symbols, and semantic tokens
+- register semantic-token support so VS Code requests
+  `textDocument/semanticTokens/full`
+- keep command palette actions for `dudu build`, `dudu run`, `dudu test`,
+  `dudu fmt`, and LSP restart
+- preserve the status item showing compiler path, target, and native-header
+  state
+
+The extension must not duplicate compiler logic in JavaScript. If a feature
+needs type or symbol knowledge, that knowledge belongs in `duc lsp`.
+
+## Server Work
+
+The server should provide the editor behavior from shared compiler state:
+
+- ProjectIndex owns parsed modules, exported declarations, import graph,
+  reverse references, native metadata, source overlays, and dirty state
+- cursor selection returns a structured query containing symbol name, dotted
+  path, expression path, and source range
+- definition, hover, references, rename, completion, signature help, and semantic
+  tokens consume that shared query and shared indexed module view
+- native metadata keeps canonical identity keys plus source file/range when
+  Clang provides them
+- doc comments/docstrings attach to AST declarations rather than being recovered
+  by line scanning in hover
+- warm editor requests reuse cached ProjectIndex views instead of reparsing and
+  remerging native headers
+- unresolved symbols return useful diagnostics or empty results quickly; they
+  must not leave the editor spinning
+
+## Semantic Highlighting
+
+Semantic tokens should be type-aware and stable enough that a normal theme can
+color Dudu like a real language.
+
+Minimum token classes:
+
+- namespace/module
+- type/class/enum/sum type
+- function/method
+- local variable
+- parameter
+- field/property
+- constant/static field
+- enum member/variant
+- macro
+- keyword/operator/string/number where semantic tokens add value
+
+Minimum modifiers:
+
+- declaration/definition
+- readonly
+- static
+- native
+- unresolved
+
+Semantic token tests should assert decoded tokens by name, kind, and modifier in
+small fixtures rather than only checking that some token data exists.
+
+## Validation
+
+Validation must include deterministic LSP JSON-RPC tests and dogfood repos.
+
+Required fixture families:
+
+- same-file locals and parameters
+- imported Dudu functions/classes/constants
+- module aliases and selective imports
+- fields and methods on Dudu classes
+- generic classes/functions
+- enum members and sum-type variants
+- overloaded operators
+- native C functions/types/macros
+- native C++ classes/methods/templates/namespaces
+- missing/unresolved symbol behavior
+- doc comments and docstrings
+- semantic-token classifications
+
+Dogfood checks:
+
+- `/home/vega/Coding/Graphics/raymarch-dd`
+- `/home/vega/Coding/Web/dudu-webserver`
+
+Measure:
+
+- cold workspace index latency
+- warm hover latency
+- warm go-to-definition latency
+- warm find-references latency
+- warm completion latency
+- warm semantic-token latency
+
+## Priority
+
+This is on-topic for the active ProjectIndex goal. It should come after the
+current module/incremental backend is stable enough that editor requests can rely
+on the same indexed project model. It should not wait until all syntax features
+are complete, because poor editor intelligence makes dogfooding painful and hides
+compiler-model bugs.

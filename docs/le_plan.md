@@ -2201,12 +2201,22 @@ push. They are not release packaging work.
 13. Language Server And Formatter
 
    Implement `duc lsp` so editors can show diagnostics, warnings, hover,
-   completion, go to definition, find references, rename, formatting, and native
-   header navigation. The concrete plan is
-   [Language Server Plan](language-server-plan.md).
+   completion, go to definition, find references, rename, formatting, semantic
+   highlighting, and native header navigation. The concrete plans are
+   [Language Server Plan](language-server-plan.md) and
+   [Editor Intelligence Plan](editor-intelligence-plan.md).
 
    Build LSP and formatter behavior from the same AST/sema model used by the
    compiler.
+
+   The editor target is Rust-Analyzer/clangd-like behavior: semantic tokens
+   should be type-aware, go-to-definition should work for locals, parameters,
+   functions, constants, fields, methods, enum members, Dudu modules, Dudu
+   libraries, and scanned C/C++ declarations, and hover should show full
+   type/signature/documentation information when the compiler or native scanner
+   has it. The VS Code extension should move away from broad hand-written
+   JSON-RPC plumbing and use standard language-client integration so capabilities
+   such as semantic tokens are not missed by the client layer.
 
    Status: unaliased nested Dudu module imports such as
    `import vendor.helper` now resolve through their full dotted path for hover,
