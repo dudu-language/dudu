@@ -443,6 +443,9 @@ into LSP symbols. Completion, hover, signature help, and definition can resolve
 aliased imported functions such as `dudu_native.dudu_native_add`, and definition
 uses the real header location when Clang provides it. Direct native imports
 without aliases are covered for completion, signature help, and definition.
+Native function hover/detail includes the lowered Dudu signature plus a compact
+scanner-derived native signature suffix such as `native i32(i32, i32)` when the
+scanner has non-synthesized return/parameter spelling.
 Macro metadata,
 including object-like/function-like macro hover and completion, is also exposed
 for scanned native headers. Initial native C++ member completion is implemented

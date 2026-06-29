@@ -6,6 +6,7 @@
 #include "dudu/native/native_header_identity.hpp"
 #include "dudu/native/native_headers.hpp"
 
+#include <algorithm>
 #include <optional>
 #include <sstream>
 
@@ -65,6 +66,45 @@ std::string native_function_detail(const NativeFunctionDecl& fn) {
     }
     out << ") -> " << type_ref_text(native_function_return_type_ref(fn));
     return out.str();
+}
+
+std::optional<std::string> native_function_signature_doc(const NativeFunctionDecl& fn) {
+    const bool has_concrete_return =
+        !fn.return_native_spelling.empty() && fn.return_native_spelling != "auto";
+    const bool has_concrete_param =
+        std::ranges::any_of(fn.param_native_spellings, [](const std::string& param) {
+            return !param.empty() && param != "auto";
+        });
+    const bool has_native_signature = has_concrete_return || has_concrete_param;
+    if (!has_native_signature) {
+        return std::nullopt;
+    }
+    std::ostringstream out;
+    out << "Native signature: `native " << fn.return_native_spelling << "(";
+    for (size_t i = 0; i < fn.param_native_spellings.size(); ++i) {
+        if (i > 0) {
+            out << ", ";
+        }
+        out << fn.param_native_spellings[i];
+    }
+    if (fn.variadic) {
+        if (!fn.param_native_spellings.empty()) {
+            out << ", ";
+        }
+        out << "...";
+    }
+    out << ")`";
+    return out.str();
+}
+
+std::string combine_doc_comment(std::string existing, const std::optional<std::string>& extra) {
+    if (!extra.has_value()) {
+        return existing;
+    }
+    if (existing.empty()) {
+        return *extra;
+    }
+    return existing + "\n\n" + *extra;
 }
 
 std::string native_type_detail(const NativeClassDefinitionIndex& class_index,
@@ -220,7 +260,8 @@ std::vector<Symbol> symbols_for_module(const ModuleAst& module, bool include_nat
                        .location = fn.location,
                        .kind = lsp_symbol_kind::Function,
                        .native_identity_key = native_identity_key(fn.identity),
-                       .doc_comment = fn.doc_comment});
+                       .doc_comment =
+                           combine_doc_comment(fn.doc_comment, native_function_signature_doc(fn))});
     }
     for (const ClassDecl& klass : module.native_classes) {
         out.push_back({.name = klass.name,

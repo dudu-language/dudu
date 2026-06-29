@@ -348,6 +348,7 @@ assert "resolves to native class dudu_native.Widget" in native_widget_symbol["de
 
 native_hover = next(item for item in responses if item.get("id") == 9)
 assert "dudu_native.dudu_native_add(i32, i32) -> i32" in native_hover["result"]["contents"]["value"]
+assert "native i32(i32, i32)" in native_hover["result"]["contents"]["value"]
 
 native_definition = next(item for item in responses if item.get("id") == 10)
 assert native_definition["result"]["uri"].endswith("/tests/fixtures/native_headers/simple_c.h")

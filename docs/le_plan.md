@@ -2365,6 +2365,9 @@ push. They are not release packaging work.
    selective imported classes, imported functions, and imported constants, and
    the JSON-RPC LSP matrix decodes the token stream to assert those imported
    symbol identities.
+   Native function hover/detail includes both the lowered Dudu signature and a
+   compact scanner-derived native signature suffix when concrete
+   return/parameter spelling is available.
    Misplaced module/class/enum/function docstrings now produce explicit parser
    diagnostics instead of generic syntax failures or inert string statements.
    Field/constant/alias larger-doc syntax and native C/C++ docs remain planned.
