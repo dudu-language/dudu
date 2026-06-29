@@ -199,6 +199,35 @@ emit_timing_cached_output="$("$repo_root/build/duc" emit-modules \
     "$repo_root/tests/fixtures/project_import_metadata/main.dd" \
     -o "$emit_timing_dir" --timings 2>&1)"
 printf '%s\n' "$emit_timing_cached_output" | grep -Fq 'dirty 0 modules'
+emit_incremental_project="$repo_root/build/emit_modules_incremental_smoke/project"
+emit_incremental_dir="$repo_root/build/emit_modules_incremental_smoke/generated"
+rm -rf "$repo_root/build/emit_modules_incremental_smoke"
+mkdir -p "$emit_incremental_project"
+cp -R "$repo_root/tests/fixtures/project_import_metadata/." "$emit_incremental_project/"
+"$repo_root/build/duc" emit-modules "$emit_incremental_project/main.dd" \
+    -o "$emit_incremental_dir" >/dev/null
+sleep 1
+windowing_before="$(stat -c %y "$emit_incremental_dir/windowing.cpp")"
+camera_before="$(stat -c %y "$emit_incremental_dir/camera.cpp")"
+renderer_before="$(stat -c %y "$emit_incremental_dir/renderer.cpp")"
+vec3_before="$(stat -c %y "$emit_incremental_dir/vec3.cpp")"
+perl -pi -e 's/height=22/height=23/' "$emit_incremental_project/windowing.dd"
+emit_incremental_output="$("$repo_root/build/duc" emit-modules \
+    "$emit_incremental_project/main.dd" -o "$emit_incremental_dir" --timings 2>&1)"
+printf '%s\n' "$emit_incremental_output" | grep -Fq 'dirty 2 modules'
+windowing_after="$(stat -c %y "$emit_incremental_dir/windowing.cpp")"
+camera_after="$(stat -c %y "$emit_incremental_dir/camera.cpp")"
+renderer_after="$(stat -c %y "$emit_incremental_dir/renderer.cpp")"
+vec3_after="$(stat -c %y "$emit_incremental_dir/vec3.cpp")"
+if [[ "$windowing_before" == "$windowing_after" ]]; then
+    echo "changed module artifact was not rewritten" >&2
+    exit 1
+fi
+if [[ "$camera_before" != "$camera_after" || "$renderer_before" != "$renderer_after" || \
+      "$vec3_before" != "$vec3_after" ]]; then
+    echo "unaffected module artifacts were rewritten" >&2
+    exit 1
+fi
 rejected_direct_backend="$repo_root/build/rejected_direct_backend_smoke"
 rm -rf "$rejected_direct_backend"
 mkdir -p "$rejected_direct_backend"
