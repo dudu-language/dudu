@@ -1904,6 +1904,16 @@ push. They are not release packaging work.
    broader static-atom rewrite of `lower_template_type` was tried separately
    and not kept because it regressed indexing, operators, and mixed despite
    helping generics and matches.
+   A thread-local last-id cache inside `source_text_from_id` was then kept.
+   It preserves the mutex-backed interner lookup for misses while avoiding the
+   lock/table path when hot code resolves the same atom repeatedly. A
+   five-sample focused Release run measured indexing 50k at about 128ms,
+   arrays about 68ms, generics about 78ms, operators about 94ms, and mixed
+   about 86ms. A three-sample broad run stayed acceptable, with expressions
+   about 202ms, functions about 52ms, modules about 66ms, indexing about
+   132ms, operators about 93ms, and mixed about 93ms. This is still not a
+   complete indexing fix, but it reduces the hot interner read cost without
+   changing AST size or source semantics.
    Replacing statement-level optional `shared_ptr` fields with `unique_ptr`
    plus deep-copy semantics was tried and rejected. It reduced some retained
    memory in expression/call/control shapes, but a five-sample focused Release

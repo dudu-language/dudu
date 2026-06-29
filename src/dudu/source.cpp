@@ -100,12 +100,19 @@ const std::string& source_text_from_id(uint32_t id) {
     if (id == 0) {
         return empty_file_name();
     }
+    static thread_local uint32_t cached_id = 0;
+    static thread_local const std::string* cached_text = nullptr;
+    if (id == cached_id && cached_text != nullptr) {
+        return *cached_text;
+    }
     SourceTextInterner& interner = source_text_interner();
     std::lock_guard lock(interner.mutex);
     if (id >= interner.texts.size()) {
         return empty_file_name();
     }
-    return interner.texts[id];
+    cached_id = id;
+    cached_text = &interner.texts[id];
+    return *cached_text;
 }
 
 } // namespace
