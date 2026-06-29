@@ -266,10 +266,20 @@ std::string hover_json(const Document& doc, const std::string& word, const Json*
     if (const std::optional<Symbol> suffix = unambiguous_suffix_symbol_match(symbols, query)) {
         return symbol_hover_json(doc, *suffix);
     }
-    const std::string local_type =
+    std::string local_type =
         !query.empty() && params != nullptr
             ? substitute_type_ref_text(local_type_ref_before_cursor(current, query, params), {})
             : std::string{};
+    if (local_type.empty() && !query.empty() && params != nullptr) {
+        try {
+            const ProjectIndex* native = load_native_index();
+            local_type = substitute_type_ref_text(
+                local_type_ref_before_cursor(native->visible_unit_for_path(doc.path), query,
+                                             params),
+                {});
+        } catch (const std::exception&) {
+        }
+    }
     if (!local_type.empty()) {
         return "{\"contents\":{\"kind\":\"markdown\",\"value\":\"`" + json_escape(query) + ": " +
                json_escape(local_type) + "`\"}}";

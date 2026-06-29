@@ -537,6 +537,9 @@ header.
 Go-to-definition for parameters, inferred assignment locals, loop bindings,
 and destructured bindings is covered in both direct frontend tests and
 JSON-RPC smoke fixtures.
+Hover now retries local type inference against the native-enriched visible
+module when plain Dudu symbols cannot infer a local, so locals assigned from
+native C/C++ calls can still show useful inferred types.
 Local completion scope filtering is covered so deeper-block locals do not leak
 into outer-block completions.
 The server caches the expanded workspace document set across requests and

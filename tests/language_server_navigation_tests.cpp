@@ -179,6 +179,29 @@ void test_lsp_hover_uses_receiver_for_ambiguous_native_methods() {
     assert(hover.find("shared() -> i32") == std::string::npos);
 }
 
+void test_lsp_hover_infers_local_from_native_call() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_native_call_local_hover_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "native_factory.h", "typedef struct NativeThing {\n"
+                                         "    int value;\n"
+                                         "} NativeThing;\n"
+                                         "NativeThing* make_thing(void);\n");
+
+    const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
+                             .path = dir / "main.dd",
+                             .text = "import c \"./native_factory.h\" as native\n"
+                                     "\n"
+                                     "def main() -> i32:\n"
+                                     "    thing = native.make_thing()\n"
+                                     "    thing\n"
+                                     "    return 0\n"};
+    dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":4,\"character\":6}}").parse();
+    const std::string hover = dudu::hover_json(doc, "", &params);
+    assert(hover.find("thing: *NativeThing") != std::string::npos);
+}
+
 void test_lsp_references_keep_unbound_member_query_dotted() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_lsp_member_reference_query_test";
@@ -532,6 +555,7 @@ int main() {
         test_lsp_definition_jumps_to_destructured_binding();
         test_lsp_definition_uses_receiver_for_ambiguous_native_methods();
         test_lsp_hover_uses_receiver_for_ambiguous_native_methods();
+        test_lsp_hover_infers_local_from_native_call();
         test_lsp_references_keep_unbound_member_query_dotted();
         test_lsp_hover_uses_loaded_module_units();
         test_lsp_unreachable_lint_uses_branch_structure();

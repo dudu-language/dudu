@@ -40,7 +40,10 @@ JSON-RPC smoke fixtures. Dogfood latency probing exists in
 `scripts/probe_lsp_dogfood_latency.py`; after sharing the native class-alias
 index across hover/symbol/semantic-token paths, warm editor requests in
 `raymarch-dd` and `dudu-webserver` are in the single-digit/tens-of-ms range on
-the current machine, while cold indexing remains the larger cost.
+the current machine, while cold indexing remains the larger cost. The dogfood
+probe also covers same-file local references, and hover can now infer locals
+assigned from native C/C++ function calls through the native-enriched module
+view.
 
 ## Target Behavior
 

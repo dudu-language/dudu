@@ -210,7 +210,7 @@ def main():
             {
                 "definition": "setup_monitor_rect()",
                 "hover": "render_w =",
-                "references": "setup_monitor_rect()",
+                "references": "render_w =",
                 "completion": "SDL_",
             },
         ),
