@@ -1994,6 +1994,12 @@ push. They are not release packaging work.
    generated shape measured native 50k around 236ms and 68MB RSS, down from the
    initial native-shape baseline around 246ms and 70MB RSS, while expressions
    stayed around 195ms, indexing around 123ms, and mixed around 86ms.
+   Avoiding the per-call native overload-vector copy was then tried and
+   rejected. It looked like a clear hot-path cleanup, but a focused
+   five-sample Release run left native 50k unchanged around 236ms, with
+   indexing slightly noisier and no broad proof from the opt-in stdlib shape.
+   Keep the simpler copied-candidate path until profiling shows signature-copy
+   cost is genuinely dominant.
    Changing `named_type_ref` from an owning `std::string` parameter to
    `std::string_view` was tried and rejected even though it looked like an
    obvious way to avoid temporary strings before atom interning. Focused
