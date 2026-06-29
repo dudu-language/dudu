@@ -53,8 +53,12 @@ on syntax shape or native metadata. A decoded semantic-token fixture asserts
 token text, kind, and modifiers against the original source for the core Dudu
 token classes.
 Leading `#` declaration comments now attach to parsed Dudu declarations and
-flow through hover for same-file and imported Dudu symbols. Hover no longer
-recovers those comments by scanning source lines at request time.
+flow through hover for same-file and imported Dudu symbols. Completion items
+for Dudu symbols also carry those AST docs through current-document, imported,
+module, and member completion paths. Hover no longer recovers declaration
+comments by scanning source lines at request time, and completion resolve
+preserves documentation attached to the item instead of fabricating docs from
+display text.
 
 ## Target Behavior
 

@@ -2329,8 +2329,13 @@ push. They are not release packaging work.
    and show them in hover, completion resolve, signature help, and document
    symbols. Native C/C++ hover should also surface header comments when
    Clang/header metadata can recover them, while falling back honestly to
-   signature-only hover when documentation is unavailable. The concrete plan and
-   remaining implementation checklist live in
+   signature-only hover when documentation is unavailable. Status: leading `#`
+   declaration comments now live on AST declarations, hover uses them for
+   same-file and imported Dudu symbols, and completion items preserve them
+   across current-document, imported, module, and member completion paths.
+   Triple-quoted docstrings, signature-help docs, document-symbol docs, and
+   native C/C++ docs remain planned. The concrete plan and remaining
+   implementation checklist live in
    [Language Server Plan](language-server-plan.md#doc-comments-and-docstrings).
 
 14. Project Driver Polish

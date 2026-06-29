@@ -278,6 +278,7 @@ struct NativeTypeDecl {
     TypeRef type_ref;
     NativeSymbolId identity{};
     SourceLocation location;
+    std::string doc_comment{};
 };
 
 struct NativeValueDecl {
@@ -287,6 +288,7 @@ struct NativeValueDecl {
     bool enum_constant = false;
     NativeSymbolId identity{};
     SourceLocation location;
+    std::string doc_comment{};
 };
 
 struct NativeFunctionDecl {
@@ -300,6 +302,7 @@ struct NativeFunctionDecl {
     bool variadic = false;
     NativeSymbolId identity{};
     SourceLocation location;
+    std::string doc_comment{};
 };
 
 struct NativeMacroDecl {

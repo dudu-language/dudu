@@ -195,14 +195,16 @@ std::vector<Symbol> symbols_for_module(const ModuleAst& module, bool include_nat
                        .detail = native_type_detail(native_class_index, type),
                        .location = type.location,
                        .kind = lsp_symbol_kind::Struct,
-                       .native_identity_key = native_identity_key(type.identity)});
+                       .native_identity_key = native_identity_key(type.identity),
+                       .doc_comment = type.doc_comment});
     }
     for (const NativeValueDecl& value : module.native_values) {
         out.push_back({.name = value.name,
                        .detail = value.name + ": " + native_value_type_text(value),
                        .location = value.location,
                        .kind = lsp_symbol_kind::Constant,
-                       .native_identity_key = native_identity_key(value.identity)});
+                       .native_identity_key = native_identity_key(value.identity),
+                       .doc_comment = value.doc_comment});
     }
     for (const NativeMacroDecl& macro : module.native_macros) {
         out.push_back(
@@ -217,7 +219,8 @@ std::vector<Symbol> symbols_for_module(const ModuleAst& module, bool include_nat
                        .detail = native_function_detail(fn),
                        .location = fn.location,
                        .kind = lsp_symbol_kind::Function,
-                       .native_identity_key = native_identity_key(fn.identity)});
+                       .native_identity_key = native_identity_key(fn.identity),
+                       .doc_comment = fn.doc_comment});
     }
     for (const ClassDecl& klass : module.native_classes) {
         out.push_back({.name = klass.name,

@@ -6,9 +6,9 @@
 #include "dudu/lsp/language_server_navigation.hpp"
 #include "dudu/lsp/language_server_support.hpp"
 #include "dudu/lsp/language_server_symbols.hpp"
+#include "dudu/native/native_headers.hpp"
 #include "dudu/parser/lexer.hpp"
 #include "dudu/project/module_names.hpp"
-#include "dudu/native/native_headers.hpp"
 
 #include <algorithm>
 #include <filesystem>
@@ -59,6 +59,24 @@ std::string completion_documentation(const std::string& label, const std::string
     return label;
 }
 
+void write_documentation(std::ostringstream& out, std::string_view documentation) {
+    if (documentation.empty()) {
+        return;
+    }
+    out << ",\"documentation\":{\"kind\":\"markdown\",\"value\":\"" << json_escape(documentation)
+        << "\"}";
+}
+
+void write_completion_item(std::ostringstream& out, std::string_view label, int kind,
+                           std::string_view detail, std::string_view documentation = {}) {
+    out << "{\"label\":\"" << json_escape(label) << "\",\"kind\":" << kind;
+    if (!detail.empty()) {
+        out << ",\"detail\":\"" << json_escape(detail) << "\"";
+    }
+    write_documentation(out, documentation);
+    out << "}";
+}
+
 std::string completion_items_json(const std::vector<Symbol>& symbols) {
     std::ostringstream out;
     out << "[";
@@ -70,7 +88,9 @@ std::string completion_items_json(const std::vector<Symbol>& symbols) {
         first = false;
         out << "{\"label\":\"" << json_escape(symbol.name)
             << "\",\"kind\":" << completion_kind(symbol.kind) << ",\"detail\":\""
-            << json_escape(symbol.detail) << "\"}";
+            << json_escape(symbol.detail) << "\"";
+        write_documentation(out, symbol.doc_comment);
+        out << "}";
     }
     out << "]";
     return out.str();
@@ -133,13 +153,13 @@ std::string member_completion_json(const ProjectIndex& index, const ModuleAst& c
     std::ostringstream out;
     out << "[";
     bool first = true;
-    const auto add = [&](std::string_view label, int kind, std::string_view detail) {
+    const auto add = [&](std::string_view label, int kind, std::string_view detail,
+                         std::string_view documentation = {}) {
         if (!first) {
             out << ",";
         }
         first = false;
-        out << "{\"label\":\"" << json_escape(label) << "\",\"kind\":" << kind << ",\"detail\":\""
-            << json_escape(detail) << "\"}";
+        write_completion_item(out, label, kind, detail, documentation);
     };
     const std::set<std::string> candidate_types = member_candidate_types(module, type_ref);
     for (const ClassDecl& klass : module.classes) {
@@ -147,17 +167,20 @@ std::string member_completion_json(const ProjectIndex& index, const ModuleAst& c
             continue;
         }
         for (const FieldDecl& field : klass.fields) {
-            add(field.name, 5, field.name + ": " + type_ref_text(field.type_ref));
+            add(field.name, 5, field.name + ": " + type_ref_text(field.type_ref),
+                field.doc_comment);
         }
         for (const ConstDecl& constant : klass.constants) {
-            add(constant.name, 21, constant.name + ": " + type_ref_text(constant.type_ref));
+            add(constant.name, 21, constant.name + ": " + type_ref_text(constant.type_ref),
+                constant.doc_comment);
         }
         for (const ConstDecl& field : klass.static_fields) {
-            add(field.name, 5, field.name + ": " + type_ref_text(field.type_ref));
+            add(field.name, 5, field.name + ": " + type_ref_text(field.type_ref),
+                field.doc_comment);
         }
         for (const FunctionDecl& method : klass.methods) {
             add(method.name, is_constructor_method_name(method.name) ? 4 : 2,
-                function_detail(method));
+                function_detail(method), method.doc_comment);
         }
         break;
     }
@@ -272,13 +295,13 @@ std::string completion_json(const Document* doc, const Json* params) {
     std::ostringstream out;
     out << "[";
     bool first = true;
-    const auto add = [&](std::string_view label, int kind, std::string_view detail) {
+    const auto add = [&](std::string_view label, int kind, std::string_view detail,
+                         std::string_view documentation = {}) {
         if (!first) {
             out << ",";
         }
         first = false;
-        out << "{\"label\":\"" << json_escape(label) << "\",\"kind\":" << kind << ",\"detail\":\""
-            << json_escape(detail) << "\"}";
+        write_completion_item(out, label, kind, detail, documentation);
     };
     const auto add_snippet = [&](std::string_view label, std::string_view detail,
                                  std::string_view insert_text) {
@@ -315,7 +338,7 @@ std::string completion_json(const Document* doc, const Json* params) {
             add(name, 6, name + ": " + substitute_type_ref_text(type_ref, {}));
         }
         for (const Symbol& symbol : symbols_for_module(*current, true)) {
-            add(symbol.name, completion_kind(symbol.kind), symbol.detail);
+            add(symbol.name, completion_kind(symbol.kind), symbol.detail, symbol.doc_comment);
         }
     }
     out << "]";
@@ -342,8 +365,21 @@ std::string completion_resolve_json(const Json* params) {
         insert_format != 0) {
         out << ",\"insertTextFormat\":" << insert_format;
     }
-    out << ",\"documentation\":{\"kind\":\"markdown\",\"value\":\""
-        << json_escape(completion_documentation(label, detail)) << "\"}}";
+    if (const Json* documentation = params == nullptr ? nullptr : params->get("documentation");
+        documentation != nullptr && documentation->object() != nullptr) {
+        if (const Json* value = documentation->get("value");
+            value != nullptr && value->string() != nullptr && !value->string()->empty()) {
+            out << ",\"documentation\":{\"kind\":\"markdown\",\"value\":\""
+                << json_escape(*value->string()) << "\"}";
+        } else {
+            out << ",\"documentation\":{\"kind\":\"markdown\",\"value\":\""
+                << json_escape(completion_documentation(label, detail)) << "\"}";
+        }
+    } else {
+        out << ",\"documentation\":{\"kind\":\"markdown\",\"value\":\""
+            << json_escape(completion_documentation(label, detail)) << "\"}";
+    }
+    out << "}";
     return out.str();
 }
 

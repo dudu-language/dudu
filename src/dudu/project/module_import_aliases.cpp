@@ -23,13 +23,15 @@ NativeSymbolId module_symbol_identity(std::string canonical_path) {
 }
 
 void add_module_type_alias(ModuleAst& module, const std::string& prefix, const std::string& name,
-                           const TypeRef& type, const SourceLocation& location) {
+                           const TypeRef& type, const SourceLocation& location,
+                           std::string doc_comment = {}) {
     const std::string exposed_name = prefix + "." + name;
     module.native_types.push_back({.name = prefix + "." + name,
                                    .native_spelling = "",
                                    .type_ref = type,
                                    .identity = module_symbol_identity(exposed_name),
-                                   .location = location});
+                                   .location = location,
+                                   .doc_comment = std::move(doc_comment)});
 }
 
 std::map<std::string, TypeRef> qualified_type_substitutions(const ModuleAst& dependency,
@@ -91,6 +93,7 @@ void add_function_alias(ModuleAst& module, const FunctionDecl& fn, const std::st
                                 ? substitute_type_ref(fn.return_type_ref, type_substitutions)
                                 : void_type_ref(location);
     alias.location = location;
+    alias.doc_comment = fn.doc_comment;
     for (const ParamDecl& param : fn.params) {
         TypeRef param_type = substitute_type_ref(param.type_ref, type_substitutions);
         alias.param_type_refs.push_back(std::move(param_type));
@@ -113,8 +116,8 @@ ClassDecl imported_class_shape(ClassDecl klass, const std::string& name,
                                const std::map<std::string, TypeRef>& type_substitutions,
                                const SourceLocation& location) {
     if (klass.identity.canonical_path.empty() && klass.identity.usr.empty()) {
-        klass.identity = module_symbol_identity(klass.origin_module.empty() ? name
-                                                                            : klass.origin_module);
+        klass.identity =
+            module_symbol_identity(klass.origin_module.empty() ? name : klass.origin_module);
     }
     klass.name = name;
     klass.location = location;
@@ -148,17 +151,17 @@ void add_qualified_module_symbols(ModuleAst& module, const ModuleAst& dependency
     for (const TypeAliasDecl& alias : dependency.aliases) {
         add_module_type_alias(module, prefix, alias.name,
                               substitute_type_ref(alias.type_ref, type_substitutions),
-                              import.location);
+                              import.location, alias.doc_comment);
     }
     for (const EnumDecl& en : dependency.enums) {
         add_module_type_alias(module, prefix, en.name,
                               module_qualified_type_ref(prefix, en.name, import.location),
-                              import.location);
+                              import.location, en.doc_comment);
     }
     for (const ClassDecl& klass : dependency.classes) {
         add_module_type_alias(module, prefix, klass.name,
                               module_qualified_type_ref(prefix, klass.name, import.location),
-                              import.location);
+                              import.location, klass.doc_comment);
         module.native_classes.push_back(imported_class_shape(klass, prefix + "." + klass.name,
                                                              type_substitutions, import.location));
     }
@@ -171,7 +174,8 @@ void add_qualified_module_symbols(ModuleAst& module, const ModuleAst& dependency
              .identity = module_symbol_identity(constant.origin_module.empty()
                                                     ? prefix + "." + constant.name
                                                     : constant.origin_module + "." + constant.name),
-             .location = import.location});
+             .location = import.location,
+             .doc_comment = constant.doc_comment});
     }
     for (const FunctionDecl& fn : dependency.functions) {
         add_function_alias(module, fn, prefix + "." + fn.name, type_substitutions, import.location);
@@ -189,7 +193,7 @@ void add_selective_module_symbol(ModuleAst& module, const ModuleAst& dependency,
             add_module_type_alias(
                 module, import.module_path, en.name,
                 module_qualified_type_ref(import.module_path, en.name, import.location),
-                import.location);
+                import.location, en.doc_comment);
         }
     }
     for (const ClassDecl& klass : dependency.classes) {
@@ -197,7 +201,7 @@ void add_selective_module_symbol(ModuleAst& module, const ModuleAst& dependency,
             add_module_type_alias(
                 module, import.module_path, klass.name,
                 module_qualified_type_ref(import.module_path, klass.name, import.location),
-                import.location);
+                import.location, klass.doc_comment);
             module.native_classes.push_back(imported_class_shape(
                 klass, import.module_path + "." + klass.name, type_substitutions, import.location));
         }
@@ -212,7 +216,8 @@ void add_selective_module_symbol(ModuleAst& module, const ModuleAst& dependency,
                  .identity = module_symbol_identity(alias.origin_module.empty()
                                                         ? exposed_name
                                                         : alias.origin_module + "." + alias.name),
-                 .location = import.location});
+                 .location = import.location,
+                 .doc_comment = alias.doc_comment});
             return;
         }
     }
@@ -226,11 +231,12 @@ void add_selective_module_symbol(ModuleAst& module, const ModuleAst& dependency,
                  .identity = module_symbol_identity(en.origin_module.empty()
                                                         ? import.module_path + "." + en.name
                                                         : en.origin_module + "." + en.name),
-                 .location = import.location});
+                 .location = import.location,
+                 .doc_comment = en.doc_comment});
             add_module_type_alias(
                 module, import.module_path, en.name,
                 module_qualified_type_ref(import.module_path, en.name, import.location),
-                import.location);
+                import.location, en.doc_comment);
             return;
         }
     }
@@ -244,11 +250,12 @@ void add_selective_module_symbol(ModuleAst& module, const ModuleAst& dependency,
                  .identity = module_symbol_identity(klass.origin_module.empty()
                                                         ? import.module_path + "." + klass.name
                                                         : klass.origin_module + "." + klass.name),
-                 .location = import.location});
+                 .location = import.location,
+                 .doc_comment = klass.doc_comment});
             add_module_type_alias(
                 module, import.module_path, klass.name,
                 module_qualified_type_ref(import.module_path, klass.name, import.location),
-                import.location);
+                import.location, klass.doc_comment);
             module.native_classes.push_back(
                 imported_class_shape(klass, exposed_name, type_substitutions, import.location));
             module.native_classes.push_back(imported_class_shape(
@@ -266,7 +273,8 @@ void add_selective_module_symbol(ModuleAst& module, const ModuleAst& dependency,
                  .identity = module_symbol_identity(
                      constant.origin_module.empty() ? exposed_name
                                                     : constant.origin_module + "." + constant.name),
-                 .location = import.location});
+                 .location = import.location,
+                 .doc_comment = constant.doc_comment});
             return;
         }
     }

@@ -7,9 +7,9 @@
 #include "dudu/lsp/language_server_reference_collect.hpp"
 #include "dudu/lsp/language_server_references.hpp"
 #include "dudu/lsp/language_server_support.hpp"
-#include "dudu/project/module_loader.hpp"
 #include "dudu/native/native_headers.hpp"
 #include "dudu/parser/parser.hpp"
+#include "dudu/project/module_loader.hpp"
 #include "dudu/sema/sema.hpp"
 
 #include <cassert>
@@ -151,6 +151,71 @@ void test_lsp_completion_uses_visible_imported_functions() {
     assert(completions.find("helper(i32) -> i32") != std::string::npos);
 }
 
+void test_lsp_completion_includes_imported_ast_docs() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_imported_completion_doc_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "helper.dd", "# Adds one for completion docs.\n"
+                                  "def helper(value: i32) -> i32:\n"
+                                  "    return value + 1\n");
+    write_file(dir / "main.dd", "def main() -> i32:\n"
+                                "    return 0\n");
+
+    const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
+                             .path = dir / "main.dd",
+                             .text = "from helper import helper\n"
+                                     "\n"
+                                     "def main() -> i32:\n"
+                                     "    return hel\n"};
+    dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":3,\"character\":14}}").parse();
+    const std::string completions = dudu::completion_json(&doc, &params);
+    assert(completions.find("\"label\":\"helper\"") != std::string::npos);
+    assert(completions.find("Adds one for completion docs.") != std::string::npos);
+}
+
+void test_lsp_member_completion_includes_ast_docs() {
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "dudu_lsp_member_completion_doc_test";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    write_file(dir / "vec3.dd", "class Vec3:\n"
+                                "    # Horizontal component.\n"
+                                "    x: f32\n"
+                                "\n"
+                                "    # Normalize this vector.\n"
+                                "    def normalized(self) -> Vec3:\n"
+                                "        return self\n");
+    write_file(dir / "main.dd", "def main() -> i32:\n"
+                                "    return 0\n");
+
+    const dudu::Document doc{.uri = dudu::file_uri(dir / "main.dd"),
+                             .path = dir / "main.dd",
+                             .text = "from vec3 import Vec3\n"
+                                     "\n"
+                                     "def main() -> i32:\n"
+                                     "    v: Vec3 = Vec3(x=1.0)\n"
+                                     "    v.\n"
+                                     "    return 0\n"};
+    dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":4,\"character\":6}}").parse();
+    const std::string completions = dudu::completion_json(&doc, &params);
+    assert(completions.find("\"label\":\"x\"") != std::string::npos);
+    assert(completions.find("Horizontal component.") != std::string::npos);
+    assert(completions.find("\"label\":\"normalized\"") != std::string::npos);
+    assert(completions.find("Normalize this vector.") != std::string::npos);
+}
+
+void test_lsp_completion_resolve_preserves_ast_docs() {
+    const dudu::Json params =
+        dudu::JsonParser("{\"label\":\"helper\",\"kind\":3,\"detail\":\"def helper()\","
+                         "\"documentation\":{\"kind\":\"markdown\","
+                         "\"value\":\"Existing AST docs.\"}}")
+            .parse();
+    const std::string resolved = dudu::completion_resolve_json(&params);
+    assert(resolved.find("Existing AST docs.") != std::string::npos);
+    assert(resolved.find("def helper()") != std::string::npos);
+}
+
 void test_lsp_signature_help_uses_visible_imported_functions() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_lsp_imported_function_signature_test";
@@ -245,10 +310,8 @@ void test_lsp_project_index_cache_invalidates_imported_file_changes() {
                            "def inc(value: i32) -> i32:\n"
                            "    return value + 2\n");
     std::error_code error;
-    std::filesystem::last_write_time(dependency,
-                                     std::filesystem::file_time_type::clock::now() +
-                                         std::chrono::seconds(5),
-                                     error);
+    std::filesystem::last_write_time(
+        dependency, std::filesystem::file_time_type::clock::now() + std::chrono::seconds(5), error);
     assert(!error);
 
     const std::string second_definition = dudu::definition_json(doc, &params);
@@ -280,8 +343,8 @@ void test_lsp_project_index_uses_open_imported_document_sources() {
                                                 "def inc(value: i32) -> i32:\n"
                                                 "    return value + 2\n"};
     dudu::clear_language_server_module_cache();
-    dudu::set_language_server_open_documents({{main_doc.uri, main_doc},
-                                              {dependency_doc.uri, dependency_doc}});
+    dudu::set_language_server_open_documents(
+        {{main_doc.uri, main_doc}, {dependency_doc.uri, dependency_doc}});
 
     dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":3,\"character\":18}}").parse();
     const std::string definition = dudu::definition_json(main_doc, &params);
@@ -310,8 +373,8 @@ void test_lsp_hover_uses_open_imported_document_sources() {
                                         .text = "def inc(value: i32) -> i32:\n"
                                                 "    return value + 2\n"};
     dudu::clear_language_server_module_cache();
-    dudu::set_language_server_open_documents({{main_doc.uri, main_doc},
-                                              {dependency_doc.uri, dependency_doc}});
+    dudu::set_language_server_open_documents(
+        {{main_doc.uri, main_doc}, {dependency_doc.uri, dependency_doc}});
 
     dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":3,\"character\":18}}").parse();
     const std::string hover = dudu::hover_json(main_doc, "maths.inc", &params);
@@ -399,6 +462,9 @@ int main() {
         test_lsp_lints_do_not_leak_from_dependency_modules();
         test_lsp_member_completion_uses_imported_module_shapes();
         test_lsp_completion_uses_visible_imported_functions();
+        test_lsp_completion_includes_imported_ast_docs();
+        test_lsp_member_completion_includes_ast_docs();
+        test_lsp_completion_resolve_preserves_ast_docs();
         test_lsp_signature_help_uses_visible_imported_functions();
         test_lsp_module_completion_uses_loaded_module_units();
         test_lsp_definition_uses_loaded_module_units();

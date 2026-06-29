@@ -339,19 +339,22 @@ they document because the broader language goal is Python-shaped source.
 
 Current support is partial: contiguous `#` comments immediately above Dudu
 declarations attach to parsed declaration AST nodes. Hover shows those docs for
-same-file declarations and imported Dudu module symbols. Triple-quoted
-docstrings and native C/C++ documentation are still planned.
+same-file declarations and imported Dudu module symbols. Completion items now
+carry those AST docs for local, imported, and Dudu member symbols, and
+`completionItem/resolve` preserves that documentation payload instead of
+reconstructing it from display text. Triple-quoted docstrings, signature-help
+docs, document-symbol docs, and native C/C++ documentation are still planned.
 
 Remaining work:
 
 1. Support leading `''' ... '''` docstrings for modules, classes, methods,
    functions, enums, fields, constants, and aliases.
-2. Preserve docs in completion, signature help, and document symbols.
+2. Preserve docs in signature help and document symbols.
 3. Define formatting rules for docstrings, including indentation trimming and
    blank-line preservation.
 4. Add parser diagnostics for malformed or misplaced docstrings.
-5. Add LSP fixtures for class/member docs and completion/signature-help
-   documentation.
+5. Add LSP fixtures for signature-help documentation and broader class/member
+   doc cases.
 6. Extend native header scanning to capture C/C++ comments when Clang exposes
    useful source ranges or documentation comments.
 7. Show native C/C++ documentation in hover/completion/signature help when
@@ -378,7 +381,10 @@ returned with snippet insert text, and typed locals in the current document are
 included in completion. Local completion now filters out declarations from
 deeper indentation levels when completing in an outer block. Richer snippet
 coverage is implemented for common function, type, control-flow, import, and
-exception forms.
+exception forms. Completion items for Dudu symbols preserve AST-backed
+documentation comments across current-document symbols, selective imports,
+module completions, and member completions, and completion resolve keeps that
+documentation instead of replacing it with a generic detail string.
 
 ### Milestone 4: Native Header Navigation
 
