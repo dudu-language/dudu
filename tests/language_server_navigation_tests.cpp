@@ -62,6 +62,53 @@ void test_lsp_definition_jumps_to_native_header_type() {
     assert(definition.find("\"line\":0") != std::string::npos);
 }
 
+void test_lsp_definition_jumps_to_parameter_and_inferred_local() {
+    const dudu::Document doc{.uri = "file:///local_definition.dd",
+                             .path = "local_definition.dd",
+                             .text = "def add(value: i32, extra: i32) -> i32:\n"
+                                     "    total = value + extra\n"
+                                     "    return total\n"};
+
+    dudu::Json value_params =
+        dudu::JsonParser("{\"position\":{\"line\":1,\"character\":14}}").parse();
+    const std::string value_definition = dudu::definition_json(doc, &value_params);
+    assert(value_definition.find("\"line\":0") != std::string::npos);
+
+    dudu::Json total_params =
+        dudu::JsonParser("{\"position\":{\"line\":2,\"character\":13}}").parse();
+    const std::string total_definition = dudu::definition_json(doc, &total_params);
+    assert(total_definition.find("\"line\":1") != std::string::npos);
+}
+
+void test_lsp_definition_jumps_to_loop_binding() {
+    const dudu::Document doc{.uri = "file:///loop_definition.dd",
+                             .path = "loop_definition.dd",
+                             .text = "def sum_values(values: list[i32]) -> i32:\n"
+                                     "    total = 0\n"
+                                     "    for value in values:\n"
+                                     "        total += value\n"
+                                     "    return total\n"};
+
+    dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":3,\"character\":18}}").parse();
+    const std::string definition = dudu::definition_json(doc, &params);
+    assert(definition.find("\"line\":2") != std::string::npos);
+}
+
+void test_lsp_definition_jumps_to_destructured_binding() {
+    const dudu::Document doc{.uri = "file:///destructure_definition.dd",
+                             .path = "destructure_definition.dd",
+                             .text = "def pair() -> tuple[i32, i32]:\n"
+                                     "    return 1, 2\n"
+                                     "\n"
+                                     "def main() -> i32:\n"
+                                     "    left, right = pair()\n"
+                                     "    return right\n"};
+
+    dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":5,\"character\":13}}").parse();
+    const std::string definition = dudu::definition_json(doc, &params);
+    assert(definition.find("\"line\":4") != std::string::npos);
+}
+
 void test_lsp_definition_uses_receiver_for_ambiguous_native_methods() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_lsp_native_method_definition_test";
@@ -480,6 +527,9 @@ void test_lsp_native_references_filter_by_identity() {
 int main() {
     try {
         test_lsp_definition_jumps_to_native_header_type();
+        test_lsp_definition_jumps_to_parameter_and_inferred_local();
+        test_lsp_definition_jumps_to_loop_binding();
+        test_lsp_definition_jumps_to_destructured_binding();
         test_lsp_definition_uses_receiver_for_ambiguous_native_methods();
         test_lsp_hover_uses_receiver_for_ambiguous_native_methods();
         test_lsp_references_keep_unbound_member_query_dotted();

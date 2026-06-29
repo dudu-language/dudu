@@ -161,6 +161,15 @@ assert "total: i32" in ast_inferred_hover["result"]["contents"]["value"]
 ast_param_hover = next(item for item in responses if item.get("id") == 53)
 assert "extra: i32" in ast_param_hover["result"]["contents"]["value"]
 
+ast_amount_definition = next(item for item in responses if item.get("id") == 71)
+assert ast_amount_definition["result"]["range"]["start"]["line"] == 4
+
+ast_total_definition = next(item for item in responses if item.get("id") == 72)
+assert ast_total_definition["result"]["range"]["start"]["line"] == 7
+
+ast_extra_definition = next(item for item in responses if item.get("id") == 73)
+assert ast_extra_definition["result"]["range"]["start"]["line"] == 5
+
 doc_hover = next(item for item in responses if item.get("id") == 41)
 doc_hover_value = doc_hover["result"]["contents"]["value"]
 assert "def documented_add" in doc_hover_value

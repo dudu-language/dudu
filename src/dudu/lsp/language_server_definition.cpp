@@ -3,6 +3,7 @@
 #include "dudu/core/ast_expr.hpp"
 #include "dudu/core/ast_type.hpp"
 #include "dudu/codegen/cpp_lower.hpp"
+#include "dudu/lsp/language_server_ast_walk.hpp"
 #include "dudu/lsp/language_server_json.hpp"
 #include "dudu/lsp/language_server_local_context.hpp"
 #include "dudu/lsp/language_server_native_lookup.hpp"
@@ -12,6 +13,7 @@
 #include "dudu/project/module_names.hpp"
 #include "dudu/native/native_build.hpp"
 
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
@@ -259,6 +261,86 @@ std::string symbol_definition_json(const Symbol& symbol, const Document& doc) {
     return location_json(uri_for_location(symbol.location, doc), range_json(symbol.location));
 }
 
+int function_end_line(const FunctionDecl& function) {
+    int line = function.location.line;
+    for (const Stmt& stmt : function.statements) {
+        line = std::max(line, stmt.range.end.line);
+        line = std::max(line, stmt.location.line);
+    }
+    return line;
+}
+
+bool function_contains_line(const FunctionDecl& function, int one_based_line) {
+    return function.location.line <= one_based_line &&
+           one_based_line <= function_end_line(function);
+}
+
+bool location_before_cursor(SourceLocation location, const LspPosition& position) {
+    const int line = position.line + 1;
+    const int column = position.character + 1;
+    if (location.line < line) {
+        return true;
+    }
+    return location.line == line && location.column <= column;
+}
+
+void collect_binding_locations_before_cursor(const std::vector<Stmt>& statements,
+                                             const LspPosition& position,
+                                             const std::string& query,
+                                             std::optional<SourceLocation>& result) {
+    for (const Stmt& stmt : statements) {
+        if (stmt.location.line > position.line + 1) {
+            continue;
+        }
+        visit_stmt_binding_names(stmt, [&](const std::string& name, SourceLocation location) {
+            if (!result && name == query && location_before_cursor(location, position)) {
+                result = location;
+            }
+        });
+        collect_binding_locations_before_cursor(stmt.children, position, query, result);
+    }
+}
+
+std::optional<std::string> local_definition_json(const Document& doc, const ModuleAst& current,
+                                                 const Json* params,
+                                                 const std::string& word) {
+    if (word.empty() || word.find('.') != std::string::npos) {
+        return std::nullopt;
+    }
+    const LspPosition position = lsp_position(params);
+    const int line = position.line + 1;
+    const auto search_function = [&](const FunctionDecl& function) -> std::optional<std::string> {
+        if (!function_contains_line(function, line)) {
+            return std::nullopt;
+        }
+        for (const ParamDecl& param : function.params) {
+            if (param.name == word && location_before_cursor(param.location, position)) {
+                return location_json(uri_for_location(param.location, doc),
+                                     range_json(param.location));
+            }
+        }
+        std::optional<SourceLocation> local;
+        collect_binding_locations_before_cursor(function.statements, position, word, local);
+        if (local) {
+            return location_json(uri_for_location(*local, doc), range_json(*local));
+        }
+        return std::nullopt;
+    };
+    for (const FunctionDecl& function : current.functions) {
+        if (const std::optional<std::string> found = search_function(function)) {
+            return found;
+        }
+    }
+    for (const ClassDecl& klass : current.classes) {
+        for (const FunctionDecl& method : klass.methods) {
+            if (const std::optional<std::string> found = search_function(method)) {
+                return found;
+            }
+        }
+    }
+    return std::nullopt;
+}
+
 } // namespace
 
 std::string definition_json(const Document& doc, const Json* params) {
@@ -271,6 +353,9 @@ std::string definition_json(const Document& doc, const Json* params) {
     const std::string word = selection.symbol_path.value_or("");
     if (word.empty()) {
         return "null";
+    }
+    if (const std::optional<std::string> local = local_definition_json(doc, current, params, word)) {
+        return *local;
     }
     const std::vector<Symbol> symbols = symbols_for_module(current, false);
     if (const std::optional<Symbol> exact = exact_symbol_match(symbols, word)) {

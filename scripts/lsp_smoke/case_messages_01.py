@@ -64,6 +64,39 @@ messages.extend([
     lsp_message(
         {
             "jsonrpc": "2.0",
+            "id": 71,
+            "method": "textDocument/definition",
+            "params": {
+                "textDocument": {"uri": hover_ast_locals_uri},
+                "position": {"line": 7, "character": 17},
+            },
+        }
+    ),
+    lsp_message(
+        {
+            "jsonrpc": "2.0",
+            "id": 72,
+            "method": "textDocument/definition",
+            "params": {
+                "textDocument": {"uri": hover_ast_locals_uri},
+                "position": {"line": 8, "character": 6},
+            },
+        }
+    ),
+    lsp_message(
+        {
+            "jsonrpc": "2.0",
+            "id": 73,
+            "method": "textDocument/definition",
+            "params": {
+                "textDocument": {"uri": hover_ast_locals_uri},
+                "position": {"line": 9, "character": 6},
+            },
+        }
+    ),
+    lsp_message(
+        {
+            "jsonrpc": "2.0",
             "method": "textDocument/didOpen",
             "params": {
                 "textDocument": {
