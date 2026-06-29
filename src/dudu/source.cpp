@@ -101,7 +101,7 @@ const std::string& source_text_from_id(uint32_t id) {
     if (id == 0) {
         return empty_file_name();
     }
-    constexpr size_t cache_size = 16;
+    constexpr size_t cache_size = 64;
     const size_t cache_slot = id % cache_size;
     static thread_local std::array<uint32_t, cache_size> cached_ids{};
     static thread_local std::array<const std::string*, cache_size> cached_texts{};

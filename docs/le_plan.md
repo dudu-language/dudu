@@ -1940,6 +1940,15 @@ push. They are not release packaging work.
    around 60ms, modules around 58ms, arrays around 67ms, indexing around
    125ms, generics around 73ms, matches around 60ms, operators around 90ms,
    and mixed around 86ms. Keep it as a real broad frontend-throughput win.
+   Increasing that direct-mapped source-text atom cache from 16 to 64 entries
+   was then kept after another diverse Release sweep. A focused five-sample
+   run measured expressions 50k around 200ms, indexing around 125ms, matches
+   around 57ms, operators around 87ms, and mixed around 89ms. A three-sample
+   broad run stayed positive: expressions around 194ms, calls around 50ms,
+   classes around 38ms, control around 64ms, modules around 62ms, arrays
+   around 66ms, indexing around 124ms, matches around 61ms, operators around
+   90ms, and mixed around 89ms. Keep treating cache-size tuning as measured,
+   not guessed; larger cache sizes need their own diverse validation.
    Changing `named_type_ref` from an owning `std::string` parameter to
    `std::string_view` was tried and rejected even though it looked like an
    obvious way to avoid temporary strings before atom interning. Focused
