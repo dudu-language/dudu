@@ -1,13 +1,28 @@
 #include "dudu/cmake_emit.hpp"
 
 #include "dudu/cpp_emit_modules.hpp"
-#include "dudu/module_loader.hpp"
+#include "dudu/file_io.hpp"
+#include "dudu/project_index.hpp"
 
 #include <sstream>
 #include <string_view>
 
 namespace dudu {
 namespace {
+
+ProjectIndex load_cmake_project_index(const ProjectConfig& config,
+                                      const std::filesystem::path& input) {
+    const std::string source = read_required_text_file(input);
+    ProjectIndexOptions options;
+    options.entry_path = input;
+    options.entry_source = source;
+    options.config = config;
+    options.source_dir = config.project_dir.empty() ? input.parent_path() : config.project_dir;
+    options.force_module_tree = true;
+    options.include_native_headers = false;
+    options.check_semantics = false;
+    return ProjectIndex::load(options);
+}
 
 std::string cmake_quote(const std::string& value) {
     std::string out = "\"";
@@ -180,7 +195,8 @@ std::string emit_cmake_project(const ProjectConfig& config, const std::filesyste
     const std::string source_path = source_path_for_project(project_dir, input);
     const std::filesystem::path generated_dir =
         std::filesystem::path("${CMAKE_CURRENT_BINARY_DIR}") / "generated";
-    const ModuleAst module = load_source_tree(input);
+    const ProjectIndex index = load_cmake_project_index(config, input);
+    const ModuleAst& module = index.merged_module();
     const std::vector<std::filesystem::path> generated_sources = generated_module_sources(module);
     std::ostringstream out;
     out << "cmake_minimum_required(VERSION 3.20)\n\n"
@@ -240,7 +256,8 @@ std::string emit_cmake_test_project(const ProjectConfig& config, const std::file
     const std::string source_path = source_path_for_project(project_dir, input);
     const std::filesystem::path generated_dir =
         std::filesystem::path("${CMAKE_CURRENT_BINARY_DIR}") / "generated";
-    const ModuleAst module = load_source_tree(input);
+    const ProjectIndex index = load_cmake_project_index(config, input);
+    const ModuleAst& module = index.merged_module();
     const std::vector<std::filesystem::path> generated_sources =
         generated_module_sources(module, true);
     std::ostringstream out;
