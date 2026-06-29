@@ -540,6 +540,9 @@ JSON-RPC smoke fixtures.
 Hover now retries local type inference against the native-enriched visible
 module when plain Dudu symbols cannot infer a local, so locals assigned from
 native C/C++ calls can still show useful inferred types.
+Find-references for local variables is covered for same-named locals in
+different functions; local reference collection stays within the selected
+function/method scope when that scope owns the binding.
 Local completion scope filtering is covered so deeper-block locals do not leak
 into outer-block completions.
 The server caches the expanded workspace document set across requests and

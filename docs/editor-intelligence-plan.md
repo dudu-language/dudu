@@ -44,6 +44,9 @@ the current machine, while cold indexing remains the larger cost. The dogfood
 probe also covers same-file local references, and hover can now infer locals
 assigned from native C/C++ function calls through the native-enriched module
 view.
+Find-references for local variables now scopes same-named bindings to the
+selected function/method body in direct LSP tests, so unrelated locals with the
+same spelling are not reported together.
 
 ## Target Behavior
 

@@ -364,6 +364,25 @@ void test_lsp_references_track_assignment_bindings() {
     assert(right_refs.size() == 2);
 }
 
+void test_lsp_references_scope_same_named_locals_by_function() {
+    const dudu::Document doc{.uri = "file:///scoped_local_refs.dd",
+                             .path = "scoped_local_refs.dd",
+                             .text = "def first() -> i32:\n"
+                                     "    value = 1\n"
+                                     "    return value\n"
+                                     "\n"
+                                     "def second() -> i32:\n"
+                                     "    value = 2\n"
+                                     "    return value\n"};
+    const std::map<std::string, dudu::Document> workspace{{doc.uri, doc}};
+    dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":6,\"character\":13}}").parse();
+    const std::string refs = dudu::references_json(doc, &params, workspace);
+    assert(refs.find("\"start\":{\"line\":5,\"character\":4}") != std::string::npos);
+    assert(refs.find("\"start\":{\"line\":6,\"character\":11}") != std::string::npos);
+    assert(refs.find("\"start\":{\"line\":1,\"character\":4}") == std::string::npos);
+    assert(refs.find("\"start\":{\"line\":2,\"character\":11}") == std::string::npos);
+}
+
 void test_lsp_references_track_qualified_type_refs() {
     const dudu::Document doc{.uri = "file:///qualified_type_refs.dd",
                              .path = "qualified_type_refs.dd",
@@ -564,6 +583,7 @@ int main() {
         test_lsp_scope_lint_tracks_inferred_assignment_locals();
         test_lsp_suspicious_cast_lint_uses_type_refs();
         test_lsp_references_track_assignment_bindings();
+        test_lsp_references_scope_same_named_locals_by_function();
         test_lsp_references_track_qualified_type_refs();
         test_lsp_module_reference_filters_alias_target();
         test_lsp_module_references_include_target_declaration();

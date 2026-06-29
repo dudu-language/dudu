@@ -382,8 +382,17 @@ std::string references_json(const Document& doc, const Json* params,
                                             : target_selective_document
                                                 ? selective_target->member_name
                                                 : query;
-        const std::vector<ReferenceLocation> locations =
-            references_in(*candidate_unit, candidate, candidate_query);
+        std::vector<ReferenceLocation> locations;
+        if (scope == ReferenceScope::CurrentDocument && candidate.uri == doc.uri &&
+            current_unit != nullptr &&
+            has_type_ref(local_type_ref_before_cursor(*current_unit, query, params))) {
+            const LspPosition position = lsp_position(params);
+            locations = references_in_local_scope(*candidate_unit, candidate, candidate_query,
+                                                  position.line + 1)
+                            .value_or(std::vector<ReferenceLocation>{});
+        } else {
+            locations = references_in(*candidate_unit, candidate, candidate_query);
+        }
         if (locations.empty()) {
             continue;
         }
