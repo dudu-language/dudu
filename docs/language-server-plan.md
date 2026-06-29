@@ -599,7 +599,8 @@ function/method scope when that scope owns the binding.
 Semantic-token coverage now decodes token deltas back to source text and checks
 token names, kinds, and modifiers for Dudu classes, enums, enum members, fields,
 static fields, module constants, methods, parameters, implicit local bindings,
-function declarations, function calls, numbers, and strings. The semantic-token
+function declarations, function calls, native type/function/value/macro tokens,
+numbers, and strings. The semantic-token
 collector also indexes Dudu classes/enums/enum members directly, so Dudu class
 return types, enum member expressions, and member calls are no longer colored as
 generic types/properties/functions.

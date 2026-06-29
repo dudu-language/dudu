@@ -59,7 +59,8 @@ Dudu semantic tokens now use a source-symbol index for Dudu classes, enums,
 enum members, implicit local bindings, and member calls instead of relying only
 on syntax shape or native metadata. A decoded semantic-token fixture asserts
 token text, kind, and modifiers against the original source for the core Dudu
-token classes. The LSP server now builds semantic tokens with ProjectIndex
+token classes, including native type/function/value/macro tokens with the
+native modifier. The LSP server now builds semantic tokens with ProjectIndex
 import context, so imported Dudu module aliases, selective imported classes,
 imported functions, and imported constants receive namespace/class/function/
 readonly-variable token identities instead of syntax-only fallback coloring.

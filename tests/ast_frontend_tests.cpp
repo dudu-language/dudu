@@ -71,15 +71,6 @@ std::vector<int> semantic_token_data(const std::string& json) {
     return out;
 }
 
-bool has_semantic_token(const std::vector<int>& data, int type, int modifier) {
-    for (size_t i = 0; i + 4 < data.size(); i += 5) {
-        if (data[i + 3] == type && (data[i + 4] & modifier) == modifier) {
-            return true;
-        }
-    }
-    return false;
-}
-
 struct DecodedSemanticToken {
     int line = 0;
     int column = 0;
@@ -170,15 +161,14 @@ dudu::Json completion_params(int line, int character) {
 }
 
 void test_native_semantic_tokens() {
-    dudu::ModuleAst module =
-        dudu::parse_source("import c \"native.h\"\n"
-                           "\n"
-                           "def main() -> i32:\n"
-                           "    event: DuduNativeEvent\n"
-                           "    if DUDU_NATIVE_CHECK():\n"
-                           "        return dudu_native_add(DUDU_NATIVE_MAGIC, event.type)\n"
-                           "    return 0\n",
-                           "native_semantic_tokens.dd");
+    const std::string source = "import c \"native.h\"\n"
+                               "\n"
+                               "def main() -> i32:\n"
+                               "    event: DuduNativeEvent\n"
+                               "    if DUDU_NATIVE_CHECK():\n"
+                               "        return dudu_native_add(DUDU_NATIVE_MAGIC, event.type)\n"
+                               "    return 0\n";
+    dudu::ModuleAst module = dudu::parse_source(source, "native_semantic_tokens.dd");
     dudu::ModuleAst native_symbols = module;
     native_symbols.native_types.push_back({.name = "DuduNativeEvent",
                                            .native_spelling = "DuduNativeEvent",
@@ -199,13 +189,15 @@ void test_native_semantic_tokens() {
     native_symbols.native_macros.push_back(
         {.name = "DUDU_NATIVE_CHECK", .arity = 0, .function_like = true, .location = {}});
 
-    const std::vector<int> data =
-        semantic_token_data(dudu::semantic_tokens_json(module, native_symbols));
     constexpr int native_modifier = 16;
-    assert(has_semantic_token(data, 1, native_modifier));
-    assert(has_semantic_token(data, 4, native_modifier));
-    assert(has_semantic_token(data, 6, native_modifier | 4));
-    assert(has_semantic_token(data, 10, native_modifier));
+    constexpr int readonly_modifier = 4;
+    const std::vector<DecodedSemanticToken> tokens =
+        decoded_semantic_tokens(source, dudu::semantic_tokens_json(module, native_symbols));
+    require_decoded_semantic_token(tokens, "DuduNativeEvent", 1, native_modifier);
+    require_decoded_semantic_token(tokens, "DUDU_NATIVE_CHECK", 10, native_modifier);
+    require_decoded_semantic_token(tokens, "dudu_native_add", 4, native_modifier);
+    require_decoded_semantic_token(tokens, "DUDU_NATIVE_MAGIC", 6,
+                                   native_modifier | readonly_modifier);
 }
 
 void test_decoded_semantic_tokens_cover_core_dudu_kinds() {
