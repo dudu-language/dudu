@@ -1900,10 +1900,7 @@ push. They are not release packaging work.
    comparisons. A five-sample Release run on indexing/operators/matches plus
    arrays/generics/mixed measured operators around 94ms, matches around 61ms,
    generics around 80ms, and mixed around 88ms; indexing remained noisy around
-   134ms, so this is a small representation cleanup, not the indexing fix. A
-   broader static-atom rewrite of `lower_template_type` was tried separately
-   and not kept because it regressed indexing, operators, and mixed despite
-   helping generics and matches.
+   134ms, so this is a small representation cleanup, not the indexing fix.
    A thread-local last-id cache inside `source_text_from_id` was then kept.
    It preserves the mutex-backed interner lookup for misses while avoiding the
    lock/table path when hot code resolves the same atom repeatedly. A
@@ -1913,7 +1910,11 @@ push. They are not release packaging work.
    about 202ms, functions about 52ms, modules about 66ms, indexing about
    132ms, operators about 93ms, and mixed about 93ms. This is still not a
    complete indexing fix, but it reduces the hot interner read cost without
-   changing AST size or source semantics.
+   changing AST size or source semantics. A broader static-atom rewrite of
+   `lower_template_type` was tried separately, and then retried after this
+   lookup cache landed, and was not kept: it still regressed indexing,
+   generics, and mixed project-shaped code compared with the simpler
+   cache-only path.
    Replacing statement-level optional `shared_ptr` fields with `unique_ptr`
    plus deep-copy semantics was tried and rejected. It reduced some retained
    memory in expression/call/control shapes, but a five-sample focused Release
