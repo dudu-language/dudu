@@ -47,6 +47,11 @@ view.
 Find-references for local variables now scopes same-named bindings to the
 selected function/method body in direct LSP tests, so unrelated locals with the
 same spelling are not reported together.
+Dudu semantic tokens now use a source-symbol index for Dudu classes, enums,
+enum members, implicit local bindings, and member calls instead of relying only
+on syntax shape or native metadata. A decoded semantic-token fixture asserts
+token text, kind, and modifiers against the original source for the core Dudu
+token classes.
 
 ## Target Behavior
 
@@ -165,6 +170,12 @@ Minimum modifiers:
 
 Semantic token tests should assert decoded tokens by name, kind, and modifier in
 small fixtures rather than only checking that some token data exists.
+
+Status: direct frontend coverage now decodes semantic-token deltas back to
+source text and asserts the actual token name, kind, and modifiers for module
+constants, classes, fields, static fields, methods, parameters, implicit locals,
+functions, enums, enum members, numbers, and strings. JSON-RPC smoke tests still
+cover semantic-token transport through `dudu-lsp`.
 
 ## Validation
 

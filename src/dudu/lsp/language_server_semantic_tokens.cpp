@@ -53,6 +53,12 @@ struct NativeSemanticIndex {
     std::set<std::string> methods;
 };
 
+struct DuduSemanticIndex {
+    std::set<std::string> classes;
+    std::set<std::string> enums;
+    std::set<std::string> enum_members;
+};
+
 void add_semantic_token(std::vector<SemanticToken>& tokens, const SourceLocation& loc,
                         std::string_view text, int type, int modifiers = 0) {
     if (text.empty() || loc.line <= 0 || loc.column <= 0) {
@@ -141,7 +147,22 @@ NativeSemanticIndex native_semantic_index(const ModuleAst& module) {
     return out;
 }
 
+DuduSemanticIndex dudu_semantic_index(const ModuleAst& module) {
+    DuduSemanticIndex out;
+    for (const ClassDecl& klass : module.classes) {
+        out.classes.insert(klass.name);
+    }
+    for (const EnumDecl& en : module.enums) {
+        out.enums.insert(en.name);
+        for (const EnumValueDecl& value : en.values) {
+            out.enum_members.insert(en.name + "." + value.name);
+        }
+    }
+    return out;
+}
+
 void collect_type_tokens(const TypeRef& type, std::vector<SemanticToken>& tokens,
+                         const DuduSemanticIndex& dudu_index,
                          const NativeSemanticIndex* native_index) {
     if (type.kind == TypeKind::Named || type.kind == TypeKind::Qualified ||
         type.kind == TypeKind::Template) {
@@ -155,16 +176,21 @@ void collect_type_tokens(const TypeRef& type, std::vector<SemanticToken>& tokens
             add_native_semantic_token(tokens, type.location, label_text, token_class);
         } else if (native_type) {
             add_native_semantic_token(tokens, type.location, label_text, token_type);
+        } else if (dudu_index.classes.contains(label_text)) {
+            add_semantic_token(tokens, type.location, label_text, token_class);
+        } else if (dudu_index.enums.contains(label_text)) {
+            add_semantic_token(tokens, type.location, label_text, token_enum);
         } else {
             add_semantic_token(tokens, type.location, label_text, token_type);
         }
     }
     for (const TypeRef& child : type.children) {
-        collect_type_tokens(child, tokens, native_index);
+        collect_type_tokens(child, tokens, dudu_index, native_index);
     }
 }
 
 void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
+                         const DuduSemanticIndex& dudu_index,
                          const NativeSemanticIndex* native_index);
 
 std::optional<std::string> expr_path_key(const Expr& expr) {
@@ -173,12 +199,17 @@ std::optional<std::string> expr_path_key(const Expr& expr) {
 }
 
 void collect_call_callee_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
+                                const DuduSemanticIndex& dudu_index,
                                 const NativeSemanticIndex* native_index) {
     if (expr.kind == ExprKind::Name) {
         if (native_index != nullptr && native_index->macros.contains(expr.name)) {
             add_native_semantic_token(tokens, expr.location, expr.name, token_macro);
         } else if (native_index != nullptr && native_index->functions.contains(expr.name)) {
             add_native_semantic_token(tokens, expr.location, expr.name, token_function);
+        } else if (dudu_index.classes.contains(expr.name)) {
+            add_semantic_token(tokens, expr.location, expr.name, token_class);
+        } else if (dudu_index.enums.contains(expr.name)) {
+            add_semantic_token(tokens, expr.location, expr.name, token_enum);
         } else {
             add_semantic_token(tokens, expr.location, expr.name, token_function);
         }
@@ -186,7 +217,7 @@ void collect_call_callee_tokens(const Expr& expr, std::vector<SemanticToken>& to
     }
     if (expr.kind == ExprKind::Member) {
         for (const Expr& child : expr.children) {
-            collect_expr_tokens(child, tokens, native_index);
+            collect_expr_tokens(child, tokens, dudu_index, native_index);
         }
         const SourceLocation member_location = member_name_location(expr);
         const std::optional<std::string> path = expr_path_key(expr);
@@ -196,15 +227,18 @@ void collect_call_callee_tokens(const Expr& expr, std::vector<SemanticToken>& to
             add_native_semantic_token(tokens, member_location, expr.name, token_function);
         } else if (native_index != nullptr && path && native_index->methods.contains(*path)) {
             add_native_semantic_token(tokens, member_location, expr.name, token_method);
+        } else if (path && dudu_index.enum_members.contains(*path)) {
+            add_semantic_token(tokens, member_location, expr.name, token_enum_member, mod_readonly);
         } else {
-            add_semantic_token(tokens, member_location, expr.name, token_function);
+            add_semantic_token(tokens, member_location, expr.name, token_method);
         }
         return;
     }
-    collect_expr_tokens(expr, tokens, native_index);
+    collect_expr_tokens(expr, tokens, dudu_index, native_index);
 }
 
 void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
+                         const DuduSemanticIndex& dudu_index,
                          const NativeSemanticIndex* native_index) {
     switch (expr.kind) {
     case ExprKind::Name:
@@ -225,6 +259,10 @@ void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
                                       mod_readonly);
         } else if (native_index != nullptr && native_index->namespaces.contains(expr.name)) {
             add_native_semantic_token(tokens, expr.location, expr.name, token_namespace);
+        } else if (dudu_index.classes.contains(expr.name)) {
+            add_semantic_token(tokens, expr.location, expr.name, token_class);
+        } else if (dudu_index.enums.contains(expr.name)) {
+            add_semantic_token(tokens, expr.location, expr.name, token_enum);
         } else {
             add_semantic_token(tokens, expr.location, expr.name, token_variable);
         }
@@ -232,14 +270,15 @@ void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
     case ExprKind::Call:
     case ExprKind::TemplateCall:
         if (has_expr_callee(expr)) {
-            collect_call_callee_tokens(expr_callee(expr).front(), tokens, native_index);
+            collect_call_callee_tokens(expr_callee(expr).front(), tokens, dudu_index,
+                                       native_index);
         } else {
             add_semantic_token(tokens, expr.location, expr.name, token_function);
         }
         break;
     case ExprKind::Member: {
         for (const Expr& child : expr.children) {
-            collect_expr_tokens(child, tokens, native_index);
+            collect_expr_tokens(child, tokens, dudu_index, native_index);
         }
         const SourceLocation member_location = member_name_location(expr);
         const std::optional<std::string> path = expr_path_key(expr);
@@ -255,6 +294,8 @@ void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
         } else if (native_index != nullptr && path && native_index->enum_members.contains(*path)) {
             add_native_semantic_token(tokens, member_location, expr.name, token_enum_member,
                                       mod_readonly);
+        } else if (path && dudu_index.enum_members.contains(*path)) {
+            add_semantic_token(tokens, member_location, expr.name, token_enum_member, mod_readonly);
         } else {
             add_semantic_token(tokens, member_location, expr.name, token_property);
         }
@@ -277,53 +318,68 @@ void collect_expr_tokens(const Expr& expr, std::vector<SemanticToken>& tokens,
     }
     if (expr.kind != ExprKind::Call && expr.kind != ExprKind::TemplateCall) {
         for (const Expr& callee : expr_callee(expr)) {
-            collect_expr_tokens(callee, tokens, native_index);
+            collect_expr_tokens(callee, tokens, dudu_index, native_index);
         }
     }
     for (const Expr& child : expr.children) {
-        collect_expr_tokens(child, tokens, native_index);
+        collect_expr_tokens(child, tokens, dudu_index, native_index);
     }
     if (has_expr_template_type_args(expr)) {
         for (const TypeRef& arg : expr_template_type_args(expr)) {
-            collect_type_tokens(arg, tokens, native_index);
+            collect_type_tokens(arg, tokens, dudu_index, native_index);
         }
     } else {
         for (const Expr& arg : expr_template_args(expr)) {
-            collect_expr_tokens(arg, tokens, native_index);
+            collect_expr_tokens(arg, tokens, dudu_index, native_index);
         }
     }
 }
 
 void collect_stmt_tokens(const std::vector<Stmt>& statements, std::vector<SemanticToken>& tokens,
-                         const NativeSemanticIndex* native_index) {
+                         const DuduSemanticIndex& dudu_index,
+                         const NativeSemanticIndex* native_index,
+                         std::set<std::string>& local_bindings) {
     for (const Stmt& stmt : statements) {
         if (stmt.kind == StmtKind::VarDecl) {
             add_semantic_token(tokens, stmt.location, stmt.name, token_variable, mod_declaration);
-            collect_type_tokens(stmt_type_ref(stmt), tokens, native_index);
-            collect_expr_tokens(stmt.value_expr, tokens, native_index);
-        } else if (stmt.kind == StmtKind::Assign || stmt.kind == StmtKind::CompoundAssign) {
-            collect_expr_tokens(stmt_target_expr(stmt), tokens, native_index);
-            collect_expr_tokens(stmt.value_expr, tokens, native_index);
+            local_bindings.insert(stmt.name);
+            collect_type_tokens(stmt_type_ref(stmt), tokens, dudu_index, native_index);
+            collect_expr_tokens(stmt.value_expr, tokens, dudu_index, native_index);
+        } else if (stmt.kind == StmtKind::Assign) {
+            const Expr& target = stmt_target_expr(stmt);
+            if (target.kind == ExprKind::Name && !local_bindings.contains(target.name)) {
+                add_semantic_token(tokens, target.location, target.name, token_variable,
+                                   mod_declaration);
+                local_bindings.insert(target.name);
+            } else {
+                collect_expr_tokens(target, tokens, dudu_index, native_index);
+            }
+            collect_expr_tokens(stmt.value_expr, tokens, dudu_index, native_index);
+        } else if (stmt.kind == StmtKind::CompoundAssign) {
+            collect_expr_tokens(stmt_target_expr(stmt), tokens, dudu_index, native_index);
+            collect_expr_tokens(stmt.value_expr, tokens, dudu_index, native_index);
         } else if (stmt.kind == StmtKind::Return || stmt.kind == StmtKind::Raise ||
                    stmt.kind == StmtKind::Delete) {
-            collect_expr_tokens(stmt.value_expr, tokens, native_index);
+            collect_expr_tokens(stmt.value_expr, tokens, dudu_index, native_index);
         } else if (stmt.kind == StmtKind::If || stmt.kind == StmtKind::Elif ||
                    stmt.kind == StmtKind::While || stmt.kind == StmtKind::Assert ||
                    stmt.kind == StmtKind::DebugAssert) {
-            collect_expr_tokens(stmt_condition_expr(stmt), tokens, native_index);
+            collect_expr_tokens(stmt_condition_expr(stmt), tokens, dudu_index, native_index);
         } else if (stmt.kind == StmtKind::For) {
             add_semantic_token(tokens, stmt.location, stmt.name, token_variable, mod_declaration);
-            collect_type_tokens(stmt_type_ref(stmt), tokens, native_index);
-            collect_expr_tokens(stmt_iterable_expr(stmt), tokens, native_index);
+            local_bindings.insert(stmt.name);
+            collect_type_tokens(stmt_type_ref(stmt), tokens, dudu_index, native_index);
+            collect_expr_tokens(stmt_iterable_expr(stmt), tokens, dudu_index, native_index);
         } else if (stmt.kind == StmtKind::Expr) {
-            collect_expr_tokens(stmt.expr, tokens, native_index);
+            collect_expr_tokens(stmt.expr, tokens, dudu_index, native_index);
         }
-        collect_stmt_tokens(stmt.children, tokens, native_index);
+        collect_stmt_tokens(stmt.children, tokens, dudu_index, native_index, local_bindings);
     }
 }
 
 void collect_semantic_tokens(const ModuleAst& module, std::vector<SemanticToken>& tokens,
                              const NativeSemanticIndex* native_index) {
+    const DuduSemanticIndex dudu_index = dudu_semantic_index(module);
     for (const ImportDecl& import : module.imports) {
         const bool native_import = import.kind == ImportKind::ForeignC ||
                                    import.kind == ImportKind::ForeignCxx ||
@@ -334,66 +390,72 @@ void collect_semantic_tokens(const ModuleAst& module, std::vector<SemanticToken>
     for (const TypeAliasDecl& alias : module.aliases) {
         add_semantic_token(tokens, shifted_location(alias.location, 5), alias.name, token_type,
                            mod_declaration);
-        collect_type_tokens(alias.type_ref, tokens, native_index);
+        collect_type_tokens(alias.type_ref, tokens, dudu_index, native_index);
     }
     for (const EnumDecl& en : module.enums) {
-        add_semantic_token(tokens, shifted_location(en.location, 5), en.name, token_enum,
-                           mod_declaration);
-        collect_type_tokens(en.underlying_type_ref, tokens, native_index);
+        add_semantic_token(tokens, en.location, en.name, token_enum, mod_declaration);
+        collect_type_tokens(en.underlying_type_ref, tokens, dudu_index, native_index);
         for (const EnumValueDecl& value : en.values) {
             add_semantic_token(tokens, value.location, value.name, token_enum_member,
                                mod_declaration);
-            collect_expr_tokens(value.value_expr, tokens, native_index);
+            collect_expr_tokens(value.value_expr, tokens, dudu_index, native_index);
         }
     }
     for (const ClassDecl& klass : module.classes) {
         add_semantic_token(tokens, klass.location, klass.name, token_class, mod_declaration);
         for (const FieldDecl& field : klass.fields) {
             add_semantic_token(tokens, field.location, field.name, token_property, mod_declaration);
-            collect_type_tokens(field.type_ref, tokens, native_index);
-            collect_expr_tokens(field.value_expr, tokens, native_index);
+            collect_type_tokens(field.type_ref, tokens, dudu_index, native_index);
+            collect_expr_tokens(field.value_expr, tokens, dudu_index, native_index);
         }
         for (const ConstDecl& constant : klass.constants) {
             add_semantic_token(tokens, constant.location, constant.name, token_property,
                                mod_declaration | mod_readonly);
-            collect_type_tokens(constant.type_ref, tokens, native_index);
-            collect_expr_tokens(constant.value_expr, tokens, native_index);
+            collect_type_tokens(constant.type_ref, tokens, dudu_index, native_index);
+            collect_expr_tokens(constant.value_expr, tokens, dudu_index, native_index);
         }
         for (const ConstDecl& field : klass.static_fields) {
             add_semantic_token(tokens, field.location, field.name, token_property,
                                mod_declaration | mod_static);
-            collect_type_tokens(field.type_ref, tokens, native_index);
-            collect_expr_tokens(field.value_expr, tokens, native_index);
+            collect_type_tokens(field.type_ref, tokens, dudu_index, native_index);
+            collect_expr_tokens(field.value_expr, tokens, dudu_index, native_index);
         }
         for (const FunctionDecl& method : klass.methods) {
             add_semantic_token(tokens, method.location, method.name, token_method, mod_declaration);
+            std::set<std::string> local_bindings;
             for (const ParamDecl& param : method.params) {
                 add_semantic_token(tokens, param.location, param.name, token_parameter,
                                    mod_declaration);
-                collect_type_tokens(param.type_ref, tokens, native_index);
+                local_bindings.insert(param.name);
+                if (param.name != "self") {
+                    collect_type_tokens(param.type_ref, tokens, dudu_index, native_index);
+                }
             }
-            collect_type_tokens(method.return_type_ref, tokens, native_index);
-            collect_stmt_tokens(method.statements, tokens, native_index);
+            collect_type_tokens(method.return_type_ref, tokens, dudu_index, native_index);
+            collect_stmt_tokens(method.statements, tokens, dudu_index, native_index,
+                                local_bindings);
         }
     }
     for (const ConstDecl& constant : module.constants) {
         add_semantic_token(tokens, constant.location, constant.name, token_variable,
                            mod_declaration | mod_readonly);
-        collect_type_tokens(constant.type_ref, tokens, native_index);
-        collect_expr_tokens(constant.value_expr, tokens, native_index);
+        collect_type_tokens(constant.type_ref, tokens, dudu_index, native_index);
+        collect_expr_tokens(constant.value_expr, tokens, dudu_index, native_index);
     }
     for (const StaticAssertDecl& assertion : module.static_asserts) {
-        collect_expr_tokens(assertion.expression_expr, tokens, native_index);
+        collect_expr_tokens(assertion.expression_expr, tokens, dudu_index, native_index);
     }
     for (const FunctionDecl& fn : module.functions) {
         add_semantic_token(tokens, fn.location, fn.name, token_function, mod_declaration);
+        std::set<std::string> local_bindings;
         for (const ParamDecl& param : fn.params) {
             add_semantic_token(tokens, param.location, param.name, token_parameter,
                                mod_declaration);
-            collect_type_tokens(param.type_ref, tokens, native_index);
+            local_bindings.insert(param.name);
+            collect_type_tokens(param.type_ref, tokens, dudu_index, native_index);
         }
-        collect_type_tokens(fn.return_type_ref, tokens, native_index);
-        collect_stmt_tokens(fn.statements, tokens, native_index);
+        collect_type_tokens(fn.return_type_ref, tokens, dudu_index, native_index);
+        collect_stmt_tokens(fn.statements, tokens, dudu_index, native_index, local_bindings);
     }
 }
 

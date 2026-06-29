@@ -543,6 +543,13 @@ native C/C++ calls can still show useful inferred types.
 Find-references for local variables is covered for same-named locals in
 different functions; local reference collection stays within the selected
 function/method scope when that scope owns the binding.
+Semantic-token coverage now decodes token deltas back to source text and checks
+token names, kinds, and modifiers for Dudu classes, enums, enum members, fields,
+static fields, module constants, methods, parameters, implicit local bindings,
+function declarations, function calls, numbers, and strings. The semantic-token
+collector also indexes Dudu classes/enums/enum members directly, so Dudu class
+return types, enum member expressions, and member calls are no longer colored as
+generic types/properties/functions.
 Local completion scope filtering is covered so deeper-block locals do not leak
 into outer-block completions.
 The server caches the expanded workspace document set across requests and
