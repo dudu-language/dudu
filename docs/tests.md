@@ -93,9 +93,10 @@ relevant subsystem, before large pushes, and before version bumps. CI can keep
 the fast/core path required while running optional native/library matrices on a
 schedule or manual dispatch.
 
-`duduplayground` is intentionally a scratch/user-feel repo. It is useful for
-local dogfooding, but official compatibility examples should live in the Dudu
-repo as curated fixtures or examples with clear dependencies.
+`duduplayground` is intentionally an external scratch/user-feel sibling repo, not
+a subdirectory of this repository. It is useful for local dogfooding, but
+official compatibility examples should live in the Dudu repo as curated fixtures
+or examples with clear dependencies. See [Repository Layout](repo-layout.md).
 
 ## Test Function Rules
 

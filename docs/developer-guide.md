@@ -2,6 +2,9 @@
 
 This page keeps the developer-heavy command notes out of the main README.
 
+For what belongs in each top-level directory, see
+[Repository Layout](repo-layout.md).
+
 ## Build From Source
 
 Build the compiler:

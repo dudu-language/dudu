@@ -1368,14 +1368,14 @@ push. They are not release packaging work.
    This matrix is not part of the always-on fast loop. Keep fast compiler
    validation small, and run the real-library/example matrix periodically, when
    touching native interop or build-driver behavior, and before version bumps.
-   `duduplayground`, `raymarch-dd`, `dudu-webserver`, and similar external
-   repos are dogfood inputs, not required public fixtures; curated,
-   reproducible examples should live in the Dudu repo when they become
-   official compatibility checks. `dudu-webserver` is currently a useful
-   POSIX/C++ standard-library dogfood repo because it stresses multi-file Dudu
-   modules, generated CMake builds, repeated native imports, sockets, `poll`,
-   time APIs, environment reads, and C++ string interop without wrapper
-   headers.
+   external sibling repos such as `duduplayground`, `raymarch-dd`,
+   `dudu-webserver`, and similar projects are dogfood inputs, not required
+   public fixtures; curated, reproducible examples should live in the Dudu repo
+   when they become official compatibility checks. `dudu-webserver` is currently
+   a useful POSIX/C++ standard-library dogfood repo because it stresses
+   multi-file Dudu modules, generated CMake builds, repeated native imports,
+   sockets, `poll`, time APIs, environment reads, and C++ string interop without
+   wrapper headers.
 
 11. Compiler Throughput And Build Performance
 
