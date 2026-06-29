@@ -194,12 +194,11 @@ All diagnostics, lint warnings, code actions, hover data, definition lookup,
 and fix-its must move onto parser AST, resolved symbols, typed expressions, and
 semantic control-flow facts.
 
-The current editor lint pass still contains prototype string/regex heuristics
-for things like unreachable code, unused locals, shadowing, suspicious casts,
-and raw `cpp(...)` warnings. That is not acceptable as the final architecture.
-These checks can produce false positives because they do not understand real
-statement trees, expression continuations, imports, scopes, overloads, or typed
-control flow.
+The prototype editor lint pass used to contain string/regex heuristics for
+things like unreachable code, unused locals, shadowing, suspicious casts, and
+raw `cpp(...)` warnings. That is not acceptable architecture for Dudu. Lint
+checks must understand real statement trees, expression continuations, imports,
+scopes, overloads, and typed control flow.
 
 Required behavior:
 
@@ -252,6 +251,8 @@ a focused lint pass, so the aggregate AST lint entry point is now only a
 dispatcher. A
 multi-module lint fixture guards against reporting a
 dependency module's unused local in the entry document's diagnostics.
+The AST migration guard rejects `std::regex` in LSP lint sources so editor
+warnings do not regress into source-text pattern matching.
 
 ## Resolved Critical Module Import Blocker
 
