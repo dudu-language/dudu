@@ -294,7 +294,7 @@ typedef struct MatrixNativePoint {
     int y;
 } MatrixNativePoint;
 
-int matrix_native_add(int a, int b);
+/** Adds two matrix fixture integers. */ int matrix_native_add(int a, int b);
 """
     )
     native_source = """import c "native_bridge.h" as nb
@@ -387,6 +387,7 @@ def main() -> i32:
         request(52, "textDocument/definition", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add", add=len("nb."))}),
         request(53, "textDocument/hover", {"textDocument": text_document(native), "position": position(native_source, "nb.DUDU_MATRIX_NATIVE_SCALE", add=len("nb."))}),
         request(54, "textDocument/references", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add", add=len("nb."))}),
+        request(55, "textDocument/signatureHelp", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add(point.x", add=len("nb.matrix_native_add(point.x"))}),
         request(70, "textDocument/semanticTokens/full", {"textDocument": text_document(unresolved)}),
         request(99, "shutdown", None),
         lsp_message({"jsonrpc": "2.0", "method": "exit", "params": None}),
@@ -516,7 +517,9 @@ def main() -> i32:
         raise AssertionError(f"missing unresolved return variable token: {unresolved_tokens!r}")
     assert_symbol_names(response(messages, 40), ["Vec2", "main"])
     assert_nonempty(response(messages, 41), "operator method definition")
-    assert_completion_labels(response(messages, 50), ["matrix_native_add", "MatrixNativePoint", "DUDU_MATRIX_NATIVE_SCALE"])
+    native_completion = response(messages, 50)
+    assert_completion_labels(native_completion, ["matrix_native_add", "MatrixNativePoint", "DUDU_MATRIX_NATIVE_SCALE"])
+    assert_documentation_contains(item_named(native_completion, "matrix_native_add"), "Adds two matrix fixture integers.")
     for request_id in (51, 52, 53):
         assert_nonempty(response(messages, request_id), f"native request {request_id}")
     native_type_hover = response(messages, 51)["contents"]["value"]
@@ -526,6 +529,10 @@ def main() -> i32:
     if "Native identity: `path:DUDU_MATRIX_NATIVE_SCALE`" not in native_macro_hover:
         raise AssertionError(f"missing native macro identity: {native_macro_hover!r}")
     assert_nonempty(response(messages, 54), "native function references")
+    native_signature_help = response(messages, 55)
+    native_signature_docs = native_signature_help["signatures"][0]["documentation"]["value"]
+    if "Adds two matrix fixture integers." not in native_signature_docs:
+        raise AssertionError(f"missing native signature docs: {native_signature_help!r}")
     missing_diags = publish_diagnostics(messages, missing.as_uri())
     if not missing_diags or not missing_diags[-1]:
         raise AssertionError("missing import fixture did not publish diagnostics")

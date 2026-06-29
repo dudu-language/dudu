@@ -2370,10 +2370,13 @@ push. They are not release packaging work.
    return/parameter spelling is available.
    The native scanner now parses Clang comment nodes and stores native header
    declaration docs through the scan cache, so LSP hover/completion/signature
-   help can show real C/C++ docs when the imported header provides them.
+   help can show real C/C++ docs when the imported header provides them. The
+   JSON-RPC LSP matrix now asserts native function docs through completion and
+   signature help.
    Misplaced module/class/enum/function docstrings now produce explicit parser
    diagnostics instead of generic syntax failures or inert string statements.
-   Field/constant/alias larger-doc syntax and native C/C++ docs remain planned.
+   Field/constant/alias larger-doc syntax and broader native C/C++ declaration
+   doc fixtures remain planned.
    The concrete plan and remaining implementation checklist live in
    [Language Server Plan](language-server-plan.md#doc-comments-and-docstrings).
 

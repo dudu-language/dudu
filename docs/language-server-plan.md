@@ -397,11 +397,8 @@ Remaining work:
    appear beyond unterminated triple strings and misplaced docstrings.
 5. Add more LSP fixtures for constant/alias documentation once their larger-doc
    syntax is decided.
-6. Extend native header scanning to capture C/C++ comments when Clang exposes
-   useful source ranges or documentation comments.
-7. Show native C/C++ documentation in hover/completion/signature help when
-   available, while clearly falling back to signature-only hover when native
-   docs cannot be recovered.
+6. Extend native C/C++ documentation fixtures beyond native functions when the
+   scanner exposes useful docs for more declaration kinds.
 
 ### Milestone 3: Completion And Signature Help
 
@@ -451,7 +448,8 @@ scanner has non-synthesized return/parameter spelling.
 The native scanner also parses Clang `FullComment`/`TextComment` nodes and
 preserves header comments on native declarations through the scan cache, so
 hover/completion/signature-help documentation can include real C/C++ declaration
-docs when available.
+docs when available. The JSON-RPC LSP matrix covers native function header docs
+through completion and signature help.
 Macro metadata,
 including object-like/function-like macro hover and completion, is also exposed
 for scanned native headers. Initial native C++ member completion is implemented
