@@ -226,6 +226,10 @@ std::string reference_query_at(const Document& doc, const Json* params,
             member_declaration_reference_query_at(doc, params, module)) {
         return *member_query;
     }
+    if (const std::optional<std::string> enum_value_query =
+            enum_value_declaration_reference_query_at(doc, params, module)) {
+        return *enum_value_query;
+    }
     const std::string name = selection.symbol.value_or("");
     std::optional<std::string> expression_path;
     std::vector<std::string> paths;

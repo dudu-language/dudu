@@ -55,6 +55,26 @@ std::optional<std::string> method_query_at(const Document& doc, const Json* para
 
 } // namespace
 
+std::optional<std::string> enum_value_declaration_reference_query_at(const Document& doc,
+                                                                     const Json* params,
+                                                                     const ModuleAst* module) {
+    if (module == nullptr) {
+        return std::nullopt;
+    }
+    for (const EnumDecl& en : module->enums) {
+        if (!location_is_current_document(en.location, doc)) {
+            continue;
+        }
+        for (const EnumValueDecl& value : en.values) {
+            if (location_is_current_document(value.location, doc) &&
+                position_contains_name(params, value.name, value.location)) {
+                return en.name + "." + value.name;
+            }
+        }
+    }
+    return std::nullopt;
+}
+
 std::optional<std::string> member_declaration_reference_query_at(const Document& doc,
                                                                  const Json* params,
                                                                  const ModuleAst* module) {

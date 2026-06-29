@@ -468,6 +468,29 @@ void test_lsp_references_use_member_identity() {
     assert(refs.find("\"start\":{\"line\":15,\"character\":29}") == std::string::npos);
 }
 
+void test_lsp_references_use_enum_value_identity() {
+    const dudu::Document doc{.uri = "file:///enum_identity_refs.dd",
+                             .path = "enum_identity_refs.dd",
+                             .text = "enum Mode:\n"
+                                     "    Play\n"
+                                     "    Pause\n"
+                                     "\n"
+                                     "enum Other:\n"
+                                     "    Play\n"
+                                     "\n"
+                                     "def main() -> i32:\n"
+                                     "    mode: Mode = Mode.Play\n"
+                                     "    other: Other = Other.Play\n"
+                                     "    return 0\n"};
+    const std::map<std::string, dudu::Document> workspace{{doc.uri, doc}};
+    dudu::Json params = dudu::JsonParser("{\"position\":{\"line\":1,\"character\":5}}").parse();
+    const std::string refs = dudu::references_json(doc, &params, workspace);
+    assert(refs.find("\"start\":{\"line\":1,\"character\":4}") != std::string::npos);
+    assert(refs.find("\"start\":{\"line\":8,\"character\":22}") != std::string::npos);
+    assert(refs.find("\"start\":{\"line\":5,\"character\":4}") == std::string::npos);
+    assert(refs.find("\"start\":{\"line\":9,\"character\":25}") == std::string::npos);
+}
+
 void test_lsp_module_reference_filters_alias_target() {
     const std::filesystem::path dir =
         std::filesystem::temp_directory_path() / "dudu_lsp_module_reference_target_test";
@@ -652,6 +675,7 @@ int main() {
         test_lsp_references_scope_same_named_locals_by_function();
         test_lsp_references_track_qualified_type_refs();
         test_lsp_references_use_member_identity();
+        test_lsp_references_use_enum_value_identity();
         test_lsp_module_reference_filters_alias_target();
         test_lsp_module_references_include_target_declaration();
         test_lsp_selective_import_references_include_target_declaration();

@@ -194,6 +194,7 @@ std::vector<ReferenceLocation> references_in(const ModuleAst& module, const Docu
         collector.visit_type_tree(en.underlying_type_ref);
         for (const EnumValueDecl& value : en.values) {
             collector.add(value.name, value.location);
+            collector.add_member_decl(en.name, value.name, value.location);
             for (const EnumPayloadField& field : value.payload_fields) {
                 collector.add(field.name, field.location);
                 collector.visit_type_tree(field.type_ref);

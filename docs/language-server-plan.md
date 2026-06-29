@@ -138,7 +138,8 @@ member name.
 Dudu class member declaration references now use class-qualified identity for
 the selected declaration and receiver-type checks for member expressions, so
 `Player.hp` references do not include unrelated `Enemy.hp` declarations or
-uses.
+uses. Enum value declaration references use the same qualified identity shape,
+so `Mode.Play` does not include another enum's `Play` variant.
 
 ## Architecture
 

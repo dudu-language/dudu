@@ -51,6 +51,8 @@ Find-references for Dudu member declarations now uses a class-qualified
 `Class.member` query internally and filters member expressions by receiver
 type, so same-named fields or methods on unrelated classes are not reported
 together.
+Enum value declaration references use the same qualified identity shape, so
+`Mode.Play` does not collide with another enum's `Play` variant.
 Dudu semantic tokens now use a source-symbol index for Dudu classes, enums,
 enum members, implicit local bindings, and member calls instead of relying only
 on syntax shape or native metadata. A decoded semantic-token fixture asserts

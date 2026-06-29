@@ -171,6 +171,9 @@ enum Mode:
     Play
     Pause
 
+enum OtherMode:
+    Play
+
 enum Token:
     Eof
     IntLit(i64)
@@ -316,6 +319,7 @@ def main() -> i32:
         request(36, "textDocument/signatureHelp", {"textDocument": text_document(main), "position": position(main_source, "math.mix(current", add=len("math.mix(current"))}),
         request(37, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "import entities", add=len("import "))}),
         request(38, "textDocument/references", {"textDocument": text_document(entities), "position": position(entities_source, "hp: i32", add=1)}),
+        request(39, "textDocument/references", {"textDocument": text_document(entities), "position": position(entities_source, "Play", add=1)}),
         request(40, "textDocument/documentSymbol", {"textDocument": text_document(ops)}),
         request(41, "textDocument/definition", {"textDocument": text_document(ops), "position": position(ops_source, "add(self", add=1)}),
         request(50, "textDocument/completion", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add", add=len("nb."))}),
@@ -377,6 +381,14 @@ def main() -> i32:
         raise AssertionError(f"missing Player.self hp reference: {member_refs!r}")
     if has_start(member_refs, entities.as_uri(), enemy_self_hp["line"], enemy_self_hp["character"]):
         raise AssertionError(f"Enemy.self hp reference leaked into Player.hp refs: {member_refs!r}")
+    enum_refs = response(messages, 39)
+    assert_nonempty(enum_refs, "enum value identity references")
+    mode_play = position(entities_source, "Play")
+    other_play = position(entities_source, "Play", occurrence=1)
+    if not has_start(enum_refs, entities.as_uri(), mode_play["line"], mode_play["character"]):
+        raise AssertionError(f"missing Mode.Play declaration reference: {enum_refs!r}")
+    if has_start(enum_refs, entities.as_uri(), other_play["line"], other_play["character"]):
+        raise AssertionError(f"OtherMode.Play leaked into Mode.Play refs: {enum_refs!r}")
     assert_symbol_names(response(messages, 40), ["Vec2", "main"])
     assert_nonempty(response(messages, 41), "operator method definition")
     assert_completion_labels(response(messages, 50), ["matrix_native_add", "MatrixNativePoint", "DUDU_MATRIX_NATIVE_SCALE"])

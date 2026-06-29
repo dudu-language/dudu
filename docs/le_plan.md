@@ -2283,7 +2283,9 @@ push. They are not release packaging work.
    module. Dudu class member declaration references now use class-qualified
    `Class.member` identity plus receiver-type checks for member expressions, so
    references for a field such as `Player.hp` do not include unrelated same-name
-   fields such as `Enemy.hp`.
+   fields such as `Enemy.hp`. Enum value declaration references use the same
+   qualified identity shape, so `Mode.Play` does not include another enum's
+   `Play` variant.
 
    The LSP server now caches the expanded workspace document set across
    requests and invalidates it when open buffers change. References, rename,

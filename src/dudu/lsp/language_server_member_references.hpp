@@ -13,5 +13,8 @@ struct ModuleAst;
 std::optional<std::string> member_declaration_reference_query_at(const Document& doc,
                                                                  const Json* params,
                                                                  const ModuleAst* module);
+std::optional<std::string> enum_value_declaration_reference_query_at(const Document& doc,
+                                                                     const Json* params,
+                                                                     const ModuleAst* module);
 
 } // namespace dudu
