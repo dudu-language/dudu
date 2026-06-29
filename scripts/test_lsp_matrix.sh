@@ -421,6 +421,7 @@ def main() -> i32:
         request(27, "textDocument/definition", {"textDocument": text_document(main), "position": position(main_source, "identity[i32]", add=1)}),
         request(28, "textDocument/definition", {"textDocument": text_document(main), "position": position(main_source, "Box[i32]", add=1)}),
         request(29, "textDocument/definition", {"textDocument": text_document(main), "position": position(main_source, "transitive.transitive_value", add=len("transitive."))}),
+        request(49, "textDocument/definition", {"textDocument": text_document(main), "position": position(main_source, "player_id: PlayerId", add=len("player_id: "))}),
         request(30, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "current", occurrence=1)}),
         request(31, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "player: Player", add=1)}),
         request(32, "textDocument/references", {"textDocument": text_document(main), "position": position(main_source, "current =")}),
@@ -554,6 +555,11 @@ def main() -> i32:
     alias_hover_value = alias_hover["contents"]["value"]
     if "type PlayerId = i32" not in alias_hover_value or "Player id alias docs." not in alias_hover_value:
         raise AssertionError(f"missing imported alias hover docs: {alias_hover!r}")
+    alias_definition = response(messages, 49)
+    if alias_definition["uri"] != entities.as_uri():
+        raise AssertionError(f"imported alias definition did not jump to source module: {alias_definition!r}")
+    if alias_definition["range"]["start"]["line"] != 5:
+        raise AssertionError(f"imported alias definition jumped to wrong line: {alias_definition!r}")
     initialize = response(messages, 1)
     semantic_legend = initialize["capabilities"]["semanticTokensProvider"]["legend"]
     legend = semantic_legend["tokenTypes"]

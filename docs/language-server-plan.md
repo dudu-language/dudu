@@ -370,7 +370,9 @@ symbols, and `completionItem/resolve` preserves that documentation payload
 instead of reconstructing it from display text. Signature help also shows those
 docs for Dudu functions visible through the ProjectIndex. Type aliases are now
 first-class LSP symbols, so hover and definition can use their attached docs the
-same way classes and other type declarations do. Misplaced
+same way classes and other type declarations do. Direct tests cover same-file
+alias and constant definition from use sites, and the JSON-RPC matrix covers
+imported alias definition back to the source module. Misplaced
 module/class/enum/function docstrings now produce explicit parser diagnostics
 instead of generic syntax failures or inert string statements. Document symbols
 now use proper LSP `DocumentSymbol` objects and put a short AST doc summary

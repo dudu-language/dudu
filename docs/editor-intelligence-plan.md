@@ -79,10 +79,10 @@ recovers declaration comments by scanning source lines at request time, and
 completion resolve preserves documentation attached to the item instead of
 fabricating docs from display text. Signature help also surfaces those docs for
 Dudu functions from the visible symbol index. Type aliases are now emitted as
-type-like LSP symbols, so hover/definition paths can show alias docs and
-signatures. Document symbols now use LSP `DocumentSymbol` shape and include a
-short AST doc summary in their detail text when available. The LSP matrix
-fixture now exercises doc propagation for
+type-like LSP symbols, so hover and go-to-definition paths can show alias docs
+and jump to alias declarations. Document symbols now use LSP `DocumentSymbol`
+shape and include a short AST doc summary in their detail text when available.
+The LSP matrix fixture now exercises doc propagation for
 classes, fields, field member hover, methods, imported completions, signature
 help, constant hover, alias hover, and document symbols through actual JSON-RPC
 requests, including docstring-backed module, class, enum, enum-value, method,

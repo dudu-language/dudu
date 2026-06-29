@@ -371,6 +371,12 @@ void test_lsp_hover_uses_constant_and_alias_docs() {
     const std::string constant_hover = dudu::hover_json(doc, "", &constant_params);
     assert(constant_hover.find("DEFAULT_PLAYER_ID: PlayerId") != std::string::npos);
     assert(constant_hover.find("Default player id docs.") != std::string::npos);
+
+    const std::string alias_definition = dudu::definition_json(doc, &alias_params);
+    assert(alias_definition.find("\"line\":1") != std::string::npos);
+
+    const std::string constant_definition = dudu::definition_json(doc, &constant_params);
+    assert(constant_definition.find("\"line\":4") != std::string::npos);
 }
 
 void test_lsp_hover_uses_imported_ast_doc_comments() {
