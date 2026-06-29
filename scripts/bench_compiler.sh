@@ -435,7 +435,29 @@ messages = [
             },
         }
     ),
-    packet({"jsonrpc": "2.0", "id": 11, "method": "shutdown", "params": None}),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 11,
+            "method": "textDocument/completion",
+            "params": {
+                "textDocument": {"uri": uri},
+                "position": {"line": 8, "character": 23},
+            },
+        }
+    ),
+    packet(
+        {
+            "jsonrpc": "2.0",
+            "id": 12,
+            "method": "textDocument/completion",
+            "params": {
+                "textDocument": {"uri": uri},
+                "position": {"line": 8, "character": 23},
+            },
+        }
+    ),
+    packet({"jsonrpc": "2.0", "id": 13, "method": "shutdown", "params": None}),
     packet({"jsonrpc": "2.0", "method": "exit", "params": None}),
 ]
 
@@ -491,6 +513,11 @@ for request_id in (9, 10):
     contents = hover.get("result", {}).get("contents") if hover is not None else None
     if not contents:
         raise RuntimeError(f"unexpected hover response {request_id}: {hover!r}")
+for request_id in (11, 12):
+    completion = next((item for item in packets if item.get("id") == request_id), None)
+    labels = [item.get("label") for item in completion.get("result", [])] if completion is not None else []
+    if "hp" not in labels:
+        raise RuntimeError(f"unexpected completion response {request_id}: {completion!r}")
 PY
 }
 

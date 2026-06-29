@@ -1422,9 +1422,10 @@ push. They are not release packaging work.
    check, C++ emission, native header cold/cache check,
    generated-CMake module build, generated-CMake no-op rebuild, and
    generated-CMake one-Dudu-file-changed rebuild cases. It also measures a
-   lightweight LSP parse/diagnostic/document-symbol roundtrip through
-   `duc_lsp_diagnostics`, so editor latency is visible outside the full LSP
-   smoke suite. A generated synthetic multi-module corpus under
+   lightweight LSP parse/diagnostic/document-symbol/references/definition/
+   hover/completion roundtrip through `duc_lsp_diagnostics`, so editor latency
+   is visible outside the full LSP smoke suite. A generated synthetic
+   multi-module corpus under
    `build/bench_compiler` gives frontend throughput a larger parse/sema input
    than the tiny correctness fixtures. The benchmark also generates diverse
    scalable frontend-throughput corpora through `--line-scales` and code shapes
