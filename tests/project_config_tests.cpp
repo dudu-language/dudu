@@ -68,32 +68,30 @@ void test_cmake_emit_depends_on_manifest(const std::filesystem::path& root) {
     assert(cmake.find("DEPENDS ${DUDU_EXECUTABLE}") != std::string::npos);
 }
 
-void test_build_backend_selection(const std::filesystem::path& root) {
-    const std::filesystem::path project = root / "build" / "project-config-backend";
+void test_cmake_project_config(const std::filesystem::path& root) {
+    const std::filesystem::path project = root / "build" / "project-config-cmake";
     std::filesystem::remove_all(project);
-    write_text(project / "dudu.toml", "name = \"backend_probe\"\n"
+    write_text(project / "dudu.toml", "name = \"cmake_probe\"\n"
                                       "entry = \"src/main.dd\"\n"
                                       "\n"
                                       "[build]\n"
                                       "dir = \"build\"\n"
-                                      "backend = \"cmake\"\n"
                                       "\n"
                                       "[cmake]\n"
                                       "source = \".\"\n"
-                                      "target = \"backend_probe\"\n"
+                                      "target = \"cmake_probe\"\n"
                                       "config = \"Debug\"\n"
                                       "generator = \"Ninja\"\n");
     write_text(project / "src" / "main.dd", "def main() -> i32:\n    return 0\n");
 
     const dudu::ProjectConfig config = dudu::parse_project_config(project / "dudu.toml");
     assert(config.build_dir == "build");
-    assert(config.build_backend == "cmake");
     assert(config.cmake_source == ".");
-    assert(config.cmake_target == "backend_probe");
+    assert(config.cmake_target == "cmake_probe");
     assert(config.cmake_config == "Debug");
     assert(config.cmake_generator == "Ninja");
 
-    write_text(project / "dudu.toml", "name = \"backend_probe\"\n"
+    write_text(project / "dudu.toml", "name = \"cmake_probe\"\n"
                                       "entry = \"src/main.dd\"\n"
                                       "\n"
                                       "[build]\n"
@@ -101,25 +99,13 @@ void test_build_backend_selection(const std::filesystem::path& root) {
     bool rejected = false;
     try {
         (void)dudu::parse_project_config(project / "dudu.toml");
-    } catch (const std::runtime_error&) {
-        rejected = true;
+    } catch (const std::runtime_error& error) {
+        rejected =
+            std::string(error.what()).find("[build] backend was removed") != std::string::npos;
     }
     assert(rejected);
 
-    write_text(project / "dudu.toml", "name = \"backend_probe\"\n"
-                                      "entry = \"src/main.dd\"\n");
-    const dudu::ProjectConfig implicit = dudu::parse_project_config(project / "dudu.toml");
-    assert(implicit.build_backend == "cmake");
-
-    write_text(project / "src" / "support.dd", "def support() -> i32:\n    return 1\n");
-    write_text(project / "src" / "main.dd", "import support\n"
-                                            "\n"
-                                            "def main() -> i32:\n"
-                                            "    return support.support()\n");
-    const dudu::ProjectConfig implicit_multi = dudu::parse_project_config(project / "dudu.toml");
-    assert(implicit_multi.build_backend == "cmake");
-
-    write_text(project / "dudu.toml", "name = \"backend_probe\"\n"
+    write_text(project / "dudu.toml", "name = \"cmake_probe\"\n"
                                       "entry = \"src/main.dd\"\n"
                                       "\n"
                                       "[build]\n"
@@ -132,7 +118,7 @@ void test_build_backend_selection(const std::filesystem::path& root) {
     }
     assert(direct_rejected);
 
-    write_text(project / "dudu.toml", "name = \"backend_probe\"\n"
+    write_text(project / "dudu.toml", "name = \"cmake_probe\"\n"
                                       "entry = \"src/main.dd\"\n"
                                       "\n"
                                       "[cmake]\n"
@@ -315,7 +301,7 @@ int main() {
     try {
         test_manifest_relative_paths(DUDU_REPO_ROOT);
         test_cmake_emit_depends_on_manifest(DUDU_REPO_ROOT);
-        test_build_backend_selection(DUDU_REPO_ROOT);
+        test_cmake_project_config(DUDU_REPO_ROOT);
         test_quoted_manifest_strings(DUDU_REPO_ROOT);
         test_invalid_manifest_string_escapes(DUDU_REPO_ROOT);
         test_project_driver_resolves_manifest_relative_entries(DUDU_REPO_ROOT);

@@ -244,7 +244,7 @@ int run_build_command(const CliOptions& options, char* executable) {
     const ProjectConfig config = build_config_for_options(options);
     const std::filesystem::path dudu_executable = executable_path(executable);
     const bool project_output = options.project_driver && !options.quiet;
-    print_project_step(project_output, "backend", config.build_backend);
+    print_project_step(project_output, "backend", "cmake");
     print_project_step(project_output, "entry", options.input);
     print_project_step(project_output, "cmake", cmake_backend_log_source(config));
     print_project_step(project_output, "build", cmake_backend_log_build_dir(config));
@@ -266,7 +266,7 @@ int run_run_command(const CliOptions& options, char* executable) {
         fail("cannot run target kind: " + config.target_kind);
     }
     const bool project_output = options.project_driver && !options.quiet;
-    print_project_step(project_output, "backend", config.build_backend);
+    print_project_step(project_output, "backend", "cmake");
     print_project_step(project_output, "entry", options.input);
     print_project_step(project_output, "cmake", cmake_backend_log_source(config));
     print_project_step(project_output, "build", cmake_backend_log_build_dir(config));

@@ -2,5 +2,4 @@ name = "project_import_metadata"
 entry = "main.dd"
 
 [build]
-backend = "cmake"
 dir = "../../../build/project_import_metadata"

@@ -2166,10 +2166,8 @@ push. They are not release packaging work.
    content is unchanged, and generated-CMake uses a stamp output plus generated
    file byproducts, so whitespace-only `.dd` edits do not force unchanged
    generated C++ translation units to recompile. Project builds use this CMake
-   path; `[build] backend = "direct"` is no longer a supported manifest mode.
-   The old implicit single-file shortcut to the direct backend has also been
-   removed, so `dudu build` and `dudu run` exercise generated/user-owned CMake
-   for small projects too.
+   path. `[build] backend` is no longer a supported manifest key; `dudu build`
+   and `dudu run` exercise generated/user-owned CMake for small projects too.
 
    Remaining incremental work is on the Dudu side: `duc emit-modules` still
    analyzes the selected entry's full module graph in a fresh process. Native
@@ -2324,9 +2322,9 @@ push. They are not release packaging work.
    `dudu.toml` remains the canonical Dudu project file, but it does not have
    to be the canonical source for every native compilation detail in a mixed
    C/C++ project. The manifest should own Dudu entries, targets, generated
-   artifact locations, Dudu compile-time settings, delegated commands, and
-   backend selection. User-owned CMake may remain the authority for native
-   target definitions, toolchain files, platform conditionals, package
+   artifact locations, Dudu compile-time settings, and delegated commands.
+   User-owned CMake may remain the authority for native target definitions,
+   toolchain files, platform conditionals, package
    discovery, install/export rules, vendored native dependencies, CUDA or
    platform-SDK setup, and other details that CMake already models well.
 
@@ -2371,11 +2369,9 @@ push. They are not release packaging work.
    default, even for single-module inputs, so generated C++ stays split into
    per-module artifacts. The project configuration model also defaults to
    CMake; `duc build` and `duc run` also use generated CMake rather than a
-   separate single-file native compiler shortcut. `[build] backend = "cmake"`
-   is the only supported manifest backend; `[build] backend = "direct"` is
-   rejected. The old no-op backend selector layer has been removed, so backend
-   validation lives in manifest parsing and build execution lives in the CMake
-   backend. The generated CMake
+   separate single-file native compiler shortcut. `[build] backend` is rejected
+   as stale configuration. The old no-op backend selector layer has been
+   removed, so build execution lives in the CMake backend. The generated CMake
    backend is implemented for `dudu build`, `dudu run`, and `dudu test`; it
    emits an internal CMake project and drives `cmake -S/-B`
    plus `cmake --build`. Native inputs such as include paths, library paths,
@@ -2423,10 +2419,10 @@ push. They are not release packaging work.
    front-door commands, not to tell users that real projects must leave
    `dudu build`.
 
-   Required backend milestones: explicit backend selection in `dudu.toml`,
+   Required backend milestones: reject stale backend selection in `dudu.toml`,
    generated-CMake builds behind `dudu build`, `dudu run`, and `dudu test`,
-   user-owned CMake projects as a backend mode, and diagnostics that reject a
-   backend when it cannot honestly model the manifest.
+   user-owned CMake projects through `[cmake] source`, and diagnostics that
+   reject a build path when it cannot honestly model the manifest.
 
    Path handling is part of the project-driver contract. Manifest entries such
    as `entry`, `build.dir`, include paths, library paths, and native source
@@ -2440,9 +2436,9 @@ push. They are not release packaging work.
    inside string arrays, so command strings and native paths do not leak raw
    escape backslashes into the driver. Invalid or unfinished quoted-string
    escapes are rejected as manifest errors instead of being guessed. The stale
-   `[cmake] enabled` key has been removed; CMake behavior is selected through
-   `[build] backend = "cmake"` plus `[cmake] source`/`target` for user-owned
-   CMake projects, or through `dudu cmake` for inspectable CMake emission.
+   `[cmake] enabled` and `[build] backend` keys have been removed; user-owned
+   CMake behavior is selected through `[cmake] source`/`target`, and
+   `dudu cmake` remains for inspectable CMake emission.
 
 15. Freestanding And Embedded Assert Policy
 

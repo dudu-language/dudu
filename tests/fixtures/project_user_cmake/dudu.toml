@@ -1,9 +1,6 @@
 name = "user_cmake_tool"
 build_dir = "../../../build/project_user_cmake"
 
-[build]
-backend = "cmake"
-
 [cmake]
 source = "."
 target = "user_cmake_tool"

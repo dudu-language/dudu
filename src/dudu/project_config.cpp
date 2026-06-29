@@ -367,8 +367,8 @@ ProjectConfig parse_project_config(const std::filesystem::path& path) {
         } else if (section == "build" && name == "dir") {
             config.build_dir = unquote(path, line, value);
         } else if (section == "build" && name == "backend") {
-            config.build_backend = unquote(path, line, value);
-            validate_one_of(path, line, "backend", config.build_backend, {"cmake"});
+            fail(path, "[build] backend was removed; dudu build and dudu run always use CMake",
+                 line);
         } else if (section == "cmake" && name == "source") {
             config.cmake_source = unquote(path, line, value);
         } else if (section == "cmake" && name == "target") {

@@ -21,10 +21,10 @@ void add_direct_name(std::map<std::string, std::pair<std::string, SourceLocation
         if (found->second.first == module_path) {
             return;
         }
-        throw CompileError(location,
-                           "merged C++ output cannot combine Dudu modules that both declare '" +
-                               name + "'; use [build] backend = \"cmake\" through `dudu build` "
-                                      "or emit per-module artifacts with `duc emit-modules`");
+        throw CompileError(
+            location, "merged C++ output cannot combine Dudu modules that both declare '" + name +
+                          "'; use `dudu build` "
+                          "or emit per-module artifacts with `duc emit-modules`");
     }
     names.emplace(name, std::pair{module_path, location});
 }

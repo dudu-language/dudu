@@ -214,7 +214,7 @@ if (
     echo "dudu project build unexpectedly accepted [build] backend = direct" >&2
     exit 1
 fi
-grep -Fq 'invalid [target] backend: backend = "direct"' "$repo_root/build/rejected_direct_backend.err"
+grep -Fq '[build] backend was removed' "$repo_root/build/rejected_direct_backend.err"
 cmake_build_output="$("$repo_root/build/dudu" build \
     "$repo_root/tests/fixtures/project_backend_cmake" 2>&1)"
 printf '%s\n' "$cmake_build_output" | grep -Eq '^backend cmake$'

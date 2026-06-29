@@ -242,7 +242,7 @@ void test_merged_output_rejects_same_named_module_declarations() {
         const std::string message = error.what();
         rejected =
             message.find("merged C++ output cannot combine Dudu modules") != std::string::npos &&
-            message.find("[build] backend = \"cmake\"") != std::string::npos &&
+            message.find("use `dudu build`") != std::string::npos &&
             message.find("duc emit-modules") != std::string::npos;
     }
     assert(rejected);

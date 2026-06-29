@@ -381,21 +381,20 @@ Current implementation reality:
   plus a small generated `test_harness.cpp`; generated module sources suppress
   normal executable entry points and headers expose test functions to the
   harness.
-- `[build] backend = "cmake"` parses from `dudu.toml`; `[build] backend =
-  "direct"` is rejected. The generated CMake backend is implemented for
-  `dudu build`, `dudu run`, and `dudu test`; it emits an internal CMake project
-  and drives `cmake -S/-B` plus `cmake --build`.
+- `dudu build`, `dudu run`, and `dudu test` always use CMake-backed project
+  builds. The generated CMake path emits an internal CMake project and drives
+  `cmake -S/-B` plus `cmake --build`. `[build] backend` is a stale manifest key
+  and must be rejected instead of silently becoming arbitrary build metadata.
 - The generated-CMake backend supports useful native inputs: include paths,
   library paths, libraries, compile flags, link flags, pkg-config packages, and
   extra C/C++ sources. Fixtures cover linking an extra C source into both the
   app target and generated Dudu test harness.
 - `dudu cmake` emits CMake for inspection or handoff.
 - User-owned CMake project integration is implemented for `dudu build`,
-  `dudu run`, and `dudu test` when `[build] backend = "cmake"` and
-  `[cmake] source` select an existing CMake source tree. The driver
-  configures/builds the declared `[cmake] target` under the configured Dudu
-  build directory, and `dudu test` runs CTest when there is no Dudu test entry
-  or explicit delegated test command.
+  `dudu run`, and `dudu test` when `[cmake] source` selects an existing CMake
+  source tree. The driver configures/builds the declared `[cmake] target` under
+  the configured Dudu build directory, and `dudu test` runs CTest when there is
+  no Dudu test entry or explicit delegated test command.
 - `dudu build`, `dudu run`, and `dudu test` stream native compiler, CMake, and
   CTest output by default through the project-driver front door. Full native
   command lines stay behind `--verbose`, generated/user-owned CMake builds
@@ -433,10 +432,9 @@ Current implementation reality:
   not leak raw escape backslashes into the driver. Invalid or unfinished
   quoted-string escapes are rejected as manifest errors instead of being
   guessed.
-- The stale `[cmake] enabled` manifest key has been removed. CMake behavior is
-  selected through `[build] backend = "cmake"` plus `[cmake] source`/`target`
-  when using a user-owned CMake project, or through `dudu cmake` when emitting
-  an inspectable generated CMake artifact.
+- The stale `[cmake] enabled` and `[build] backend` manifest keys have been
+  removed. User-owned CMake behavior is selected through `[cmake] source` and
+  `[cmake] target`; `dudu cmake` emits an inspectable generated CMake artifact.
 
 Future build-driver work should keep that front-door contract intact: users
 should still type `dudu build`, `dudu run`, and `dudu test`.
@@ -513,8 +511,8 @@ The practical target is:
   useful for check/format/emit/debugging actions, but there is no separate
   direct native build backend.
 - Backend selection is intentionally not a separate compiler layer anymore.
-  The manifest parser accepts only `backend = "cmake"` and rejects every other
-  value; generated/user-owned CMake code owns the build path directly.
+  The manifest parser rejects `[build] backend`; generated/user-owned CMake
+  code owns the build path directly.
 - Existing CMake projects can remain user-owned; Dudu should drive the declared
   CMake target instead of pretending to understand every project-specific build
   rule itself.
@@ -522,12 +520,12 @@ The practical target is:
   generated CMake artifact when that is the right native workflow. It does not
   change the normal Dudu command surface.
 
-Backend selection rules should be boring:
+Project backend rules should be boring:
 
-- If the manifest explicitly selects `backend = "cmake"`, use it.
-- If the manifest selects any other backend, reject it.
-- If no backend is selected, use generated CMake for `dudu` project-driver
-  builds.
+- If `[cmake] source` is set, drive the declared user-owned CMake project.
+- If `[cmake] source` is not set, use generated CMake for `dudu`
+  project-driver builds.
+- If `[build] backend` is present, reject it as stale configuration.
 - If the selected backend cannot model the project, fail with a diagnostic that
   names the missing capability and the backend that can support it.
 - Do not silently ignore include paths, link inputs, generated files, native
@@ -549,7 +547,6 @@ Planned manifest shape:
 
 ```toml
 [build]
-backend = "cmake"
 dir = "build"
 
 [cmake]
@@ -632,10 +629,10 @@ docs. Generated Dudu projects do not get a changelog by default.
 13. Update examples to prefer `dudu run` where it improves usability.
 14. Keep `duc` workflows documented as the transparent fallback.
 15. Add `dudu clean`.
-16. Add explicit build backend selection in `dudu.toml`.
-17. Add a generated-CMake backend behind `dudu build`, `dudu run`, and
+16. Reject stale `[build] backend` manifest entries.
+17. Add a generated-CMake path behind `dudu build`, `dudu run`, and
     `dudu test`.
-18. Support user-owned CMake projects as another backend mode behind the same
+18. Support user-owned CMake projects behind the same
     commands. Build/run/test are implemented for declared executable targets
     and CTest-enabled projects.
 19. Keep `dudu cmake` as artifact emission for inspection and handoff, not as

@@ -223,7 +223,7 @@ std::string user_cmake_target_name(const ProjectConfig& config) {
 }
 
 bool uses_user_cmake_backend(const ProjectConfig& config) {
-    return config.build_backend == "cmake" && !config.cmake_source.empty();
+    return !config.cmake_source.empty();
 }
 
 std::filesystem::path run_cmake_backend(const CMakeBackendOptions& options) {
@@ -274,7 +274,7 @@ std::filesystem::path run_cmake_backend(const CMakeBackendOptions& options) {
 
 std::filesystem::path run_user_cmake_backend(const UserCMakeBackendOptions& options) {
     if (!uses_user_cmake_backend(options.config)) {
-        fail("user-owned CMake backend requires [build] backend = \"cmake\" and [cmake] source");
+        fail("user-owned CMake backend requires [cmake] source");
     }
     const BackendLock lock(options.root);
     const std::filesystem::path build_dir = options.root / "build";
@@ -287,7 +287,7 @@ std::filesystem::path run_user_cmake_backend(const UserCMakeBackendOptions& opti
 
 int run_user_cmake_tests(const UserCMakeBackendOptions& options) {
     if (!uses_user_cmake_backend(options.config)) {
-        fail("user-owned CMake tests require [build] backend = \"cmake\" and [cmake] source");
+        fail("user-owned CMake tests require [cmake] source");
     }
     const BackendLock lock(options.root);
     const std::filesystem::path build_dir = options.root / "build";
