@@ -607,6 +607,9 @@ native C/C++ calls can still show useful inferred types.
 Find-references for local variables is covered for same-named locals in
 different functions; local reference collection stays within the selected
 function/method scope when that scope owns the binding.
+Payload sum-type variants such as `Token.IntLit(i64)` are covered for hover and
+references, including a same-named payload variant on another enum to prove the
+qualified enum-member identity is used.
 Semantic-token coverage now decodes token deltas back to source text and checks
 token names, kinds, and modifiers for Dudu classes, enums, enum members, fields,
 static fields, module constants, methods, parameters, implicit local bindings,

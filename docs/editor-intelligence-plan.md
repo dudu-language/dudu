@@ -54,7 +54,10 @@ together. Member use sites such as `player.hp` and `player.move(...)` now
 resolve through the receiver's structured type to the same qualified member
 identity, including when the class was imported from another Dudu module.
 Enum value declaration references use the same qualified identity shape, so
-`Mode.Play` does not collide with another enum's `Play` variant.
+`Mode.Play` does not collide with another enum's `Play` variant. Payload
+sum-type variants such as `Token.IntLit(i64)` use the same identity path for
+hover and references, so constructor-like variants do not collide with
+same-named variants on other enums.
 Dudu semantic tokens now use a source-symbol index for Dudu classes, enums,
 enum members, implicit local bindings, and member calls instead of relying only
 on syntax shape or native metadata. A decoded semantic-token fixture asserts

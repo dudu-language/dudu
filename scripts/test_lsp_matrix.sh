@@ -211,6 +211,10 @@ enum OtherMode:
 
 enum Token:
     Eof
+    # Integer token docs.
+    IntLit(i64)
+
+enum OtherToken:
     IntLit(i64)
 
 class Box[T]:
@@ -440,6 +444,8 @@ def main() -> i32:
         request(46, "textDocument/semanticTokens/full", {"textDocument": text_document(main)}),
         request(47, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "Mode.Play", add=len("Mode."))}),
         request(48, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "player_id: PlayerId", add=len("player_id: "))}),
+        request(62, "textDocument/hover", {"textDocument": text_document(main), "position": position(main_source, "Token.IntLit", add=len("Token."))}),
+        request(63, "textDocument/references", {"textDocument": text_document(main), "position": position(main_source, "Token.IntLit", add=len("Token."))}),
         request(40, "textDocument/documentSymbol", {"textDocument": text_document(ops)}),
         request(41, "textDocument/definition", {"textDocument": text_document(ops), "position": position(ops_source, "add(self", add=1)}),
         request(50, "textDocument/completion", {"textDocument": text_document(native), "position": position(native_source, "nb.matrix_native_add", add=len("nb."))}),
@@ -553,6 +559,20 @@ def main() -> i32:
     enum_value_hover_value = enum_value_hover["contents"]["value"]
     if "enum variant Mode.Play" not in enum_value_hover_value or "Mode play docs." not in enum_value_hover_value:
         raise AssertionError(f"missing imported enum value hover docs: {enum_value_hover!r}")
+    token_variant_hover = response(messages, 62)
+    token_variant_hover_value = token_variant_hover["contents"]["value"]
+    if "enum variant Token.IntLit" not in token_variant_hover_value or "Integer token docs." not in token_variant_hover_value:
+        raise AssertionError(f"missing sum-type variant hover docs: {token_variant_hover!r}")
+    token_variant_refs = response(messages, 63)
+    token_int_lit_decl = position(entities_source, "    IntLit(i64)", add=4)
+    other_token_int_lit_decl = position(entities_source, "    IntLit(i64)", occurrence=1, add=4)
+    main_token_int_lit = position(main_source, "Token.IntLit", add=len("Token."))
+    if not has_start(token_variant_refs, entities.as_uri(), token_int_lit_decl["line"], token_int_lit_decl["character"]):
+        raise AssertionError(f"missing Token.IntLit declaration reference: {token_variant_refs!r}")
+    if not has_start(token_variant_refs, main.as_uri(), main_token_int_lit["line"], main_token_int_lit["character"]):
+        raise AssertionError(f"missing Token.IntLit use reference: {token_variant_refs!r}")
+    if has_start(token_variant_refs, entities.as_uri(), other_token_int_lit_decl["line"], other_token_int_lit_decl["character"]):
+        raise AssertionError(f"OtherToken.IntLit leaked into Token.IntLit refs: {token_variant_refs!r}")
     alias_hover = response(messages, 48)
     alias_hover_value = alias_hover["contents"]["value"]
     if "type PlayerId = i32" not in alias_hover_value or "Player id alias docs." not in alias_hover_value:
