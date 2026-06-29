@@ -1210,11 +1210,12 @@ void test_lsp_references_track_assignment_bindings() {
                                      "    left, right = pair()\n"
                                      "    return used + left + right\n"};
 
-    const std::vector<dudu::ReferenceLocation> used_refs = dudu::references_in(doc, "used");
+    const dudu::ModuleAst module = dudu::parse_source(doc.text, doc.path);
+    const std::vector<dudu::ReferenceLocation> used_refs = dudu::references_in(module, doc, "used");
     assert(used_refs.size() == 2);
-    const std::vector<dudu::ReferenceLocation> left_refs = dudu::references_in(doc, "left");
+    const std::vector<dudu::ReferenceLocation> left_refs = dudu::references_in(module, doc, "left");
     assert(left_refs.size() == 2);
-    const std::vector<dudu::ReferenceLocation> right_refs = dudu::references_in(doc, "right");
+    const std::vector<dudu::ReferenceLocation> right_refs = dudu::references_in(module, doc, "right");
     assert(right_refs.size() == 2);
 }
 
@@ -1227,7 +1228,9 @@ void test_lsp_references_track_qualified_type_refs() {
                                      "    other: rl.Vector2\n"
                                      "    return value.x + other.x\n"};
 
-    const std::vector<dudu::ReferenceLocation> refs = dudu::references_in(doc, "rl.Vector2");
+    const dudu::ModuleAst module = dudu::parse_source(doc.text, doc.path);
+    const std::vector<dudu::ReferenceLocation> refs =
+        dudu::references_in(module, doc, "rl.Vector2");
     assert(refs.size() == 2);
 
     const std::map<std::string, dudu::Document> workspace{{doc.uri, doc}};

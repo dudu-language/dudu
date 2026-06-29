@@ -4,7 +4,6 @@
 #include "dudu/ast_type.hpp"
 #include "dudu/language_server_ast_walk.hpp"
 #include "dudu/language_server_navigation.hpp"
-#include "dudu/parser.hpp"
 
 #include <optional>
 #include <set>
@@ -128,15 +127,6 @@ std::vector<ReferenceLocation> references_in(const ModuleAst& module, const Docu
         visit_stmts(fn.statements);
     }
     return out;
-}
-
-std::vector<ReferenceLocation> references_in(const Document& doc, const std::string& query) {
-    try {
-        const ModuleAst module = parse_source(doc.text, doc.path);
-        return references_in(module, doc, query);
-    } catch (const std::exception&) {
-        return {};
-    }
 }
 
 } // namespace dudu

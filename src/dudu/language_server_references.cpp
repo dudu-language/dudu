@@ -96,12 +96,11 @@ std::optional<Symbol>
 unique_document_declaration_for_references(const Document& doc, const std::string& name,
                                            const ModuleAst* module,
                                            const std::vector<Symbol>& symbols) {
-    if (name.empty() || name.find('.') != std::string::npos) {
+    if (name.empty() || name.find('.') != std::string::npos || module == nullptr) {
         return std::nullopt;
     }
     std::set<std::string> reference_ranges;
-    const std::vector<ReferenceLocation> references =
-        module == nullptr ? references_in(doc, name) : references_in(*module, doc, name);
+    const std::vector<ReferenceLocation> references = references_in(*module, doc, name);
     for (const ReferenceLocation& location : references) {
         reference_ranges.insert(symbol_range_key(location.uri, location.range));
     }
